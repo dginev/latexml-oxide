@@ -146,7 +146,6 @@ fn terms_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn vertbars_test() {
   latexml_test_single("tests/parse/vertbars.tex", "vertbars", DIR, None, None);
 }

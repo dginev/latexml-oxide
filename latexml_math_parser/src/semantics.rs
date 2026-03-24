@@ -2693,58 +2693,15 @@ pub fn eval_at(
     (args.remove(0), None)
   };
 
-  // Build presentation arm:
-  // Perl: $pres = XMWrap(base, bar[CLOSE]); $pres = NewScript($pres, sub); $pres = NewScript($pres, sup)
+  // Pre-extract all values from ctxt.nodes before create_xmrefs consumes ctxt
   let bar_close = morph_vertbar(vertbar, "CLOSE", ctxt.nodes);
-  let wrap = XM::Wrap(
-    vec![base.clone(), bar_close],
-    XProps::default(),
-    Meta::default(),
-  );
-
-  // Get script content from wrapper nodes' children
   let sub_content_xm = get_script_child_xm(&sub_script, ctxt.nodes);
   let sup_content_xm = sup_script.as_ref().and_then(|s| get_script_child_xm(&Some(s.clone()), ctxt.nodes));
+  let sub_content_xm2 = get_script_child_xm(&sub_script, ctxt.nodes);
+  let sup_content_xm2 = sup_script.as_ref().and_then(|s| get_script_child_xm(&Some(s.clone()), ctxt.nodes));
 
-  // Get first child of sub script for content-arm reference
-  let mut sub_for_ref = get_script_child_xm(&sub_script, ctxt.nodes);
-  let mut sup_for_ref = sup_script.as_ref().and_then(|s| get_script_child_xm(&Some(s.clone()), ctxt.nodes));
-
-  // Build: XMApp(SUBSCRIPTOP[scriptpos=post1], wrap, sub_content)
-  let sub_op = XM::Token(
-    XProps {
-      role: Some(Cow::Borrowed("SUBSCRIPTOP")),
-      scriptpos: Some(Cow::Borrowed("post1")),
-      ..XProps::default()
-    },
-    Meta::default(),
-  );
-  let mut pres = XM::Apply(
-    sub_op.into(),
-    Args(vec![Some(wrap), sub_content_xm]),
-    XProps::default(),
-    Meta::default(),
-  );
-
-  // Optionally wrap with superscript
-  if let Some(sup_xm) = sup_content_xm {
-    let sup_op = XM::Token(
-      XProps {
-        role: Some(Cow::Borrowed("SUPERSCRIPTOP")),
-        scriptpos: Some(Cow::Borrowed("post1")),
-        ..XProps::default()
-      },
-      Meta::default(),
-    );
-    pres = XM::Apply(
-      sup_op.into(),
-      Args(vec![Some(pres), Some(sup_xm)]),
-      XProps::default(),
-      Meta::default(),
-    );
-  }
-
-  // Build content arm: XMApp(evaluated-at, base_ref, sub_content_ref?, sup_content_ref?)
+  // Build content arm FIRST: this sets _xmkey/xml:id on base and sub/sup
+  // so the presentation arm (built after) gets the references.
   let eval_tok = XM::Token(
     XProps {
       meaning: Some(Cow::Borrowed("evaluated-at")),
@@ -2753,7 +2710,9 @@ pub fn eval_at(
     Meta::default(),
   );
 
-  // Get content references: base, and first child of each script wrapper
+  let mut sub_for_ref = sub_content_xm;
+  let mut sup_for_ref = sup_content_xm;
+
   let mut content_args: Vec<&mut XM> = vec![&mut base];
   if let Some(ref mut sc) = sub_for_ref {
     content_args.push(sc);
@@ -2769,6 +2728,45 @@ pub fn eval_at(
     XProps::default(),
     Meta::default(),
   );
+
+  // Build presentation arm AFTER content (so base has _xmkey set)
+  let wrap = XM::Wrap(
+    vec![base, bar_close],
+    XProps::default(),
+    Meta::default(),
+  );
+
+  let sub_op = XM::Token(
+    XProps {
+      role: Some(Cow::Borrowed("SUBSCRIPTOP")),
+      scriptpos: Some(Cow::Borrowed("post1")),
+      ..XProps::default()
+    },
+    Meta::default(),
+  );
+  let mut pres = XM::Apply(
+    sub_op.into(),
+    Args(vec![Some(wrap), sub_content_xm2]),
+    XProps::default(),
+    Meta::default(),
+  );
+
+  if let Some(sup_xm) = sup_content_xm2 {
+    let sup_op = XM::Token(
+      XProps {
+        role: Some(Cow::Borrowed("SUPERSCRIPTOP")),
+        scriptpos: Some(Cow::Borrowed("post1")),
+        ..XProps::default()
+      },
+      Meta::default(),
+    );
+    pres = XM::Apply(
+      sup_op.into(),
+      Args(vec![Some(pres), Some(sup_xm)]),
+      XProps::default(),
+      Meta::default(),
+    );
+  }
 
   Ok(Some(XM::Dual(
     Box::new(content),
