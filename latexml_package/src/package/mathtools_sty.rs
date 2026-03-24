@@ -392,11 +392,10 @@ LoadDefinitions!({
   //======================================================================
   // {multlined} environment
   //======================================================================
-  // Perl: \@@multlined is DefConstructor with DigestedBody + afterConstruct.
-  // Creates <ltx:XMApp role="MULTIRELATION"> with alignment rows.
-  // Simplified: \@@multlined opens a group, content flows via alignment.
-  DefConstructor!("\\@@multlined",
-    "<ltx:XMApp role='MULTIRELATION'>",
+  // Perl: DefConstructor('\@@multlined DigestedBody', "#1", ...)
+  // DigestedBody absorbs the entire content until the matching end command.
+  DefConstructor!("\\@@multlined DigestedBody",
+    "#1",
     before_digest => { bgroup(); }
   );
   DefMacro!("\\multlined[][]",
