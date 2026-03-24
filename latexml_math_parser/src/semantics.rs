@@ -227,14 +227,11 @@ pub fn list_apply(
     }
   }
   // Rule 3: Reject when either item has `absent` as a relop operand.
-  // Absent arguments are only valid at the top level (equation fragments).
-  // Inside lists, they indicate a wrong parse level — the relop should be
-  // at formula level, not inside a list item.
-  if left.as_ref().is_some_and(has_absent_relop_operand) {
-    return Err("list_apply: left has absent relop operand (top-level only)".into());
-  }
-  if has_absent_relop_operand(&right) {
-    return Err("list_apply: right has absent relop operand (top-level only)".into());
+  // `absent` means equation fragment — fragments should be single formulas,
+  // not list items. If `absent` appears, the expression should be parsed
+  // as a single formula, not broken into a list.
+  if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
+    return Err("list_apply: absent relop operand (should be single formula, not list)".into());
   }
   let meaning = "list";
 
@@ -375,6 +372,24 @@ pub fn formulae_apply(
   // This forces Marpa to use the `statements` rule (list_apply) instead.
   let left_rel = left.as_ref().is_some_and(is_relational_item);
   let right_rel = is_relational_item(&right);
+
+  // Reject when any item has `absent` as a relop operand.
+  // `absent` means "equation fragment" — fragments are single formulas,
+  // not part of a formulae collection. A formulae is a collection of
+  // COMPLETE relational statements.
+  if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
+    return Err("formulae_apply: absent operand (fragment, not complete formula)".into());
+  }
+  // Also check inside an existing formulae Dual being extended
+  if let Some(XM::Dual(ref content, _, _, _)) = left {
+    if let XM::Apply(_, ref args, _, _) = **content {
+      for arg in &args.0 {
+        if arg.as_ref().is_some_and(has_absent_relop_operand) {
+          return Err("formulae_apply: formulae contains fragment with absent".into());
+        }
+      }
+    }
+  }
   if !left_rel && !right_rel {
     return Err("formulae_apply: no relational items, use list_apply instead".into());
   }
