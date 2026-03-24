@@ -740,6 +740,8 @@ LoadDefinitions!({
   DefKeyVal!("multirow", "rowsep", "Dimension");
 
   // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
+  // Perl takes RequiredKeyVals:multirow + OptionalKeyVals (for before_row/after_row).
+  // We only handle the required keyvals for now.
   DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
@@ -747,6 +749,25 @@ LoadDefinitions!({
     if let Some(name_arg) = kv.get_value("name") {
       let name = name_arg.to_attribute();
       attrs.insert(String::from("name"), name);
+    }
+    // Pass through rowsep if present (from \spreadlines setting \jot)
+    if let Some(rowsep_arg) = kv.get_value("rowsep") {
+      let rowsep = rowsep_arg.to_attribute();
+      if !rowsep.is_empty() && rowsep != "0pt" && rowsep != "0.0pt" {
+        attrs.insert(String::from("rowsep"), rowsep);
+      }
+    }
+    // Pass through vattach if present (top/bottom/center attachment)
+    if let Some(vattach_arg) = kv.get_value("vattach") {
+      let va = vattach_arg.to_attribute();
+      // Perl: translateAttachment converts t→top, b→bottom, c→center
+      let translated = match va.as_str() {
+        "t" => "top",
+        "b" => "bottom",
+        "c" | "" => "center",
+        other => other,
+      };
+      attrs.insert(String::from("vattach"), translated.to_string());
     }
     // Single-column template: \hfil \displaystyle before
     let col1 = Cell {
