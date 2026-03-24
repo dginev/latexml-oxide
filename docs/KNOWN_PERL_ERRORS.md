@@ -236,3 +236,30 @@ integrand and differential.
 **Rust status:** Currently unparsed (`ltx_math_unparsed`). Future fix should add
 quantifier-period-body grammar rules rather than mimicking Perl's incorrect
 formulae split.
+
+## 10. `io.tex` produces `Error:unexpected:}` from unmatched braces in `\read` content
+
+**Perl source:** `Stomach.pm` L336–340 (`egroup()`)
+
+**Symptom:** The io digestion test reads `exists.data` which contains:
+```
+line { with extra } } silently discards }
+```
+When `\read` stores this line in `\aline` and it's expanded, the `{` opens a group
+(switching to horizontal mode), the first `}` closes it, but the second `}` finds
+a mode-switch frame and triggers:
+```
+Error:unexpected:} Attempt to close a group that switched to mode horizontal
+```
+
+**Root cause:** The file content has genuinely unmatched braces. Perl's `egroup()`
+checks `isValueBound('BOUND_MODE', 0)` and reports an Error when the current frame
+was a mode switch. This is correct behavior — the error is informational and
+non-fatal.
+
+**Perl also errors:** Yes — running Perl's LaTeXML on `io.tex` with `verbosity=>5`
+produces the exact same 2 `Error:unexpected:}` messages. The Perl test suite
+passes because these errors are logged to an internal report, not printed to stderr.
+
+**Rust status:** Identical behavior — 2 `Error:unexpected:}` messages. These are
+expected and match Perl. The Rust test passes despite the errors.
