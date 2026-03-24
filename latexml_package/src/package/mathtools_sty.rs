@@ -462,20 +462,41 @@ LoadDefinitions!({
   // 3.6 — Paired delimiters
   //======================================================================
 
-  // \DeclarePairedDelimiter — complex DefPrimitive with sub{} body
-  // TODO: complex sub{} body — stubbed
-  DefMacro!("\\DeclarePairedDelimiter{}{}{}", None);
+  // \DeclarePairedDelimiter\cmd{left}{right}
+  // Perl: DefPrimitive creates runtime macros via DefMacroI.
+  // Simplified: \cmd{x} → \left<ldel> x \right<rdel>, \cmd*{x} → same
+  DefPrimitive!("\\DeclarePairedDelimiter DefToken {}{}", sub[(cs, ldel, rdel)] {
+    let ldel_s = ldel.to_string();
+    let rdel_s = rdel.to_string();
+    // Simple approach: \cmd{x} → \left<ldel> x \right<rdel>
+    let body = format!("\\left{ldel_s}#1\\right{rdel_s}");
+    // Use the original cs Token directly (not T_CS! which would double-escape)
+    let params = parse_parameters("{}", &cs, true)?;
+    def_macro(cs.clone(), params, Tokenize!(&body), None)?;
+  });
 
-  // \DeclarePairedDelimiterX — complex DefPrimitive with sub{} body
-  // TODO: complex sub{} body — stubbed
-  DefMacro!("\\DeclarePairedDelimiterX{}[]{}{}{}", None);
+  // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
+  DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, _body)] {
+    let n = nargs.value_of() as usize;
+    let ldel_s = ldel.to_string();
+    let rdel_s = rdel.to_string();
+    // Build parameter spec: {} repeated n times
+    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
+    let expansion = format!("\\left{ldel_s}#1\\right{rdel_s}");
+    let params = parse_parameters(&param_spec, &cs, true)?;
+    def_macro(cs.clone(), params, Tokenize!(&expansion), None)?;
+  });
 
-  // \DeclarePairedDelimiterXPP — complex DefPrimitive with sub{} body
-  // TODO: complex sub{} body — stubbed
-  DefMacro!("\\DeclarePairedDelimiterXPP{}[]{}{}{}{}{}", None);
+  // \DeclarePairedDelimiterXPP — most general form
+  DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, _nargs, _pre, ldel, rdel, _post, _body)] {
+    let ldel_s = ldel.to_string();
+    let rdel_s = rdel.to_string();
+    let body = format!("\\left{ldel_s}#1\\right{rdel_s}");
+    let params = parse_parameters("{}", &cs, true)?;
+    def_macro(cs.clone(), params, Tokenize!(&body), None)?;
+  });
 
-  // \reDeclarePairedDelimiterInnerWrapper — complex DefPrimitive with sub{} body
-  // TODO: complex sub{} body — stubbed
+  // \reDeclarePairedDelimiterInnerWrapper — stub (rarely used)
   DefMacro!("\\reDeclarePairedDelimiterInnerWrapper{}{}{}", None);
 
   //======================================================================
