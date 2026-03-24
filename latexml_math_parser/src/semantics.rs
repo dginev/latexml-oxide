@@ -2753,12 +2753,26 @@ pub fn prefix_relop_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  _ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => relop, right);
+  // For BINOP prefix usage (e.g. \mathbin{|}x), Perl produces op@(x) without absent.
+  // For RELOP prefix (e.g. = b, < c), keep absent as first arg.
+  let is_binop = relop.as_ref().is_some_and(|op| {
+    match op {
+      XM::Lexeme(l, _) => l.split(':').next() == Some("BINOP"),
+      XM::Token(p, _) => p.role.as_deref() == Some("BINOP"),
+      _ => false,
+    }
+  });
+  let args = if is_binop {
+    Args(vec![right])
+  } else {
+    Args(vec![Some(absent()), right])
+  };
   Ok(Some(XM::Apply(
     relop.into(),
-    Args(vec![Some(absent()), right]),
+    args,
     XProps::default(),
     Meta::default(),
   )))
