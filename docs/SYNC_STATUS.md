@@ -426,6 +426,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] C2. Font specialize for parser tokens in nested script contexts
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
 - [ ] C4. ltx_nopad_l on @{}l@{} columns
+- [ ] C5. Script content preservation: `faux_wrap` discards parsed content inside scripts, `obtain_arg` re-reads from DOM. Causes empty XMRef for `f^{(n)}` (fenced content in superscript). Blocks ntheorem (~42 diffs).
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
