@@ -113,7 +113,7 @@ LoadDefinitions!({
   // Now that Pair survives digestion (RegisterValue::Pair), use it directly.
   DefMacro!("\\put SkipSpaces Match:( Until:, Until:) {}", "\\lx@pic@put(#2,#3){#4\\relax}");
   DefConstructor!("\\lx@pic@put Pair {}",
-    "<ltx:g transform='#transform'>#2</ltx:g>",
+    "<ltx:g transform='#transform' innerdepth='#innerdepth' innerheight='#innerheight'>#2</ltx:g>",
     alias => "\\put",
     mode  => "text",
     properties => sub[args] {
@@ -133,7 +133,12 @@ LoadDefinitions!({
       let tx = px_value(x * unit);
       let ty = px_value(y * unit);
       let transform_str = format!("translate({},{})", fmt_px(tx), fmt_px(ty));
-      Ok(stored_map!("transform" => Stored::String(arena::pin(&transform_str))))
+      // TODO: compute actual inner dimensions from body getSize
+      Ok(stored_map!(
+        "transform" => Stored::String(arena::pin(&transform_str)),
+        "innerdepth" => "0.0pt",
+        "innerheight" => "0.0pt"
+      ))
     }
   );
 
@@ -277,11 +282,112 @@ LoadDefinitions!({
   // TODO: full multiput loop expansion with delta stepping
   DefMacro!("\\multiput Match:( Until:, Until:) Match:( Until:, Until:) {}{}", "\\put(#2,#3){#8}");
 
-  // Box commands for picture mode (simplified)
-  DefMacro!("\\pic@makebox Pair [] {}", "#3");
-  DefMacro!("\\pic@framebox Pair [] {}", "#3");
-  DefMacro!("\\frame{}", "#1");
-  DefMacro!("\\dashbox{Float} Pair [] {}", "#4");
+  // Box commands for picture mode
+  // Perl: \pic@makebox@ Undigested RequiredKeyVals Pair []{} — the master box constructor
+  // Creates optional <rect> for frame + <g class="makebox"> for content with positioning.
+  // Properties compute inner dimensions from $box->getSize and position from [pos] arg.
+  //
+  // The Perl macros are:
+  //   \pic@makebox  → \pic@makebox@{\makebox}{}
+  //   \pic@framebox → \pic@makebox@{\framebox}{framed=true}
+  //   \frame{}      → \pic@makebox@{\framebox}{framed=true}(0,0)[bl]{#1}
+  //   \dashbox      → \pic@makebox@{\dashbox(N)}{framed=true,dash={N}}
+  //
+  // For now: simplified port without getSize (uses zero defaults).
+  // The constructor uses sub[] to build DOM directly matching Perl's output structure.
+  DefConstructor!("\\pic@makebox@ Undigested {} Pair []{}",
+    sub[document, args, props] {
+      // args: [0]=cs(Undigested), [1]=kv_text({}), [2]=size(Pair), [3]=pos([]), [4]=box({})
+      let framed = props.get("framed").is_some();
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // Frame rect (only when framed=true)
+      if framed {
+        let mut rect_attrs = map!(
+          "x" => "0".to_string(), "y" => "0".to_string(),
+          "width" => props.get("fwidth").map(|s| s.to_string()).unwrap_or_else(|| "0".into()),
+          "height" => props.get("fheight").map(|s| s.to_string()).unwrap_or_else(|| "0".into()),
+          "stroke" => "#000000".to_string(),
+          "stroke-width" => format!("{thick}"),
+          "fill" => "none".to_string()
+        );
+        if let Some(dash) = props.get("dash") {
+          rect_attrs.insert("stroke-dasharray".to_string(), dash.to_string());
+        }
+        document.insert_element("ltx:rect", Vec::new(), Some(rect_attrs))?;
+      }
+      // Content <g>
+      let mut g_attrs = map!("class" => "makebox".to_string());
+      for &key in &["innerwidth", "innerheight", "innerdepth"] {
+        if let Some(v) = props.get(key) {
+          let vs = v.to_string();
+          if !vs.is_empty() {
+            g_attrs.insert(key.to_string(), vs);
+          }
+        }
+      }
+      let xshift = props.get("xshift").map(|s| s.to_string()).unwrap_or_else(|| s!("0"));
+      let yshift = props.get("yshift").map(|s| s.to_string()).unwrap_or_else(|| s!("0"));
+      g_attrs.insert(s!("transform"), format!("translate({xshift},{yshift})"));
+      document.open_element("ltx:g", Some(g_attrs), None)?;
+      if let Some(body) = args.get(4).and_then(|a| a.as_ref()) {
+        document.absorb(body, None)?;
+      }
+      document.close_element("ltx:g")?;
+    },
+    properties => sub[args] {
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      // args: [0]=cs, [1]=kv_text, [2]=size(Pair), [3]=pos, [4]=box
+      let kv_str = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      // Extract frame size from Pair parameter (args[2])
+      let (fw, fh) = match args[2].as_ref() {
+        Some(d) => match d.data() {
+          DigestedData::RegisterValue(RegisterValue::Pair(p)) => {
+            let w = p.x.0 * unit;
+            let h = p.y.0 * unit;
+            (format!("{w}pt"), format!("{h}pt"))
+          },
+          _ => ("0".into(), "0".into()),
+        },
+        None => ("0".into(), "0".into()),
+      };
+      // TODO: compute actual inner dimensions from body getSize
+      let mut map = stored_map!(
+        "innerwidth" => "",
+        "innerheight" => "0.0pt",
+        "innerdepth" => "0.0pt",
+        "fwidth" => Stored::String(arena::pin(&fw)),
+        "fheight" => Stored::String(arena::pin(&fh)),
+        "xshift" => "0",
+        "yshift" => "0"
+      );
+      if kv_str.contains("framed") {
+        map.insert("framed", Stored::Bool(true));
+      }
+      if let Some(dash_start) = kv_str.find("dash={") {
+        let rest = &kv_str[dash_start + 6..];
+        if let Some(end) = rest.find('}') {
+          map.insert("dash", Stored::String(arena::pin(&rest[..end])));
+        }
+      }
+      Ok(map)
+    },
+    mode => "text"
+  );
+
+  // Perl macro aliases
+  DefMacro!("\\pic@makebox",            "\\pic@makebox@{\\makebox}{}");
+  DefMacro!("\\pic@framebox",           "\\pic@makebox@{\\framebox}{framed=true}");
+  DefMacro!("\\lx@pic@dashbox{Float}",  "\\pic@makebox@{\\dashbox(#1)}{framed=true,dash={#1}}");
+  DefMacro!("\\dashbox Until:(",
+    "\\ifx.#1.\\lx@pic@dashbox{0}(\\else\\lx@pic@dashbox{#1}(\\fi");
+  DefMacro!("\\frame{}",
+    "\\pic@makebox@{\\framebox}{framed=true}(0,0)[bl]{#1}");
 
   // \pic@raisebox — simplified raisebox for picture mode
   DefConstructor!("\\pic@raisebox{Dimension}[Dimension][Dimension]{}",
