@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 293 pass, 0 fail, 31 ignored (85 commits). Session 38 (23 commits): **FunctionsPreferWiderAbsorption** + **BigopPreferWiderAbsorption** pragmas. **DELIMITER_MAP** audit (14 entries). **\\intertext** crcr+noalign. **DeclarePairedDelimiter** star/optional (all 3). **\\@@multlined DigestedBody** (14→2 XMath errors). **METARELOP** lexer. **\\gathered** multirow bindings. **Large amsmath audit** (30+ defs). rowsep/vattach. \\xalignat/\\xxalignat. \\split. \\hdotsfor. \\mspace. **Consecutive FUNCTION multiplication** grammar (fgh→f·g·h). **rearrangeLoneAMSAligned** (equation+aligned→equationgroup). mathtools 31→15 unparsed.
+**Status (2026-03-24):** 293 pass, 0 fail, 31 ignored (88 commits). Session 38 (27 commits): **2 pragmas** (FunctionsPreferWider + BigopPreferWider). **DELIMITER_MAP** (14 entries). **\\intertext** crcr+noalign. **DeclarePairedDelimiter** star/optional. **\\@@multlined DigestedBody** (14→2 XMath errors). **METARELOP** lexer. **\\gathered** multirow bindings. **Large amsmath audit** (30+ defs). **FUNCTION multiplication** grammar. **rearrangeLoneAMSAligned** (equation+aligned→equationgroup/MathFork). **afterConstruct** for gathered/lgathered/rgathered/multlined (rearrangeAMSMultirow XMDual wrapping). mathtools 31→9 actual unparsed (71% reduction). S6 parity 82%→104%, S9 82%→88%.
 
 ### Active TODO items (ordered)
 
