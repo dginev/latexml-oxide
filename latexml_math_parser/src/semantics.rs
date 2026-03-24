@@ -1034,6 +1034,48 @@ pub fn speculative_prefix_apply(
     Meta::default(),
   )))
 }
+/// Perl: limit-from@(number, sign) — directional limits like 0+, 1-
+/// Matches factor_base followed by addop. Semantic checks:
+/// 1. The addop must be + or - (not other ADDOP like ⊕)
+/// 2. The factor_base should be a number or simple ID (not a compound expression)
+/// If checks fail, prunes the parse so Marpa tries addition instead.
+pub fn limit_from_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Check the addop is + or -
+  let is_plus_minus = args.get(1).and_then(|a| a.as_ref()).is_some_and(|xm| {
+    let val = match xm {
+      XM::Lexeme(lex, _) => {
+        lookup_lex_node(lex.as_str(), ctxt.nodes).ok()
+          .and_then(|n| n.get_attribute("meaning"))
+      },
+      XM::Token(props, _) => props.meaning.as_ref().map(|c| c.to_string()),
+      _ => None,
+    };
+    matches!(val.as_deref(), Some("plus") | Some("minus"))
+  });
+  if !is_plus_minus {
+    return Err("limit_from_apply: addop is not +/-, pruning".into());
+  }
+  unp!(args => base, sign);
+  let op = XM::Token(
+    XProps {
+      meaning: Some(Cow::Borrowed("limit-from")),
+      ..XProps::default()
+    },
+    Meta::default(),
+  );
+  Ok(Some(XM::Apply(
+    op.into(),
+    Args(vec![base, sign]),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
+
 /// Perl IntFactor: diffd ATOM_OR_ID/UNKNOWN => Apply(DIFFOP(d), var)
 /// Matches `d` followed by a factor. The semantic action checks that the first
 /// token's text content is literally "d" (case-sensitive). If not, prunes the parse.

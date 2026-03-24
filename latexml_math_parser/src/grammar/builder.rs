@@ -83,6 +83,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | open array => open_fenced
       | array close => close_fenced;
     factor = factor_base | opfunction | fenced_array;
+    // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
+    // A "left-only term": on the left behaves as a term (for comma lists),
+    // on the right terminates at the addop (like expression-level postfix).
+    limit_from_term = factor_base addop => limit_from_apply;
     // Terms
     // Perl: bigop = BIGOP | SUMOP | INTOP | LIMITOP | DIFFOP
     any_bigop = bigop | sumop | intop | limitop | diffop;
@@ -227,8 +231,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | formula_list punct expression => formula_list_apply;
     // Comma-separated term lists: term, term, term, ...
     // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
+    // Also includes limit_from_term for patterns like (1+, 0+, 1-, 0-).
     term_list = term punct term => list_apply
-      | term_list punct term => list_apply;
+      | term_list punct term => list_apply
+      | limit_from_term punct term => list_apply
+      | limit_from_term punct limit_from_term => list_apply
+      | term_list punct limit_from_term => list_apply
+      | term punct limit_from_term => list_apply;
 
     // Perl MathGrammar L709-711: Two-part relops (>=, <=, <<, >>)
     two_part_relop = langle_rel langle_rel => two_part_relop_combine
@@ -289,6 +298,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     fenced_factor = lbrace expression rbrace    => fenced
            | lbracket expression rbracket       => fenced
            | lparen formula rparen              => fenced
+           // Parenthesized comma-separated lists: (a,b,c), (1+,0+,1-,0-)
+           // Uses term_list which requires 2+ items (avoids single-formula ambiguity).
+           | lparen term_list rparen            => fenced
            // Angle brackets as delimiters: <x,y> for inner products, etc.
            // Old typesetting conventions used < > instead of \langle \rangle.
            // Uses term_list (comma-separated terms) to avoid matching complex
