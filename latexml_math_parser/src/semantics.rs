@@ -390,7 +390,10 @@ pub fn formulae_apply(
       }
     }
   }
-  if !left_rel && !right_rel {
+  // Period separator always creates formulae (it's a hard formula boundary).
+  // Comma separator requires at least one relational item.
+  let sep_is_period = sep.get_value(ctxt.nodes).ok().is_some_and(|v| v == ".");
+  if !left_rel && !right_rel && !sep_is_period {
     return Err("formulae_apply: no relational items, use list_apply instead".into());
   }
 
@@ -1734,9 +1737,25 @@ pub fn postfix_embellished(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let mut arg = args.remove(0).unwrap();
   let trailer = args.remove(0).unwrap();
+  // Perl: trailing comma wraps content in list@(...), trailing period in formulae@(...)
+  // This matches Perl's endPunct(?) behavior in script content parsing.
+  let is_comma = trailer.get_value(ctxt.nodes).ok().is_some_and(|v| v == ",");
+  let is_period = trailer.get_value(ctxt.nodes).ok().is_some_and(|v| v == ".");
   let mut ref_arg = create_xmrefs(&mut [&mut arg], ctxt)?;
+  let content = if is_comma || is_period {
+    // Perl: trailing comma/period wraps content in list@(ref)
+    // Period as separator creates formulae; as trailing punct, still wraps in list.
+    Box::new(XM::Apply(
+      XProps { meaning: Some(Cow::Borrowed("list")), ..XProps::default() }.into(),
+      Args(vec![Some(ref_arg.remove(0))]),
+      XProps::default(),
+      Meta::default(),
+    ))
+  } else {
+    Box::new(ref_arg.remove(0))
+  };
   Ok(Some(XM::Dual(
-    Box::new(ref_arg.remove(0)),
+    content,
     Box::new(XM::Wrap(
       vec![arg, trailer],
       XProps::default(),

@@ -282,8 +282,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | statement end_punct => postfix_embellished
       | statements end_punct => postfix_embellished
       | statements punct statement => list_apply
-      // Perl MathGrammar L129: endPunct includes PERIOD.
-      | statements period statement => list_apply
+      // Perl MathGrammar L129: endPunct includes PERIOD. Period creates formulae, not list.
+      | statements period statement => formulae_apply
       // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
       | statement vertbar statements => vertbar_modifier;
 
