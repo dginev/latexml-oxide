@@ -33,19 +33,23 @@ pub fn node_to_grammar_lexemes_from(
   for node in child_nodes.into_iter() {
     if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
       let role = node.get_attribute("role").unwrap();
-      // ARROW-role XMApps (decorated arrows like \xrightarrow{over}) should be
-      // atomic terminals. Extract the arrow meaning from the ARROW child token.
-      if role == "ARROW" {
+      // ARROW/METARELOP-role XMApps (decorated arrows like \xrightarrow{over},
+      // \xleftrightarrow[under]{over}) should be atomic terminals.
+      // Extract the meaning from the inner ARROW/METARELOP child token.
+      if role == "ARROW" || role == "METARELOP" {
         let arrow_meaning = node.get_child_elements().into_iter()
-          .find(|ch| ch.get_attribute("role").as_deref() == Some("ARROW"))
+          .find(|ch| {
+            let cr = ch.get_attribute("role");
+            cr.as_deref() == Some("ARROW") || cr.as_deref() == Some("METARELOP")
+          })
           .and_then(|ch| {
             ch.get_attribute("meaning")
               .or_else(|| ch.get_attribute("name"))
               .or_else(|| Some(ch.get_content()))
           })
-          .unwrap_or_else(|| "ARROW".to_string());
+          .unwrap_or_else(|| role.to_string());
         *idx += 1;
-        let lexeme = format!("ARROW:{arrow_meaning}:{idx}").replace(' ', "");
+        let lexeme = format!("{role}:{arrow_meaning}:{idx}").replace(' ', "");
         lexemes.push(lexeme);
         nodes.push(node);
       } else if node.has_attribute("_rewrite") {
