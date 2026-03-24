@@ -194,14 +194,31 @@ pub fn list_apply(
   let mut right = right.unwrap();
   let sep = sep.unwrap();
 
-  // Perl: top-level PUNCT-separated relational formulas (containing RELOP/multirelation)
-  // use meaning="formulae" (NewFormulae). Non-relational items use "list" (NewList).
-  // TODO: This heuristic is a temporary approximation. The real fix is to split the grammar
-  // into formula_list (top level, always "formulae") and expression_list (within formula,
-  // always "list"), matching Perl's Formulae/extendFormula distinction.
+  // list_apply always produces "list". Reject certain cases to force
+  // Marpa to use the competing formula_list rule (formulae_apply) instead.
+  //
+  // Rule 1: Both items relational → should be formulae, not list.
   let left_rel = left.as_ref().is_some_and(is_relational_item);
   let right_rel = is_relational_item(&right);
-  let meaning = if left_rel && right_rel { "formulae" } else { "list" };
+  if left_rel && right_rel {
+    return Err("list_apply: both items relational, use formulae_apply instead".into());
+  }
+  // Rule 2: Reject when RIGHT is already a list Dual. A list() without
+  // delimiters should not appear as a bare operand in another list — nobody
+  // writes lists-of-lists without parentheses. This prevents the problematic
+  // parse where `a=b, c=d` becomes `a = list(b, c) = d` because the inner
+  // `list(b,c)` would need to appear as the right operand of a higher-level
+  // list_apply to extend further.
+  if let XM::Dual(ref content, _, _, _) = right {
+    if let XM::Apply(ref op, _, _, _) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list") {
+          return Err("list_apply: right operand is a list (needs delimiters to nest)".into());
+        }
+      }
+    }
+  }
+  let meaning = "list";
 
   // If left is already a list/formulae Dual, extend it (flat accumulation).
   // For formulae with \quad separators, post-processing in restructure_formulae_right
@@ -292,11 +309,12 @@ fn is_relational_item(xm: &XM) -> bool {
   }
 }
 
-/// Perl: NewFormulae — comma-separated formulas at the top level use meaning="formulae"
-/// Smart list/formulae: use "formulae" for comma-separated statements, "list" otherwise.
-/// Perl: Formulae = Statement (',' Statement)* produces meaning="formulae"
-/// but \quad-separated items produce meaning="list".
-pub fn _formulae_apply(
+/// Perl: NewFormulae — punct-separated formulas at top level → meaning="formulae".
+/// This action is used by `formula_list` (the top-level rule that competes with
+/// `statements` via `list_apply`). It ALWAYS produces meaning="formulae", but
+/// REJECTS the parse (returns Err) if no items are relational — causing Marpa
+/// to fall back to the `statements` parse which produces "list".
+pub fn formulae_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
@@ -307,15 +325,17 @@ pub fn _formulae_apply(
   let mut right = right.unwrap();
   let sep = sep.unwrap();
 
-  // Determine meaning based on separator content: comma => formulae, else => list
-  let is_comma = match &sep {
-    XM::Lexeme(lex, _) => lex.contains(','),
-    XM::Token(props, _) => props.content.as_deref() == Some(","),
-    _ => false,
-  };
-  let meaning = if is_comma { "formulae" } else { "list" };
+  // Check if ANY item is relational — if not, reject this parse.
+  // This forces Marpa to use the `statements` rule (list_apply) instead.
+  let left_rel = left.as_ref().is_some_and(is_relational_item);
+  let right_rel = is_relational_item(&right);
+  if !left_rel && !right_rel {
+    return Err("formulae_apply: no relational items, use list_apply instead".into());
+  }
 
-  // If left is already a Dual with same meaning, extend it
+  let meaning = "formulae"; // always
+
+  // If left is already a formulae Dual, extend it
   if let Some(XM::Dual(ref mut content, ref mut pres, _, _)) = left {
     if let XM::Apply(ref op, ref mut op_args, _, _) = **content {
       if let XM::Token(ref props, _) = *op.0 {

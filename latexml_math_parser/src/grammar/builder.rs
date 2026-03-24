@@ -273,6 +273,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
       | statement vertbar statements => vertbar_modifier;
 
+    // Perl MathGrammar: Formulae = Formula (endPunct Formula)* → NewFormulae()
+    // formula_list: punct-separated formulas at top level → always "formulae".
+    // Only fires when there are 2+ items (single items go through `statements`).
+    // formulae_apply REJECTS the parse if no items are relational, so Marpa
+    // falls back to the `statements` parse which produces "list".
+    formula_list = statement punct statement => formulae_apply
+      | formula_list punct statement => formulae_apply;
+
     // Extensions, now that we have more category variables defined
     fenced_factor = lbrace expression rbrace    => fenced
            | lbracket expression rbracket       => fenced
@@ -496,7 +504,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
     // These already have valid prefix interpretations inside expressions.
     orphan_op = mulop | binop | diffop | supop | modifierop;
-    anything = statements | anyop | anyscript |
+    anything = formula_list | statements | anyop | anyscript |
       anyop anyop => compound_operator_2 |
       // Perl MathGrammar L81: leading orphan operator (tabular fragment).
       // Only at the start rule (anything) — not recursive, not inside subexpressions.
