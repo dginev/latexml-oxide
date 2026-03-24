@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 292 pass, 0 fail, 32 ignored (51 commits). Session 36 (28 commits): +ncases_test, +vertbars_test, +ntheorem_test, +relations_test. **eval_at + norm grammar**. **bigop scope fix**. **C5: script content preservation**. **Formulae vs list fix**. **Period separator**. **Absent base in scripts**. **Statements inside script content**. **Trailing period stripping**.
+**Status (2026-03-24):** 292 pass, 0 fail, 32 ignored (53 commits). Session 36 (30 commits): +ncases_test, +vertbars_test, +ntheorem_test, +relations_test. **eval_at + norm grammar**. **bigop scope fix**. **C5: script content preservation**. **Formulae vs list fix**. **Period separator**. **Absent base in scripts**. **Statements in scripts**. **Trailing period stripping**. **limit-from term** + fenced term_list in parens. Design decisions #13-#17.
 
 ### Active TODO items (ordered)
 
