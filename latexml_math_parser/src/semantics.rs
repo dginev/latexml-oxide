@@ -870,6 +870,21 @@ pub fn annotated_fenced_modifier(
   )))
 }
 
+/// Perl MathGrammar L223: expression PUNCT OPEN relop/modifierop Expression CLOSE
+/// Semicolon annotation: a;(<e) → annotated(a, Fence((, absent < e, )))
+/// Drops the PUNCT arg and delegates to annotated_fenced_modifier.
+pub fn annotated_punct_fenced_modifier(
+  rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  p: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // args: [expr, punct, open, op, inner_expr, close]
+  // Drop punct (index 1) and delegate
+  args.remove(1); // remove punct
+  annotated_fenced_modifier(rule_id, args, p, ctxt)
+}
+
 /// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
 /// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
 /// only parsed as function application when speculation is active. Without speculation,

@@ -209,7 +209,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Perl MathGrammar L224-233: OPEN relop/modifierop Expression balancedClose
       // Parenthesized modifier expressions: x(>0) → annotated(x, Fence(>0))
       | expression lparen relop expression rparen => annotated_fenced_modifier
-      | expression lparen modifierop expression rparen => annotated_fenced_modifier;
+      | expression lparen modifierop expression rparen => annotated_fenced_modifier
+      // Perl MathGrammar L223: PUNCT? OPEN relop Expression CLOSE
+      // Semicolon annotation: a;(<e) → annotated(a, absent < e)
+      | expression punct lparen relop expression rparen => annotated_punct_fenced_modifier
+      | expression punct lparen modifierop expression rparen => annotated_punct_fenced_modifier;
 
     // Formula
     // Perl MathGrammar L73/236: MODIFIEROP Expression => Apply(mod, Absent, expr)
