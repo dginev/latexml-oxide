@@ -924,7 +924,17 @@ LoadDefinitions!({
   DefConstructor!("\\@@gathered DigestedBody",
     "#1",
     before_digest => { bgroup(); },
-    reversion => "\\begin{gathered}#1\\end{gathered}");
+    after_digest => sub[whatsit] {
+      // Perl: { 'default' => 'center' } — all rows centered
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("center"));
+    },
+    reversion => "\\begin{gathered}#1\\end{gathered}",
+    after_construct => sub[document, whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = get_multirow_alignment_rule(whatsit);
+        rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    });
 
   DefMacro!("\\aligned[]",
     "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@amsaligned\\lx@begin@alignment",
@@ -1228,6 +1238,11 @@ pub fn rearrange_lone_ams_aligned(
 /// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST, etc.
 fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
   let mut rules = Vec::new();
+  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_DEFAULT") {
+    if let Stored::String(s) = &*val {
+      rules.push(("default".to_string(), arena::to_string(*s)));
+    }
+  }
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_0") {
     if let Stored::String(s) = &*val {
       rules.push(("0".to_string(), arena::to_string(*s)));
@@ -1420,6 +1435,15 @@ fn rearrange_ams_multirow(
   let rows = element_nodes(&array);
   let num_rows = rows.len();
   for (key, align_val) in align_rules {
+    if key == "default" {
+      // Apply default alignment to ALL rows
+      for row in &rows {
+        for mut cell in element_nodes(row) {
+          cell.set_attribute("align", align_val).ok();
+        }
+      }
+      continue;
+    }
     let row_idx = if key == "last" {
       if num_rows > 0 { num_rows - 1 } else { continue; }
     } else if let Ok(idx) = key.parse::<usize>() {
