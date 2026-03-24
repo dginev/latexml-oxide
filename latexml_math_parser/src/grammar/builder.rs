@@ -272,20 +272,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     statements = statement
       | statement end_punct => postfix_embellished
       | statements punct statement => list_apply
-      // Perl MathGrammar L129: endPunct : PUNCT | PERIOD
-      // Period acts as formula/list separator, same as comma
+      // Perl MathGrammar L129: endPunct includes PERIOD.
+      // Period has lower precedence than comma but acts as formula separator.
       | statements period statement => list_apply
       // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
       | statement vertbar statements => vertbar_modifier;
 
     // Perl MathGrammar: Formulae = Formula (endPunct Formula)* → NewFormulae()
-    // formula_list: punct-separated formulas at top level → always "formulae".
-    // Only fires when there are 2+ items (single items go through `statements`).
-    // formulae_apply REJECTS the parse if no items are relational, so Marpa
-    // falls back to the `statements` parse which produces "list".
     formula_list = statement punct statement => formulae_apply
       | formula_list punct statement => formulae_apply
-      // Period also separates formulae (Perl: endPunct)
+      // Period also separates formulae
       | statement period statement => formulae_apply
       | formula_list period statement => formulae_apply;
 

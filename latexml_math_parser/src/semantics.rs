@@ -2708,13 +2708,19 @@ pub fn eval_at(
   let (sub_script, sup_script) = if args.len() == 2 {
     let s1 = args.remove(0);
     let s2 = args.remove(0);
-    // Determine which is sub and which is super by checking the role
+    // Determine which is sub and which is super by checking the role.
+    // faux_wrap returns Wrap([lexeme, content]) — extract the lexeme first.
     let s1_is_sub = s1.as_ref().map_or(true, |xm| {
-      if let XM::Lexeme(ref lex, _) = xm {
-        lookup_lex_node(lex.as_str(), ctxt.nodes)
-          .map(|n| n.get_attribute("role").unwrap_or_default().contains("SUB"))
-          .unwrap_or(true)
-      } else { true }
+      let lex = match xm {
+        XM::Lexeme(ref l, _) => Some(l.as_str()),
+        XM::Wrap(ref items, _, _) if !items.is_empty() => {
+          if let XM::Lexeme(ref l, _) = items[0] { Some(l.as_str()) } else { None }
+        },
+        _ => None,
+      };
+      lex.and_then(|l| lookup_lex_node(l, ctxt.nodes).ok())
+        .map(|n| n.get_attribute("role").unwrap_or_default().contains("SUB"))
+        .unwrap_or(true)
     });
     if s1_is_sub {
       (s1, s2)
