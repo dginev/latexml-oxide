@@ -397,9 +397,22 @@ LoadDefinitions!({
   //======================================================================
   // Perl: DefConstructor('\@@multlined DigestedBody', "#1", ...)
   // DigestedBody absorbs the entire content until the matching end command.
+  // Perl: afterDigest sets alignment rule {default=>'center', 0=>'left', -1=>'right'}
+  // afterConstruct calls rearrangeAMSMultirow
   DefConstructor!("\\@@multlined DigestedBody",
     "#1",
-    before_digest => { bgroup(); }
+    before_digest => { bgroup(); },
+    after_digest => sub[whatsit] {
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("center"));
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    },
+    after_construct => sub[document, whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
+        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    }
   );
   DefMacro!("\\multlined[][]",
     "\\@ams@multirow@bindings{name=multlined}\\@@multlined\\lx@begin@alignment");
