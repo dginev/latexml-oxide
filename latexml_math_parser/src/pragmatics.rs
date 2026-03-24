@@ -32,10 +32,13 @@ pub enum ValidationPragmatics {
   /// Prefer parses where scripts attach to bases rather than floating standalone.
   MaximizeScriptAttachment,
   /// An expression should never have `absent` on BOTH the left and right sides
-  /// of a binary/relational operator. `absent < a` (prefix) or `a > absent` (postfix)
-  /// are valid, but `absent < a > absent` is too tortured to be real notation.
-  /// This prevents `< a >` from being parsed as bilateral relational chains.
+  /// of a binary/relational operator.
   NoBilateralAbsent,
+  /// Functions prefer wider absorption: `\log 2x^2` means `log(2*x^2)`,
+  /// not `log(2)*x^2`. When a function can absorb more factors, prefer that parse.
+  /// Implemented by penalizing parses where a function's result is multiplied
+  /// by factors that could have been the function's argument.
+  FunctionsPreferWiderAbsorption,
 }
 
 impl ValidationPragmatics {
@@ -68,6 +71,7 @@ impl ValidationPragmatics {
       AdjacentUnfencedScriptsDontApply,
       AdjacentFunctionsDontUnifyIntoOperator,
       ConsistentLetterBlocks,
+      FunctionsPreferWiderAbsorption,
       ConsistentCase,
       ConsistentCaseFlat,
       ConsistentCaseFlatUnstyled,
@@ -99,6 +103,7 @@ impl ValidationPragmatics {
       RestrictNumeralFractions => pragma_restrict_numeral_fractions(tree),
       MaximizeScriptAttachment => pragma_maximize_script_attachment(tree),
       NoBilateralAbsent => pragma_no_bilateral_absent(tree),
+      FunctionsPreferWiderAbsorption => pragma_functions_prefer_wider_absorption(tree),
       _ => Ok(()),
     }
   }
@@ -576,6 +581,43 @@ fn pragma_no_bilateral_absent(tree: &XM) -> Result<(), Box<dyn Error>> {
           "Prune: bilateral absent (absent on both sides) is never valid notation.".into()
         );
       }
+    }
+  }
+  Ok(())
+}
+
+/// Functions prefer wider argument absorption: `\log 2x^2` means `log(2*x^2)`.
+/// Prune parses where a function application is immediately followed by invisible
+/// multiplication with unfenced factors. The competing parse would have the function
+/// absorb those factors as arguments.
+fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    match **op {
+      XM::Lexeme(ref oplexeme, _) if oplexeme.contains("invisible_operator") => {
+        let trees = args.trees();
+        if trees.len() == 2 {
+          // LHS is a function application (Apply(function, arg))
+          if let XM::Apply(Operator(ref func_op), ref func_args, _, ref func_meta) = trees[0] {
+            // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
+            let func_name = func_op.base_operator_name();
+            if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
+              && func_meta.fenced.is_none()
+              && func_args.trees().len() == 1
+            {
+              // RHS is an unfenced factor — it could have been the function's argument
+              let rhs = trees[1];
+              let rhs_meta = rhs.get_meta();
+              if rhs_meta.fenced.is_none() {
+                return Err(
+                  "Prune: function application followed by unfenced factor — \
+                   prefer wider absorption.".into()
+                );
+              }
+            }
+          }
+        }
+      },
+      _ => {},
     }
   }
   Ok(())

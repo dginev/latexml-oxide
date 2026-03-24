@@ -384,8 +384,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += opfunction lbracket formula rbracket => apply_delimited;
     // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += opfunction fenced_factor => prefix_apply;
-    // Perl: OPFUNCTION absorbs barearg (factor chain) just like FUNCTION/TRIGFUNCTION
-    // \log x => log@(x), \operatorname{cov}(L) already handled by fenced_factor rule
+    // Perl: OPFUNCTION absorbs factor chain via addOpArgs (barearg + moreargs).
+    // \log 2x^2 => log@(2*x^2). Absorbs tight_term (factor chain with invisible times).
     tight_term += opfunction tight_term => prefix_apply;
     tight_term += opfunction factor => prefix_apply;
     // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
