@@ -2407,8 +2407,13 @@ pub fn open_fenced(
       XProps::default(),
       Meta::default(),
     );
+    // Perl: XMWrap(open, content, absent_close) — absent marks missing close delimiter
+    let absent_close = XM::Token(
+      XProps { meaning: Some(Cow::Borrowed("absent")), ..XProps::default() },
+      Meta::default(),
+    );
     let pres = XM::Wrap(
-      vec![open, arg],
+      vec![open, arg, absent_close],
       XProps::default(),
       Meta::default(),
     );
@@ -2419,8 +2424,13 @@ pub fn open_fenced(
       Meta::default(),
     )))
   } else {
+    // Non-brace open without close — just wrap
+    let absent_close = XM::Token(
+      XProps { meaning: Some(Cow::Borrowed("absent")), ..XProps::default() },
+      Meta::default(),
+    );
     Ok(Some(XM::Wrap(
-      vec![open, arg],
+      vec![open, arg, absent_close],
       XProps::default(),
       Meta::default(),
     )))
