@@ -589,15 +589,26 @@ LoadDefinitions!({
   DefPrimitive!("\\newgathered{}{}{}{}", sub[(name, _pre, _post, _after)] {
     let env_name = name.to_string();
     // Create \name macro → begins gathered alignment
-    let begin_body = format!(
-      "\\@ams@multirow@bindings{{name={env_name}}}\\@@newgathered@dummy\\lx@begin@alignment"
-    );
+    // Build tokens manually to preserve @ in CS names
+    let mut begin_toks = vec![
+      T_CS!("\\@ams@multirow@bindings"),
+      T_BEGIN!(),
+    ];
+    begin_toks.extend(ExplodeText!(&format!("name={env_name}")));
+    begin_toks.extend(vec![
+      T_END!(),
+      T_CS!("\\@@newgathered@dummy"),
+      T_CS!("\\lx@begin@alignment"),
+    ]);
     let begin_cs = T_CS!(&format!("\\{env_name}"));
-    def_macro(begin_cs, None, Tokenize!(&begin_body), None)?;
+    def_macro(begin_cs, None, Tokens::new(begin_toks), None)?;
     // Create \endname macro → ends alignment
-    let end_body = "\\lx@end@alignment\\@end@gathered";
+    let end_toks = Tokens::new(vec![
+      T_CS!("\\lx@end@alignment"),
+      T_CS!("\\@end@gathered"),
+    ]);
     let end_cs = T_CS!(&format!("\\end{env_name}"));
-    def_macro(end_cs, None, Tokenize!(end_body), None)?;
+    def_macro(end_cs, None, end_toks, None)?;
   });
   Let!("\\renewgathered", "\\newgathered");
 
