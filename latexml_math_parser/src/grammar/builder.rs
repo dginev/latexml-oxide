@@ -271,9 +271,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     end_punct = punct | period;
     statements = statement
       | statement end_punct => postfix_embellished
+      | statements end_punct => postfix_embellished
       | statements punct statement => list_apply
       // Perl MathGrammar L129: endPunct includes PERIOD.
-      // Period has lower precedence than comma but acts as formula separator.
       | statements period statement => list_apply
       // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
       | statement vertbar statements => vertbar_modifier;
@@ -386,10 +386,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     script_op = addop | mulop | binop | relop | arrow | metarelop
       | bigop | sumop | intop | limitop | diffop | vertbar | supop
       | modifierop | operator;
-    // Script content: expressions or bare operators
+    // Script content: expressions, statements (period/comma-separated), or bare operators
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap
+      | start_postsubscript statements end_postsubscript => faux_wrap
+      | start_postsubscript formula_list end_postsubscript => faux_wrap
       | start_postsubscript script_op end_postsubscript => faux_wrap;
     postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap
+      | start_postsuperscript statements end_postsuperscript => faux_wrap
+      | start_postsuperscript formula_list end_postsuperscript => faux_wrap
       | start_postsuperscript script_op end_postsuperscript => faux_wrap;
     floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap
       | start_floatsubscript script_op end_floatsubscript => faux_wrap;
