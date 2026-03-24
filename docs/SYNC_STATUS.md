@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 290 pass, 0 fail, 34 ignored (39 commits). Session 36: +ncases_test, +vertbars_test. **evaluated-at grammar** (`a|_∞` → `evaluated-at@(a,∞)`). **norm grammar** (`||a||` → `norm@(a)` with ‖). **bigop scope fix**: removed any_bigop from scripted_factor → bigop_application now absorbs arguments even after invisible times. **_xmkey resolution** order fix for eval_at.
+**Status (2026-03-24):** 291 pass, 0 fail, 33 ignored (42 commits). Session 36: +ncases_test, +vertbars_test, +ntheorem_test. **evaluated-at grammar** (`a|_∞`). **norm grammar** (`||a||`). **bigop scope fix**. **Script content preservation (C5)**: faux_wrap now preserves parsed content → fixes empty XMRef for f^{(n)}, q_{a,b}.
 
 ### Active TODO items (ordered)
 
@@ -410,7 +410,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
 - [ ] **48. 70_parse suite** (70_parse) — 22/28 pass, 6 ignored. +vertbars_test (session 36). Remaining: relations 53, calculus 23, scripts 50, functions 119, artefacts 25, qm 74, operators 128.
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
-- [ ] **52. ntheorem_test** (55_theorem) — ~50 diffs (was 1423). Mostly ID renumbering + f^{(n)} _xmkey issue.
+- [x] **52. ntheorem_test** (55_theorem) — DONE (was 1423 diffs). Fixed by C5 script content preservation + bigop scope fix.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
 ### Alignment gaps
@@ -426,7 +426,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] C2. Font specialize for parser tokens in nested script contexts
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
 - [ ] C4. ltx_nopad_l on @{}l@{} columns
-- [ ] C5. Script content preservation: `faux_wrap` discards parsed content inside scripts, `obtain_arg` re-reads from DOM. Causes empty XMRef for `f^{(n)}` (fenced content in superscript). Blocks ntheorem (~42 diffs).
+- [x] C5. Script content preservation: FIXED. faux_wrap now returns Wrap([lexeme, content]), new_script uses parsed content directly.
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
