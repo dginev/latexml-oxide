@@ -46,13 +46,8 @@ static INIT_LOGGER: Once = Once::new();
 pub fn init_logger() {
   INIT_LOGGER.call_once(|| {
     latexml_core::util::logger::init(log::LevelFilter::Warn).unwrap();
-    // Initializing the libxml parser ONCE is a recommendation for thread-safety,
-    // which should hopefully avoid any hangs in a threaded "cargo test"
-    // this may also be needed in web servers running parallel latexml_oxide conversion jobs
-    // See: https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/libxml2-2.4.24/doc/threads.html
-    unsafe {
-      libxml::bindings::xmlInitParser();
-    }
+    // libxml2 thread-safe initialization is now handled by
+    // latexml_core::ensure_libxml_init() called from Document::new()
   });
 }
 
