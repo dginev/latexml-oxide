@@ -212,7 +212,12 @@ LoadDefinitions!({
   // IEEEeqnarray => eqnarray
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   Let!(T_CS!("\\endIEEEeqnarray"), T_CS!("\\endeqnarray"));
-  DefMacro!(T_CS!("\\IEEEeqnarray*"), "{}", "\\eqnarray*");
+  // Perl: DefMacroI(T_CS('\IEEEeqnarray*'), '{}', T_CS('\eqnarray*'));
+  // Must use T_CS! for the expansion so * is part of the CS name, not a separate token.
+  {
+    let params = parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?;
+    def_macro(T_CS!("\\IEEEeqnarray*"), params, Tokens!(T_CS!("\\eqnarray*")), None)?;
+  }
   Let!(T_CS!("\\endIEEEeqnarray*"), T_CS!("\\endeqnarray*"));
 
   // Column types for IEEEeqnarray: L, C, R
