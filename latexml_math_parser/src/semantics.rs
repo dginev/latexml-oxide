@@ -464,10 +464,8 @@ pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
   // Recurse into children first (bottom-up)
   match xm {
     XM::Apply(_, ref mut args, _, _) => {
-      for arg in &mut args.0 {
-        if let Some(ref mut a) = arg {
-          restructure_formulae_right(a)?;
-        }
+      for arg in args.0.iter_mut().flatten() {
+        restructure_formulae_right(arg)?;
       }
     },
     XM::Wrap(ref mut items, _, _) => {
@@ -668,14 +666,12 @@ pub fn infix_relation(
           };
           if is_rel {
             // Check last argument
-            if let Some(Some(last)) = args.0.last() {
-              if let XM::Dual(ref content, _, _, _) = last {
+            if let Some(Some(XM::Dual(ref content, _, _, _))) = args.0.last() {
                 if let XM::Apply(ref inner_op, _, _, _) = **content {
                   if let XM::Token(ref props, _) = *inner_op.0 {
                     return props.meaning.as_deref() == Some("list");
                   }
                 }
-              }
             }
           }
           false
@@ -807,8 +803,8 @@ pub fn prefix_apply(
       matches!(role, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION")
     },
     Some(XM::Token(props, _)) => {
-      props.role.as_deref().map_or(false, |r|
-        matches!(r, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION"))
+      props.role.as_deref()
+        .is_some_and(|r| matches!(r, "FUNCTION" | "OPFUNCTION" | "TRIGFUNCTION"))
     },
     _ => false,
   };
@@ -1038,6 +1034,7 @@ pub fn speculative_prefix_apply(
 /// Matches factor_base followed by addop. Semantic checks:
 /// 1. The addop must be + or - (not other ADDOP like ⊕)
 /// 2. The factor_base should be a number or simple ID (not a compound expression)
+///
 /// If checks fail, prunes the parse so Marpa tries addition instead.
 pub fn limit_from_apply(
   _rule_id: i32,
@@ -2713,6 +2710,7 @@ pub fn close_fenced(
 /// Double-fenced: <<expr>> or <<list>> — double angle brackets as a single
 /// semantic unit. Used in quantum mechanics (<<a|b>>), operator theory, etc.
 /// Produces Apply(delimited-<<>>, content).
+#[allow(dead_code)]
 pub fn double_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2757,7 +2755,7 @@ pub fn eval_at(
     let s2 = args.remove(0);
     // Determine which is sub and which is super by checking the role.
     // faux_wrap returns Wrap([lexeme, content]) — extract the lexeme first.
-    let s1_is_sub = s1.as_ref().map_or(true, |xm| {
+    let s1_is_sub = s1.as_ref().is_none_or(|xm| {
       let lex = match xm {
         XM::Lexeme(ref l, _) => Some(l.as_str()),
         XM::Wrap(ref items, _, _) if !items.is_empty() => {

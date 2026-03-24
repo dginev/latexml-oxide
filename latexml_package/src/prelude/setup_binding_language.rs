@@ -1622,8 +1622,13 @@ macro_rules! DeclareOption {
 
 #[macro_export]
 macro_rules! ProcessOptions {
+  // ProcessOptions!() — non-star, declared order (inorder=false)
   () => {
-    process_options()?;
+    process_options(false)?;
+  };
+  // ProcessOptions!(*) — star variant, in-order processing (inorder=true)
+  (*) => {
+    process_options(true)?;
   };
 }
 

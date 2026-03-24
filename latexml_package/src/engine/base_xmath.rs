@@ -1182,7 +1182,7 @@ LoadDefinitions!({
                 } else {
                   let mut xm_text =
                     document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
-                  xm_text.set_content("otherwise");
+                  let _ = xm_text.set_content("otherwise");
                   document.close_element_at(&mut xm_text)?;
                 }
               }
@@ -1262,7 +1262,7 @@ LoadDefinitions!({
                 } else {
                   let mut xm_text =
                     document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
-                  xm_text.set_content("otherwise");
+                  let _ = xm_text.set_content("otherwise");
                   document.close_element_at(&mut xm_text)?;
                 }
               }

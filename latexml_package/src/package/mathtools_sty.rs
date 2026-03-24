@@ -64,7 +64,8 @@ LoadDefinitions!({
   // \smashoperator — destructures argument to recognize operators and scripts
   DefMacro!("\\smashoperator[]{}", "\\lx@smashoperator{#1}#2{}{}{}{}{}{}\\end");
   // TODO: \lx@smashoperator has complex sub{} body — stubbed to pass through
-  DefMacro!("\\lx@smashoperator{}{}{}{}{}{}{}{}", "#2");
+  // Perl uses "Until:\end" to consume trailing \end sentinel from outer macro
+  DefMacro!("\\lx@smashoperator{} {}{}{}{}{}{} Until:\\end", "#2");
   // TODO: \lx@@smashoperator has complex afterDigest — stubbed
   DefMacro!("\\lx@@smashoperator{}{}{}{}", "#2");
 
@@ -476,7 +477,7 @@ LoadDefinitions!({
     let body = format!("\\left{ldel_s}#1\\right{rdel_s}");
     // Use the original cs Token directly (not T_CS! which would double-escape)
     let params = parse_parameters("{}", &cs, true)?;
-    def_macro(cs.clone(), params, Tokenize!(&body), None)?;
+    def_macro(cs, params, Tokenize!(&body), None)?;
   });
 
   // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
@@ -488,7 +489,7 @@ LoadDefinitions!({
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
     let expansion = format!("\\left{ldel_s}#1\\right{rdel_s}");
     let params = parse_parameters(&param_spec, &cs, true)?;
-    def_macro(cs.clone(), params, Tokenize!(&expansion), None)?;
+    def_macro(cs, params, Tokenize!(&expansion), None)?;
   });
 
   // \DeclarePairedDelimiterXPP — most general form
@@ -497,7 +498,7 @@ LoadDefinitions!({
     let rdel_s = rdel.to_string();
     let body = format!("\\left{ldel_s}#1\\right{rdel_s}");
     let params = parse_parameters("{}", &cs, true)?;
-    def_macro(cs.clone(), params, Tokenize!(&body), None)?;
+    def_macro(cs, params, Tokenize!(&body), None)?;
   });
 
   // \reDeclarePairedDelimiterInnerWrapper — stub (rarely used)

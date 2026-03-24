@@ -273,7 +273,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
       assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
       if !options.noerror {
-        Error!("missing_file", name,
+        // Perl uses Warn (not Error) for missing files — matches L2646 of Package.pm
+        Warn!("missing_file", name,
           s!("Can't find binding or file for '{filename}'. \
             No dispatcher entry and no raw file found on disk."));
       }
@@ -669,7 +670,10 @@ fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
   Ok(())
 }
 
-pub fn process_options() -> Result<()> {
+/// Perl Package.pm L2430-2465: ProcessOptions / ProcessOptions*
+/// `inorder=false` (\ProcessOptions) — execute in declared order, default handler for undeclared
+/// `inorder=true` (\ProcessOptions*) — execute in order passed, class options silently skipped
+pub fn process_options(inorder: bool) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
   let name = if lookup_definition(&currname_token)?.is_some() {
@@ -686,70 +690,62 @@ pub fn process_options() -> Result<()> {
   let opt_key = s!("opt@{}.{}", name, ext);
   let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
   let class_options = lookup_vecdeque("class_options").unwrap_or_default();
-  // Execute options in declared order (unless \ProcessOptions*)
 
-  // TODO: processing options, not yet supported
-  // if ($options{inorder}) {    # Execute options in the order passed in (eg. \ProcessOptions*)
-  //   foreach my $option (@class_options) {    # process global options, but no error
-  //     if    (executeOption_internal($option))        { }
-  //     elsif (executeDefaultOption_internal($option)) { } }
-  // for option in current_options.iter() {
-  //   if execute_option_internal(option)        { }
-  //   else if execute_default_option_internal(option)) { }
-  // } }
-  // else {
-  let mut requested_options: HashSet<SymStr> = HashSet::default();
-  for option in current_options.iter() {
-    match option {
-      Stored::String(content) => {
-        requested_options.insert(*content);
-      },
-      Stored::Strings(contents) => {
-        for content in contents.iter() {
-          requested_options.insert(*content);
-        }
-      },
-      _ => {},
+  let collect_syms = |vdq: &VecDeque<Stored>| -> Vec<SymStr> {
+    let mut list = Vec::new();
+    for item in vdq.iter() {
+      match item {
+        Stored::String(s) => { list.push(*s); },
+        Stored::Strings(ss) => { for s in ss.iter() { list.push(*s); } },
+        _ => {},
+      }
     }
-  }
-  for option in class_options.iter() {
-    match option {
-      Stored::String(content) => {
-        requested_options.insert(*content);
-      },
-      Stored::Strings(contents) => {
-        for content in contents.iter() {
-          requested_options.insert(*content);
-        }
-      },
-      _ => {},
-    }
-  }
+    list
+  };
+  let cur_options_list = collect_syms(&current_options);
+  let cls_options_list = collect_syms(&class_options);
 
-  // Execute options in declared order (eg. \ProcessOptions)
-  for option in declared_options.iter() {
-    match option {
-      Stored::String(content)
-        if requested_options.contains(content) => {
-          requested_options.remove(content); // Remove it, since it's been handled.'
-          execute_option_internal(*content)?;
-        },
-      Stored::Strings(contents) => {
-        for content in contents.iter() {
-          if requested_options.contains(content) {
-            requested_options.remove(content); // Remove it, since it's been handled.
+  if inorder {
+    // Perl L2447-2453: ProcessOptions* — execute in the order passed
+    // Class options: try executeOption_internal only (no default fallback)
+    for option in &cls_options_list {
+      let _ = execute_option_internal(*option)?;
+    }
+    // Current options: try executeOption, then default handler
+    for option in &cur_options_list {
+      if !execute_option_internal(*option)? {
+        execute_default_option_internal(*option)?;
+      }
+    }
+  } else {
+    // Perl L2454-2461: ProcessOptions — execute in declared order
+    let mut cur_set: HashSet<SymStr> = cur_options_list.iter().copied().collect();
+    let mut cls_set: HashSet<SymStr> = cls_options_list.iter().copied().collect();
+
+    for option in declared_options.iter() {
+      match option {
+        Stored::String(content) => {
+          if cur_set.remove(content) || cls_set.remove(content) {
             execute_option_internal(*content)?;
           }
-        }
-      },
-      _ => {},
+        },
+        Stored::Strings(contents) => {
+          for content in contents.iter() {
+            if cur_set.remove(content) || cls_set.remove(content) {
+              execute_option_internal(*content)?;
+            }
+          }
+        },
+        _ => {},
+      }
+    }
+    // Only undeclared CURRENT options go to default handler (not class options).
+    // Perl L2460-2461: "foreach my $option (@curroptions)" — class options excluded.
+    for option in cur_set.iter() {
+      execute_default_option_internal(*option)?;
     }
   }
-  // Now handle any remaining options (eg. default options), in the given order.
-  for option in requested_options.iter() {
-    execute_default_option_internal(*option)?;
-  }
-  // Now, undefine the handlers?
+  // Now, undefine the handlers
   for option in declared_options.iter() {
     let_i(&T_CS!(s!("\\ds@{}", option)), &T_RELAX!(), None);
   }

@@ -182,14 +182,10 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(_star)] {
-    // TODO:
-    // if star.is_some() {
-    //   "inorder"
-    // }
-    // ProcessOptions!(($star ? (inorder => 1) : ()));
-    Info!("TODO","\\ProcessOptions","implement fully, missing 'inorder'");
-    process_options()?;
+  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(star)] {
+    // Perl: ProcessOptions(($star ? (inorder => 1) : ()));
+    let inorder = star.is_some();
+    process_options(inorder)?;
     Ok(Vec::new())
   });
   DefMacro!("\\@options", "\\ProcessOptions*");

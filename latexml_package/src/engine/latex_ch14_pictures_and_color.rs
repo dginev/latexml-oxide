@@ -106,9 +106,9 @@ LoadDefinitions!({
         if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
       };
       Ok(stored_map!(
-        "width"      => Stored::String(arena::pin(&fmt_pt(w))),
-        "height"     => Stored::String(arena::pin(&fmt_pt(h))),
-        "unitlength" => Stored::String(arena::pin(&fmt_pt(unit)))
+        "width"      => Stored::String(arena::pin(fmt_pt(w))),
+        "height"     => Stored::String(arena::pin(fmt_pt(h))),
+        "unitlength" => Stored::String(arena::pin(fmt_pt(unit)))
       ))
     }
   );
@@ -172,8 +172,8 @@ LoadDefinitions!({
         px_value(xlength * unit * my / mx.abs())
       };
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(&format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
-        "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
+        "points" => Stored::String(arena::pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
+        "thick"  => Stored::String(arena::pin(format!("{thick}"))),
         "color"  => "#000000"
       ))
     }
@@ -204,8 +204,8 @@ LoadDefinitions!({
         px_value(xlength * unit * my / mx.abs())
       };
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(&format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
-        "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
+        "points" => Stored::String(arena::pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
+        "thick"  => Stored::String(arena::pin(format!("{thick}"))),
         "color"  => "#000000"
       ))
     }
@@ -233,10 +233,10 @@ LoadDefinitions!({
         ("none", "#000000")
       };
       Ok(stored_map!(
-        "radius" => Stored::String(arena::pin(&format!("{}", fmt_px(radius)))),
+        "radius" => Stored::String(arena::pin(fmt_px(radius))),
         "fill"   => fill,
         "stroke" => stroke,
-        "thick"  => Stored::String(arena::pin(&format!("{thick}")))
+        "thick"  => Stored::String(arena::pin(format!("{thick}")))
       ))
     }
   );
@@ -272,9 +272,9 @@ LoadDefinitions!({
       let (x2, y2) = (px_value(parse_f(3) * unit), px_value(parse_f(4) * unit));
       let (x3, y3) = (px_value(parse_f(5) * unit), px_value(parse_f(6) * unit));
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(&format!("{},{} {},{} {},{}",
+        "points" => Stored::String(arena::pin(format!("{},{} {},{} {},{}",
           fmt_px(x1), fmt_px(y1), fmt_px(x2), fmt_px(y2), fmt_px(x3), fmt_px(y3)))),
-        "thick"  => Stored::String(arena::pin(&format!("{thick}"))),
+        "thick"  => Stored::String(arena::pin(format!("{thick}"))),
         "color"  => "#000000"
       ))
     }

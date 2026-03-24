@@ -630,7 +630,7 @@ fn parse_kludge(mathnode: &mut libxml::tree::Node, document: &mut Document) {
         let end = i;
         // Collect the nodes between OPEN and CLOSE (inclusive)
         let group: Vec<libxml::tree::Node> =
-          elems[start..=end].iter().cloned().collect();
+          elems[start..=end].to_vec();
         if group.len() > 1 {
           let _ = document.wrap_nodes("ltx:XMWrap", group);
           changed = true;
@@ -639,15 +639,17 @@ fn parse_kludge(mathnode: &mut libxml::tree::Node, document: &mut Document) {
       }
     }
     // If we found an unmatched OPEN (no CLOSE), wrap OPEN through end
-    if !changed && open_idx.is_some() {
-      let elems = mathnode.get_child_elements();
-      let start = open_idx.unwrap().min(elems.len().saturating_sub(1));
-      if start < elems.len() {
-        let group: Vec<libxml::tree::Node> =
-          elems[start..].iter().cloned().collect();
-        if group.len() > 1 {
-          let _ = document.wrap_nodes("ltx:XMWrap", group);
-          changed = true;
+    if !changed {
+      if let Some(oi) = open_idx {
+        let elems = mathnode.get_child_elements();
+        let start = oi.min(elems.len().saturating_sub(1));
+        if start < elems.len() {
+          let group: Vec<libxml::tree::Node> =
+            elems[start..].to_vec();
+          if group.len() > 1 {
+            let _ = document.wrap_nodes("ltx:XMWrap", group);
+            changed = true;
+          }
         }
       }
     }
