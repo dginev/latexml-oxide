@@ -311,6 +311,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbracket term punct term rbracket  => interval
            | lbracket term punct term rparen  => interval
            | rbracket term punct term lbracket => interval
+           // TODO: Dirac bra-ket notation (QM) — Perl MathGrammar L375-393
+           // Grammar rules using langle_rel/rangle_rel conflict with relational expressions.
+           // QM notation needs context-sensitive handling (e.g. SawNotation('QM') in Perl).
+           // Semantic actions (qm_expectation, qm_bra, qm_ket, qm_braket, qm_bracket)
+           // are implemented and ready for when the grammar can be made context-sensitive.
+           //
            // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
            // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
            | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced

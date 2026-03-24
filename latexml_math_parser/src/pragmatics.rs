@@ -30,10 +30,12 @@ pub enum ValidationPragmatics {
   PostfixTermsAreFencedIfSingleArguments,
   RestrictNumeralFractions,
   /// Prefer parses where scripts attach to bases rather than floating standalone.
-  /// In mathematical writing, `_b^a A` means A with pre-scripts b,a — not
-  /// a standalone subscript _b times ^a(A). This is a universal convention:
-  /// scripts are inherently relational (they modify something).
   MaximizeScriptAttachment,
+  /// An expression should never have `absent` on BOTH the left and right sides
+  /// of a binary/relational operator. `absent < a` (prefix) or `a > absent` (postfix)
+  /// are valid, but `absent < a > absent` is too tortured to be real notation.
+  /// This prevents `< a >` from being parsed as bilateral relational chains.
+  NoBilateralAbsent,
 }
 
 impl ValidationPragmatics {
@@ -49,6 +51,7 @@ impl ValidationPragmatics {
       StandaloneDiffopsAreNotNumerators,
       PostfixTermsAreFencedIfSingleArguments,
       RestrictNumeralFractions,
+      NoBilateralAbsent,
     ]
   }
   /// Pragmatic rules that are executed at the end of the parse process,
@@ -95,6 +98,7 @@ impl ValidationPragmatics {
       AdjacentFunctionsDontUnifyIntoOperator => pragma_adjacent_functions_dont_unify_into_op(tree),
       RestrictNumeralFractions => pragma_restrict_numeral_fractions(tree),
       MaximizeScriptAttachment => pragma_maximize_script_attachment(tree),
+      NoBilateralAbsent => pragma_no_bilateral_absent(tree),
       _ => Ok(()),
     }
   }
@@ -548,6 +552,29 @@ fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
             );
           }
         }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// An expression with `absent` on BOTH sides of a relational/binary operator is
+/// never valid mathematical notation. `absent < a` (prefix relop) or `a > absent`
+/// (postfix relop) can occur, but `absent < a > absent` is two missing operands —
+/// too tortured. This prunes `< a >` from being parsed as a bilateral relation chain,
+/// allowing QM expectation `<a>` to win instead.
+fn pragma_no_bilateral_absent(tree: &XM) -> Result<(), Box<dyn Error>> {
+  if let XM::Apply(_, ref args, ..) = tree {
+    let trees = args.trees();
+    if trees.len() >= 2 {
+      let first_absent = matches!(trees.first(),
+        Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
+      let last_absent = matches!(trees.last(),
+        Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
+      if first_absent && last_absent {
+        return Err(
+          "Prune: bilateral absent (absent on both sides) is never valid notation.".into()
+        );
       }
     }
   }

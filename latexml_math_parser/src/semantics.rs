@@ -3109,6 +3109,78 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
   None
 }
 
+/// Dirac bra-ket notation helpers.
+/// All produce Apply(meaning, args) wrapped in XMDual with appropriate presentation.
+/// Currently unused — QM grammar rules are disabled due to RELOP ambiguity.
+/// Ready for when context-sensitive QM matching is implemented.
+#[allow(dead_code)]
+fn qm_fenced(
+  meaning: &'static str,
+  mut args_xm: Vec<Option<XM>>,
+  stuff: Vec<XM>,
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let op = XProps { meaning: Some(Cow::Borrowed(meaning)), ..XProps::default() };
+  let mut arg_refs: Vec<&mut XM> = args_xm.iter_mut().filter_map(|a| a.as_mut()).collect();
+  let refs: Vec<Option<XM>> = create_xmrefs(arg_refs.as_mut_slice(), ctxt)?
+    .into_iter().map(Option::Some).collect();
+  Ok(Some(XM::Dual(
+    Box::new(XM::Apply(op.into(), Args(refs), XProps::default(), Meta::default())),
+    Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
+    XProps::default(), Meta::default(),
+  )))
+}
+
+/// `<a>` → expectation@(a) — Perl enclose1: '<@>' => 'expectation'
+#[allow(dead_code)]
+pub fn qm_expectation(
+  _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
+  unp!(args => _open, expr, _close);
+  qm_fenced("expectation", vec![expr], stuff, ctxt)
+}
+
+/// `<a|` → bra@(a) — Perl enclose1: '<@|' => 'bra'
+#[allow(dead_code)]
+pub fn qm_bra(
+  _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
+  unp!(args => _open, expr, _bar);
+  qm_fenced("bra", vec![expr], stuff, ctxt)
+}
+
+/// `|b>` → ket@(b) — Perl enclose1: '|@>' => 'ket'
+#[allow(dead_code)]
+pub fn qm_ket(
+  _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
+  unp!(args => _bar, expr, _close);
+  qm_fenced("ket", vec![expr], stuff, ctxt)
+}
+
+/// `<a|b>` → inner-product@(a, b) — Perl MathGrammar L382-386
+#[allow(dead_code)]
+pub fn qm_braket(
+  _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
+  unp!(args => _open, left, _bar, right, _close);
+  qm_fenced("inner-product", vec![left, right], stuff, ctxt)
+}
+
+/// `<a|f|b>` → quantum-operator-product@(a, f, b) — Perl MathGrammar L387-393
+#[allow(dead_code)]
+pub fn qm_bracket(
+  _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let stuff: Vec<XM> = args.iter().flatten().cloned().collect();
+  unp!(args => _open, left, _bar1, mid, _bar2, right, _close);
+  qm_fenced("quantum-operator-product", vec![left, mid, right], stuff, ctxt)
+}
+
 /// Perl MathGrammar L294: `|| exp ||` → norm
 /// Merges two single vertbar `|` tokens into double `‖` and fences as norm.
 pub fn norm_fenced(
