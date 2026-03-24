@@ -78,7 +78,6 @@ fn operators_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn parens_test() {
   latexml_test_single("tests/parse/parens.tex", "parens", DIR, None, None);
 }
