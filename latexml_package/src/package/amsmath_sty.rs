@@ -594,6 +594,13 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
 
+  // Perl L630: Tag('ltx:equation', afterClose => \&rearrangeLoneAMSAligned)
+  // When an equation closes, check if it contains a lone aligned environment
+  // and restructure into equationgroup/equation/MathFork.
+  Tag!("ltx:equation", after_close => sub[document, node] {
+    rearrange_lone_ams_aligned(document, node)?;
+  });
+
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 153-161
   DefPrimitive!("\\lx@ams@cr@binding", {
@@ -1116,6 +1123,105 @@ LoadDefinitions!({
 });
 
 use latexml_core::document;
+
+/// Perl L632-676: rearrangeLoneAMSAligned
+/// When an equation contains a lone aligned environment as its only content,
+/// restructure into equationgroup with one equation per row, each with MathFork.
+pub fn rearrange_lone_ams_aligned(
+  document: &mut Document,
+  equation: &mut Node,
+) -> Result<()> {
+  use crate::engine::base_xmath::{open_math_fork, close_math_fork};
+  use latexml_core::common::xml::element_nodes;
+
+  // Test: single ltx:Math child?
+  let maths: Vec<Node> = document.findnodes("ltx:Math", Some(equation));
+  if maths.len() != 1 {
+    return Ok(());
+  }
+  let math = &maths[0];
+  // Single child of Math must be XMArray[name='aligned']
+  let math_first = match math.get_first_child() {
+    Some(n) if n.get_type() == Some(libxml::tree::NodeType::ElementNode) => n,
+    _ => return Ok(()),
+  };
+  let children = element_nodes(&math_first);
+  // The first element child of Math's first element should be the XMArray
+  // (possibly after XMath wrapper)
+  let array = if document::get_node_qname(&math_first) == arena::pin_static("ltx:XMath") {
+    let xmath_children = element_nodes(&math_first);
+    if xmath_children.len() != 1 {
+      return Ok(());
+    }
+    xmath_children[0].clone()
+  } else if children.is_empty() {
+    math_first.clone()
+  } else {
+    return Ok(());
+  };
+  if document::get_node_qname(&array) != arena::pin_static("ltx:XMArray") {
+    return Ok(());
+  }
+  if array.get_attribute("name").as_deref() != Some("aligned") {
+    return Ok(());
+  }
+
+  // Unbind the Math node (we'll restructure the equation)
+  let mut math_clone = maths[0].clone();
+  math_clone.unlink_node();
+
+  // Rename equation → equationgroup
+  let mut eqgroup = document.rename_node(equation.clone(), "ltx:equationgroup", false)?;
+  let eq_id = eqgroup.get_attribute("xml:id").unwrap_or_default();
+
+  // For each XMRow in the array, create a new equation
+  let rows: Vec<Node> = document.findnodes("ltx:XMRow", Some(&array));
+  for row in rows {
+    let mut eqn = document.open_element_at(&mut eqgroup, "ltx:equation", None, None)?;
+    if !eq_id.is_empty() {
+      let new_id = document.modify_id(format!("{eq_id}X"));
+      document.set_attribute(&mut eqn, "xml:id", &new_id)?;
+    }
+    let cells: Vec<Node> = document.findnodes("ltx:XMCell", Some(&row));
+    let mut cell_iter = cells.into_iter();
+    // Process cells in pairs (LHS, RHS)
+    while let Some(cell) = cell_iter.next() {
+      let (mut main, mut branch) = open_math_fork(document, &mut eqn)?;
+      // Process up to 2 cells
+      for cell_node in [Some(cell), cell_iter.next()] {
+        let Some(cn) = cell_node else { continue };
+        let align = cn.get_attribute("align").unwrap_or_default();
+        let mut td = document.open_element_at(&mut branch, "ltx:td", None, None)?;
+        if !align.is_empty() {
+          document.set_attribute(&mut td, "align", &align)?;
+        }
+        let cell_children = element_nodes(&cn);
+        if !cell_children.is_empty() {
+          let mut imath = document.open_element_at(&mut td, "ltx:Math", None, None)?;
+          document.set_attribute(&mut imath, "mode", "inline")?;
+          let mut xmath = document.open_element_at(&mut imath, "ltx:XMath", None, None)?;
+          // Clone the cell's children into this XMath
+          document.append_clone(&mut xmath, cell_children.clone())?;
+          document.close_element_at(&mut xmath)?;
+          document.close_element_at(&mut imath)?;
+          // Move original children into main branch
+          for mut child in cell_children {
+            child.unlink_node();
+            let main_xmath = document.findnodes("ltx:XMath", Some(&main));
+            if let Some(mut mx) = main_xmath.into_iter().next() {
+              mx.add_child(&mut child).ok();
+            }
+          }
+        }
+        document.close_element_at(&mut td)?;
+      }
+      close_math_fork(document, &mut eqn, &mut main, &mut branch)?;
+    }
+    document.close_element_at(&mut eqn)?;
+  }
+
+  Ok(())
+}
 
 /// Extract the alignment rule from whatsit properties.
 /// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
