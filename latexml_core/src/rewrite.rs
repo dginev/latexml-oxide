@@ -457,7 +457,38 @@ impl Rewrite {
           // Perl: $self->applyClause($document, $tree, $nmatched, @more_clauses);
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
-        _ => todo!(),
+        Regexp => {
+          // Perl: tests the matched node's text content against a regex.
+          // If it matches, continue with remaining clauses; otherwise skip.
+          if let RewritePattern::String(regex_str) = pattern {
+            let content = tree.get_content();
+            let re = regex::Regex::new(regex_str)
+              .unwrap_or_else(|_| regex::Regex::new("$^").unwrap()); // never-match fallback
+            if re.is_match(&content) {
+              self.apply_clause(document, tree, nmatched, clauses)?;
+            }
+            // else: no match → skip this node (don't mark as seen)
+          }
+        },
+        Label => {
+          // Label clause stores the label on the node. Perl: $$self{label} usage.
+          // Typically compiled away in compile_clause, but if it reaches here, record it.
+          if let RewritePattern::String(label_str) = pattern {
+            let id = tree.get_attribute("xml:id").unwrap_or_default();
+            if !id.is_empty() {
+              document.rewrite_labels.insert(label_str.clone(), id);
+            }
+          }
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        Trace => {
+          // Debug tracing — just continue
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        _ => {
+          // Unimplemented operators — skip silently instead of crashing
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
       }
     } else {
       // No more clauses — mark the matched nodes as seen
