@@ -69,7 +69,10 @@ LoadDefinitions!({
   DefMacro!("\\smashoperator[]{}", "\\lx@smashoperator{#1}#2{}{}{}{}{}{}\\end");
   DefMacro!("\\lx@smashoperator{} {}{}{}{}{}{} Until:\\end", "#2");
 
-  // \adjustlimits — TODO: complex afterDigest with depth/height
+  // \adjustlimits — Perl: {lim1} DefToken InScriptStyle {lim2} DefToken InScriptStyle
+  // Produces two subscripted limit operators. The afterDigest adjusts depth/height
+  // for visual alignment — cosmetic only. Our params read 6 balanced groups where
+  // #2 and #5 are _ tokens (consumed silently by TeX when followed by subscript content).
   DefMacro!("\\adjustlimits{}{}{}{}{}{}", "#1_{#3}#4_{#6}");
 
   DefConstructor!("\\SwapAboveDisplaySkip", "");
