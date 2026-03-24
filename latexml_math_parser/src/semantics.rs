@@ -196,7 +196,9 @@ pub fn list_apply(
 
   // Perl: top-level PUNCT-separated relational formulas (containing RELOP/multirelation)
   // use meaning="formulae" (NewFormulae). Non-relational items use "list" (NewList).
-  // This applies regardless of separator type (comma, \quad, period, etc.).
+  // TODO: This heuristic is a temporary approximation. The real fix is to split the grammar
+  // into formula_list (top level, always "formulae") and expression_list (within formula,
+  // always "list"), matching Perl's Formulae/extendFormula distinction.
   let left_rel = left.as_ref().is_some_and(is_relational_item);
   let right_rel = is_relational_item(&right);
   let meaning = if left_rel && right_rel { "formulae" } else { "list" };
