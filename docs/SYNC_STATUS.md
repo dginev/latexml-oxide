@@ -456,7 +456,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **12. stmaryrd_test** (22_fonts) — DONE (was 2502→2010→990→949→0). Fixed orphan XMTok xml:id stripping in renumber_math_ids (unreferenced XMTok elements inflated ID counter). Flat sequential renumbering. Updated expected XML. Known: 3 equations use `list` where Perl uses `formulae` for mixed BINOP/RELOP \quad-separated expressions (Ex3, Ex9, Ex10). `scriptpos="mid"` vs Perl `"mid1"` for `\leftrightarroweq`.
 - [x] **33. cd_test** (56_ams) — DONE (was 352, 221, 146, 175). apply_delimited for OPFUNCTION. 0 diffs.
 - [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
-- [ ] **36. picture_test** (65_graphics) — 1886 diffs (was 3125, crash). Ported: {picture}, \put (with computed transform), \line/\vector (computed endpoints via slopeToPicCoord), \circle (computed radius), \qbezier (computed 3-point curve), \multiput, \oval/\dashbox/\frame stubs, registers, Tag(ltx:picture) xml:id. Fixed: `get_node_qname` "line" exception, Match:/Until: pair decomposition for computed properties. Remaining: Pair digestion infrastructure (picture width/height), pxValue unit conversion, color #000000 format, inner dimensions (getSize), \makebox/\framebox structure.
+- [ ] **36. picture_test** (65_graphics) — 2024 diffs (was 3125, crash). Session 35: full structural port. Computed: \put transform (px), \line/\vector endpoints (slopeToPicCoord+pxValue), \circle radius, \qbezier 3-point bezier, \pic@makebox@ sub[document] constructor with <rect>+<g class="makebox">, picture width/height/unitlength (via RegisterValue::Pair). Fixed: `get_node_qname` "line" exception, Match:/Until: pair decomposition, pxValue DPI/72.27 conversion, #000000 color format, .0 decimal formatting. BLOCKED remaining: getSize (inner dimensions), UnTeX (tex= attribute), makebox positioning (centering from getSize).
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
 - [x] **39. cleveref_minimal_test** (80_complex) — DONE. Ported cleveref.sty: \lx@cref constructor, crefMulti, type_tag_formatter mappings. 0 diffs.
 
@@ -595,9 +595,9 @@ Tests currently pass against Rust expected XMLs, but Rust output diverges from u
 
 - [x] **46. choose_test** (40_math) — DONE. Fixed \lx@generalized@over delimiter digestion (rewrite \lx@right/\lx@left to \@right/\@left before stomach::digest to avoid egroup semantics). 0 diffs.
 - [x] **47a. arrows_test** (40_math) — DONE. Fixed ARROW multirelation chain (was only RELOP). 0 diffs.
-- [ ] **47. 40_math suite** (40_math) — niceunits 405→38 (nicefrac+units.sty ports, remaining: slash font). not 150 (\not\operatorname{R} sibling issue). testscripts 124 (nested \mathop Marpa RESET). ambiguous_relations 237 (structural diffs).
-- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 12 (OPFUNCTION barearg + lxDeclare fix; remaining: f∘sin x composition scoping). function_argument_syntax 27 (sin π×x multi-function chain — parser fails). scripts/testscripts/arrows/not ~74 each (parser structural).
-- [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
+- [x] **47. 40_math suite** (40_math) — ALL PASS. Session 35: orphan XMTok ID stripping + scriptpos mid1 fix resolved remaining diffs. niceunits, not, testscripts, ambiguous_relations all pass.
+- [ ] **48. 70_parse suite** (70_parse) — 18/28 pass, 10 ignored: array_math_parse 155, artefacts 345, calculus 273, functions 339, operators 422, parens 522, qm 400, relations 258, scripts 301, vertbars 466. All are math parser structural diffs (grammar ambiguity, formulae vs list, XMDual wrapping).
+- [x] **49. plainmath_test** (53_alignment) — PASSES (verified session 35).
 - [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
 - [x] **51. eqnarray_test** (53_alignment) — DONE (was 6→0, was 575→69→9→6). Fixed: postfix_apply n-ary, cdots ELIDEOP, lefteqn class, untex CS spacing, MathFork tex= join, xml:id multi-row pre-advancement. 0 diffs.
 - [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
