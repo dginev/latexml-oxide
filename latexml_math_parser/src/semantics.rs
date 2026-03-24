@@ -394,6 +394,14 @@ pub fn formulae_apply(
     return Err("formulae_apply: no relational items, use list_apply instead".into());
   }
 
+  // Reject when right is non-relational and left is relational.
+  // This forces `a=b, c` to be parsed via `formula relop formula_list`
+  // (producing `a = list(b,c)`) rather than `formulae(a=b, c)`.
+  // Perl: addFormulae extends the RHS as a list, not adding a new formula.
+  if left_rel && !right_rel {
+    return Err("formulae_apply: non-relational right after relational left — use formula_list RHS".into());
+  }
+
   let meaning = "formulae"; // always
 
   // If left is already a formulae Dual, extend it
