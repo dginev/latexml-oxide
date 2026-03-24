@@ -724,10 +724,9 @@ pub fn process_options(inorder: bool) -> Result<()> {
 
     for option in declared_options.iter() {
       match option {
-        Stored::String(content) => {
-          if cur_set.remove(content) || cls_set.remove(content) {
+        Stored::String(content)
+          if cur_set.remove(content) || cls_set.remove(content) => {
             execute_option_internal(*content)?;
-          }
         },
         Stored::Strings(contents) => {
           for content in contents.iter() {
