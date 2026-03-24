@@ -226,6 +226,16 @@ pub fn list_apply(
       return Err("list_apply: item is relational, use formulae_apply instead".into());
     }
   }
+  // Rule 3: Reject when either item has `absent` as a relop operand.
+  // Absent arguments are only valid at the top level (equation fragments).
+  // Inside lists, they indicate a wrong parse level — the relop should be
+  // at formula level, not inside a list item.
+  if left.as_ref().is_some_and(has_absent_relop_operand) {
+    return Err("list_apply: left has absent relop operand (top-level only)".into());
+  }
+  if has_absent_relop_operand(&right) {
+    return Err("list_apply: right has absent relop operand (top-level only)".into());
+  }
   let meaning = "list";
 
   // If left is already a list/formulae Dual, extend it (flat accumulation).
@@ -287,6 +297,34 @@ pub fn formula_list_apply(
     }
   }
   list_apply(rule_id, args, p, ctxt)
+}
+
+/// Check if an XM tree contains `absent` as a direct operand of a relop.
+/// Absent operands are valid at the top level (equation fragments like `= f(x)`)
+/// but should be pruned when inside inner rules (lists, fenced expressions, function args).
+fn has_absent_relop_operand(xm: &XM) -> bool {
+  if let XM::Apply(ref op, ref args, _, _) = xm {
+    let is_rel = match &*op.0 {
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("multirelation")
+          || props.role.as_deref().is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
+      },
+      XM::Lexeme(ref lex, _) => {
+        lex.split(':').next().is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
+      },
+      _ => false,
+    };
+    if is_rel {
+      for arg in &args.0 {
+        if let Some(XM::Token(ref props, _)) = arg {
+          if props.meaning.as_deref() == Some("absent") {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  false
 }
 
 /// Check if an XM tree is a relational formula (contains RELOP or multirelation).
