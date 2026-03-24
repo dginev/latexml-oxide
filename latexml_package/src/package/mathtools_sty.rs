@@ -501,24 +501,62 @@ LoadDefinitions!({
   });
 
   // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
+  // Same star/optional dispatch as DeclarePairedDelimiter but with multi-arg body.
+  // For now, body is ignored — content comes from the nargs parameters.
   DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, _body)] {
+    let cmd = cs.to_string();
+    let cmd_name = cmd.trim_start_matches('\\');
     let n = nargs.value_of() as usize;
     let ldel_s = ldel.to_string();
     let rdel_s = rdel.to_string();
-    // Build parameter spec: {} repeated n times
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let expansion = format!("\\left{ldel_s}#1\\right{rdel_s}");
-    let params = parse_parameters(&param_spec, &cs, true)?;
-    def_macro(cs, params, Tokenize!(&expansion), None)?;
+    // Star variant
+    let star_body = format!("\\left{ldel_s}#1\\right{rdel_s}");
+    let star_cs_name = format!("\\MT@delim@{cmd_name}@star");
+    let star_cs = T_CS!(&star_cs_name);
+    def_macro(star_cs, parse_parameters(&param_spec, &T_CS!(&star_cs_name), true)?,
+      Tokenize!(&star_body), None)?;
+    // Non-star variant
+    let nostar_cs_name = format!("\\MT@delim@{cmd_name}@nostar");
+    let nostar_cs = T_CS!(&nostar_cs_name);
+    // Add [] for optional size prefix before the n args
+    let nostar_param_spec = format!("[]{param_spec}");
+    let nostar_body = format!("#1{ldel_s}#2#1{rdel_s}");
+    def_macro(nostar_cs, parse_parameters(&nostar_param_spec, &T_CS!(&nostar_cs_name), true)?,
+      Tokenize!(&nostar_body), None)?;
+    // Main dispatch
+    let dispatch_toks = Tokens::new(vec![
+      T_CS!("\\@ifstar"),
+      T_BEGIN!(), T_CS!(&star_cs_name), T_END!(),
+      T_BEGIN!(), T_CS!(&nostar_cs_name), T_END!(),
+    ]);
+    def_macro(cs, None, dispatch_toks, None)?;
   });
 
   // \DeclarePairedDelimiterXPP — most general form
+  // Same pattern with star/optional dispatch.
   DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, _nargs, _pre, ldel, rdel, _post, _body)] {
+    let cmd = cs.to_string();
+    let cmd_name = cmd.trim_start_matches('\\');
     let ldel_s = ldel.to_string();
     let rdel_s = rdel.to_string();
-    let body = format!("\\left{ldel_s}#1\\right{rdel_s}");
-    let params = parse_parameters("{}", &cs, true)?;
-    def_macro(cs, params, Tokenize!(&body), None)?;
+    // Star variant
+    let star_body = format!("\\left{ldel_s}#1\\right{rdel_s}");
+    let star_cs_name = format!("\\MT@delim@{cmd_name}@star");
+    def_macro(T_CS!(&star_cs_name), parse_parameters("{}", &T_CS!(&star_cs_name), true)?,
+      Tokenize!(&star_body), None)?;
+    // Non-star variant
+    let nostar_body = format!("#1{ldel_s}#2#1{rdel_s}");
+    let nostar_cs_name = format!("\\MT@delim@{cmd_name}@nostar");
+    def_macro(T_CS!(&nostar_cs_name), parse_parameters("[]{}", &T_CS!(&nostar_cs_name), true)?,
+      Tokenize!(&nostar_body), None)?;
+    // Main dispatch
+    let dispatch_toks = Tokens::new(vec![
+      T_CS!("\\@ifstar"),
+      T_BEGIN!(), T_CS!(&star_cs_name), T_END!(),
+      T_BEGIN!(), T_CS!(&nostar_cs_name), T_END!(),
+    ]);
+    def_macro(cs, None, dispatch_toks, None)?;
   });
 
   // \reDeclarePairedDelimiterInnerWrapper — stub (rarely used)
