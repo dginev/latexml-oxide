@@ -1147,8 +1147,22 @@ pub fn fenced(
     let close_m = morph_vertbar(close, "CLOSE", ctxt.nodes);
     interpret_delimited(op.into(), vec![open_m, arg, close_m], ctxt).map(Option::Some)
   } else {
-    let op = xnew(op_name);
-    interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+    // Check for known delimiter meanings
+    let meaning = match (o.as_ref(), c.as_ref()) {
+      ("\u{230A}", "\u{230B}") => Some("floor"),     // ⌊ ⌋
+      ("\u{2308}", "\u{2309}") => Some("ceiling"),   // ⌈ ⌉
+      ("\u{2016}", "\u{2016}") => Some("norm"),      // ‖ ‖
+      ("lfloor", "rfloor") => Some("floor"),         // name-based match
+      ("lceil", "rceil") => Some("ceiling"),         // name-based match
+      _ => None,
+    };
+    if let Some(m) = meaning {
+      let op = XProps { meaning: Some(Cow::Borrowed(m)), ..XProps::default() };
+      interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+    } else {
+      let op = xnew(op_name);
+      interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+    }
   }
 }
 

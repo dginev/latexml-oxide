@@ -291,6 +291,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace formula singlevertbar formula rbrace => fence
            | lbrace formula middle_bar formula rbrace => fence
            | lbrace formula metarelop formula rbrace => fence
+           // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
+           // Perl MathGrammar: OPEN Expression CLOSE → Fence
+           | open expression close => fenced
            // Empty fenced expressions: () [] {} ⌊⌋ etc.
            | lparen rparen => empty_fenced
            | lbracket rbracket => empty_fenced

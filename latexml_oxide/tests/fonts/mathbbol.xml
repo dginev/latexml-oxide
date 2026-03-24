@@ -7,20 +7,56 @@
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
     <equation xml:id="S0.Ex1">
-      <Math class="ltx_math_unparsed" mode="display" tex="\Langle\Eins\Rangle,\qquad\Lbrack\Eins\Rbrack,\qquad\Lparen\Eins\Rparen," xml:id="S0.Ex1.m1">
+      <Math mode="display" tex="\Langle\Eins\Rangle,\qquad\Lbrack\Eins\Rbrack,\qquad\Lparen\Eins\Rparen," text="list@(delimited-&lt;&gt;@(Eins), delimited-[]@(Eins), Eins)" xml:id="S0.Ex1.m1">
         <XMath>
-          <XMTok font="blackboard" meaning="less-than" name="Langle" role="OPEN">&lt;</XMTok>
-          <XMTok font="blackboard" meaning="1" name="Eins" role="UNKNOWN">1</XMTok>
-          <XMTok font="blackboard" meaning="greater-than" name="Rangle" role="CLOSE">&gt;</XMTok>
-          <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
-          <XMTok font="blackboard" name="Lbrack" role="OPEN" stretchy="false">[</XMTok>
-          <XMTok font="blackboard" meaning="1" name="Eins" role="UNKNOWN">1</XMTok>
-          <XMTok font="blackboard" name="Rbrack" role="CLOSE" stretchy="false">]</XMTok>
-          <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
-          <XMTok font="blackboard" name="Lparen" role="OPEN" stretchy="false">(</XMTok>
-          <XMTok font="blackboard" meaning="1" name="Eins" role="UNKNOWN">1</XMTok>
-          <XMTok font="blackboard" name="Rparen" role="CLOSE" stretchy="false">)</XMTok>
-          <XMTok role="PUNCT">,</XMTok>
+          <XMDual>
+            <XMRef idref="S0.Ex1.m1.1"/>
+            <XMWrap>
+              <XMDual xml:id="S0.Ex1.m1.1">
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S0.Ex1.m1.2"/>
+                  <XMRef idref="S0.Ex1.m1.4"/>
+                  <XMRef idref="S0.Ex1.m1.6"/>
+                </XMApp>
+                <XMWrap>
+                  <XMDual xml:id="S0.Ex1.m1.2">
+                    <XMApp>
+                      <XMTok meaning="delimited-&lt;&gt;"/>
+                      <XMRef idref="S0.Ex1.m1.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="blackboard" meaning="less-than" role="RELOP">&lt;</XMTok>
+                      <XMTok font="blackboard" meaning="1" name="Eins" role="UNKNOWN" xml:id="S0.Ex1.m1.3">1</XMTok>
+                      <XMTok font="blackboard" meaning="greater-than" role="RELOP">&gt;</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
+                  <XMDual xml:id="S0.Ex1.m1.4">
+                    <XMApp>
+                      <XMTok meaning="delimited-[]"/>
+                      <XMRef idref="S0.Ex1.m1.5"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="blackboard" role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="blackboard" meaning="1" name="Eins" role="UNKNOWN" xml:id="S0.Ex1.m1.5">1</XMTok>
+                      <XMTok font="blackboard" role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
+                  <XMDual xml:id="S0.Ex1.m1.6">
+                    <XMRef idref="S0.Ex1.m1.7"/>
+                    <XMWrap>
+                      <XMTok font="blackboard" role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="blackboard" meaning="1" name="Eins" role="UNKNOWN" xml:id="S0.Ex1.m1.7">1</XMTok>
+                      <XMTok font="blackboard" role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMWrap>
+              </XMDual>
+              <XMTok role="PUNCT">,</XMTok>
+            </XMWrap>
+          </XMDual>
         </XMath>
       </Math>
     </equation>
