@@ -224,10 +224,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
     formula_list = expression punct expression => formula_list_apply
-      | formula_list punct expression => formula_list_apply
-      // Period also acts as list separator within formulas (Perl: endPunct)
-      | expression period expression => formula_list_apply
-      | formula_list period expression => formula_list_apply;
+      | formula_list punct expression => formula_list_apply;
     // Comma-separated term lists: term, term, term, ...
     // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
     term_list = term punct term => list_apply
