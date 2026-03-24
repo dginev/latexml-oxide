@@ -616,6 +616,81 @@ fn build_formulae_pair(
   )
 }
 
+/// Post-processing: rename `list` to `vector`/`set` when delimiters wrap the list.
+/// Perl's Fence receives flat (open, item, punct, ..., close) and uses encloseN tables.
+/// Our grammar builds `list` via `list_apply` before fencing can see the items.
+/// This pass walks the tree and checks if a list Dual's presentation XMWrap
+/// starts with OPEN and ends with CLOSE, then applies the encloseN meaning.
+pub fn rename_fenced_lists(xm: &mut XM, nodes: &[libxml::tree::Node]) -> Result<(), Box<dyn Error>> {
+  match xm {
+    XM::Apply(_, ref mut args, _, _) => {
+      for arg in args.0.iter_mut().flatten() {
+        rename_fenced_lists(arg, nodes)?;
+      }
+    },
+    XM::Wrap(ref mut items, _, _) => {
+      for item in items.iter_mut() {
+        rename_fenced_lists(item, nodes)?;
+      }
+      // Check if this Wrap contains [OPEN, list_Dual, CLOSE] — rename list meaning
+      // Handles script content like ^{(1+,0+,1-,0-)} where OPEN/CLOSE are siblings
+      // of the list Dual in the script's presentation Wrap.
+      if items.len() >= 3 {
+        let first_role = get_xm_role(&items[0]);
+        let last_role = get_xm_role(items.last().unwrap());
+        if first_role.as_deref() == Some("OPEN") && last_role.as_deref() == Some("CLOSE") {
+          let o_val: String = items[0].get_value(nodes).unwrap_or_default().into_owned();
+          let c_val: String = items.last().unwrap().get_value(nodes).unwrap_or_default().into_owned();
+          // Find and rename any list Dual among the inner items
+          let len = items.len();
+          for item in items[1..len-1].iter_mut() {
+            if let XM::Dual(ref mut content, _, _, _) = item {
+              if let XM::Apply(ref mut op, ref args, _, _) = **content {
+                if let XM::Token(ref mut props, _) = *op.0 {
+                  if props.meaning.as_deref() == Some("list") {
+                    let n = args.0.len();
+                    let new_meaning = match (o_val.as_ref(), c_val.as_ref()) {
+                      ("(", ")") if n == 2 => Some("open-interval"),
+                      ("[", "]") if n == 2 => Some("closed-interval"),
+                      ("(", "]") if n == 2 => Some("open-closed-interval"),
+                      ("[", ")") if n == 2 => Some("closed-open-interval"),
+                      ("{", "}") => Some("set"),
+                      ("(", ")") => Some("vector"), // n >= 3
+                      _ => None,
+                    };
+                    if let Some(m) = new_meaning {
+                      props.meaning = Some(Cow::Borrowed(m));
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    XM::Dual(ref mut content, ref mut pres, _, _) => {
+      rename_fenced_lists(content, nodes)?;
+      rename_fenced_lists(pres, nodes)?;
+    },
+    XM::Choices(ref mut trees) => {
+      for tree in trees.iter_mut() {
+        rename_fenced_lists(tree, nodes)?;
+      }
+    },
+    _ => {},
+  }
+  Ok(())
+}
+
+fn get_xm_role(xm: &XM) -> Option<String> {
+  match xm {
+    XM::Lexeme(l, _) => l.split(':').next().map(|s| s.to_string()),
+    XM::Token(p, _) => p.role.as_ref().map(|r| r.to_string()),
+    _ => None,
+  }
+}
+
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
 pub fn infix_apply_and_elide(
   rule_id: i32,

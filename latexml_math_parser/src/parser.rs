@@ -762,6 +762,8 @@ impl MathParser {
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         crate::semantics::restructure_formulae_right(&mut parse_tree)?;
+        // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
+        crate::semantics::rename_fenced_lists(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))
       },
       Err(_e) => {
