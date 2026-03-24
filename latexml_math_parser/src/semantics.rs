@@ -203,19 +203,27 @@ pub fn list_apply(
   if left_rel && right_rel {
     return Err("list_apply: both items relational, use formulae_apply instead".into());
   }
-  // Rule 2: Reject when RIGHT is already a list Dual. A list() without
-  // delimiters should not appear as a bare operand in another list — nobody
-  // writes lists-of-lists without parentheses. This prevents the problematic
-  // parse where `a=b, c=d` becomes `a = list(b, c) = d` because the inner
-  // `list(b,c)` would need to appear as the right operand of a higher-level
-  // list_apply to extend further.
-  if let XM::Dual(ref content, _, _, _) = right {
-    if let XM::Apply(ref op, _, _, _) = **content {
-      if let XM::Token(ref props, _) = *op.0 {
-        if props.meaning.as_deref() == Some("list") {
-          return Err("list_apply: right operand is a list (needs delimiters to nest)".into());
+  // Rule 2: If EITHER item is relational, reject. This prevents commas from
+  // creating lists within relational formulas. For `a=b, c=d`, the inner
+  // `list_apply(b, comma, c)` is rejected because the formula_list rule
+  // should handle the comma as a formula boundary instead.
+  // Exception: left can be relational when it's being extended (left is already
+  // a list/formulae Dual from a previous list_apply — handled by extension below).
+  if left_rel || right_rel {
+    // Allow extension of existing list/formulae Duals (flat accumulation)
+    let left_is_list_dual = left.as_ref().is_some_and(|l| {
+      if let XM::Dual(ref content, _, _, _) = l {
+        if let XM::Apply(ref op, _, _, _) = **content {
+          if let XM::Token(ref props, _) = *op.0 {
+            return props.meaning.as_deref() == Some("list")
+              || props.meaning.as_deref() == Some("formulae");
+          }
         }
       }
+      false
+    });
+    if !left_is_list_dual {
+      return Err("list_apply: item is relational, use formulae_apply instead".into());
     }
   }
   let meaning = "list";
@@ -572,20 +580,45 @@ pub fn infix_relation(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
-  // Reject list Dual as RHS when extending a multirelation chain.
-  // e.g. for `1<x<10,2<y<20`, prevent `< list(10,2) <` — commas should
-  // go to statement level, not be absorbed as a list within the multirelation.
+  // Reject multirelation when the left formula's last operand is a list Dual.
+  // For `a = b, c = d`: the wrong parse creates `a = list(b,c)` then tries
+  // to extend with `= d`. If the left formula has a list as its last arg,
+  // the comma should have been a formula boundary, not an expression list.
+  // Rejecting here forces Marpa to use formula_list instead.
   if let Some(ref left_xm) = left {
-    if is_relational_item(left_xm) {
-      if let Some(XM::Dual(ref content, _, _, _)) = right {
-        if let XM::Apply(ref op, _, _, _) = **content {
-          if let XM::Token(ref props, _) = *op.0 {
-            if props.meaning.as_deref() == Some("list") {
-              return Err("infix_relation: rejecting list Dual as multirelation RHS".into());
+    fn last_arg_is_list(xm: &XM) -> bool {
+      match xm {
+        XM::Apply(ref op, ref args, _, _) => {
+          // Check if this is a relational Apply (has RELOP/ARROW operator)
+          let is_rel = match &*op.0 {
+            XM::Token(ref props, _) => {
+              props.meaning.as_deref() == Some("multirelation")
+                || props.role.as_deref().is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
+            },
+            XM::Lexeme(ref lex, _) => {
+              lex.split(':').next().is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
+            },
+            _ => false,
+          };
+          if is_rel {
+            // Check last argument
+            if let Some(Some(last)) = args.0.last() {
+              if let XM::Dual(ref content, _, _, _) = last {
+                if let XM::Apply(ref inner_op, _, _, _) = **content {
+                  if let XM::Token(ref props, _) = *inner_op.0 {
+                    return props.meaning.as_deref() == Some("list");
+                  }
+                }
+              }
             }
           }
-        }
+          false
+        },
+        _ => false,
       }
+    }
+    if last_arg_is_list(left_xm) {
+      return Err("infix_relation: left formula ends with list (comma should be formula boundary)".into());
     }
   }
   // if left has a "multirelation" already, add right in.

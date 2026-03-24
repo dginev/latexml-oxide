@@ -881,11 +881,11 @@ and <text font="typewriter">m:mstyle</text>:</p>
             <tag role="refnum">16</tag>
           </tags>
           <MathFork>
-            <Math tex="\displaystyle=f(x)+\phantom{g(x)}+h(x)" text="list@(absent = limit-from@(f * x, +), + h * x)" xml:id="S2.E16.m4">
+            <Math tex="\displaystyle=f(x)+\phantom{g(x)}+h(x)" text="formulae@(absent = limit-from@(f * x, +), + h * x)" xml:id="S2.E16.m4">
               <XMath>
                 <XMDual>
                   <XMApp>
-                    <XMTok meaning="list"/>
+                    <XMTok meaning="formulae"/>
                     <XMRef idref="S2.E16.m4.1"/>
                     <XMRef idref="S2.E16.m4.3"/>
                   </XMApp>
