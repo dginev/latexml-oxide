@@ -27,8 +27,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(vertbar ~ "VERTBAR");
   token!(singlevertbar = "VERTBAR:|");
   token!(close_pipe = "CLOSE:|");
-  // evalAtOp: VERTBAR or CLOSE:| (from \right|)
-  token!(eval_at_op = [singlevertbar close_pipe]);
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
   token!(midbar = [vertbar middle_bar middle_parallel]);
