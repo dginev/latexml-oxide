@@ -39,6 +39,10 @@ pub enum ValidationPragmatics {
   /// Implemented by penalizing parses where a function's result is multiplied
   /// by factors that could have been the function's argument.
   FunctionsPreferWiderAbsorption,
+  /// Bigops prefer wider absorption: `\int F\times Gdx` means `∫(F×G dx)`,
+  /// not `∫(F)×Gdx`. Perl's moreOpArgFactors absorbs MulOp chains.
+  /// Rejects trees where mulop(bigop_app(narrow), rhs) when rhs is a simple factor.
+  BigopPreferWiderAbsorption,
 }
 
 impl ValidationPragmatics {
@@ -72,6 +76,7 @@ impl ValidationPragmatics {
       AdjacentFunctionsDontUnifyIntoOperator,
       ConsistentLetterBlocks,
       FunctionsPreferWiderAbsorption,
+      BigopPreferWiderAbsorption,
       ConsistentCase,
       ConsistentCaseFlat,
       ConsistentCaseFlatUnstyled,
@@ -104,6 +109,7 @@ impl ValidationPragmatics {
       MaximizeScriptAttachment => pragma_maximize_script_attachment(tree),
       NoBilateralAbsent => pragma_no_bilateral_absent(tree),
       FunctionsPreferWiderAbsorption => pragma_functions_prefer_wider_absorption(tree),
+      BigopPreferWiderAbsorption => pragma_bigop_prefer_wider_absorption(tree),
       _ => Ok(()),
     }
   }
@@ -636,6 +642,66 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
               return Err(
                 "Prune: function application followed by simple unfenced factor — \
                  prefer wider absorption.".into()
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Bigop prefer wider absorption: reject mulop(bigop_app(narrow), rhs)
+/// when rhs is a simple factor that could have been part of the bigop's argument.
+/// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
+fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_mulop = match **op {
+      XM::Token(ref props, _) => {
+        props.role.as_deref() == Some("MULOP")
+      },
+      XM::Lexeme(ref lex, _) => {
+        lex.starts_with("MULOP") || lex.contains("invisible_operator")
+      },
+      _ => false,
+    };
+    if is_mulop {
+      let trees = args.trees();
+      if trees.len() == 2 {
+        // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
+        if let XM::Apply(Operator(ref bigop_op), _, _, _) = trees[0] {
+          let bigop_name = bigop_op.base_operator_name();
+          let is_bigop = bigop_name.starts_with("BIGOP")
+            || bigop_name.starts_with("SUMOP")
+            || bigop_name.starts_with("INTOP")
+            || bigop_name.starts_with("LIMITOP")
+            || bigop_name.starts_with("DIFFOP");
+          if is_bigop {
+            // RHS should be a simple factor, not another bigop or function
+            let rhs = trees[1];
+            let rhs_is_simple = match rhs {
+              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
+              XM::Apply(Operator(ref rhs_op), _, _, _) => {
+                let rhs_role = match &**rhs_op {
+                  XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
+                  XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
+                  _ => "",
+                };
+                // Scripted factors and invisible_times products are simple
+                rhs_role == "SUPERSCRIPTOP"
+                  || rhs_role == "SUBSCRIPTOP"
+                  || rhs_role == "MULOP"
+                  || rhs_role == "DIFFOP"
+              },
+              _ => false,
+            };
+            if rhs_is_simple {
+              return Err(
+                "Prune: bigop application followed by mulop factor — \
+                 prefer wider bigop absorption."
+                  .into(),
               );
             }
           }
