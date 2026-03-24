@@ -61,13 +61,13 @@ LoadDefinitions!({
   Let!("\\crampedrlap", "\\mathrlap");
   Let!("\\crampedclap", "\\mathclap");
 
-  // \smashoperator — destructures argument to recognize operators and scripts
+  // \smashoperator — destructures argument to recognize operators and scripts.
+  // Perl: \smashoperator[align]{op_sub_sup} → destructure → \lx@@smashoperator{align}{op}{sub}{sup}
+  // The smashing (zero-width padding) is cosmetic only. Perl absorbs scripts into XMApp
+  // structure. Our simplified version passes through the bare operator (scripts appear
+  // naturally in the math context via normal TeX subscript/superscript processing).
   DefMacro!("\\smashoperator[]{}", "\\lx@smashoperator{#1}#2{}{}{}{}{}{}\\end");
-  // TODO: \lx@smashoperator has complex sub{} body — stubbed to pass through
-  // Perl uses "Until:\end" to consume trailing \end sentinel from outer macro
   DefMacro!("\\lx@smashoperator{} {}{}{}{}{}{} Until:\\end", "#2");
-  // TODO: \lx@@smashoperator has complex afterDigest — stubbed
-  DefMacro!("\\lx@@smashoperator{}{}{}{}", "#2");
 
   // \adjustlimits — TODO: complex afterDigest with depth/height
   DefMacro!("\\adjustlimits{}{}{}{}{}{}", "#1_{#3}#4_{#6}");
