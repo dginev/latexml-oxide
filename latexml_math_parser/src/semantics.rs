@@ -2062,7 +2062,25 @@ pub fn apply_invisible_times(
       _ => None,
     };
     if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION")) {
-      return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
+      // Exception: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
+      // prefer invisible_times (multiplication). Perl: `fgh` with all FUNCTION → f·g·h.
+      let rhs_is_function = right.as_ref().map(|r| {
+        let rr = match r {
+          XM::Token(props, _) => props.role.as_deref().map(String::from),
+          XM::Lexeme(lex_id, _) => {
+            lex_id.split(':').next_back()
+              .and_then(|s| s.parse::<usize>().ok())
+              .and_then(|id| if id > 0 && id <= ctxt.nodes.len() {
+                ctxt.nodes[id - 1].get_attribute("role")
+              } else { None })
+          },
+          _ => None,
+        };
+        matches!(rr.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION"))
+      }).unwrap_or(false);
+      if !rhs_is_function {
+        return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
+      }
     }
   }
   // Bigop application results should not participate in invisible-times on their right.

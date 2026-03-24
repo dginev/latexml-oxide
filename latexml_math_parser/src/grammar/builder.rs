@@ -192,6 +192,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_opterm = factor function => apply_invisible_times
       | factor trigfunction => apply_invisible_times
       | factor opfunction => apply_invisible_times
+      // Consecutive functions multiply: fgh → f·g·h (Perl Factor moreFactors)
+      | function function => apply_invisible_times
+      | function trigfunction => apply_invisible_times
+      | function opfunction => apply_invisible_times
       | tight_opterm function => apply_invisible_times
       | tight_opterm trigfunction => apply_invisible_times
       | tight_opterm opfunction => apply_invisible_times;
