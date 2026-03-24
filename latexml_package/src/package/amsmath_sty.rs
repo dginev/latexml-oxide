@@ -838,8 +838,9 @@ LoadDefinitions!({
   // Section 3.7 Alignment building blocks (gathered, aligned, alignedat)
   // Perl: amsmath.sty.ltxml lines 570-676
 
+  // Perl: \lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}\@@gathered\lx@begin@alignment
   DefMacro!("\\gathered[]",
-    "\\lx@hidden@bgroup\\@@gathered\\lx@begin@alignment");
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=gathered,vattach=#1}\\@@gathered\\lx@begin@alignment");
   DefMacro!("\\endgathered",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@gathered\\lx@hidden@egroup");
   DefPrimitive!("\\@end@gathered", { egroup()?; });
