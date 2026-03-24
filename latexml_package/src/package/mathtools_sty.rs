@@ -391,9 +391,13 @@ LoadDefinitions!({
   //======================================================================
   // {multlined} environment
   //======================================================================
-  // TODO: @@multlined has complex afterDigest/afterConstruct — stubbed
-  // Perl: DefMacroI('\multlined', '[][]', ...)
-  // For now, forward to amsmath multirow machinery
+  // Perl: \@@multlined is DefConstructor with DigestedBody + afterConstruct.
+  // Creates <ltx:XMApp role="MULTIRELATION"> with alignment rows.
+  // Simplified: \@@multlined opens a group, content flows via alignment.
+  DefConstructor!("\\@@multlined",
+    "<ltx:XMApp role='MULTIRELATION'>",
+    before_digest => { bgroup(); }
+  );
   DefMacro!("\\multlined[][]",
     "\\@ams@multirow@bindings{name=multlined}\\@@multlined\\lx@begin@alignment");
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
@@ -579,10 +583,30 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     reversion => "\\begin{rgathered}#1\\end{rgathered}");
 
-  // \newgathered / \renewgathered — complex sub{} body
-  // TODO: complex sub{} body — stubbed
-  DefMacro!("\\newgathered{}{}{}{}", None);
+  // \newgathered{name}{pre_line}{post_line}{after}
+  // Creates \name and \endname environments for gathered-like displays.
+  // Perl: DefMacro sub{} body creates runtime macros.
+  DefPrimitive!("\\newgathered{}{}{}{}", sub[(name, _pre, _post, _after)] {
+    let env_name = name.to_string();
+    // Create \name macro → begins gathered alignment
+    let begin_body = format!(
+      "\\@ams@multirow@bindings{{name={env_name}}}\\@@newgathered@dummy\\lx@begin@alignment"
+    );
+    let begin_cs = T_CS!(&format!("\\{env_name}"));
+    def_macro(begin_cs, None, Tokenize!(&begin_body), None)?;
+    // Create \endname macro → ends alignment
+    let end_body = "\\lx@end@alignment\\@end@gathered";
+    let end_cs = T_CS!(&format!("\\end{env_name}"));
+    def_macro(end_cs, None, Tokenize!(end_body), None)?;
+  });
   Let!("\\renewgathered", "\\newgathered");
+
+  // \@@newgathered@dummy — simplified gathered constructor
+  DefConstructor!("\\@@newgathered@dummy",
+    "<ltx:XMApp role='MULTIRELATION'>",
+    before_digest => { bgroup(); }
+  );
+  DefPrimitive!("\\@end@gathered", { egroup()?; });
 
   // 4.6 — Split fractions
   DefMacro!("\\splitfrac{}{}",
