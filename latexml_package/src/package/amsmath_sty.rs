@@ -572,8 +572,11 @@ LoadDefinitions!({
   );
 
   // Perl: amsmath.sty.ltxml line 100
+  // \@ams@intertext ends the current alignment row, then inserts intertext via \noalign.
+  // Perl: DefMacro('\@ams@intertext{}', '\lx@hidden@crcr\noalign{\@@ams@intertext{#1}}');
+  DefMacro!("\\@ams@intertext{}", "\\lx@hidden@crcr\\noalign{\\@@ams@intertext{#1}}");
   DefConstructor!(
-    "\\@ams@intertext{}",
+    "\\@@ams@intertext{}",
     "<ltx:p class='ltx_intertext'>#1</ltx:p>",
     mode => "internal_vertical"
   );
