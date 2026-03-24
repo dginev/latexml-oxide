@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 291 pass, 0 fail, 33 ignored (44 commits). Session 36: +ncases_test, +vertbars_test, +ntheorem_test. **evaluated-at grammar**. **norm grammar**. **bigop scope fix**. **Script content preservation (C5)**. **Formulae vs list fix**: reject non-relational right after relational left → a=b,c,d=e → formulae(a=list(b,c), d=e).
+**Status (2026-03-24):** 292 pass, 0 fail, 32 ignored (48 commits). Session 36 (24 commits): +ncases_test, +vertbars_test, +ntheorem_test, +relations_test. **evaluated-at grammar**. **norm grammar**. **bigop scope fix**. **C5: script content preservation**. **Formulae vs list fix**. **Period as formula separator**. Design decisions #13-#17 documented.
 
 ### Active TODO items (ordered)
 
@@ -408,7 +408,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **36. picture_test** (65_graphics) — 2024 diffs (was 3125, crash). BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 22/28 pass, 6 ignored. +vertbars_test (session 36). Remaining: relations 53, calculus 23, scripts 50, functions 119, artefacts 25, qm 74, operators 128.
+- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. +vertbars_test, +relations_test (session 36). Remaining: calculus (4 text=), scripts (pre-scripts), functions (lxDeclare), artefacts (QM/scripted-ops), qm (QM notation).
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
 - [x] **52. ntheorem_test** (55_theorem) — DONE (was 1423 diffs). Fixed by C5 script content preservation + bigop scope fix.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
