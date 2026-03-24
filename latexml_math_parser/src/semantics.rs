@@ -683,6 +683,72 @@ pub fn rename_fenced_lists(xm: &mut XM, nodes: &[libxml::tree::Node]) -> Result<
   Ok(())
 }
 
+/// Post-processing: combine adjacent SUPOP tokens in script content.
+/// Perl MathGrammar L720-723: supops = SUPOP(s) → prime2, prime3, etc.
+/// Marpa often parses `\prime\prime` as `list@(prime, prime)` or `times(prime, prime)`
+/// instead of using the `supops` grammar rule. This pass detects these patterns
+/// and replaces them with combined `prime{N}` tokens.
+pub fn combine_supop_post(xm: &mut XM, nodes: &[libxml::tree::Node]) -> Result<(), Box<dyn Error>> {
+  match xm {
+    XM::Apply(_, ref mut args, _, _) => {
+      for arg in args.0.iter_mut().flatten() {
+        combine_supop_post(arg, nodes)?;
+      }
+    },
+    XM::Wrap(ref mut items, _, _) => {
+      for item in items.iter_mut() {
+        combine_supop_post(item, nodes)?;
+      }
+    },
+    XM::Dual(ref mut content, ref mut pres, _, _) => {
+      combine_supop_post(content, nodes)?;
+      combine_supop_post(pres, nodes)?;
+      // Check if content is Apply(list/times, args) where pres Wrap has all SUPOP items
+      if let XM::Apply(ref op, ref args, _, _) = **content {
+        let is_list_or_times = if let XM::Token(ref props, _) = *op.0 {
+          props.meaning.as_deref() == Some("list")
+            || props.meaning.as_deref() == Some("times")
+        } else { false };
+        if is_list_or_times && args.0.len() >= 2 {
+          // Check presentation Wrap: all non-separator items should be SUPOP
+          if let XM::Wrap(ref items, _, _) = **pres {
+            // Items at even indices (0, 2, 4, ...) are the actual tokens
+            // Items at odd indices (1, 3, ...) are separators (PUNCT, MULOP)
+            let all_supop = items.iter().enumerate()
+              .filter(|(i, _)| i % 2 == 0) // actual items at even positions
+              .all(|(_, item)| get_xm_role(item).as_deref() == Some("SUPOP"));
+            if all_supop {
+              let count = args.0.len();
+              let text: String = items.iter().enumerate()
+                .filter(|(i, _)| i % 2 == 0)
+                .map(|(_, item)| item.get_value(nodes).unwrap_or(Cow::Borrowed("′")).into_owned())
+                .collect();
+              // Replace the Dual with a single combined SUPOP Token
+              *xm = XM::Token(
+                XProps {
+                  role: Some(Cow::Borrowed("SUPOP")),
+                  name: Some(Cow::Owned(format!("prime{count}"))),
+                  content: Some(Cow::Owned(text)),
+                  ..XProps::default()
+                },
+                Meta::default(),
+              );
+              return Ok(());
+            }
+          }
+        }
+      }
+    },
+    XM::Choices(ref mut trees) => {
+      for tree in trees.iter_mut() {
+        combine_supop_post(tree, nodes)?;
+      }
+    },
+    _ => {},
+  }
+  Ok(())
+}
+
 fn get_xm_role(xm: &XM) -> Option<String> {
   match xm {
     XM::Lexeme(l, _) => l.split(':').next().map(|s| s.to_string()),

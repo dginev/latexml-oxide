@@ -764,6 +764,8 @@ impl MathParser {
         crate::semantics::restructure_formulae_right(&mut parse_tree)?;
         // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
         crate::semantics::rename_fenced_lists(&mut parse_tree, nodes)?;
+        // Combine adjacent SUPOP tokens (prime+prime → prime2)
+        crate::semantics::combine_supop_post(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))
       },
       Err(_e) => {
