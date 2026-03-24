@@ -979,6 +979,70 @@ LoadDefinitions!({
   DefMacro!("\\primfrac{}", None);
   DefMacro!("\\shoveleft{}", "#1");
   DefMacro!("\\shoveright{}", "#1");
+
+  //======================================================================
+  // Additions from Perl amsmath audit (session 38)
+  //======================================================================
+
+  // Section 4.5: Additional math accents (triple/quadruple dots)
+  DefMath!("\\dddot{}", "\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\dddot{#1}");
+  DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
+
+  // Section 4.6: Root adjustment (no-ops — cosmetic only)
+  DefMacro!("\\leftroot{}", None);
+  DefMacro!("\\uproot{}", None);
+
+  // Section 4.13: Smash with optional direction (pass through body)
+  DefConstructor!("\\smash[]{}", "#2");
+
+  // Section 4.4: Nonbreaking dashes (no-op)
+  DefMacro!("\\nobreakdash", None);
+
+  // Section 3.8: Tag placement adjustment (no-op)
+  DefMacro!("\\raisetag{}", None);
+
+  // Section 3.9: Page breaks (no-op)
+  DefMacro!("\\displaybreak[]", None);
+
+  // Section 4.11: Inline fraction (\ifrac)
+  DefConstructor!("\\ifrac{}{}", "\
+    <ltx:XMApp>\
+      <ltx:XMTok meaning='divide' role='MULOP' style='inline'>\u{2215}</ltx:XMTok>\
+      #1\
+      #2\
+    </ltx:XMApp>");
+
+  // Section 4.12: Continued fractions (simplified — no mathstyle switching)
+  DefMacro!("\\cfrac[]{}{}", "\\frac{#2}{#3}");
+
+  // Section 7.4: Multiple integrals dispatch
+  DefMacro!("\\MultiIntegral{}", "\\int");
+
+  // Section 9.4: Accent aliases (Perl L1297-1306)
+  Let!("\\Hat", "\\hat");
+  Let!("\\Check", "\\check");
+  Let!("\\Tilde", "\\tilde");
+  Let!("\\Acute", "\\acute");
+  Let!("\\Grave", "\\grave");
+  Let!("\\Dot", "\\dot");
+  Let!("\\Ddot", "\\ddot");
+  Let!("\\Breve", "\\breve");
+  Let!("\\Bar", "\\bar");
+  Let!("\\Vec", "\\vec");
+
+  // Preamble: trivial macros
+  DefMacro!("\\AmSfont", None);
+  DefMacro!("\\AmS", "AmS");
+
+  // Miscellaneous no-ops
+  DefPrimitive!("\\allowdisplaybreaks[]", {});
+
+  // Conditionals (always false sentinels — Perl L58-68)
+  DefConditional!("\\ifmeasuring@");
+  DefConditional!("\\iftagsleft@");
+  DefConditional!("\\if@fleqn");
 });
 
 use latexml_core::document;
@@ -1412,4 +1476,6 @@ fn sideset_wrap_impl(
   let closed = document.close_element("ltx:XMApp")?;
   Ok(closed.unwrap_or_else(|| document.get_node().clone()))
 }
+
+// Additional amsmath definitions are added inline in the LoadDefinitions block above.
 
