@@ -468,16 +468,36 @@ LoadDefinitions!({
   //======================================================================
 
   // \DeclarePairedDelimiter\cmd{left}{right}
-  // Perl: DefPrimitive creates runtime macros via DefMacroI.
-  // Simplified: \cmd{x} → \left<ldel> x \right<rdel>, \cmd*{x} → same
+  // Perl: creates \cmd with star/optional-size/plain variants:
+  //   \cmd*{x}      → \left<ldel> x \right<rdel>
+  //   \cmd[\Big]{x}  → \Big<ldel> x \Big<rdel>
+  //   \cmd{x}       → <ldel> x <rdel>
   DefPrimitive!("\\DeclarePairedDelimiter DefToken {}{}", sub[(cs, ldel, rdel)] {
+    let cmd = cs.to_string();
+    let cmd_name = cmd.trim_start_matches('\\');
     let ldel_s = ldel.to_string();
     let rdel_s = rdel.to_string();
-    // Simple approach: \cmd{x} → \left<ldel> x \right<rdel>
-    let body = format!("\\left{ldel_s}#1\\right{rdel_s}");
-    // Use the original cs Token directly (not T_CS! which would double-escape)
-    let params = parse_parameters("{}", &cs, true)?;
-    def_macro(cs, params, Tokenize!(&body), None)?;
+    // Star variant: \left...\right
+    let star_body = format!("\\left{ldel_s}#1\\right{rdel_s}");
+    let star_cs_name = format!("\\MT@delim@{cmd_name}@star");
+    let star_cs = T_CS!(&star_cs_name);
+    let star_params = parse_parameters("{}", &star_cs, true)?;
+    def_macro(star_cs, star_params, Tokenize!(&star_body), None)?;
+    // Non-star variant: optional size prefix
+    let nostar_body = format!("#1{ldel_s}#2#1{rdel_s}");
+    let nostar_cs_name = format!("\\MT@delim@{cmd_name}@nostar");
+    let nostar_cs = T_CS!(&nostar_cs_name);
+    let nostar_params = parse_parameters("[]{}", &nostar_cs, true)?;
+    def_macro(nostar_cs, nostar_params, Tokenize!(&nostar_body), None)?;
+    // Main command: \@ifstar dispatches to star or nostar
+    let star_cs_tok = T_CS!(&star_cs_name);
+    let nostar_cs_tok = T_CS!(&nostar_cs_name);
+    let dispatch_toks = Tokens::new(vec![
+      T_CS!("\\@ifstar"),
+      T_BEGIN!(), star_cs_tok, T_END!(),
+      T_BEGIN!(), nostar_cs_tok, T_END!(),
+    ]);
+    def_macro(cs, None, dispatch_toks, None)?;
   });
 
   // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
