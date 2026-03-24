@@ -282,7 +282,8 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint name='negthickspace'/>)()"
   );
 
-  // DefConstructor('\mspace{MuDimension}', "<ltx:XMHint name='mspace' width='#1'/>");
+  // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
+  DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");
 
   //======================================================================
   // Section 4.3 Dots
@@ -297,7 +298,12 @@ LoadDefinitions!({
   DefMacro!("\\DOTSX", None);
   Let!("\\hdots", "\\lx@ldots");
 
-  DefMacro!("\\hdotsfor Number", r"\hdots");
+  // Perl: expands to N copies of \hdots (where N is the numeric argument)
+  DefPrimitive!("\\hdotsfor Number", sub[(n)] {
+    let count = n.value_of().max(1) as usize;
+    let toks: Vec<Token> = (0..count).flat_map(|_| vec![T_CS!("\\hdots")]).collect();
+    gullet::unread(Tokens::new(toks));
+  });
 
   // Perl amsmath L848-860: Smart \dots — peek at following token's role.
   // If ADDOP/BINOP/MULOP/RELOP → use ⋯ (cdots), else → … (ldots)
@@ -580,6 +586,13 @@ LoadDefinitions!({
     "<ltx:p class='ltx_intertext'>#1</ltx:p>",
     mode => "internal_vertical"
   );
+  // Standalone \intertext (outside alignment) — Perl L734-735
+  // Inside alignment, \intertext is Let'd to \@ams@intertext by the alignment bindings.
+  DefConstructor!(
+    "\\intertext{}",
+    "<ltx:p class='ltx_intertext'>#1</ltx:p>",
+    mode => "internal_vertical"
+  );
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 153-161
@@ -693,9 +706,38 @@ LoadDefinitions!({
   DefMacro!("\\csname endalignat*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
 
+  // xalignat — like alignat but full-width (Perl L530-545)
+  DefMacro!("\\xalignat{}",
+    "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
+     \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
+     \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment\\fi");
+  DefMacro!("\\endxalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+  DefMacro!("\\csname xalignat*\\endcsname{}",
+    "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
+     \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
+     \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment\\fi");
+  DefMacro!("\\csname endxalignat*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+
+  // xxalignat — like xalignat (Perl L547-551)
+  DefMacro!("\\xxalignat{}",
+    "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
+     \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
+     \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment\\fi");
+  DefMacro!("\\endxxalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+
   //======================================================================
   // Section 3.3 Split equations without alignment (multline)
   // Perl: amsmath.sty.ltxml lines 240-310
+
+  // Perl L283-284: multirow keyval type declarations
+  DefKeyVal!("multirow", "width", "Dimension");
+  DefKeyVal!("multirow", "rowsep", "Dimension");
 
   // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
   DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow", sub[(kv)] {
@@ -819,8 +861,15 @@ LoadDefinitions!({
     ams_aligned_bindings()?;
   });
 
+  // Perl: \if@in@ams@align\lx@ams@marksplitinalign\fi prefix for split-in-align
   DefMacro!("\\split",
-    "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
+    "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
+     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
+  // \if@in@ams@align — checks if current environment starts with "align"
+  // Simplified: always false for now (proper impl needs lookupStackedValues)
+  DefConditional!("\\if@in@ams@align");
+  // \lx@ams@marksplitinalign — stub (sets colspan=2, advances column)
+  DefConstructor!("\\lx@ams@marksplitinalign", "");
   DefMacro!("\\endsplit",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@split\\lx@hidden@egroup");
   DefPrimitive!("\\@end@split", { egroup()?; });
