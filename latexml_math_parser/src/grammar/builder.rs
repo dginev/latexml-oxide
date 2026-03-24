@@ -224,7 +224,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // e.g. a=b,c,d → a = list(b,c,d), not list(a=b, c, d).
     // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
     formula_list = expression punct expression => formula_list_apply
-      | formula_list punct expression => formula_list_apply;
+      | formula_list punct expression => formula_list_apply
+      // Period also acts as list separator within formulas (Perl: endPunct)
+      | expression period expression => formula_list_apply
+      | formula_list period expression => formula_list_apply;
     // Comma-separated term lists: term, term, term, ...
     // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
     term_list = term punct term => list_apply
@@ -272,6 +275,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     statements = statement
       | statement end_punct => postfix_embellished
       | statements punct statement => list_apply
+      // Perl MathGrammar L129: endPunct : PUNCT | PERIOD
+      // Period acts as formula/list separator, same as comma
+      | statements period statement => list_apply
       // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
       | statement vertbar statements => vertbar_modifier;
 
@@ -281,7 +287,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // formulae_apply REJECTS the parse if no items are relational, so Marpa
     // falls back to the `statements` parse which produces "list".
     formula_list = statement punct statement => formulae_apply
-      | formula_list punct statement => formulae_apply;
+      | formula_list punct statement => formulae_apply
+      // Period also separates formulae (Perl: endPunct)
+      | statement period statement => formulae_apply
+      | formula_list period statement => formulae_apply;
 
     // Extensions, now that we have more category variables defined
     fenced_factor = lbrace expression rbrace    => fenced
