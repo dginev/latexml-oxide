@@ -15,7 +15,7 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
   use crate::engine::tex_tables::alignment_bindings;
   let properties = SymHashMap::default();
   // Perl: my $cur_jot = LookupDimension('\jot');
-  // TODO: handle \jot rowsep
+  // Note: \jot rowsep is now passed through via \@ams@multirow@bindings
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
   state::let_i(
     &T_CS!("\\\\"),
