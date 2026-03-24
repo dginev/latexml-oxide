@@ -636,13 +636,32 @@ LoadDefinitions!({
   DefMacro!("\\endrgathered", "\\lx@end@alignment\\@end@gathered");
 
   // Perl: DefConstructor('\@@lgathered DigestedBody', ...)
-  // Forward to the gathered constructor from amsmath
+  // Perl: afterDigest sets MULTIROW_ALIGNMENT_RULE { default => 'left' }
+  // afterConstruct calls rearrangeAMSMultirow
   DefConstructor!("\\@@lgathered DigestedBody", "#1",
     before_digest => { bgroup(); },
-    reversion => "\\begin{lgathered}#1\\end{lgathered}");
+    after_digest => sub[whatsit] {
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("left"));
+    },
+    reversion => "\\begin{lgathered}#1\\end{lgathered}",
+    after_construct => sub[document, whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
+        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    });
   DefConstructor!("\\@@rgathered DigestedBody", "#1",
     before_digest => { bgroup(); },
-    reversion => "\\begin{rgathered}#1\\end{rgathered}");
+    after_digest => sub[whatsit] {
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("right"));
+    },
+    reversion => "\\begin{rgathered}#1\\end{rgathered}",
+    after_construct => sub[document, whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
+        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    });
 
   // \newgathered{name}{pre_line}{post_line}{after}
   // Creates \name and \endname environments for gathered-like displays.

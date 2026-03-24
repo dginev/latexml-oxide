@@ -1236,7 +1236,7 @@ pub fn rearrange_lone_ams_aligned(
 /// Extract the alignment rule from whatsit properties.
 /// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
 /// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST, etc.
-fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
+pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
   let mut rules = Vec::new();
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_DEFAULT") {
     if let Stored::String(s) = &*val {
@@ -1421,7 +1421,7 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
 
 /// Perl: rearrangeAMSMultirow (amsmath.sty.ltxml L286-307)
 /// Like split, but also adjusts row alignment (first=left, last=right for multline).
-fn rearrange_ams_multirow(
+pub fn rearrange_ams_multirow(
   document: &mut Document,
   array: Node,
   align_rules: &[(String, String)],
