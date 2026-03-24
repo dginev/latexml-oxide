@@ -142,7 +142,6 @@ fn diagboxtest_test() {
 }
 
 #[test]
-#[ignore] // 1048 diffs: cases math + equation numbering
 fn ncases_test() {
   latexml_test_single("tests/alignment/ncases.tex", "ncases", DIR, None, None);
 }
