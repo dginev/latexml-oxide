@@ -9,7 +9,6 @@ fn algebraic_terms_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn array_math_parse_test() {
   latexml_test_single("tests/parse/array_math.tex", "array_math", DIR, None, None);
 }
