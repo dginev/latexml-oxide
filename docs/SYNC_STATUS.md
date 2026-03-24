@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-23):** 287 pass, 0 fail, 37 ignored. Session 35 (17 commits): +stmaryrd_test, +array_math_parse_test. Orphan XMTok ID stripping. \stackrel scriptpos mid1 fix. RegisterValue::Pair infrastructure. Picture env full structural port (crash→2024 diffs). pxValue DPI/72.27 conversion. Parser tree enumeration safety limit (5000/30s). Absent close/open tokens for fenced_array. **bigop_application at term level** (fixes ADDOP+BIGOP ambiguity).
+**Status (2026-03-24):** 287 pass, 0 fail, 37 ignored. Session 35 (21 commits): +stmaryrd_test, +array_math_parse_test. Orphan XMTok ID stripping. \stackrel scriptpos mid1 fix. RegisterValue::Pair infrastructure. Picture env full structural port (crash→2024 diffs). pxValue DPI/72.27 conversion. Parser tree limit (5000/30s). Absent close/open tokens. **bigop_application at term level** (fixes ADDOP+BIGOP ambiguity). **open expression close => fenced** (generic delimiters). Floor/ceiling/norm meanings. DeclarePairedDelimiter family.
 
 ### Active TODO items (ordered)
 
