@@ -400,7 +400,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-23):** 286 pass, 0 fail, 38 ignored. Session 35 (15 commits): +stmaryrd_test. Orphan XMTok ID stripping. \stackrel scriptpos mid1 fix. RegisterValue::Pair infrastructure. Picture env full structural port (crash→2024 diffs). pxValue DPI/72.27 conversion. Parser tree enumeration safety limit (5000/30s). Absent close/open tokens for fenced_array.
+**Status (2026-03-23):** 287 pass, 0 fail, 37 ignored. Session 35 (17 commits): +stmaryrd_test, +array_math_parse_test. Orphan XMTok ID stripping. \stackrel scriptpos mid1 fix. RegisterValue::Pair infrastructure. Picture env full structural port (crash→2024 diffs). pxValue DPI/72.27 conversion. Parser tree enumeration safety limit (5000/30s). Absent close/open tokens for fenced_array. **bigop_application at term level** (fixes ADDOP+BIGOP ambiguity).
 
 ### Active TODO items (ordered)
 
@@ -408,7 +408,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **36. picture_test** (65_graphics) — 2024 diffs (was 3125, crash). BLOCKED: getSize (inner dimensions), UnTeX (tex= attribute), makebox positioning.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 18/28 pass, 10 ignored (155-522 diffs each). All math parser structural diffs. ADDOP+BIGOP ambiguity causes parse failures (`a+\neg b` hangs).
+- [ ] **48. 70_parse suite** (70_parse) — 19/28 pass, 9 ignored. +array_math_parse_test (session 35, bigop at term level). Remaining diffs: parens 257, relations 258, calculus 278, scripts 301, functions 339, artefacts 345, qm 400, operators 422, vertbars 466. All deep math parser structural.
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
 - [ ] **52. ntheorem_test** (55_theorem) — 1423 diffs. Math parser tree + eqnarray.
 - [ ] **54. ncases_test** (53_alignment) — 899 diffs. Cases math + equation numbering.
