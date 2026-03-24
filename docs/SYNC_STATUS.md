@@ -404,14 +404,30 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Active TODO items (ordered)
 
-- [ ] **34. mathtools_test** (56_ams) — 6683 diffs (was TIMEOUT). DeclarePairedDelimiter family + math parser structural diffs.
-- [ ] **36. picture_test** (65_graphics) — 2024 diffs (was 3125, crash). BLOCKED: getSize, UnTeX, makebox.
+- [ ] **34. mathtools_test** (56_ams) — 6449 diffs (19 unparsed formulas, 2 XMath errors). See mini-plan below.
+- [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. +vertbars_test, +relations_test (session 36). Remaining: calculus (4 text=), scripts (pre-scripts), functions (lxDeclare), artefacts (QM/scripted-ops), qm (QM notation).
+- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. Remaining: calculus (319), artefacts (256), functions (332), operators (443), qm (387).
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
-- [x] **52. ntheorem_test** (55_theorem) — DONE (was 1423 diffs). Fixed by C5 script content preservation + bigop scope fix.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
+
+#### mathtools_test mini-plan (per-section parity)
+
+| Section | Topic | Parity | Key gap |
+|---------|-------|--------|---------|
+| S1 | Sums/Limits | 70% | `\smashoperator` stubbed, `\adjustlimits` simplified |
+| S2 | Tags | **100%** | — |
+| S3 | Arrows | 95% | Extended arrow font attributes |
+| S4 | Matrices | **99%** | 1 line diff |
+| S5 | Cases | **101%** | Intertext fixed |
+| S6 | Gathered | 82% | lgathered/rgathered afterConstruct |
+| S7 | Delimiters | 77% | DeclarePairedDelimiterX body eval |
+| S8 | Prescripts | 69% | XMRef/xml:id for prescript nodes |
+| S9 | Multlines | 82% | multlined afterConstruct restructure |
+| S10 | Spread-lines | 95% | rowsep attribute |
+| S11 | Stepped lines | 62% | MoveEqLeft alignment shift |
+| S12 | Shifting | 87% | mathmakebox xoffset |
 
 ### Alignment gaps
 
@@ -426,7 +442,6 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] C2. Font specialize for parser tokens in nested script contexts
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
 - [ ] C4. ltx_nopad_l on @{}l@{} columns
-- [x] C5. Script content preservation: FIXED. faux_wrap now returns Wrap([lexeme, content]), new_script uses parsed content directly.
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
