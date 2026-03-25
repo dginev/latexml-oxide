@@ -82,9 +82,9 @@ LoadDefinitions!({
 
   // \smashoperator — destructures argument to recognize operators and scripts.
   // Perl: \smashoperator[align]{op_sub_sup} → destructure → \lx@@smashoperator{align}{op}{sub}{sup}
-  // The smashing (zero-width padding) is cosmetic only. Perl absorbs scripts into XMApp
-  // structure. Our simplified version passes through the bare operator (scripts appear
-  // naturally in the math context via normal TeX subscript/superscript processing).
+  // The 6-param decomposition extracts the operator token; scripts become part of the
+  // \lx@@smashoperator structure. Our stub extracts just the operator token, matching
+  // the Perl's tex reversion behavior (scripts absorbed into the operator structure).
   DefMacro!("\\smashoperator[]{}", "\\lx@smashoperator{#1}#2{}{}{}{}{}{}\\end");
   DefMacro!("\\lx@smashoperator{} {}{}{}{}{}{} Until:\\end", "#2");
 
@@ -544,8 +544,10 @@ LoadDefinitions!({
       }
     }
   );
+  // Perl: \multlined[][] → \@multlined@tmp{name=multlined,...}\@@multlined\lx@begin@alignment
+  // The \ifx/#1/ pattern: if #1 is empty, /==/ is true and vattach is omitted.
   DefMacro!("\\multlined[][]",
-    "\\@ams@multirow@bindings{name=multlined}\\@@multlined\\lx@begin@alignment");
+    "\\@ams@multirow@bindings{name=multlined,\\ifx/#1/\\else vattach=#1,\\fi\\ifx/#2/\\else width=#2,\\fi}\\@@multlined\\lx@begin@alignment");
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
   DefPrimitive!("\\@end@multlined", { egroup()?; });
 
@@ -613,99 +615,225 @@ LoadDefinitions!({
   //======================================================================
 
   // \DeclarePairedDelimiter\cmd{left}{right}
-  // Perl: creates \cmd with star/optional-size/plain variants:
+  // Perl: creates \cmd with star/optional-size/plain variants via wrapper macros:
   //   \cmd*{x}      → \left<ldel> x \right<rdel>
   //   \cmd[\Big]{x}  → \Big<ldel> x \Big<rdel>
   //   \cmd{x}       → <ldel> x <rdel>
   DefPrimitive!("\\DeclarePairedDelimiter DefToken {}{}", sub[(cs, ldel, rdel)] {
+    use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let cmd_name = cmd.trim_start_matches('\\');
-    let ldel_s = ldel.to_string();
-    let rdel_s = rdel.to_string();
-    // Star variant: \left...\right
-    let star_body = format!("\\left{ldel_s}#1\\right{rdel_s}");
-    let star_cs_name = format!("\\MT@delim@{cmd_name}@star");
-    let star_cs = T_CS!(&star_cs_name);
-    let star_params = parse_parameters("{}", &star_cs, true)?;
-    def_macro(star_cs, star_params, Tokenize!(&star_body), None)?;
-    // Non-star variant: optional size prefix
-    let nostar_body = format!("#1{ldel_s}#2#1{rdel_s}");
-    let nostar_cs_name = format!("\\MT@delim@{cmd_name}@nostar");
-    let nostar_cs = T_CS!(&nostar_cs_name);
-    let nostar_params = parse_parameters("[]{}", &nostar_cs, true)?;
-    def_macro(nostar_cs, nostar_params, Tokenize!(&nostar_body), None)?;
+    let ldel_toks: Vec<Token> = ldel.clone().unlist();
+    let rdel_toks: Vec<Token> = rdel.clone().unlist();
+    // Wrapper macros: #1#2#3 (identity by default, can be overridden)
+    let star_wrapper_cs = s!("\\MT@delim@{}@star@wrapper", cmd_name);
+    def_macro(T_CS!(&star_wrapper_cs),
+      parse_parameters("{}{}{}", &T_CS!(&star_wrapper_cs), true)?,
+      Tokenize!("#1#2#3"), None)?;
+    let nostar_wrapper_cs = s!("\\MT@delim@{}@nostar@wrapper", cmd_name);
+    def_macro(T_CS!(&nostar_wrapper_cs),
+      parse_parameters("{}{}{}", &T_CS!(&nostar_wrapper_cs), true)?,
+      Tokenize!("#1#2#3"), None)?;
+    // Star variant: @star@wrapper{\left ldel}{#1}{\right rdel}
+    let star_cs_name = s!("\\MT@delim@{}@star", cmd_name);
+    let mut star_body_toks: Vec<Token> = vec![];
+    star_body_toks.push(T_CS!(&star_wrapper_cs));
+    star_body_toks.push(T_BEGIN!());
+    star_body_toks.push(T_CS!("\\left"));
+    star_body_toks.extend(ldel_toks.iter().cloned());
+    star_body_toks.push(T_END!());
+    star_body_toks.push(T_BEGIN!());
+    star_body_toks.push(T_PARAM!()); star_body_toks.push(T_OTHER!("1"));
+    star_body_toks.push(T_END!());
+    star_body_toks.push(T_BEGIN!());
+    star_body_toks.push(T_CS!("\\right"));
+    star_body_toks.extend(rdel_toks.iter().cloned());
+    star_body_toks.push(T_END!());
+    def_macro(T_CS!(&star_cs_name),
+      parse_parameters("{}", &T_CS!(&star_cs_name), true)?,
+      ExpansionBody::Tokens(Tokens::new(star_body_toks)), None)?;
+    // Nostar variant: @nostar@wrapper{#1 ldel}{#2}{#1 rdel}
+    let nostar_cs_name = s!("\\MT@delim@{}@nostar", cmd_name);
+    let mut nostar_body_toks: Vec<Token> = vec![];
+    nostar_body_toks.push(T_CS!(&nostar_wrapper_cs));
+    nostar_body_toks.push(T_BEGIN!());
+    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
+    nostar_body_toks.extend(ldel_toks.iter().cloned());
+    nostar_body_toks.push(T_END!());
+    nostar_body_toks.push(T_BEGIN!());
+    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("2"));
+    nostar_body_toks.push(T_END!());
+    nostar_body_toks.push(T_BEGIN!());
+    nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
+    nostar_body_toks.extend(rdel_toks.iter().cloned());
+    nostar_body_toks.push(T_END!());
+    def_macro(T_CS!(&nostar_cs_name),
+      parse_parameters("[]{}", &T_CS!(&nostar_cs_name), true)?,
+      ExpansionBody::Tokens(Tokens::new(nostar_body_toks)), None)?;
     // Main command: \@ifstar dispatches to star or nostar
-    let star_cs_tok = T_CS!(&star_cs_name);
-    let nostar_cs_tok = T_CS!(&nostar_cs_name);
     let dispatch_toks = Tokens::new(vec![
       T_CS!("\\@ifstar"),
-      T_BEGIN!(), star_cs_tok, T_END!(),
-      T_BEGIN!(), nostar_cs_tok, T_END!(),
+      T_BEGIN!(), T_CS!(&star_cs_name), T_END!(),
+      T_BEGIN!(), T_CS!(&nostar_cs_name), T_END!(),
     ]);
     def_macro(cs, None, dispatch_toks, None)?;
   });
 
   // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body}
-  // Same star/optional dispatch as DeclarePairedDelimiter but with multi-arg body.
-  // For now, body is ignored — content comes from the nargs parameters.
-  DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, _body)] {
+  // Perl: creates \cmd@inner with n args expanding to body + \cmd@after,
+  // then \cmd with OptionalMatch:* [] dispatching to construct:
+  //   star:  \left ldel \def\delimsize{\middle} \def\cmd@after{\right rdel} \cmd@inner
+  //   [opt]: opt ldel \def\delimsize{opt} \def\cmd@after{opt rdel} \cmd@inner
+  //   plain: ldel \def\delimsize{} \def\cmd@after{rdel} \cmd@inner
+  DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, body)] {
+    use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
-    let cmd_name = cmd.trim_start_matches('\\');
     let n = nargs.value_of() as usize;
-    let ldel_s = ldel.to_string();
-    let rdel_s = rdel.to_string();
+    let ldel_toks: Vec<Token> = ldel.clone().unlist();
+    let rdel_toks: Vec<Token> = rdel.clone().unlist();
+    let body_toks: Vec<Token> = body.clone().unlist();
+    // Create \cmd@inner: n args, body = user_body + \cmd@after
+    let inner_cs_name = s!("{}@inner", cmd);
+    let after_cs_name = s!("{}@after", cmd);
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    // Star variant
-    let star_body = format!("\\left{ldel_s}#1\\right{rdel_s}");
-    let star_cs_name = format!("\\MT@delim@{cmd_name}@star");
-    let star_cs = T_CS!(&star_cs_name);
-    def_macro(star_cs, parse_parameters(&param_spec, &T_CS!(&star_cs_name), true)?,
-      Tokenize!(&star_body), None)?;
-    // Non-star variant
-    let nostar_cs_name = format!("\\MT@delim@{cmd_name}@nostar");
-    let nostar_cs = T_CS!(&nostar_cs_name);
-    // Add [] for optional size prefix before the n args
-    let nostar_param_spec = format!("[]{param_spec}");
-    let nostar_body = format!("#1{ldel_s}#2#1{rdel_s}");
-    def_macro(nostar_cs, parse_parameters(&nostar_param_spec, &T_CS!(&nostar_cs_name), true)?,
-      Tokenize!(&nostar_body), None)?;
-    // Main dispatch
-    let dispatch_toks = Tokens::new(vec![
-      T_CS!("\\@ifstar"),
-      T_BEGIN!(), T_CS!(&star_cs_name), T_END!(),
-      T_BEGIN!(), T_CS!(&nostar_cs_name), T_END!(),
-    ]);
-    def_macro(cs, None, dispatch_toks, None)?;
+    let mut inner_body_toks = body_toks.clone();
+    inner_body_toks.push(T_CS!(&after_cs_name));
+    def_macro(T_CS!(&inner_cs_name),
+      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
+      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
+    // Create main \cmd with OptionalMatch:* [] expansion closure
+    let cs_clone = cs.clone();
+    let inner_cs = inner_cs_name.clone();
+    let after_cs = after_cs_name.clone();
+    let ldel_c = ldel_toks.clone();
+    let rdel_c = rdel_toks.clone();
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs_clone, true)?,
+      Some(ExpansionBody::Closure(Rc::new(move |args| {
+        let star = &args[0]; // OptionalMatch:*
+        let opt = &args[1];  // []
+        let is_star = !star.is_empty();
+        let has_opt = !opt.is_empty();
+        let mut toks: Vec<Token> = vec![];
+        // Prefix: \left (star), opt tokens (sized), or nothing (plain)
+        if is_star {
+          toks.push(T_CS!("\\left"));
+        } else if has_opt {
+          toks.extend(opt.clone().unlist());
+        }
+        // Left delimiter
+        toks.extend(ldel_c.iter().cloned());
+        // \def\delimsize{...}
+        toks.push(T_CS!("\\def"));
+        toks.push(T_CS!("\\delimsize"));
+        toks.push(T_BEGIN!());
+        if has_opt {
+          toks.extend(opt.clone().unlist());
+        } else if is_star {
+          toks.push(T_CS!("\\middle"));
+        }
+        toks.push(T_END!());
+        // \def\cmd@after{... rdel}
+        toks.push(T_CS!("\\def"));
+        toks.push(T_CS!(&after_cs));
+        toks.push(T_BEGIN!());
+        if is_star {
+          toks.push(T_CS!("\\right"));
+        } else if has_opt {
+          toks.extend(opt.clone().unlist());
+        }
+        toks.extend(rdel_c.iter().cloned());
+        toks.push(T_END!());
+        // \cmd@inner
+        toks.push(T_CS!(&inner_cs));
+        Ok(Tokens::new(toks))
+      }))), None)?;
   });
 
-  // \DeclarePairedDelimiterXPP — most general form
-  // Same pattern with star/optional dispatch.
-  DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, _nargs, _pre, ldel, rdel, _post, _body)] {
+  // \DeclarePairedDelimiterXPP — most general form (with pre/post code)
+  // Perl: same as X but with precode before delimiters and postcode after.
+  DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, nargs, pre, ldel, rdel, post, body)] {
+    use latexml_core::definition::ExpansionBody;
+    let cmd = cs.to_string();
+    let n = nargs.value_of() as usize;
+    let ldel_toks: Vec<Token> = ldel.clone().unlist();
+    let rdel_toks: Vec<Token> = rdel.clone().unlist();
+    let body_toks: Vec<Token> = body.clone().unlist();
+    let pre_toks: Vec<Token> = pre.clone().unlist();
+    let post_toks: Vec<Token> = post.clone().unlist();
+    // Create \cmd@inner: n args, body = user_body + \cmd@after + postcode
+    let inner_cs_name = s!("{}@inner", cmd);
+    let after_cs_name = s!("{}@after", cmd);
+    let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
+    let mut inner_body_toks = body_toks.clone();
+    inner_body_toks.push(T_CS!(&after_cs_name));
+    inner_body_toks.extend(post_toks.iter().cloned());
+    def_macro(T_CS!(&inner_cs_name),
+      parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
+      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
+    // Create main \cmd with OptionalMatch:* [] expansion closure
+    let cs_clone = cs.clone();
+    let inner_cs = inner_cs_name.clone();
+    let after_cs = after_cs_name.clone();
+    let ldel_c = ldel_toks.clone();
+    let rdel_c = rdel_toks.clone();
+    let pre_c = pre_toks.clone();
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs_clone, true)?,
+      Some(ExpansionBody::Closure(Rc::new(move |args| {
+        let star = &args[0];
+        let opt = &args[1];
+        let is_star = !star.is_empty();
+        let has_opt = !opt.is_empty();
+        let mut toks: Vec<Token> = vec![];
+        // Precode
+        toks.extend(pre_c.iter().cloned());
+        // Prefix
+        if is_star {
+          toks.push(T_CS!("\\left"));
+        } else if has_opt {
+          toks.extend(opt.clone().unlist());
+        }
+        // Left delimiter
+        toks.extend(ldel_c.iter().cloned());
+        // \def\delimsize{...}
+        toks.push(T_CS!("\\def"));
+        toks.push(T_CS!("\\delimsize"));
+        toks.push(T_BEGIN!());
+        if has_opt {
+          toks.extend(opt.clone().unlist());
+        } else if is_star {
+          toks.push(T_CS!("\\middle"));
+        }
+        toks.push(T_END!());
+        // \def\cmd@after{... rdel}
+        toks.push(T_CS!("\\def"));
+        toks.push(T_CS!(&after_cs));
+        toks.push(T_BEGIN!());
+        if is_star {
+          toks.push(T_CS!("\\right"));
+        } else if has_opt {
+          toks.extend(opt.clone().unlist());
+        }
+        toks.extend(rdel_c.iter().cloned());
+        toks.push(T_END!());
+        // \cmd@inner
+        toks.push(T_CS!(&inner_cs));
+        Ok(Tokens::new(toks))
+      }))), None)?;
+  });
+
+  // \reDeclarePairedDelimiterInnerWrapper\cmd{star|nostar}{body}
+  // Perl: redefines the @star@wrapper or @nostar@wrapper for \DeclarePairedDelimiter
+  DefPrimitive!("\\reDeclarePairedDelimiterInnerWrapper DefToken {}{}", sub[(cs, nstar, body)] {
+    use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let cmd_name = cmd.trim_start_matches('\\');
-    let ldel_s = ldel.to_string();
-    let rdel_s = rdel.to_string();
-    // Star variant
-    let star_body = format!("\\left{ldel_s}#1\\right{rdel_s}");
-    let star_cs_name = format!("\\MT@delim@{cmd_name}@star");
-    def_macro(T_CS!(&star_cs_name), parse_parameters("{}", &T_CS!(&star_cs_name), true)?,
-      Tokenize!(&star_body), None)?;
-    // Non-star variant
-    let nostar_body = format!("#1{ldel_s}#2#1{rdel_s}");
-    let nostar_cs_name = format!("\\MT@delim@{cmd_name}@nostar");
-    def_macro(T_CS!(&nostar_cs_name), parse_parameters("[]{}", &T_CS!(&nostar_cs_name), true)?,
-      Tokenize!(&nostar_body), None)?;
-    // Main dispatch
-    let dispatch_toks = Tokens::new(vec![
-      T_CS!("\\@ifstar"),
-      T_BEGIN!(), T_CS!(&star_cs_name), T_END!(),
-      T_BEGIN!(), T_CS!(&nostar_cs_name), T_END!(),
-    ]);
-    def_macro(cs, None, dispatch_toks, None)?;
+    let variant = nstar.to_string();
+    let wrapper_cs = s!("\\MT@delim@{}@{}@wrapper", cmd_name, variant);
+    let body_toks: Vec<Token> = body.clone().unlist();
+    def_macro(T_CS!(&wrapper_cs),
+      parse_parameters("{}{}{}", &T_CS!(&wrapper_cs), true)?,
+      ExpansionBody::Tokens(Tokens::new(body_toks)), None)?;
   });
-
-  // \reDeclarePairedDelimiterInnerWrapper — stub (rarely used)
-  DefMacro!("\\reDeclarePairedDelimiterInnerWrapper{}{}{}", None);
 
   //======================================================================
   // 3.7 — Math-mode symbol definitions
@@ -835,10 +963,19 @@ LoadDefinitions!({
   });
   Let!("\\renewgathered", "\\newgathered");
 
-  // \@@newgathered@dummy — simplified gathered constructor
-  DefConstructor!("\\@@newgathered@dummy",
-    "<ltx:XMApp role='MULTIRELATION'>",
-    before_digest => { bgroup(); }
+  // \@@newgathered@dummy — gathered-like constructor with DigestedBody
+  // Perl: afterConstruct extracts array cells and wraps in XMDual.
+  // Simplified: just output the body as-is, like \@@gathered.
+  DefConstructor!("\\@@newgathered@dummy DigestedBody",
+    "#1",
+    before_digest => { bgroup(); },
+    reversion => "\\begin{gathered}#1\\end{gathered}",
+    after_construct => sub[document, whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
+        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    }
   );
   DefPrimitive!("\\@end@gathered", { egroup()?; });
 
