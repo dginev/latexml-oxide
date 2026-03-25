@@ -20,7 +20,6 @@ fn artefacts_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn calculus_test() {
   latexml_test_single("tests/parse/calculus.tex", "calculus", DIR, None, None);
 }
