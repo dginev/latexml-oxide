@@ -428,9 +428,14 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Math parser gaps
 
-- [ ] C2. Font specialize for parser tokens in nested script contexts
+- [ ] C2. Font specialize for parser tokens in nested script contexts (fontsize 50% vs 70% in calculus)
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
 - [ ] C4. ltx_nopad_l on @{}l@{} columns
+- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
+- [ ] C6. XMDual id ordering in eval-at: `\left.xyz\right|_0` has swapped m1.1↔m1.2
+- [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`
+- [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
+- [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
@@ -451,7 +456,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
-- [ ] **G. ar5iv-bindings** — translate all bindings from `~/git/ar5iv-bindings/bindings/` into `latexml_contrib` crate entries.
+- [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 
 ### Permanent ignores (5)
 
