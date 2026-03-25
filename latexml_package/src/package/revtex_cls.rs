@@ -22,5 +22,5 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("natbib", options => vec![String::from("numbers")]);
-  // RequirePackage!("revtex3_support"); // not ported yet
+  RequirePackage!("revtex3_support");
 });
