@@ -485,6 +485,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | mulop postsuperarg postsubarg => postfix_script;
     // Add scripted mulop as infix operator at term level
     term += tight_term scripted_mulop tight_term => infix_apply_nary;
+    // Ket with scripted operator label: |\times_{i}^{2}⟩ → ket@(scripted_mulop)
+    fenced_factor += singlevertbar scripted_mulop close => qm_ket;
 
     // Scripted FUNCTION with fenced args: f'(a), f^2(a), f_n(x)
     scripted_function = function postsuperarg => postfix_script
