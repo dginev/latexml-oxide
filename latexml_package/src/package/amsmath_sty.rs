@@ -11,11 +11,20 @@ use crate::prelude::*;
 
 /// Perl: amsAlignmentBindings($template, %properties) — amsmath.sty.ltxml lines 107-120
 /// Simple alignment bindings for ams environments (no equation rearrangement)
-fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, String>) {
+fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::alignment_bindings;
   let properties = SymHashMap::default();
   // Perl: my $cur_jot = LookupDimension('\jot');
-  // Note: \jot rowsep is now passed through via \@ams@multirow@bindings
+  // If \jot differs from default, set it as rowsep attribute
+  if !xml_attributes.contains_key("rowsep") {
+    if let Some(cur_jot) = state::lookup_dimension("\\jot") {
+      let default_jot = state::lookup_dimension("\\lx@default@jot");
+      let default_val = default_jot.map(|d| d.0).unwrap_or(0);
+      if cur_jot.0 != default_val && cur_jot.0 != 0 {
+        xml_attributes.insert(String::from("rowsep"), cur_jot.to_attribute());
+      }
+    }
+  }
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
   state::let_i(
     &T_CS!("\\\\"),
