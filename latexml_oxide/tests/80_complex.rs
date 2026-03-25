@@ -70,11 +70,11 @@ fn aastex_test_test() { complex("aastex_test"); }
 fn aliceblog_test() { complex("aliceblog"); }
 
 #[test]
-#[ignore] // diffs — physics package
+#[ignore] // TooManyErrors: needs physics.sty full port
 fn physics_test() { complex("physics"); }
 
 #[test]
-#[ignore] // diffs — siunitx package
+#[ignore] // TooManyErrors: needs siunitx.sty full port
 fn si_test() { complex("si"); }
 
 #[test]
