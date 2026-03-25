@@ -1,4 +1,4 @@
-// pub mod algorithmic_sty; // TODO: fix compile errors (.to_string() type issue)
+pub mod algorithmic_sty;
 // Supported package bindings
 pub mod a0size_sty;
 pub mod a4_sty;
