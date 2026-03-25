@@ -217,7 +217,15 @@ LoadDefinitions!({
     egroup()?;
   });
 
-  DefPrimitive!("\\@@end", { gullet::flush() });
+  // \@@end is the saved TeX \end primitive (before LaTeX redefines \end).
+  // expl3's primitive rename (\tex_let:D \tex_end:D \@@end) makes \tex_end:D
+  // point to this. When expl3's error handler calls \tex_end:D during package
+  // loading, we must NOT flush all mouths — that destroys the document.
+  DefPrimitive!("\\@@end", {
+    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+      gullet::flush();
+    }
+  });
 
   // DG: TODO Maybe split these out?
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
