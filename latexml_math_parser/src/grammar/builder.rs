@@ -319,6 +319,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // Parenthesized comma-separated lists: (a,b,c), (1+,0+,1-,0-)
            // Uses term_list which requires 2+ items (avoids single-formula ambiguity).
            | lparen term_list rparen            => fenced
+           // Comma-separated statements: (→,←), (a,b|Θ)
+           | lparen formula_list rparen        => fenced
            // Angle brackets as delimiters: <x,y> for inner products, etc.
            // Old typesetting conventions used < > instead of \langle \rangle.
            // Uses term_list (comma-separated terms) to avoid matching complex
