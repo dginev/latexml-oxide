@@ -748,8 +748,7 @@ LoadDefinitions!({
 
   // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
   // Perl takes RequiredKeyVals:multirow + OptionalKeyVals (for before_row/after_row).
-  // We only handle the required keyvals for now.
-  DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow", sub[(kv)] {
+  DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow OptionalKeyVals", sub[(kv, opt_kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
     let mut attrs: HashMap<String, String> = HashMap::default();
@@ -789,9 +788,35 @@ LoadDefinitions!({
         }
       }
     }
-    // Single-column template: \hfil \displaystyle before
+    // Process OptionalKeyVals: before_row, after_row
+    // Perl: wraps in \text{...} for before/after each row
+    let opt_keyvals: Option<KeyVals> = opt_kv.into();
+    let mut before_row_toks: Vec<Token> = Vec::new();
+    let mut after_row_toks: Vec<Token> = Vec::new();
+    if let Some(okv) = opt_keyvals {
+      if let Some(br) = okv.get_value("before_row") {
+        if !br.is_empty() {
+          before_row_toks.push(T_CS!("\\text"));
+          before_row_toks.push(T_BEGIN!());
+          before_row_toks.extend(br.clone().unlist());
+          before_row_toks.push(T_END!());
+        }
+      }
+      if let Some(ar) = okv.get_value("after_row") {
+        if !ar.is_empty() {
+          after_row_toks.push(T_CS!("\\text"));
+          after_row_toks.push(T_BEGIN!());
+          after_row_toks.extend(ar.clone().unlist());
+          after_row_toks.push(T_END!());
+        }
+      }
+    }
+    // Single-column template: \hfil \displaystyle [before_row] before, [after_row] after
+    let mut before_tokens = vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")];
+    before_tokens.extend(before_row_toks);
     let col1 = Cell {
-      before: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")])),
+      before: Some(Tokens::new(before_tokens)),
+      after: if after_row_toks.is_empty() { None } else { Some(Tokens::new(after_row_toks)) },
       empty: true,
       ..Cell::default()
     };
