@@ -239,6 +239,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "showkeys.sty" => package::showkeys_sty::load_definitions(),
     "underscore.sty" => package::underscore_sty::load_definitions(),
     "upquote.sty" => package::upquote_sty::load_definitions(),
+    "minimal.cls" => package::minimal_cls::load_definitions(),
+    "standalone.cls" => package::standalone_cls::load_definitions(),
     _other => return None,
   })
 }
