@@ -239,7 +239,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Plus 16 unit tests (state, tokens, replace_tree) = 309 total passing**
 **Coverage: 97% pass rate (293/301 non-permanently-blocked tests)**
 
-**Session 39 (86 packages, 17 commits):** 86 new packages translated from Perl. Total: 125→210 packages (243 dispatch entries, 60% of Perl's 405). Dimension precision fix (1 decimal). \\mathllap/\\mathclap/\\mathrlap xoffset. \\framebox align. \\mathmakebox arg count. Matrix cell alignment. \\ref* ltx_nolink. mathtools S12: 72→8, S4: 173→149. Overall diffs: 3369→3276.
+**Session 39 (95 packages, 21 commits):** 95 new packages (125→219, 252 dispatch, 60%). Dimension precision. xoffset. framebox align. mathmakebox. Matrix alignment. \\ref* ltx_nolink. IEEEnonumber/IEEEyesnumber (ieee 805→65). Grammar cycle investigation.
 
 **Ignored test breakdown (31 total):**
 - **~18 permanently blocked / missing packages**: tikz (10), pgf (2), beamer, expl3 (2), babel, physics, si, moderncv
