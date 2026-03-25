@@ -54,6 +54,31 @@ pub mod stix_sty;
 pub mod svg_extract_sty;
 pub mod tipa_sty;
 pub mod tlp_cls;
+pub mod axessibility_sty;
+pub mod breqn_sty;
+pub mod catchfile_sty;
+pub mod changepage_sty;
+pub mod cjk_sty;
+pub mod cjkutf8_sty;
+pub mod cmcal_sty;
+pub mod datetime2_sty;
+pub mod datetime_sty;
+pub mod emlines_sty;
+pub mod hobby_code_tex;
+pub mod hyphenat_sty;
+pub mod l3draw_sty;
+pub mod lettrine_sty;
+pub mod libertine_sty;
+pub mod ltablex_sty;
+pub mod mnsymbol_sty;
+pub mod mssymb_tex;
+pub mod oldgerm_sty;
+pub mod pst_plot_sty;
+pub mod savetrees_sty;
+pub mod scrbook_cls;
+pub mod tabularray_sty;
+pub mod xltabular_sty;
+pub mod xr_sty;
 
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
@@ -103,6 +128,31 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "svg-extract.sty" => Some(svg_extract_sty::load_definitions()),
     "tipa.sty" => Some(tipa_sty::load_definitions()),
     "tlp.cls" => Some(tlp_cls::load_definitions()),
+    "axessibility.sty" => Some(axessibility_sty::load_definitions()),
+    "breqn.sty" => Some(breqn_sty::load_definitions()),
+    "catchfile.sty" => Some(catchfile_sty::load_definitions()),
+    "changepage.sty" => Some(changepage_sty::load_definitions()),
+    "CJK.sty" => Some(cjk_sty::load_definitions()),
+    "CJKutf8.sty" => Some(cjkutf8_sty::load_definitions()),
+    "cmcal.sty" => Some(cmcal_sty::load_definitions()),
+    "datetime2.sty" => Some(datetime2_sty::load_definitions()),
+    "datetime.sty" => Some(datetime_sty::load_definitions()),
+    "emlines.sty" => Some(emlines_sty::load_definitions()),
+    "hobby.code.tex" => Some(hobby_code_tex::load_definitions()),
+    "hyphenat.sty" => Some(hyphenat_sty::load_definitions()),
+    "l3draw.sty" => Some(l3draw_sty::load_definitions()),
+    "lettrine.sty" => Some(lettrine_sty::load_definitions()),
+    "libertine.sty" => Some(libertine_sty::load_definitions()),
+    "ltablex.sty" => Some(ltablex_sty::load_definitions()),
+    "MnSymbol.sty" => Some(mnsymbol_sty::load_definitions()),
+    "mssymb.tex" => Some(mssymb_tex::load_definitions()),
+    "oldgerm.sty" => Some(oldgerm_sty::load_definitions()),
+    "pst-plot.sty" => Some(pst_plot_sty::load_definitions()),
+    "savetrees.sty" => Some(savetrees_sty::load_definitions()),
+    "scrbook.cls" => Some(scrbook_cls::load_definitions()),
+    "tabularray.sty" => Some(tabularray_sty::load_definitions()),
+    "xltabular.sty" => Some(xltabular_sty::load_definitions()),
+    "xr.sty" => Some(xr_sty::load_definitions()),
     _ => None,
   }
 }
