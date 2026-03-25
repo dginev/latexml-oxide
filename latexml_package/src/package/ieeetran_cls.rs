@@ -50,7 +50,7 @@ LoadDefinitions!({
   RawTeX!(r"\DeclareOption{peerreviewca}{\CLASSOPTIONpeerreviewtrue\CLASSOPTIONpeerreviewcatrue\CLASSOPTIONjournalfalse\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotefalse}");
   RawTeX!(r"\DeclareOption{nofonttune}{\CLASSOPTIONnofonttunetrue}");
   RawTeX!(r"\DeclareOption{captionsoff}{\CLASSOPTIONcaptionsofftrue}");
-  RawTeX!(r"\DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse\CLASSOPTIONtransmagfalse}");
+  RawTeX!(r"\DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse\CLASSOPTIONtransmagfalse\RequirePackage{newtxmath}}");
   RawTeX!(r"\DeclareOption{compsoc}{\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsoctrue\CLASSOPTIONtransmagfalse}");
   RawTeX!(r"\DeclareOption{transmag}{\CLASSOPTIONtransmagtrue\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsocfalse}");
   RawTeX!(r"\DeclareOption{romanappendices}{\CLASSOPTIONromanappendicestrue}");
@@ -423,8 +423,14 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
   DefMacro!(T_CS!("\\end{keywords}"), None, "\\@endIEEEkeywords");
   // Perl: \keywords can take either {} or bare text
-  // Simplified: just redirect to \@IEEEkeywords
-  DefMacro!("\\keywords", "\\@IEEEkeywords");
+  // If next token is T_BEGIN, use \keywords@onearg, otherwise \@IEEEkeywords
+  DefMacro!("\\keywords", sub[_args] {
+    if gullet::if_next(T_BEGIN!())? {
+      Tokens!(T_CS!("\\keywords@onearg"))
+    } else {
+      Tokens!(T_CS!("\\@IEEEkeywords"))
+    }
+  });
   DefMacro!("\\keywords@onearg{}", "\\@IEEEkeywords #1 \\@endIEEEkeywords");
 
   // Legacy IED list aliases
