@@ -2062,30 +2062,44 @@ pub fn apply_invisible_times(
       // For scripted functions/operators (XM::Apply with SCRIPTOP operator):
       // check the base token's role. E.g. \log_e → Apply(SUBSCRIPTOP, [log, e])
       // where log has role OPFUNCTION — should still prefer prefix_apply.
+      // Also for compound operators: \nabla\log → Apply(nabla, [log])
+      // where nabla is OPERATOR — the compound result should absorb args.
       XM::Apply(ref op, ref args, ..) => {
-        if let XM::Token(ref op_props, _) = *op.0 {
-          let op_role = op_props.role.as_deref().unwrap_or("");
-          if op_role.ends_with("SCRIPTOP") {
-            // Check base token's role
-            args.0.first().and_then(|base| base.as_ref()).and_then(|base| {
-              match base {
-                XM::Token(props, _) => props.role.as_deref().map(String::from),
-                XM::Lexeme(lex_id, _) => {
-                  lex_id.split(':').next_back()
-                    .and_then(|s| s.parse::<usize>().ok())
-                    .and_then(|id| if id > 0 && id <= ctxt.nodes.len() {
-                      ctxt.nodes[id - 1].get_attribute("role")
-                    } else { None })
-                },
-                _ => None,
-              }
-            })
-          } else { None }
+        let op_role = match &*op.0 {
+          XM::Token(ref p, _) => p.role.as_deref().map(String::from),
+          XM::Lexeme(lex, _) => {
+            // Extract role from lexeme string prefix: "OPERATOR:nabla:1" → "OPERATOR"
+            lex.split(':').next().map(String::from)
+          },
+          _ => None,
+        };
+        let op_role_str = op_role.as_deref().unwrap_or("");
+        if op_role_str.ends_with("SCRIPTOP") {
+          // Scripted: check base token's role (e.g. \log_e → SUBSCRIPTOP over OPFUNCTION)
+          args.0.first().and_then(|base| base.as_ref()).and_then(|base| {
+            match base {
+              XM::Token(props, _) => props.role.as_deref().map(String::from),
+              XM::Lexeme(lex_id, _) => {
+                lex_id.split(':').next_back()
+                  .and_then(|s| s.parse::<usize>().ok())
+                  .and_then(|id| if id > 0 && id <= ctxt.nodes.len() {
+                    ctxt.nodes[id - 1].get_attribute("role")
+                  } else { None })
+              },
+              _ => None,
+            }
+          })
+        } else if op_role_str == "OPERATOR" {
+          // Compound operator application: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
+          // The compound result should absorb next arg via prefix_apply, not invisible-times.
+          // Note: FUNCTION/TRIGFUNCTION/OPFUNCTION Applies are NOT pruned here — they
+          // participate in invisible-times chains like sin@(π)*cos@(2πy).
+          op_role.clone()
         } else { None }
       },
       _ => None,
     };
-    if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION")) {
+    if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR")) {
       // Exception: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
       // prefer invisible_times (multiplication). Perl: `fgh` with all FUNCTION → f·g·h.
       let rhs_is_function = right.as_ref().map(|r| {
