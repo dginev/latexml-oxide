@@ -766,15 +766,28 @@ LoadDefinitions!({
     }
     // Pass through vattach if present (top/bottom/center attachment)
     if let Some(vattach_arg) = kv.get_value("vattach") {
-      let va = vattach_arg.to_attribute();
-      // Perl: translateAttachment converts t→top, b→bottom, c→center
-      let translated = match va.as_str() {
-        "t" => "top",
-        "b" => "bottom",
-        "c" | "" => "center",
-        other => other,
-      };
-      attrs.insert(String::from("vattach"), translated.to_string());
+      if !vattach_arg.is_empty() {
+        let va = vattach_arg.to_attribute();
+        // Perl: translateAttachment converts t→top, b→bottom, c→center
+        let translated = match va.as_str() {
+          "t" => "top",
+          "b" => "bottom",
+          "c" => "center",
+          "" | "None" => "middle", // empty/None → default middle
+          other => other,
+        };
+        attrs.insert(String::from("vattach"), translated.to_string());
+      }
+    }
+    // Pass through width if present and non-zero
+    // Perl: if ($attr{width} && $attr{width}->valueOf == 0) { delete $attr{width}; }
+    if let Some(width_arg) = kv.get_value("width") {
+      if !width_arg.is_empty() {
+        let w = width_arg.to_attribute();
+        if !w.is_empty() && w != "0pt" && w != "0.0pt" {
+          attrs.insert(String::from("width"), w);
+        }
+      }
     }
     // Single-column template: \hfil \displaystyle before
     let col1 = Cell {
