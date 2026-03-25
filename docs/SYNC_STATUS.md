@@ -238,9 +238,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Current totals: 294 pass, 0 fail, 30 ignored (324 total integration tests)**
 **Plus 16 unit tests (state, tokens, replace_tree) = 310 total passing**
 **Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
-**Packages: 408 modules + 55 ar5iv contrib bindings (463 total, exceeds Perl's 405+87)**
+**Packages: 408 modules + 91 ar5iv contrib bindings (499 total, exceeds Perl's 405+87)**
 
-**Session 41 (47 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
+**Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
 **Ignored test breakdown (30 total):**
 - **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
