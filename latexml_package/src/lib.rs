@@ -185,6 +185,16 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "diagbox.sty" => package::diagbox_sty::load_definitions(),
     "nicefrac.sty" => package::nicefrac_sty::load_definitions(),
     "units.sty" => package::units_sty::load_definitions(),
+    "parskip.sty" => package::parskip_sty::load_definitions(),
+    "lscape.sty" => package::lscape_sty::load_definitions(),
+    "enumerate.sty" => package::enumerate_sty::load_definitions(),
+    "makeidx.sty" => package::makeidx_sty::load_definitions(),
+    "bm.sty" => package::bm_sty::load_definitions(),
+    "mleftright.sty" => package::mleftright_sty::load_definitions(),
+    "placeins.sty" => package::placeins_sty::load_definitions(),
+    "xfrac.sty" => package::xfrac_sty::load_definitions(),
+    "afterpage.sty" => package::afterpage_sty::load_definitions(),
+    "mathrsfs.sty" => package::mathrsfs_sty::load_definitions(),
     _other => return None,
   })
 }
