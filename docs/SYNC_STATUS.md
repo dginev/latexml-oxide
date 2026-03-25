@@ -244,11 +244,20 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 **Session 40:** DeclarePairedDelimiterX body eval, \mathtoolsset keyval, vattach/width, before_row/after_row, \@@newgathered@dummy DigestedBody, \jot→rowsep, 83 packages, grammar: bra-ket + FUNCTION/OPFUNCTION distinction (-337 diffs in 70_parse).
 
-**Ignored test breakdown (31 total):**
-- **~18 permanently blocked / missing packages**: tikz (10), pgf (2), beamer, expl3 (2), babel, physics, si, moderncv
-- **~5 math parser grammar**: calculus, artefacts, functions, operators, qm
-- **~5 structural**: listing (1661), ieee (805), figure_mixed_content (868), mathtools, split (timeout)
-- **~3 other**: picture (2023), xytest (conversion error), 65_graphics picture
+**Ignored test breakdown (30 total):**
+- **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
+- **5 math parser**: calculus, artefacts, functions, operators, qm (70_parse)
+- **2 expl3**: tilde_tricks, xparse — needs ExplSyntaxOn
+- **2 alignment**: listing (mathescape), split (timeout/OOM)
+- **1 babel**: timeout — unbounded loop
+- **1 beamer**: needs beamer.cls full port
+- **1 moderncv** (orc): SVG namespace
+- **1 mathtools** (56_ams): MathPrimitive crash
+- **1 xytest**: needs xy.sty full port
+- **1 picture**: needs picture environment
+- **1 physics**: needs physics.sty
+- **1 siunitx**: needs siunitx.sty
+- **1 figure_mixed_content**: wrapfig + listings math
 
 **Key infrastructure (sessions 26-33):**
 - Multi-token math rewrite infrastructure (C5): XMWrap wrapping, `_rewrite` marker, parser atomic handling
