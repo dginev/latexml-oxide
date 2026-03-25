@@ -13,15 +13,17 @@ use crate::prelude::*;
 /// Simple alignment bindings for ams environments (no equation rearrangement)
 fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::alignment_bindings;
-  let properties = SymHashMap::default();
+  let mut properties = SymHashMap::default();
   // Perl: my $cur_jot = LookupDimension('\jot');
-  // If \jot differs from default, set it as rowsep attribute
+  // If \jot differs from default, set rowsep as PROPERTY (for equationgroup)
+  // Perl sets $properties{rowsep} = $cur_jot for gather/align environments
   if !xml_attributes.contains_key("rowsep") {
     if let Some(cur_jot) = state::lookup_dimension("\\jot") {
       let default_jot = state::lookup_dimension("\\lx@default@jot");
       let default_val = default_jot.map(|d| d.0).unwrap_or(0);
       if cur_jot.0 != default_val && cur_jot.0 != 0 {
-        xml_attributes.insert(String::from("rowsep"), cur_jot.to_attribute());
+        let rowsep_str = cur_jot.to_attribute();
+        properties.insert("rowsep", Stored::String(arena::pin(&rowsep_str)));
       }
     }
   }
