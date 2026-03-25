@@ -404,6 +404,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += function lbracket formula rbracket => apply_delimited;
     // Also support fenced_factor for backwards compat (no XMDual wrapping)
     tight_term += function fenced_factor => prefix_apply;
+    // scripted_function rules moved below postsubarg/postsuperarg definitions
     // OPFUNCTION followed by fenced args => function application with XMDual wrapping.
     // Perl: ApplyDelimited for \operatorname{cov}(L), \log(x), etc.
     tight_term += opfunction lparen formula rparen => apply_delimited;
@@ -462,6 +463,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | mulop postsuperarg postsubarg => postfix_script;
     // Add scripted mulop as infix operator at term level
     term += tight_term scripted_mulop tight_term => infix_apply_nary;
+
+    // Scripted FUNCTION with fenced args: f'(a), f^2(a), f_n(x)
+    scripted_function = function postsuperarg => postfix_script
+      | function postsubarg => postfix_script
+      | function postsubarg postsuperarg => postfix_script
+      | function postsuperarg postsubarg => postfix_script;
+    tight_term += scripted_function fenced_factor => prefix_apply;
+    tight_term += scripted_function lparen formula rparen => apply_delimited;
 
     // standalone top-level variants of floating scripts:
     floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
