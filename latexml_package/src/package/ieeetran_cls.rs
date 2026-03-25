@@ -192,21 +192,52 @@ LoadDefinitions!({
   // IEEEnonumber / IEEEyesnumber / IEEEyessubnumber / IEEEnosubnumber
   // Perl: These manipulate EQUATION_NUMBERING and EQUATIONROW_TAGS state
   // For now, simplified stubs that handle the common cases
-  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(_star)] {
-    // Suppress numbering — similar to \nonumber
-    // TODO: full Perl semantics with EQUATION_NUMBERING/EQUATIONROW_TAGS
+  // Perl: IEEEnonumber manipulates EQUATION_NUMBERING and EQUATIONROW_TAGS
+  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
+    // Suppress numbering for current row (no star) or all rows (star)
+    if star.is_some() {
+      // Star: retract all future equations in this group
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.insert("retract", true.into());
+          numbering.remove("counter");
+        }
+      });
+    } else {
+      // No star: retract current equation only
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("retract", true.into());
+          tags.remove("counter");
+        }
+      });
+    }
   });
-  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(_star)] {
-    // Restore numbering
-    // TODO: full Perl semantics
+  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
+    // Restore numbering for current row (no star) or all rows (star)
+    if star.is_some() {
+      // Star: enable numbering for all future equations in this group
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.remove("retract");
+          numbering.remove("counter");
+        }
+      });
+    } else {
+      // No star: force number on current equation
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("noretract", true.into());
+          tags.remove("counter");
+        }
+      });
+    }
   });
   DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(_star)] {
-    // Enable sub-numbering
-    // TODO: full Perl semantics
+    // TODO: sub-numbering not yet implemented
   });
   DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(_star)] {
-    // Disable sub-numbering
-    // TODO: full Perl semantics
+    // TODO: sub-numbering not yet implemented
   });
 
   // IEEEeqnarray => eqnarray
