@@ -189,10 +189,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     | operator applyop term => prefix_apply_applyop;
 
 
-    // Allow standalone functions/trigfunctions/opfunctions as terms
+    // Allow standalone functions/trigfunctions/opfunctions/operators as terms
     // This is needed for (f*g)(x) where f and g are FUNCTION tokens
     // opfunction here allows standalone \operatorname{R} to parse
-    term += function | trigfunction | opfunction | composed_term;
+    // operator as term enables D - 1 (subtraction), D + G (addition)
+    term += function | trigfunction | opfunction | composed_term | operator;
     // Allow elideop (\cdots) as a term for chains like y + i + \cdots + y_n
     // Perl treats cdots as a regular term in addition chains
     term += elideop;
