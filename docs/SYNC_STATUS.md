@@ -406,7 +406,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Active TODO items (ordered)
 
-- [ ] **34. mathtools_test** (56_ams) — 6449 diffs (19 unparsed formulas, 2 XMath errors). See mini-plan below.
+- [ ] **34. mathtools_test** (56_ams) — 7348 diffs (15 unparsed formulas, 2 XMath errors). See mini-plan below.
 - [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
@@ -424,7 +424,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 | S4 | Matrices | **99%** | 1 line diff |
 | S5 | Cases | **101%** | Intertext fixed |
 | S6 | Gathered | **104%** | afterConstruct XMDual wrapping done |
-| S7 | Delimiters | 77% | DeclarePairedDelimiterX body eval |
+| S7 | Delimiters | 85% | DeclarePairedDelimiterX body eval done, \Set* parses |
 | S8 | Prescripts | 69% | XMRef/xml:id for prescript nodes |
 | S9 | Multlines | **88%** | lgathered/rgathered afterConstruct done |
 | S10 | Spread-lines | **95%** | rowsep, xml:id numbering |
