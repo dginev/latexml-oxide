@@ -240,7 +240,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
 **Packages: 408 modules + 55 ar5iv contrib bindings (463 total, exceeds Perl's 405+87)**
 
-**Session 41 (40 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
+**Session 41 (47 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
 **Ignored test breakdown (30 total):**
 - **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
@@ -397,7 +397,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. Remaining: calculus (332 diffs: XMDual nesting + eval-at), artefacts (285 diffs: 5 kets now correct, (\int)/(\Delta) fixed), functions (421 diffs: 4 unparsed — conditional|, \middle|; \nabla\log fixed), operators (505 diffs: 3 unparsed — double-sum chart exhaustion, D(a)(b) chain; D-1 fixed, Df(a) fixed), qm (460 diffs: literal `<>` bra-ket needs QM pragma).
+- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored (dramatically reduced). Remaining: calculus (17 diffs: xml:id ordering + fontsize), artefacts (285 diffs: structural from improvements over Perl), functions (421 diffs: conditional|, unparsed arrows), operators (505 diffs: double-sum + D(a)(b)), qm (460 diffs: <> bra-ket needs QM pragma). Key fix: fenced XMDual nesting for multi-item lists (calculus 332→17).
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
