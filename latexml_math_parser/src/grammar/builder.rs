@@ -82,7 +82,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     fenced_array = open array close => fenced
       | open array => open_fenced
       | array close => close_fenced;
-    factor = factor_base | opfunction | fenced_array;
+    // FUNCTION and OPFUNCTION are both factors (participate in implicit multiplication).
+    // The distinction is in argument absorption: OPFUNCTION absorbs bare args,
+    // FUNCTION only absorbs fenced (parenthesized) args.
+    factor = factor_base | function | opfunction | fenced_array;
     // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
     // A "left-only term": on the left behaves as a term (for comma lists),
     // on the right terminates at the addop (like expression-level postfix).
@@ -110,7 +113,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | tight_term factor => apply_invisible_times
       // Perl MathGrammar L423: POSTFIX (e.g. n!) => Apply(op, term)
       | tight_term postfix => apply_postfix
-      | function tight_term => prefix_apply
+      // Note: FUNCTION does NOT absorb bare args — only parens or APPLYOP.
+      // `fga` = f*g*a, but `f(a)` = f@(a). OPFUNCTION absorbs: `Fga` = F@(g*a).
+      // FUNCTION only chains via opfunction's factor status or APPLYOP.
       // trigfunction uses trigbarearg via applied_func (absorbs MulOp chains)
       // NOTE: bigop rules moved to += section (after `term` is defined) so they
       // can absorb full term (mulop chains like x² * dx), not just tight_term.
@@ -354,16 +359,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | unknown fenced_factor => speculative_prefix_apply
       | function fenced_factor => prefix_apply
       | opfunction fenced_factor => prefix_apply
-      // Perl: trigBarearg includes FUNCTION/OPFUNCTION+args (chained function application)
-      // Allows: \sin\log x → sin(log(x)), \sin\det A → sin(det(A))
-      | function factor => prefix_apply
+      // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
+      // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
       | opfunction factor => prefix_apply
       | trig_arg mulop factor => infix_apply_nary
       | trig_arg binop factor => infix_apply_nary
       | trig_arg factor => apply_invisible_times;
 
-    // applied_func uses trig_arg (defined above)
-    applied_func = function tight_term => prefix_apply
+    // applied_func: FUNCTION only absorbs fenced args (parens), not bare args.
+    // OPFUNCTION and TRIGFUNCTION absorb bare args (Perl distinction).
+    // Perl: `fga` = f*g*a (FUNCTION), `Fga` = F@(g*a) (OPFUNCTION)
+    applied_func = function fenced_factor => prefix_apply
       | trigfunction trig_arg => prefix_apply
       | opfunction tight_term => prefix_apply;
     // Standalone applied functions are also tight_terms
