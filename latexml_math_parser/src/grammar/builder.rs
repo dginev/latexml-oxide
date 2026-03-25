@@ -325,6 +325,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
            | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
            | singlevertbar expression singlevertbar => fenced
+           // Dirac ket: |expr⟩ — VERTBAR as opening, CLOSE as closing
+           | singlevertbar expression close => fenced
+           // Dirac bra: ⟨expr| — OPEN as opening, VERTBAR as closing
+           | open expression singlevertbar => fenced
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
            | lbrace term punct term punct term rbrace => fence
