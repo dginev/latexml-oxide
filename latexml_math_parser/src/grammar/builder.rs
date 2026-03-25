@@ -103,6 +103,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Must end with a function/trigfunction (no bare operator-only compounds)
     compound_operator = operator trigfunction => prefix_apply
       | operator function => prefix_apply
+      | operator opfunction => prefix_apply
       | operator compound_operator => prefix_apply;
 
     // tight_term includes single factors (for left-recursive chaining)
