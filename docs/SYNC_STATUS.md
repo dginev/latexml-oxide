@@ -446,7 +446,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
-- [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
+- [ ] expl3.sty — **PARTIALLY WORKING**: expl3-code.tex loads ~3700/22K lines. Fixed: Lua file loading (101→3 errors). Remaining: `\__tl_if_recursion_tail_break:nN` undefined + mouth-closure errors. Likely cause: `\exp_args:Ne` / `\cs_generate_variant` e-type expansion via `\expanded XGeneralText` (Partial expansion may not match true `\expanded` semantics).
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
 - [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
 
