@@ -233,13 +233,16 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-24)
+## Test Suite Status (2026-03-25)
 
-**Current totals: 293 pass, 0 fail, 31 ignored (324 total integration tests)**
-**Plus 16 unit tests (state, tokens, replace_tree) = 309 total passing**
-**Coverage: 97% pass rate (293/301 non-permanently-blocked tests)**
+**Current totals: 294 pass, 0 fail, 30 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 310 total passing**
+**Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
+**Packages: 398 modules, 407+ dispatch entries (~97% of Perl's 405)**
 
-**Session 39 (95 packages, 21 commits):** 95 new packages (125→219, 252 dispatch, 60%). Dimension precision. xoffset. framebox align. mathmakebox. Matrix alignment. \\ref* ltx_nolink. IEEEnonumber/IEEEyesnumber (ieee 805→65). Grammar cycle investigation.
+**Session 41 (15 commits, 2026-03-25):** OOM root cause found and fixed: `parse_parameters` infinite loop on non-word chars in CS names (e.g. `\nprt@sign@+`). Literal Token fallback + 50-step guard. Re-enabled all 8 commented-out modules. XMArg lexer fix: subscript content like `_{ij}` now unwrapped and parsed as `i*j` (matching Perl). Grammar: bra-ket QM notation (`qm_ket`/`qm_bra` semantic actions), fenced singleton operators `(\int)`, `(\Delta)`. 6 new packages ported (amstex, rotate, svg, aas_macros, a0poster, aipproc). Angle-bracket bra-ket rules attempted but conflict with set comprehension — needs QM pragma. algorithmic_sty compile errors fixed.
+
+**Session 40:** DeclarePairedDelimiterX body eval, \mathtoolsset keyval, vattach/width, before_row/after_row, \@@newgathered@dummy DigestedBody, \jot→rowsep, 83 packages, grammar: bra-ket + FUNCTION/OPFUNCTION distinction (-337 diffs in 70_parse).
 
 **Ignored test breakdown (31 total):**
 - **~18 permanently blocked / missing packages**: tikz (10), pgf (2), beamer, expl3 (2), babel, physics, si, moderncv
@@ -402,7 +405,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-24):** 293 pass, 0 fail, 31 ignored (88 commits). Session 38 (27 commits): **2 pragmas** (FunctionsPreferWider + BigopPreferWider). **DELIMITER_MAP** (14 entries). **\\intertext** crcr+noalign. **DeclarePairedDelimiter** star/optional. **\\@@multlined DigestedBody** (14→2 XMath errors). **METARELOP** lexer. **\\gathered** multirow bindings. **Large amsmath audit** (30+ defs). **FUNCTION multiplication** grammar. **rearrangeLoneAMSAligned** (equation+aligned→equationgroup/MathFork). **afterConstruct** for gathered/lgathered/rgathered/multlined (rearrangeAMSMultirow XMDual wrapping). mathtools 31→9 actual unparsed (71% reduction). S6 parity 82%→104%, S9 82%→88%.
+**Status (2026-03-25):** 294 pass, 0 fail, 30 ignored. 398 modules (97% Perl).
 
 ### Active TODO items (ordered)
 
@@ -410,7 +413,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. Remaining: calculus (327, 0 unparsed — diffs: xml:id renumbering + `dt` vs `differential-d@(t)` from lxDeclare DIFFOP + vector wrapping + triple-sum subscript grouping), artefacts (251, 2 unparsed: scripted operators `×_i^2`), functions (332, 8 unparsed), operators (434, 4 unparsed: sum+function patterns + `|∇|^α`), qm (414, 4 unparsed: `<a|` needs context-sensitive `<` morphing).
+- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. Remaining: calculus (332 diffs: XMDual nesting + eval-at), artefacts (285 diffs: ket@(scripted) content, (\int)/(\Delta) now fixed, 3 kets now correct), functions (452 diffs: nabla\log structural), operators (506 diffs: DIFFOP dx recognition + compound operator application), qm (460 diffs: literal `<>` bra-ket blocked by set comprehension conflict, needs QM pragma).
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
