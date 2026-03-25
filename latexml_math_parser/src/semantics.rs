@@ -1532,13 +1532,13 @@ pub fn fenced(
       };
       // Determine meaning from delimiter + item count (matching Perl's fence lookup)
       let n = items.len();
-      let fence_meaning = match (o.as_ref(), n) {
-        ("(", 2) => "open-interval",
-        ("(", _) => "vector",
-        ("{", _) => "set",
-        _ => &meaning_str,
+      let fence_meaning: Cow<'static, str> = match (o.as_ref(), n) {
+        ("(", 2) => Cow::Borrowed("open-interval"),
+        ("(", _) => Cow::Borrowed("vector"),
+        ("{", _) => Cow::Borrowed("set"),
+        _ => Cow::Owned(meaning_str),
       };
-      let op = XProps { meaning: Some(Cow::Borrowed(fence_meaning)), ..XProps::default() };
+      let op = XProps { meaning: Some(fence_meaning), ..XProps::default() };
       // Build stuff: [open, item1, comma, item2, comma, ..., close]
       let comma = XM::Token(
         XProps { role: Some(Cow::Borrowed("PUNCT")), content: Some(Cow::Borrowed(",")), ..XProps::default() },
