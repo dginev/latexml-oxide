@@ -62,6 +62,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(end_postsubscript ~ "end_POSTSUBSCRIPT");
   token!(start_postsuperscript ~ "start_POSTSUPERSCRIPT");
   token!(end_postsuperscript ~ "end_POSTSUPERSCRIPT");
+  // Separated bigop script tokens — prevents earley chart competition
+  // between scripted_bigop and scripted_factor rules
+  token!(start_bigopsub ~ "start_BIGOPSUB");
+  token!(end_bigopsub ~ "end_BIGOPSUB");
+  token!(start_bigopsup ~ "start_BIGOPSUP");
+  token!(end_bigopsup ~ "end_BIGOPSUP");
   token!(start_floatsuperscript ~ "start_FLOATSUPERSCRIPT");
   token!(end_floatsuperscript ~ "end_FLOATSUPERSCRIPT");
   token!(start_floatsubscript ~ "start_FLOATSUBSCRIPT");
@@ -434,6 +440,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | start_postsuperscript statements end_postsuperscript => faux_wrap
       | start_postsuperscript formula_list end_postsuperscript => faux_wrap
       | start_postsuperscript script_op end_postsuperscript => faux_wrap;
+    // Bigop-specific script args — separated tokens to reduce earley chart competition
+    bigopsubarg = start_bigopsub expression end_bigopsub => faux_wrap
+      | start_bigopsub statements end_bigopsub => faux_wrap
+      | start_bigopsub formula_list end_bigopsub => faux_wrap
+      | start_bigopsub script_op end_bigopsub => faux_wrap;
+    bigopsuparg = start_bigopsup expression end_bigopsup => faux_wrap
+      | start_bigopsup statements end_bigopsup => faux_wrap
+      | start_bigopsup formula_list end_bigopsup => faux_wrap
+      | start_bigopsup script_op end_bigopsup => faux_wrap;
     floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap
       | start_floatsubscript script_op end_floatsubscript => faux_wrap;
     floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap
@@ -491,9 +506,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // These are bigops with post-scripts that still act as prefix operators.
     // Perl: preScripted['INTOP'] addIntOpArgs / preScripted['bigop'] addOpArgs
     // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
-    scripted_bigop_r1 = any_bigop postsuperarg => postfix_script
+    // Use bigop-specific script tokens when available (from lexer),
+    // fall back to generic POSTSUBSCRIPT/POSTSUPERSCRIPT for compatibility
+    scripted_bigop_r1 = any_bigop bigopsuparg => postfix_script
+      | any_bigop bigopsubarg => postfix_script
+      | any_bigop postsuperarg => postfix_script
       | any_bigop postsubarg => postfix_script;
     scripted_bigop = scripted_bigop_r1
+      | scripted_bigop_r1 bigopsuparg => postfix_script
+      | scripted_bigop_r1 bigopsubarg => postfix_script
       | scripted_bigop_r1 postsuperarg => postfix_script
       | scripted_bigop_r1 postsubarg => postfix_script;
     // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
