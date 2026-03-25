@@ -1489,18 +1489,76 @@ pub fn fenced(
   // TODO: For now assume a single argument in arg; specialize in other functions such as "open_interval",
   //       for the other cases from the classic MathParser.pm
   if op_name == "delimited-()" {
-    // Perl Fence L1412: Single arg in () → XMDual(XMRef(arg), XMWrap((,arg,)))
-    let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
-    Ok(Some(XM::Dual(
-      Box::new(arg_xmrefs.remove(0)),
-      Box::new(XM::Wrap(
-        vec![open, arg, close],
+    // Check if arg is a multi-item list (XM::Dual from list_apply/formulae_apply).
+    // If so, use interpret_delimited for per-item XMRefs (matching Perl's NewFenced).
+    let is_multi_item = match &arg {
+      XM::Dual(ref content, _, _, _) => matches!(&**content, XM::Apply(ref op_box, ref args, ..)
+        if args.0.len() >= 2 && matches!(&*op_box.0,
+          XM::Token(ref p, _) if matches!(p.meaning.as_deref(),
+            Some("vector") | Some("list") | Some("formulae")))),
+      XM::Apply(ref op_box, ref args, ..) => args.0.len() >= 2 && matches!(&*op_box.0,
+        XM::Token(ref p, _) if matches!(p.meaning.as_deref(),
+          Some("vector") | Some("list") | Some("formulae"))),
+      _ => false,
+    };
+    if is_multi_item {
+      // Extract meaning and items from either Dual(Apply(...), Wrap(...)) or bare Apply
+      let (meaning_str, items) = match arg {
+        XM::Dual(content, pres, _, _) => {
+          // For Dual: use the presentation Wrap's children (which have xml:ids)
+          let m = if let XM::Apply(ref op_box, ..) = *content {
+            if let XM::Token(ref p, _) = *op_box.0 {
+              p.meaning.as_deref().unwrap_or("vector").to_string()
+            } else { "vector".to_string() }
+          } else { "vector".to_string() };
+          // Extract items from the presentation Wrap (skip separators)
+          let pres_items = if let XM::Wrap(wrap_items, _, _) = *pres {
+            // Items are at even indices (0, 2, 4, ...) — separators at odd
+            wrap_items.into_iter().enumerate()
+              .filter(|(i, _)| i % 2 == 0)
+              .map(|(_, item)| item)
+              .collect::<Vec<_>>()
+          } else { vec![] };
+          (m, pres_items)
+        },
+        XM::Apply(op_box, args_inner, _, _) => {
+          let m = if let XM::Token(ref p, _) = *op_box.0 {
+            p.meaning.as_deref().unwrap_or("vector").to_string()
+          } else { "vector".to_string() };
+          let items: Vec<XM> = args_inner.0.into_iter().flatten().collect();
+          (m, items)
+        },
+        _ => unreachable!(),
+      };
+      let op = XProps { meaning: Some(Cow::Owned(meaning_str)), ..XProps::default() };
+      // Build stuff: [open, item1, comma, item2, comma, ..., close]
+      let comma = XM::Token(
+        XProps { role: Some(Cow::Borrowed("PUNCT")), ..XProps::default() },
+        Meta::default(),
+      );
+      let mut stuff = vec![open];
+      for (i, item) in items.into_iter().enumerate() {
+        if i > 0 {
+          stuff.push(comma.clone());
+        }
+        stuff.push(item);
+      }
+      stuff.push(close);
+      interpret_delimited(op.into(), stuff, ctxt).map(Option::Some)
+    } else {
+      // Single arg: XMDual(XMRef(arg), XMWrap((,arg,)))
+      let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
+      Ok(Some(XM::Dual(
+        Box::new(arg_xmrefs.remove(0)),
+        Box::new(XM::Wrap(
+          vec![open, arg, close],
+          XProps::default(),
+          Meta::default(),
+        )),
         XProps::default(),
         Meta::default(),
-      )),
-      XProps::default(),
-      Meta::default(),
-    )))
+      )))
+    }
   } else if op_name == "delimited-{}" {
     // Perl enclose1: {expr} => set
     let op = XProps {
