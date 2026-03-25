@@ -378,6 +378,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // on | from \lxDeclare, or QM pragma to disable ket rules).
            // | lparen formula_list singlevertbar formula rparen => fence
            // | lparen formula singlevertbar formula_list rparen => fence
+           // \middle separator: \left(a\middle|b\right) → conditional@(a^b, x)
+           // MIDDLE tokens are author-explicit (unlike bare |), so safe from ambiguity.
+           // BLOCKED: Perl leaves these unparsed; enabling parses them correctly but
+           // diverges from expected XML. Needs user approval to update test expectations.
+           // | open formula middle_bar formula close => fence
+           // | open formula middle formula close => fence
+           // | lparen formula middle_bar formula rparen => fence
            // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
            // Perl MathGrammar: OPEN Expression CLOSE → Fence
            | open expression close => fenced
