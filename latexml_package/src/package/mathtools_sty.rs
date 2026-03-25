@@ -100,14 +100,11 @@ LoadDefinitions!({
   // 3.2 — Tag forms
   //======================================================================
 
-  // \newtagform, \renewtagform — complex DefPrimitive with sub{} — stubbed
+  // \newtagform, \renewtagform — complex runtime macro factories
+  // TODO: Implement properly — requires careful token construction for \fnum@equation redefinition
   DefMacro!("\\newtagform{}[]{}{}", None);
   DefMacro!("\\renewtagform{}[]{}{}", None);
   DefMacro!("\\usetagform{}", "\\csname @MTStag@#1\\endcsname");
-
-  // RawTeX('\newtagform{default}{(}{)}');
-  // Stubbed — the \newtagform primitive is stubbed above
-  // RawTeX!("\\newtagform{default}{(}{)}");
 
   Let!("\\refeq", "\\ref");
   DefMacro!("\\noeqref{}", None);
