@@ -238,11 +238,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Current totals: 294 pass, 0 fail, 30 ignored (324 total integration tests)**
 **Plus 16 unit tests (state, tokens, replace_tree) = 310 total passing**
 **Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
-**Packages: 407 modules, 430+ dispatch entries (exceeds Perl's 405 base)**
+**Packages: 408 modules + 55 ar5iv contrib bindings (463 total, exceeds Perl's 405+87)**
 
-**Session 41 (15 commits, 2026-03-25):** OOM root cause found and fixed: `parse_parameters` infinite loop on non-word chars in CS names (e.g. `\nprt@sign@+`). Literal Token fallback + 50-step guard. Re-enabled all 8 commented-out modules. XMArg lexer fix: subscript content like `_{ij}` now unwrapped and parsed as `i*j` (matching Perl). Grammar: bra-ket QM notation (`qm_ket`/`qm_bra` semantic actions), fenced singleton operators `(\int)`, `(\Delta)`. 6 new packages ported (amstex, rotate, svg, aas_macros, a0poster, aipproc). Angle-bracket bra-ket rules attempted but conflict with set comprehension — needs QM pragma. algorithmic_sty compile errors fixed.
-
-**Session 40:** DeclarePairedDelimiterX body eval, \mathtoolsset keyval, vattach/width, before_row/after_row, \@@newgathered@dummy DigestedBody, \jot→rowsep, 83 packages, grammar: bra-ket + FUNCTION/OPFUNCTION distinction (-337 diffs in 70_parse).
+**Session 41 (40 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
 **Ignored test breakdown (30 total):**
 - **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
