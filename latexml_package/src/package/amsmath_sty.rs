@@ -11,7 +11,7 @@ use crate::prelude::*;
 
 /// Perl: amsAlignmentBindings($template, %properties) — amsmath.sty.ltxml lines 107-120
 /// Simple alignment bindings for ams environments (no equation rearrangement)
-fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
+fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::alignment_bindings;
   let mut properties = SymHashMap::default();
   // Perl: my $cur_jot = LookupDimension('\jot');
