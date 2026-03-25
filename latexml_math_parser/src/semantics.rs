@@ -1656,6 +1656,7 @@ pub fn fence(
     2 => match (o.as_ref(), p_str, c.as_ref()) {
       ("{", ",", "}") => "set",
       ("{", ":", "}") | ("{", "|", "}") => "conditional-set",
+      ("(", "|", ")") => "conditional",
       ("(", ",", ")") => "open-interval",
       ("[", ",", "]") => "closed-interval",
       ("(", ",", "]") => "open-closed-interval",
