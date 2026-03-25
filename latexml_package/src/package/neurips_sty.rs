@@ -5,13 +5,13 @@ LoadDefinitions!({
   RequirePackage!("geometry");
   RequirePackage!("lineno");
   DeclareOption!("final", {
-    state::assign_value("neurips_final", Stored::from(1), Some("global"));
+    state::assign_value("neurips_final", Stored::from(1), Some(Scope::Global));
   });
   DeclareOption!("preprint", {
-    state::assign_value("neurips_preprint", Stored::from(1), Some("global"));
+    state::assign_value("neurips_preprint", Stored::from(1), Some(Scope::Global));
   });
   DeclareOption!("nonatbib", {
-    state::assign_value("neurips_nonatbib", Stored::from(1), Some("global"));
+    state::assign_value("neurips_nonatbib", Stored::from(1), Some(Scope::Global));
   });
   ProcessOptions!();
   if state::lookup_value("neurips_nonatbib").is_none() {
