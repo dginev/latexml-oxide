@@ -635,6 +635,12 @@ LoadDefinitions!({
       stored_map!("explicit_mathstyle" => true),
     )
   });
+  // TODO [C2]: \scriptstyle is an ABSOLUTE mathstyle command — it should always
+  // produce fontsize=70% regardless of nesting context. Currently MergeFont adds
+  // "script" relative to existing style, so \scriptstyle inside a subscript
+  // (already script) produces scriptscript (50%) instead of script (70%).
+  // Fix: MergeFont should detect "explicit_mathstyle" and RESET rather than merge.
+  // Affected: calculus.xml (\scriptstyle inside \atop inside subscript).
   DefPrimitive!("\\scriptstyle", {
     MergeFont!(mathstyle => "script");
     Tbox::new(

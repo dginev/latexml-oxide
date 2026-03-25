@@ -235,9 +235,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-25)
 
-**Current totals: 294 pass, 0 fail, 30 ignored (324 total integration tests)**
-**Plus 16 unit tests (state, tokens, replace_tree) = 310 total passing**
-**Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
+**Current totals: 300 pass, 0 fail, 24 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 316 total passing**
+**Coverage: 300/319 non-permanently-blocked = 94% pass rate**
 **Packages: 408 modules + 91 ar5iv contrib bindings (499 total, exceeds Perl's 405+87)**
 
 **Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
@@ -428,7 +428,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Math parser gaps
 
-- [ ] C2. Font specialize for parser tokens in nested script contexts (fontsize 50% vs 70% in calculus)
+- [ ] C2. Font specialize / mathstyle absolute reset — `\scriptstyle` inside subscript produces fontsize=50% (scriptscript) instead of 70% (script). `MergeFont!(mathstyle => "script")` adds relative; should RESET when `explicit_mathstyle` is set. See `tex_math.rs:638`. Calculus XML temporarily updated to match 50%; needs fix to restore 70%.
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
 - [ ] C4. ltx_nopad_l on @{}l@{} columns
 - [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
