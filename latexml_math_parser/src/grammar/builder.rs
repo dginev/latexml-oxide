@@ -453,6 +453,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | start_floatsubscript script_op end_floatsubscript => faux_wrap;
     floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap
       | start_floatsuperscript script_op end_floatsuperscript => faux_wrap;
+    // Scripted infix operators: x \times_i^2 y — operator with decorating scripts
+    scripted_mulop = mulop postsubarg => postfix_script
+      | mulop postsuperarg => postfix_script
+      | mulop postsubarg postsuperarg => postfix_script
+      | mulop postsuperarg postsubarg => postfix_script;
+    // Add scripted mulop as infix operator at term level
+    term += tight_term scripted_mulop tight_term => infix_apply_nary;
+
     // standalone top-level variants of floating scripts:
     floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
     floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
