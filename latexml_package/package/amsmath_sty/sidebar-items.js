@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","rearrange_ams_align","rearrange_ams_gather"]};
+window.SIDEBAR_ITEMS = {"fn":["get_multirow_alignment_rule","load_definitions","rearrange_ams_align","rearrange_ams_gather","rearrange_ams_multirow","rearrange_lone_ams_aligned"]};

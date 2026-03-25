@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_savable_keys","load_definitions","save_theorem_style","set_savable_theorem_parameters","use_theorem_style"]};
+window.SIDEBAR_ITEMS = {"fn":["define_new_theorem","get_savable_keys","load_definitions","save_theorem_style","set_savable_theorem_parameters","use_theorem_style"]};
