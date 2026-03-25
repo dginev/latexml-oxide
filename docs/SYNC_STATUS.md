@@ -238,7 +238,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Current totals: 294 pass, 0 fail, 30 ignored (324 total integration tests)**
 **Plus 16 unit tests (state, tokens, replace_tree) = 310 total passing**
 **Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
-**Packages: 398 modules, 407+ dispatch entries (~97% of Perl's 405)**
+**Packages: 403 modules, 420+ dispatch entries (~99% of Perl's 405)**
 
 **Session 41 (15 commits, 2026-03-25):** OOM root cause found and fixed: `parse_parameters` infinite loop on non-word chars in CS names (e.g. `\nprt@sign@+`). Literal Token fallback + 50-step guard. Re-enabled all 8 commented-out modules. XMArg lexer fix: subscript content like `_{ij}` now unwrapped and parsed as `i*j` (matching Perl). Grammar: bra-ket QM notation (`qm_ket`/`qm_bra` semantic actions), fenced singleton operators `(\int)`, `(\Delta)`. 6 new packages ported (amstex, rotate, svg, aas_macros, a0poster, aipproc). Angle-bracket bra-ket rules attempted but conflict with set comprehension — needs QM pragma. algorithmic_sty compile errors fixed.
 
@@ -413,7 +413,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. Remaining: calculus (332 diffs: XMDual nesting + eval-at), artefacts (285 diffs: ket@(scripted) content, (\int)/(\Delta) now fixed, 3 kets now correct), functions (452 diffs: nabla\log structural), operators (506 diffs: DIFFOP dx recognition + compound operator application), qm (460 diffs: literal `<>` bra-ket blocked by set comprehension conflict, needs QM pragma).
+- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored. Remaining: calculus (332 diffs: XMDual nesting + eval-at), artefacts (285 diffs: 5 kets now correct, (\int)/(\Delta) fixed), functions (421 diffs: 4 unparsed — conditional|, \middle|; \nabla\log fixed), operators (505 diffs: 3 unparsed — double-sum chart exhaustion, D(a)(b) chain; D-1 fixed, Df(a) fixed), qm (460 diffs: literal `<>` bra-ket needs QM pragma).
 - [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
