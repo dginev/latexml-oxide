@@ -116,16 +116,16 @@
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="evaluated-at"/>
-                        <XMRef idref="S1.I1.i6.p1.m1.3"/>
                         <XMRef idref="S1.I1.i6.p1.m1.1"/>
                         <XMRef idref="S1.I1.i6.p1.m1.2"/>
+                        <XMRef idref="S1.I1.i6.p1.m1.3"/>
                       </XMApp>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMApp>
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMWrap>
-                            <XMApp xml:id="S1.I1.i6.p1.m1.3">
+                            <XMApp xml:id="S1.I1.i6.p1.m1.1">
                               <XMTok meaning="times" role="MULOP">⁢</XMTok>
                               <XMTok font="italic" role="UNKNOWN">x</XMTok>
                               <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -133,9 +133,9 @@
                             </XMApp>
                             <XMTok role="CLOSE" stretchy="true">|</XMTok>
                           </XMWrap>
-                          <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.I1.i6.p1.m1.1">0</XMTok>
+                          <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.I1.i6.p1.m1.2">0</XMTok>
                         </XMApp>
-                        <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S1.I1.i6.p1.m1.2">2</XMTok>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER" xml:id="S1.I1.i6.p1.m1.3">2</XMTok>
                       </XMApp>
                     </XMDual>
                     <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -169,17 +169,13 @@
             <tag role="typerefnum">item 8</tag>
           </tags>
           <para xml:id="S1.I1.i8.p1">
-            <p><Math mode="inline" tex="x\times_{i}^{2}y" text="x (* _ i) ^ 2 y" xml:id="S1.I1.i8.p1.m1">
+            <p><Math mode="inline" tex="x\times_{i}^{2}y" text="(* _ i)@(x, y)" xml:id="S1.I1.i8.p1.m1">
                 <XMath>
                   <XMApp>
-                    <XMApp role="MULOP">
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                      <XMApp role="MULOP">
-                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok meaning="times" role="MULOP">×</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                      </XMApp>
-                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok meaning="times" role="MULOP">×</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                     </XMApp>
                     <XMTok font="italic" role="UNKNOWN">x</XMTok>
                     <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -203,7 +199,7 @@
                       <XMRef idref="S1.I1.i9.p1.m1.1"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
                       <XMTok name="rightarrow" role="ARROW" xml:id="S1.I1.i9.p1.m1.1">→</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -227,7 +223,7 @@
                       <XMRef idref="S1.I1.i10.p1.m1.1"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
                       <XMTok meaning="iff" role="METARELOP" xml:id="S1.I1.i10.p1.m1.1">⇔</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -251,7 +247,7 @@
                       <XMRef idref="S1.I1.i11.p1.m1.1"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
                       <XMTok meaning="modulo" name="bmod" role="MODIFIEROP" xml:id="S1.I1.i11.p1.m1.1">mod</XMTok>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -267,23 +263,19 @@
             <tag role="typerefnum">item 12</tag>
           </tags>
           <para xml:id="S1.I1.i12.p1">
-            <p><Math mode="inline" tex="|\times_{i}^{2}\rangle" text="ket@((* _ i) ^ 2)" xml:id="S1.I1.i12.p1.m1">
+            <p><Math mode="inline" tex="|\times_{i}^{2}\rangle" text="ket@([])" xml:id="S1.I1.i12.p1.m1">
                 <XMath>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="ket"/>
-                      <XMRef idref="S1.I1.i12.p1.m1.1"/>
+                      <XMRef/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">|</XMTok>
-                      <XMApp role="MULOP" xml:id="S1.I1.i12.p1.m1.1">
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMApp role="MULOP">
-                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok meaning="times" role="MULOP">×</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                        </XMApp>
-                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="times" role="MULOP">×</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                       </XMApp>
                       <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                     </XMWrap>
@@ -320,25 +312,21 @@
             <tag role="typerefnum">item 14</tag>
           </tags>
           <para xml:id="S1.I1.i14.p1">
-            <p><Math mode="inline" tex="\partial\sin x\times_{i}^{2}y" text="partial-differential@(sine@(x (* _ i) ^ 2 y))" xml:id="S1.I1.i14.p1.m1">
+            <p><Math mode="inline" tex="\partial\sin x\times_{i}^{2}y" text="partial-differential@((* _ i)@(sine@(x), y))" xml:id="S1.I1.i14.p1.m1">
                 <XMath>
                   <XMApp>
                     <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                     <XMApp>
-                      <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
                       <XMApp>
-                        <XMApp role="MULOP">
-                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMApp role="MULOP">
-                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                            <XMTok meaning="times" role="MULOP">×</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                          </XMApp>
-                          <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                        </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok meaning="times" role="MULOP">×</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
                       </XMApp>
+                      <XMApp>
+                        <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                      </XMApp>
+                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
                     </XMApp>
                   </XMApp>
                 </XMath>

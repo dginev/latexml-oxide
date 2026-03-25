@@ -14,7 +14,6 @@ fn array_math_parse_test() {
 }
 
 #[test]
-#[ignore] // 0 text= diffs, minor xml:id ordering diffs remain
 fn artefacts_test() {
   latexml_test_single("tests/parse/artefacts.tex", "artefacts", DIR, None, None);
 }
@@ -40,7 +39,6 @@ fn function_argument_syntax_test() {
 }
 
 #[test]
-#[ignore] // minor diffs after fenced XMDual fix
 fn functions_test() {
   latexml_test_single("tests/parse/functions.tex", "functions", DIR, None, None);
 }
@@ -71,7 +69,6 @@ fn nested_application_test() {
 }
 
 #[test]
-#[ignore] // minor diffs after fenced XMDual fix
 fn operators_test() {
   latexml_test_single("tests/parse/operators.tex", "operators", DIR, None, None);
 }
@@ -92,7 +89,6 @@ fn prescripted_test() {
 }
 
 #[test]
-#[ignore] // minor diffs after fenced XMDual fix
 fn qm_test() {
   latexml_test_single("tests/parse/qm.tex", "qm", DIR, None, None);
 }

@@ -59,192 +59,119 @@
         </Math>
       </equation>
       <equation xml:id="S1.Ex2">
-        <Math mode="display" tex="\sum_{a=0}^{\infty}\sum_{b=-a}^{a}f_{a}(c^{a})g_{b}(c^{b})" text="((sum _ (a = 0)) ^ infinity)@(((sum _ (b = - a)) ^ a)@((f _ a)@(c ^ a) * (g _ b)@(c ^ b)))" xml:id="S1.Ex2.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="\sum_{a=0}^{\infty}\sum_{b=-a}^{a}f_{a}(c^{a})g_{b}(c^{b})" xml:id="S1.Ex2.m1">
           <XMath>
-            <XMApp>
+            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
               <XMApp>
-                <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                  <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMApp>
-                    <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                  </XMApp>
-                </XMApp>
-                <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
               </XMApp>
+            </XMApp>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="mid1">
+              <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+            </XMApp>
+            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
               <XMApp>
+                <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                  <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                    <XMApp>
-                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
-                      <XMApp>
-                        <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                      </XMApp>
-                    </XMApp>
-                  </XMApp>
+                  <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                   <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                </XMApp>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMDual>
-                    <XMApp>
-                      <XMRef idref="S1.Ex2.m1.1"/>
-                      <XMRef idref="S1.Ex2.m1.2"/>
-                    </XMApp>
-                    <XMApp>
-                      <XMApp xml:id="S1.Ex2.m1.1">
-                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="FUNCTION">f</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S1.Ex2.m1.2">
-                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">c</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                        </XMApp>
-                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMApp>
-                  </XMDual>
-                  <XMDual>
-                    <XMApp>
-                      <XMRef idref="S1.Ex2.m1.3"/>
-                      <XMRef idref="S1.Ex2.m1.4"/>
-                    </XMApp>
-                    <XMApp>
-                      <XMApp xml:id="S1.Ex2.m1.3">
-                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="FUNCTION">g</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S1.Ex2.m1.4">
-                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="ID">c</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
-                        </XMApp>
-                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMApp>
-                  </XMDual>
                 </XMApp>
               </XMApp>
             </XMApp>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="mid1">
+              <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+            </XMApp>
+            <XMTok font="italic" role="FUNCTION">f</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+            </XMApp>
+            <XMTok role="OPEN" stretchy="false">(</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+            </XMApp>
+            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            <XMTok font="italic" role="FUNCTION">g</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
+            </XMApp>
+            <XMTok role="OPEN" stretchy="false">(</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
+            </XMApp>
+            <XMTok role="CLOSE" stretchy="false">)</XMTok>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S1.Ex3">
-        <Math mode="display" tex="\sum_{a=0}^{\infty}\sum_{b=-a}^{a}\lim_{c\rightarrow 0}f_{a}(c^{a})g_{b}(c^{b})" text="((sum _ (a = 0)) ^ infinity)@(((sum _ (b = - a)) ^ a)@((limit _ (c rightarrow 0))@((f _ a)@(c ^ a) * (g _ b)@(c ^ b))))" xml:id="S1.Ex3.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="\sum_{a=0}^{\infty}\sum_{b=-a}^{a}\lim_{c\rightarrow 0}f_{a}(c^{a})g_{b}(c^{b})" xml:id="S1.Ex3.m1">
           <XMath>
-            <XMApp>
+            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
               <XMApp>
-                <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                  <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                  <XMApp>
-                    <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                  </XMApp>
-                </XMApp>
-                <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
               </XMApp>
+            </XMApp>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="mid1">
+              <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+            </XMApp>
+            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
               <XMApp>
+                <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
                 <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                  <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                    <XMApp>
-                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
-                      <XMApp>
-                        <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                      </XMApp>
-                    </XMApp>
-                  </XMApp>
+                  <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                   <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                </XMApp>
-                <XMApp>
-                  <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                    <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
-                    <XMApp>
-                      <XMTok fontsize="70%" name="rightarrow" role="ARROW">→</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
-                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                    </XMApp>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMRef idref="S1.Ex3.m1.1"/>
-                        <XMRef idref="S1.Ex3.m1.2"/>
-                      </XMApp>
-                      <XMApp>
-                        <XMApp xml:id="S1.Ex3.m1.1">
-                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="FUNCTION">f</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="false">(</XMTok>
-                          <XMApp xml:id="S1.Ex3.m1.2">
-                            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="ID">c</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
-                          </XMApp>
-                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                        </XMWrap>
-                      </XMApp>
-                    </XMDual>
-                    <XMDual>
-                      <XMApp>
-                        <XMRef idref="S1.Ex3.m1.3"/>
-                        <XMRef idref="S1.Ex3.m1.4"/>
-                      </XMApp>
-                      <XMApp>
-                        <XMApp xml:id="S1.Ex3.m1.3">
-                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                          <XMTok font="italic" role="FUNCTION">g</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="false">(</XMTok>
-                          <XMApp xml:id="S1.Ex3.m1.4">
-                            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="ID">c</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
-                          </XMApp>
-                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                        </XMWrap>
-                      </XMApp>
-                    </XMDual>
-                  </XMApp>
                 </XMApp>
               </XMApp>
             </XMApp>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="mid1">
+              <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+            </XMApp>
+            <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
+              <XMApp>
+                <XMTok fontsize="70%" name="rightarrow" role="ARROW">→</XMTok>
+                <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
+                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+              </XMApp>
+            </XMApp>
+            <XMTok font="italic" role="FUNCTION">f</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+            </XMApp>
+            <XMTok role="OPEN" stretchy="false">(</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">a</XMTok>
+            </XMApp>
+            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            <XMTok font="italic" role="FUNCTION">g</XMTok>
+            <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
+            </XMApp>
+            <XMTok role="OPEN" stretchy="false">(</XMTok>
+            <XMTok font="italic" role="ID">c</XMTok>
+            <XMApp role="POSTSUPERSCRIPT" scriptpos="1">
+              <XMTok font="italic" fontsize="70%" role="ID">b</XMTok>
+            </XMApp>
+            <XMTok role="CLOSE" stretchy="false">)</XMTok>
           </XMath>
         </Math>
       </equation>
     </para>
     <para xml:id="S1.p2">
       <equation xml:id="S1.Ex4">
-        <Math mode="display" tex="\int_{a}^{b}f(x)dx" text="((integral _ a) ^ b)@(f@(x) * differential-d@(x))" xml:id="S1.Ex4.m1">
+        <Math mode="display" tex="\int_{a}^{b}f(x)dx" text="((integral _ a) ^ b)@(f@(x) * d * x)" xml:id="S1.Ex4.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -272,17 +199,15 @@
                     </XMWrap>
                   </XMApp>
                 </XMDual>
-                <XMApp>
-                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                </XMApp>
+                <XMTok font="italic" role="ID">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S1.Ex5">
-        <Math content-tex="\int_{a}^{b}f(x)\diffd x" mode="display" tex="\int_{a}^{b}f(x)\operatorname{\operatorname{d}\!}x" text="((integral _ a) ^ b)@(f@(x) * diffd@(x))" xml:id="S1.Ex5.m1">
+        <Math mode="display" tex="\int_{a}^{b}f(x)\diffd x" text="((integral _ a) ^ b)@(f@(x) * diffd * x)" xml:id="S1.Ex5.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -310,33 +235,31 @@
                     </XMWrap>
                   </XMApp>
                 </XMDual>
-                <XMApp>
-                  <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                </XMApp>
+                <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
+                <XMTok role="UNKNOWN">x</XMTok>
               </XMApp>
             </XMApp>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S1.Ex6">
-        <Math content-tex="\diffd u=\diffd x+\diffd y" mode="display" tex="\operatorname{\operatorname{d}\!}u=\operatorname{\operatorname{d}\!}x+\operatorname{\operatorname{d}\!}y" text="diffd@(u) = diffd@(x) + diffd@(y)" xml:id="S1.Ex6.m1">
+        <Math mode="display" tex="\diffd u=\diffd x+\diffd y" text="diffd@(u) = diffd@(x) + diffd@(y)" xml:id="S1.Ex6.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
               <XMApp>
                 <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">u</XMTok>
+                <XMTok role="UNKNOWN">u</XMTok>
               </XMApp>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok role="UNKNOWN">x</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok role="UNKNOWN">y</XMTok>
                 </XMApp>
               </XMApp>
             </XMApp>
@@ -376,23 +299,20 @@
       <equation xml:id="S2.Ex9">
         <Math mode="display" tex="Df(a)" text="(D@(f))@(a)" xml:id="S2.Ex9.m1">
           <XMath>
-            <XMDual>
+            <XMApp>
               <XMApp>
-                <XMRef idref="S2.Ex9.m1.2"/>
-                <XMRef idref="S2.Ex9.m1.1"/>
+                <XMTok font="italic" role="OPERATOR">D</XMTok>
+                <XMTok font="italic" role="FUNCTION">f</XMTok>
               </XMApp>
-              <XMApp>
-                <XMApp xml:id="S2.Ex9.m1.2">
-                  <XMTok font="italic" role="OPERATOR">D</XMTok>
-                  <XMTok font="italic" role="FUNCTION">f</XMTok>
-                </XMApp>
+              <XMDual>
+                <XMRef idref="S2.Ex9.m1.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
                   <XMTok font="italic" role="ID" xml:id="S2.Ex9.m1.1">a</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
-              </XMApp>
-            </XMDual>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math>
       </equation>
@@ -415,62 +335,39 @@
       <equation xml:id="S2.Ex11">
         <Math mode="display" tex="DGHf(a)" text="(D@(G@(H@(f))))@(a)" xml:id="S2.Ex11.m1">
           <XMath>
-            <XMDual>
+            <XMApp>
               <XMApp>
-                <XMRef idref="S2.Ex11.m1.2"/>
-                <XMRef idref="S2.Ex11.m1.1"/>
-              </XMApp>
-              <XMApp>
-                <XMApp xml:id="S2.Ex11.m1.2">
-                  <XMTok font="italic" role="OPERATOR">D</XMTok>
+                <XMTok font="italic" role="OPERATOR">D</XMTok>
+                <XMApp>
+                  <XMTok font="italic" role="OPERATOR">G</XMTok>
                   <XMApp>
-                    <XMTok font="italic" role="OPERATOR">G</XMTok>
-                    <XMApp>
-                      <XMTok font="italic" role="OPERATOR">H</XMTok>
-                      <XMTok font="italic" role="FUNCTION">f</XMTok>
-                    </XMApp>
+                    <XMTok font="italic" role="OPERATOR">H</XMTok>
+                    <XMTok font="italic" role="FUNCTION">f</XMTok>
                   </XMApp>
                 </XMApp>
+              </XMApp>
+              <XMDual>
+                <XMRef idref="S2.Ex11.m1.1"/>
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="false">(</XMTok>
                   <XMTok font="italic" role="ID" xml:id="S2.Ex11.m1.1">a</XMTok>
                   <XMTok role="CLOSE" stretchy="false">)</XMTok>
                 </XMWrap>
-              </XMApp>
-            </XMDual>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S2.Ex12">
-        <Math mode="display" tex="D(a)(b)" text="(D@(a))@(b)" xml:id="S2.Ex12.m1">
+        <Math class="ltx_math_unparsed" mode="display" tex="D(a)(b)" xml:id="S2.Ex12.m1">
           <XMath>
-            <XMDual>
-              <XMApp>
-                <XMRef idref="S2.Ex12.m1.4"/>
-                <XMRef idref="S2.Ex12.m1.3"/>
-              </XMApp>
-              <XMApp>
-                <XMDual xml:id="S2.Ex12.m1.4">
-                  <XMApp>
-                    <XMRef idref="S2.Ex12.m1.1"/>
-                    <XMRef idref="S2.Ex12.m1.2"/>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok font="italic" role="OPERATOR" xml:id="S2.Ex12.m1.1">D</XMTok>
-                    <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.2">a</XMTok>
-                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                    </XMWrap>
-                  </XMApp>
-                </XMDual>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="ID" xml:id="S2.Ex12.m1.3">b</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                </XMWrap>
-              </XMApp>
-            </XMDual>
+            <XMTok font="italic" role="OPERATOR">D</XMTok>
+            <XMTok role="OPEN" stretchy="false">(</XMTok>
+            <XMTok font="italic" role="ID">a</XMTok>
+            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            <XMTok role="OPEN" stretchy="false">(</XMTok>
+            <XMTok font="italic" role="ID">b</XMTok>
+            <XMTok role="CLOSE" stretchy="false">)</XMTok>
           </XMath>
         </Math>
       </equation>
@@ -536,23 +433,23 @@
             <XMDual>
               <XMApp>
                 <XMTok meaning="formulae"/>
+                <XMRef idref="S4.Ex15.m1.1"/>
                 <XMRef idref="S4.Ex15.m1.2"/>
-                <XMRef idref="S4.Ex15.m1.3"/>
               </XMApp>
               <XMWrap>
-                <XMApp xml:id="S4.Ex15.m1.2">
+                <XMApp xml:id="S4.Ex15.m1.1">
                   <XMTok meaning="exists" role="BIGOP">∃</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 </XMApp>
                 <XMTok role="PERIOD">.</XMTok>
-                <XMApp xml:id="S4.Ex15.m1.3">
+                <XMApp xml:id="S4.Ex15.m1.2">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" role="UNKNOWN">P</XMTok>
                   <XMDual>
-                    <XMRef idref="S4.Ex15.m1.1"/>
+                    <XMRef idref="S4.Ex15.m1.3"/>
                     <XMWrap>
                       <XMTok role="OPEN" stretchy="false">(</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex15.m1.1">x</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex15.m1.3">x</XMTok>
                       <XMTok role="CLOSE" stretchy="false">)</XMTok>
                     </XMWrap>
                   </XMDual>
