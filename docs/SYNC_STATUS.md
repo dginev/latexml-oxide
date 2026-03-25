@@ -235,9 +235,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-25)
 
-**Current totals: 300 pass, 0 fail, 24 ignored (324 total integration tests)**
-**Plus 16 unit tests (state, tokens, replace_tree) = 316 total passing**
-**Coverage: 300/319 non-permanently-blocked = 94% pass rate**
+**Current totals: 303 pass, 0 fail, 21 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 319 total passing**
+**Coverage: 303/319 non-permanently-blocked = 95% pass rate**
 **Packages: 408 modules + 91 ar5iv contrib bindings (499 total, exceeds Perl's 405+87)**
 
 **Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
