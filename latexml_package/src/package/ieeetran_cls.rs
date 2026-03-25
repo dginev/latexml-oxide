@@ -214,9 +214,17 @@ LoadDefinitions!({
     }
   });
   DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
-    // Restore numbering for current row (no star) or all rows (star)
+    // Perl: if currently in subequation mode, step equation counter to exit
+    let in_subeq = state::lookup_value("EQUATION_NUMBERING")
+      .map(|v| if let Stored::HashStored(h) = v {
+        h.get("counter").map(|c| c.to_string()) == Some("subequation".to_string())
+      } else { false })
+      .unwrap_or(false);
+    if in_subeq {
+      ref_step_counter("equation", false)?;
+    }
+    // Restore numbering
     if star.is_some() {
-      // Star: enable numbering for all future equations in this group
       with_value_mut("EQUATION_NUMBERING", |val_opt| {
         if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
           numbering.remove("retract");
@@ -224,7 +232,6 @@ LoadDefinitions!({
         }
       });
     } else {
-      // No star: force number on current equation
       with_value_mut("EQUATIONROW_TAGS", |val_opt| {
         if let Some(Stored::HashStored(ref mut tags)) = val_opt {
           tags.insert("noretract", true.into());
