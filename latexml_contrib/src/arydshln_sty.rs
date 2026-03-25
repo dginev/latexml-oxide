@@ -10,8 +10,8 @@ LoadDefinitions!({
   // DefColumnType(':') not yet ported here.
   Let!("\\firsthdashline", "\\firsthline");
   Let!("\\lasthdashline", "\\lasthline");
-  DefRegister!("\\dashlinedash" => Dimension::new_scaled(4 * 65536));   // 4pt
-  DefRegister!("\\dashlinegap" => Dimension::new_scaled(4 * 65536));    // 4pt
+  DefRegister!("\\dashlinedash" => Dimension!("4pt"));
+  DefRegister!("\\dashlinegap" => Dimension!("4pt"));
   Let!("\\hdashlinewidth", "\\dashlinedash");
   Let!("\\hdashlinegap", "\\dashlinegap");
   DefMacro!("\\ADLactivate", "");

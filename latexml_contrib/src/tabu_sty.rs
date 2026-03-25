@@ -20,8 +20,8 @@ LoadDefinitions!({
   DefMacro!("\\taburulecolor OptionalMatch:| OptionalUntil:| {}", "");
   DefMacro!("\\taburowcolors[] Number {}", "");
   DefMacro!("\\tabuphantomline", "");
-  DefRegister!("\\tracingtabu" => Number::ZERO);
-  DefRegister!("\\tabulinesep" => Dimension::ZERO);
-  DefRegister!("\\abovetabulinesep" => Dimension::ZERO);
-  DefRegister!("\\belowtabulinesep" => Dimension::ZERO);
+  DefRegister!("\\tracingtabu" => Number::new(0));
+  DefRegister!("\\tabulinesep" => Dimension::new(0));
+  DefRegister!("\\abovetabulinesep" => Dimension::new(0));
+  DefRegister!("\\belowtabulinesep" => Dimension::new(0));
 });

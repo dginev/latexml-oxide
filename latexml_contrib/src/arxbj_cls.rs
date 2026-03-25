@@ -20,6 +20,6 @@ LoadDefinitions!({
   Let!("\\longlist", "\\list");
   Let!("\\endlonglist", "\\endlist");
   DefMacro!("\\MR{}", "\\href{http://www.ams.org/mathscinet-getitem?mr=#1}{MR#1}");
-  DefMacroI!("\\remark*", "\\begin{remark}");
-  DefMacroI!("\\endremark*", "\\end{remark}");
+  RawTeX!(r"\expandafter\def\csname remark*\endcsname{\begin{remark}}");
+  RawTeX!(r"\expandafter\def\csname endremark*\endcsname{\end{remark}}");
 });

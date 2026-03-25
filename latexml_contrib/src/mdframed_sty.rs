@@ -15,7 +15,7 @@ LoadDefinitions!({
   DefMacro!("\\mdfapptodefinestyle{}{}", "");
   DefMacro!("\\mdfsetup{}", "");
   DefMacro!("\\mdfdefinestyle{}{}", "");
-  DefRegister!("\\mdflength" => Dimension::ZERO);
+  DefRegister!("\\mdflength" => Dimension::new(0));
   // TODO: Perl has DefEnvironment for {mdframed}[] with inline-block framed="rectangle"
   // and framecolor from current font color. Stubbed as empty for now.
   DefEnvironment!("{mdframed}[]", "#body");

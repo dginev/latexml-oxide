@@ -79,6 +79,29 @@ pub mod scrbook_cls;
 pub mod tabularray_sty;
 pub mod xltabular_sty;
 pub mod xr_sty;
+pub mod ar5iv_sty;
+pub mod arxbj_cls;
+pub mod arydshln_sty;
+pub mod changes_sty;
+pub mod currfile_sty;
+pub mod diagrams_tex;
+pub mod equations_sty;
+pub mod eso_pic_sty;
+pub mod forest_sty;
+pub mod harvmac_tex;
+pub mod mciteplus_sty;
+pub mod mdframed_sty;
+pub mod memoir_cls;
+pub mod minted_sty;
+pub mod nicematrix_sty;
+pub mod pb_diagram_sty;
+pub mod siamltex_cls;
+pub mod svn_multi_sty;
+pub mod svninfo_sty;
+pub mod tabu_sty;
+pub mod ucs_sty;
+pub mod ut_thesis_cls;
+pub mod ws_p8_50x6_00_cls;
 
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
@@ -153,6 +176,29 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "tabularray.sty" => Some(tabularray_sty::load_definitions()),
     "xltabular.sty" => Some(xltabular_sty::load_definitions()),
     "xr.sty" => Some(xr_sty::load_definitions()),
+    "ar5iv.sty" => Some(ar5iv_sty::load_definitions()),
+    "arxbj.cls" => Some(arxbj_cls::load_definitions()),
+    "arydshln.sty" => Some(arydshln_sty::load_definitions()),
+    "changes.sty" => Some(changes_sty::load_definitions()),
+    "currfile.sty" => Some(currfile_sty::load_definitions()),
+    "diagrams.tex" => Some(diagrams_tex::load_definitions()),
+    "equations.sty" => Some(equations_sty::load_definitions()),
+    "eso-pic.sty" => Some(eso_pic_sty::load_definitions()),
+    "forest.sty" => Some(forest_sty::load_definitions()),
+    "harvmac.tex" => Some(harvmac_tex::load_definitions()),
+    "mciteplus.sty" => Some(mciteplus_sty::load_definitions()),
+    "mdframed.sty" => Some(mdframed_sty::load_definitions()),
+    "memoir.cls" => Some(memoir_cls::load_definitions()),
+    "minted.sty" => Some(minted_sty::load_definitions()),
+    "nicematrix.sty" => Some(nicematrix_sty::load_definitions()),
+    "pb-diagram.sty" => Some(pb_diagram_sty::load_definitions()),
+    "siamltex.cls" => Some(siamltex_cls::load_definitions()),
+    "svn-multi.sty" => Some(svn_multi_sty::load_definitions()),
+    "svninfo.sty" => Some(svninfo_sty::load_definitions()),
+    "tabu.sty" => Some(tabu_sty::load_definitions()),
+    "ucs.sty" => Some(ucs_sty::load_definitions()),
+    "ut-thesis.cls" => Some(ut_thesis_cls::load_definitions()),
+    "ws-p8-50x6-00.cls" => Some(ws_p8_50x6_00_cls::load_definitions()),
     _ => None,
   }
 }
