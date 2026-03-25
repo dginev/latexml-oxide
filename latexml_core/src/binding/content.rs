@@ -1065,7 +1065,13 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     //   return (-f $result ? $result : undef); }
     // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
     //   return $path; }
-    pathname::kpsewhich(&[file])
+    // When notex is set, don't search for the raw TeX file via kpsewhich.
+    // This prevents non-TeX files (e.g. .lua) from being loaded as raw TeX.
+    if options.notex {
+      None
+    } else {
+      pathname::kpsewhich(&[file])
+    }
   }
 }
 
