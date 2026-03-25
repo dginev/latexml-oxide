@@ -371,7 +371,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl: `fga` = f*g*a (FUNCTION), `Fga` = F@(g*a) (OPFUNCTION)
     applied_func = function fenced_factor => prefix_apply
       | trigfunction trig_arg => prefix_apply
-      | opfunction tight_term => prefix_apply;
+      | opfunction tight_term => prefix_apply
+      // OPFUNCTION absorbs another OPFUNCTION even without trailing args:
+      // FGH → F@(G@(H)) when F,G,H are all OPFUNCTION
+      | opfunction opfunction => prefix_apply;
     // Standalone applied functions are also tight_terms
     tight_term += applied_func;
     // Function application results can chain with invisible times (Perl moreFactors)
