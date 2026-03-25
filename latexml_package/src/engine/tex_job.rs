@@ -53,8 +53,14 @@ LoadDefinitions!({
   // \maxdeadcycles    pi is the maximum allowed value of \deadcycles before an error is generated.
   // Perl: $stomach->leaveHorizontal; $stomach->getGullet->flush;
   DefPrimitive!("\\lx@end@document", {
-    leave_horizontal()?;
-    gullet::flush();
+    // When called during package/definition loading (e.g., expl3's error handler
+    // calls \tex_end:D via \msg_fatal), ignore it. Package errors should not
+    // terminate the entire document processing.
+    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+      leave_horizontal()?;
+      gullet::flush();
+    }
+    // else: silently ignore during definition loading
   });
   Let!("\\end", "\\lx@end@document");
 

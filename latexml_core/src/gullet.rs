@@ -1866,33 +1866,27 @@ where FnR: FnOnce() -> Result<R> {
       );
       break;
     } else {
-      let has_input_remaining = {
-        if let Some(ref mut runtime) = runtime!() {
-          !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
-        } else {
-          false
-        }
-      };
-      if has_input_remaining {
-        let next = read_token()?.unwrap();
+      let is_autoclosable = gullet!()
+        .runtime
+        .as_ref()
+        .map(|r| r.autoclose)
+        .unwrap_or(false);
+      if is_autoclosable {
+        // Auto-closable mouth (e.g. from \scantokens, raw_tex) — safe to close
+        close_mouth(true)?;
+      } else {
+        // Non-autoclosable mouth that isn't our target — this means our target
+        // mouth was already consumed. Don't close this mouth (it belongs to an
+        // outer reading_from_mouth call). Just error and stop.
         Error!(
           "unexpected",
-          next,
-          s!("Unexpected input remaining: '{next}'"),
+          "<closed>",
+          "Mouth is unexpectedly already closed",
           arena::with(context_mouth_source, |source| s!(
-            "Finished reading from {source}, but it still has input."
+            "Reading from {source}, but it has already been closed (found different non-closable mouth on top)."
           ))
         );
-        {
-          if let Some(ref mut runtime) = runtime!() {
-            runtime.mouth.finish();
-          }
-        }
-        close_mouth(true)?;
-      }
-      // ?? if we continue?
-      else {
-        close_mouth(false)?;
+        break;
       }
     }
   }
