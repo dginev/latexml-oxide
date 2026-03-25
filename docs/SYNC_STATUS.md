@@ -238,7 +238,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Current totals: 294 pass, 0 fail, 30 ignored (324 total integration tests)**
 **Plus 16 unit tests (state, tokens, replace_tree) = 310 total passing**
 **Coverage: 97% pass rate (294/301 non-permanently-blocked tests)**
-**Packages: 403 modules, 420+ dispatch entries (~99% of Perl's 405)**
+**Packages: 407 modules, 430+ dispatch entries (exceeds Perl's 405 base)**
 
 **Session 41 (15 commits, 2026-03-25):** OOM root cause found and fixed: `parse_parameters` infinite loop on non-word chars in CS names (e.g. `\nprt@sign@+`). Literal Token fallback + 50-step guard. Re-enabled all 8 commented-out modules. XMArg lexer fix: subscript content like `_{ij}` now unwrapped and parsed as `i*j` (matching Perl). Grammar: bra-ket QM notation (`qm_ket`/`qm_bra` semantic actions), fenced singleton operators `(\int)`, `(\Delta)`. 6 new packages ported (amstex, rotate, svg, aas_macros, a0poster, aipproc). Angle-bracket bra-ket rules attempted but conflict with set comprehension — needs QM pragma. algorithmic_sty compile errors fixed.
 
@@ -259,30 +259,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - **1 siunitx**: needs siunitx.sty
 - **1 figure_mixed_content**: wrapfig + listings math
 
-**Key infrastructure (sessions 26-33):**
-- Multi-token math rewrite infrastructure (C5): XMWrap wrapping, `_rewrite` marker, parser atomic handling
-- `bigop_application` at expression level — absorbs full term (∫ x²dx → ∫(x²*dx))
-- `term_list` + angle bracket fencing (`<x,y>` → inner product)
-- `parse_kludge` OPEN/CLOSE balancing for failed expressions
-- `fenced_array` grammar rules (OPEN ARRAY CLOSE → cases)
-- `*_src.rs` convention for per-document bindings (Perl .latexml equivalent)
-- `finalize_rec` iterative rewrite (no stack overflow for any DOM depth)
-- replace_tree safety verified (node cache prevents premature xmlFreeNode)
-- 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 8 intentional divergences (OXIDIZED_DESIGN.md)
-
-**Detailed fix history lives in git log. Key session summaries:**
-- **S33 (17 commits, 2026-03-23)**: +simplemath_test. C5 multi-token rewrites. bigop_application. angle bracket fencing (<x,y>). parse_kludge. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. calculus 331→273, ambiguous_relations 101→98.
-- **S32 (9 commits)**: +plainmath_test, +cd_test. BINOP grammar. apply_delimited XMDual. dynamic_scriptpos. stmaryrd 2502→2010.
-- **S31 (31 commits)**: TeXDelimiter. \genfrac. \bordermatrix. \halign is_halign. XMHint glue. standalone_modifiers 0 diffs.
-- **S30**: +standalone_modifiers, +array, +acm_aria. acmart.cls. ncases 1048→894. listing 2032→1660.
-- **S26-29**: +cells, +graphrot, +diagboxtest, +sideset, +kludge, +array. diagbox.sty. TFM fonts. alias catcode bug. ARRAY grammar rule.
-- **S18-25**: +eqnarray, +vmode. finalize_rec iterative. normalize.rs refactor. colortbl. equation numbering.
-
-**Recent fixes (2026-03-18, session 2):**
-- **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
-- **vbox/vtop height/depth**: Fixed 3 bugs — sizer closure now passes Whatsit properties (vattach etc.), `repack_horizontal` sets "mode" property string, removed extra `flat_map(unlist)` in `compute_boxes_size`.
-- **compact_xmdual xml:id leak**: Fixed content token xml:id leaking to presentation token when dual has no xml:id (Case 1).
-- **Sizes test progress**: Down from 313 to 20 diff lines. Remaining: dimension rounding (4), super/subscript widths (3), table sizing (6+), section 8 (7).
+**Detailed fix history lives in git log.** Key milestones: C5 multi-token rewrites (S33), bigop_application (S33), BIGOPSUB/BIGOPSUP token separation (S40), finalize_rec iterative (S18-25), 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 9 intentional divergences (OXIDIZED_DESIGN.md).
 
 ### Per-test enumeration
 
