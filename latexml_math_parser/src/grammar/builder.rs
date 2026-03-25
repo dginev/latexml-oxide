@@ -339,10 +339,24 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
            | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
            | singlevertbar expression singlevertbar => fenced
-           // Dirac ket: |expr⟩ — VERTBAR as opening, CLOSE as closing
-           | singlevertbar expression close => fenced
-           // Dirac bra: ⟨expr| — OPEN as opening, VERTBAR as closing
-           | open expression singlevertbar => fenced
+           // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE as closing
+           // Ket labels can be expressions, arrows, operators, relops, etc.
+           // e.g. |x⟩, |\rightarrow⟩, |\iff⟩, |\bmod⟩, |\times_{i}^{2}⟩
+           // Future: QM subject-area pragma to control bra-ket vs other notation
+           | singlevertbar expression close => qm_ket
+           | singlevertbar arrow close => qm_ket
+           | singlevertbar metarelop close => qm_ket
+           | singlevertbar operator close => qm_ket
+           | singlevertbar any_bigop close => qm_ket
+           | singlevertbar mulop close => qm_ket
+           | singlevertbar addop close => qm_ket
+           | singlevertbar relop close => qm_ket
+           | singlevertbar modifierop close => qm_ket
+           // Dirac bra: ⟨label| — OPEN as opening, VERTBAR as closing
+           | open expression singlevertbar => qm_bra
+           | open arrow singlevertbar => qm_bra
+           | open metarelop singlevertbar => qm_bra
+           | open operator singlevertbar => qm_bra
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
            | lbrace term punct term punct term rbrace => fence

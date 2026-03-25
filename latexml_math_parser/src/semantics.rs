@@ -3160,7 +3160,6 @@ pub fn qm_expectation(
 }
 
 /// `<a|` → bra@(a) — Perl enclose1: '<@|' => 'bra'
-#[allow(dead_code)]
 pub fn qm_bra(
   _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
@@ -3170,7 +3169,6 @@ pub fn qm_bra(
 }
 
 /// `|b>` → ket@(b) — Perl enclose1: '|@>' => 'ket'
-#[allow(dead_code)]
 pub fn qm_ket(
   _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
