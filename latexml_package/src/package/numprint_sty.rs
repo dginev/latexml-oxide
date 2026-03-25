@@ -16,8 +16,10 @@ LoadDefinitions!({
     "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>");
   DefMacro!("\\ltx@math@numprint@{}",
     "\\ltx@math@@numprint@{#1}{\\ltx@orig@numprint{#1}}");
-  DefMacro!("\\nprt@sign@+",  "\\ifmmode+\\else+\\fi");
-  DefMacro!("\\nprt@sign@-",  "\\ifmmode-\\else-\\fi");
-  DefMacro!("\\nprt@sign@+-", "\\ifmmode\\pm\\else\\pm\\fi");
+  // CS names with +/- use \csname in Perl, so the special chars are part of the name.
+  // DefMacro!'s compile-time tokenizer loops on these; use T_CS! form to bypass it.
+  DefMacro!(T_CS!("\\nprt@sign@+"),  None, "\\ifmmode+\\else+\\fi");
+  DefMacro!(T_CS!("\\nprt@sign@-"),  None, "\\ifmmode-\\else-\\fi");
+  DefMacro!(T_CS!("\\nprt@sign@+-"), None, "\\ifmmode\\pm\\else\\pm\\fi");
   DefMacro!("\\npunitcommand{}", "\\ensuremath{\\mathrm{#1}}");
 });

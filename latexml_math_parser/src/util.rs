@@ -103,6 +103,17 @@ fn node_to_grammar_lexemes_ctx(
           last_was_bigop = false;
         }
       }
+    } else if node.get_name() == "XMArg" {
+      // XMArg is a transparent wrapper (e.g. from \lx@post@subscript).
+      // Recurse into its children so the grammar can parse them individually.
+      // E.g. _{ij} should emit UNKNOWN:i + UNKNOWN:j, not ATOM:ij.
+      let arg_children = filter_hints(node.get_child_nodes());
+      let (mut inner_lexes, mut inner_nodes) =
+        node_to_grammar_lexemes_ctx(&node, arg_children, idx, false);
+      for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
+        lexemes.push(inner_lex);
+        nodes.push(inner_node);
+      }
     } else {
       let role = get_grammatical_role(&node);
       let mut text = get_token_meaning(&node);

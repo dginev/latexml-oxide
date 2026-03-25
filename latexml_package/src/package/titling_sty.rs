@@ -29,8 +29,8 @@ LoadDefinitions!({
   DefMacro!("\\cancelthanksrule",    "");
   DefMacro!("\\calccentering{}{}",   "");
   DefRegister!("\\droptitle" =>       Dimension::new(0));
-  DefRegister!("\\thanksmarkwidth" => Dimension("1.8em"));
-  DefRegister!("\\thanksmargin" =>    Dimension("-1.8em"));
+  DefRegister!("\\thanksmarkwidth" => Dimension::from_str("1.8em")?);
+  DefRegister!("\\thanksmargin" =>    Dimension::from_str("-1.8em")?);
   Let!("\\lx@titling@maketitle", "\\maketitle");
   DefMacro!("\\maketitle",
     "\\global\\let\\theauthor\\@author\\global\\let\\thedate\\@date\\global\\let\\thetitle\\@title\\lx@titling@maketitle");

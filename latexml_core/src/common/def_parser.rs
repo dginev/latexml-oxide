@@ -66,7 +66,18 @@ pub fn parse_parameters(
 ) -> Result<Option<Parameters>> {
   let mut prototype = Cow::Borrowed(outer_prototype);
   let mut parameters = Vec::new();
+  let mut steps = 0;
+  const MAX_STEPS: usize = 50;
   while !prototype.is_empty() {
+    steps += 1;
+    if steps > MAX_STEPS {
+      fatal!(
+        Parameter,
+        Misdefined,
+        s!("parse_parameters exceeded {} steps for {:?} (remaining: {:?})",
+          MAX_STEPS, cs, prototype)
+      );
+    }
     let next_proto: Cow<str>;
     // Handle possibly nested cases, such as {Number}
     if NESTED_CHECK_RE.is_match(&prototype) {
@@ -143,37 +154,64 @@ pub fn parse_parameters(
         parameters.push(p);
       }
     } else if let Some(captures) = PARAMSPECT_CHECK_RE.captures(&prototype) {
-      let spec = arena::pin(captures.get(1).map_or("", |m| m.as_str()));
-      let name = arena::pin(captures.get(2).map_or("", |m| m.as_str()));
-      let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
-      next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "");
-      let extra: Vec<Tokens> = if extra_str.is_empty() {
-        Vec::new()
+      let full_match = captures.get(0).map_or("", |m| m.as_str());
+      if full_match.is_empty() || full_match.chars().all(|c| c.is_whitespace()) {
+        // PARAMSPECT_CHECK_RE matched empty string (e.g. on '+', '-').
+        // Perl fallback: consume next char as a literal Token parameter.
+        // Perl: push(@params, LaTeXML::Core::Parameter->new('Token','Token',
+        //   extra => [T_OTHER($ch)]));
+        let ch = prototype.chars().next().unwrap();
+        let ch_token = CharToken!(ch, Catcode::OTHER);
+        let mut p = Parameter {
+          name: arena::pin_static("Token"),
+          spec: arena::pin_static("Token"),
+          extra: vec![Tokens::new(vec![ch_token])],
+          ..Parameter::default()
+        };
+        if init_flag {
+          p = p.init()?;
+        }
+        parameters.push(p);
+        next_proto = Cow::Owned(prototype[ch.len_utf8()..].to_string());
       } else {
-        extra_str
-          .split('|')
-          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
-          .collect()
-      };
+        let spec = arena::pin(captures.get(1).map_or("", |m| m.as_str()));
+        let name = arena::pin(captures.get(2).map_or("", |m| m.as_str()));
+        let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
+        next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "");
+        let extra: Vec<Tokens> = if extra_str.is_empty() {
+          Vec::new()
+        } else {
+          extra_str
+            .split('|')
+            .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
+            .collect()
+        };
+        let mut p = Parameter {
+          name,
+          spec,
+          extra,
+          ..Parameter::default()
+        };
+        if init_flag {
+          p = p.init()?;
+        }
+        parameters.push(p);
+      }
+    } else {
+      // Perl fallback: consume next char as a literal Token parameter.
+      let ch = prototype.chars().next().unwrap();
+      let ch_token = CharToken!(ch, Catcode::OTHER);
       let mut p = Parameter {
-        name,
-        spec,
-        extra,
+        name: arena::pin_static("Token"),
+        spec: arena::pin_static("Token"),
+        extra: vec![Tokens::new(vec![ch_token])],
         ..Parameter::default()
       };
       if init_flag {
         p = p.init()?;
       }
       parameters.push(p);
-    } else {
-      fatal!(
-        Parameter,
-        Misdefined,
-        s!(
-          "Unrecognized parameter specification at \"prototype\" {:?}",
-          cs
-        )
-      );
+      next_proto = Cow::Owned(prototype[ch.len_utf8()..].to_string());
     }
     prototype = Cow::Owned(next_proto.to_string());
   }

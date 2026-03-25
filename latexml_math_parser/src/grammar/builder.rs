@@ -353,6 +353,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
            // Perl MathGrammar: OPEN Expression CLOSE → Fence
            | open expression close => fenced
+           // Fenced singleton bigops/operators: (\int), (\Delta), (\sum)
+           // Perl allows bigops/operators as factors; here we only allow them fenced.
+           | lparen any_bigop rparen => fenced
+           | lparen composed_bigop rparen => fenced
+           | lparen operator rparen => fenced
+           | lparen compound_operator rparen => fenced
+           | open any_bigop close => fenced
+           | open operator close => fenced
            // Empty fenced expressions: () [] {} ⌊⌋ etc.
            | lparen rparen => empty_fenced
            | lbracket rbracket => empty_fenced

@@ -1,4 +1,4 @@
-// pub mod algorithmic_sty; // TODO: fix compile errors
+// pub mod algorithmic_sty; // TODO: fix compile errors (.to_string() type issue)
 // Supported package bindings
 pub mod a0size_sty;
 pub mod a4_sty;
@@ -384,11 +384,10 @@ pub mod xunicode_sty;
 pub mod xurl_sty;
 pub mod xypic_sty;
 pub mod yfonts_sty;
-// --- Not yet enabled (compilation memory investigation needed) ---
-// pub mod jheppub_sty;
-// pub mod neurips_sty;
-// pub mod numprint_sty;
-// pub mod revtex4_1_cls;
-// pub mod revtex_cls;
-// pub mod titling_sty;
-// pub mod vmargin_sty;
+pub mod jheppub_sty;
+pub mod neurips_sty;
+pub mod numprint_sty;
+pub mod revtex4_1_cls;
+pub mod revtex_cls;
+pub mod titling_sty;
+pub mod vmargin_sty;
