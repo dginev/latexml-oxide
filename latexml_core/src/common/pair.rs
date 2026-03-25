@@ -43,10 +43,8 @@ impl Object for Pair {
   }
 
   fn be_digested(self) -> Result<Digested> {
-    // Pairs are typically used as parameter values, not digested
-    Ok(Digested::from(crate::RegisterValue::Dimension(
-      crate::common::dimension::Dimension(0),
-    )))
+    // Preserve pair values through digestion via RegisterValue::Pair
+    Ok(Digested::from(crate::RegisterValue::Pair(self)))
   }
 }
 

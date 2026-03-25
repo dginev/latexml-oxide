@@ -66,6 +66,17 @@ use once_cell::sync::Lazy;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
+use std::sync::Once;
+
+/// Initialize libxml2 for thread safety. Must be called before any libxml2 operations.
+/// Uses std::sync::Once to guarantee exactly-once initialization even across threads.
+/// See: https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/doc/threads.html
+static LIBXML_INIT: Once = Once::new();
+pub fn ensure_libxml_init() {
+  LIBXML_INIT.call_once(|| {
+    unsafe { libxml::bindings::xmlInitParser(); }
+  });
+}
 
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;

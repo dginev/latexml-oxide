@@ -335,14 +335,14 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
                 </XMDual>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
                 <XMDual xml:id="S1.E7.m1.5">
-                  <XMRef idref="S1.E7.m1.5.1"/>
+                  <XMRef idref="S1.E7.m1.6"/>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMDual xml:id="S1.E7.m1.5.1">
-                      <XMRef idref="S1.E7.m1.5.1.1"/>
+                    <XMDual xml:id="S1.E7.m1.6">
+                      <XMRef idref="S1.E7.m1.7"/>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S1.E7.m1.5.1.1">
+                        <XMApp xml:id="S1.E7.m1.7">
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" role="UNKNOWN">x</XMTok>
                           <XMTok font="italic" role="UNKNOWN">z</XMTok>
@@ -591,7 +591,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
                   <XMApp>
                     <XMRef idref="S2.E12.m1.13"/>
                     <XMRef idref="S2.E12.m1.14"/>
-                    <XMRef idref="S2.E12.m1.15"/>
+                    <XMRef idref="S2.E12.m1.16"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="true">(</XMTok>
@@ -611,10 +611,10 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">f</XMTok>
                           <XMDual>
-                            <XMRef idref="S2.E12.m1.14.1"/>
+                            <XMRef idref="S2.E12.m1.15"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.14.1">x</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.15">x</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>
@@ -624,7 +624,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           </XMApp>
                         </XMApp>
                       </XMApp>
-                      <XMApp xml:id="S2.E12.m1.15">
+                      <XMApp xml:id="S2.E12.m1.16">
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMApp>
@@ -638,10 +638,10 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">g</XMTok>
                           <XMDual>
-                            <XMRef idref="S2.E12.m1.15.1"/>
+                            <XMRef idref="S2.E12.m1.17"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.15.1">x</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.17">x</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>
@@ -881,53 +881,19 @@ and <text font="typewriter">m:mstyle</text>:</p>
             <tag role="refnum">16</tag>
           </tags>
           <MathFork>
-            <Math tex="\displaystyle=f(x)+\phantom{g(x)}+h(x)" text="list@(absent = limit-from@(f * x, +), + h * x)" xml:id="S2.E16.m4">
+            <Math class="ltx_math_unparsed" tex="\displaystyle=f(x)+\phantom{g(x)}+h(x)" xml:id="S2.E16.m4">
               <XMath>
-                <XMDual>
-                  <XMApp>
-                    <XMTok meaning="list"/>
-                    <XMRef idref="S2.E16.m4.1"/>
-                    <XMRef idref="S2.E16.m4.3"/>
-                  </XMApp>
-                  <XMWrap>
-                    <XMApp xml:id="S2.E16.m4.1">
-                      <XMTok meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok meaning="absent"/>
-                      <XMApp>
-                        <XMTok meaning="limit-from"/>
-                        <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                          <XMDual>
-                            <XMRef idref="S2.E16.m4.2"/>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m4.2">x</XMTok>
-                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                            </XMWrap>
-                          </XMDual>
-                        </XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      </XMApp>
-                    </XMApp>
-                    <XMHint name="quad" role="PUNCT" width="18.6pt"/>
-                    <XMApp xml:id="S2.E16.m4.3">
-                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                        <XMDual>
-                          <XMRef idref="S2.E16.m4.4"/>
-                          <XMWrap>
-                            <XMTok role="OPEN" stretchy="false">(</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S2.E16.m4.4">x</XMTok>
-                            <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                          </XMWrap>
-                        </XMDual>
-                      </XMApp>
-                    </XMApp>
-                  </XMWrap>
-                </XMDual>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
               </XMath>
             </Math>
             <MathBranch>
@@ -1148,77 +1114,112 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           <tag>(20)</tag>
           <tag role="refnum">20</tag>
         </tags>
-        <Math class="ltx_math_unparsed" mode="display" tex="X=\sum_{1\leq i\leq j\leq n}X_{ij},\qquad X=\sum_{\mathclap{1\leq i\leq j\leq n}}X_{ij},\qquad X=\sum{}{}_{ij},\qquad X=\sum{}{}_{ij}" xml:id="S3.E20.m1">
+        <Math mode="display" tex="X=\sum_{1\leq i\leq j\leq n}X_{ij},\qquad X=\sum_{\mathclap{1\leq i\leq j\leq n}}X_{ij},\qquad X=\sum X_{ij},\qquad X=\sum X_{ij}" text="formulae@(X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), X = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(X _ (i * j)), X = sum@(X _ (i * j)), X = sum@(X _ (i * j)))" xml:id="S3.E20.m1">
           <XMath>
-            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
+            <XMDual>
               <XMApp>
-                <XMTok meaning="multirelation"/>
-                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                <XMTok meaning="formulae"/>
+                <XMRef idref="S3.E20.m1.1"/>
+                <XMRef idref="S3.E20.m1.2"/>
+                <XMRef idref="S3.E20.m1.3"/>
+                <XMRef idref="S3.E20.m1.4"/>
               </XMApp>
-            </XMApp>
-            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-            <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-              <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-              </XMApp>
-            </XMApp>
-            <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
-            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-            <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-              <XMApp width="0pt">
-                <XMTok meaning="multirelation"/>
-                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-              </XMApp>
-            </XMApp>
-            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-            <XMApp role="POSTSUBSCRIPT" scriptpos="1">
-              <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-              </XMApp>
-            </XMApp>
-            <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
-            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-            <XMApp role="FLOATSUBSCRIPT" scriptpos="1">
-              <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-              </XMApp>
-            </XMApp>
-            <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
-            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-            <XMApp role="FLOATSUBSCRIPT" scriptpos="1">
-              <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-              </XMApp>
-            </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S3.E20.m1.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                      <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                      <XMApp>
+                        <XMTok meaning="multirelation"/>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                        <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
+                <XMApp xml:id="S3.E20.m1.2">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                      <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                      <XMApp width="0pt" xoffset="-15.7pt">
+                        <XMTok meaning="multirelation"/>
+                        <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                        <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
+                <XMApp xml:id="S3.E20.m1.3">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMApp>
+                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>
+                <XMApp xml:id="S3.E20.m1.4">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                  <XMApp>
+                    <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
           </XMath>
         </Math>
       </equation>
@@ -1631,3 +1632,4 @@ are not currently tested.</p>
     </para>
   </section>
 </document>
+

@@ -204,7 +204,7 @@ LoadDefinitions!({
   //   reportNoUnicode($cs);
   //   Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode'); });
   DefPrimitive!("\\lx@math@nounicode DefToken", sub[(cs)] {
-    let text = arena::pin(&cs.to_string());
+    let text = arena::pin(cs.to_string());
     let tbox = Tbox::new(
       text,
       None,

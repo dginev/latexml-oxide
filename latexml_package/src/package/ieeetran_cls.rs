@@ -50,7 +50,7 @@ LoadDefinitions!({
   RawTeX!(r"\DeclareOption{peerreviewca}{\CLASSOPTIONpeerreviewtrue\CLASSOPTIONpeerreviewcatrue\CLASSOPTIONjournalfalse\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotefalse}");
   RawTeX!(r"\DeclareOption{nofonttune}{\CLASSOPTIONnofonttunetrue}");
   RawTeX!(r"\DeclareOption{captionsoff}{\CLASSOPTIONcaptionsofftrue}");
-  RawTeX!(r"\DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse\CLASSOPTIONtransmagfalse}");
+  RawTeX!(r"\DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse\CLASSOPTIONtransmagfalse\RequirePackage{newtxmath}}");
   RawTeX!(r"\DeclareOption{compsoc}{\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsoctrue\CLASSOPTIONtransmagfalse}");
   RawTeX!(r"\DeclareOption{transmag}{\CLASSOPTIONtransmagtrue\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsocfalse}");
   RawTeX!(r"\DeclareOption{romanappendices}{\CLASSOPTIONromanappendicestrue}");
@@ -192,27 +192,106 @@ LoadDefinitions!({
   // IEEEnonumber / IEEEyesnumber / IEEEyessubnumber / IEEEnosubnumber
   // Perl: These manipulate EQUATION_NUMBERING and EQUATIONROW_TAGS state
   // For now, simplified stubs that handle the common cases
-  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(_star)] {
-    // Suppress numbering — similar to \nonumber
-    // TODO: full Perl semantics with EQUATION_NUMBERING/EQUATIONROW_TAGS
+  // Perl: IEEEnonumber manipulates EQUATION_NUMBERING and EQUATIONROW_TAGS
+  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
+    // Suppress numbering for current row (no star) or all rows (star)
+    if star.is_some() {
+      // Star: retract all future equations in this group
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.insert("retract", true.into());
+          numbering.remove("counter");
+        }
+      });
+    } else {
+      // No star: retract current equation only
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("retract", true.into());
+          tags.remove("counter");
+        }
+      });
+    }
   });
-  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(_star)] {
+  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
+    // Perl: if currently in subequation mode, step equation counter to exit
+    let in_subeq = state::lookup_value("EQUATION_NUMBERING")
+      .map(|v| if let Stored::HashStored(h) = v {
+        h.get("counter").map(|c| c.to_string()) == Some("subequation".to_string())
+      } else { false })
+      .unwrap_or(false);
+    if in_subeq {
+      ref_step_counter("equation", false)?;
+    }
     // Restore numbering
-    // TODO: full Perl semantics
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.remove("retract");
+          numbering.remove("counter");
+        }
+      });
+    } else {
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("noretract", true.into());
+          tags.remove("counter");
+        }
+      });
+    }
   });
-  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(_star)] {
-    // Enable sub-numbering
-    // TODO: full Perl semantics
+  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
+    // Switch to sub-equation counter
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.insert("counter", Stored::from("subequation"));
+        }
+      });
+    } else {
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("counter", Stored::from("subequation"));
+        }
+      });
+    }
+    // If preset, step the subequation counter
+    let has_preset = state::lookup_value("EQUATION_NUMBERING")
+      .map(|v| if let Stored::HashStored(h) = v { h.contains_key("preset") } else { false })
+      .unwrap_or(false)
+      || state::lookup_value("EQUATIONROW_TAGS")
+      .map(|v| if let Stored::HashStored(h) = v { h.contains_key("preset") } else { false })
+      .unwrap_or(false);
+    if has_preset {
+      ref_step_counter("subequation", false)?;
+    }
   });
-  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(_star)] {
-    // Disable sub-numbering
-    // TODO: full Perl semantics
+  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
+    // Switch back to equation counter
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.insert("counter", Stored::from("equation"));
+        }
+      });
+    } else {
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("counter", Stored::from("equation"));
+        }
+      });
+    }
   });
 
   // IEEEeqnarray => eqnarray
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   Let!(T_CS!("\\endIEEEeqnarray"), T_CS!("\\endeqnarray"));
-  DefMacro!(T_CS!("\\IEEEeqnarray*"), "{}", "\\eqnarray*");
+  // Perl: DefMacroI(T_CS('\IEEEeqnarray*'), '{}', T_CS('\eqnarray*'));
+  // Must use T_CS! for the expansion so * is part of the CS name, not a separate token.
+  {
+    let params = parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?;
+    def_macro(T_CS!("\\IEEEeqnarray*"), params, Tokens!(T_CS!("\\eqnarray*")), None)?;
+  }
   Let!(T_CS!("\\endIEEEeqnarray*"), T_CS!("\\endeqnarray*"));
 
   // Column types for IEEEeqnarray: L, C, R
@@ -344,8 +423,14 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
   DefMacro!(T_CS!("\\end{keywords}"), None, "\\@endIEEEkeywords");
   // Perl: \keywords can take either {} or bare text
-  // Simplified: just redirect to \@IEEEkeywords
-  DefMacro!("\\keywords", "\\@IEEEkeywords");
+  // If next token is T_BEGIN, use \keywords@onearg, otherwise \@IEEEkeywords
+  DefMacro!("\\keywords", sub[_args] {
+    if gullet::if_next(T_BEGIN!())? {
+      Tokens!(T_CS!("\\keywords@onearg"))
+    } else {
+      Tokens!(T_CS!("\\@IEEEkeywords"))
+    }
+  });
   DefMacro!("\\keywords@onearg{}", "\\@IEEEkeywords #1 \\@endIEEEkeywords");
 
   // Legacy IED list aliases

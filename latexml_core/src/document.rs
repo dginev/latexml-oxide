@@ -121,6 +121,7 @@ impl Object for Document {
 }
 impl Document {
   pub fn new() -> Self {
+    crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
     set_node_rc_guard(50); // We will need a high threshold for Node mutability
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {

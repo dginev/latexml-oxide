@@ -236,9 +236,9 @@
       <Math mode="display" tex="\stackrel{{\scriptstyle C}}{{{\stackrel{{\scriptstyle B}}{{A}}}}}" text="A ^ B ^ C" xml:id="S0.Ex5.m1">
         <XMath>
           <XMApp role="RELOP">
-            <XMTok role="SUPERSCRIPTOP" scriptpos="mid"/>
+            <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
             <XMApp role="RELOP">
-              <XMTok role="SUPERSCRIPTOP" scriptpos="mid"/>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="mid3"/>
               <XMTok font="italic" role="UNKNOWN">A</XMTok>
               <XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok>
             </XMApp>

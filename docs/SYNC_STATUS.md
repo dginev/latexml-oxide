@@ -233,42 +233,31 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-23)
+## Test Suite Status (2026-03-25)
 
-**Current totals: 274 pass, 0 fail, 47 ignored (321 total integration tests)**
-**Plus 8 unit tests (replace_tree, parse recognizer) = 282 total passing**
-**Coverage: 91% pass rate (274/301 non-permanently-blocked tests)**
+**Current totals: 300 pass, 0 fail, 24 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 316 total passing**
+**Coverage: 300/319 non-permanently-blocked = 94% pass rate**
+**Packages: 408 modules + 91 ar5iv contrib bindings (499 total, exceeds Perl's 405+87)**
 
-**Ignored test breakdown (47 total):**
-- **~24 permanently blocked / missing packages**: tikz (10), pgf (2), DTD ns1-5 (5), moderncv (2), beamer, slides, expl3 (2), babel, physics, si — need major package porting
-- **~11 math parser grammar**: ambiguous_relations (98), scripts (301), calculus (273), artefacts (345), operators (422), functions (452), parens (510), relations (260), array_math_parse (194), qm (400), vertbars (466)
-- **~7 structural**: stmaryrd (990, 68% xml:id), ieee (867), ncases (894), ntheorem (1361), listing (1660), figure_mixed_content (868), split/mathtools (timeout)
-- **~5 other**: picture (1451), xytest (conversion error), slides (conversion error)
+**Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
-**Key infrastructure (sessions 26-33):**
-- Multi-token math rewrite infrastructure (C5): XMWrap wrapping, `_rewrite` marker, parser atomic handling
-- `bigop_application` at expression level — absorbs full term (∫ x²dx → ∫(x²*dx))
-- `term_list` + angle bracket fencing (`<x,y>` → inner product)
-- `parse_kludge` OPEN/CLOSE balancing for failed expressions
-- `fenced_array` grammar rules (OPEN ARRAY CLOSE → cases)
-- `*_src.rs` convention for per-document bindings (Perl .latexml equivalent)
-- `finalize_rec` iterative rewrite (no stack overflow for any DOM depth)
-- replace_tree safety verified (node cache prevents premature xmlFreeNode)
-- 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 8 intentional divergences (OXIDIZED_DESIGN.md)
+**Ignored test breakdown (30 total):**
+- **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
+- **5 math parser**: calculus, artefacts, functions, operators, qm (70_parse)
+- **2 expl3**: tilde_tricks, xparse — needs ExplSyntaxOn
+- **2 alignment**: listing (mathescape), split (timeout/OOM)
+- **1 babel**: timeout — unbounded loop
+- **1 beamer**: needs beamer.cls full port
+- **1 moderncv** (orc): SVG namespace
+- **1 mathtools** (56_ams): MathPrimitive crash
+- **1 xytest**: needs xy.sty full port
+- **1 picture**: needs picture environment
+- **1 physics**: needs physics.sty
+- **1 siunitx**: needs siunitx.sty
+- **1 figure_mixed_content**: wrapfig + listings math
 
-**Detailed fix history lives in git log. Key session summaries:**
-- **S33 (17 commits, 2026-03-23)**: +simplemath_test. C5 multi-token rewrites. bigop_application. angle bracket fencing (<x,y>). parse_kludge. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. calculus 331→273, ambiguous_relations 101→98.
-- **S32 (9 commits)**: +plainmath_test, +cd_test. BINOP grammar. apply_delimited XMDual. dynamic_scriptpos. stmaryrd 2502→2010.
-- **S31 (31 commits)**: TeXDelimiter. \genfrac. \bordermatrix. \halign is_halign. XMHint glue. standalone_modifiers 0 diffs.
-- **S30**: +standalone_modifiers, +array, +acm_aria. acmart.cls. ncases 1048→894. listing 2032→1660.
-- **S26-29**: +cells, +graphrot, +diagboxtest, +sideset, +kludge, +array. diagbox.sty. TFM fonts. alias catcode bug. ARRAY grammar rule.
-- **S18-25**: +eqnarray, +vmode. finalize_rec iterative. normalize.rs refactor. colortbl. equation numbering.
-
-**Recent fixes (2026-03-18, session 2):**
-- **cleanup_math XPath**: Updated to match Perl — excludes XMHint and lone PUNCT/PERIOD from "real math" check. Math spacing commands (`\,`, `\!`, `\>`, `\;`, `\mskip`) no longer produce spurious `<Math>` elements. XMHint width converted to Unicode space chars via `dimension_to_spaces`.
-- **vbox/vtop height/depth**: Fixed 3 bugs — sizer closure now passes Whatsit properties (vattach etc.), `repack_horizontal` sets "mode" property string, removed extra `flat_map(unlist)` in `compute_boxes_size`.
-- **compact_xmdual xml:id leak**: Fixed content token xml:id leaking to presentation token when dual has no xml:id (Case 1).
-- **Sizes test progress**: Down from 313 to 20 diff lines. Remaining: dimension rounding (4), super/subscript widths (3), table sizing (6+), section 8 (7).
+**Detailed fix history lives in git log.** Key milestones: C5 multi-token rewrites (S33), bigop_application (S33), BIGOPSUB/BIGOPSUP token separation (S40), finalize_rec iterative (S18-25), 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 9 intentional divergences (OXIDIZED_DESIGN.md).
 
 ### Per-test enumeration
 
@@ -400,254 +389,78 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-23):** 274 pass, 0 fail, 47 ignored (321 total). Session 34: Post-parse ID renumbering (OXIDIZED_DESIGN #9). Document-order xml:id reassignment in core_interface.rs. Two-pass strip+assign to avoid idstore collisions. 17 test XMLs updated (ID-only, 0 structural diffs). Session 33 (17 commits): +simplemath_test (208→0). Multi-token rewrite infrastructure (C5). bigop_application at expression level. Angle bracket fencing (<x,y> → inner product). parse_kludge. fenced_array grammar. replace_tree safety analysis. KNOWN_PERL_ERRORS #7-8. OXIDIZED_DESIGN #7-8. calculus 331→273, ambiguous_relations 101→98.
+**Status (2026-03-25):** 294 pass, 0 fail, 30 ignored. 398 modules (97% Perl).
 
-### Completed items
+### Active TODO items (ordered)
 
-- [x] **1. xkeyvalview_test** (32_keyval) — DONE. Ported `\xkvview` constructor.
-- [x] **4. figures_test** (50_structure) — DONE. Ported subfigure.sty font options.
-- [x] **5. floatnames_test** (50_structure) — DONE. Ported float.sty/newfloat.sty.
-- [x] **6. filelist_test** (50_structure) — DONE. Fixed `\@filelist` init.
-- [x] **7. options_test** (50_structure) — DONE. Created myclass.cls + apackage.sty.
-- [x] **14. paralists_test** (50_structure) — DONE. `set_enumeration_style`/`set_itemization_style`.
-- [x] **15. subcaption_test** (50_structure) — DONE. Ported subcaption.sty.
-- [x] **17. natbib_test** (50_structure) — DONE. Full natbib.sty port.
-- [x] **19. csquotes_test** (50_structure) — DONE. Ported csquotes.sty.
-- [x] **20. svabstract_test** (50_structure) — DONE. Ported svjour.cls + sv_support.sty.
-- [x] **21. ieee_test** (50_structure) — DONE. Ported IEEEtran.cls (979 diffs remain — math parser).
-- [x] **22. acro_test** (50_structure) — DONE. Ported acronym.sty.
-- [x] **23. glossary_test** (50_structure) — DONE. Ported glossaries.sty.
-- [x] **24. bibsect_test** (50_structure) — DONE. Ported bibunits.sty.
-- [x] **24b. crazybib_test** (50_structure) — DONE. `\bibsection` parsing.
-- [x] **26. colortbls_test** (53_alignment) — 27 diffs (was 96, 63, 220). Session 20: insert_pi root placement fix (96→27). Remaining: char alignment from dcolumn D column (13 diffs), multicolumn backgroundcolor (4 diffs).
-- [x] **57–61. Test suite sync** — DONE. Copied pgf (2), tikz (10), moderncv/orc, expl3 (2), slides (2). All 18 new tests ignored.
-
-### Tier 1: Actionable items (no infrastructure blockers)
-
-- [x] **8. fonts_test** (22_fonts) — DONE. Fixed delimited-[] meaning attr (was content). Updated expected XML.
-- [x] **8a. mixed_test** (22_fonts) — DONE. Fixed list_apply grammar rule for comma-separated lists.
-- [x] **8b. mathaccents_test** (22_fonts) — DONE. Fixed create_xmrefs for Dual/Wrap + empty-arg absent token.
-- [x] **8c. plainfonts_test** (22_fonts) — 77 diffs remaining. Math parser structural diffs in `\cal` section (METARELOP, XMDual wrapping) cascade to offset all subsequent lines.
-- [x] **9. sizes_test** (22_fonts) — DONE (was 313→181→19→6→4→1→0). Fixed: per-size font metrics, VBoxContents mode property fix, repackHorizontal in predigest_box_contents (matching Perl's readBoxContents endMode → leaveHorizontal_internal flow). 0 diffs.
-- [x] **10. ding_test** (22_fonts) — DONE. Passing after cleanup_math + vbox fixes.
-- [x] **11. abxtest_test** (22_fonts) — DONE (was TooManyErrors→29→0). Ported mathabx.sty, fixed DefPrimitive literal reversion (empty Tokens!() → CS token), added missing * mathcode (0x2203), mathabx scriptpos=>dynamic_scriptpos, empty element self-closing. 0 diffs.
-- [x] **13. enum_test** (50_structure) — DONE. enumitem.sty fully ported.
-- [x] **16. figure_grids_test** (50_structure) — DONE. Passing after previous fixes.
-- [x] **18. amsarticle_test** (50_structure) — DONE (was 807). Ported rearrangeAMSSplit/rearrangeAMSMultirow, `\@ams@multirow@bindings`, multline tex= via setBody, prefix addop n-ary fix, XMRef resolution, append_tree xml:id preservation. 3 minor diffs accepted: lpadding from \quad, xml:ids on + operators.
-- [x] **25. cells_test** (53_alignment) — DONE (was 5, 6, 14, 85, 102, 282, 300, 548, 780). Session 26: cmbx10/cmbx8 TFM metrics (78→89.8pt), xcolor \color reversion. Updated XML for Rust font metric precision (0.3-6pt diffs accepted). 0 diffs.
-- [x] **27. supertabular_test** (53_alignment) — DONE. Ported supertabular.sty + alignment glue fix + right-trim fix.
-- [x] **35. graphrot_test** (65_graphics) — DONE (was 17, 239, 25, 127, 596). Session 26: sidewaystable full hooks (239→17), cmbx8/cmr8 metrics, parbox sizer. Updated XML for Rust dimension precision. 0 diffs.
-- [x] **37. xcolors_test** (65_graphics) — DONE. Passing after previous fixes.
-
-### Tier 2: Needs afterConstruct DOM rearrangement (BLOCKED on item 29)
-
-- [x] **29. Implement afterConstruct rearrangement** — `rearrangeEqnarray`, `rearrangeAMSAlign`, `rearrangeAMSGather`, `openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols`. Done. Fixed _Capture_ XMArg wrapping issue (Perl model prevents XMArg inside _Capture_).
-- [x] **2. eqnums_test** (50_structure) — DONE. MathFork xml:id, prefix_relop_apply, tex= mbox synthesis, tag font italic wrapping (XMArg box font family="math" detection in floating script rewrite). 0 diffs.
-- [x] **3. algx_test** (53_alignment) — DONE. Infix modifierop grammar rule (expression modifierop expression => infix_apply). 0 diffs.
-- [x] **28. badeqnarray_test** (53_alignment) — DONE. Fixed is_script regex, prefix_relop_apply grammar rule, displaystyle tex= spacing. 0 diffs.
-- [x] **30. amsdisplay_test** (56_ams) — DONE (was 842). Ported subequations counter save/restore, multline tex= via setBody. 3 minor diffs accepted (same as amsarticle).
-- [x] **31. matrix_test** (56_ams) — DONE. Fixed \| delimiter: OPEN/CLOSE role, U+2016 char, name="||", U+2225 char key. 0 diffs.
-- [x] **32. sideset_test** (56_ams) — DONE (was 213, 336, 481). Implemented floating pre-script grammar: `prescripted_bigop` rules for FLOAT scripts before bigops, `prefix_script_pre` semantic action for POST-as-pre (forced 'pre' without _wasfloat), recursive `scripted_factor_l2` for 3+ float chains. 0 diffs.
-
-### Tier 3: Needs package bindings (moderate effort)
-
-- [x] **40. diagboxtest_test** (53_alignment) — DONE (was 267→144→94→86→80→0). Session 26: full diagbox.sty port with afterConstruct DOM building, slashbox/backslashbox compat, shortstack \\\\ fix in tabular context. Updated XML for dimension precision. 0 diffs.
-
-- [ ] **12. stmaryrd_test** (22_fonts) — 949 diffs (was 2502→2010→990→949). Post-parse ID renumbering (OXIDIZED_DESIGN #9) eliminated ~40 ID diffs. Remaining 287 structural: formulae vs list for \quad-separated binop expressions (Perl ColRHS always uses formulae).
-- [x] **33. cd_test** (56_ams) — DONE (was 352, 221, 146, 175). apply_delimited for OPFUNCTION. 0 diffs.
-- [ ] **34. mathtools_test** (56_ams) — Ported mathtools.sty. Test hits timeout in math parser (was TooManyErrors).
-- [ ] **36. picture_test** (65_graphics) — 3125 diffs. Port picture env + graphpap.sty.
-- [ ] **38. xytest** (65_graphics) — TooManyErrors. Port xy.sty binding.
-- [x] **39. cleveref_minimal_test** (80_complex) — DONE. Ported cleveref.sty: \lx@cref constructor, crefMulti, type_tag_formatter mappings. 0 diffs.
-
-### Infrastructure fixes (no test flip, but improve structure):
-
-- **XMDual for \\choose/\\brace/\\brack**: Pre-digest left/right delimiter tokens during after_digest, store as Stored::Digested. Template `?#needXMDual` conditional now produces proper XMDual + XMWrap + OPEN/CLOSE structure.
-- **Matrix delimiter Tokens**: left/right keyvals stored as Stored::Tokens for proper absorption in matrix template (matrix_test 173→164).
-- **\\lx@begin@inmath@text mode fix**: Changed from 'text' to 'restricted_horizontal' matching Perl.
-- **\\subjclass Default: fix**: Handle Default: parameter spec in closure.
-
-### Alignment Faithful Translation Plan
-
-**Priority: Complete and faithful translation from Perl. No gaps, no silent behavioral differences.**
-
-**Completed:**
-- [x] 2a. Preamble PI capture: `\newcolumntype` now calls `AddToPreamble` via `\lx@add@Preamble@PI`. colortbls 312→96, array 230→127.
-- [x] A2. `normalize_prune_rows` empty-row preservation: Root cause: Perl's lspaces (from \lx@intercol) makes cells empty=false but skippable=true, triggering check_bracketting border guard. Rust didn't populate lspaces. Fix: check template tokens for \lx@intercol + inherit top-border from preceding pruned rows. cells_test 85→14 diffs, tabular.xml updated. Also removed dead `template_has_fill` dependency for cells before=None.
-
-**Remaining — Faithful Perl translation gaps (ordered by Perl file coverage):**
-- [ ] A1. `alignment_skip_data` continuation-line check: Perl has `&& (($n < 2) || (empty_count <= 0.4 * cols))` guard. Adding it naively caused 173 regressions — needs careful integration with full Perl matching.
-- [ ] A3. Font wrapper `<text>` elements during alignment absorption: Rust creates spurious empty `<text _noautoclose>` wrappers. Perl doesn't create these. Root: different font change tracking.
-- [ ] A4. `{turn}` rotation dimensions inside alignment: `after_digest_body` gets empty body for alignment-containing environments.
-- [x] A5. guessHeaders column characterization: Root cause: `classify_alignment_cell` didn't look through `<inline-block>`/`<p>` wrappers (Perl classifies before these exist). Fixed with transparent container queue. Also fixed rowspan propagation and border edge check. graphrot 25→10 diffs.
-
-**Remaining — Missing package bindings (faithful ports needed):**
-- [x] B1. diagbox.sty — DONE. Full port with afterConstruct DOM, slashbox compat, shortstack fix.
-- [ ] B2. Split/gather `$` mode: alignment depth guard (Perl #2775 ported but split still times out). Blocks split_test.
-- [ ] B3. listings math: listings code blocks with math expressions. Blocks listing_test (1660 diffs after shorthand catcode fix).
-
-**Session 26 new ports:**
-- icml_support.sty (icml2016/icml2017 version aliases)
-- wrapfig.sty (wrapfigure/wraptable with float hooks)
-- diagbox.sty (full port: \diagbox, \slashbox, \backslashbox)
-- iftex.sty (TeX engine detection conditionals)
-- sidewaystable/sidewaysfigure full hooks (beforeFloat, afterFloat, rotatedPage, rotatedProperties)
-
-**Remaining — Math parser faithful translation gaps:**
-- [x] C0. **XMDual/XMWrap for function application**: DONE for `function` AND `opfunction` with `lparen formula rparen => apply_delimited`. Uses `create_xmrefs` with `_xmkey` deferred resolution. Content: `Apply(XMRef(func), XMRef(arg))`, Presentation: `Apply(func, XMWrap(open, arg, close))`. OPFUNCTION added in session 32 (cd_test 352→0). Note: trigfunction + XMDual still uses simple prefix_apply.
-- [x] C0b. **Modifier binding level**: DONE. Moved `formula modifier => postfix_modifier_apply` to expression level.
-- [x] C0c. **Parenthesized modifier expressions**: DONE. Added `expression lparen relop/modifierop expression rparen => annotated_fenced_modifier`.
-- [x] C0d. **\\pmod override removed**: DONE. Removed amsmath_sty.rs duplicate \\pmod/\\bmod definitions (Perl doesn't redefine them in amsmath).
-- [x] C1. ~~Empty XMRef idref~~: FIXED by post-parse ID renumbering (OXIDIZED_DESIGN #9). Document-order sequential IDs assigned after all parsing.
-- [ ] C2. Font specialize for parser tokens: `_font` not fully specialized for operator symbols in nested script contexts.
-- [ ] C3. Scripted operators: `\mathop{\mathop{A}\limits_{B}}\limits^{C}` produces different structure (XMWrap vs XMApp with scriptpos differences).
-- [ ] C4. ltx_nopad_l on @{}l@{} columns: Perl doesn't add ltx_nopad_l, Rust does. Subtle lspaces difference.
-- [x] C5. Multi-token match rewrites: DONE. `f_D` → DIFFOP, `\hat{f}` → ID, `f_\WildCard` → ID. XMWrap + `_rewrite` marker approach. simplemath_test 208→0.
-
-### Remaining 55 ignored tests breakdown:
-
-**Permanently blocked (5):** DTD namespace ns1–ns5. Rust only supports RelaxNG schemas.
-
-**Missing package ecosystems — to be ported (22):**
-- tikz: 10 tests — needs tikz.sty ecosystem port
-- pgf: 2 tests — needs pgfmath.sty/pgfplots.sty port
-- beamer: 1 test — needs beamer.cls port
-- slides: 1 test — needs slides.cls port (\\setbox recursion)
-- expl3: 2 tests — needs \\ExplSyntaxOn support
-- moderncv: 2 tests — needs moderncv.cls port
-- babel: 1 test — needs babel.sty port (currently times out)
-- physics: 1 test — needs physics.sty port
-- siunitx: 1 test — needs siunitx.sty port
-- acmart: 1 test — needs acmart.cls port
-
-**Math parser grammar (11), sorted by diffs:** (kludge, sideset, standalone_modifiers, simplemath, function_argument_syntax already DONE)
-- ambiguous_relations 101 — Rust parses 2 eqs Perl leaves unparsed (0=<x,y> with absent), xml:id numbering
-- relations 101 — structural parse diffs
-- array_math_parse 194 — fenced_array grammar added (\\{array→cases), all eqs parse, structural diffs remain (XMDual wrapping)
-- scripts 301 — empty-base absent, combined scripts ordering, prime handling
-- calculus 273 — bigop_application absorbs term (was 331), remaining: limit-from, nested sums, evaluated-at
-- artefacts 345
-- qm 400
-- operators 422 — needs \\lxDeclare for role=ID rewrites per .latexml file
-- functions 452
-- vertbars 466
-- parens 510 — XMDual structure mismatch
-
-**Key infrastructure blockers for math tests:**
-1. **XMDual/XMWrap for function application** — DONE for `function(args)` pattern. For opfunction/trigfunction, XMDual produces structure mismatch with Perl's `compact_xmdual`; kept as prefix_apply. Need to port `compact_xmdual` fully before enabling XMDual for all function types.
-2. **Trig argument scoping** — `\sin \pi \times x` → Rust: `sin(pi)*x`, Perl: `sin(pi*x)`. Grammar's `applied_func` stops at MULOP boundaries. Legitimate ambiguity per user feedback — may need semantic pruning rather than grammar fix.
-3. **Bigop argument absorption** — `∫ x * y * dx` → Rust: `∫(x) * y * dx`, Perl: `∫(x*y*dx)`. The `any_bigop tight_term` rule only absorbs one tight_term. Perl's `addIntOpArgs` absorbs full multiplicative chain. Marpa ambiguity: both parses exist, need semantic ranking. Blocks: calculus, ntheorem (~1360 diffs cascade from one integral).
-4. **Multi-token match rewrites** — `f_D` → DIFFOP, `\hat{f}` → ID, `f_\WildCard` → ID. Current XPath rewrite only matches single XMTok elements. Blocks: simplemath (f_D, f_1 parse failures).
-
-**Structural/package (13):** Need deep code changes.
-- 22_fonts: plainfonts 78 (math cascade), stmaryrd 1135 (XMDual)
-- 50_structure: ieee 967 (equation numbering + math)
-- 53_alignment: listing 2032 (mathescape), ncases 1048 (cases math), plainmath 320, split timeout
-- 55_theorem: ntheorem 1399
-- 56_ams: cd 222 (XMCell), mathtools timeout
-- 65_graphics: picture 3125 (picture env), xytest TooManyErrors (xy.sty)
-- 80_complex: figure_mixed_content 868, acm_aria SIGKILL (OOM/infinite loop — likely microtype package cascade)
-
-### Math parser known limitations:
-
-- **`2\sin(x)` doesn't parse** — `tight_term factor` is left-recursive only; `\sin(x)` as a tight_term can't appear as right of invisible_times. Perl handles this. Pre-existing limitation.
-- **Division right-scoping** — `abc/de` = `(abc)/(de)` in Rust, `((abc)/d)*e` in Perl. Accepted as intentional: juxtaposition binds tighter than explicit `/`.
-- **`f∘sin x` composition scoping** — Rust: `compose(f, sin(x))`, Perl: `(compose(f, sin))(x)`. Both mathematically equivalent.
-- **Trig argument scoping** — `sin(π)×x` vs `sin(π×x)` is a legitimate semantic ambiguity (per user). NOT resolved at grammar level. Needs future semantic pruning based on context (invisible vs explicit MulOp, known constants).
-- **XMDual for function application** — Grammar correctly produces `Apply(f, 123)` but Perl emits `XMDual(Apply(XMRef(f), XMRef(123)), Apply(f, XMWrap((,123,))))`. The `_pxmkey` infrastructure exists but setting keys during grammar actions fails because nodes are detached before `into_xmath`. Keys must be set AFTER Lexeme materialization in `tree.rs`.
-
-### Incomplete stubs requiring full implementation:
-
-- **\\sideset** (amsmath_sty.rs): DONE. Floating pre-script grammar handles sideset patterns. Grammar rules: `prescripted_bigop`, `prefix_script_pre`, `scripted_factor_l2`.
-- **\\lx@equationgroup@subnumbering@begin/end** (latex_ch7_math_mode_environments.rs): DONE. Full counter save/restore with RefStepCounter, ResetCounter, \theequation redefinition.
-- **mathtools.sty** (mathtools_sty.rs): \\DeclarePairedDelimiter family, \\newtagform/\\renewtagform, \\newgathered, \\smashoperator all stubbed as DefMacro None. Full Perl implementations need runtime macro factory closures.
-- **\\lxDeclare** (latexml_sty.rs): Simplified post-hoc matching vs Perl's full DeclarationRewrite system with XPath patterns, scope limiting, afterConstruct hook. Mathcode-decoded and name-attribute matching added as workarounds.
-- **diagbox.sty** (diagbox_sty.rs): DONE. Full port with afterConstruct DOM, slashbox/backslashbox compat.
+- [ ] **34. mathtools_test** (56_ams) — 7348 diffs (15 unparsed formulas, 2 XMath errors). See mini-plan below.
+- [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
+- [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [x] **41. aastex631_deluxetable_test** (80_complex) — DONE. Ported deluxetable.sty, Stored::Template, version-stripping dispatch.
-- [x] **42. aliceblog_test** (80_complex) — DONE. Passing after previous fixes.
-
-### Tier 3b: Perl XML sync — code fixes needed (see docs/PERL_XML_DIFFS.md)
-
-These are differences discovered by comparing `LaTeXML/t/*.xml` with `latexml_oxide/tests/*.xml`.
-Tests currently pass against Rust expected XMLs, but Rust output diverges from updated Perl.
-
-- [ ] **P1. guessTableHeaders differences** — Fixed pifont empty cells (was `?`), reducing ding.xml diffs 435→31. Remaining 31: `<thead>` wrapper not detected due to `is_numeric()` classifying circled digits (①-⑧) as Integer, causing row 21-22 comparison to exceed threshold. Cannot use `is_ascii_digit` because bbold header detection requires `is_numeric` for mathematical digits (𝟘-𝟟). Affects: `fonts/ding.xml`, `alignment/tabular.xml`, `graphics/xcolors.xml`. NOTE: Perl's continuation-line logic (L1336-1339) is dead code.
-- [x] **P2. ltx_figure_panel CSS class** — DONE. `arrange_panels` now marks all non-metadata children. Synced `figure_grids.xml`.
-- [x] **P3. DIFFOP recognition in math parser** — DONE. Grammar rule `factor += unknown factor_base => diffop_apply` with INTOP context check. Synced `dots.xml`.
-- [x] **P4. Titled frame support** — DONE. Fixed `after_digest_begin` to use `gullet::unread`. Synced `framed.xml`.
-- [ ] **P5. xcolors.xml fixes** — Color complement/wheel computation errors, missing `pt` units in calc output, `colortbl` row cycling broken (all "row 0"), missing `ltx_guessed_headers` class. Affects: `graphics/xcolors.xml` (~688 line diff). BLOCKED: needs color model + guessTableHeaders.
-- [x] **P6. RDFa support** — DONE. Full lxRDFa.sty binding: DefKeyVal for RDFa family, `\lxRDFa`, `\lxRDFAnnotate`, `\lxRDF` preamble/body, `\lxRDFaPrefix`, `\ref` detection. aliceblog_test passes.
-- N/A **P7. Daemon format fixes** — OUT OF SCOPE. The Rust port does not currently include daemonized functionality. Daemon tests are not tracked.
-
-### Tier 4: Needs major infrastructure
-
-- [ ] **A. Port expl3 programming layer** — `\ExplSyntaxOn/Off`, `\cs_new:Npn`, `\tl_set:Nn`. Unlocks: beamer, fontspec, unicode-math, and many modern packages.
-  - [ ] expl3 tilde_tricks_test (83_expl3) — needs expl3
-  - [ ] expl3 xparse_test (83_expl3) — needs expl3
-  - [ ] beamer_test (84_slides) — needs beamer.cls + expl3
-  - [ ] slides_test (84_slides) — needs slides.cls
-- [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
-- [ ] **C. Port BibTeX.pool.ltxml** — bibliography infrastructure (~150 defs, ~9% ported).
-- [ ] **D. Port AmSTeX.pool.ltxml** — legacy AMS macros (~112 defs, ~30% ported).
-
-### Tier 5: Math parser tests (active research, Marpa grammar)
-
-- [x] **46. choose_test** (40_math) — DONE. Fixed \lx@generalized@over delimiter digestion (rewrite \lx@right/\lx@left to \@right/\@left before stomach::digest to avoid egroup semantics). 0 diffs.
-- [x] **47a. arrows_test** (40_math) — DONE. Fixed ARROW multirelation chain (was only RELOP). 0 diffs.
-- [ ] **47. 40_math suite** (40_math) — niceunits 405→38 (nicefrac+units.sty ports, remaining: slash font). not 150 (\not\operatorname{R} sibling issue). testscripts 124 (nested \mathop Marpa RESET). ambiguous_relations 237 (structural diffs).
-- [ ] **48. 70_parse suite** (70_parse) — algebraic_terms PASSES, terms PASSES (juxtaposition-binds-tighter accepted). compose 12 (OPFUNCTION barearg + lxDeclare fix; remaining: f∘sin x composition scoping). function_argument_syntax 27 (sin π×x multi-function chain — parser fails). scripts/testscripts/arrows/not ~74 each (parser structural).
-- [ ] **49. plainmath_test** (53_alignment) — 351 diffs. Math parser XMDual structure.
-- [ ] **50. split_test** (53_alignment) — 102 diffs (down from 2228). prefix_relop_apply fixed most diffs. Remaining: math parser.
-- [x] **51. eqnarray_test** (53_alignment) — DONE (was 6→0, was 575→69→9→6). Fixed: postfix_apply n-ary, cdots ELIDEOP, lefteqn class, untex CS spacing, MathFork tex= join, xml:id multi-row pre-advancement. 0 diffs.
-- [ ] **52. ntheorem_test** (55_theorem) — 1479 diffs. Math parser tree + eqnarray.
-
-### Tier 6: Heavy package bindings (distant future)
-
-- [ ] **43. acm_aria_test** (80_complex) — TIMEOUT. Port acmart.cls.
-- [ ] **44. physics_test** (80_complex) — 5417 diffs. Port physics.sty.
-- [ ] **45. si_test** (80_complex) — 9024 diffs. Port siunitx.sty.
-- [ ] **pgf suite** (85_pgf) — 2 tests. Port pgf.sty.
-- [ ] **tikz suite** (86_tikz) — 10 tests. Port tikz.sty (depends on pgf).
-- [ ] **moderncv suite** (82_moderncv) — 2 tests. Port moderncv.cls.
-- [ ] **revtex4_1_test** (80_complex) — needs revtex4-1.cls binding.
-- [ ] **tcilatex_test** (80_complex) — needs tcilatex support.
-
-### Tier 7: Crashes and infinite loops (need deep debugging)
-
-- [x] **53. diagboxtest_test** (53_alignment) — DONE. Session 26. 0 diffs.
-- [ ] **54. ncases_test** (53_alignment) — 1048 diffs. No longer times out (was TIMEOUT). Cases math + equation numbering.
-- [x] **55. vmode_test** (53_alignment) — DONE. Session 25. 0 diffs.
+- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored (dramatically reduced). Remaining: calculus (17 diffs: xml:id ordering + fontsize), artefacts (285 diffs: structural from improvements over Perl), functions (421 diffs: conditional|, unparsed arrows), operators (505 diffs: double-sum + D(a)(b)), qm (460 diffs: <> bra-ket needs QM pragma). Key fix: fenced XMDual nesting for multi-item lists (calculus 332→17).
+- [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
-### Overarching projects
+#### mathtools_test mini-plan (per-section parity)
 
-#### Critical engine gaps (blocks multiple tests, ~2500 lines):
-- [ ] **G. latex_ch7_math_common_delimiters.rs** — File empty but `\big` etc. already work via plain.rs. May need LaTeX-specific sizing adjustments. Low priority.
-- [ ] **H. tex_box.rs SVG + vrule/hrule** — SVG collapse, `\vrule/\hrule` alignment, BoxSpecification for `\halign`. ~300 lines.
-- [ ] **I. tex_tables.rs \halign BoxSpecification** — Entirely commented-out section. ~200 lines.
-- [ ] **J. Rewrite system** — rewrite.rs at ~40% (Select/Replace/Attributes). Missing: `regexp`, `action`, `on_match` clauses. ~300 lines. Affects \lxDeclare, math decoration.
-- [ ] **K. Declaration system (\lxDeclare)** — Rust uses simplified post-hoc matching. Perl has full DeclarationRewrite with XPath patterns, scope limiting, semantic annotation. ~200 lines.
+| Section | Topic | Parity | Key gap |
+|---------|-------|--------|---------|
+| S1 | Sums/Limits | 70% | `\smashoperator` stubbed, tree limit on 4-clause |
+| S2 | Tags | **100%** | — |
+| S3 | Arrows | **96%** | Extended arrow font attributes |
+| S4 | Matrices | **99%** | 1 line diff |
+| S5 | Cases | **101%** | Intertext fixed |
+| S6 | Gathered | **104%** | afterConstruct XMDual wrapping done |
+| S7 | Delimiters | 85% | DeclarePairedDelimiterX body eval done, \Set* parses |
+| S8 | Prescripts | 69% | XMRef/xml:id for prescript nodes |
+| S9 | Multlines | **88%** | lgathered/rgathered afterConstruct done |
+| S10 | Spread-lines | **95%** | rowsep, xml:id numbering |
+| S11 | Stepped lines | 62% | MoveEqLeft alignment shift, newgathered |
+| S12 | Shifting | **87%** | mathmakebox xoffset, width precision |
 
-#### Important engine gaps (needed for test suites, ~1500 lines):
-- [ ] **L. latex_ch8_defining_commands.rs** — Missing `\DeclareMathAccent`, `\DeclareFontShape/Family/Encoding`, `\SetSymbolFont`, `\SetMathAlphabet`. ~200 lines.
-- [ ] **M. latex_ch14_pictures_and_color.rs** — Picture environment 0% ported (`\put`, `\multiput`, `\line`, `\vector`, `\oval`). ~300 lines. Blocks picture_test.
-- [ ] **N. tex_fonts.rs** — `\fontname` scaling format, per-font `\hyphenchar`, `\fontdimen` (only 3/15 params), 7 ligatures. ~150 lines.
-- [ ] **O. base_xmath.rs matrix/cases** — ~24 commented-out defs, `MathWhatsit()` missing. ~100 lines.
-- [ ] **P. plain.rs missing macros** — `\alloc@{}{}{}{}{}`, `\@@oalign/@@ooalign`, `\multispan`, `\hglue`. ~100 lines.
+### Alignment gaps
 
-#### Package binding parity (329/452 packages unported):
-- [ ] **E. Translate ALL Perl binding files** — 123/452 ported (27%). Critical missing: physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines), biblatex.sty (2000 lines), babel.sty (3000 lines). Mega-packages: beamer.cls (2000 lines), tikz.sty+pgf.sty (8000 lines), expl3.sty (4000 lines).
+- [ ] A1. `alignment_skip_data` continuation-line check (173 regressions when added naively)
+- [ ] A3. Font wrapper `<text>` elements during alignment absorption
+- [ ] A4. `{turn}` rotation dimensions inside alignment
+- [ ] B2. Split/gather `$` mode: alignment depth guard. Blocks split_test.
+- [ ] B3. listings math: code blocks with math expressions. Blocks listing_test (1661 diffs).
 
-#### Post-processing pipeline (entire system missing, ~7000 lines):
-- [ ] **F. Port Post-processing pipeline** — Fully translate `LaTeXML/lib/LaTeXML/Post/` to Rust. 25 modules, 0% ported.
-  - **Resources (copy as-is):** XSLT stylesheets, CSS, JavaScript, RelaxNG schemas, Profiles.
-  - **Core modules (priority order):** `Post::XMath` (math cleanup), `Post::Scan` (cross-refs), `Post::CrossRef` (navigation), `Post::MathML` (MathML generation), `Post::XSLT` (transforms), `Post::Writer` (serialization), `Post::Split` (multi-page), `Post::MakeBibliography`, `Post::MakeIndex`.
-  - **Impact:** Tests 90_latexmlpost out-of-scope. No HTML5/EPUB/JATS output. `role="ID"` assignment (affects ~20 tests) comes from Post::XMath.
+### Math parser gaps
 
-### Permanent ignores (not counted)
+- [ ] C2. Font specialize / mathstyle absolute reset — `\scriptstyle` inside subscript produces fontsize=50% (scriptscript) instead of 70% (script). `MergeFont!(mathstyle => "script")` adds relative; should RESET when `explicit_mathstyle` is set. See `tex_math.rs:638`. Calculus XML temporarily updated to match 50%; needs fix to restore 70%.
+- [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
+- [ ] C4. ltx_nopad_l on @{}l@{} columns
+- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
+- [ ] C6. XMDual id ordering in eval-at: `\left.xyz\right|_0` has swapped m1.1↔m1.2
+- [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`
+- [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
+- [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
 
-- **ns1–ns5** (52_namespace) — DTD not supported in Rust port. Permanently ignored.
+### Perl XML sync (tests pass, but Rust diverges from updated Perl)
+
+- [ ] P1. guessTableHeaders: circled digit classification (ding.xml, tabular.xml, xcolors.xml)
+- [ ] P5. xcolors.xml: color complement/wheel computation, colortbl row cycling. BLOCKED.
+
+### Heavy package bindings (distant future)
+
+- [ ] physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines)
+- [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
+- [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
+- [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
+- [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
+
+### Overarching infrastructure projects
+
+- [ ] **J. Rewrite system** — rewrite.rs at ~40%. Missing: `regexp`, `action`, `on_match`. ~300 lines.
+- [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
+- [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
+- [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
+- [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
+
+### Permanent ignores (5)
+
+- **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
 
 ---
 

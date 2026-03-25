@@ -65,7 +65,8 @@ macro_rules! RequirePackage {
 }
 #[macro_export]
 macro_rules! LoadClass {
-  ($class:expr, $options:expr, $after:expr) => {{ load_class($class, $options, $after) }};
+  ($class:expr) => {{ load_class($class, Vec::new(), Tokens!())? }};
+  ($class:expr, $options:expr, $after:expr) => {{ load_class($class, $options, $after)? }};
 }
 
 #[macro_export]
@@ -1622,8 +1623,13 @@ macro_rules! DeclareOption {
 
 #[macro_export]
 macro_rules! ProcessOptions {
+  // ProcessOptions!() — non-star, declared order (inorder=false)
   () => {
-    process_options()?;
+    process_options(false)?;
+  };
+  // ProcessOptions!(*) — star variant, in-order processing (inorder=true)
+  (*) => {
+    process_options(true)?;
   };
 }
 

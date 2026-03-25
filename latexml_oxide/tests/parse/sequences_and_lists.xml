@@ -136,7 +136,7 @@
             <XMApp>
               <XMTok meaning="formulae"/>
               <XMRef idref="p6.m1.1"/>
-              <XMRef idref="p6.m1.3"/>
+              <XMRef idref="p6.m1.2"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="p6.m1.1">
@@ -149,7 +149,7 @@
                 <XMTok meaning="3" role="NUMBER">3</XMTok>
               </XMApp>
               <XMTok role="PUNCT">,</XMTok>
-              <XMApp xml:id="p6.m1.3">
+              <XMApp xml:id="p6.m1.2">
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>

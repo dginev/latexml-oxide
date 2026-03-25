@@ -641,7 +641,7 @@ LoadDefinitions!({
   },
   digested_reversion => sub[arg] {
     // Revert without adding braces (unlike {} parameter)
-    let mut toks = arg.revert()?;
+    let toks = arg.revert()?;
     // Strip outer braces if present from the reversion
     let list = toks.unlist_ref();
     if list.len() >= 2

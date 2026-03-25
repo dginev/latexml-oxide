@@ -14,7 +14,7 @@ LoadDefinitions!({
       <ltx:XMArg>#1</ltx:XMArg>\
     </ltx:XMApp>",
     reversion => "\\stackrel{#1}{#2}",
-    properties => { stored_map!("scriptpos" => "mid") }
+    properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())) }
   );
 
   DefConstructor!(

@@ -44,7 +44,7 @@ LoadDefinitions!({
     } else if props.get("isMath") == Some(&Stored::Bool(true)) {
       // TODO: Reconsider if the insert_element API needs to be based around
       // Stored map values, rather than String map values.
-      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_string())))?;
+      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_attribute())))?;
     } else {
       // Add space to document?
       document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;

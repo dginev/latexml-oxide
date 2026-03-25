@@ -862,6 +862,7 @@ impl From<RegisterValue> for Stored {
       RegisterValue::MuGlue(v) => Stored::MuGlue(v),
       RegisterValue::Token(v) => Stored::Token(v),
       RegisterValue::Tokens(v) => Stored::Tokens(v),
+      RegisterValue::Pair(_) => Stored::None, // TODO: add Stored::Pair
     }
   }
 }

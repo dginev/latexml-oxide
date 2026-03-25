@@ -13,9 +13,20 @@ use crate::prelude::*;
 /// Simple alignment bindings for ams environments (no equation rearrangement)
 fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::alignment_bindings;
-  let properties = SymHashMap::default();
+  let mut properties = SymHashMap::default();
   // Perl: my $cur_jot = LookupDimension('\jot');
-  // TODO: handle \jot rowsep
+  // If \jot differs from default, set rowsep as PROPERTY (for equationgroup)
+  // Perl sets $properties{rowsep} = $cur_jot for gather/align environments
+  if !xml_attributes.contains_key("rowsep") {
+    if let Some(cur_jot) = state::lookup_dimension("\\jot") {
+      let default_jot = state::lookup_dimension("\\lx@default@jot");
+      let default_val = default_jot.map(|d| d.0).unwrap_or(0);
+      if cur_jot.0 != default_val && cur_jot.0 != 0 {
+        let rowsep_str = cur_jot.to_attribute();
+        properties.insert("rowsep", Stored::String(arena::pin(&rowsep_str)));
+      }
+    }
+  }
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
   state::let_i(
     &T_CS!("\\\\"),
@@ -282,7 +293,8 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint name='negthickspace'/>)()"
   );
 
-  // DefConstructor('\mspace{MuDimension}', "<ltx:XMHint name='mspace' width='#1'/>");
+  // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
+  DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");
 
   //======================================================================
   // Section 4.3 Dots
@@ -297,7 +309,12 @@ LoadDefinitions!({
   DefMacro!("\\DOTSX", None);
   Let!("\\hdots", "\\lx@ldots");
 
-  DefMacro!("\\hdotsfor Number", r"\hdots");
+  // Perl: expands to N copies of \hdots (where N is the numeric argument)
+  DefPrimitive!("\\hdotsfor Number", sub[(n)] {
+    let count = n.value_of().max(1) as usize;
+    let toks: Vec<Token> = (0..count).flat_map(|_| vec![T_CS!("\\hdots")]).collect();
+    gullet::unread(Tokens::new(toks));
+  });
 
   // Perl amsmath L848-860: Smart \dots — peek at following token's role.
   // If ADDOP/BINOP/MULOP/RELOP → use ⋯ (cdots), else → … (ldots)
@@ -572,11 +589,28 @@ LoadDefinitions!({
   );
 
   // Perl: amsmath.sty.ltxml line 100
+  // \@ams@intertext ends the current alignment row, then inserts intertext via \noalign.
+  // Perl: DefMacro('\@ams@intertext{}', '\lx@hidden@crcr\noalign{\@@ams@intertext{#1}}');
+  DefMacro!("\\@ams@intertext{}", "\\lx@hidden@crcr\\noalign{\\@@ams@intertext{#1}}");
   DefConstructor!(
-    "\\@ams@intertext{}",
+    "\\@@ams@intertext{}",
     "<ltx:p class='ltx_intertext'>#1</ltx:p>",
     mode => "internal_vertical"
   );
+  // Standalone \intertext (outside alignment) — Perl L734-735
+  // Inside alignment, \intertext is Let'd to \@ams@intertext by the alignment bindings.
+  DefConstructor!(
+    "\\intertext{}",
+    "<ltx:p class='ltx_intertext'>#1</ltx:p>",
+    mode => "internal_vertical"
+  );
+
+  // Perl L630: Tag('ltx:equation', afterClose => \&rearrangeLoneAMSAligned)
+  // When an equation closes, check if it contains a lone aligned environment
+  // and restructure into equationgroup/equation/MathFork.
+  Tag!("ltx:equation", after_close => sub[document, node] {
+    rearrange_lone_ams_aligned(document, node)?;
+  });
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 153-161
@@ -690,12 +724,42 @@ LoadDefinitions!({
   DefMacro!("\\csname endalignat*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
 
+  // xalignat — like alignat but full-width (Perl L530-545)
+  DefMacro!("\\xalignat{}",
+    "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
+     \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
+     \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment\\fi");
+  DefMacro!("\\endxalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+  DefMacro!("\\csname xalignat*\\endcsname{}",
+    "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
+     \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
+     \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment\\fi");
+  DefMacro!("\\csname endxalignat*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+
+  // xxalignat — like xalignat (Perl L547-551)
+  DefMacro!("\\xxalignat{}",
+    "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
+     \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
+     \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
+     \\lx@begin@alignment\\fi");
+  DefMacro!("\\endxxalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+
   //======================================================================
   // Section 3.3 Split equations without alignment (multline)
   // Perl: amsmath.sty.ltxml lines 240-310
 
+  // Perl L283-284: multirow keyval type declarations
+  DefKeyVal!("multirow", "width", "Dimension");
+  DefKeyVal!("multirow", "rowsep", "Dimension");
+
   // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
-  DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow", sub[(kv)] {
+  // Perl takes RequiredKeyVals:multirow + OptionalKeyVals (for before_row/after_row).
+  DefPrimitive!("\\@ams@multirow@bindings RequiredKeyVals:multirow OptionalKeyVals", sub[(kv, opt_kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
     let mut attrs: HashMap<String, String> = HashMap::default();
@@ -703,9 +767,67 @@ LoadDefinitions!({
       let name = name_arg.to_attribute();
       attrs.insert(String::from("name"), name);
     }
-    // Single-column template: \hfil \displaystyle before
+    // Pass through rowsep if present (from \spreadlines setting \jot)
+    if let Some(rowsep_arg) = kv.get_value("rowsep") {
+      let rowsep = rowsep_arg.to_attribute();
+      if !rowsep.is_empty() && rowsep != "0pt" && rowsep != "0.0pt" {
+        attrs.insert(String::from("rowsep"), rowsep);
+      }
+    }
+    // Pass through vattach if present (top/bottom/center attachment)
+    if let Some(vattach_arg) = kv.get_value("vattach") {
+      if !vattach_arg.is_empty() {
+        let va = vattach_arg.to_attribute();
+        // Perl: translateAttachment converts t→top, b→bottom, c→center
+        let translated = match va.as_str() {
+          "t" => "top",
+          "b" => "bottom",
+          "c" => "center",
+          "" | "None" => "middle", // empty/None → default middle
+          other => other,
+        };
+        attrs.insert(String::from("vattach"), translated.to_string());
+      }
+    }
+    // Pass through width if present and non-zero
+    // Perl: if ($attr{width} && $attr{width}->valueOf == 0) { delete $attr{width}; }
+    if let Some(width_arg) = kv.get_value("width") {
+      if !width_arg.is_empty() {
+        let w = width_arg.to_attribute();
+        if !w.is_empty() && w != "0pt" && w != "0.0pt" {
+          attrs.insert(String::from("width"), w);
+        }
+      }
+    }
+    // Process OptionalKeyVals: before_row, after_row
+    // Perl: wraps in \text{...} for before/after each row
+    let opt_keyvals: Option<KeyVals> = opt_kv.into();
+    let mut before_row_toks: Vec<Token> = Vec::new();
+    let mut after_row_toks: Vec<Token> = Vec::new();
+    if let Some(okv) = opt_keyvals {
+      if let Some(br) = okv.get_value("before_row") {
+        if !br.is_empty() {
+          before_row_toks.push(T_CS!("\\text"));
+          before_row_toks.push(T_BEGIN!());
+          before_row_toks.extend(br.clone().unlist());
+          before_row_toks.push(T_END!());
+        }
+      }
+      if let Some(ar) = okv.get_value("after_row") {
+        if !ar.is_empty() {
+          after_row_toks.push(T_CS!("\\text"));
+          after_row_toks.push(T_BEGIN!());
+          after_row_toks.extend(ar.clone().unlist());
+          after_row_toks.push(T_END!());
+        }
+      }
+    }
+    // Single-column template: \hfil \displaystyle [before_row] before, [after_row] after
+    let mut before_tokens = vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")];
+    before_tokens.extend(before_row_toks);
     let col1 = Cell {
-      before: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")])),
+      before: Some(Tokens::new(before_tokens)),
+      after: if after_row_toks.is_empty() { None } else { Some(Tokens::new(after_row_toks)) },
       empty: true,
       ..Cell::default()
     };
@@ -816,8 +938,15 @@ LoadDefinitions!({
     ams_aligned_bindings()?;
   });
 
+  // Perl: \if@in@ams@align\lx@ams@marksplitinalign\fi prefix for split-in-align
   DefMacro!("\\split",
-    "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
+    "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
+     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
+  // \if@in@ams@align — checks if current environment starts with "align"
+  // Simplified: always false for now (proper impl needs lookupStackedValues)
+  DefConditional!("\\if@in@ams@align");
+  // \lx@ams@marksplitinalign — stub (sets colspan=2, advances column)
+  DefConstructor!("\\lx@ams@marksplitinalign", "");
   DefMacro!("\\endsplit",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@split\\lx@hidden@egroup");
   DefPrimitive!("\\@end@split", { egroup()?; });
@@ -835,15 +964,26 @@ LoadDefinitions!({
   // Section 3.7 Alignment building blocks (gathered, aligned, alignedat)
   // Perl: amsmath.sty.ltxml lines 570-676
 
+  // Perl: \lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}\@@gathered\lx@begin@alignment
   DefMacro!("\\gathered[]",
-    "\\lx@hidden@bgroup\\@@gathered\\lx@begin@alignment");
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=gathered,vattach=#1}\\@@gathered\\lx@begin@alignment");
   DefMacro!("\\endgathered",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@gathered\\lx@hidden@egroup");
   DefPrimitive!("\\@end@gathered", { egroup()?; });
   DefConstructor!("\\@@gathered DigestedBody",
     "#1",
     before_digest => { bgroup(); },
-    reversion => "\\begin{gathered}#1\\end{gathered}");
+    after_digest => sub[whatsit] {
+      // Perl: { 'default' => 'center' } — all rows centered
+      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("center"));
+    },
+    reversion => "\\begin{gathered}#1\\end{gathered}",
+    after_construct => sub[document, whatsit] {
+      if let Some(last) = document.get_node().get_last_child() {
+        let align_rule = get_multirow_alignment_rule(whatsit);
+        rearrange_ams_multirow(document, last, &align_rule)?;
+      }
+    });
 
   DefMacro!("\\aligned[]",
     "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@amsaligned\\lx@begin@alignment",
@@ -975,15 +1115,183 @@ LoadDefinitions!({
   DefMacro!("\\primfrac{}", None);
   DefMacro!("\\shoveleft{}", "#1");
   DefMacro!("\\shoveright{}", "#1");
+
+  //======================================================================
+  // Additions from Perl amsmath audit (session 38)
+  //======================================================================
+
+  // Section 4.5: Additional math accents (triple/quadruple dots)
+  DefMath!("\\dddot{}", "\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\dddot{#1}");
+  DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
+
+  // Section 4.6: Root adjustment (no-ops — cosmetic only)
+  DefMacro!("\\leftroot{}", None);
+  DefMacro!("\\uproot{}", None);
+
+  // Section 4.13: Smash with optional direction (pass through body)
+  DefConstructor!("\\smash[]{}", "#2");
+
+  // Section 4.4: Nonbreaking dashes (no-op)
+  DefMacro!("\\nobreakdash", None);
+
+  // Section 3.8: Tag placement adjustment (no-op)
+  DefMacro!("\\raisetag{}", None);
+
+  // Section 3.9: Page breaks (no-op)
+  DefMacro!("\\displaybreak[]", None);
+
+  // Section 4.11: Inline fraction (\ifrac)
+  DefConstructor!("\\ifrac{}{}", "\
+    <ltx:XMApp>\
+      <ltx:XMTok meaning='divide' role='MULOP' style='inline'>\u{2215}</ltx:XMTok>\
+      #1\
+      #2\
+    </ltx:XMApp>");
+
+  // Section 4.12: Continued fractions (simplified — no mathstyle switching)
+  DefMacro!("\\cfrac[]{}{}", "\\frac{#2}{#3}");
+
+  // Section 7.4: Multiple integrals dispatch
+  DefMacro!("\\MultiIntegral{}", "\\int");
+
+  // Section 9.4: Accent aliases (Perl L1297-1306)
+  Let!("\\Hat", "\\hat");
+  Let!("\\Check", "\\check");
+  Let!("\\Tilde", "\\tilde");
+  Let!("\\Acute", "\\acute");
+  Let!("\\Grave", "\\grave");
+  Let!("\\Dot", "\\dot");
+  Let!("\\Ddot", "\\ddot");
+  Let!("\\Breve", "\\breve");
+  Let!("\\Bar", "\\bar");
+  Let!("\\Vec", "\\vec");
+
+  // Preamble: trivial macros
+  DefMacro!("\\AmSfont", None);
+  DefMacro!("\\AmS", "AmS");
+
+  // Miscellaneous no-ops
+  DefPrimitive!("\\allowdisplaybreaks[]", {});
+
+  // Conditionals (always false sentinels — Perl L58-68)
+  DefConditional!("\\ifmeasuring@");
+  DefConditional!("\\iftagsleft@");
+  DefConditional!("\\if@fleqn");
 });
 
 use latexml_core::document;
 
+/// Perl L632-676: rearrangeLoneAMSAligned
+/// When an equation contains a lone aligned environment as its only content,
+/// restructure into equationgroup with one equation per row, each with MathFork.
+pub fn rearrange_lone_ams_aligned(
+  document: &mut Document,
+  equation: &mut Node,
+) -> Result<()> {
+  use crate::engine::base_xmath::{open_math_fork, close_math_fork};
+  use latexml_core::common::xml::element_nodes;
+
+  // Test: single ltx:Math child?
+  let maths: Vec<Node> = document.findnodes("ltx:Math", Some(equation));
+  if maths.len() != 1 {
+    return Ok(());
+  }
+  let math = &maths[0];
+  // Single child of Math must be XMArray[name='aligned']
+  let math_first = match math.get_first_child() {
+    Some(n) if n.get_type() == Some(libxml::tree::NodeType::ElementNode) => n,
+    _ => return Ok(()),
+  };
+  let children = element_nodes(&math_first);
+  // The first element child of Math's first element should be the XMArray
+  // (possibly after XMath wrapper)
+  let array = if document::get_node_qname(&math_first) == arena::pin_static("ltx:XMath") {
+    let xmath_children = element_nodes(&math_first);
+    if xmath_children.len() != 1 {
+      return Ok(());
+    }
+    xmath_children[0].clone()
+  } else if children.is_empty() {
+    math_first.clone()
+  } else {
+    return Ok(());
+  };
+  if document::get_node_qname(&array) != arena::pin_static("ltx:XMArray") {
+    return Ok(());
+  }
+  if array.get_attribute("name").as_deref() != Some("aligned") {
+    return Ok(());
+  }
+
+  // Unbind the Math node (we'll restructure the equation)
+  let mut math_clone = maths[0].clone();
+  math_clone.unlink_node();
+
+  // Rename equation → equationgroup
+  let mut eqgroup = document.rename_node(equation.clone(), "ltx:equationgroup", false)?;
+  let eq_id = eqgroup.get_attribute("xml:id").unwrap_or_default();
+
+  // For each XMRow in the array, create a new equation
+  let rows: Vec<Node> = document.findnodes("ltx:XMRow", Some(&array));
+  for row in rows {
+    let mut eqn = document.open_element_at(&mut eqgroup, "ltx:equation", None, None)?;
+    if !eq_id.is_empty() {
+      let new_id = document.modify_id(format!("{eq_id}X"));
+      document.set_attribute(&mut eqn, "xml:id", &new_id)?;
+    }
+    let cells: Vec<Node> = document.findnodes("ltx:XMCell", Some(&row));
+    let mut cell_iter = cells.into_iter();
+    // Process cells in pairs (LHS, RHS)
+    while let Some(cell) = cell_iter.next() {
+      let (mut main, mut branch) = open_math_fork(document, &mut eqn)?;
+      // Process up to 2 cells
+      for cell_node in [Some(cell), cell_iter.next()] {
+        let Some(cn) = cell_node else { continue };
+        let align = cn.get_attribute("align").unwrap_or_default();
+        let mut td = document.open_element_at(&mut branch, "ltx:td", None, None)?;
+        if !align.is_empty() {
+          document.set_attribute(&mut td, "align", &align)?;
+        }
+        let cell_children = element_nodes(&cn);
+        if !cell_children.is_empty() {
+          let mut imath = document.open_element_at(&mut td, "ltx:Math", None, None)?;
+          document.set_attribute(&mut imath, "mode", "inline")?;
+          let mut xmath = document.open_element_at(&mut imath, "ltx:XMath", None, None)?;
+          // Clone the cell's children into this XMath
+          document.append_clone(&mut xmath, cell_children.clone())?;
+          document.close_element_at(&mut xmath)?;
+          document.close_element_at(&mut imath)?;
+          // Move original children into main branch
+          for mut child in cell_children {
+            child.unlink_node();
+            let main_xmath = document.findnodes("ltx:XMath", Some(&main));
+            if let Some(mut mx) = main_xmath.into_iter().next() {
+              mx.add_child(&mut child).ok();
+            }
+          }
+        }
+        document.close_element_at(&mut td)?;
+      }
+      close_math_fork(document, &mut eqn, &mut main, &mut branch)?;
+    }
+    document.close_element_at(&mut eqn)?;
+  }
+
+  Ok(())
+}
+
 /// Extract the alignment rule from whatsit properties.
 /// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
 /// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST, etc.
-fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
+pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
   let mut rules = Vec::new();
+  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_DEFAULT") {
+    if let Stored::String(s) = &*val {
+      rules.push(("default".to_string(), arena::to_string(*s)));
+    }
+  }
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_0") {
     if let Stored::String(s) = &*val {
       rules.push(("0".to_string(), arena::to_string(*s)));
@@ -1162,7 +1470,7 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
 
 /// Perl: rearrangeAMSMultirow (amsmath.sty.ltxml L286-307)
 /// Like split, but also adjusts row alignment (first=left, last=right for multline).
-fn rearrange_ams_multirow(
+pub fn rearrange_ams_multirow(
   document: &mut Document,
   array: Node,
   align_rules: &[(String, String)],
@@ -1176,6 +1484,15 @@ fn rearrange_ams_multirow(
   let rows = element_nodes(&array);
   let num_rows = rows.len();
   for (key, align_val) in align_rules {
+    if key == "default" {
+      // Apply default alignment to ALL rows
+      for row in &rows {
+        for mut cell in element_nodes(row) {
+          cell.set_attribute("align", align_val).ok();
+        }
+      }
+      continue;
+    }
     let row_idx = if key == "last" {
       if num_rows > 0 { num_rows - 1 } else { continue; }
     } else if let Ok(idx) = key.parse::<usize>() {
@@ -1408,4 +1725,6 @@ fn sideset_wrap_impl(
   let closed = document.close_element("ltx:XMApp")?;
   Ok(closed.unwrap_or_else(|| document.get_node().clone()))
 }
+
+// Additional amsmath definitions are added inline in the LoadDefinitions block above.
 

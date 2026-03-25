@@ -2009,10 +2009,10 @@ LoadDefinitions!({
             nopad_attrs.insert("class".to_string(), "ltx_nopad".to_string());
             let mut cell1 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs.clone()), None)?;
             document.close_element_at(&mut cell1)?;
-            cell1.remove_attribute("align"); // Empty paren cell — no alignment
+            let _ = cell1.remove_attribute("align"); // Empty paren cell — no alignment
             let mut cell2 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs), None)?;
             document.close_element_at(&mut cell2)?;
-            cell2.remove_attribute("align"); // Empty paren cell — no alignment
+            let _ = cell2.remove_attribute("align"); // Empty paren cell — no alignment
             // Move cell2 (last child) to 2nd position (after first child)
             if let Some(mut first_child) = row.get_first_element_child() {
               cell2.unlink_node();
@@ -2042,14 +2042,14 @@ LoadDefinitions!({
               open_attrs.insert("role".to_string(), "OPEN".to_string());
               open_attrs.insert("stretchy".to_string(), "true".to_string());
               let mut open_tok = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(open_attrs), Some(paren_font.clone()))?;
-              open_tok.set_content("(");
+              let _ = open_tok.set_content("(");
               document.close_element_at(&mut open_tok)?;
               // Strut: height=half, depth=half (symmetric)
               let mut strut_attrs = HashMap::default();
               strut_attrs.insert("height".to_string(), Dimension::new(half_sp).to_attribute());
               strut_attrs.insert("depth".to_string(), Dimension::new(half_sp).to_attribute());
               let mut strut = document.open_element_at(&mut wrap1, "ltx:XMTok", Some(strut_attrs), Some(paren_font.clone()))?;
-              strut.set_content(" ");
+              let _ = strut.set_content(" ");
               document.close_element_at(&mut strut)?;
               document.close_element_at(&mut wrap1)?;
               // Close paren — same structure
@@ -2064,13 +2064,13 @@ LoadDefinitions!({
               close_attrs.insert("role".to_string(), "CLOSE".to_string());
               close_attrs.insert("stretchy".to_string(), "true".to_string());
               let mut close_tok = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(close_attrs), Some(paren_font.clone()))?;
-              close_tok.set_content(")");
+              let _ = close_tok.set_content(")");
               document.close_element_at(&mut close_tok)?;
               let mut strut2_attrs = HashMap::default();
               strut2_attrs.insert("height".to_string(), Dimension::new(half_sp).to_attribute());
               strut2_attrs.insert("depth".to_string(), Dimension::new(half_sp).to_attribute());
               let mut strut2 = document.open_element_at(&mut wrap2, "ltx:XMTok", Some(strut2_attrs), Some(paren_font))?;
-              strut2.set_content(" ");
+              let _ = strut2.set_content(" ");
               document.close_element_at(&mut strut2)?;
               document.close_element_at(&mut wrap2)?;
             }

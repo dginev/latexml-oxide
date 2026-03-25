@@ -9,19 +9,16 @@ fn algebraic_terms_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn array_math_parse_test() {
   latexml_test_single("tests/parse/array_math.tex", "array_math", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn artefacts_test() {
   latexml_test_single("tests/parse/artefacts.tex", "artefacts", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn calculus_test() {
   latexml_test_single("tests/parse/calculus.tex", "calculus", DIR, None, None);
 }
@@ -42,7 +39,6 @@ fn function_argument_syntax_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn functions_test() {
   latexml_test_single("tests/parse/functions.tex", "functions", DIR, None, None);
 }
@@ -73,13 +69,11 @@ fn nested_application_test() {
 }
 
 #[test]
-#[ignore] // 416 diffs: needs \lxDeclare implementation for role=ID
 fn operators_test() {
   latexml_test_single("tests/parse/operators.tex", "operators", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn parens_test() {
   latexml_test_single("tests/parse/parens.tex", "parens", DIR, None, None);
 }
@@ -95,19 +89,16 @@ fn prescripted_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn qm_test() {
   latexml_test_single("tests/parse/qm.tex", "qm", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn relations_test() {
   latexml_test_single("tests/parse/relations.tex", "relations", DIR, None, None);
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser
 fn scripts_test() {
   latexml_test_single("tests/parse/scripts.tex", "scripts", DIR, None, None);
 }
@@ -148,7 +139,6 @@ fn terms_test() {
 }
 
 #[test]
-#[ignore] // text= attr diffs: math parser (many)
 fn vertbars_test() {
   latexml_test_single("tests/parse/vertbars.tex", "vertbars", DIR, None, None);
 }

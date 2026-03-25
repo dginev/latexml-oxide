@@ -22,30 +22,56 @@ pub fn node_to_grammar_lexemes_from(
   child_nodes: Vec<Node>,
   idx: &mut usize,
 ) -> (Vec<String>, Vec<Node>) {
+  node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false)
+}
+
+fn node_to_grammar_lexemes_ctx(
+  mathnode: &Node,
+  child_nodes: Vec<Node>,
+  idx: &mut usize,
+  bigop_context: bool,
+) -> (Vec<String>, Vec<Node>) {
   let mut lexemes = Vec::new();
   let mut nodes = Vec::new();
   let top_role_opt = mathnode.get_attribute("role");
   if let Some(ref top_role) = top_role_opt {
     *idx += 1;
-    lexemes.push(format!("start_{top_role}:start:{idx}"));
+    // When in bigop context, emit BIGOPSUB/BIGOPSUP instead of POSTSUBSCRIPT/POSTSUPERSCRIPT
+    let mapped_role = if bigop_context {
+      match top_role.as_str() {
+        "POSTSUBSCRIPT" => "BIGOPSUB".to_string(),
+        "POSTSUPERSCRIPT" => "BIGOPSUP".to_string(),
+        _ => top_role.clone(),
+      }
+    } else {
+      top_role.clone()
+    };
+    lexemes.push(format!("start_{mapped_role}:start:{idx}"));
     nodes.push(mathnode.clone());
   }
+  // Track whether the last emitted token was a bigop (SUMOP/INTOP/etc.)
+  // so we can emit bigop-specific script tokens to reduce earley chart ambiguity.
+  let mut last_was_bigop = false;
   for node in child_nodes.into_iter() {
     if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
       let role = node.get_attribute("role").unwrap();
-      // ARROW-role XMApps (decorated arrows like \xrightarrow{over}) should be
-      // atomic terminals. Extract the arrow meaning from the ARROW child token.
-      if role == "ARROW" {
+      // ARROW/METARELOP-role XMApps (decorated arrows like \xrightarrow{over},
+      // \xleftrightarrow[under]{over}) should be atomic terminals.
+      // Extract the meaning from the inner ARROW/METARELOP child token.
+      if role == "ARROW" || role == "METARELOP" {
         let arrow_meaning = node.get_child_elements().into_iter()
-          .find(|ch| ch.get_attribute("role").as_deref() == Some("ARROW"))
+          .find(|ch| {
+            let cr = ch.get_attribute("role");
+            cr.as_deref() == Some("ARROW") || cr.as_deref() == Some("METARELOP")
+          })
           .and_then(|ch| {
             ch.get_attribute("meaning")
               .or_else(|| ch.get_attribute("name"))
               .or_else(|| Some(ch.get_content()))
           })
-          .unwrap_or_else(|| "ARROW".to_string());
+          .unwrap_or_else(|| role.to_string());
         *idx += 1;
-        let lexeme = format!("ARROW:{arrow_meaning}:{idx}").replace(' ', "");
+        let lexeme = format!("{role}:{arrow_meaning}:{idx}").replace(' ', "");
         lexemes.push(lexeme);
         nodes.push(node);
       } else if node.has_attribute("_rewrite") {
@@ -63,11 +89,30 @@ pub fn node_to_grammar_lexemes_from(
       } else {
         // Only recurse into XMApp nodes that have a role (scripts, etc.)
         // Role-less XMApps (e.g. \sqrt, already-parsed structures) are atomic.
-        let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes(&node, idx);
+        // Pass bigop_context for POSTSUBSCRIPT/POSTSUPERSCRIPT following a bigop
+        let is_script = matches!(role.as_str(), "POSTSUBSCRIPT" | "POSTSUPERSCRIPT");
+        let ctx = last_was_bigop && is_script;
+        let children = filter_hints(node.get_child_nodes());
+        let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes_ctx(&node, children, idx, ctx);
         for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
           lexemes.push(inner_lex);
           nodes.push(inner_node);
         }
+        // Script following a bigop is still "bigop context" for the next script
+        if !is_script {
+          last_was_bigop = false;
+        }
+      }
+    } else if node.get_name() == "XMArg" {
+      // XMArg is a transparent wrapper (e.g. from \lx@post@subscript).
+      // Recurse into its children so the grammar can parse them individually.
+      // E.g. _{ij} should emit UNKNOWN:i + UNKNOWN:j, not ATOM:ij.
+      let arg_children = filter_hints(node.get_child_nodes());
+      let (mut inner_lexes, mut inner_nodes) =
+        node_to_grammar_lexemes_ctx(&node, arg_children, idx, false);
+      for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
+        lexemes.push(inner_lex);
+        nodes.push(inner_node);
       }
     } else {
       let role = get_grammatical_role(&node);
@@ -76,6 +121,9 @@ pub fn node_to_grammar_lexemes_from(
         text = "UNKNOWN".to_string();
       }
       *idx += 1;
+      // Track bigop tokens for bigop-specific script token emission
+      let is_bigop = matches!(role.as_str(), "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP");
+      last_was_bigop = is_bigop;
       // Remap angle brackets to parentheses for parsing (grammar can't handle
       // OPEN:langle without massive ambiguity, but OPEN:( works fine).
       // The original node preserves the actual ⟨⟩ characters for XML output.
@@ -90,9 +138,18 @@ pub fn node_to_grammar_lexemes_from(
       nodes.push(node);
     }
   }
-  if let Some(top_role) = top_role_opt {
+  if let Some(ref top_role) = top_role_opt {
     *idx += 1;
-    lexemes.push(format!("end_{top_role}:end:{idx}"));
+    let mapped_end = if bigop_context {
+      match top_role.as_str() {
+        "POSTSUBSCRIPT" => "BIGOPSUB".to_string(),
+        "POSTSUPERSCRIPT" => "BIGOPSUP".to_string(),
+        _ => top_role.clone(),
+      }
+    } else {
+      top_role.clone()
+    };
+    lexemes.push(format!("end_{mapped_end}:end:{idx}"));
     nodes.push(mathnode.clone());
   }
   (lexemes, nodes)
@@ -254,8 +311,6 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
       XM::Lexeme(lex, _) => {
         // If arg is already XML, it's too late to get automatic ID's
         let node = lookup_lex_node(lex, nodes).expect("lexemes should only have valid ids.");
-        // let qname   = document::get_node_qname(node, state);
-        // let nodebox     = document.get_node_box(node);
 
         match node.get_attribute("xml:id") {
           //  already has id, so refer to it.

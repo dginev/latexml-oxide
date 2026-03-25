@@ -439,7 +439,12 @@ LoadDefinitions!({
     }
     for mut r in refs {                        // Now fill in the references
       let r_xmkey = r.get_attribute("_xmkey").unwrap();
-      document.set_attribute(&mut r, "idref", ids.get(&r_xmkey).unwrap())?;
+      if let Some(idref) = ids.get(&r_xmkey) {
+        document.set_attribute(&mut r, "idref", idref)?;
+      } else {
+        // xmkey not resolved — may happen with parser-generated nested structures
+        eprintln!("\x1b[33mWarn:expected:id \x1b[0mUnresolved _xmkey '{}' in createXMRefs", r_xmkey);
+      }
       r.remove_attribute("_xmkey")?;
     }
   });
@@ -783,6 +788,7 @@ LoadDefinitions!({
       .unwrap_or_else(|| T_CS!("\\textstyle"));
     let align = kv.get_value("alignment")
       .map(ToString::to_string)
+      .filter(|s| !s.is_empty())
       .unwrap_or_else(|| String::from("c"));
     let ncols_str = kv.get_value("ncolumns").map(ToString::to_string).unwrap_or_default();
     let ncols: usize = ncols_str.parse().unwrap_or(0);
@@ -799,7 +805,14 @@ LoadDefinitions!({
       after_toks.push(T_CS!("\\hfil"));
     }
 
+    // Set explicit alignment on cell so it propagates to XMCell align= attribute
+    let cell_align = match align.as_str() {
+      "l" => Some(Align::Left),
+      "r" => Some(Align::Right),
+      _ => Some(Align::Center), // default "c"
+    };
     let col = Cell {
+      align: cell_align,
       before: Some(Tokens::new(before_toks)),
       after: if after_toks.is_empty() { None } else { Some(Tokens::new(after_toks)) },
       empty: true,
@@ -1177,7 +1190,7 @@ LoadDefinitions!({
                 } else {
                   let mut xm_text =
                     document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
-                  xm_text.set_content("otherwise");
+                  let _ = xm_text.set_content("otherwise");
                   document.close_element_at(&mut xm_text)?;
                 }
               }
@@ -1257,7 +1270,7 @@ LoadDefinitions!({
                 } else {
                   let mut xm_text =
                     document.open_element_at(&mut xm_app, "ltx:XMText", None, None)?;
-                  xm_text.set_content("otherwise");
+                  let _ = xm_text.set_content("otherwise");
                   document.close_element_at(&mut xm_text)?;
                 }
               }

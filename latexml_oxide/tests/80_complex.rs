@@ -37,7 +37,6 @@ fn figure_dual_caption_test() { complex("figure_dual_caption"); }
 fn hyperchars_test() { complex("hyperchars"); }
 
 #[test]
-#[ignore] // tags diffs: figure caption + listings math
 fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 
 #[test]
@@ -70,11 +69,11 @@ fn aastex_test_test() { complex("aastex_test"); }
 fn aliceblog_test() { complex("aliceblog"); }
 
 #[test]
-#[ignore] // diffs — physics package
+#[ignore] // TooManyErrors: needs physics.sty full port
 fn physics_test() { complex("physics"); }
 
 #[test]
-#[ignore] // diffs — siunitx package
+#[ignore] // TooManyErrors: needs siunitx.sty full port
 fn si_test() { complex("si"); }
 
 #[test]

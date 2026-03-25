@@ -29,6 +29,20 @@ pub enum ValidationPragmatics {
   StandaloneDiffopsAreNotNumerators,
   PostfixTermsAreFencedIfSingleArguments,
   RestrictNumeralFractions,
+  /// Prefer parses where scripts attach to bases rather than floating standalone.
+  MaximizeScriptAttachment,
+  /// An expression should never have `absent` on BOTH the left and right sides
+  /// of a binary/relational operator.
+  NoBilateralAbsent,
+  /// Functions prefer wider absorption: `\log 2x^2` means `log(2*x^2)`,
+  /// not `log(2)*x^2`. When a function can absorb more factors, prefer that parse.
+  /// Implemented by penalizing parses where a function's result is multiplied
+  /// by factors that could have been the function's argument.
+  FunctionsPreferWiderAbsorption,
+  /// Bigops prefer wider absorption: `\int F\times Gdx` means `∫(F×G dx)`,
+  /// not `∫(F)×Gdx`. Perl's moreOpArgFactors absorbs MulOp chains.
+  /// Rejects trees where mulop(bigop_app(narrow), rhs) when rhs is a simple factor.
+  BigopPreferWiderAbsorption,
 }
 
 impl ValidationPragmatics {
@@ -44,6 +58,7 @@ impl ValidationPragmatics {
       StandaloneDiffopsAreNotNumerators,
       PostfixTermsAreFencedIfSingleArguments,
       RestrictNumeralFractions,
+      NoBilateralAbsent,
     ]
   }
   /// Pragmatic rules that are executed at the end of the parse process,
@@ -60,9 +75,12 @@ impl ValidationPragmatics {
       AdjacentUnfencedScriptsDontApply,
       AdjacentFunctionsDontUnifyIntoOperator,
       ConsistentLetterBlocks,
+      FunctionsPreferWiderAbsorption,
+      BigopPreferWiderAbsorption,
       ConsistentCase,
       ConsistentCaseFlat,
       ConsistentCaseFlatUnstyled,
+      MaximizeScriptAttachment,
     ]
   }
 
@@ -88,6 +106,10 @@ impl ValidationPragmatics {
       PostfixTermsAreFencedIfSingleArguments => pragma_postfix_terms_are_fenced_if_single_arg(tree),
       AdjacentFunctionsDontUnifyIntoOperator => pragma_adjacent_functions_dont_unify_into_op(tree),
       RestrictNumeralFractions => pragma_restrict_numeral_fractions(tree),
+      MaximizeScriptAttachment => pragma_maximize_script_attachment(tree),
+      NoBilateralAbsent => pragma_no_bilateral_absent(tree),
+      FunctionsPreferWiderAbsorption => pragma_functions_prefer_wider_absorption(tree),
+      BigopPreferWiderAbsorption => pragma_bigop_prefer_wider_absorption(tree),
       _ => Ok(()),
     }
   }
@@ -107,6 +129,15 @@ impl ValidationPragmatics {
         self.validate_recursive(op)?;
         for arg_subtree in args.trees() {
           self.validate_recursive(arg_subtree)?;
+        }
+      },
+      XM::Dual(ref content, ref pres, _, _) => {
+        self.validate_recursive(content)?;
+        self.validate_recursive(pres)?;
+      },
+      XM::Wrap(ref items, _, _) => {
+        for item in items.iter() {
+          self.validate_recursive(item)?;
         }
       },
       _ => {},
@@ -501,6 +532,178 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
             || op_name.starts_with("DIFFOP")
           {
             return Err("pruning postfix term used as single argument without fences".into());
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Scripts are inherently relational — they modify a base. A standalone floating
+/// script (_b by itself, with base=absent) indicates a pre-script that should
+/// attach to a subsequent base. Prefer parses where scripts are attached to
+/// bases over parses where scripts float independently.
+///
+/// This is a universal mathematical convention: in `_b^a A^c_d`, the `_b^a`
+/// are pre-scripts of A, not standalone subscript/superscript expressions.
+fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Detect any script-op Apply where the first arg (base) is "absent".
+  // This pattern means a standalone floating script that should be a pre-script.
+  if let XM::Apply(Operator(ref op), ref args, _, _) = tree {
+    if let XM::Token(ref props, _) = **op {
+      if props.role.as_deref().is_some_and(|r|
+        r == "SUBSCRIPTOP" || r == "SUPERSCRIPTOP")
+      {
+        // Check if base (first arg) is "absent" — standalone script
+        if let Some(Some(XM::Token(ref base_props, _))) = args.0.first() {
+          if base_props.meaning.as_deref() == Some("absent") {
+            return Err(
+              "Prune: standalone floating script (base=absent) should attach as pre-script.".into()
+            );
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// An expression with `absent` on BOTH sides of a relational/binary operator is
+/// never valid mathematical notation. `absent < a` (prefix relop) or `a > absent`
+/// (postfix relop) can occur, but `absent < a > absent` is two missing operands —
+/// too tortured. This prunes `< a >` from being parsed as a bilateral relation chain,
+/// allowing QM expectation `<a>` to win instead.
+fn pragma_no_bilateral_absent(tree: &XM) -> Result<(), Box<dyn Error>> {
+  if let XM::Apply(_, ref args, ..) = tree {
+    let trees = args.trees();
+    if trees.len() >= 2 {
+      let first_absent = matches!(trees.first(),
+        Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
+      let last_absent = matches!(trees.last(),
+        Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
+      if first_absent && last_absent {
+        return Err(
+          "Prune: bilateral absent (absent on both sides) is never valid notation.".into()
+        );
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Functions prefer wider argument absorption: `\log 2x^2` means `log(2*x^2)`.
+/// Prune parses where a function application is immediately followed by invisible
+/// multiplication with unfenced factors. The competing parse would have the function
+/// absorb those factors as arguments.
+fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Reject: invisible_times(function_app(f, narrow_arg), simple_rhs)
+  // This forces the wider parse: function_app(f, narrow_arg * rhs)
+  // Only fires when RHS is a simple factor (Lexeme/Token/Wrap), NOT another
+  // function application — chained functions like sin(πx)*cos(2πy) should stay separate.
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_invisible_times = match **op {
+      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("times")
+          && props.role.as_deref() == Some("MULOP")
+      },
+      _ => false,
+    };
+    if is_invisible_times {
+      let trees = args.trees();
+      if trees.len() == 2 {
+        // LHS is a function application (Apply(function, arg))
+        if let XM::Apply(Operator(ref func_op), ref func_args, _, ref func_meta) = trees[0] {
+          // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
+          let func_name = func_op.base_operator_name();
+          if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
+            && func_meta.fenced.is_none()
+            && func_args.trees().len() == 1
+          {
+            // RHS must be a simple factor — not another function application
+            // or compound expression. Scripted factors (x^2) are simple.
+            let rhs = trees[1];
+            let rhs_is_simple = match rhs {
+              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
+              XM::Apply(Operator(ref rhs_op), _, _, _) => {
+                // Scripted factors (SUPERSCRIPTOP/SUBSCRIPTOP) are simple
+                let rhs_role = match &**rhs_op {
+                  XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
+                  XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
+                  _ => "",
+                };
+                rhs_role == "SUPERSCRIPTOP" || rhs_role == "SUBSCRIPTOP"
+              },
+              _ => false,
+            };
+            let rhs_meta = rhs.get_meta();
+            if rhs_is_simple && rhs_meta.fenced.is_none() {
+              return Err(
+                "Prune: function application followed by simple unfenced factor — \
+                 prefer wider absorption.".into()
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Bigop prefer wider absorption: reject mulop(bigop_app(narrow), rhs)
+/// when rhs is a simple factor that could have been part of the bigop's argument.
+/// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
+fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_mulop = match **op {
+      XM::Token(ref props, _) => {
+        props.role.as_deref() == Some("MULOP")
+      },
+      XM::Lexeme(ref lex, _) => {
+        lex.starts_with("MULOP") || lex.contains("invisible_operator")
+      },
+      _ => false,
+    };
+    if is_mulop {
+      let trees = args.trees();
+      if trees.len() == 2 {
+        // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
+        if let XM::Apply(Operator(ref bigop_op), _, _, _) = trees[0] {
+          let bigop_name = bigop_op.base_operator_name();
+          let is_bigop = bigop_name.starts_with("BIGOP")
+            || bigop_name.starts_with("SUMOP")
+            || bigop_name.starts_with("INTOP")
+            || bigop_name.starts_with("LIMITOP")
+            || bigop_name.starts_with("DIFFOP");
+          if is_bigop {
+            // RHS should be a simple factor, not another bigop or function
+            let rhs = trees[1];
+            let rhs_is_simple = match rhs {
+              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
+              XM::Apply(Operator(ref rhs_op), _, _, _) => {
+                let rhs_role = match &**rhs_op {
+                  XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
+                  XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
+                  _ => "",
+                };
+                // Scripted factors and invisible_times products are simple
+                rhs_role == "SUPERSCRIPTOP"
+                  || rhs_role == "SUBSCRIPTOP"
+                  || rhs_role == "MULOP"
+                  || rhs_role == "DIFFOP"
+              },
+              _ => false,
+            };
+            if rhs_is_simple {
+              return Err(
+                "Prune: bigop application followed by mulop factor — \
+                 prefer wider bigop absorption."
+                  .into(),
+              );
+            }
           }
         }
       }

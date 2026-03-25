@@ -17,11 +17,11 @@ LoadDefinitions!({
   DefMacro!("\\algorithmic", "\\lx@setup@algorithmic\\lx@orig@algorithmic");
 
   DefPrimitive!("\\lx@setup@algorithmic", {
-    reset_counter("ALC@line")?;
+    reset_counter(&T_CS!("\\c@ALC@line"))?;
     // If not within an algorithm environment, step the counter for its id's
-    let in_algorithm = state::lookup_stacked_values("current_environment")
-      .iter()
-      .any(|s| s.to_string() == "algorithm");
+    let in_algorithm = state::with_stacked_values("current_environment", |vals| {
+      vals.iter().any(|s| s.to_string() == "algorithm")
+    });
     if !in_algorithm {
       ref_step_id("algorithm")?;
     }
@@ -58,17 +58,18 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@algorithmic@item@@ OptionalUndigested",
     "<ltx:listingline xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => sub[args] {
+    properties => sub[_args] {
       let id = digest(T_CS!("\\theALC@line@ID"))?.to_attribute();
-      let tags = digest(Invocation!("\\lx@make@tags", vec![Some(Tokens!(T_OTHER!("ALC@line")))]))?.to_stored();
-      props!("id" => id, "tags" => tags)
+      let tags = Stored::from(digest(Invocation!("\\lx@make@tags",
+        vec![Some(Tokens!(T_OTHER!("ALC@line")))]))?);
+      Ok(stored_map!("id" => id, "tags" => tags))
     },
     before_construct => sub[document] {
       document.maybe_close_element("ltx:listingline")?;
     });
 
-  NewCounter!("algorithm", None, idprefix => "alg");
-  NewCounter!("ALC@line", Some("algorithm"), idprefix => "l");
+  NewCounter!("algorithm", "", idprefix => "alg");
+  NewCounter!("ALC@line", "algorithm", idprefix => "l");
   DefMacro!("\\fnum@ALC@line", "\\ALC@lno");
 
   DefConstructor!("\\lx@algorithmic@hfill",

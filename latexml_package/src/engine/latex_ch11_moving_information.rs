@@ -70,7 +70,7 @@ LoadDefinitions!({
   // # These will get filled in during postprocessing.
   // # * is added to accommodate hyperref
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
-    "<ltx:ref labelref='#label' _force_font='true'/>",
+    "<ltx:ref ?#1(class='ltx_nolink')() labelref='#label' _force_font='true'/>",
     robust => true,
     properties => sub[args] {
       unpack_opt_ref!(args => _star, label_opt);

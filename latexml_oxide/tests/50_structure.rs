@@ -189,7 +189,6 @@ fn glossary_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: math parser + equation numbering (977 diffs)
 fn ieee_test() {
   latexml_test_single("tests/structure/IEEE.tex", "IEEE", DIR, None, None);
 }

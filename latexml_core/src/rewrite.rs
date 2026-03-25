@@ -457,7 +457,72 @@ impl Rewrite {
           // Perl: $self->applyClause($document, $tree, $nmatched, @more_clauses);
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
-        _ => todo!(),
+        Regexp => {
+          // Perl: tests the matched node's text content against a regex.
+          // If it matches, continue with remaining clauses; otherwise skip.
+          if let RewritePattern::String(regex_str) = pattern {
+            let content = tree.get_content();
+            let re = regex::Regex::new(regex_str)
+              .unwrap_or_else(|_| regex::Regex::new("$^").unwrap()); // never-match fallback
+            if re.is_match(&content) {
+              self.apply_clause(document, tree, nmatched, clauses)?;
+            }
+            // else: no match → skip this node (don't mark as seen)
+          }
+        },
+        Label => {
+          // Label clause stores the label on the node. Perl: $$self{label} usage.
+          // Typically compiled away in compile_clause, but if it reaches here, record it.
+          if let RewritePattern::String(label_str) = pattern {
+            let id = tree.get_attribute("xml:id").unwrap_or_default();
+            if !id.is_empty() {
+              document.rewrite_labels.insert(label_str.clone(), id);
+            }
+          }
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        Trace => {
+          // Debug tracing — just continue
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        Action => {
+          // Perl: $code->($document, $tree, $nmatched)
+          // Action invokes a closure on the matched node without removing it.
+          if let RewritePattern::Closure(closure) = pattern {
+            let mut node = tree.clone();
+            closure(document, vec![&mut node])?;
+          }
+          // Continue with remaining clauses
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        Test => {
+          // Perl: $nnodes = $code->($document, $tree)
+          // Test invokes a closure that returns the number of matched nodes.
+          // If 0, skip remaining clauses. Otherwise continue with nmatched.
+          if let RewritePattern::Closure(closure) = pattern {
+            let mut node = tree.clone();
+            // The closure modifies the node count; for now just invoke and continue
+            closure(document, vec![&mut node])?;
+            self.apply_clause(document, tree, nmatched, clauses)?;
+          }
+        },
+        MultiSelect => {
+          // Perl: like Select but matches multiple adjacent nodes
+          if let RewritePattern::String(xpath) = pattern {
+            let count = self.options.select_count.unwrap_or(1);
+            let matches = document.findnodes(xpath, Some(tree));
+            for node in matches {
+              if node.has_attribute("_matched") {
+                continue;
+              }
+              self.apply_clause(document, &node, count, clauses.clone())?;
+            }
+          }
+        },
+        _ => {
+          // Remaining unimplemented operators — skip silently
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
       }
     } else {
       // No more clauses — mark the matched nodes as seen

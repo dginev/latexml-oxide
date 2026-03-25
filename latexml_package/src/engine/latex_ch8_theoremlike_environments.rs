@@ -143,7 +143,7 @@ pub fn use_theorem_style(name: &str) {
   }
 }
 
-fn define_new_theorem(
+pub fn define_new_theorem(
   flag: Option<Tokens>,
   thmset: Tokens,
   otherthmset: Option<Tokens>,

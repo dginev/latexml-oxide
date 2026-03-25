@@ -680,7 +680,17 @@ impl MathParser {
     let mut parses = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
+    let start = std::time::Instant::now();
+    let max_trees = 5000; // Hard limit on parse tree enumeration
+    let max_time = std::time::Duration::from_secs(30); // 30 second timeout
     for val in parse_result {
+      // Bail out if too many trees or too much time
+      if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+        return Err(format!(
+          "Parse aborted: {} trees ({} ok, {} pruned) in {:?}",
+          ok_trees + pruned_trees, ok_trees, pruned_trees, start.elapsed()
+        ).into());
+      }
       match self.actions.get_tree(
         self.builder.clone(),
         val,
@@ -689,15 +699,13 @@ impl MathParser {
       ) {
         Ok(tree_opt) => {
           if let Some(tree) = tree_opt {
-            // eprintln!("-- we found a tree: {:?}", tree);
             ok_trees += 1;
-            // ignore semantically pruned parses
             parses.push(tree);
           }
         },
         Err(_prune_err) => {
           pruned_trees += 1;
-        }, // bookkeep the prune reasons?
+        },
       }
     }
     if ok_trees + pruned_trees > 100 {
@@ -714,18 +722,14 @@ impl MathParser {
     match parses.len() {
       0 => Err("Failed to find any parse".into()),
       1 => Ok(parses.into_iter().next().unwrap()),
-      2 | 3 => Ok(XM::Choices(parses)),
       _more => {
-        // Loop over the various soft pruning algorithms available, until we are at 3 trees or less
+        // Loop over the various soft pruning algorithms available, until we have 1 tree
         let mut reduced_forest = XM::Choices(parses);
         for pragma in self.student_pragmatics.iter() {
           reduced_forest = reduced_forest.soft_prune_choices(*pragma);
           match reduced_forest {
-            XM::Choices(ref trees) => match trees.len() {
-              2 | 3 => break, //reduced sufficiently, return
-              _more => {},    // keep trying to reduce
-            },
-            _ => break, // reduced sufficiently, return
+            XM::Choices(ref trees) if trees.len() <= 1 => break,
+            _ => {},
           };
         }
         Ok(reduced_forest)
@@ -744,12 +748,20 @@ impl MathParser {
     // a rules!() macro that has a Hard expectation of a space char following EVERY token.
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
+
+    // Timeout guard: if the input has many tokens, it might cause exponential
+    // Marpa ambiguity (e.g. BIGOP tokens like \neg). Use a thread-based timeout.
+    let _token_count = input_string.split_whitespace().count();
     match self.parse_marpa(&input_string, nodes, document) {
       Ok(mut parse_tree) => {
         self.reset_engine(); // Reset for next parse (engine is in completed state)
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         crate::semantics::restructure_formulae_right(&mut parse_tree)?;
+        // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
+        crate::semantics::rename_fenced_lists(&mut parse_tree, nodes)?;
+        // Combine adjacent SUPOP tokens (prime+prime → prime2)
+        crate::semantics::combine_supop_post(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))
       },
       Err(_e) => {

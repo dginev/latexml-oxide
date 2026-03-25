@@ -994,6 +994,17 @@ pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
       new_vdq.push_back(value);
       **field = Stored::VecDequeStored(new_vdq);
     },
+    // Convert Strings (immutable array) to VecDequeStored for push — matches Perl auto-vivification
+    Some(ref mut field) if matches!(field, Stored::Strings(_)) => {
+      let existing: VecDeque<Stored> = if let Stored::Strings(strings) = &**field {
+        strings.iter().map(|s| Stored::String(*s)).collect()
+      } else {
+        VecDeque::new()
+      };
+      let mut new_vdq = existing;
+      new_vdq.push_back(value);
+      **field = Stored::VecDequeStored(new_vdq);
+    },
     other => {
       let message =
         s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");

@@ -635,6 +635,12 @@ LoadDefinitions!({
       stored_map!("explicit_mathstyle" => true),
     )
   });
+  // TODO [C2]: \scriptstyle is an ABSOLUTE mathstyle command — it should always
+  // produce fontsize=70% regardless of nesting context. Currently MergeFont adds
+  // "script" relative to existing style, so \scriptstyle inside a subscript
+  // (already script) produces scriptscript (50%) instead of script (70%).
+  // Fix: MergeFont should detect "explicit_mathstyle" and RESET rather than merge.
+  // Affected: calculus.xml (\scriptstyle inside \atop inside subscript).
   DefPrimitive!("\\scriptstyle", {
     MergeFont!(mathstyle => "script");
     Tbox::new(
@@ -1096,17 +1102,33 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
     "]" => DelimiterMeta{ char: ']', left_role: "OPEN", right_role: "CLOSE", name:None},
     "\\{" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
     "\\}" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\lbrace" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\rbrace" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "{" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "}" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
     "\\lfloor"=> DelimiterMeta{ char: '\u{230A}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("lfloor") },
+    "\u{230A}" => DelimiterMeta{ char: '\u{230A}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("lfloor") },
     "\\rfloor"=> DelimiterMeta{ char: '\u{230B}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("rfloor") },
+    "\u{230B}" => DelimiterMeta{ char: '\u{230B}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("rfloor") },
     "\\lceil" => DelimiterMeta{ char: '\u{2308}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("lceil") },
+    "\u{2308}" => DelimiterMeta{ char: '\u{2308}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("lceil") },
     "\\rceil" => DelimiterMeta{ char: '\u{2309}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("rceil") },
+    "\u{2309}" => DelimiterMeta{ char: '\u{2309}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("rceil") },
     "\\langle"=> DelimiterMeta{ char: '\u{27E8}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
+    "\u{27E8}" => DelimiterMeta{ char: '\u{27E8}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
     "\\rangle"=> DelimiterMeta{ char: '\u{27E9}',
+                  left_role: "OPEN",  right_role: "CLOSE", name: Some("rangle") },
+    "\u{27E9}" => DelimiterMeta{ char: '\u{27E9}',
                   left_role: "OPEN",  right_role: "CLOSE", name: Some("rangle") },
     "<"      => DelimiterMeta{ char: '\u{27E8}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
@@ -1119,20 +1141,43 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
                   left_role: "VERTBAR", right_role: "VERTBAR", name: None },
     "\\|"     => DelimiterMeta{ char: '\u{2016}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
+    "\\Vert"  => DelimiterMeta{ char: '\u{2016}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
+    "\\vert"  => DelimiterMeta{ char: '|',
+                  left_role: "VERTBAR", right_role: "VERTBAR", name: None },
     "\u{2225}" => DelimiterMeta{ char: '\u{2016}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
+    "\u{2016}" => DelimiterMeta{ char: '\u{2016}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
     "\\uparrow"   => DelimiterMeta{ char: '\u{2191}',
                       left_role: "OPEN", right_role: "CLOSE", name: Some("uparrow") },
+    "\u{2191}"    => DelimiterMeta{ char: '\u{2191}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("uparrow") },
     "\\Uparrow"   => DelimiterMeta{ char: '\u{21D1}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Uparrow") },
+    "\u{21D1}"    => DelimiterMeta{ char: '\u{21D1}',
                       left_role: "OPEN", right_role: "CLOSE", name: Some("Uparrow") },
     "\\downarrow" => DelimiterMeta{ char: '\u{2193}',
                       left_role: "OPEN", right_role: "CLOSE", name: Some("downarrow") },
+    "\u{2193}"    => DelimiterMeta{ char: '\u{2193}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("downarrow") },
     "\\Downarrow" =>  DelimiterMeta{ char: '\u{21D3}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Downarrow") },
+    "\u{21D3}"    => DelimiterMeta{ char: '\u{21D3}',
                       left_role: "OPEN", right_role: "CLOSE", name: Some("Downarrow") },
     "\\updownarrow" => DelimiterMeta{ char: '\u{2195}',
                       left_role: "OPEN", right_role: "CLOSE", name: Some("updownarrow") },
+    "\u{2195}"    => DelimiterMeta{ char: '\u{2195}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("updownarrow") },
     "\\Updownarrow" => DelimiterMeta{ char: '\u{21D5}',
-                      left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") }
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") },
+    "\u{21D5}"    => DelimiterMeta{ char: '\u{21D5}',
+                      left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") },
+    // amsmath delimiter CS names (resolved via TeXDelimiter in Perl)
+    "\\lvert"  => DelimiterMeta{ char: '|', left_role: "OPEN",  right_role: "OPEN",  name: None },
+    "\\rvert"  => DelimiterMeta{ char: '|', left_role: "CLOSE", right_role: "CLOSE", name: None },
+    "\\lVert"  => DelimiterMeta{ char: '\u{2016}', left_role: "OPEN",  right_role: "OPEN",  name: Some("||") },
+    "\\rVert"  => DelimiterMeta{ char: '\u{2016}', left_role: "CLOSE", right_role: "CLOSE", name: Some("||") }
   )
 });
 

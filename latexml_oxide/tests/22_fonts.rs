@@ -88,7 +88,6 @@ fn mathaccents_test() {
 }
 
 #[test]
-#[ignore] // 679 diffs — mostly math parser (XMDual)
 fn stmaryrd_test() {
   latexml_test_single("tests/fonts/stmaryrd.tex", "stmaryrd", DIR, None, None);
 }

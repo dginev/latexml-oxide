@@ -1,0 +1,167 @@
+use crate::prelude::*;
+
+#[rustfmt::skip]
+LoadDefinitions!({
+  // Perl: llncs.cls.ltxml — Lecture Notes in Computer Science (Springer)
+  for option in [
+    "envcountreset", "citeauthoryear", "oribibl", "orivec",
+    "envcountsame", "envcountsect", "runningheads",
+  ].iter() {
+    DeclareOption!(*option, None);
+  }
+  DeclareOption!(None, {
+    Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
+  });
+  ProcessOptions!();
+  LoadClass!("article");
+
+  RequirePackage!("multicol");
+  RequirePackage!("inst_support");
+
+  //======================================================================
+  // Frontmatter
+  DefMacro!("\\frontmatter", "");
+
+  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+
+  DefMacro!("\\emailname", "E-mail");
+  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email' name='#name'>#1</ltx:contact>",
+    properties => sub[_args] {
+      let name = Stored::from(digest(T_CS!("\\emailname"))?);
+      Ok(stored_map!("name" => name))
+    });
+  DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+
+  DefMacro!("\\mailname", "\\textit{Correspondence to}:");
+  DefConstructor!("\\@@@mail{}", "^ <ltx:contact role='address' name='#name'>#1</ltx:contact>",
+    properties => sub[_args] {
+      let name = Stored::from(digest(T_CS!("\\mailname"))?);
+      Ok(stored_map!("name" => name))
+    });
+  DefMacro!("\\mail{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}");
+
+  DefMacro!("\\keywordname", "\\textbf{Keywords}");
+  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordname}]{#1}");
+
+  DefMacro!("\\ackname", "Acknowledgements");
+  DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
+    properties => sub[_args] {
+      let name = Stored::from(digest(T_CS!("\\ackname"))?);
+      Ok(stored_map!("name" => name))
+    });
+  DefMacro!("\\acknowledgement", "\\acknowledgements");
+  DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
+  DefConstructor!("\\endacknowledgement", "</ltx:acknowledgements>");
+  Tag!("ltx:acknowledgements", auto_close => true);
+
+  DefConstructor!("\\url Semiverbatim", "<ltx:ref href='#1'>#1</ltx:ref>");
+
+  DefRegister!("\\instindent" => Dimension::new(0));
+  DefRegister!("\\authrun" => Tokens!());
+  DefRegister!("\\authorrunning" => Tokens!());
+  DefRegister!("\\tocauthor" => Tokens!());
+  DefRegister!("\\titrun" => Tokens!());
+  DefRegister!("\\titlerunning" => Tokens!());
+  DefMacro!("\\toctitle{}", "");
+
+  DefRegister!("\\tocchpnum" => Dimension::new(0));
+  DefRegister!("\\tocsecnum" => Dimension!("15pt"));
+  DefRegister!("\\tocsubsecnum" => Dimension!("23pt"));
+  DefRegister!("\\tocsubsubsecnum" => Dimension!("27pt"));
+  DefRegister!("\\tocparanum" => Dimension!("35pt"));
+  DefRegister!("\\tocsubparanum" => Dimension!("43pt"));
+  DefRegister!("\\tocsectotal" => Dimension::new(0));
+  DefRegister!("\\tocsubsectotal" => Dimension::new(0));
+  DefRegister!("\\tocsubsubsectotal" => Dimension::new(0));
+  DefRegister!("\\tocparatotal" => Dimension::new(0));
+
+  DefMacro!("\\addcontentsmark{}{}{}", "");
+  DefMacro!("\\addcontentsmarkwop{}{}{}", "");
+  DefMacro!("\\addnumcontentsmark{}{}{}", "");
+  DefMacro!("\\addtocmark[]{}{}{}", "");
+
+  //======================================================================
+  DefMacro!("\\mainmatter", "");
+
+  NewCounter!("chapter", "document", idprefix => "Pt", nested => vec!["section"]);
+  DefMacro!("\\thechapter", "\\arabic{chapter}");
+  DefMacro!("\\chaptermark{}", "");
+
+  // TODO: \spnewtheorem — complex theorem definition system with capfont/bodyfont.
+  // Perl defines it as a DefMacro closure that calls NewCounter, DefMacroI,
+  // DefEnvironmentI with style-dependent title formatting and swap support.
+  // For now, use RawTeX to define theorem environments via the raw TeX definitions.
+  RawTeX!(r#"\def\theoremname{Theorem}
+\def\claimname{Claim}
+\def\proofname{Proof}
+\def\conjecturename{Conjecture}
+\def\corollaryname{Corollary}
+\def\definitionname{Definition}
+\def\examplename{Example}
+\def\exercisename{Exercise}
+\def\lemmaname{Lemma}
+\def\notename{Note}
+\def\problemname{Problem}
+\def\propertyname{Property}
+\def\propositionname{Proposition}
+\def\questionname{Question}
+\def\solutionname{Solution}
+\def\remarkname{Remark}"#);
+
+  //======================================================================
+  // Blackboard bold letters
+  DefConstructor!("\\bbbc",   "\u{2102}",   enter_horizontal => true);
+  DefConstructor!("\\bbbf",   "\u{1D53D}",  enter_horizontal => true);
+  DefConstructor!("\\bbbh",   "\u{210D}",   enter_horizontal => true);
+  DefConstructor!("\\bbbk",   "\u{1D542}",  enter_horizontal => true);
+  DefConstructor!("\\bbbm",   "\u{1D544}",  enter_horizontal => true);
+  DefConstructor!("\\bbbn",   "\u{2115}",   enter_horizontal => true);
+  DefConstructor!("\\bbbone", "\u{1D7D9}",  enter_horizontal => true);
+  DefConstructor!("\\bbbp",   "\u{2119}",   enter_horizontal => true);
+  DefConstructor!("\\bbbq",   "\u{211A}",   enter_horizontal => true);
+  DefConstructor!("\\bbbr",   "\u{211D}",   enter_horizontal => true);
+  DefConstructor!("\\bbbs",   "\u{1D54A}",  enter_horizontal => true);
+  DefConstructor!("\\bbbt",   "\u{1D54B}",  enter_horizontal => true);
+  DefConstructor!("\\bbbz",   "\u{2124}",   enter_horizontal => true);
+
+  DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
+  DefMath!("\\lid",    "\u{2266}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\gid",    "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefMath!("\\grole",  "\u{2277}", role => "RELOP", meaning => "greater-than-or-less-than");
+
+  // QED symbol
+  DefConstructor!("\\squareforqed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+  DefMacro!("\\qed", "\\squareforqed");
+
+  //======================================================================
+  DefMacro!("\\backmatter", "");
+
+  DefMacro!("\\andname", "and");
+  DefMacro!("\\chaptername", "Chapter");
+  DefMacro!("\\contriblistname", "List of Contributors");
+  DefMacro!("\\lastandname", ", and");
+  DefMacro!("\\noteaddname", "Note added in proof");
+  DefMacro!("\\seename", "see");
+  DefMacro!("\\subclassname", "\\textit{Subject Classification}:");
+
+  DefRegister!("\\fnindent" => Dimension::new(0));
+  DefMacro!("\\fnmsep", "${}^{,}$");
+  DefMacro!("\\fnnstart", "0");
+
+  DefMacro!("\\calctocindent", "");
+  DefMacro!("\\clearheadinfo", "");
+  DefRegister!("\\headlineindent" => Dimension::new(0));
+  DefMacro!("\\thisbottomragged", "");
+  Let!("\\ts", "\\,");
+  DefEnvironment!("{theopargself}", "#body");
+  DefMacro!("\\homedir", "\\~{ }");
+  DefMacro!("\\idxquad", "\\hskip 10pt\\relax");
+
+  //======================================================================
+  // ORCID support
+  DefMacro!("\\orcidID Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@orcid{\\@@orcid{#1}}}");
+  DefConstructor!("\\@@orcid{}", "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
+    enter_horizontal => true);
+  DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
+});
