@@ -37,7 +37,6 @@ fn figure_dual_caption_test() { complex("figure_dual_caption"); }
 fn hyperchars_test() { complex("hyperchars"); }
 
 #[test]
-#[ignore] // tags diffs: figure caption + listings math
 fn figure_mixed_content_test() { complex("figure_mixed_content"); }
 
 #[test]
