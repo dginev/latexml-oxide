@@ -239,15 +239,13 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 **Plus 16 unit tests (state, tokens, replace_tree) = 309 total passing**
 **Coverage: 97% pass rate (293/301 non-permanently-blocked tests)**
 
-**Session 39 package porting:** 40 new packages translated from Perl (preview, upgreek, lineno, titlesec, floatfig, parskip, lscape, enumerate, makeidx, bm, mleftright, placeins, xfrac, afterpage, mathrsfs, ragged2e, relsize, todonotes, xspace, threeparttable, footmisc, gensymb, empheq, mathdots, fancybox, lipsum, here, indentfirst, lmodern, showkeys, nopageno, blindtext, doi, lastpage, underscore, fancyvrb, dsfont, flafter, upquote, cmap). Total: 125→165 packages.
+**Session 39 (59 packages, 8 commits):** 59 new packages translated from Perl. Total: 125→184 packages (217 dispatch entries). Dimension precision fix. \\mathllap/\\mathclap/\\mathrlap xoffset. \\framebox align. \\mathmakebox arg count. Matrix cell alignment. mathtools S12: 72→8, S4: 173→149. Overall diffs: 3369→3276.
 
-**Session 39 fixes:** Dimension attribute precision (1 decimal), \\mathllap/\\mathclap/\\mathrlap xoffset, \\framebox align suppression, \\mathmakebox arg count fix. mathtools S12: 72→8 diffs.
-
-**Ignored test breakdown (47 total):**
-- **~24 permanently blocked / missing packages**: tikz (10), pgf (2), DTD ns1-5 (5), moderncv (2), beamer, slides, expl3 (2), babel, physics, si — need major package porting
-- **~11 math parser grammar**: ambiguous_relations (98), scripts (301), calculus (273), artefacts (345), operators (422), functions (452), parens (510), relations (260), array_math_parse (194), qm (400), vertbars (466)
-- **~7 structural**: stmaryrd (990, 68% xml:id), ieee (867), ncases (894), ntheorem (1361), listing (1660), figure_mixed_content (868), split/mathtools (timeout)
-- **~5 other**: picture (1451), xytest (conversion error), slides (conversion error)
+**Ignored test breakdown (31 total):**
+- **~18 permanently blocked / missing packages**: tikz (10), pgf (2), beamer, expl3 (2), babel, physics, si, moderncv
+- **~5 math parser grammar**: calculus, artefacts, functions, operators, qm
+- **~5 structural**: listing (1661), ieee (805), figure_mixed_content (868), mathtools, split (timeout)
+- **~3 other**: picture (2023), xytest (conversion error), 65_graphics picture
 
 **Key infrastructure (sessions 26-33):**
 - Multi-token math rewrite infrastructure (C5): XMWrap wrapping, `_rewrite` marker, parser atomic handling
