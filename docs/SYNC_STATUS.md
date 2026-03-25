@@ -398,7 +398,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
 - [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored (dramatically reduced). Remaining: calculus (17 diffs: xml:id ordering + fontsize), artefacts (285 diffs: structural from improvements over Perl), functions (421 diffs: conditional|, unparsed arrows), operators (505 diffs: double-sum + D(a)(b)), qm (460 diffs: <> bra-ket needs QM pragma). Key fix: fenced XMDual nesting for multi-item lists (calculus 332→17).
-- [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard issue.
+- [ ] **50. split_test** (53_alignment) — 115 diffs (366 vs 2239 lines). TIMEOUT FIXED: erroneous `$` letdef in ams_rearrangeable_bindings removed; ams_alignment_bindings restores `$` → `\lx@dollar@default`. Remaining: nested `{aligned}` in `{align}` loses content due to mode-switch ordering.
 - [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
 
 #### mathtools_test mini-plan (per-section parity)
