@@ -453,6 +453,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines).
+- [ ] **G. ar5iv-bindings** — translate all bindings from `~/git/ar5iv-bindings/bindings/` into `latexml_contrib` crate entries.
 
 ### Permanent ignores (5)
 

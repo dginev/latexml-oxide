@@ -297,6 +297,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pgf.sty" => package::pgf_sty::load_definitions(),
     "pgfplots.sty" => package::pgfplots_sty::load_definitions(),
     "tikz.sty" => package::tikz_sty::load_definitions(),
+    "llncs.cls" => package::llncs_cls::load_definitions(),
     "xkvview.sty" => package::xkvview_sty::load_definitions(),
     "wiki.sty" => package::wiki_sty::load_definitions(),
     "tikzbricks.sty" => package::tikzbricks_sty::load_definitions(),
