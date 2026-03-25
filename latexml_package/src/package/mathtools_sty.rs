@@ -102,15 +102,15 @@ LoadDefinitions!({
 
   // \newtagform{name}[style]{open}{close} — Perl: DefPrimitive calling defMTTagForm
   // Creates \fnum@equation@MT@{name}, \ref@equation@MT@{name}, \@MTStag@{name}
-  DefPrimitive!("\\newtagform{}{} [] {}{}", sub[(name_arg, _dummy, style_opt, open_arg, close_arg)] {
+  DefPrimitive!("\\newtagform{} [] {}{}", sub[(name_arg, style_opt, open_arg, close_arg)] {
     use latexml_core::common::def_parser::parse_parameters;
 
     let name = name_arg.to_string();
-    // $open->unlist / $close->unlist — get the token content of the {open} and {close} args
-    let open_toks: Vec<Token> = ExplodeText!(&open_arg.to_string());
-    let close_toks: Vec<Token> = ExplodeText!(&close_arg.to_string());
+    // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
+    let open_toks: Vec<Token> = open_arg.clone().unlist();
+    let close_toks: Vec<Token> = close_arg.clone().unlist();
     let style_toks: Vec<Token> = if let Some(ref s) = style_opt {
-      ExplodeText!(&s.to_string())
+      s.clone().unlist()
     } else { Vec::new() };
 
     // Define \fnum@equation@MT@{name} = {open [style] {\theequation} close}
@@ -163,26 +163,62 @@ LoadDefinitions!({
     )?;
   });
 
-  // \renewtagform — same as \newtagform (Perl skips isDefinable check)
-  DefPrimitive!("\\renewtagform{}{} [] {}{}", sub[(name_arg, _dummy, style_opt, open_arg, close_arg)] {
-    // Reuse newtagform logic by unreading the tokens
+  // \renewtagform — same logic as \newtagform (Perl skips isDefinable check)
+  DefPrimitive!("\\renewtagform{} [] {}{}", sub[(name_arg, style_opt, open_arg, close_arg)] {
+    use latexml_core::common::def_parser::parse_parameters;
     let name = name_arg.to_string();
-    let style = if let Some(ref s) = style_opt { s.to_string() } else { String::new() };
-    let open = open_arg.to_string();
-    let close = close_arg.to_string();
-    let tex = if style.is_empty() {
-      s!("\\newtagform{{{name}}}{{{open}}}{{{close}}}")
-    } else {
-      s!("\\newtagform{{{name}}}[{style}]{{{open}}}{{{close}}}")
-    };
-    gullet::unread(Tokens::new(ExplodeText!(&tex)));
+    let open_toks: Vec<Token> = open_arg.clone().unlist();
+    let close_toks: Vec<Token> = close_arg.clone().unlist();
+    let style_toks: Vec<Token> = if let Some(ref s) = style_opt {
+      s.clone().unlist()
+    } else { Vec::new() };
+    // Same body as \newtagform:
+    let mut fnum_body = vec![T_BEGIN!()];
+    fnum_body.extend(open_toks.iter().cloned());
+    fnum_body.extend(style_toks.iter().cloned());
+    fnum_body.push(T_BEGIN!());
+    fnum_body.push(T_CS!("\\theequation"));
+    fnum_body.push(T_END!());
+    fnum_body.extend(close_toks.iter().cloned());
+    fnum_body.push(T_END!());
+    let fnum_cs_name = s!("\\fnum@equation@MT@{}", name);
+    def_macro(T_CS!(&fnum_cs_name), None, Tokens::new(fnum_body),
+      Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }))?;
+    let mut ref_body = vec![T_BEGIN!()];
+    ref_body.extend(open_toks.iter().cloned());
+    ref_body.extend(style_toks.iter().cloned());
+    ref_body.push(T_BEGIN!());
+    ref_body.push(T_CS!("\\ref"));
+    ref_body.push(T_BEGIN!());
+    ref_body.push(T_PARAM!());
+    ref_body.push(T_OTHER!("1"));
+    ref_body.push(T_END!());
+    ref_body.push(T_END!());
+    ref_body.extend(close_toks.iter().cloned());
+    ref_body.push(T_END!());
+    let ref_cs_name = s!("\\ref@equation@MT@{}", name);
+    let ref_params = parse_parameters("Semiverbatim", &T_CS!(&ref_cs_name), true)?;
+    def_macro(T_CS!(&ref_cs_name), ref_params, Tokens::new(ref_body),
+      Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }))?;
+    let fnum_cs_clone = fnum_cs_name.clone();
+    let ref_cs_clone = ref_cs_name.clone();
+    def_primitive(T_CS!(&s!("\\@MTStag@{}", name)), None,
+      Some(PrimitiveBody::Closure(Rc::new(move |_args| {
+        def_macro(T_CS!("\\fnum@equation"), None, Tokens!(T_CS!(&fnum_cs_clone)),
+          Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }))?;
+        let eqref_params = parse_parameters("Semiverbatim", &T_CS!("\\eqref"), true)?;
+        def_macro(T_CS!("\\eqref"), eqref_params,
+          Tokens::new(vec![T_CS!(&ref_cs_clone), T_BEGIN!(), T_PARAM!(), T_OTHER!("1"), T_END!()]),
+          Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }))?;
+        Ok(Vec::new())
+      }))), PrimitiveOptions::default())?;
   });
 
   DefMacro!("\\usetagform{}", "\\csname @MTStag@#1\\endcsname");
 
-  // Perl: RawTeX('\newtagform{default}{(}{)}') — this ONLY defines the macros,
-  // it doesn't activate them. The existing \fnum@equation already uses (equation) format.
-  // We skip this since it just creates the default@ variants that mirror existing behavior.
+  // Initialize default tag form — creates \fnum@equation@MT@default and \@MTStag@default
+  // These are needed for \usetagform{default} to work (switches back to standard format)
+  RawTeX!("\\newtagform{default}{(}{)}");
 
   Let!("\\refeq", "\\ref");
   DefMacro!("\\noeqref{}", None);
