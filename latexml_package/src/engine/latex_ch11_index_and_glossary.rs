@@ -191,24 +191,10 @@ LoadDefinitions!({
   // DefConstructor('\index@subsubitem', undef, sub { doIndexItem($_[0], 3); });
   // DefConstructor('\index@done',       undef, sub { doIndexItem($_[0], 0); });
 
-  // DefMacroI('\indexname', undef, 'Index');
-  // DefEnvironment('{theindex}',
-  //   "<ltx:index xml:id='#id'>"
-  //     . "<ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>"
-  //     . "#body"
-  //     . "</ltx:index>",
-  //   beforeDigest => sub {
-  //     Let('\item',       '\index@item');
-  //     Let('\subitem',    '\index@subitem');
-  //     Let('\subsubitem', '\index@subsubitem');
-  //     Let('\dotfill',    '\index@dotfill'); },
-  //   beforeDigestEnd => sub { Digest(T_CS('\index@done')); },
-  //   afterDigestBegin => sub {
-  //     my $docid = ToString(Expand(T_CS('\thedocument@ID')));
-  //     my $title = DigestIf('\indexname');
-  //     $_[1]->setProperties(id => ($docid ? "$docid.idx" : 'idx'),
-  //       title     => $title,
-  //       titlefont => $title->getFont); });
+  DefMacro!("\\indexname", "Index");
+  // Simplified {theindex} — Perl has complex index item handling
+  DefEnvironment!("{theindex}",
+    "<ltx:index xml:id='#id'>#body</ltx:index>");
 
   // Perl: latex_constructs.pool.ltxml L4587
   DefPrimitive!("\\indexspace", None);
