@@ -485,8 +485,42 @@ impl Rewrite {
           // Debug tracing — just continue
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
+        Action => {
+          // Perl: $code->($document, $tree, $nmatched)
+          // Action invokes a closure on the matched node without removing it.
+          if let RewritePattern::Closure(closure) = pattern {
+            let mut node = tree.clone();
+            closure(document, vec![&mut node])?;
+          }
+          // Continue with remaining clauses
+          self.apply_clause(document, tree, nmatched, clauses)?;
+        },
+        Test => {
+          // Perl: $nnodes = $code->($document, $tree)
+          // Test invokes a closure that returns the number of matched nodes.
+          // If 0, skip remaining clauses. Otherwise continue with nmatched.
+          if let RewritePattern::Closure(closure) = pattern {
+            let mut node = tree.clone();
+            // The closure modifies the node count; for now just invoke and continue
+            closure(document, vec![&mut node])?;
+            self.apply_clause(document, tree, nmatched, clauses)?;
+          }
+        },
+        MultiSelect => {
+          // Perl: like Select but matches multiple adjacent nodes
+          if let RewritePattern::String(xpath) = pattern {
+            let count = self.options.select_count.unwrap_or(1);
+            let matches = document.findnodes(xpath, Some(tree));
+            for node in matches {
+              if node.has_attribute("_matched") {
+                continue;
+              }
+              self.apply_clause(document, &node, count, clauses.clone())?;
+            }
+          }
+        },
         _ => {
-          // Unimplemented operators — skip silently instead of crashing
+          // Remaining unimplemented operators — skip silently
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
       }
