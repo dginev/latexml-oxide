@@ -26,8 +26,14 @@ LoadDefinitions!({
   //======================================================================
 
   // \mathtoolsset — stores keyval pairs as macros \@mt@mathtoolsset@<key>
-  // TODO: complex DefPrimitive with sub{} body — stubbed
-  DefMacro!("\\mathtoolsset{}", None);
+  // Perl: DefPrimitive('\mathtoolsset RequiredKeyVals', sub { ... getPairs ... DefMacro })
+  DefPrimitive!("\\mathtoolsset RequiredKeyVals:mt", sub[(kv)] {
+    for (key, val) in kv.get_pairs() {
+      let val_str = if val.is_empty() { "\\@mt@true".to_string() } else { val.to_string() };
+      let cs_name = s!("\\@mt@mathtoolsset@{}", key);
+      def_macro(T_CS!(&cs_name), None, Tokenize!(&val_str), None)?;
+    }
+  });
 
   // Lookup function for mathtoolsset
   DefMacro!("\\@mt@getmtoption{}",
