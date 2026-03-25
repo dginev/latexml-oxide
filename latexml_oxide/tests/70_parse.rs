@@ -20,7 +20,6 @@ fn artefacts_test() {
 }
 
 #[test]
-#[ignore] // 17 diffs: xml:id ordering in eval-at
 fn calculus_test() {
   latexml_test_single("tests/parse/calculus.tex", "calculus", DIR, None, None);
 }

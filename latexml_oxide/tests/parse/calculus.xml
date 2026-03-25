@@ -221,13 +221,13 @@
           <XMDual>
             <XMApp>
               <XMTok meaning="evaluated-at"/>
-              <XMRef idref="p7.m1.2"/>
               <XMRef idref="p7.m1.1"/>
+              <XMRef idref="p7.m1.2"/>
             </XMApp>
             <XMApp>
               <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
               <XMWrap>
-                <XMApp xml:id="p7.m1.2">
+                <XMApp xml:id="p7.m1.1">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -235,7 +235,7 @@
                 </XMApp>
                 <XMTok role="CLOSE" stretchy="true">|</XMTok>
               </XMWrap>
-              <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="p7.m1.1">0</XMTok>
+              <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="p7.m1.2">0</XMTok>
             </XMApp>
           </XMDual>
         </XMath>
@@ -253,11 +253,11 @@
                 <XMTok mathstyle="script" role="FRACOP" thickness="0pt"/>
                 <XMApp>
                   <XMTok meaning="multirelation"/>
-                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">m</XMTok>
+                  <XMTok fontsize="50%" meaning="0" role="NUMBER">0</XMTok>
+                  <XMTok fontsize="50%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMTok font="italic" fontsize="50%" role="UNKNOWN">i</XMTok>
+                  <XMTok fontsize="50%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMTok font="italic" fontsize="50%" role="UNKNOWN">m</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok meaning="multirelation"/>
@@ -414,15 +414,15 @@
           <XMApp>
             <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok meaning="times" role="MULOP">×</XMTok>
+              <XMTok font="italic" role="UNKNOWN">F</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">×</XMTok>
-                <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok font="italic" role="UNKNOWN">G</XMTok>
-              </XMApp>
-              <XMApp>
-                <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
               </XMApp>
             </XMApp>
           </XMApp>
