@@ -28,6 +28,11 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
     }
   }
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
+  // Restore $ to default: inner math alignments ({aligned},{split},{gathered}) don't use $
+  // in their column templates. The $ letdef from alignment_bindings (\lx@dollar@in@mathmode)
+  // would interfere with the outer {align}'s after-template $ (injected by handle_template
+  // while inner frames are still on the stack), causing an infinite mode-switching loop.
+  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@default"), None);
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline@noskip"),
@@ -92,7 +97,14 @@ fn ams_rearrangeable_bindings(
     xml_attributes,
   });
   assign_alignment(alignment, None);
-  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+  // NOTE: Perl's amsRearrangeableBindings does NOT set Let(T_MATH, '\lx@dollar@in@mathmode').
+  // That letdef is only in alignmentBindings (for {tabular}/{array}/{eqnarray}).
+  // For rearrangeable environments ({align},{gather}), the column template already contains
+  // literal $ tokens. The $ meaning is left as \lx@dollar@default — the template $ tokens
+  // toggle math/text mode via the default mechanism.
+  // Adding the letdef here would cause nested \begin{aligned} inside \begin{align} to hang:
+  // the after-template $ would run \lx@dollar@in@mathmode while inner frames are still on stack,
+  // mismatching MATH_ALIGN_$_BEGUN and opening restricted_horizontal mode instead of closing inline math.
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline@noskip"),
