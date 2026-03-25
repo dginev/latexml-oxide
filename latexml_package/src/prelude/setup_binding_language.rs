@@ -65,6 +65,7 @@ macro_rules! RequirePackage {
 }
 #[macro_export]
 macro_rules! LoadClass {
+  ($class:expr) => {{ load_class($class, Vec::new(), Tokens!()) }};
   ($class:expr, $options:expr, $after:expr) => {{ load_class($class, $options, $after) }};
 }
 
