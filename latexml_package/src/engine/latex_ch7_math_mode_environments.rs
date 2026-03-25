@@ -602,9 +602,13 @@ LoadDefinitions!({
 
   Tag!("ltx:equationgroup", auto_close => true);
 
+  // Perl: latex_constructs.pool.ltxml L1971-1973
+  NewCounter!("subequation", "equation", idprefix => "E", idwithin => "equation");
+  DefMacro!("\\thesubequation", "\\theequation\\alph{subequation}");
+  DefMacro!("\\fnum@subequation", "(\\thesubequation)");
+
   // Perl: latex_constructs.pool.ltxml L2174-2191
   // \lx@equationgroup@subnumbering@begin/end — subequation numbering
-  // Perl: latex_constructs.pool.ltxml L2174-2191
   DefConstructor!("\\lx@equationgroup@subnumbering@begin",
     "<ltx:equationgroup xml:id='#id'>#tags",
     after_digest => sub[whatsit] {

@@ -233,11 +233,47 @@ LoadDefinitions!({
       });
     }
   });
-  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(_star)] {
-    // TODO: sub-numbering not yet implemented
+  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
+    // Switch to sub-equation counter
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.insert("counter", Stored::from("subequation"));
+        }
+      });
+    } else {
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("counter", Stored::from("subequation"));
+        }
+      });
+    }
+    // If preset, step the subequation counter
+    let has_preset = state::lookup_value("EQUATION_NUMBERING")
+      .map(|v| if let Stored::HashStored(h) = v { h.contains_key("preset") } else { false })
+      .unwrap_or(false)
+      || state::lookup_value("EQUATIONROW_TAGS")
+      .map(|v| if let Stored::HashStored(h) = v { h.contains_key("preset") } else { false })
+      .unwrap_or(false);
+    if has_preset {
+      ref_step_counter("subequation", false)?;
+    }
   });
-  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(_star)] {
-    // TODO: sub-numbering not yet implemented
+  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
+    // Switch back to equation counter
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |val_opt| {
+        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+          numbering.insert("counter", Stored::from("equation"));
+        }
+      });
+    } else {
+      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
+        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
+          tags.insert("counter", Stored::from("equation"));
+        }
+      });
+    }
   });
 
   // IEEEeqnarray => eqnarray
