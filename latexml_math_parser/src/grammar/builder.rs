@@ -372,11 +372,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace formula singlevertbar formula rbrace => fence
            | lbrace formula middle_bar formula rbrace => fence
            | lbrace formula metarelop formula rbrace => fence
-           // Conditional probability: p(x,y|Θ) — comma-list before |, formula after
-           // Requires comma-list (formula_list) to disambiguate from (a|b)
-           // TODO: add dedicated conditional_probability semantic action
-           | lparen formula_list singlevertbar formula rparen => fence
-           | lparen formula singlevertbar formula_list rparen => fence
+           // Conditional probability: p(x,y|Θ) — BLOCKED: causes exponential ambiguity
+           // with ket rules (singlevertbar expression close => qm_ket) when |
+           // appears inside (). Needs context-sensitive handling (MODIFIEROP role
+           // on | from \lxDeclare, or QM pragma to disable ket rules).
+           // | lparen formula_list singlevertbar formula rparen => fence
+           // | lparen formula singlevertbar formula_list rparen => fence
            // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
            // Perl MathGrammar: OPEN Expression CLOSE → Fence
            | open expression close => fenced
