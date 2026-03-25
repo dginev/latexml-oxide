@@ -2,47 +2,128 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: svmult.cls.ltxml — Springer multi-author volume class (136 lines)
-  //
-  // TODO: Full port requires:
-  // 1. \author{} RequiredKeyVals — Perl extracts firstname/lastname/inst from keyvals,
-  //    constructs \lx@author{} with \lx@contact{} invocations per institution.
-  //    Requires keyval-to-author mapping logic.
-  // 2. \inst{} — institution reference numbering, maps to ltx:contact.
-  // 3. \abstract{}{} — two-arg abstract (English + other language).
-  // 4. \@maketitle — complex frontmatter generation with Springer formatting.
-  // 5. Various theorem-related commands: \spnewtheorem, \theoremheaderfont, etc.
-  //    These require integration with the theorem-like environments system.
-  //
-  // Perl source: LaTeXML/lib/LaTeXML/Package/svmult.cls.ltxml
+  // Perl: svmult.cls.ltxml
+
+  // Generally ignorable options
   for option in [
     "nospthms", "vecphys", "vecarrow", "norunningheads", "referee", "oribibl",
     "chaprefs", "footinfo", "openany", "sechang", "deutsch", "francais",
+    // These could affect numbering...
+    "numart", "book", "envcountresetchap", "envcountresetsect", "envcountsame",
+    "envcountchap",
+    "natbib",
   ].iter() {
     DeclareOption!(*option, None);
   }
+
+  // Other options could load sv<option>.clo
+  // Anything else gets passed to book.
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{book}")?;
   });
+
   ProcessOptions!();
-  LoadClass!("book");
-  RequirePackage!("natbib");
+  load_class("book", Vec::new(), Tokens!())?;
+  RequirePackage!("sv_support");
+  RequirePackage!("url");
 
-  // Frontmatter — basic macros ported
-  DefMacro!("\\frontmatter", "");
-  DefMacro!("\\mainmatter", "");
-  DefMacro!("\\backmatter", "");
+  // \title with optional * to affect numbering (* => numart, none => book)
+  DefMacro!("\\title OptionalMatch:* {}",
+    "\\if.#1.\\else\\def\\thesection{\\arabic{section}}\\fi\
+     \\@add@frontmatter{ltx:title}{#2}");
 
-  // TODO: \institute — Perl uses RequiredKeyVals extraction, complex mapping
-  DefMacro!("\\institute{}", "\\@add@frontmatter{ltx:note}[role=institutetext]{#1}");
-  DefMacro!("\\institutename", "");
+  //======================================================================
+  // Upright greek letters
+  DefMath!("\\ualpha", "\u{03B1}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\ubeta",  "\u{03B2}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\uchi",   "\u{03C7}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\udelta", "\u{03B4}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\ugamma", "\u{03B3}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\umu",    "\u{03BC}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\unu",    "\u{03BD}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\upi",    "\u{03C0}", font => { shape => "upright", forceshape => true });
+  DefMath!("\\utau",   "\u{03C4}", font => { shape => "upright", forceshape => true });
 
-  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
-  DefMacro!("\\dedication{}", "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
-  DefMacro!("\\extmark", "");
+  // Italic var-Greek letters
+  DefMath!("\\varDelta",   "\u{0394}", font => { shape => "italic" });
+  DefMath!("\\varGamma",   "\u{0393}", font => { shape => "italic" });
+  DefMath!("\\varLambda",  "\u{039B}", font => { shape => "italic" });
+  DefMath!("\\varOmega",   "\u{03A9}", font => { shape => "italic" });
+  DefMath!("\\varPhi",     "\u{03A6}", font => { shape => "italic" });
+  DefMath!("\\varPi",      "\u{03A0}", font => { shape => "italic" });
+  DefMath!("\\varPsi",     "\u{03A8}", font => { shape => "italic" });
+  DefMath!("\\varSigma",   "\u{03A3}", font => { shape => "italic" });
+  DefMath!("\\varTheta",   "\u{0398}", font => { shape => "italic" });
+  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
+  DefMath!("\\varXi",      "\u{039E}", font => { shape => "italic" });
 
-  // TODO: \spnewtheorem — Springer theorem definition system.
-  // Perl calls define_new_theorem() with additional Springer-specific styling.
-  // TODO: \abstract — two-argument form for bilingual abstracts.
+  // Blackboard bold letters
+  // Perl: DefPrimitiveI('\bbbc', undef, "\x{2102}");
+  DefConstructor!("\\bbbc",   "\u{2102}",   enter_horizontal => true);
+  DefConstructor!("\\bbbf",   "\u{1D53D}",  enter_horizontal => true);
+  DefConstructor!("\\bbbh",   "\u{210D}",   enter_horizontal => true);
+  DefConstructor!("\\bbbk",   "\u{1D542}",  enter_horizontal => true);
+  DefConstructor!("\\bbbm",   "\u{1D544}",  enter_horizontal => true);
+  DefConstructor!("\\bbbn",   "\u{2115}",   enter_horizontal => true);
+  DefConstructor!("\\bbbone", "\u{1D7D9}",  enter_horizontal => true);
+  DefConstructor!("\\bbbp",   "\u{2119}",   enter_horizontal => true);
+  DefConstructor!("\\bbbq",   "\u{211A}",   enter_horizontal => true);
+  DefConstructor!("\\bbbr",   "\u{211D}",   enter_horizontal => true);
+  DefConstructor!("\\bbbs",   "\u{1D54A}",  enter_horizontal => true);
+  DefConstructor!("\\bbbt",   "\u{1D54B}",  enter_horizontal => true);
+  DefConstructor!("\\bbbz",   "\u{2124}",   enter_horizontal => true);
+
+  // Math operators
+  DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
+  DefMath!("\\lid",    "\u{2266}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\gid",    "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefMath!("\\grole",  "\u{2277}", role => "RELOP", meaning => "greater-than-or-less-than");
+  Let!("\\qedsymbol", "\\qed");
+
+  // Special signs and characters
+  DefMacro!("\\D", "\\mathrm{d}");
+  DefMacro!("\\E", "\\mathrm{e}");
+  Let!("\\eul", "\\E");
+  DefMacro!("\\I", "{\\rm i}");
+  Let!("\\imag", "\\I");
+
+  // Size and style macros
+  DefMacro!("\\partsize",    "\\Large");
+  DefMacro!("\\partstyle",   "\\bfseries\\boldmath");
+  DefMacro!("\\chapsize",    "\\Large");
+  DefMacro!("\\chapstyle",   "\\bfseries\\boldmath");
+  DefMacro!("\\secsize",     "\\large");
+  DefMacro!("\\secstyle",    "\\bfseries\\boldmath");
+  DefMacro!("\\subsecsize",  "\\normalsize");
+  DefMacro!("\\subsecstyle", "\\bfseries\\boldmath");
+
+  DefMacro!("\\chaptermark{}",    "");
+  DefMacro!("\\sectionmark{}",    "");
+  DefMacro!("\\subsectionmark{}", "");
+  DefMacro!("\\tocauthorstyle",   "\\itshape");
+  DefMacro!("\\toctitlestyle",    "\\bfseries");
+  DefMacro!("\\tocaftauthskip",   "\\z@");
+
+  DefMacro!("\\preface{}",   "\\chapter*{#1}");
+  DefMacro!("\\prefacename", "Preface");
+
+  DefMacro!("\\propositionname", "Proposition");
+
+  // TOC registers
+  DefRegister!("\\tocchpnum"         => Dimension::new(0));
+  DefRegister!("\\tocsecnum"         => Dimension!("18pt"));
+  DefRegister!("\\tocsectotal"       => Dimension::new(0));
+  DefRegister!("\\tocsubsecnum"      => Dimension::new(0));
+  DefRegister!("\\tocsubsectotal"    => Dimension::new(0));
+  DefRegister!("\\tocsubsubsecnum"   => Dimension::new(0));
+  DefRegister!("\\tocsubsubsectotal" => Dimension::new(0));
+  DefRegister!("\\tocparanum"        => Dimension::new(0));
+  DefRegister!("\\tocparatotal"      => Dimension::new(0));
+  DefRegister!("\\tocsubparanum"     => Dimension::new(0));
+
+  DefMacro!("\\dominitoc",     "");
+  DefMacro!("\\calctocindent", "");
+
+  DefMacro!("\\clearheadinfo",        "");
+  DefMacro!("\\clearemptydoublepage", "");
 });
