@@ -357,6 +357,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | open arrow singlevertbar => qm_bra
            | open metarelop singlevertbar => qm_bra
            | open operator singlevertbar => qm_bra
+           // Angle-bracket bra-ket with literal < > (QM notation)
+           // BLOCKED: conflicts with relational expressions ({y|y>0} → ket@(y))
+           // Needs QM subject-area pragma to enable safely
+           // | langle_rel expression singlevertbar => qm_bra
+           // | singlevertbar expression rangle_rel => qm_ket
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
            | lbrace term punct term punct term rbrace => fence
