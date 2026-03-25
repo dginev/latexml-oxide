@@ -26,7 +26,7 @@ fn genfracs_test() {
 }
 
 #[test]
-#[ignore] // crash — MathPrimitive unhandled in is_defined_token
+
 fn mathtools_test() {
   latexml_test_single("tests/ams/mathtools.tex", "mathtools", DIR, None, None);
 }

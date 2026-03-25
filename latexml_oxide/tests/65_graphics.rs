@@ -38,7 +38,7 @@ fn keyval_test() {
 }
 
 #[test]
-#[ignore] // needs graphpap.sty, picture environment
+
 fn picture_test() {
   latexml_test_single("tests/graphics/picture.tex", "picture", DIR, None, None);
 }
