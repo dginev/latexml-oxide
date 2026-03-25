@@ -314,6 +314,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     fenced_factor = lbrace expression rbrace    => fenced
            | lbracket expression rbracket       => fenced
            | lparen formula rparen              => fenced
+           // METARELOP inside parens: f(a:b), f(a↔b) — colon/arrow as relation in fenced
+           | lparen formula metarelop expression rparen => fence
            // Parenthesized comma-separated lists: (a,b,c), (1+,0+,1-,0-)
            // Uses term_list which requires 2+ items (avoids single-formula ambiguity).
            | lparen term_list rparen            => fenced
