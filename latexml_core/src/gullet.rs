@@ -237,7 +237,7 @@ pub fn close_mouth(forced: bool) -> Result<()> {
   let mut shift_from_mouthstack = false;
   let mut error_has_more_input = false;
   if let Some(ref mut runtime) = runtime!() {
-    if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
+    if !forced && (!runtime.pushback.is_empty() || runtime.mouth.has_more_input()) {
       error_has_more_input = true
     }
   }
