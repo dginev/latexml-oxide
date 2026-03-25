@@ -161,7 +161,16 @@ impl ArgWrap {
   }
 
   /// Convert to an attribute string value (for constructor templates)
-  pub fn to_attribute(&self) -> String { self.to_string() }
+  /// Uses attribute_format for dimensions (1 decimal place) matching Perl
+  pub fn to_attribute(&self) -> String {
+    match self {
+      ArgWrap::Dimension(d) => d.to_attribute(),
+      ArgWrap::Glue(g) => g.to_attribute(),
+      ArgWrap::MuGlue(mg) => mg.to_attribute(),
+      ArgWrap::MuDimension(md) => md.to_attribute(),
+      _ => self.to_string(),
+    }
+  }
 
   pub fn as_tokens(&self) -> Result<Option<Cow<'_, Tokens>>> {
     use ArgWrap::*;

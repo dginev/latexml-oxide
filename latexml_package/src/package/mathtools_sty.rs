@@ -43,16 +43,35 @@ LoadDefinitions!({
   // Perl: enterHorizontal => 1 — not supported in template form, but #1 pass-through is fine
   DefConstructor!("\\mathmbox{}", "#1");
 
-  // \mathllap — zero-width math overlap (left)
-  // TODO: afterDigest with width negation — using simple template for now
-  DefConstructor!("\\mathllap[]{}", "<ltx:XMArg width='0pt'>#2</ltx:XMArg>");
-  // \mathrlap — zero-width math overlap (right)
-  DefConstructor!("\\mathrlap[]{}", "<ltx:XMArg width='0pt'>#2</ltx:XMArg>");
-  // \mathclap — zero-width math overlap (center)
-  DefConstructor!("\\mathclap[]{}", "<ltx:XMArg width='0pt'>#2</ltx:XMArg>");
+  // \mathllap — zero-width math overlap (left): xoffset = -width
+  DefConstructor!("\\mathllap[]{}",
+    "<ltx:XMArg width='0pt' ?#xoffset(xoffset='#xoffset')>#2</ltx:XMArg>",
+    after_digest => sub[whatsit] {
+      if let Ok(Some(RegisterValue::Dimension(w))) = whatsit.get_width(None) {
+        let neg = w.negate();
+        whatsit.set_property("xoffset", Stored::String(arena::pin(neg.to_attribute())));
+      }
+      whatsit.set_width(Stored::String(arena::pin_static("0pt")));
+    });
+  // \mathrlap — zero-width math overlap (right): no xoffset needed
+  DefConstructor!("\\mathrlap[]{}",
+    "<ltx:XMArg width='0pt' ?#xoffset(xoffset='#xoffset')>#2</ltx:XMArg>",
+    after_digest => sub[whatsit] {
+      whatsit.set_width(Stored::String(arena::pin_static("0pt")));
+    });
+  // \mathclap — zero-width math overlap (center): xoffset = -0.5 * width
+  DefConstructor!("\\mathclap[]{}",
+    "<ltx:XMArg width='0pt' ?#xoffset(xoffset='#xoffset')>#2</ltx:XMArg>",
+    after_digest => sub[whatsit] {
+      if let Ok(Some(RegisterValue::Dimension(w))) = whatsit.get_width(None) {
+        let half_neg = w.multiply(Float::new_f64(-0.5));
+        whatsit.set_property("xoffset", Stored::String(arena::pin(half_neg.to_attribute())));
+      }
+      whatsit.set_width(Stored::String(arena::pin_static("0pt")));
+    });
 
   DefConstructor!("\\clap{}", "#1");
-  DefConstructor!("\\mathmakebox[][][]{}", "#3");
+  DefConstructor!("\\mathmakebox[][]{}", "#3");
   // Ignoring cramped, for now
   DefConstructor!("\\cramped[]{}", "#2");
 

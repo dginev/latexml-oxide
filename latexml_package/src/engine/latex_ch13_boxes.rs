@@ -187,20 +187,21 @@ LoadDefinitions!({
         .unwrap_or_else(|| s!("#000000"));
       let mut props = stored_map!("framecolor" => framecolor);
       // Perl: align from arg 2 (optional []) — only set when explicitly given
+      // Perl: only emit align for l/r/s; 'c' (center) is default → not emitted
       if let Some(align_val) = args[1].as_ref() {
         let align_str = align_val.to_string();
-        if !align_str.is_empty() {
-          let mapped = match align_str.as_str() {
-            "l" => "left",
-            "r" => "right",
-            "s" => "justify",
-            _ => "center",
-          };
-          props.insert("align", Stored::String(arena::pin_static(mapped)));
+        let mapped = match align_str.as_str() {
+          "l" => Some("left"),
+          "r" => Some("right"),
+          "s" => Some("justified"),
+          _ => None, // 'c' or empty → default center, not emitted
+        };
+        if let Some(m) = mapped {
+          props.insert("align", Stored::String(arena::pin_static(m)));
         }
       }
       if let Some(width_val) = args[0].as_ref() {
-        props.insert("width", Stored::String(arena::pin(width_val.to_string())));
+        props.insert("width", Stored::String(arena::pin(width_val.to_attribute())));
       }
       Ok(props)
     },
