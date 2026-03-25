@@ -788,6 +788,7 @@ LoadDefinitions!({
       .unwrap_or_else(|| T_CS!("\\textstyle"));
     let align = kv.get_value("alignment")
       .map(ToString::to_string)
+      .filter(|s| !s.is_empty())
       .unwrap_or_else(|| String::from("c"));
     let ncols_str = kv.get_value("ncolumns").map(ToString::to_string).unwrap_or_default();
     let ncols: usize = ncols_str.parse().unwrap_or(0);
@@ -804,7 +805,14 @@ LoadDefinitions!({
       after_toks.push(T_CS!("\\hfil"));
     }
 
+    // Set explicit alignment on cell so it propagates to XMCell align= attribute
+    let cell_align = match align.as_str() {
+      "l" => Some(Align::Left),
+      "r" => Some(Align::Right),
+      _ => Some(Align::Center), // default "c"
+    };
     let col = Cell {
+      align: cell_align,
       before: Some(Tokens::new(before_toks)),
       after: if after_toks.is_empty() { None } else { Some(Tokens::new(after_toks)) },
       empty: true,

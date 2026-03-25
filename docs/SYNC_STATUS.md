@@ -233,11 +233,15 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-23)
+## Test Suite Status (2026-03-24)
 
-**Current totals: 274 pass, 0 fail, 47 ignored (321 total integration tests)**
-**Plus 8 unit tests (replace_tree, parse recognizer) = 282 total passing**
-**Coverage: 91% pass rate (274/301 non-permanently-blocked tests)**
+**Current totals: 293 pass, 0 fail, 31 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 309 total passing**
+**Coverage: 97% pass rate (293/301 non-permanently-blocked tests)**
+
+**Session 39 package porting:** 40 new packages translated from Perl (preview, upgreek, lineno, titlesec, floatfig, parskip, lscape, enumerate, makeidx, bm, mleftright, placeins, xfrac, afterpage, mathrsfs, ragged2e, relsize, todonotes, xspace, threeparttable, footmisc, gensymb, empheq, mathdots, fancybox, lipsum, here, indentfirst, lmodern, showkeys, nopageno, blindtext, doi, lastpage, underscore, fancyvrb, dsfont, flafter, upquote, cmap). Total: 125→165 packages.
+
+**Session 39 fixes:** Dimension attribute precision (1 decimal), \\mathllap/\\mathclap/\\mathrlap xoffset, \\framebox align suppression, \\mathmakebox arg count fix. mathtools S12: 72→8 diffs.
 
 **Ignored test breakdown (47 total):**
 - **~24 permanently blocked / missing packages**: tikz (10), pgf (2), DTD ns1-5 (5), moderncv (2), beamer, slides, expl3 (2), babel, physics, si — need major package porting
