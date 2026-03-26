@@ -32,20 +32,6 @@ LoadDefinitions!({
   // Now apply all fixups with expl3 catcodes active.
   raw_tex(concat!(
     r"\protected\long\gdef\exp_end_continue_f:w{\number\c_zero_int}",
-    r"\cs_undefine:N\__tl_if_recursion_tail_break:nN",
-    r"\cs_undefine:N\__str_if_recursion_tail_break:NN",
-    r"\cs_undefine:N\__str_if_recursion_tail_stop_do:Nn",
-    r"\cs_undefine:N\__int_if_recursion_tail_stop_do:Nn",
-    r"\cs_undefine:N\__int_if_recursion_tail_stop:N",
-    r"\cs_undefine:N\__bool_if_recursion_tail_stop_do:nn",
-    r"\cs_undefine:N\__prop_if_recursion_tail_stop:n",
-    r"\__kernel_quark_new_test:N\__tl_if_recursion_tail_break:nN",
-    r"\__kernel_quark_new_test:N\__str_if_recursion_tail_break:NN",
-    r"\__kernel_quark_new_test:N\__str_if_recursion_tail_stop_do:Nn",
-    r"\__kernel_quark_new_test:N\__int_if_recursion_tail_stop_do:Nn",
-    r"\__kernel_quark_new_test:N\__int_if_recursion_tail_stop:N",
-    r"\__kernel_quark_new_test:N\__bool_if_recursion_tail_stop_do:nn",
-    r"\__kernel_quark_new_test:N\__prop_if_recursion_tail_stop:n",
     // Define the cmd/define-command message (from latex.ltx line 4780).
     // xparse.sty checks this to determine which module to use.
     r"\msg_new:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
