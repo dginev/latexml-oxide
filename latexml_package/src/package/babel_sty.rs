@@ -16,6 +16,28 @@ LoadDefinitions!({
   // from babel's AtBeginDocument font encoding iteration.
   RawTeX!(r"\def\@fontenc@load@list{}");
 
+  // Fix \bbl@main@language: babel's option processing sets it to "nil"
+  // because the ini-based loading path doesn't call \main@language.
+  // Read the last option from \@raw@classoptionslist or babel's internal
+  // state and call \main@language explicitly.
+  // Fix \bbl@main@language: use \bbl@loaded (set by babel option processing)
+  // to call \main@language with the correct language name.
+  DefPrimitive!("\\lx@babel@fix@mainlang", {
+    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    if main == "nil" || main.is_empty() {
+      // \bbl@loaded contains the last loaded language
+      let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
+        .map(|t| t.to_string()).unwrap_or_default();
+      let last_lang = loaded.split(',').map(|s| s.trim())
+        .filter(|s| !s.is_empty()).last().unwrap_or("").to_string();
+      if !last_lang.is_empty() {
+        gullet::unread(Tokenize!(&s!("\\main@language{{{}}}", last_lang)));
+      }
+    }
+  });
+  RawTeX!(r"\lx@babel@fix@mainlang");
+
   // Emulate Perl's precompiled kernel: pre-define \captions<lang> and \date<lang>
   // for common languages. In Perl, `make formats` precompiles the kernel so these
   // macros exist. Without them, babel's \bbl@provide@locale calls \babelprovide
@@ -24,8 +46,25 @@ LoadDefinitions!({
   // Pre-defining makes \bbl@provide@locale skip the heavy \babelprovide path.
   RawTeX!(r"\providecommand\captionsenglish{}\providecommand\dateenglish{}");
   RawTeX!(r"\providecommand\captionsfrench{}\providecommand\datefrench{}");
-  RawTeX!(r"\providecommand\captionsgerman{}\providecommand\dategerman{}");
-  RawTeX!(r"\providecommand\captionsngerman{}\providecommand\datengerman{}");
+  // German captions (from germanb.ldf) — not empty, actual text.
+  // Avoids OOM from \babelprovide AND provides correct localization.
+  DefPrimitive!("\\lx@babel@setup@german", {
+    RawTeX!(r"\providecommand\captionsgerman{%
+      \def\prefacename{Vorwort}\def\refname{Literatur}%
+      \def\abstractname{Zusammenfassung}\def\bibname{Literaturverzeichnis}%
+      \def\chaptername{Kapitel}\def\appendixname{Anhang}%
+      \def\contentsname{Inhaltsverzeichnis}%
+      \def\listfigurename{Abbildungsverzeichnis}%
+      \def\listtablename{Tabellenverzeichnis}%
+      \def\indexname{Index}\def\figurename{Abbildung}%
+      \def\tablename{Tabelle}\def\partname{Teil}%
+      \def\pagename{Seite}\def\seename{siehe}%
+      \def\alsoname{siehe auch}\def\proofname{Beweis}}");
+    RawTeX!(r"\providecommand\dategerman{}");
+    RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
+    RawTeX!(r"\providecommand\datengerman{\dategerman}");
+  });
+  RawTeX!(r"\lx@babel@setup@german");
   RawTeX!(r"\providecommand\captionsspanish{}\providecommand\datespanish{}");
   RawTeX!(r"\providecommand\captionsitalian{}\providecommand\dateitalian{}");
   RawTeX!(r"\providecommand\captionsportuges{}\providecommand\dateportuges{}");
