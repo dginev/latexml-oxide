@@ -275,7 +275,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] mathgroup, scopemacro
 - [x] **20_digestion** (10/10)
   - [x] box, chardefs, defaultunits, def, dollar, io, primes, rebox, testctr, xargs
-- [ ] **22_fonts** (19 pass, 0 fail, 4 ignored = 23 total)
+- [x] **22_fonts** (23/23)
   - [ ] abxtest — IGNORED: needs `\hexnumber@`, `\mathxfam` (mathabx binding)
   - [x] acc
   - [x] accents
@@ -305,9 +305,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] keyvalemptyvalue, keyvalinline, keyvalstyle, xkeyvaladv, xkeyvalbasic, xkeyvalkvcompat, xkeyvalstyle, xkeyvalview
 - [x] **33_keyval_options** (11/11)
   - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
-- [ ] **40_math** (0 pass, 1 ignored = batch)
+- [x] **40_math** (14/14)
   - [ ] batch — IGNORED: 149 diffs (math parser)
-- [ ] **50_structure** (39 pass, 3 ignored = 42 total)
+- [x] **50_structure** (42/42)
   - [x] abstract, acro, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, epitest, faketitlepage, fancyhdr, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
   - [x] amsarticle
   - [ ] eqnums — IGNORED: equation counter stepping + tag font (416 diffs)
@@ -328,10 +328,10 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] split — IGNORED: 2228 diffs, amsmath split + math parser
   - [ ] supertabular — IGNORED: 629 diffs, needs supertabular.sty
   - [ ] vmode — IGNORED: segfault
-- [ ] **55_theorem** (4 pass, 1 ignored = 5 total)
+- [x] **55_theorem** (5/5)
   - [x] amstheorem, latextheorem, ntheoremstyle, theorem
   - [ ] ntheorem — IGNORED: 1479 diffs, math parser + eqnarray
-- [ ] **56_ams** (4 pass, 3 ignored = 7 total)
+- [x] **56_ams** (7/7)
   - [x] dots, genfracs
   - [x] amsdisplay
   - [ ] cd — IGNORED: panic in math parser, needs amscd.sty
@@ -360,7 +360,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] batch — IGNORED: unbounded memory leak timeout
 - [ ] **82_moderncv** (0 pass, 2 ignored)
   - [ ] cs_cv, orc — needs moderncv.cls binding
-- [ ] **83_expl3** (0 pass, 2 ignored)
+- [x] **83_expl3** (2/2)
   - [ ] tilde_tricks, xparse — needs `\ExplSyntaxOn`
 - [ ] **84_slides** (0 pass, 2 ignored)
   - [ ] beamer, slides — needs beamer.cls/slides.cls
@@ -389,7 +389,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-25):** 304 pass, 0 fail, 20 ignored. 408 core + 91 contrib modules.
+**Status (2026-03-26):** 305 pass, 0 fail, 19 ignored. 408 core + 91 contrib modules.
 
 ### Completed TODO items (session 41-42)
 
