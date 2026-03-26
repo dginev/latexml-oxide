@@ -100,7 +100,13 @@ pub struct Gullet {
 }
 
 #[thread_local]
-pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet::default()));
+pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet {
+  // Safety limit: 10M tokens prevents infinite loops from corrupted macro state.
+  // A typical LaTeX document with expl3 processes ~5M tokens. This limit should
+  // never be reached in normal operation.
+  token_limit: Some(5_000_000),
+  ..Gullet::default()
+}));
 
 macro_rules! gullet {
   () => {
@@ -368,21 +374,27 @@ pub fn read_token() -> Result<Option<Token>> {
       }
       // some infinite loops are hard to predict and may be
       // better guarded against via a global token limit.
-      if let Some(token_limit) = gullet.token_limit {
-        if gullet.progress > token_limit {
+      let token_limit = gullet.token_limit;
+      let pushback_limit = gullet.pushback_limit;
+      let progress = gullet.progress;
+      let pushback_len = gullet.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
+      drop(gullet);
+      if let Some(limit) = token_limit {
+        gullet_mut!().progress = progress + 1;
+        if progress + 1 > limit {
           Fatal!(
             Timeout,
             TokenLimit,
-            s!("Token limit of {token_limit} exceeded, infinite loop?")
+            s!("Token limit of {} exceeded, infinite loop?", limit)
           );
         }
       }
-      if let Some(pushback_limit) = gullet.pushback_limit {
-        if gullet.runtime.as_ref().unwrap().pushback.len() > pushback_limit {
+      if let Some(limit) = pushback_limit {
+        if pushback_len > limit {
           Fatal!(
             Timeout,
             PushbackLimit,
-            s!("Pushback limit of {pushback_limit} exceeded, infinite loop?")
+            s!("Pushback limit of {} exceeded, infinite loop?", limit)
           );
         }
       }
