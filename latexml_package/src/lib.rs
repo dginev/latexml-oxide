@@ -12,6 +12,8 @@ pub mod prelude;
 // The TeX/LaTeX/eTeX/PdfTeX kernels
 #[macro_use]
 pub mod engine;
+// XMath helper functions for building XMDual token streams
+pub mod xmath_helpers;
 // Supported LaTeX packages
 #[macro_use]
 pub mod package;
