@@ -233,29 +233,25 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-25)
+## Test Suite Status (2026-03-26)
 
-**Current totals: 303 pass, 0 fail, 21 ignored (324 total integration tests)**
-**Plus 16 unit tests (state, tokens, replace_tree) = 319 total passing**
-**Coverage: 303/319 non-permanently-blocked = 95% pass rate**
-**Packages: 408 modules + 91 ar5iv contrib bindings (499 total, exceeds Perl's 405+87)**
+**Current totals: 301 pass, 0 fail, 23 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 317 total passing**
+**Coverage: 301/319 non-permanently-blocked = 94% pass rate**
+**Packages: 409 modules + 91 ar5iv contrib bindings (500 total, exceeds Perl's 405+87)**
 
 **Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
-**Ignored test breakdown (30 total):**
+**Ignored test breakdown (23 total, 18 code-ignored + 5 run-but-fail):**
 - **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
-- **5 math parser**: calculus, artefacts, functions, operators, qm (70_parse)
-- **2 expl3**: tilde_tricks, xparse — needs ExplSyntaxOn
-- **2 alignment**: listing (mathescape), split (timeout/OOM)
+- **5 permanent**: ns1–ns5 (52_namespace) — DTD not supported
 - **1 babel**: timeout — unbounded loop
 - **1 beamer**: needs beamer.cls full port
 - **1 moderncv** (orc): SVG namespace
-- **1 mathtools** (56_ams): MathPrimitive crash
 - **1 xytest**: needs xy.sty full port
-- **1 picture**: needs picture environment
 - **1 physics**: needs physics.sty
 - **1 siunitx**: needs siunitx.sty
-- **1 figure_mixed_content**: wrapfig + listings math
+- *Run-but-fail (5):* IEEE (math parser), split (alignment), mathtools (TooManyErrors), cs_cv (moderncv), slides (slides.cls)
 
 **Detailed fix history lives in git log.** Key milestones: C5 multi-token rewrites (S33), bigop_application (S33), BIGOPSUB/BIGOPSUP token separation (S40), finalize_rec iterative (S18-25), 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 9 intentional divergences (OXIDIZED_DESIGN.md).
 
@@ -312,8 +308,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] IEEE — IGNORED: math parser diffs (979 diffs)
 - [ ] **52_namespace** (0 pass, 5 ignored = permanent)
   - [ ] ns1–ns5 — DTD not supported in Rust port
-- [x] **53_alignment** (29/29)
-  - [x] algx, array, badeqnarray, cells, colortbls, diagboxtest, eqnarray, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, ncases, plainmath, supertabular, tabtab, tabbing, tabular, split, supertabular, tabtab, tabbing, tabular, tabularstar, vmode
+- [ ] **53_alignment** (28 pass, 1 ignored = 29 total)
+  - [x] algx, array, badeqnarray, cells, colortbls, diagboxtest, eqnarray, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, ncases, plainmath, supertabular, tabtab, tabbing, tabular, tabularstar, vmode
+  - [ ] split — IGNORED: ~118 structural diffs, amsmath split + math parser
 - [x] **55_theorem** (5/5)
   - [x] amstheorem, latextheorem, ntheorem, ntheoremstyle, theorem
 - [ ] **56_ams** (6 pass, 1 ignored = 7 total)
@@ -326,7 +323,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] batch — IGNORED: 120 diffs (math parser)
 - [x] **700_unit_parse** (3/3)
   - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
-- [ ] **80_complex** (13 pass, 3 ignored = 16 total)
+- [ ] **80_complex** (14 pass, 2 ignored = 16 total)
   - [x] aastex631_deluxetable, aastex_test, acm_aria, aliceblog, cleveref_minimal, equationnest, figure_dual_caption, figure_mixed_content, hyperchars, hypertest, labelled, tcilatex_minimal, versioned_fallback, xii
   - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
   - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
@@ -363,7 +360,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-26):** 305 pass, 0 fail, 19 ignored. 409 core + 91 contrib modules.
+**Status (2026-03-26):** 301 pass, 0 fail, 23 ignored (18 code-ignored + 5 run-but-fail). 409 core + 91 contrib modules.
 
 ### Completed TODO items (session 41-43)
 
