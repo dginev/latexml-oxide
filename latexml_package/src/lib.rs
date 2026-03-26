@@ -293,6 +293,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "svg.sty" => package::svg_sty::load_definitions(),
     "subfig.sty" => package::subfig_sty::load_definitions(),
     "xy.sty" => package::xy_sty::load_definitions(),
+    "xylatexml.tex" => package::xylatexml_tex::load_definitions(),
     "xypic.sty" => package::xypic_sty::load_definitions(),
     "pgf.sty" => package::pgf_sty::load_definitions(),
     "pgfplots.sty" => package::pgfplots_sty::load_definitions(),

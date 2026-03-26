@@ -399,6 +399,7 @@ pub mod xspace_sty;
 pub mod xunicode_sty;
 pub mod xurl_sty;
 pub mod xy_sty;
+pub mod xylatexml_tex;
 pub mod xypic_sty;
 pub mod yfonts_sty;
 pub mod jheppub_sty;
