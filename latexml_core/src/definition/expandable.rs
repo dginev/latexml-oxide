@@ -95,8 +95,8 @@ impl Definition for Expandable {
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let tracing = lookup_int("tracingmacros") > 0;
-    let profiled = lookup_bool("PROFILING");
+    let _tracing = lookup_int("tracingmacros") > 0;
+    let _profiled = lookup_bool("PROFILING");
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
@@ -105,31 +105,18 @@ impl Definition for Expandable {
         } else {
           Vec::new()
         };
-        if profiled {
-          // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
-          todo!();
-        }
+        // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
         let result = closure(args)?;
-        if tracing {
-          //$LaTeXML::DEBUG{tracing}) {    # More involved...
-          todo!();
-          // Debug($self->tracingCSName . ' ==> ' . tracetoString($result));
-          // Debug($self->tracingArgs(@args)) if @args; } }
-        }
+        // Tracing: Perl prints tracingCSName ==> tracetoString(result)
+        // Not implemented — silently skip to avoid panic on \tracingmacros=1
         Ok(result)
       },
       Some(ExpansionBody::Tokens(tokens)) => {
         let result = if self.paramlist.is_none() {
           // Case: Trivial macro
-          if profiled {
-            todo!();
-            // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
-          }
-          if tracing {
-            todo!();
-            // Debug($self->tracingCSName . ' ->' . tracetoString($expansion))
-            //   if $tracing || $LaTeXML::DEBUG{tracing};
-          }
+          // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
+          // Tracing: Perl prints tracingCSName -> tracetoString(expansion)
+          // Not implemented — silently skip to avoid panic on \tracingmacros=1
           // For trivial expansion, make sure we don't get \cs or \relax\cs direct recursion!
           let is_recursion = if !once_only {
             let token_vec = tokens.unlist_ref();
@@ -184,11 +171,8 @@ impl Definition for Expandable {
             tokens.clone()
           }
         };
-        // Getting exclusive requires dubious Gullet support!
-        if profiled {
-          todo!();
-          // result = Tokens!(result, T_MARKER!(profiled));
-        }
+        // Profiling: Perl appends T_MARKER(profiled) for exclusive profiling
+        // Not implemented — silently skip
         Ok(result)
       },
       None => {
