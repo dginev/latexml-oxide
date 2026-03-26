@@ -208,7 +208,19 @@ impl Expandable {
     let traits = traits.unwrap_or_default();
     if !traits.nopack_parameters {
       if let Some(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt {
-        expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens.pack_parameters()?));
+        // Perl: Fatal if expansion is unbalanced (mismatched {/})
+        if !expansion_tokens.is_balanced() {
+          Error!(
+            "misdefined",
+            cs,
+            s!("Expansion of '{}' has unbalanced {{}}", cs),
+            "skipping pack_parameters"
+          );
+          // Store as-is without packing
+          expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens));
+        } else {
+          expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens.pack_parameters()?));
+        }
       }
     }
     let has_cc_arg = match expansion_opt {
