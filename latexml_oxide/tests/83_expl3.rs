@@ -7,7 +7,6 @@ fn tilde_tricks_test() {
 }
 
 #[test]
-#[ignore] // needs \ExplSyntaxOn support
 fn xparse_test() {
   latexml_test_single("tests/expl3/xparse.tex", "xparse", DIR, None, None);
 }
