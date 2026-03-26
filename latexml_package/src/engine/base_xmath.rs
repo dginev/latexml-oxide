@@ -1381,8 +1381,9 @@ pub fn close_math_fork(
         .iter()
         .map(|t| t.strip_prefix("\\displaystyle").unwrap_or(t).trim_start())
         .collect();
-      // Join with CS-aware spacing: if previous part ends with a letter and next starts
-      // with a letter, insert a space (matching TeX CS termination rules).
+      // Join cell parts with CS-aware spacing: if previous part ends with a letter
+      // and next starts with a letter, insert a space. This preserves cell boundaries
+      // and handles CS termination (\word followed by letter needs space).
       let mut body = String::new();
       for (i, part) in stripped.iter().enumerate() {
         if i > 0 && !body.is_empty() && !part.is_empty() {
