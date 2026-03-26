@@ -744,6 +744,28 @@ impl Document {
   }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+  /// Perl: insertElementBefore — insert a new element before a given point node.
+  /// Creates a new element with the given qname and attributes, inserts it
+  /// before `point` in the DOM tree, and returns the new node.
+  pub fn insert_element_before(
+    &self,
+    point: &Node,
+    qname: &str,
+    attrib: Option<HashMap<String, String>>,
+  ) -> Result<Node> {
+    // Create element in LTX namespace (matching Perl's setNamespace($LTX_NS,'',1))
+    let mut new_node = Node::new(qname, None, &self.document)?;
+    if let Some(attrs) = attrib {
+      for (key, value) in attrs {
+        let _ = new_node.set_attribute(&key, &value);
+      }
+    }
+    // insertBefore: add new_node before point
+    let mut point_mut = point.clone();
+    point_mut.add_prev_sibling(&mut new_node).ok();
+    Ok(new_node)
+  }
+
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(
     &mut self,
