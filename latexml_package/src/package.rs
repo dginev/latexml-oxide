@@ -284,6 +284,7 @@ pub mod pgfmath_sty;
 pub mod pgfplots_sty;
 pub mod pgfplotstable_sty;
 pub mod pgfrcs_sty;
+pub mod physics_sty;
 pub mod pifont_sty;
 pub mod placeins_sty;
 pub mod pos_cls;

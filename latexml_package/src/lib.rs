@@ -416,6 +416,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pgfkeys.sty" => package::pgfkeys_sty::load_definitions(),
     "pgfplotstable.sty" => package::pgfplotstable_sty::load_definitions(),
     "pgfrcs.sty" => package::pgfrcs_sty::load_definitions(),
+    "physics.sty" => package::physics_sty::load_definitions(),
     "prettyref.sty" => package::prettyref_sty::load_definitions(),
     "pslatex.sty" => package::pslatex_sty::load_definitions(),
     "pxfonts.sty" => package::pxfonts_sty::load_definitions(),
