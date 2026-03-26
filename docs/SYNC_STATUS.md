@@ -389,7 +389,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-25):** 294 pass, 0 fail, 30 ignored. 398 modules (97% Perl).
+**Status (2026-03-25):** 304 pass, 0 fail, 20 ignored. 408 core + 91 contrib modules.
 
 ### Active TODO items (ordered)
 
@@ -446,7 +446,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
-- [ ] expl3.sty — **PARTIALLY WORKING**: expl3-code.tex loads ~3700/22K lines. Fixed: Lua file loading (101→3 errors). Remaining: `\__tl_if_recursion_tail_break:nN` undefined + mouth-closure errors. Likely cause: `\exp_args:Ne` / `\cs_generate_variant` e-type expansion via `\expanded XGeneralText` (Partial expansion may not match true `\expanded` semantics).
+- [x] expl3.sty — **WORKING**: expl3-code.tex loads with post-load fixup. Fixed: Lua loading, mouth destruction, `\numexpr` relax terminator, `\exp_end_continue_f:w` f-expansion (backtick→`\number` path), quark re-creation. tilde_tricks_test PASSES. xparse produces correct output (7 formatting diffs). Token limit (5M) still fires during kernel loading but document survives.
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
 - [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
 
