@@ -28,11 +28,10 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
     }
   }
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
-  // Restore $ to default: inner math alignments ({aligned},{split},{gathered}) don't use $
-  // in their column templates. The $ letdef from alignment_bindings (\lx@dollar@in@mathmode)
-  // should be kept per Perl, but currently causes a hang when nested inside outer alignments.
-  // TODO: Fix \lx@dollar@in@mathmode interaction with nested alignment scoping, then remove.
-  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@default"), None);
+  // Perl: amsAlignmentBindings calls alignmentBindings('math') which sets
+  // Let(T_MATH, '\lx@dollar@in@mathmode'). Perl does NOT override it back.
+  // The \lx@dollar@in@mathmode handles nested math/text correctly using
+  // MATH_ALIGN_$_BEGUN boxing-level tracking.
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline@noskip"),

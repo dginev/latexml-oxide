@@ -428,7 +428,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] A3. Font wrapper `<text>` elements during alignment absorption
 - [ ] A4. `{turn}` rotation dimensions inside alignment
 - [x] B2. Split/gather `$` mode: alignment depth guard. FIXED: `alignsafeOptional` + `\lx@begin@alignment` SkipSpaces removal.
-- [ ] B3. listings math: code blocks with math expressions. Blocks listing_test (1661 diffs).
+- [x] B3. listings math: code blocks with math expressions. listing_test PASSING (0 diffs).
 
 ### Math parser gaps
 
