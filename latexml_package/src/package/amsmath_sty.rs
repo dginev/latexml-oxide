@@ -1293,7 +1293,11 @@ pub fn rearrange_lone_ams_aligned(
     let mut cell_iter = cells.into_iter();
     // Process cells in pairs (LHS, RHS)
     while let Some(cell) = cell_iter.next() {
+      // Clear box_to_absorb before creating MathFork to prevent the main Math
+      // from inheriting the aligned box (which would produce wrong tex).
+      document.set_box_to_absorb(None);
       let (mut main, mut branch) = open_math_fork(document, &mut eqn)?;
+      document.expire_box_to_absorb();
       // Process up to 2 cells
       for cell_node in [Some(cell), cell_iter.next()] {
         let Some(cn) = cell_node else { continue };
@@ -1304,20 +1308,48 @@ pub fn rearrange_lone_ams_aligned(
         }
         let cell_children = element_nodes(&cn);
         if !cell_children.is_empty() {
+          // Perl: creates MathWhatsit(Digest(\displaystyle), cellbox) for proper reversion.
+          // We don't have MathWhatsit in Rust, so we:
+          // 1. Clear box_to_absorb to prevent inheriting the aligned box
+          // 2. Synthesize tex attribute from the cell's box reversion
+          let cell_tex = {
+            let first_child = cn.get_first_child();
+            let cell_box = first_child.as_ref().and_then(|c| document.get_node_box(c));
+            if let Some(ref cb) = cell_box {
+              match cb.untex() {
+                Ok(t) => {
+                  let t = t.trim().to_string();
+                  // Cell tex may already include \displaystyle from alignment template
+                  if t.starts_with("\\displaystyle") {
+                    t
+                  } else if t.starts_with(|c: char| c.is_ascii_alphabetic()) {
+                    format!("\\displaystyle {t}")
+                  } else {
+                    format!("\\displaystyle{t}")
+                  }
+                },
+                Err(_) => String::new(),
+              }
+            } else { String::new() }
+          };
+          document.set_box_to_absorb(None);
           let mut imath = document.open_element_at(&mut td, "ltx:Math", None, None)?;
           document.set_attribute(&mut imath, "mode", "inline")?;
+          if !cell_tex.is_empty() {
+            // Pre-set tex to prevent afterClose from using wrong box reversion
+            document.set_attribute(&mut imath, "tex", &cell_tex)?;
+          }
           let mut xmath = document.open_element_at(&mut imath, "ltx:XMath", None, None)?;
-          // Clone the cell's children into this XMath
           document.append_clone(&mut xmath, cell_children.clone())?;
           document.close_element_at(&mut xmath)?;
           document.close_element_at(&mut imath)?;
-          // Move original children into main branch
-          for mut child in cell_children {
-            child.unlink_node();
-            let main_xmath = document.findnodes("ltx:XMath", Some(&main));
-            if let Some(mut mx) = main_xmath.into_iter().next() {
-              mx.add_child(&mut child).ok();
-            }
+          document.expire_box_to_absorb();
+          // Clone cell content into main branch. The Perl moves originals
+          // (L671: map { $main->firstChild->appendChild($_) } ...) but
+          // our libxml wrapper has issues with unlink+reparent from detached
+          // subtrees, producing garbled nodes. Use clone instead.
+          if let Some(mut mx) = document.findnodes("ltx:XMath", Some(&main)).into_iter().next() {
+            document.append_clone(&mut mx, cell_children)?;
           }
         }
         document.close_element_at(&mut td)?;
