@@ -9,4 +9,26 @@ LoadDefinitions!({
   // 646 "Script _ can only appear in math mode" errors from Lua's underscored identifiers.
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
   InputDefinitions!("expl3", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+
+  // Post-load fixup for expl3 f-expansion.
+  //
+  // expl3's \exp_end_continue_f:w body is `^^@ (backtick + NUL = charcode 0).
+  // Our backtick charcode reader doesn't expand the next token during space-skip
+  // (unlike real TeX). Using \number\c_zero_int goes through read_digits →
+  // read_x_token which DOES expand, making f-expansion work.
+  //
+  // After the fixup, re-create the quark functions that failed during kernel loading
+  // (because they used the broken \exp_end_continue_f:w).
+  raw_tex(concat!(
+    r"\catcode58=11\relax\catcode95=11\relax",
+    r"\protected\long\gdef\exp_end_continue_f:w{\number\c_zero_int}",
+    r"\__kernel_quark_new_test:N\__tl_if_recursion_tail_break:nN",
+    r"\__kernel_quark_new_test:N\__str_if_recursion_tail_break:NN",
+    r"\__kernel_quark_new_test:N\__str_if_recursion_tail_stop_do:Nn",
+    r"\__kernel_quark_new_test:N\__int_if_recursion_tail_stop_do:Nn",
+    r"\__kernel_quark_new_test:N\__int_if_recursion_tail_stop:N",
+    r"\__kernel_quark_new_test:N\__bool_if_recursion_tail_stop_do:nn",
+    r"\__kernel_quark_new_test:N\__prop_if_recursion_tail_stop:n",
+    r"\catcode58=12\relax\catcode95=8\relax",
+  ))?;
 });
