@@ -48,7 +48,14 @@ LoadDefinitions!({
     // Also suppress the \__kernel_msg_info:nnxx handler that might bypass redirects.
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // Restore catcodes.
+  // Restore catcodes to LaTeX defaults.
+  // Critical: expl3 sets \catcode32=9 (SPACE→IGNORE) for its internal processing.
+  // If not restored, ALL spaces in the document are ignored, breaking paragraphs.
   state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::OTHER, Some(Scope::Global));
+  state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+  state::assign_catcode(' ', Catcode::SPACE, Some(Scope::Global));
+  state::assign_catcode('\t', Catcode::SPACE, Some(Scope::Global)); // TAB was set to IGNORE too
+  state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global)); // tilde was set to SPACE
+  // Also restore \endlinechar to 13 (carriage return, default)
+  raw_tex(r"\endlinechar=13\relax")?;
 });
