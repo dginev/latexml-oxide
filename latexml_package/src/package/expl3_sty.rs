@@ -29,6 +29,12 @@ LoadDefinitions!({
     r"\__kernel_quark_new_test:N\__int_if_recursion_tail_stop:N",
     r"\__kernel_quark_new_test:N\__bool_if_recursion_tail_stop_do:nn",
     r"\__kernel_quark_new_test:N\__prop_if_recursion_tail_stop:n",
+    // Define the cmd/define-command message (from latex.ltx line 4780).
+    // This is normally in the LaTeX format but our pool doesn't include it.
+    // xparse.sty checks \msg_if_exist:nnTF { cmd } { define-command } to
+    // determine which module to use for command definitions.
+    r"\msg_new:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
+    r"\msg_new:nnn{cmd}{define-env}{Defining~environment~#1~with~sig.~'#2'~\msg_line_context:.}",
     r"\catcode58=12\relax\catcode95=8\relax",
   ))?;
 });
