@@ -499,10 +499,20 @@ LoadDefinitions!({
           whatsit.set_property("name", name);
         }
         whatsit.set_property("stretchy", true);
-        // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
           whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
         ));
+        // Set canonical reversion: \left + the user-facing delimiter token.
+        // XToken expands \{ → \lx@text@lbrace during macro reading, so the stored
+        // arg reverts to \lx@text@lbrace. Override with the canonical form.
+        let canonical = match entry.char {
+          '{' => Some("\\left\\{"),
+          '}' => Some("\\left\\}"),
+          _ => None,
+        };
+        if let Some(rev_str) = canonical {
+          whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
+        }
       }
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
@@ -527,10 +537,18 @@ LoadDefinitions!({
           whatsit.set_property("name", name);
         }
         whatsit.set_property("stretchy", true);
-        // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
           whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
         ));
+        // Set canonical reversion for brace delimiters (XToken expands \} → \lx@text@rbrace)
+        let canonical = match entry.char {
+          '{' => Some("\\right\\{"),
+          '}' => Some("\\right\\}"),
+          _ => None,
+        };
+        if let Some(rev_str) = canonical {
+          whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
+        }
       }
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
