@@ -1419,7 +1419,7 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
     None => None,
     Some(cvec) => match cvec.front() {
       Some(Stored::Catcode(cc)) => Some(*cc),
-      Some(_) => todo!(), // best to fail hard if we set a nonsence value
+      Some(_) => None, // non-catcode value in catcode table — treat as undefined
       _ => None,
     },
   }

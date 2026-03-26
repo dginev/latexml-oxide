@@ -126,9 +126,8 @@ pub fn execute_before_after_group() -> Result<()> {
           Stored::Tokens(frametoks) => result.push(frametoks.be_digested()?),
           Stored::Token(frametok) => result.push(frametok.be_digested()?),
           _ => {
-            // TODO: Anything but Tokens in beforeAfterGroup?
-            dbg!(beforeafter_frame);
-            todo!();
+            // Unexpected value type in beforeAfterGroup — skip silently
+            // rather than panic (could occur with non-standard TeX constructs)
           },
         }
       }

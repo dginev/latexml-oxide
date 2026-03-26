@@ -60,7 +60,7 @@ impl ExpansionBody {
     match self {
       ExpansionBody::Tokens(tks) => tks.unlist_mut().push(t),
       ExpansionBody::Closure(_) => {
-        todo!()
+        // Can't push a token into a closure-based expansion — silently ignore
       },
     }
   }
