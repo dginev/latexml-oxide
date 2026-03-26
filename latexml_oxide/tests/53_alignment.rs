@@ -116,7 +116,6 @@ fn plainmath_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: amsmath split + math parser
 fn split_test() {
   latexml_test_single("tests/alignment/split.tex", "split", DIR, None, None);
 }
