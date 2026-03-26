@@ -96,15 +96,20 @@ impl Definition for Primitive {
     match self.replacement {
       Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),
       Some(PrimitiveBody::String(symbol)) => {
+        // Perl L67: $stomach->enterHorizontal if defined $replacement
+        crate::stomach::enter_horizontal();
         let cs_token = self
           .alias
           .as_ref()
           .map(|alias| Token::from(alias.as_str()))
           .unwrap_or(self.cs);
-        let box_tokens = vec![cs_token];
-        if let Some(ref _params) = self.paramlist {
-          todo!(); // we need to generalize the revert functions to take ArgWrap-typed arguments
-          // box_tokens.extend(params.revert_arguments(args)?);
+        let mut box_tokens = vec![cs_token];
+        // Perl L69: append revertArguments for parameterized string primitives
+        if let Some(ref params) = self.paramlist {
+          for arg in &args {
+            box_tokens.extend(arg.revert()?.unlist());
+          }
+          let _ = params; // acknowledge usage
         }
         let box_props = SymHashMap::default();
         invoked_boxes.push(Digested::from(Tbox::new(
