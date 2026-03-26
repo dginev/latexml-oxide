@@ -8,7 +8,10 @@ LoadDefinitions!({
   // We skip the raw .lua file: Lua is not TeX, loading it as raw TeX causes
   // 646 "Script _ can only appear in math mode" errors from Lua's underscored identifiers.
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
-  InputDefinitions!("expl3", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // Load raw expl3.sty — may hit token limit (5M) due to infinite loop in kernel.
+  // Catch the error so our post-load fixup still runs.
+  let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
+    noltxml => true, extension => Some(Cow::Borrowed("sty"))));
 
   // Post-load fixup for expl3 f-expansion.
   //
@@ -19,8 +22,11 @@ LoadDefinitions!({
   //
   // After the fixup, re-create the quark functions that failed during kernel loading
   // (because they used the broken \exp_end_continue_f:w).
+  // Post-load fixup: set expl3 catcodes via Rust API (global scope, not reverted).
+  state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
+  state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
+  // Now apply all fixups with expl3 catcodes active.
   raw_tex(concat!(
-    r"\catcode58=11\relax\catcode95=11\relax",
     r"\protected\long\gdef\exp_end_continue_f:w{\number\c_zero_int}",
     r"\__kernel_quark_new_test:N\__tl_if_recursion_tail_break:nN",
     r"\__kernel_quark_new_test:N\__str_if_recursion_tail_break:NN",
@@ -30,11 +36,11 @@ LoadDefinitions!({
     r"\__kernel_quark_new_test:N\__bool_if_recursion_tail_stop_do:nn",
     r"\__kernel_quark_new_test:N\__prop_if_recursion_tail_stop:n",
     // Define the cmd/define-command message (from latex.ltx line 4780).
-    // This is normally in the LaTeX format but our pool doesn't include it.
-    // xparse.sty checks \msg_if_exist:nnTF { cmd } { define-command } to
-    // determine which module to use for command definitions.
+    // xparse.sty checks this to determine which module to use.
     r"\msg_new:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
     r"\msg_new:nnn{cmd}{define-env}{Defining~environment~#1~with~sig.~'#2'~\msg_line_context:.}",
-    r"\catcode58=12\relax\catcode95=8\relax",
   ))?;
+  // Restore catcodes.
+  state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+  state::assign_catcode('_', Catcode::OTHER, Some(Scope::Global));
 });
