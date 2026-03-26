@@ -739,6 +739,12 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
             result.push(digested);
           }
         } else {
+          // Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
+          if token.get_catcode() == Catcode::ALIGN {
+            if let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax")) {
+              assign_meaning(&token, relax_meaning, Some(Scope::Local));
+            }
+          }
           let message = s!(
             "The token {:?} (catcode {:?}) should never reach Stomach!",
             token,
@@ -809,11 +815,9 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
         }
       },
       meaning => {
-        fatal!(
-          Stomach,
-          Misdefined,
-          s!("The object {:?} should never reach Stomach!", meaning)
-        );
+        // Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
+        Error!("misdefined", token,
+          s!("Unexpected object in Stomach: {:?}", meaning));
       },
     }
     expire_current_token();
@@ -930,6 +934,8 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
           return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
         }
       }
+      // Perl L250-257: enterHorizontal in BOTH the non-math case AND the
+      // math-but-no-mathcode fallthrough (matching Perl's else branch)
       if !lookup_bool("IN_MATH") {
         enter_horizontal();
       }
