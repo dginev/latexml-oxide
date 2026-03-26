@@ -84,7 +84,7 @@ pub struct Alignment {
   in_tabular_head:   bool,
   is_math:           bool,
   is_normalized:     bool,
-  /// True for \halign templates (no first-column ltx_nopad_l guard)
+  /// True for \halign templates
   pub is_halign:     bool,
   current_column:    usize,
   current_row:       Option<usize>,
@@ -508,7 +508,7 @@ impl BoxOps for Alignment {
       for before in row.before.iter() {
         document.absorb(before, None)?;
       }
-      for (col_idx, cell) in row.get_columns_mut().iter_mut().enumerate() {
+      for (_col_idx, cell) in row.get_columns_mut().iter_mut().enumerate() {
         if cell.skipped {
           continue;
         }
@@ -627,9 +627,11 @@ impl BoxOps for Alignment {
                 0
               }
             });
-          // Perl: for LaTeX tabular, first column never gets ltx_nopad_l (boundary).
-          // But for \halign, ALL columns can get ltx_nopad_l (no special first column).
-          if (col_idx > 0 || self.is_halign) && (!empty || has_boxes) && lpad < threshold_02em {
+          // Perl L340-341: ltx_nopad_l, unless math mode (Perl: `unless $ismath`)
+          // Note: col_idx guard still needed because cell.before/has_intercol_before
+          // are cleared during extraction — lpad heuristic can't distinguish @{} from
+          // default padding on first columns without proper lspaces population.
+          if (_col_idx > 0 || self.is_halign) && !ismath && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // In math mode, absorb named spacing (like \quad) as XMHint content
@@ -641,7 +643,8 @@ impl BoxOps for Alignment {
           } else {
             pre_absorb = cell.lspaces.take();
           }
-          if (!empty || has_boxes) && rpad < threshold_02em {
+          // Perl L344-345: ltx_nopad_r, unless math mode (Perl: `unless $ismath`)
+          if !ismath && (!empty || has_boxes) && rpad < threshold_02em {
             classes.push("ltx_nopad_r".to_string());
           } else if rpad < threshold_15em {
             // do nothing — use CSS default padding

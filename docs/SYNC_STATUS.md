@@ -403,9 +403,9 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Math parser gaps
 
-- [ ] C2. Font specialize / mathstyle absolute reset — `\scriptstyle` inside subscript produces fontsize=50% (scriptscript) instead of 70% (script). `MergeFont!(mathstyle => "script")` adds relative; should RESET when `explicit_mathstyle` is set. See `tex_math.rs:638`. Calculus XML temporarily updated to match 50%; needs fix to restore 70%.
+- [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
-- [ ] C4. ltx_nopad_l on @{}l@{} columns
+- [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
 - [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
 - [ ] C6. XMDual id ordering in eval-at: `\left.xyz\right|_0` has swapped m1.1↔m1.2
 - [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`

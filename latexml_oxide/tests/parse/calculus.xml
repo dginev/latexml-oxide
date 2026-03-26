@@ -253,11 +253,11 @@
                 <XMTok mathstyle="script" role="FRACOP" thickness="0pt"/>
                 <XMApp>
                   <XMTok meaning="multirelation"/>
-                  <XMTok fontsize="50%" meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok fontsize="50%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok font="italic" fontsize="50%" role="UNKNOWN">i</XMTok>
-                  <XMTok fontsize="50%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                  <XMTok font="italic" fontsize="50%" role="UNKNOWN">m</XMTok>
+                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">m</XMTok>
                 </XMApp>
                 <XMApp>
                   <XMTok meaning="multirelation"/>
