@@ -4,18 +4,24 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Pre-define \bbl@languages as empty. Babel's language.def loading uses \openin
+  // to read hyphenation pattern files, which our system can't find (.ini search paths).
+  // Without this, \bbl@languages stays undefined, and our error recovery defines it
+  // as <ltx:ERROR/> which corrupts babel's list accumulation → infinite recursion → OOM.
+  RawTeX!(r"\def\bbl@languages{}");
+
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // After babel loads, clear \@fontenc@load@list to prevent stray commas
   // from babel's AtBeginDocument font encoding iteration.
   RawTeX!(r"\def\@fontenc@load@list{}");
 
-  // Prevent babel 3.x OOM: \selectlanguage triggers \bbl@provide@locale which
-  // calls \babelprovide to load language .ini files. This ini-loading path causes
-  // exponential memory growth (14-26GB). Perl avoids this via precompiled kernel
-  // where languages are pre-loaded. We emulate this by pre-defining empty
-  // \captions<lang> and \date<lang> macros for common languages.
-  // \bbl@provide@locale checks \csname date<lang>\endcsname — if defined, skips loading.
+  // Emulate Perl's precompiled kernel: pre-define \captions<lang> and \date<lang>
+  // for common languages. In Perl, `make formats` precompiles the kernel so these
+  // macros exist. Without them, babel's \bbl@provide@locale calls \babelprovide
+  // which loads .ini files — a path that our engine can't handle (multiple undefined
+  // macros hit error recovery → <ltx:ERROR/> corruption → OOM).
+  // Pre-defining makes \bbl@provide@locale skip the heavy \babelprovide path.
   RawTeX!(r"\providecommand\captionsenglish{}\providecommand\dateenglish{}");
   RawTeX!(r"\providecommand\captionsfrench{}\providecommand\datefrench{}");
   RawTeX!(r"\providecommand\captionsgerman{}\providecommand\dategerman{}");
