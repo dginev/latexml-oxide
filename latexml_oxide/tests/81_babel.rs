@@ -3,7 +3,7 @@ use latexml::util::test::*;
 const DIR: &str = "tests/babel";
 
 #[test]
-#[ignore] // csquotes.sty \ifnum`#1=`##1 in \def causes infinite loop (Relation param reads \def)
+#[ignore] // OOM: babel+csquotes processing exceeds memory limits
 fn csquotes_test() {
   latexml_test_single("tests/babel/csquotes.tex", "csquotes", DIR, None, None);
 }
