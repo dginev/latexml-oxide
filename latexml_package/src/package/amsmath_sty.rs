@@ -30,8 +30,8 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
   // Restore $ to default: inner math alignments ({aligned},{split},{gathered}) don't use $
   // in their column templates. The $ letdef from alignment_bindings (\lx@dollar@in@mathmode)
-  // would interfere with the outer {align}'s after-template $ (injected by handle_template
-  // while inner frames are still on the stack), causing an infinite mode-switching loop.
+  // should be kept per Perl, but currently causes a hang when nested inside outer alignments.
+  // TODO: Fix \lx@dollar@in@mathmode interaction with nested alignment scoping, then remove.
   state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@default"), None);
   state::let_i(
     &T_CS!("\\\\"),
@@ -997,15 +997,34 @@ LoadDefinitions!({
       }
     });
 
-  DefMacro!("\\aligned[]",
-    "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@amsaligned\\lx@begin@alignment",
-    locked => true);
+  // Perl: DefMacro('\aligned alignsafeOptional', ...)
+  // alignsafeOptional reads optional arg WITHOUT triggering alignment machinery.
+  // Standard [] would cause &-interception by handle_template for the outer alignment,
+  // breaking nested \begin{aligned} inside \begin{align}.
+  DefPrimitive!("\\aligned", {
+    // Perl: local $LaTeXML::ALIGN_STATE = 1000000; — disable alignment check
+    local_align_group_count(1000000);
+    let _opt = gullet::read_optional(None)?; // read and discard optional [t]/[b]
+    expire_align_group_count();
+    gullet::unread(Tokens::new(vec![
+      T_CS!("\\lx@hidden@bgroup"), T_CS!("\\@ams@aligned@bindings"),
+      T_CS!("\\@@amsaligned"), T_CS!("\\lx@begin@alignment"),
+    ]));
+  }, locked => true);
   DefMacro!("\\endaligned",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
-  DefMacro!("\\alignedat{} []",
-    "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@amsaligned\\lx@begin@alignment",
-    locked => true);
+  // Perl: DefMacro('\alignedat{} alignsafeOptional', ...)
+  DefPrimitive!("\\alignedat", {
+    let _nargs = gullet::read_arg(ExpansionLevel::Off)?; // consume mandatory {n}
+    local_align_group_count(1000000);
+    let _opt = gullet::read_optional(None)?;
+    expire_align_group_count();
+    gullet::unread(Tokens::new(vec![
+      T_CS!("\\lx@hidden@bgroup"), T_CS!("\\@ams@aligned@bindings"),
+      T_CS!("\\@@amsaligned"), T_CS!("\\lx@begin@alignment"),
+    ]));
+  }, locked => true);
   DefMacro!("\\endalignedat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);

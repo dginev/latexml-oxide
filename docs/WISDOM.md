@@ -512,3 +512,18 @@ add_math_rewrite("f", "FUNCTION")?;  // enables function application
 - `prefix_script_pre`: semantic action that forces "pre" position without `_wasfloat` (matching Perl's `NewScript($base, $script, 'pre')` for POST scripts)
 - `prescripted_factor_post_r/l`: POST scripts used as pre-scripts on factors (only valid when FLOAT-wrapped)
 - Recursive chaining via `scripted_factor_l2 += floatsubarg scripted_factor_l2` for 3+ float chains
+
+---
+
+## 12. alignsafeOptional: alignment token interception during parameter parsing
+
+**Problem:** `\begin{aligned}` nested inside `\begin{align}` loses 85% of content. All errors cascade from "Attempt to end mode `inline_math` in `math`". The inner aligned's content `& D` gets intercepted by the outer alignment.
+
+**Root cause:** `\aligned[]` reads its optional arg using standard `[]` parameter parsing. During the `read_x_token` call to check for `[`, the gullet's alignment check intercepts `&` from the content. Since the inner alignment hasn't been set up yet, `handle_template` fires for the OUTER alignment, injecting the outer after-template `$` into the inner alignment's token stream. This `$` triggers `\lx@end@inline@math` inside the inner alignment, corrupting the mode stack.
+
+**Fix (3 parts):**
+1. **`\aligned`/`\alignedat`**: Implement Perl's `alignsafeOptional` — read optional arg with `local_align_group_count(1000000)` to disable alignment token interception during arg reading.
+2. **`\lx@begin@alignment`**: Remove spurious `SkipSpaces` parameter (Perl has none). SkipSpaces also triggers `read_x_token` which intercepts alignment tokens.
+3. **`eqnarray_bindings`**: Remove spurious `Let(T_MATH, '\lx@dollar@in@mathmode')` — Perl doesn't set this.
+
+**Key insight:** Any `read_x_token` call inside an alignment column can trigger `handle_template`. Parameter parsing (SkipSpaces, optional `[]`, etc.) calls `read_x_token`. If the content after the macro contains alignment tokens (`&`, `\cr`), they'll be intercepted by the outer alignment's template. Perl avoids this with `$LaTeXML::ALIGN_STATE = 1000000` (our `local_align_group_count`).

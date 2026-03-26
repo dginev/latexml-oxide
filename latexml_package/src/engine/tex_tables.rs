@@ -19,7 +19,10 @@ LoadDefinitions!({
 
   // This is where ALL alignments start & finish
   // This creates the object representing the entire alignment!
-  DefConstructor!("\\lx@begin@alignment SkipSpaces", "#alignment",
+  // NOTE: Perl does NOT have SkipSpaces here. Adding it causes handle_template
+  // to fire for the outer alignment during parameter parsing, corrupting the token stream
+  // when \begin{aligned} is nested inside \begin{align}.
+  DefConstructor!("\\lx@begin@alignment", "#alignment",
     reversion => sub[whatsit,_args] {
       if let Some(Stored::Digested(alignment)) = whatsit.get_property("alignment").as_deref() {
         if let DigestedData::Alignment(data) = alignment.data() {

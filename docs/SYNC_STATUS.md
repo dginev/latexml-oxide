@@ -400,8 +400,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Active TODO items (ordered)
 
-- [ ] **50. split_test** (53_alignment) — 115 diffs. TIMEOUT FIXED. Remaining: nested `{aligned}` in `{align}` loses content due to mode-switch ordering.
-- [ ] **83. xparse_test** (83_expl3) — 5 diffs. Content correct, paragraph structure wrong (xparse-defined commands absorb `\par`). OLD versioned xparse loaded instead of kernel cmd module.
+- [ ] **50. split_test** (53_alignment) — 1935 diffs. MODE-CRASH FIXED (was losing 85% content). Root cause: `\aligned[]` optional arg triggered handle_template for outer alignment during arg parsing. Fixed: `alignsafeOptional` (disables alignment checks during `[]` reading), removed spurious `SkipSpaces` from `\lx@begin@alignment`, removed eqnarray `T_MATH` letdef. Remaining diffs are structural (alignment rearrangement, xml:id, etc.).
+- [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **56. babel suite** (81_babel) — Recursive csquotes, excessive `{` nesting.
 
@@ -427,7 +427,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] A1. `alignment_skip_data` continuation-line check (173 regressions when added naively)
 - [ ] A3. Font wrapper `<text>` elements during alignment absorption
 - [ ] A4. `{turn}` rotation dimensions inside alignment
-- [ ] B2. Split/gather `$` mode: alignment depth guard. Blocks split_test.
+- [x] B2. Split/gather `$` mode: alignment depth guard. FIXED: `alignsafeOptional` + `\lx@begin@alignment` SkipSpaces removal.
 - [ ] B3. listings math: code blocks with math expressions. Blocks listing_test (1661 diffs).
 
 ### Math parser gaps
