@@ -3108,9 +3108,18 @@ impl Document {
               match Namespace::new(&prefix, &ns_uri, &mut root) {
                 Ok(ns) => Some(ns),
                 Err(_) => {
-                  let message = s!("failed to create namespace: {:?}", prefix);
-                  Error!("document", "open_element_internal", message);
-                  None
+                  // Namespace already exists on root — find and reuse it.
+                  // We search declarations then fall back to creating on the
+                  // insertion point (which inherits from root).
+                  let found = root.get_namespace_declarations()
+                    .into_iter()
+                    .find(|ns| ns.get_prefix() == prefix);
+                  if found.is_none() {
+                    // Try creating on the insertion point instead
+                    Namespace::new(&prefix, &ns_uri, point).ok()
+                  } else {
+                    found
+                  }
                 },
               }
             } else {
@@ -3124,7 +3133,7 @@ impl Document {
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode = Node::new(tag, new_ns, &self.document).unwrap();
+    let mut newnode = Node::new(tag, new_ns.clone(), &self.document).unwrap();
     point.add_child(&mut newnode)?;
     if no_ns {
       // without this explicit set call, an XPath for things such as "ltx:XMath"
@@ -3132,6 +3141,11 @@ impl Document {
       if let Some(ns) = point.get_namespace() {
         newnode.set_namespace(&ns)?;
       }
+    } else if let Some(ref ns) = new_ns {
+      // For explicitly namespaced elements (e.g., svg:svg), ensure the namespace
+      // is set after add_child — Node::new may not properly bind the namespace
+      // when the Namespace was retrieved from get_namespace_declarations().
+      let _ = newnode.set_namespace(ns);
     }
 
     self.record_constructed_node(&newnode);
