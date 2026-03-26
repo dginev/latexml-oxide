@@ -1857,7 +1857,27 @@ pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
   open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
-  let results: R = { reader()? };
+  let reader_result = reader();
+  // If the reader returned an error (e.g., Fatal from token limit),
+  // we STILL need to clean up the mouth to preserve the caller's state.
+  let results: R = match reader_result {
+    Ok(v) => v,
+    Err(e) => {
+      // Force-close our mouth and any autoclosable mouths above it
+      loop {
+        let current = gullet!().runtime.as_ref().map(|r| arena::pin(r.mouth.get_source()));
+        if current == Some(context_mouth_source) {
+          close_mouth(true).ok();
+          break;
+        } else if gullet!().mouthstack.is_empty() {
+          break; // Our mouth was already consumed
+        } else {
+          close_mouth(true).ok(); // Close stale mouth above ours
+        }
+      }
+      return Err(e);
+    }
+  };
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
   loop {
     let mouth_source = gullet!()

@@ -242,8 +242,23 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     return Ok(());
   }
 
-  let is_binding =
-    !options.noltxml && (load_external_binding(&filename)? || load_binding(&filename)?);
+  // Catch Fatal errors during binding loading (e.g., token limit exceeded during
+  // expl3 kernel loading). Convert to non-fatal so document processing continues.
+  let is_binding = if options.noltxml {
+    false
+  } else {
+    match load_external_binding(&filename).and_then(|ext| {
+      if ext { Ok(true) } else { load_binding(&filename) }
+    }) {
+      Ok(v) => v,
+      Err(e) => {
+        Error!("unexpected", &filename, s!("Error loading binding for '{}': {}", filename, e));
+        // Mark as loaded even on error to prevent re-loading via raw path
+        assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+        false
+      }
+    }
+  };
   let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
