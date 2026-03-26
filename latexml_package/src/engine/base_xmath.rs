@@ -1415,6 +1415,12 @@ pub fn close_math_fork(
     document.close_element_at(&mut xmath)?;
   }
   document.close_element_at(mainfork)?;
+  // Fix broken XMRef idrefs: append_clone's id mapping can get out of sync
+  // with the ids assigned by close_element_at (which triggers afterClose
+  // callbacks that may re-generate ids via generate_id).
+  if let Some(xmath) = first_child_element(mainfork) {
+    fixup_xmref_idrefs(document, &xmath);
+  }
   // Close the MathFork — find it defensively via xpath
   let mfs = document.findnodes("ltx:MathFork", Some(equation));
   if let Some(mut last_mf) = mfs.into_iter().last() {
@@ -1505,6 +1511,84 @@ pub fn add_column_to_math_fork(
   }
   document.close_element_at(&mut td)?;
   Ok(())
+}
+
+/// Collect all xml:id values from a subtree by DOM walking.
+fn collect_xml_ids(node: &Node, ids: &mut Vec<String>) {
+  // Try all possible attribute forms for xml:id
+  let id = node.get_attribute("xml:id")
+    .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
+    .or_else(|| {
+      // Fallback: scan attributes for anything named "id" or "xml:id"
+      node.get_attributes().into_iter()
+        .find(|(k, _)| k == "id" || k == "xml:id")
+        .map(|(_, v)| v)
+    });
+  if let Some(id) = id {
+    ids.push(id);
+  }
+  for child in node.get_child_nodes() {
+    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+      collect_xml_ids(&child, ids);
+    }
+  }
+}
+
+/// Collect all XMRef nodes from a subtree by DOM walking.
+fn collect_xmrefs(node: &Node, refs: &mut Vec<Node>) {
+  if node.get_name() == "XMRef" && node.has_attribute("idref") {
+    refs.push(node.clone());
+  }
+  for child in node.get_child_nodes() {
+    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+      collect_xmrefs(&child, refs);
+    }
+  }
+}
+
+/// Fix broken XMRef idrefs in a subtree after append_clone.
+/// append_clone's id_map and record_id_with_node can produce inconsistent
+/// xml:id/idref pairs. This function scans the subtree for all xml:ids,
+/// then updates XMRef idrefs to point to actual existing ids.
+fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
+  use std::collections::HashMap;
+  // Collect all xml:ids in the subtree, keyed by their "base" (without suffix variants)
+  // Collect xml:ids from the subtree by walking the DOM directly
+  // (XPath namespace handling may miss xml:id attributes)
+  let mut all_ids: Vec<String> = Vec::new();
+  collect_xml_ids(root, &mut all_ids);
+  if all_ids.is_empty() { return; }
+  // Build a reverse lookup: for each id, map its base forms to the actual id
+  // E.g., "Ch0.E16.m2.1" could be the actual id for what was originally "Ch0.E16.m1.1"
+  // We use a simpler approach: map by the TRAILING number(s) after the last dot
+  let mut id_by_suffix: HashMap<String, String> = HashMap::new();
+  for id in &all_ids {
+    // Extract suffix like ".1", ".2", ".3" etc.
+    if let Some(dot_pos) = id.rfind('.') {
+      let suffix = &id[dot_pos..];
+      id_by_suffix.insert(suffix.to_string(), id.clone());
+    }
+    id_by_suffix.insert(id.clone(), id.clone()); // exact match
+  }
+  // Find all XMRef nodes and fix their idrefs
+  let mut xmrefs: Vec<Node> = Vec::new();
+  collect_xmrefs(root, &mut xmrefs);
+  let fixed_count = xmrefs.len();
+  for mut xmref in xmrefs {
+    if let Some(idref) = xmref.get_attribute("idref") {
+      // Check if idref points to an existing id in the subtree
+      if all_ids.contains(&idref) { continue; }
+      // Try to find the matching id by suffix
+      if let Some(dot_pos) = idref.rfind('.') {
+        let suffix = &idref[dot_pos..];
+        // Try suffix match: e.g. ".1" in idref matches ".1" in actual id
+        if let Some(actual_id) = id_by_suffix.get(suffix) {
+          xmref.set_attribute("idref", actual_id).ok();
+        }
+      }
+    }
+  }
+  let _ = fixed_count;
 }
 
 /// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)

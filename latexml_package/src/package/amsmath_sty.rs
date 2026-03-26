@@ -953,11 +953,29 @@ LoadDefinitions!({
   DefMacro!("\\split",
     "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
      \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
-  // \if@in@ams@align — checks if current environment starts with "align"
-  // Simplified: always false for now (proper impl needs lookupStackedValues)
-  DefConditional!("\\if@in@ams@align");
-  // \lx@ams@marksplitinalign — stub (sets colspan=2, advances column)
-  DefConstructor!("\\lx@ams@marksplitinalign", "");
+  // Perl: \if@in@ams@align — checks if current environment starts with "align"
+  // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')
+  DefConditional!("\\if@in@ams@align", {
+    state::with_stacked_values("current_environment", |vals| {
+      vals.iter().any(|v| v.to_string().starts_with("align"))
+    })
+  });
+  // Perl: \lx@ams@marksplitinalign — constructor that marks the current _Capture_
+  // cell with colspan=2, align=center, then advances to the next column.
+  // Perl: afterDigest => sub { LookupValue('Alignment')->nextColumn; return; }
+  DefPrimitive!("\\lx@ams@marksplitinalign", {
+    use latexml_core::alignment::template::Align;
+    if let Some(alignment_stored) = state::lookup_alignment() {
+      if let Some(alignment_cell) = alignment_stored.alignment_cell() {
+        let mut al = alignment_cell.borrow_mut();
+        if let Some(cell) = al.current_column() {
+          cell.colspan = Some(2);
+          cell.align = Some(Align::Center);
+        }
+        al.next_column()?;
+      }
+    }
+  });
   DefMacro!("\\endsplit",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@split\\lx@hidden@egroup");
   DefPrimitive!("\\@end@split", { egroup()?; });

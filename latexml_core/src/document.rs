@@ -2497,6 +2497,9 @@ impl Document {
 
   pub fn lookup_id(&self, id: &str) -> Option<&Node> { self.idstore.get(id) }
 
+  /// Clone the idstore for use in thread-local contexts (math parsing).
+  pub fn get_idstore_clone(&self) -> HashMap<String, Node> { self.idstore.clone() }
+
   // ======================================================================
   //  Odd bit:
   //  In an XMDual, in each branch (content, presentation) there will be atoms
@@ -3186,13 +3189,34 @@ impl Document {
     // Now find all xml:id's in the new_children and record replacement id's for them
     let mut id_map = HashMap::default();
     // Find all id's defined in the copy and change the id.
+    // Note: XPath ".//@xml:id" can fail to find namespace-qualified attributes.
+    // Use DOM walking as fallback to ensure all ids are found.
     for child in new_children.iter() {
-      for id in self.findvalues(".//@xml:id", Some(child)) {
+      let mut xpath_ids: Vec<String> = self.findvalues(".//@xml:id", Some(child));
+      if xpath_ids.is_empty() {
+        // Fallback: walk DOM to find xml:id attributes
+        Self::collect_xml_ids_from(child, &mut xpath_ids);
+      }
+      for id in xpath_ids {
         id_map.insert(id.to_string(), self.modify_id(id));
       }
     }
     // Now do the cloning (actually copying) and insertion.
     self.append_clone_aux(node, new_children, &mut id_map)
+  }
+
+  /// Walk DOM to collect xml:id attribute values (fallback when XPath fails).
+  fn collect_xml_ids_from(node: &Node, ids: &mut Vec<String>) {
+    if let Some(id) = node.get_attribute("xml:id") {
+      ids.push(id);
+    } else if let Some(id) = node.get_attribute_ns("id", XML_NS) {
+      ids.push(id);
+    }
+    for child in node.get_child_nodes() {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        Self::collect_xml_ids_from(&child, ids);
+      }
+    }
   }
 
   fn append_clone_aux(
@@ -3216,6 +3240,12 @@ impl Document {
                 let mapped_id = id_map.get(&val).unwrap();
                 let newid = self.record_id_with_node(mapped_id, &new);
                 new.set_attribute(&key, &newid)?;
+                // Update id_map so subsequent idref lookups use the ACTUAL recorded id.
+                // record_id_with_node may change the id (e.g., if there are conflicts),
+                // so the mapped_id and newid may differ.
+                if *mapped_id != newid {
+                  id_map.insert(val.clone(), newid);
+                }
               },
               "idref" => {
                 // Refer to the replacement id if it was replaced

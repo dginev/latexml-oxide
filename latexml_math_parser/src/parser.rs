@@ -192,9 +192,13 @@ impl MathParser {
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
       note_progress(&s!("{:?} formulae ...", xmath_nodes.len()));
+      // Populate the thread-local idstore for XMRef resolution during parsing.
+      // Perl uses $doc->lookupID which accesses the document's idstore directly.
+      crate::data::set_math_idstore(document.get_idstore_clone());
       for math in xmath_nodes {
         self.parse(math, document)?;
       }
+      crate::data::clear_math_idstore();
 
       //     note_progress("\nMath parsing succeeded:"
       //         . join('', map { "\n   $_: "

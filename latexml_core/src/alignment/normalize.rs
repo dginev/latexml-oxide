@@ -126,6 +126,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
       } else {
         cell.empty = true;
         cell.skippable = true;
+        cell.align = None; // Perl: skippable cells don't get align (L470)
       }
     }
   }

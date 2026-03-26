@@ -117,7 +117,7 @@ LoadDefinitions!({
   }, novalue => true);
 
   DefParameterType!(Skip1Space, sub[_inner, _extra] {
-    gullet::skip_one_space()?;
+    gullet::skip_one_space(false)?;
   }, novalue => true);
 
   // Read the next token
