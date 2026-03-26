@@ -10,6 +10,6 @@ LoadDefinitions!({
   // Load raw txtbabel.def
   InputDefinitions!("txtbabel", noltxml => true, extension => Some(Cow::Borrowed("def")));
 
-  // Load babel support package (quote chars, language mapping, selectlanguage hook)
+  // Load babel support package
   RequirePackage!("babel_support");
 });
