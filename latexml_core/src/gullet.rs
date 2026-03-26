@@ -1875,6 +1875,8 @@ where FnR: FnOnce() -> Result<R> {
           close_mouth(true).ok(); // Close stale mouth above ours
         }
       }
+      // Reset progress counter so subsequent processing isn't immediately killed
+      gullet_mut!().progress = 0;
       return Err(e);
     }
   };
