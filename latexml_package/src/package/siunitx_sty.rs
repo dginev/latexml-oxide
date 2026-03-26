@@ -45,8 +45,9 @@ LoadDefinitions!({
 
   //======================================================================
   // Unit declaration primitives
-  // \DeclareSIUnit\meter{m} — defines \meter to expand to \mathrm{m}
-  DefPrimitive!("\\DeclareSIUnit[]{}", {
+  // Perl: \DeclareSIUnit OptionalKeyVals:SIX SkipSpaces DefToken {}
+  // Reads: optional [...], then a CS token, then {body}
+  DefPrimitive!("\\DeclareSIUnit[]", {
     let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
     let body = gullet::read_arg(ExpansionLevel::Off)?;
     let body_str = body.to_string();
@@ -55,7 +56,8 @@ LoadDefinitions!({
     def_macro(cs, None, expansion, None)?;
   });
 
-  DefPrimitive!("\\DeclareSIPrefix[]{}", {
+  // Perl: \DeclareSIPrefix OptionalKeyVals:SIX SkipSpaces DefToken {}{}
+  DefPrimitive!("\\DeclareSIPrefix[]", {
     let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
     let body = gullet::read_arg(ExpansionLevel::Off)?;
     let _power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -65,7 +67,8 @@ LoadDefinitions!({
     def_macro(cs, None, expansion, None)?;
   });
 
-  DefPrimitive!("\\DeclareSIQualifier[]{}", {
+  // Perl: \DeclareSIQualifier OptionalKeyVals:SIX SkipSpaces DefToken {}
+  DefPrimitive!("\\DeclareSIQualifier[]", {
     let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
     let body = gullet::read_arg(ExpansionLevel::Off)?;
     let body_str = body.to_string();
@@ -74,9 +77,20 @@ LoadDefinitions!({
     def_macro(cs, None, expansion, None)?;
   });
 
-  DefMacro!("\\DeclareBinaryPrefix[]{}", "");
-  DefMacro!("\\DeclareSIPrePower[]{}", "");
-  DefMacro!("\\DeclareSIPostPower[]{}", "");
+  // Perl: \DeclareBinaryPrefix, \DeclareSIPrePower, \DeclareSIPostPower — similar pattern
+  DefPrimitive!("\\DeclareBinaryPrefix[]", {
+    let _cs = gullet::read_token()?;
+    let _body = gullet::read_arg(ExpansionLevel::Off)?;
+    let _power = gullet::read_arg(ExpansionLevel::Off)?;
+  });
+  DefPrimitive!("\\DeclareSIPrePower[]", {
+    let _cs = gullet::read_token()?;
+    let _body = gullet::read_arg(ExpansionLevel::Off)?;
+  });
+  DefPrimitive!("\\DeclareSIPostPower[]", {
+    let _cs = gullet::read_token()?;
+    let _body = gullet::read_arg(ExpansionLevel::Off)?;
+  });
 
   //======================================================================
   // \per — division separator in units
@@ -85,9 +99,9 @@ LoadDefinitions!({
   DefMacro!("\\highlight{}", "#1");
   // \of — qualifier
   DefMacro!("\\of{}", "(#1)");
-  // \tothe, \raiseto — power
-  DefMacro!("\\tothe{}", "^{#1}");
-  DefMacro!("\\raiseto{}", "^{#1}");
+  // \tothe, \raiseto — power (use \textsuperscript for text-safe superscript)
+  DefMacro!("\\tothe{}", "\\textsuperscript{#1}");
+  DefMacro!("\\raiseto{}", "\\textsuperscript{#1}");
 
   //======================================================================
   // SI Base Units
