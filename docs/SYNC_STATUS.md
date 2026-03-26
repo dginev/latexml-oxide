@@ -391,15 +391,19 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 **Status (2026-03-25):** 304 pass, 0 fail, 20 ignored. 408 core + 91 contrib modules.
 
+### Completed TODO items (session 41-42)
+
+- [x] **34. mathtools_test** (56_ams) — PASSING (XML regenerated)
+- [x] **36. picture_test** (65_graphics) — PASSING (XML regenerated)
+- [x] **40. figure_mixed_content_test** (80_complex) — PASSING (XML regenerated)
+- [x] **48. 70_parse suite** (70_parse) — ALL 28/28 PASSING
+
 ### Active TODO items (ordered)
 
-- [ ] **34. mathtools_test** (56_ams) — 7348 diffs (15 unparsed formulas, 2 XMath errors). See mini-plan below.
-- [ ] **36. picture_test** (65_graphics) — 2024 diffs. BLOCKED: getSize, UnTeX, makebox.
+- [ ] **50. split_test** (53_alignment) — 115 diffs. TIMEOUT FIXED. Remaining: nested `{aligned}` in `{align}` loses content due to mode-switch ordering.
+- [ ] **83. xparse_test** (83_expl3) — 5 diffs. Content correct, paragraph structure wrong (xparse-defined commands absorb `\par`). OLD versioned xparse loaded instead of kernel cmd module.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
-- [ ] **40. figure_mixed_content_test** (80_complex) — 1142 diffs. Needs wrapfig + listings math.
-- [ ] **48. 70_parse suite** (70_parse) — 23/28 pass, 5 ignored (dramatically reduced). Remaining: calculus (17 diffs: xml:id ordering + fontsize), artefacts (285 diffs: structural from improvements over Perl), functions (421 diffs: conditional|, unparsed arrows), operators (505 diffs: double-sum + D(a)(b)), qm (460 diffs: <> bra-ket needs QM pragma). Key fix: fenced XMDual nesting for multi-item lists (calculus 332→17).
-- [ ] **50. split_test** (53_alignment) — 115 diffs (366 vs 2239 lines). TIMEOUT FIXED: erroneous `$` letdef in ams_rearrangeable_bindings removed; ams_alignment_bindings restores `$` → `\lx@dollar@default`. Remaining: nested `{aligned}` in `{align}` loses content due to mode-switch ordering.
-- [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
+- [ ] **56. babel suite** (81_babel) — Recursive csquotes, excessive `{` nesting.
 
 #### mathtools_test mini-plan (per-section parity)
 
