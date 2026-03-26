@@ -337,6 +337,11 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
   }
   
   let c = n as u8 as char;
+  // Guard against invalid class values from corrupted mathchar codes
+  // (e.g., during expl3 loading when \__int_eval_end: errors corrupt state)
+  if (class as usize) >= MATH_CLASS_ROLE.len() {
+    return Ok(MathCharProps::default());
+  }
   let class_role = MATH_CLASS_ROLE[class as usize];
 
   let mut f = (*curfont).clone();
