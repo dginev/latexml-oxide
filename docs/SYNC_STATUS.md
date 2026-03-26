@@ -360,7 +360,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-26):** 301 pass, 0 fail, 23 ignored (18 code-ignored + 5 run-but-fail). 409 core + 91 contrib modules.
+**Status (2026-03-26):** 306 pass, 0 fail, 18 ignored. 411 core + 91 contrib modules.
 
 ### Completed TODO items (session 41-43)
 
@@ -373,8 +373,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
 - [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
-- [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
-- [ ] **56. babel suite** (81_babel) — Recursive csquotes, excessive `{` nesting.
+- [ ] **38. xytest** (65_graphics) — 26 errors (was 102 TooManyErrors). Session 46: Fixed mouth double-finish catcode bug (flush_mouth.stop_reading split), added InputDefinitionOptions.at_letter, ported xy.tex.ltxml overlay (xyoption redef, SVG constructors, font defs), created xylatexml_tex.rs SVG driver (lines, paths, circles, arrows, direction calc). Remaining: SVG namespace not propagating, \xymatrix/\ar undefined (extension loading chain), coordinate precision.
+- [ ] **56. babel suite** (81_babel) — 202 diffs (no longer crashes). Session 46: now runs to completion. Issues: quote chars use bold `?` fallback (need language-specific quote definitions), document xml:lang missing, section 1 content displaced.
 
 #### mathtools_test mini-plan (per-section parity)
 
