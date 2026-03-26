@@ -427,7 +427,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Overarching infrastructure projects
 
-- [ ] **J. Rewrite system** — rewrite.rs at ~40%. Missing: `regexp`, `action`, `on_match`. ~300 lines.
+- [ ] **J. Rewrite system** — rewrite.rs at ~80%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label. Missing: `on_match` callback. ~562 lines.
 - [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
