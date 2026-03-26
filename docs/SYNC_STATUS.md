@@ -303,24 +303,21 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
 - [x] **40_math** (14/14)
   - [ ] batch — IGNORED: 149 diffs (math parser)
-- [ ] **50_structure** (41 pass, 1 ignored = 42 total)
-  - [x] abstract, acro, amsarticle, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, eqnums, epitest, faketitlepage, fancyhdr, figure_grids, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
-  - [ ] IEEE — IGNORED: math parser diffs (979 diffs)
+- [x] **50_structure** (42/42)
+  - [x] abstract, acro, amsarticle, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, eqnums, epitest, faketitlepage, fancyhdr, figure_grids, figures, filelist, floatnames, footnote, glossary, hyperref, IEEE, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
 - [ ] **52_namespace** (0 pass, 5 ignored = permanent)
   - [ ] ns1–ns5 — DTD not supported in Rust port
-- [ ] **53_alignment** (28 pass, 1 ignored = 29 total)
-  - [x] algx, array, badeqnarray, cells, colortbls, diagboxtest, eqnarray, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, ncases, plainmath, supertabular, tabtab, tabbing, tabular, tabularstar, vmode
-  - [ ] split — IGNORED: ~118 structural diffs, amsmath split + math parser
+- [x] **53_alignment** (29/29)
+  - [x] algx, array, badeqnarray, cells, colortbls, diagboxtest, eqnarray, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, ncases, plainmath, split, supertabular, tabtab, tabbing, tabular, tabularstar, vmode
 - [x] **55_theorem** (5/5)
   - [x] amstheorem, latextheorem, ntheorem, ntheoremstyle, theorem
-- [ ] **56_ams** (6 pass, 1 ignored = 7 total)
-  - [x] amsdisplay, cd, dots, genfracs, matrix, sideset
-  - [ ] mathtools — IGNORED: TooManyErrors, needs mathtools.sty
+- [x] **56_ams** (7/7)
+  - [x] amsdisplay, cd, dots, genfracs, mathtools, matrix, sideset
 - [ ] **65_graphics** (8 pass, 1 ignored = 9 total)
   - [x] calc, colors, framed, graphrot, keyval, picture, simplekv, xcolors
   - [ ] xytest — IGNORED: crash, needs xy.sty
-- [ ] **70_parse** (16 pass, 12 ignored = 28 total)
-  - [ ] batch — IGNORED: 120 diffs (math parser)
+- [x] **70_parse** (28/28)
+  - [x] all 28 parse tests passing
 - [x] **700_unit_parse** (3/3)
   - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
 - [ ] **80_complex** (14 pass, 2 ignored = 16 total)
@@ -329,12 +326,13 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
 - [ ] **81_babel** (0 pass, 1 ignored)
   - [ ] batch — IGNORED: unbounded memory leak timeout
-- [ ] **82_moderncv** (0 pass, 2 ignored)
-  - [ ] cs_cv, orc — needs moderncv.cls binding
+- [x] **82_moderncv** (2/2)
+  - [x] cs_cv, orc
 - [x] **83_expl3** (2/2)
-  - [ ] tilde_tricks, xparse — needs `\ExplSyntaxOn`
-- [ ] **84_slides** (0 pass, 2 ignored)
-  - [ ] beamer, slides — needs beamer.cls/slides.cls
+  - [x] tilde_tricks, xparse
+- [ ] **84_slides** (1 pass, 1 ignored = 2 total)
+  - [x] slides
+  - [ ] beamer — IGNORED: needs beamer.cls binding
 - [ ] **85_pgf** (0 pass, 2 ignored)
   - [ ] stress_pgfmath, stress_pgfplots — needs pgf.sty
 - [ ] **86_tikz** (0 pass, 10 ignored)
