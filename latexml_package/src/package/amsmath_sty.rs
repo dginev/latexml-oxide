@@ -1344,12 +1344,20 @@ pub fn rearrange_lone_ams_aligned(
           document.close_element_at(&mut xmath)?;
           document.close_element_at(&mut imath)?;
           document.expire_box_to_absorb();
-          // Clone cell content into main branch. The Perl moves originals
-          // (L671: map { $main->firstChild->appendChild($_) } ...) but
-          // our libxml wrapper has issues with unlink+reparent from detached
-          // subtrees, producing garbled nodes. Use clone instead.
+          // Perl L657-671: $stuff = $cell->firstChild, then
+          // map { $main->firstChild->appendChild($_) } map { $_->childNodes } @cells
+          // This flattens by taking the CHILDREN of each cell's first child,
+          // not the first child itself. We clone into main XMath.
           if let Some(mut mx) = document.findnodes("ltx:XMath", Some(&main)).into_iter().next() {
-            document.append_clone(&mut mx, cell_children)?;
+            // Get the first element child of the cell, then clone ITS children
+            if let Some(stuff) = cn.get_first_element_child() {
+              let stuff_children: Vec<Node> = stuff.get_child_nodes().into_iter()
+                .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
+                .collect();
+              if !stuff_children.is_empty() {
+                document.append_clone(&mut mx, stuff_children)?;
+              }
+            }
           }
         }
         document.close_element_at(&mut td)?;
