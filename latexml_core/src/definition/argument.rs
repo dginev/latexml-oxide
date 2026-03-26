@@ -87,8 +87,8 @@ impl Object for ArgWrap {
       KV(kv) => kv.be_digested(),
       Pair(p) => p.be_digested(),
       None => Ok(Digested::default()),
-      AlignmentTemplate(_) => todo!(),
-      RegisterDefinition(_) => todo!(), // ??? not meant for direct digestion I think
+      AlignmentTemplate(_) => Ok(Digested::default()), // templates don't digest directly
+      RegisterDefinition(_) => Ok(Digested::default()), // register defs don't digest directly
     }
   }
   fn revert(&self) -> Result<Tokens> {
@@ -105,8 +105,8 @@ impl Object for ArgWrap {
       KV(kv) => kv.revert(),
       Pair(p) => p.revert(),
       None => Ok(Tokens!()),
-      AlignmentTemplate(_) => todo!(),
-      RegisterDefinition(_) => todo!(), // ??? not meant for direct reversion I think
+      AlignmentTemplate(_) => Ok(Tokens!()), // templates don't revert directly
+      RegisterDefinition(_) => Ok(Tokens!()), // register defs don't revert directly
     }
   }
 }
@@ -180,8 +180,7 @@ impl ArgWrap {
       Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_)
       | Pair(_) => Some(Cow::Owned(self.revert()?)),
       None => Some(Cow::Borrowed(NO_BORROWED_TOKENS)),
-      AlignmentTemplate(_) => todo!(),
-      RegisterDefinition(_) => todo!(), // ??? not meant for such use
+      AlignmentTemplate(_) | RegisterDefinition(_) => Some(Cow::Owned(Tokens!())),
     };
     Ok(result)
   }
@@ -367,7 +366,7 @@ impl ArgWrap {
         tks.unlist()
       },
       ArgWrap::None => Vec::new(),
-      _ => todo!(),
+      _ => self.revert().unwrap_or_default().unlist(),
     }
   }
 
