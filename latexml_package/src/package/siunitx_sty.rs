@@ -33,14 +33,14 @@ LoadDefinitions!({
   DefMacro!("\\ang[]{}", "#2\\SIUnitSymbolDegree{}");
 
   //======================================================================
-  // Unit formatting — simplified
-  // \si{unit} — format unit
-  DefMacro!("\\si[]{}", "#2");
+  // Unit formatting — wrap in math mode for superscripts/subscripts
+  // \si{unit} — format unit in math mode
+  DefMacro!("\\si[]{}", "\\ensuremath{#2}");
   // \SI{number}{unit} — number followed by unit
-  DefMacro!("\\SI[]{}{}", "#2\\,#3");
+  DefMacro!("\\SI[]{}{}", "\\ensuremath{#2\\,#3}");
   // \SIlist, \SIrange
-  DefMacro!("\\SIlist[]{}{}", "#2\\,#3");
-  DefMacro!("\\SIrange[]{}{}{}", "#2 to #3\\,#4");
+  DefMacro!("\\SIlist[]{}{}", "\\ensuremath{#2\\,#3}");
+  DefMacro!("\\SIrange[]{}{}{}", "\\ensuremath{#2}\\text{ to }\\ensuremath{#3\\,#4}");
   Let!("\\tablenum", "\\num");
 
   //======================================================================
