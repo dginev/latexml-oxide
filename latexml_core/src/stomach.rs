@@ -424,8 +424,12 @@ pub fn enter_horizontal() {
   let mode = lookup_string("MODE");
   if mode.ends_with("vertical") {
     assign_value_inplace("MODE", arena::pin("horizontal"));
+  } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
+    // Perl L420-422: warn on unexpected mode
+    Warn!("unexpected", "enterHorizontal",
+      s!("Unexpected mode '{}' for enterHorizontal", mode));
   }
-  // else: already horizontal or math — ignore
+  // else: already horizontal or math — fine
 }
 
 /// Resume vertical mode by executing \par, in TeX-like fashion.
@@ -884,8 +888,11 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
       },
       Some(Scope::Global),
     );
-    // and then invoke it.
-    invoke_token(token)
+    // Perl: unread the token and return empty, so the outer loop re-reads
+    // and dispatches through the normal path (with the newly installed stub).
+    // This ensures gullet-level side effects (filtering, expansion) are applied.
+    gullet::unread_one(*token);
+    Ok(Vec::new())
   }
 }
 
