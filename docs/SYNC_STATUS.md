@@ -360,7 +360,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-26):** 306 pass, 0 fail, 18 ignored. 411 core + 91 contrib modules.
+**Status (2026-03-26):** 307 pass, 0 fail, 17 ignored. 417 core + 91 contrib modules.
 
 ### Completed TODO items (session 41-43)
 
@@ -430,6 +430,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **J. Rewrite system** — rewrite.rs at ~80%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label. Missing: `on_match` callback. ~562 lines.
 - [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
+- [ ] **E. Precompiled kernel dump** — Perl uses `make formats` to precompile the LaTeX kernel (latex.ltx + expl3 + base packages) into a `.dump.ltxml` file that's loaded at test time. Our fresh kernel loading has incomplete LaTeX3 hook system (expl3 token limit, missing hook primitives) which causes babel 3.x to malfunction (25+ comma tokens leak per hook point). A Rust kernel dump would: fix babel and hook-dependent packages, match Perl's approach, speed up test execution significantly.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 
