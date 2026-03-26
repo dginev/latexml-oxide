@@ -412,7 +412,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
-- [ ] P1. guessTableHeaders: circled digit classification (ding.xml, tabular.xml, xcolors.xml)
+- [x] P1. guessTableHeaders: circled digit classification — FIXED: exclude U+2460-U+24FF (circled/parenthesized numbers) from is_numeric() check, matching Perl's ASCII-only `\d`. Preserves bbold double-struck digit (Nd) matching.
 - [ ] P5. xcolors.xml: color complement/wheel computation, colortbl row cycling. BLOCKED.
 
 ### Heavy package bindings (distant future)

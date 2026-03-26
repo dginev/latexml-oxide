@@ -1302,11 +1302,13 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec> = Vec::new();
   // Perl: /^[\s\d]+$/ — \d matches ASCII digits only in Perl 5.
-  // Use is_numeric() which also matches mathematical digits (𝟘-𝟟) and superscript/subscript digits.
-  // This enables header detection for bbold fontmaps where double-struck digits differ from symbols.
-  // Note: circled digits (①-⑳ etc.) also match; this differs from Perl but the effect is benign
-  // for most tables since circled digits appear only in specialized fontmaps.
-  if !content.is_empty() && content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
+  // Perl L1123: /^[\s\d]+$/ — Perl \d is ASCII-only (0-9).
+  // Use is_numeric() to also match mathematical digits (𝟘-𝟟) from bbold fontmaps,
+  // but exclude circled/parenthesized number forms (①⑴ etc., Unicode No category)
+  // which shouldn't be classified as Integer.
+  if !content.is_empty() && content.chars().all(|c| {
+    c.is_whitespace() || (c.is_numeric() && !(('\u{2460}'..='\u{24FF}').contains(&c)))
+  }) {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
     let mut nodes = xcell.get_child_nodes();
