@@ -929,16 +929,15 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // and specializes the font. This produces the correct LaTeXML-level properties.
       // The mathchar parsing handles non-ASCII chars needing font map lookup.
       // TODO: Use for chars where font-encoding glyph differs from input.
+      // Perl L248-257: if IN_MATH && mathcode → decodeMathChar (math box)
+      // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
       if lookup_bool("IN_MATH") {
         if let Some(mathcode) = lookup_mathcode_sym(&meaning.get_sym()) {
           return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
         }
       }
-      // Perl L250-257: enterHorizontal in BOTH the non-math case AND the
-      // math-but-no-mathcode fallthrough (matching Perl's else branch)
-      if !lookup_bool("IN_MATH") {
-        enter_horizontal();
-      }
+      // Fallthrough: either not in math, or in math but no mathcode
+      enter_horizontal();
       let text = font::decode_string(meaning.get_sym(), None, true);
       Ok(Some(Digested::from(Tbox::new(
         text,
