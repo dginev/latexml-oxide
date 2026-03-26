@@ -318,6 +318,7 @@ pub mod sectsty_sty;
 pub mod setspace_sty;
 pub mod showkeys_sty;
 pub mod sidecap_sty;
+pub mod siunitx_sty;
 pub mod siunits_sty;
 pub mod slashbox_sty;
 pub mod slashed_sty;

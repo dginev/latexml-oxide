@@ -382,6 +382,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pdfpages.sty" => package::pdfpages_sty::load_definitions(),
     "pdflscape.sty" => package::pdflscape_sty::load_definitions(),
     "sidecap.sty" => package::sidecap_sty::load_definitions(),
+    "siunitx.sty" => package::siunitx_sty::load_definitions(),
     "showkeys.sty" => package::showkeys_sty::load_definitions(),
     "underscore.sty" => package::underscore_sty::load_definitions(),
     "undertilde.sty" => package::undertilde_sty::load_definitions(),
