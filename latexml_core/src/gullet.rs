@@ -290,7 +290,10 @@ pub fn flush_mouth() {
         runtime.pushback.push_back(token);
       }
     }
-    runtime.mouth.finish(); // then finish the mouth (it'll get closed on next read)
+    // Stop reading (clear buffers, close file) but do NOT restore catcodes.
+    // Catcodes are restored by close_mouth → finish() when the mouth is
+    // properly popped from the stack.
+    runtime.mouth.stop_reading();
   }
 }
 

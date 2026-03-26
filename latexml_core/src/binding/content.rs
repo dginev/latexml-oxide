@@ -63,6 +63,9 @@ pub struct InputDefinitionOptions {
   pub raw:           bool,
   /// flag to allow reloading a previously loaded definitions file
   pub reloadable:    bool,
+  /// flag: set @ catcode to LETTER during loading (default true).
+  /// Set to false for packages like xy.tex that need @ to stay as OTHER.
+  pub at_letter:     bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
@@ -78,6 +81,7 @@ impl Default for InputDefinitionOptions {
       withoptions:   None,
       handleoptions: false,
       as_class:      false,
+      at_letter:     true,
     }
   }
 }
@@ -282,7 +286,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       }),
     ) {
       is_found_raw = true;
-      load_tex_definitions(&filename, &file, options.reloadable)?;
+      load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
     } else {
       // Mark as loaded even on failure — prevents retrying a missing file
       // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
@@ -588,7 +592,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
-fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool) -> Result<()> {
+fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_letter: bool) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -626,7 +630,7 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool) -> Resu
   };
   let pathname_mouth = Mouth::create(pathname, MouthOptions {
     fordefinitions: true,
-    at_letter: true,
+    at_letter,
     notes: true,
     content,
     ..MouthOptions::default()
