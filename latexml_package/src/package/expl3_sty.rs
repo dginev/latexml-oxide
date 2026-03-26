@@ -8,10 +8,14 @@ LoadDefinitions!({
   // We skip the raw .lua file: Lua is not TeX, loading it as raw TeX causes
   // 646 "Script _ can only appear in math mode" errors from Lua's underscored identifiers.
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
-  // Load raw expl3.sty — may hit token limit (5M) due to infinite loop in kernel.
-  // Catch the error so our post-load fixup still runs.
+  // Load raw expl3.sty — with expanded skip_one_space, f-expansion works and
+  // the kernel loads much further. Temporarily lower the token limit to prevent
+  // reaching the fp module (which has cascading errors). 2M tokens is enough
+  // for all quark creation and basic infrastructure.
+  let saved_limit = gullet::set_token_limit(Some(1_000_000));
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+  gullet::restore_token_limit(saved_limit);
 
   // Post-load fixup for expl3 f-expansion.
   //
@@ -28,6 +32,13 @@ LoadDefinitions!({
   // Now apply all fixups with expl3 catcodes active.
   raw_tex(concat!(
     r"\protected\long\gdef\exp_end_continue_f:w{\number\c_zero_int}",
+    r"\cs_undefine:N\__tl_if_recursion_tail_break:nN",
+    r"\cs_undefine:N\__str_if_recursion_tail_break:NN",
+    r"\cs_undefine:N\__str_if_recursion_tail_stop_do:Nn",
+    r"\cs_undefine:N\__int_if_recursion_tail_stop_do:Nn",
+    r"\cs_undefine:N\__int_if_recursion_tail_stop:N",
+    r"\cs_undefine:N\__bool_if_recursion_tail_stop_do:nn",
+    r"\cs_undefine:N\__prop_if_recursion_tail_stop:n",
     r"\__kernel_quark_new_test:N\__tl_if_recursion_tail_break:nN",
     r"\__kernel_quark_new_test:N\__str_if_recursion_tail_break:NN",
     r"\__kernel_quark_new_test:N\__str_if_recursion_tail_stop_do:Nn",

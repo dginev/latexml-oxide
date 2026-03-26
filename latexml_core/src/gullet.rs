@@ -118,6 +118,22 @@ macro_rules! gullet_mut {
     (*GULLET).borrow_mut()
   };
 }
+/// Set the token limit and reset progress. Returns previous (limit, progress) for restoration.
+pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
+  let mut g = gullet_mut!();
+  let prev = (g.token_limit, g.progress);
+  g.token_limit = limit;
+  g.progress = 0;
+  prev
+}
+
+/// Restore the token limit and progress from a previous set_token_limit call.
+pub fn restore_token_limit(saved: (Option<usize>, usize)) {
+  let mut g = gullet_mut!();
+  g.token_limit = saved.0;
+  g.progress = saved.1;
+}
+
 macro_rules! runtime {
   () => {
     (*GULLET).borrow_mut().runtime
@@ -405,9 +421,15 @@ pub fn read_token() -> Result<Option<Token>> {
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
 
     // Wow!!!!! See TeX the Program \S 309
+    // Perl: alignment check → dont_expand check → else break
+    // ALIGN_STATE tracking happens AFTER the loop (Perl L320-324)
     if let Some(ref nextt) = next_token {
-      let mut check_dont_expand = true;
-      // Perl Gullet.pm L322-323: track { and } at scan level for ALIGN_STATE
+      // NOTE: Perl tracks { and } OUTSIDE the loop (after break), but in Rust
+      // we track here BEFORE checks. This is an intentional divergence:
+      // moving tracking after the loop causes expl3 kernel loading to proceed
+      // further into problematic modules (fp). The pre-check tracking prevents
+      // alignment triggers on { tokens (count becomes 1 before the check).
+      // Both orderings produce the same result for non-alignment tokens.
       match nextt.get_catcode() {
         Catcode::BEGIN => increment_align_group_count(),
         Catcode::END => decrement_align_group_count(),
@@ -415,26 +437,24 @@ pub fn read_token() -> Result<Option<Token>> {
       }
       if (align_group_count() == 0) && has_reading_alignment() {
         if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
-          check_dont_expand = false;
           let reading_alignment = get_reading_alignment().unwrap();
           if let DigestedData::Alignment(data) = reading_alignment.data() {
             handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
           } else {
             return Err("reading_alignment should always contain DigestedData::Alignment".into());
           }
+          continue; // Perl: handleTemplate then continue while(1) loop
         }
       }
-      if check_dont_expand {
-        if nextt.code == Catcode::CS && nextt.text == *DONT_EXPAND_SYM {
-          let unexpanded = read_token()?;
-          // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
-          if let Some(tok) = unexpanded {
-            set_special_relax_smuggled(tok);
-          }
-          next_token = Some(T_CS!("\\special_relax"));
+      if nextt.code == Catcode::CS && nextt.text == *DONT_EXPAND_SYM {
+        let unexpanded = read_token()?;
+        // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
+        if let Some(tok) = unexpanded {
+          set_special_relax_smuggled(tok);
         }
-        break;
+        next_token = Some(T_CS!("\\special_relax"));
       }
+      break;
     } else {
       break;
     }
@@ -1357,8 +1377,8 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
           s.remove(0);
         }
         let s_char = s.chars().next().unwrap_or('\0');
-        // Perl: skip1Space($self, 1); — consume one optional space after charcode
-        skip_one_space()?;
+        // Perl: skip1Space($self, 1); — expanded space-skip after charcode
+        skip_one_space(true)?;
         Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
       } else {
         unread_one(token); // Unread
@@ -1474,7 +1494,7 @@ pub fn read_dimension() -> Result<Dimension> {
 /// Read a unit, returning the equivalent number of scaled points,
 fn read_unit() -> Result<Option<f64>> {
   let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
-    skip_one_space()?;
+    skip_one_space(true)?;
     Some(convert_unit(&u))
   } else if let Some(u) = read_internal_integer()? {
     Some(u.value_of() as f64) // These are coerced to number=>sp
@@ -1485,7 +1505,7 @@ fn read_unit() -> Result<Option<f64>> {
   } else {
     read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
     if let Some(u) = read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"])? {
-      skip_one_space()?;
+      skip_one_space(true)?;
       Some(convert_unit(&u))
     } else {
       None
@@ -1637,7 +1657,7 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
 
 pub fn read_mu_unit() -> Result<Option<i64>> {
   if read_keyword(&["mu"])?.is_some() {
-    skip_one_space()?;
+    skip_one_space(true)?;
     Ok(Some(UNITY)) // effectively, scaled mu
   } else if let Some(m) = read_internal_mu_glue()? {
     Ok(Some(m.value_of()))
@@ -1700,10 +1720,14 @@ pub fn skip_spaces() -> Result<()> {
   Ok(())
 }
 
-pub fn skip_one_space() -> Result<()> {
-  if let Some(token) = read_token()? {
-    if token.get_catcode() != Catcode::SPACE {
-      unread_one(token);
+/// Skip one optional space.
+/// If `expanded` is true, acts like `<one optional space>` and expands tokens (readXToken).
+/// Perl: skip1Space($self, $expanded)
+pub fn skip_one_space(expanded: bool) -> Result<()> {
+  let token = if expanded { read_x_token(None, false, None)? } else { read_token()? };
+  if let Some(t) = token {
+    if t.get_catcode() != Catcode::SPACE {
+      unread_one(t);
     }
   }
   Ok(())
