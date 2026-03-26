@@ -13,8 +13,18 @@ LoadDefinitions!({
   DefMacro!("\\xystycatcode", "12");
 
   // Step 2: Load raw xy.tex (Perl: at_letter => 0)
+  // Save \@currname/\@currext before raw loading (xy.tex changes these internally)
+  let saved_currname = gullet::do_expand(T_CS!("\\@currname")).ok().map(|t| t.to_string());
+  let saved_currext = gullet::do_expand(T_CS!("\\@currext")).ok().map(|t| t.to_string());
   assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
   InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")), at_letter => false);
+  // Restore \@currname/\@currext so ProcessOptions uses the correct package name
+  if let Some(ref name) = saved_currname {
+    def_macro(T_CS!("\\@currname"), None, Tokenize!(name), None)?;
+  }
+  if let Some(ref ext) = saved_currext {
+    def_macro(T_CS!("\\@currext"), None, Tokenize!(ext), None)?;
+  }
 
   //======================================================================
   // Step 3: xy.tex.ltxml overlay (Perl L26-151)
@@ -206,6 +216,7 @@ LoadDefinitions!({
   DeclareOption!("12pt", "\\xywithoption{tips}{\\def\\tipsize@@{12}}");
 
   // Catch-all: DeclareOption(undef, ...)
+  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
   DeclareOption!(None, {
     let current_option = gullet::do_expand(T_CS!("\\CurrentOption"))?.to_string();
     gullet::unread(Tokenize!(&s!("\\xyoption{{{}}}", current_option)));
