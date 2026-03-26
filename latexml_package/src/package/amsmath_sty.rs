@@ -1334,7 +1334,6 @@ pub fn rearrange_lone_ams_aligned(
           };
           document.set_box_to_absorb(None);
           let mut imath = document.open_element_at(&mut td, "ltx:Math", None, None)?;
-          document.set_attribute(&mut imath, "mode", "inline")?;
           if !cell_tex.is_empty() {
             // Pre-set tex to prevent afterClose from using wrong box reversion
             document.set_attribute(&mut imath, "tex", &cell_tex)?;

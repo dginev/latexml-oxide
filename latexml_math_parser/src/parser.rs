@@ -200,6 +200,10 @@ impl MathParser {
       }
       crate::data::clear_math_idstore();
 
+      // TODO: Run parse_kludge on failed XMath nodes (wraps OPEN/CLOSE in XMWrap).
+      // Perl: parse_kludge (MathParser.pm L530-566) wraps delimiter pairs in XMWrap.
+      // Currently deferred — matching failed nodes after DOM modification is unreliable.
+
       //     note_progress("\nMath parsing succeeded:"
       //         . join('', map { "\n   $_: "
       // . colorizeString(self.passed{$_} . "/" . (self.passed{$_} +
@@ -555,7 +559,8 @@ impl MathParser {
   /// the parser module break Marpa grammar precomputation. The kludge logic
   /// must be moved to core_interface.rs (the caller) using failed_xmath_ids.
   fn parse_kludge(&self, _node: &mut Node, _document: &mut Document) {
-    // No-op — see note above
+    // TODO: Perl L530-566: wraps OPEN..CLOSE delimiter pairs in XMWrap.
+    // Deferred — needs careful handling to avoid wrapping successfully-parsed content.
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
