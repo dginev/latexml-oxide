@@ -400,7 +400,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Active TODO items (ordered)
 
-- [ ] **50. split_test** (53_alignment) — ~156 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44 fixes: `\if@in@ams@align` implemented, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via thread-local idstore, aligned-in-equation tex fixed. Remaining: aligned-in-`\[..\]` main Math parsing (cell items joined with invisible-times), XMWrap wrapping, `\lx@text@lbrace` tex.
+- [ ] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
 - [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **56. babel suite** (81_babel) — Recursive csquotes, excessive `{` nesting.
