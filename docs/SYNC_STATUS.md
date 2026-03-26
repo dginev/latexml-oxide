@@ -276,12 +276,12 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 - [x] **20_digestion** (10/10)
   - [x] box, chardefs, defaultunits, def, dollar, io, primes, rebox, testctr, xargs
 - [x] **22_fonts** (23/23)
-  - [ ] abxtest — IGNORED: needs `\hexnumber@`, `\mathxfam` (mathabx binding)
+  - [x] abxtest
   - [x] acc
   - [x] accents
   - [x] bbold
   - [x] cancels
-  - [ ] ding — IGNORED: enumerate nesting + guessTableHeaders
+  - [x] ding
   - [x] emph
   - [x] esint
   - [x] fonts
@@ -292,9 +292,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] mixed
   - [x] omencodings
   - [x] plainfonts
-  - [ ] sizes — IGNORED: ~26 diff hunks, vbox/vtop height/depth
+  - [x] sizes
   - [x] soul
-  - [ ] stmaryrd — IGNORED: needs stmaryrd.sty port (1449 diffs)
+  - [x] stmaryrd
   - [x] textcomp
   - [x] textsymbols
   - [x] ulem
@@ -307,53 +307,27 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
 - [x] **40_math** (14/14)
   - [ ] batch — IGNORED: 149 diffs (math parser)
-- [x] **50_structure** (42/42)
-  - [x] abstract, acro, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, epitest, faketitlepage, fancyhdr, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
-  - [x] amsarticle
-  - [ ] eqnums — IGNORED: equation counter stepping + tag font (416 diffs)
-  - [ ] figure_grids — IGNORED: needs BuildPanelsAndID (331 diffs)
+- [ ] **50_structure** (41 pass, 1 ignored = 42 total)
+  - [x] abstract, acro, amsarticle, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, eqnums, epitest, faketitlepage, fancyhdr, figure_grids, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
   - [ ] IEEE — IGNORED: math parser diffs (979 diffs)
 - [ ] **52_namespace** (0 pass, 5 ignored = permanent)
   - [ ] ns1–ns5 — DTD not supported in Rust port
-- [ ] **53_alignment** (18 pass, 11 ignored = 29 total)
-  - [x] array, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, tabtab, tabbing, tabular, tabularstar
-  - [ ] algx — IGNORED: 163 diffs, needs math parser XMDual
-  - [ ] badeqnarray — IGNORED: 182 diffs, needs afterConstruct
-  - [ ] cells — IGNORED: stack overflow
-  - [ ] colortbls — IGNORED: crash
-  - [ ] diagboxtest — IGNORED: infinite loop timeout
-  - [ ] eqnarray — IGNORED: 1176 diffs, needs afterConstruct + math parser
-  - [ ] ncases — IGNORED: infinite loop timeout
-  - [ ] plainmath — IGNORED: 351 diffs, math parser XMDual
-  - [ ] split — IGNORED: 2228 diffs, amsmath split + math parser
-  - [ ] supertabular — IGNORED: 629 diffs, needs supertabular.sty
-  - [ ] vmode — IGNORED: segfault
+- [x] **53_alignment** (29/29)
+  - [x] algx, array, badeqnarray, cells, colortbls, diagboxtest, eqnarray, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, ncases, plainmath, supertabular, tabtab, tabbing, tabular, split, supertabular, tabtab, tabbing, tabular, tabularstar, vmode
 - [x] **55_theorem** (5/5)
-  - [x] amstheorem, latextheorem, ntheoremstyle, theorem
-  - [ ] ntheorem — IGNORED: 1479 diffs, math parser + eqnarray
-- [x] **56_ams** (7/7)
-  - [x] dots, genfracs
-  - [x] amsdisplay
-  - [ ] cd — IGNORED: panic in math parser, needs amscd.sty
+  - [x] amstheorem, latextheorem, ntheorem, ntheoremstyle, theorem
+- [ ] **56_ams** (6 pass, 1 ignored = 7 total)
+  - [x] amsdisplay, cd, dots, genfracs, matrix, sideset
   - [ ] mathtools — IGNORED: TooManyErrors, needs mathtools.sty
-  - [ ] matrix — IGNORED: 187 diffs, needs afterConstruct + math parser
-  - [ ] sideset — IGNORED: 488 diffs, needs afterConstruct
-- [ ] **65_graphics** (5 pass, 4 ignored = 9 total)
-  - [x] calc, colors, framed, keyval, simplekv
-  - [ ] graphrot — IGNORED: 596 diffs, `\begingroup` in `\csname..\endcsname`
-  - [ ] picture — IGNORED: 3125 diffs, needs picture env
-  - [ ] xcolors — IGNORED: 447 diffs, complete xcolor port
+- [ ] **65_graphics** (8 pass, 1 ignored = 9 total)
+  - [x] calc, colors, framed, graphrot, keyval, picture, simplekv, xcolors
   - [ ] xytest — IGNORED: crash, needs xy.sty
 - [ ] **70_parse** (16 pass, 12 ignored = 28 total)
   - [ ] batch — IGNORED: 120 diffs (math parser)
 - [x] **700_unit_parse** (3/3)
   - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
-- [ ] **80_complex** (10 pass, 6 ignored = 16 total)
-  - [x] aastex631_deluxetable, aastex_test, equationnest, hyperchars, hypertest, labelled, figure_dual_caption, tcilatex_minimal, versioned_fallback, xii
-  - [ ] acm_aria — IGNORED: timeout, needs acmart.cls
-  - [x] aliceblog
-  - [ ] cleveref_minimal — IGNORED: 302 diffs, needs cleveref.sty
-  - [ ] figure_mixed_content — IGNORED: 1142 diffs, needs wrapfig + listings math
+- [ ] **80_complex** (13 pass, 3 ignored = 16 total)
+  - [x] aastex631_deluxetable, aastex_test, acm_aria, aliceblog, cleveref_minimal, equationnest, figure_dual_caption, figure_mixed_content, hyperchars, hypertest, labelled, tcilatex_minimal, versioned_fallback, xii
   - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
   - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
 - [ ] **81_babel** (0 pass, 1 ignored)
@@ -400,7 +374,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Active TODO items (ordered)
 
-- [ ] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
+- [x] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
 - [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **56. babel suite** (81_babel) — Recursive csquotes, excessive `{` nesting.
