@@ -11,10 +11,86 @@ LoadDefinitions!({
 
   //======================================================================
   // Automatic bracing
+  // Perl: physics.sty.ltxml L44-142 — \quantity reads delimiter dynamically.
 
-  DefMacro!("\\quantity{}", r"\left(#1\right)");
+  // Helper: read optional size prefix (*, \big, \Big, \bigg, \Bigg)
+  // Returns: 0=no stretch, 1=stretchy (\left/\right), or the size token.
+  // Perl: phys_readSize (L50-61)
+  // Perl: physics.sty.ltxml L132-142 — \quantity reads delimiter dynamically.
+  // Reads optional size prefix (*, \big, etc.), then reads matching delimiters.
+  DefPrimitive!("\\quantity", {
+    // Read optional size prefix: *, \big/\Big/\bigg/\Bigg
+    let mut size_cs: Option<Token> = None;
+    let mut no_stretch = false;
+    let first = gullet::read_token()?;
+    let delim_tok = if let Some(ref t) = first {
+      let s = t.to_string();
+      if s == "*" {
+        no_stretch = true;
+        gullet::read_token()?
+      } else if s.starts_with('\\') && (s == "\\big" || s == "\\Big"
+          || s == "\\bigg" || s == "\\Bigg") {
+        size_cs = Some(t.clone());
+        gullet::read_token()?
+      } else {
+        first // No size prefix — this IS the delimiter token
+      }
+    } else { first };
+    // Determine open/close from delimiter token
+    let (open_s, close_s, is_brace) = if let Some(ref t) = delim_tok {
+      match t.to_string().as_str() {
+        "(" => ("(", ")", false),
+        "[" => ("[", "]", false),
+        "|" => ("|", "|", false),
+        _ => {
+          // TeX-style {} arg or unknown — unread and use default braces
+          gullet::unread_one(t.clone());
+          ("\\{", "\\}", true)
+        }
+      }
+    } else { ("\\{", "\\}", true) };
+    // Read argument
+    let arg = if is_brace {
+      gullet::read_arg(ExpansionLevel::Off)?
+    } else {
+      let open_tok = Token::from(open_s);
+      let close_tok = Token::from(close_s);
+      let mut tokens = Vec::new();
+      let mut level = 1i32;
+      while let Some(tok) = gullet::read_token()? {
+        if tok == close_tok { level -= 1; if level == 0 { break; } tokens.push(tok); }
+        else if tok == open_tok { level += 1; tokens.push(tok); }
+        else { tokens.push(tok); }
+      }
+      Tokens::new(tokens)
+    };
+    // Emit result with appropriate sizing
+    let mut result = Vec::new();
+    if no_stretch {
+      // No stretch: bare delimiters
+      result.extend(Tokenize!(open_s).unlist());
+      result.extend(arg.unlist());
+      result.extend(Tokenize!(close_s).unlist());
+    } else if let Some(ref sz) = size_cs {
+      // Explicit size: \big( ... \big)
+      result.push(sz.clone());
+      result.extend(Tokenize!(open_s).unlist());
+      result.extend(arg.unlist());
+      result.push(sz.clone());
+      result.extend(Tokenize!(close_s).unlist());
+    } else {
+      // Default: \left ... \right
+      result.push(T_CS!("\\left"));
+      result.extend(Tokenize!(open_s).unlist());
+      result.extend(arg.unlist());
+      result.push(T_CS!("\\right"));
+      result.extend(Tokenize!(close_s).unlist());
+    }
+    gullet::unread(Tokens::new(result));
+  });
   Let!("\\qty", "\\quantity");
 
+  // Fenced variants — fixed delimiters (Perl: \lx@physics@fenced)
   DefMacro!("\\pqty{}", r"\left(#1\right)");
   DefMacro!("\\bqty{}", r"\left[#1\right]");
   DefMacro!("\\vqty{}", r"\left\vert #1\right\vert ");
