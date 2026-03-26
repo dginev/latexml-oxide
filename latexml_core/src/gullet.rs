@@ -515,7 +515,10 @@ pub fn read_x_token(
     // we got a token
     let token = next_token.unwrap();
     if token.get_catcode() == Catcode::CS && token.text == *DONT_EXPAND_SYM {
-      let unexpanded = read_token()?.unwrap();
+      let unexpanded = match read_token()? {
+        Some(t) => t,
+        None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
+      };
       if for_conditional && unexpanded.code == Catcode::ACTIVE {
         return Ok(Some(unexpanded));
       } else {
