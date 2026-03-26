@@ -429,7 +429,7 @@ LoadDefinitions!({
     \mathchardef\@Mii=10002
     \mathchardef\@Miii=10003
     \mathchardef\@Miv=10004
-    \def\@fontenc@load@list{\@elt{T1,OT1}}"
+    \def\@fontenc@load@list{\@elt{T1}\@elt{OT1}}"
   );
 
   DefMacro!("\\@vpt", "5");
