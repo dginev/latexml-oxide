@@ -417,7 +417,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Heavy package bindings (distant future)
 
-- [ ] physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines)
+- [ ] physics.sty (800 lines) — 3311 diffs (was 5474). Processes in 3.6s/209MB. Needs I_dual rewrite of 194 calls. I_dual infrastructure now available in xmath_helpers.rs.
+- [ ] siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
 - [x] expl3.sty — **WORKING**: expl3-code.tex loads with post-load fixup. Fixed: Lua loading, mouth destruction, `\numexpr` relax terminator, `\exp_end_continue_f:w` f-expansion (backtick→`\number` path), quark re-creation. tilde_tricks_test PASSES. xparse produces correct output (7 formatting diffs). Token limit (5M) still fires during kernel loading but document survives.
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
