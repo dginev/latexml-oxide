@@ -527,3 +527,28 @@ add_math_rewrite("f", "FUNCTION")?;  // enables function application
 3. **`eqnarray_bindings`**: Remove spurious `Let(T_MATH, '\lx@dollar@in@mathmode')` — Perl doesn't set this.
 
 **Key insight:** Any `read_x_token` call inside an alignment column can trigger `handle_template`. Parameter parsing (SkipSpaces, optional `[]`, etc.) calls `read_x_token`. If the content after the macro contains alignment tokens (`&`, `\cr`), they'll be intercepted by the outer alignment's template. Perl avoids this with `$LaTeXML::ALIGN_STATE = 1000000` (our `local_align_group_count`).
+
+## 22. Babel OOM: undefined macros → \<ltx:ERROR/\> self-expansion → infinite loop
+
+When babel 3.x calls `\selectlanguage{french}`, it triggers `\bbl@provide@locale`
+which calls `\babelprovide{french}` if `\csname datefrench\endcsname` is `\relax`.
+The `\babelprovide` path reads `.ini` files and uses many internal macros that our
+engine doesn't define. Our error recovery for undefined macros creates them as
+`<ltx:ERROR/>` — a string that, when expanded again, creates more error tokens.
+Some babel macros accumulate lists that include undefined macros, creating chains
+of error-recovery expansions that consume 14-26GB of memory.
+
+**Root causes identified:**
+1. `\bbl@languages` undefined → error recovery → self-referential expansion
+2. `\babelprovide` ini-loading path hits multiple undefined internal macros
+3. `\bbl@iflanguage` fails because `\l@<lang>` registers aren't defined
+
+**Fixes applied (emulating Perl's precompiled kernel):**
+- Pre-define `\bbl@languages{}` before babel loads
+- Pre-define `\captionslang` + `\datelang` for 27 common languages
+- Pre-define `\l@lang` registers for 13 common languages
+- Clear `\@fontenc@load@list` after babel loads (comma leak fix)
+
+**Fundamental fix needed:** Precompiled kernel dump (infrastructure E) that
+pre-loads all kernel state, or fix error recovery to NOT create self-referential
+expansions for undefined macros.
