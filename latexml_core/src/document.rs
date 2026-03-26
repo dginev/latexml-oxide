@@ -1212,9 +1212,14 @@ impl Document {
         }
       },
       Some(NodeType::ElementNode) => {
-        // TODO: handle properly
-        // let tag = model::get_node_document_qname(&node);
-        let tag = node.get_name();
+        // Get the qualified name (prefix:localname) for namespace-prefixed elements
+        let local_name = node.get_name();
+        let tag = if let Some(ns) = node.get_namespace() {
+          let prefix = ns.get_prefix();
+          if prefix.is_empty() { local_name } else { s!("{}:{}", prefix, local_name) }
+        } else {
+          local_name
+        };
         let children = node.get_child_nodes();
         let mut open_tag = s!("<{tag}");
 

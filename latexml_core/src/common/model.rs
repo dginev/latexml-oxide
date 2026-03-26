@@ -513,18 +513,26 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       arena::pin_static("xmlns")
     },
     ElementNode | AttributeNode => {
-      // match node.namespace_uri() {
-      //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
-      //     Some(prefix) => prefx+":"+node.get_name(),
-      //     None => node.get_name()
-      //   },
-      //   None => node.get_name()
-      // }
-      // TODO: Mock for now, add namespace_uri capability to rust-libxml next
       let name_str = node.get_name();
-      match name_str.as_str() {
-        "song" | "verse" => arena::pin(name_str),
-        regular => arena::pin(s!("ltx:{}", regular)),
+      // Use the actual namespace prefix from the node when available.
+      // For elements in the default (ltx) namespace, the prefix is empty
+      // so we prepend "ltx:". For SVG/MathML/etc with explicit prefix,
+      // use that prefix directly.
+      if let Some(ns) = node.get_namespace() {
+        let prefix = ns.get_prefix();
+        if prefix.is_empty() {
+          // Default namespace — use ltx: prefix
+          arena::pin(s!("ltx:{}", name_str))
+        } else {
+          // Explicit prefix (e.g., "svg", "m") — use it
+          arena::pin(s!("{}:{}", prefix, name_str))
+        }
+      } else {
+        // No namespace — special cases for non-namespaced elements
+        match name_str.as_str() {
+          "song" | "verse" => arena::pin(name_str),
+          regular => arena::pin(s!("ltx:{}", regular)),
+        }
       }
     },
     // Need others?
