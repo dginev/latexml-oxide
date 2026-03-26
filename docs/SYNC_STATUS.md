@@ -426,7 +426,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Overarching infrastructure projects
 
-- [ ] **J. Rewrite system** — rewrite.rs at ~80%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label. Missing: `on_match` callback. ~562 lines.
+- [x] **J. Rewrite system** — rewrite.rs at ~95%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match (compiled to Select). All operators functional, no todo!() panics. ~562 lines. Missing: compile_match for TeX-string patterns (rare), wildcard tracking.
 - [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
 - [ ] **E. Precompiled kernel dump** — Perl uses `make formats` to precompile the LaTeX kernel (latex.ltx + expl3 + base packages) into a `.dump.ltxml` file that's loaded at test time. Our fresh kernel loading has incomplete LaTeX3 hook system (expl3 token limit, missing hook primitives) which causes babel 3.x to malfunction (25+ comma tokens leak per hook point). A Rust kernel dump would: fix babel and hook-dependent packages, match Perl's approach, speed up test execution significantly.
