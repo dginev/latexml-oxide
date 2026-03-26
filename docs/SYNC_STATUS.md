@@ -400,7 +400,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Active TODO items (ordered)
 
-- [ ] **50. split_test** (53_alignment) — 1935 diffs. MODE-CRASH FIXED (was losing 85% content). Root cause: `\aligned[]` optional arg triggered handle_template for outer alignment during arg parsing. Fixed: `alignsafeOptional` (disables alignment checks during `[]` reading), removed spurious `SkipSpaces` from `\lx@begin@alignment`, removed eqnarray `T_MATH` letdef. Remaining diffs are structural (alignment rearrangement, xml:id, etc.).
+- [ ] **50. split_test** (53_alignment) — ~156 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44 fixes: `\if@in@ams@align` implemented, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via thread-local idstore, aligned-in-equation tex fixed. Remaining: aligned-in-`\[..\]` main Math parsing (cell items joined with invisible-times), XMWrap wrapping, `\lx@text@lbrace` tex.
 - [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
 - [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port.
 - [ ] **56. babel suite** (81_babel) — Recursive csquotes, excessive `{` nesting.
