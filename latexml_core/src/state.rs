@@ -603,6 +603,7 @@ impl State {
         }
       }
     }
+    // TRACE: watch for cleanup:w
     // regular check, local scope is default, unless a global prefix is set
     let scope = match scope_opt {
       Some(s) => s,

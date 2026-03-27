@@ -9,7 +9,6 @@ LoadDefinitions!({
   LoadPool!("LaTeX");
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
   // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
-  // No token limit, no l3file stubs needed.
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
 
