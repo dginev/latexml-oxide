@@ -62,7 +62,19 @@ LoadDefinitions!({
   // which loads .ini files — a path that our engine can't handle (multiple undefined
   // macros hit error recovery → <ltx:ERROR/> corruption → OOM).
   // Pre-defining makes \bbl@provide@locale skip the heavy \babelprovide path.
-  RawTeX!(r"\providecommand\captionsenglish{}\providecommand\dateenglish{}");
+  // English captions (from english.ldf) — must reset names when switching from other languages
+  RawTeX!(r"\providecommand\captionsenglish{%
+    \def\prefacename{Preface}\def\refname{References}%
+    \def\abstractname{Abstract}\def\bibname{Bibliography}%
+    \def\chaptername{Chapter}\def\appendixname{Appendix}%
+    \def\contentsname{Contents}%
+    \def\listfigurename{List of Figures}%
+    \def\listtablename{List of Tables}%
+    \def\indexname{Index}\def\figurename{Figure}%
+    \def\tablename{Table}\def\partname{Part}%
+    \def\pagename{Page}\def\seename{see}%
+    \def\alsoname{see also}\def\proofname{Proof}}");
+  RawTeX!(r"\providecommand\dateenglish{}");
   // French captions (from frenchb.ldf)
   RawTeX!(r"\providecommand\captionsfrench{%
     \def\prefacename{Pr\'eface}\def\refname{R\'ef\'erences}%
