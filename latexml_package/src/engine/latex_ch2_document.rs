@@ -63,7 +63,14 @@ LoadDefinitions!({
     // when expl3 has redefined it to use \AddToHook{begindocument}{...}.
     // Includes babel's \lx@babel@activate@mainlang.
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);}
+      boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);
+    }
+    // Fire babel language activation AFTER all hooks (including babel's own
+    // \selectlanguage call). This runs even if babel's hook code has errors.
+    // Use T_CS! directly since @ is OTHER catcode at \begin{document} time.
+    if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
+      boxes.push(stomach::digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
+    }
     state::assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
     if let Some(ops) = state::lookup_tokens("@document@preamble@afterend") {
       boxes.push(stomach::digest(ops)?);

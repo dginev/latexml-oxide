@@ -145,15 +145,24 @@ LoadDefinitions!({
       main
     };
     if !lang.is_empty() {
+      // Temporarily set @ to LETTER for CS name tokenization
+      // (at \begin{document} time, @ is OTHER which breaks \captions<lang>)
+      state::assign_catcode('@', Catcode::LETTER, None);
       // Call \captions<lang> to set localized names
       let cs = s!("\\captions{}", lang);
       if lookup_definition(&T_CS!(cs.clone()))?.is_some() {
-        gullet::unread(Tokenize!(&cs));
+        stomach::digest(Tokenize!(&cs))?;
       }
       // Call \ltx@bbl@select@language to set xml:lang
-      gullet::unread(Tokenize!(&s!("\\ltx@bbl@select@language{{{}}}", lang)));
+      let select_cs = s!("\\ltx@bbl@select@language{{{}}}", lang);
+      stomach::digest(Tokenize!(&select_cs))?;
+      // Restore @ to OTHER
+      state::assign_catcode('@', Catcode::OTHER, None);
     }
   });
+  // Register activation in @at@begin@document (fires at \begin{document}).
+  // Note: babel's own AtBeginDocument code (~700 tokens) includes
+  // \selectlanguage{\bbl@main@language} which must run first.
   RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
 
   // German " shorthand system (from germanb.ldf).
