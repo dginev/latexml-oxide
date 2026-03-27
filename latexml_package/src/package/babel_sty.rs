@@ -199,9 +199,29 @@ LoadDefinitions!({
         state::assign_meaning(&active_dq, defn, Some(Scope::Global));
       }
       // Directly invoke \captionsgerman and set xml:lang
-      // (gullet::unread gets lost during package loading; do it via stomach)
       stomach::digest(Tokenize!(r"\captionsgerman"))?;
-      stomach::digest(Tokenize!(r"\ltx@bbl@select@language{german}"))?;
+      // Set DOCUMENT_LANGUAGE directly (bypasses tokenization issues with @ catcode)
+      let lang_name = loaded.split(',').map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty()).last().unwrap_or_default();
+      let iso = match lang_name.as_str() {
+        "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
+        "french" | "francais" | "frenchb" => Some("fr"),
+        "spanish" => Some("es"),
+        "italian" => Some("it"),
+        "english" => Some("en"),
+        "american" | "USenglish" => Some("en-US"),
+        "british" | "UKenglish" => Some("en-GB"),
+        "portuguese" | "portuges" => Some("pt"),
+        "russian" | "russianb" => Some("ru"),
+        _ => None,
+      };
+      if let Some(code) = iso {
+        state::assign_value("DOCUMENT_LANGUAGE", Stored::from(code.to_string()), Some(Scope::Global));
+        // Also merge font language for text-level xml:lang
+        let mut font = Font::default();
+        font.language = Some(Cow::Owned(code.to_string()));
+        merge_font(font);
+      }
     }
   });
   RawTeX!(r"\lx@babel@maybe@german@shorthands");
