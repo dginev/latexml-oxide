@@ -168,14 +168,6 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   if state::has_meaning(&cs_tok) {
     return Ok(false);
   }
-  // Skip expl3-internal macros: they have delimited parameters (Until, Match)
-  // that our dump approximates as plain {}, causing breakage.
-  // expl3 internals use __ (double underscore) prefix convention.
-  // Also skip macros with : in the name (expl3 argument specifiers like :Nn, :nn)
-  // unless they're simple \cs_...: patterns without __ that might be user-facing.
-  if key.contains("__") || key.contains(':') {
-    return Ok(false);
-  }
 
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
   if parts.is_empty() {
