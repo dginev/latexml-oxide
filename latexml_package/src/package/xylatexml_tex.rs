@@ -65,6 +65,7 @@ fn xy_packpath(parts: &[XyPathPart]) -> String {
   }).collect::<Vec<_>>().join(" ")
 }
 
+#[allow(dead_code)]
 enum XyPathPart {
   Cmd(&'static str),
   Dim(Dimension),

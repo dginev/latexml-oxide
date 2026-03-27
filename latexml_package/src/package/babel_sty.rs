@@ -345,7 +345,7 @@ LoadDefinitions!({
       // Note: Perl has \let\xspace\relax here, but we have a proper
       // \xspace implementation in xspace_sty.rs. Load it for French macros.
       if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
-        crate::package::xspace_sty::load_definitions();
+        let _ = crate::package::xspace_sty::load_definitions();
       }
       // TODO: French active punctuation (:;!? → thin space + char).
       // Implemented but produces U+2006 encoding while Perl produces regular spaces.
