@@ -595,29 +595,39 @@ LoadDefinitions!({
 
   // \cirbuild@ — circle (Perl L522-557)
   DefConstructor!("\\cirbuild@",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] {
+      let is_full = match props.get("xy_full") {
+        Some(Stored::Bool(b)) => *b,
+        _ => true,
+      };
+      if is_full {
+        xy_emit_circle(document, props)?;
+      } else {
+        xy_emit_path(document, props)?;
+      }
+    },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let r = xy_reg_dim("\\R@");
       let r_px = dim_to_px(r);
-      let xc_px = r_px; // circle centered at (R@, 0) in xy convention
+      let xc_px = r_px;
       let cd = state::lookup_string("xy_circle_dir");
       if cd.is_empty() || cd == "0" {
         // Full circle
-        svg_empty_element(document, "svg:circle", string_map!(
-          "cx" => fmt2(xc_px), "cy" => "0", "r" => fmt2(r_px),
-          "stroke" => stroke, "fill" => fill
-        ))?;
+        stored_map!(
+          "xy_full" => true,
+          "xy_cx" => fmt2(xc_px), "xy_cy" => "0", "xy_r" => fmt2(r_px),
+          "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+        )
       } else {
         // Partial arc
         let d1 = xy_reg_num("\\count@@");
         let d2 = xy_reg_num("\\count@");
         let cd_val: i64 = cd.parse().unwrap_or(0);
         let (a1, a2) = if cd_val > 0 {
-          // CCW
           if d1 < d2 { ((d1 - 4) * 45, (d2 - 4) * 45) }
           else { ((d1 - 4) * 45, (d2 - 4 + 8) * 45) }
         } else {
-          // CW
           if d1 < d2 { ((d2 - 4) * 45, (d1 - 4 + 8) * 45) }
           else { ((d2 - 4) * 45, (d1 - 4) * 45) }
         };
@@ -631,9 +641,10 @@ LoadDefinitions!({
         let large = if a > 180 { 1 } else { 0 };
         let path = s!("M {} {} A {} {} {} {} 0 {} {}",
           fmt2(x1), fmt2(y1), fmt2(r_px), fmt2(r_px), a, large, fmt2(x0), fmt2(y0));
-        svg_empty_element(document, "svg:path", string_map!(
-          "d" => path, "stroke" => stroke, "fill" => fill
-        ))?;
+        stored_map!(
+          "xy_full" => false,
+          "xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+        )
       }
     }
   );
@@ -652,22 +663,16 @@ LoadDefinitions!({
 
   // \lx@xy@spline@ — cubic Bezier spline (Perl L656-692)
   DefConstructor!("\\lx@xy@spline@",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
-      let x0 = xy_reg_dim("\\X@p"); let y0 = xy_reg_dim("\\Y@p");
-      let x1 = xy_reg_dim("\\X@c"); let y1 = xy_reg_dim("\\Y@c");
-      let lc = xy_reg_dim("\\L@c"); let uc = xy_reg_dim("\\U@c");
-      let rc = xy_reg_dim("\\R@c"); let dc = xy_reg_dim("\\D@c");
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let path = xy_packpath(&[
-        XyPathPart::Cmd("M"), XyPathPart::Dim(x0), XyPathPart::Dim(y0),
-        XyPathPart::Cmd("C"), XyPathPart::Dim(lc), XyPathPart::Dim(uc),
-        XyPathPart::Dim(rc), XyPathPart::Dim(dc),
-        XyPathPart::Dim(x1), XyPathPart::Dim(y1),
+        XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
+        XyPathPart::Cmd("C"), XyPathPart::Dim(xy_reg_dim("\\L@c")), XyPathPart::Dim(xy_reg_dim("\\U@c")),
+        XyPathPart::Dim(xy_reg_dim("\\R@c")), XyPathPart::Dim(xy_reg_dim("\\D@c")),
+        XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
       ]);
-      let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:path", attrs)?;
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
     }
   );
 
@@ -719,29 +724,39 @@ LoadDefinitions!({
 
   // \lx@xy@buildcircle@ — ellipse from \R@ and \L@ (Perl L722-741)
   DefConstructor!("\\lx@xy@buildcircle@",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
-      let rx = xy_reg_dim("\\R@");
-      let ry = xy_reg_dim("\\L@");
-      let rx_px = dim_to_px(rx);
-      let ry_px = dim_to_px(ry);
-      let xc_px = rx_px;
-      let yc_px = ry_px + dim_to_px(xy_reg_dim("\\xydashl@")); // Perl: weird offset
-      let mut attrs = string_map!(
-        "cx" => fmt2(xc_px), "cy" => fmt2(yc_px),
-        "rx" => fmt2(rx_px), "ry" => fmt2(ry_px),
-        "stroke" => stroke, "fill" => fill
-      );
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+    sub[document, _args, props] {
+      let cx = match props.get("xy_cx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let cy = match props.get("xy_cy") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let rx = match props.get("xy_rx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let ry = match props.get("xy_ry") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
+      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
+      let mut attrs = string_map!("cx" => cx, "cy" => cy, "rx" => rx, "ry" => ry, "stroke" => stroke, "fill" => fill);
+      if let Some(Stored::String(d)) = props.get("xy_dashes") {
+        let dashes = arena::to_string(*d);
+        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+      }
       svg_empty_element(document, "svg:ellipse", attrs)?;
+    },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
+      let rx_px = dim_to_px(xy_reg_dim("\\R@"));
+      let ry_px = dim_to_px(xy_reg_dim("\\L@"));
+      let xc_px = rx_px;
+      let yc_px = ry_px + dim_to_px(xy_reg_dim("\\xydashl@"));
+      stored_map!(
+        "xy_cx" => fmt2(xc_px), "xy_cy" => fmt2(yc_px),
+        "xy_rx" => fmt2(rx_px), "xy_ry" => fmt2(ry_px),
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+      )
     }
   );
 
   // \framed@@ — rectangular frame with optional rounded corners (Perl L773-809)
   DefConstructor!("\\framed@@ {Dimension}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let r = args.first().and_then(|a| a.as_ref())
         .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
@@ -765,58 +780,60 @@ LoadDefinitions!({
           fmt2(x1 - r_px), fmt2(y1), fmt2(r_px), fmt2(r_px), fmt2(x1), fmt2(y1 - r_px),
           fmt2(x1), fmt2(y0 + r_px), fmt2(r_px), fmt2(r_px), fmt2(x1 - r_px), fmt2(y0))
       };
-      let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:path", attrs)?;
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
     }
   );
 
   // \circled@ — circle frame (Perl L811-829)
   DefConstructor!("\\circled@ {Dimension}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_circle(document, props)?; },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let r_arg = args.first().and_then(|a| a.as_ref())
         .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
       let l = xy_reg_dim("\\L@c"); let u = xy_reg_dim("\\U@c");
       let rc = xy_reg_dim("\\R@c"); let d = xy_reg_dim("\\D@c");
-      let w = Dimension::new(l.value_of() + rc.value_of());
-      let h = Dimension::new(u.value_of() + d.value_of());
-      let r = if r_arg.value_of() != 0 {
-        r_arg
-      } else {
-        let wv = w.value_of(); let hv = h.value_of();
-        Dimension::new(wv.max(hv) / 2)
-      };
-      let mut attrs = string_map!(
-        "cx" => fmt2(dim_to_px(x)), "cy" => fmt2(dim_to_px(y)),
-        "r" => fmt2(dim_to_px(r)),
-        "stroke" => stroke, "fill" => fill
-      );
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:circle", attrs)?;
+      let w_v = l.value_of() + rc.value_of();
+      let h_v = u.value_of() + d.value_of();
+      let r = if r_arg.value_of() != 0 { r_arg }
+        else { Dimension::new(w_v.max(h_v) / 2) };
+      Ok(stored_map!(
+        "xy_cx" => fmt2(dim_to_px(x)), "xy_cy" => fmt2(dim_to_px(y)),
+        "xy_r" => fmt2(dim_to_px(r)),
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+      ))
     }
   );
 
   // \ellipsed@ — ellipse frame (Perl L831-848)
   DefConstructor!("\\ellipsed@ {Dimension}{Dimension}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] {
+      let cx = match props.get("xy_cx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let cy = match props.get("xy_cy") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let rx = match props.get("xy_rx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let ry = match props.get("xy_ry") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
+      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
+      let mut attrs = string_map!("cx" => cx, "cy" => cy, "rx" => rx, "ry" => ry, "stroke" => stroke, "fill" => fill);
+      if let Some(Stored::String(d)) = props.get("xy_dashes") {
+        let dashes = arena::to_string(*d);
+        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+      }
+      svg_empty_element(document, "svg:ellipse", attrs)?;
+    },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let rx = args.first().and_then(|a| a.as_ref())
         .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
       let ry = args.get(1).and_then(|a| a.as_ref())
         .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
-      let mut attrs = string_map!(
-        "cx" => fmt2(dim_to_px(x)), "cy" => fmt2(dim_to_px(y)),
-        "rx" => fmt2(dim_to_px(rx)), "ry" => fmt2(dim_to_px(ry)),
-        "stroke" => stroke, "fill" => fill
-      );
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:ellipse", attrs)?;
+      Ok(stored_map!(
+        "xy_cx" => fmt2(dim_to_px(x)), "xy_cy" => fmt2(dim_to_px(y)),
+        "xy_rx" => fmt2(dim_to_px(rx)), "xy_ry" => fmt2(dim_to_px(ry)),
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+      ))
     }
   );
 
