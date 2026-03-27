@@ -440,6 +440,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "calrsfs.sty" => package::calrsfs_sty::load_definitions(),
     "cmbright.sty" => package::cmbright_sty::load_definitions(),
     "euscript.sty" => package::euscript_sty::load_definitions(),
+    "expl3.lua" => package::expl3_lua::load_definitions(),
     "expl3.sty" => package::expl3_sty::load_definitions(),
     "fixme.sty" => package::fixme_sty::load_definitions(),
     "fleqn.sty" => package::fleqn_sty::load_definitions(),
