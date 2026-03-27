@@ -257,6 +257,10 @@ LoadDefinitions!({
       stomach::digest(Tokenize!(r"\def\at{@}\def\boi{\textbackslash}"))?;
       stomach::digest(Tokenize!(r"\def\nombre#1{\numprint{#1}}"))?;
       stomach::digest(Tokenize!(r"\let\xspace\relax"))?;
+      // NOTE: French punctuation spacing (:;!? → thin_space + char) is NOT yet
+      // implemented. It requires making :;!? active ONLY in the document body
+      // (not during package loading), which needs AtBeginDocument support.
+      // Current: 18 diffs remain for french_test, all spacing-related.
     }
     // German-specific: activate " shorthand
     let is_german = lang_name == "german" || lang_name == "ngerman"
