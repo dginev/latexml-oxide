@@ -76,17 +76,69 @@ enum XyPathPart {
 /// Uses floatToElement to find the right insertion point (matching Perl's "^" prefix).
 /// This ensures SVG elements like svg:path go into svg:g, not ltx:text.
 fn svg_empty_element(document: &mut Document, tag: &str, attrs: HashMap<String, String>) -> Result<()> {
-  // Perl constructors use "^<svg:path .../>" which floats up to find
-  // an ancestor that can contain the SVG element. We replicate this
-  // by calling float_to_element before opening.
   let savenode = document.float_to_element(tag, false)?;
   document.open_element(tag, Some(attrs), None)?;
   document.close_element(tag)?;
-  // Restore the insertion point if float_to_element moved it
   if let Some(saved) = savenode {
     document.set_node(&saved);
   }
   Ok(())
+}
+
+/// Helper: capture common xy SVG element properties at digest time.
+/// Returns (stroke, fill, dashes) for use in after_digest handlers.
+fn xy_capture_stroke_fill() -> (String, String, String) {
+  let (stroke, fill) = xy_fill_stroke();
+  let dashes = state::lookup_string("xy_linepattern");
+  (stroke, fill, dashes)
+}
+
+/// Helper: store SVG path attributes on whatsit for construction time.
+/// Perl: properties => sub { (path => ..., do_stroke => ..., do_fill => 0, dashes => ...) }
+fn xy_store_path_props(whatsit: &mut impl BoxOps, path: &str, stroke: &str, fill: &str, dashes: &str) {
+  whatsit.set_property("xy_path", Stored::String(arena::pin(path)));
+  whatsit.set_property("xy_stroke", Stored::String(arena::pin(stroke)));
+  whatsit.set_property("xy_fill", Stored::String(arena::pin(fill)));
+  if !dashes.is_empty() {
+    whatsit.set_property("xy_dashes", Stored::String(arena::pin(dashes)));
+  }
+}
+
+/// Helper: read SVG path attributes from props at construction time and emit element.
+fn xy_emit_path(document: &mut Document, props: &latexml_core::common::arena::SymHashMap<Stored>) -> Result<()> {
+  let path = match props.get("xy_path") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => return Ok(()), // no path → skip
+  };
+  let stroke = match props.get("xy_stroke") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("#000000"),
+  };
+  let fill = match props.get("xy_fill") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("none"),
+  };
+  let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
+  if let Some(Stored::String(d)) = props.get("xy_dashes") {
+    let dashes = arena::to_string(*d);
+    if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+  }
+  svg_empty_element(document, "svg:path", attrs)
+}
+
+/// Helper: emit SVG circle from props.
+fn xy_emit_circle(document: &mut Document, props: &latexml_core::common::arena::SymHashMap<Stored>) -> Result<()> {
+  let cx = match props.get("xy_cx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+  let cy = match props.get("xy_cy") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+  let r = match props.get("xy_r") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
+  let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
+  let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
+  let mut attrs = string_map!("cx" => cx, "cy" => cy, "r" => r, "stroke" => stroke, "fill" => fill);
+  if let Some(Stored::String(d)) = props.get("xy_dashes") {
+    let dashes = arena::to_string(*d);
+    if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+  }
+  svg_empty_element(document, "svg:circle", attrs)
 }
 
 /// Helper: format a float for SVG output, rounding to 2 decimal places
@@ -345,11 +397,15 @@ LoadDefinitions!({
 
   // \zerodot — dot for dotted lines (Perl L262-269)
   DefConstructor!("\\zerodot",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
-      svg_empty_element(document, "svg:path", string_map!(
-        "d" => "M -2 -1 l 1 1", "stroke" => stroke, "fill" => fill
-      ))?;
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
+      stored_map!(
+        "xy_path" => "M -2 -1 l 1 1",
+        "xy_stroke" => stroke,
+        "xy_fill" => fill,
+        "xy_dashes" => dashes
+      )
     }
   );
 
@@ -357,25 +413,15 @@ LoadDefinitions!({
   DefMacro!("\\Droprule@", "\\setboxz@h{\\lx@xy@droprule}\\advance\\X@p-\\X@c\\Drop@@");
 
   // \lx@xy@droprule — horizontal/vertical rule (Perl L280-293)
-  // Perl uses properties => sub { ... } to capture registers at digest time.
   DefConstructor!("\\lx@xy@droprule",
-    sub[document, _args, props] {
-      let (stroke, fill) = xy_fill_stroke();
-      let path = match props.get("path") {
-        Some(Stored::String(s)) => arena::to_string(*s),
-        _ => String::from("M 0 0 L 0 0"),
-      };
-      let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:path", attrs)?;
-    },
-    after_digest => sub[whatsit] {
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let path = xy_packpath(&[
         XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
         XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
       ]);
-      whatsit.set_property("path", Stored::String(arena::pin(&path)));
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
     }
   );
 
@@ -384,43 +430,28 @@ LoadDefinitions!({
 
   // \line@@ — line segment (Perl L296-307)
   DefConstructor!("\\line@@",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let (c, s) = xy_get_orientation();
       let l = xy_reg_dim("\\xydashl@");
       let x = dim_to_px(l) * c;
       let y = dim_to_px(l) * s;
-      let mut attrs = string_map!(
-        "d" => s!("M 0 0 L {} {}", fmt2(x), fmt2(y)),
-        "stroke" => stroke, "fill" => fill
-      );
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:path", attrs)?;
+      let path = s!("M 0 0 L {} {}", fmt2(x), fmt2(y));
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
     }
   );
 
   // \lx@xy@drawline@ — connecting line from X@p,Y@p to X@c,Y@c (Perl L336-344)
   DefConstructor!("\\lx@xy@drawline@",
-    sub[document, _args, props] {
-      let (stroke, fill) = xy_fill_stroke();
-      let path = match props.get("path") {
-        Some(Stored::String(s)) => arena::to_string(*s),
-        _ => String::from("M 0 0 L 0 0"),
-      };
-      let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
-      let dashes = state::lookup_string("xy_linepattern");
-      if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-      svg_empty_element(document, "svg:path", attrs)?;
-    },
-    after_digest => sub[whatsit] {
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let path = xy_packpath(&[
         XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
         XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
       ]);
-      whatsit.set_property("path", Stored::String(arena::pin(&path)));
-      whatsit.set_property("dashes",
-        Stored::String(arena::pin(&state::lookup_string("xy_linepattern"))));
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
     }
   );
 
@@ -476,98 +507,89 @@ LoadDefinitions!({
   // Arrow tips (Perl L428-446)
   // \lx@xy@tip — half an arrow tip using arc path
   DefConstructor!("\\lx@xy@tip {}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let stretch_str = args.first().and_then(|a| a.as_ref())
         .map(|t| t.to_string()).unwrap_or_else(|| String::from("1"));
       let stretch: f64 = stretch_str.parse().unwrap_or(1.0);
       let (c, s) = xy_get_orientation();
-      let l = xy_reg_dim("\\xydashl@");
-      let w = xy_reg_dim("\\xydashh@");
-      let l_px = dim_to_px(l);    // lf=1 for 'xy' style
-      let w_px = dim_to_px(w) * stretch;
+      let l_px = dim_to_px(xy_reg_dim("\\xydashl@"));
+      let w_px = dim_to_px(xy_reg_dim("\\xydashh@")) * stretch;
       let r_px = l_px * 2.0;
       let dx = -l_px * c - w_px * s;
       let dy = -l_px * s + w_px * c;
       let sweep = if stretch < 0.0 { 1 } else { 0 };
       let path = s!("M 0 0 A {} {} 45 0 {} {} {}",
         fmt2(r_px), fmt2(r_px), sweep, fmt2(dx), fmt2(dy));
-      svg_empty_element(document, "svg:path", string_map!(
-        "d" => path, "stroke" => stroke, "fill" => fill
-      ))?;
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
     }
   );
 
   // \lx@xy@stopper — "|" tip (Perl L448-460)
   DefConstructor!("\\lx@xy@stopper",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let (c, s) = xy_get_orientation();
-      let l = xy_reg_dim("\\xydashl@");
-      let l_px = dim_to_px(l);
+      let l_px = dim_to_px(xy_reg_dim("\\xydashl@"));
       let dx = -l_px * s;
       let dy = l_px * c;
       let path = s!("M {} {} L {} {}", fmt2(dx), fmt2(dy), fmt2(-dx), fmt2(-dy));
-      svg_empty_element(document, "svg:path", string_map!(
-        "d" => path, "stroke" => stroke, "fill" => fill
-      ))?;
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
     }
   );
 
   // \lx@xy@hook — "(" tip (Perl L462-480)
   DefConstructor!("\\lx@xy@hook {Number}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let offset: f64 = args.first().and_then(|a| a.as_ref())
         .map(|t| t.value_of() as f64).unwrap_or(0.0);
       let (c, s) = xy_get_orientation();
-      let l = xy_reg_dim("\\xybsqll@");
-      let l_px = dim_to_px(l) * 0.707107;
+      let l_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * 0.707107;
       let x0 = if offset != 0.0 { 0.0 } else { l_px };
       let y0_val = l_px * (offset + 1.0);
       let y1_val = y0_val - l_px * 2.0;
       let mx = x0 * c - y0_val * s;
-      let my = x0 * s + y0_val * c;
+      let my_val = x0 * s + y0_val * c;
       let ex = x0 * c - y1_val * s;
       let ey = x0 * s + y1_val * c;
       let path = s!("M {} {} A {} {} 180 0 1 {} {}",
-        fmt2(mx), fmt2(my), fmt2(l_px), fmt2(l_px), fmt2(ex), fmt2(ey));
-      svg_empty_element(document, "svg:path", string_map!(
-        "d" => path, "stroke" => stroke, "fill" => fill
-      ))?;
+        fmt2(mx), fmt2(my_val), fmt2(l_px), fmt2(l_px), fmt2(ex), fmt2(ey));
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
     }
   );
 
   // \lx@xy@turn — quarter circle tip (Perl L481-495)
   DefConstructor!("\\lx@xy@turn {Number}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let offset: f64 = args.first().and_then(|a| a.as_ref())
         .map(|t| t.value_of() as f64).unwrap_or(1.0);
       let (c, s) = xy_get_orientation();
-      let l = xy_reg_dim("\\xybsqll@");
-      let l_px = dim_to_px(l) * 0.707107;
+      let l_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * 0.707107;
       let sweep = if offset > 0.0 { 0 } else { 1 };
       let ex = l_px * -(c + offset * s);
       let ey = l_px * (offset * c - s);
       let path = s!("M 0 0 A {} {} 90 0 {} {} {}",
         fmt2(l_px), fmt2(l_px), sweep, fmt2(ex), fmt2(ey));
-      svg_empty_element(document, "svg:path", string_map!(
-        "d" => path, "stroke" => stroke, "fill" => fill
-      ))?;
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
     }
   );
 
   // \lx@xy@point — filled/empty circle (Perl L497-505)
   DefConstructor!("\\lx@xy@point",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
-      let l = xy_reg_dim("\\xybsqll@");
-      let r_px = dim_to_px(l) * 0.5;
-      svg_empty_element(document, "svg:circle", string_map!(
-        "cx" => "0", "cy" => "0", "r" => fmt2(r_px),
-        "stroke" => stroke, "fill" => fill
-      ))?;
+    sub[document, _args, props] { xy_emit_circle(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
+      let r_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * 0.5;
+      stored_map!(
+        "xy_cx" => "0", "xy_cy" => "0", "xy_r" => fmt2(r_px),
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+      )
     }
   );
 
