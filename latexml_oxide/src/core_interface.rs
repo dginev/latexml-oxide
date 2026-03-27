@@ -95,14 +95,21 @@ impl DigestionAPI for Core {
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
 
-    // Load Perl kernel dump if LATEXML_DUMP environment variable is set.
+    // Load kernel dump if LATEXML_DUMP environment variable is set.
+    // Supports both Rust-native (.oxide) and Perl (.ltxml) formats.
     // The dump provides LaTeX kernel Expandable macros that complement our
-    // Rust Primitives/Constructors. Only macros without existing
-    // Primitive/Constructor definitions are loaded (protection in dump_loader).
+    // Rust Primitives/Constructors. Only new definitions are loaded.
     if let Ok(dump_path) = std::env::var("LATEXML_DUMP") {
       let path = std::path::Path::new(&dump_path);
       if path.exists() {
-        match latexml_core::dump_loader::load_dump(path) {
+        let result = if dump_path.ends_with(".oxide") {
+          // Rust-native format (from --init mode)
+          latexml_core::dump_reader::load_native_dump(path)
+        } else {
+          // Perl format (from Perl's make formats)
+          latexml_core::dump_loader::load_dump(path)
+        };
+        match result {
           Ok(count) => {
             eprintln!(
               "[latexml-oxide] Loaded {} kernel definitions from {}",
