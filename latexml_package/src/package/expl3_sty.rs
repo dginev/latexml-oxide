@@ -32,20 +32,17 @@ LoadDefinitions!({
   // Post-load fixup: set expl3 catcodes via Rust API (global scope, not reverted).
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
   state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
-  // Now apply all fixups with expl3 catcodes active.
+  // Post-load fixups with expl3 catcodes active.
   raw_tex(concat!(
+    // Fix \exp_end_continue_f:w: our backtick charcode reader doesn't expand
+    // during space-skip. Use \number\c_zero_int instead of `^^@.
     r"\protected\long\gdef\exp_end_continue_f:w{\number\c_zero_int}",
-    // Define the cmd/define-command message (from latex.ltx line 4780).
-    // xparse.sty checks this to determine which module to use.
+    // Define cmd module messages (normally from latex.ltx, not in our LaTeX pool).
     r"\msg_new:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
     r"\msg_new:nnn{cmd}{define-env}{Defining~environment~#1~with~sig.~'#2'~\msg_line_context:.}",
-    // Suppress info messages from cmd/ltcmd modules.
-    // \NewDocumentCommand calls \msg_info:nnxx which leaks text into the document
-    // because the l3keys module (needed for log-declarations option) isn't loaded
-    // (token limit kills loading before l3keys at line ~16K).
+    // Suppress info messages from cmd/ltcmd to prevent leaking into output.
     r"\msg_redirect_module:nnn{cmd}{info}{none}",
     r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
-    // Also suppress the \__kernel_msg_info:nnxx handler that might bypass redirects.
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
   // Verify l3keys loaded
