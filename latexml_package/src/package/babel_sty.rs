@@ -177,11 +177,12 @@ LoadDefinitions!({
       if is_french {
         // Define dispatch primitives for French punctuation (if not already defined)
         if lookup_definition(&T_CS!("\\lx@french@punct@colon"))?.is_none() {
-          // These are defined as Primitives that output thin_space + char
-          // U+2006 = SIX-PER-EM SPACE (matches Perl's thin space output)
+          // French punctuation spacing:
+          // Before ':' → regular non-breaking space (U+00A0, espace insécable)
+          // Before ';!?' → thin space (U+2006 SIX-PER-EM SPACE, espace fine)
           DefPrimitive!("\\lx@french@punct@colon", {
             enter_horizontal();
-            Tbox::new(arena::pin_static("\u{2006}:"), None, None, Tokens!(), stored_map!())
+            Tbox::new(arena::pin_static(" :"), None, None, Tokens!(), stored_map!())
           });
           DefPrimitive!("\\lx@french@punct@semi", {
             enter_horizontal();
