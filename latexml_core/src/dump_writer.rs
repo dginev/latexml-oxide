@@ -16,7 +16,9 @@ use std::path::Path;
 
 use crate::common::arena;
 use crate::common::store::Stored;
+use crate::definition::Definition; // trait for get_expansion(), get_cs(), etc.
 use crate::state::TableName;
+use crate::token::Token;
 
 /// Write a state diff to a dump file.
 /// Returns the number of entries successfully written.
@@ -86,9 +88,22 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
       Some(format!("TK\t{}", tok_strs.join(",")))
     }
-    // Expandable macros, Register, etc. — need Definition trait in scope.
-    // TODO: implement once the trait access is sorted out.
-    // For now, these are handled by the Perl dump_loader path.
+    Stored::Expandable(exp) => {
+      if let Some(crate::definition::ExpansionBody::Tokens(tks)) = exp.get_expansion() {
+        let cs_name = exp.get_cs().with_str(|s| url_encode(s));
+        let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
+        let nargs = exp.get_num_args();
+        let mut flags = String::new();
+        if exp.is_long { flags.push('L'); }
+        if exp.is_protected() { flags.push('P'); }
+        Some(format!(
+          "E\t{}\t{}\t{}\t{}",
+          cs_name, nargs, flags, tok_strs.join(",")
+        ))
+      } else {
+        Option::None // Closure-based, can't serialize
+      }
+    }
     _ => Option::None,
   }
 }
