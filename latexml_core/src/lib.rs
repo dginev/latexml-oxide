@@ -52,6 +52,8 @@ pub mod rewrite;
 pub mod state;
 /// Loader for Perl LaTeXML kernel dump files
 pub mod dump_loader;
+/// Writer for Rust-native kernel dump files
+pub mod dump_writer;
 /// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
 /// Gullet into Boxes
 #[macro_use]
