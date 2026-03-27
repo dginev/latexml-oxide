@@ -138,11 +138,23 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let lang = if main == "nil" || main.is_empty() {
+    // Also check \bbl@cl@<lang> which babel sets for each language option
+    // This catches languages from \usepackage[lang]{babel} even when babel
+    // was already loaded from a class option.
+    let opt_list = gullet::do_expand(T_CS!("\\@raw@classoptionslist"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    let lang = if main != "nil" && !main.is_empty() {
+      main
+    } else if loaded.contains(',') || loaded.len() > 2 {
+      // Multiple languages loaded: last one is main
       loaded.split(',').map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty()).last().unwrap_or_default()
+    } else if !loaded.is_empty() && loaded != "nil" {
+      loaded
     } else {
-      main
+      // Fallback: use class options
+      opt_list.split(',').map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty()).last().unwrap_or_default()
     };
     if !lang.is_empty() {
       // Temporarily set @ to LETTER for CS name tokenization
