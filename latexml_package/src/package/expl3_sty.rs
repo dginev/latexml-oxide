@@ -12,6 +12,12 @@ LoadDefinitions!({
   // the kernel loads much further. Temporarily lower the token limit to prevent
   // reaching the fp module (which has cascading errors). 2M tokens is enough
   // for all quark creation and basic infrastructure.
+  // Load raw expl3.sty. expl3-code.tex (36K lines) has module boundaries:
+  //   l3keys (12886), l3intarray (14331), l3fp (14607), l3regex (24625)
+  // l3keys is critical for babel hooks, but loading past l3msg (~10K) introduces
+  // undefined errors from incomplete primitives. Current limit loads through l3msg
+  // safely. Full loading requires implementing: l3skip dimension parsing,
+  // l3keys property handlers, \tex_expanded:D, and other internal primitives.
   let saved_limit = gullet::set_token_limit(Some(1_000_000));
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
