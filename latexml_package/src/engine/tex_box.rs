@@ -376,8 +376,13 @@ LoadDefinitions!({
     whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
   });
 
-  // TODO:
-  // Tag('svg:foreignObject', autoOpen => 1, autoClose => 1, ...
+  // Perl: Tag('svg:foreignObject', autoOpen => 1, autoClose => 1, afterClose => ...)
+  // This enables automatic insertion of <svg:foreignObject> when non-SVG content
+  // (like <ltx:text>, <ltx:Math>) appears inside <svg:g>.
+  // The afterClose handler (Perl L337-388) cleans up empty foreignObjects,
+  // converts text-only content to svg:text, and sets size attributes.
+  // TODO: Port the afterClose cleanup handler when Tag! supports it.
+  Tag!("svg:foreignObject", auto_open => true, auto_close => true);
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props] {
       let contents = args[1].as_ref().unwrap();
