@@ -44,9 +44,31 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
   let mut count = 0;
   let mut errors = 0;
 
+  // Join multi-line entries: lines not starting with an entry type are continuations
+  let entry_prefixes = ["Lt(", "V(", "Cc(", "I(", "Im(", "Mc(", "Sc(", "Lc(", "Uc(", "Dc("];
+  let mut current_entry = String::new();
+  let mut entry_start_line = 0;
+
+  let mut process_entry =
+    |entry: &str, start_line: usize, count: &mut usize, errors: &mut usize| {
+      match parse_and_execute(entry) {
+        Ok(()) => *count += 1,
+        Err(e) => {
+          *errors += 1;
+          if *errors <= 10 {
+            eprintln!(
+              "[dump_loader] Line {}: {}: {}",
+              start_line,
+              e,
+              &entry[..entry.len().min(80)]
+            );
+          }
+        }
+      }
+    };
+
   for (lineno, line) in content.lines().enumerate() {
     let line = line.trim();
-    // Skip comments, blank lines, package declarations, use statements
     if line.is_empty()
       || line.starts_with('#')
       || line.starts_with("package ")
@@ -56,15 +78,26 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
       continue;
     }
 
-    match parse_and_execute(line) {
-      Ok(()) => count += 1,
-      Err(e) => {
-        errors += 1;
-        if errors <= 10 {
-          eprintln!("[dump_loader] Line {}: {}: {}", lineno + 1, e, &line[..line.len().min(80)]);
-        }
+    let is_new_entry = entry_prefixes.iter().any(|p| line.starts_with(p));
+    if is_new_entry {
+      // Process previous entry if any
+      if !current_entry.is_empty() {
+        process_entry(&current_entry, entry_start_line, &mut count, &mut errors);
       }
+      current_entry = line.to_string();
+      entry_start_line = lineno + 1;
+    } else if !current_entry.is_empty() {
+      // Continuation line
+      current_entry.push(' ');
+      current_entry.push_str(line);
+    } else {
+      // Orphan line (not a continuation, not an entry) — skip
+      errors += 1;
     }
+  }
+  // Process final entry
+  if !current_entry.is_empty() {
+    process_entry(&current_entry, entry_start_line, &mut count, &mut errors);
   }
 
   if errors > 10 {
@@ -429,7 +462,16 @@ fn parse_dump_token(input: &str) -> Result<(Token, &str), String> {
     return Ok((Token { text: arena::pin(&s), code: Catcode::LETTER }, rest));
   }
   if let Some(rest) = input.strip_prefix("O(") {
-    let (s, rest) = parse_perl_string(rest)?;
+    let rest = rest.trim();
+    // O() can have a string or a bare number
+    let (s, rest) = if rest.starts_with('\'') || rest.starts_with('"') || rest.starts_with("UTF(") {
+      parse_perl_string(rest)?
+    } else {
+      // Bare number or character — read until ')'
+      let end = rest.find(')').ok_or("Unterminated O()")?;
+      let val = rest[..end].trim();
+      (val.to_string(), &rest[end..])
+    };
     let rest = skip_close_paren(rest)?;
     return Ok((Token { text: arena::pin(&s), code: Catcode::OTHER }, rest));
   }
