@@ -456,6 +456,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [ ] **I. "make formats" build step** — Prerequisite: H (expl3 loading). Rust equivalent of `make formats`: a build.rs step for latexml_package that checks for texlive installation, runs the kernel initialization (latex.ltx + expl3), and generates a `_dump.rs` file containing precompiled state as valid Rust code. This gets compiled into latexml_package, eliminating runtime kernel loading overhead.
 - [x] **E. Precompiled kernel dump** — Prerequisite: I (make formats). **ZERO-REGRESSION**: `latexml_oxide --init=latex.ltx --dest=dump` → 137 clean non-expl3 kernel entries. `LATEXML_DUMP=dump cargo test` → 311/0/21 (identical to without dump). Infrastructure: dump_writer.rs, dump_reader.rs, dump_loader.rs (Perl 98%), ini_tex.rs (--init), State::snapshot/diff.
 - [ ] **F. Post-processing pipeline** — Last step. 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
+- [ ] **L. Arena/SymStr migration audit** — Final step before post-processing. Audit all `arena::to_string()` calls and `String::clone()` calls across the codebase. Replace with: (1) `SymStr` methods where strings are already interned, (2) `arena::with()` family to avoid allocations, (3) `arena::pin()` to convert frequently-used Strings to SymStr. Goal: eliminate unnecessary heap allocations by leveraging the arena's zero-cost interned strings.
 
 ### Permanent ignores (5)
 

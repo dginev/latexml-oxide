@@ -483,9 +483,9 @@ LoadDefinitions!({
   // The afterClose handler (Perl L337-388) cleans up empty foreignObjects,
   // converts text-only content to svg:text, and sets size attributes.
   Tag!("svg:foreignObject", auto_open => true, auto_close => true,
-    after_close => sub[document, node] {
+    after_close => sub[document, node, whatsit] {
       use latexml_core::common::xml::element_nodes;
-      // Perl L341: my @fo = $node->childNodes — get ALL children (not just elements)
+      // Perl L341: my @fo = $node->childNodes
       let has_any_child = node.get_first_child().is_some();
       // Perl L342-344: Empty foreignObject → remove
       if !has_any_child {
@@ -493,11 +493,6 @@ LoadDefinitions!({
         document.remove_node(n);
         return Ok(());
       }
-      // Perl L345-348: All children are text nodes → convert to svg:text
-      // NOTE: Disabled for now — auto-close timing can cause premature conversion.
-      // The foreignObject may be auto-closed before all children are added,
-      // making the text-only check return a false positive.
-      // TODO: Re-enable when auto-close timing matches Perl's behavior.
       let children = element_nodes(node);
       // Perl L349-362: Single <p/> cleanup
       if children.len() == 1 {
@@ -516,7 +511,6 @@ LoadDefinitions!({
               if pic_children.len() == 1 {
                 let svg_qname = document::get_node_qname(&pic_children[0]);
                 if arena::with(svg_qname, |s| s == "svg:svg") {
-                  // Replace foreignObject with the svg:svg's children
                   let replacement = pic_children[0].clone();
                   document.replace_tree(replacement, node.clone())?;
                   return Ok(());
@@ -526,9 +520,57 @@ LoadDefinitions!({
           }
         }
       }
-      // Perl L363-388: Set overflow on remaining foreignObjects
-      if !node.has_attribute("overflow") {
-        document.set_attribute(node, "overflow", "visible")?;
+      // Perl L363-388: Set size and transform on remaining foreignObjects
+      // Read cached dimensions from whatsit properties
+      let mut has_dims = false;
+      if let Some(wh) = whatsit {
+        let dims = wh.with_properties(|props| {
+          let w = match props.get("cached_width").or_else(|| props.get("width")) {
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+          let h = match props.get("cached_height").or_else(|| props.get("height")) {
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+          let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+          (w, h, d)
+        });
+        let (w, h, d) = dims;
+        if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
+          has_dims = true;
+          let w_px = w.px_value(Some(2));
+          let h_px = h.px_value(Some(2));
+          let d_px = d.px_value(Some(2));
+          let total_h = h_px + d_px;
+          // Perl L378-382: width and height (total height = h + d)
+          if !node.has_attribute("width") {
+            document.set_attribute(node, "width", &s!("{}", w_px))?;
+          }
+          if !node.has_attribute("height") {
+            document.set_attribute(node, "height", &s!("{}", total_h))?;
+          }
+          // Perl L381: transform flips y-axis, offset by height above baseline
+          document.set_attribute(node, "transform",
+            &s!("matrix(1 0 0 -1 0 {})", h_px))?;
+          document.set_attribute(node, "overflow", "visible")?;
+          // Perl L384-387: CSS custom properties in em units
+          let font_size = wh.with_properties(|props| {
+            match props.get("font_size") {
+              Some(Stored::Dimension(d)) => d.value_f64() / 65536.0,
+              _ => 10.0,
+            }
+          });
+          let em = if font_size > 0.0 { font_size } else { 10.0 };
+          let w_em = w.value_f64() / 65536.0 / em;
+          let h_em = h.value_f64() / 65536.0 / em;
+          let d_em = d.value_f64() / 65536.0 / em;
+          document.set_attribute(node, "style",
+            &s!("--ltx-fo-width:{:.2}em;--ltx-fo-height:{:.2}em;--ltx-fo-depth:{:.2}em;",
+              w_em, h_em, d_em))?;
+        }
+      }
+      if !has_dims {
+        if !node.has_attribute("overflow") {
+          document.set_attribute(node, "overflow", "visible")?;
+        }
       }
     }
   );
