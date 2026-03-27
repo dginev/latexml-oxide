@@ -89,18 +89,16 @@ impl DigestionAPI for Core {
     // should we reset the model also?
     model::initialize_model();
     // let paths = state::search_paths;
+    let dump_path = std::env::var("LATEXML_DUMP").ok();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       input_definitions(&preload, InputDefinitionOptions::default())?;
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
 
-    // Load kernel dump if LATEXML_DUMP environment variable is set.
-    // Supports both Rust-native (.oxide) and Perl (.ltxml) formats.
-    // The dump provides LaTeX kernel Expandable macros that complement our
-    // Rust Primitives/Constructors. Only new definitions are loaded.
-    if let Ok(dump_path) = std::env::var("LATEXML_DUMP") {
-      let path = std::path::Path::new(&dump_path);
+    // Load kernel dump AFTER pools (provides TeX/LaTeX macros the pools skipped).
+    if let Some(ref dump_path) = dump_path {
+      let path = std::path::Path::new(dump_path);
       if path.exists() {
         let result = if dump_path.ends_with(".oxide") {
           // Rust-native format (from --init mode)

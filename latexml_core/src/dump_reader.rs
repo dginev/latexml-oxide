@@ -18,6 +18,7 @@ use crate::state::{self, Scope};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
+
 /// Load a Rust-native dump file into the current State.
 /// Returns the number of entries loaded.
 pub fn load_native_dump(path: &Path) -> Result<usize, String> {
@@ -88,13 +89,23 @@ const SKIP_VALUES: &[&str] = &[
   "INTERPRETING_DEFINITIONS", // Runtime flag
   "if_count",                 // Runtime counter
   "absorb_count",             // Runtime counter
+  "_loaded",                  // Package loading flags (e.g., expl3-code.tex_loaded)
+                              // These must be set by actual loading, not pre-set by dump,
+                              // otherwise packages think they're loaded and skip initialization
+  "INCLUDE_COMMENTS",         // Runtime config
+  "INCLUDE_STYLES",           // Runtime config
+  "\\everyjob",               // Token register — affects startup behavior
+  "\\toks",                   // Token registers
+  "input_file:",              // File tracking
+  "output_file:",             // File tracking
+  "texsys",                   // System config
 ];
 
 /// Load a value entry: V\tKEY\tTYPE\tDATA
 fn load_value(key: &str, data: &str) -> Result<bool, String> {
   // Skip values that cause regressions or are runtime-specific
   for skip in SKIP_VALUES {
-    if key == *skip || key.starts_with(skip) {
+    if key == *skip || key.starts_with(skip) || key.ends_with(skip) || key.contains(skip) {
       return Ok(false);
     }
   }
@@ -153,8 +164,16 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
     code: Catcode::CS,
   };
 
-  // Only add new definitions — don't override existing ones
+  // Add-only policy: don't override ANY existing definition.
   if state::has_meaning(&cs_tok) {
+    return Ok(false);
+  }
+  // Skip expl3-internal macros: they have delimited parameters (Until, Match)
+  // that our dump approximates as plain {}, causing breakage.
+  // expl3 internals use __ (double underscore) prefix convention.
+  // Also skip macros with : in the name (expl3 argument specifiers like :Nn, :nn)
+  // unless they're simple \cs_...: patterns without __ that might be user-facing.
+  if key.contains("__") || key.contains(':') {
     return Ok(false);
   }
 
