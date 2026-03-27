@@ -269,8 +269,8 @@ LoadDefinitions!({
       // Core French macros from french.ldf.ltxml / frenchb.ldf.ltxml
       stomach::digest(Tokenize!(r"\def\up#1{\textsuperscript{#1}}"))?;
       stomach::digest(Tokenize!(r"\def\fup#1{\textsuperscript{#1}}"))?;
-      stomach::digest(Tokenize!(r"\def\No{N\up{o}}\def\no{n\up{o}}"))?;
-      stomach::digest(Tokenize!(r"\def\Nos{N\up{os}}\def\nos{n\up{os}}"))?;
+      stomach::digest(Tokenize!(r"\def\No{N\up{o}\xspace}\def\no{n\up{o}\xspace}"))?;
+      stomach::digest(Tokenize!(r"\def\Nos{N\up{os}\xspace}\def\nos{n\up{os}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\bsc#1{{\scshape #1}}"))?;
       stomach::digest(Tokenize!(r"\def\ieme{\up{e}}\def\iemes{\up{es}}"))?;
       stomach::digest(Tokenize!(r"\def\ier{\up{er}}\def\iers{\up{ers}}"))?;
@@ -289,7 +289,11 @@ LoadDefinitions!({
       stomach::digest(Tokenize!(r"\let\circonflexe\textasciicircum"))?;
       stomach::digest(Tokenize!(r"\def\at{@}\def\boi{\textbackslash}"))?;
       stomach::digest(Tokenize!(r"\def\nombre#1{\numprint{#1}}"))?;
-      stomach::digest(Tokenize!(r"\let\xspace\relax"))?;
+      // Note: Perl has \let\xspace\relax here, but we have a proper
+      // \xspace implementation in xspace_sty.rs. Load it for French macros.
+      if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
+        crate::package::xspace_sty::load_definitions();
+      }
       // NOTE: French punctuation spacing (:;!? → thin_space + char) is NOT yet
       // implemented. It requires making :;!? active ONLY in the document body
       // (not during package loading), which needs AtBeginDocument support.
