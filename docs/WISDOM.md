@@ -552,3 +552,60 @@ of error-recovery expansions that consume 14-26GB of memory.
 **Fundamental fix needed:** Precompiled kernel dump (infrastructure E) that
 pre-loads all kernel state, or fix error recovery to NOT create self-referential
 expansions for undefined macros.
+
+---
+
+## 23. DefConstructor state lookups: digest time vs construction time
+
+**Discovery:** xy-pic SVG constructors produced zero coordinates because register
+values (\X@c, \Y@c, etc.) were read at construction time instead of digest time.
+
+**Analysis:** `DefConstructor` bodies (`sub[document, args, props] { ... }`) run at
+CONSTRUCTION time (when XML is built). But multiple constructors are digested in
+sequence before any are constructed. A register read at construction time sees the
+value from the LAST digested constructor, not the one being constructed.
+
+**Fix pattern:** Use `properties => sub[args] { ... }` to capture register values
+at digest time. The callback returns a `SymHashMap<Stored>` that becomes the
+whatsit's properties. The constructor body reads from `props.get("key")`.
+
+```rust
+// WRONG: reads register at construction time
+DefConstructor!("\\foo", sub[document, _args, _props] {
+    let val = state::lookup_register("\\bar", Vec::new())?; // WRONG
+});
+
+// RIGHT: captures register at digest time
+DefConstructor!("\\foo", sub[document, _args, props] {
+    let val = props.get("bar_val"); // Read from properties
+}, properties => {
+    let val = state::lookup_register("\\bar", Vec::new())?;
+    stored_map!("bar_val" => format!("{}", val))
+});
+```
+
+**Scope:** Applied to all 19 xy SVG constructors + `\pic@makebox@`. Audit found
+no other critical instances in the engine codebase.
+
+---
+
+## 24. catcode checks vs defined_as: Perl is inconsistent
+
+**Discovery:** Replacing `get_catcode() == Catcode::BEGIN` with `defined_as(T_BEGIN!())`
+caused regressions because Perl uses DIFFERENT check patterns in different functions.
+
+**Analysis:** Perl's Token has both `$$token[1] == CC_BEGIN` (raw catcode check)
+and `$token->defined_as(T_BEGIN)` (meaning check via `\let` chain resolution).
+Perl uses them inconsistently:
+
+| Function | Perl check | Matches `\bgroup`? |
+|----------|-----------|-------------------|
+| readArg | CC_BEGIN catcode | No |
+| readBoxContents | defined_as(T_BEGIN) | Yes |
+| readBalanced (require_open) | CC_BEGIN \|\| Equals(meaning, T_BEGIN) | Yes (dual) |
+| readDelimited | CC_BEGIN catcode | No |
+| readTokensValue | CC_BEGIN catcode | No |
+| readUntilBrace | CC_BEGIN catcode | No |
+
+**Fix:** Match each Perl function's exact check pattern. Never assume `defined_as`
+is universally correct — check the Perl source for each specific function.
