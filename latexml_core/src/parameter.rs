@@ -480,9 +480,9 @@ impl Parameter {
         if !tokens.is_empty() // Strip outer braces from dimensions & friends
           && arena::with(self.name,|name|
               matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"))
-          && tokens.first().map(|t| t.defined_as(&T_BEGIN!()))
+          && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN)
               .unwrap_or(false)
-          && tokens.last().map(|t| t.defined_as(&T_END!())).unwrap_or(false)
+          && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false)
         {
           tokens.remove(0);
           tokens.pop();

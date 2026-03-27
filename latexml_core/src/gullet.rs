@@ -937,7 +937,8 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
             return Ok(Tokens!()); // Not more correct, but maybe less confusing?
           },
         };
-        if token.defined_as(&T_BEGIN!()) {
+        // Perl: $$token[1] == CC_BEGIN — direct catcode check
+        if token.get_catcode() == Catcode::BEGIN {
           // read balanced, and refill ring.
           nbraces += 1;
           for r_token in ring {
@@ -965,9 +966,10 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
   }
   // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
   // so that delimited arguments behave more similarly to simple, undelimited arguments.
+  // Perl: ($nbraces == 1) && ($tokens[0][1] == CC_BEGIN) && ($tokens[-1][1] == CC_END)
   if nbraces == 1
-    && tokens.first().unwrap().defined_as(&T_BEGIN!())
-    && tokens.last().unwrap().defined_as(&T_END!())
+    && tokens.first().unwrap().get_catcode() == Catcode::BEGIN
+    && tokens.last().unwrap().get_catcode() == Catcode::END
   {
     tokens.remove(0);
     tokens.pop();
@@ -978,11 +980,12 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
 /// Convenience method wrapping around `read_until`
 /// TODO: This seems to be the wrong Rust type interface, we need to rework...
 pub fn read_until_token(t: Token) -> Result<Tokens> { read_until(&Tokens!(t)) }
-/// reads until it encounters a T_BEGIN token (including \bgroup)
+/// reads until it encounters a Catcode::BEGIN token
+/// Note: Perl uses $$token[1] == CC_BEGIN (catcode check, not defined_as)
 pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
   while let Some(token) = read_token()? {
-    if token.defined_as(&T_BEGIN!()) {
+    if token.get_catcode() == Catcode::BEGIN {
       unread_one(token); // Unread with proper agc adjustment
       break;
     } else {
@@ -1076,7 +1079,9 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
     Some(token) => {
-      if token.defined_as(&T_BEGIN!()) {
+      // Perl: $$token[1] == CC_BEGIN — checks actual catcode, NOT defined_as.
+      // \bgroup (catcode CS) does NOT match here; only literal { does.
+      if token.get_catcode() == Catcode::BEGIN {
         read_balanced(expansion_level, false, false)
       } else if matches!(expansion_level, ExpansionLevel::Off) {
         Ok(Tokens!(token))
@@ -1686,7 +1691,8 @@ pub fn read_tokens_value() -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
     Some(token) => {
-      if token.defined_as(&T_BEGIN!()) {
+      // Perl: $$token[1] == CC_BEGIN — direct catcode check
+      if token.get_catcode() == Catcode::BEGIN {
         Ok(read_balanced(ExpansionLevel::Off, false, false)?)
       } else if let Some(defn) = lookup_register_definition(&token) {
         match defn.register_type() {
