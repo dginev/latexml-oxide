@@ -15,10 +15,8 @@ LoadDefinitions!({
   // in expl3-code.tex (line 11529+) because \cs_new checks for existing defs.
   // The l3file undefined-macro errors at early loading are benign and self-resolve
   // when the l3file module loads at line 10734.
-  let saved_limit = gullet::set_token_limit(Some(20_000_000));
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
-  gullet::restore_token_limit(saved_limit);
 
   // Post-load fixup for expl3 f-expansion.
   //
