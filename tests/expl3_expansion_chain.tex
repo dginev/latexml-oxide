@@ -10,33 +10,24 @@
 %   - When called in post-load context (raw_tex), the definition persists
 %   - All other l3file functions defined via direct \cs_new:Npn work fine
 %
-% WHAT FAILS:
-%   - During expl3-code.tex loading, \gdef for \__file_name_expand_cleanup:w
-%     never reaches do_def() (confirmed by tracing)
-%   - The \tex_gdef:D primitive IS invoked 2213 times during loading
-%   - But the specific cleanup:w definition is NOT among them
-%   - The \exp_last_unbraced:NNNNo expansion at line 11527 produces tokens
-%     that go through the expandafter chain → \cs_new:Npn → \cs_gset:Npn →
-%     \tex_long:D \tex_gdef:D, but the \gdef body closure is never called
-%     for the cleanup:w CS
+% ROOT CAUSE (session 49, confirmed):
+%   The 12 errors are NOT from the \exp_last_unbraced:NNNNo expansion chain.
+%   Even replacing the chain with a direct \cs_gset:Npn produces the SAME
+%   12 errors. The errors are from FORWARD REFERENCES — code earlier in
+%   expl3-code.tex that references l3file macros BEFORE they're defined:
+%     - \__file_name_expand_end: (used in \__file_name_expand:n at line 11519)
+%     - \__kernel_file_name_sanitize:n (used for Unicode file loading)
+%     - \l_file_search_path_seq, \g__file_record_seq
+%   These forward references are inherent to the l3file module loading order.
 %
-% SUSPECTED ROOT CAUSE:
-%   The invoke_token Expandable case calls read_x_token(fully_expand=true).
-%   This expands the entire chain INSIDE read_x_token:
-%     \exp_last_unbraced:NNNNo → expandafter chain → \cs_new:Npn expansion →
-%     \cs_gset:Npn expansion → \tex_long:D \tex_gdef:D
-%   The \tex_long:D is returned (not expandable). The invoke_token loop
-%   processes it and breaks. The outer load_tex_definitions loop should then
-%   pick up \tex_gdef:D. But somehow the definition is lost.
+% WORKAROUND (in expl3_sty.rs):
+%   Post-load re-definitions recreate the 3 affected l3file functions.
+%   All functions are available for document processing.
 %
-% TO DEBUG:
-%   1. Copy this pattern into expl3-code.tex (replacing lines 11527-11528)
-%      or into a standalone file loaded via raw TeX
-%   2. Trace invoke_token for \tex_gdef:D when the CS being defined is
-%      \__file_name_expand_cleanup:w
-%   3. Check if the \long prefix from \tex_long:D persists across the
-%      invoke_token break → outer loop → invoke_token cycle
-%   4. Verify the pushback contains the right tokens after the expansion
+% POSSIBLE IMPROVEMENTS:
+%   1. Suppress forward-reference errors during raw TeX loading (non-fatal)
+%   2. Track which errors are from forward refs vs genuine issues
+%   3. The "make formats" precompiled kernel would eliminate these entirely
 %
 % PATTERN FROM expl3-code.tex lines 11527-11528:
 %   \exp_last_unbraced:NNNNo
