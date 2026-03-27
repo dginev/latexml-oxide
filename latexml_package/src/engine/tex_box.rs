@@ -381,8 +381,56 @@ LoadDefinitions!({
   // (like <ltx:text>, <ltx:Math>) appears inside <svg:g>.
   // The afterClose handler (Perl L337-388) cleans up empty foreignObjects,
   // converts text-only content to svg:text, and sets size attributes.
-  // TODO: Port the afterClose cleanup handler when Tag! supports it.
-  Tag!("svg:foreignObject", auto_open => true, auto_close => true);
+  Tag!("svg:foreignObject", auto_open => true, auto_close => true,
+    after_close => sub[document, node] {
+      use latexml_core::common::xml::element_nodes;
+      // Perl L341: my @fo = $node->childNodes — get ALL children (not just elements)
+      let has_any_child = node.get_first_child().is_some();
+      // Perl L342-344: Empty foreignObject → remove
+      if !has_any_child {
+        let n = node.clone();
+        document.remove_node(n);
+        return Ok(());
+      }
+      // Perl L345-348: All children are text nodes → convert to svg:text
+      // NOTE: Disabled for now — auto-close timing can cause premature conversion.
+      // The foreignObject may be auto-closed before all children are added,
+      // making the text-only check return a false positive.
+      // TODO: Re-enable when auto-close timing matches Perl's behavior.
+      let children = element_nodes(node);
+      // Perl L349-362: Single <p/> cleanup
+      if children.len() == 1 {
+        let child_qname = document::get_node_qname(&children[0]);
+        if arena::with(child_qname, |s| s == "ltx:p") {
+          let p_children = element_nodes(&children[0]);
+          if p_children.is_empty() {
+            let n = node.clone();
+            document.remove_node(n);
+            return Ok(());
+          }
+          if p_children.len() == 1 {
+            let inner_qname = document::get_node_qname(&p_children[0]);
+            if arena::with(inner_qname, |s| s == "ltx:picture" || s == "ltx:text") {
+              let pic_children = element_nodes(&p_children[0]);
+              if pic_children.len() == 1 {
+                let svg_qname = document::get_node_qname(&pic_children[0]);
+                if arena::with(svg_qname, |s| s == "svg:svg") {
+                  // Replace foreignObject with the svg:svg's children
+                  let replacement = pic_children[0].clone();
+                  document.replace_tree(replacement, node.clone())?;
+                  return Ok(());
+                }
+              }
+            }
+          }
+        }
+      }
+      // Perl L363-388: Set overflow on remaining foreignObjects
+      if !node.has_attribute("overflow") {
+        document.set_attribute(node, "overflow", "visible")?;
+      }
+    }
+  );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props] {
       let contents = args[1].as_ref().unwrap();
