@@ -48,14 +48,14 @@ LoadDefinitions!({
     let has_keys = state::lookup_meaning(&T_CS!("\\keys_define:nn")).is_some();
     if !has_keys { eprintln!("WARN: expl3 l3keys module did not load (\\keys_define:nn undefined)"); }
   }
-  // Restore catcodes to LaTeX defaults.
-  // Critical: expl3 sets \catcode32=9 (SPACE→IGNORE) for its internal processing.
-  // If not restored, ALL spaces in the document are ignored, breaking paragraphs.
-  state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
-  state::assign_catcode(' ', Catcode::SPACE, Some(Scope::Global));
-  state::assign_catcode('\t', Catcode::SPACE, Some(Scope::Global)); // TAB was set to IGNORE too
-  state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global)); // tilde was set to SPACE
-  // Also restore \endlinechar to 13 (carriage return, default)
-  raw_tex(r"\endlinechar=13\relax")?;
+  // Catcodes: expl3.sty calls \ExplSyntaxOff at end, which should restore
+  // space/tab/tilde/endlinechar. But verify and fix if needed.
+  if state::lookup_catcode(' ') != Some(Catcode::SPACE) {
+    state::assign_catcode(' ', Catcode::SPACE, Some(Scope::Global));
+    state::assign_catcode('\t', Catcode::SPACE, Some(Scope::Global));
+    state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+    state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+    state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+    raw_tex(r"\endlinechar=13\relax")?;
+  }
 });
