@@ -1,0 +1,77 @@
+% Minimal reproduction of the expl3 l3file expansion chain issue.
+%
+% CONTEXT: expl3-code.tex line 11527-11528 uses \exp_last_unbraced:NNNNo
+% to define \__file_name_expand_cleanup:w with a delimited parameter.
+% The expansion chain works correctly in isolation but the definition
+% is lost during expl3-code.tex loading.
+%
+% WHAT WORKS:
+%   - The expansion chain \exp_last_unbraced:NNNNo correctly produces tokens
+%   - When called in post-load context (raw_tex), the definition persists
+%   - All other l3file functions defined via direct \cs_new:Npn work fine
+%
+% WHAT FAILS:
+%   - During expl3-code.tex loading, \gdef for \__file_name_expand_cleanup:w
+%     never reaches do_def() (confirmed by tracing)
+%   - The \tex_gdef:D primitive IS invoked 2213 times during loading
+%   - But the specific cleanup:w definition is NOT among them
+%   - The \exp_last_unbraced:NNNNo expansion at line 11527 produces tokens
+%     that go through the expandafter chain → \cs_new:Npn → \cs_gset:Npn →
+%     \tex_long:D \tex_gdef:D, but the \gdef body closure is never called
+%     for the cleanup:w CS
+%
+% SUSPECTED ROOT CAUSE:
+%   The invoke_token Expandable case calls read_x_token(fully_expand=true).
+%   This expands the entire chain INSIDE read_x_token:
+%     \exp_last_unbraced:NNNNo → expandafter chain → \cs_new:Npn expansion →
+%     \cs_gset:Npn expansion → \tex_long:D \tex_gdef:D
+%   The \tex_long:D is returned (not expandable). The invoke_token loop
+%   processes it and breaks. The outer load_tex_definitions loop should then
+%   pick up \tex_gdef:D. But somehow the definition is lost.
+%
+% TO DEBUG:
+%   1. Copy this pattern into expl3-code.tex (replacing lines 11527-11528)
+%      or into a standalone file loaded via raw TeX
+%   2. Trace invoke_token for \tex_gdef:D when the CS being defined is
+%      \__file_name_expand_cleanup:w
+%   3. Check if the \long prefix from \tex_long:D persists across the
+%      invoke_token break → outer loop → invoke_token cycle
+%   4. Verify the pushback contains the right tokens after the expansion
+%
+% PATTERN FROM expl3-code.tex lines 11527-11528:
+%   \exp_last_unbraced:NNNNo
+%   \cs_new:Npn \__file_name_expand_cleanup:w #1 \tl_to_str:n { __file_name = } { }
+%
+% This defines \__file_name_expand_cleanup:w with:
+%   - Parameter: #1 delimited by catcode-12 string "__file_name="
+%   - Body: empty {}
+
+\documentclass{article}
+\usepackage{xparse}
+\begin{document}
+
+\ExplSyntaxOn
+% TEST 1: Direct definition (should always work)
+\cs_gset:Npn \test_direct:w #1 test { DIRECT:#1 }
+\cs_if_exist:NTF \test_direct:w {Direct:~OK} {Direct:~FAIL}
+
+% TEST 2: Via \exp_last_unbraced:NNNNo (the failing pattern)
+\exp_last_unbraced:NNNNo
+\cs_gset:Npn \test_chain:w #1 \tl_to_str:n { test_delim } { CHAIN:#1 }
+\cs_if_exist:NTF \test_chain:w {Chain:~OK} {Chain:~FAIL}
+
+% TEST 3: Check the actual l3file functions
+\cs_if_exist:NTF \__file_name_expand_cleanup:w
+  {cleanup:w~EXISTS} {cleanup:w~MISSING}
+
+\cs_if_exist:NTF \__file_name_expand_end:
+  {expand_end:~EXISTS} {expand_end:~MISSING}
+
+\cs_if_exist:NTF \__kernel_file_name_sanitize:n
+  {sanitize:n~EXISTS} {sanitize:n~MISSING}
+
+\cs_if_exist:NTF \keys_define:nn
+  {keys:~EXISTS} {keys:~MISSING}
+
+\ExplSyntaxOff
+\end{document}
