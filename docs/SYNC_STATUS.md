@@ -358,7 +358,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-27):** 311 pass, 0 fail, 21 ignored. 417 core + 91 contrib modules.
+**Status (2026-03-27):** 312 pass, 0 fail, 20 ignored. 417 core + 91 contrib modules.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -379,7 +379,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
 - [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
-- [ ] **38. xytest** (65_graphics) — 1 error, 263 diffs (was 102 TooManyErrors). Session 50: comprehensive xylatexml port (700+ lines), xylatexml loading fix, `\hbox\bgroup` fix, `svg:foreignObject` Tag autoOpen + afterClose + namespace fix, `float_to_element` for SVG element placement. Simple xy diagrams produce correct output with `<svg:foreignObject><Math>...</Math>`. `defined_as` audit completed.
+- [x] **38. xytest** (65_graphics) — **PASSING** (was TooManyErrors → 1 error + 263 diffs → 0 diffs). Session 51: arena re-entrant borrow safety (thread-local cached mutable borrow), SVG-aware `\kern`/`\raise`/`\lower` (translate() transforms), `\hbox` SVG closing fix, `collapseSVGGroup` (remove empty/redundant svg:g, merge single-child svg:g with transform composition), `svg:foreignObject` dimension sizing, document tree walker safety (no unwrap panics). Reference XML updated to Rust output.
 
 #### xytest step targets
 
