@@ -421,14 +421,14 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
 - [x] expl3.sty — **WORKING**: expl3-code.tex loads with post-load fixup. Fixed: Lua loading, mouth destruction, `\numexpr` relax terminator, `\exp_end_continue_f:w` f-expansion (backtick→`\number` path), quark re-creation. tilde_tricks_test PASSES. xparse produces correct output (7 formatting diffs). Token limit (5M) still fires during kernel loading but document survives.
-- [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
+- [ ] babel.sty (3000 lines), biblatex.sty (2000 lines). German shorthands working (active " dispatch, \captionsgerman). german_test PASSES (was 20 diffs → 0). Remaining: xml:lang timing (AtBeginDocument), non-breaking space from `\ ` (U+0020 vs U+00A0).
 - [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
 
 ### Overarching infrastructure projects
 
 - [x] **J. Rewrite system** — rewrite.rs at ~95%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match (compiled to Select). All operators functional, no todo!() panics. ~562 lines. Missing: compile_match for TeX-string patterns (rare), wildcard tracking.
 - [x] **K. Declaration system (\lxDeclare)** — now connected to rewrite system. Creates Rewrite rules from \lxDeclare keyvals (role/name/meaning → XMTok attributes). Both string-based (for math parser) and rewrite-based (for XML tree) paths functional. Complex \WildCard patterns not yet supported.
-- [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
+- [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete). Only gap: XML comment creation in libxml wrapper (minor).
 - [ ] **E. Precompiled kernel dump** — Perl uses `make formats` to precompile the LaTeX kernel (latex.ltx + expl3 + base packages) into a `.dump.ltxml` file that's loaded at test time. Our fresh kernel loading has incomplete LaTeX3 hook system (expl3 token limit, missing hook primitives) which causes babel 3.x to malfunction (25+ comma tokens leak per hook point). A Rust kernel dump would: fix babel and hook-dependent packages, match Perl's approach, speed up test execution significantly.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).

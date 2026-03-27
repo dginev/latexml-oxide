@@ -15,7 +15,6 @@ fn french_test() {
 }
 
 #[test]
-#[ignore] // needs germanb.ldf, hangs in batch
 fn german_test() {
   latexml_test_single("tests/babel/german.tex", "german", DIR, None, None);
 }

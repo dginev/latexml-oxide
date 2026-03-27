@@ -106,4 +106,103 @@ LoadDefinitions!({
   RawTeX!(r"\providecommand\captionsaustrian{}\providecommand\dateaustrian{}");
   RawTeX!(r"\providecommand\captionsnaustrian{}\providecommand\datenaustrian{}");
   RawTeX!(r"\providecommand\captionsfrancais{}\providecommand\datefrancais{}");
+
+  // After babel loads: activate the main language's captions and shorthands.
+  // In Perl this happens via the precompiled kernel; we do it explicitly.
+  DefPrimitive!("\\lx@babel@activate@mainlang", {
+    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    let lang = if main == "nil" || main.is_empty() {
+      loaded.split(',').map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty()).last().unwrap_or_default()
+    } else {
+      main
+    };
+    if !lang.is_empty() {
+      // Call \captions<lang> to set localized names
+      let cs = s!("\\captions{}", lang);
+      if lookup_definition(&T_CS!(cs.clone()))?.is_some() {
+        gullet::unread(Tokenize!(&cs));
+      }
+      // Call \ltx@bbl@select@language to set xml:lang
+      gullet::unread(Tokenize!(&s!("\\ltx@bbl@select@language{{{}}}", lang)));
+    }
+  });
+  RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
+
+  // German " shorthand system (from germanb.ldf).
+  // babel's \initiate@active@char mechanism often fails during raw loading;
+  // implement the dispatch entirely in Rust as a Primitive that reads the
+  // next token and expands to the appropriate shorthand.
+  DefPrimitive!("\\lx@german@dq@dispatch", {
+    // Read the next token (the character after ")
+    let tok = gullet::read_token()?;
+    let ch = tok.as_ref().map(|t| t.with_str(|s| s.to_string())).unwrap_or_default();
+    // Map shorthand to expansion. Use Unicode directly for umlauts to avoid
+    // catcode issues with active " interfering with \" command.
+    let expansion: &str = match ch.as_str() {
+      "a" => "\u{00E4}", "o" => "\u{00F6}", "u" => "\u{00FC}",
+      "e" => "\u{00EB}", "i" => "\u{00EF}",
+      "A" => "\u{00C4}", "O" => "\u{00D6}", "U" => "\u{00DC}",
+      "E" => "\u{00CB}", "I" => "\u{00CF}",
+      "s" | "z" => "\u{00DF}", // ß
+      "S" => "SS", "Z" => "SZ",
+      "`" => "\u{201E}", // „ (German opening quote)
+      "'" => "\u{201C}", // " (German closing quote)
+      "<" => "\u{00AB}", // «
+      ">" => "\u{00BB}", // »
+      "~" => "-", "=" => "-",
+      // "" → empty (hskip) — handled below via empty check
+      // Consonant shorthands: discretionary hyphens, ignored in LaTeXML
+      _ => "",
+    };
+    if !expansion.is_empty() {
+      gullet::unread(Tokenize!(expansion));
+    } else if !ch.is_empty() {
+      // For consonants (c,f,l,m,n,p,r,t,...) and unknowns: just output the character
+      if let Some(t) = tok { gullet::unread(Tokens!(t)); }
+    }
+  });
+  // \mdqoff/\mdqon: toggle " catcode between active (13) and other (12)
+  DefPrimitive!("\\mdqon", { state::assign_catcode('"', Catcode::ACTIVE, None); });
+  DefPrimitive!("\\mdqoff", { state::assign_catcode('"', Catcode::OTHER, None); });
+  // Stubs for babel helper macros used by germanb.ldf
+  RawTeX!(r"\providecommand\bbl@allowhyphens{}");
+  RawTeX!(r"\providecommand\bbl@ss{\ss}");
+  RawTeX!(r"\providecommand\bbl@SS{SS}");
+  RawTeX!(r"\providecommand\bbl@sz{\ss}");
+  RawTeX!(r"\providecommand\bbl@SZ{SZ}");
+  // Activate: make " active and assign it the dispatch primitive's meaning.
+  DefPrimitive!("\\lx@babel@setup@german@shorthands", {
+    state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
+    let active_dq = T_ACTIVE!('"');
+    let dispatch_cs = T_CS!("\\lx@german@dq@dispatch");
+    state::assign_meaning(&active_dq, dispatch_cs, Some(Scope::Global));
+  });
+  // Activate German shorthands if German is the main language
+  DefPrimitive!("\\lx@babel@maybe@german@shorthands", {
+    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    let is_german = main == "german" || main == "ngerman" || main == "germanb"
+      || loaded.contains("german");
+    if is_german {
+      // Make " active and assign the dispatch primitive's definition to it
+      state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
+      let active_dq = T_ACTIVE!('"');
+      let dispatch_cs = T_CS!("\\lx@german@dq@dispatch");
+      // Look up the actual definition and assign it directly
+      if let Some(defn) = lookup_meaning(&dispatch_cs) {
+        state::assign_meaning(&active_dq, defn, Some(Scope::Global));
+      }
+      // Directly invoke \captionsgerman and set xml:lang
+      // (gullet::unread gets lost during package loading; do it via stomach)
+      stomach::digest(Tokenize!(r"\captionsgerman"))?;
+      stomach::digest(Tokenize!(r"\ltx@bbl@select@language{german}"))?;
+    }
+  });
+  RawTeX!(r"\lx@babel@maybe@german@shorthands");
 });
