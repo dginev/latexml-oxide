@@ -229,95 +229,59 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {
 /// is also vertical, return the item directly instead of wrapping in a List.
 /// This enables `is_vbox` property propagation for nested \vbox/\vtop.
 pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
-  // Perl: readBoxContents (TeX_Box.pool.ltxml lines 133-154)
-  // Uses a MANUAL token loop with frame depth tracking, NOT invoke_token(T_BEGIN).
-  // This is critical for patterns like \hbox\bgroup...\egroup used by xy-pic.
+  // Perl: readBoxContents calls beginMode($mode) / endMode($mode) around the body reading.
+  // This creates a scoped frame where enterHorizontal can change MODE inplace.
+  // When endMode is called, leaveHorizontal_internal detects MODE='horizontal' with
+  // BOUND_MODE ending in 'vertical', triggers repackHorizontal, then pops the frame.
   //
-  // The Perl approach:
-  // 1. beginMode($mode) — push frame for mode scope
-  // 2. Manual loop: read tokens with readXToken, digest with invokeToken,
-  //    exit when T_END found AND frame depth matches entry level
-  // 3. endMode($mode) — pop mode frame
+  // We replicate this by adding our own beginMode/endMode pair, matching Perl's
+  // readBoxContents (TeX_Box.pool.ltxml lines 145, 153).
+  //
+  // NOTE: read_box_contents already consumed the opening { or \bgroup via defined_as(T_BEGIN).
+  // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
+  // in the content will pop this frame, since \egroup is \let to T_END and
+  // invoke_token handles it via the standard group-closing mechanism.
   let current_mode = state::lookup_string("MODE");
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
   if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
     stomach::begin_mode(&current_mode)?;
   }
-  // Record frame depth AFTER beginMode, so we match T_END at this level
-  let entry_depth = state::get_frame_depth();
-  // Manual token loop matching Perl's readBoxContents lines 150-152
-  let mut boxes: Vec<Digested> = Vec::new();
-  loop {
-    // Perl: $gullet->getPendingComment || $gullet->readXToken(1)
-    let t = match gullet::read_x_token(None, false, None)? {
-      Some(tok) => tok,
-      None => break, // end of input
-    };
-    // Perl: last if $t->defined_as(T_END) && ($level >= $STATE->getFrameDepth)
-    // Note: must check defined_as, not just catcode, because \egroup is a CS
-    // that is \let to T_END (catcode END). Token::defined_as checks meaning.
-    if t.defined_as(&T_END!()) {
-      let current_depth = state::get_frame_depth();
-      if entry_depth >= current_depth {
-        break;
-      }
-      // T_END at deeper level: process normally (closes an inner group)
-    }
-    // Perl: push(@LaTeXML::LIST, $stomach->invokeToken($t))
-    let digested = stomach::invoke_token(&t)?;
-    boxes.extend(digested);
-  }
-  // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
-  let post_mode = state::lookup_string("MODE");
-  let bound_mode = state::lookup_string("BOUND_MODE");
-  // Perl reversion: sub { (T_BEGIN, Revert($_[0]), T_END) }
-  // Add brace tokens to the box list for proper reversion.
-  // read_box_contents consumed the opening { / \bgroup, and we broke on } / \egroup,
-  // so we need to restore them in the reversion.
-  // Perl reversion: sub { (T_BEGIN, Revert($_[0]), T_END) }
-  // The reversion is handled by the HBoxContents/VBoxContents parameter type.
-  // We store the braces flag as a property for the parameter type's reversion logic.
-  // Build the result as a List
-  let mut item = if boxes.is_empty() {
+  let mut contents = stomach::invoke_token(&T_BEGIN!())?;
+  if contents.is_empty() {
     // Perl: $stomach->endMode($mode)
     if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
       stomach::end_mode(&current_mode)?;
     }
-    return Ok(None);
-  } else if boxes.len() == 1 {
-    boxes.remove(0)
+    Ok(None)
   } else {
-    // Create a List from the collected boxes, matching Perl's List(@boxes, mode => $mode)
-    use latexml_core::list::List;
-    Digested::from(List {
-      boxes,
-      mode: None,
-      font: None,
-      locator: Locator::default(),
-      properties: Default::default(),
-    })
-  };
-  if post_mode == "horizontal" && bound_mode.ends_with("vertical")
-    && has_only_simple_horizontal_content(&item)
-  {
-    repack_horizontal_in_list(&mut item);
-    // Restore MODE like leave_horizontal_internal does
-    state::assign_value_inplace("MODE", arena::pin(&bound_mode));
+    let mut item = contents.remove(0);
+    // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
+    // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
+    // Check the condition BEFORE endMode pops the frame.
+    let post_mode = state::lookup_string("MODE");
+    let bound_mode = state::lookup_string("BOUND_MODE");
+    if post_mode == "horizontal" && bound_mode.ends_with("vertical")
+      && has_only_simple_horizontal_content(&item)
+    {
+      repack_horizontal_in_list(&mut item);
+      // Restore MODE like leave_horizontal_internal does
+      state::assign_value_inplace("MODE", arena::pin(&bound_mode));
+    }
+    // Perl: $stomach->endMode($mode) — pop the frame
+    if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
+      stomach::end_mode(&current_mode)?;
+    }
+    // Set the mode property on the resulting item (matching Perl's List(@boxes, mode => $mode))
+    if !current_mode.is_empty() {
+      item.set_property("mode", Stored::String(arena::pin(current_mode)));
+    }
+    // Apply Perl's List() single-item simplification for vertical modes.
+    // In Perl, List(@boxes, mode=>'internal_vertical') returns the single box
+    // directly when @boxes has 1 element and the box's mode is also vertical.
+    // This is critical for nested \vbox/\vtop: the inner box's `is_vbox` property
+    // must be visible to the outer box's constructor.
+    Ok(Some(simplify_vertical_list(item)))
   }
-  // Perl: $stomach->endMode($mode) — pop the frame
-  if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
-    stomach::end_mode(&current_mode)?;
-  }
-  // Set the mode property on the resulting item (matching Perl's List(@boxes, mode => $mode))
-  if !current_mode.is_empty() {
-    item.set_property("mode", Stored::String(arena::pin(current_mode)));
-  }
-  // Apply Perl's List() single-item simplification for vertical modes.
-  // In Perl, List(@boxes, mode=>'internal_vertical') returns the single box
-  // directly when @boxes has 1 element and the box's mode is also vertical.
-  // This is critical for nested \vbox/\vtop: the inner box's `is_vbox` property
-  // must be visible to the outer box's constructor.
-  Ok(Some(simplify_vertical_list(item)))
 }
 
 /// Check if a List contains only simple horizontal content (TBoxes/Comments),
