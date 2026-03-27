@@ -109,11 +109,37 @@ LoadDefinitions!({
   // We replicate this with after_digest to snapshot the range at digest time.
   DefConstructor!("\\lx@xy@svg Digested",
     sub[document, args, props] {
-      // Read dimensions from properties (captured at digest time)
-      let range_str = match props.get("saved_xy_range") {
-        Some(Stored::String(s)) => arena::to_string(*s),
-        _ => String::new(),
+      // All values pre-computed at digest time via properties callback
+      let get_s = |k: &str| -> String {
+        match props.get(k) { Some(Stored::String(s)) => arena::to_string(*s), _ => String::new() }
       };
+      let pxwidth = get_s("pxwidth");
+      let pxheight = get_s("pxheight");
+      let pic_attrs = string_map!("width" => pxwidth.clone(), "height" => pxheight.clone());
+      document.open_element("ltx:picture", Some(pic_attrs), None)?;
+
+      let mut svg_attrs = string_map!(
+        "version" => "1.1", "overflow" => "visible",
+        "width" => pxwidth.clone(), "height" => pxheight.clone(),
+        "viewBox" => get_s("viewBox")
+      );
+      let style = get_s("style");
+      if !style.is_empty() { svg_attrs.insert(String::from("style"), style); }
+      document.open_element("svg:svg", Some(svg_attrs), None)?;
+
+      let g_attrs = string_map!("transform" => get_s("transform"));
+      document.open_element("svg:g", Some(g_attrs), None)?;
+
+      if let Some(Some(content)) = args.first() {
+        document.absorb(content, None)?;
+      }
+      document.close_element("svg:g")?;
+      document.close_element("svg:svg")?;
+      document.close_element("ltx:picture")?;
+    },
+    // Perl: properties => sub { ... } — capture AND compute all values at digest time
+    after_digest => sub[whatsit] {
+      let range_str = state::lookup_string("saved_xy_range");
       let dpi_val = state::lookup_int("DPI");
       let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
       let dims: Vec<f64> = range_str.split(',')
@@ -134,71 +160,28 @@ LoadDefinitions!({
       let y = y1 - y0f;
       let minx = x;
       let miny = -y0f;
-      let transform = s!("matrix(1 0 0 -1 {} {})", x, y);
       let pxwidth = if w > 1.0 { w } else { 1.0 };
       let pxheight = if h > 1.0 { h } else { 1.0 };
-
-      let pic_attrs = string_map!(
-        "width" => s!("{:.2}", pxwidth),
-        "height" => s!("{:.2}", pxheight)
-      );
-      document.open_element("ltx:picture", Some(pic_attrs), None)?;
-
-      let mut svg_attrs = string_map!(
-        "version" => "1.1",
-        "overflow" => "visible",
-        "width" => s!("{:.2}", pxwidth),
-        "height" => s!("{:.2}", pxheight),
-        "viewBox" => s!("{:.2} {:.2} {:.2} {:.2}", minx, miny, pxwidth, pxheight)
-      );
+      whatsit.set_property("pxwidth", Stored::from(s!("{:.2}", pxwidth)));
+      whatsit.set_property("pxheight", Stored::from(s!("{:.2}", pxheight)));
+      whatsit.set_property("viewBox", Stored::from(
+        s!("{:.2} {:.2} {:.2} {:.2}", minx, miny, pxwidth, pxheight)));
+      whatsit.set_property("transform", Stored::from(
+        s!("matrix(1 0 0 -1 {} {})", x, y)));
       if miny != 0.0 {
-        svg_attrs.insert(String::from("style"), s!("vertical-align:{}px", -miny));
+        whatsit.set_property("style", Stored::from(
+          s!("vertical-align:{}px", -miny)));
       }
-      document.open_element("svg:svg", Some(svg_attrs), None)?;
-
-      let g_attrs = string_map!("transform" => transform);
-      document.open_element("svg:g", Some(g_attrs), None)?;
-
-      if let Some(Some(content)) = args.first() {
-        document.absorb(content, None)?;
-      }
-
-      document.close_element("svg:g")?;
-      document.close_element("svg:svg")?;
-      document.close_element("ltx:picture")?;
-    },
-    // Perl: properties => sub { my ($x0,$y0,$x1,$y1) = @{LookupValue('saved_xy_range')...}; ... }
-    // Capture saved_xy_range at DIGEST time so it's preserved per-diagram.
-    after_digest => sub[whatsit] {
-      let range_str = state::lookup_string("saved_xy_range");
-      whatsit.set_property("saved_xy_range", Stored::String(arena::pin(&range_str)));
     }
   );
 
   // \lx@xy@svgnested — nested xy picture (Perl L79-93)
   DefConstructor!("\\lx@xy@svgnested Digested",
     sub[document, args, props] {
-      let range_str = match props.get("saved_xy_range") {
+      let transform = match props.get("transform") {
         Some(Stored::String(s)) => arena::to_string(*s),
-        _ => String::new(),
+        _ => String::from("matrix(1 0 0 1 0 0)"),
       };
-      let dpi_val = state::lookup_int("DPI");
-      let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
-      let dims: Vec<f64> = range_str.split(',')
-        .filter_map(|s| s.trim().parse::<i64>().ok())
-        .map(|v| (v as f64 / 65536.0) * (dpi / 72.27))
-        .collect();
-      let (x0, y0, _x1, _y1) = (
-        dims.first().copied().unwrap_or(0.0),
-        dims.get(1).copied().unwrap_or(0.0),
-        dims.get(2).copied().unwrap_or(0.0),
-        dims.get(3).copied().unwrap_or(0.0),
-      );
-      let h = _y1 - y0;
-      let x_px = if x0 > 0.0 { x0 } else { 0.0 };
-      let y_px = if state::lookup_bool("IN_MATH") { -(h / 2.0) } else { 0.0 };
-      let transform = s!("matrix(1 0 0 1 {} {})", x_px, y_px);
-
       let g_attrs = string_map!("transform" => transform);
       document.open_element("svg:g", Some(g_attrs), None)?;
       if let Some(Some(content)) = args.first() {
@@ -208,7 +191,24 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] {
       let range_str = state::lookup_string("saved_xy_range");
-      whatsit.set_property("saved_xy_range", Stored::String(arena::pin(&range_str)));
+      let dpi_val = state::lookup_int("DPI");
+      let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
+      let dims: Vec<f64> = range_str.split(',')
+        .filter_map(|s| s.trim().parse::<i64>().ok())
+        .map(|v| (v as f64 / 65536.0) * (dpi / 72.27))
+        .collect();
+      let (x0, y0, _x1, y1) = (
+        dims.first().copied().unwrap_or(0.0),
+        dims.get(1).copied().unwrap_or(0.0),
+        dims.get(2).copied().unwrap_or(0.0),
+        dims.get(3).copied().unwrap_or(0.0),
+      );
+      let h = y1 - y0;
+      let x_px = if x0 > 0.0 { x0 } else { 0.0 };
+      let in_math = state::lookup_bool("IN_MATH");
+      let y_px = if in_math { -(h / 2.0) } else { 0.0 };
+      whatsit.set_property("transform", Stored::from(
+        s!("matrix(1 0 0 1 {} {})", x_px, y_px)));
     }
   );
 
