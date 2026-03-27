@@ -3158,9 +3158,18 @@ impl Document {
     let mut newnode = Node::new(tag, new_ns.clone(), &self.document).unwrap();
     point.add_child(&mut newnode)?;
     if no_ns {
-      // without this explicit set call, an XPath for things such as "ltx:XMath"
-      // fails ???
-      if let Some(ns) = point.get_namespace() {
+      // When no explicit namespace was determined (default namespace element),
+      // try to find the root's default namespace first. This prevents inheriting
+      // the parent's namespace when inside a different namespace context (e.g.,
+      // SVG elements getting svg: prefix on LaTeXML elements like Math/XMath).
+      let root_ns = self.document.get_root_element()
+        .and_then(|r| r.get_namespace());
+      let parent_ns = point.get_namespace();
+      if let Some(ref rns) = root_ns {
+        // Use root's namespace for default-namespace elements
+        let _ = newnode.set_namespace(rns);
+      } else if let Some(ns) = parent_ns {
+        // Fallback: inherit from parent (original behavior)
         newnode.set_namespace(&ns)?;
       }
     } else if let Some(ref ns) = new_ns {
