@@ -303,8 +303,9 @@ LoadDefinitions!({
     sub[document, args, props] {
       // args: [0]=cs(Undigested), [1]=kv_text({}), [2]=size(Pair), [3]=pos([]), [4]=box({})
       let framed = props.get("framed").is_some();
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
-        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+      // \@wholewidth captured at digest time in properties callback
+      let thick = match props.get("thick") {
+        Some(Stored::String(s)) => arena::to_string(*s).parse::<f64>().unwrap_or(0.4),
         _ => 0.4,
       };
       // Frame rect (only when framed=true)
@@ -346,6 +347,11 @@ LoadDefinitions!({
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
+      // Capture \@wholewidth at digest time for frame stroke-width
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
       // args: [0]=cs, [1]=kv_text, [2]=size(Pair), [3]=pos, [4]=box
       let kv_str = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
       // Extract frame size from Pair parameter (args[2])
@@ -382,6 +388,7 @@ LoadDefinitions!({
           map.insert("dash", Stored::String(arena::pin(&rest[..end])));
         }
       }
+      map.insert("thick", Stored::String(arena::pin(&s!("{thick}"))));
       Ok(map)
     },
     mode => "text"
