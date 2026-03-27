@@ -1783,6 +1783,18 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
               return retry_entry.front().cloned();
             }
           }
+          // Also follow \let chains for CS tokens: if \foo is \let to \bar,
+          // resolve \bar's definition. This handles expl3 aliases like
+          // \tex_long:D → \long, \tex_gdef:D → \gdef.
+          if t.get_catcode() == Catcode::CS {
+            if let Some(target_entry) = state.meaning.get(&t.text) {
+              if let Some(target_front) = target_entry.front() {
+                if !matches!(target_front, Stored::Token(_) | Stored::None) {
+                  return Some(target_front.clone());
+                }
+              }
+            }
+          }
         }
         // if a regular definition, just return.
         return Some(front.clone());
