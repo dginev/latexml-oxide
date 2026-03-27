@@ -113,9 +113,29 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
   Ok(count)
 }
 
+/// Entries to skip from the dump (cause regressions with our engine).
+/// Perl: IGNORED_SYMBOLS in TeX_Job.pool.ltxml
+const SKIP_ENTRIES: &[&str] = &[
+  // Active CR → \par conflicts with our paragraph handling
+  "Lt(UTF(13)",
+  // These are runtime-computed values, not static
+  "V('DOCUMENT_REWRITE_RULES'",
+  "V('PARAMETER_TYPES'",
+  "V('TAG_PROPERTIES'",
+  "V('MATH_LIGATURES'",
+  "V('TEXT_LIGATURES'",
+];
+
 /// Parse a single dump line and execute it.
 fn parse_and_execute(line: &str) -> Result<(), String> {
   let line = line.strip_suffix(';').unwrap_or(line).trim();
+
+  // Skip known problematic entries
+  for skip in SKIP_ENTRIES {
+    if line.starts_with(skip) {
+      return Ok(());
+    }
+  }
 
   if let Some(rest) = line.strip_prefix("Lt(") {
     parse_let(rest)
@@ -260,7 +280,6 @@ fn skip_close_paren(input: &str) -> Result<&str, String> {
 
 /// Parse Lt('\\csA','\\csB') — let assignment
 fn parse_let(input: &str) -> Result<(), String> {
-  use crate::common::store::Stored;
 
   let (key, rest) = parse_perl_string(input)?;
   let rest = skip_comma(rest);
@@ -268,12 +287,9 @@ fn parse_let(input: &str) -> Result<(), String> {
 
   let key_tok = make_cs_token(&key);
 
-  // Don't override existing Primitives/Constructors with let-assignments from dump
-  if let Some(existing) = state::lookup_meaning(&key_tok) {
-    match existing {
-      Stored::Expandable(_) | Stored::Token(_) | Stored::None => {} // allow override
-      _ => return Ok(()),                                           // skip: has Rust definition
-    }
+  // Only ADD new let-assignments — don't override existing definitions
+  if state::has_meaning(&key_tok) {
+    return Ok(());
   }
 
   let target_tok = make_cs_token(&target);
@@ -286,34 +302,13 @@ fn parse_let(input: &str) -> Result<(), String> {
   Ok(())
 }
 
-/// Parse Cc('char',catcode) or Cc(num,catcode) — catcode assignment
-fn parse_catcode(input: &str) -> Result<(), String> {
-  let input = input.trim();
-  // Key can be a string ('char') or bare number (e.g., Cc(2,12))
-  let (ch, rest) = if input.starts_with('\'') || input.starts_with('"') || input.starts_with("UTF(")
-  {
-    let (s, rest) = parse_perl_string(input)?;
-    (s.chars().next(), rest)
-  } else {
-    // Bare number — character code
-    let end = input.find(',').ok_or("No comma in Cc()")?;
-    let code: u32 = input[..end]
-      .trim()
-      .parse()
-      .map_err(|e| format!("Bad char code: {}", e))?;
-    (char::from_u32(code), &input[end..])
-  };
-  let rest = skip_comma(rest);
-  let end = rest.find(')').unwrap_or(rest.len());
-  let code: u8 = rest[..end]
-    .trim()
-    .parse()
-    .map_err(|e| format!("Bad catcode: {}", e))?;
-
-  if let Some(ch) = ch {
-    let cc = Catcode::from(code);
-    state::assign_catcode(ch, cc, Some(state::Scope::Global));
-  }
+/// Parse Cc('char',catcode) or Cc(num,catcode) — catcode assignment.
+/// Currently SKIPS all catcode assignments from the dump: our engine + expl3
+/// loading already establishes the correct catcodes. The dump's catcodes
+/// come from Perl's latex.ltx processing and conflict with our setup
+/// (e.g., \n→OTHER breaks paragraphs, Unicode→LETTER breaks encoding tests).
+fn parse_catcode(_input: &str) -> Result<(), String> {
+  // Skip all dump catcodes — our engine has the right ones
   Ok(())
 }
 
@@ -662,33 +657,50 @@ mod tests {
 /// (Primitive, Constructor, etc.) from our Rust engine bindings.
 fn install_expandable(
   cs_name: &str,
-  _params: Option<Vec<String>>,
+  params: Option<Vec<String>>,
   expansion: Vec<Token>,
-  _is_long: bool,
-  _is_protected: bool,
+  is_long: bool,
+  is_protected: bool,
 ) -> Result<(), String> {
-  use crate::common::store::Stored;
-  use crate::definition::expandable::Expandable;
+  use crate::definition::expandable::{Expandable, ExpandableOptions};
   use crate::tokens::Tokens;
 
   let cs = make_cs_token(cs_name);
 
-  // Check if this CS already has a definition from our Rust engine
-  if let Some(existing) = state::lookup_meaning(&cs) {
-    match existing {
-      // Allow overriding other Expandable macros (dump may have more complete version)
-      Stored::Expandable(_) => {}
-      // Allow overriding token let-assignments
-      Stored::Token(_) => {}
-      // Do NOT override Primitives, Constructors, Conditionals, etc.
-      // These have Rust code that the dump can't replicate.
-      _ => return Ok(()),
-    }
+  // Only ADD new definitions — don't override any existing definition.
+  // Our engine (Primitives, Constructors, expl3) has priority over the dump.
+  if state::has_meaning(&cs) {
+    return Ok(());
   }
 
-  let expansion_tokens = Tokens::from(expansion);
+  // Build parameter list from the parsed Ps() specification.
+  // Each entry in params is a spec string: "{}" for mandatory, "[]" for optional.
+  let paramlist = if let Some(ref param_specs) = params {
+    if param_specs.is_empty() {
+      None
+    } else {
+      // Build a prototype string from the param specs
+      let proto: String = param_specs.join("");
+      // init_flag=false: skip PARAMETER_TYPES lookup (may not be available during dump loading)
+      // The parameters will use default readers but preserve arg count for pack_parameters
+      crate::common::def_parser::parse_parameters(&proto, &cs, false)
+        .map_err(|e| format!("Parameter parse error for {}: {}", cs_name, e))?
+    }
+  } else {
+    None
+  };
 
-  match Expandable::new(cs, None, expansion_tokens.into(), None) {
+  let expansion_tokens = Tokens::from(expansion);
+  // nopack_parameters: true — the dump expansion tokens already have ARG tokens (A(n))
+  // from the Perl serialization. Re-packing would fail on any literal # tokens.
+  let options = Some(ExpandableOptions {
+    long: is_long,
+    protected: is_protected,
+    nopack_parameters: true,
+    ..ExpandableOptions::default()
+  });
+
+  match Expandable::new(cs, paramlist, expansion_tokens.into(), options) {
     Ok(exp) => {
       state::install_definition(exp, Some(state::Scope::Global));
       Ok(())

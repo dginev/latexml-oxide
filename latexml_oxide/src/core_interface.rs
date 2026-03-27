@@ -95,6 +95,26 @@ impl DigestionAPI for Core {
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
 
+    // Load Perl kernel dump if LATEXML_DUMP environment variable is set.
+    // The dump provides LaTeX kernel Expandable macros that complement our
+    // Rust Primitives/Constructors. Only macros without existing
+    // Primitive/Constructor definitions are loaded (protection in dump_loader).
+    if let Ok(dump_path) = std::env::var("LATEXML_DUMP") {
+      let path = std::path::Path::new(&dump_path);
+      if path.exists() {
+        match latexml_core::dump_loader::load_dump(path) {
+          Ok(count) => {
+            eprintln!(
+              "[latexml-oxide] Loaded {} kernel definitions from {}",
+              count, path.display()
+            );
+          }
+          Err(e) => {
+            eprintln!("[latexml-oxide] Warning: failed to load dump: {}", e);
+          }
+        }
+      }
+    }
     Ok(())
   }
 
