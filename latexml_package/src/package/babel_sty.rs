@@ -321,17 +321,19 @@ LoadDefinitions!({
       stomach::digest(Tokenize!(r"\def\No{N\up{o}\xspace}\def\no{n\up{o}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\Nos{N\up{os}\xspace}\def\nos{n\up{os}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\bsc#1{{\scshape #1}}"))?;
-      // Note: \ier/\iere/\ieme do NOT use \xspace (matching raw frenchb.ldf).
-      // Only \primo/\secundo/... and \No/\Nos use \xspace.
-      stomach::digest(Tokenize!(r"\def\ieme{\up{e}}\def\iemes{\up{es}}"))?;
-      stomach::digest(Tokenize!(r"\def\ier{\up{er}}\def\iers{\up{ers}}"))?;
-      stomach::digest(Tokenize!(r"\def\iere{\up{re}}\def\ieres{\up{res}}"))?;
-      stomach::digest(Tokenize!(r"\def\FrenchEnumerate#1{#1\up{o}}"))?;
-      stomach::digest(Tokenize!(r"\def\FrenchPopularEnumerate#1{#1\up{o})}"))?;
-      stomach::digest(Tokenize!(r"\def\primo{1\up{o}\xspace}\def\secundo{2\up{o}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\tertio{3\up{o}\xspace}\def\quarto{4\up{o}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\fprimo){1\up{o})\xspace}\def\fsecundo){2\up{o})\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\ftertio){3\up{o})\xspace}\def\fquarto){4\up{o})\xspace}"))?;
+      // Note: \ier/\iere/\ieme use \xspace (matching raw french.ldf).
+      // \primo/\secundo/... use \FBthickkern (matching french.ldf FrenchEnumerate).
+      // \No/\Nos/\no/\nos use \xspace.
+      stomach::digest(Tokenize!(r"\def\FBthickkern{\kern+.3em}"))?;
+      stomach::digest(Tokenize!(r"\def\ieme{\up{e}\xspace}\def\iemes{\up{es}\xspace}"))?;
+      stomach::digest(Tokenize!(r"\def\ier{\up{er}\xspace}\def\iers{\up{ers}\xspace}"))?;
+      stomach::digest(Tokenize!(r"\def\iere{\up{re}\xspace}\def\ieres{\up{res}\xspace}"))?;
+      stomach::digest(Tokenize!(r"\def\FrenchEnumerate#1{#1\up{o}\FBthickkern}"))?;
+      stomach::digest(Tokenize!(r"\def\FrenchPopularEnumerate#1{#1\up{o})\FBthickkern}"))?;
+      stomach::digest(Tokenize!(r"\def\primo{\FrenchEnumerate1}\def\secundo{\FrenchEnumerate2}"))?;
+      stomach::digest(Tokenize!(r"\def\tertio{\FrenchEnumerate3}\def\quarto{\FrenchEnumerate4}"))?;
+      stomach::digest(Tokenize!(r"\def\fprimo){\FrenchPopularEnumerate1}\def\fsecundo){\FrenchPopularEnumerate2}"))?;
+      stomach::digest(Tokenize!(r"\def\ftertio){\FrenchPopularEnumerate3}\def\fquarto){\FrenchPopularEnumerate4}"))?;
       stomach::digest(Tokenize!(r"\def\og{\guillemotleft\nobreakspace}"))?;
       stomach::digest(Tokenize!(r"\def\fg{\nobreakspace\guillemotright\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\degre{\textdegree}"))?;
