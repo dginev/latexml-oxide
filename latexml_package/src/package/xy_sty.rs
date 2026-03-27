@@ -52,6 +52,12 @@ LoadDefinitions!({
       return Ok(Tokens!());
     }
     state::assign_value(&cache_key, true, Some(Scope::Global));
+    // Special case: "latexml" driver — load our Rust xylatexml overlay directly
+    // since the file xylatexml.tex doesn't exist on disk (it's compiled into the binary).
+    if option_s == "latexml" {
+      crate::package::xylatexml_tex::load_definitions()?;
+      return Ok(Tokens!());
+    }
     Ok(Tokens!(T_CS!("\\lx@xy@xyoption@orig"), T_BEGIN!(), option, T_END!()))
   });
 

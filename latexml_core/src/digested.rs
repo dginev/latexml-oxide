@@ -433,6 +433,13 @@ impl Digested {
       _ => 0,
     }
   }
+  /// Obtain a Dimension from the digested object, iff it wraps a `RegisterValue`
+  pub fn get_dimension(&self) -> Option<Dimension> {
+    match &*self.0 {
+      DigestedData::RegisterValue(rv) => Some(Dimension::from(rv)),
+      _ => None,
+    }
+  }
   /// Obtain the f64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn pt_value(&self, prec: Option<u8>) -> f64 {
     match &*self.0 {
