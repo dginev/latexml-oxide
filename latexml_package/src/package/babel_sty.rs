@@ -312,9 +312,11 @@ LoadDefinitions!({
       stomach::digest(Tokenize!(r"\def\No{N\up{o}\xspace}\def\no{n\up{o}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\Nos{N\up{os}\xspace}\def\nos{n\up{os}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\bsc#1{{\scshape #1}}"))?;
-      stomach::digest(Tokenize!(r"\def\ieme{\up{e}\xspace}\def\iemes{\up{es}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\ier{\up{er}\xspace}\def\iers{\up{ers}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\iere{\up{re}\xspace}\def\ieres{\up{res}\xspace}"))?;
+      // Note: \ier/\iere/\ieme do NOT use \xspace (matching raw frenchb.ldf).
+      // Only \primo/\secundo/... and \No/\Nos use \xspace.
+      stomach::digest(Tokenize!(r"\def\ieme{\up{e}}\def\iemes{\up{es}}"))?;
+      stomach::digest(Tokenize!(r"\def\ier{\up{er}}\def\iers{\up{ers}}"))?;
+      stomach::digest(Tokenize!(r"\def\iere{\up{re}}\def\ieres{\up{res}}"))?;
       stomach::digest(Tokenize!(r"\def\FrenchEnumerate#1{#1\up{o}}"))?;
       stomach::digest(Tokenize!(r"\def\FrenchPopularEnumerate#1{#1\up{o})}"))?;
       stomach::digest(Tokenize!(r"\def\primo{1\up{o}\xspace}\def\secundo{2\up{o}\xspace}"))?;
