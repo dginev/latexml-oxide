@@ -10,11 +10,17 @@ LoadDefinitions!({
   //    text
   //   \end{document}
 
-  DefMacro!("\\AtBeginDocument{}", sub[(rules)] {
-    state::push_value("@at@begin@document", rules)
+  // Perl: PushValue('@at@begin@document', $_[1]->unlist)
+  // Must push INDIVIDUAL TOKENS so lookup_tokens can reconstruct them.
+  DefPrimitive!("\\AtBeginDocument{}", sub[(rules)] {
+    for tok in rules.revert() {
+      let _ = state::push_value("@at@begin@document", tok);
+    }
   });
-  DefMacro!("\\AtEndDocument{}", sub[(rules)] {
-    state::push_value("@at@end@document", rules)
+  DefPrimitive!("\\AtEndDocument{}", sub[(rules)] {
+    for tok in rules.revert() {
+      let _ = state::push_value("@at@end@document", tok);
+    }
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
