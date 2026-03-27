@@ -104,9 +104,16 @@ LoadDefinitions!({
   // fn xy_range_px() -> (f64, f64, f64, f64) — inline at use sites
 
   // \lx@xy@svg — top-level xy picture SVG (Perl L95-141)
+  // Perl uses a `properties` callback (digestion time) to capture saved_xy_range,
+  // then the constructor body (construction time) reads from %props.
+  // We replicate this with after_digest to snapshot the range at digest time.
   DefConstructor!("\\lx@xy@svg Digested",
-    sub[document, args, _props] {
-      let range_str = state::lookup_string("saved_xy_range");
+    sub[document, args, props] {
+      // Read dimensions from properties (captured at digest time)
+      let range_str = match props.get("saved_xy_range") {
+        Some(Stored::String(s)) => arena::to_string(*s),
+        _ => String::new(),
+      };
       let dpi_val = state::lookup_int("DPI");
       let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
       let dims: Vec<f64> = range_str.split(',')
@@ -159,13 +166,22 @@ LoadDefinitions!({
       document.close_element("svg:g")?;
       document.close_element("svg:svg")?;
       document.close_element("ltx:picture")?;
+    },
+    // Perl: properties => sub { my ($x0,$y0,$x1,$y1) = @{LookupValue('saved_xy_range')...}; ... }
+    // Capture saved_xy_range at DIGEST time so it's preserved per-diagram.
+    after_digest => sub[whatsit] {
+      let range_str = state::lookup_string("saved_xy_range");
+      whatsit.set_property("saved_xy_range", Stored::String(arena::pin(&range_str)));
     }
   );
 
   // \lx@xy@svgnested — nested xy picture (Perl L79-93)
   DefConstructor!("\\lx@xy@svgnested Digested",
-    sub[document, args, _props] {
-      let range_str = state::lookup_string("saved_xy_range");
+    sub[document, args, props] {
+      let range_str = match props.get("saved_xy_range") {
+        Some(Stored::String(s)) => arena::to_string(*s),
+        _ => String::new(),
+      };
       let dpi_val = state::lookup_int("DPI");
       let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
       let dims: Vec<f64> = range_str.split(',')
@@ -189,6 +205,10 @@ LoadDefinitions!({
         document.absorb(content, None)?;
       }
       document.close_element("svg:g")?;
+    },
+    after_digest => sub[whatsit] {
+      let range_str = state::lookup_string("saved_xy_range");
+      whatsit.set_property("saved_xy_range", Stored::String(arena::pin(&range_str)));
     }
   );
 
