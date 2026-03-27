@@ -11,16 +11,15 @@ LoadDefinitions!({
   //   \end{document}
 
   // Perl: PushValue('@at@begin@document', $_[1]->unlist)
-  // Must push INDIVIDUAL TOKENS so lookup_tokens can reconstruct them.
-  DefPrimitive!("\\AtBeginDocument{}", sub[(rules)] {
-    for tok in rules.revert() {
-      let _ = state::push_value("@at@begin@document", tok);
-    }
+  // Note: in modern LaTeX with expl3, \AtBeginDocument is redefined to use
+  // the L3 hook system (\AddToHook{begindocument}{...}). Our definition here
+  // serves as a fallback when expl3 isn't loaded. When expl3 IS loaded, it
+  // overrides this with its own version that routes through \hook_gput_code:nnn.
+  DefMacro!("\\AtBeginDocument{}", sub[(rules)] {
+    state::push_value("@at@begin@document", rules)
   });
-  DefPrimitive!("\\AtEndDocument{}", sub[(rules)] {
-    for tok in rules.revert() {
-      let _ = state::push_value("@at@end@document", tok);
-    }
+  DefMacro!("\\AtEndDocument{}", sub[(rules)] {
+    state::push_value("@at@end@document", rules)
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
