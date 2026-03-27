@@ -1654,12 +1654,31 @@ where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
 /// $meaning should be a definition (for defining active control sequences)
 /// or another token, for \let
 pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<Scope>) {
-  let meaning = meaning.into();
-  // HACK!!!????
+  let mut meaning = meaning.into();
   // short-circuit guard to avoid e.g. T_MATH let to itself
   if let Stored::Token(ref mt) = meaning {
     if token == mt {
       return;
+    }
+  }
+  // For \let chains: if the target token has an expandable/primitive definition,
+  // store that definition directly instead of the Token indirection.
+  // This ensures `\let \foo \bar` where \bar is expandable makes \foo expandable too.
+  // Follow at most 50 \let links to avoid cycles.
+  if let Stored::Token(ref target) = meaning {
+    let mut current = target.clone();
+    for _ in 0..50 {
+      match lookup_meaning(&current) {
+        Some(Stored::Token(next)) => {
+          current = next; // follow chain
+        }
+        Some(Stored::None) | None => break, // dead end — keep as Token
+        Some(defn) => {
+          // Found a real definition — use it directly
+          meaning = defn;
+          break;
+        }
+      }
     }
   }
   let csname_sym = token.pin_cs_name();

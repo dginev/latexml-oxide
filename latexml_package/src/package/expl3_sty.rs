@@ -8,6 +8,7 @@ LoadDefinitions!({
   //   InputDefinitions('expl3', type => 'sty', noltxml => 1);
   LoadPool!("LaTeX");
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
+
   // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
