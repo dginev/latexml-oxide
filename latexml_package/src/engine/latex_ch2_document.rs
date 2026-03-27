@@ -57,6 +57,13 @@ LoadDefinitions!({
     if let Some(ops) = state::lookup_tokens("@at@begin@document") {
       boxes.push(stomach::digest(ops)?);
     }
+    // Fire the L3 hook system for begindocument.
+    // Modern LaTeX (with expl3) uses \hook_use:n{begindocument} instead of
+    // \@begindocumenthook. This fires hooks registered via \AtBeginDocument
+    // when expl3 has redefined it to use \AddToHook{begindocument}{...}.
+    // Includes babel's \lx@babel@activate@mainlang.
+    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+      boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);}
     state::assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
     if let Some(ops) = state::lookup_tokens("@document@preamble@afterend") {
       boxes.push(stomach::digest(ops)?);
