@@ -260,20 +260,27 @@ fn skip_close_paren(input: &str) -> Result<&str, String> {
 
 /// Parse Lt('\\csA','\\csB') — let assignment
 fn parse_let(input: &str) -> Result<(), String> {
+  use crate::common::store::Stored;
+
   let (key, rest) = parse_perl_string(input)?;
   let rest = skip_comma(rest);
   let (target, _rest) = parse_perl_string(rest)?;
 
-  // Look up the target's definition and assign it to the key
-  let target_tok = make_cs_token(&target);
   let key_tok = make_cs_token(&key);
 
+  // Don't override existing Primitives/Constructors with let-assignments from dump
+  if let Some(existing) = state::lookup_meaning(&key_tok) {
+    match existing {
+      Stored::Expandable(_) | Stored::Token(_) | Stored::None => {} // allow override
+      _ => return Ok(()),                                           // skip: has Rust definition
+    }
+  }
+
+  let target_tok = make_cs_token(&target);
   if let Some(defn) = state::lookup_meaning(&target_tok) {
     state::assign_meaning(&key_tok, defn, Some(state::Scope::Global));
-  }
-  // If target has no meaning yet, store as a token reference (lazy let)
-  // This handles forward references in the dump
-  else {
+  } else {
+    // Forward reference: store as token for lazy resolution
     state::assign_meaning(&key_tok, target_tok, Some(state::Scope::Global));
   }
   Ok(())
@@ -650,7 +657,9 @@ mod tests {
   }
 }
 
-/// Create and install an Expandable definition
+/// Create and install an Expandable definition.
+/// Only installs if the CS doesn't already have a non-Expandable definition
+/// (Primitive, Constructor, etc.) from our Rust engine bindings.
 fn install_expandable(
   cs_name: &str,
   _params: Option<Vec<String>>,
@@ -658,14 +667,27 @@ fn install_expandable(
   _is_long: bool,
   _is_protected: bool,
 ) -> Result<(), String> {
+  use crate::common::store::Stored;
   use crate::definition::expandable::Expandable;
   use crate::tokens::Tokens;
 
   let cs = make_cs_token(cs_name);
+
+  // Check if this CS already has a definition from our Rust engine
+  if let Some(existing) = state::lookup_meaning(&cs) {
+    match existing {
+      // Allow overriding other Expandable macros (dump may have more complete version)
+      Stored::Expandable(_) => {}
+      // Allow overriding token let-assignments
+      Stored::Token(_) => {}
+      // Do NOT override Primitives, Constructors, Conditionals, etc.
+      // These have Rust code that the dump can't replicate.
+      _ => return Ok(()),
+    }
+  }
+
   let expansion_tokens = Tokens::from(expansion);
 
-  // Create Expandable with no parameters (simplified — full param parsing needed later)
-  // For the initial prototype, we install macros without parameter handling
   match Expandable::new(cs, None, expansion_tokens.into(), None) {
     Ok(exp) => {
       state::install_definition(exp, Some(state::Scope::Global));

@@ -94,6 +94,7 @@ impl DigestionAPI for Core {
       input_definitions(&preload, InputDefinitionOptions::default())?;
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
+
     Ok(())
   }
 
@@ -806,3 +807,4 @@ fn renumber_collect_dfs(
     renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
   }
 }
+
