@@ -11,18 +11,10 @@ LoadDefinitions!({
   // Load raw expl3.sty — the 20M token limit allows full loading of all 36K lines
   // of expl3-code.tex. Module boundaries:
   //   l3keys (12886), l3intarray (14331), l3fp (14607), l3regex (24625)
-  // Pre-define stubs for l3file macros referenced before their module loads.
-  // Use \long\gdef (TeX primitive) since \cs_gset:Npn isn't defined yet.
-  state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
-  raw_tex(concat!(
-    r"\long\gdef\__file_name_expand_end:#1\s__file_stop{#1}",
-    r"\long\gdef\__kernel_file_name_sanitize:n#1{#1}",
-    r"\long\gdef\l_file_search_path_seq{}",
-    r"\long\gdef\g__file_record_seq{}",
-  ))?;
-  state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+  // Note: NO l3file stubs here. Pre-defining them causes \cs_new:Npn failures
+  // in expl3-code.tex (line 11529+) because \cs_new checks for existing defs.
+  // The l3file undefined-macro errors at early loading are benign and self-resolve
+  // when the l3file module loads at line 10734.
   let saved_limit = gullet::set_token_limit(Some(20_000_000));
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
@@ -56,7 +48,11 @@ LoadDefinitions!({
     // Also suppress the \__kernel_msg_info:nnxx handler that might bypass redirects.
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // Module loading diagnostics (l3file blocks l3skip/l3keys — see SYNC_STATUS)
+  // Verify l3keys loaded
+  {
+    let has_keys = state::lookup_meaning(&T_CS!("\\keys_define:nn")).is_some();
+    if !has_keys { eprintln!("WARN: expl3 l3keys module did not load (\\keys_define:nn undefined)"); }
+  }
   // Restore catcodes to LaTeX defaults.
   // Critical: expl3 sets \catcode32=9 (SPACE→IGNORE) for its internal processing.
   // If not restored, ALL spaces in the document are ignored, breaking paragraphs.
