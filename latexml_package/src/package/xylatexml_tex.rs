@@ -357,17 +357,25 @@ LoadDefinitions!({
   DefMacro!("\\Droprule@", "\\setboxz@h{\\lx@xy@droprule}\\advance\\X@p-\\X@c\\Drop@@");
 
   // \lx@xy@droprule — horizontal/vertical rule (Perl L280-293)
+  // Perl uses properties => sub { ... } to capture registers at digest time.
   DefConstructor!("\\lx@xy@droprule",
-    sub[document, _args, _props] {
+    sub[document, _args, props] {
       let (stroke, fill) = xy_fill_stroke();
-      let path = xy_packpath(&[
-        XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
-        XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
-      ]);
+      let path = match props.get("path") {
+        Some(Stored::String(s)) => arena::to_string(*s),
+        _ => String::from("M 0 0 L 0 0"),
+      };
       let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
       let dashes = state::lookup_string("xy_linepattern");
       if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
       svg_empty_element(document, "svg:path", attrs)?;
+    },
+    after_digest => sub[whatsit] {
+      let path = xy_packpath(&[
+        XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
+        XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
+      ]);
+      whatsit.set_property("path", Stored::String(arena::pin(&path)));
     }
   );
 
@@ -394,16 +402,25 @@ LoadDefinitions!({
 
   // \lx@xy@drawline@ — connecting line from X@p,Y@p to X@c,Y@c (Perl L336-344)
   DefConstructor!("\\lx@xy@drawline@",
-    sub[document, _args, _props] {
+    sub[document, _args, props] {
       let (stroke, fill) = xy_fill_stroke();
-      let path = xy_packpath(&[
-        XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
-        XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
-      ]);
+      let path = match props.get("path") {
+        Some(Stored::String(s)) => arena::to_string(*s),
+        _ => String::from("M 0 0 L 0 0"),
+      };
       let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
       let dashes = state::lookup_string("xy_linepattern");
       if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
       svg_empty_element(document, "svg:path", attrs)?;
+    },
+    after_digest => sub[whatsit] {
+      let path = xy_packpath(&[
+        XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
+        XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
+      ]);
+      whatsit.set_property("path", Stored::String(arena::pin(&path)));
+      whatsit.set_property("dashes",
+        Stored::String(arena::pin(&state::lookup_string("xy_linepattern"))));
     }
   );
 
