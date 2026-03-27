@@ -270,6 +270,13 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
   let post_mode = state::lookup_string("MODE");
   let bound_mode = state::lookup_string("BOUND_MODE");
+  // Perl reversion: sub { (T_BEGIN, Revert($_[0]), T_END) }
+  // Add brace tokens to the box list for proper reversion.
+  // read_box_contents consumed the opening { / \bgroup, and we broke on } / \egroup,
+  // so we need to restore them in the reversion.
+  // Perl reversion: sub { (T_BEGIN, Revert($_[0]), T_END) }
+  // The reversion is handled by the HBoxContents/VBoxContents parameter type.
+  // We store the braces flag as a property for the parameter type's reversion logic.
   // Build the result as a List
   let mut item = if boxes.is_empty() {
     // Perl: $stomach->endMode($mode)
