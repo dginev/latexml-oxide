@@ -84,9 +84,20 @@ macro_rules! before_digest_simple {
 
 #[macro_export]
 macro_rules! tagsub {
+  // 2-argument form: sub[document, node] { ... }
   ($document:ident, $node:ident, $body:block) => {
     vec![Rc::new(
-      |$document: &mut Document, mut $node: &mut Node| -> Result<()> {
+      |$document: &mut Document, mut $node: &mut Node, _whatsit: Option<&Digested>| -> Result<()> {
+        $body
+        Ok(())
+      },
+    )]
+  };
+  // 3-argument form: sub[document, node, whatsit] { ... }
+  // Matches Perl's ($document, $node, $box) signature for Tag afterClose/afterOpen
+  ($document:ident, $node:ident, $whatsit:ident, $body:block) => {
+    vec![Rc::new(
+      |$document: &mut Document, mut $node: &mut Node, $whatsit: Option<&Digested>| -> Result<()> {
         $body
         Ok(())
       },

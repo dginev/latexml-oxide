@@ -3193,8 +3193,10 @@ impl Document {
     let savenode = self.node.clone();
     self.set_node(node);
     let node_qname = get_node_qname(node);
+    // Perl: my $box = getNodeBox($self, $node);
+    let box_opt = self.get_node_box(node);
     for action in self.get_tag_action_list(node_qname, TagOptionName::AfterOpen) {
-      action(self, node)?;
+      action(self, node, box_opt.as_ref())?;
     }
     self.set_node(&savenode);
     Ok(())
@@ -3204,8 +3206,10 @@ impl Document {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
     let node_qname = get_node_qname(node);
+    // Perl: my $box = getNodeBox($self, $node);
+    let box_opt = self.get_node_box(node);
     for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose) {
-      action(self, node)?;
+      action(self, node, box_opt.as_ref())?;
     }
     self.set_node(&savenode);
     Ok(())

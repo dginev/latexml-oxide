@@ -6,7 +6,10 @@ use crate::Digested;
 use crate::common::error::*;
 use crate::document::Document;
 
-pub type TagConstructionClosure = Rc<dyn Fn(&mut Document, &mut Node) -> Result<()>>;
+/// Perl's Tag afterOpen/afterClose closures receive ($document, $node, $box).
+/// The $box is the Digested (whatsit) associated with the node, retrieved via getNodeBox.
+pub type TagConstructionClosure =
+  Rc<dyn Fn(&mut Document, &mut Node, Option<&Digested>) -> Result<()>>;
 pub type TagData = (String, Option<HashMap<String, String>>, Digested);
 
 // Specify the properties of a Node tag.
