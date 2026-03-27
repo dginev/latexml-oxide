@@ -1393,12 +1393,17 @@ pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
       front.push_front(value)
     }
   } else if receiver.is_none() || matches!(receiver, Some(Stored::None)) {
-    // Key doesn't exist yet — create a new VecDequeStored
-    let mut vd = std::collections::VecDeque::new();
+    // Key doesn't exist yet — create a new VecDequeStored via the existing borrow
+    let mut vd = VecDeque::new();
     for value in values_iter {
       vd.push_back(value);
     }
-    state_mut!().assign_value(key, Stored::VecDequeStored(vd), Some(Scope::Global));
+    state.assign_internal(
+      TableName::Value,
+      key_sym,
+      Stored::VecDequeStored(vd),
+      Some(Scope::Global),
+    );
   } else {
     // Wrong type — warn but don't panic
     Warn!(
