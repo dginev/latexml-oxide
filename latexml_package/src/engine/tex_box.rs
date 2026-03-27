@@ -67,6 +67,107 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
   }
 }
 
+/// Perl: collapseSVGGroup (TeX_Box.pool.ltxml L199-271)
+/// Collapse/remove/unwrap unneeded svg:g elements to reduce tree depth.
+fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
+  use latexml_core::common::xml::element_nodes;
+  use latexml_core::document::get_node_qname;
+
+  // Collapsible SVG group attributes (Perl L193-197)
+  const COLLAPSIBLE: &[&str] = &[
+    "fill", "fill-rule", "fill-opacity",
+    "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit",
+    "stroke-dasharray", "stroke-dashoffset", "stroke-opacity",
+    "color",
+  ];
+
+  // Record public (non-internal) attributes on this node
+  let nodeattr: HashMap<String, String> = node.get_attributes().into_iter()
+    .filter(|(k, _)| !k.starts_with('_'))
+    .collect();
+  // Perl L208: skip if clip-path is set
+  if nodeattr.contains_key("clip-path") {
+    return Ok(());
+  }
+
+  let is_svg_g = |n: &Node| -> bool {
+    document::with_node_qname(n, |q| q == "svg:g")
+  };
+
+  // Step 1: Remove empty svg:g children (Perl L211-214)
+  let mut children = element_nodes(node);
+  let mut nempty = 0;
+  for c in &children {
+    if is_svg_g(c) && element_nodes(c).is_empty() {
+      document.remove_node(c.clone());
+      nempty += 1;
+    }
+  }
+  if nempty > 0 {
+    children = element_nodes(node);
+  }
+
+  // Step 2-3: Pop/push leading/trailing children that mask parent attributes (Perl L218-237)
+  // Skip for now — this optimization moves children outside the parent, which is complex
+  // and less impactful than steps 4-5 for reducing nesting.
+
+  // Step 4: Remove redundant svg:g children (same attributes as parent, Perl L239-250)
+  let mut nredundant = 0;
+  for c in &children {
+    if is_svg_g(c) {
+      let mut is_same = true;
+      for (key, val) in c.get_attributes() {
+        if key.starts_with('_') {
+          continue;
+        }
+        // Perl L245-246: different value OR key is 'transform' → not redundant
+        if val != *nodeattr.get(&key).unwrap_or(&String::new()) || key == "transform" {
+          is_same = false;
+          break;
+        }
+      }
+      if is_same {
+        document.unwrap_nodes(c.clone())?;
+        nredundant += 1;
+      }
+    }
+  }
+  if nredundant > 0 {
+    children = element_nodes(node);
+  }
+
+  // Step 5: Merge single svg:g child into parent (Perl L254-270)
+  if children.len() == 1 && is_svg_g(&children[0]) {
+    let c = &children[0];
+    let mut av: HashMap<String, String> = HashMap::default();
+    let mut mergeable = true;
+    for (key, val) in c.get_attributes() {
+      if key.starts_with('_') || COLLAPSIBLE.contains(&key.as_str()) {
+        av.insert(key, val);
+      } else if key == "transform" {
+        // Compose transforms: parent's transform + child's transform
+        let composed = if let Some(parent_t) = nodeattr.get("transform") {
+          format!("{} {}", parent_t, val)
+        } else {
+          val
+        };
+        av.insert(key, composed);
+      } else {
+        mergeable = false;
+        break;
+      }
+    }
+    if mergeable {
+      for (key, val) in &av {
+        node.set_attribute(key, val)?;
+      }
+      document.unwrap_nodes(children[0].clone())?;
+    }
+  }
+
+  Ok(())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box Family of primitive control sequences
@@ -302,10 +403,10 @@ LoadDefinitions!({
     Tokens!(T_MATH!(), T_CS!("\\lx@dollar@in@normalmode")),
   )?;
 
-  // Perl: collapseSVGGroup — collapse nested svg:g elements
-  // Stub: SVG group collapsing is deferred (low priority for test passage).
-  Tag!("svg:g", after_close => sub[_document, _node] {
-    // TODO: implement collapse_svg_group(document, node)
+  // Perl: collapseSVGGroup (TeX_Box.pool.ltxml L199-271)
+  // Collapse/remove/unwrap unneeded svg:g's to reduce tree depth.
+  Tag!("svg:g", after_close => sub[document, node] {
+    collapse_svg_group(document, node)?;
   });
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
