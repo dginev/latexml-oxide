@@ -371,7 +371,21 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
 - [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
-- [ ] **38. xytest** (65_graphics) — SVG nesting errors (was 102 TooManyErrors). Session 46: 9 infrastructure fixes. Session 50: comprehensive xylatexml.tex.ltxml port, xylatexml loading fix, `\hbox\bgroup` fix (`defined_as(T_BEGIN)` in `read_box_contents`), `svg:foreignObject` Tag with autoOpen + afterClose handler, `Digested::get_dimension()`. xy picture dimensions now correct (9.46x10.38). `defined_as` audit completed. **CURRENT BLOCKER**: (1) `svg:text` auto-opens before `svg:foreignObject` for text content inside `svg:g`; (2) LaTeXML elements get `svg:` namespace prefix inside foreignObject (e.g. `<svg:Math>` instead of `<Math>`). Both are document model issues.
+- [ ] **38. xytest** (65_graphics) — 1 error, 263 diffs (was 102 TooManyErrors). Session 50: comprehensive xylatexml port (700+ lines), xylatexml loading fix, `\hbox\bgroup` fix, `svg:foreignObject` Tag autoOpen + afterClose + namespace fix, `float_to_element` for SVG element placement. Simple xy diagrams produce correct output with `<svg:foreignObject><Math>...</Math>`. `defined_as` audit completed.
+
+#### xytest step targets
+
+| Step | Issue | Perl behavior | Rust status | Impact |
+|------|-------|---------------|-------------|--------|
+| XY1 | Coordinate registers | `\X@min/\X@max/\Y@min/\Y@max` populated by xy kernel's `\kern`/`\raise` tracking | Registers are zero — `\lx@xy@capturerange` returns `0,0,0,0` | Picture dimensions wrong (16.60 vs 42.82/81.86) |
+| XY2 | SVG element coordinates | `\X@c/\Y@c/\X@p/\Y@p` drive line/circle positions via `pxValue` | Zero values → `d="M 0 0 L 0 0"`, `r="0"` | All drawing elements at origin |
+| XY3 | `\lx@xy@move@to` translate | Produces `translate(6.62,0) translate(0,-4.73)` chains | Translate values partially correct but depend on registers | Node positioning wrong |
+| XY4 | foreignObject attributes | `height`, `width`, `style`, `transform` from whatsit dimensions | Only `overflow="visible"` — needs afterClose handler with sizing | foreignObject rendering broken |
+| XY5 | `tex` attribute on `<picture>` | Full TeX source from reversion | Missing — no `tex` attr generated | Test comparison diff |
+| XY6 | Transform chains | Multiple `translate()` calls composed in `<svg:g>` | Single `matrix()` transform | Minor positioning diff |
+| XY7 | `\cirbuild@` radius | `r="9.75"` from `\R@` register | `r="0"` — `\R@` is zero | Circle not drawn |
+
+Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht`, `\dp` to compute positions. These TeX primitives work at the box level. Our engine handles them but doesn't track the accumulated position for xy's range registers. The `\endxy` macro's `\edef\tmp@{...}` captures register values, but they're all zero.
 - [ ] **56. babel suite** (81_babel) — 186 diffs (csquotes sub-test), no longer OOM. Session 47: (1) fixed \@fontenc@load@list comma leak; (2) fixed OOM by pre-defining \captions/\date macros for 27 common languages, skipping babel's \babelprovide ini-loading path (was 26GB, now 50MB/0.14s). Remaining diffs: missing xml:lang on document root, quote chars `?` fallback (csquotes can't find language styles), language name display.
 
 #### mathtools_test mini-plan (per-section parity)
