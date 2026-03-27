@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 
 use crate::alignment::Alignment;
 use crate::common::arena::{self, DONT_EXPAND_SYM, SymStr};
+use crate::common::store::Stored;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -1337,9 +1338,10 @@ pub fn read_number() -> Result<Number> {
     Ok(Number::new(s * n.value_of()))
   } else {
     let next = read_token()?;
+    let current = get_current_token().unwrap();
     let message = s!(
       "Missing number, treated as zero while processing {:?}, next token is {:?}",
-      get_current_token().unwrap(),
+      current,
       next
     );
     Warn!("expected", "<number>", message);
@@ -1726,13 +1728,29 @@ pub fn skip_spaces() -> Result<()> {
   Ok(())
 }
 
+/// Check if a token is a space token (catcode SPACE) or an "implicit space"
+/// (a CS or ACTIVE token `\let` to a space token).
+/// See TeXbook p269: `<one optional space>` absorbs both explicit and implicit spaces.
+fn is_space_or_implicit_space(token: &Token) -> bool {
+  if token.get_catcode() == Catcode::SPACE {
+    return true;
+  }
+  // Check for implicit space: CS/ACTIVE let to a space token
+  if token.get_catcode() == Catcode::CS || token.get_catcode() == Catcode::ACTIVE {
+    if let Some(Stored::Token(let_tok)) = state::lookup_meaning(token) {
+      return let_tok.get_catcode() == Catcode::SPACE;
+    }
+  }
+  false
+}
+
 /// Skip one optional space.
 /// If `expanded` is true, acts like `<one optional space>` and expands tokens (readXToken).
 /// Perl: skip1Space($self, $expanded)
 pub fn skip_one_space(expanded: bool) -> Result<()> {
   let token = if expanded { read_x_token(None, false, None)? } else { read_token()? };
   if let Some(t) = token {
-    if t.get_catcode() != Catcode::SPACE {
+    if !is_space_or_implicit_space(&t) {
       unread_one(t);
     }
   }
@@ -1750,7 +1768,7 @@ fn read_optional_signs() -> Result<bool> {
     let sym = t.get_sym();
     if sym == arena::pin_static("-") {
       sign = !sign;
-    } else if (sym != arena::pin_static("+")) && t.get_catcode() != Catcode::SPACE {
+    } else if (sym != arena::pin_static("+")) && !is_space_or_implicit_space(&t) {
       unread_one(t); // Unread and end
       break;
     }
@@ -1771,7 +1789,7 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
     if let Some(digit) = digit_opt {
       result.push(digit);
     } else {
-      if !(skip && token.get_catcode() == Catcode::SPACE) {
+      if !(skip && is_space_or_implicit_space(&token)) {
         unread_one(token);
       }
       break;

@@ -8,26 +8,18 @@ LoadDefinitions!({
   // We skip the raw .lua file: Lua is not TeX, loading it as raw TeX causes
   // 646 "Script _ can only appear in math mode" errors from Lua's underscored identifiers.
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
-  // Load raw expl3.sty — with expanded skip_one_space, f-expansion works and
-  // the kernel loads much further. Temporarily lower the token limit to prevent
-  // reaching the fp module (which has cascading errors). 2M tokens is enough
-  // for all quark creation and basic infrastructure.
-  // Load raw expl3.sty. expl3-code.tex (36K lines) has module boundaries:
+  // Load raw expl3.sty — the 20M token limit allows full loading of all 36K lines
+  // of expl3-code.tex. Module boundaries:
   //   l3keys (12886), l3intarray (14331), l3fp (14607), l3regex (24625)
-  // l3keys is critical for babel hooks, but loading past l3msg (~10K) introduces
-  // undefined errors from incomplete primitives. Current limit loads through l3msg
-  // safely. Full loading requires implementing: l3skip dimension parsing,
-  // l3keys property handlers, \tex_expanded:D, and other internal primitives.
-  // Pre-define stubs for l3file macros that would be defined later in expl3-code.tex
-  // but are referenced by code that loads within the token limit window.
-  // Without these, partial loading corrupts state via undefined-macro cascades.
+  // Pre-define stubs for l3file macros referenced before their module loads.
+  // Use \long\gdef (TeX primitive) since \cs_gset:Npn isn't defined yet.
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
   state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
   raw_tex(concat!(
-    r"\cs_gset:Npn\__file_name_expand_end:#1\s__file_stop{#1}",
-    r"\cs_gset:Npn\__kernel_file_name_sanitize:n#1{#1}",
-    r"\cs_gset:Npn\l_file_search_path_seq{}",
-    r"\cs_gset:Npn\g__file_record_seq{}",
+    r"\long\gdef\__file_name_expand_end:#1\s__file_stop{#1}",
+    r"\long\gdef\__kernel_file_name_sanitize:n#1{#1}",
+    r"\long\gdef\l_file_search_path_seq{}",
+    r"\long\gdef\g__file_record_seq{}",
   ))?;
   state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
   state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
