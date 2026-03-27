@@ -272,10 +272,18 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let lang_name = if main == "nil" || main.is_empty() {
-      loaded.split(',').map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty()).last().unwrap_or_default()
-    } else { main };
+    // Prefer the last entry in \bbl@loaded (explicit \usepackage options)
+    // over \bbl@main@language (which may come from class options).
+    // In babel, the last explicitly loaded language is the main language.
+    let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty()).last().unwrap_or_default();
+    let lang_name = if !loaded_last.is_empty() && loaded_last != "nil" {
+      loaded_last
+    } else if main != "nil" && !main.is_empty() {
+      main
+    } else {
+      String::new()
+    };
     // Map language name to ISO code
     let iso = match lang_name.as_str() {
       "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),

@@ -112,9 +112,9 @@ LoadDefinitions!({
       let mut font = Font::default();
       font.language = Some(Cow::Owned(code.to_string()));
       merge_font(font);
-      // Also store as a state value for the document element's after_open hook
-      // (font merge may not persist through document construction phase)
-      state::assign_value("DOCUMENT_LANGUAGE", Stored::from(code.to_string()), Some(Scope::Global));
+      // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init
+      // in \lx@babel@activate@lang@post. Setting it here would override the main
+      // language whenever \selectlanguage is called in the document body.
     }
   });
 
