@@ -73,9 +73,19 @@ enum XyPathPart {
 }
 
 /// Helper: insert an empty SVG element with attributes
+/// Uses floatToElement to find the right insertion point (matching Perl's "^" prefix).
+/// This ensures SVG elements like svg:path go into svg:g, not ltx:text.
 fn svg_empty_element(document: &mut Document, tag: &str, attrs: HashMap<String, String>) -> Result<()> {
+  // Perl constructors use "^<svg:path .../>" which floats up to find
+  // an ancestor that can contain the SVG element. We replicate this
+  // by calling float_to_element before opening.
+  let savenode = document.float_to_element(tag, false)?;
   document.open_element(tag, Some(attrs), None)?;
   document.close_element(tag)?;
+  // Restore the insertion point if float_to_element moved it
+  if let Some(saved) = savenode {
+    document.set_node(&saved);
+  }
   Ok(())
 }
 
