@@ -393,19 +393,19 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Alignment gaps
 
-- [ ] A1. `alignment_skip_data` continuation-line check (173 regressions when added naively)
-- [ ] A3. Font wrapper `<text>` elements during alignment absorption
-- [ ] A4. `{turn}` rotation dimensions inside alignment
+- [x] A1. `alignment_skip_data` continuation-line check: Perl's continuation logic is dead code (KNOWN_PERL_ERRORS #7 — `scalar($::TABLINES[0])` returns array ref address). Rust matches Perl's actual behavior. 173 regressions confirmed this is correct.
+- [ ] A3. Font wrapper `<text>` elements during alignment absorption (cosmetic; tests pass, listing divergence is font nesting)
+- [x] A4. `{turn}` rotation dimensions inside alignment — FIXED: parbox sizer now applies vattach transformation (Perl Font.pm L793-800). innerdepth/innerheight now balanced (27.5/32.5 vs old 52/8, Perl 25/30).
 - [x] B2. Split/gather `$` mode: alignment depth guard. FIXED: `alignsafeOptional` + `\lx@begin@alignment` SkipSpaces removal.
 - [x] B3. listings math: code blocks with math expressions. listing_test PASSING (0 diffs).
 
 ### Math parser gaps
 
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
-- [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
+- [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure — digestion produces XMWrap+POSTSUBSCRIPT, Perl produces XMApp+SUBSCRIPTOP. Math parser structural difference.
 - [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
-- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
-- [ ] C6. XMDual id ordering in eval-at: `\left.xyz\right|_0` has swapped m1.1↔m1.2
+- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`. Rust separates mulop at term level vs invisible-times at tight_term level. Fix: semantic pruning in apply_invisible_times or grammar restructure.
+- [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
 - [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`
 - [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
 - [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
