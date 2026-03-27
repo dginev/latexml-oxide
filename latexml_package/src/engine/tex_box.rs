@@ -876,7 +876,9 @@ LoadDefinitions!({
 // but parameter think's it's just parsing from gullet...
 pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
   while let Some(t) = gullet::read_token()? {
-    if t.get_catcode() == Catcode::BEGIN {
+    // Perl: $t->defined_as(T_BEGIN) — checks meaning, not catcode.
+    // This catches both { (catcode BEGIN) and \bgroup (\let to T_BEGIN).
+    if t.defined_as(&T_BEGIN!()) {
       break;
     } // Skip till { or \bgroup
   }
