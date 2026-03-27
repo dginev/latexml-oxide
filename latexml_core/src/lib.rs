@@ -50,6 +50,8 @@ pub mod rewrite;
 /// conversion
 #[macro_use]
 pub mod state;
+/// Loader for Perl LaTeXML kernel dump files
+pub mod dump_loader;
 /// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
 /// Gullet into Boxes
 #[macro_use]
