@@ -43,11 +43,6 @@ LoadDefinitions!({
     r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // Verify l3keys loaded
-  {
-    let has_keys = state::lookup_meaning(&T_CS!("\\keys_define:nn")).is_some();
-    if !has_keys { eprintln!("WARN: expl3 l3keys module did not load (\\keys_define:nn undefined)"); }
-  }
   // Catcodes: expl3.sty calls \ExplSyntaxOff at end, which should restore
   // space/tab/tilde/endlinechar. But verify and fix if needed.
   if state::lookup_catcode(' ') != Some(Catcode::SPACE) {
