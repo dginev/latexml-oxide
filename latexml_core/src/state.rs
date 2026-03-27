@@ -70,7 +70,7 @@ pub enum Scope {
 }
 
 /// the kinds of tables bookkept in the State
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TableName {
   /// token meaning
   Meaning,
@@ -502,6 +502,73 @@ impl State {
       Stash => &mut self.stash,
       StashActive => &mut self.stash_active,
     }
+  }
+
+  /// Perl DumpFile equivalent: Take a snapshot of the current state.
+  /// Returns a HashMap mapping (table_name, key) → Stored value.
+  /// Only captures the front (current) value of each key.
+  /// Used before processing latex.ltx to diff what changed.
+  pub fn snapshot(&self) -> std::collections::HashMap<(TableName, SymStr), Stored> {
+    let tables = [
+      TableName::Value,
+      TableName::Meaning,
+      TableName::Catcode,
+      TableName::Mathcode,
+      TableName::Sfcode,
+      TableName::Lccode,
+      TableName::Uccode,
+      TableName::Delcode,
+    ];
+    let mut snap = std::collections::HashMap::new();
+    for &tname in &tables {
+      let table = self.table(tname);
+      for (key, values) in table {
+        if let Some(front) = values.front() {
+          snap.insert((tname, *key), front.clone());
+        }
+      }
+    }
+    snap
+  }
+
+  /// Perl DumpFile equivalent: Compute the diff between current state and a snapshot.
+  /// Returns only entries that CHANGED since the snapshot was taken.
+  /// Skips entries that contain closures (Primitive, Constructor, Conditional)
+  /// since those can't be serialized — they come from Rust engine code.
+  pub fn diff_from_snapshot(
+    &self,
+    snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+  ) -> Vec<(TableName, SymStr, Stored)> {
+    let tables = [
+      TableName::Value,
+      TableName::Meaning,
+      TableName::Catcode,
+      TableName::Mathcode,
+      TableName::Sfcode,
+      TableName::Lccode,
+      TableName::Uccode,
+      TableName::Delcode,
+    ];
+    let mut diff = Vec::new();
+    for &tname in &tables {
+      let table = self.table(tname);
+      for (key, values) in table {
+        if let Some(current) = values.front() {
+          let key_pair = (tname, *key);
+          let changed = match snap.get(&key_pair) {
+            None => true,    // new entry
+            Some(prev) => {
+              // Compare string representations (cheap approximation of Perl's dump-based diff)
+              format!("{:?}", current) != format!("{:?}", prev)
+            }
+          };
+          if changed && is_serializable(current) {
+            diff.push((tname, *key, current.clone()));
+          }
+        }
+      }
+    }
+    diff
   }
 
   // needed for assign_internal, so keeping it as a object method
@@ -2277,4 +2344,49 @@ pub fn set_state(incoming_state: State) {
   }
   let mut global_state = state_mut!();
   *global_state = incoming_state;
+}
+
+/// Check whether a Stored value can be serialized for the kernel dump.
+/// Values containing closures (Primitive, Constructor, Conditional, etc.)
+/// cannot be serialized — they come from Rust engine code, not the dump.
+/// This matches Perl's DumpFile which only serializes Expandable macros.
+pub fn is_serializable(stored: &Stored) -> bool {
+  use Stored::*;
+  match stored {
+    // Data types: always serializable
+    None | Bool(_) | String(_) | Charcode(_) | Int(_) | Catcode(_) => true,
+    Token(_) | Tokens(_) | Number(_) | Float(_) => true,
+    Glue(_) | MuGlue(_) | Dimension(_) | MuDimension(_) => true,
+    Reversion(_) | KeyVal(_) => true,
+    Chars(_) | Strings(_) => true,
+    // Expandable: serializable only if it has a Tokens body (not a Closure body)
+    Expandable(exp) => {
+      match exp.get_expansion() {
+        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None => true,
+        _ => false,
+      }
+    },
+    // Register: serializable (stores value + type, no closures)
+    Register(_) => true,
+    // Font: serializable (data only)
+    Font(_) => true,
+    // These contain closures — NOT serializable
+    Primitive(_) | Constructor(_) | Conditional(_) | MathPrimitive(_) => false,
+    // Collections: serializable if contents are
+    VecDequeStored(_) | HashStored(_) | HashString(_) => true,
+    // Everything else: skip for safety
+    _ => false,
+  }
+}
+
+/// Take a snapshot of the current State (for dump diff).
+pub fn take_snapshot() -> std::collections::HashMap<(TableName, SymStr), Stored> {
+  state!().snapshot()
+}
+
+/// Compute diff from snapshot and return changed serializable entries.
+pub fn diff_snapshot(
+  snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+) -> Vec<(TableName, SymStr, Stored)> {
+  state!().diff_from_snapshot(snap)
 }
