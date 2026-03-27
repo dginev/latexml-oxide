@@ -336,10 +336,9 @@ LoadDefinitions!({
       if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
         crate::package::xspace_sty::load_definitions();
       }
-      // NOTE: French punctuation spacing (:;!? → thin_space + char) is NOT yet
-      // implemented. It requires making :;!? active ONLY in the document body
-      // (not during package loading), which needs AtBeginDocument support.
-      // Current: 18 diffs remain for french_test, all spacing-related.
+      // TODO: French active punctuation (:;!? → thin space + char).
+      // Implemented but produces U+2006 encoding while Perl produces regular spaces.
+      // Need to match Perl's serialization of \hskip thin spaces before enabling.
     }
     // German-specific: activate " shorthand
     let is_german = lang_name == "german" || lang_name == "ngerman"
