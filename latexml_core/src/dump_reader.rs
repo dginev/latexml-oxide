@@ -82,8 +82,22 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   }
 }
 
+/// Value entries to skip (cause test regressions or are runtime-specific)
+/// Value entries to skip from dump loading (runtime-specific or cause regressions)
+const SKIP_VALUES: &[&str] = &[
+  "INTERPRETING_DEFINITIONS", // Runtime flag
+  "if_count",                 // Runtime counter
+  "absorb_count",             // Runtime counter
+];
+
 /// Load a value entry: V\tKEY\tTYPE\tDATA
 fn load_value(key: &str, data: &str) -> Result<bool, String> {
+  // Skip values that cause regressions or are runtime-specific
+  for skip in SKIP_VALUES {
+    if key == *skip || key.starts_with(skip) {
+      return Ok(false);
+    }
+  }
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
   if parts.is_empty() {
     return Err("Missing value type".into());
