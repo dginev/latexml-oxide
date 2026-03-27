@@ -460,33 +460,34 @@ LoadDefinitions!({
 
   // \lx@xy@drawsquiggles@ — squiggle path (Perl L349-379)
   DefConstructor!("\\lx@xy@drawsquiggles@",
-    sub[document, _args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let x0 = xy_reg_dim("\\X@p"); let y0 = xy_reg_dim("\\Y@p");
       let x1 = xy_reg_dim("\\X@c"); let y1 = xy_reg_dim("\\Y@c");
       let l = xy_reg_dim("\\xybsqll@");
       let r_px = dim_to_px(l) * 0.66;
-      let dashed = !state::lookup_string("xy_linepattern").is_empty();
+      let is_dashed = !dashes.is_empty();
       let w = x1.value_of() - x0.value_of();
       let h = y1.value_of() - y0.value_of();
       let dist = ((w as f64 * w as f64 + h as f64 * h as f64).sqrt()) as i64;
       let l_val = l.value_of();
-      if l_val == 0 { return Ok(()); }
-      let mut n = ((dist as f64 * 0.5 + dist as f64).sqrt() / l_val as f64) as i32;
+      let mut n = if l_val != 0 {
+        ((dist as f64 * 0.5 + dist as f64).sqrt() / l_val as f64) as i32
+      } else { 0 };
       if n % 2 == 1 { n += 1; }
-      if dashed && n % 4 == 0 { n += 2; }
-      if n <= 0 { return Ok(()); }
+      if is_dashed && n % 4 == 0 { n += 2; }
       let dx_px = dim_to_px(x1) - dim_to_px(x0);
       let dy_px = dim_to_px(y1) - dim_to_px(y0);
       let ddx = dx_px / n as f64;
       let ddy = dy_px / n as f64;
-      let step = if dashed { 4 } else { 2 };
+      let step = if is_dashed { 4 } else { 2 };
       let mut path_str = String::new();
       let mut cx = dim_to_px(x0);
       let mut cy = dim_to_px(y0);
       let mut i = 0;
       while i < n {
-        if dashed || i == 0 {
+        if is_dashed || i == 0 {
           path_str.push_str(&s!("M {} {} ", fmt2(cx), fmt2(cy)));
         }
         path_str.push_str(&s!("a {} {} 60 0 0 {} {} ", fmt2(r_px), fmt2(r_px), fmt2(ddx), fmt2(ddy)));
@@ -495,12 +496,11 @@ LoadDefinitions!({
         cy += ddy * step as f64;
         i += step;
       }
-      if !path_str.is_empty() {
-        let mut attrs = string_map!("d" => path_str.trim(), "stroke" => stroke, "fill" => fill);
-        let dashes = state::lookup_string("xy_linepattern");
-        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-        svg_empty_element(document, "svg:path", attrs)?;
-      }
+      let trimmed_path = path_str.trim().to_string();
+      stored_map!(
+        "xy_path" => trimmed_path,
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+      )
     }
   );
 
@@ -871,13 +871,14 @@ LoadDefinitions!({
 
   // \lx@xy@poly — polyline (Perl L962-983)
   DefConstructor!("\\lx@xy@poly {}",
-    sub[document, args, _props] {
-      let (stroke, fill) = xy_fill_stroke();
+    sub[document, _args, props] { xy_emit_path(document, props)?; },
+    properties => sub[args] {
+      let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let points_str = args.first().and_then(|a| a.as_ref())
         .map(|t| t.to_string()).unwrap_or_default();
       let dpi = state::lookup_int("DPI");
       let dpi = if dpi > 0 { dpi as f64 } else { 100.0 };
-      let pt_px = dpi / 72.27; // 1pt in px
+      let pt_px = dpi / 72.27;
       let points: Vec<f64> = points_str.split_whitespace()
         .filter_map(|s| s.parse::<f64>().ok())
         .map(|v| (v * pt_px * 100.0).round() / 100.0)
@@ -889,10 +890,9 @@ LoadDefinitions!({
           path.push_str(&s!(" L {} {}", points[i], points[i + 1]));
           i += 2;
         }
-        let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
-        let dashes = state::lookup_string("xy_linepattern");
-        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
-        svg_empty_element(document, "svg:path", attrs)?;
+        Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
+      } else {
+        Ok(stored_map!("xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
       }
     }
   );
