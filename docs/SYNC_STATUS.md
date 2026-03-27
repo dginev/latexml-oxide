@@ -432,6 +432,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **E. Precompiled kernel dump** — **ZERO-REGRESSION**: `latexml_oxide --init=latex.ltx --dest=dump` → 137 clean non-expl3 kernel entries. `LATEXML_DUMP=dump cargo test` → 311/0/21 (identical to without dump). expl3 macros filtered from dump (load fresh with correct delimited params). Infrastructure: dump_writer.rs, dump_reader.rs, dump_loader.rs (Perl 98%), ini_tex.rs (--init), State::snapshot/diff.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
+- [ ] **H. expl3 l3file/l3skip/l3keys loading** — expl3 loads through l3msg (line 9805) but stops at l3file (line 10734). l3file uses `\openin`/`\read` for Unicode data files that our engine doesn't support. This blocks l3skip (12292) and l3keys (12886). Fix: implement file I/O primitives or add l3file-specific stubs. Currently expl3 loading: 1500→6 errors (session 49: implicit space fix + expl3.lua.ltxml port).
+- [ ] **I. "make formats" build step** — Rust equivalent of `make formats`: a build.rs step for latexml_package that checks for texlive installation, runs the kernel initialization (latex.ltx + expl3), and generates a `_dump.rs` file containing precompiled state as valid Rust code. This gets compiled into latexml_package, eliminating runtime kernel loading overhead. Extends the existing dump infrastructure (dump_writer.rs/dump_loader.rs).
 
 ### Permanent ignores (5)
 

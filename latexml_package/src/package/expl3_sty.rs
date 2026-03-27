@@ -56,6 +56,7 @@ LoadDefinitions!({
     // Also suppress the \__kernel_msg_info:nnxx handler that might bypass redirects.
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
+  // Module loading diagnostics (l3file blocks l3skip/l3keys — see SYNC_STATUS)
   // Restore catcodes to LaTeX defaults.
   // Critical: expl3 sets \catcode32=9 (SPACE→IGNORE) for its internal processing.
   // If not restored, ALL spaces in the document are ignored, breaking paragraphs.
