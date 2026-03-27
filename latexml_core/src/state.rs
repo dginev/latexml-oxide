@@ -1392,10 +1392,23 @@ pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
       // preserving order unshift, as Perl's
       front.push_front(value)
     }
+  } else if receiver.is_none() || matches!(receiver, Some(Stored::None)) {
+    // Key doesn't exist yet — create a new VecDequeStored
+    let mut vd = std::collections::VecDeque::new();
+    for value in values_iter {
+      vd.push_back(value);
+    }
+    state_mut!().assign_value(key, Stored::VecDequeStored(vd), Some(Scope::Global));
   } else {
-    panic!(
-      "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} \
-       got: {receiver:?}"
+    // Wrong type — warn but don't panic
+    Warn!(
+      "unexpected",
+      "unshift_value",
+      s!(
+        "unshift_value expects VecDequeStored receiver for key {:?}, got: {:?}",
+        key,
+        receiver.map(|r| std::mem::discriminant(r))
+      )
     );
   }
 }
