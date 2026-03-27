@@ -901,7 +901,10 @@ impl Document {
       if !can_auto_close(&node) {
         cant_close.push(node.clone());
       }
-      node = node.get_parent().unwrap();
+      match node.get_parent() {
+        Some(parent) => { node = parent; }
+        None => break, // detached node — treat as not found
+      }
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {
@@ -1086,11 +1089,18 @@ impl Document {
       if !can_auto_close(&n) {
         cant_close.push(n.clone());
       }
-      n = n.get_parent().unwrap();
-      t = n.get_type(); // update to walker's type
+      match n.get_parent() {
+        Some(parent) => {
+          n = parent;
+          t = n.get_type();
+        }
+        None => {
+          t = None; // detached node — stop walking
+        }
+      }
     }
 
-    if t == Some(NodeType::DocumentNode) {
+    if t == Some(NodeType::DocumentNode) || t.is_none() {
       // Didn't find $qname at all!!
       if strict {
         let qname = get_node_qname(node);
@@ -1679,7 +1689,13 @@ impl Document {
   /// No checking! Use this when you've already verified that `node` can be closed.
   /// and, of course, `node` must be current or some ancestor of it!!!
   pub fn close_node_internal(&mut self, node: &Node) -> Result<()> {
-    let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
+    let closeto = match node.get_parent() {
+      Some(p) => p,
+      None => {
+        // Node has been detached — nothing to close up to.
+        return Ok(());
+      }
+    };
     let mut n = self.close_text_internal()?; // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
       self.close_element_at(&mut n)?;
@@ -1687,7 +1703,13 @@ impl Document {
       if *node == n {
         break;
       }
-      n = n.get_parent().unwrap();
+      match n.get_parent() {
+        Some(parent) => { n = parent; }
+        None => {
+          // Node was detached during close/collapse — bail out safely.
+          break;
+        }
+      }
     }
     self.set_node(&closeto);
     Ok(())

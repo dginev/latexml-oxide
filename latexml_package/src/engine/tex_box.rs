@@ -338,14 +338,14 @@ LoadDefinitions!({
     let node = document.open_element(newtag,
       Some(string_map!("_noautoclose" => "true", "width" => width)), None)?;
     document.absorb(contents, None)?;
+    // Perl L318-321: cleanup auto-opened svg:g/svg:svg (only when NOT in SVG),
+    // then always close the specific node we opened.
     if !is_svg {
       while !document.get_element().unwrap().has_attribute("_beginscope") &&
         document.maybe_close_element("svg:g")?.is_some() {}
       document.maybe_close_element("svg:svg")?;
-      document.maybe_close_node(&node)?;
-    } else {
-      document.maybe_close_element("svg:g")?;
     }
+    document.maybe_close_node(&node)?;
   },
   mode => "restricted_horizontal",
   bounded => true,

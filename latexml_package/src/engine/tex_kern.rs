@@ -16,37 +16,38 @@ LoadDefinitions!({
   // \lastkern         iq is 0.0 pt or the last kern on the current list.
 
   // \kern is heavily used by xy.
-  // Completely HACK version for the moment
   // Note that \kern should add vertical spacing in vertical modes!
-  // Perl: enterHorizontal => 1
+  // Perl: TeX_Kern.pool.ltxml L31-52
   DefConstructor!("\\kern Dimension", sub[document,args, props] {
-    // TODO: We definitely need a cleaner Dimension cast here.
     let length : Dimension = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[0].as_ref().unwrap().data() {
         *d
       } else { Dimension::default() };
     let is_svg_g = document::with_node_qname(document.get_node(),
       |qname| qname == "svg:g");
-    let parent = document.get_node_mut();
     if is_svg_g {
       let x = length.px_value(None);
-      if x > 0.0 {
-        // HACK HACK HACK
-        let mut transform = parent.get_attribute("transform").unwrap_or_default();
-        if !transform.is_empty() {
-          transform.push(' ');
+      if x != 0.0 {
+        let shift = s!("translate({x},0)");
+        let parent = document.get_node_mut();
+        let has_children = !parent.get_child_nodes().is_empty();
+        if has_children {
+          // Perl L37-38: If already have positioned children, open new svg:g
+          let attrs = string_map!("_autoclose" => "1", "transform" => shift);
+          document.open_element("svg:g", Some(attrs), None)?;
+        } else {
+          // Perl L40-41: No children yet — append to parent's transform attribute
+          let prev = parent.get_attribute("transform").unwrap_or_default();
+          let new_transform = if prev.is_empty() { shift } else { s!("{prev} {shift}") };
+          parent.set_attribute("transform", &new_transform)?;
         }
-        transform.push_str(&s!("translate({x},0)"));
-        parent.set_attribute("transform", &transform)?;
       }
     } else if in_svg(document) {
       Warn!("unexpected", "kern", s!("Lost kern in SVG {length}"));
     } else if props.get("isMath") == Some(&Stored::Bool(true)) {
-      // TODO: Reconsider if the insert_element API needs to be based around
-      // Stored map values, rather than String map values.
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_attribute())))?;
     } else {
-      // Add space to document?
+      // Add space to document
       document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
     }
   },
@@ -112,9 +113,33 @@ LoadDefinitions!({
   // \raise <dimen> <box>
   // But <box> apparently must really explicitly be an \hbox, \vbox or \vtop (?)
   // OR something that expands into one!!
-  // Perl: enterHorizontal => 1
+  // Perl: TeX_Kern.pool.ltxml L94-103
+  // Template: ?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)
+  //                    (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)
   DefConstructor!("\\lower Dimension MoveableBox",
-  "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
+    sub[document, args, props] {
+      let svg = in_svg(document);
+      let noautoclose = string_map!("_noautoclose" => "1");
+      let node = if svg {
+        let transform = match props.get("transform") {
+          Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+        };
+        let mut attrs = noautoclose.clone();
+        if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
+        document.open_element("svg:g", Some(attrs), None)?
+      } else {
+        let y_attr = match props.get("y") {
+          Some(Stored::Dimension(d)) => d.to_attribute(), _ => String::new()
+        };
+        let mut attrs = noautoclose;
+        if !y_attr.is_empty() { attrs.insert(String::from("yoffset"), y_attr); }
+        document.open_element("ltx:text", Some(attrs), None)?
+      };
+      if let Some(Some(content)) = args.get(1) {
+        document.absorb(content, None)?;
+      }
+      document.maybe_close_node(&node)?;
+    },
     // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); },
     enter_horizontal => true,
     after_digest => sub[whatsit] {
@@ -126,18 +151,42 @@ LoadDefinitions!({
     }
   );
 
-  // Perl: enterHorizontal => 1
+  // Perl: TeX_Kern.pool.ltxml L105-114
+  // Template: ?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)
+  //                    (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)
   DefConstructor!("\\raise Dimension MoveableBox",
-  "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
-  //sizer       => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
-  enter_horizontal => true,
-  after_digest => sub[whatsit] {
-    let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
-    let ypx       = y.px_value(None);
-    let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
-    whatsit.set_property("y", y);
-    whatsit.set_property("transform", transform);
-  });
+    sub[document, args, props] {
+      let svg = in_svg(document);
+      let noautoclose = string_map!("_noautoclose" => "1");
+      let node = if svg {
+        let transform = match props.get("transform") {
+          Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+        };
+        let mut attrs = noautoclose.clone();
+        if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
+        document.open_element("svg:g", Some(attrs), None)?
+      } else {
+        let y_attr = match props.get("y") {
+          Some(Stored::Dimension(d)) => d.to_attribute(), _ => String::new()
+        };
+        let mut attrs = noautoclose;
+        if !y_attr.is_empty() { attrs.insert(String::from("yoffset"), y_attr); }
+        document.open_element("ltx:text", Some(attrs), None)?
+      };
+      if let Some(Some(content)) = args.get(1) {
+        document.absorb(content, None)?;
+      }
+      document.maybe_close_node(&node)?;
+    },
+    // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
+    enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
+      let ypx       = y.px_value(None);
+      let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
+      whatsit.set_property("y", y);
+      whatsit.set_property("transform", transform);
+    });
 
   //======================================================================
   // Moving Horizontally
