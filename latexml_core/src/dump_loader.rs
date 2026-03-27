@@ -534,7 +534,7 @@ fn parse_parameters(input: &str) -> Result<(Option<Vec<String>>, &str), String> 
     return Ok((Some(vec!["{}".to_string()]), &input[2..]));
   }
   if let Some(rest) = input.strip_prefix("Ps(") {
-    // Ps($P,$P,...) — list of parameters
+    // Ps($P,$P,...,P(type,spec,opts)) — list of parameters
     let mut params = Vec::new();
     let mut rest = rest.trim();
     while !rest.starts_with(')') && !rest.is_empty() {
@@ -542,11 +542,19 @@ fn parse_parameters(input: &str) -> Result<(Option<Vec<String>>, &str), String> 
         params.push("{}".to_string());
         rest = skip_comma(&rest[2..]);
       } else if let Some(r) = rest.strip_prefix("P(") {
-        // P(type, spec) — complex parameter
-        let end = r.find(')').unwrap_or(r.len());
-        let param_str = &r[..end];
-        params.push(param_str.to_string());
-        rest = skip_comma(&r[end + 1..]);
+        // P(type, spec, key=>value, ...) — complex parameter
+        // Need to handle nested parens/brackets for extra=>[T(...)]
+        let param_end = find_matching_paren(r)?;
+        let param_str = &r[..param_end];
+        // Extract type for basic classification
+        if param_str.starts_with("'Until'") || param_str.starts_with("'Match'") {
+          params.push("{}".to_string()); // Approximate as mandatory arg
+        } else if param_str.starts_with("'Optional'") {
+          params.push("[]".to_string()); // Approximate as optional arg
+        } else {
+          params.push("{}".to_string()); // Default to mandatory
+        }
+        rest = skip_comma(&r[param_end + 1..]);
       } else {
         rest = skip_comma(&rest[1..]); // skip unknown
       }
@@ -561,6 +569,46 @@ fn parse_parameters(input: &str) -> Result<(Option<Vec<String>>, &str), String> 
 //======================================================================
 // Helpers
 //======================================================================
+
+/// Find the position of the matching close paren, handling nested parens and brackets
+fn find_matching_paren(input: &str) -> Result<usize, String> {
+  let mut depth = 1;
+  let mut in_string = false;
+  let mut escape = false;
+  let mut quote_char = ' ';
+
+  for (i, ch) in input.char_indices() {
+    if escape {
+      escape = false;
+      continue;
+    }
+    if ch == '\\' && in_string {
+      escape = true;
+      continue;
+    }
+    if in_string {
+      if ch == quote_char {
+        in_string = false;
+      }
+      continue;
+    }
+    match ch {
+      '\'' | '"' => {
+        in_string = true;
+        quote_char = ch;
+      }
+      '(' | '[' => depth += 1,
+      ')' | ']' => {
+        depth -= 1;
+        if depth == 0 {
+          return Ok(i);
+        }
+      }
+      _ => {}
+    }
+  }
+  Err("Unmatched paren".into())
+}
 
 fn make_cs_token(name: &str) -> Token {
   Token { text: arena::pin(name), code: Catcode::CS }
