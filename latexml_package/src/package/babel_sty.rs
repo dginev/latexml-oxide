@@ -170,6 +170,46 @@ LoadDefinitions!({
       stomach::digest(Tokenize!(&select_cs))?;
       // Restore @ to OTHER
       state::assign_catcode('@', Catcode::OTHER, None);
+
+      // French active punctuation: make :;!? insert thin space BEFORE the char.
+      // Safe to activate here since we're at \begin{document} time (all packages loaded).
+      let is_french = lang == "french" || lang == "francais" || lang == "frenchb";
+      if is_french {
+        // Define dispatch primitives for French punctuation (if not already defined)
+        if lookup_definition(&T_CS!("\\lx@french@punct@colon"))?.is_none() {
+          // These are defined as Primitives that output thin_space + char
+          // U+2006 = SIX-PER-EM SPACE (matches Perl's thin space output)
+          DefPrimitive!("\\lx@french@punct@colon", {
+            enter_horizontal();
+            Tbox::new(arena::pin_static("\u{2006}:"), None, None, Tokens!(), stored_map!())
+          });
+          DefPrimitive!("\\lx@french@punct@semi", {
+            enter_horizontal();
+            Tbox::new(arena::pin_static("\u{2006};"), None, None, Tokens!(), stored_map!())
+          });
+          DefPrimitive!("\\lx@french@punct@exclam", {
+            enter_horizontal();
+            Tbox::new(arena::pin_static("\u{2006}!"), None, None, Tokens!(), stored_map!())
+          });
+          DefPrimitive!("\\lx@french@punct@question", {
+            enter_horizontal();
+            Tbox::new(arena::pin_static("\u{2006}?"), None, None, Tokens!(), stored_map!())
+          });
+        }
+        for &(ch, cs_name) in &[
+          (':', "\\lx@french@punct@colon"),
+          (';', "\\lx@french@punct@semi"),
+          ('!', "\\lx@french@punct@exclam"),
+          ('?', "\\lx@french@punct@question"),
+        ] {
+          state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
+          let active_tok = T_ACTIVE!(ch);
+          let dispatch_cs = T_CS!(cs_name);
+          if let Some(defn) = lookup_meaning(&dispatch_cs) {
+            state::assign_meaning(&active_tok, defn, Some(Scope::Global));
+          }
+        }
+      }
     }
   });
   // Register activation in @at@begin@document (fires at \begin{document}).
