@@ -7,78 +7,77 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <picture height="42.82" tex="\lx@xy@svg{\hbox{\raise 0.0pt\hbox{\kern-4.78578pt\hbox{{\hbox{\kern 4.78578pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise-3.41666pt\hbox{$\textstyle{A}$}}}}}{\hbox{\kern 49.86182pt\raise 17.07156pt\hbox{\hbox{\kern 3.0pt\raise-3.41666pt\hbox{$\textstyle{B}$}}}}}{\hbox{\kern 49.8618pt\raise 17.07156pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\cirbuild@}}}}}\ignorespaces{\hbox{\lx@xy@drawline@}}}}}}" width="81.86" xml:id="p1.pic1">
-      <svg:svg height="38.1" overflow="visible" style="vertical-align:-4.73px" version="1.1" viewBox="-6.62 4.73 81.86 38.1" width="81.86">
-        <svg:g transform="matrix(1 0 0 -1 -6.62 38.1) translate(-6.62,0)">
+    <picture height="37.23" width="81.86" xml:id="p1.pic1">
+      <svg:svg height="37.23" overflow="visible" style="vertical-align:-4.727627638218659px" version="1.1" viewBox="-6.62 4.73 81.86 37.23" width="81.86">
+        <svg:g transform="matrix(1 0 0 -1 -6.6220864263893215 37.22827827450446) translate(-6.62,0)">
           <svg:g transform="translate(6.62,0) translate(0,-4.73)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38"><Math mode="inline" tex="\textstyle{A}" text="A" xml:id="p1.pic1.m1">
+            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38"><Math mode="inline" tex="\textstyle{A}" text="A" xml:id="p1.pic1.m1">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">A</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
           <svg:g transform="translate(68.99,0) translate(0,23.62) translate(4.15,0) translate(0,-4.73)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.81em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.19"><Math mode="inline" tex="\textstyle{B}" text="B" xml:id="p1.pic1.m2">
+            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.81em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.19"><Math mode="inline" tex="\textstyle{B}" text="B" xml:id="p1.pic1.m2">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">B</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(68.99,0) translate(0,23.62)">
+          <svg:g transform="translate(78.74,0) translate(0,23.62)">
             <svg:circle cx="9.75" cy="0" fill="none" r="9.75" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 17 1.83 L 69.55 20.38" fill="none" stroke="#000000"/>
+          <svg:path d="M 16.999857643753458 1.829281146222499 L 78.73974318852048 23.621922956556144" fill="none" stroke="#000000"/>
         </svg:g>
       </svg:svg>
     </picture>
   </para>
   <para xml:id="p2">
-    <picture height="198.79" tex="\lx@xy@svg{\hbox{\raise 0.0pt\hbox{\kern 6.95901pt\hbox{\ignorespaces\ignorespaces\ignorespaces\hbox{\vtop{\kern 0.0pt\halign{\entry@#!@&amp;&amp;\entry@@#!@\cr\\&amp;&amp;\\&amp;&amp;\crcr}}}\ignorespaces{\hbox{\kern-6.95901pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{U\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{}{}{{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}}{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{}{}{{}{}}\ignorespaces\ignorespaces{\hbox{\kern&#10;10.39345pt\raise-39.30325pt\hbox{{}\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\hbox{\hbox{\kern 0.0pt\raise-0.8264pt\hbox{$\scriptstyle{y}$}}}\kern 3.0pt}}}}}}\ignorespaces{}{}{}{{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}}{\hbox{\kern 43.71304pt\raise-57.55635pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}{{}}{{}{}{}\lx@xy@spline@}{}}}}\ignorespaces{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces\ignorespaces\ignorespaces{}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 38.86055pt\raise-24.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{}{}{{}{}{}{}{}{}{}{}{}{}{}{}{}{}}{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{}{}{{}{}}\ignorespaces\ignorespaces{\hbox{\kern 49.12173pt\raise-5.42339pt\hbox{{}\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\hbox{\hbox{\kern 0.0pt\raise-1.50694pt\hbox{$\scriptstyle{x}$}}}\kern 3.0pt}}}}}}\ignorespaces{}{}{}{{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}}{\hbox{\kern 94.49512pt\raise-27.19577pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}{{}}{{}{}{}\lx@xy@spline@}{}}}}\ignorespaces{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{{}}{{}{}{}}{}}}}\ignorespaces{}{\hbox{\kern-3.0pt\raise-31.33331pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{}$}}}}}}}{\hbox{\kern 30.95901pt\raise-31.33331pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{\hbox{\kern 50.72705pt\raise-46.99997pt\hbox{{}\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\hbox{\hbox{\kern 0.0pt\raise-0.8264pt\hbox{$\scriptstyle{q}$}}}\kern 3.0pt}}}}}}\ignorespaces{\hbox{\kern 50.72705pt\raise-55.33331pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{\hbox{\kern 71.31725pt\raise-36.5208pt\hbox{{}\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\hbox{\hbox{\kern 0.0pt\raise-0.8264pt\hbox{$\scriptstyle{p}$}}}\kern 3.0pt}}}}}}\ignorespaces{\hbox{\kern 94.49509pt\raise-31.33331pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}{\hbox{\kern 94.49509pt\raise-31.33331pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{X\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{\hbox{\kern 91.34572pt\raise-46.99997pt\hbox{{}\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\hbox{\hbox{\kern 0.0pt\raise-1.75pt\hbox{$\scriptstyle{f}$}}}\kern 3.0pt}}}}}}\ignorespaces{\hbox{\kern 102.0298pt\raise-55.33331pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}{\hbox{\kern-3.0pt\raise-62.66663pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{}$}}}}}}}{\hbox{\kern 43.71317pt\raise-62.66663pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{\hbox{\kern 71.3022pt\raise-57.47913pt\hbox{{}\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\hbox{\hbox{\kern 0.0pt\raise-0.8264pt\hbox{$\scriptstyle{g}$}}}\kern 3.0pt}}}}}}\ignorespaces{\hbox{\kern 95.25897pt\raise-62.66663pt\hbox{\hbox{\kern&#10;0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}{\hbox{\kern 95.25897pt\raise-62.66663pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{Z}$}}}}}}}\ignorespaces}}}}" width="161.23" xml:id="p2.pic1">
-      <svg:svg height="104.47" overflow="visible" style="vertical-align:-94.32px" version="1.1" viewBox="9.63 94.32 161.23 104.47" width="161.23">
-        <svg:g transform="matrix(1 0 0 -1 9.63 104.47) translate(9.63,0)">
-          <svg:g transform="translate(-9.63,0) translate(4.15,0) translate(0,-3.46)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.79em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.96"><Math mode="inline" tex="\textstyle{U\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="U" xml:id="p2.pic1.m1">
+    <picture height="84.18" width="86.47" xml:id="p2.pic1">
+      <svg:svg height="84.18" overflow="visible" style="vertical-align:-70.56870070568701px" version="1.1" viewBox="9.63 70.57 86.47 84.18" width="86.47">
+        <svg:g transform="matrix(1 0 0 -1 9.629189003152241 84.17505602363532) translate(9.63,0)">
+          <svg:g transform="translate(-9.63,0) translate(4.15,0)">
+            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.79em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.96"><Math mode="inline" tex="\textstyle{U\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="U" xml:id="p2.pic1.m1">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">U</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(14.38,0) translate(0,-54.38) translate(4.15,0) translate(0,-1.14)">
-            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.43em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.96"><Math mode="inline" tex="\scriptstyle{y}" text="y" xml:id="p2.pic1.m2">
+          <svg:g transform="translate(-5.08,0) translate(0,-40.51) translate(4.15,0) translate(0,-1.14)">
+            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.43em;--ltx-fo-height:0.30em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.96"><Math mode="inline" tex="\scriptstyle{y}" text="y" xml:id="p2.pic1.m2">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(60.49,0) translate(0,-79.64)">
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.8 6.41" fill="none" stroke="#000000"/>
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.17 2.02" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(14.28,0) translate(0,-57.37) translate(0,-4.46)">
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -2.7 6.95" fill="none" stroke="#000000"/>
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.74 3.17" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 3.32 -7.62 C 16.53 -36.36 35.59 -60.36 60.49 -79.64" fill="none" stroke="#000000"/>
-          <svg:path d="M 9.63 -5.94 L 9.65 -5.98" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(53.77,0) translate(0,-33.21)">
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.43 5.99" fill="none" stroke="#000000"/>
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.34 1.28" fill="none" stroke="#000000"/>
+          <svg:path d="M 0 0 C 1.1686792475266363 -27.089723993736595 12.238279358222638 -49.2289242151286 33.208800332088 -66.417600664176" fill="none" stroke="#000000"/>
+          <svg:path d="M 4.147046232876712 -4.151100041511 L 4.179476701951017 -4.175444006903366" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(10.39,0) translate(0,-19.6) translate(0,-4.46)">
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -2.94 6.85" fill="none" stroke="#000000"/>
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.85 2.94" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 9.63 -5.94 L 53.77 -33.21" fill="none" stroke="#000000"/>
-          <svg:path d="M 53.74 -33.19 L 53.77 -33.21" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(67.97,0) translate(0,-7.5) translate(4.15,0) translate(0,-2.09)">
-            <svg:foreignObject height="4.17" overflow="visible" style="--ltx-fo-width:0.45em;--ltx-fo-height:0.3em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 4.17)" width="6.27"><Math mode="inline" tex="\scriptstyle{x}" text="x" xml:id="p2.pic1.m3">
+          <svg:path d="M 4.147046232876712 -4.151100041511 L 15.161497655277087 -15.143846696848623" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(33.28,0) translate(0,-2.94) translate(4.15,0) translate(0,-2.09)">
+            <svg:foreignObject height="4.17" overflow="visible" style="--ltx-fo-width:0.45em;--ltx-fo-height:0.30em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 4.17)" width="6.27"><Math mode="inline" tex="\scriptstyle{x}" text="x" xml:id="p2.pic1.m3">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(130.75,0) translate(0,-37.63)">
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.82 5.68" fill="none" stroke="#000000"/>
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.41 0.78" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(46.77,0) translate(0,-22.24) translate(0,-4.46)">
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.34 6.66" fill="none" stroke="#000000"/>
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.01 2.52" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 9.61 -0.87 C 52.38 -5.35 92.76 -17.6 130.75 -37.63" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(42.84,0) translate(0,-43.36) translate(4.15,0) translate(0,-3.46)">
-            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:3.35em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="46.4"><Math mode="inline" tex="\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="X * _ Z Y" xml:id="p2.pic1.m5">
+          <svg:path d="M 0 0 C 27.089745107323232 -1.1686581339399993 49.228945328715234 -12.238258244636 66.417600664176 -33.208800332088" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(5.86,0) translate(0,-33.21) translate(4.15,0)">
+            <svg:foreignObject height="11.540000000000001" overflow="visible" style="--ltx-fo-width:3.35em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="46.4"><Math mode="inline" tex="\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="(* _ Z)@(X, Y)" xml:id="p2.pic1.m5">
                 <XMath>
                   <XMApp>
-                    <XMApp role="MULOP">
+                    <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
                       <XMTok meaning="times" role="MULOP">×</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">Z</XMTok>
@@ -89,78 +88,77 @@
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:path class="droprule" d="M 69.91 -53.04 L 70.47 -53.04" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(70.19,0) translate(0,-65.03) translate(4.15,0) translate(0,-1.14)">
-            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.42"><Math mode="inline" tex="\scriptstyle{q}" text="q" xml:id="p2.pic1.m6">
+          <svg:path d="M 32.93206455203793 -39.435450394354504 L 33.48553611213808 -39.435450394354504" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(33.21,0) translate(0,-49.81) translate(4.15,0) translate(0,-1.14)">
+            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.30em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.42"><Math mode="inline" tex="\scriptstyle{q}" text="q" xml:id="p2.pic1.m6">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">q</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(70.19,0) translate(0,-76.56)">
+          <svg:g transform="translate(23.98,0) translate(0,-52.81) translate(0,-4.46)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 2.77 6.92" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -2.77 6.92" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path class="droprule" d="M 69.91 -76.56 L 70.47 -53.04" fill="none" stroke="#000000"/>
-          <svg:path class="droprule" d="M 69.91 -76.56 L 70.47 -76.56" fill="none" stroke="#000000"/>
-          <svg:path class="droprule" d="M 97.54 -43.63 L 97.54 -43.08" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(98.68,0) translate(0,-50.53) translate(4.15,0) translate(0,-1.14)">
-            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.41em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.7"><Math mode="inline" tex="\scriptstyle{p}" text="p" xml:id="p2.pic1.m7">
+          <svg:path d="M 32.93206455203793 -48.35264702893663 L 33.48553611213808 -39.435450394354504" fill="none" stroke="#000000"/>
+          <svg:path d="M 32.93206455203793 -52.811245346227686 L 33.48553611213808 -57.269822549932115" fill="none" stroke="#000000"/>
+          <svg:path d="M 60.561831864773595 -33.48553611213808 L 60.561831864773595 -32.93206455203793" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(42.81,0) translate(0,-40.39) translate(4.15,0) translate(0,-1.14)">
+            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.41em;--ltx-fo-height:0.30em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.7"><Math mode="inline" tex="\scriptstyle{p}" text="p" xml:id="p2.pic1.m7">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(130.75,0) translate(0,-43.36)">
+          <svg:g transform="translate(46.77,0) translate(0,-33.21) translate(0,-4.46)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -6.92 2.77" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.92 -2.77" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path class="droprule" d="M 97.54 -43.63 L 130.75 -43.08" fill="none" stroke="#000000"/>
-          <svg:path class="droprule" d="M 130.75 -43.63 L 130.75 -43.08" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(130.75,0) translate(0,-43.36) translate(4.15,0) translate(0,-3.46)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.91em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="12.55"><Math mode="inline" tex="\textstyle{X\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="X" xml:id="p2.pic1.m8">
+          <svg:path d="M 65.21649094757507 -33.48553611213808 L 55.99181715079952 -32.93206455203793" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(55.99,0) translate(0,-33.21) translate(4.15,0)">
+            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.91em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="12.55"><Math mode="inline" tex="\textstyle{X\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="X" xml:id="p2.pic1.m8">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">X</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:path class="droprule" d="M 140.9 -50.97 L 141.46 -50.97" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(126.4,0) translate(0,-65.03) translate(4.15,0) translate(0,-2.42)">
+          <svg:path d="M 66.14086488412593 -37.359900373599004 L 66.69433644422608 -37.359900373599004" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(51.63,0) translate(0,-49.81) translate(4.15,0) translate(0,-2.42)">
             <svg:foreignObject height="8.61" overflow="visible" style="--ltx-fo-width:0.47em;--ltx-fo-height:0.49em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 6.73)" width="6.48"><Math mode="inline" tex="\scriptstyle{f}" text="f" xml:id="p2.pic1.m9">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(141.18,0) translate(0,-76.56)">
+          <svg:g transform="translate(57.19,0) translate(0,-52.81) translate(0,-4.46)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 2.77 6.92" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -2.77 6.92" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path class="droprule" d="M 140.9 -76.56 L 141.46 -50.97" fill="none" stroke="#000000"/>
-          <svg:path class="droprule" d="M 140.9 -76.56 L 141.46 -76.56" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(60.49,0) translate(0,-86.71) translate(4.15,0) translate(0,-3.46)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.8em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.11"><Math mode="inline" tex="\textstyle{Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="Y" xml:id="p2.pic1.m11">
+          <svg:path d="M 66.14086488412593 -48.35264702893663 L 66.69433644422608 -37.359900373599004" fill="none" stroke="#000000"/>
+          <svg:path d="M 66.14086488412593 -52.811245346227686 L 66.69433644422608 -57.269822549932115" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(23.5,0) translate(0,-66.42) translate(4.15,0)">
+            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.80em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.11"><Math mode="inline" tex="\textstyle{Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="Y" xml:id="p2.pic1.m11">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">Y</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:path class="droprule" d="M 79.9 -86.99 L 79.9 -86.44" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(98.66,0) translate(0,-79.53) translate(4.15,0) translate(0,-1.14)">
-            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.42em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.75"><Math mode="inline" tex="\scriptstyle{g}" text="g" xml:id="p2.pic1.m12">
+          <svg:path d="M 42.913934906373235 -66.69433644422608 L 42.913934906373235 -66.14086488412593" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(42.79,0) translate(0,-59.24) translate(4.15,0) translate(0,-1.14)">
+            <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.42em;--ltx-fo-height:0.30em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.75"><Math mode="inline" tex="\scriptstyle{g}" text="g" xml:id="p2.pic1.m12">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(131.81,0) translate(0,-86.71)">
+          <svg:g transform="translate(47.82,0) translate(0,-66.42) translate(0,-4.46)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -6.92 2.77" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.92 -2.77" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path class="droprule" d="M 79.9 -86.99 L 131.81 -86.44" fill="none" stroke="#000000"/>
-          <svg:path class="droprule" d="M 131.81 -86.99 L 131.81 -86.44" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(131.81,0) translate(0,-86.71) translate(4.15,0) translate(0,-3.46)">
-            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.44"><Math mode="inline" tex="\textstyle{Z}" text="Z" xml:id="p2.pic1.m13">
+          <svg:path d="M 42.913934906373235 -66.69433644422608 L 47.82411061465468 -66.14086488412593" fill="none" stroke="#000000"/>
+          <svg:path d="M 66.27347932179241 -66.69433644422608 L 57.04880552501687 -66.14086488412593" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(57.05,0) translate(0,-66.42) translate(4.15,0)">
+            <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.44"><Math mode="inline" tex="\textstyle{Z}" text="Z" xml:id="p2.pic1.m13">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">Z</XMTok>
                 </XMath>
@@ -173,58 +171,57 @@
   <para xml:id="p3">
     <p>Before equation</p>
     <equation xml:id="S0.Ex1">
-      <Math mode="display" tex="x=\lx@xy@svg{\hbox{\raise 2.5pt\hbox{\kern 6.93124pt\hbox{\ignorespaces\ignorespaces\ignorespaces\hbox{\vtop{\kern 0.0pt\halign{\entry@#!@&amp;&amp;\entry@@#!@\cr&amp;\\&amp;\crcr}}}\ignorespaces{\hbox{\kern-6.75pt\raise 0.0pt\hbox{\hbox{\kern&#10;0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 0.0pt\raise-24.68333pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 30.93124pt\raise-25.78745pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\lx@xy@drawline@}}{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{B}$}}}}}}}{\hbox{\kern-6.93124pt\raise-32.01665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{C}$}}}}}}}{\hbox{\kern 30.93124pt\raise-32.01665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{\hbox{\large D}}$}}}}}}}\ignorespaces}}}}\ignorespaces" text="x = [ABCD]" xml:id="S0.Ex1.m1">
+      <Math mode="display" tex="x=\lx@xy@svg{\hbox{\raise 0.0pt\hbox{\kern 6.93124pt\hbox{\ignorespaces\ignorespaces\ignorespaces\hbox{\vtop{\halign{\entry@#!@&amp;&amp;\entry@@#!@\cr&amp;\cr&amp;\crcr}}}\ignorespaces{\hbox{\kern-6.75pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 10.28992pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise-3.22221pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern-6.66669pt\raise-14.16669pt\hbox{\hbox{\kern 0.0pt\raise-3.22221pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 9.74997pt\raise-16.42407pt\hbox{\hbox{\kern 0.0pt\raise-3.22221pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 16.9566pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{B}$}}}}}}}{\hbox{\kern-6.93124pt\raise-24.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{C}$}}}}}}}{\hbox{\kern 16.41666pt\raise-24.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{\hbox{\large D}}$}}}}}}}\ignorespaces}}}}\ignorespaces" text="x = [ABCD]" xml:id="S0.Ex1.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
             <XMTok font="italic" role="UNKNOWN">x</XMTok>
-            <XMText><picture height="110.51" tex="\lx@xy@svg{\hbox{\raise 2.5pt\hbox{\kern 6.93124pt\hbox{\ignorespaces\ignorespaces\ignorespaces\hbox{\vtop{\kern 0.0pt\halign{\entry@#!@&amp;&amp;\entry@@#!@\cr&amp;\\&amp;\crcr}}}\ignorespaces{\hbox{\kern-6.75pt\raise 0.0pt\hbox{\hbox{\kern&#10;0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 0.0pt\raise-24.68333pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 30.93124pt\raise-25.78745pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\lx@xy@drawline@}}{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{B}$}}}}}}}{\hbox{\kern-6.93124pt\raise-32.01665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{C}$}}}}}}}{\hbox{\kern 30.93124pt\raise-32.01665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{\hbox{\large D}}$}}}}}}}\ignorespaces}}}}" width="73.11" xml:id="S0.Ex1.m1.pic1">
-                <svg:svg height="62.06" overflow="visible" style="vertical-align:-51.91px" version="1.1" viewBox="9.59 51.91 73.11 62.06" width="73.11">
-                  <svg:g transform="matrix(1 0 0 -1 9.59 62.06) translate(0,3.46) translate(9.59,0)">
-                    <svg:g transform="translate(-9.34,0) translate(4.15,0) translate(0,-3.46)">
-                      <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38"><Math mode="inline" tex="\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="A" xml:id="S0.Ex1.m1.pic1.m1">
+            <XMText><picture height="50.97" width="53.29" xml:id="S0.Ex1.m1.1">
+                <svg:svg height="50.97" overflow="visible" style="vertical-align:-37.359900373599004px" version="1.1" viewBox="9.59 37.36 53.29 50.97" width="53.29">
+                  <svg:g transform="matrix(1 0 0 -1 9.590762275473052 50.966255691547325) translate(9.59,0)">
+                    <svg:g transform="translate(-9.34,0) translate(4.15,0)">
+                      <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38"><Math mode="inline" tex="\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="A" xml:id="S0.Ex1.m1.pic1.m1">
                           <XMath>
                             <XMTok font="italic" role="UNKNOWN">A</XMTok>
                           </XMath>
                         </Math></svg:foreignObject>
                     </svg:g>
-                    <svg:path class="droprule" d="M 9.34 -0.28 L 9.34 0.28" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(43.41,0)">
+                    <svg:path d="M 9.339996206986388 -0.27673578005007266 L 9.339996206986388 0.27673578005007266" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(14.24,0) translate(0,-4.46)">
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -6.92 2.77" fill="none" stroke="#000000"/>
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.92 -2.77" fill="none" stroke="#000000"/>
                     </svg:g>
-                    <svg:path class="droprule" d="M 9.34 -0.28 L 43.41 0.28" fill="none" stroke="#000000"/>
-                    <svg:path class="droprule" d="M 43.41 -0.28 L 43.41 0.28" fill="none" stroke="#000000"/>
-                    <svg:path class="droprule" d="M -0.28 -7.61 L 0.28 -7.61" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(0,-34.15)">
+                    <svg:path d="M 9.339996206986388 -0.27673578005007266 L 14.238158284471426 0.27673578005007266" fill="none" stroke="#000000"/>
+                    <svg:path d="M 32.687526991609154 -0.27673578005007266 L 23.46285319483361 0.27673578005007266" fill="none" stroke="#000000"/>
+                    <svg:path d="M -0.27673578005007266 -4.151100041511 L 0.27673578005007266 -4.151100041511" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(-9.22,0) translate(0,-19.6) translate(0,-4.46)">
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 0 2.77 6.92" fill="none" stroke="#000000"/>
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -2.77 6.92" fill="none" stroke="#000000"/>
                     </svg:g>
-                    <svg:path class="droprule" d="M -0.28 -34.15 L 0.28 -7.61" fill="none" stroke="#000000"/>
-                    <svg:path class="droprule" d="M -0.28 -34.15 L 0.28 -34.15" fill="none" stroke="#000000"/>
-                    <svg:path d="M 9.13 -7.61 L 9.16 -7.67" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(42.8,0) translate(0,-35.68)">
-                      <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.54 6.55" fill="none" stroke="#000000"/>
-                      <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.09 2.3" fill="none" stroke="#000000"/>
+                    <svg:path d="M -0.27673578005007266 -15.143846696848623 L 0.27673578005007266 -4.151100041511" fill="none" stroke="#000000"/>
+                    <svg:path d="M -0.27673578005007266 -19.602445014139686 L 0.27673578005007266 -24.06102221784411" fill="none" stroke="#000000"/>
+                    <svg:path d="M 4.147046232876712 -4.151100041511 L 4.179476701951017 -4.175444006903366" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(13.49,0) translate(0,-22.73) translate(0,-4.46)">
+                      <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -2.94 6.85" fill="none" stroke="#000000"/>
+                      <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.85 2.94" fill="none" stroke="#000000"/>
                     </svg:g>
-                    <svg:path d="M 9.13 -7.61 L 42.8 -35.68" fill="none" stroke="#000000"/>
-                    <svg:path d="M 42.79 -35.61 L 42.8 -35.68" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(43.41,0) translate(4.15,0) translate(0,-3.46)">
-                      <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.81em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.19"><Math mode="inline" tex="\textstyle{B}" text="B" xml:id="S0.Ex1.m1.pic1.m2">
+                    <svg:path d="M 4.147046232876712 -4.151100041511 L 17.726523955036235 -17.711385513417564" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(23.46,0) translate(4.15,0)">
+                      <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.81em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.19"><Math mode="inline" tex="\textstyle{B}" text="B" xml:id="S0.Ex1.m1.pic1.m2">
                           <XMath>
                             <XMTok font="italic" role="UNKNOWN">B</XMTok>
                           </XMath>
                         </Math></svg:foreignObject>
                     </svg:g>
-                    <svg:g transform="translate(-9.59,0) translate(0,-44.3) translate(4.15,0) translate(0,-3.46)">
-                      <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.79em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.88"><Math mode="inline" tex="\textstyle{C}" text="C" xml:id="S0.Ex1.m1.pic1.m3">
+                    <svg:g transform="translate(-9.59,0) translate(0,-33.21) translate(4.15,0)">
+                      <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.79em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.88"><Math mode="inline" tex="\textstyle{C}" text="C" xml:id="S0.Ex1.m1.pic1.m3">
                           <XMath>
                             <XMTok font="italic" role="UNKNOWN">C</XMTok>
                           </XMath>
                         </Math></svg:foreignObject>
                     </svg:g>
-                    <svg:g transform="translate(42.8,0) translate(0,-44.3) translate(4.15,0) translate(0,-3.46)">
-                      <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.9em;--ltx-fo-height:0.82em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.42"><text class="ltx_markedasmath" fontsize="120%">D</text></svg:foreignObject>
+                    <svg:g transform="translate(22.72,0) translate(0,-33.21) translate(4.15,0)">
+                      <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.92em;--ltx-fo-height:0.82em;--ltx-fo-depth:0.00em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.68"><text class="ltx_markedasmath" fontsize="120%">D</text></svg:foreignObject>
                     </svg:g>
                   </svg:g>
                 </svg:svg>
@@ -237,7 +234,7 @@
   </para>
   <para xml:id="p4">
     <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="[\raise 5.0pt\lx@xy@svg{\hbox{\raise 2.5pt\hbox{\kern-12.0pt\hbox{\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{}{}{}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{{}{}}{{}}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}\lx@xy@spline@}{{}{}{}\ignorespaces{}\lx@xy@spline@}{{}{}{}\lx@xy@spline@}{}}}}\ignorespaces{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{}{}{}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{}{{}}{}{}{{}{{}}}{\hbox{\kern 15.5pt\raise-6.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{$\scriptstyle{\hbox to5.0pt{\hfill\vrule height=2.5pt,depth=2.5pt,width=0.0pt}}$}}}}}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}{{}{}{{}}{}{}{{{}}{{{}}}{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{}{{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}{}{}{}{}{}{{{}}{{{}}{{{}}{{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}{}}}}}}}}}}}}}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}\lx@xy@spline@}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{{}{}}{{}}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{{}{}{{}}{}{}{{{}}{}{}{{}{}}{{}}{}{{{{}}{{{}}{{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}}{{}}}}}}}}}}}}}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}\lx@xy@spline@}{}}}}\ignorespaces{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces\ignorespaces\ignorespaces}}}}]" text="delimited-[]@([ ])" xml:id="S0.Ex2.m1">
+      <Math mode="display" tex="[\raise 5.0pt]" text="delimited-[]@([])" xml:id="S0.Ex2.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -246,20 +243,7 @@
             </XMApp>
             <XMWrap>
               <XMTok role="OPEN" stretchy="false">[</XMTok>
-              <XMText xml:id="S0.Ex2.m1.1" yoffset="5.0pt"><picture height="29.75" tex="\lx@xy@svg{\hbox{\raise 2.5pt\hbox{\kern-12.0pt\hbox{\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{}{}{}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{{}{}}{{}}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}\lx@xy@spline@}{{}{}{}\ignorespaces{}\lx@xy@spline@}{{}{}{}\lx@xy@spline@}{}}}}\ignorespaces{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{}{}{}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{}{{}}{}{}{{}{{}}}{\hbox{\kern 15.5pt\raise-6.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{$\scriptstyle{\hbox to5.0pt{\hfill\vrule height=2.5pt,depth=2.5pt,width=0.0pt}}$}}}}}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}{{}{}{{}}{}{}{{{}}{{{}}}{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{{{}}{}{{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}}{{}}{}{}{}{}{}{{{}}{{{}}{{{}}{{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}{}}}}}}}}}}}}}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}\lx@xy@spline@}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces{}{{}{}}{{}}{}{{}}{}\ignorespaces\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{{}{}{{}}{}{}{{{}}{}{}{{}{}}{{}}{}{{{{}}{{{}}{{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}{{{}}}{{}}{{{}}}{{}}{{{}}{{{}}}{{}}}}}}}}}}}}}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}\lx@xy@spline@}{}}}}\ignorespaces{}\ignorespaces\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{{}{}{}\ignorespaces\ignorespaces{{}{}{}{}\ignorespaces{}}{{}{}{}\ignorespaces{}}{{}{}{}}{}}}}\ignorespaces{}\ignorespaces\ignorespaces\ignorespaces}}}}" width="16.6" xml:id="S0.Ex2.m1.pic1">
-                  <svg:svg height="16.6" overflow="visible" style="vertical-align:-16.6px" version="1.1" viewBox="-16.6 16.6 16.6 16.6" width="16.6">
-                    <svg:g transform="matrix(1 0 0 -1 -16.6 16.6) translate(0,3.46) translate(-16.6,0)">
-                      <svg:path d="M 16.6 0 C 20.76 0 22.83 -3.11 23.87 -5.36" fill="none" stroke="#000000"/>
-                      <svg:path d="M 23.87 -5.36 C 24.91 -7.61 24.91 -8.99 25.94 -11.24" fill="none" stroke="#000000"/>
-                      <svg:path d="M 25.94 -11.24 C 26.98 -13.49 29.06 -16.6 33.21 -16.6" fill="none" stroke="#000000"/>
-                      <svg:g transform="translate(21.45,0) translate(0,-8.3)">
-                        <svg:foreignObject height="6.92" overflow="visible" style="--ltx-fo-width:0.63em;--ltx-fo-height:0.31em;--ltx-fo-depth:0.31em;" transform="matrix(1 0 0 -1 0 3.46)" width="6.92"><text class="ltx_markedasmath" fontsize="70%" width="5.0pt"> </text></svg:foreignObject>
-                      </svg:g>
-                      <svg:path d="M 16.6 -16.6 C 20.44 -16.6 22.51 -13.94 23.62 -11.76" fill="none" stroke="#000000"/>
-                      <svg:path d="M 26.2 -4.84 C 27.31 -2.66 29.37 0 33.21 0" fill="none" stroke="#000000"/>
-                    </svg:g>
-                  </svg:svg>
-                </picture></XMText>
+              <XMText yoffset="5.0pt" xml:id="S0.Ex2.m1.1"/>
               <XMTok role="CLOSE" stretchy="false">]</XMTok>
             </XMWrap>
           </XMDual>

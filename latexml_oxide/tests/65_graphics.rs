@@ -54,7 +54,6 @@ fn xcolors_test() {
 }
 
 #[test]
-#[ignore] // needs xy.sty
 fn xytest_test() {
   latexml_test_single("tests/graphics/xytest.tex", "xytest", DIR, None, None);
 }
