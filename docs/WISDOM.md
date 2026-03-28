@@ -609,3 +609,100 @@ Perl uses them inconsistently:
 
 **Fix:** Match each Perl function's exact check pattern. Never assume `defined_as`
 is universally correct — check the Perl source for each specific function.
+
+---
+
+## 18. Rewrite system: internal DOM ≠ serialized XML
+
+**Discovery (Session 58):** \lxDeclare wildcard patterns failed because the
+XPath matched the serialized XML structure, not the internal DOM structure.
+
+**Analysis:** The serializer transforms the DOM during output:
+- Internal: `<XMApp role="POSTSUBSCRIPT"><sub_content/></XMApp>` (base token is a SIBLING)
+- Serialized: `<XMApp><XMTok role="SUBSCRIPTOP"/><base/><sub/></XMApp>` (3 children)
+
+XPath queries in rewrite rules run on the INTERNAL DOM (before serialization).
+Attributes like `role="SUBSCRIPTOP"` and `scriptpos="post1"` exist only in the
+serialized form. The internal DOM uses `role="POSTSUBSCRIPT"` on the XMApp
+with `scriptpos="1"` (just the position number).
+
+**Debugging approach that worked:**
+1. List all unique attribute values: iterate all `*[@role]` nodes and collect
+   via `get_property("role")` into a BTreeSet.
+2. Compare XPath results: test the same XPath pattern with Python's lxml (which
+   operates on serialized XML) vs our libxml2 (which operates on internal DOM).
+3. Inspect actual node attributes: use `node.get_attributes()` to see the raw
+   HashMap of attribute names and values.
+
+**Key insight:** Always verify attribute values in the internal DOM before
+writing XPath predicates. The serializer may synthesize, rename, or transform
+attributes. Use `get_attributes()` debug prints rather than assuming the
+serialized XML reflects the internal representation.
+
+---
+
+## 19. XPath nested predicates: known limitation
+
+**Discovery (Session 58):** `ltx:XMApp[child::*[text()='x']]` returns 0 matches
+in our libxml2 XPath evaluator, even though the elements exist.
+
+**Analysis:** Predicates that check child attributes or text content within a
+parent predicate (`[child::*[@role='SUBSCRIPTOP']]`) fail silently. Boolean
+attribute checks (`[child::*[@role]]`) work, and top-level text comparisons
+(`*[text()='x']`) work, but combining them in nested predicates doesn't.
+
+The `xml:` namespace prefix also has quirks: `@xml:id` works in some contexts
+but `@xml:id='S1'` (value comparison) may fail depending on the context.
+
+**Workaround:** Match broadly with XPath (e.g., `*[@role='POSTSUBSCRIPT']`)
+and apply fine-grained filtering in Rust code using `node.get_property()`,
+`node.get_content()`, `node.get_next_sibling()`, etc.
+
+**Key insight:** Treat our XPath as limited — use it for coarse selection and
+do precise matching in Rust. Don't trust complex nested predicates.
+
+---
+
+## 20. Scope vs content Select: shared select_count hazard
+
+**Discovery (Session 58):** Scoped rewrite rules with `select_count=2` (for
+subscript wildcard wrapping) caused scope Selects to fail because the scope
+Select tried to collect 2 sibling section nodes.
+
+**Analysis:** `RewriteOptions::select_count` is shared across ALL clauses in
+a Rewrite rule. When a rule has [Scope, Xpath, Attributes] clauses, the Scope
+compiles to a Select that uses `select_count` — but this count was meant for
+the inner Xpath Select, not the Scope Select.
+
+In Perl, `nnodes` is stored per-clause in the pattern array `[$xpath, $nnodes, @wilds]`.
+In Rust, it's a single shared field.
+
+**Fix:** Distinguish scope Selects from content Selects by checking if the
+XPath contains `xml:id` or `@id=`. Scope Selects always use nmatched=1.
+
+**Key insight:** When porting Perl structures where each clause has its own
+metadata (like `nnodes`), verify that shared fields in Rust don't create
+cross-clause interference.
+
+---
+
+## 21. afterConstruct vs afterDigest timing: gullet state
+
+**Discovery (Session 58):** `\thesection@ID` expanded in afterConstruct
+always returned "S7" (the last section) regardless of the declaring section.
+
+**Analysis:** `afterDigest` runs during the digestion phase — the gullet has
+the correct current state (current section, counters, etc.). `afterConstruct`
+runs during the construction phase — all digestion is complete, so the gullet
+state reflects the end-of-document state.
+
+For \lxDeclare, the `decl_id` (computed in afterDigest) correctly has the
+section prefix (S1.XMD1, S2.XMD1, etc.). But the `scope` (derived from
+`\thesection@ID` in afterConstruct) always sees the last section.
+
+**Fix:** Derive the scope from the `decl_id` prefix rather than re-expanding
+`\thesection@ID` in afterConstruct.
+
+**Key insight:** Any TeX state query (counter values, section IDs, font state)
+in afterConstruct reflects end-of-document state. Store needed values in
+afterDigest as whatsit properties, then use them in afterConstruct.
