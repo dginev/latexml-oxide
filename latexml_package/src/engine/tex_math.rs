@@ -511,7 +511,7 @@ LoadDefinitions!({
     reversion => Tokens!());
 
   DefConstructor!("\\@left Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
+    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy'>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
     after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
@@ -523,6 +523,16 @@ LoadDefinitions!({
         if let Some(name) = entry.name {
           whatsit.set_property("name", name);
         }
+        // Preserve meaning from DefMath (e.g. "/" has meaning="divide")
+        // Look up math_token_attributes for the delimiter character.
+        let char_str = entry.char.to_string();
+        state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
+          if let Some(Stored::HashString(ref attrs)) = val {
+            if let Some(meaning) = attrs.get("meaning") {
+              whatsit.set_property("meaning", meaning.to_string());
+            }
+          }
+        });
         whatsit.set_property("stretchy", true);
         whatsit.set_font(Rc::new(
           whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
@@ -549,7 +559,7 @@ LoadDefinitions!({
     },
     alias => "\\left");
   DefConstructor!("\\@right Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
+    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy'>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
     after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
@@ -561,6 +571,15 @@ LoadDefinitions!({
         if let Some(name) = entry.name {
           whatsit.set_property("name", name);
         }
+        // Preserve meaning from DefMath
+        let char_str = entry.char.to_string();
+        state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
+          if let Some(Stored::HashString(ref attrs)) = val {
+            if let Some(meaning) = attrs.get("meaning") {
+              whatsit.set_property("meaning", meaning.to_string());
+            }
+          }
+        });
         whatsit.set_property("stretchy", true);
         whatsit.set_font(Rc::new(
           whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
