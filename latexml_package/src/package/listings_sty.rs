@@ -698,13 +698,10 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   result.extend(ExplodeText!(&css_string));
   result.push(T_END!());
   result.push(T_BEGIN!());
-  // Delimiter chars first (in default font)
+  // Apply styling before delimiters (Perl merges font onto the semantic element,
+  // so both delimiters and content share the same font/color).
+  result.extend(style_tokens);
   result.extend(delim_tokens);
-  if !style_tokens.is_empty() {
-    // Open a group for styling so it's scoped (doesn't affect close delimiters)
-    result.push(T_BEGIN!());
-    result.extend(style_tokens);
-  }
   result
 }
 
@@ -712,7 +709,6 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
 /// Mirrors lstClassBegin: close the style group first, then emit delimiter chars.
 fn lst_class_end(classname: &str) -> Vec<Token> {
   let mut delim_tokens = Vec::new();
-  let mut has_style = false;
   let mut current_class = Some(classname.to_string());
   let mut is_leaf = true;
   while let Some(ref cname) = current_class {
@@ -721,16 +717,6 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
       if let Some(rescanned) = lst_rescan(Some(end)) {
         if is_leaf {
           delim_tokens.extend(rescanned.unlist().to_vec());
-        }
-        // Parent class end tokens (if any) go before delimiter tokens
-      }
-    }
-    // Check if parent class has begin styling (to know if we opened a style group)
-    if !is_leaf {
-      let begin_key = s!("LST_CLASSES@{cname}@begin");
-      if let Some(Stored::Tokens(begin)) = state::lookup_value(&begin_key) {
-        if !begin.is_empty() {
-          has_style = true;
         }
       }
     }
@@ -741,10 +727,7 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
     is_leaf = false;
   }
   let mut result = Vec::new();
-  if has_style {
-    // Close the style group opened by lstClassBegin
-    result.push(T_END!());
-  }
+  // No separate style group to close — style applied at group level
   result.extend(delim_tokens);
   result.push(T_END!());
   result.push(T_END!());
