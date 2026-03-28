@@ -18,7 +18,6 @@ fn german_test() {
 }
 
 #[test]
-#[ignore] // needs greek.ldf
 fn greek_test() {
   latexml_test_single("tests/babel/greek.tex", "greek", DIR, None, None);
 }
