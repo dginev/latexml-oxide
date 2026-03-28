@@ -1,5 +1,74 @@
 use crate::prelude::*;
 
+/// Compile a \lxDeclare pattern with \WildCard into an XPath expression.
+/// Generates XPath by recognizing common wildcard pattern forms from the
+/// digested body structure, without requiring a temporary document.
+///
+/// Common patterns:
+/// - `$x_\WildCard$` → XMApp[SUBSCRIPTOP + XMTok[x] + *]
+/// - `$\hat{\WildCard}$` → XMApp[XMTok[@meaning='hat'] + *]
+/// - `$f\WildCard[(\WildCard)]$` → nowrap, matches function application
+fn compile_declare_pattern(body_text: &str) -> String {
+  // Pattern: `TOKEN_\WildCard` (subscripted token with wildcard subscript)
+  // e.g. $x_\WildCard$, $f_\WildCard$, $\varepsilon_\WildCard$
+  if let Some(base) = body_text.strip_suffix("_\\WildCard") {
+    let base = base.trim();
+    // Handle \cmd{} base tokens (like \mathcal{T}, \varepsilon)
+    let text_pred = if base.starts_with('\\') {
+      // Command base: match by meaning attribute
+      let cmd = base.trim_start_matches('\\');
+      // Common math commands → their meaning
+      match cmd {
+        "varepsilon" => "@meaning='varepsilon'".to_string(),
+        _ => {
+          // For \mathcal{X} patterns, extract the inner token
+          if let Some(inner) = cmd.strip_prefix("mathcal{").and_then(|s| s.strip_suffix('}')) {
+            format!("@font='caligraphic' and text()='{inner}'")
+          } else {
+            format!("@meaning='{cmd}'")
+          }
+        }
+      }
+    } else {
+      format!("text()='{}'", base.replace('\'', "&apos;"))
+    };
+    // Internal DOM stores subscripts as XMApp[@role='POSTSUBSCRIPT'] with 2 children:
+    // child 1 = base token, child 2 = subscript content (the wildcard).
+    // The serializer transforms this to XMApp > XMTok[SUBSCRIPTOP] + base + sub.
+    return format!(
+      "descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT' and child::*[{text_pred}]]"
+    );
+  }
+  // Pattern: `\accent{\WildCard}` (accented wildcard)
+  // e.g. $\hat{\WildCard}$, $\widehat{\WildCard}$
+  for accent in &["hat", "widehat", "tilde", "bar", "vec", "dot", "ddot", "check", "breve"] {
+    let pattern = format!("\\{accent}{{\\WildCard}}");
+    if body_text == pattern {
+      return format!(
+        "descendant-or-self::*[local-name()='XMApp' and *[1][@meaning='{accent}'] and *[2]]"
+      );
+    }
+  }
+  // Pattern: subscripted with braced wildcards `TOKEN_{\WildCard}` or `TOKEN_{\WildCard,\WildCard}`
+  if body_text.contains("_{\\WildCard") {
+    if let Some(idx) = body_text.find("_{") {
+      let base = body_text[..idx].trim();
+      let text_pred = if base.starts_with('\\') {
+        let cmd = base.trim_start_matches('\\');
+        format!("@meaning='{cmd}'")
+      } else {
+        format!("text()='{}'", base.replace('\'', "&apos;"))
+      };
+      return format!(
+        "descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT' and child::*[{text_pred}]]"
+      );
+    }
+  }
+  // Fallback: return empty (wildcard pattern not recognized)
+  // The caller will skip creating the rewrite rule.
+  String::new()
+}
+
 LoadDefinitions!({
   // 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
   // (bibtex will not be ran). 'bibtex' is the default (try bib, fall back to bbl).
@@ -209,18 +278,44 @@ LoadDefinitions!({
       if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
         use latexml_core::rewrite::{Rewrite, RewriteOptions};
         use rustc_hash::FxHashMap;
-        let xpath = format!(
-          "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
-          body_text.replace('\'', "&apos;"));
         let mut attrs = FxHashMap::default();
         if !role.is_empty() { attrs.insert("role".to_string(), role); }
         if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
         if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
         if !decl_id.is_empty() { attrs.insert("decl_id".to_string(), decl_id); }
-        if !attrs.is_empty() {
+        // Check if pattern contains \WildCard
+        let has_wildcard = body_text.contains("WildCard");
+        let xpath = if has_wildcard {
+          // Compile via domToXPath: absorb digested body into temp document,
+          // extract XMath content, convert to XPath + wildcard paths.
+          // For now, use the digested body to build XPath.
+          compile_declare_pattern(&body_text)
+        } else {
+          // Simple single-token pattern
+          format!(
+            "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
+            body_text.replace('\'', "&apos;"))
+        };
+        if has_wildcard {
+          attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
+        }
+        if !xpath.is_empty() && !attrs.is_empty() {
+          // For wildcard patterns, compute the wildcard position paths
+          let wildcard_paths = if has_wildcard {
+            // For subscript pattern `x_\WildCard`: wildcard is 3rd child of matched XMApp
+            // For accent pattern `\hat{\WildCard}`: wildcard is 2nd child
+            if body_text.contains('_') && body_text.contains("\\WildCard") {
+              Some(vec![vec![2usize]]) // 2nd child (internal: 1=base, 2=subscript wildcard)
+            } else if body_text.starts_with('\\') && body_text.contains("{\\WildCard}") {
+              Some(vec![vec![2usize]]) // 2nd child (1=accent op, 2=wildcard)
+            } else {
+              None
+            }
+          } else { None };
           let rewrite = Rewrite::new("math", RewriteOptions {
             xpath: Some(xpath),
             attributes_map: Some(attrs),
+            wildcard_paths,
             ..RewriteOptions::default()
           });
           unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);

@@ -1,6 +1,6 @@
 use crate::common::arena;
 use crate::common::error::*;
-use crate::document::Document;
+use crate::document::{get_node_qname, Document};
 use crate::state::Scope;
 use crate::tokens::Tokens;
 use libxml::tree::Node;
@@ -27,6 +27,7 @@ pub struct RewriteOptions {
   pub select:         Option<String>,
   pub select_count:   Option<usize>,
   pub is_math:        bool,
+  pub wildcard_paths: Option<Vec<WildPath>>,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -323,26 +324,30 @@ impl Rewrite {
     if let Some(RewriteClause { compiled: _, op, pattern }) = clauses.pop_front() {
       match op {
         Select => {
-          // my ($xpath, $nnodes, @wilds) = @$pattern;
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
+            let wilds = self.options.wildcard_paths.clone();
             for node in matches {
-              // next unless node.get_owner_document()->isSameNode($tree->ownerDocument); # If still
-              // attached to original document!
               if node.has_attribute("_matched") {
                 continue;
               }
-              // let w = mark_wildcards(node, wilds);
+              // Mark wildcard nodes before applying clauses
+              let marked = if let Some(ref wpaths) = wilds {
+                mark_wildcards(&node, wpaths)
+              } else {
+                vec![]
+              };
               self.apply_clause(
                 document,
                 &node,
                 self.options.select_count.unwrap_or(1),
                 clauses.clone(),
               )?;
-              // unmark_wildcards(node, w);
+              // Unmark wildcards after processing
+              if !marked.is_empty() {
+                unmark_wildcards(&marked);
+              }
             }
-          } else {
-            // Unsupported rewrite pattern for Select — skip silently
           }
         },
         Replace => {
@@ -409,9 +414,13 @@ impl Rewrite {
           }
         },
         Attributes => {
-          // Perl: setAttributes_encapsulate — set attributes on the matched node(s)
           if let Some(ref attrs) = self.options.attributes_map {
-            if nmatched > 1 {
+            let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
+            if is_wildcard_pattern && tree.has_attribute("_has_wildcards") {
+              // Wildcard pattern: use XMDual wrapping
+              let nodes = vec![tree.clone()];
+              set_attributes_wild(document, attrs, nodes, nmatched)?;
+            } else if nmatched > 1 {
               // Multi-node: collect nmatched element siblings starting from tree
               let mut nodes = vec![tree.clone()];
               let mut cur = tree.clone();
@@ -426,12 +435,11 @@ impl Rewrite {
               }
               // Perl: skip if ALL nodes already matched
               if nodes.iter().any(|n| !n.has_attribute("_matched")) {
-                // Wrap in XMWrap and set attributes on wrapper.
-                // Mark as rewrite-created so the parser treats it as an atomic
-                // token (not recursively parsed like parser-created XMWraps).
                 if let Ok(Some(mut wrapper)) = document.wrap_nodes("ltx:XMWrap", nodes) {
                   for (key, value) in attrs {
-                    let _ = wrapper.set_attribute(key, value);
+                    if !key.starts_with('_') {
+                      let _ = wrapper.set_attribute(key, value);
+                    }
                   }
                   let _ = wrapper.set_attribute("_rewrite", "1");
                 }
@@ -440,10 +448,10 @@ impl Rewrite {
               // Single node: set attributes directly
               let mut node = tree.clone();
               for (key, value) in attrs {
-                let _ = node.set_attribute(key, value);
+                if !key.starts_with('_') {
+                  let _ = node.set_attribute(key, value);
+                }
               }
-              // Mark XMApp nodes with rewrite-set roles so the parser treats them
-              // as atomic tokens (prevents start_ROLE/end_ROLE lexeme emission).
               if node.get_name() == "XMApp" && attrs.contains_key("role") {
                 let _ = node.set_attribute("_rewrite", "1");
               }
@@ -531,6 +539,356 @@ impl Rewrite {
 
     Ok(())
   }
+}
+
+// ======================================================================
+// WildCard support: domToXPath, wildcard marking, XMDual wrapping
+// ======================================================================
+
+/// Wildcard position path: indices to navigate from matched root to wildcard node.
+/// First index uses nth_sibling (sibling offset), rest use nth_child (child position).
+pub type WildPath = Vec<usize>;
+
+/// Result of domToXPath compilation: xpath string, node count, wildcard paths.
+pub type CompiledMatch = (String, usize, Vec<WildPath>);
+
+/// Convert a DOM subtree to an XPath expression + wildcard position tracking.
+/// Perl: domToXPath() → domToXPath_rec() → domToXPath_seq()
+pub fn dom_to_xpath(document: &Document, node: &Node) -> CompiledMatch {
+  let (xpath, nnodes, _nwilds, wilds) =
+    dom_to_xpath_rec(document, node, "descendant-or-self", None);
+  (xpath, nnodes, wilds)
+}
+
+/// Attributes excluded from XPath match predicates.
+fn is_excluded_match_attr(key: &str) -> bool {
+  matches!(key, "scriptpos" | "mathstyle" | "xml:id" | "fontsize" | "_font" | "_pvis" | "_cvis")
+    || key.starts_with('_')
+}
+
+/// Recursive DOM-to-XPath conversion.
+/// Returns (xpath_fragment, node_count, wildcard_count, wildcard_paths)
+fn dom_to_xpath_rec(
+  document: &Document, node: &Node, axis: &str, pos: Option<usize>,
+) -> (String, usize, usize, Vec<WildPath>) {
+  let node_type = node.get_type();
+  // NodeList / DocumentFragment: sequence of children
+  if node_type == Some(libxml::tree::NodeType::DocumentFragNode) {
+    let children = node.get_child_nodes();
+    let (xpath, nnodes, wilds) = dom_to_xpath_seq(document, axis, pos, &children);
+    return (xpath, nnodes, 0, wilds);
+  }
+  if node_type == Some(libxml::tree::NodeType::ElementNode) {
+    let qname = arena::with(get_node_qname(node), |s| s.to_string());
+    let children = node.get_child_nodes();
+
+    // _WildCard_ element → matches anything
+    if qname == "_WildCard_" {
+      if !children.is_empty() {
+        // WildCard WITH children: recurse on children
+        let child_list = node.get_child_nodes();
+        // Create a fragment-like approach: process children as a sequence
+        let (xpath, _nnodes, _nwilds, _wilds) =
+          dom_to_xpath_rec(document, &child_list[0], axis, pos);
+        let n = children.len().max(1);
+        return (xpath, n, n, vec![]);
+      } else {
+        return (format!("{axis}::*"), 1, 1, vec![]);
+      }
+    }
+    // XMRef pointing to a _WildCard_ is also a wildcard
+    if qname == "ltx:XMRef" {
+      if let Some(idref) = node.get_property("idref") {
+        if let Some(target) = document.lookup_id(&idref).cloned() {
+          let tqname = arena::with(get_node_qname(&target), |s| s.to_string());
+          // Check if target is XMArg/XMWrap with single WildCard child
+          let is_wild = if tqname.ends_with("XMArg") || tqname.ends_with("XMWrap") {
+            let tc = target.get_child_nodes();
+            tc.len() == 1 && arena::with(get_node_qname(&tc[0]), |s| s == "_WildCard_")
+          } else {
+            tqname == "_WildCard_"
+          };
+          if is_wild {
+            return (format!("{axis}::*"), 1, 1, vec![]);
+          }
+        }
+      }
+    }
+    // XMArg/XMWrap with single _WildCard_ child
+    if (qname.ends_with("XMArg") || qname.ends_with("XMWrap"))
+      && children.len() == 1
+      && arena::with(get_node_qname(&children[0]), |s| s.to_string()) == "_WildCard_"
+    {
+      let wc_children = children[0].get_child_nodes();
+      if !wc_children.is_empty() {
+        let (child_xpath, _nn, _nw, _w) =
+          dom_to_xpath_rec(document, &wc_children[0], "child", Some(1));
+        let mut preds = vec![];
+        if let Some(p) = pos { preds.push(format!("position()={p}")); }
+        preds.push(child_xpath);
+        return (format!("{axis}::{qname}[{}]", preds.join(" and ")), 1, 1, vec![]);
+      } else {
+        return (format!("{axis}::*"), 1, 1, vec![]);
+      }
+    }
+
+    // Standard element: build predicates from attributes and children
+    let mut predicates = Vec::new();
+    let mut wilds = Vec::new();
+
+    // Attribute predicates
+    let attrs = node.get_attributes();
+    for (key, value) in &attrs {
+      if !is_excluded_match_attr(key) {
+        predicates.push(format!("@{key}='{}'", value.replace('\'', "&apos;")));
+      }
+    }
+    // Child predicates
+    if !children.is_empty() {
+      let all_text = children.iter().all(|c|
+        c.get_type() == Some(libxml::tree::NodeType::TextNode));
+      let all_elem = children.iter().all(|c|
+        c.get_type() == Some(libxml::tree::NodeType::ElementNode));
+      if all_text {
+        let text = node.get_content();
+        predicates.push(format!("text()='{}'", text.replace('\'', "&apos;")));
+      } else if all_elem {
+        let (xp, _nn, w) = dom_to_xpath_seq(document, "child", Some(1), &children);
+        predicates.push(xp);
+        wilds.extend(w);
+      }
+      // Mixed content: skip (rare in math patterns)
+    }
+
+    // Position-based matching (when this is a child in a sequence)
+    let tag = if let Some(p) = pos {
+      predicates.insert(0, format!("self::{qname}"));
+      predicates.insert(0, format!("position()={p}"));
+      "*".to_string()
+    } else {
+      qname
+    };
+    let preds = predicates.join(" and ");
+    let xpath = if preds.is_empty() {
+      format!("{axis}::{tag}")
+    } else {
+      format!("{axis}::{tag}[{preds}]")
+    };
+    return (xpath, 1, 0, wilds);
+  }
+  if node_type == Some(libxml::tree::NodeType::TextNode) {
+    let text = node.get_content();
+    return (format!("*[text()='{}']", text.replace('\'', "&apos;")), 1, 0, vec![]);
+  }
+  (String::new(), 0, 0, vec![])
+}
+
+/// Convert a sequence of sibling nodes to XPath with wildcard tracking.
+/// Perl: domToXPath_seq()
+fn dom_to_xpath_seq(
+  document: &Document, axis: &str, pos: Option<usize>, nodes: &[Node],
+) -> (String, usize, Vec<WildPath>) {
+  if nodes.is_empty() {
+    return (String::new(), 0, vec![]);
+  }
+  let mut i: usize = 1;
+  let mut sib_xpaths = Vec::new();
+  let mut wilds = Vec::new();
+
+  // First node
+  let (xpath, _nn, nwilds, w0) = dom_to_xpath_rec(document, &nodes[0], axis, pos);
+  if nwilds > 0 {
+    for _ in 0..nwilds {
+      wilds.push(vec![i]);
+      i += 1;
+    }
+  } else {
+    for w in &w0 {
+      let mut path = vec![1usize];
+      path.extend(w);
+      wilds.push(path);
+    }
+    i += 1;
+  }
+  // Remaining siblings
+  for sib in &nodes[1..] {
+    let (xp, _nn, nw, w) =
+      dom_to_xpath_rec(document, sib, "following-sibling", Some(i - 1));
+    sib_xpaths.push(xp);
+    if nw > 0 {
+      for _ in 0..nw {
+        wilds.push(vec![i]);
+        i += 1;
+      }
+    } else {
+      for ww in &w {
+        let mut path = vec![i];
+        path.extend(ww);
+        wilds.push(path);
+      }
+      i += 1;
+    }
+  }
+  let mut result = xpath;
+  for sp in &sib_xpaths {
+    result = format!("{result}[{sp}]");
+  }
+  (result, i - 1, wilds)
+}
+
+/// Navigate to the nth sibling (1-based) from a starting node.
+fn nth_sibling(node: &Node, n: usize) -> Option<Node> {
+  let mut current = Some(node.clone());
+  for _ in 1..n {
+    current = current.and_then(|n| {
+      let mut next = n.get_next_sibling();
+      // Skip non-element nodes
+      while let Some(ref s) = next {
+        if s.get_type() == Some(libxml::tree::NodeType::ElementNode) { break; }
+        next = s.get_next_sibling();
+      }
+      next
+    });
+  }
+  current
+}
+
+/// Navigate to the nth child (1-based) of a node.
+fn nth_child(node: &Node, n: usize) -> Option<Node> {
+  node.get_child_nodes().into_iter().nth(n - 1)
+}
+
+/// Mark wildcard nodes in the matched tree.
+/// Perl: markWildcards($node, @wilds)
+pub fn mark_wildcards(node: &Node, wilds: &[WildPath]) -> Vec<Node> {
+  if wilds.is_empty() { return vec![]; }
+  let mut n = node.clone();
+  let _ = n.set_attribute("_has_wildcards", "1");
+  let mut marked = Vec::new();
+  for wild in wilds {
+    let mut current = Some(node.clone());
+    let mut first = true;
+    for &idx in wild {
+      if current.is_none() { break; }
+      current = if first {
+        first = false;
+        nth_sibling(current.as_ref().unwrap(), idx)
+      } else {
+        nth_child(current.as_ref().unwrap(), idx)
+      };
+    }
+    if let Some(ref c) = current {
+      if c.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+        let mut mc = c.clone();
+        let _ = mc.set_attribute("_wildcard", "1");
+        marked.push(mc);
+      }
+    }
+  }
+  marked
+}
+
+/// Unmark wildcard nodes after processing.
+pub fn unmark_wildcards(nodes: &[Node]) {
+  for n in nodes {
+    if n.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+      let mut mc = n.clone();
+      let _ = mc.remove_attribute("_has_wildcards");
+      let _ = mc.remove_attribute("_wildcard");
+    }
+  }
+}
+
+/// Collect xml:ids of wildcard-marked nodes, generating IDs if needed.
+/// Perl: set_wildcard_ids($document, $node)
+pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
+  if node.get_type() != Some(libxml::tree::NodeType::ElementNode) {
+    return vec![];
+  }
+  if node.has_attribute("_matched") {
+    return vec![];
+  }
+  if node.has_attribute("_wildcard") {
+    let id = if let Some(existing) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
+      existing
+    } else {
+      // Generate an ID for this node
+      let mut n = node.clone();
+      let _ = document.generate_id(&mut n, "");
+      node.get_property("xml:id").or_else(|| node.get_property("id")).unwrap_or_default()
+    };
+    return vec![id];
+  }
+  // Recurse into children
+  let mut ids = Vec::new();
+  for child in node.get_child_nodes() {
+    ids.extend(set_wildcard_ids(document, &child));
+  }
+  ids
+}
+
+/// Set attributes on a tree containing wildcards, creating XMDual wrappers.
+/// Perl: setAttributes_wild($document, $attributes, @nodes)
+pub fn set_attributes_wild(
+  document: &mut Document, attrs: &HashMap<String, String>,
+  nodes: Vec<Node>, _nmatched: usize,
+) -> Result<()> {
+  // Skip if all nodes already matched
+  if nodes.iter().all(|n| n.has_attribute("_matched")) {
+    return Ok(());
+  }
+  let nowrap = attrs.contains_key("_nowrap");
+  // If nowrap or already XMDual: set attributes on first non-wildcard node
+  if nowrap || (nodes.len() == 1 && nodes[0].get_name() == "XMDual") {
+    if let Some(nonwild) = nodes.iter().find(|n| !n.has_attribute("_wildcard")) {
+      let mut n = nonwild.clone();
+      for (key, value) in attrs {
+        if !key.starts_with('_') {
+          let _ = n.set_attribute(key, value);
+        }
+      }
+    }
+    return Ok(());
+  }
+  // Full XMDual wrapping:
+  // Step 1: Wrap matched nodes in XMWrap (presentation arm)
+  let wrapper = document.wrap_nodes("ltx:XMWrap", nodes)?;
+  if let Some(mut wrapper_node) = wrapper {
+    // Step 2: Assign xml:ids to wildcard nodes
+    let wild_ids = set_wildcard_ids(document, &wrapper_node);
+    // Step 3: Wrap XMWrap in XMDual
+    let dual = document.wrap_nodes("ltx:XMDual", vec![wrapper_node.clone()])?;
+    if let Some(mut dual_node) = dual {
+      // Set role on XMDual
+      if let Some(role) = attrs.get("role") {
+        let _ = dual_node.set_attribute("role", role);
+      }
+      // Step 4: Detach presentation wrapper temporarily
+      wrapper_node.unbind_node();
+      // Step 5: Build content arm: XMApp with XMTok + XMRefs
+      let mut app = Node::new("XMApp", None, document.get_document())?;
+      // Build XMTok with all attributes except role
+      let mut op = Node::new("XMTok", None, document.get_document())?;
+      for (key, value) in attrs {
+        if key != "role" && !key.starts_with('_') {
+          let _ = op.set_attribute(key, value);
+        }
+      }
+      app.add_child(&mut op)?;
+      // Add XMRef elements for each wildcard ID
+      for rid in &wild_ids {
+        let mut xmref = Node::new("XMRef", None, document.get_document())?;
+        let _ = xmref.set_attribute("idref", rid);
+        app.add_child(&mut xmref)?;
+      }
+      dual_node.add_child(&mut app)?;
+      // Step 6: Re-attach presentation wrapper
+      dual_node.add_child(&mut wrapper_node)?;
+      // Mark all children of the dual as seen
+      mark_seen_rec(&dual_node);
+    }
+  }
+  Ok(())
 }
 
 /// Mark a node (and nsibs following siblings) as matched, preventing re-matching.
