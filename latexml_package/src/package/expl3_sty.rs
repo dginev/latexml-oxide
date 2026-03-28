@@ -9,19 +9,34 @@ LoadDefinitions!({
   LoadPool!("LaTeX");
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
 
+  // Pre-define l3file functions that are forward-referenced during expl3 loading.
+  // In Perl's expansion engine, \exp_last_unbraced:NNNNo at line 11527 of
+  // expl3-code.tex creates these functions. In Rust, the expansion chain fails,
+  // producing an extra \endcsname. Pre-defining prevents undefined errors;
+  // post-load fixup below provides the correct definitions.
+  raw_tex(concat!(
+    r"\begingroup",
+    r"\catcode`\_=11\relax\catcode`\:=11\relax",
+    r"\global\def\__file_name_expand_end:{}",
+    r"\global\def\__kernel_file_name_sanitize:n#1{#1}",
+    r"\global\def\l_file_search_path_seq{}",
+    r"\endgroup",
+  ))?;
+
   // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
-  // Suppress errors during loading: expl3-code.tex has forward references and
-  // expansion chain differences that are resolved by post-load fixups below.
-  // These are Rust-specific issues (Perl's expansion engine handles them natively).
+  // Suppress errors during loading: expl3-code.tex has many forward references
+  // (functions used before defined) and one expansion chain issue producing
+  // an extra \endcsname. Pre-definitions above eliminate the l3file forward-refs;
+  // SUPPRESS_UNDEFINED_ERRORS handles remaining forward-refs within the 36K lines.
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, Some(Scope::Global));
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
-  // Also suppress log output: expl3-code.tex fires \errmessage for forward-ref errors
-  // and missing Unicode data files, which are harmless noise during loading.
+  // Suppress log output during loading: expl3-code.tex fires \errmessage for
+  // forward-ref errors and missing Unicode data files (harmless noise).
   latexml_core::common::error::set_suppress_log_output(true);
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
   latexml_core::common::error::set_suppress_log_output(false);
-  // Keep other suppression active through post-load fixups.
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
 
   // Post-load: set expl3 catcodes for fixup commands.
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
@@ -35,8 +50,8 @@ LoadDefinitions!({
     r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // Re-define l3file functions that expl3-code.tex's \exp_last_unbraced:NNNNo
-  // failed to create during loading (expansion chain issue at line 11527).
+  // Re-define l3file functions with correct definitions (the pre-defined stubs
+  // were overwritten by the broken expansion chain, now fix them properly).
   raw_tex(concat!(
     r"\exp_last_unbraced:NNNNo",
     r"\cs_gset:Npn \__file_name_expand_cleanup:w #1 \tl_to_str:n { __file_name = } { }",
@@ -70,5 +85,4 @@ LoadDefinitions!({
     raw_tex(r"\endlinechar=13\relax")?;
   }
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", false, Some(Scope::Global));
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
 });
