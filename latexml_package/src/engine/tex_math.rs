@@ -463,7 +463,32 @@ LoadDefinitions!({
   // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
   // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
   // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-  DefMacro!("\\left XToken", r"\@left #1\lx@hidden@bgroup");
+  // Perl: DefMacro('\left TeXDelimiter', ...) where TeXDelimiter invokes the token.
+  // When the delimiter is \delimiter<Number>, we must digest it to produce the glyph.
+  // For regular tokens (., \{, \langle, etc.), XToken suffices.
+  DefMacro!("\\left XToken", sub[(delim)] {
+    let delim_str = delim.to_string();
+    if delim_str == "\\delimiter" {
+      // \delimiter<Number>: read the number, shift, and decode to get the delimiter char
+      let n = gullet::read_number()?.value_of() >> 12;
+      let props = decode_math_char(n as u16, None)?;
+      if let Some(glyph) = props.glyph {
+        let glyph_str = glyph.to_string();
+        if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
+          // Found the delimiter — unread it as a token
+          let tok = T_OTHER!(entry.char.to_string());
+          gullet::unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
+        } else {
+          // Unknown glyph, use dot delimiter
+          gullet::unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+        }
+      } else {
+        gullet::unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+      }
+    } else {
+      gullet::unread(Tokens::new(vec![T_CS!("\\@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
+    }
+  });
   // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
   DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
@@ -774,9 +799,29 @@ LoadDefinitions!({
     properties => { stored_map!("hint" => true) });
 
   // \lx@left/\lx@right: like \left/\right but without extra grouping.
-  // Perl uses TeXDelimiter param type; we alias to \@left/\@right for now.
+  // Perl uses TeXDelimiter param type; we handle \delimiter specially.
   Let!("\\lx@left", "\\@left");
-  Let!("\\lx@right", "\\@right");
+  // \lx@right wraps \@right to handle \delimiter<Number> (TeXDelimiter logic)
+  DefMacro!("\\lx@right XToken", sub[(delim)] {
+    let delim_str = delim.to_string();
+    if delim_str == "\\delimiter" {
+      let n = gullet::read_number()?.value_of() >> 12;
+      let props = decode_math_char(n as u16, None)?;
+      if let Some(glyph) = props.glyph {
+        let glyph_str = glyph.to_string();
+        if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
+          let tok = T_OTHER!(entry.char.to_string());
+          gullet::unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
+        } else {
+          gullet::unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+        }
+      } else {
+        gullet::unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+      }
+    } else {
+      gullet::unread(Tokens::new(vec![T_CS!("\\@right"), delim]));
+    }
+  });
 
   // \lx@generalized@over{reversion}{keyvals}{top}{bottom}
   // keyvals: role, meaning, left, right, thickness
