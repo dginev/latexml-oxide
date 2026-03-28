@@ -287,7 +287,8 @@ macro_rules! generate_message {
 #[macro_export]
 macro_rules! Note {
   ($input:expr) => {
-    if !$crate::common::error::is_log_output_suppressed() {
+    if !$crate::common::error::is_log_output_suppressed()
+      && log::max_level() >= log::LevelFilter::Info {
       let msg = $input;
       println_stderr!("{msg}");
     }
@@ -297,7 +298,8 @@ macro_rules! Note {
 #[macro_export]
 macro_rules! NoteLog {
   ($input:expr) => {
-    if !$crate::common::error::is_log_output_suppressed() {
+    if !$crate::common::error::is_log_output_suppressed()
+      && log::max_level() >= log::LevelFilter::Debug {
       let msg = $input;
       println_stderr!("{msg}");
     }
