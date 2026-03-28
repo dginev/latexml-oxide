@@ -326,25 +326,27 @@ impl Rewrite {
         Select => {
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
-            if self.options.wildcard_paths.is_some() {
-            }
             let wilds = self.options.wildcard_paths.clone();
-            // Rust-side filter for wildcard base token (workaround for nested XPath predicate bug)
             let base_filter = self.options.attributes_map.as_ref()
               .and_then(|a| a.get("_wildcard_base").cloned());
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
               }
-              // Filter by first-child text if _wildcard_base is set
               if let Some(ref base) = base_filter {
-                let children = node.get_child_nodes();
-                let first_text = children.first()
-                  .map(|c| c.get_content()).unwrap_or_default();
-                if first_text != *base {
-                  continue; // Skip: base token doesn't match
+                // Base token is the PREVIOUS SIBLING of the POSTSUBSCRIPT XMApp.
+                // Internal DOM: ... <XMTok>x</XMTok> <XMApp role="POSTSUBSCRIPT"><sub/></XMApp>
+                let prev_text = node.get_prev_sibling()
+                  .map(|s| s.get_content()).unwrap_or_default();
+                if prev_text != *base {
+                  continue;
                 }
               }
+              // TODO: For wildcard patterns, the Select clause needs to match the
+              // ENTIRE subscript expression (base + POSTSUBSCRIPT XMApp) as nmatched=2,
+              // not just the POSTSUBSCRIPT XMApp alone. The XMDual wrapper should wrap
+              // both the base token and its subscript. This requires select_count=2
+              // and proper sibling-group handling in set_attributes_wild.
               let marked = if let Some(ref wpaths) = wilds {
                 mark_wildcards(&node, wpaths)
               } else {
@@ -356,7 +358,6 @@ impl Rewrite {
                 self.options.select_count.unwrap_or(1),
                 clauses.clone(),
               )?;
-              // Unmark wildcards after processing
               if !marked.is_empty() {
                 unmark_wildcards(&marked);
               }
@@ -429,7 +430,12 @@ impl Rewrite {
         Attributes => {
           if let Some(ref attrs) = self.options.attributes_map {
             let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
-            if is_wildcard_pattern && tree.has_attribute("_has_wildcards") {
+            let has_wc = tree.has_attribute("_has_wildcards");
+            if is_wildcard_pattern {
+              eprintln!("ATTR: is_wild_pat=true, _has_wildcards={}, matched={}, name={}",
+                has_wc, tree.has_attribute("_matched"), tree.get_name());
+            }
+            if is_wildcard_pattern && has_wc {
               // Wildcard pattern: use XMDual wrapping
               let nodes = vec![tree.clone()];
               set_attributes_wild(document, attrs, nodes, nmatched)?;

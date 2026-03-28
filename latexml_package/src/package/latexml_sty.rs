@@ -49,18 +49,9 @@ fn compile_declare_pattern(body_text: &str) -> String {
   }
   // Pattern: subscripted with braced wildcards `TOKEN_{\WildCard}` or `TOKEN_{\WildCard,\WildCard}`
   if body_text.contains("_{\\WildCard") {
-    if let Some(idx) = body_text.find("_{") {
-      let base = body_text[..idx].trim();
-      let text_pred = if base.starts_with('\\') {
-        let cmd = base.trim_start_matches('\\');
-        format!("@meaning='{cmd}'")
-      } else {
-        format!("text()='{}'", base.replace('\'', "&apos;"))
-      };
-      return format!(
-        "descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT' and child::*[{text_pred}]]"
-      );
-    }
+    return format!(
+      "descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT']"
+    );
   }
   // Fallback: return empty (wildcard pattern not recognized)
   // The caller will skip creating the rewrite rule.
@@ -315,7 +306,7 @@ LoadDefinitions!({
             // For subscript pattern `x_\WildCard`: wildcard is 3rd child of matched XMApp
             // For accent pattern `\hat{\WildCard}`: wildcard is 2nd child
             if body_text.contains('_') && body_text.contains("\\WildCard") {
-              Some(vec![vec![2usize]]) // 2nd child (internal: 1=base, 2=subscript wildcard)
+              Some(vec![vec![1usize]]) // 1st child (internal: POSTSUBSCRIPT has subscript as only child; base is prev sibling)
             } else if body_text.starts_with('\\') && body_text.contains("{\\WildCard}") {
               Some(vec![vec![2usize]]) // 2nd child (1=accent op, 2=wildcard)
             } else {
