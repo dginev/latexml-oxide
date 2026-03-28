@@ -435,11 +435,17 @@ impl Rewrite {
             let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
             let has_wc = tree.has_attribute("_has_wildcards");
             if is_wildcard_pattern && has_wc {
-              // TODO: XMDual wrapping causes memory corruption in wrap_nodes.
-              // For now, fall through to simple attribute setting.
-              // set_attributes_wild(document, attrs, nodes, nmatched)?;
-            }
-            if nmatched > 1 {
+              let mut nodes = vec![tree.clone()];
+              // Collect nmatched siblings
+              let mut cur = tree.clone();
+              for _ in 1..nmatched {
+                if let Some(sib) = cur.get_next_sibling() {
+                  cur = sib.clone();
+                  nodes.push(sib);
+                } else { break; }
+              }
+              set_attributes_wild(document, attrs, nodes, nmatched)?;
+            } else if nmatched > 1 {
               // Multi-node: collect nmatched element siblings starting from tree
               let mut nodes = vec![tree.clone()];
               let mut cur = tree.clone();
@@ -869,42 +875,46 @@ pub fn set_attributes_wild(
     }
     return Ok(());
   }
-  // Full XMDual wrapping:
-  // Step 1: Wrap matched nodes in XMWrap → then wrap XMWrap in XMDual
-  let wrapper = document.wrap_nodes("ltx:XMWrap", nodes)?;
-  if let Some(wrapper_node) = wrapper {
-    // Step 2: Assign xml:ids to wildcard nodes in the wrapper
-    let wild_ids = set_wildcard_ids(document, &wrapper_node);
-    // Step 3: Wrap XMWrap in XMDual
-    let dual = document.wrap_nodes("ltx:XMDual", vec![wrapper_node.clone()])?;
-    if let Some(mut dual_node) = dual {
-      // Set role on XMDual
-      if let Some(role) = attrs.get("role") {
-        let _ = dual_node.set_attribute("role", role);
-      }
-      // Step 4: Build content arm: XMApp with XMTok + XMRefs
-      // Insert BEFORE the XMWrap (first child = content, second = presentation)
-      let mut app = Node::new("XMApp", None, document.get_document())?;
-      let mut op = Node::new("XMTok", None, document.get_document())?;
-      for (key, value) in attrs {
-        if key != "role" && !key.starts_with('_') {
-          let _ = op.set_attribute(key, value);
-        }
-      }
-      app.add_child(&mut op)?;
-      for rid in &wild_ids {
-        let mut xmref = Node::new("XMRef", None, document.get_document())?;
-        let _ = xmref.set_attribute("idref", rid);
-        app.add_child(&mut xmref)?;
-      }
-      // Insert content arm before presentation arm
-      if let Some(mut first_child) = dual_node.get_first_child() {
-        first_child.add_prev_sibling(&mut app)?;
-      } else {
-        dual_node.add_child(&mut app)?;
-      }
-      mark_seen_rec(&dual_node);
+  // Wrap matched nodes directly in XMDual (single wrap_nodes call).
+  // The presentation arm is the XMDual's children (the original nodes).
+  // The content arm (XMApp > XMTok + XMRef) is prepended.
+  // NOTE: We skip the intermediate XMWrap for now — the original nodes
+  // ARE the presentation. Perl wraps them in XMWrap, but that would
+  // require a second wrap_nodes which causes memory corruption.
+
+  // First, get wildcard IDs from the nodes before wrapping
+  let mut wild_ids = Vec::new();
+  for n in &nodes {
+    wild_ids.extend(set_wildcard_ids(document, n));
+  }
+
+  let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
+  if let Some(mut dual_node) = wrapper {
+    if let Some(role) = attrs.get("role") {
+      let _ = dual_node.set_attribute("role", role);
     }
+    // Build content arm: XMApp > XMTok[attrs] + XMRef[wildcard_ids]
+    let doc = document.get_document();
+    let mut content_app = Node::new("XMApp", None, doc)?;
+    let mut content_op = Node::new("XMTok", None, doc)?;
+    for (key, value) in attrs {
+      if key != "role" && !key.starts_with('_') {
+        let _ = content_op.set_attribute(key, value);
+      }
+    }
+    content_app.add_child(&mut content_op)?;
+    for rid in &wild_ids {
+      let mut xmref = Node::new("XMRef", None, doc)?;
+      let _ = xmref.set_attribute("idref", rid);
+      content_app.add_child(&mut xmref)?;
+    }
+    // Insert content arm as first child (before presentation nodes)
+    if let Some(mut first_child) = dual_node.get_first_child() {
+      first_child.add_prev_sibling(&mut content_app)?;
+    } else {
+      dual_node.add_child(&mut content_app)?;
+    }
+    mark_seen_rec(&dual_node);
   }
   Ok(())
 }
