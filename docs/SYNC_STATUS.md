@@ -164,7 +164,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | `latex_bootstrap.pool.ltxml` | 10 | — | **Complete** (audit 2026-03-12: 10/10 defs present) |
 | `latex_base.pool.ltxml` | ~160 | — | **Complete** (audit 2026-03-12: ~100% across 36 ch files + appendices) |
 | `latex_constructs.pool.ltxml` | ~843 | Low | ~92% ported. Done: alignment-based `\eqnarray`/`\eqnarray*`, `\lefteqn`, `\if@in@firstcolumn`, `\@equationgroup@numbering`, `eqnarray@row@before/after`. Missing: afterConstruct rearrangement (`rearrangeEqnarray`), `\@xargdef/yargdef/reargdef`, picture env. |
-| `math_common.pool.ltxml` | 312 | Medium | ~87% ported. Missing: 19 sized delimiters (\big/\Big etc.), `\vert` Let. |
+| `math_common.pool.ltxml` | 312 | Medium | ~90% ported. Sized delimiters (\big/\Big/\bigg/\Bigg + l/m/r variants, \vert, \Vert) all in plain.rs. Missing: createDeclarationRewrite `<declare>` element generation (1051 diffs in declare test). |
 | `Base_Deprecated.pool.ltxml` | 77 | Low | ~16% — deprecated compat shims, port on-demand |
 | `AmSTeX.pool.ltxml` | 112 | Low | ~30% — port on-demand |
 | `BibTeX.pool.ltxml` | 150 | Low | ~9% — essentially unimplemented |
@@ -358,7 +358,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 315 pass, 0 fail, 17 ignored. 417 core + 91 contrib modules. Zero cargo test output noise.
+**Status (2026-03-28):** 316 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -394,7 +394,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 | XY7 | `\cirbuild@` radius | `r="9.75"` from `\R@` register | `r="0"` — `\R@` is zero | Circle not drawn |
 
 Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht`, `\dp` to compute positions. These TeX primitives work at the box level. Our engine handles them but doesn't track the accumulated position for xy's range registers. The `\endxy` macro's `\edef\tmp@{...}` captures register values, but they're all zero.
-- [x] **56. babel suite** (81_babel) — german_test, french_test, page545_test, csquotes_test all PASSING (0 diffs). Session 52: precompiled kernel dump infrastructure (dump_codegen, embed module, 22K entries). Session 53: csquotes catcode fix (\makeatletter) + fallback quote styles. Remaining: greek (190 diffs, needs greek.ldf), numprints (TooManyErrors, needs numprint.sty).
+- [x] **56. babel suite** (81_babel) — german_test, french_test, page545_test, csquotes_test, greek_test all PASSING (0 diffs). Session 52: precompiled kernel dump infrastructure. Session 53: csquotes catcode fix + fallback quote styles; greek polutonikogreek register. Remaining: numprints (TooManyErrors, needs numprint.sty fixes).
 
 #### mathtools_test mini-plan (per-section parity)
 
