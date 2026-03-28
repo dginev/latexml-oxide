@@ -9,6 +9,6 @@ const DUMP_DATA: &str = include_str!("latex_dump.oxide");
 /// This replaces processing latex.ltx at every test run.
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {
   latexml_core::dump_reader::load_from_str(DUMP_DATA)
-    .map_err(|e| latexml_core::common::error::Error::from(e))?;
+    .map_err(latexml_core::common::error::Error::from)?;
   Ok(())
 }
