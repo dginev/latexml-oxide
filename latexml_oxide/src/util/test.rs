@@ -45,9 +45,14 @@ pub fn latexml_tests_internal(
 static INIT_LOGGER: Once = Once::new();
 pub fn init_logger() {
   INIT_LOGGER.call_once(|| {
-    latexml_core::util::logger::init(log::LevelFilter::Warn).unwrap();
-    // libxml2 thread-safe initialization is now handled by
-    // latexml_core::ensure_libxml_init() called from Document::new()
+    // Use Off level for clean test output. Error/Warn counting still works
+    // via note_status(); set LATEXML_TEST_LOG=1 to see warnings during debugging.
+    let level = if std::env::var("LATEXML_TEST_LOG").is_ok() {
+      log::LevelFilter::Warn
+    } else {
+      log::LevelFilter::Off
+    };
+    latexml_core::util::logger::init(level).unwrap();
   });
 }
 
