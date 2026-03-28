@@ -878,8 +878,9 @@ LoadDefinitions!({
   // Perl: UTF(0x2908) — DOWNWARDS DOUBLE ARROW FROM BAR (approximation)
   DefMath!("\\ndownarrow", None, "\u{2908}", role => "ARROW");
   // Perl: UTF(0xD7) = × MULTIPLICATION SIGN
+  // Perl: font => { size => 'Big' } where rationalizeFontSize('Big') = 1.6 * DEFSIZE(10) = 16.0pt
   DefMath!("\\bigtimes", None, "\u{00D7}", role => "MULOP", meaning => "times",
-    font => { size => 1.2 },
+    font => { size => 16.0 },
     dynamic_scriptpos => true);
 
   //======================================================================

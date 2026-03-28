@@ -3856,7 +3856,7 @@ Then a switch of tag forms.</p>
         <equation xml:id="S7.Ex59">
           <Math class="ltx_math_unparsed" mode="display" tex="\bigtimes\times\nuparrow\ndownarrow\otimes\bigotimes" xml:id="S7.Ex59.m1">
             <XMath>
-              <XMTok fontsize="12%" meaning="times" name="bigtimes" role="MULOP" scriptpos="mid">×</XMTok>
+              <XMTok fontsize="160%" meaning="times" name="bigtimes" role="MULOP" scriptpos="mid">×</XMTok>
               <XMTok meaning="times" role="MULOP">×</XMTok>
               <XMTok name="nuparrow" role="ARROW">⤉</XMTok>
               <XMTok name="ndownarrow" role="ARROW">⤈</XMTok>

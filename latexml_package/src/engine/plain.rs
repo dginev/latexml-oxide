@@ -1761,13 +1761,15 @@ LoadDefinitions!({
   // but reverts WITHOUT adding braces: \Big( not \Big{(}
   // Perl: augmentDelimiterProperties($doc, $whatsit, undef, 0) — look up delimiter
   // in map and set name/meaning (but don't change role or stretchy).
-  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.2 },
+  // Perl: font => { size => 'big' } where 'big' → 1.2 * DEFSIZE(10) = 12.0 absolute pt.
+  // Named sizes map to absolute values, NOT scale factors.
+  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
-  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.6 },
+  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
-  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.1 },
+  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
-  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.6 },
+  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
 
   // sub addDelimiterRole {
@@ -1784,32 +1786,34 @@ LoadDefinitions!({
   //   return; }
 
   // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
-  DefConstructor!("\\bigl TeXDelimiter",  "#1", bounded => true, font => { size => 1.2 },
+  // Perl: font => { size => 'big' } where rationalizeFontSize('big') = 1.2 * DEFSIZE(10) = 12.0pt
+  // Named sizes are absolute, not relative — must use `size` (not `scale`).
+  DefConstructor!("\\bigl TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\bigm TeXDelimiter",  "#1", bounded => true, font => { size => 1.2 },
+  DefConstructor!("\\bigm TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\bigr TeXDelimiter",  "#1", bounded => true, font => { size => 1.2 },
+  DefConstructor!("\\bigr TeXDelimiter",  "#1", bounded => true, font => { size => 12.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\Bigl TeXDelimiter",  "#1", bounded => true, font => { size => 1.6 },
+  DefConstructor!("\\Bigl TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\Bigm TeXDelimiter",  "#1", bounded => true, font => { size => 1.6 },
+  DefConstructor!("\\Bigm TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\Bigr TeXDelimiter",  "#1", bounded => true, font => { size => 1.6 },
+  DefConstructor!("\\Bigr TeXDelimiter",  "#1", bounded => true, font => { size => 16.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\biggl TeXDelimiter", "#1", bounded => true, font => { size => 2.1 },
+  DefConstructor!("\\biggl TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\biggm TeXDelimiter", "#1", bounded => true, font => { size => 2.1 },
+  DefConstructor!("\\biggm TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\biggr TeXDelimiter", "#1", bounded => true, font => { size => 2.1 },
+  DefConstructor!("\\biggr TeXDelimiter", "#1", bounded => true, font => { size => 21.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
-  DefConstructor!("\\Biggl TeXDelimiter", "#1", bounded => true, font => { size => 2.6 },
+  DefConstructor!("\\Biggl TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
-  DefConstructor!("\\Biggm TeXDelimiter", "#1", bounded => true, font => { size => 2.6 },
+  DefConstructor!("\\Biggm TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "MIDDLE")?; });
-  DefConstructor!("\\Biggr TeXDelimiter", "#1", bounded => true, font => { size => 2.6 },
+  DefConstructor!("\\Biggr TeXDelimiter", "#1", bounded => true, font => { size => 26.0 },
     after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   Let!(&T_CS!("\\vert"), T_OTHER!("|"));
