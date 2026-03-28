@@ -88,6 +88,9 @@ static DELIM_CHAR_MAP: Lazy<HashMap<char, DelimCharProps>> = Lazy::new(|| {
 
 /// Set role and augment delimiter properties on the last child element.
 /// Mirrors Perl's augmentDelimiterProperties (TeX_Math.pool.ltxml).
+/// Perl: augmentDelimiterProperties($doc, $whatsit, $role, $stretchy)
+/// Look up delimiter character in DELIM_CHAR_MAP and set name/meaning/role.
+/// When role is empty, don't change the role (Perl: $role=undef).
 fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<()> {
   let current = document.get_node().clone();
   let delim_opt = current
@@ -100,15 +103,16 @@ fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<(
     let first_char = char_content.chars().next();
     // Look up delimiter properties by char content
     if let Some(entry) = first_char.and_then(|c| DELIM_CHAR_MAP.get(&c)) {
-      // Role: use lrole if requested role is OPEN, else rrole
-      let new_role = if role == "OPEN" { entry.left_role } else { entry.right_role };
-      // Only set role if current role is a delimiter role or absent
-      let current_role = delim.get_attribute("role");
-      match current_role.as_deref() {
-        None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
-          document.set_attribute(&mut delim, "role", new_role)?;
-        },
-        _ => {},
+      // Role: only change if explicitly requested (non-empty role)
+      if !role.is_empty() {
+        let new_role = if role == "OPEN" { entry.left_role } else { entry.right_role };
+        let current_role = delim.get_attribute("role");
+        match current_role.as_deref() {
+          None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
+            document.set_attribute(&mut delim, "role", new_role)?;
+          },
+          _ => {},
+        }
       }
       // Set name if entry has one
       if let Some(name) = entry.name {
@@ -124,8 +128,8 @@ fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<(
           let _ = first_child.set_content(&replacement.to_string());
         }
       }
-    } else {
-      // No map entry — just set role as before
+    } else if !role.is_empty() {
+      // No map entry — just set role if explicitly requested
       let current_role = delim.get_attribute("role");
       match current_role.as_deref() {
         None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {
@@ -1755,10 +1759,16 @@ LoadDefinitions!({
 
   // Perl PR#2596: TeXDelimiter reads like {} (for correct math XMTok digestion)
   // but reverts WITHOUT adding braces: \Big( not \Big{(}
-  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.2 });
-  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.6 });
-  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.1 });
-  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.6 });
+  // Perl: augmentDelimiterProperties($doc, $whatsit, undef, 0) — look up delimiter
+  // in map and set name/meaning (but don't change role or stretchy).
+  DefConstructor!("\\big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.2 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
+  DefConstructor!("\\Big TeXDelimiter",  "#1", bounded => true, font => { scale => 1.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
+  DefConstructor!("\\bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.1 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
+  DefConstructor!("\\Bigg TeXDelimiter", "#1", bounded => true, font => { scale => 2.6 },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; });
 
   // sub addDelimiterRole {
   //   my ($document, $role) = @_;
