@@ -121,12 +121,28 @@ LoadDefinitions!({
     });
   Let!("\\Gscale@box", "\\scalebox");
 
+  // Perl: DefParameterType('GraphixDimension', sub { skipSpaces, readXToken,
+  //   if ! or undef → undef, else unread + readDimension }, optional => 1)
+  DefParameterType!(GraphixDimension, sub[_inner, _extra] {
+    gullet::skip_spaces()?;
+    let next = gullet::read_x_token(Some(false), false, None)?;
+    if next.is_none() || next.as_ref().is_some_and(|t| t.to_string() == "!") {
+      // ! or end-of-input: "let other dimensions determine size"
+      Ok(Tokens!())
+    } else {
+      // Unread and read a Dimension
+      if let Some(tok) = next {
+        gullet::unread_one(tok);
+      }
+      let dim = gullet::read_dimension()?;
+      // Return the dimension value as tokens for storage
+      Ok(Tokenize!(&dim.to_attribute()))
+    }
+  }, optional => true);
+
   // \resizebox{width}{height}{content}
-  // Perl: DefConstructor('\Gscale@@box {} {GraphixDimension}{GraphixDimension} {}', ...)
-  // GraphixDimension reads ! (skip) or a Dimension. Our {} reads balanced text.
-  // TODO: implement DefParameterType for GraphixDimension.
   DefMacro!("\\resizebox", "\\leavevmode\\@ifstar{\\Gscale@@box\\totalheight}{\\Gscale@@box\\height}");
-  DefConstructor!("\\Gscale@@box{}{}{}{}", "#4",
+  DefConstructor!("\\Gscale@@box{}{GraphixDimension}{GraphixDimension}{}", "#4",
     mode => "restricted_horizontal", enter_horizontal => true);
 
   // == Rotation ==
