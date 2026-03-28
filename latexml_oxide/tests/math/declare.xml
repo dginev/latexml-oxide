@@ -64,21 +64,21 @@
                   <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S1.Ex1.m1.3">
+                <XMApp decl_id="S1.XMD6" role="ID" xml:id="S1.Ex1.m1.3">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok decl_id="S1.XMD4" font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                   <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S1.Ex1.m1.4">
+                <XMApp decl_id="S1.XMD6" role="ID" xml:id="S1.Ex1.m1.4">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok decl_id="S1.XMD4" font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                   <XMTok decl_id="S1.XMD1" font="italic" fontsize="70%" role="ID">n</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S1.Ex1.m1.5">
+                <XMApp decl_id="S1.XMD6" role="ID" xml:id="S1.Ex1.m1.5">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok decl_id="S1.XMD4" font="italic" role="ID">x</XMTok>
+                  <XMTok font="italic" role="ID">x</XMTok>
                   <XMApp>
                     <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                     <XMApp>
@@ -223,15 +223,15 @@
               <XMWrap>
                 <XMTok decl_id="S2.XMD1" font="italic" role="ID" xml:id="S2.Ex3.m1.1">q</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.2">
+                <XMApp decl_id="S2.XMD3" role="ID" xml:id="S2.Ex3.m1.2">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok decl_id="S2.XMD1" font="italic" role="ID">q</XMTok>
+                  <XMTok font="italic" role="ID">q</XMTok>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.3">
+                <XMApp decl_id="S2.XMD3" role="ID" xml:id="S2.Ex3.m1.3">
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok decl_id="S2.XMD1" font="italic" role="ID">q</XMTok>
+                  <XMTok font="italic" role="ID">q</XMTok>
                   <XMDual>
                     <XMApp>
                       <XMTok meaning="list"/>
@@ -249,9 +249,9 @@
                 <XMApp xml:id="S2.Ex3.m1.6">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMText> but accidentally </XMText>
-                  <XMApp>
+                  <XMApp decl_id="S2.XMD3" role="ID">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok decl_id="S2.XMD1" font="italic" role="ID">q</XMTok>
+                    <XMTok font="italic" role="ID">q</XMTok>
                     <XMApp>
                       <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
@@ -499,9 +499,9 @@
                 </XMApp>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMApp>
+                  <XMApp decl_id="S3.XMD4" role="ID">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok decl_id="S3.XMD3" font="italic" role="ID">f</XMTok>
+                    <XMTok font="italic" role="ID">f</XMTok>
                     <XMTok decl_id="S3.XMD2" font="italic" fontsize="70%" role="ID">i</XMTok>
                   </XMApp>
                   <XMApp>
@@ -972,9 +972,9 @@
                 </XMApp>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMApp>
+                  <XMApp decl_id="S7.XMD4" role="ID">
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok decl_id="S7.XMD3" font="italic" role="ID">f</XMTok>
+                    <XMTok font="italic" role="ID">f</XMTok>
                     <XMTok decl_id="S7.XMD2" font="italic" fontsize="70%" role="ID">i</XMTok>
                   </XMApp>
                   <XMApp>

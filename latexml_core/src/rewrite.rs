@@ -327,21 +327,14 @@ impl Rewrite {
         Select => {
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
-            let wilds = self.options.wildcard_paths.clone();
-            let base_filter = self.options.attributes_map.as_ref()
-              .and_then(|a| a.get("_wildcard_base").cloned());
+            // Only apply wildcard filtering on content Selects, not scope Selects
+            let is_content_select = !xpath.contains("xml:id") && !xpath.contains("@id=");
+            let wilds = if is_content_select {
+              self.options.wildcard_paths.clone()
+            } else { None };
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
-              }
-              if let Some(ref base) = base_filter {
-                // For POSTSUBSCRIPT patterns: base is prev sibling
-                // For base-token patterns: no filter needed (XPath already checks)
-                let prev_text = node.get_prev_sibling()
-                  .map(|s| s.get_content()).unwrap_or_default();
-                if prev_text != *base {
-                  continue;
-                }
               }
               // For subscript wildcard, check that next sibling is POSTSUBSCRIPT
               if wilds.is_some() && self.options.select_count == Some(2) {
@@ -358,10 +351,14 @@ impl Rewrite {
               } else {
                 vec![]
               };
+              // Scope Selects always pass nmatched=1; content Selects use select_count
+              let nmatched_for_clause = if is_content_select {
+                self.options.select_count.unwrap_or(1)
+              } else { 1 };
               self.apply_clause(
                 document,
                 &node,
-                self.options.select_count.unwrap_or(1),
+                nmatched_for_clause,
                 clauses.clone(),
               )?;
               if !marked.is_empty() {
@@ -438,10 +435,11 @@ impl Rewrite {
             let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
             let has_wc = tree.has_attribute("_has_wildcards");
             if is_wildcard_pattern && has_wc {
-              // Wildcard pattern: use XMDual wrapping
-              let nodes = vec![tree.clone()];
-              set_attributes_wild(document, attrs, nodes, nmatched)?;
-            } else if nmatched > 1 {
+              // TODO: XMDual wrapping causes memory corruption in wrap_nodes.
+              // For now, fall through to simple attribute setting.
+              // set_attributes_wild(document, attrs, nodes, nmatched)?;
+            }
+            if nmatched > 1 {
               // Multi-node: collect nmatched element siblings starting from tree
               let mut nodes = vec![tree.clone()];
               let mut cur = tree.clone();
@@ -872,10 +870,10 @@ pub fn set_attributes_wild(
     return Ok(());
   }
   // Full XMDual wrapping:
-  // Step 1: Wrap matched nodes in XMWrap (presentation arm)
+  // Step 1: Wrap matched nodes in XMWrap → then wrap XMWrap in XMDual
   let wrapper = document.wrap_nodes("ltx:XMWrap", nodes)?;
-  if let Some(mut wrapper_node) = wrapper {
-    // Step 2: Assign xml:ids to wildcard nodes
+  if let Some(wrapper_node) = wrapper {
+    // Step 2: Assign xml:ids to wildcard nodes in the wrapper
     let wild_ids = set_wildcard_ids(document, &wrapper_node);
     // Step 3: Wrap XMWrap in XMDual
     let dual = document.wrap_nodes("ltx:XMDual", vec![wrapper_node.clone()])?;
@@ -884,11 +882,9 @@ pub fn set_attributes_wild(
       if let Some(role) = attrs.get("role") {
         let _ = dual_node.set_attribute("role", role);
       }
-      // Step 4: Detach presentation wrapper temporarily
-      wrapper_node.unbind_node();
-      // Step 5: Build content arm: XMApp with XMTok + XMRefs
+      // Step 4: Build content arm: XMApp with XMTok + XMRefs
+      // Insert BEFORE the XMWrap (first child = content, second = presentation)
       let mut app = Node::new("XMApp", None, document.get_document())?;
-      // Build XMTok with all attributes except role
       let mut op = Node::new("XMTok", None, document.get_document())?;
       for (key, value) in attrs {
         if key != "role" && !key.starts_with('_') {
@@ -896,16 +892,17 @@ pub fn set_attributes_wild(
         }
       }
       app.add_child(&mut op)?;
-      // Add XMRef elements for each wildcard ID
       for rid in &wild_ids {
         let mut xmref = Node::new("XMRef", None, document.get_document())?;
         let _ = xmref.set_attribute("idref", rid);
         app.add_child(&mut xmref)?;
       }
-      dual_node.add_child(&mut app)?;
-      // Step 6: Re-attach presentation wrapper
-      dual_node.add_child(&mut wrapper_node)?;
-      // Mark all children of the dual as seen
+      // Insert content arm before presentation arm
+      if let Some(mut first_child) = dual_node.get_first_child() {
+        first_child.add_prev_sibling(&mut app)?;
+      } else {
+        dual_node.add_child(&mut app)?;
+      }
       mark_seen_rec(&dual_node);
     }
   }
