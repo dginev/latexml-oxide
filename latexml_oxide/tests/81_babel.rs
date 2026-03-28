@@ -3,7 +3,6 @@ use latexml::util::test::*;
 const DIR: &str = "tests/babel";
 
 #[test]
-#[ignore] // OOM: babel+csquotes processing exceeds memory limits
 fn csquotes_test() {
   latexml_test_single("tests/babel/csquotes.tex", "csquotes", DIR, None, None);
 }

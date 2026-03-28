@@ -5,6 +5,20 @@ LoadDefinitions!({
   // Load the raw TeX style file first
   InputDefinitions!("csquotes", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
+  // Ensure @ is catcode letter for all our internal macro definitions
+  RawTeX!(r#"\makeatletter"#);
+
+  // Provide default quote style macros — csquotes.def normally defines these
+  // via DeclareQuoteStyle, but the complex TeX initialization may fail.
+  // Define English-style defaults that csq@setstyle will override at \begin{document}.
+  RawTeX!(r#"\def\csq@thequote@oinit{}%
+\def\csq@thequote@oopen{\textquotedblleft}%
+\def\csq@thequote@oclose{\textquotedblright}%
+\def\csq@thequote@iinit{}%
+\def\csq@thequote@iopen{\textquoteleft}%
+\def\csq@thequote@iclose{\textquoteright}%
+\let\csq@kernchar@i\relax"#);
+
   // Compatibility fixes: unicode check workaround
   RawTeX!(r#"\def\csq@ifutfchar#1{%
   \ifundef\@inpenc@undefined
@@ -252,4 +266,7 @@ LoadDefinitions!({
   DefMacro!("\\ltxml@mkenddispquote{}{}",
     "\\mkenddispquote{#1}{#2}\\ltxml@mkenddispquote@aclose");
   DefConstructor!("\\ltxml@mkenddispquote@aclose", "</ltx:text>");
+
+  // Restore @ catcode
+  RawTeX!(r#"\makeatother"#);
 });
