@@ -2802,7 +2802,7 @@
       </para>
       <para xml:id="S1.SS7.p2">
         <equation xml:id="S1.Ex39">
-          <Math mode="display" tex="\begin{pmatrix}\begin{pmatrix}\end{pmatrix}&amp;\begin{pmatrix}a\\&#10;b\end{pmatrix}\\&#10;\begin{pmatrix}c&amp;d\end{pmatrix}&amp;e\end{pmatrix}" text="matrix@(Array[[, matrix@(Array[[a], [b]])], [matrix@(Array[[c, d]]), e]])" xml:id="S1.Ex39.m1">
+          <Math mode="display" tex="\begin{pmatrix}\begin{pmatrix}\end{pmatrix}&amp;\begin{pmatrix}a\\&#10;b\end{pmatrix}\\&#10;\begin{pmatrix}c&amp;d\end{pmatrix}&amp;e\end{pmatrix}" text="matrix@(Array[[matrix@(absent), matrix@(Array[[a], [b]])], [matrix@(Array[[c, d]]), e]])" xml:id="S1.Ex39.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2813,7 +2813,6 @@
                   <XMTok role="OPEN" stretchy="true">(</XMTok>
                   <XMArray xml:id="S1.Ex39.m1.1">
                     <XMRow>
-                      <XMCell/>
                       <XMCell align="center">
                         <XMDual>
                           <XMApp>
@@ -2822,7 +2821,20 @@
                           </XMApp>
                           <XMWrap>
                             <XMTok role="OPEN" stretchy="true">(</XMTok>
-                            <XMArray xml:id="S1.Ex39.m1.2">
+                            <XMTok meaning="absent" xml:id="S1.Ex39.m1.2"/>
+                            <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMCell>
+                      <XMCell align="center">
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="matrix"/>
+                            <XMRef idref="S1.Ex39.m1.3"/>
+                          </XMApp>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="true">(</XMTok>
+                            <XMArray xml:id="S1.Ex39.m1.3">
                               <XMRow>
                                 <XMCell align="center">
                                   <XMTok font="italic" role="UNKNOWN">a</XMTok>
@@ -2844,11 +2856,11 @@
                         <XMDual>
                           <XMApp>
                             <XMTok meaning="matrix"/>
-                            <XMRef idref="S1.Ex39.m1.3"/>
+                            <XMRef idref="S1.Ex39.m1.4"/>
                           </XMApp>
                           <XMWrap>
                             <XMTok role="OPEN" stretchy="true">(</XMTok>
-                            <XMArray xml:id="S1.Ex39.m1.3">
+                            <XMArray xml:id="S1.Ex39.m1.4">
                               <XMRow>
                                 <XMCell align="center">
                                   <XMTok font="italic" role="UNKNOWN">c</XMTok>
@@ -2957,7 +2969,7 @@
       <para xml:id="S1.SS7.p4">
         <p>But, alignment is illusion</p>
         <equation xml:id="S1.Ex41">
-          <Math mode="display" tex="\begin{pmatrix}\begin{pmatrix}\end{pmatrix}&amp;\begin{pmatrix}\displaystyle\frac{x}{y}\\&#10;b\end{pmatrix}\\&#10;\begin{pmatrix}u+v+w+x+y+z&amp;d\end{pmatrix}&amp;e\end{pmatrix}" text="matrix@(Array[[, matrix@(Array[[x / y], [b]])], [matrix@(Array[[u + v + w + x + y + z, d]]), e]])" xml:id="S1.Ex41.m1">
+          <Math mode="display" tex="\begin{pmatrix}\begin{pmatrix}\end{pmatrix}&amp;\begin{pmatrix}\displaystyle\frac{x}{y}\\&#10;b\end{pmatrix}\\&#10;\begin{pmatrix}u+v+w+x+y+z&amp;d\end{pmatrix}&amp;e\end{pmatrix}" text="matrix@(Array[[matrix@(absent), matrix@(Array[[x / y], [b]])], [matrix@(Array[[u + v + w + x + y + z, d]]), e]])" xml:id="S1.Ex41.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2968,7 +2980,6 @@
                   <XMTok role="OPEN" stretchy="true">(</XMTok>
                   <XMArray xml:id="S1.Ex41.m1.1">
                     <XMRow>
-                      <XMCell/>
                       <XMCell align="center">
                         <XMDual>
                           <XMApp>
@@ -2977,7 +2988,20 @@
                           </XMApp>
                           <XMWrap>
                             <XMTok role="OPEN" stretchy="true">(</XMTok>
-                            <XMArray xml:id="S1.Ex41.m1.2">
+                            <XMTok meaning="absent" xml:id="S1.Ex41.m1.2"/>
+                            <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMCell>
+                      <XMCell align="center">
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="matrix"/>
+                            <XMRef idref="S1.Ex41.m1.3"/>
+                          </XMApp>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="true">(</XMTok>
+                            <XMArray xml:id="S1.Ex41.m1.3">
                               <XMRow>
                                 <XMCell align="center">
                                   <XMApp>
@@ -3003,11 +3027,11 @@
                         <XMDual>
                           <XMApp>
                             <XMTok meaning="matrix"/>
-                            <XMRef idref="S1.Ex41.m1.3"/>
+                            <XMRef idref="S1.Ex41.m1.4"/>
                           </XMApp>
                           <XMWrap>
                             <XMTok role="OPEN" stretchy="true">(</XMTok>
-                            <XMArray xml:id="S1.Ex41.m1.3">
+                            <XMArray xml:id="S1.Ex41.m1.4">
                               <XMRow>
                                 <XMCell align="center">
                                   <XMApp>

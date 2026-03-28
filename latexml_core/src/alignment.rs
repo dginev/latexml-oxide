@@ -628,9 +628,12 @@ impl BoxOps for Alignment {
               }
             });
           // Perl L340-341: ltx_nopad_l, unless math mode (Perl: `unless $ismath`)
-          // Note: col_idx guard still needed because cell.before/has_intercol_before
-          // are cleared during extraction — lpad heuristic can't distinguish @{} from
-          // default padding on first columns without proper lspaces population.
+          // Note: col_idx guard for non-halign tables. Column 0 always has lpad=0
+          // in our alignment because lspaces aren't populated for the first column.
+          // Perl's lpad comes from \tabcolsep which is ~6pt (>0.2em), so ltx_nopad_l
+          // wouldn't fire for column 0 with default spacing. The guard prevents a
+          // false positive. For @{} columns at position 0, the guard incorrectly
+          // suppresses ltx_nopad_l but this is rare.
           if (_col_idx > 0 || self.is_halign) && !ismath && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {

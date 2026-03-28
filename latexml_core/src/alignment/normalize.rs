@@ -102,9 +102,9 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
               || b.get_property_bool("alignmentSkippable")
               || b.is_comment()
           });
-        // Perl L457-462
+        // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved
         let empty = ((fullw.value_of() < 1
-          || (ch.value_of() < 1 && cd.value_of() < 1))
+          && (ch.value_of() < 1 && cd.value_of() < 1))
           || isrule)
           && preserved_boxes(Some(boxes)).is_empty();
         let skippable = empty || boxes.is_skippable();

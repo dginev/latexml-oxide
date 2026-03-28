@@ -1313,16 +1313,9 @@ impl Document {
           serialized.push_str(&indent)
         }
         serialized.push_str(&open_tag);
-        // Perl serializes elements with no real content as self-closing <tag/>.
-        // Check if children are "effectively empty" (only empty text nodes).
-        let has_real_content = children.iter().any(|c| {
-          match c.get_type() {
-            Some(NodeType::TextNode) => !c.get_content().is_empty(),
-            Some(NodeType::ElementNode) | Some(NodeType::CommentNode) | Some(NodeType::PiNode) => true,
-            _ => false,
-          }
-        });
-        if has_real_content {
+        // Perl serializes elements with children (including empty text nodes) as
+        // <tag>...</tag>, and truly childless elements as <tag/>. Match this behavior.
+        if !children.is_empty() {
           // with contents.
           serialized.push('>');
           if !noindent_children {

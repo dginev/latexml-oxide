@@ -1,7 +1,5 @@
 use glob::glob;
-use libxml::parser::Parser;
-use libxml::tree::Document as XmlDoc;
-use libxml::tree::{Node, SaveOptions};
+use libxml::tree::Node;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Once;
@@ -180,13 +178,19 @@ fn process_texfile(
   }
 }
 
-/// Loads and serialized the resulting XML for a test file target,
-/// returning it as a vector of line strings for the serialization
-fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
-  let parser = Parser::default();
-  match parser.parse_file(xml_path) {
-    Err(e) => panic!("Faield to parse XML file for {:?}: {:?}", name, e),
-    Ok(dom) => process_dom(dom, name),
+/// Loads the reference XML file as raw text lines, avoiding libxml2
+/// re-serialization which would normalize `<p></p>` to `<p/>`.
+fn process_xmlfile<'a>(xml_path: &'a str, _name: &'a str) -> Vec<String> {
+  match std::fs::read_to_string(xml_path) {
+    Err(e) => panic!("Failed to read XML file {:?}: {:?}", xml_path, e),
+    Ok(contents) => {
+      let mut lines: Vec<String> = contents.split('\n').map(ToString::to_string).collect();
+      // Remove trailing empty line from final newline
+      if lines.last().map_or(false, |l| l.is_empty()) {
+        lines.pop();
+      }
+      lines
+    }
   }
 }
 fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
@@ -204,19 +208,12 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
     std::fs::write(&path2, &libxml_str).ok();
     eprintln!("Saved libxml XML to {path2}");
   }
-  doc_str.split('\n').map(ToString::to_string).collect()
-}
-
-/// Serializes and splits by line a given `XmlDoc`
-fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
-  dom
-    .to_string_with_options(SaveOptions {
-      format: true,
-      ..SaveOptions::default()
-    })
-    .split('\n')
-    .map(ToString::to_string)
-    .collect()
+  let mut lines: Vec<String> = doc_str.split('\n').map(ToString::to_string).collect();
+  // Remove trailing empty line from final newline
+  if lines.last().map_or(false, |l| l.is_empty()) {
+    lines.pop();
+  }
+  lines
 }
 
 /// Provide a default test `Core` engine for simple operations
