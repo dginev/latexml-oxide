@@ -428,7 +428,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
 - [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`. Rust separates mulop at term level vs invisible-times at tight_term level. Fix: semantic pruning in apply_invisible_times or grammar restructure.
 - [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
-- [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`
+- [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`. Root cause: XMRef xmkey resolution fails for parser-created Apply nodes inside XMDual. Adding operators as grammar factors breaks `X\times_Z Y` infix parsing. Fix: xmkey → xml:id resolution in finalize_rec.
 - [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
 - [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
 
