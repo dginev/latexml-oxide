@@ -17,7 +17,7 @@ LoadDefinitions!({
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
-  // Keep suppression active through post-load fixups.
+  // Keep other suppression active through post-load fixups.
 
   // Post-load: set expl3 catcodes for fixup commands.
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
@@ -43,6 +43,18 @@ LoadDefinitions!({
     r"{ \exp_args:Ne \__file_name_trim_spaces:n",
     r"  { \exp_args:Ne \__file_name_strip_quotes:n",
     r"    { \__file_name_expand:n {#1} } } }",
+  ))?;
+  // Ensure l3file sequences exist (may have failed to create during loading)
+  raw_tex(concat!(
+    r"\cs_if_exist:NF \g__file_record_seq { \seq_new:N \g__file_record_seq }",
+    r"\cs_if_exist:NF \l_file_search_path_seq { \seq_new:N \l_file_search_path_seq }",
+  ))?;
+  // Ensure cctab message exists (used by cctab validation, defined late in expl3-code.tex).
+  // Use \msg_set which overwrites if already defined (avoiding "already defined" error).
+  raw_tex(concat!(
+    r"\msg_set:nnnn{cctab}{invalid-cctab}",
+    r"  {Invalid~code~category~table~'#1'.}",
+    r"  {You~tried~to~use~'#1'~as~a~catcode~table,~but~it~is~not~a~valid~catcode~table.}",
   ))?;
   // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run.
   if state::lookup_catcode(' ') != Some(Catcode::SPACE) {
