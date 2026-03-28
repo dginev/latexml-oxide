@@ -16,7 +16,7 @@
             </XMApp>
             <XMWrap>
               <XMTok role="OPEN" stretchy="false">{</XMTok>
-              <XMTok font="italic" role="ID" xml:id="S0.Ex1.m1.1">a</XMTok>
+              <XMTok decl_id="XMD1" font="italic" role="ID" xml:id="S0.Ex1.m1.1">a</XMTok>
               <XMTok role="CLOSE" stretchy="false">}</XMTok>
             </XMWrap>
           </XMDual>
@@ -34,12 +34,12 @@
             </XMApp>
             <XMWrap>
               <XMTok role="OPEN" stretchy="false">{</XMTok>
-              <XMTok font="italic" role="ID" xml:id="S0.Ex2.m1.1">a</XMTok>
+              <XMTok decl_id="XMD1" font="italic" role="ID" xml:id="S0.Ex2.m1.1">a</XMTok>
               <XMTok name="colon" role="METARELOP">:</XMTok>
               <XMApp xml:id="S0.Ex2.m1.2">
                 <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok decl_id="XMD1" font="italic" role="ID">a</XMTok>
+                <XMTok decl_id="XMD2" font="italic" role="ID">b</XMTok>
               </XMApp>
               <XMTok role="CLOSE" stretchy="false">}</XMTok>
             </XMWrap>
@@ -58,12 +58,12 @@
             </XMApp>
             <XMWrap>
               <XMTok role="OPEN" stretchy="false">{</XMTok>
-              <XMTok font="italic" role="ID" xml:id="S0.Ex3.m1.1">a</XMTok>
+              <XMTok decl_id="XMD1" font="italic" role="ID" xml:id="S0.Ex3.m1.1">a</XMTok>
               <XMTok role="MIDDLE" stretchy="false">|</XMTok>
               <XMApp xml:id="S0.Ex3.m1.2">
                 <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
+                <XMTok decl_id="XMD1" font="italic" role="ID">a</XMTok>
+                <XMTok decl_id="XMD2" font="italic" role="ID">b</XMTok>
               </XMApp>
               <XMTok role="CLOSE" stretchy="false">}</XMTok>
             </XMWrap>
@@ -86,19 +86,19 @@
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S0.Ex4.m1.1">a</XMTok>
+                <XMTok decl_id="XMD1" font="italic" role="ID" xml:id="S0.Ex4.m1.1">a</XMTok>
                 <XMTok role="MIDDLE" stretchy="false">|</XMTok>
                 <XMApp xml:id="S0.Ex4.m1.2">
                   <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
-                  <XMTok font="italic" role="ID">a</XMTok>
-                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok decl_id="XMD1" font="italic" role="ID">a</XMTok>
+                  <XMTok decl_id="XMD2" font="italic" role="ID">b</XMTok>
                 </XMApp>
                 <XMTok role="CLOSE" stretchy="false">}</XMTok>
               </XMWrap>
             </XMDual>
             <XMApp>
               <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" fontsize="70%" role="ID">c</XMTok>
+              <XMTok decl_id="XMD3" font="italic" fontsize="70%" role="ID">c</XMTok>
               <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
             </XMApp>
           </XMApp>

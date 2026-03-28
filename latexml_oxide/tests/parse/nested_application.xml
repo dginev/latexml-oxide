@@ -10,9 +10,9 @@
         <XMath>
           <XMApp>
             <XMApp>
-              <XMTok font="italic" role="OPERATOR">D</XMTok>
+              <XMTok decl_id="XMD1" font="italic" role="OPERATOR">D</XMTok>
               <XMApp>
-                <XMTok font="italic" role="OPERATOR">D</XMTok>
+                <XMTok decl_id="XMD1" font="italic" role="OPERATOR">D</XMTok>
                 <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
               </XMApp>
             </XMApp>
@@ -23,7 +23,7 @@
 <Math mode="inline" tex="Dx\times y\times z" text="D@(x * y * z)" xml:id="p1.m2">
         <XMath>
           <XMApp>
-            <XMTok font="italic" role="OPERATOR">D</XMTok>
+            <XMTok decl_id="XMD1" font="italic" role="OPERATOR">D</XMTok>
             <XMApp>
               <XMTok meaning="times" role="MULOP">×</XMTok>
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
