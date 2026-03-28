@@ -50,7 +50,12 @@ LoadDefinitions!({
       let last_lang = loaded.split(',').map(|s| s.trim())
         .rfind(|s| !s.is_empty()).unwrap_or("").to_string();
       if !last_lang.is_empty() {
-        gullet::unread(Tokenize!(&s!("\\main@language{{{}}}", last_lang)));
+        gullet::unread(Tokens::new(vec![
+          T_CS!("\\main@language"),
+          T_BEGIN!(),
+          T_OTHER!(last_lang),
+          T_END!(),
+        ]));
       }
     }
   });
