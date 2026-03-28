@@ -3693,73 +3693,81 @@ Then a switch of tag forms.</p>
       <equation xml:id="S7.Ex56">
         <Math class="ltx_math_unparsed" mode="display" tex="\left(\frac{\pi}{\omega}\right)\cdot\left[\int xdx\right]\ldots[\sqrt{\frac{\sin x}{\cos z}}]\cdots\lparen\frac{\frac{foo}{bar}}{\frac{baz}{qux}}\rparen" xml:id="S7.Ex56.m1">
           <XMath>
-            <XMTok role="OPEN" stretchy="true">(</XMTok>
-            <XMApp>
-              <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-              <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
-              <XMTok font="italic" name="omega" role="UNKNOWN">ω</XMTok>
-            </XMApp>
-            <XMTok role="CLOSE" stretchy="true">)</XMTok>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="true">(</XMTok>
+              <XMApp>
+                <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                <XMTok font="italic" name="omega" role="UNKNOWN">ω</XMTok>
+              </XMApp>
+              <XMTok role="CLOSE" stretchy="true">)</XMTok>
+            </XMWrap>
             <XMTok name="cdot" role="MULOP">⋅</XMTok>
-            <XMTok role="OPEN" stretchy="true">[</XMTok>
-            <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
-            <XMTok font="italic" role="UNKNOWN">d</XMTok>
-            <XMTok font="italic" role="UNKNOWN">x</XMTok>
-            <XMTok role="CLOSE" stretchy="true">]</XMTok>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="true">[</XMTok>
+              <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok role="CLOSE" stretchy="true">]</XMTok>
+            </XMWrap>
             <XMTok name="ldots" role="ID">…</XMTok>
-            <XMTok role="OPEN" stretchy="false">[</XMTok>
-            <XMApp>
-              <XMTok meaning="square-root"/>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">[</XMTok>
+              <XMApp>
+                <XMTok meaning="square-root"/>
+                <XMApp>
+                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                  <XMApp>
+                    <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+              <XMTok role="CLOSE" stretchy="false">]</XMTok>
+            </XMWrap>
+            <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            <XMWrap>
+              <XMTok name="lparen" role="OPEN" stretchy="false">(</XMTok>
               <XMApp>
                 <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                 <XMApp>
-                  <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
+                  </XMApp>
                 </XMApp>
                 <XMApp>
-                  <XMTok meaning="cosine" role="TRIGFUNCTION">cos</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">q</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
+                  </XMApp>
                 </XMApp>
               </XMApp>
-            </XMApp>
-            <XMTok role="CLOSE" stretchy="false">]</XMTok>
-            <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
-            <XMTok name="lparen" role="OPEN" stretchy="false">(</XMTok>
-            <XMApp>
-              <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-              <XMApp>
-                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">o</XMTok>
-                </XMApp>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">r</XMTok>
-                </XMApp>
-              </XMApp>
-              <XMApp>
-                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok>
-                </XMApp>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">q</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
-                </XMApp>
-              </XMApp>
-            </XMApp>
-            <XMTok name="rparen" role="CLOSE" stretchy="false">)</XMTok>
+              <XMTok name="rparen" role="CLOSE" stretchy="false">)</XMTok>
+            </XMWrap>
           </XMath>
         </Math>
       </equation>

@@ -31,7 +31,7 @@ Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git hi
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | tex_math.rs | GAPS | `TeXDelimiter` partially implemented (`\left\delimiter`/`\right\delimiter` handle hex number codes). Missing: `\nonscript`, `\lx@dollar@default`, full `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. |
-| tex_box.rs | GAPS | `\leaders/cleaders/xleaders` implemented (bounded + hide alignment + filled leader extension). Missing: SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
+| tex_box.rs | MINOR | `\leaders/cleaders/xleaders` implemented. `collapseSVGGroup` ported (session 51). `\hbox/vbox/vtop` have some TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | `\fontname` implemented (returns font filename). Missing: `\fontname` "select font X at Ypt" format for scaled fonts, per-font `\hyphenchar` tracking, `getFontDimen()`, 7 ligature defs. `\fontdimen` only handles 3 hardcoded params |
 | tex_tables.rs | GAPS | `\halign BoxSpecification` entirely commented out, many alignment helpers missing |
@@ -46,7 +46,7 @@ Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git hi
 | tex_logic.rs | OK | — |
 | tex_glue.rs | MINOR | `\hskip` SVG missing |
 | tex_registers.rs | MINOR | Missing `DumpFile()` infrastructure |
-| tex_kern.rs | OK | SVG handling removed (not critical for XML output) |
+| tex_kern.rs | OK | SVG handling ported (session 51: \kern/\raise/\lower create svg:g translate() transforms) |
 | pdftex.rs | MINOR | Missing: `OpenAnnotSpecification`, `\pdfannot`, `\pdfobj`, `\pdfcolorstack` |
 | etex.rs | MINOR | `\parshapelength` returns Dimension (Perl: Number); `etex_readexpr_i` has `todo!()` for missing close paren |
 | tex_job.rs | OK | — |
@@ -184,7 +184,7 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | register.rs | MINOR | — |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_is_contained`, `pathname_findall`, `pathname_timestamp/copy/mkdir`. `canonical` now handles `./`, `/../`. Dir-listing approach in `candidate_pathnames` not ported (uses `Path::exists` instead). |
 | alignment.rs | MINOR | normalize.rs deep refactored (2026-03-14): per-column-index arrays, vattach height/depth split, lspaces/rspaces padding, border padding (0.4*UNITY), first/last row strut, rowspan redirect. Remaining: padding CSS classes, ABSORB_LIMIT guard |
-| rewrite.rs | GAPS | ~20% ported (Select/Replace only) |
+| rewrite.rs | MINOR | ~95% ported. Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. Missing: compile_match for TeX-string patterns (rare), wildcard tracking. |
 | token.rs | OK | — |
 | tokens.rs | OK | — |
 | number/float/dimension.rs | OK | — |
@@ -235,25 +235,46 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ## Test Suite Status (2026-03-28)
 
-**Current totals: 316 pass, 0 fail, 16 ignored (332 total integration tests)**
-**Plus 16 unit tests (state, tokens, replace_tree) = 332 total passing**
-**Coverage: 316/327 non-permanently-blocked = 96.6% pass rate**
-**Perl parity: 262/318 tests (82%) have ZERO structural diffs vs Perl (excl xml:id, tex=, %&#10;)**
-**14,227 total structural diffs across 56 non-zero tests (mostly math parser)**
-**Packages: 409 modules + 91 ar5iv contrib bindings (500 total, exceeds Perl's 405+87)**
+**Current totals: 319 pass, 0 fail, 16 ignored (335 total tests = 304 integration + 16 unit + 15 doc)**
+**Coverage: 319/330 non-permanently-blocked = 96.7% pass rate**
+**Perl parity: 194/264 paired tests (73%) have zero raw diffs vs Perl**
+**14,790 total raw diff lines across 70 non-zero paired tests**
+**Packages: 417 core modules + 91 ar5iv contrib bindings (508 total)**
+
+### Top 20 tests by diff count vs Perl (raw diff lines)
+
+| Rank | Diffs | Test | Primary issue |
+|------|-------|------|---------------|
+| 1 | 3214 | ams/mathtools | S1 smashoperator, S8 prescripts, S11 MoveEqLeft, parse structure |
+| 2 | 2730 | graphics/picture | Picture environment largely unported |
+| 3 | 975 | math/declare | \lxDeclare XMDual wrapping, function roles, wildcard patterns |
+| 4 | 847 | fonts/stmaryrd | ~680 intentional (xml:id + %\n) + RELOP chain parse diffs |
+| 5 | 682 | graphics/xcolors | Color complement/wheel computation (BLOCKED) |
+| 6 | 672 | math/sampler | xml:id renumbering + VERTBAR ambiguity + \hskip/\phantom |
+| 7 | 548 | babel/greek | Missing cbgreek/LGR font encoding decode |
+| 8 | 458 | alignment/listing | Font nesting in delimiters/strings, showspaces, math in comments |
+| 9 | 399 | alignment/split | XMWrap structure (needs parse_kludgeScripts_rec) |
+| 10 | 345 | parse/operators | Scripted operators (needs parse_kludgeScripts_rec) |
+| 11 | 333 | parse/kludge | Scripted operators (needs parse_kludgeScripts_rec) |
+| 12 | 310 | alignment/ncases | VERTBAR conditional vs multirelation + \ref expansion |
+| 13 | 290 | parse/qm | QM subject-area pragma (C8) |
+| 14 | 256 | ams/genfracs | Math parse structure diffs |
+| 15 | 235 | parse/functions | Function application structure |
+| 16 | 234 | complex/xii | Mixed complex diffs |
+| 17 | 218 | math/ambiguous_relations | VERTBAR ambiguity |
+| 18 | 198 | graphics/xytest | SVG coordinate registers (XY1-XY7) |
+| 19 | 160 | alignment/diagboxtest | Alignment padding |
+| 20 | 143 | complex/figure_mixed_content | Mixed structure diffs |
 
 **Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
-**Ignored test breakdown (23 total, 18 code-ignored + 5 run-but-fail):**
+**Ignored test breakdown (16 total):**
 - **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
-- **5 permanent**: ns1–ns5 (52_namespace) — DTD not supported
-- **1 babel**: timeout — unbounded loop
+- **1 babel**: numprints — TooManyErrors (120 errors, numprint `n` column type)
 - **1 beamer**: needs beamer.cls full port
-- **1 moderncv** (orc): SVG namespace
-- **1 xytest**: needs xy.sty full port
 - **1 physics**: needs physics.sty
 - **1 siunitx**: needs siunitx.sty
-- *Run-but-fail (5):* IEEE (math parser), split (alignment), mathtools (TooManyErrors), cs_cv (moderncv), slides (slides.cls)
+- *Permanent ignores (5, not counted above):* ns1–ns5 (52_namespace) — DTD not supported
 
 **Detailed fix history lives in git log.** Key milestones: C5 multi-token rewrites (S33), bigop_application (S33), BIGOPSUB/BIGOPSUP token separation (S40), finalize_rec iterative (S18-25), 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 9 intentional divergences (OXIDIZED_DESIGN.md).
 
@@ -315,9 +336,8 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] amstheorem, latextheorem, ntheorem, ntheoremstyle, theorem
 - [x] **56_ams** (7/7)
   - [x] amsdisplay, cd, dots, genfracs, mathtools, matrix, sideset
-- [ ] **65_graphics** (8 pass, 1 ignored = 9 total)
-  - [x] calc, colors, framed, graphrot, keyval, picture, simplekv, xcolors
-  - [ ] xytest — IGNORED: crash, needs xy.sty
+- [x] **65_graphics** (9/9)
+  - [x] calc, colors, framed, graphrot, keyval, picture, simplekv, xcolors, xytest
 - [x] **70_parse** (28/28)
   - [x] all 28 parse tests passing
 - [x] **700_unit_parse** (3/3)
@@ -361,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 316 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 13,522 structural diffs across 41 non-zero tests vs Perl (was 14,227). 126/167 zero-diff tests (was 122).
+**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 14,790 total diff lines across 70 non-zero paired tests vs Perl. 194/264 paired zero-diff tests (73%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -416,6 +436,18 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 | S11 | Stepped lines | 62% | MoveEqLeft alignment shift, newgathered |
 | S12 | Shifting | **87%** | mathmakebox xoffset, width precision |
 
+### Impact-ordered priorities (by reducible diff lines)
+
+| Priority | Item | Est. reducible diffs | Difficulty | Tests affected |
+|----------|------|---------------------|------------|----------------|
+| 1 | C3: `parse_kludgeScripts_rec` | ~1000+ | Hard | kludge (333), operators (345), split (399), functions (235), sampler (subset) |
+| 2 | declare.xml: XMDual wrapping + function roles | ~700 | Hard | declare (975) |
+| 3 | LGR font encoding (cbgreek) | ~520 | Medium | greek (548) |
+| 4 | VERTBAR ambiguity resolution | ~500+ | Hard | sampler, ncases, ambiguous_relations, vertbars, qm |
+| 5 | A3: listing font nesting | ~200 | Medium | listing (458) |
+| 6 | C4: ltx_nopad_l alignment padding | ~150 | Medium | diagboxtest (160), ncases (subset) |
+| 7 | mathtools S1/S8/S11 | ~500 | Hard | mathtools (3214 total, much is xml:id) |
+
 ### Alignment gaps
 
 - [x] A1. `alignment_skip_data` continuation-line check: Perl's continuation logic is dead code (KNOWN_PERL_ERRORS #7 — `scalar($::TABLINES[0])` returns array ref address). Rust matches Perl's actual behavior. 173 regressions confirmed this is correct.
@@ -427,7 +459,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 ### Math parser gaps
 
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
-- [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure — digestion produces XMWrap+POSTSUBSCRIPT, Perl produces XMApp+SUBSCRIPTOP. Math parser structural difference.
+- [ ] C3. `parse_kludgeScripts_rec` — Perl's `parse_kludge` (MathParser.pm L530-589) attaches POSTSUPERSCRIPT/POSTSUBSCRIPT to their preceding base as `XMApp(SUPERSCRIPTOP, base, script)` before the math parser runs. Rust's kludge only does OPEN/CLOSE matching but skips script attachment entirely. Affects: kludge (333), operators (345), split (399), functions (235). Previous attempt failed because DOM operations corrupted parsed content trees — needs array-based (non-DOM) intermediate representation like Perl's `[$node, $role]` pairs.
 - [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
 - [x] C5. `\times` vs invisible-times precedence — **FIXED**: semantic pruning in `infix_apply_nary`: when MULOP is division and right operand is invisible-times, extract first factor as divisor and chain rest. `a/bc` → `(a/b)*c` matching Perl's left-to-right. parse/terms.xml: 28→0 diffs (new zero-diff test).
 - [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.

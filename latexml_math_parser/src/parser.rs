@@ -576,115 +576,88 @@ impl MathParser {
   //     (they're all the same size; big)
   // (2) un-attached sub/superscripts won't position correctly,
   //     unless they're attached to something plausible.
-  // NOTE: we should be able to optionally switch this off.
-  // Especially, when we want to try alternative parse strategies.
-  /// Fallback parser for unparseable expressions.
-  /// NOTE: Cannot implement DOM manipulation here — any DOM changes inside
-  /// the parser module break Marpa grammar precomputation. The kludge logic
-  /// must be moved to core_interface.rs (the caller) using failed_xmath_ids.
   /// Perl: parse_kludge (MathParser.pm L530-566)
-  /// Stack-based matching of OPEN/CLOSE delimiter pairs, wrapping in XMWrap.
+  /// Stack-based matching of OPEN/CLOSE delimiter pairs + script attachment.
   fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) {
     use crate::data::get_grammatical_role;
     let children: Vec<Node> = filter_hints(mathnode.get_child_nodes());
     if children.is_empty() { return; }
-    let child_names: Vec<String> = children.iter().map(|c| {
-      let r = c.get_attribute("role").unwrap_or_default();
-      format!("{}({})", c.get_name(), r)
-    }).collect();
-    log::debug!("parse_kludge: processing {} children: {:?}", children.len(), child_names);
 
-    // Represent content as either individual nodes or groups needing XMWrap.
-    enum Item { Node(Node), Wrap(Vec<Item>) }
+    // Build (node, role) pairs — matching Perl's @pairs.
+    let pairs: Vec<(Node, String)> = children.into_iter()
+      .map(|n| { let r = get_grammatical_role(&n); (n, r) })
+      .collect();
 
     // Perl: @stack = ([], []) — extra empty level handles unmatched leading CLOSEs.
-    let mut stack: Vec<Vec<Item>> = vec![vec![], vec![]];
-    let roles: Vec<String> = children.iter().map(get_grammatical_role).collect();
-    let mut iter = children.into_iter().zip(roles).peekable();
+    let mut stack: Vec<Vec<(Node, String)>> = vec![vec![], vec![]];
+    let mut iter = pairs.into_iter().peekable();
 
     while iter.peek().is_some() || stack.len() > 1 {
       let pair_opt = iter.next();
       let role = pair_opt.as_ref().map(|(_, r)| r.as_str()).unwrap_or("CLOSE");
       match role {
         "OPEN" => {
-          stack.insert(0, vec![Item::Node(pair_opt.unwrap().0)]);
+          let pair = pair_opt.unwrap();
+          stack.insert(0, vec![pair]);
         },
         "CLOSE" => {
           let mut row = stack.remove(0);
-          if let Some((node, _)) = pair_opt {
-            row.push(Item::Node(node));
+          if let Some(pair) = pair_opt {
+            row.push(pair);
           }
-          // Wrap the row if > 1 item
-          let result = if row.len() > 1 {
-            Item::Wrap(row)
+          // Perl L546: handle scripts within this fenced group
+          let kludged = kludge_scripts_rec(row, document);
+          // Wrap if > 1 node, give role FENCED
+          let result = if kludged.len() > 1 {
+            let mut wrap = Node::new("XMWrap", None, document.get_document())
+              .unwrap();
+            for mut n in kludged {
+              n.unlink_node();
+              wrap.add_child(&mut n).ok();
+            }
+            (wrap, "FENCED".to_string())
           } else {
-            row.into_iter().next().unwrap_or(Item::Node(
-              Node::new_text("", &document.document).unwrap()))
+            let node = kludged.into_iter().next().unwrap_or_else(
+              || Node::new_text("", &document.document).unwrap());
+            (node, "FENCED".to_string())
           };
           if stack.is_empty() { stack.push(vec![]); }
           stack[0].push(result);
         },
         _ => {
-          if let Some((node, _)) = pair_opt {
-            stack[0].push(Item::Node(node));
+          if let Some(pair) = pair_opt {
+            stack[0].push(pair);
           }
         },
       }
     }
 
-    // Check if any wrapping happened
-    let items = stack.into_iter().next().unwrap_or_default();
-    let has_wrap = items.iter().any(|i| matches!(i, Item::Wrap(_)));
-    log::debug!("parse_kludge: items={} has_wrap={}", items.len(), has_wrap);
-    if !has_wrap { return; }
+    // Perl L555: process remaining top-level items through kludge_scripts
+    let final_pairs = stack.into_iter().next().unwrap_or_default();
+    let result_nodes = kludge_scripts_rec(final_pairs, document);
 
-    // Rebuild: clear mathnode, then reconstruct with XMWrap DOM elements.
+    // Perl L558-563: at top level, unwrap top-level XMWraps (extract children).
+    // Perl iterates all pairs and extracts children of any array-rep XMWrap.
+    let mut replacements = Vec::new();
+    for node in result_nodes {
+      if node.get_name() == "XMWrap" {
+        // Unwrap: extract children
+        for child in node.get_child_nodes() {
+          replacements.push(child);
+        }
+      } else {
+        replacements.push(node);
+      }
+    }
+
+    // Rebuild: clear mathnode, then add replacement nodes.
     document.unrecord_node_ids(mathnode);
     for mut child in mathnode.get_child_nodes() {
       child.unbind_node();
     }
-    // Perl L560-563: top-level Wraps are UNWRAPPED (appendTree extracts content).
-    // But inner Wraps become actual XMWrap elements.
-    fn add_items(items: Vec<Item>, parent: &mut Node, document: &mut Document) {
-      for item in items {
-        match item {
-          Item::Node(mut n) => {
-            n.unlink_node();
-            parent.add_child(&mut n).ok();
-          },
-          Item::Wrap(inner) => {
-            log::debug!("parse_kludge: creating XMWrap with {} inner items", inner.len());
-            match document.open_element_at(parent, "ltx:XMWrap", None, None) {
-              Ok(mut wrap) => {
-                add_items(inner, &mut wrap, document);
-                document.close_element_at(&mut wrap).ok();
-                log::debug!("parse_kludge: XMWrap created, children={}", wrap.get_child_nodes().len());
-              },
-              Err(e) => {
-                log::warn!("parse_kludge: FAILED to create XMWrap: {:?}", e);
-                // Fallback: add items directly
-                add_items(inner, parent, document);
-              },
-            }
-          },
-        }
-      }
-    }
-    // Perl L560-563: at top level, unwrap single Wrap (extract XMWrap contents).
-    // Otherwise, add items directly (inner Wraps become XMWrap elements).
-    let is_single_wrap = items.len() == 1 && matches!(&items[0], Item::Wrap(_));
-    log::debug!("parse_kludge: is_single_wrap={}", is_single_wrap);
-    if is_single_wrap {
-      if let Some(Item::Wrap(inner)) = items.into_iter().next() {
-        let inner_desc: Vec<&str> = inner.iter().map(|i| match i {
-          Item::Node(_) => "Node",
-          Item::Wrap(_) => "Wrap",
-        }).collect();
-        log::debug!("parse_kludge: unwrapping single top-level, inner items: {:?}", inner_desc);
-        add_items(inner, mathnode, document);
-      }
-    } else {
-      add_items(items, mathnode, document);
+    for mut node in replacements {
+      node.unlink_node();
+      mathnode.add_child(&mut node).ok();
     }
   }
 
@@ -904,6 +877,198 @@ impl MathParser {
       }
     }
   }
+}
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// parse_kludgeScripts_rec — script attachment for unparsed expressions
+// Perl: MathParser.pm L568-589
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/// Perl: parse_kludgeScripts_rec (MathParser.pm L568-589)
+/// Takes a list of (Node, role) pairs and attaches scripts to their bases:
+/// - POSTSUPERSCRIPT/POSTSUBSCRIPT → attach to preceding node
+/// - FLOATSUPERSCRIPT/FLOATSUBSCRIPT → pre-script on following node
+fn kludge_scripts_rec(
+  pairs: Vec<(Node, String)>,
+  document: &mut Document,
+) -> Vec<Node> {
+  use crate::data::get_grammatical_role;
+  if pairs.is_empty() { return vec![]; }
+  if pairs.len() == 1 { return vec![pairs.into_iter().next().unwrap().0]; }
+
+  let mut acc: Vec<Node> = Vec::new();
+  let mut iter = pairs.into_iter();
+  let mut x = iter.next().unwrap(); // (node, role)
+
+  loop {
+    let y_opt = iter.next();
+    let y = match y_opt {
+      Some(y) => y,
+      None => {
+        // Base case: only x remains
+        acc.push(x.0);
+        break;
+      },
+    };
+    let more: Vec<(Node, String)> = iter.collect();
+
+    if is_float_script(&x.1) {
+      if is_post_script(&y.1) {
+        if !more.is_empty() {
+          // Perl L575-576: FLOAT + POST + more → combined pre-sub+super
+          let mut rest = kludge_scripts_rec(more, document);
+          if let Some(base) = rest.first_mut() {
+            let inner = new_script_node(base.clone(), &y, document);
+            let outer = new_script_node(inner, &x, document);
+            rest[0] = outer;
+          }
+          acc.extend(rest);
+          break;
+        } else {
+          // Perl L578: FLOAT + POST, no more → floating sub+super on Absent
+          let absent = new_absent_node(document);
+          let inner = new_script_node(absent, &y, document);
+          let outer = new_script_node(inner, &x, document);
+          acc.push(outer);
+          break;
+        }
+      } else {
+        // Perl L580-581: FLOAT + non-script → prescript on whatever follows
+        let mut rest_pairs = vec![y];
+        rest_pairs.extend(more);
+        let mut rest = kludge_scripts_rec(rest_pairs, document);
+        if let Some(base) = rest.first_mut() {
+          let scripted = new_script_node(base.clone(), &x, document);
+          rest[0] = scripted;
+        }
+        acc.extend(rest);
+        break;
+      }
+    } else if is_post_script(&y.1) {
+      // Perl L583-584: POST script → attach to preceding, recurse with result
+      let scripted = new_script_node(x.0.clone(), &y, document);
+      let role = get_grammatical_role(&scripted);
+      let mut rest_pairs = vec![(scripted, role)];
+      rest_pairs.extend(more);
+      let rest = kludge_scripts_rec(rest_pairs, document);
+      acc.extend(rest);
+      break;
+    } else {
+      // Perl L585-586: neither is a script → accumulate x, advance
+      acc.push(x.0);
+      x = y;
+      iter = more.into_iter();
+    }
+  }
+  acc
+}
+
+fn is_float_script(role: &str) -> bool {
+  role == "FLOATSUPERSCRIPT" || role == "FLOATSUBSCRIPT"
+}
+
+fn is_post_script(role: &str) -> bool {
+  role == "POSTSUPERSCRIPT" || role == "POSTSUBSCRIPT"
+}
+
+/// Perl: NewScript (MathParser.pm L1597-1644)
+/// Creates XMApp(XMTok[role=SCRIPTOP, scriptpos=...], base, script_content).
+fn new_script_node(
+  base: Node,
+  script_pair: &(Node, String),
+  document: &mut Document,
+) -> Node {
+  let (script_node, script_role) = script_pair;
+
+  // Determine SUPER vs SUB from role
+  let is_super = script_role.contains("SUPER");
+  let is_float = script_role.starts_with("FLOAT");
+  let op_role = if is_super { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+
+  // Extract scriptpos from base and script (Perl L1613-1635)
+  // For XMApp bases, check the inner operator's scriptpos too
+  let rbase_sp = {
+    let mut sp = base.get_attribute("scriptpos").unwrap_or_default();
+    if sp.is_empty() && base.get_name() == "XMApp" {
+      // Check inner operator (first child) for scriptpos
+      if let Some(op) = base.get_child_elements().first() {
+        sp = op.get_attribute("scriptpos").unwrap_or_default();
+      }
+    }
+    sp
+  };
+  let script_sp = script_node.get_attribute("scriptpos").unwrap_or_default();
+
+  let (bx, bl) = parse_scriptpos_str(&rbase_sp);
+  let (sx, sl) = parse_scriptpos_str(&script_sp);
+  let bl = if bl > 0 { bl } else if sl > 0 { sl } else { 1 };
+  let sl = if sl > 0 { sl } else { bl };
+  let mut l = if sl > 0 { sl } else if bl > 0 { bl } else { 1 };
+
+  // Perl: if base was a float script, bump level
+  if base.get_attribute("_wasfloat").is_some() {
+    l += 1;
+  } else if let Some(bump_str) = base.get_attribute("_bumplevel") {
+    if let Ok(bump) = bump_str.parse::<u32>() { l = bump; }
+  }
+
+  // Perl L1632: position from base or script, defaulting to "post"
+  let x = if is_float {
+    "pre"
+  } else if bl == sl {
+    if !bx.is_empty() { bx } else { "post" }
+  } else {
+    if !sx.is_empty() { sx } else { "post" }
+  };
+  let scriptpos = format!("{x}{l}");
+
+  // Create XMTok operator: <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+  let mut op_node = Node::new("XMTok", None, document.get_document()).unwrap();
+  op_node.set_attribute("role", op_role).ok();
+  op_node.set_attribute("scriptpos", &scriptpos).ok();
+
+  // Extract script content: first child element of the script XMApp
+  // Perl: Arg($script, 0) — gets first element child
+  let script_content = script_node.get_child_elements().into_iter().next();
+
+  // Create XMApp: <XMApp> op, base, script_content </XMApp>
+  let mut app_node = Node::new("XMApp", None, document.get_document()).unwrap();
+
+  // Propagate _font from operator if present
+  if let Some(font) = op_node.get_attribute("_font") {
+    app_node.set_attribute("_font", &font).ok();
+  }
+  // Mark as float if applicable
+  if is_float {
+    app_node.set_attribute("_wasfloat", "1").ok();
+  }
+
+  // Add children: op, base, script_content
+  op_node.unlink_node();
+  app_node.add_child(&mut op_node).ok();
+  let mut base_clone = base;
+  base_clone.unlink_node();
+  app_node.add_child(&mut base_clone).ok();
+  if let Some(mut content) = script_content {
+    content.unlink_node();
+    app_node.add_child(&mut content).ok();
+  }
+  app_node
+}
+
+/// Create an XMTok with meaning="absent" (Perl: Absent())
+fn new_absent_node(document: &mut Document) -> Node {
+  let mut tok = Node::new("XMTok", None, document.get_document()).unwrap();
+  tok.set_attribute("meaning", "absent").ok();
+  tok
+}
+
+fn parse_scriptpos_str(sp: &str) -> (&str, u32) {
+  if sp.is_empty() { return ("post", 0); }
+  let pos_end = sp.find(|c: char| c.is_ascii_digit()).unwrap_or(sp.len());
+  let pos = &sp[..pos_end];
+  let level = sp[pos_end..].parse::<u32>().unwrap_or(0);
+  (pos, level)
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
