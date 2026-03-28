@@ -75,40 +75,73 @@ LoadDefinitions!({
   DefKeyVal!("Declare", "trace", "");
 
   // \lxDeclare — declare semantic roles for math tokens
-  // Perl: latexml.sty.ltxml lines 462-512
-  // Fast-path implementation: handles simple single-token patterns only.
+  // Perl: latexml.sty.ltxml lines 462-568
+  // Creates <declare> elements and rewrite rules for math token annotation.
   // Complex patterns with \WildCard are NOT yet supported.
-  {
-    use latexml_core::common::def_parser::parse_parameters;
-    let lxdeclare_params = parse_parameters(
-      "OptionalKeyVals:Declare Undigested", &T_CS!("\\lxDeclare"), true)?;
-    def_primitive(
-    T_CS!("\\lxDeclare"),
-    lxdeclare_params,
-    Some(PrimitiveBody::Closure(Rc::new(|args| {
-      use latexml_core::definition::argument::ArgWrap;
-
-      // Extract role/name/meaning from KeyVals arg
+  DefConstructor!("\\lxDeclare OptionalMatch:* OptionalKeyVals:Declare {}", "",
+    mode => "restricted_horizontal",
+    reversion => "",
+    after_digest => sub[whatsit] {
+      // Extract role/name/meaning from KeyVals arg (arg index 2 = keyvals)
       let mut role = String::new();
       let mut name_val = String::new();
       let mut meaning = String::new();
-      if let ArgWrap::KV(ref kv) = args[0] {
-        if let Some(v) = kv.get_value("role") { role = v.to_string(); }
-        if let Some(v) = kv.get_value("name") { name_val = v.to_string(); }
-        if let Some(v) = kv.get_value("meaning") { meaning = v.to_string(); }
+      let mut has_tag = false;
+      let mut has_description = false;
+      let mut tag_text = String::new();
+      let mut description_text = String::new();
+      if let Some(kv_arg) = whatsit.get_arg(2) {
+        if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
+          let hash = kv.get_hash_digested();
+          if let Some(v) = hash.get("role") { role = v.to_string(); }
+          if let Some(v) = hash.get("name") { name_val = v.to_string(); }
+          if let Some(v) = hash.get("meaning") { meaning = v.to_string(); }
+          if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.to_string(); }
+          if let Some(v) = hash.get("description") { has_description = true; description_text = v.to_string(); }
+        }
       }
+      // Extract body text from arg 3 (the {} body)
+      let body_text = whatsit.get_arg(3)
+        .map(|a| { let s = a.to_string(); s.trim_matches('$').trim().to_string() })
+        .unwrap_or_default();
 
-      // Extract the token text from the body (arg[1] is Tokens)
-      let body_text = match &args[1] {
-        ArgWrap::Tokens(toks) => {
-          let s = toks.to_string();
-          s.trim_matches('$').trim().to_string()
-        },
-        _ => String::new(),
+      // Generate declaration ID if tag or description present
+      // Perl: next_declaration_id via @XMDECL counter → section-scoped "S1.XMD4"
+      // TODO: Use proper section-scoped counter via RefStepID when available
+      let decl_id = if has_tag || has_description {
+        let n = lookup_int("XMDECL_COUNTER") + 1;
+        assign_value("XMDECL_COUNTER",
+          Stored::from(latexml_core::common::number::Number::new(n as i64)),
+          Some(Scope::Global));
+        // Get current section prefix for scoped ID
+        let section_prefix = state::lookup_value("current_counter")
+          .map(|v| {
+            let ctr = v.to_string();
+            if ctr.is_empty() { String::new() }
+            else {
+              let num = lookup_int(&format!("\\c@UN{ctr}"));
+              if num > 0 { format!("S{num}.") } else { String::new() }
+            }
+          })
+          .unwrap_or_default();
+        format!("{section_prefix}XMD{n}")
+      } else {
+        String::new()
       };
 
+      // Store properties on the whatsit for constructor body and afterConstruct
+      whatsit.set_property("role", Stored::from(role.clone()));
+      whatsit.set_property("name", Stored::from(name_val.clone()));
+      whatsit.set_property("meaning", Stored::from(meaning.clone()));
+      whatsit.set_property("body_text", Stored::from(body_text.clone()));
+      whatsit.set_property("decl_id", Stored::from(decl_id.clone()));
+      if has_description || has_tag {
+        let desc = if !description_text.is_empty() { description_text } else { tag_text };
+        whatsit.set_property("description", Stored::from(desc));
+      }
+
+      // Store in LATEXML_DECLARATIONS for math parser string-based lookup
       if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-        // Store as "token_text\trole\tname\tmeaning" in LATEXML_DECLARATIONS
         let key = "LATEXML_DECLARATIONS";
         let mut decls: Vec<String> = match lookup_value(key) {
           Some(Stored::String(s)) => {
@@ -117,30 +150,23 @@ LoadDefinitions!({
           },
           _ => Vec::new(),
         };
-        let decl = format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning);
-        decls.push(decl);
-        // Perl: \lxDeclare digests the $...$ body in math mode, producing the
-        // mathcode-decoded glyph. If the body_text is a single char with a mathcode,
-        // also store the declaration under the decoded character so it matches
-        // after mathcode processing (e.g. * → ∗).
+        decls.push(format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning));
+        // Mathcode decoding for single-char bodies
         if body_text.chars().count() == 1 {
           let ch = body_text.chars().next().unwrap();
           if let Some(mathcode) = state::lookup_mathcode(&ch.to_string()) {
             if mathcode > 0 {
               let decoded_pos = (mathcode % 256) as u8;
-              let decoded_fam = (mathcode / 256) % 16 ;
-              // Look up the font encoding for this family to decode the character
-              let _style = "text";
+              let decoded_fam = (mathcode / 256) % 16;
               let font_key = format!("textfont_{decoded_fam}");
               if let Some(Stored::Token(ref ftok)) = state::lookup_value(&font_key) {
                 state::with_font_info(ftok, |fontinfo| {
                   if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
                     if let Some(ref encoding) = info.encoding {
-                      if let Some(decoded_char) = latexml_core::common::font::decode(decoded_pos, Some(encoding.to_string()), false) {
-                        let decoded_str = decoded_char.to_string();
-                        if decoded_str != body_text {
-                          let decoded_decl = format!("{}\t{}\t{}\t{}", decoded_str, role, name_val, meaning);
-                          decls.push(decoded_decl);
+                      if let Some(dc) = latexml_core::common::font::decode(decoded_pos, Some(encoding.to_string()), false) {
+                        let ds = dc.to_string();
+                        if ds != body_text {
+                          decls.push(format!("{}\t{}\t{}\t{}", ds, role, name_val, meaning));
                         }
                       }
                     }
@@ -151,10 +177,40 @@ LoadDefinitions!({
           }
         }
         assign_value(key, Stored::String(arena::pin(decls.join("\n"))), Some(Scope::Global));
+      }
+    },
+    after_construct => sub[document, whatsit] {
+      // Perl: createDeclarationRewrite — create rewrite rule AND <declare> element
+      let role = whatsit.get_property("role").map(|v| v.to_string()).unwrap_or_default();
+      let name_val = whatsit.get_property("name").map(|v| v.to_string()).unwrap_or_default();
+      let meaning = whatsit.get_property("meaning").map(|v| v.to_string()).unwrap_or_default();
+      let body_text = whatsit.get_property("body_text").map(|v| v.to_string()).unwrap_or_default();
+      let decl_id = whatsit.get_property("decl_id").map(|v| v.to_string()).unwrap_or_default();
 
-        // Also create a Rewrite rule for the XML rewrite phase (matching Perl's
-        // createDeclarationRewrite in afterConstruct). This applies role/name/meaning
-        // attributes to matching XMTok elements in the final XML tree.
+      // Create <ltx:declare> element if id is set (tag or description present)
+      if !decl_id.is_empty() {
+        let desc = whatsit.get_property("description").map(|v| v.to_string()).unwrap_or_default();
+        // Perl: floatToElement('ltx:declare') positions at a container that accepts <declare>
+        let saved = document.float_to_element("ltx:declare", false)?;
+        let mut attrs_map = HashMap::default();
+        attrs_map.insert("xml:id".to_string(), decl_id.clone());
+        let _decl_node = document.open_element("ltx:declare", Some(attrs_map), None)?;
+        if !desc.is_empty() {
+          // Insert description text in <ltx:text>
+          let _text_node = document.open_element("ltx:text", None, None)?;
+          // Add text content directly to the current node
+          let font = lookup_font().unwrap_or_default();
+          document.open_text(&desc, &font)?;
+          document.close_element("ltx:text")?;
+        }
+        document.close_element("ltx:declare")?;
+        if let Some(ref save) = saved {
+          document.set_node(save);
+        }
+      }
+
+      // Create rewrite rule
+      if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
         use latexml_core::rewrite::{Rewrite, RewriteOptions};
         use rustc_hash::FxHashMap;
         let xpath = format!(
@@ -164,21 +220,17 @@ LoadDefinitions!({
         if !role.is_empty() { attrs.insert("role".to_string(), role); }
         if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
         if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
+        if !decl_id.is_empty() { attrs.insert("decl_id".to_string(), decl_id); }
         if !attrs.is_empty() {
           let rewrite = Rewrite::new("math", RewriteOptions {
             xpath: Some(xpath),
             attributes_map: Some(attrs),
             ..RewriteOptions::default()
           });
-          push_value("DOCUMENT_REWRITE_RULES", rewrite)?;
+          unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);
         }
       }
-
-      Ok(Vec::new())
-    }))),
-    PrimitiveOptions::default(),
-  )?;
-  }
+    });
 
   // Perl: DefMacroI('\lxTableRowHead', undef, sub { $alignment->currentColumn->{thead}{row} = 1 })
   // Marks the current column as a row header in alignment/tabular contexts.
