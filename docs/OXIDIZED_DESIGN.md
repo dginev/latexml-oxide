@@ -48,7 +48,7 @@ internal contributors resuming work.
 
 LaTeXML (Perl) has two main programs: `latexml` (TeX→XML) and `latexmlpost` (XML→HTML/MathML).
 The Rust port currently covers the `latexml` pipeline. The `latexmlpost` pipeline is planned
-for Phase 3 (see `mini_3_plan.md`).
+for Phase 3 (post-processing pipeline).
 
 The `latexml` pipeline processes input through five stages:
 1. **Digestion** — Mouth (chars→tokens), Gullet (expansion), Stomach (digestion into boxes/whatsits)

@@ -332,17 +332,34 @@ impl Rewrite {
             let wilds = if is_content_select {
               self.options.wildcard_paths.clone()
             } else { None };
+            // Get declare pattern metadata for Rust-side filtering
+            // Only apply on content Selects, not scope Selects
+            let declare_type = if is_content_select {
+              self.options.attributes_map.as_ref()
+                .and_then(|a| a.get("_declare_type")).cloned()
+            } else { None };
+            let declare_base = if is_content_select {
+              self.options.attributes_map.as_ref()
+                .and_then(|a| a.get("_declare_base")).cloned()
+            } else { None };
+            let declare_sub = if is_content_select {
+              self.options.attributes_map.as_ref()
+                .and_then(|a| a.get("_declare_sub")).cloned()
+            } else { None };
+            let declare_accent = if is_content_select {
+              self.options.attributes_map.as_ref()
+                .and_then(|a| a.get("_declare_accent")).cloned()
+            } else { None };
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
               }
-              // For subscript wildcard, check that next sibling is POSTSUBSCRIPT
-              if wilds.is_some() && self.options.select_count == Some(2) {
-                let next_sib = node.get_next_sibling();
-                let next_role = next_sib.as_ref()
-                  .and_then(|s| s.get_property("role"));
-                let has_post_sub = next_role.as_deref() == Some("POSTSUBSCRIPT");
-                if !has_post_sub {
+              // Rust-side filtering for declare pattern types (content Selects only)
+              if let Some(ref dtype) = declare_type {
+                if !declare_node_matches(
+                  &node, dtype, declare_base.as_deref(),
+                  declare_sub.as_deref(), declare_accent.as_deref(),
+                ) {
                   continue;
                 }
               }
@@ -432,9 +449,9 @@ impl Rewrite {
         },
         Attributes => {
           if let Some(ref attrs) = self.options.attributes_map {
-            let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
             let has_wc = tree.has_attribute("_has_wildcards");
-            if is_wildcard_pattern && has_wc {
+            if has_wc {
+              // Perl: setAttributes_wild — wildcards present in matched tree
               let mut nodes = vec![tree.clone()];
               // Collect nmatched siblings
               let mut cur = tree.clone();
@@ -875,19 +892,46 @@ pub fn set_attributes_wild(
     }
     return Ok(());
   }
-  // Wrap matched nodes directly in XMDual (single wrap_nodes call).
-  // The presentation arm is the XMDual's children (the original nodes).
-  // The content arm (XMApp > XMTok + XMRef) is prepended.
-  // NOTE: We skip the intermediate XMWrap for now — the original nodes
-  // ARE the presentation. Perl wraps them in XMWrap, but that would
-  // require a second wrap_nodes which causes memory corruption.
-
-  // First, get wildcard IDs from the nodes before wrapping
+  // First, get wildcard IDs from the nodes before wrapping.
+  // If all wildcards are already _matched (by prior rules), wild_ids is empty.
+  // In that case, Perl creates XMDual but pruneXMDuals collapses it back.
+  // We skip XMDual creation and just set attributes directly.
   let mut wild_ids = Vec::new();
   for n in &nodes {
     wild_ids.extend(set_wildcard_ids(document, n));
   }
 
+  if wild_ids.is_empty() {
+    // All wildcards already matched — no XMRef targets available.
+    // Perl: creates XMDual → pruneXMDuals collapses it.
+    // Rust: skip XMDual, set attributes directly (same end result).
+    let mut node = nodes[0].clone();
+    if let Some(role) = attrs.get("role") {
+      let _ = node.set_attribute("role", role);
+    }
+    // Set decl_id on the first non-wildcard child (operator token for accents)
+    for child in node.get_child_nodes() {
+      if child.get_type() == Some(libxml::tree::NodeType::ElementNode)
+        && !child.has_attribute("_wildcard")
+        && !child.has_attribute("_matched")
+      {
+        let mut c = child.clone();
+        for (key, value) in attrs {
+          if key != "role" && !key.starts_with('_') {
+            let _ = c.set_attribute(key, value);
+          }
+        }
+        break;
+      }
+    }
+    if node.get_name() == "XMApp" && attrs.contains_key("role") {
+      let _ = node.set_attribute("_rewrite", "1");
+    }
+    mark_seen_rec(&node);
+    return Ok(());
+  }
+
+  // Wrap matched nodes in XMDual with presentation arm (XMApp > XMTok + XMRef).
   let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
   if let Some(mut dual_node) = wrapper {
     if let Some(role) = attrs.get("role") {
@@ -943,5 +987,104 @@ fn mark_seen_rec(node: &Node) {
     if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
       mark_seen_rec(&child);
     }
+  }
+}
+
+/// Rust-side filtering for \lxDeclare pattern matching.
+/// XPath matches are broad (to avoid nested predicate bugs); this function
+/// verifies the matched node's children match the specific pattern.
+///
+/// Pattern types:
+/// - "subscript": node is XMApp[@role='POSTSUBSCRIPT'], check base text + optional sub text
+/// - "prime": node is XMApp[@role='POSTSUPERSCRIPT'], check base text
+/// - "accent": node is XMApp, check accent name in first child, optional base text
+/// - "simple": no extra filtering needed (XPath is specific enough)
+fn declare_node_matches(
+  node: &Node, pattern_type: &str, base_text: Option<&str>,
+  sub_text: Option<&str>, accent_name: Option<&str>,
+) -> bool {
+  let children = node.get_child_nodes();
+  match pattern_type {
+    "subscript" => {
+      // XMApp[@role='POSTSUBSCRIPT'] with children: [base_token, subscript_content]
+      if children.len() < 2 { return false; }
+      // Check base token text
+      if let Some(base) = base_text {
+        if !declare_base_matches(&children[0], base) {
+          return false;
+        }
+      }
+      // For literal subscripts, check subscript content text
+      if let Some(sub) = sub_text {
+        let sub_content = children[1].get_content();
+        if sub_content.trim() != sub {
+          return false;
+        }
+      }
+      true
+    },
+    "prime" => {
+      // XMApp[@role='POSTSUPERSCRIPT'] with children: [base_token, prime_content]
+      if children.len() < 2 { return false; }
+      if let Some(base) = base_text {
+        if !declare_base_matches(&children[0], base) {
+          return false;
+        }
+      }
+      // Verify second child is prime-like (text contains ′ or meaning=prime)
+      let sup = &children[1];
+      let is_prime = sup.get_content().contains('′')
+        || sup.get_property("meaning").as_deref() == Some("prime");
+      if !is_prime { return false; }
+      true
+    },
+    "accent" => {
+      // XMApp with children: [accent_op, base_content]
+      if children.len() < 2 { return false; }
+      // Check accent name on first child
+      if let Some(accent) = accent_name {
+        let first_name = children[0].get_property("name")
+          .or_else(|| children[0].get_property("meaning"));
+        if first_name.as_deref() != Some(accent) {
+          return false;
+        }
+        // Accent ops should have OVERACCENT or UNDERACCENT role
+        let role = children[0].get_property("role");
+        let is_accent = role.as_deref().map(|r|
+          r.contains("ACCENT")).unwrap_or(false);
+        if !is_accent { return false; }
+      }
+      // Check base content text if specified
+      if let Some(base) = base_text {
+        if !declare_base_matches(&children[1], base) {
+          return false;
+        }
+      }
+      true
+    },
+    "simple" => true, // XPath already does the filtering
+    _ => true,        // Unknown type: pass through
+  }
+}
+
+/// Check if a node matches a base text specification.
+/// Handles both plain text (e.g. "x") and command names (e.g. "\varepsilon").
+fn declare_base_matches(node: &Node, base_spec: &str) -> bool {
+  if base_spec.starts_with('\\') {
+    // Command base: match by meaning or name attribute
+    let cmd = base_spec.trim_start_matches('\\');
+    // Handle \mathcal{X} → check font=caligraphic + text=X
+    if let Some(inner) = cmd.strip_prefix("mathcal{").and_then(|s| s.strip_suffix('}')) {
+      let font = node.get_property("font").unwrap_or_default();
+      let text = node.get_content();
+      return font == "caligraphic" && text.trim() == inner;
+    }
+    // General command: check meaning attribute
+    let meaning = node.get_property("meaning").unwrap_or_default();
+    meaning == cmd
+  } else {
+    // Plain text base: match node text content
+    let text = node.get_content();
+    text.trim() == base_spec
   }
 }

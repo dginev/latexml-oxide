@@ -4,8 +4,7 @@
 
 Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git history.
 
-**High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
-(Engine Parity → Package Bindings → Post-Processing → Production).
+**High-level roadmap:** Engine Parity → Package Bindings → Post-Processing → Production.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
@@ -485,8 +484,20 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 
 ### Overarching infrastructure projects
 
-- [x] **J. Rewrite system** — rewrite.rs at ~95%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match (compiled to Select). All operators functional, no todo!() panics. ~562 lines. Missing: compile_match for TeX-string patterns (rare), wildcard tracking.
-- [x] **K. Declaration system (\lxDeclare)** — now connected to rewrite system. Creates Rewrite rules from \lxDeclare keyvals (role/name/meaning → XMTok attributes). Both string-based (for math parser) and rewrite-based (for XML tree) paths functional. Complex \WildCard patterns not yet supported.
+- [ ] **J. Rewrite system** — rewrite.rs ~85%. See [`docs/rewrite_subsystem_audit.md`](rewrite_subsystem_audit.md) for full Perl/Rust diff audit (session 59). Operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Open issues (by priority):**
+  - **R9** Font predicate missing — `\mathbf{x}` matches `$x$` declaration (bold vs non-bold not distinguished). Need `font_match_xpaths` equivalent.
+  - **R11** XMDual content arm structure differs from Perl (child ordering, missing XMWrap wrapper). Every XMDual node has structural diffs.
+  - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` post-processing not invoked after rewrites. Redundant XMDual nodes remain.
+  - **R4** Test operator: closure return value ignored (should control whether remaining clauses execute).
+  - **R1** `Match => Tokens` compilation: tokens never digested to DOM/XPath (full `compile_match1` pipeline missing).
+  - **R5** Regexp: doesn't traverse descendant text nodes or modify them (acts as filter only).
+  - **R6** MultiSelect: single xpath+count instead of per-sub-pattern `[xpath, nnodes, wilds]` tuples.
+  - **R2** Math decoration filter (`@_pvis and @_cvis`) not applied to math-mode XPaths.
+  - **R13** `markXMNodeVisibility` not implemented.
+- [ ] **K. Declaration system (\lxDeclare)** — Session 59: restructured pattern compiler. Now handles subscript, prime, accent, and wildcard patterns with Rust-side filtering. See audit R14/R15. **Open issues:**
+  - Function application patterns `f\WildCard[(\WildCard)]` not supported.
+  - Font matching in declarations missing (R9).
+  - XMDual structure mismatch for wildcard patterns (R11).
 - [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete). Only gap: XML comment creation in libxml wrapper (minor).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 - [x] **H. expl3 full loading** — **DONE (1 remaining)**: Session 49: 1500→12 errors. Session 57: Pre-define l3file forward-refs (`\__file_name_expand_end:`, `\__kernel_file_name_sanitize:n`, `\l_file_search_path_seq`) as stubs before loading. Reduces actual errors to 1 (extra `\endcsname` from `\exp_last_unbraced:NNNNo` expansion chain difference). SUPPRESS_UNEXPECTED_ERRORS handles the 1 remaining error. All expl3 modules load correctly; post-load fixups provide correct l3file definitions.

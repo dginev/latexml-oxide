@@ -1,72 +1,178 @@
 use crate::prelude::*;
 
-/// Compile a \lxDeclare pattern with \WildCard into an XPath expression.
-/// Generates XPath by recognizing common wildcard pattern forms from the
-/// digested body structure, without requiring a temporary document.
+/// Metadata for a compiled \lxDeclare pattern.
+/// Contains the XPath, pattern type for Rust-side filtering, and wildcard info.
+struct DeclarePattern {
+  xpath:          String,
+  /// "simple", "subscript", "prime", "accent"
+  pattern_type:   &'static str,
+  /// Base token text for subscript/prime/accent base matching (e.g. "x")
+  base_text:      Option<String>,
+  /// For literal subscripts: the subscript content text (e.g. "1")
+  sub_text:       Option<String>,
+  /// For accent patterns: the accent name (e.g. "hat")
+  accent_name:    Option<String>,
+  has_wildcard:   bool,
+  wildcard_paths: Option<Vec<Vec<usize>>>,
+}
+
+/// Compile a \lxDeclare body_text into pattern metadata.
+/// Handles both wildcard and non-wildcard patterns.
 ///
-/// Common patterns:
-/// - `$x_\WildCard$` → XMApp[SUBSCRIPTOP + XMTok[x] + *]
-/// - `$\hat{\WildCard}$` → XMApp[XMTok[@meaning='hat'] + *]
-/// - `$f\WildCard[(\WildCard)]$` → nowrap, matches function application
-fn compile_declare_pattern(body_text: &str) -> String {
-  // Pattern: `TOKEN_\WildCard` (subscripted token with wildcard subscript)
-  // e.g. $x_\WildCard$, $f_\WildCard$, $\varepsilon_\WildCard$
+/// Perl: compile_match1 digests tokens to DOM, then domToXPath.
+/// Rust: pattern-match on body_text string and generate broad XPath
+/// with Rust-side filtering criteria (avoids XPath nested predicate bug).
+fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
+  // === Subscript patterns ===
+  // Wildcard: x_\WildCard, \varepsilon_\WildCard, \mathcal{T}_\WildCard
   if let Some(base) = body_text.strip_suffix("_\\WildCard") {
-    let base = base.trim();
-    // Handle \cmd{} base tokens (like \mathcal{T}, \varepsilon)
-    let text_pred = if base.starts_with('\\') {
-      // Command base: match by meaning attribute
-      let cmd = base.trim_start_matches('\\');
-      // Common math commands → their meaning
-      match cmd {
-        "varepsilon" => "@meaning='varepsilon'".to_string(),
-        _ => {
-          // For \mathcal{X} patterns, extract the inner token
-          if let Some(inner) = cmd.strip_prefix("mathcal{").and_then(|s| s.strip_suffix('}')) {
-            format!("@font='caligraphic' and text()='{inner}'")
-          } else {
-            format!("@meaning='{cmd}'")
-          }
-        }
-      }
-    } else {
-      format!("text()='{}'", base.replace('\'', "&apos;"))
+    let base = base.trim().to_string();
+    return DeclarePattern {
+      // Match XMApp[@role='POSTSUBSCRIPT'] directly — Rust filters base text
+      xpath: "descendant-or-self::*[@role='POSTSUBSCRIPT']".to_string(),
+      pattern_type: "subscript",
+      base_text: Some(base),
+      sub_text: None,
+      accent_name: None,
+      has_wildcard: true,
+      // Wildcard = child 2 (subscript content) of the matched XMApp
+      wildcard_paths: Some(vec![vec![1, 2]]),
     };
-    // Internal DOM: ... <XMTok>x</XMTok> <XMApp role="POSTSUBSCRIPT"><sub/></XMApp>
-    // Match the base token; POSTSUBSCRIPT check done in Rust (XPath nested predicates buggy).
-    return format!(
-      "descendant-or-self::*[local-name()='XMTok' and {text_pred}]"
-    );
   }
-  // Pattern: `\accent{\WildCard}` (accented wildcard)
-  // e.g. $\hat{\WildCard}$, $\widehat{\WildCard}$
+  // Braced wildcard subscripts: x_{\WildCard}, x_{\WildCard,\WildCard}
+  if body_text.contains("_{\\WildCard") {
+    if let Some(idx) = body_text.find("_{") {
+      let base = body_text[..idx].trim().to_string();
+      // Count wildcards in braces
+      let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
+      let nwilds = brace_content.matches("\\WildCard").count();
+      // For multi-wildcard subscripts, the subscript content is wrapped in XMWrap
+      // Each wildcard element inside gets its own path
+      let wpaths = if nwilds <= 1 {
+        vec![vec![1, 2]]
+      } else {
+        // Multiple wildcards in subscript: each is a child of child[2]
+        (1..=nwilds).map(|i| vec![1, 2, i]).collect()
+      };
+      return DeclarePattern {
+        xpath: "descendant-or-self::*[@role='POSTSUBSCRIPT']".to_string(),
+        pattern_type: "subscript",
+        base_text: Some(base),
+        sub_text: None,
+        accent_name: None,
+        has_wildcard: true,
+        wildcard_paths: Some(wpaths),
+      };
+    }
+  }
+  // Literal subscript: x_1, x_{1}, x_{2n-1}
+  // No \WildCard but has _ subscript
+  if let Some((base, sub)) = parse_subscript_literal(body_text) {
+    return DeclarePattern {
+      xpath: "descendant-or-self::*[@role='POSTSUBSCRIPT']".to_string(),
+      pattern_type: "subscript",
+      base_text: Some(base),
+      sub_text: Some(sub),
+      accent_name: None,
+      has_wildcard: false,
+      wildcard_paths: None,
+    };
+  }
+
+  // === Accent patterns ===
+  // Wildcard accent: \hat{\WildCard}, \widehat{\WildCard}
   for accent in &["hat", "widehat", "tilde", "bar", "vec", "dot", "ddot", "check", "breve"] {
     let pattern = format!("\\{accent}{{\\WildCard}}");
     if body_text == pattern {
-      return format!(
-        "descendant-or-self::*[local-name()='XMApp' and *[1][@meaning='{accent}'] and *[2]]"
-      );
-    }
-  }
-  // Pattern: subscripted with braced wildcards `TOKEN_{\WildCard}` or `TOKEN_{\WildCard,\WildCard}`
-  // Pattern: subscripted with braced wildcards `TOKEN_{\WildCard}` or `TOKEN_{\WildCard,\WildCard}`
-  if body_text.contains("_{\\WildCard") {
-    if let Some(idx) = body_text.find("_{") {
-      let base = body_text[..idx].trim();
-      let text_pred = if base.starts_with('\\') {
-        let cmd = base.trim_start_matches('\\');
-        format!("@meaning='{cmd}'")
-      } else {
-        format!("text()='{}'", base.replace('\'', "&apos;"))
+      return DeclarePattern {
+        // Broad: match any XMApp. Rust filters by accent name in first child.
+        xpath: "descendant-or-self::*[local-name()='XMApp']".to_string(),
+        pattern_type: "accent",
+        base_text: None,
+        sub_text: None,
+        accent_name: Some(accent.to_string()),
+        has_wildcard: true,
+        // Wildcard = child 2 (base content) of the accent XMApp
+        wildcard_paths: Some(vec![vec![1, 2]]),
       };
-      return format!(
-        "descendant-or-self::*[local-name()='XMTok' and {text_pred}]"
-      );
     }
   }
-  // Fallback: return empty (wildcard pattern not recognized)
-  // The caller will skip creating the rewrite rule.
-  String::new()
+  // Literal accent: \hat{x}, \widehat{x}
+  for accent in &["hat", "widehat", "tilde", "bar", "vec", "dot", "ddot", "check", "breve"] {
+    if let Some(rest) = body_text.strip_prefix(&format!("\\{accent}{{")) {
+      if let Some(inner) = rest.strip_suffix('}') {
+        if !inner.contains("WildCard") {
+          return DeclarePattern {
+            xpath: "descendant-or-self::*[local-name()='XMApp']".to_string(),
+            pattern_type: "accent",
+            base_text: Some(inner.to_string()),
+            sub_text: None,
+            accent_name: Some(accent.to_string()),
+            has_wildcard: false,
+            wildcard_paths: None,
+          };
+        }
+      }
+    }
+  }
+
+  // === Prime pattern ===
+  // x^{\prime} → XMApp[@role='POSTSUPERSCRIPT'] with base x and prime superscript
+  // body_text is "x^{\\prime}" (backslash-prime in braces)
+  if let Some(base) = body_text.strip_suffix("^{\\prime}") {
+    let base = base.trim().to_string();
+    if !base.is_empty() && !base.contains('\\') {
+      return DeclarePattern {
+        xpath: "descendant-or-self::*[@role='POSTSUPERSCRIPT']".to_string(),
+        pattern_type: "prime",
+        base_text: Some(base),
+        sub_text: None,
+        accent_name: None,
+        has_wildcard: false,
+        wildcard_paths: None,
+      };
+    }
+  }
+  // Also handle raw prime: x'
+  if body_text.ends_with('\'') && body_text.len() > 1 {
+    let base = body_text[..body_text.len() - 1].trim().to_string();
+    if !base.is_empty() && !base.contains('\\') {
+      return DeclarePattern {
+        xpath: "descendant-or-self::*[@role='POSTSUPERSCRIPT']".to_string(),
+        pattern_type: "prime",
+        base_text: Some(base),
+        sub_text: None,
+        accent_name: None,
+        has_wildcard: false,
+        wildcard_paths: None,
+      };
+    }
+  }
+
+  // === Fallback: unrecognized pattern ===
+  DeclarePattern {
+    xpath: String::new(),
+    pattern_type: "unknown",
+    base_text: None,
+    sub_text: None,
+    accent_name: None,
+    has_wildcard: false,
+    wildcard_paths: None,
+  }
+}
+
+/// Parse a literal (non-wildcard) subscript pattern like "x_1" or "x_{2n-1}".
+/// Returns (base, subscript_content) if recognized.
+fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
+  if body_text.contains("WildCard") { return None; }
+  // Check for _ subscript
+  let idx = body_text.find('_')?;
+  let base = body_text[..idx].trim().to_string();
+  if base.is_empty() { return None; }
+  let sub = body_text[idx + 1..].trim();
+  // Strip braces: {1} → 1, {2n-1} → 2n-1
+  let sub = sub.strip_prefix('{').and_then(|s| s.strip_suffix('}')).unwrap_or(sub);
+  Some((base, sub.to_string()))
 }
 
 LoadDefinitions!({
@@ -317,52 +423,49 @@ LoadDefinitions!({
         if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
         if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
         if !decl_id.is_empty() { attrs.insert("decl_id".to_string(), decl_id); }
-        // Check if pattern contains \WildCard
+        // Compile pattern: determine XPath, type, filters, wildcard paths
         let has_wildcard = body_text.contains("WildCard");
-        let xpath = if has_wildcard {
+        let pat = if body_text.contains('_') || body_text.contains('\\') || body_text.contains('\'') {
           compile_declare_pattern(&body_text)
         } else {
-          // Simple single-token pattern
-          format!(
-            "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
-            body_text.replace('\'', "&apos;"))
-        };
-        if has_wildcard {
-          attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
-          // For subscript patterns, store the base token text for Rust-side filtering
-          // (XPath nested predicates are buggy in our libxml2 wrapper)
-          if body_text.contains('_') && body_text.contains("\\WildCard") {
-            let base = if let Some(b) = body_text.strip_suffix("_\\WildCard") {
-              b.trim().to_string()
-            } else if let Some(idx) = body_text.find("_{") {
-              body_text[..idx].trim().to_string()
-            } else { String::new() };
-            if !base.is_empty() {
-              attrs.insert("_wildcard_base".to_string(), base);
-            }
+          // Simple single-token pattern: match XMTok by text
+          DeclarePattern {
+            xpath: format!(
+              "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
+              body_text.replace('\'', "&apos;")),
+            pattern_type: "simple",
+            base_text: None,
+            sub_text: None,
+            accent_name: None,
+            has_wildcard: false,
+            wildcard_paths: None,
           }
-        }
-        if !xpath.is_empty() && !attrs.is_empty() {
-          // For wildcard patterns, compute the wildcard position paths
-          let wildcard_paths = if has_wildcard {
-            // For subscript pattern `x_\WildCard`: wildcard is 3rd child of matched XMApp
-            // For accent pattern `\hat{\WildCard}`: wildcard is 2nd child
-            if body_text.contains('_') && body_text.contains("\\WildCard") {
-              Some(vec![vec![2usize, 1]]) // sibling 2 (POSTSUBSCRIPT), child 1 (subscript content)
-            } else if body_text.starts_with('\\') && body_text.contains("{\\WildCard}") {
-              Some(vec![vec![2usize]]) // 2nd child (1=accent op, 2=wildcard)
-            } else {
-              None
-            }
-          } else { None };
-          // For subscript patterns, select_count=2 (base + POSTSUBSCRIPT)
-          let select_count = if has_wildcard && body_text.contains('_') {
-            Some(2usize)
+        };
+        if pat.xpath.is_empty() {
+          // Unrecognized pattern — skip
+        } else {
+          // Store pattern metadata in attrs for Rust-side filtering in Select handler
+          attrs.insert("_declare_type".to_string(), pat.pattern_type.to_string());
+          if let Some(ref base) = pat.base_text {
+            attrs.insert("_declare_base".to_string(), base.clone());
+          }
+          if let Some(ref sub) = pat.sub_text {
+            attrs.insert("_declare_sub".to_string(), sub.clone());
+          }
+          if let Some(ref accent) = pat.accent_name {
+            attrs.insert("_declare_accent".to_string(), accent.clone());
+          }
+          if has_wildcard {
+            attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
+          }
+          // XMApp patterns (subscript, accent, prime) always match a single node
+          let select_count = if pat.pattern_type != "simple" {
+            Some(1usize)
           } else { None };
           let rewrite = Rewrite::new("math", RewriteOptions {
-            xpath: Some(xpath),
+            xpath: Some(pat.xpath),
             attributes_map: Some(attrs),
-            wildcard_paths,
+            wildcard_paths: pat.wildcard_paths,
             select_count,
             scope: rewrite_scope,
             ..RewriteOptions::default()
