@@ -41,6 +41,12 @@ pub fn dump_format(
   let (_, name, ext) = split_path(init_file);
   eprintln!("[ini_tex] Loading {} (ext: {})", name, ext);
 
+  // Lift the token limit for format dumps — expl3-code.tex alone uses ~5M tokens.
+  let saved_limit = latexml_core::gullet::set_token_limit(None);
+  // Suppress known expl3 loading errors (forward references resolved by post-load fixups)
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
+
   // Use the full filename with extension for proper file resolution
   let load_name = if ext.is_empty() { name.clone() } else { format!("{}.{}", name, ext) };
   let result = input_definitions(
@@ -53,6 +59,11 @@ pub fn dump_format(
   if let Err(e) = result {
     eprintln!("[ini_tex] Warning during loading: {}", e);
   }
+
+  // Restore limits and suppression
+  latexml_core::gullet::restore_token_limit(saved_limit);
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, None);
 
   // Step 3: Compute the diff — only entries that changed.
   let diff = state::diff_snapshot(&snap);

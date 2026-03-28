@@ -208,8 +208,9 @@ LoadDefinitions!({
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
         },
-        e => { // are there other cases that could occur here? should we handle them?
-          panic!("this may be a missing case in \\meaning's implementation: {e}");
+        e => {
+          // Handle other Stored variants gracefully (e.g., Register, Constructor, etc.)
+          meaning = format!("{e}");
         }
       }
     }

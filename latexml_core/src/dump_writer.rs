@@ -38,14 +38,8 @@ pub fn write_dump(
     let table_code = table_to_code(*table);
     let key_str = arena::with(*key, |s| s.to_string());
 
-    // Skip expl3 macros — they have delimited parameters that can't be
-    // faithfully serialized. expl3 naming uses _ (single/double underscore)
-    // and : (argument specifier). Also skip \ver@ package markers.
-    // expl3 loads fresh with correct parameters at runtime.
-    // Skip "msg " keys too (l3msg message text entries).
-    if key_str.contains('_') || key_str.contains(':') || key_str.starts_with("\\ver@")
-      || key_str.starts_with("\\msg ")
-    {
+    // Skip \ver@ package version markers (runtime metadata, not definitions)
+    if key_str.starts_with("\\ver@") {
       skipped += 1;
       continue;
     }

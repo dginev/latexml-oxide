@@ -228,9 +228,7 @@ impl fmt::Display for Stored {
       KeyVals(ref kvs) => write!(f, "{kvs}"),
       Template(ref t) => write!(f, "{t}"),
       None => write!(f, "Stored::None"),
-      ref variant => {
-        panic!("TODO: implement Display for Stored variant {variant:?}");
-      },
+      _ => write!(f, "Stored::<??>"),
     }
   }
 }
