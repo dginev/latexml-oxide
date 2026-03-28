@@ -171,7 +171,7 @@
     </para>
     <para xml:id="S1.p2">
       <equation xml:id="S1.Ex4">
-        <Math mode="display" tex="\int_{a}^{b}f(x)dx" text="((integral _ a) ^ b)@(f@(x) * d * x)" xml:id="S1.Ex4.m1">
+        <Math mode="display" tex="\int_{a}^{b}f(x)dx" text="((integral _ a) ^ b)@(f@(x) * differential-d@(x))" xml:id="S1.Ex4.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -199,8 +199,10 @@
                     </XMWrap>
                   </XMApp>
                 </XMDual>
-                <XMTok font="italic" role="ID">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
               </XMApp>
             </XMApp>
           </XMath>

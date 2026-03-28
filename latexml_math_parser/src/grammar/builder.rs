@@ -466,9 +466,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += trigfunction lbracket formula rbracket => apply_delimited;
     tight_term += trigfunction fenced_factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
-    // Uses existing `unknown` terminal; semantic action checks text is literally "d".
+    // Semantic action checks text is literally "d" and INTOP context.
     // At factor level so it can appear as right operand of invisible_times.
-    factor += unknown factor_base => diffop_apply;
+    // Perl: diffd matches both /UNKNOWN:d/ and /ID:d/ (lxDeclare can set role=ID on d).
+    factor += unknown factor_base => diffop_apply
+      | id factor_base => diffop_apply;
 
     // Perl MathGrammar L720-723: combine SUPOP tokens (\prime\prime → prime2)
     supops = supop

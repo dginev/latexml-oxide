@@ -303,7 +303,7 @@
     </para>
     <para xml:id="S2.p2">
       <equation xml:id="S2.Ex12">
-        <Math mode="display" tex="\int|x|dx" text="integral@(absolute-value@(x) * d * x)" xml:id="S2.Ex12.m1">
+        <Math mode="display" tex="\int|x|dx" text="integral@(absolute-value@(x) * differential-d@(x))" xml:id="S2.Ex12.m1">
           <XMath>
             <XMApp>
               <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
@@ -320,8 +320,10 @@
                     <XMTok role="CLOSE" stretchy="false">|</XMTok>
                   </XMWrap>
                 </XMDual>
-                <XMTok font="italic" role="ID">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
               </XMApp>
             </XMApp>
           </XMath>
