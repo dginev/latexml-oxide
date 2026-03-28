@@ -108,20 +108,6 @@ LoadDefinitions!({
       };
 
       if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-        // Generate declaration ID (Perl: next_declaration_id via @XMDECL counter)
-        let decl_id = {
-          let counter = match lookup_value("XMDECL_COUNTER") {
-            Some(Stored::Number(n)) => n.value_of() + 1,
-            _ => 1,
-          };
-          assign_value("XMDECL_COUNTER",
-            Stored::from(latexml_core::common::number::Number::new(counter)),
-            Some(Scope::Global));
-          // Perl generates IDs like "S1.XMD4" using \the@XMDECL@ID.
-          // We use a simplified form here.
-          format!("XMD{counter}")
-        };
-
         // Store as "token_text\trole\tname\tmeaning" in LATEXML_DECLARATIONS
         let key = "LATEXML_DECLARATIONS";
         let mut decls: Vec<String> = match lookup_value(key) {
@@ -178,16 +164,13 @@ LoadDefinitions!({
         if !role.is_empty() { attrs.insert("role".to_string(), role); }
         if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
         if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
-        // Perl: createDeclarationRewrite adds decl_id pointing to the <declare> element
-        attrs.insert("decl_id".to_string(), decl_id);
         if !attrs.is_empty() {
           let rewrite = Rewrite::new("math", RewriteOptions {
             xpath: Some(xpath),
             attributes_map: Some(attrs),
             ..RewriteOptions::default()
           });
-          // Perl: UnshiftValue (prepend) — declarations go IN FRONT of other rules
-          unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);
+          push_value("DOCUMENT_REWRITE_RULES", rewrite)?;
         }
       }
 
