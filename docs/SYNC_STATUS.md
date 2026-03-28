@@ -361,7 +361,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 316 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 13,669 structural diffs across 45 non-zero tests vs Perl (was 14,227).
+**Status (2026-03-28):** 316 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 13,554 structural diffs across 42 non-zero tests vs Perl (was 14,227). 125/167 zero-diff tests (was 122).
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -429,7 +429,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure — digestion produces XMWrap+POSTSUBSCRIPT, Perl produces XMApp+SUBSCRIPTOP. Math parser structural difference.
 - [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
-- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`. Rust separates mulop at term level vs invisible-times at tight_term level. Fix: semantic pruning in apply_invisible_times or grammar restructure.
+- [x] C5. `\times` vs invisible-times precedence — **FIXED**: semantic pruning in `infix_apply_nary`: when MULOP is division and right operand is invisible-times, extract first factor as divisor and chain rest. `a/bc` → `(a/b)*c` matching Perl's left-to-right. parse/terms.xml: 28→0 diffs (new zero-diff test).
 - [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
 - [x] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@(* _ i)` (was `ket@([])`). **PARTIALLY FIXED**: xmkey propagation in qm_fenced (presentation stuff didn't have _xmkey). Content reference now resolves. Remaining gap: superscript `^2` missing because operators can't be grammar bases for double-scripts without breaking infix parsing.
 - [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
