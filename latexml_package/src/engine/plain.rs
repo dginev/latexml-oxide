@@ -399,7 +399,7 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B, p. 347
   DefPrimitive!("\\wlog{}", sub[(arg)] {
-    eprintln!("{}", Expand!(arg));
+    NoteLog!(Expand!(arg).to_string());
     Ok(Vec::new())
   }, locked => true);
   // From plain.tex

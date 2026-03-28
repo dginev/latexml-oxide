@@ -40,7 +40,7 @@ pub fn load_native_dump(path: &Path) -> Result<usize, String> {
       Err(e) => {
         errors += 1;
         if errors <= 10 {
-          eprintln!(
+          log::warn!(
             "[dump_reader] Line {}: {}: {}",
             lineno + 1,
             e,
@@ -52,9 +52,9 @@ pub fn load_native_dump(path: &Path) -> Result<usize, String> {
   }
 
   if errors > 10 {
-    eprintln!("[dump_reader] ... and {} more errors", errors - 10);
+    log::warn!("[dump_reader] ... and {} more errors", errors - 10);
   }
-  eprintln!(
+  log::info!(
     "[dump_reader] Loaded {} entries from {} ({} errors)",
     count,
     path.display(),
@@ -339,11 +339,11 @@ mod tests {
   fn test_load_native_dump() {
     let path = std::path::Path::new("/tmp/latex_dump.oxide");
     if !path.exists() {
-      eprintln!("No dump file at /tmp/latex_dump.oxide, skipping");
+      println!("No dump file at /tmp/latex_dump.oxide, skipping");
       return;
     }
     let count = load_native_dump(path).unwrap();
     assert!(count > 0, "Expected entries loaded");
-    eprintln!("Loaded {} entries from native dump", count);
+    println!("Loaded {} entries from native dump", count);
   }
 }

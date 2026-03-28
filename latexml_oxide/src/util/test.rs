@@ -51,6 +51,17 @@ pub fn init_logger() {
   });
 }
 
+/// Tests whose TeX input is *known* to produce Error/Warn messages in both
+/// the Perl reference implementation and the Rust port.  We suppress log
+/// output for these so that `cargo test` runs cleanly, while still counting
+/// errors internally (MAX_ERRORS check still fires).
+/// Tests where Perl LaTeXML also produces Error/Warn messages.
+/// ONLY add tests here if verified that Perl `bin/latexml` emits errors on the same input.
+const KNOWN_ERROR_TESTS: &[&str] = &[
+  "io",                     // Perl: 2 errors (mode-switch egroup from \readnext)
+  "figure_mixed_content",   // Perl: 1 error (ltx:theorem not allowed in ltx:figure)
+];
+
 pub fn latexml_test_single(
   tex_file_str: &str,
   name: &str,
@@ -61,6 +72,10 @@ pub fn latexml_test_single(
   init_logger();
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
+  }
+  let suppress = KNOWN_ERROR_TESTS.contains(&name);
+  if suppress {
+    latexml_core::common::error::set_suppress_log_output(true);
   }
   let tex_file = PathBuf::from(tex_file_str);
   let xml_file = tex_file.with_extension("xml");
@@ -73,6 +88,9 @@ pub fn latexml_test_single(
     );
   } else {
     // Skip, these could be tex fragment files.
+  }
+  if suppress {
+    latexml_core::common::error::set_suppress_log_output(false);
   }
 }
 

@@ -443,7 +443,7 @@ LoadDefinitions!({
         document.set_attribute(&mut r, "idref", idref)?;
       } else {
         // xmkey not resolved — may happen with parser-generated nested structures
-        eprintln!("\x1b[33mWarn:expected:id \x1b[0mUnresolved _xmkey '{}' in createXMRefs", r_xmkey);
+        Warn!("expected", "id", s!("Unresolved _xmkey '{}' in createXMRefs", r_xmkey));
       }
       r.remove_attribute("_xmkey")?;
     }

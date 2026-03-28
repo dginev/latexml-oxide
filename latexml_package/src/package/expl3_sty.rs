@@ -15,8 +15,12 @@ LoadDefinitions!({
   // These are Rust-specific issues (Perl's expansion engine handles them natively).
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, Some(Scope::Global));
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
+  // Also suppress log output: expl3-code.tex fires \errmessage for forward-ref errors
+  // and missing Unicode data files, which are harmless noise during loading.
+  latexml_core::common::error::set_suppress_log_output(true);
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+  latexml_core::common::error::set_suppress_log_output(false);
   // Keep other suppression active through post-load fixups.
 
   // Post-load: set expl3 catcodes for fixup commands.

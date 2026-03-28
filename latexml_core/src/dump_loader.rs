@@ -49,14 +49,14 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
   let mut current_entry = String::new();
   let mut entry_start_line = 0;
 
-  let mut process_entry =
+  let process_entry =
     |entry: &str, start_line: usize, count: &mut usize, errors: &mut usize| {
       match parse_and_execute(entry) {
         Ok(()) => *count += 1,
         Err(e) => {
           *errors += 1;
           if *errors <= 10 {
-            eprintln!(
+            log::warn!(
               "[dump_loader] Line {}: {}: {}",
               start_line,
               e,
@@ -101,9 +101,9 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
   }
 
   if errors > 10 {
-    eprintln!("[dump_loader] ... and {} more errors", errors - 10);
+    log::warn!("[dump_loader] ... and {} more errors", errors - 10);
   }
-  eprintln!(
+  log::info!(
     "[dump_loader] Loaded {} entries from {} ({} errors)",
     count,
     path.display(),

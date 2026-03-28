@@ -71,7 +71,6 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
 /// Collapse/remove/unwrap unneeded svg:g elements to reduce tree depth.
 fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
   use latexml_core::common::xml::element_nodes;
-  use latexml_core::document::get_node_qname;
 
   // Collapsible SVG group attributes (Perl L193-197)
   const COLLAPSIBLE: &[&str] = &[

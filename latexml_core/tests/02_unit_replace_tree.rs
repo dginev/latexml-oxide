@@ -88,7 +88,7 @@ fn replace_tree_replacement_reuses_old_children() {
   // originally part of the old node. After replace_tree, those children
   // must still be accessible (no use-after-free from xmlFreeNode).
   let (mut doc, root) = setup_doc_with_tree();
-  let xml_doc_ptr = doc.get_document() as *const _;
+  let _xml_doc_ptr = doc.get_document() as *const _;
 
   // Build: root -> A, Wrapper(B1, B2), C
   let b = root.get_child_elements()[1].clone(); // B

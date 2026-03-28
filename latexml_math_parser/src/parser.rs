@@ -592,7 +592,7 @@ impl MathParser {
       let r = c.get_attribute("role").unwrap_or_default();
       format!("{}({})", c.get_name(), r)
     }).collect();
-    eprintln!("parse_kludge: processing {} children: {:?}", children.len(), child_names);
+    log::debug!("parse_kludge: processing {} children: {:?}", children.len(), child_names);
 
     // Represent content as either individual nodes or groups needing XMWrap.
     enum Item { Node(Node), Wrap(Vec<Item>) }
@@ -635,7 +635,7 @@ impl MathParser {
     // Check if any wrapping happened
     let items = stack.into_iter().next().unwrap_or_default();
     let has_wrap = items.iter().any(|i| matches!(i, Item::Wrap(_)));
-    eprintln!("parse_kludge: items={} has_wrap={}", items.len(), has_wrap);
+    log::debug!("parse_kludge: items={} has_wrap={}", items.len(), has_wrap);
     if !has_wrap { return; }
 
     // Rebuild: clear mathnode, then reconstruct with XMWrap DOM elements.
@@ -653,15 +653,15 @@ impl MathParser {
             parent.add_child(&mut n).ok();
           },
           Item::Wrap(inner) => {
-            eprintln!("parse_kludge: creating XMWrap with {} inner items", inner.len());
+            log::debug!("parse_kludge: creating XMWrap with {} inner items", inner.len());
             match document.open_element_at(parent, "ltx:XMWrap", None, None) {
               Ok(mut wrap) => {
                 add_items(inner, &mut wrap, document);
                 document.close_element_at(&mut wrap).ok();
-                eprintln!("parse_kludge: XMWrap created, children={}", wrap.get_child_nodes().len());
+                log::debug!("parse_kludge: XMWrap created, children={}", wrap.get_child_nodes().len());
               },
               Err(e) => {
-                eprintln!("parse_kludge: FAILED to create XMWrap: {:?}", e);
+                log::warn!("parse_kludge: FAILED to create XMWrap: {:?}", e);
                 // Fallback: add items directly
                 add_items(inner, parent, document);
               },
@@ -673,14 +673,14 @@ impl MathParser {
     // Perl L560-563: at top level, unwrap single Wrap (extract XMWrap contents).
     // Otherwise, add items directly (inner Wraps become XMWrap elements).
     let is_single_wrap = items.len() == 1 && matches!(&items[0], Item::Wrap(_));
-    eprintln!("parse_kludge: is_single_wrap={}", is_single_wrap);
+    log::debug!("parse_kludge: is_single_wrap={}", is_single_wrap);
     if is_single_wrap {
       if let Some(Item::Wrap(inner)) = items.into_iter().next() {
         let inner_desc: Vec<&str> = inner.iter().map(|i| match i {
           Item::Node(_) => "Node",
           Item::Wrap(_) => "Wrap",
         }).collect();
-        eprintln!("parse_kludge: unwrapping single top-level, inner items: {:?}", inner_desc);
+        log::debug!("parse_kludge: unwrapping single top-level, inner items: {:?}", inner_desc);
         add_items(inner, mathnode, document);
       }
     } else {

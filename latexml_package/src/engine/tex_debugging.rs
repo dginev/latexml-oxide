@@ -50,8 +50,8 @@ LoadDefinitions!({
   // in the spirit of the B Book, "show_token_list" routine, in 292.
   // [This could be a $tokens->unpackParameters, but for the curious space treatment]
   DefPrimitive!("\\message{}", sub [(message)] {
-    if lookup_int("VERBOSITY") > -1 {
-      eprintln!("{}", writable_tokens(&do_expand(message)?));
+    if state::current_verbosity() > -1 {
+      Note!(writable_tokens(&do_expand(message)?).to_string());
     }
   });
 
@@ -59,7 +59,7 @@ LoadDefinitions!({
   DefPrimitive!("\\errmessage{}", sub[(args)] {
     let message = Expand!(args);
     let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
-    eprintln!("{}: {}", message, help);
+    Note!(s!("{}: {}", message, help));
   });
   DefRegister!("\\errorcontextlines", Number!(5));
 
@@ -235,9 +235,7 @@ LoadDefinitions!({
     } else { String::new() };
     let stuff = Invocation!(T_CS!("\\meaning"), vec![arg]);
     let rhs = writable_tokens(&Expand!(stuff));
-    // TODO: add+use `Note!` instead of `eprintln`
-    eprintln!("> {lhs}{rhs}");
-    eprintln!("{}",gullet::get_locator());
+    Note!(s!("> {lhs}{rhs}\n{}", gullet::get_locator()));
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();

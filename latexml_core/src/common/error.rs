@@ -30,6 +30,24 @@ pub enum LogStatus {
 
 #[thread_local]
 pub static REPORT: Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
+
+/// When true, Error!/Warn!/Info! macros still count in the report
+/// but do **not** emit anything to stderr/log.
+/// Used by tests that are known to produce errors in both Perl and Rust.
+#[thread_local]
+static SUPPRESS_LOG_OUTPUT: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// Set or clear the log-output suppression flag. Returns the previous value.
+pub fn set_suppress_log_output(suppress: bool) -> bool {
+  let prev = SUPPRESS_LOG_OUTPUT.get();
+  SUPPRESS_LOG_OUTPUT.set(suppress);
+  prev
+}
+
+/// Returns true if log output is currently suppressed.
+pub fn is_log_output_suppressed() -> bool {
+  SUPPRESS_LOG_OUTPUT.get()
+}
 #[macro_export]
 macro_rules! report {
   () => {
@@ -145,16 +163,20 @@ macro_rules! Warn {
   ($category:expr, $object:expr, $message:expr) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
-    use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message))
+    if !$crate::common::error::is_log_output_suppressed() {
+      use log::warn;
+      warn!(target: &format!("{}:{}", $category, $object), "{}",
+        $crate::generate_message!($message))
+    }
   }};
  ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
-    use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, $($details),*))
+    if !$crate::common::error::is_log_output_suppressed() {
+      use log::warn;
+      warn!(target: &format!("{}:{}", $category, $object), "{}",
+        $crate::generate_message!($message, $($details),*))
+    }
   }}
 }
 
@@ -166,9 +188,11 @@ macro_rules! Error {
  ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Error, None);
-    use log::error;
-    error!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($message, $($details),*));
+    if !$crate::common::error::is_log_output_suppressed() {
+      use log::error;
+      error!(target: &format!("{}:{}", $category, $object), "{}",
+        $crate::generate_message!($message, $($details),*));
+    }
     let maxerrors = 100; //TODO: ($state::? $state->lookupValue('MAX_ERRORS') : 100);
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
@@ -263,18 +287,20 @@ macro_rules! generate_message {
 #[macro_export]
 macro_rules! Note {
   ($input:expr) => {
-    // TODO: Only print to log file AND stderr
-    let msg = $input;
-    println_stderr!("{msg}");
+    if !$crate::common::error::is_log_output_suppressed() {
+      let msg = $input;
+      println_stderr!("{msg}");
+    }
   };
 }
 
 #[macro_export]
 macro_rules! NoteLog {
   ($input:expr) => {
-    // TODO: Only print to the log file
-    let msg = $input;
-    println_stderr!("{msg}");
+    if !$crate::common::error::is_log_output_suppressed() {
+      let msg = $input;
+      println_stderr!("{msg}");
+    }
   };
 }
 

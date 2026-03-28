@@ -18,7 +18,6 @@ use crate::common::arena;
 use crate::common::store::Stored;
 use crate::definition::Definition; // trait for get_expansion(), get_cs(), etc.
 use crate::state::TableName;
-use crate::token::Token;
 
 /// Write a state diff to a dump file.
 /// Returns the number of entries successfully written.
