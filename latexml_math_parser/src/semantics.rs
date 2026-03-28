@@ -920,6 +920,51 @@ pub fn infix_apply_nary(
       }
     }
   }
+  // Perl left-to-right division: abc/de → ((abc)/d)*e, not (abc)/(de).
+  // When the MULOP is division ("divide") and the right operand is an invisible-times
+  // application, extract just the first factor as the divisor and chain the rest.
+  // Transform: Apply(/, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(/, left, first), rest...)
+  let is_divide = match &infixop {
+    Some(XM::Lexeme(lex, _)) => lex.split(':').nth(1) == Some("divide"),
+    Some(XM::Token(props, _)) => props.meaning.as_deref() == Some("divide"),
+    _ => false,
+  };
+  if is_divide {
+    let right_is_invisible_times = match &right {
+      Some(XM::Apply(ref op, ref args, _, _)) => {
+        let op_is_times = match &*op.0 {
+          XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
+          XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
+          _ => false,
+        };
+        op_is_times && args.0.len() >= 2
+      },
+      _ => false,
+    };
+    if right_is_invisible_times {
+      if let Some(XM::Apply(right_op, right_args, right_props, right_meta)) = right {
+        let mut factors = right_args.0;
+        let first = factors.remove(0);
+        // Build Apply(/, left, first)
+        let div_result = Some(XM::Apply(
+          infixop.into(),
+          Args(vec![left, first]),
+          XProps::default(),
+          Meta::default(),
+        ));
+        // Rebuild: Apply(times, div_result, rest...)
+        let mut new_args = vec![div_result];
+        new_args.extend(factors);
+        return Ok(Some(XM::Apply(
+          right_op,
+          Args(new_args),
+          right_props,
+          right_meta,
+        )));
+      }
+    }
+  }
+
   // base case: new apply tree
   let apply_tree = XM::Apply(
     infixop.into(),

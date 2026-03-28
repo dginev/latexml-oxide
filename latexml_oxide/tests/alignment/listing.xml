@@ -552,7 +552,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><Math mode="inline" tex="a_{ij}=a_{jj}/a{ij}" text="a _ (i * j) = a _ (j * j) / (a * i * j)" xml:id="lstnumberx63.m1">
+          </tags><Math mode="inline" tex="a_{ij}=a_{jj}/a{ij}" text="a _ (i * j) = (a _ (j * j) / a) * i * j" xml:id="lstnumberx63.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -566,22 +566,22 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
                   </XMApp>
                 </XMApp>
                 <XMApp>
-                  <XMTok meaning="divide" role="MULOP">/</XMTok>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok meaning="divide" role="MULOP">/</XMTok>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
                     </XMApp>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">j</XMTok>
                   </XMApp>
+                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
                 </XMApp>
               </XMApp>
             </XMath>
