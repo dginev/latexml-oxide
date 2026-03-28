@@ -318,51 +318,51 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S6.p2">
-      <listing class="ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
+      <listing class="ltx_lst_language_Pascal ltx_lst_numbers_right ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx31"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_identifier">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_identifier">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text></listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_keyword" font="bold">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">do</text></listingline>
         <listingline xml:id="lstnumberx32"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><text class="ltx_lst_identifier">begin</text></listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">begin</text></listingline>
         <listingline xml:id="lstnumberx33"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_space">  </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">nothing</text><text class="ltx_lst_space"> </text>}</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_comment">{<text class="ltx_lst_space" font="italic"> </text><text font="italic">do<text class="ltx_lst_space"> </text>nothing<text class="ltx_lst_space"> </text></text>}</text></listingline>
         <listingline xml:id="lstnumberx34"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_identifier">end</text>;</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">end</text>;</listingline>
       </listing>
     </para>
     <para xml:id="S6.p3">
-      <listing class="ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
+      <listing class="ltx_lst_language_Pascal ltx_lst_numbers_right ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx35"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_identifier">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_identifier">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text></listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_keyword" font="bold">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">do</text></listingline>
         <listingline xml:id="lstnumberx36"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><text class="ltx_lst_identifier">begin</text></listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">begin</text></listingline>
         <listingline xml:id="lstnumberx37"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_space">  </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">nothing</text><text class="ltx_lst_space"> </text>}</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_comment">{<text class="ltx_lst_space" font="italic"> </text><text font="italic">do<text class="ltx_lst_space"> </text>nothing<text class="ltx_lst_space"> </text></text>}</text></listingline>
         <listingline xml:id="lstnumberx38"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_identifier">end</text>;</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">end</text>;</listingline>
       </listing>
     </para>
   </section>
