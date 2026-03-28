@@ -920,16 +920,25 @@ pub fn infix_apply_nary(
       }
     }
   }
-  // Perl left-to-right division: abc/de → ((abc)/d)*e, not (abc)/(de).
-  // When the MULOP is division ("divide") and the right operand is an invisible-times
-  // application, extract just the first factor as the divisor and chain the rest.
-  // Transform: Apply(/, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(/, left, first), rest...)
-  let is_divide = match &infixop {
-    Some(XM::Lexeme(lex, _)) => lex.split(':').nth(1) == Some("divide"),
-    Some(XM::Token(props, _)) => props.meaning.as_deref() == Some("divide"),
+  // Perl left-to-right: explicit MULOP only takes one factor on the right.
+  // a/bc → (a/b)*c, F×G dx → (F×G)*dx. NOT a/(b*c) or F×(G*dx).
+  // When any explicit (non-invisible) MULOP has a right operand that is an invisible-times
+  // application, extract just the first factor and chain the rest.
+  // Transform: Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...)
+  // Detect explicit (visible) MULOPs: /, ×, etc. — NOT invisible times (⁢ U+2062).
+  let is_explicit_mulop = match &infixop {
+    Some(XM::Lexeme(lex, _)) => {
+      let role = lex.split(':').next().unwrap_or("");
+      let symbol = lex.split(':').nth(2).unwrap_or("");
+      role == "MULOP" && symbol != "\u{2062}" // not invisible times char
+    },
+    Some(XM::Token(props, _)) => {
+      props.role.as_deref() == Some("MULOP")
+        && props.content.as_deref() != Some("\u{2062}")
+    },
     _ => false,
   };
-  if is_divide {
+  if is_explicit_mulop {
     let right_is_invisible_times = match &right {
       Some(XM::Apply(ref op, ref args, _, _)) => {
         let op_is_times = match &*op.0 {

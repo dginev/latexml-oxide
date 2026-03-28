@@ -2396,17 +2396,17 @@ Then a switch of tag forms.</p>
                         <XMApp>
                           <XMTok meaning="divide" role="MULOP">/</XMTok>
                           <XMApp>
-                            <XMTok meaning="times" role="MULOP">×</XMTok>
-                            <XMTok meaning="3.00" role="NUMBER">3.00</XMTok>
+                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
                             <XMApp>
-                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                              <XMTok meaning="times" role="MULOP">×</XMTok>
+                              <XMTok meaning="3.00" role="NUMBER">3.00</XMTok>
                               <XMApp>
                                 <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
                                 <XMTok meaning="10" role="NUMBER">10</XMTok>
                                 <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
                               </XMApp>
-                              <XMTok role="UNKNOWN">m</XMTok>
                             </XMApp>
+                            <XMTok role="UNKNOWN">m</XMTok>
                           </XMApp>
                           <XMTok role="UNKNOWN">s</XMTok>
                         </XMApp>
