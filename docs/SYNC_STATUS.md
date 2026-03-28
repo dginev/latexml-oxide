@@ -358,7 +358,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-27):** 312 pass, 0 fail, 20 ignored. 417 core + 91 contrib modules.
+**Status (2026-03-27):** 313 pass, 0 fail, 19 ignored. 417 core + 91 contrib modules.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent

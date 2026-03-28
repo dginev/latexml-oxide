@@ -31,7 +31,6 @@ fn numprints_test() {
 }
 
 #[test]
-#[ignore] // needs germanb.ldf
 fn page545_test() {
   latexml_test_single("tests/babel/page545.tex", "page545", DIR, None, None);
 }
