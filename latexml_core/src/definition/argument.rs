@@ -129,6 +129,7 @@ impl ArgWrap {
         let tks: Tokens = n.into();
         Some(tks)
       },
+      ArgWrap::KV(kv) => kv.revert().ok(),
       _ => None,
     }
   }

@@ -110,6 +110,23 @@ LoadDefinitions!({
         gullet::do_expand(T_CS!("\\f@encoding"))?, None)?;
       // Merge language into font → produces xml:lang attribute
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
+      // Perl: greek.ldf does \fontencoding{LGR}\selectfont in \extrasgreek
+      // and restores via \noextrasgreek. We replicate this here since our babel
+      // intercept doesn't load the real .ldf files.
+      if code == "el" {
+        load_font_map("LGR");
+        MergeFont!(encoding => "LGR");
+      } else {
+        // Restore non-Greek encoding: check if we're coming from LGR
+        let current_enc = lookup_font()
+          .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+          .unwrap_or_else(|| "OT1".to_string());
+        if current_enc == "LGR" {
+          // Restore to OT1 (default Latin encoding) when leaving Greek
+          load_font_map("OT1");
+          MergeFont!(encoding => "OT1");
+        }
+      }
       // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init
       // in \lx@babel@activate@lang@post. Setting it here would override the main
       // language whenever \selectlanguage is called in the document body.

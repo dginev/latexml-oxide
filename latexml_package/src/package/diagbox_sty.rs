@@ -3,7 +3,6 @@ use crate::prelude::*;
 
 fn roundto(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
 fn max_f(a: f64, b: f64) -> f64 { if a > b { a } else { b } }
-fn px_value(d: Dimension) -> f64 { d.value_of() as f64 / UNITY as f64 }
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -52,8 +51,8 @@ LoadDefinitions!({
 
     let mut result = Vec::new();
     result.push(T_CS!("\\lx@diagbox"));
-    // Keyvals arg — convert back to tokens
-    let kv_toks: Tokens = kv_arg.into();
+    // Keyvals arg — revert back to tokens (into() loses KV data, must use revert)
+    let kv_toks: Tokens = kv_arg.revert()?;
     result.push(T_BEGIN!()); result.extend(kv_toks.unlist()); result.push(T_END!());
     // A head
     result.push(T_BEGIN!()); result.push(T_CS!("\\lx@diagbox@head"));
@@ -147,44 +146,65 @@ LoadDefinitions!({
       let m = args.get(2).and_then(|a| a.clone());
       let b = args.get(3).and_then(|a| a.clone());
 
+      // Perl: map { roundto($_->pxValue) } $X->getSize; $Xh += $Xd;
       let (aw, ah, _ad) = if let Some(ref d) = a {
         let (w, h, d, _, _, _) = d.clone().get_size(None)?;
-        (roundto(px_value(w)), roundto(px_value(h) + px_value(d)), roundto(px_value(d)))
+        (roundto(w.px_value(None)), roundto(h.px_value(None) + d.px_value(None)), roundto(d.px_value(None)))
       } else { (0.0, 0.0, 0.0) };
       let (bw, bh, _bd) = if let Some(ref d) = b {
         let (w, h, d, _, _, _) = d.clone().get_size(None)?;
-        (roundto(px_value(w)), roundto(px_value(h) + px_value(d)), roundto(px_value(d)))
+        (roundto(w.px_value(None)), roundto(h.px_value(None) + d.px_value(None)), roundto(d.px_value(None)))
       } else { (0.0, 0.0, 0.0) };
       let (mw, mh, _md) = if let Some(ref d) = m {
         let (w, h, d, _, _, _) = d.clone().get_size(None)?;
-        (roundto(px_value(w)), roundto(px_value(h) + px_value(d)), roundto(px_value(d)))
+        (roundto(w.px_value(None)), roundto(h.px_value(None) + d.px_value(None)), roundto(d.px_value(None)))
       } else { (0.0, 0.0, 0.0) };
 
-      let kv = args.first().and_then(|a| a.clone());
-      let dir = kv.as_ref().and_then(|k| k.get_property("dir")).map(|v| v.to_string()).unwrap_or_else(|| "NW".to_string());
-
-      let kv_w: Option<f64> = kv.as_ref().and_then(|k| {
-        k.get_property("width").or_else(|| k.get_property("innerwidth"))
-      }).and_then(|v| {
-        let s = v.to_string();
-        Dimension::spec_to_f64(&s).ok().map(|f| f / UNITY as f64)
+      // Extract KeyVals from the digested first argument (DigestedData::KeyVals)
+      let kv_arg = args.first().and_then(|a| a.clone());
+      let kv = kv_arg.as_ref().and_then(|d| {
+        if let DigestedData::KeyVals(ref kv) = *d.data() { Some(kv) } else { None }
       });
-      let kv_h: Option<f64> = kv.as_ref().and_then(|k| k.get_property("height"))
-        .and_then(|v| {
-          let s = v.to_string();
-          Dimension::spec_to_f64(&s).ok().map(|f| f / UNITY as f64)
-        });
+
+      // Perl: my $dir = $kv && ToString($kv->getValue('dir')) || 'NW';
+      let dir = kv.and_then(|kv| kv.get_value_digested("dir"))
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "NW".to_string());
+
+      // Perl: $w = $w->pxValue if $w;  (width/innerwidth are Dimension keyvals)
+      let kv_w: Option<f64> = kv.and_then(|kv| {
+        kv.get_value_digested("width").or_else(|| kv.get_value_digested("innerwidth"))
+      }).and_then(|v| v.get_dimension()).map(|d| d.px_value(None));
+      let kv_h: Option<f64> = kv.and_then(|kv| kv.get_value_digested("height"))
+        .and_then(|v| v.get_dimension()).map(|d| d.px_value(None));
 
       #[allow(unused_assignments)]
       let (mut line1, mut line2) = (String::new(), String::new());
       #[allow(unused_assignments, unused_mut)]
       let (mut ax, mut ay, mut bx, mut by, mut mx, mut my) = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-      let has_m = m.is_some() && mw > 0.0;
+      let has_m = m.is_some();
       let (w, h);
 
       if has_m {
-        w = roundto(kv_w.unwrap_or(2.0 * (max_f(aw, bw) + mw)));
-        h = roundto(kv_h.unwrap_or(2.0 * (max_f(ah, bh) + mh)));
+        // Perl diagbox.pdf: quadratic formula for optimal 3-part box sizing
+        if kv_w.is_none() || kv_h.is_none() {
+          let t = ah + mh;
+          let s = bw + mw;
+          let v = s * t - aw * bh;
+          let u = aw * mh - mw * bh;
+          let delta = (u + v) * (u + v) + 4.0 * aw * (t - bh) * (mw * (bh - mh) - bw * mh);
+          w = roundto(kv_w.unwrap_or_else(|| {
+            if bh < t && delta >= 0.0 { (u + v + delta.sqrt()) / (t - bh) / 2.0 }
+            else { 2.0 * (max_f(aw, bw) + mw) }
+          }));
+          h = roundto(kv_h.unwrap_or_else(|| {
+            if aw < s && delta >= 0.0 { (u - v - delta.sqrt()) / (aw - s) / 2.0 }
+            else { 2.0 * (max_f(ah, bh) + mh) }
+          }));
+        } else {
+          w = roundto(kv_w.unwrap());
+          h = roundto(kv_h.unwrap());
+        }
         let (wm, hm) = (w * 0.5, h * 0.5);
         match dir.as_str() {
           "SE" => { mx = w - mw; bx = w - bw; by = h - bh;
@@ -206,9 +226,20 @@ LoadDefinitions!({
         }
       }
 
-      let linewidth = kv.as_ref().and_then(|k| k.get_property("linewidth")).map(|v| v.to_string()).unwrap_or_else(|| "0.4".to_string());
-      let linecolor = kv.as_ref().and_then(|k| k.get_property("linecolor")).map(|v| v.to_string()).unwrap_or_else(|| "#000000".to_string());
+      // Perl: linewidth => ($kv && $kv->getValue('linewidth')) || '0.4'
+      let linewidth = kv.and_then(|kv| kv.get_value_digested("linewidth"))
+        .map(|v| v.to_string()).unwrap_or_else(|| "0.4".to_string());
+      // Perl: linecolor => ($kv && $kv->getValue('linecolor')) || Black
+      let linecolor = kv.and_then(|kv| kv.get_value_digested("linecolor"))
+        .map(|v| v.to_string()).unwrap_or_else(|| "#000000".to_string());
 
+      // Round coordinates to avoid float artifacts (e.g. 36.31999999999999 → 36.32)
+      let (ax, ay) = (roundto(ax), roundto(ay));
+      let (bx, by) = (roundto(bx), roundto(by));
+      let (mx, my) = (roundto(mx), roundto(my));
+
+      // Perl: setProperties with Dimension($w / $pxppt . 'pt') for width/height
+      // In Rust, template uses raw px strings, so store as-is
       whatsit.set_property("width", Stored::from(s!("{w}")));
       whatsit.set_property("height", Stored::from(s!("{h}")));
       whatsit.set_property("A", a.map(Stored::from).unwrap_or(Stored::None));
@@ -218,9 +249,10 @@ LoadDefinitions!({
       whatsit.set_property("Bx", Stored::from(s!("{bx}"))); whatsit.set_property("By", Stored::from(s!("{by}")));
       whatsit.set_property("Bw", Stored::from(s!("{bw}"))); whatsit.set_property("Bh", Stored::from(s!("{bh}")));
       if has_m {
+        // Perl: Mw => $Bw (note: Perl uses $Bw for M's width, not $Mw!)
         whatsit.set_property("M", m.map(Stored::from).unwrap_or(Stored::None));
         whatsit.set_property("Mx", Stored::from(s!("{mx}"))); whatsit.set_property("My", Stored::from(s!("{my}")));
-        whatsit.set_property("Mw", Stored::from(s!("{mw}"))); whatsit.set_property("Mh", Stored::from(s!("{mh}")));
+        whatsit.set_property("Mw", Stored::from(s!("{bw}"))); whatsit.set_property("Mh", Stored::from(s!("{mh}")));
       }
       whatsit.set_property("line1", Stored::from(line1));
       whatsit.set_property("line2", Stored::from(line2));

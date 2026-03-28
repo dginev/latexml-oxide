@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 14,333 total diff lines across 70 non-zero paired tests vs Perl (was 14,790). 194/264 paired zero-diff tests (73%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs.
+**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~14,173 total diff lines across 70 non-zero paired tests vs Perl (was 14,333). 194/264 paired zero-diff tests (73%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -445,7 +445,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 | 3 | LGR font encoding (cbgreek) | ~520 | Medium | greek (548) |
 | 4 | VERTBAR ambiguity resolution | ~500+ | Hard | sampler, ncases, ambiguous_relations, vertbars, qm |
 | 5 | A3: listing font nesting | ~200 | Medium | listing (458) |
-| 6 | C4: ltx_nopad_l alignment padding | ~150 | Medium | diagboxtest (160), ncases (subset) |
+| ~~6~~ | ~~C4: diagbox package~~ | ~~done~~ | ~~Medium~~ | ~~diagboxtest 240→80~~ |
 | 7 | mathtools S1/S8/S11 | ~500 | Hard | mathtools (3214 total, much is xml:id) |
 
 ### Alignment gaps
@@ -460,7 +460,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
 - [x] C3. `parse_kludgeScripts_rec` — **DONE**: Ported Perl MathParser.pm L568-589. Script attachment in parse_kludge: POSTSUPERSCRIPT/POSTSUBSCRIPT attach to preceding base as XMApp(SCRIPTOP, base, content). FLOAT scripts become pre-scripts. Removed duplicate parse_kludge from core_interface.rs. kludge.xml: 333→2 diffs. split: 399→319. Overall -457 diffs.
-- [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
+- [x] C4. `\diagbox` package fix (was misattributed as ltx_nopad_l) — **DONE**: Three bugs fixed: (1) `px_value` helper computed pt not px (missing `*100/72.27` factor, ~72% dimension scaling), (2) `ArgWrap::KV → Tokens` via `owned_tokens()` returned empty — fixed to use `revert()`, (3) KeyVals accessed via `get_property()` on `DigestedData::KeyVals` returned None — fixed to extract `KeyVals` and use `get_value_digested()`. Also ported Perl's quadratic formula for 3-part box sizing. diagboxtest: 240→80 diffs (remaining: 16 `tex` attr + 4 minor font metric).
 - [x] C5. `\times` vs invisible-times precedence — **FIXED**: semantic pruning in `infix_apply_nary`: when MULOP is division and right operand is invisible-times, extract first factor as divisor and chain rest. `a/bc` → `(a/b)*c` matching Perl's left-to-right. parse/terms.xml: 28→0 diffs (new zero-diff test).
 - [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
 - [x] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@(* _ i)` (was `ket@([])`). **PARTIALLY FIXED**: xmkey propagation in qm_fenced (presentation stuff didn't have _xmkey). Content reference now resolves. Remaining gap: superscript `^2` missing because operators can't be grammar bases for double-scripts without breaking infix parsing.

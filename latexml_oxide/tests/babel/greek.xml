@@ -9,13 +9,13 @@
     <p>This is a test of typesetting ancient Greek with LaTeX:</p>
   </para>
   <para xml:id="p2">
-    <p><text xml:lang="el">¿En ¿arq h— ¿ hn ¡o l’ogoc…</text></p>
+    <p><text xml:lang="el">’Εν ἀρχ ῃ ’ ην ‛ο λ´ογος…</text></p>
   </para>
   <para xml:id="p3">
-    <p>Here’s the correspondance between ”greek” and ”latin” encoding for TeX:<break/><text font="typewriter">a b g d e z h j i k l m n x o p r s t u f q y w c</text> <break/><text xml:lang="el">a b g d e z h j i k l m n x o p r s t u f q y w c</text></p>
+    <p>Here’s the correspondance between ”greek” and ”latin” encoding for TeX:<break/><text font="typewriter">a b g d e z h j i k l m n x o p r s t u f q y w c</text> <break/><text xml:lang="el">α β γ δ ε ζ η ϑ ι ϰ λ μ ν ξ ο π ρ ς τ υ φ χ ψ ω ς</text></p>
   </para>
   <para xml:id="p4">
-    <p>A simple example how to get accents and spirits: <break/><text font="typewriter">’a ‘a  a &gt;a &lt;a a| &gt; a| "i "’i</text> <break/><text xml:lang="el">’a ‘a  a ¿a ¡a a— ¿ a— ”i ”’i</text></p>
+    <p>A simple example how to get accents and spirits: <break/><text font="typewriter">’a ‘a  a &gt;a &lt;a a| &gt; a| "i "’i</text> <break/><text xml:lang="el">ά ὰ  α ἀ ἁ ᾳ ’ ᾳ ϊ ΐ</text></p>
   </para>
   <para xml:id="p5">
     <tabular class="ltx_guessed_headers" vattach="middle">
@@ -26,16 +26,16 @@
           <td thead="column"/>
           <td thead="column"/>
           <td thead="column"/>
-          <td align="center" thead="column"><text xml:lang="el">”U</text></td>
+          <td align="center" thead="column"><text xml:lang="el">ϔ</text></td>
           <td thead="column"/>
-          <td align="center" thead="column"><text xml:lang="el">”u</text></td>
+          <td align="center" thead="column"><text xml:lang="el">ϋ</text></td>
         </tr>
         <tr>
-          <td align="center" thead="column"><text xml:lang="el">”</text></td>
+          <td align="center" thead="column"><text xml:lang="el">᾽</text></td>
           <td thead="column"/>
           <td thead="column"/>
-          <td align="center" thead="column"><text xml:lang="el">”’</text></td>
-          <td align="center" thead="column"><text xml:lang="el">”‘</text></td>
+          <td align="center" thead="column"><text xml:lang="el">΅</text></td>
+          <td align="center" thead="column"><text xml:lang="el">῭</text></td>
           <td thead="column"/>
           <td thead="column"/>
           <td/>
@@ -65,247 +65,247 @@
           <td align="center"><text xml:lang="el">9</text></td>
           <td align="center"><text xml:lang="el">:</text></td>
           <td align="center"><text xml:lang="el">.</text></td>
-          <td align="center"><text xml:lang="el">¡</text></td>
+          <td align="center"><text xml:lang="el">‛</text></td>
           <td align="center"><text xml:lang="el">=</text></td>
-          <td align="center"><text xml:lang="el">¿</text></td>
-          <td align="center"><text xml:lang="el">;</text></td>
+          <td align="center"><text xml:lang="el">’</text></td>
+          <td align="center"><text xml:lang="el">·</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">¡</text></td>
-          <td align="center"><text xml:lang="el">A</text></td>
-          <td align="center"><text xml:lang="el">B</text></td>
-          <td align="center"><text xml:lang="el">¡‘</text></td>
-          <td align="center"><text xml:lang="el">D</text></td>
-          <td align="center"><text xml:lang="el">E</text></td>
-          <td align="center"><text xml:lang="el">F</text></td>
-          <td align="center"><text xml:lang="el">G</text></td>
+          <td align="center"><text xml:lang="el">‛</text></td>
+          <td align="center"><text xml:lang="el">Α</text></td>
+          <td align="center"><text xml:lang="el">Β</text></td>
+          <td align="center"><text xml:lang="el">῝</text></td>
+          <td align="center"><text xml:lang="el">Δ</text></td>
+          <td align="center"><text xml:lang="el">Ε</text></td>
+          <td align="center"><text xml:lang="el">Φ</text></td>
+          <td align="center"><text xml:lang="el">Γ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">H</text></td>
-          <td align="center"><text xml:lang="el">I</text></td>
-          <td align="center"><text xml:lang="el">J</text></td>
-          <td align="center"><text xml:lang="el">K</text></td>
-          <td align="center"><text xml:lang="el">L</text></td>
-          <td align="center"><text xml:lang="el">M</text></td>
-          <td align="center"><text xml:lang="el">N</text></td>
-          <td align="center"><text xml:lang="el">O</text></td>
+          <td align="center"><text xml:lang="el">Η</text></td>
+          <td align="center"><text xml:lang="el">Ι</text></td>
+          <td align="center"><text xml:lang="el">Θ</text></td>
+          <td align="center"><text xml:lang="el">Κ</text></td>
+          <td align="center"><text xml:lang="el">Λ</text></td>
+          <td align="center"><text xml:lang="el">Μ</text></td>
+          <td align="center"><text xml:lang="el">Ν</text></td>
+          <td align="center"><text xml:lang="el">Ο</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">P</text></td>
-          <td align="center"><text xml:lang="el">Q</text></td>
-          <td align="center"><text xml:lang="el">R</text></td>
-          <td align="center"><text xml:lang="el">S</text></td>
-          <td align="center"><text xml:lang="el">T</text></td>
-          <td align="center"><text xml:lang="el">U</text></td>
-          <td align="center"><text xml:lang="el">¡’</text></td>
-          <td align="center"><text xml:lang="el">W</text></td>
+          <td align="center"><text xml:lang="el">Π</text></td>
+          <td align="center"><text xml:lang="el">Χ</text></td>
+          <td align="center"><text xml:lang="el">Ρ</text></td>
+          <td align="center"><text xml:lang="el">Σ</text></td>
+          <td align="center"><text xml:lang="el">Τ</text></td>
+          <td align="center"><text xml:lang="el">ϒ</text></td>
+          <td align="center"><text xml:lang="el">῞</text></td>
+          <td align="center"><text xml:lang="el">Ω</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">X</text></td>
-          <td align="center"><text xml:lang="el">Y</text></td>
-          <td align="center"><text xml:lang="el">Z</text></td>
+          <td align="center"><text xml:lang="el">Ξ</text></td>
+          <td align="center"><text xml:lang="el">Ψ</text></td>
+          <td align="center"><text xml:lang="el">Ζ</text></td>
           <td align="center"><text xml:lang="el">[</text></td>
-          <td align="center"><text xml:lang="el">¿</text></td>
+          <td align="center"><text xml:lang="el">’</text></td>
           <td align="center"><text xml:lang="el">]</text></td>
-          <td align="center"><text xml:lang="el">¿’</text></td>
-          <td align="center"><text xml:lang="el">¿‘</text></td>
+          <td align="center"><text xml:lang="el">῎</text></td>
+          <td align="center"><text xml:lang="el">῍</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">‘</text></td>
-          <td align="center"><text xml:lang="el">a</text></td>
-          <td align="center"><text xml:lang="el">b</text></td>
-          <td align="center"><text xml:lang="el">c</text></td>
-          <td align="center"><text xml:lang="el">d</text></td>
-          <td align="center"><text xml:lang="el">e</text></td>
-          <td align="center"><text xml:lang="el">f</text></td>
-          <td align="center"><text xml:lang="el">g</text></td>
+          <td align="center"><text xml:lang="el">`</text></td>
+          <td align="center"><text xml:lang="el">α</text></td>
+          <td align="center"><text xml:lang="el">β</text></td>
+          <td align="center"><text xml:lang="el">ς</text></td>
+          <td align="center"><text xml:lang="el">δ</text></td>
+          <td align="center"><text xml:lang="el">ε</text></td>
+          <td align="center"><text xml:lang="el">φ</text></td>
+          <td align="center"><text xml:lang="el">γ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">h</text></td>
-          <td align="center"><text xml:lang="el">i</text></td>
-          <td align="center"><text xml:lang="el">j</text></td>
-          <td align="center"><text xml:lang="el">k</text></td>
-          <td align="center"><text xml:lang="el">l</text></td>
-          <td align="center"><text xml:lang="el">m</text></td>
-          <td align="center"><text xml:lang="el">n</text></td>
-          <td align="center"><text xml:lang="el">o</text></td>
+          <td align="center"><text xml:lang="el">η</text></td>
+          <td align="center"><text xml:lang="el">ι</text></td>
+          <td align="center"><text xml:lang="el">ϑ</text></td>
+          <td align="center"><text xml:lang="el">ϰ</text></td>
+          <td align="center"><text xml:lang="el">λ</text></td>
+          <td align="center"><text xml:lang="el">μ</text></td>
+          <td align="center"><text xml:lang="el">ν</text></td>
+          <td align="center"><text xml:lang="el">ο</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">p</text></td>
-          <td align="center"><text xml:lang="el">q</text></td>
-          <td align="center"><text xml:lang="el">r</text></td>
-          <td align="center"><text xml:lang="el">s</text></td>
-          <td align="center"><text xml:lang="el">t</text></td>
-          <td align="center"><text xml:lang="el">u</text></td>
+          <td align="center"><text xml:lang="el">π</text></td>
+          <td align="center"><text xml:lang="el">χ</text></td>
+          <td align="center"><text xml:lang="el">ρ</text></td>
+          <td align="center"><text xml:lang="el">ς</text></td>
+          <td align="center"><text xml:lang="el">τ</text></td>
+          <td align="center"><text xml:lang="el">υ</text></td>
           <td/>
-          <td align="center"><text xml:lang="el">w</text></td>
+          <td align="center"><text xml:lang="el">ω</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">x</text></td>
-          <td align="center"><text xml:lang="el">y</text></td>
-          <td align="center"><text xml:lang="el">z</text></td>
+          <td align="center"><text xml:lang="el">ξ</text></td>
+          <td align="center"><text xml:lang="el">ψ</text></td>
+          <td align="center"><text xml:lang="el">ζ</text></td>
           <td/>
-          <td align="center"><text xml:lang="el">—</text></td>
+          <td align="center"><text xml:lang="el">ι</text></td>
           <td/>
           <td/>
-          <td/>
-        </tr>
-        <tr>
-          <td align="center"><text xml:lang="el">‘a</text></td>
-          <td align="center"><text xml:lang="el">¡a</text></td>
-          <td align="center"><text xml:lang="el">¿a</text></td>
-          <td align="center"><text xml:lang="el">¡‘a</text></td>
-          <td align="center"><text xml:lang="el">‘a—</text></td>
-          <td align="center"><text xml:lang="el">¡a—</text></td>
-          <td align="center"><text xml:lang="el">¿a—</text></td>
-          <td align="center"><text xml:lang="el">¡‘a—</text></td>
-        </tr>
-        <tr>
-          <td align="center"><text xml:lang="el">’a</text></td>
-          <td align="center"><text xml:lang="el">¡’a</text></td>
-          <td align="center"><text xml:lang="el">¿’a</text></td>
-          <td align="center"><text xml:lang="el">¿‘a</text></td>
-          <td align="center"><text xml:lang="el">’a—</text></td>
-          <td align="center"><text xml:lang="el">¡’a—</text></td>
-          <td align="center"><text xml:lang="el">¿’a—</text></td>
-          <td align="center"><text xml:lang="el">¿‘a—</text></td>
-        </tr>
-        <tr>
-          <td align="center"><text xml:lang="el">a</text></td>
-          <td align="center"><text xml:lang="el">¡ a</text></td>
-          <td align="center"><text xml:lang="el">¿ a</text></td>
-          <td/>
-          <td align="center"><text xml:lang="el">a—</text></td>
-          <td align="center"><text xml:lang="el">¡ a—</text></td>
-          <td align="center"><text xml:lang="el">¿ a—</text></td>
           <td/>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">‘h</text></td>
-          <td align="center"><text xml:lang="el">¡h</text></td>
-          <td align="center"><text xml:lang="el">¿h</text></td>
-          <td align="center"><text xml:lang="el">¡‘h</text></td>
-          <td align="center"><text xml:lang="el">‘h—</text></td>
-          <td align="center"><text xml:lang="el">¡h—</text></td>
-          <td align="center"><text xml:lang="el">¿h—</text></td>
-          <td align="center"><text xml:lang="el">¡‘h—</text></td>
+          <td align="center"><text xml:lang="el">ὰ</text></td>
+          <td align="center"><text xml:lang="el">ἁ</text></td>
+          <td align="center"><text xml:lang="el">ἀ</text></td>
+          <td align="center"><text xml:lang="el">ἃ</text></td>
+          <td align="center"><text xml:lang="el">ᾲ</text></td>
+          <td align="center"><text xml:lang="el">ᾁ</text></td>
+          <td align="center"><text xml:lang="el">ᾀ</text></td>
+          <td align="center"><text xml:lang="el">ᾃ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">’h</text></td>
-          <td align="center"><text xml:lang="el">¡’h</text></td>
-          <td align="center"><text xml:lang="el">¿’h</text></td>
-          <td align="center"><text xml:lang="el">¿‘h</text></td>
-          <td align="center"><text xml:lang="el">’h—</text></td>
-          <td align="center"><text xml:lang="el">¡’h—</text></td>
-          <td align="center"><text xml:lang="el">¿’h—</text></td>
-          <td align="center"><text xml:lang="el">¿‘h—</text></td>
+          <td align="center"><text xml:lang="el">ά</text></td>
+          <td align="center"><text xml:lang="el">ἅ</text></td>
+          <td align="center"><text xml:lang="el">ἄ</text></td>
+          <td align="center"><text xml:lang="el">ἂ</text></td>
+          <td align="center"><text xml:lang="el">ᾴ</text></td>
+          <td align="center"><text xml:lang="el">ᾅ</text></td>
+          <td align="center"><text xml:lang="el">ᾄ</text></td>
+          <td align="center"><text xml:lang="el">ᾂ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">h</text></td>
-          <td align="center"><text xml:lang="el">¡ h</text></td>
-          <td align="center"><text xml:lang="el">¿ h</text></td>
+          <td align="center"><text xml:lang="el">α</text></td>
+          <td align="center"><text xml:lang="el">‛ α</text></td>
+          <td align="center"><text xml:lang="el">’ α</text></td>
           <td/>
-          <td align="center"><text xml:lang="el">h—</text></td>
-          <td align="center"><text xml:lang="el">¡ h—</text></td>
-          <td align="center"><text xml:lang="el">¿ h—</text></td>
-          <td/>
-        </tr>
-        <tr>
-          <td align="center"><text xml:lang="el">‘w</text></td>
-          <td align="center"><text xml:lang="el">¡w</text></td>
-          <td align="center"><text xml:lang="el">¿w</text></td>
-          <td align="center"><text xml:lang="el">¡‘w</text></td>
-          <td align="center"><text xml:lang="el">‘w—</text></td>
-          <td align="center"><text xml:lang="el">¡w—</text></td>
-          <td align="center"><text xml:lang="el">¿w—</text></td>
-          <td align="center"><text xml:lang="el">¡‘w—</text></td>
-        </tr>
-        <tr>
-          <td align="center"><text xml:lang="el">’w</text></td>
-          <td align="center"><text xml:lang="el">¡’w</text></td>
-          <td align="center"><text xml:lang="el">¿’w</text></td>
-          <td align="center"><text xml:lang="el">¿‘w</text></td>
-          <td align="center"><text xml:lang="el">’w—</text></td>
-          <td align="center"><text xml:lang="el">¡’w—</text></td>
-          <td align="center"><text xml:lang="el">¿’w—</text></td>
-          <td align="center"><text xml:lang="el">¿‘w—</text></td>
-        </tr>
-        <tr>
-          <td align="center"><text xml:lang="el">w</text></td>
-          <td align="center"><text xml:lang="el">¡ w</text></td>
-          <td align="center"><text xml:lang="el">¿ w</text></td>
-          <td/>
-          <td align="center"><text xml:lang="el">w—</text></td>
-          <td align="center"><text xml:lang="el">¡ w—</text></td>
-          <td align="center"><text xml:lang="el">¿ w—</text></td>
+          <td align="center"><text xml:lang="el">ᾳ</text></td>
+          <td align="center"><text xml:lang="el">‛ ᾳ</text></td>
+          <td align="center"><text xml:lang="el">’ ᾳ</text></td>
           <td/>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">‘i</text></td>
-          <td align="center"><text xml:lang="el">¡i</text></td>
-          <td align="center"><text xml:lang="el">¿i</text></td>
-          <td align="center"><text xml:lang="el">¡‘i</text></td>
-          <td align="center"><text xml:lang="el">‘u—</text></td>
-          <td align="center"><text xml:lang="el">¡u—</text></td>
-          <td align="center"><text xml:lang="el">¿u—</text></td>
-          <td align="center"><text xml:lang="el">¡‘u—</text></td>
+          <td align="center"><text xml:lang="el">ὴ</text></td>
+          <td align="center"><text xml:lang="el">ἡ</text></td>
+          <td align="center"><text xml:lang="el">ἠ</text></td>
+          <td align="center"><text xml:lang="el">ἣ</text></td>
+          <td align="center"><text xml:lang="el">ῂ</text></td>
+          <td align="center"><text xml:lang="el">ᾑ</text></td>
+          <td align="center"><text xml:lang="el">ᾐ</text></td>
+          <td align="center"><text xml:lang="el">ᾓ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">’i</text></td>
-          <td align="center"><text xml:lang="el">¡’i</text></td>
-          <td align="center"><text xml:lang="el">¿’i</text></td>
-          <td align="center"><text xml:lang="el">¿‘i</text></td>
-          <td align="center"><text xml:lang="el">’u—</text></td>
-          <td align="center"><text xml:lang="el">¡’u—</text></td>
-          <td align="center"><text xml:lang="el">¿’u—</text></td>
-          <td align="center"><text xml:lang="el">¿‘u—</text></td>
+          <td align="center"><text xml:lang="el">ή</text></td>
+          <td align="center"><text xml:lang="el">ἥ</text></td>
+          <td align="center"><text xml:lang="el">ἤ</text></td>
+          <td align="center"><text xml:lang="el">ἢ</text></td>
+          <td align="center"><text xml:lang="el">ῄ</text></td>
+          <td align="center"><text xml:lang="el">ᾕ</text></td>
+          <td align="center"><text xml:lang="el">ᾔ</text></td>
+          <td align="center"><text xml:lang="el">ᾒ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">i</text></td>
-          <td align="center"><text xml:lang="el">¡ i</text></td>
-          <td align="center"><text xml:lang="el">¿ i</text></td>
-          <td align="center"><text xml:lang="el">”I</text></td>
-          <td align="center"><text xml:lang="el">u—</text></td>
-          <td align="center"><text xml:lang="el">¡ u—</text></td>
-          <td align="center"><text xml:lang="el">¿ u—</text></td>
-          <td align="center"><text xml:lang="el">”U</text></td>
+          <td align="center"><text xml:lang="el">η</text></td>
+          <td align="center"><text xml:lang="el">‛ η</text></td>
+          <td align="center"><text xml:lang="el">’ η</text></td>
+          <td/>
+          <td align="center"><text xml:lang="el">ῃ</text></td>
+          <td align="center"><text xml:lang="el">‛ ῃ</text></td>
+          <td align="center"><text xml:lang="el">’ ῃ</text></td>
+          <td/>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">‘e</text></td>
-          <td align="center"><text xml:lang="el">¡e</text></td>
-          <td align="center"><text xml:lang="el">¿e</text></td>
-          <td align="center"><text xml:lang="el">¡‘e</text></td>
-          <td align="center"><text xml:lang="el">‘o—</text></td>
-          <td align="center"><text xml:lang="el">¡o—</text></td>
-          <td align="center"><text xml:lang="el">¿o—</text></td>
-          <td align="center"><text xml:lang="el">¡‘o—</text></td>
+          <td align="center"><text xml:lang="el">ὼ</text></td>
+          <td align="center"><text xml:lang="el">ὡ</text></td>
+          <td align="center"><text xml:lang="el">ὠ</text></td>
+          <td align="center"><text xml:lang="el">ὣ</text></td>
+          <td align="center"><text xml:lang="el">ῲ</text></td>
+          <td align="center"><text xml:lang="el">ᾡ</text></td>
+          <td align="center"><text xml:lang="el">ᾠ</text></td>
+          <td align="center"><text xml:lang="el">ᾣ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">’e</text></td>
-          <td align="center"><text xml:lang="el">¡’e</text></td>
-          <td align="center"><text xml:lang="el">¿’e</text></td>
-          <td align="center"><text xml:lang="el">¿‘e</text></td>
-          <td align="center"><text xml:lang="el">’o—</text></td>
-          <td align="center"><text xml:lang="el">¡’o—</text></td>
-          <td align="center"><text xml:lang="el">¿’o—</text></td>
-          <td align="center"><text xml:lang="el">¿‘o—</text></td>
+          <td align="center"><text xml:lang="el">ὼ</text></td>
+          <td align="center"><text xml:lang="el">ὥ</text></td>
+          <td align="center"><text xml:lang="el">ὤ</text></td>
+          <td align="center"><text xml:lang="el">ὢ</text></td>
+          <td align="center"><text xml:lang="el">ῴ</text></td>
+          <td align="center"><text xml:lang="el">ᾥ</text></td>
+          <td align="center"><text xml:lang="el">ᾤ</text></td>
+          <td align="center"><text xml:lang="el">ᾢ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">”i</text></td>
-          <td align="center"><text xml:lang="el">‘”i</text></td>
-          <td align="center"><text xml:lang="el">’”i</text></td>
-          <td align="center"><text xml:lang="el">”i</text></td>
-          <td align="center"><text xml:lang="el">”u</text></td>
-          <td align="center"><text xml:lang="el">‘”u</text></td>
-          <td align="center"><text xml:lang="el">’”u</text></td>
-          <td align="center"><text xml:lang="el">”u</text></td>
+          <td align="center"><text xml:lang="el">ω</text></td>
+          <td align="center"><text xml:lang="el">‛ ω</text></td>
+          <td align="center"><text xml:lang="el">’ ω</text></td>
+          <td/>
+          <td align="center"><text xml:lang="el">ῳ</text></td>
+          <td align="center"><text xml:lang="el">‛ ῳ</text></td>
+          <td align="center"><text xml:lang="el">’ ῳ</text></td>
+          <td/>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">a—</text></td>
-          <td align="center"><text xml:lang="el">h—</text></td>
-          <td align="center"><text xml:lang="el">w—</text></td>
-          <td align="center"><text xml:lang="el">¡r</text></td>
-          <td align="center"><text xml:lang="el">¿r</text></td>
+          <td align="center"><text xml:lang="el">ὶ</text></td>
+          <td align="center"><text xml:lang="el">ἱ</text></td>
+          <td align="center"><text xml:lang="el">ἰ</text></td>
+          <td align="center"><text xml:lang="el">ἳ</text></td>
+          <td align="center"><text xml:lang="el">ὺ</text></td>
+          <td align="center"><text xml:lang="el">ὑ</text></td>
+          <td align="center"><text xml:lang="el">ὐ</text></td>
+          <td align="center"><text xml:lang="el">ὓ</text></td>
+        </tr>
+        <tr>
+          <td align="center"><text xml:lang="el">ί</text></td>
+          <td align="center"><text xml:lang="el">ἵ</text></td>
+          <td align="center"><text xml:lang="el">ἴ</text></td>
+          <td align="center"><text xml:lang="el">ἲ</text></td>
+          <td align="center"><text xml:lang="el">ύ</text></td>
+          <td align="center"><text xml:lang="el">ὕ</text></td>
+          <td align="center"><text xml:lang="el">ὔ</text></td>
+          <td align="center"><text xml:lang="el">ὒ</text></td>
+        </tr>
+        <tr>
+          <td align="center"><text xml:lang="el">ι</text></td>
+          <td align="center"><text xml:lang="el">‛ ι</text></td>
+          <td align="center"><text xml:lang="el">’ ι</text></td>
+          <td align="center"><text xml:lang="el">Ϊ</text></td>
+          <td align="center"><text xml:lang="el">υι</text></td>
+          <td align="center"><text xml:lang="el">‛ υι</text></td>
+          <td align="center"><text xml:lang="el">’ υι</text></td>
+          <td align="center"><text xml:lang="el">ϔ</text></td>
+        </tr>
+        <tr>
+          <td align="center"><text xml:lang="el">ὲ</text></td>
+          <td align="center"><text xml:lang="el">ἑ</text></td>
+          <td align="center"><text xml:lang="el">ἐ</text></td>
+          <td align="center"><text xml:lang="el">ἓ</text></td>
+          <td align="center"><text xml:lang="el">ὸ</text></td>
+          <td align="center"><text xml:lang="el">ὁ</text></td>
+          <td align="center"><text xml:lang="el">ὀ</text></td>
+          <td align="center"><text xml:lang="el">ὃ</text></td>
+        </tr>
+        <tr>
+          <td align="center"><text xml:lang="el">έ</text></td>
+          <td align="center"><text xml:lang="el">ἕ</text></td>
+          <td align="center"><text xml:lang="el">ἔ</text></td>
+          <td align="center"><text xml:lang="el">ἒ</text></td>
+          <td align="center"><text xml:lang="el">ό</text></td>
+          <td align="center"><text xml:lang="el">ὅ</text></td>
+          <td align="center"><text xml:lang="el">ὄ</text></td>
+          <td align="center"><text xml:lang="el">ὂ</text></td>
+        </tr>
+        <tr>
+          <td align="center"><text xml:lang="el">ϊ</text></td>
+          <td align="center"><text xml:lang="el">ῒ</text></td>
+          <td align="center"><text xml:lang="el">ΐ</text></td>
+          <td align="center"><text xml:lang="el">ϊ</text></td>
+          <td align="center"><text xml:lang="el">ϋ</text></td>
+          <td align="center"><text xml:lang="el">ῢ</text></td>
+          <td align="center"><text xml:lang="el">ΰ</text></td>
+          <td align="center"><text xml:lang="el">ϋ</text></td>
+        </tr>
+        <tr>
+          <td align="center"><text xml:lang="el">ᾳ</text></td>
+          <td align="center"><text xml:lang="el">ῃ</text></td>
+          <td align="center"><text xml:lang="el">ῳ</text></td>
+          <td align="center"><text xml:lang="el">ῥ</text></td>
+          <td align="center"><text xml:lang="el">ῤ</text></td>
           <td/>
           <td/>
           <td/>
