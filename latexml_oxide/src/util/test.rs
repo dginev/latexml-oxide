@@ -155,7 +155,6 @@ fn process_texfile(
   name: &str,
   extra_bindings_dispatcher: Option<BindingDispatcher>,
 ) -> Vec<String> {
-  // TODO: continue here...
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     search_paths: None,
@@ -167,8 +166,6 @@ fn process_texfile(
   state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
   // If we want to test the latexml_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
-  // this would have been equivalent to a latexml --path argument, except we require access to
-  // compiled functions, hence the rust-native pass
   if let Some(dispatcher) = extra_bindings_dispatcher {
     state::set_extra_bindings_dispatch(dispatcher);
   }
