@@ -72,7 +72,6 @@ fn aliceblog_test() { complex("aliceblog"); }
 fn physics_test() { complex("physics"); }
 
 #[test]
-#[ignore] // TooManyErrors: needs siunitx.sty full port
 fn si_test() { complex("si"); }
 
 #[test]
