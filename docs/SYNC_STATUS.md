@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 313 pass, 0 fail, 12 ignored. 417 core + 91 contrib modules. 211/298 zero-diff (71%). ~87 non-zero tests vs Perl (~32K raw diff lines, but ~19 tests have ONLY intentional divergences). Session 58 (4 commits): babel page545 language fix (14→4 diffs), declare.xml section-scoped decl_id (975→911), empty element serialization `<p></p>` matching Perl (abxtest 60→0), tabular empty-column operator precedence fix (15→6). New zero-diff: abxtest, moderncv/cs_cv, hyperref.
+**Status (2026-03-28):** 320 pass, 0 fail, 12 ignored. 211/298 zero-diff (71%). Session 58 (17 commits): **WildCard XMDual wrapping for \lxDeclare** — full pipeline: domToXPath, mark_wildcards, set_attributes_wild, scope=section, base token filtering, single-wrap-nodes approach. declare.xml: 975→867 (-11%). Also: babel page545 language (14→4), `<p></p>` serialization (abxtest 60→0), tabular column pruning (15→6). New zero-diff: abxtest, cs_cv. 4 WISDOM entries added.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
