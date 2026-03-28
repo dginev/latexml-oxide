@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~19,100 total diff lines across 83 non-zero of 298 paired tests vs Perl (was 19,272). 215/298 paired zero-diff tests (72%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs. Most remaining non-zero diffs are xml:id renumbering (OXIDIZED_DESIGN #9) and `%&#10;` tex attr (intentional).
+**Status (2026-03-28):** 309 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~19,100 total diff lines across 83 non-zero of 298 paired tests vs Perl. 215/298 paired zero-diff tests (72%). C8+C9 done: QM bra-ket, conditional probability, MIDDLE fences all parsing correctly. Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs. Most remaining non-zero diffs are xml:id renumbering (OXIDIZED_DESIGN #9) and `%&#10;` tex attr (intentional).
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -464,8 +464,8 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [x] C5. `\times` vs invisible-times precedence — **FIXED**: semantic pruning in `infix_apply_nary`: when MULOP is division and right operand is invisible-times, extract first factor as divisor and chain rest. `a/bc` → `(a/b)*c` matching Perl's left-to-right. parse/terms.xml: 28→0 diffs (new zero-diff test).
 - [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
 - [x] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@(* _ i)` (was `ket@([])`). **PARTIALLY FIXED**: xmkey propagation in qm_fenced (presentation stuff didn't have _xmkey). Content reference now resolves. Remaining gap: superscript `^2` missing because operators can't be grammar bases for double-scripts without breaking infix parsing.
-- [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
-- [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
+- [x] C8. QM bra-ket + conditional probability — **DONE**: Restricted ket rules to `rangle_close` (⟩) and bra rules to `langle_open` (⟨) instead of generic close/open, removing exponential ambiguity with `(x|y)`. Stopped remapping ⟨/⟩→(/) in lexer so QM tokens are distinct from parens. Added braket `⟨a|b⟩→inner-product@(a,b)`, bracket `⟨a|f|b⟩`, conditional `(x|y)→conditional@(x,y)` rules. Added angle-bracket fenced rules (term_list, formula, formula_list). Minor Perl divergence: `⟨a,b⟩` now preserves delimiter info as `delimited-⟨⟩@(list@(a,b))` instead of flat `list@(a,b)`.
+- [x] C9. MIDDLE fence rules — **DONE**: `\left(a\middle|b\right)` → `conditional@(a,b)`. Enabled `open formula middle_bar formula close → fence`. Also `open formula middle formula close` for generic MIDDLE delimiters. sampler E5 + E6 now parsed (was unparsed). functions_test `f(a\middle|b)` now parsed.
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
