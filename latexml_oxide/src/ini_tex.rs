@@ -81,6 +81,18 @@ pub fn dump_format(
   Ok(count)
 }
 
+/// Generate a compiled Rust module from a dump file.
+/// Reads the text dump and produces a .rs file with direct state assignment calls.
+pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, String> {
+  eprintln!("[ini_tex] Generating Rust module from {}", dump_path);
+  let count = latexml_core::dump_codegen::generate_rs(
+    Path::new(dump_path),
+    Path::new(output_path),
+  )?;
+  eprintln!("[ini_tex] Generated {} entries to {}", count, output_path);
+  Ok(count)
+}
+
 fn split_path(path: &str) -> (String, String, String) {
   let p = Path::new(path);
   let dir = p

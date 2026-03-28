@@ -24,7 +24,17 @@ use crate::tokens::Tokens;
 pub fn load_native_dump(path: &Path) -> Result<usize, String> {
   let content = std::fs::read_to_string(path)
     .map_err(|e| format!("Failed to read dump file {}: {}", path.display(), e))?;
+  let count = load_from_str_internal(&content, &path.display().to_string())?;
+  Ok(count)
+}
 
+/// Load dump data from a string (used by embedded dump modules).
+/// Returns the number of entries loaded.
+pub fn load_from_str(content: &str) -> Result<usize, String> {
+  load_from_str_internal(content, "<embedded>")
+}
+
+fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, String> {
   let mut count = 0;
   let mut errors = 0;
 
@@ -57,7 +67,7 @@ pub fn load_native_dump(path: &Path) -> Result<usize, String> {
   log::info!(
     "[dump_reader] Loaded {} entries from {} ({} errors)",
     count,
-    path.display(),
+    source_name,
     errors
   );
 
