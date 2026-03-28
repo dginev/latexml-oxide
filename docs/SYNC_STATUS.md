@@ -394,7 +394,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 | XY7 | `\cirbuild@` radius | `r="9.75"` from `\R@` register | `r="0"` — `\R@` is zero | Circle not drawn |
 
 Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht`, `\dp` to compute positions. These TeX primitives work at the box level. Our engine handles them but doesn't track the accumulated position for xy's range registers. The `\endxy` macro's `\edef\tmp@{...}` captures register values, but they're all zero.
-- [ ] **56. babel suite** (81_babel) — 186 diffs (csquotes sub-test), no longer OOM. Session 47: (1) fixed \@fontenc@load@list comma leak; (2) fixed OOM by pre-defining \captions/\date macros for 27 common languages, skipping babel's \babelprovide ini-loading path (was 26GB, now 50MB/0.14s). Remaining diffs: missing xml:lang on document root, quote chars `?` fallback (csquotes can't find language styles), language name display.
+- [x] **56. babel suite** (81_babel) — german_test, french_test, page545_test all PASSING (0 diffs). csquotes_test still ignored (186 diffs, needs csquotes language style loading). Session 52: precompiled kernel dump infrastructure (dump_codegen, embed module, 22K entries). Remaining: csquotes sub-test.
 
 #### mathtools_test mini-plan (per-section parity)
 
