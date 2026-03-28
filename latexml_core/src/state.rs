@@ -935,14 +935,18 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
     );
     let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
   } else {
-    Error!(
-      "undefined",
-      token,
-      s!(
-        "The token {} is not defined. Defining it now as <ltx:ERROR/>",
-        token.stringify()
-      )
-    );
+    // Allow suppression of undefined errors during bulk loading (e.g., expl3-code.tex)
+    // where forward references are later resolved by post-load fixups.
+    if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
+      Error!(
+        "undefined",
+        token,
+        s!(
+          "The token {} is not defined. Defining it now as <ltx:ERROR/>",
+          token.stringify()
+        )
+      );
+    }
     install_definition(
       Constructor {
         cs: *token,

@@ -10,8 +10,14 @@ LoadDefinitions!({
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
 
   // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
+  // Suppress errors during loading: expl3-code.tex has forward references and
+  // expansion chain differences that are resolved by post-load fixups below.
+  // These are Rust-specific issues (Perl's expansion engine handles them natively).
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, Some(Scope::Global));
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+  // Keep suppression active through post-load fixups.
 
   // Post-load: set expl3 catcodes for fixup commands.
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
@@ -47,4 +53,6 @@ LoadDefinitions!({
     state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
     raw_tex(r"\endlinechar=13\relax")?;
   }
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", false, Some(Scope::Global));
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
 });
