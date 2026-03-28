@@ -193,7 +193,8 @@ macro_rules! Error {
       error!(target: &format!("{}:{}", $category, $object), "{}",
         $crate::generate_message!($message, $($details),*));
     }
-    let maxerrors = 100; //TODO: ($state::? $state->lookupValue('MAX_ERRORS') : 100);
+    let max_from_state = $crate::state::lookup_int("MAX_ERRORS");
+    let maxerrors = if max_from_state > 0 { max_from_state as usize } else { 100 };
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
     }
