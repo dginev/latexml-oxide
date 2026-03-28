@@ -171,6 +171,10 @@ LoadDefinitions!({
           if let Some(v) = hash.get("meaning") { meaning = v.to_string(); }
           if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.to_string(); }
           if let Some(v) = hash.get("description") { has_description = true; description_text = v.to_string(); }
+          // Store scope option for rewrite rule creation in afterConstruct
+          if let Some(v) = hash.get("scope") {
+            whatsit.set_property("scope_opt", Stored::from(v.to_string()));
+          }
         }
       }
       // Extract body text from arg 3 (the {} body)
@@ -278,6 +282,17 @@ LoadDefinitions!({
       if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
         use latexml_core::rewrite::{Rewrite, RewriteOptions};
         use rustc_hash::FxHashMap;
+        // Perl: getDeclarationScope — resolve scope=section to current section ID
+        let scope_val = whatsit.get_property("scope_opt").map(|v| v.to_string()).unwrap_or_default();
+        let rewrite_scope = if scope_val == "section" {
+          // Get the current section's ID
+          let section_id = gullet::do_expand(T_CS!("\\thesection@ID"))
+            .ok().map(|t| t.to_string().trim().to_string())
+            .unwrap_or_default();
+          if !section_id.is_empty() {
+            Some(Scope::Named(arena::pin(&format!("id:{section_id}"))))
+          } else { None }
+        } else { None };
         let mut attrs = FxHashMap::default();
         if !role.is_empty() { attrs.insert("role".to_string(), role); }
         if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
@@ -330,6 +345,7 @@ LoadDefinitions!({
             attributes_map: Some(attrs),
             wildcard_paths,
             select_count,
+            scope: rewrite_scope,
             ..RewriteOptions::default()
           });
           unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);

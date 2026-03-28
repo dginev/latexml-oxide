@@ -326,17 +326,11 @@ impl Rewrite {
         Select => {
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
-            if self.options.wildcard_paths.is_some() {
-                matches.len(), self.options.select_count, &xpath[..xpath.len().min(80)]);
-            }
             let wilds = self.options.wildcard_paths.clone();
             let base_filter = self.options.attributes_map.as_ref()
               .and_then(|a| a.get("_wildcard_base").cloned());
-            let is_wild = wilds.is_some();
             for node in matches {
               if node.has_attribute("_matched") {
-                if is_wild {
-                }
                 continue;
               }
               if let Some(ref base) = base_filter {
@@ -355,8 +349,6 @@ impl Rewrite {
                   .and_then(|s| s.get_property("role"));
                 let has_post_sub = next_role.as_deref() == Some("POSTSUBSCRIPT");
                 if !has_post_sub {
-                    node.get_content(), next_role,
-                    next_sib.as_ref().map(|s| s.get_name()));
                   continue;
                 }
               }
@@ -444,9 +436,6 @@ impl Rewrite {
           if let Some(ref attrs) = self.options.attributes_map {
             let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
             let has_wc = tree.has_attribute("_has_wildcards");
-            if is_wildcard_pattern {
-                has_wc, tree.has_attribute("_matched"), tree.get_name());
-            }
             if is_wildcard_pattern && has_wc {
               // Wildcard pattern: use XMDual wrapping
               let nodes = vec![tree.clone()];
