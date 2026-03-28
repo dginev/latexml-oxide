@@ -23,7 +23,6 @@ fn greek_test() {
 }
 
 #[test]
-#[ignore] // needs numprint.sty
 fn numprints_test() {
   latexml_test_single("tests/babel/numprints.tex", "numprints", DIR, None, None);
 }
