@@ -254,7 +254,8 @@ impl Rewrite {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
           }
-          let xpath = format!("descendant-or-self::*[@xml:id='{}']", id_part);
+          let xpath = format!(
+            "descendant-or-self::*[@xml:id='{0}' or @id='{0}']", id_part);
           return RewriteClause {
             compiled: true,
             op: RewriteOperator::Select,

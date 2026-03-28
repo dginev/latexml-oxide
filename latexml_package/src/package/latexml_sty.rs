@@ -283,12 +283,31 @@ LoadDefinitions!({
         use latexml_core::rewrite::{Rewrite, RewriteOptions};
         use rustc_hash::FxHashMap;
         // Perl: getDeclarationScope — resolve scope=section to current section ID
+        // Use decl_id prefix (e.g. "S1" from "S1.XMD1") since it's computed in afterDigest
+        // where \thesection@ID is correct. In afterConstruct, it may be stale.
         let scope_val = whatsit.get_property("scope_opt").map(|v| v.to_string()).unwrap_or_default();
         let rewrite_scope = if scope_val == "section" {
-          // Get the current section's ID
-          let section_id = gullet::do_expand(T_CS!("\\thesection@ID"))
-            .ok().map(|t| t.to_string().trim().to_string())
-            .unwrap_or_default();
+          // Extract section prefix from decl_id (e.g. "S1" from "S1.XMD1")
+          let section_id = if !decl_id.is_empty() {
+            decl_id.split('.').next().unwrap_or("").to_string()
+          } else {
+            // Fallback: use the node's ancestor section id
+            let mut node = document.get_node().clone();
+            let mut sid = String::new();
+            loop {
+              if node.get_name() == "section" {
+                if let Some(id) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
+                  sid = id;
+                }
+                break;
+              }
+              match node.get_parent() {
+                Some(p) => node = p,
+                None => break,
+              }
+            }
+            sid
+          };
           if !section_id.is_empty() {
             Some(Scope::Named(arena::pin(&format!("id:{section_id}"))))
           } else { None }
