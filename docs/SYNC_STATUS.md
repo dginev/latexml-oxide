@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 313 pass, 0 fail, 12 ignored. 417 core + 91 contrib modules. ~19,419 raw diff lines across 84 non-zero of 298 paired tests vs Perl. 214/298 zero-diff (71%). **Effective parity: 83.6%** — 249/298 tests zero real structural diffs (35 of 84 non-zero have ONLY xml:id/tex-attr/XMRef intentional diffs). ~10,000 real structural diff lines across 49 tests. Session 57: C8+C9 (QM bra-ket, conditional, MIDDLE), Greek tilde, A3 listing font nesting (802→718), H expl3 pre-defs (12→1 error).
+**Status (2026-03-28):** 313 pass, 0 fail, 12 ignored. 417 core + 91 contrib modules. ~19,419 raw diff lines across 84 non-zero of 298 paired tests vs Perl. 214/298 zero-diff (71%). **Effective parity: 82%** — 245/298 tests zero real structural diffs (53 have real structural diffs). ~10,000 real structural diff lines. Session 57 (18 commits): C8+C9 (QM bra-ket, conditional, MIDDLE), Greek tilde, A3 listing (802→718), H expl3 (12→1), +4 tests enabled (physics, si, beamer, numprints). Only tikz/pgf tests remain ignored.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
