@@ -30,7 +30,7 @@ Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git hi
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. CS names synced: `\lx@hidden@egroup@right`, `\lx@right` (was `\right@hidden@egroup`, `\@right`). `\left` now unreads `\lx@hidden@bgroup` (was `\@hidden@bgroup`). |
+| tex_math.rs | GAPS | `TeXDelimiter` partially implemented (`\left\delimiter`/`\right\delimiter` handle hex number codes). Missing: `\nonscript`, `\lx@dollar@default`, full `TeXDelimiter` param type, `adjustMathRole()`, math ligatures. `\mathchoice` ported. |
 | tex_box.rs | GAPS | `\leaders/cleaders/xleaders` implemented (bounded + hide alignment + filled leader extension). Missing: SVG functions (`collapseSVGGroup` etc), `\hbox/vbox/vtop` have many TODOs, `\vrule/\hrule` mostly commented out |
 | tex_file_io.rs | MINOR | `\lx@special@graphics` constructor + `Tag('ltx:graphics')` commented out |
 | tex_fonts.rs | GAPS | `\fontname` implemented (returns font filename). Missing: `\fontname` "select font X at Ypt" format for scaled fonts, per-font `\hyphenchar` tracking, `getFontDimen()`, 7 ligature defs. `\fontdimen` only handles 3 hardcoded params |
@@ -358,7 +358,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-27):** 314 pass, 0 fail, 18 ignored. 417 core + 91 contrib modules.
+**Status (2026-03-27):** 314 pass, 0 fail, 18 ignored. 417 core + 91 contrib modules. Zero cargo test output noise.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
