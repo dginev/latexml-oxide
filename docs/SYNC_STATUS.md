@@ -358,7 +358,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-27):** 314 pass, 0 fail, 18 ignored. 417 core + 91 contrib modules. Zero cargo test output noise.
+**Status (2026-03-28):** 315 pass, 0 fail, 17 ignored. 417 core + 91 contrib modules. Zero cargo test output noise.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -394,7 +394,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 | XY7 | `\cirbuild@` radius | `r="9.75"` from `\R@` register | `r="0"` — `\R@` is zero | Circle not drawn |
 
 Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht`, `\dp` to compute positions. These TeX primitives work at the box level. Our engine handles them but doesn't track the accumulated position for xy's range registers. The `\endxy` macro's `\edef\tmp@{...}` captures register values, but they're all zero.
-- [x] **56. babel suite** (81_babel) — german_test, french_test, page545_test all PASSING (0 diffs). csquotes_test still ignored (186 diffs, needs csquotes language style loading). Session 52: precompiled kernel dump infrastructure (dump_codegen, embed module, 22K entries). Remaining: csquotes sub-test.
+- [x] **56. babel suite** (81_babel) — german_test, french_test, page545_test, csquotes_test all PASSING (0 diffs). Session 52: precompiled kernel dump infrastructure (dump_codegen, embed module, 22K entries). Session 53: csquotes catcode fix (\makeatletter) + fallback quote styles. Remaining: greek (190 diffs, needs greek.ldf), numprints (TooManyErrors, needs numprint.sty).
 
 #### mathtools_test mini-plan (per-section parity)
 
