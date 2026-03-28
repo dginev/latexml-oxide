@@ -728,7 +728,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           <g class="makebox" innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <Math mode="inline" tex="0" text="0" xml:id="S3.F1.pic1.m3">
               <XMath>
-                <XMTok meaning="0" role="NUMBER">0</XMTok>
+                <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
               </XMath>
             </Math>
           </g>
@@ -737,7 +737,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           <g class="makebox" innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <Math mode="inline" tex="1" text="1" xml:id="S3.F1.pic1.m4">
               <XMath>
-                <XMTok meaning="1" role="NUMBER">1</XMTok>
+                <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
               </XMath>
             </Math>
           </g>
@@ -755,7 +755,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           <g class="makebox" innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <Math mode="inline" tex="0" text="0" xml:id="S3.F1.pic1.m6">
               <XMath>
-                <XMTok meaning="0" role="NUMBER">0</XMTok>
+                <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
               </XMath>
             </Math>
           </g>
@@ -764,7 +764,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           <g class="makebox" innerdepth="0.0pt" innerheight="0.0pt" transform="translate(0,0)">
             <Math mode="inline" tex="1" text="1" xml:id="S3.F1.pic1.m7">
               <XMath>
-                <XMTok meaning="1" role="NUMBER">1</XMTok>
+                <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
               </XMath>
             </Math>
           </g>

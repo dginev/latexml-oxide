@@ -132,7 +132,7 @@
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
-              <XMTok meaning="1" role="NUMBER" rpadding="1.7pt">1</XMTok>
+              <XMTok fontsize="70%" meaning="1" role="NUMBER" rpadding="1.7pt">1</XMTok>
               <XMApp>
                 <XMTok fontsize="70%" meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
                 <XMTok class="ltx_unit" fontsize="49%" role="ID" rpadding="-0.5em" yoffset="0.3em">m</XMTok>

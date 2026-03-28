@@ -349,6 +349,10 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
     if use_current_font {
       // f is already curfont
     } else {
+      // Merge textfont info (family, encoding, etc.) but preserve the current
+      // font's size. The textfont defines design-time properties, while the
+      // current size comes from context (e.g. \big's font => { size => 12 }).
+      let preserved_size = f.size;
       state::with_font_info(ftok, |fontinfo| {
         if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
           f = f.merge((**info).clone());
@@ -363,6 +367,7 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
           }
         }
       });
+      f.size = preserved_size;
     }
   }
 
