@@ -122,9 +122,10 @@ LoadDefinitions!({
   Let!("\\Gscale@box", "\\scalebox");
 
   // \resizebox{width}{height}{content}
+  // Perl: DefConstructor('\Gscale@@box {} {GraphixDimension}{GraphixDimension} {}', ...)
+  // GraphixDimension reads ! (skip) or a Dimension. Our {} reads balanced text.
+  // TODO: implement DefParameterType for GraphixDimension.
   DefMacro!("\\resizebox", "\\leavevmode\\@ifstar{\\Gscale@@box\\totalheight}{\\Gscale@@box\\height}");
-
-  // Simplified \Gscale@@box — just passes through content for now
   DefConstructor!("\\Gscale@@box{}{}{}{}", "#4",
     mode => "restricted_horizontal", enter_horizontal => true);
 
