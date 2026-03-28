@@ -2,25 +2,25 @@
 <?latexml class="article" options="german"?>
 <?latexml package="babel" options="french,english"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="de">
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="en">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para class="ltx_align_left" xml:id="p1">
     <p>The expansion of fixed document element names
 depends on the language, e.g., in English
-we have “Literatur” or “Kapitel”.</p>
+we have “References” or “Chapter”.</p>
   </para>
   <para class="ltx_align_left" xml:id="p2">
-    <p>Auf Deutsch ergibt sich
-“Literatur” oder “Kapitel”.</p>
+    <p><text xml:lang="de">Auf Deutsch ergibt sich
+“Literatur” oder “Kapitel”.</text></p>
   </para>
   <para class="ltx_align_left" xml:id="p3">
     <p><text xml:lang="fr">Voice en
 français: “Références” ou “Chapitre”.</text></p>
   </para>
   <para class="ltx_align_left" xml:id="p4">
-    <p><text xml:lang="en">But in short
+    <p>But in short
 phrases “Références” does not change!<text xml:lang="fr">
-</text></text></p>
+</text></p>
   </para>
 </document>

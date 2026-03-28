@@ -35,12 +35,17 @@ LoadDefinitions!({
     if let Some(bg) = bg_to_set {
       document.set_attribute(root, "backgroundcolor", &bg)?;
     }
-    // Apply font language as xml:lang on document root
-    // The language is stored as a state value by \ltx@bbl@select@language
+    // Apply font language as xml:lang on document root.
+    // Also update the document element's font language to match, so the
+    // font delta serializer doesn't override xml:lang with a stale value
+    // (e.g., from class options processed before babel determines the main language).
     if let Some(lang) = lookup_value("DOCUMENT_LANGUAGE") {
       let lang_str = lang.to_string();
       if !lang_str.is_empty() {
         document.set_attribute(root, "xml:lang", &lang_str)?;
+        let mut font = document.get_node_font(root).clone();
+        font.language = Some(Cow::Owned(lang_str));
+        document.set_node_font(root, &font)?;
       }
     }
   });

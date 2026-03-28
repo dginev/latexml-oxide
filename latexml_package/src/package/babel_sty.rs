@@ -148,23 +148,22 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
       .map(|t| t.to_string()).unwrap_or_default();
-    // Also check \bbl@cl@<lang> which babel sets for each language option
-    // This catches languages from \usepackage[lang]{babel} even when babel
-    // was already loaded from a class option.
-    let opt_list = gullet::do_expand(T_CS!("\\@raw@classoptionslist"))
+    // \opt@babel.sty has the actual \usepackage[...]{babel} options.
+    // Prefer these over \bbl@main@language which may reflect class options.
+    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let lang = if main != "nil" && !main.is_empty() {
+    let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    let lang = if !pkg_last.is_empty() {
+      pkg_last
+    } else if !loaded_last.is_empty() {
+      loaded_last
+    } else if main != "nil" && !main.is_empty() {
       main
-    } else if loaded.contains(',') || loaded.len() > 2 {
-      // Multiple languages loaded: last one is main
-      loaded.split(',').map(|s| s.trim().to_string())
-        .rfind(|s| !s.is_empty()).unwrap_or_default()
-    } else if !loaded.is_empty() && loaded != "nil" {
-      loaded
     } else {
-      // Fallback: use class options
-      opt_list.split(',').map(|s| s.trim().to_string())
-        .rfind(|s| !s.is_empty()).unwrap_or_default()
+      String::new()
     };
     if !lang.is_empty() {
       // Temporarily set @ to LETTER for CS name tokenization
@@ -175,9 +174,24 @@ LoadDefinitions!({
       if lookup_definition(&T_CS!(cs.clone()))?.is_some() {
         stomach::digest(Tokenize!(&cs))?;
       }
-      // Call \ltx@bbl@select@language to set xml:lang
-      let select_cs = s!("\\ltx@bbl@select@language{{{}}}", lang);
-      stomach::digest(Tokenize!(&select_cs))?;
+      // Set font language directly (don't go through stomach::digest which
+      // can interleave with pending babel hook processing).
+      let iso = match lang.as_str() {
+        "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
+        "french" | "francais" | "frenchb" => Some("fr"),
+        "spanish" => Some("es"), "italian" => Some("it"),
+        "english" => Some("en"),
+        "american" | "USenglish" => Some("en-US"),
+        "british" | "UKenglish" => Some("en-GB"),
+        "portuguese" | "portuges" => Some("pt"),
+        "russian" | "russianb" => Some("ru"),
+        "greek" | "polutonikogreek" => Some("el"),
+        "dutch" => Some("nl"), "polish" => Some("pl"),
+        _ => None,
+      };
+      if let Some(code) = iso {
+        merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
+      }
       // Restore @ to OTHER
       state::assign_catcode('@', Catcode::OTHER, None);
 
@@ -283,12 +297,21 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
       .map(|t| t.to_string()).unwrap_or_default();
-    // Prefer the last entry in \bbl@loaded (explicit \usepackage options)
-    // over \bbl@main@language (which may come from class options).
+    // \opt@babel.sty has the actual \usepackage[...]{babel} options.
+    // \bbl@loaded and \bbl@main@language may only reflect class options
+    // because babel's ini-based loading path doesn't run in our engine.
+    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
+      .map(|t| t.to_string()).unwrap_or_default();
     // In babel, the last explicitly loaded language is the main language.
+    // Prefer \opt@babel.sty (explicit package options) over \bbl@loaded
+    // (which may only contain class-option languages).
+    let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
     let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
-      .rfind(|s| !s.is_empty()).unwrap_or_default();
-    let lang_name = if !loaded_last.is_empty() && loaded_last != "nil" {
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    let lang_name = if !pkg_last.is_empty() {
+      pkg_last
+    } else if !loaded_last.is_empty() {
       loaded_last
     } else if main != "nil" && !main.is_empty() {
       main
