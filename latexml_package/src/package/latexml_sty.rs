@@ -32,10 +32,11 @@ fn compile_declare_pattern(body_text: &str) -> String {
     } else {
       format!("text()='{}'", base.replace('\'', "&apos;"))
     };
-    // Internal DOM: XMApp[@role='POSTSUBSCRIPT'](base, sub).
-    // Nested predicates (child::*[text()='x']) fail in our XPath (known bug).
-    // We match all POSTSUBSCRIPT and filter by first-child text via _wildcard_base attr.
-    return format!("descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT']");
+    // Internal DOM: ... <XMTok>x</XMTok> <XMApp role="POSTSUBSCRIPT"><sub/></XMApp>
+    // Match the base token; POSTSUBSCRIPT check done in Rust (XPath nested predicates buggy).
+    return format!(
+      "descendant-or-self::*[local-name()='XMTok' and {text_pred}]"
+    );
   }
   // Pattern: `\accent{\WildCard}` (accented wildcard)
   // e.g. $\hat{\WildCard}$, $\widehat{\WildCard}$
@@ -48,10 +49,20 @@ fn compile_declare_pattern(body_text: &str) -> String {
     }
   }
   // Pattern: subscripted with braced wildcards `TOKEN_{\WildCard}` or `TOKEN_{\WildCard,\WildCard}`
+  // Pattern: subscripted with braced wildcards `TOKEN_{\WildCard}` or `TOKEN_{\WildCard,\WildCard}`
   if body_text.contains("_{\\WildCard") {
-    return format!(
-      "descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT']"
-    );
+    if let Some(idx) = body_text.find("_{") {
+      let base = body_text[..idx].trim();
+      let text_pred = if base.starts_with('\\') {
+        let cmd = base.trim_start_matches('\\');
+        format!("@meaning='{cmd}'")
+      } else {
+        format!("text()='{}'", base.replace('\'', "&apos;"))
+      };
+      return format!(
+        "descendant-or-self::*[local-name()='XMTok' and {text_pred}]"
+      );
+    }
   }
   // Fallback: return empty (wildcard pattern not recognized)
   // The caller will skip creating the rewrite rule.
@@ -275,9 +286,6 @@ LoadDefinitions!({
         // Check if pattern contains \WildCard
         let has_wildcard = body_text.contains("WildCard");
         let xpath = if has_wildcard {
-          // Compile via domToXPath: absorb digested body into temp document,
-          // extract XMath content, convert to XPath + wildcard paths.
-          // For now, use the digested body to build XPath.
           compile_declare_pattern(&body_text)
         } else {
           // Simple single-token pattern
@@ -306,17 +314,22 @@ LoadDefinitions!({
             // For subscript pattern `x_\WildCard`: wildcard is 3rd child of matched XMApp
             // For accent pattern `\hat{\WildCard}`: wildcard is 2nd child
             if body_text.contains('_') && body_text.contains("\\WildCard") {
-              Some(vec![vec![1usize]]) // 1st child (internal: POSTSUBSCRIPT has subscript as only child; base is prev sibling)
+              Some(vec![vec![2usize, 1]]) // sibling 2 (POSTSUBSCRIPT), child 1 (subscript content)
             } else if body_text.starts_with('\\') && body_text.contains("{\\WildCard}") {
               Some(vec![vec![2usize]]) // 2nd child (1=accent op, 2=wildcard)
             } else {
               None
             }
           } else { None };
+          // For subscript patterns, select_count=2 (base + POSTSUBSCRIPT)
+          let select_count = if has_wildcard && body_text.contains('_') {
+            Some(2usize)
+          } else { None };
           let rewrite = Rewrite::new("math", RewriteOptions {
             xpath: Some(xpath),
             attributes_map: Some(attrs),
             wildcard_paths,
+            select_count,
             ..RewriteOptions::default()
           });
           unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);

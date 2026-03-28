@@ -326,27 +326,40 @@ impl Rewrite {
         Select => {
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
+            if self.options.wildcard_paths.is_some() {
+                matches.len(), self.options.select_count, &xpath[..xpath.len().min(80)]);
+            }
             let wilds = self.options.wildcard_paths.clone();
             let base_filter = self.options.attributes_map.as_ref()
               .and_then(|a| a.get("_wildcard_base").cloned());
+            let is_wild = wilds.is_some();
             for node in matches {
               if node.has_attribute("_matched") {
+                if is_wild {
+                }
                 continue;
               }
               if let Some(ref base) = base_filter {
-                // Base token is the PREVIOUS SIBLING of the POSTSUBSCRIPT XMApp.
-                // Internal DOM: ... <XMTok>x</XMTok> <XMApp role="POSTSUBSCRIPT"><sub/></XMApp>
+                // For POSTSUBSCRIPT patterns: base is prev sibling
+                // For base-token patterns: no filter needed (XPath already checks)
                 let prev_text = node.get_prev_sibling()
                   .map(|s| s.get_content()).unwrap_or_default();
                 if prev_text != *base {
                   continue;
                 }
               }
-              // TODO: For wildcard patterns, the Select clause needs to match the
-              // ENTIRE subscript expression (base + POSTSUBSCRIPT XMApp) as nmatched=2,
-              // not just the POSTSUBSCRIPT XMApp alone. The XMDual wrapper should wrap
-              // both the base token and its subscript. This requires select_count=2
-              // and proper sibling-group handling in set_attributes_wild.
+              // For subscript wildcard, check that next sibling is POSTSUBSCRIPT
+              if wilds.is_some() && self.options.select_count == Some(2) {
+                let next_sib = node.get_next_sibling();
+                let next_role = next_sib.as_ref()
+                  .and_then(|s| s.get_property("role"));
+                let has_post_sub = next_role.as_deref() == Some("POSTSUBSCRIPT");
+                if !has_post_sub {
+                    node.get_content(), next_role,
+                    next_sib.as_ref().map(|s| s.get_name()));
+                  continue;
+                }
+              }
               let marked = if let Some(ref wpaths) = wilds {
                 mark_wildcards(&node, wpaths)
               } else {
@@ -432,7 +445,6 @@ impl Rewrite {
             let is_wildcard_pattern = attrs.contains_key("_wildcard_pattern");
             let has_wc = tree.has_attribute("_has_wildcards");
             if is_wildcard_pattern {
-              eprintln!("ATTR: is_wild_pat=true, _has_wildcards={}, matched={}, name={}",
                 has_wc, tree.has_attribute("_matched"), tree.get_name());
             }
             if is_wildcard_pattern && has_wc {
