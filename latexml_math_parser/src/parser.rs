@@ -1228,7 +1228,9 @@ fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Resu
         None => continue,
       };
       // Find the element with matching key (non-XMRef)
-      let xpath = format!("descendant::*[@{}='{}'][not(self::ltx:XMRef)]", attr_name, key);
+      // Note: not(self::ltx:XMRef) may fail with namespace prefix in nested
+      // predicates (XPath bug). Use local-name() check instead.
+      let xpath = format!("descendant::*[@{}='{}'][not(local-name()='XMRef')]", attr_name, key);
       let targets = document.findnodes(&xpath, Some(mathnode));
       if let Some(mut target) = targets.into_iter().next() {
         // Ensure target has xml:id

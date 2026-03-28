@@ -3240,13 +3240,38 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
 fn qm_fenced(
   meaning: &'static str,
   mut args_xm: Vec<Option<XM>>,
-  stuff: Vec<XM>,
+  mut stuff: Vec<XM>,
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let op = XProps { meaning: Some(Cow::Borrowed(meaning)), ..XProps::default() };
   let mut arg_refs: Vec<&mut XM> = args_xm.iter_mut().filter_map(|a| a.as_mut()).collect();
   let refs: Vec<Option<XM>> = create_xmrefs(arg_refs.as_mut_slice(), ctxt)?
     .into_iter().map(Option::Some).collect();
+  // Propagate xmkey from content args to matching presentation stuff items.
+  // create_xmrefs sets xmkey on the args in args_xm, but stuff was cloned
+  // before that. The presentation-side elements need _xmkey so that the
+  // base_xmath createXMRefs handler can resolve the content-side XMRef.
+  for arg in args_xm.iter().flatten() {
+    let arg_xmkey = match arg {
+      XM::Token(p, _) | XM::Apply(_, _, p, _) | XM::Dual(_, _, p, _) | XM::Wrap(_, p, _) => p.xmkey.clone(),
+      _ => None,
+    };
+    if let Some(ref key) = arg_xmkey {
+      // Find the corresponding non-delimiter item in stuff
+      for item in stuff.iter_mut() {
+        match item {
+          XM::Token(props, _) | XM::Apply(_, _, props, _)
+          | XM::Dual(_, _, props, _) | XM::Wrap(_, props, _) => {
+            if props.xmkey.is_none() && props.id.is_none() {
+              props.xmkey = Some(key.clone());
+              break;
+            }
+          },
+          _ => {},
+        }
+      }
+    }
+  }
   Ok(Some(XM::Dual(
     Box::new(XM::Apply(op.into(), Args(refs), XProps::default(), Meta::default())),
     Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
