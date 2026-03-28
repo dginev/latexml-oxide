@@ -253,9 +253,9 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 | 6 | 672 | math/sampler | xml:id renumbering + VERTBAR ambiguity + \hskip/\phantom |
 | 7 | 548 | babel/greek | Missing cbgreek/LGR font encoding decode |
 | 8 | 458 | alignment/listing | Font nesting in delimiters/strings, showspaces, math in comments |
-| 9 | 399 | alignment/split | XMWrap structure (needs parse_kludgeScripts_rec) |
-| 10 | 345 | parse/operators | Scripted operators (needs parse_kludgeScripts_rec) |
-| 11 | 333 | parse/kludge | Scripted operators (needs parse_kludgeScripts_rec) |
+| 9 | 358 | parse/operators | Script attachment done; remaining: parse structure, xml:id |
+| 10 | 319 | alignment/split | XMWrap structure, xml:id diffs |
+| 11 | 2 | parse/kludge | **DONE** — only %\n tex attr divergence remains |
 | 12 | 310 | alignment/ncases | VERTBAR conditional vs multirelation + \ref expansion |
 | 13 | 290 | parse/qm | QM subject-area pragma (C8) |
 | 14 | 256 | ams/genfracs | Math parse structure diffs |
@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 14,790 total diff lines across 70 non-zero paired tests vs Perl. 194/264 paired zero-diff tests (73%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs.
+**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. 14,333 total diff lines across 70 non-zero paired tests vs Perl (was 14,790). 194/264 paired zero-diff tests (73%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -459,7 +459,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 ### Math parser gaps
 
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
-- [ ] C3. `parse_kludgeScripts_rec` — Perl's `parse_kludge` (MathParser.pm L530-589) attaches POSTSUPERSCRIPT/POSTSUBSCRIPT to their preceding base as `XMApp(SUPERSCRIPTOP, base, script)` before the math parser runs. Rust's kludge only does OPEN/CLOSE matching but skips script attachment entirely. Affects: kludge (333), operators (345), split (399), functions (235). Previous attempt failed because DOM operations corrupted parsed content trees — needs array-based (non-DOM) intermediate representation like Perl's `[$node, $role]` pairs.
+- [x] C3. `parse_kludgeScripts_rec` — **DONE**: Ported Perl MathParser.pm L568-589. Script attachment in parse_kludge: POSTSUPERSCRIPT/POSTSUBSCRIPT attach to preceding base as XMApp(SCRIPTOP, base, content). FLOAT scripts become pre-scripts. Removed duplicate parse_kludge from core_interface.rs. kludge.xml: 333→2 diffs. split: 399→319. Overall -457 diffs.
 - [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
 - [x] C5. `\times` vs invisible-times precedence — **FIXED**: semantic pruning in `infix_apply_nary`: when MULOP is division and right operand is invisible-times, extract first factor as divisor and chain rest. `a/bc` → `(a/b)*c` matching Perl's left-to-right. parse/terms.xml: 28→0 diffs (new zero-diff test).
 - [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
