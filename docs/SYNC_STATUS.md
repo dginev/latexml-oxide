@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~14,173 total diff lines across 70 non-zero paired tests vs Perl (was 14,333). 194/264 paired zero-diff tests (73%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs.
+**Status (2026-03-28):** 319 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~19,100 total diff lines across 83 non-zero of 298 paired tests vs Perl (was 19,272). 215/298 paired zero-diff tests (72%). Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs. Most remaining non-zero diffs are xml:id renumbering (OXIDIZED_DESIGN #9) and `%&#10;` tex attr (intentional).
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
