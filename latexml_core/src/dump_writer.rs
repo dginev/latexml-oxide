@@ -94,7 +94,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
     }
     Stored::Expandable(exp) => {
       if let Some(crate::definition::ExpansionBody::Tokens(tks)) = exp.get_expansion() {
-        let cs_name = exp.get_cs().with_str(|s| url_encode(s));
+        let cs_name = exp.get_cs().with_str(url_encode);
         let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
         let nargs = exp.get_num_args();
         let mut flags = String::new();
@@ -138,7 +138,7 @@ fn fillcode_index(fc: &crate::common::glue::FillCode) -> usize {
 
 fn serialize_token(t: &crate::token::Token) -> String {
   let cc: u8 = t.get_catcode().into();
-  let text = t.with_str(|s| url_encode(s));
+  let text = t.with_str(url_encode);
   format!("{}:{}", cc, text)
 }
 

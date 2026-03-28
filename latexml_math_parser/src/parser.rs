@@ -599,8 +599,8 @@ impl MathParser {
 
     // Perl: @stack = ([], []) — extra empty level handles unmatched leading CLOSEs.
     let mut stack: Vec<Vec<Item>> = vec![vec![], vec![]];
-    let roles: Vec<String> = children.iter().map(|c| get_grammatical_role(c)).collect();
-    let mut iter = children.into_iter().zip(roles.into_iter()).peekable();
+    let roles: Vec<String> = children.iter().map(get_grammatical_role).collect();
+    let mut iter = children.into_iter().zip(roles).peekable();
 
     while iter.peek().is_some() || stack.len() > 1 {
       let pair_opt = iter.next();

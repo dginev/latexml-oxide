@@ -30,7 +30,7 @@ LoadDefinitions!({
         gullet::read_token()?
       } else if s.starts_with('\\') && (s == "\\big" || s == "\\Big"
           || s == "\\bigg" || s == "\\Bigg") {
-        size_cs = Some(t.clone());
+        size_cs = Some(*t);
         gullet::read_token()?
       } else {
         first // No size prefix — this IS the delimiter token
@@ -44,7 +44,7 @@ LoadDefinitions!({
         "|" => ("|", "|", false),
         _ => {
           // TeX-style {} arg or unknown — unread and use default braces
-          gullet::unread_one(t.clone());
+          gullet::unread_one(*t);
           ("\\{", "\\}", true)
         }
       }
@@ -73,10 +73,10 @@ LoadDefinitions!({
       result.extend(Tokenize!(close_s).unlist());
     } else if let Some(ref sz) = size_cs {
       // Explicit size: \big( ... \big)
-      result.push(sz.clone());
+      result.push(*sz);
       result.extend(Tokenize!(open_s).unlist());
       result.extend(arg.unlist());
-      result.push(sz.clone());
+      result.push(*sz);
       result.extend(Tokenize!(close_s).unlist());
     } else {
       // Default: \left ... \right

@@ -109,9 +109,7 @@ LoadDefinitions!({
       def_macro(T_CS!("\\cf@encoding"), None,
         gullet::do_expand(T_CS!("\\f@encoding"))?, None)?;
       // Merge language into font → produces xml:lang attribute
-      let mut font = Font::default();
-      font.language = Some(Cow::Owned(code.to_string()));
-      merge_font(font);
+      merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
       // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init
       // in \lx@babel@activate@lang@post. Setting it here would override the main
       // language whenever \selectlanguage is called in the document body.

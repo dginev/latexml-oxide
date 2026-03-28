@@ -388,7 +388,7 @@ LoadDefinitions!({
           map.insert("dash", Stored::String(arena::pin(&rest[..end])));
         }
       }
-      map.insert("thick", Stored::String(arena::pin(&s!("{thick}"))));
+      map.insert("thick", Stored::String(arena::pin(s!("{thick}"))));
       Ok(map)
     },
     mode => "text"

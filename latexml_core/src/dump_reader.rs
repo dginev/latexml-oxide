@@ -253,7 +253,7 @@ fn parse_token(s: &str) -> Result<Token, String> {
   let (cc_str, text) = s.split_once(':').ok_or("Missing ':' in token")?;
   let cc: u8 = cc_str.parse().map_err(|e| format!("Bad CC: {}", e))?;
   Ok(Token {
-    text: arena::pin(&url_decode(text)),
+    text: arena::pin(url_decode(text)),
     code: Catcode::from(cc),
   })
 }

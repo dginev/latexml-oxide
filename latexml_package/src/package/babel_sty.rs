@@ -48,7 +48,7 @@ LoadDefinitions!({
       let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
         .map(|t| t.to_string()).unwrap_or_default();
       let last_lang = loaded.split(',').map(|s| s.trim())
-        .filter(|s| !s.is_empty()).last().unwrap_or("").to_string();
+        .rfind(|s| !s.is_empty()).unwrap_or("").to_string();
       if !last_lang.is_empty() {
         gullet::unread(Tokenize!(&s!("\\main@language{{{}}}", last_lang)));
       }
@@ -148,13 +148,13 @@ LoadDefinitions!({
     } else if loaded.contains(',') || loaded.len() > 2 {
       // Multiple languages loaded: last one is main
       loaded.split(',').map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty()).last().unwrap_or_default()
+        .rfind(|s| !s.is_empty()).unwrap_or_default()
     } else if !loaded.is_empty() && loaded != "nil" {
       loaded
     } else {
       // Fallback: use class options
       opt_list.split(',').map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty()).last().unwrap_or_default()
+        .rfind(|s| !s.is_empty()).unwrap_or_default()
     };
     if !lang.is_empty() {
       // Temporarily set @ to LETTER for CS name tokenization
@@ -277,7 +277,7 @@ LoadDefinitions!({
     // over \bbl@main@language (which may come from class options).
     // In babel, the last explicitly loaded language is the main language.
     let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty()).last().unwrap_or_default();
+      .rfind(|s| !s.is_empty()).unwrap_or_default();
     let lang_name = if !loaded_last.is_empty() && loaded_last != "nil" {
       loaded_last
     } else if main != "nil" && !main.is_empty() {
@@ -302,9 +302,7 @@ LoadDefinitions!({
     // Set DOCUMENT_LANGUAGE for xml:lang on <document>
     if let Some(code) = iso {
       state::assign_value("DOCUMENT_LANGUAGE", Stored::from(code.to_string()), Some(Scope::Global));
-      let mut font = Font::default();
-      font.language = Some(Cow::Owned(code.to_string()));
-      merge_font(font);
+      merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
     // Call \captions<lang> to set localized names
     let captions_cs = s!("\\captions{}", lang_name);

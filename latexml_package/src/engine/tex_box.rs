@@ -566,10 +566,8 @@ LoadDefinitions!({
               w_em, h_em, d_em))?;
         }
       }
-      if !has_dims {
-        if !node.has_attribute("overflow") {
-          document.set_attribute(node, "overflow", "visible")?;
-        }
+      if !has_dims && !node.has_attribute("overflow") {
+        document.set_attribute(node, "overflow", "visible")?;
       }
     }
   );

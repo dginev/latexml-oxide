@@ -812,7 +812,7 @@ LoadDefinitions!({
     }
     // Process OptionalKeyVals: before_row, after_row
     // Perl: wraps in \text{...} for before/after each row
-    let opt_keyvals: Option<KeyVals> = opt_kv.into();
+    let opt_keyvals: Option<KeyVals> = opt_kv;
     let mut before_row_toks: Vec<Token> = Vec::new();
     let mut after_row_toks: Vec<Token> = Vec::new();
     if let Some(okv) = opt_keyvals {

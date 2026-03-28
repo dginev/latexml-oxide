@@ -1670,7 +1670,7 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
   // This ensures `\let \foo \bar` where \bar is expandable makes \foo expandable too.
   // Follow at most 50 \let links to avoid cycles.
   if let Stored::Token(ref target) = meaning {
-    let mut current = target.clone();
+    let mut current = *target;
     for _ in 0..50 {
       match lookup_meaning(&current) {
         Some(Stored::Token(next)) => {
@@ -2415,10 +2415,8 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Chars(_) | Strings(_) => true,
     // Expandable: serializable only if it has a Tokens body (not a Closure body)
     Expandable(exp) => {
-      match exp.get_expansion() {
-        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None => true,
-        _ => false,
-      }
+      matches!(exp.get_expansion(),
+        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None)
     },
     // Register: serializable (stores value + type, no closures)
     Register(_) => true,
