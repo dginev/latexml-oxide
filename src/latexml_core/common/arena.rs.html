@@ -1,161 +1,227 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/arena.rs`."><title>arena.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (362211dc2 2026-03-24)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>arena.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! An arena for interning strings
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/arena.rs`."><title>arena.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (fda6d37bb 2026-03-27)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>arena.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! An arena for interning strings
 <a href=#2 id=2 data-nosnippet>2</a>//!  (global, mutable, single thread only)
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! Note: works under the assumption of a single threaded, short-lived process,
 <a href=#5 id=5 data-nosnippet>5</a>//! where memory starvation will not be an issue. It would need a hard reset if the same process
 <a href=#6 id=6 data-nosnippet>6</a>//! does multiple conversions, and a different implementation if one needs a thread-local arena.
-<a href=#7 id=7 data-nosnippet>7</a>
-<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">use </span>std::cell::RefCell;
-<a href=#9 id=9 data-nosnippet>9</a>
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>rustc_hash::FxHasher;
-<a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>once_cell::sync::Lazy;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>std::hash::BuildHasherDefault;
-<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>string_interner::StringInterner;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>string_interner::backend::BufferBackend;
+<a href=#7 id=7 data-nosnippet>7</a>//!
+<a href=#8 id=8 data-nosnippet>8</a>//! ## Borrow safety
+<a href=#9 id=9 data-nosnippet>9</a>//!
+<a href=#10 id=10 data-nosnippet>10</a>//! All arena access goes through `with_arena_mut()`, which acquires a mutable
+<a href=#11 id=11 data-nosnippet>11</a>//! borrow from `RefCell` on first call and caches the raw pointer in a
+<a href=#12 id=12 data-nosnippet>12</a>//! thread-local `Cell`. Re-entrant calls (e.g., `pin()` inside a `with()`
+<a href=#13 id=13 data-nosnippet>13</a>//! closure) reuse the cached pointer without touching `RefCell`, eliminating
+<a href=#14 id=14 data-nosnippet>14</a>//! borrow conflicts entirely. A RAII guard clears the pointer on scope exit
+<a href=#15 id=15 data-nosnippet>15</a>//! (including panics), so the invariant holds through unwinds.
 <a href=#16 id=16 data-nosnippet>16</a>
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub mod </span>data;
-<a href=#18 id=18 data-nosnippet>18</a><span class="kw">pub use </span>data::{SymHashMap, SymStr};
-<a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a><span class="attr">#[thread_local]
-<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">static </span>ARENA: Lazy&lt;RefCell&lt;StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;&gt;&gt; =
-<a href=#22 id=22 data-nosnippet>22</a>  Lazy::new(|| {
-<a href=#23 id=23 data-nosnippet>23</a>    RefCell::new(StringInterner::with_capacity_and_hasher(
-<a href=#24 id=24 data-nosnippet>24</a>      <span class="number">32_768</span>,
-<a href=#25 id=25 data-nosnippet>25</a>      BuildHasherDefault::&lt;FxHasher&gt;::default(),
-<a href=#26 id=26 data-nosnippet>26</a>    ))
-<a href=#27 id=27 data-nosnippet>27</a>  });
-<a href=#28 id=28 data-nosnippet>28</a><span class="doccomment">/// the unique symbol for str value "ANY"
-<a href=#29 id=29 data-nosnippet>29</a></span><span class="attr">#[thread_local]
-<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub static </span>ANY_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ANY"</span>));
-<a href=#31 id=31 data-nosnippet>31</a><span class="doccomment">/// the unique symbol for str value "#PCDATA"
-<a href=#32 id=32 data-nosnippet>32</a></span><span class="attr">#[thread_local]
-<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">pub static </span>H_PCDATA_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#PCDATA"</span>));
-<a href=#34 id=34 data-nosnippet>34</a><span class="doccomment">/// the unique symbol for str value "#COMMENT"
-<a href=#35 id=35 data-nosnippet>35</a></span><span class="attr">#[thread_local]
-<a href=#36 id=36 data-nosnippet>36</a></span><span class="kw">pub static </span>H_COMMENT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#Comment"</span>));
-<a href=#37 id=37 data-nosnippet>37</a><span class="doccomment">/// the unique symbol for the empty str value ""
-<a href=#38 id=38 data-nosnippet>38</a></span><span class="attr">#[thread_local]
-<a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">pub static </span>EMPTY_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">""</span>));
-<a href=#40 id=40 data-nosnippet>40</a><span class="doccomment">/// the unique symbol for str value "ltx:*"
-<a href=#41 id=41 data-nosnippet>41</a></span><span class="attr">#[thread_local]
-<a href=#42 id=42 data-nosnippet>42</a></span><span class="kw">pub static </span>LTX_STAR_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:*"</span>));
-<a href=#43 id=43 data-nosnippet>43</a><span class="doccomment">/// the unique symbol for str value "ltx:p"
-<a href=#44 id=44 data-nosnippet>44</a></span><span class="attr">#[thread_local]
-<a href=#45 id=45 data-nosnippet>45</a></span><span class="kw">pub static </span>LTX_P_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:p"</span>));
-<a href=#46 id=46 data-nosnippet>46</a><span class="doccomment">/// the unique symbol for str value "\globaldefs"
-<a href=#47 id=47 data-nosnippet>47</a></span><span class="attr">#[thread_local]
-<a href=#48 id=48 data-nosnippet>48</a></span><span class="kw">pub static </span>GLOBAL_DEFS_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\globaldefs"</span>));
-<a href=#49 id=49 data-nosnippet>49</a><span class="doccomment">/// the unique symbol for str value "\dont_expand"
-<a href=#50 id=50 data-nosnippet>50</a></span><span class="attr">#[thread_local]
-<a href=#51 id=51 data-nosnippet>51</a></span><span class="kw">pub static </span>DONT_EXPAND_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\dont_expand"</span>));
-<a href=#52 id=52 data-nosnippet>52</a><span class="doccomment">/// the unique symbol for str value "_WildCard_"
-<a href=#53 id=53 data-nosnippet>53</a></span><span class="attr">#[thread_local]
-<a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub static </span>WILD_CARD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"_WildCard_"</span>));
-<a href=#55 id=55 data-nosnippet>55</a><span class="doccomment">/// the unique symbol for str value "#ProcessingInstruction"
-<a href=#56 id=56 data-nosnippet>56</a></span><span class="attr">#[thread_local]
-<a href=#57 id=57 data-nosnippet>57</a></span><span class="kw">pub static </span>H_PI_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#ProcessingInstruction"</span>));
-<a href=#58 id=58 data-nosnippet>58</a><span class="doccomment">/// the unique symbol for str value "#DTD"
-<a href=#59 id=59 data-nosnippet>59</a></span><span class="attr">#[thread_local]
-<a href=#60 id=60 data-nosnippet>60</a></span><span class="kw">pub static </span>H_DTD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#DTD"</span>));
-<a href=#61 id=61 data-nosnippet>61</a><span class="doccomment">/// the unique symbol for str value "#Document"
-<a href=#62 id=62 data-nosnippet>62</a></span><span class="attr">#[thread_local]
-<a href=#63 id=63 data-nosnippet>63</a></span><span class="kw">pub static </span>H_DOC_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#Document"</span>));
-<a href=#64 id=64 data-nosnippet>64</a><span class="doccomment">/// the unique symbol for str value "#default"
-<a href=#65 id=65 data-nosnippet>65</a></span><span class="attr">#[thread_local]
-<a href=#66 id=66 data-nosnippet>66</a></span><span class="kw">pub static </span>H_DEFAULT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#default"</span>));
-<a href=#67 id=67 data-nosnippet>67</a><span class="doccomment">/// the unique symbol for str value "ltx:_Capture_"
-<a href=#68 id=68 data-nosnippet>68</a></span><span class="attr">#[thread_local]
-<a href=#69 id=69 data-nosnippet>69</a></span><span class="kw">pub static </span>CAPTURE_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:_Capture_"</span>));
-<a href=#70 id=70 data-nosnippet>70</a><span class="doccomment">/// the unique symbol for str value "font"
-<a href=#71 id=71 data-nosnippet>71</a></span><span class="attr">#[thread_local]
-<a href=#72 id=72 data-nosnippet>72</a></span><span class="kw">pub static </span>FONT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"font"</span>));
-<a href=#73 id=73 data-nosnippet>73</a><span class="doccomment">/// the unique symbol for str value "xml:id"
-<a href=#74 id=74 data-nosnippet>74</a></span><span class="attr">#[thread_local]
-<a href=#75 id=75 data-nosnippet>75</a></span><span class="kw">pub static </span>XML_ID_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"xml:id"</span>));
-<a href=#76 id=76 data-nosnippet>76</a><span class="doccomment">/// the unique symbol for str value "RelaxNG"
-<a href=#77 id=77 data-nosnippet>77</a></span><span class="attr">#[thread_local]
-<a href=#78 id=78 data-nosnippet>78</a></span><span class="kw">pub static </span>RELAXNG_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"RelaxNG"</span>));
-<a href=#79 id=79 data-nosnippet>79</a><span class="doccomment">/// the unique symbol for str value "text"
-<a href=#80 id=80 data-nosnippet>80</a></span><span class="attr">#[thread_local]
-<a href=#81 id=81 data-nosnippet>81</a></span><span class="kw">pub static </span>TEXT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"text"</span>));
-<a href=#82 id=82 data-nosnippet>82</a><span class="doccomment">/// the unique symbol for str value "math"
+<a href=#17 id=17 data-nosnippet>17</a></span><span class="kw">use </span>std::cell::{Cell, RefCell};
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span>rustc_hash::FxHasher;
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>once_cell::sync::Lazy;
+<a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span>std::hash::BuildHasherDefault;
+<a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>string_interner::StringInterner;
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">use </span>string_interner::backend::BufferBackend;
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a><span class="kw">pub mod </span>data;
+<a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub use </span>data::{SymHashMap, SymStr};
+<a href=#28 id=28 data-nosnippet>28</a>
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">type </span>Interner = StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;;
+<a href=#30 id=30 data-nosnippet>30</a>
+<a href=#31 id=31 data-nosnippet>31</a><span class="attr">#[thread_local]
+<a href=#32 id=32 data-nosnippet>32</a></span><span class="kw">static </span>ARENA: Lazy&lt;RefCell&lt;Interner&gt;&gt; =
+<a href=#33 id=33 data-nosnippet>33</a>  Lazy::new(|| {
+<a href=#34 id=34 data-nosnippet>34</a>    RefCell::new(StringInterner::with_capacity_and_hasher(
+<a href=#35 id=35 data-nosnippet>35</a>      <span class="number">32_768</span>,
+<a href=#36 id=36 data-nosnippet>36</a>      BuildHasherDefault::&lt;FxHasher&gt;::default(),
+<a href=#37 id=37 data-nosnippet>37</a>    ))
+<a href=#38 id=38 data-nosnippet>38</a>  });
+<a href=#39 id=39 data-nosnippet>39</a>
+<a href=#40 id=40 data-nosnippet>40</a><span class="doccomment">/// Cached raw pointer to the arena's inner interner, valid only while the
+<a href=#41 id=41 data-nosnippet>41</a>/// outermost `with_arena_mut` holds its `RefMut` guard. Null when idle.
+<a href=#42 id=42 data-nosnippet>42</a></span><span class="attr">#[thread_local]
+<a href=#43 id=43 data-nosnippet>43</a></span><span class="kw">static </span>ACTIVE: Cell&lt;<span class="kw-2">*mut </span>Interner&gt; = Cell::new(std::ptr::null_mut());
+<a href=#44 id=44 data-nosnippet>44</a>
+<a href=#45 id=45 data-nosnippet>45</a><span class="doccomment">/// RAII guard that clears `ACTIVE` on drop (including during unwinds).
+<a href=#46 id=46 data-nosnippet>46</a>/// Declared AFTER the `RefMut` guard so it drops FIRST (Rust drops in
+<a href=#47 id=47 data-nosnippet>47</a>/// reverse declaration order), ensuring no window where ACTIVE is stale.
+<a href=#48 id=48 data-nosnippet>48</a></span><span class="kw">struct </span>ArenaCleanup;
+<a href=#49 id=49 data-nosnippet>49</a><span class="kw">impl </span>Drop <span class="kw">for </span>ArenaCleanup {
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#51 id=51 data-nosnippet>51</a>    ACTIVE.set(std::ptr::null_mut());
+<a href=#52 id=52 data-nosnippet>52</a>  }
+<a href=#53 id=53 data-nosnippet>53</a>}
+<a href=#54 id=54 data-nosnippet>54</a>
+<a href=#55 id=55 data-nosnippet>55</a><span class="doccomment">/// Execute `f` with mutable access to the interner.
+<a href=#56 id=56 data-nosnippet>56</a>/// First (outermost) call acquires `borrow_mut()` from `RefCell` and caches
+<a href=#57 id=57 data-nosnippet>57</a>/// the raw pointer. Re-entrant calls reuse the cached pointer — no RefCell
+<a href=#58 id=58 data-nosnippet>58</a>/// interaction, so no borrow conflicts.
+<a href=#59 id=59 data-nosnippet>59</a>///
+<a href=#60 id=60 data-nosnippet>60</a>/// # Safety
+<a href=#61 id=61 data-nosnippet>61</a>/// Sound because: (1) `#[thread_local]` guarantees single-thread access,
+<a href=#62 id=62 data-nosnippet>62</a>/// (2) `ArenaCleanup` clears the pointer before the `RefMut` drops,
+<a href=#63 id=63 data-nosnippet>63</a>/// (3) re-entrant access is strictly nested (same stack, same thread).
+<a href=#64 id=64 data-nosnippet>64</a></span><span class="attr">#[inline]
+<a href=#65 id=65 data-nosnippet>65</a></span><span class="kw">fn </span>with_arena_mut&lt;R&gt;(f: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>Interner) -&gt; R) -&gt; R {
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">let </span>ptr = ACTIVE.get();
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="kw">if </span>!ptr.is_null() {
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="comment">// Re-entrant call — reuse existing mutable borrow.
+<a href=#69 id=69 data-nosnippet>69</a>    // SAFETY: ptr was set by the outermost call on this thread, which still
+<a href=#70 id=70 data-nosnippet>70</a>    // holds the RefMut guard. We are nested on the same stack.
+<a href=#71 id=71 data-nosnippet>71</a>    </span>f(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>ptr })
+<a href=#72 id=72 data-nosnippet>72</a>  } <span class="kw">else </span>{
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="comment">// Outermost call — acquire mutable borrow from RefCell.
+<a href=#74 id=74 data-nosnippet>74</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>guard = ARENA.borrow_mut();
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>ptr = <span class="kw-2">&amp;mut *</span>guard <span class="kw">as </span><span class="kw-2">*mut </span>Interner;
+<a href=#76 id=76 data-nosnippet>76</a>    ACTIVE.set(ptr);
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span>_cleanup = ArenaCleanup; <span class="comment">// drops BEFORE guard (reverse order)
+<a href=#78 id=78 data-nosnippet>78</a>    </span>f(<span class="kw-2">&amp;mut *</span>guard)
+<a href=#79 id=79 data-nosnippet>79</a>  }
+<a href=#80 id=80 data-nosnippet>80</a>}
+<a href=#81 id=81 data-nosnippet>81</a>
+<a href=#82 id=82 data-nosnippet>82</a><span class="doccomment">/// the unique symbol for str value "ANY"
 <a href=#83 id=83 data-nosnippet>83</a></span><span class="attr">#[thread_local]
-<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">pub static </span>MATH_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"math"</span>));
-<a href=#85 id=85 data-nosnippet>85</a>
-<a href=#86 id=86 data-nosnippet>86</a><span class="doccomment">/// Assign a static str into the arena, returning a unique symbol associated with it
-<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">pub fn </span>pin_static(text: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; SymStr { ARENA.borrow_mut().get_or_intern_static(text) }
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a><span class="doccomment">/// Assign a string into the arena, returning a unique symbol associated with it
-<a href=#90 id=90 data-nosnippet>90</a></span><span class="kw">pub fn </span>pin&lt;S: AsRef&lt;str&gt;&gt;(text: S) -&gt; SymStr { ARENA.borrow_mut().get_or_intern(text) }
-<a href=#91 id=91 data-nosnippet>91</a>
-<a href=#92 id=92 data-nosnippet>92</a><span class="kw">pub fn </span>pin_char(c: char) -&gt; SymStr {
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="kw">let </span>s = c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
-<a href=#95 id=95 data-nosnippet>95</a>  pin(s)
-<a href=#96 id=96 data-nosnippet>96</a>}
-<a href=#97 id=97 data-nosnippet>97</a>
-<a href=#98 id=98 data-nosnippet>98</a><span class="kw">pub fn </span>into_pin&lt;T: ToString&gt;(num: T) -&gt; SymStr { pin(num.to_string()) }
-<a href=#99 id=99 data-nosnippet>99</a>
-<a href=#100 id=100 data-nosnippet>100</a><span class="kw">pub fn </span>with&lt;R, FnR&gt;(sym: SymStr, caller: FnR) -&gt; R
-<a href=#101 id=101 data-nosnippet>101</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
-<a href=#102 id=102 data-nosnippet>102</a>  caller(
-<a href=#103 id=103 data-nosnippet>103</a>    ARENA
-<a href=#104 id=104 data-nosnippet>104</a>      .borrow()
-<a href=#105 id=105 data-nosnippet>105</a>      .resolve(sym)
-<a href=#106 id=106 data-nosnippet>106</a>      .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>),
-<a href=#107 id=107 data-nosnippet>107</a>  )
-<a href=#108 id=108 data-nosnippet>108</a>}
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a><span class="kw">pub fn </span>with2&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, caller: FnR) -&gt; R
-<a href=#111 id=111 data-nosnippet>111</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) -&gt; R {
-<a href=#112 id=112 data-nosnippet>112</a>  <span class="kw">let </span>arena = ARENA.borrow();
-<a href=#113 id=113 data-nosnippet>113</a>  <span class="kw">let </span>str1 = arena
-<a href=#114 id=114 data-nosnippet>114</a>    .resolve(sym1)
-<a href=#115 id=115 data-nosnippet>115</a>    .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-<a href=#116 id=116 data-nosnippet>116</a>  <span class="kw">let </span>str2 = arena
-<a href=#117 id=117 data-nosnippet>117</a>    .resolve(sym2)
-<a href=#118 id=118 data-nosnippet>118</a>    .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-<a href=#119 id=119 data-nosnippet>119</a>  caller(str1, str2)
-<a href=#120 id=120 data-nosnippet>120</a>}
-<a href=#121 id=121 data-nosnippet>121</a><span class="kw">pub fn </span>with3&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, sym3: SymStr, caller: FnR) -&gt; R
-<a href=#122 id=122 data-nosnippet>122</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) -&gt; R {
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="kw">let </span>arena = ARENA.borrow();
-<a href=#124 id=124 data-nosnippet>124</a>  <span class="kw">let </span>str1 = arena
-<a href=#125 id=125 data-nosnippet>125</a>    .resolve(sym1)
-<a href=#126 id=126 data-nosnippet>126</a>    .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="kw">let </span>str2 = arena
-<a href=#128 id=128 data-nosnippet>128</a>    .resolve(sym2)
-<a href=#129 id=129 data-nosnippet>129</a>    .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-<a href=#130 id=130 data-nosnippet>130</a>  <span class="kw">let </span>str3 = arena
-<a href=#131 id=131 data-nosnippet>131</a>    .resolve(sym3)
-<a href=#132 id=132 data-nosnippet>132</a>    .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>);
-<a href=#133 id=133 data-nosnippet>133</a>  caller(str1, str2, str3)
-<a href=#134 id=134 data-nosnippet>134</a>}
-<a href=#135 id=135 data-nosnippet>135</a>
-<a href=#136 id=136 data-nosnippet>136</a><span class="kw">pub fn </span>with_many&lt;R, FnR&gt;(syms: <span class="kw-2">&amp;</span>[SymStr], caller: FnR) -&gt; R
-<a href=#137 id=137 data-nosnippet>137</a><span class="kw">where </span>FnR: FnOnce(Vec&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; R {
-<a href=#138 id=138 data-nosnippet>138</a>  <span class="kw">let </span>arena = ARENA.borrow();
-<a href=#139 id=139 data-nosnippet>139</a>  <span class="kw">let </span>many = syms
-<a href=#140 id=140 data-nosnippet>140</a>    .iter()
-<a href=#141 id=141 data-nosnippet>141</a>    .map(|sym| {
-<a href=#142 id=142 data-nosnippet>142</a>      arena
-<a href=#143 id=143 data-nosnippet>143</a>        .resolve(<span class="kw-2">*</span>sym)
-<a href=#144 id=144 data-nosnippet>144</a>        .expect(<span class="string">"arena::with should only be called when the string is guaranteed to be allocated."</span>)
-<a href=#145 id=145 data-nosnippet>145</a>    })
-<a href=#146 id=146 data-nosnippet>146</a>    .collect();
-<a href=#147 id=147 data-nosnippet>147</a>  caller(many)
+<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">pub static </span>ANY_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ANY"</span>));
+<a href=#85 id=85 data-nosnippet>85</a><span class="doccomment">/// the unique symbol for str value "#PCDATA"
+<a href=#86 id=86 data-nosnippet>86</a></span><span class="attr">#[thread_local]
+<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">pub static </span>H_PCDATA_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#PCDATA"</span>));
+<a href=#88 id=88 data-nosnippet>88</a><span class="doccomment">/// the unique symbol for str value "#COMMENT"
+<a href=#89 id=89 data-nosnippet>89</a></span><span class="attr">#[thread_local]
+<a href=#90 id=90 data-nosnippet>90</a></span><span class="kw">pub static </span>H_COMMENT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#Comment"</span>));
+<a href=#91 id=91 data-nosnippet>91</a><span class="doccomment">/// the unique symbol for the empty str value ""
+<a href=#92 id=92 data-nosnippet>92</a></span><span class="attr">#[thread_local]
+<a href=#93 id=93 data-nosnippet>93</a></span><span class="kw">pub static </span>EMPTY_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">""</span>));
+<a href=#94 id=94 data-nosnippet>94</a><span class="doccomment">/// the unique symbol for str value "ltx:*"
+<a href=#95 id=95 data-nosnippet>95</a></span><span class="attr">#[thread_local]
+<a href=#96 id=96 data-nosnippet>96</a></span><span class="kw">pub static </span>LTX_STAR_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:*"</span>));
+<a href=#97 id=97 data-nosnippet>97</a><span class="doccomment">/// the unique symbol for str value "ltx:p"
+<a href=#98 id=98 data-nosnippet>98</a></span><span class="attr">#[thread_local]
+<a href=#99 id=99 data-nosnippet>99</a></span><span class="kw">pub static </span>LTX_P_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:p"</span>));
+<a href=#100 id=100 data-nosnippet>100</a><span class="doccomment">/// the unique symbol for str value "\globaldefs"
+<a href=#101 id=101 data-nosnippet>101</a></span><span class="attr">#[thread_local]
+<a href=#102 id=102 data-nosnippet>102</a></span><span class="kw">pub static </span>GLOBAL_DEFS_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\globaldefs"</span>));
+<a href=#103 id=103 data-nosnippet>103</a><span class="doccomment">/// the unique symbol for str value "\dont_expand"
+<a href=#104 id=104 data-nosnippet>104</a></span><span class="attr">#[thread_local]
+<a href=#105 id=105 data-nosnippet>105</a></span><span class="kw">pub static </span>DONT_EXPAND_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"\\dont_expand"</span>));
+<a href=#106 id=106 data-nosnippet>106</a><span class="doccomment">/// the unique symbol for str value "_WildCard_"
+<a href=#107 id=107 data-nosnippet>107</a></span><span class="attr">#[thread_local]
+<a href=#108 id=108 data-nosnippet>108</a></span><span class="kw">pub static </span>WILD_CARD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"_WildCard_"</span>));
+<a href=#109 id=109 data-nosnippet>109</a><span class="doccomment">/// the unique symbol for str value "#ProcessingInstruction"
+<a href=#110 id=110 data-nosnippet>110</a></span><span class="attr">#[thread_local]
+<a href=#111 id=111 data-nosnippet>111</a></span><span class="kw">pub static </span>H_PI_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#ProcessingInstruction"</span>));
+<a href=#112 id=112 data-nosnippet>112</a><span class="doccomment">/// the unique symbol for str value "#DTD"
+<a href=#113 id=113 data-nosnippet>113</a></span><span class="attr">#[thread_local]
+<a href=#114 id=114 data-nosnippet>114</a></span><span class="kw">pub static </span>H_DTD_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#DTD"</span>));
+<a href=#115 id=115 data-nosnippet>115</a><span class="doccomment">/// the unique symbol for str value "#Document"
+<a href=#116 id=116 data-nosnippet>116</a></span><span class="attr">#[thread_local]
+<a href=#117 id=117 data-nosnippet>117</a></span><span class="kw">pub static </span>H_DOC_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#Document"</span>));
+<a href=#118 id=118 data-nosnippet>118</a><span class="doccomment">/// the unique symbol for str value "#default"
+<a href=#119 id=119 data-nosnippet>119</a></span><span class="attr">#[thread_local]
+<a href=#120 id=120 data-nosnippet>120</a></span><span class="kw">pub static </span>H_DEFAULT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"#default"</span>));
+<a href=#121 id=121 data-nosnippet>121</a><span class="doccomment">/// the unique symbol for str value "ltx:_Capture_"
+<a href=#122 id=122 data-nosnippet>122</a></span><span class="attr">#[thread_local]
+<a href=#123 id=123 data-nosnippet>123</a></span><span class="kw">pub static </span>CAPTURE_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"ltx:_Capture_"</span>));
+<a href=#124 id=124 data-nosnippet>124</a><span class="doccomment">/// the unique symbol for str value "font"
+<a href=#125 id=125 data-nosnippet>125</a></span><span class="attr">#[thread_local]
+<a href=#126 id=126 data-nosnippet>126</a></span><span class="kw">pub static </span>FONT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"font"</span>));
+<a href=#127 id=127 data-nosnippet>127</a><span class="doccomment">/// the unique symbol for str value "xml:id"
+<a href=#128 id=128 data-nosnippet>128</a></span><span class="attr">#[thread_local]
+<a href=#129 id=129 data-nosnippet>129</a></span><span class="kw">pub static </span>XML_ID_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"xml:id"</span>));
+<a href=#130 id=130 data-nosnippet>130</a><span class="doccomment">/// the unique symbol for str value "RelaxNG"
+<a href=#131 id=131 data-nosnippet>131</a></span><span class="attr">#[thread_local]
+<a href=#132 id=132 data-nosnippet>132</a></span><span class="kw">pub static </span>RELAXNG_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"RelaxNG"</span>));
+<a href=#133 id=133 data-nosnippet>133</a><span class="doccomment">/// the unique symbol for str value "text"
+<a href=#134 id=134 data-nosnippet>134</a></span><span class="attr">#[thread_local]
+<a href=#135 id=135 data-nosnippet>135</a></span><span class="kw">pub static </span>TEXT_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"text"</span>));
+<a href=#136 id=136 data-nosnippet>136</a><span class="doccomment">/// the unique symbol for str value "math"
+<a href=#137 id=137 data-nosnippet>137</a></span><span class="attr">#[thread_local]
+<a href=#138 id=138 data-nosnippet>138</a></span><span class="kw">pub static </span>MATH_SYM: Lazy&lt;SymStr&gt; = Lazy::new(|| pin_static(<span class="string">"math"</span>));
+<a href=#139 id=139 data-nosnippet>139</a>
+<a href=#140 id=140 data-nosnippet>140</a><span class="doccomment">/// Assign a static str into the arena, returning a unique symbol.
+<a href=#141 id=141 data-nosnippet>141</a></span><span class="kw">pub fn </span>pin_static(text: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; SymStr {
+<a href=#142 id=142 data-nosnippet>142</a>  with_arena_mut(|arena| arena.get_or_intern_static(text))
+<a href=#143 id=143 data-nosnippet>143</a>}
+<a href=#144 id=144 data-nosnippet>144</a>
+<a href=#145 id=145 data-nosnippet>145</a><span class="doccomment">/// Assign a string into the arena, returning a unique symbol.
+<a href=#146 id=146 data-nosnippet>146</a></span><span class="kw">pub fn </span>pin&lt;S: AsRef&lt;str&gt;&gt;(text: S) -&gt; SymStr {
+<a href=#147 id=147 data-nosnippet>147</a>  with_arena_mut(|arena| arena.get_or_intern(text))
 <a href=#148 id=148 data-nosnippet>148</a>}
 <a href=#149 id=149 data-nosnippet>149</a>
-<a href=#150 id=150 data-nosnippet>150</a><span class="kw">pub fn </span>to_string(sym: SymStr) -&gt; String {
-<a href=#151 id=151 data-nosnippet>151</a>  ARENA
-<a href=#152 id=152 data-nosnippet>152</a>    .borrow()
-<a href=#153 id=153 data-nosnippet>153</a>    .resolve(sym)
-<a href=#154 id=154 data-nosnippet>154</a>    .expect(<span class="string">"arena::to_string should only be called when the string is guaranteed to be allocated."</span>)
-<a href=#155 id=155 data-nosnippet>155</a>    .to_owned()
-<a href=#156 id=156 data-nosnippet>156</a>}
+<a href=#150 id=150 data-nosnippet>150</a><span class="kw">pub fn </span>pin_char(c: char) -&gt; SymStr {
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">4</span>];
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="kw">let </span>s = c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
+<a href=#153 id=153 data-nosnippet>153</a>  pin(s)
+<a href=#154 id=154 data-nosnippet>154</a>}
+<a href=#155 id=155 data-nosnippet>155</a>
+<a href=#156 id=156 data-nosnippet>156</a><span class="kw">pub fn </span>into_pin&lt;T: ToString&gt;(num: T) -&gt; SymStr { pin(num.to_string()) }
 <a href=#157 id=157 data-nosnippet>157</a>
-<a href=#158 id=158 data-nosnippet>158</a><span class="kw">pub fn </span>join(syms: <span class="kw-2">&amp;</span>[SymStr], sep: <span class="kw-2">&amp;</span>str) -&gt; String { with_many(syms, |strs| strs.join(sep)) }
-<a href=#159 id=159 data-nosnippet>159</a>
-<a href=#160 id=160 data-nosnippet>160</a><span class="kw">pub fn </span>len() -&gt; usize { ARENA.borrow().len() }
+<a href=#158 id=158 data-nosnippet>158</a><span class="doccomment">/// Resolve a symbol and call the closure with a `&amp;str` reference.
+<a href=#159 id=159 data-nosnippet>159</a>/// The closure may safely call `pin()` or any other arena function —
+<a href=#160 id=160 data-nosnippet>160</a>/// re-entrant access reuses the cached borrow.
+<a href=#161 id=161 data-nosnippet>161</a></span><span class="kw">pub fn </span>with&lt;R, FnR&gt;(sym: SymStr, caller: FnR) -&gt; R
+<a href=#162 id=162 data-nosnippet>162</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
+<a href=#163 id=163 data-nosnippet>163</a>  with_arena_mut(|arena| {
+<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>s = arena
+<a href=#165 id=165 data-nosnippet>165</a>      .resolve(sym)
+<a href=#166 id=166 data-nosnippet>166</a>      .expect(<span class="string">"arena::with: symbol not found in arena"</span>);
+<a href=#167 id=167 data-nosnippet>167</a>    caller(s)
+<a href=#168 id=168 data-nosnippet>168</a>  })
+<a href=#169 id=169 data-nosnippet>169</a>}
+<a href=#170 id=170 data-nosnippet>170</a>
+<a href=#171 id=171 data-nosnippet>171</a><span class="kw">pub fn </span>with2&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, caller: FnR) -&gt; R
+<a href=#172 id=172 data-nosnippet>172</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) -&gt; R {
+<a href=#173 id=173 data-nosnippet>173</a>  with_arena_mut(|arena| {
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="kw">let </span>s1 = arena
+<a href=#175 id=175 data-nosnippet>175</a>      .resolve(sym1)
+<a href=#176 id=176 data-nosnippet>176</a>      .expect(<span class="string">"arena::with2: symbol not found in arena"</span>);
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">let </span>s2 = arena
+<a href=#178 id=178 data-nosnippet>178</a>      .resolve(sym2)
+<a href=#179 id=179 data-nosnippet>179</a>      .expect(<span class="string">"arena::with2: symbol not found in arena"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>    caller(s1, s2)
+<a href=#181 id=181 data-nosnippet>181</a>  })
+<a href=#182 id=182 data-nosnippet>182</a>}
+<a href=#183 id=183 data-nosnippet>183</a>
+<a href=#184 id=184 data-nosnippet>184</a><span class="kw">pub fn </span>with3&lt;R, FnR&gt;(sym1: SymStr, sym2: SymStr, sym3: SymStr, caller: FnR) -&gt; R
+<a href=#185 id=185 data-nosnippet>185</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) -&gt; R {
+<a href=#186 id=186 data-nosnippet>186</a>  with_arena_mut(|arena| {
+<a href=#187 id=187 data-nosnippet>187</a>    <span class="kw">let </span>s1 = arena
+<a href=#188 id=188 data-nosnippet>188</a>      .resolve(sym1)
+<a href=#189 id=189 data-nosnippet>189</a>      .expect(<span class="string">"arena::with3: symbol not found in arena"</span>);
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">let </span>s2 = arena
+<a href=#191 id=191 data-nosnippet>191</a>      .resolve(sym2)
+<a href=#192 id=192 data-nosnippet>192</a>      .expect(<span class="string">"arena::with3: symbol not found in arena"</span>);
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="kw">let </span>s3 = arena
+<a href=#194 id=194 data-nosnippet>194</a>      .resolve(sym3)
+<a href=#195 id=195 data-nosnippet>195</a>      .expect(<span class="string">"arena::with3: symbol not found in arena"</span>);
+<a href=#196 id=196 data-nosnippet>196</a>    caller(s1, s2, s3)
+<a href=#197 id=197 data-nosnippet>197</a>  })
+<a href=#198 id=198 data-nosnippet>198</a>}
+<a href=#199 id=199 data-nosnippet>199</a>
+<a href=#200 id=200 data-nosnippet>200</a><span class="kw">pub fn </span>with_many&lt;R, FnR&gt;(syms: <span class="kw-2">&amp;</span>[SymStr], caller: FnR) -&gt; R
+<a href=#201 id=201 data-nosnippet>201</a><span class="kw">where </span>FnR: FnOnce(Vec&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; R {
+<a href=#202 id=202 data-nosnippet>202</a>  with_arena_mut(|arena| {
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">let </span>many = syms
+<a href=#204 id=204 data-nosnippet>204</a>      .iter()
+<a href=#205 id=205 data-nosnippet>205</a>      .map(|sym| {
+<a href=#206 id=206 data-nosnippet>206</a>        arena
+<a href=#207 id=207 data-nosnippet>207</a>          .resolve(<span class="kw-2">*</span>sym)
+<a href=#208 id=208 data-nosnippet>208</a>          .expect(<span class="string">"arena::with_many: symbol not found in arena"</span>)
+<a href=#209 id=209 data-nosnippet>209</a>      })
+<a href=#210 id=210 data-nosnippet>210</a>      .collect();
+<a href=#211 id=211 data-nosnippet>211</a>    caller(many)
+<a href=#212 id=212 data-nosnippet>212</a>  })
+<a href=#213 id=213 data-nosnippet>213</a>}
+<a href=#214 id=214 data-nosnippet>214</a>
+<a href=#215 id=215 data-nosnippet>215</a><span class="kw">pub fn </span>to_string(sym: SymStr) -&gt; String {
+<a href=#216 id=216 data-nosnippet>216</a>  with_arena_mut(|arena| {
+<a href=#217 id=217 data-nosnippet>217</a>    arena
+<a href=#218 id=218 data-nosnippet>218</a>      .resolve(sym)
+<a href=#219 id=219 data-nosnippet>219</a>      .expect(<span class="string">"arena::to_string: symbol not found in arena"</span>)
+<a href=#220 id=220 data-nosnippet>220</a>      .to_owned()
+<a href=#221 id=221 data-nosnippet>221</a>  })
+<a href=#222 id=222 data-nosnippet>222</a>}
+<a href=#223 id=223 data-nosnippet>223</a>
+<a href=#224 id=224 data-nosnippet>224</a><span class="kw">pub fn </span>join(syms: <span class="kw-2">&amp;</span>[SymStr], sep: <span class="kw-2">&amp;</span>str) -&gt; String { with_many(syms, |strs| strs.join(sep)) }
+<a href=#225 id=225 data-nosnippet>225</a>
+<a href=#226 id=226 data-nosnippet>226</a><span class="kw">pub fn </span>len() -&gt; usize { with_arena_mut(|arena| arena.len()) }
 </code></pre></div></section></main></body></html>

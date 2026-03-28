@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_xm_arg_id","i_arg","i_dual","i_wrap","i_xmarg","i_xmref"]};

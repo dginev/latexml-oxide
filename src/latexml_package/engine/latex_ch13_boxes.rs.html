@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch13_boxes.rs`."><title>latex_ch13_boxes.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (362211dc2 2026-03-24)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch13_boxes.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch13_boxes.rs`."><title>latex_ch13_boxes.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (fda6d37bb 2026-03-27)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch13_boxes.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="comment">//**********************************************************************
 <a href=#4 id=4 data-nosnippet>4</a>// C.13 Lengths, Spaces and Boxes
@@ -337,118 +337,139 @@
 <a href=#337 id=337 data-nosnippet>337</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"width" </span>=&gt; width, <span class="string">"vattach" </span>=&gt; translate_attachment(<span class="kw-2">&amp;</span>attachment)))
 <a href=#338 id=338 data-nosnippet>338</a>    },
 <a href=#339 id=339 data-nosnippet>339</a>    <span class="comment">// Sizer: width from arg #4 (Dimension), height/depth from body (arg #5)
-<a href=#340 id=340 data-nosnippet>340</a>    </span>sizer =&gt; sub[whatsit] {
-<a href=#341 id=341 data-nosnippet>341</a>      <span class="comment">// Width from the "width" property (arg #4 Dimension)
-<a href=#342 id=342 data-nosnippet>342</a>      </span><span class="kw">let </span>w = whatsit.get_property(<span class="string">"width"</span>)
-<a href=#343 id=343 data-nosnippet>343</a>        .and_then(|s| Dimension::new_f64(Dimension::spec_to_f64(<span class="kw-2">&amp;</span>s.to_string()).ok()<span class="question-mark">?</span>).into())
-<a href=#344 id=344 data-nosnippet>344</a>        .unwrap_or_default();
-<a href=#345 id=345 data-nosnippet>345</a>      <span class="comment">// Height/depth from body (arg #5 VBoxContents)
-<a href=#346 id=346 data-nosnippet>346</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(body) = whatsit.get_arg(<span class="number">5</span>) {
-<a href=#347 id=347 data-nosnippet>347</a>        <span class="kw">let </span>w_val = w.value_of();
-<a href=#348 id=348 data-nosnippet>348</a>        <span class="kw">if </span>w_val &gt; <span class="number">0 </span>{
-<a href=#349 id=349 data-nosnippet>349</a>          <span class="comment">// Approximate paragraph height: measure total unwrapped width,
-<a href=#350 id=350 data-nosnippet>350</a>          // estimate lines, use \baselineskip for line height.
-<a href=#351 id=351 data-nosnippet>351</a>          </span><span class="kw">let </span>(body_w, body_h, body_d) = body.compute_size(SymHashMap::default())<span class="question-mark">?</span>;
-<a href=#352 id=352 data-nosnippet>352</a>          <span class="kw">let </span>total_w = body_w.value_of();
-<a href=#353 id=353 data-nosnippet>353</a>          <span class="kw">if </span>total_w &gt; w_val {
-<a href=#354 id=354 data-nosnippet>354</a>            <span class="comment">// Paragraph wrapping: estimate number of lines
-<a href=#355 id=355 data-nosnippet>355</a>            </span><span class="kw">let </span>num_lines = ((total_w <span class="kw">as </span>f64) / (w_val <span class="kw">as </span>f64)).ceil() <span class="kw">as </span>i64;
-<a href=#356 id=356 data-nosnippet>356</a>            <span class="comment">// Use \baselineskip (typically 12pt = 786432 sp) for line height
-<a href=#357 id=357 data-nosnippet>357</a>            </span><span class="kw">let </span>baseline_skip = state::lookup_dimension(<span class="string">"\\baselineskip"</span>)
-<a href=#358 id=358 data-nosnippet>358</a>              .unwrap_or(Dimension::new(<span class="number">786432</span>)); <span class="comment">// 12pt default
-<a href=#359 id=359 data-nosnippet>359</a>            </span><span class="kw">let </span>line_h = baseline_skip.value_of();
-<a href=#360 id=360 data-nosnippet>360</a>            <span class="kw">let </span>total_h = num_lines * line_h;
-<a href=#361 id=361 data-nosnippet>361</a>            <span class="comment">// Height = first line ascender, depth = rest
-<a href=#362 id=362 data-nosnippet>362</a>            </span><span class="kw">let </span>first_line_h = body_h.value_of().max(line_h * <span class="number">2 </span>/ <span class="number">3</span>); <span class="comment">// ~ascender
-<a href=#363 id=363 data-nosnippet>363</a>            </span><span class="kw">let </span>d = Dimension::new(total_h - first_line_h);
-<a href=#364 id=364 data-nosnippet>364</a>            <span class="kw">let </span>h = Dimension::new(first_line_h);
-<a href=#365 id=365 data-nosnippet>365</a>            <span class="prelude-val">Ok</span>((w, h, d))
+<a href=#340 id=340 data-nosnippet>340</a>    // Perl: sizer =&gt; '#5' — uses font.computeBoxesSize(body, vattach =&gt; ..., width =&gt; ...)
+<a href=#341 id=341 data-nosnippet>341</a>    // which does proper line breaking and vattach transformation.
+<a href=#342 id=342 data-nosnippet>342</a>    </span>sizer =&gt; sub[whatsit] {
+<a href=#343 id=343 data-nosnippet>343</a>      <span class="comment">// Width from the "width" property (arg #4 Dimension)
+<a href=#344 id=344 data-nosnippet>344</a>      </span><span class="kw">let </span>w = whatsit.get_property(<span class="string">"width"</span>)
+<a href=#345 id=345 data-nosnippet>345</a>        .and_then(|s| Dimension::new_f64(Dimension::spec_to_f64(<span class="kw-2">&amp;</span>s.to_string()).ok()<span class="question-mark">?</span>).into())
+<a href=#346 id=346 data-nosnippet>346</a>        .unwrap_or_default();
+<a href=#347 id=347 data-nosnippet>347</a>      <span class="comment">// Height/depth from body (arg #5 VBoxContents)
+<a href=#348 id=348 data-nosnippet>348</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(body) = whatsit.get_arg(<span class="number">5</span>) {
+<a href=#349 id=349 data-nosnippet>349</a>        <span class="kw">let </span>w_val = w.value_of();
+<a href=#350 id=350 data-nosnippet>350</a>        <span class="kw">if </span>w_val &gt; <span class="number">0 </span>{
+<a href=#351 id=351 data-nosnippet>351</a>          <span class="comment">// Approximate paragraph height: measure total unwrapped width,
+<a href=#352 id=352 data-nosnippet>352</a>          // estimate lines, use \baselineskip for line height.
+<a href=#353 id=353 data-nosnippet>353</a>          </span><span class="kw">let </span>(body_w, body_h, body_d) = body.compute_size(SymHashMap::default())<span class="question-mark">?</span>;
+<a href=#354 id=354 data-nosnippet>354</a>          <span class="kw">let </span>total_w = body_w.value_of();
+<a href=#355 id=355 data-nosnippet>355</a>          <span class="kw">let </span>(<span class="kw-2">mut </span>ht, <span class="kw-2">mut </span>dp) = <span class="kw">if </span>total_w &gt; w_val {
+<a href=#356 id=356 data-nosnippet>356</a>            <span class="comment">// Paragraph wrapping: estimate number of lines
+<a href=#357 id=357 data-nosnippet>357</a>            </span><span class="kw">let </span>num_lines = ((total_w <span class="kw">as </span>f64) / (w_val <span class="kw">as </span>f64)).ceil() <span class="kw">as </span>i64;
+<a href=#358 id=358 data-nosnippet>358</a>            <span class="comment">// Use \baselineskip (typically 12pt = 786432 sp) for line height
+<a href=#359 id=359 data-nosnippet>359</a>            </span><span class="kw">let </span>baseline_skip = state::lookup_dimension(<span class="string">"\\baselineskip"</span>)
+<a href=#360 id=360 data-nosnippet>360</a>              .unwrap_or(Dimension::new(<span class="number">786432</span>)); <span class="comment">// 12pt default
+<a href=#361 id=361 data-nosnippet>361</a>            </span><span class="kw">let </span>line_h = baseline_skip.value_of();
+<a href=#362 id=362 data-nosnippet>362</a>            <span class="kw">let </span>total_h = num_lines * line_h;
+<a href=#363 id=363 data-nosnippet>363</a>            <span class="comment">// Default: top alignment (first line as height)
+<a href=#364 id=364 data-nosnippet>364</a>            </span><span class="kw">let </span>first_line_h = body_h.value_of().max(line_h * <span class="number">2 </span>/ <span class="number">3</span>);
+<a href=#365 id=365 data-nosnippet>365</a>            (first_line_h, total_h - first_line_h)
 <a href=#366 id=366 data-nosnippet>366</a>          } <span class="kw">else </span>{
-<a href=#367 id=367 data-nosnippet>367</a>            <span class="prelude-val">Ok</span>((w, body_h, body_d))
-<a href=#368 id=368 data-nosnippet>368</a>          }
-<a href=#369 id=369 data-nosnippet>369</a>        } <span class="kw">else </span>{
-<a href=#370 id=370 data-nosnippet>370</a>          <span class="kw">let </span>(<span class="kw">_</span>, h, d) = body.compute_size(SymHashMap::default())<span class="question-mark">?</span>;
-<a href=#371 id=371 data-nosnippet>371</a>          <span class="prelude-val">Ok</span>((w, h, d))
-<a href=#372 id=372 data-nosnippet>372</a>        }
-<a href=#373 id=373 data-nosnippet>373</a>      } <span class="kw">else </span>{
-<a href=#374 id=374 data-nosnippet>374</a>        <span class="prelude-val">Ok</span>((w, Dimension::default(), Dimension::default()))
-<a href=#375 id=375 data-nosnippet>375</a>      }
-<a href=#376 id=376 data-nosnippet>376</a>    },
-<a href=#377 id=377 data-nosnippet>377</a>    mode =&gt; <span class="string">"internal_vertical"</span>,
-<a href=#378 id=378 data-nosnippet>378</a>    before_digest =&gt; {
-<a href=#379 id=379 data-nosnippet>379</a>      <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\lx@newline"</span>);
-<a href=#380 id=380 data-nosnippet>380</a>    }
-<a href=#381 id=381 data-nosnippet>381</a>  );
-<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@parboxrestore"</span>, <span class="string">""</span>);
-<a href=#383 id=383 data-nosnippet>383</a>
-<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@minipage"</span>);
-<a href=#385 id=385 data-nosnippet>385</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@setminipage"</span>, <span class="string">""</span>);
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 4822-4846
-<a href=#387 id=387 data-nosnippet>387</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{minipage}[] OptionalUndigested [] {Dimension}"</span>,
-<a href=#388 id=388 data-nosnippet>388</a>    sub[document, args, props] {
-<a href=#389 id=389 data-nosnippet>389</a>      <span class="kw">let </span>attachment = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
-<a href=#390 id=390 data-nosnippet>390</a>      <span class="kw">let </span>vattach = translate_attachment(<span class="kw-2">&amp;</span>attachment);
-<a href=#391 id=391 data-nosnippet>391</a>      <span class="kw">let </span>width = props.get(<span class="string">"width"</span>).map(|w| w.to_string())
-<a href=#392 id=392 data-nosnippet>392</a>        .or_else(|| args.get(<span class="number">3</span>).and_then(|a| a.as_ref()).map(|a| a.to_attribute()))
-<a href=#393 id=393 data-nosnippet>393</a>        .unwrap_or_default();
-<a href=#394 id=394 data-nosnippet>394</a>      <span class="kw">let </span><span class="kw-2">mut </span>attr = <span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="string">"ltx_minipage"</span>);
-<a href=#395 id=395 data-nosnippet>395</a>      <span class="kw">if </span>!width.is_empty() { attr.insert(<span class="string">"width"</span>.to_string(), width); }
-<a href=#396 id=396 data-nosnippet>396</a>      attr.insert(<span class="string">"vattach"</span>.to_string(), vattach.to_string());
-<a href=#397 id=397 data-nosnippet>397</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = props.get(<span class="string">"body"</span>) {
-<a href=#398 id=398 data-nosnippet>398</a>        insert_block(document, body, attr)<span class="question-mark">?</span>;
-<a href=#399 id=399 data-nosnippet>399</a>      }
-<a href=#400 id=400 data-nosnippet>400</a>      <span class="prelude-val">Ok</span>(())
-<a href=#401 id=401 data-nosnippet>401</a>    },
-<a href=#402 id=402 data-nosnippet>402</a>    mode =&gt; <span class="string">"internal_vertical"</span>,
-<a href=#403 id=403 data-nosnippet>403</a>    before_digest =&gt; {
-<a href=#404 id=404 data-nosnippet>404</a>      stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@minipagetrue"</span>)))<span class="question-mark">?</span>;
-<a href=#405 id=405 data-nosnippet>405</a>    },
-<a href=#406 id=406 data-nosnippet>406</a>    after_digest_begin =&gt; sub[whatsit] {
-<a href=#407 id=407 data-nosnippet>407</a>      <span class="comment">// Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg
-<a href=#408 id=408 data-nosnippet>408</a>      </span><span class="kw">let </span>vattach = whatsit.get_arg(<span class="number">1</span>)
-<a href=#409 id=409 data-nosnippet>409</a>        .map(|a| translate_attachment(a.to_string()))
-<a href=#410 id=410 data-nosnippet>410</a>        .unwrap_or(<span class="string">"middle"</span>);
-<a href=#411 id=411 data-nosnippet>411</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(width_arg) = whatsit.get_arg(<span class="number">4</span>) {
-<a href=#412 id=412 data-nosnippet>412</a>        <span class="kw">let </span>width_val = width_arg.value_of();
-<a href=#413 id=413 data-nosnippet>413</a>        <span class="kw">let </span>dim = Dimension::new(width_val);
-<a href=#414 id=414 data-nosnippet>414</a>        <span class="kw">let </span>rv: RegisterValue = dim.into();
-<a href=#415 id=415 data-nosnippet>415</a>        state::assign_register(<span class="string">"\\hsize"</span>, rv.clone(), <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
-<a href=#416 id=416 data-nosnippet>416</a>        state::assign_register(<span class="string">"\\textwidth"</span>, rv.clone(), <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
-<a href=#417 id=417 data-nosnippet>417</a>        state::assign_register(<span class="string">"\\columnwidth"</span>, rv, <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
-<a href=#418 id=418 data-nosnippet>418</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::from(width_arg.to_attribute()));
-<a href=#419 id=419 data-nosnippet>419</a>      }
-<a href=#420 id=420 data-nosnippet>420</a>      whatsit.set_property(<span class="string">"vattach"</span>, Stored::from(vattach.to_string()));
-<a href=#421 id=421 data-nosnippet>421</a>      <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\lx@newline"</span>);
+<a href=#367 id=367 data-nosnippet>367</a>            (body_h.value_of(), body_d.value_of())
+<a href=#368 id=368 data-nosnippet>368</a>          };
+<a href=#369 id=369 data-nosnippet>369</a>          <span class="comment">// Perl Font.pm L793-800: apply vattach transformation
+<a href=#370 id=370 data-nosnippet>370</a>          </span><span class="kw">let </span>vattach = whatsit.get_property(<span class="string">"vattach"</span>)
+<a href=#371 id=371 data-nosnippet>371</a>            .map(|v| v.to_string())
+<a href=#372 id=372 data-nosnippet>372</a>            .unwrap_or_default();
+<a href=#373 id=373 data-nosnippet>373</a>          <span class="kw">let </span>total = ht + dp;
+<a href=#374 id=374 data-nosnippet>374</a>          <span class="kw">if </span>vattach == <span class="string">"middle" </span>{
+<a href=#375 id=375 data-nosnippet>375</a>            <span class="kw">let </span>font_size = lookup_font()
+<a href=#376 id=376 data-nosnippet>376</a>              .and_then(|f| f.get_size().map(|s| s <span class="kw">as </span>i64))
+<a href=#377 id=377 data-nosnippet>377</a>              .unwrap_or(<span class="number">10</span>);
+<a href=#378 id=378 data-nosnippet>378</a>            <span class="kw">let </span>hh = total / <span class="number">2</span>;
+<a href=#379 id=379 data-nosnippet>379</a>            <span class="kw">let </span>c = font_size * UNITY / <span class="number">4</span>; <span class="comment">// math axis ≈ size/4
+<a href=#380 id=380 data-nosnippet>380</a>            </span>ht = hh + c;
+<a href=#381 id=381 data-nosnippet>381</a>            dp = hh - c;
+<a href=#382 id=382 data-nosnippet>382</a>          } <span class="kw">else if </span>vattach == <span class="string">"bottom" </span>{
+<a href=#383 id=383 data-nosnippet>383</a>            <span class="comment">// Align to baseline of bottom row
+<a href=#384 id=384 data-nosnippet>384</a>            </span><span class="kw">let </span>last_line_d = body_d.value_of().min(total);
+<a href=#385 id=385 data-nosnippet>385</a>            dp = last_line_d;
+<a href=#386 id=386 data-nosnippet>386</a>            ht = total - dp;
+<a href=#387 id=387 data-nosnippet>387</a>          }
+<a href=#388 id=388 data-nosnippet>388</a>          <span class="comment">// else: "top"/"baseline" — keep first line as height (default above)
+<a href=#389 id=389 data-nosnippet>389</a>          </span><span class="prelude-val">Ok</span>((w, Dimension::new(ht), Dimension::new(dp)))
+<a href=#390 id=390 data-nosnippet>390</a>        } <span class="kw">else </span>{
+<a href=#391 id=391 data-nosnippet>391</a>          <span class="kw">let </span>(<span class="kw">_</span>, h, d) = body.compute_size(SymHashMap::default())<span class="question-mark">?</span>;
+<a href=#392 id=392 data-nosnippet>392</a>          <span class="prelude-val">Ok</span>((w, h, d))
+<a href=#393 id=393 data-nosnippet>393</a>        }
+<a href=#394 id=394 data-nosnippet>394</a>      } <span class="kw">else </span>{
+<a href=#395 id=395 data-nosnippet>395</a>        <span class="prelude-val">Ok</span>((w, Dimension::default(), Dimension::default()))
+<a href=#396 id=396 data-nosnippet>396</a>      }
+<a href=#397 id=397 data-nosnippet>397</a>    },
+<a href=#398 id=398 data-nosnippet>398</a>    mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>    before_digest =&gt; {
+<a href=#400 id=400 data-nosnippet>400</a>      <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\lx@newline"</span>);
+<a href=#401 id=401 data-nosnippet>401</a>    }
+<a href=#402 id=402 data-nosnippet>402</a>  );
+<a href=#403 id=403 data-nosnippet>403</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@parboxrestore"</span>, <span class="string">""</span>);
+<a href=#404 id=404 data-nosnippet>404</a>
+<a href=#405 id=405 data-nosnippet>405</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@minipage"</span>);
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@setminipage"</span>, <span class="string">""</span>);
+<a href=#407 id=407 data-nosnippet>407</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 4822-4846
+<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{minipage}[] OptionalUndigested [] {Dimension}"</span>,
+<a href=#409 id=409 data-nosnippet>409</a>    sub[document, args, props] {
+<a href=#410 id=410 data-nosnippet>410</a>      <span class="kw">let </span>attachment = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="kw">let </span>vattach = translate_attachment(<span class="kw-2">&amp;</span>attachment);
+<a href=#412 id=412 data-nosnippet>412</a>      <span class="kw">let </span>width = props.get(<span class="string">"width"</span>).map(|w| w.to_string())
+<a href=#413 id=413 data-nosnippet>413</a>        .or_else(|| args.get(<span class="number">3</span>).and_then(|a| a.as_ref()).map(|a| a.to_attribute()))
+<a href=#414 id=414 data-nosnippet>414</a>        .unwrap_or_default();
+<a href=#415 id=415 data-nosnippet>415</a>      <span class="kw">let </span><span class="kw-2">mut </span>attr = <span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="string">"ltx_minipage"</span>);
+<a href=#416 id=416 data-nosnippet>416</a>      <span class="kw">if </span>!width.is_empty() { attr.insert(<span class="string">"width"</span>.to_string(), width); }
+<a href=#417 id=417 data-nosnippet>417</a>      attr.insert(<span class="string">"vattach"</span>.to_string(), vattach.to_string());
+<a href=#418 id=418 data-nosnippet>418</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = props.get(<span class="string">"body"</span>) {
+<a href=#419 id=419 data-nosnippet>419</a>        insert_block(document, body, attr)<span class="question-mark">?</span>;
+<a href=#420 id=420 data-nosnippet>420</a>      }
+<a href=#421 id=421 data-nosnippet>421</a>      <span class="prelude-val">Ok</span>(())
 <a href=#422 id=422 data-nosnippet>422</a>    },
-<a href=#423 id=423 data-nosnippet>423</a>    after_digest_body =&gt; sub[whatsit] {
-<a href=#424 id=424 data-nosnippet>424</a>      <span class="comment">// Perl: afterDigestBody copies vattach from whatsit to body
-<a href=#425 id=425 data-nosnippet>425</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(vattach) = whatsit.get_property(<span class="string">"vattach"</span>).map(|v| v.into_owned()) {
-<a href=#426 id=426 data-nosnippet>426</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = whatsit.properties.get(<span class="string">"body"</span>).cloned() {
-<a href=#427 id=427 data-nosnippet>427</a>          <span class="kw">let </span><span class="kw-2">mut </span>body = body;
-<a href=#428 id=428 data-nosnippet>428</a>          body.set_property(<span class="string">"vattach"</span>, vattach);
-<a href=#429 id=429 data-nosnippet>429</a>        }
-<a href=#430 id=430 data-nosnippet>430</a>      }
-<a href=#431 id=431 data-nosnippet>431</a>    }
-<a href=#432 id=432 data-nosnippet>432</a>  );
-<a href=#433 id=433 data-nosnippet>433</a>
-<a href=#434 id=434 data-nosnippet>434</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\rule[Dimension]{Dimension}{Dimension}"</span>,
-<a href=#435 id=435 data-nosnippet>435</a>    <span class="string">"&lt;ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/&gt;"</span>,
-<a href=#436 id=436 data-nosnippet>436</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#437 id=437 data-nosnippet>437</a>    properties =&gt; sub[args] {
-<a href=#438 id=438 data-nosnippet>438</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
-<a href=#439 id=439 data-nosnippet>439</a>        <span class="string">"offset" </span>=&gt; args[<span class="number">0</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
-<a href=#440 id=440 data-nosnippet>440</a>        <span class="string">"width" </span>=&gt; args[<span class="number">1</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
-<a href=#441 id=441 data-nosnippet>441</a>        <span class="string">"height" </span>=&gt; args[<span class="number">2</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default()
-<a href=#442 id=442 data-nosnippet>442</a>      ))
-<a href=#443 id=443 data-nosnippet>443</a>    }
-<a href=#444 id=444 data-nosnippet>444</a>  );
-<a href=#445 id=445 data-nosnippet>445</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\raisebox{Dimension}[Dimension][Dimension]{}"</span>,
-<a href=#446 id=446 data-nosnippet>446</a>    <span class="string">"&lt;ltx:text yoffset='#1' _noautoclose='1'&gt;#4&lt;/ltx:text&gt;"</span>,
-<a href=#447 id=447 data-nosnippet>447</a>    mode         =&gt; <span class="string">"text"</span>, bounded =&gt; <span class="bool-val">true</span>,
-<a href=#448 id=448 data-nosnippet>448</a>    before_digest =&gt; {
-<a href=#449 id=449 data-nosnippet>449</a>      reenter_text_mode(<span class="bool-val">false</span>); }
-<a href=#450 id=450 data-nosnippet>450</a>    <span class="comment">// TODO
-<a href=#451 id=451 data-nosnippet>451</a>    // sizer        =&gt; sub { raisedSizer($_[0]-&gt;getArg(4), $_[0]-&gt;getArg(1)); }
-<a href=#452 id=452 data-nosnippet>452</a>  </span>);
-<a href=#453 id=453 data-nosnippet>453</a>});
+<a href=#423 id=423 data-nosnippet>423</a>    mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#424 id=424 data-nosnippet>424</a>    before_digest =&gt; {
+<a href=#425 id=425 data-nosnippet>425</a>      stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@minipagetrue"</span>)))<span class="question-mark">?</span>;
+<a href=#426 id=426 data-nosnippet>426</a>    },
+<a href=#427 id=427 data-nosnippet>427</a>    after_digest_begin =&gt; sub[whatsit] {
+<a href=#428 id=428 data-nosnippet>428</a>      <span class="comment">// Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg
+<a href=#429 id=429 data-nosnippet>429</a>      </span><span class="kw">let </span>vattach = whatsit.get_arg(<span class="number">1</span>)
+<a href=#430 id=430 data-nosnippet>430</a>        .map(|a| translate_attachment(a.to_string()))
+<a href=#431 id=431 data-nosnippet>431</a>        .unwrap_or(<span class="string">"middle"</span>);
+<a href=#432 id=432 data-nosnippet>432</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(width_arg) = whatsit.get_arg(<span class="number">4</span>) {
+<a href=#433 id=433 data-nosnippet>433</a>        <span class="kw">let </span>width_val = width_arg.value_of();
+<a href=#434 id=434 data-nosnippet>434</a>        <span class="kw">let </span>dim = Dimension::new(width_val);
+<a href=#435 id=435 data-nosnippet>435</a>        <span class="kw">let </span>rv: RegisterValue = dim.into();
+<a href=#436 id=436 data-nosnippet>436</a>        state::assign_register(<span class="string">"\\hsize"</span>, rv.clone(), <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
+<a href=#437 id=437 data-nosnippet>437</a>        state::assign_register(<span class="string">"\\textwidth"</span>, rv.clone(), <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
+<a href=#438 id=438 data-nosnippet>438</a>        state::assign_register(<span class="string">"\\columnwidth"</span>, rv, <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
+<a href=#439 id=439 data-nosnippet>439</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::from(width_arg.to_attribute()));
+<a href=#440 id=440 data-nosnippet>440</a>      }
+<a href=#441 id=441 data-nosnippet>441</a>      whatsit.set_property(<span class="string">"vattach"</span>, Stored::from(vattach.to_string()));
+<a href=#442 id=442 data-nosnippet>442</a>      <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\lx@newline"</span>);
+<a href=#443 id=443 data-nosnippet>443</a>    },
+<a href=#444 id=444 data-nosnippet>444</a>    after_digest_body =&gt; sub[whatsit] {
+<a href=#445 id=445 data-nosnippet>445</a>      <span class="comment">// Perl: afterDigestBody copies vattach from whatsit to body
+<a href=#446 id=446 data-nosnippet>446</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(vattach) = whatsit.get_property(<span class="string">"vattach"</span>).map(|v| v.into_owned()) {
+<a href=#447 id=447 data-nosnippet>447</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = whatsit.properties.get(<span class="string">"body"</span>).cloned() {
+<a href=#448 id=448 data-nosnippet>448</a>          <span class="kw">let </span><span class="kw-2">mut </span>body = body;
+<a href=#449 id=449 data-nosnippet>449</a>          body.set_property(<span class="string">"vattach"</span>, vattach);
+<a href=#450 id=450 data-nosnippet>450</a>        }
+<a href=#451 id=451 data-nosnippet>451</a>      }
+<a href=#452 id=452 data-nosnippet>452</a>    }
+<a href=#453 id=453 data-nosnippet>453</a>  );
+<a href=#454 id=454 data-nosnippet>454</a>
+<a href=#455 id=455 data-nosnippet>455</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\rule[Dimension]{Dimension}{Dimension}"</span>,
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="string">"&lt;ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/&gt;"</span>,
+<a href=#457 id=457 data-nosnippet>457</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#458 id=458 data-nosnippet>458</a>    properties =&gt; sub[args] {
+<a href=#459 id=459 data-nosnippet>459</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
+<a href=#460 id=460 data-nosnippet>460</a>        <span class="string">"offset" </span>=&gt; args[<span class="number">0</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
+<a href=#461 id=461 data-nosnippet>461</a>        <span class="string">"width" </span>=&gt; args[<span class="number">1</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
+<a href=#462 id=462 data-nosnippet>462</a>        <span class="string">"height" </span>=&gt; args[<span class="number">2</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default()
+<a href=#463 id=463 data-nosnippet>463</a>      ))
+<a href=#464 id=464 data-nosnippet>464</a>    }
+<a href=#465 id=465 data-nosnippet>465</a>  );
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\raisebox{Dimension}[Dimension][Dimension]{}"</span>,
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="string">"&lt;ltx:text yoffset='#1' _noautoclose='1'&gt;#4&lt;/ltx:text&gt;"</span>,
+<a href=#468 id=468 data-nosnippet>468</a>    mode         =&gt; <span class="string">"text"</span>, bounded =&gt; <span class="bool-val">true</span>,
+<a href=#469 id=469 data-nosnippet>469</a>    before_digest =&gt; {
+<a href=#470 id=470 data-nosnippet>470</a>      reenter_text_mode(<span class="bool-val">false</span>); }
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="comment">// TODO
+<a href=#472 id=472 data-nosnippet>472</a>    // sizer        =&gt; sub { raisedSizer($_[0]-&gt;getArg(4), $_[0]-&gt;getArg(1)); }
+<a href=#473 id=473 data-nosnippet>473</a>  </span>);
+<a href=#474 id=474 data-nosnippet>474</a>});
 </code></pre></div></section></main></body></html>
