@@ -28,6 +28,10 @@ LoadDefinitions!({
   // as <ltx:ERROR/> which corrupts babel's list accumulation → infinite recursion → OOM.
   RawTeX!(r"\def\bbl@languages{}");
 
+  // Pre-define babel internals that are normally set by the ini-based loading path
+  // (\babelprovide) which we skip. Without these, \ifcase\bbl@opt@hyphenmap fails.
+  RawTeX!(r"\chardef\bbl@opt@hyphenmap\@ne");
+
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // After babel loads, clear \@fontenc@load@list to prevent stray commas
