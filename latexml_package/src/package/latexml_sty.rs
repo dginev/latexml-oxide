@@ -106,25 +106,21 @@ LoadDefinitions!({
         .unwrap_or_default();
 
       // Generate declaration ID if tag or description present
-      // Perl: next_declaration_id via @XMDECL counter → section-scoped "S1.XMD4"
-      // TODO: Use proper section-scoped counter via RefStepID when available
+      // Perl: next_declaration_id → "S1.XMD4" format (section-scoped)
       let decl_id = if has_tag || has_description {
+        // Step the internal counter
         let n = lookup_int("XMDECL_COUNTER") + 1;
         assign_value("XMDECL_COUNTER",
           Stored::from(latexml_core::common::number::Number::new(n as i64)),
           Some(Scope::Global));
-        // Get current section prefix for scoped ID
-        let section_prefix = state::lookup_value("current_counter")
-          .map(|v| {
-            let ctr = v.to_string();
-            if ctr.is_empty() { String::new() }
-            else {
-              let num = lookup_int(&format!("\\c@UN{ctr}"));
-              if num > 0 { format!("S{num}.") } else { String::new() }
-            }
-          })
+        // Perl: the ID prefix comes from the parent counter chain. For XMDECL
+        // within a section, this is the section ID (e.g. "S1").
+        // Get the section-level ID by expanding \thesection@ID
+        let prefix = gullet::do_expand(T_CS!("\\thesection@ID"))
+          .ok().map(|t| { let s = t.to_string(); s.trim().to_string() })
           .unwrap_or_default();
-        format!("{section_prefix}XMD{n}")
+        let prefix = if prefix.is_empty() { String::new() } else { format!("{prefix}.") };
+        format!("{prefix}XMD{n}")
       } else {
         String::new()
       };
