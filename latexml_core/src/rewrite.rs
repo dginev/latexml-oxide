@@ -326,12 +326,25 @@ impl Rewrite {
         Select => {
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
+            if self.options.wildcard_paths.is_some() {
+            }
             let wilds = self.options.wildcard_paths.clone();
+            // Rust-side filter for wildcard base token (workaround for nested XPath predicate bug)
+            let base_filter = self.options.attributes_map.as_ref()
+              .and_then(|a| a.get("_wildcard_base").cloned());
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
               }
-              // Mark wildcard nodes before applying clauses
+              // Filter by first-child text if _wildcard_base is set
+              if let Some(ref base) = base_filter {
+                let children = node.get_child_nodes();
+                let first_text = children.first()
+                  .map(|c| c.get_content()).unwrap_or_default();
+                if first_text != *base {
+                  continue; // Skip: base token doesn't match
+                }
+              }
               let marked = if let Some(ref wpaths) = wilds {
                 mark_wildcards(&node, wpaths)
               } else {

@@ -32,12 +32,10 @@ fn compile_declare_pattern(body_text: &str) -> String {
     } else {
       format!("text()='{}'", base.replace('\'', "&apos;"))
     };
-    // Internal DOM stores subscripts as XMApp[@role='POSTSUBSCRIPT'] with 2 children:
-    // child 1 = base token, child 2 = subscript content (the wildcard).
-    // The serializer transforms this to XMApp > XMTok[SUBSCRIPTOP] + base + sub.
-    return format!(
-      "descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT' and child::*[{text_pred}]]"
-    );
+    // Internal DOM: XMApp[@role='POSTSUBSCRIPT'](base, sub).
+    // Nested predicates (child::*[text()='x']) fail in our XPath (known bug).
+    // We match all POSTSUBSCRIPT and filter by first-child text via _wildcard_base attr.
+    return format!("descendant-or-self::*[local-name()='XMApp' and @role='POSTSUBSCRIPT']");
   }
   // Pattern: `\accent{\WildCard}` (accented wildcard)
   // e.g. $\hat{\WildCard}$, $\widehat{\WildCard}$
@@ -298,6 +296,18 @@ LoadDefinitions!({
         };
         if has_wildcard {
           attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
+          // For subscript patterns, store the base token text for Rust-side filtering
+          // (XPath nested predicates are buggy in our libxml2 wrapper)
+          if body_text.contains('_') && body_text.contains("\\WildCard") {
+            let base = if let Some(b) = body_text.strip_suffix("_\\WildCard") {
+              b.trim().to_string()
+            } else if let Some(idx) = body_text.find("_{") {
+              body_text[..idx].trim().to_string()
+            } else { String::new() };
+            if !base.is_empty() {
+              attrs.insert("_wildcard_base".to_string(), base);
+            }
+          }
         }
         if !xpath.is_empty() && !attrs.is_empty() {
           // For wildcard patterns, compute the wildcard position paths
