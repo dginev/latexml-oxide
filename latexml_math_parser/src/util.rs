@@ -132,13 +132,13 @@ fn node_to_grammar_lexemes_ctx(
       // Track bigop tokens for bigop-specific script token emission
       let is_bigop = matches!(role.as_str(), "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP");
       last_was_bigop = is_bigop;
-      // Remap angle brackets to parentheses for parsing (grammar can't handle
-      // OPEN:langle without massive ambiguity, but OPEN:( works fine).
-      // The original node preserves the actual ⟨⟩ characters for XML output.
-      let lexeme = if role == "OPEN" && (text == "langle" || text == "⟨") {
-        format!("OPEN:(:{idx}")
-      } else if role == "CLOSE" && (text == "rangle" || text == "⟩") {
-        format!("CLOSE:):{idx}")
+      // Normalize langle/rangle meaning for consistent grammar matching.
+      // Do NOT remap to parentheses — langle_open/rangle_close tokens need
+      // distinct identity for QM bra-ket rules vs conditional probability.
+      let lexeme = if role == "OPEN" && text == "⟨" {
+        format!("OPEN:langle:{idx}")
+      } else if role == "CLOSE" && text == "⟩" {
+        format!("CLOSE:rangle:{idx}")
       } else {
         format!("{role}:{text}:{idx}").replace(' ', "")
       };

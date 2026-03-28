@@ -333,16 +333,25 @@
         </Math>
       </equation>
       <equation xml:id="S3.Ex13">
-        <Math class="ltx_math_unparsed" mode="display" tex="f\left(a\middle|b\right)" xml:id="S3.Ex13.m1">
+        <Math mode="display" tex="f\left(a\middle|b\right)" text="f@(conditional@(a, b))" xml:id="S3.Ex13.m1">
           <XMath>
-            <XMTok font="italic" role="FUNCTION">f</XMTok>
-            <XMWrap>
-              <XMTok role="OPEN" stretchy="true">(</XMTok>
-              <XMTok font="italic" role="ID">a</XMTok>
-              <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-              <XMTok font="italic" role="ID">b</XMTok>
-              <XMTok role="CLOSE" stretchy="true">)</XMTok>
-            </XMWrap>
+            <XMApp>
+              <XMTok font="italic" role="FUNCTION">f</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S3.Ex13.m1.1"/>
+                  <XMRef idref="S3.Ex13.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S3.Ex13.m1.1">a</XMTok>
+                  <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S3.Ex13.m1.2">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math>
       </equation>

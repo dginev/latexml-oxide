@@ -3288,9 +3288,6 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
 
 /// Dirac bra-ket notation helpers.
 /// All produce Apply(meaning, args) wrapped in XMDual with appropriate presentation.
-/// Currently unused — QM grammar rules are disabled due to RELOP ambiguity.
-/// Ready for when context-sensitive QM matching is implemented.
-#[allow(dead_code)]
 fn qm_fenced(
   meaning: &'static str,
   mut args_xm: Vec<Option<XM>>,
@@ -3362,7 +3359,6 @@ pub fn qm_ket(
 }
 
 /// `<a|b>` → inner-product@(a, b) — Perl MathGrammar L382-386
-#[allow(dead_code)]
 pub fn qm_braket(
   _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
@@ -3372,7 +3368,6 @@ pub fn qm_braket(
 }
 
 /// `<a|f|b>` → quantum-operator-product@(a, f, b) — Perl MathGrammar L387-393
-#[allow(dead_code)]
 pub fn qm_bracket(
   _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
