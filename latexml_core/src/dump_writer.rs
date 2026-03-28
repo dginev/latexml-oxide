@@ -109,8 +109,32 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         Option::None // Closure-based, can't serialize
       }
     }
+    Stored::Dimension(d) => Some(format!("D\t{}", d.0)),
+    Stored::Glue(g) => {
+      let mut s = format!("G\t{}", g.skip);
+      if let Some(p) = g.plus { s.push_str(&format!(",p{}", p)); }
+      if let Some(ref pf) = g.pfill { s.push_str(&format!(",pf{}", fillcode_index(pf))); }
+      if let Some(m) = g.minus { s.push_str(&format!(",m{}", m)); }
+      if let Some(ref mf) = g.mfill { s.push_str(&format!(",mf{}", fillcode_index(mf))); }
+      Some(s)
+    }
+    Stored::MuDimension(d) => Some(format!("MD\t{}", d.0)),
+    Stored::MuGlue(g) => {
+      let mut s = format!("MG\t{}", g.skip);
+      if let Some(p) = g.plus { s.push_str(&format!(",p{}", p)); }
+      if let Some(ref pf) = g.pfill { s.push_str(&format!(",pf{}", fillcode_index(pf))); }
+      if let Some(m) = g.minus { s.push_str(&format!(",m{}", m)); }
+      if let Some(ref mf) = g.mfill { s.push_str(&format!(",mf{}", fillcode_index(mf))); }
+      Some(s)
+    }
+    Stored::VecDequeStored(vd) if vd.is_empty() => Some("VD\t".to_string()),
     _ => Option::None,
   }
+}
+
+fn fillcode_index(fc: &crate::common::glue::FillCode) -> usize {
+  use crate::common::glue::FillCode::*;
+  match fc { Fil => 1, Fill => 2, Filll => 3 }
 }
 
 fn serialize_token(t: &crate::token::Token) -> String {
