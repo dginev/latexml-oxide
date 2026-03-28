@@ -1088,7 +1088,31 @@ fn declare_node_matches(
       }
       true
     },
-    "simple" => true, // XPath already does the filtering
+    "simple" => {
+      // XPath does text matching. Add font check: single-letter math declarations
+      // expect italic font (default). Bold/caligraphic tokens should NOT match.
+      // Perl: font_match_xpaths checks family/series/shape from _font attribute.
+      // _font format: Font[family,series,shape,size,color,bg,opacity,encoding,lang,mathstyle,force]
+      if let Some(font_str) = node.get_property("_font") {
+        // Check series component (2nd field): "bold" should not match "medium"
+        let parts: Vec<&str> = font_str.trim_start_matches("Font[")
+          .trim_end_matches(']').split(',').collect();
+        if parts.len() > 1 {
+          let series = parts[1].trim();
+          if series == "bold" {
+            return false; // Bold token doesn't match non-bold declaration
+          }
+        }
+        // Check family (1st field): caligraphic should not match serif
+        if parts.len() > 0 {
+          let family = parts[0].trim();
+          if family == "caligraphic" || family == "typewriter" {
+            return false; // Non-serif font doesn't match plain declaration
+          }
+        }
+      }
+      true
+    }
     _ => true,        // Unknown type: pass through
   }
 }
