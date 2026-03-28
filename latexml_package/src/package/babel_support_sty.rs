@@ -116,6 +116,12 @@ LoadDefinitions!({
       if code == "el" {
         load_font_map("LGR");
         MergeFont!(encoding => "LGR");
+        // Greek accent shorthand: redefine active ~ to produce perispomeni
+        // (U+1FC0) for LGR ligature composition. In standard TeX, ~ produces
+        // tie/nobreakspace, but in Greek mode it's the circumflex accent
+        // combining character that triggers ligatures like ~a → ᾶ.
+        state::let_i(&T_CS!("\\ltx@save@greek@tilde"), &T_ACTIVE!('~'), None);
+        def_macro(T_ACTIVE!('~'), None, TokenizeInternal!("\u{1FC0}"), None)?;
       } else {
         // Restore non-Greek encoding: check if we're coming from LGR
         let current_enc = lookup_font()
@@ -125,6 +131,8 @@ LoadDefinitions!({
           // Restore to OT1 (default Latin encoding) when leaving Greek
           load_font_map("OT1");
           MergeFont!(encoding => "OT1");
+          // Restore ~ to its pre-Greek meaning (tie/nobreakspace)
+          state::let_i(&T_ACTIVE!('~'), &T_CS!("\\ltx@save@greek@tilde"), None);
         }
       }
       // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init

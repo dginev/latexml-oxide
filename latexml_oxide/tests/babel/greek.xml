@@ -9,13 +9,13 @@
     <p>This is a test of typesetting ancient Greek with LaTeX:</p>
   </para>
   <para xml:id="p2">
-    <p><text xml:lang="el">’Εν ἀρχ ῃ ’ ην ‛ο λ´ογος…</text></p>
+    <p><text xml:lang="el">’Εν ἀρχῇ ἦν ‛ο λ´ογος…</text></p>
   </para>
   <para xml:id="p3">
     <p>Here’s the correspondance between ”greek” and ”latin” encoding for TeX:<break/><text font="typewriter">a b g d e z h j i k l m n x o p r s t u f q y w c</text> <break/><text xml:lang="el">α β γ δ ε ζ η ϑ ι ϰ λ μ ν ξ ο π ρ ς τ υ φ χ ψ ω ς</text></p>
   </para>
   <para xml:id="p4">
-    <p>A simple example how to get accents and spirits: <break/><text font="typewriter">’a ‘a  a &gt;a &lt;a a| &gt; a| "i "’i</text> <break/><text xml:lang="el">ά ὰ  α ἀ ἁ ᾳ ’ ᾳ ϊ ΐ</text></p>
+    <p>A simple example how to get accents and spirits: <break/><text font="typewriter">’a ‘a  a &gt;a &lt;a a| &gt; a| "i "’i</text> <break/><text xml:lang="el">ά ὰ ᾶ ἀ ἁ ᾳ ᾆ ϊ ΐ</text></p>
   </para>
   <para xml:id="p5">
     <tabular class="ltx_guessed_headers" vattach="middle">
@@ -31,7 +31,7 @@
           <td align="center" thead="column"><text xml:lang="el">ϋ</text></td>
         </tr>
         <tr>
-          <td align="center" thead="column"><text xml:lang="el">᾽</text></td>
+          <td align="center" thead="column"><text xml:lang="el">῁</text></td>
           <td thead="column"/>
           <td thead="column"/>
           <td align="center" thead="column"><text xml:lang="el">΅</text></td>
@@ -71,7 +71,7 @@
           <td align="center"><text xml:lang="el">·</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">‛</text></td>
+          <td align="center"><text xml:lang="el">῟</text></td>
           <td align="center"><text xml:lang="el">Α</text></td>
           <td align="center"><text xml:lang="el">Β</text></td>
           <td align="center"><text xml:lang="el">῝</text></td>
@@ -105,7 +105,7 @@
           <td align="center"><text xml:lang="el">Ψ</text></td>
           <td align="center"><text xml:lang="el">Ζ</text></td>
           <td align="center"><text xml:lang="el">[</text></td>
-          <td align="center"><text xml:lang="el">’</text></td>
+          <td align="center"><text xml:lang="el">῏</text></td>
           <td align="center"><text xml:lang="el">]</text></td>
           <td align="center"><text xml:lang="el">῎</text></td>
           <td align="center"><text xml:lang="el">῍</text></td>
@@ -147,7 +147,7 @@
           <td/>
           <td align="center"><text xml:lang="el">ι</text></td>
           <td/>
-          <td/>
+          <td align="center"><text xml:lang="el">῀</text></td>
           <td/>
         </tr>
         <tr>
@@ -171,13 +171,13 @@
           <td align="center"><text xml:lang="el">ᾂ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">α</text></td>
-          <td align="center"><text xml:lang="el">‛ α</text></td>
-          <td align="center"><text xml:lang="el">’ α</text></td>
+          <td align="center"><text xml:lang="el">ᾶ</text></td>
+          <td align="center"><text xml:lang="el">ἇ</text></td>
+          <td align="center"><text xml:lang="el">ἆ</text></td>
           <td/>
-          <td align="center"><text xml:lang="el">ᾳ</text></td>
-          <td align="center"><text xml:lang="el">‛ ᾳ</text></td>
-          <td align="center"><text xml:lang="el">’ ᾳ</text></td>
+          <td align="center"><text xml:lang="el">ᾷ</text></td>
+          <td align="center"><text xml:lang="el">ᾇ</text></td>
+          <td align="center"><text xml:lang="el">ᾆ</text></td>
           <td/>
         </tr>
         <tr>
@@ -201,13 +201,13 @@
           <td align="center"><text xml:lang="el">ᾒ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">η</text></td>
-          <td align="center"><text xml:lang="el">‛ η</text></td>
-          <td align="center"><text xml:lang="el">’ η</text></td>
+          <td align="center"><text xml:lang="el">ῆ</text></td>
+          <td align="center"><text xml:lang="el">ἧ</text></td>
+          <td align="center"><text xml:lang="el">ἦ</text></td>
           <td/>
-          <td align="center"><text xml:lang="el">ῃ</text></td>
-          <td align="center"><text xml:lang="el">‛ ῃ</text></td>
-          <td align="center"><text xml:lang="el">’ ῃ</text></td>
+          <td align="center"><text xml:lang="el">ῇ</text></td>
+          <td align="center"><text xml:lang="el">ᾗ</text></td>
+          <td align="center"><text xml:lang="el">ᾖ</text></td>
           <td/>
         </tr>
         <tr>
@@ -231,13 +231,13 @@
           <td align="center"><text xml:lang="el">ᾢ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">ω</text></td>
-          <td align="center"><text xml:lang="el">‛ ω</text></td>
-          <td align="center"><text xml:lang="el">’ ω</text></td>
+          <td align="center"><text xml:lang="el">ῶ</text></td>
+          <td align="center"><text xml:lang="el">ὧ</text></td>
+          <td align="center"><text xml:lang="el">ὦ</text></td>
           <td/>
-          <td align="center"><text xml:lang="el">ῳ</text></td>
-          <td align="center"><text xml:lang="el">‛ ῳ</text></td>
-          <td align="center"><text xml:lang="el">’ ῳ</text></td>
+          <td align="center"><text xml:lang="el">ῷ</text></td>
+          <td align="center"><text xml:lang="el">ᾧ</text></td>
+          <td align="center"><text xml:lang="el">ᾦ</text></td>
           <td/>
         </tr>
         <tr>
@@ -261,13 +261,13 @@
           <td align="center"><text xml:lang="el">ὒ</text></td>
         </tr>
         <tr>
-          <td align="center"><text xml:lang="el">ι</text></td>
-          <td align="center"><text xml:lang="el">‛ ι</text></td>
-          <td align="center"><text xml:lang="el">’ ι</text></td>
+          <td align="center"><text xml:lang="el">ῖ</text></td>
+          <td align="center"><text xml:lang="el">ἷ</text></td>
+          <td align="center"><text xml:lang="el">ἶ</text></td>
           <td align="center"><text xml:lang="el">Ϊ</text></td>
-          <td align="center"><text xml:lang="el">υι</text></td>
-          <td align="center"><text xml:lang="el">‛ υι</text></td>
-          <td align="center"><text xml:lang="el">’ υι</text></td>
+          <td align="center"><text xml:lang="el">ῦ</text></td>
+          <td align="center"><text xml:lang="el">ὗ</text></td>
+          <td align="center"><text xml:lang="el">ὖ</text></td>
           <td align="center"><text xml:lang="el">ϔ</text></td>
         </tr>
         <tr>
@@ -294,11 +294,11 @@
           <td align="center"><text xml:lang="el">ϊ</text></td>
           <td align="center"><text xml:lang="el">ῒ</text></td>
           <td align="center"><text xml:lang="el">ΐ</text></td>
-          <td align="center"><text xml:lang="el">ϊ</text></td>
+          <td align="center"><text xml:lang="el">ῗ</text></td>
           <td align="center"><text xml:lang="el">ϋ</text></td>
           <td align="center"><text xml:lang="el">ῢ</text></td>
           <td align="center"><text xml:lang="el">ΰ</text></td>
-          <td align="center"><text xml:lang="el">ϋ</text></td>
+          <td align="center"><text xml:lang="el">ῧ</text></td>
         </tr>
         <tr>
           <td align="center"><text xml:lang="el">ᾳ</text></td>
