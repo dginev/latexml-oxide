@@ -69,7 +69,6 @@ fn aastex_test_test() { complex("aastex_test"); }
 fn aliceblog_test() { complex("aliceblog"); }
 
 #[test]
-#[ignore] // TooManyErrors: needs physics.sty full port
 fn physics_test() { complex("physics"); }
 
 #[test]
