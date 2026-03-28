@@ -356,10 +356,11 @@ impl Rewrite {
               }
               // Rust-side filtering for declare pattern types (content Selects only)
               if let Some(ref dtype) = declare_type {
-                if !declare_node_matches(
+                let passes = declare_node_matches(
                   &node, dtype, declare_base.as_deref(),
                   declare_sub.as_deref(), declare_accent.as_deref(),
-                ) {
+                );
+                if !passes {
                   continue;
                 }
               }
@@ -851,6 +852,13 @@ pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
     return vec![];
   }
   if node.has_attribute("_wildcard") {
+    // Check if ALL descendant elements are already _matched.
+    // If so, this wildcard's content was fully handled by prior rules.
+    // Perl creates XMDual in this case, then pruneXMDuals collapses it.
+    // We skip to achieve the same end result.
+    if all_descendants_matched(node) {
+      return vec![];
+    }
     let id = if let Some(existing) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
       existing
     } else {
@@ -900,11 +908,13 @@ pub fn set_attributes_wild(
   for n in &nodes {
     wild_ids.extend(set_wildcard_ids(document, n));
   }
-
   if wild_ids.is_empty() {
     // All wildcards already matched — no XMRef targets available.
     // Perl: creates XMDual → pruneXMDuals collapses it.
     // Rust: skip XMDual, set attributes directly (same end result).
+    eprintln!("DEBUG wild_ids empty: node={} children={} attrs={:?}",
+      nodes[0].get_name(), nodes[0].get_child_nodes().len(),
+      attrs.keys().filter(|k| !k.starts_with('_')).collect::<Vec<_>>());
     let mut node = nodes[0].clone();
     if let Some(role) = attrs.get("role") {
       let _ = node.set_attribute("role", role);
@@ -975,6 +985,22 @@ fn mark_seen(node: &Node, nsibs: usize) {
       break;
     }
   }
+}
+
+/// Check if all element descendants of a node are already _matched.
+/// Used to detect wildcard nodes whose content was fully processed by prior rules.
+fn all_descendants_matched(node: &Node) -> bool {
+  for child in node.get_child_nodes() {
+    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+      if !child.has_attribute("_matched") {
+        return false;
+      }
+      if !all_descendants_matched(&child) {
+        return false;
+      }
+    }
+  }
+  true
 }
 
 fn mark_seen_rec(node: &Node) {

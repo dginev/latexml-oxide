@@ -41,7 +41,7 @@
     </declare>
     <para xml:id="S1.p1">
       <equation xml:id="S1.Ex1">
-        <Math mode="display" tex="x,x^{\prime},x_{1},x_{n},x_{2n-1},\hat{x},\widehat{x},\mathbf{x}" text="list@(x, x ^ prime, x _ 1, x _ n, x _ (2 * n - 1), hat@(x), Unknown@(x), x)" xml:id="S1.Ex1.m1">
+        <Math mode="display" tex="x,x^{\prime},x_{1},x_{n},x_{2n-1},\hat{x},\widehat{x},\mathbf{x}" text="list@(x, x ^ prime, x _ 1, x _ n, x _ (2 * n - 1), hat@(x), widehat@(x), x)" xml:id="S1.Ex1.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -53,7 +53,7 @@
                 <XMRef idref="S1.Ex1.m1.5"/>
                 <XMRef idref="S1.Ex1.m1.6"/>
                 <XMRef idref="S1.Ex1.m1.7"/>
-                <XMRef idref="S1.Ex1.m1.9"/>
+                <XMRef idref="S1.Ex1.m1.8"/>
               </XMApp>
               <XMWrap>
                 <XMTok decl_id="S1.XMD4" font="italic" role="ID" xml:id="S1.Ex1.m1.1">x</XMTok>
@@ -100,14 +100,14 @@
                   <XMTok decl_id="S1.XMD4" font="italic" role="ID">x</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok decl_id="S1.XMD4" font="bold" role="ID" xml:id="S1.Ex1.m1.9">x</XMTok>
+                <XMTok decl_id="S1.XMD4" font="bold" role="ID" xml:id="S1.Ex1.m1.8">x</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S1.Ex2">
-        <Math mode="display" tex="y,y^{\prime},y_{1},y_{n},y_{2n-1},\hat{y},\widehat{y}" text="list@(y, y ^ prime, y _ 1, y _ n, y _ (2 * n - 1), Unknown@(y), Unknown@(y))" xml:id="S1.Ex2.m1">
+        <Math mode="display" tex="y,y^{\prime},y_{1},y_{n},y_{2n-1},\hat{y},\widehat{y}" text="list@(y, y ^ prime, y _ 1, y _ n, y _ (2 * n - 1), hat@(y), widehat@(y))" xml:id="S1.Ex2.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -118,7 +118,7 @@
                 <XMRef idref="S1.Ex2.m1.4"/>
                 <XMRef idref="S1.Ex2.m1.5"/>
                 <XMRef idref="S1.Ex2.m1.6"/>
-                <XMRef idref="S1.Ex2.m1.8"/>
+                <XMRef idref="S1.Ex2.m1.7"/>
               </XMApp>
               <XMWrap>
                 <XMTok decl_id="S1.XMD9" font="italic" role="ID" xml:id="S1.Ex2.m1.1">y</XMTok>
@@ -160,7 +160,7 @@
                   <XMTok decl_id="S1.XMD9" font="italic" role="ID">y</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp role="ID" xml:id="S1.Ex2.m1.8">
+                <XMApp role="ID" xml:id="S1.Ex2.m1.7">
                   <XMTok decl_id="S1.XMD3" name="widehat" role="OVERACCENT">^</XMTok>
                   <XMTok decl_id="S1.XMD9" font="italic" role="ID">y</XMTok>
                 </XMApp>

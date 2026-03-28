@@ -12,6 +12,7 @@ struct DeclarePattern {
   sub_text:       Option<String>,
   /// For accent patterns: the accent name (e.g. "hat")
   accent_name:    Option<String>,
+  #[allow(dead_code)]
   has_wildcard:   bool,
   wildcard_paths: Option<Vec<Vec<usize>>>,
 }
