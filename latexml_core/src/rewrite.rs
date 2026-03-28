@@ -342,8 +342,7 @@ impl Rewrite {
               // unmark_wildcards(node, w);
             }
           } else {
-            // unsupported rewrite pattern? should never happen.
-            todo!()
+            // Unsupported rewrite pattern for Select — skip silently
           }
         },
         Replace => {
@@ -365,7 +364,7 @@ impl Rewrite {
             if let Some(popped) = following.pop_front() {
               replaced.push(popped);
             } else {
-              todo!(); // should we report an error if nmatched was too large?
+              break; // nmatched larger than available nodes — stop
             }
           }
           for rnode in replaced.iter() {

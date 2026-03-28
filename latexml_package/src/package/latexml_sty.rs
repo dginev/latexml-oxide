@@ -151,6 +151,27 @@ LoadDefinitions!({
           }
         }
         assign_value(key, Stored::String(arena::pin(decls.join("\n"))), Some(Scope::Global));
+
+        // Also create a Rewrite rule for the XML rewrite phase (matching Perl's
+        // createDeclarationRewrite in afterConstruct). This applies role/name/meaning
+        // attributes to matching XMTok elements in the final XML tree.
+        use latexml_core::rewrite::{Rewrite, RewriteOptions};
+        use rustc_hash::FxHashMap;
+        let xpath = format!(
+          "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
+          body_text.replace('\'', "&apos;"));
+        let mut attrs = FxHashMap::default();
+        if !role.is_empty() { attrs.insert("role".to_string(), role); }
+        if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
+        if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
+        if !attrs.is_empty() {
+          let rewrite = Rewrite::new("math", RewriteOptions {
+            xpath: Some(xpath),
+            attributes_map: Some(attrs),
+            ..RewriteOptions::default()
+          });
+          push_value("DOCUMENT_REWRITE_RULES", rewrite)?;
+        }
       }
 
       Ok(Vec::new())

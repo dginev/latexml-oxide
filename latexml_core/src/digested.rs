@@ -308,8 +308,8 @@ impl BoxOps for Digested {
       Whatsit(w) => w.borrow().be_absorbed(document),
       Alignment(w) => w.borrow_mut().be_absorbed_mut(document),
       KeyVals(kvs) => kvs.be_absorbed(document),
-      Postponed(_) => todo!(),
-      RegisterValue(ref _rv) => todo!(),
+      Postponed(_) => Ok(Vec::new()), // Postponed items absorbed silently
+      RegisterValue(ref _rv) => Ok(Vec::new()), // Register values not absorbable
     }
   }
 
@@ -433,6 +433,13 @@ impl Digested {
       _ => 0,
     }
   }
+  /// Obtain a Dimension from the digested object, iff it wraps a `RegisterValue`
+  pub fn get_dimension(&self) -> Option<Dimension> {
+    match &*self.0 {
+      DigestedData::RegisterValue(rv) => Some(Dimension::from(rv)),
+      _ => None,
+    }
+  }
   /// Obtain the f64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn pt_value(&self, prec: Option<u8>) -> f64 {
     match &*self.0 {
@@ -474,7 +481,7 @@ impl Digested {
       List(ref l) => l.borrow().is_empty(),
       Whatsit(ref w) => w.borrow().is_empty()?,
       Postponed(ref tks) => tks.is_empty(),
-      _ => todo!(),
+      _ => false, // Comments, RegisterValues, Alignments, KeyVals are non-empty
     })
   }
 

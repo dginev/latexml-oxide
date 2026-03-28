@@ -236,6 +236,11 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   //
   // We replicate this by adding our own beginMode/endMode pair, matching Perl's
   // readBoxContents (TeX_Box.pool.ltxml lines 145, 153).
+  //
+  // NOTE: read_box_contents already consumed the opening { or \bgroup via defined_as(T_BEGIN).
+  // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
+  // in the content will pop this frame, since \egroup is \let to T_END and
+  // invoke_token handles it via the standard group-closing mechanism.
   let current_mode = state::lookup_string("MODE");
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
   if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {

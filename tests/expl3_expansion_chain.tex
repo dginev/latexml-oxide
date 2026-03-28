@@ -1,0 +1,68 @@
+% Minimal reproduction of the expl3 l3file expansion chain issue.
+%
+% CONTEXT: expl3-code.tex line 11527-11528 uses \exp_last_unbraced:NNNNo
+% to define \__file_name_expand_cleanup:w with a delimited parameter.
+% The expansion chain works correctly in isolation but the definition
+% is lost during expl3-code.tex loading.
+%
+% WHAT WORKS:
+%   - The expansion chain \exp_last_unbraced:NNNNo correctly produces tokens
+%   - When called in post-load context (raw_tex), the definition persists
+%   - All other l3file functions defined via direct \cs_new:Npn work fine
+%
+% ROOT CAUSE (session 49, confirmed):
+%   The 12 errors are NOT from the \exp_last_unbraced:NNNNo expansion chain.
+%   Even replacing the chain with a direct \cs_gset:Npn produces the SAME
+%   12 errors. The errors are from FORWARD REFERENCES — code earlier in
+%   expl3-code.tex that references l3file macros BEFORE they're defined:
+%     - \__file_name_expand_end: (used in \__file_name_expand:n at line 11519)
+%     - \__kernel_file_name_sanitize:n (used for Unicode file loading)
+%     - \l_file_search_path_seq, \g__file_record_seq
+%   These forward references are inherent to the l3file module loading order.
+%
+% WORKAROUND (in expl3_sty.rs):
+%   Post-load re-definitions recreate the 3 affected l3file functions.
+%   All functions are available for document processing.
+%
+% POSSIBLE IMPROVEMENTS:
+%   1. Suppress forward-reference errors during raw TeX loading (non-fatal)
+%   2. Track which errors are from forward refs vs genuine issues
+%   3. The "make formats" precompiled kernel would eliminate these entirely
+%
+% PATTERN FROM expl3-code.tex lines 11527-11528:
+%   \exp_last_unbraced:NNNNo
+%   \cs_new:Npn \__file_name_expand_cleanup:w #1 \tl_to_str:n { __file_name = } { }
+%
+% This defines \__file_name_expand_cleanup:w with:
+%   - Parameter: #1 delimited by catcode-12 string "__file_name="
+%   - Body: empty {}
+
+\documentclass{article}
+\usepackage{xparse}
+\begin{document}
+
+\ExplSyntaxOn
+% TEST 1: Direct definition (should always work)
+\cs_gset:Npn \test_direct:w #1 test { DIRECT:#1 }
+\cs_if_exist:NTF \test_direct:w {Direct:~OK} {Direct:~FAIL}
+
+% TEST 2: Via \exp_last_unbraced:NNNNo (the failing pattern)
+\exp_last_unbraced:NNNNo
+\cs_gset:Npn \test_chain:w #1 \tl_to_str:n { test_delim } { CHAIN:#1 }
+\cs_if_exist:NTF \test_chain:w {Chain:~OK} {Chain:~FAIL}
+
+% TEST 3: Check the actual l3file functions
+\cs_if_exist:NTF \__file_name_expand_cleanup:w
+  {cleanup:w~EXISTS} {cleanup:w~MISSING}
+
+\cs_if_exist:NTF \__file_name_expand_end:
+  {expand_end:~EXISTS} {expand_end:~MISSING}
+
+\cs_if_exist:NTF \__kernel_file_name_sanitize:n
+  {sanitize:n~EXISTS} {sanitize:n~MISSING}
+
+\cs_if_exist:NTF \keys_define:nn
+  {keys:~EXISTS} {keys:~MISSING}
+
+\ExplSyntaxOff
+\end{document}

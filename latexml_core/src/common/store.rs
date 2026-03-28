@@ -989,6 +989,12 @@ impl From<Stored> for Option<Tokens> {
       Stored::String(sym) => Some(mouth::tokenize_internal(&arena::to_string(sym))),
       Stored::Token(ts) => Some(Tokens::new(vec![ts])),
       Stored::Tokens(ts) => Some(ts),
+      // Digested: revert to tokens (needed for \AtBeginDocument hooks that
+      // store Digested arguments via push_value)
+      Stored::Digested(d) => {
+        use crate::common::object::Object;
+        d.revert().ok()
+      },
       Stored::VecDequeStored(vdq) => {
         // Each item in the queue can be unlisted into a Vec<Token>
         // and then the result can be re-cast as a single Tokens

@@ -2277,6 +2277,14 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [setter @ setter!(value, args, $body)]})
   };
+  // 3-argument form: sub[document, node, whatsit] { ... }
+  (@after_open (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_open @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
+  };
+  // 2-argument form: sub[document, node] { ... }
   (@after_open (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2288,6 +2296,14 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open @ Some(tagsub!(document, node, $body)) ]})
   };
+  // 3-argument form
+  (@after_open_late (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_open_late @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
+  };
+  // 2-argument form
   (@after_open_late (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2299,6 +2315,15 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open_late @ Some(tagsub!(document, node, $body)) ]})
   };
+  // 3-argument form: sub[document, node, whatsit] { ... }
+  // Matches Perl's afterClose => sub { my ($document, $node, $whatsit) = @_; ... }
+  (@after_close (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_close @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
+  };
+  // 2-argument form: sub[document, node] { ... }
   (@after_close (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2310,7 +2335,15 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close @ Some(tagsub!(document, node, $body)) ]})
   };
-    (@after_close_late (
+  // 3-argument form
+  (@after_close_late (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_close_late @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
+  };
+  // 2-argument form
+  (@after_close_late (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*

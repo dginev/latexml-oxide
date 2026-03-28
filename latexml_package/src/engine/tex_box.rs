@@ -67,6 +67,107 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
   }
 }
 
+/// Perl: collapseSVGGroup (TeX_Box.pool.ltxml L199-271)
+/// Collapse/remove/unwrap unneeded svg:g elements to reduce tree depth.
+fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
+  use latexml_core::common::xml::element_nodes;
+  use latexml_core::document::get_node_qname;
+
+  // Collapsible SVG group attributes (Perl L193-197)
+  const COLLAPSIBLE: &[&str] = &[
+    "fill", "fill-rule", "fill-opacity",
+    "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit",
+    "stroke-dasharray", "stroke-dashoffset", "stroke-opacity",
+    "color",
+  ];
+
+  // Record public (non-internal) attributes on this node
+  let nodeattr: HashMap<String, String> = node.get_attributes().into_iter()
+    .filter(|(k, _)| !k.starts_with('_'))
+    .collect();
+  // Perl L208: skip if clip-path is set
+  if nodeattr.contains_key("clip-path") {
+    return Ok(());
+  }
+
+  let is_svg_g = |n: &Node| -> bool {
+    document::with_node_qname(n, |q| q == "svg:g")
+  };
+
+  // Step 1: Remove empty svg:g children (Perl L211-214)
+  let mut children = element_nodes(node);
+  let mut nempty = 0;
+  for c in &children {
+    if is_svg_g(c) && element_nodes(c).is_empty() {
+      document.remove_node(c.clone());
+      nempty += 1;
+    }
+  }
+  if nempty > 0 {
+    children = element_nodes(node);
+  }
+
+  // Step 2-3: Pop/push leading/trailing children that mask parent attributes (Perl L218-237)
+  // Skip for now — this optimization moves children outside the parent, which is complex
+  // and less impactful than steps 4-5 for reducing nesting.
+
+  // Step 4: Remove redundant svg:g children (same attributes as parent, Perl L239-250)
+  let mut nredundant = 0;
+  for c in &children {
+    if is_svg_g(c) {
+      let mut is_same = true;
+      for (key, val) in c.get_attributes() {
+        if key.starts_with('_') {
+          continue;
+        }
+        // Perl L245-246: different value OR key is 'transform' → not redundant
+        if val != *nodeattr.get(&key).unwrap_or(&String::new()) || key == "transform" {
+          is_same = false;
+          break;
+        }
+      }
+      if is_same {
+        document.unwrap_nodes(c.clone())?;
+        nredundant += 1;
+      }
+    }
+  }
+  if nredundant > 0 {
+    children = element_nodes(node);
+  }
+
+  // Step 5: Merge single svg:g child into parent (Perl L254-270)
+  if children.len() == 1 && is_svg_g(&children[0]) {
+    let c = &children[0];
+    let mut av: HashMap<String, String> = HashMap::default();
+    let mut mergeable = true;
+    for (key, val) in c.get_attributes() {
+      if key.starts_with('_') || COLLAPSIBLE.contains(&key.as_str()) {
+        av.insert(key, val);
+      } else if key == "transform" {
+        // Compose transforms: parent's transform + child's transform
+        let composed = if let Some(parent_t) = nodeattr.get("transform") {
+          format!("{} {}", parent_t, val)
+        } else {
+          val
+        };
+        av.insert(key, composed);
+      } else {
+        mergeable = false;
+        break;
+      }
+    }
+    if mergeable {
+      for (key, val) in &av {
+        node.set_attribute(key, val)?;
+      }
+      document.unwrap_nodes(children[0].clone())?;
+    }
+  }
+
+  Ok(())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box Family of primitive control sequences
@@ -302,10 +403,10 @@ LoadDefinitions!({
     Tokens!(T_MATH!(), T_CS!("\\lx@dollar@in@normalmode")),
   )?;
 
-  // Perl: collapseSVGGroup — collapse nested svg:g elements
-  // Stub: SVG group collapsing is deferred (low priority for test passage).
-  Tag!("svg:g", after_close => sub[_document, _node] {
-    // TODO: implement collapse_svg_group(document, node)
+  // Perl: collapseSVGGroup (TeX_Box.pool.ltxml L199-271)
+  // Collapse/remove/unwrap unneeded svg:g's to reduce tree depth.
+  Tag!("svg:g", after_close => sub[document, node] {
+    collapse_svg_group(document, node)?;
   });
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
@@ -338,14 +439,14 @@ LoadDefinitions!({
     let node = document.open_element(newtag,
       Some(string_map!("_noautoclose" => "true", "width" => width)), None)?;
     document.absorb(contents, None)?;
+    // Perl L318-321: cleanup auto-opened svg:g/svg:svg (only when NOT in SVG),
+    // then always close the specific node we opened.
     if !is_svg {
       while !document.get_element().unwrap().has_attribute("_beginscope") &&
         document.maybe_close_element("svg:g")?.is_some() {}
       document.maybe_close_element("svg:svg")?;
-      document.maybe_close_node(&node)?;
-    } else {
-      document.maybe_close_element("svg:g")?;
     }
+    document.maybe_close_node(&node)?;
   },
   mode => "restricted_horizontal",
   bounded => true,
@@ -376,8 +477,103 @@ LoadDefinitions!({
     whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
   });
 
-  // TODO:
-  // Tag('svg:foreignObject', autoOpen => 1, autoClose => 1, ...
+  // Perl: Tag('svg:foreignObject', autoOpen => 1, autoClose => 1, afterClose => ...)
+  // This enables automatic insertion of <svg:foreignObject> when non-SVG content
+  // (like <ltx:text>, <ltx:Math>) appears inside <svg:g>.
+  // The afterClose handler (Perl L337-388) cleans up empty foreignObjects,
+  // converts text-only content to svg:text, and sets size attributes.
+  Tag!("svg:foreignObject", auto_open => true, auto_close => true,
+    after_close => sub[document, node, whatsit] {
+      use latexml_core::common::xml::element_nodes;
+      // Perl L341: my @fo = $node->childNodes
+      let has_any_child = node.get_first_child().is_some();
+      // Perl L342-344: Empty foreignObject → remove
+      if !has_any_child {
+        let n = node.clone();
+        document.remove_node(n);
+        return Ok(());
+      }
+      let children = element_nodes(node);
+      // Perl L349-362: Single <p/> cleanup
+      if children.len() == 1 {
+        let child_qname = document::get_node_qname(&children[0]);
+        if arena::with(child_qname, |s| s == "ltx:p") {
+          let p_children = element_nodes(&children[0]);
+          if p_children.is_empty() {
+            let n = node.clone();
+            document.remove_node(n);
+            return Ok(());
+          }
+          if p_children.len() == 1 {
+            let inner_qname = document::get_node_qname(&p_children[0]);
+            if arena::with(inner_qname, |s| s == "ltx:picture" || s == "ltx:text") {
+              let pic_children = element_nodes(&p_children[0]);
+              if pic_children.len() == 1 {
+                let svg_qname = document::get_node_qname(&pic_children[0]);
+                if arena::with(svg_qname, |s| s == "svg:svg") {
+                  let replacement = pic_children[0].clone();
+                  document.replace_tree(replacement, node.clone())?;
+                  return Ok(());
+                }
+              }
+            }
+          }
+        }
+      }
+      // Perl L363-388: Set size and transform on remaining foreignObjects
+      // Read cached dimensions from whatsit properties
+      let mut has_dims = false;
+      if let Some(wh) = whatsit {
+        let dims = wh.with_properties(|props| {
+          let w = match props.get("cached_width").or_else(|| props.get("width")) {
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+          let h = match props.get("cached_height").or_else(|| props.get("height")) {
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+          let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+          (w, h, d)
+        });
+        let (w, h, d) = dims;
+        if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
+          has_dims = true;
+          let w_px = w.px_value(Some(2));
+          let h_px = h.px_value(Some(2));
+          let d_px = d.px_value(Some(2));
+          let total_h = h_px + d_px;
+          // Perl L378-382: width and height (total height = h + d)
+          if !node.has_attribute("width") {
+            document.set_attribute(node, "width", &s!("{}", w_px))?;
+          }
+          if !node.has_attribute("height") {
+            document.set_attribute(node, "height", &s!("{}", total_h))?;
+          }
+          // Perl L381: transform flips y-axis, offset by height above baseline
+          document.set_attribute(node, "transform",
+            &s!("matrix(1 0 0 -1 0 {})", h_px))?;
+          document.set_attribute(node, "overflow", "visible")?;
+          // Perl L384-387: CSS custom properties in em units
+          let font_size = wh.with_properties(|props| {
+            match props.get("font_size") {
+              Some(Stored::Dimension(d)) => d.value_f64() / 65536.0,
+              _ => 10.0,
+            }
+          });
+          let em = if font_size > 0.0 { font_size } else { 10.0 };
+          let w_em = w.value_f64() / 65536.0 / em;
+          let h_em = h.value_f64() / 65536.0 / em;
+          let d_em = d.value_f64() / 65536.0 / em;
+          document.set_attribute(node, "style",
+            &s!("--ltx-fo-width:{:.2}em;--ltx-fo-height:{:.2}em;--ltx-fo-depth:{:.2}em;",
+              w_em, h_em, d_em))?;
+        }
+      }
+      if !has_dims {
+        if !node.has_attribute("overflow") {
+          document.set_attribute(node, "overflow", "visible")?;
+        }
+      }
+    }
+  );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props] {
       let contents = args[1].as_ref().unwrap();
@@ -876,7 +1072,9 @@ LoadDefinitions!({
 // but parameter think's it's just parsing from gullet...
 pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
   while let Some(t) = gullet::read_token()? {
-    if t.get_catcode() == Catcode::BEGIN {
+    // Perl: $t->defined_as(T_BEGIN) — checks meaning, not catcode.
+    // This catches both { (catcode BEGIN) and \bgroup (\let to T_BEGIN).
+    if t.defined_as(&T_BEGIN!()) {
       break;
     } // Skip till { or \bgroup
   }

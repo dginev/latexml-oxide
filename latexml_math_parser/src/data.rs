@@ -1,16 +1,45 @@
 use libxml::tree::{Node, NodeType};
+use std::cell::RefCell;
+use rustc_hash::FxHashMap;
 
-/// Resolve an XMRef node to its target by following the idref via DOM traversal.
-/// Perl: realizeXMNode (MathParser.pm) — dereferences XMRef to the target element.
+// Thread-local idstore for XMRef resolution during math parsing.
+// Set by the parser before parsing, cleared after.
+// Perl uses $doc->lookupID($idref) which accesses the document's idstore.
+thread_local! {
+  static MATH_IDSTORE: RefCell<Option<FxHashMap<String, Node>>> = RefCell::new(None);
+}
+
+/// Set the idstore for XMRef resolution. Called before math parsing starts.
+pub fn set_math_idstore(idstore: FxHashMap<String, Node>) {
+  MATH_IDSTORE.with(|cell| {
+    *cell.borrow_mut() = Some(idstore);
+  });
+}
+
+/// Clear the idstore after math parsing.
+pub fn clear_math_idstore() {
+  MATH_IDSTORE.with(|cell| {
+    *cell.borrow_mut() = None;
+  });
+}
+
+/// Resolve an XMRef node to its target using the idstore (matching Perl's lookupID).
+/// Falls back to DOM traversal if idstore is not set.
 fn resolve_xmref(node: &Node) -> Option<Node> {
   if node.get_name() == "XMRef" {
     if let Some(idref) = node.get_attribute("idref") {
-      // Walk up to document root
+      // Use idstore first (fast and reliable, matching Perl's $doc->lookupID)
+      let store_result = MATH_IDSTORE.with(|cell| {
+        cell.borrow().as_ref().and_then(|store| store.get(&idref).cloned())
+      });
+      if store_result.is_some() {
+        return store_result;
+      }
+      // Fallback: walk DOM to document root, then search by xml:id
       let mut ancestor = node.clone();
       while let Some(parent) = ancestor.get_parent() {
         ancestor = parent;
       }
-      // Search for element with matching xml:id
       return find_by_xml_id(&ancestor, &idref);
     }
   }
@@ -21,11 +50,9 @@ fn resolve_xmref(node: &Node) -> Option<Node> {
 fn find_by_xml_id(root: &Node, id: &str) -> Option<Node> {
   for child in root.get_child_nodes() {
     if child.get_type() == Some(NodeType::ElementNode) {
-      // Check both xml:id and id attributes
       if child.get_attribute("xml:id").as_deref() == Some(id) {
         return Some(child);
       }
-      // Also check via namespace-qualified access
       if child
         .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
         .as_deref()

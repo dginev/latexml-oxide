@@ -35,6 +35,14 @@ LoadDefinitions!({
     if let Some(bg) = bg_to_set {
       document.set_attribute(root, "backgroundcolor", &bg)?;
     }
+    // Apply font language as xml:lang on document root
+    // The language is stored as a state value by \ltx@bbl@select@language
+    if let Some(lang) = lookup_value("DOCUMENT_LANGUAGE") {
+      let lang_str = lang.to_string();
+      if !lang_str.is_empty() {
+        document.set_attribute(root, "xml:lang", &lang_str)?;
+      }
+    }
   });
 
   //======================================================================

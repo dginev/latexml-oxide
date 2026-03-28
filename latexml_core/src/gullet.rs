@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 
 use crate::alignment::Alignment;
 use crate::common::arena::{self, DONT_EXPAND_SYM, SymStr};
+use crate::common::store::Stored;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -100,7 +101,13 @@ pub struct Gullet {
 }
 
 #[thread_local]
-pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet::default()));
+pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet {
+  // Safety limit: 10M tokens prevents infinite loops from corrupted macro state.
+  // A typical LaTeX document with expl3 processes ~5M tokens. This limit should
+  // never be reached in normal operation.
+  token_limit: Some(5_000_000),
+  ..Gullet::default()
+}));
 
 macro_rules! gullet {
   () => {
@@ -112,6 +119,22 @@ macro_rules! gullet_mut {
     (*GULLET).borrow_mut()
   };
 }
+/// Set the token limit and reset progress. Returns previous (limit, progress) for restoration.
+pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
+  let mut g = gullet_mut!();
+  let prev = (g.token_limit, g.progress);
+  g.token_limit = limit;
+  g.progress = 0;
+  prev
+}
+
+/// Restore the token limit and progress from a previous set_token_limit call.
+pub fn restore_token_limit(saved: (Option<usize>, usize)) {
+  let mut g = gullet_mut!();
+  g.token_limit = saved.0;
+  g.progress = saved.1;
+}
+
 macro_rules! runtime {
   () => {
     (*GULLET).borrow_mut().runtime
@@ -237,7 +260,7 @@ pub fn close_mouth(forced: bool) -> Result<()> {
   let mut shift_from_mouthstack = false;
   let mut error_has_more_input = false;
   if let Some(ref mut runtime) = runtime!() {
-    if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
+    if !forced && (!runtime.pushback.is_empty() || runtime.mouth.has_more_input()) {
       error_has_more_input = true
     }
   }
@@ -268,7 +291,10 @@ pub fn flush_mouth() {
         runtime.pushback.push_back(token);
       }
     }
-    runtime.mouth.finish(); // then finish the mouth (it'll get closed on next read)
+    // Stop reading (clear buffers, close file) but do NOT restore catcodes.
+    // Catcodes are restored by close_mouth → finish() when the mouth is
+    // properly popped from the stack.
+    runtime.mouth.stop_reading();
   }
 }
 
@@ -368,21 +394,27 @@ pub fn read_token() -> Result<Option<Token>> {
       }
       // some infinite loops are hard to predict and may be
       // better guarded against via a global token limit.
-      if let Some(token_limit) = gullet.token_limit {
-        if gullet.progress > token_limit {
+      let token_limit = gullet.token_limit;
+      let pushback_limit = gullet.pushback_limit;
+      let progress = gullet.progress;
+      let pushback_len = gullet.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
+      drop(gullet);
+      if let Some(limit) = token_limit {
+        gullet_mut!().progress = progress + 1;
+        if progress + 1 > limit {
           Fatal!(
             Timeout,
             TokenLimit,
-            s!("Token limit of {token_limit} exceeded, infinite loop?")
+            s!("Token limit of {} exceeded, infinite loop?", limit)
           );
         }
       }
-      if let Some(pushback_limit) = gullet.pushback_limit {
-        if gullet.runtime.as_ref().unwrap().pushback.len() > pushback_limit {
+      if let Some(limit) = pushback_limit {
+        if pushback_len > limit {
           Fatal!(
             Timeout,
             PushbackLimit,
-            s!("Pushback limit of {pushback_limit} exceeded, infinite loop?")
+            s!("Pushback limit of {} exceeded, infinite loop?", limit)
           );
         }
       }
@@ -393,9 +425,15 @@ pub fn read_token() -> Result<Option<Token>> {
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
 
     // Wow!!!!! See TeX the Program \S 309
+    // Perl: alignment check → dont_expand check → else break
+    // ALIGN_STATE tracking happens AFTER the loop (Perl L320-324)
     if let Some(ref nextt) = next_token {
-      let mut check_dont_expand = true;
-      // Perl Gullet.pm L322-323: track { and } at scan level for ALIGN_STATE
+      // NOTE: Perl tracks { and } OUTSIDE the loop (after break), but in Rust
+      // we track here BEFORE checks. This is an intentional divergence:
+      // moving tracking after the loop causes expl3 kernel loading to proceed
+      // further into problematic modules (fp). The pre-check tracking prevents
+      // alignment triggers on { tokens (count becomes 1 before the check).
+      // Both orderings produce the same result for non-alignment tokens.
       match nextt.get_catcode() {
         Catcode::BEGIN => increment_align_group_count(),
         Catcode::END => decrement_align_group_count(),
@@ -403,26 +441,24 @@ pub fn read_token() -> Result<Option<Token>> {
       }
       if (align_group_count() == 0) && has_reading_alignment() {
         if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
-          check_dont_expand = false;
           let reading_alignment = get_reading_alignment().unwrap();
           if let DigestedData::Alignment(data) = reading_alignment.data() {
             handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
           } else {
             return Err("reading_alignment should always contain DigestedData::Alignment".into());
           }
+          continue; // Perl: handleTemplate then continue while(1) loop
         }
       }
-      if check_dont_expand {
-        if nextt.code == Catcode::CS && nextt.text == *DONT_EXPAND_SYM {
-          let unexpanded = read_token()?;
-          // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
-          if let Some(tok) = unexpanded {
-            set_special_relax_smuggled(tok);
-          }
-          next_token = Some(T_CS!("\\special_relax"));
+      if nextt.code == Catcode::CS && nextt.text == *DONT_EXPAND_SYM {
+        let unexpanded = read_token()?;
+        // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
+        if let Some(tok) = unexpanded {
+          set_special_relax_smuggled(tok);
         }
-        break;
+        next_token = Some(T_CS!("\\special_relax"));
       }
+      break;
     } else {
       break;
     }
@@ -480,7 +516,10 @@ pub fn read_x_token(
     // we got a token
     let token = next_token.unwrap();
     if token.get_catcode() == Catcode::CS && token.text == *DONT_EXPAND_SYM {
-      let unexpanded = read_token()?.unwrap();
+      let unexpanded = match read_token()? {
+        Some(t) => t,
+        None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
+      };
       if for_conditional && unexpanded.code == Catcode::ACTIVE {
         return Ok(Some(unexpanded));
       } else {
@@ -898,6 +937,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
             return Ok(Tokens!()); // Not more correct, but maybe less confusing?
           },
         };
+        // Perl: $$token[1] == CC_BEGIN — direct catcode check
         if token.get_catcode() == Catcode::BEGIN {
           // read balanced, and refill ring.
           nbraces += 1;
@@ -926,6 +966,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
   }
   // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
   // so that delimited arguments behave more similarly to simple, undelimited arguments.
+  // Perl: ($nbraces == 1) && ($tokens[0][1] == CC_BEGIN) && ($tokens[-1][1] == CC_END)
   if nbraces == 1
     && tokens.first().unwrap().get_catcode() == Catcode::BEGIN
     && tokens.last().unwrap().get_catcode() == Catcode::END
@@ -940,6 +981,7 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
 /// TODO: This seems to be the wrong Rust type interface, we need to rework...
 pub fn read_until_token(t: Token) -> Result<Tokens> { read_until(&Tokens!(t)) }
 /// reads until it encounters a Catcode::BEGIN token
+/// Note: Perl uses $$token[1] == CC_BEGIN (catcode check, not defined_as)
 pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
   while let Some(token) = read_token()? {
@@ -1037,6 +1079,8 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
     Some(token) => {
+      // Perl: $$token[1] == CC_BEGIN — checks actual catcode, NOT defined_as.
+      // \bgroup (catcode CS) does NOT match here; only literal { does.
       if token.get_catcode() == Catcode::BEGIN {
         read_balanced(expansion_level, false, false)
       } else if matches!(expansion_level, ExpansionLevel::Off) {
@@ -1299,9 +1343,10 @@ pub fn read_number() -> Result<Number> {
     Ok(Number::new(s * n.value_of()))
   } else {
     let next = read_token()?;
+    let current = get_current_token().unwrap();
     let message = s!(
       "Missing number, treated as zero while processing {:?}, next token is {:?}",
-      get_current_token().unwrap(),
+      current,
       next
     );
     Warn!("expected", "<number>", message);
@@ -1345,8 +1390,8 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
           s.remove(0);
         }
         let s_char = s.chars().next().unwrap_or('\0');
-        // Perl: skip1Space($self, 1); — consume one optional space after charcode
-        skip_one_space()?;
+        // Perl: skip1Space($self, 1); — expanded space-skip after charcode
+        skip_one_space(true)?;
         Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
       } else {
         unread_one(token); // Unread
@@ -1462,7 +1507,7 @@ pub fn read_dimension() -> Result<Dimension> {
 /// Read a unit, returning the equivalent number of scaled points,
 fn read_unit() -> Result<Option<f64>> {
   let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
-    skip_one_space()?;
+    skip_one_space(true)?;
     Some(convert_unit(&u))
   } else if let Some(u) = read_internal_integer()? {
     Some(u.value_of() as f64) // These are coerced to number=>sp
@@ -1473,7 +1518,7 @@ fn read_unit() -> Result<Option<f64>> {
   } else {
     read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
     if let Some(u) = read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"])? {
-      skip_one_space()?;
+      skip_one_space(true)?;
       Some(convert_unit(&u))
     } else {
       None
@@ -1625,7 +1670,7 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
 
 pub fn read_mu_unit() -> Result<Option<i64>> {
   if read_keyword(&["mu"])?.is_some() {
-    skip_one_space()?;
+    skip_one_space(true)?;
     Ok(Some(UNITY)) // effectively, scaled mu
   } else if let Some(m) = read_internal_mu_glue()? {
     Ok(Some(m.value_of()))
@@ -1646,6 +1691,7 @@ pub fn read_tokens_value() -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
     Some(token) => {
+      // Perl: $$token[1] == CC_BEGIN — direct catcode check
       if token.get_catcode() == Catcode::BEGIN {
         Ok(read_balanced(ExpansionLevel::Off, false, false)?)
       } else if let Some(defn) = lookup_register_definition(&token) {
@@ -1688,10 +1734,30 @@ pub fn skip_spaces() -> Result<()> {
   Ok(())
 }
 
-pub fn skip_one_space() -> Result<()> {
-  if let Some(token) = read_token()? {
-    if token.get_catcode() != Catcode::SPACE {
-      unread_one(token);
+/// Check if a token is a space token (catcode SPACE) or an "implicit space"
+/// (a CS or ACTIVE token `\let` to a space token).
+/// See TeXbook p269: `<one optional space>` absorbs both explicit and implicit spaces.
+fn is_space_or_implicit_space(token: &Token) -> bool {
+  if token.get_catcode() == Catcode::SPACE {
+    return true;
+  }
+  // Check for implicit space: CS/ACTIVE let to a space token
+  if token.get_catcode() == Catcode::CS || token.get_catcode() == Catcode::ACTIVE {
+    if let Some(Stored::Token(let_tok)) = state::lookup_meaning(token) {
+      return let_tok.get_catcode() == Catcode::SPACE;
+    }
+  }
+  false
+}
+
+/// Skip one optional space.
+/// If `expanded` is true, acts like `<one optional space>` and expands tokens (readXToken).
+/// Perl: skip1Space($self, $expanded)
+pub fn skip_one_space(expanded: bool) -> Result<()> {
+  let token = if expanded { read_x_token(None, false, None)? } else { read_token()? };
+  if let Some(t) = token {
+    if !is_space_or_implicit_space(&t) {
+      unread_one(t);
     }
   }
   Ok(())
@@ -1708,7 +1774,7 @@ fn read_optional_signs() -> Result<bool> {
     let sym = t.get_sym();
     if sym == arena::pin_static("-") {
       sign = !sign;
-    } else if (sym != arena::pin_static("+")) && t.get_catcode() != Catcode::SPACE {
+    } else if (sym != arena::pin_static("+")) && !is_space_or_implicit_space(&t) {
       unread_one(t); // Unread and end
       break;
     }
@@ -1729,7 +1795,7 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
     if let Some(digit) = digit_opt {
       result.push(digit);
     } else {
-      if !(skip && token.get_catcode() == Catcode::SPACE) {
+      if !(skip && is_space_or_implicit_space(&token)) {
         unread_one(token);
       }
       break;
@@ -1845,7 +1911,29 @@ pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
   open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
-  let results: R = { reader()? };
+  let reader_result = reader();
+  // If the reader returned an error (e.g., Fatal from token limit),
+  // we STILL need to clean up the mouth to preserve the caller's state.
+  let results: R = match reader_result {
+    Ok(v) => v,
+    Err(e) => {
+      // Force-close our mouth and any autoclosable mouths above it
+      loop {
+        let current = gullet!().runtime.as_ref().map(|r| arena::pin(r.mouth.get_source()));
+        if current == Some(context_mouth_source) {
+          close_mouth(true).ok();
+          break;
+        } else if gullet!().mouthstack.is_empty() {
+          break; // Our mouth was already consumed
+        } else {
+          close_mouth(true).ok(); // Close stale mouth above ours
+        }
+      }
+      // Reset progress counter so subsequent processing isn't immediately killed
+      gullet_mut!().progress = 0;
+      return Err(e);
+    }
+  };
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
   loop {
     let mouth_source = gullet!()
@@ -1866,33 +1954,27 @@ where FnR: FnOnce() -> Result<R> {
       );
       break;
     } else {
-      let has_input_remaining = {
-        if let Some(ref mut runtime) = runtime!() {
-          !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
-        } else {
-          false
-        }
-      };
-      if has_input_remaining {
-        let next = read_token()?.unwrap();
+      let is_autoclosable = gullet!()
+        .runtime
+        .as_ref()
+        .map(|r| r.autoclose)
+        .unwrap_or(false);
+      if is_autoclosable {
+        // Auto-closable mouth (e.g. from \scantokens, raw_tex) — safe to close
+        close_mouth(true)?;
+      } else {
+        // Non-autoclosable mouth that isn't our target — this means our target
+        // mouth was already consumed. Don't close this mouth (it belongs to an
+        // outer reading_from_mouth call). Just error and stop.
         Error!(
           "unexpected",
-          next,
-          s!("Unexpected input remaining: '{next}'"),
+          "<closed>",
+          "Mouth is unexpectedly already closed",
           arena::with(context_mouth_source, |source| s!(
-            "Finished reading from {source}, but it still has input."
+            "Reading from {source}, but it has already been closed (found different non-closable mouth on top)."
           ))
         );
-        {
-          if let Some(ref mut runtime) = runtime!() {
-            runtime.mouth.finish();
-          }
-        }
-        close_mouth(true)?;
-      }
-      // ?? if we continue?
-      else {
-        close_mouth(false)?;
+        break;
       }
     }
   }

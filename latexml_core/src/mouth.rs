@@ -305,13 +305,23 @@ impl Mouth {
       assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
   }
-  pub fn finish(&mut self) {
+  /// Stop reading from this mouth: clear buffers and close file handle.
+  /// Called by flush_mouth (\endinput) to prevent further reading.
+  /// Does NOT restore catcodes — that's done by finish().
+  pub fn stop_reading(&mut self) {
     self.buffer = VecDeque::new();
     self.raw_buffer = VecDeque::new();
     self.chars = VecDeque::new();
     self.lineno = 0;
     self.colno = 0;
     self.nchars = 0;
+    self.reader.take(); // close file handle
+  }
+
+  /// Fully finish this mouth: stop reading AND restore catcodes/state.
+  /// Called by close_mouth when the mouth is popped from the stack.
+  pub fn finish(&mut self) {
+    self.stop_reading();
     // Perl: at_letter restores @ catcode (independent of fordefinitions).
     // Use Scope::Global to ensure it takes effect regardless of scope frame state.
     if self.at_letter {
@@ -327,8 +337,6 @@ impl Mouth {
         note_end(msg);
       }
     }
-    self.reader.take(); // if we have a reader, this will force a Drop at the end of finish(), which
-    // will close the file handle
   }
   // Auxiliaries
 

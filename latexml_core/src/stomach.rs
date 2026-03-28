@@ -126,9 +126,8 @@ pub fn execute_before_after_group() -> Result<()> {
           Stored::Tokens(frametoks) => result.push(frametoks.be_digested()?),
           Stored::Token(frametok) => result.push(frametok.be_digested()?),
           _ => {
-            // TODO: Anything but Tokens in beforeAfterGroup?
-            dbg!(beforeafter_frame);
-            todo!();
+            // Unexpected value type in beforeAfterGroup — skip silently
+            // rather than panic (could occur with non-standard TeX constructs)
           },
         }
       }
@@ -425,8 +424,12 @@ pub fn enter_horizontal() {
   let mode = lookup_string("MODE");
   if mode.ends_with("vertical") {
     assign_value_inplace("MODE", arena::pin("horizontal"));
+  } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
+    // Perl L420-422: warn on unexpected mode
+    Warn!("unexpected", "enterHorizontal",
+      s!("Unexpected mode '{}' for enterHorizontal", mode));
   }
-  // else: already horizontal or math — ignore
+  // else: already horizontal or math — fine
 }
 
 /// Resume vertical mode by executing \par, in TeX-like fashion.
@@ -740,6 +743,12 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
             result.push(digested);
           }
         } else {
+          // Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
+          if token.get_catcode() == Catcode::ALIGN {
+            if let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax")) {
+              assign_meaning(&token, relax_meaning, Some(Scope::Local));
+            }
+          }
           let message = s!(
             "The token {:?} (catcode {:?}) should never reach Stomach!",
             token,
@@ -810,11 +819,9 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
         }
       },
       meaning => {
-        fatal!(
-          Stomach,
-          Misdefined,
-          s!("The object {:?} should never reach Stomach!", meaning)
-        );
+        // Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
+        Error!("misdefined", token,
+          s!("Unexpected object in Stomach: {:?}", meaning));
       },
     }
     expire_current_token();
@@ -881,8 +888,11 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
       },
       Some(Scope::Global),
     );
-    // and then invoke it.
-    invoke_token(token)
+    // Perl: unread the token and return empty, so the outer loop re-reads
+    // and dispatches through the normal path (with the newly installed stub).
+    // This ensures gullet-level side effects (filtering, expansion) are applied.
+    gullet::unread_one(*token);
+    Ok(Vec::new())
   }
 }
 
@@ -926,14 +936,15 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // and specializes the font. This produces the correct LaTeXML-level properties.
       // The mathchar parsing handles non-ASCII chars needing font map lookup.
       // TODO: Use for chars where font-encoding glyph differs from input.
+      // Perl L248-257: if IN_MATH && mathcode → decodeMathChar (math box)
+      // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
       if lookup_bool("IN_MATH") {
         if let Some(mathcode) = lookup_mathcode_sym(&meaning.get_sym()) {
           return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
         }
       }
-      if !lookup_bool("IN_MATH") {
-        enter_horizontal();
-      }
+      // Fallthrough: either not in math, or in math but no mathcode
+      enter_horizontal();
       let text = font::decode_string(meaning.get_sym(), None, true);
       Ok(Some(Digested::from(Tbox::new(
         text,

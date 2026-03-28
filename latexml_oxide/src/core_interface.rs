@@ -89,11 +89,37 @@ impl DigestionAPI for Core {
     // should we reset the model also?
     model::initialize_model();
     // let paths = state::search_paths;
+    let dump_path = std::env::var("LATEXML_DUMP").ok();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       input_definitions(&preload, InputDefinitionOptions::default())?;
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
+
+    // Load kernel dump AFTER pools (provides TeX/LaTeX macros the pools skipped).
+    if let Some(ref dump_path) = dump_path {
+      let path = std::path::Path::new(dump_path);
+      if path.exists() {
+        let result = if dump_path.ends_with(".oxide") {
+          // Rust-native format (from --init mode)
+          latexml_core::dump_reader::load_native_dump(path)
+        } else {
+          // Perl format (from Perl's make formats)
+          latexml_core::dump_loader::load_dump(path)
+        };
+        match result {
+          Ok(count) => {
+            eprintln!(
+              "[latexml-oxide] Loaded {} kernel definitions from {}",
+              count, path.display()
+            );
+          }
+          Err(e) => {
+            eprintln!("[latexml-oxide] Warning: failed to load dump: {}", e);
+          }
+        }
+      }
+    }
     Ok(())
   }
 
@@ -806,3 +832,4 @@ fn renumber_collect_dfs(
     renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
   }
 }
+

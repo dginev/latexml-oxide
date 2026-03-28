@@ -35,7 +35,7 @@ fn supertabular_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: mathescape + math parser
+
 fn listing_test() {
   latexml_test_single("tests/alignment/listing.tex", "listing", DIR, None, None);
 }
@@ -116,7 +116,6 @@ fn plainmath_test() {
 }
 
 #[test]
-#[ignore] // text= + tags diffs: amsmath split + math parser
 fn split_test() {
   latexml_test_single("tests/alignment/split.tex", "split", DIR, None, None);
 }

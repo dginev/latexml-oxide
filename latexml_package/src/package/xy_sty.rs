@@ -2,28 +2,253 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: xy.sty.ltxml (57 lines)
-  // TODO: Full port requires:
-  // 1. AssignCatcode('@' => CC_OTHER) before loading
-  // 2. InputDefinitions('xy', type => 'tex') — load raw TeX xy package
-  // 3. DeclareOption for driver options (dvips, pdftex, etc.)
-  // 4. \xyoption{} — load xy extension modules
-  // 5. ProcessOptions
-  //
-  // Perl source: LaTeXML/lib/LaTeXML/Package/xy.sty.ltxml
-  DefMacro!("\\xystycatcode", "12"); // catcode of @
-  RequirePackage!("ifpdf");
-  InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")));
+  //======================================================================
+  // Perl: xy.sty.ltxml (57 lines) + xy.tex.ltxml (153 lines)
+  //======================================================================
 
-  // Driver options (all mapped to \xyoption)
-  for option in [
-    "cmactex", "dvips", "dvitops", "emtex", "ln", "oztex",
-    "textures", "xdvi", "pdftex", "dvipdfm", "dvipdfmx",
-  ].iter() {
-    DeclareOption!(*option, None);
+  // Register SVG document namespace for xy picture output
+  model::register_document_namespace("svg", Some("http://www.w3.org/2000/svg"));
+
+  // Step 1: Catcode management
+  DefMacro!("\\xystycatcode", "12");
+
+  // Step 2: Load raw xy.tex (Perl: at_letter => 0)
+  // Save \@currname/\@currext before raw loading (xy.tex changes these internally)
+  let saved_currname = gullet::do_expand(T_CS!("\\@currname")).ok().map(|t| t.to_string());
+  let saved_currext = gullet::do_expand(T_CS!("\\@currext")).ok().map(|t| t.to_string());
+  assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
+  InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")), at_letter => false);
+  // Restore \@currname/\@currext so ProcessOptions uses the correct package name
+  if let Some(ref name) = saved_currname {
+    def_macro(T_CS!("\\@currname"), None, Tokenize!(name), None)?;
   }
-  DeclareOption!("colour", None);
-  DeclareOption!("cmtip", None);
-  DeclareOption!(None, None);
+  if let Some(ref ext) = saved_currext {
+    def_macro(T_CS!("\\@currext"), None, Tokenize!(ext), None)?;
+  }
+
+  //======================================================================
+  // Step 3: xy.tex.ltxml overlay (Perl L26-151)
+  //======================================================================
+
+  // Redefine \xyoption to filter incompatible drivers (Perl L27-50)
+  Let!("\\lx@xy@xyoption@orig", "\\xyoption");
+  DefMacro!("\\xyoption{}", sub[(option)] {
+    let option_s = option.to_string();
+    let other_drivers = [
+      "16textures", "17oztex", "dvidrv", "dvips", "dvitops",
+      "oztex", "pdf", "textures", "dvi",
+    ];
+    let unsupported = ["barr", "movie", "necula", "smart"];
+    if other_drivers.contains(&option_s.as_str()) {
+      Info!("xy", "ignored", s!("Ignoring xy driver {} (using latexml)", option_s));
+      return Ok(Tokens!());
+    }
+    if unsupported.contains(&option_s.as_str()) {
+      Warn!("xy", "unsupported",
+        s!("The xy extension/feature {} may not be supported", option_s));
+    }
+    let cache_key = s!("loaded_xyoption_{}", option_s);
+    if state::lookup_bool(&cache_key) {
+      return Ok(Tokens!());
+    }
+    state::assign_value(&cache_key, true, Some(Scope::Global));
+    // Special case: "latexml" driver — load our Rust xylatexml overlay directly
+    // since the file xylatexml.tex doesn't exist on disk (it's compiled into the binary).
+    if option_s == "latexml" {
+      crate::package::xylatexml_tex::load_definitions()?;
+      return Ok(Tokens!());
+    }
+    Ok(Tokens!(T_CS!("\\lx@xy@xyoption@orig"), T_BEGIN!(), option, T_END!()))
+  });
+
+  // \xywarning@, \xyerror@ (Perl L53-54)
+  DefPrimitive!("\\xywarning@ {}", sub[(msg)] {
+    Info!("xy", "warning", msg.to_string());
+  });
+  DefPrimitive!("\\xyerror@ {}{}", sub[(msg, _detail)] {
+    Info!("xy", "error", msg.to_string());
+  });
+
+  // Defer latexml driver to \AtBeginDocument (Perl L59)
+  RawTeX!("\\AtBeginDocument{\\xyoption{latexml}}");
+
+  // xy font primitives → no-op (Perl L66-72)
+  DefMacro!("\\xydashfont", "");
+  DefMacro!("\\xyatipfont", "");
+  DefMacro!("\\xybtipfont", "");
+  DefMacro!("\\xybsqlfont", "");
+  DefMacro!("\\xycircfont", "");
+
+  // \lx@xy@capturerange — capture coordinate range (Perl L143-146)
+  DefPrimitive!("\\lx@xy@capturerange", {
+    let mut dims = String::new();
+    for reg in ["\\X@min", "\\Y@min", "\\X@max", "\\Y@max"] {
+      if let Ok(Some(val)) = state::lookup_register(reg, Vec::new()) {
+        let sp = match val {
+          RegisterValue::Dimension(d) => d.value_of(),
+          RegisterValue::Number(n) => n.value_of(),
+          _ => 0,
+        };
+        if !dims.is_empty() { dims.push(','); }
+        dims.push_str(&sp.to_string());
+      } else {
+        if !dims.is_empty() { dims.push(','); }
+        dims.push('0');
+      }
+    }
+    state::assign_value("saved_xy_range", Stored::String(arena::pin(&dims)), Some(Scope::Global));
+  });
+
+  // Helper: read saved_xy_range as pixel values
+  // Returns (x0, y0, x1, y1) in px
+  // fn xy_range_px() -> (f64, f64, f64, f64) — inline at use sites
+
+  // \lx@xy@svg — top-level xy picture SVG (Perl L95-141)
+  // Perl uses a `properties` callback (digestion time) to capture saved_xy_range,
+  // then the constructor body (construction time) reads from %props.
+  // We replicate this with after_digest to snapshot the range at digest time.
+  DefConstructor!("\\lx@xy@svg Digested",
+    sub[document, args, props] {
+      // All values pre-computed at digest time via properties callback
+      let get_s = |k: &str| -> String {
+        match props.get(k) { Some(Stored::String(s)) => arena::to_string(*s), _ => String::new() }
+      };
+      let pxwidth = get_s("pxwidth");
+      let pxheight = get_s("pxheight");
+      let pic_attrs = string_map!("width" => pxwidth.clone(), "height" => pxheight.clone());
+      document.open_element("ltx:picture", Some(pic_attrs), None)?;
+
+      let mut svg_attrs = string_map!(
+        "version" => "1.1", "overflow" => "visible",
+        "width" => pxwidth.clone(), "height" => pxheight.clone(),
+        "viewBox" => get_s("viewBox")
+      );
+      let style = get_s("style");
+      if !style.is_empty() { svg_attrs.insert(String::from("style"), style); }
+      document.open_element("svg:svg", Some(svg_attrs), None)?;
+
+      let g_attrs = string_map!("transform" => get_s("transform"));
+      document.open_element("svg:g", Some(g_attrs), None)?;
+
+      if let Some(Some(content)) = args.first() {
+        document.absorb(content, None)?;
+      }
+      document.close_element("svg:g")?;
+      document.close_element("svg:svg")?;
+      document.close_element("ltx:picture")?;
+    },
+    // Perl: properties => sub { ... } — capture AND compute all values at digest time
+    after_digest => sub[whatsit] {
+      let range_str = state::lookup_string("saved_xy_range");
+      let dpi_val = state::lookup_int("DPI");
+      let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
+      let dims: Vec<f64> = range_str.split(',')
+        .filter_map(|s| s.trim().parse::<i64>().ok())
+        .map(|v| (v as f64 / 65536.0) * (dpi / 72.27))
+        .collect();
+      let (x0, y0, x1, y1) = (
+        dims.first().copied().unwrap_or(0.0),
+        dims.get(1).copied().unwrap_or(0.0),
+        dims.get(2).copied().unwrap_or(0.0),
+        dims.get(3).copied().unwrap_or(0.0),
+      );
+      let mut w = x1 - x0;
+      let mut h = y1 - y0;
+      let (x0f, y0f) = if w < 0.0 { w = 0.0; (0.0f64, y0) } else { (x0, y0) };
+      let y0f = if h < 0.0 { h = 0.0; 0.0 } else { y0f };
+      let x = -x0f;
+      let y = y1 - y0f;
+      let minx = x;
+      let miny = -y0f;
+      let pxwidth = if w > 1.0 { w } else { 1.0 };
+      let pxheight = if h > 1.0 { h } else { 1.0 };
+      whatsit.set_property("pxwidth", Stored::from(s!("{:.2}", pxwidth)));
+      whatsit.set_property("pxheight", Stored::from(s!("{:.2}", pxheight)));
+      whatsit.set_property("viewBox", Stored::from(
+        s!("{:.2} {:.2} {:.2} {:.2}", minx, miny, pxwidth, pxheight)));
+      whatsit.set_property("transform", Stored::from(
+        s!("matrix(1 0 0 -1 {} {})", x, y)));
+      if miny != 0.0 {
+        whatsit.set_property("style", Stored::from(
+          s!("vertical-align:{}px", -miny)));
+      }
+    }
+  );
+
+  // \lx@xy@svgnested — nested xy picture (Perl L79-93)
+  DefConstructor!("\\lx@xy@svgnested Digested",
+    sub[document, args, props] {
+      let transform = match props.get("transform") {
+        Some(Stored::String(s)) => arena::to_string(*s),
+        _ => String::from("matrix(1 0 0 1 0 0)"),
+      };
+      let g_attrs = string_map!("transform" => transform);
+      document.open_element("svg:g", Some(g_attrs), None)?;
+      if let Some(Some(content)) = args.first() {
+        document.absorb(content, None)?;
+      }
+      document.close_element("svg:g")?;
+    },
+    after_digest => sub[whatsit] {
+      let range_str = state::lookup_string("saved_xy_range");
+      let dpi_val = state::lookup_int("DPI");
+      let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
+      let dims: Vec<f64> = range_str.split(',')
+        .filter_map(|s| s.trim().parse::<i64>().ok())
+        .map(|v| (v as f64 / 65536.0) * (dpi / 72.27))
+        .collect();
+      let (x0, y0, _x1, y1) = (
+        dims.first().copied().unwrap_or(0.0),
+        dims.get(1).copied().unwrap_or(0.0),
+        dims.get(2).copied().unwrap_or(0.0),
+        dims.get(3).copied().unwrap_or(0.0),
+      );
+      let h = y1 - y0;
+      let x_px = if x0 > 0.0 { x0 } else { 0.0 };
+      let in_math = state::lookup_bool("IN_MATH");
+      let y_px = if in_math { -(h / 2.0) } else { 0.0 };
+      whatsit.set_property("transform", Stored::from(
+        s!("matrix(1 0 0 1 {} {})", x_px, y_px)));
+    }
+  );
+
+  // Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151)
+  Let!("\\lx@xy@original", "\\xy");
+  Let!("\\end@lx@xy@original", "\\endxy");
+  DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
+  DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
+
+  //======================================================================
+  // Step 4
+  RequirePackage!("ifpdf");
+
+  //======================================================================
+  // Step 5: DeclareOption (Perl xy.sty.ltxml L27-53)
+  DeclareOption!("cmactex", "\\xyoption{dvips}");
+  DeclareOption!("dvips", "\\xyoption{dvips}");
+  DeclareOption!("dvitops", "\\xyoption{dvitops}");
+  DeclareOption!("emtex", "\\xyoption{emtex}");
+  DeclareOption!("ln", "\\xyoption{ln}");
+  DeclareOption!("oztex", "\\xyoption{oztex}");
+  DeclareOption!("textures", "\\xyoption{textures}");
+  DeclareOption!("xdvi", "\\xyoption{xdvi}");
+  DeclareOption!("pdftex", "\\xyoption{pdf}");
+  DeclareOption!("dvipdfm", "\\xyoption{pdf}");
+  DeclareOption!("dvipdfmx", "\\xyoption{pdf}");
+  DeclareOption!("colour", "\\xyoption{color}");
+  DeclareOption!("cmtip", "\\xyoption{cmtip}\\UseComputerModernTips");
+  DeclareOption!("10pt", "\\xywithoption{tips}{\\def\\tipsize@@{10}}");
+  DeclareOption!("11pt", "\\xywithoption{tips}{\\def\\tipsize@@{11}}");
+  DeclareOption!("12pt", "\\xywithoption{tips}{\\def\\tipsize@@{12}}");
+
+  // Catch-all: DeclareOption(undef, ...)
+  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
+  DeclareOption!(None, {
+    let current_option = gullet::do_expand(T_CS!("\\CurrentOption"))?.to_string();
+    gullet::unread(Tokenize!(&s!("\\xyoption{{{}}}", current_option)));
+  });
+
+  //======================================================================
+  // Step 6
   ProcessOptions!();
 });

@@ -2,10 +2,36 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // The Perl source defines \xspace as a macro sub that reads the next
-  // token and checks if it's in a set of tokens that should NOT get
-  // extra space. If the next token is not in the set, a space is inserted.
-  // We approximate with a no-op since the sub-based implementation
-  // requires gullet readToken which is complex in the compile-time macro system.
-  DefMacro!("\\xspace", None);
+  // Perl: \xspace reads the next token. If it's NOT in a set of
+  // "no-space" tokens, insert a space. The no-space set includes:
+  // T_BEGIN, T_END, punctuation (.,:;!?/')-~), and certain CS tokens.
+  // This makes \No\xspace produce "No " before words but "No." before periods.
+  DefPrimitive!("\\xspace", {
+    let next = gullet::read_token()?;
+    let is_no_space = next.as_ref().map(|t| {
+      let cc = t.get_catcode();
+      // T_BEGIN ({) and T_END (}) suppress space (Perl: @XSPACES includes T_BEGIN, T_END)
+      if matches!(cc, Catcode::BEGIN | Catcode::END) {
+        return true;
+      }
+      // CS tokens: \/, \ , \xspace, \space, \@sptoken, \@xobeysp
+      if cc == Catcode::CS {
+        return t.with_str(|s| matches!(s,
+          "\\/"|"\\ "|"\\xspace"|"\\space"|"\\@sptoken"|"\\@xobeysp"
+        ));
+      }
+      // Punctuation and special characters
+      t.with_str(|s| matches!(s,
+        "." | "," | ":" | ";" | "!" | "?" | "/" | "'" | ")" | "-" | "~"
+        | "\u{00A0}" // non-breaking space
+      ))
+    }).unwrap_or(false);
+    if let Some(tok) = next {
+      gullet::unread(Tokens!(tok));
+    }
+    if !is_no_space {
+      // Insert a space token
+      gullet::unread(Tokens!(T_SPACE!()));
+    }
+  });
 });

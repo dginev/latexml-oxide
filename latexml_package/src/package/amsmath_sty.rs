@@ -28,6 +28,10 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
     }
   }
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
+  // Perl: amsAlignmentBindings calls alignmentBindings('math') which sets
+  // Let(T_MATH, '\lx@dollar@in@mathmode'). Perl does NOT override it back.
+  // The \lx@dollar@in@mathmode handles nested math/text correctly using
+  // MATH_ALIGN_$_BEGUN boxing-level tracking.
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline@noskip"),
@@ -92,7 +96,14 @@ fn ams_rearrangeable_bindings(
     xml_attributes,
   });
   assign_alignment(alignment, None);
-  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+  // NOTE: Perl's amsRearrangeableBindings does NOT set Let(T_MATH, '\lx@dollar@in@mathmode').
+  // That letdef is only in alignmentBindings (for {tabular}/{array}/{eqnarray}).
+  // For rearrangeable environments ({align},{gather}), the column template already contains
+  // literal $ tokens. The $ meaning is left as \lx@dollar@default — the template $ tokens
+  // toggle math/text mode via the default mechanism.
+  // Adding the letdef here would cause nested \begin{aligned} inside \begin{align} to hang:
+  // the after-template $ would run \lx@dollar@in@mathmode while inner frames are still on stack,
+  // mismatching MATH_ALIGN_$_BEGUN and opening restricted_horizontal mode instead of closing inline math.
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline@noskip"),
@@ -942,11 +953,29 @@ LoadDefinitions!({
   DefMacro!("\\split",
     "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
      \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
-  // \if@in@ams@align — checks if current environment starts with "align"
-  // Simplified: always false for now (proper impl needs lookupStackedValues)
-  DefConditional!("\\if@in@ams@align");
-  // \lx@ams@marksplitinalign — stub (sets colspan=2, advances column)
-  DefConstructor!("\\lx@ams@marksplitinalign", "");
+  // Perl: \if@in@ams@align — checks if current environment starts with "align"
+  // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')
+  DefConditional!("\\if@in@ams@align", {
+    state::with_stacked_values("current_environment", |vals| {
+      vals.iter().any(|v| v.to_string().starts_with("align"))
+    })
+  });
+  // Perl: \lx@ams@marksplitinalign — constructor that marks the current _Capture_
+  // cell with colspan=2, align=center, then advances to the next column.
+  // Perl: afterDigest => sub { LookupValue('Alignment')->nextColumn; return; }
+  DefPrimitive!("\\lx@ams@marksplitinalign", {
+    use latexml_core::alignment::template::Align;
+    if let Some(alignment_stored) = state::lookup_alignment() {
+      if let Some(alignment_cell) = alignment_stored.alignment_cell() {
+        let mut al = alignment_cell.borrow_mut();
+        if let Some(cell) = al.current_column() {
+          cell.colspan = Some(2);
+          cell.align = Some(Align::Center);
+        }
+        al.next_column()?;
+      }
+    }
+  });
   DefMacro!("\\endsplit",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@split\\lx@hidden@egroup");
   DefPrimitive!("\\@end@split", { egroup()?; });
@@ -985,15 +1014,34 @@ LoadDefinitions!({
       }
     });
 
-  DefMacro!("\\aligned[]",
-    "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@amsaligned\\lx@begin@alignment",
-    locked => true);
+  // Perl: DefMacro('\aligned alignsafeOptional', ...)
+  // alignsafeOptional reads optional arg WITHOUT triggering alignment machinery.
+  // Standard [] would cause &-interception by handle_template for the outer alignment,
+  // breaking nested \begin{aligned} inside \begin{align}.
+  DefPrimitive!("\\aligned", {
+    // Perl: local $LaTeXML::ALIGN_STATE = 1000000; — disable alignment check
+    local_align_group_count(1000000);
+    let _opt = gullet::read_optional(None)?; // read and discard optional [t]/[b]
+    expire_align_group_count();
+    gullet::unread(Tokens::new(vec![
+      T_CS!("\\lx@hidden@bgroup"), T_CS!("\\@ams@aligned@bindings"),
+      T_CS!("\\@@amsaligned"), T_CS!("\\lx@begin@alignment"),
+    ]));
+  }, locked => true);
   DefMacro!("\\endaligned",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
-  DefMacro!("\\alignedat{} []",
-    "\\lx@hidden@bgroup\\@ams@aligned@bindings\\@@amsaligned\\lx@begin@alignment",
-    locked => true);
+  // Perl: DefMacro('\alignedat{} alignsafeOptional', ...)
+  DefPrimitive!("\\alignedat", {
+    let _nargs = gullet::read_arg(ExpansionLevel::Off)?; // consume mandatory {n}
+    local_align_group_count(1000000);
+    let _opt = gullet::read_optional(None)?;
+    expire_align_group_count();
+    gullet::unread(Tokens::new(vec![
+      T_CS!("\\lx@hidden@bgroup"), T_CS!("\\@ams@aligned@bindings"),
+      T_CS!("\\@@amsaligned"), T_CS!("\\lx@begin@alignment"),
+    ]));
+  }, locked => true);
   DefMacro!("\\endalignedat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
@@ -1245,7 +1293,11 @@ pub fn rearrange_lone_ams_aligned(
     let mut cell_iter = cells.into_iter();
     // Process cells in pairs (LHS, RHS)
     while let Some(cell) = cell_iter.next() {
+      // Clear box_to_absorb before creating MathFork to prevent the main Math
+      // from inheriting the aligned box (which would produce wrong tex).
+      document.set_box_to_absorb(None);
       let (mut main, mut branch) = open_math_fork(document, &mut eqn)?;
+      document.expire_box_to_absorb();
       // Process up to 2 cells
       for cell_node in [Some(cell), cell_iter.next()] {
         let Some(cn) = cell_node else { continue };
@@ -1256,19 +1308,54 @@ pub fn rearrange_lone_ams_aligned(
         }
         let cell_children = element_nodes(&cn);
         if !cell_children.is_empty() {
+          // Perl: creates MathWhatsit(Digest(\displaystyle), cellbox) for proper reversion.
+          // We don't have MathWhatsit in Rust, so we:
+          // 1. Clear box_to_absorb to prevent inheriting the aligned box
+          // 2. Synthesize tex attribute from the cell's box reversion
+          let cell_tex = {
+            let first_child = cn.get_first_child();
+            let cell_box = first_child.as_ref().and_then(|c| document.get_node_box(c));
+            if let Some(ref cb) = cell_box {
+              match cb.untex() {
+                Ok(t) => {
+                  let t = t.trim().to_string();
+                  // Cell tex may already include \displaystyle from alignment template
+                  if t.starts_with("\\displaystyle") {
+                    t
+                  } else if t.starts_with(|c: char| c.is_ascii_alphabetic()) {
+                    format!("\\displaystyle {t}")
+                  } else {
+                    format!("\\displaystyle{t}")
+                  }
+                },
+                Err(_) => String::new(),
+              }
+            } else { String::new() }
+          };
+          document.set_box_to_absorb(None);
           let mut imath = document.open_element_at(&mut td, "ltx:Math", None, None)?;
-          document.set_attribute(&mut imath, "mode", "inline")?;
+          if !cell_tex.is_empty() {
+            // Pre-set tex to prevent afterClose from using wrong box reversion
+            document.set_attribute(&mut imath, "tex", &cell_tex)?;
+          }
           let mut xmath = document.open_element_at(&mut imath, "ltx:XMath", None, None)?;
-          // Clone the cell's children into this XMath
           document.append_clone(&mut xmath, cell_children.clone())?;
           document.close_element_at(&mut xmath)?;
           document.close_element_at(&mut imath)?;
-          // Move original children into main branch
-          for mut child in cell_children {
-            child.unlink_node();
-            let main_xmath = document.findnodes("ltx:XMath", Some(&main));
-            if let Some(mut mx) = main_xmath.into_iter().next() {
-              mx.add_child(&mut child).ok();
+          document.expire_box_to_absorb();
+          // Perl L657-671: $stuff = $cell->firstChild, then
+          // map { $main->firstChild->appendChild($_) } map { $_->childNodes } @cells
+          // This flattens by taking the CHILDREN of each cell's first child,
+          // not the first child itself. We clone into main XMath.
+          if let Some(mut mx) = document.findnodes("ltx:XMath", Some(&main)).into_iter().next() {
+            // Get the first element child of the cell, then clone ITS children
+            if let Some(stuff) = cn.get_first_element_child() {
+              let stuff_children: Vec<Node> = stuff.get_child_nodes().into_iter()
+                .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
+                .collect();
+              if !stuff_children.is_empty() {
+                document.append_clone(&mut mx, stuff_children)?;
+              }
             }
           }
         }

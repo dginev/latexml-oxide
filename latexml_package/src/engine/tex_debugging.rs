@@ -57,7 +57,6 @@ LoadDefinitions!({
 
   DefRegister!("\\errhelp", Tokens!());
   DefPrimitive!("\\errmessage{}", sub[(args)] {
-
     let message = Expand!(args);
     let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
     eprintln!("{}: {}", message, help);

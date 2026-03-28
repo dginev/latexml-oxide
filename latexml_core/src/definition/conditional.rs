@@ -142,7 +142,10 @@ impl Definition for Conditional {
   fn get_test(&self) -> Option<&ConditionalClosure> { self.test.as_ref() }
   fn get_conditional_type(&self) -> Option<ConditionalType> { Some(self.conditional_type) }
   // Not implemented for expandable
-  fn invoke_primitive(&self) -> Result<Vec<Digested>> { todo!() }
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
+    // Conditionals are expandable, not primitive — this shouldn't be called
+    Ok(Vec::new())
+  }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {

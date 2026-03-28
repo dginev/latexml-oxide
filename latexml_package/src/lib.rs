@@ -12,6 +12,8 @@ pub mod prelude;
 // The TeX/LaTeX/eTeX/PdfTeX kernels
 #[macro_use]
 pub mod engine;
+// XMath helper functions for building XMDual token streams
+pub mod xmath_helpers;
 // Supported LaTeX packages
 #[macro_use]
 pub mod package;
@@ -155,6 +157,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "gen-j-l.cls" => package::gen_j_l_cls::load_definitions(),
     "gen-m-l.cls" => package::gen_m_l_cls::load_definitions(),
     "gen-p-l.cls" => package::gen_p_l_cls::load_definitions(),
+    "french.ldf" => package::french_ldf::load_definitions(),
+    "frenchb.ldf" => package::french_ldf::load_definitions(),
     "gensymb.sty" => package::gensymb_sty::load_definitions(),
     "geometry.sty" => package::geometry_sty::load_definitions(),
     "german.sty" => package::german_sty::load_definitions(),
@@ -292,7 +296,11 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "subfloat.sty" => package::subfloat_sty::load_definitions(),
     "svg.sty" => package::svg_sty::load_definitions(),
     "subfig.sty" => package::subfig_sty::load_definitions(),
+    "babel.def" => package::babel_def::load_definitions(),
+    "babel_support.sty" => package::babel_support_sty::load_definitions(),
+    "txtbabel.def" => package::txtbabel_def::load_definitions(),
     "xy.sty" => package::xy_sty::load_definitions(),
+    "xylatexml.tex" => package::xylatexml_tex::load_definitions(),
     "xypic.sty" => package::xypic_sty::load_definitions(),
     "pgf.sty" => package::pgf_sty::load_definitions(),
     "pgfplots.sty" => package::pgfplots_sty::load_definitions(),
@@ -382,6 +390,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pdfpages.sty" => package::pdfpages_sty::load_definitions(),
     "pdflscape.sty" => package::pdflscape_sty::load_definitions(),
     "sidecap.sty" => package::sidecap_sty::load_definitions(),
+    "siunitx.sty" => package::siunitx_sty::load_definitions(),
     "showkeys.sty" => package::showkeys_sty::load_definitions(),
     "underscore.sty" => package::underscore_sty::load_definitions(),
     "undertilde.sty" => package::undertilde_sty::load_definitions(),
@@ -416,6 +425,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pgfkeys.sty" => package::pgfkeys_sty::load_definitions(),
     "pgfplotstable.sty" => package::pgfplotstable_sty::load_definitions(),
     "pgfrcs.sty" => package::pgfrcs_sty::load_definitions(),
+    "physics.sty" => package::physics_sty::load_definitions(),
     "prettyref.sty" => package::prettyref_sty::load_definitions(),
     "pslatex.sty" => package::pslatex_sty::load_definitions(),
     "pxfonts.sty" => package::pxfonts_sty::load_definitions(),
@@ -430,6 +440,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "calrsfs.sty" => package::calrsfs_sty::load_definitions(),
     "cmbright.sty" => package::cmbright_sty::load_definitions(),
     "euscript.sty" => package::euscript_sty::load_definitions(),
+    "expl3.lua" => package::expl3_lua::load_definitions(),
     "expl3.sty" => package::expl3_sty::load_definitions(),
     "fixme.sty" => package::fixme_sty::load_definitions(),
     "fleqn.sty" => package::fleqn_sty::load_definitions(),

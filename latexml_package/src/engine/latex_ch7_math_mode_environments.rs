@@ -308,7 +308,9 @@ pub fn eqnarray_bindings() -> Result<()> {
   });
 
   assign_alignment(alignment, None);
-  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+  // NOTE: Perl's eqnarrayBindings does NOT set Let(T_MATH, '\lx@dollar@in@mathmode').
+  // eqnarray creates the alignment directly (not through alignmentBindings),
+  // so the $ tokens in its template use \lx@dollar@default — same as amsRearrangeableBindings.
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline"),

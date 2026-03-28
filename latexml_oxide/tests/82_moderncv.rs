@@ -7,7 +7,6 @@ fn cs_cv_test() {
 }
 
 #[test]
-#[ignore] // needs SVG namespace support in document model
 fn orc_test() {
   latexml_test_single("tests/moderncv/orc.tex", "orc", DIR, None, None);
 }

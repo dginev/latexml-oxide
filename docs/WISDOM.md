@@ -512,3 +512,100 @@ add_math_rewrite("f", "FUNCTION")?;  // enables function application
 - `prefix_script_pre`: semantic action that forces "pre" position without `_wasfloat` (matching Perl's `NewScript($base, $script, 'pre')` for POST scripts)
 - `prescripted_factor_post_r/l`: POST scripts used as pre-scripts on factors (only valid when FLOAT-wrapped)
 - Recursive chaining via `scripted_factor_l2 += floatsubarg scripted_factor_l2` for 3+ float chains
+
+---
+
+## 12. alignsafeOptional: alignment token interception during parameter parsing
+
+**Problem:** `\begin{aligned}` nested inside `\begin{align}` loses 85% of content. All errors cascade from "Attempt to end mode `inline_math` in `math`". The inner aligned's content `& D` gets intercepted by the outer alignment.
+
+**Root cause:** `\aligned[]` reads its optional arg using standard `[]` parameter parsing. During the `read_x_token` call to check for `[`, the gullet's alignment check intercepts `&` from the content. Since the inner alignment hasn't been set up yet, `handle_template` fires for the OUTER alignment, injecting the outer after-template `$` into the inner alignment's token stream. This `$` triggers `\lx@end@inline@math` inside the inner alignment, corrupting the mode stack.
+
+**Fix (3 parts):**
+1. **`\aligned`/`\alignedat`**: Implement Perl's `alignsafeOptional` — read optional arg with `local_align_group_count(1000000)` to disable alignment token interception during arg reading.
+2. **`\lx@begin@alignment`**: Remove spurious `SkipSpaces` parameter (Perl has none). SkipSpaces also triggers `read_x_token` which intercepts alignment tokens.
+3. **`eqnarray_bindings`**: Remove spurious `Let(T_MATH, '\lx@dollar@in@mathmode')` — Perl doesn't set this.
+
+**Key insight:** Any `read_x_token` call inside an alignment column can trigger `handle_template`. Parameter parsing (SkipSpaces, optional `[]`, etc.) calls `read_x_token`. If the content after the macro contains alignment tokens (`&`, `\cr`), they'll be intercepted by the outer alignment's template. Perl avoids this with `$LaTeXML::ALIGN_STATE = 1000000` (our `local_align_group_count`).
+
+## 22. Babel OOM: undefined macros → \<ltx:ERROR/\> self-expansion → infinite loop
+
+When babel 3.x calls `\selectlanguage{french}`, it triggers `\bbl@provide@locale`
+which calls `\babelprovide{french}` if `\csname datefrench\endcsname` is `\relax`.
+The `\babelprovide` path reads `.ini` files and uses many internal macros that our
+engine doesn't define. Our error recovery for undefined macros creates them as
+`<ltx:ERROR/>` — a string that, when expanded again, creates more error tokens.
+Some babel macros accumulate lists that include undefined macros, creating chains
+of error-recovery expansions that consume 14-26GB of memory.
+
+**Root causes identified:**
+1. `\bbl@languages` undefined → error recovery → self-referential expansion
+2. `\babelprovide` ini-loading path hits multiple undefined internal macros
+3. `\bbl@iflanguage` fails because `\l@<lang>` registers aren't defined
+
+**Fixes applied (emulating Perl's precompiled kernel):**
+- Pre-define `\bbl@languages{}` before babel loads
+- Pre-define `\captionslang` + `\datelang` for 27 common languages
+- Pre-define `\l@lang` registers for 13 common languages
+- Clear `\@fontenc@load@list` after babel loads (comma leak fix)
+
+**Fundamental fix needed:** Precompiled kernel dump (infrastructure E) that
+pre-loads all kernel state, or fix error recovery to NOT create self-referential
+expansions for undefined macros.
+
+---
+
+## 23. DefConstructor state lookups: digest time vs construction time
+
+**Discovery:** xy-pic SVG constructors produced zero coordinates because register
+values (\X@c, \Y@c, etc.) were read at construction time instead of digest time.
+
+**Analysis:** `DefConstructor` bodies (`sub[document, args, props] { ... }`) run at
+CONSTRUCTION time (when XML is built). But multiple constructors are digested in
+sequence before any are constructed. A register read at construction time sees the
+value from the LAST digested constructor, not the one being constructed.
+
+**Fix pattern:** Use `properties => sub[args] { ... }` to capture register values
+at digest time. The callback returns a `SymHashMap<Stored>` that becomes the
+whatsit's properties. The constructor body reads from `props.get("key")`.
+
+```rust
+// WRONG: reads register at construction time
+DefConstructor!("\\foo", sub[document, _args, _props] {
+    let val = state::lookup_register("\\bar", Vec::new())?; // WRONG
+});
+
+// RIGHT: captures register at digest time
+DefConstructor!("\\foo", sub[document, _args, props] {
+    let val = props.get("bar_val"); // Read from properties
+}, properties => {
+    let val = state::lookup_register("\\bar", Vec::new())?;
+    stored_map!("bar_val" => format!("{}", val))
+});
+```
+
+**Scope:** Applied to all 19 xy SVG constructors + `\pic@makebox@`. Audit found
+no other critical instances in the engine codebase.
+
+---
+
+## 24. catcode checks vs defined_as: Perl is inconsistent
+
+**Discovery:** Replacing `get_catcode() == Catcode::BEGIN` with `defined_as(T_BEGIN!())`
+caused regressions because Perl uses DIFFERENT check patterns in different functions.
+
+**Analysis:** Perl's Token has both `$$token[1] == CC_BEGIN` (raw catcode check)
+and `$token->defined_as(T_BEGIN)` (meaning check via `\let` chain resolution).
+Perl uses them inconsistently:
+
+| Function | Perl check | Matches `\bgroup`? |
+|----------|-----------|-------------------|
+| readArg | CC_BEGIN catcode | No |
+| readBoxContents | defined_as(T_BEGIN) | Yes |
+| readBalanced (require_open) | CC_BEGIN \|\| Equals(meaning, T_BEGIN) | Yes (dual) |
+| readDelimited | CC_BEGIN catcode | No |
+| readTokensValue | CC_BEGIN catcode | No |
+| readUntilBrace | CC_BEGIN catcode | No |
+
+**Fix:** Match each Perl function's exact check pattern. Never assume `defined_as`
+is universally correct — check the Perl source for each specific function.

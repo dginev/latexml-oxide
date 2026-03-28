@@ -360,11 +360,18 @@ LoadDefinitions!({
   // # since we don't know where it ends, we can't easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
+  fn is_relax_meaning(token: &Token) -> bool {
+    if *token == *TOKEN_RELAX { return true; }
+    if token.get_catcode() != Catcode::CS { return false; }
+    matches!(state::lookup_meaning(token),
+      Some(Stored::Primitive(ref p)) if *p.get_cs() == *TOKEN_RELAX)
+  }
+
   fn etex_readexpr(rtype: RegisterType) -> Result<RegisterValue> {
     let value = etex_readexpr_i(rtype, 0)?;
     if let Some(token) = gullet::read_token()? {
-      // Skip \relax
-      if token != *TOKEN_RELAX {
+      // Skip \relax or token with \relax meaning (\__int_eval_end: etc.)
+      if !is_relax_meaning(&token) {
         gullet::unread_one(token);
       }
     }

@@ -70,7 +70,7 @@ pub enum Scope {
 }
 
 /// the kinds of tables bookkept in the State
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TableName {
   /// token meaning
   Meaning,
@@ -504,6 +504,73 @@ impl State {
     }
   }
 
+  /// Perl DumpFile equivalent: Take a snapshot of the current state.
+  /// Returns a HashMap mapping (table_name, key) → Stored value.
+  /// Only captures the front (current) value of each key.
+  /// Used before processing latex.ltx to diff what changed.
+  pub fn snapshot(&self) -> std::collections::HashMap<(TableName, SymStr), Stored> {
+    let tables = [
+      TableName::Value,
+      TableName::Meaning,
+      TableName::Catcode,
+      TableName::Mathcode,
+      TableName::Sfcode,
+      TableName::Lccode,
+      TableName::Uccode,
+      TableName::Delcode,
+    ];
+    let mut snap = std::collections::HashMap::new();
+    for &tname in &tables {
+      let table = self.table(tname);
+      for (key, values) in table {
+        if let Some(front) = values.front() {
+          snap.insert((tname, *key), front.clone());
+        }
+      }
+    }
+    snap
+  }
+
+  /// Perl DumpFile equivalent: Compute the diff between current state and a snapshot.
+  /// Returns only entries that CHANGED since the snapshot was taken.
+  /// Skips entries that contain closures (Primitive, Constructor, Conditional)
+  /// since those can't be serialized — they come from Rust engine code.
+  pub fn diff_from_snapshot(
+    &self,
+    snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+  ) -> Vec<(TableName, SymStr, Stored)> {
+    let tables = [
+      TableName::Value,
+      TableName::Meaning,
+      TableName::Catcode,
+      TableName::Mathcode,
+      TableName::Sfcode,
+      TableName::Lccode,
+      TableName::Uccode,
+      TableName::Delcode,
+    ];
+    let mut diff = Vec::new();
+    for &tname in &tables {
+      let table = self.table(tname);
+      for (key, values) in table {
+        if let Some(current) = values.front() {
+          let key_pair = (tname, *key);
+          let changed = match snap.get(&key_pair) {
+            None => true,    // new entry
+            Some(prev) => {
+              // Compare string representations (cheap approximation of Perl's dump-based diff)
+              format!("{:?}", current) != format!("{:?}", prev)
+            }
+          };
+          if changed && is_serializable(current) {
+            diff.push((tname, *key, current.clone()));
+          }
+        }
+      }
+    }
+    diff
+  }
+
   // needed for assign_internal, so keeping it as a object method
   /// gets the current value of a named prefix
   pub fn get_prefix(&self, prefix: &str) -> bool {
@@ -536,6 +603,7 @@ impl State {
         }
       }
     }
+    // TRACE: watch for cleanup:w
     // regular check, local scope is default, unless a global prefix is set
     let scope = match scope_opt {
       Some(s) => s,
@@ -1325,10 +1393,28 @@ pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
       // preserving order unshift, as Perl's
       front.push_front(value)
     }
+  } else if receiver.is_none() || matches!(receiver, Some(Stored::None)) {
+    // Key doesn't exist yet — create a new VecDequeStored via the existing borrow
+    let mut vd = VecDeque::new();
+    for value in values_iter {
+      vd.push_back(value);
+    }
+    state.assign_internal(
+      TableName::Value,
+      key_sym,
+      Stored::VecDequeStored(vd),
+      Some(Scope::Global),
+    );
   } else {
-    panic!(
-      "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} \
-       got: {receiver:?}"
+    // Wrong type — warn but don't panic
+    Warn!(
+      "unexpected",
+      "unshift_value",
+      s!(
+        "unshift_value expects VecDequeStored receiver for key {:?}, got: {:?}",
+        key,
+        receiver.map(|r| std::mem::discriminant(r))
+      )
     );
   }
 }
@@ -1419,7 +1505,7 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
     None => None,
     Some(cvec) => match cvec.front() {
       Some(Stored::Catcode(cc)) => Some(*cc),
-      Some(_) => todo!(), // best to fail hard if we set a nonsence value
+      Some(_) => None, // non-catcode value in catcode table — treat as undefined
       _ => None,
     },
   }
@@ -1695,6 +1781,18 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
               // special case,
               // If a cs has been let to an executable token, lookup ITS defn.
               return retry_entry.front().cloned();
+            }
+          }
+          // Also follow \let chains for CS tokens: if \foo is \let to \bar,
+          // resolve \bar's definition. This handles expl3 aliases like
+          // \tex_long:D → \long, \tex_gdef:D → \gdef.
+          if t.get_catcode() == Catcode::CS {
+            if let Some(target_entry) = state.meaning.get(&t.text) {
+              if let Some(target_front) = target_entry.front() {
+                if !matches!(target_front, Stored::Token(_) | Stored::None) {
+                  return Some(target_front.clone());
+                }
+              }
             }
           }
         }
@@ -2277,4 +2375,49 @@ pub fn set_state(incoming_state: State) {
   }
   let mut global_state = state_mut!();
   *global_state = incoming_state;
+}
+
+/// Check whether a Stored value can be serialized for the kernel dump.
+/// Values containing closures (Primitive, Constructor, Conditional, etc.)
+/// cannot be serialized — they come from Rust engine code, not the dump.
+/// This matches Perl's DumpFile which only serializes Expandable macros.
+pub fn is_serializable(stored: &Stored) -> bool {
+  use Stored::*;
+  match stored {
+    // Data types: always serializable
+    None | Bool(_) | String(_) | Charcode(_) | Int(_) | Catcode(_) => true,
+    Token(_) | Tokens(_) | Number(_) | Float(_) => true,
+    Glue(_) | MuGlue(_) | Dimension(_) | MuDimension(_) => true,
+    Reversion(_) | KeyVal(_) => true,
+    Chars(_) | Strings(_) => true,
+    // Expandable: serializable only if it has a Tokens body (not a Closure body)
+    Expandable(exp) => {
+      match exp.get_expansion() {
+        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None => true,
+        _ => false,
+      }
+    },
+    // Register: serializable (stores value + type, no closures)
+    Register(_) => true,
+    // Font: serializable (data only)
+    Font(_) => true,
+    // These contain closures — NOT serializable
+    Primitive(_) | Constructor(_) | Conditional(_) | MathPrimitive(_) => false,
+    // Collections: serializable if contents are
+    VecDequeStored(_) | HashStored(_) | HashString(_) => true,
+    // Everything else: skip for safety
+    _ => false,
+  }
+}
+
+/// Take a snapshot of the current State (for dump diff).
+pub fn take_snapshot() -> std::collections::HashMap<(TableName, SymStr), Stored> {
+  state!().snapshot()
+}
+
+/// Compute diff from snapshot and return changed serializable entries.
+pub fn diff_snapshot(
+  snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+) -> Vec<(TableName, SymStr, Stored)> {
+  state!().diff_from_snapshot(snap)
 }

@@ -139,7 +139,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_directive" font="typewriter">#define</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">EXAMPLE</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">whichwhat</text></listingline>
+          </tags><text class="ltx_lst_directive">#<text font="typewriter">define</text></text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">EXAMPLE</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">whichwhat</text></listingline>
         <listingline xml:id="lstnumberx5"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -206,23 +206,21 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
           </tags></listingline>
         <listingline xml:id="lstnumberx15"><tags>
             <tag/>
-          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string" color="#FF0000" font="typewriter">’case<text class="ltx_lst_space">␣</text>insensitive’</text>);</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string">’<text color="#FF0000" font="typewriter">case<text class="ltx_lst_space">␣</text>insensitive</text>’</text>);</listingline>
         <listingline xml:id="lstnumberx16"><tags>
             <tag>7</tag>
             <tag role="refnum">7</tag>
             <tag role="typerefnum">line 7</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string" color="#FF0000" font="typewriter">’long<text class="ltx_lst_space">␣</text>’’<text class="ltx_lst_space">␣</text>string’</text>);</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string">’<text color="#FF0000" font="typewriter">long<text class="ltx_lst_space">␣</text>’’<text class="ltx_lst_space">␣</text>string</text>’</text>);</listingline>
         <listingline xml:id="lstnumberx17"><tags>
             <tag/>
-          </tags><text class="ltx_lst_keyword" font="bold">WritE</text>(<text class="ltx_lst_string" color="#FF0000" font="typewriter">’Pascal<text class="ltx_lst_space">␣</text>keywords.’</text>);</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">WritE</text>(<text class="ltx_lst_string">’<text color="#FF0000" font="typewriter">Pascal<text class="ltx_lst_space">␣</text>keywords.</text>’</text>);</listingline>
       </listing>
     </para>
     <para xml:id="S5.p3">
       <p>A Titled listing:</p>
     </para>
     <float class="ltx_lstlisting" xml:id="LSTx1">
-      <toccaption>A bit of Pascal</toccaption>
-      <caption>A bit of Pascal</caption>
       <listing class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx18"><tags>
             <tag>1</tag>
@@ -248,8 +246,10 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>5</tag>
             <tag role="refnum">5</tag>
             <tag role="typerefnum">line 5</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string">’case<text class="ltx_lst_space">␣</text>insensitive’</text>);</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string">’case<text class="ltx_lst_space"> </text>insensitive’</text>);</listingline>
       </listing>
+      <toccaption>A bit of Pascal</toccaption>
+      <caption>A bit of Pascal</caption>
     </float>
     <para xml:id="S5.p4">
       <p>A Captioned listing (known as Listing <ref labelref="LABEL:pascallisting"/>) :</p>
@@ -318,51 +318,51 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S6.p2">
-      <listing class="ltx_lst_language_Pascal ltx_lst_numbers_right ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
+      <listing class="ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx31"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_keyword" font="bold">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">do</text></listingline>
+          </tags><text class="ltx_lst_identifier">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_identifier">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text></listingline>
         <listingline xml:id="lstnumberx32"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">begin</text></listingline>
+          </tags><text class="ltx_lst_identifier">begin</text></listingline>
         <listingline xml:id="lstnumberx33"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_comment">{<text class="ltx_lst_space" font="italic"> </text><text font="italic">do<text class="ltx_lst_space"> </text>nothing<text class="ltx_lst_space"> </text></text>}</text></listingline>
+          </tags><text class="ltx_lst_space">  </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">nothing</text><text class="ltx_lst_space"> </text>}</listingline>
         <listingline xml:id="lstnumberx34"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">end</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">end</text>;</listingline>
       </listing>
     </para>
     <para xml:id="S6.p3">
-      <listing class="ltx_lst_language_Pascal ltx_lst_numbers_right ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
+      <listing class="ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx35"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_keyword" font="bold">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">do</text></listingline>
+          </tags><text class="ltx_lst_identifier">for</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:=<text class="ltx_lst_identifier">maxint</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">to</text><text class="ltx_lst_space"> </text>0<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text></listingline>
         <listingline xml:id="lstnumberx36"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">begin</text></listingline>
+          </tags><text class="ltx_lst_identifier">begin</text></listingline>
         <listingline xml:id="lstnumberx37"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_comment">{<text class="ltx_lst_space" font="italic"> </text><text font="italic">do<text class="ltx_lst_space"> </text>nothing<text class="ltx_lst_space"> </text></text>}</text></listingline>
+          </tags><text class="ltx_lst_space">  </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">do</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">nothing</text><text class="ltx_lst_space"> </text>}</listingline>
         <listingline xml:id="lstnumberx38"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">end</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">end</text>;</listingline>
       </listing>
     </para>
   </section>
@@ -374,7 +374,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">7</tag>Framing and such</title>
     <para xml:id="S7.p1">
-      <listing backgroundcolor="#FF5EFF" class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain" framecolor="#FF0000" framed="rectangle">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain" framecolor="#FF0000" framed="rectangle">
         <listingline xml:id="lstnumberx39"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
@@ -398,7 +398,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S7.p2">
-      <listing backgroundcolor="#FFFF00" class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx43"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
@@ -420,7 +420,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag role="typerefnum">line 4</tag>
           </tags><text class="ltx_lst_keyword" font="bold">end</text>;</listingline>
       </listing>
-      <listing class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain" framed="rectangle">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain" framed="rectangle">
         <listingline xml:id="lstnumberx47"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
@@ -444,7 +444,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S7.p3">
-      <listing class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain" framed="topbottom">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_Pascal ltx_lst_numbers_left ltx_lstlisting" data="Zm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOw==" dataencoding="base64" datamimetype="text/plain" framed="topbottom">
         <listingline xml:id="lstnumberx51"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
@@ -475,12 +475,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </tags>
       <toccaption><tag close=" ">2</tag>A C language listing</toccaption>
       <caption><tag close=": ">Listing 2</tag>A C language listing</caption>
-      <listing backgroundcolor="#E6E6E6" class="ltx_lst_language_C ltx_lst_numbers_left ltx_lstlisting" data="I2RlZmluZSBFWEFNUExFIHdoaWNod2hhdAp4ID0gImZvbyI7CmJyZWFrOw==" dataencoding="base64" datamimetype="text/plain" framed="topbottom">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_C ltx_lst_numbers_left ltx_lstlisting" data="I2RlZmluZSBFWEFNUExFIHdoaWNod2hhdAp4ID0gImZvbyI7CmJyZWFrOw==" dataencoding="base64" datamimetype="text/plain" framed="topbottom">
         <listingline xml:id="lstnumberx55"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_directive" font="typewriter">#define</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">EXAMPLE</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">whichwhat</text></listingline>
+          </tags><text class="ltx_lst_directive">#<text font="typewriter">define</text></text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">EXAMPLE</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier" font="slanted">whichwhat</text></listingline>
         <listingline xml:id="lstnumberx56"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -502,24 +502,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">8</tag>Listing with Math</title>
     <para xml:id="S8.p1">
-      <listing class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gXHVwc2hhcGUgY2FsY3VsYXRlICRhX3tpan0kCmFbaV1bal0gPSBhW2pdW2pdL2FbaV1bal07" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gXHVwc2hhcGUgY2FsY3VsYXRlICRhX3tpan0kCmFbaV1bal0gPSBhW2pdW2pdL2FbaV1bal07" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx58"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_comment" color="#00FF00">//calculate <Math mode="inline" tex="a_{ij}" text="a _ (i * j)" xml:id="lstnumberx58.m1">
-              <XMath>
-                <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                  <XMApp>
-                    <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                  </XMApp>
-                </XMApp>
-              </XMath>
-            </Math></text></listingline>
+          </tags><text class="ltx_lst_comment">//</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_identifier">upshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text></listingline>
         <listingline xml:id="lstnumberx59"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -528,24 +516,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S8.p2">
-      <listing class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gXHVwc2hhcGUgY2FsY3VsYXRlICRhX3tpan0kCmFbaV1bal0gPSBhW2pdW2pdL2FbaV1bal07" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gXHVwc2hhcGUgY2FsY3VsYXRlICRhX3tpan0kCmFbaV1bal0gPSBhW2pdW2pdL2FbaV1bal07" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx60"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_comment"><text font="italic">//</text>calculate <Math mode="inline" tex="a_{ij}" text="a _ (i * j)" xml:id="lstnumberx60.m1">
-              <XMath>
-                <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                  <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                  </XMApp>
-                </XMApp>
-              </XMath>
-            </Math></text></listingline>
+          </tags><text class="ltx_lst_comment">//</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_identifier">upshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text></listingline>
         <listingline xml:id="lstnumberx61"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -554,29 +530,29 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S8.p3">
-      <listing class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPQpcc2luIHgkCmFbaSxqXT1zaW4oeCkKZm9vPSJhIHdvcmQiOwpmb289ImEgJHheMiQgbWF0aCI7" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPQpcc2luIHgkCmFbaSxqXT1zaW4oeCkKZm9vPSJhIHdvcmQiOwpmb289ImEgJHheMiQgbWF0aCI7" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx62"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_comment" color="#00FF00">//<text class="ltx_lst_space"> </text>calculate<text class="ltx_lst_space"> </text><Math mode="inline" tex="a_{ij}" text="a _ (i * j)" xml:id="lstnumberx62.m1">
-              <XMath>
-                <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+          </tags><text class="ltx_lst_comment">//<text class="ltx_lst_space" color="#00FF00"> </text><text color="#00FF00">calculate<text class="ltx_lst_space"> </text><Math mode="inline" tex="a_{ij}" text="a _ (i * j)" xml:id="lstnumberx62.m1">
+                <XMath>
                   <XMApp>
-                    <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMApp>
+                      <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    </XMApp>
                   </XMApp>
-                </XMApp>
-              </XMath>
-            </Math></text></listingline>
+                </XMath>
+              </Math></text></text></listingline>
         <listingline xml:id="lstnumberx63"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><Math mode="inline" tex="a_{ij}=a_{jj}/a{ij}" text="a _ (i * j) = (a _ (j * j) / a) * i * j" xml:id="lstnumberx63.m1">
+          </tags><Math mode="inline" tex="a_{ij}=a_{jj}/a{ij}" text="a _ (i * j) = a _ (j * j) / (a * i * j)" xml:id="lstnumberx63.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -590,22 +566,22 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
                   </XMApp>
                 </XMApp>
                 <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMApp>
-                    <XMTok meaning="divide" role="MULOP">/</XMTok>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                      <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                      </XMApp>
-                    </XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                    </XMApp>
                   </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">i</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  <XMApp>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">j</XMTok>
+                  </XMApp>
                 </XMApp>
               </XMApp>
             </XMath>
@@ -614,26 +590,26 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_comment" color="#00FF00">//<text class="ltx_lst_space"> </text>calculate<text class="ltx_lst_space"> </text><Math mode="inline" tex="a_{ij}=\sin x" text="a _ (i * j) = sine@(x)" xml:id="lstnumberx64.m1">
-              <XMath>
-                <XMApp>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+          </tags><text class="ltx_lst_comment">//<text class="ltx_lst_space" color="#00FF00"> </text><text color="#00FF00">calculate<text class="ltx_lst_space"> </text><Math mode="inline" tex="a_{ij}=\sin x" text="a _ (i * j) = sine@(x)" xml:id="lstnumberx64.m1">
+                <XMath>
                   <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
                     <XMApp>
-                      <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                      <XMApp>
+                        <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">x</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMApp>
-                    <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  </XMApp>
-                </XMApp>
-              </XMath>
-            </Math></text></listingline>
+                </XMath>
+              </Math></text></text></listingline>
         <listingline xml:id="lstnumberx65"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
@@ -643,12 +619,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>5</tag>
             <tag role="refnum">5</tag>
             <tag role="typerefnum">line 5</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space">␣</text>word”</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space"> </text>word”</text>;</listingline>
         <listingline xml:id="lstnumberx67"><tags>
             <tag>6</tag>
             <tag role="refnum">6</tag>
             <tag role="typerefnum">line 6</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space">␣</text><Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="lstnumberx67.m1">
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space"> </text><Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="lstnumberx67.m1">
               <XMath>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -656,28 +632,16 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMath>
-            </Math><text class="ltx_lst_space">␣</text>math”</text>;</listingline>
+            </Math><text class="ltx_lst_space"> </text>math”</text>;</listingline>
       </listing>
     </para>
     <para xml:id="S8.p4">
-      <listing class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gY2FsY3VsYXRlICUkYV97aWp9JCUKYV97aWp9CiA9IGFfe2pqfS9he2lqfTs=" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gY2FsY3VsYXRlICUkYV97aWp9JCUKYV97aWp9CiA9IGFfe2pqfS9he2lqfTs=" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx68"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_comment" font="italic">//<text class="ltx_lst_space"> </text>calculate<text class="ltx_lst_space"> </text>&lt;<Math mode="inline" tex="a_{ij}" text="a _ (i * j)" xml:id="lstnumberx68.m1">
-              <XMath>
-                <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok role="UNKNOWN">a</XMTok>
-                  <XMApp>
-                    <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok fontsize="70%" role="UNKNOWN">i</XMTok>
-                    <XMTok fontsize="70%" role="UNKNOWN">j</XMTok>
-                  </XMApp>
-                </XMApp>
-              </XMath>
-            </Math>&gt;</text></listingline>
+          </tags><text class="ltx_lst_comment">//<text class="ltx_lst_space" font="italic"> </text><text font="italic">calculate<text class="ltx_lst_space"> </text>%$a_{ij}$%</text></text></listingline>
         <listingline xml:id="lstnumberx69"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -691,12 +655,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       </listing>
     </para>
     <para xml:id="S8.p5">
-      <listing class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPQpcc2luIHgkCmFbaSxqXT1zaW4oeCkKZm9vPSJhIHdvcmQiOwpmb289ImEgXCJzdHJpbmciOwpmb289ImEgJHheMiQgbWF0aCI7" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_c ltx_lst_numbers_left ltx_lstlisting" data="Ly8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPQpcc2luIHgkCmFbaSxqXT1zaW4oeCkKZm9vPSJhIHdvcmQiOwpmb289ImEgXCJzdHJpbmciOwpmb289ImEgJHheMiQgbWF0aCI7" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx71"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_comment" font="italic">//<text class="ltx_lst_space"> </text>calculate<text class="ltx_lst_space"> </text>$a_{ij}$</text></listingline>
+          </tags><text class="ltx_lst_comment">//<text class="ltx_lst_space" font="italic"> </text><text font="italic">calculate<text class="ltx_lst_space"> </text>$a_{ij}$</text></text></listingline>
         <listingline xml:id="lstnumberx72"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -711,7 +675,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_comment" font="italic">//<text class="ltx_lst_space"> </text>calculate<text class="ltx_lst_space"> </text>$a_{ij}<text class="ltx_lst_space"> </text>=</text></listingline>
+          </tags><text class="ltx_lst_comment">//<text class="ltx_lst_space" font="italic"> </text><text font="italic">calculate<text class="ltx_lst_space"> </text>$a_{ij}<text class="ltx_lst_space"> </text>=</text></text></listingline>
         <listingline xml:id="lstnumberx75"><tags>
             <tag>5</tag>
             <tag role="refnum">5</tag>
@@ -726,17 +690,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>7</tag>
             <tag role="refnum">7</tag>
             <tag role="typerefnum">line 7</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space">␣</text>word"</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”<text font="typewriter">a<text class="ltx_lst_space"> </text>word</text>”</text>;</listingline>
         <listingline xml:id="lstnumberx78"><tags>
             <tag>8</tag>
             <tag role="refnum">8</tag>
             <tag role="typerefnum">line 8</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space">␣</text>\"string"</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”<text font="typewriter">a<text class="ltx_lst_space"> </text>\"string</text>”</text>;</listingline>
         <listingline xml:id="lstnumberx79"><tags>
             <tag>9</tag>
             <tag role="refnum">9</tag>
             <tag role="typerefnum">line 9</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space">␣</text>$x^2$<text class="ltx_lst_space">␣</text>math"</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”<text font="typewriter">a<text class="ltx_lst_space"> </text>$x^2$<text class="ltx_lst_space"> </text>math</text>”</text>;</listingline>
       </listing>
     </para>
   </section>
@@ -748,13 +712,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">9</tag>A Perl Listing</title>
     <float class="ltx_lstlisting" inlist="lol" xml:id="S9.tab1">
-      <toccaption>any.sty.ltxml</toccaption>
-      <listing class="ltx_lst_language_perl ltx_lst_numbers_left ltx_lstlisting" data="IyAtKi0gQ1BFUkwgLSotCnBhY2thZ2UgTGFUZVhNTDo6UGFja2FnZTo6UG9vbDsKdXNlIHN0cmljdDsKdXNlIExhVGVYTUw6OlBhY2thZ2U7CgpEZWZDb25zdHJ1Y3RvcignXGNvbnRhaW5lcnt9JywiPGx0eDpzcGVjaWFsPiMxPC9sdHg6c3BlY2lhbD4iKTsKRGVmQ29uc3RydWN0b3IoJ1xmb28nLCI8bHR4Om5vdC1kZWZpbmVkLz4iKTsKCjE7Cg==" dataencoding="base64" datamimetype="text/plain" dataname="any.sty.ltxml">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_perl ltx_lst_numbers_left ltx_lstlisting" data="IyAtKi0gQ1BFUkwgLSotCnBhY2thZ2UgTGFUZVhNTDo6UGFja2FnZTo6UG9vbDsKdXNlIHN0cmljdDsKdXNlIExhVGVYTUw6OlBhY2thZ2U7CgpEZWZDb25zdHJ1Y3RvcignXGNvbnRhaW5lcnt9JywiPGx0eDpzcGVjaWFsPiMxPC9sdHg6c3BlY2lhbD4iKTsKRGVmQ29uc3RydWN0b3IoJ1xmb28nLCI8bHR4Om5vdC1kZWZpbmVkLz4iKTsKCjE7Cg==" dataencoding="base64" datamimetype="text/plain" dataname="any.sty.ltxml">
         <listingline xml:id="lstnumberx80"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_comment" font="italic">#<text class="ltx_lst_space"> </text>-*-<text class="ltx_lst_space"> </text>CPERL<text class="ltx_lst_space"> </text>-*-</text></listingline>
+          </tags><text class="ltx_lst_comment">#<text class="ltx_lst_space" font="italic"> </text><text font="italic">-*-<text class="ltx_lst_space"> </text>CPERL<text class="ltx_lst_space"> </text>-*-</text></text></listingline>
         <listingline xml:id="lstnumberx81"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
@@ -806,38 +769,37 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">10</tag>A Recursive <text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text> listing</title>
     <float class="ltx_lstlisting" inlist="lol" xml:id="S10.tab1">
-      <toccaption>listing.tex</toccaption>
-      <listing class="ltx_lst_language_TeX_LaTeX ltx_lst_numbers_left ltx_lstlisting" data="XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXHVzZXBhY2thZ2V7bWFrZWlkeH0KXG1ha2VpbmRleApcdXNlcGFja2FnZXtsaXN0aW5nc30KXHVzZXBhY2thZ2VbZHZpcHNuYW1lc117Y29sb3J9ClxiZWdpbntkb2N1bWVudH0KXGxzdHNldHtudW1iZXJzPWxlZnR9ClxzZWN0aW9ue0ludHJvZHVjdGlvbn0KVGhpcyBkb2N1bWVudCBjb250YWlucyB0aGUgZm9sbG93aW5nIGxpc3RpbmdzOgpcbHN0bGlzdG9mbGlzdGluZ3MKClxzZWN0aW9ue0lubGluZSBMaXN0aW5nc30KVmFyaW91cyBkZWxpbWl0ZXJzOiBcbHN0aW5saW5le2Ffd29yZH0sClxsc3RpbmxpbmUhYV93b3JkISwgXGxzdGlubGluZSBBYV93b3JkQSwKXGxzdGlubGluZSZhX3dvcmQmIGFuZCBldmVuIFxsc3RpbmxpbmVeYV93b3JkXiBkb25lLgoKXGRlZlxqdXN0Y29weSMxeyMxfQpJbmRpcmVjdGx5OiBcanVzdGNvcHl7XGxzdGlubGluZXxhX3dvcmR8fTsKYW5kIHdpdGggbWVzc2VkIHVwIGJyYWNlcyBcbHN0aW5saW5le2ZvbyB7IGJhciB9LiUgfQoKewpcbHN0c2V0ewogIG1hdGhlc2NhcGU9dHJ1ZSwKfQpDYXJlZnVsIHdpdGggc3BhY2luZy9tYXRoL21hY3JvczogXGxzdGlubGluZSFmb28oJFxsYW5nbGUgWCBccmFuZ2xlJCkhCn0KXHN1YnNlY3Rpb257U2hvcnRoYW5kc30KTm9ybWFsOiB8QHwgYW5kICR4XnkkClxsc3RNYWtlU2hvcnRJbmxpbmVbbGFuZ3VhZ2U9cGVybCxiYXNpY3N0eWxlPVx0dGZhbWlseV18Clxsc3RNYWtlU2hvcnRJbmxpbmVbbGFuZ3VhZ2U9cGVybCxiYXNpY3N0eWxlPVx0dGZhbWlseV1AClxsc3RNYWtlU2hvcnRJbmxpbmVbbGFuZ3VhZ2U9cGVybCxiYXNpY3N0eWxlPVx0dGZhbWlseV1eCgpMaXN0aW5nMToKfCRmb28tPmJheigvXlxzKi8pIjt8CgpMaXN0aW5nMjoKQCRmb28tPmJheigvXlxzKi8pIjtACgpMaXN0aW5nMzoKXnh5XgpcbHN0RGVsZXRlU2hvcnRJbmxpbmV8Clxsc3REZWxldGVTaG9ydElubGluZUAKXGxzdERlbGV0ZVNob3J0SW5saW5lXgoKTm9ybWFsIGFnYWluOiB8QHwgYW5kICR4XnkkCgpcc2VjdGlvbntBbiB1bnR5cGVkIExpc3Rpbmd9Ck5vIG9wdGlvbnMsIGxhbmd1YWdlLCBldGMKXGJlZ2lue2xzdGxpc3Rpbmd9CnN0dWZmMQpzdHVmZjIKc3R1ZmYzClxlbmR7bHN0bGlzdGluZ30KClxzZWN0aW9ue1NvbWUgQ30KClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1DLGlkZW50aWZpZXJzdHlsZT1cc2xzaGFwZSxkaXJlY3RpdmVzdHlsZT1cdHRmYW1pbHldCiNkZWZpbmUgRVhBTVBMRSB3aGljaHdoYXQKeCA9ICJmb28iOwpicmVhazsKXGVuZHtsc3RsaXN0aW5nfQoKXHNlY3Rpb257QSBQYXNjYWwgTGlzdGluZ30KQSBsaXN0aW5nIHBvcnRpb246ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZmlyc3RsaW5lPTIsbGFzdGxpbmU9NSxjYXB0aW9uPXt9XQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7CgpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOwpXcml0ZSgnbG9uZyAnJyBzdHJpbmcnKTsKV3JpdEUoJ1Bhc2NhbCBrZXl3b3Jkcy4nKTsKXGVuZHtsc3RsaXN0aW5nfQoKQSBudW1iZXJlZCBsaXN0aW5nOgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9UGFzY2FsLG51bWJlcnM9bGVmdCwgbnVtYmVyc3R5bGU9XHRpbnksIHN0ZXBudW1iZXI9MixzdHJpbmdzdHlsZT1cY29sb3J7cmVkfVx0dGZhbWlseSxzaG93c3BhY2VzLHRhYnNpemU9NF0KZm9yIGk6PW1heGludCB0byAwIGRvCgliZWdpbgoJCXsgZG8gbm90aGluZyB9CgllbmQ7CgpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOwpXcml0ZSgnbG9uZyAnJyBzdHJpbmcnKTsKV3JpdEUoJ1Bhc2NhbCBrZXl3b3Jkcy4nKTsKXGVuZHtsc3RsaXN0aW5nfQoKQSBUaXRsZWQgbGlzdGluZzoKXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPVBhc2NhbCx0aXRsZT17QSBiaXQgb2YgUGFzY2FsfV0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOwpcZW5ke2xzdGxpc3Rpbmd9CgoKQSBDYXB0aW9uZWQgbGlzdGluZyAoa25vd24gYXMgTGlzdGluZyBccmVme3Bhc2NhbGxpc3Rpbmd9KSA6ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsY2FwdGlvbj1Bbm90aGVyIGJpdCBvZiBQYXNjYWwsIGxhYmVsPXBhc2NhbGxpc3RpbmcsZmlyc3RudW1iZXI9MTAwLG51bWJlcnM9bGVmdF0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpcZW5ke2xzdGxpc3Rpbmd9Cgpcc2VjdGlvbntBbiBFbnZpcm9ubWVudH0KXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPVBhc2NhbF0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpcZW5ke2xzdGxpc3Rpbmd9CgpcbHN0bmV3ZW52aXJvbm1lbnR7Y29sb3JlZH1bMV17XGxzdHNldHtsYW5ndWFnZT1QYXNjYWwsbnVtYmVycz1yaWdodCxudW1iZXJzdHlsZT1cY29sb3J7IzF9fX17fQpcYmVnaW57Y29sb3JlZH17cmVkfQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7ClxlbmR7Y29sb3JlZH0KClxiZWdpbntjb2xvcmVkfXtibHVlfQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7ClxlbmR7Y29sb3JlZH0KClxzZWN0aW9ue0ZyYW1pbmcgYW5kIHN1Y2h9Clxsc3RzZXR7YmFja2dyb3VuZGNvbG9yPVxjb2xvcltuYW1lZF17Q2FybmF0aW9uUGlua319ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZnJhbWU9c2luZ2xlLHJ1bGVjb2xvcj1cY29sb3J7cmVkfV0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpcZW5ke2xzdGxpc3Rpbmd9CgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9UGFzY2FsLGZyYW1lcm91bmQ9dHR0dCxiYWNrZ3JvdW5kY29sb3I9XGNvbG9ye3llbGxvd31dCmZvciBpOj1tYXhpbnQgdG8gMCBkbwpiZWdpbgogIHsgZG8gbm90aGluZyB9CmVuZDsKXGVuZHtsc3RsaXN0aW5nfQpcbHN0c2V0e2JhY2tncm91bmRjb2xvcj19ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZnJhbWU9c2luZ2xlXQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7ClxlbmR7bHN0bGlzdGluZ30KClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZnJhbWU9bGluZXNdCmZvciBpOj1tYXhpbnQgdG8gMCBkbwpiZWdpbgogIHsgZG8gbm90aGluZyB9CmVuZDsKXGVuZHtsc3RsaXN0aW5nfQoKXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPUMsaWRlbnRpZmllcnN0eWxlPVxzbHNoYXBlLGRpcmVjdGl2ZXN0eWxlPVx0dGZhbWlseSwKY2FwdGlvbj1BIEMgbGFuZ3VhZ2UgbGlzdGluZywgZnJhbWU9bGluZXMsYmFja2dyb3VuZGNvbG9yPXtcY29sb3JbY215a117MCwwLDAsMC4xfX1dCiNkZWZpbmUgRVhBTVBMRSB3aGljaHdoYXQKeCA9ICJmb28iOwpicmVhazsKXGVuZHtsc3RsaXN0aW5nfQoKXHNlY3Rpb257TGlzdGluZyB3aXRoIE1hdGh9ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1jLHRleGNsLGNvbW1lbnRzdHlsZT1cY29sb3J7Z3JlZW59XQovLyBcdXBzaGFwZSBjYWxjdWxhdGUgJGFfe2lqfSQKYVtpXVtqXSA9IGFbal1bal0vYVtpXVtqXTsKXGVuZHtsc3RsaXN0aW5nfQoKXGJlZ2lue2xzdGxpc3Rpbmd9W3RleGNsLGxhbmd1YWdlPWNdCi8vIFx1cHNoYXBlIGNhbGN1bGF0ZSAkYV97aWp9JAphW2ldW2pdID0gYVtqXVtqXS9hW2ldW2pdOwpcZW5ke2xzdGxpc3Rpbmd9CgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9YyxtYXRoZXNjYXBlLG51bWJlcnM9bGVmdCxjb21tZW50c3R5bGU9XGNvbG9ye2dyZWVufV0KLy8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPSAKXHNpbiB4JAphW2ksal09c2luKHgpCmZvbz0iYSB3b3JkIjsKZm9vPSJhICR4XjIkIG1hdGgiOwpcZW5ke2xzdGxpc3Rpbmd9CgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9Yyxlc2NhcGVjaGFyPVwlLGVzY2FwZWJlZ2luPVx0ZXh0bGVzcyxlc2NhcGVlbmQ9XHRleHRncmVhdGVyLG51bWJlcnM9bGVmdF0KLy8gY2FsY3VsYXRlICUkYV97aWp9JCUKYV97aWp9CiA9IGFfe2pqfS9he2lqfTsKXGVuZHtsc3RsaXN0aW5nfQoKXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPWMsbnVtYmVycz1sZWZ0LHN0cmluZ3N0eWxlPVx0dGZhbWlseV0KLy8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPSAKXHNpbiB4JAphW2ksal09c2luKHgpCmZvbz0iYSB3b3JkIjsKZm9vPSJhIFwic3RyaW5nIjsKZm9vPSJhICR4XjIkIG1hdGgiOwpcZW5ke2xzdGxpc3Rpbmd9Cgpcc2VjdGlvbntBIFBlcmwgTGlzdGluZ30KXGxzdGlucHV0bGlzdGluZ1tsYW5ndWFnZT1wZXJsXXthbnkuc3R5Lmx0eG1sfQoKXHNlY3Rpb257QSBSZWN1cnNpdmUgXFRlWFwgbGlzdGluZ30KXGxzdGlucHV0bGlzdGluZ1tsYW5ndWFnZT17W0xhVGVYXVRlWH1de2xpc3RpbmcudGV4fQoKQSBzaG9ydGVyIGxpc3RpbmcsIHdpdGggY29sb3JlZCBjcyB0aGF0IGluY2x1ZGUgdGhlIHNsYXNoClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT17W0xhVGVYXVRlWH0sdGV4Y3NzdHlsZT0qe1xjb2xvcntibHVlfVxiZnNlcmllc31dCiAgXGlmdHJ1ZSBzb21ldGhpbmcgXGZpClxlbmR7bHN0bGlzdGluZ30KClxzZWN0aW9ue1Rlc3RpbmcgVGFnfQolIEFIQSwgdGFnc3R5bGUgb25seSBpcyBpbiBlZmZlY3Qgd2l0aCBYTUwgKD8pClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1YTUwsdGFnc3R5bGU9XGJmXQo8ZWxlbWVudCBhdHRyPSd2YWx1ZSc+Y29udGVudDwvZWxlbWVudD4KXGVuZHtsc3RsaXN0aW5nfQpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9WE1MLHRhZ3N0eWxlPVxiZix1c2VrZXl3b3Jkc2ludGFnPWZhbHNlXQo8ZWxlbWVudCBhdHRyPSd2YWx1ZSc+Y29udGVudDwvZWxlbWVudD4KXGVuZHtsc3RsaXN0aW5nfQpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9WE1MLHRhZ3N0eWxlPVxiZixtYXJrZmlyc3RpbnRhZ10KPGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+ClxlbmR7bHN0bGlzdGluZ30KClxzZWN0aW9ue0xpdGVyYXRlIFByb2dyYW1taW5nfQpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9Qyxlc2NhcGVjaGFyPUAsbGl0ZXJhdGU9Kns6PX17eyRcZ2V0cyR9fTEgezw9fXt7JFxsZXEkfX0xIHs+PX17eyRcZ2VxJH19MSB7PD59e3skXG5lcSR9fTFdCiAgdmFyIGk6aW50ZWdlcjsKICBpZiAoaTw9MCkgaSA6PSAxO0BcbGFiZWx7bGl0OmF9QAogIGlmIChpPj0wKSBpIDo9IDA7CiAgaWYgKGk8PjApIGkgOj0gMDtAXGxhYmVse2xpdDpifUAKIC8qIEhvd2V2ZXIgbm90IDo9IGhlcmUgKi8KXGVuZHtsc3RsaXN0aW5nfQp3aGVyZSB3ZSBkcmF3IHlvdXIgYXR0ZW50aW9uIHRvIGxpbmVzIFxyZWZ7bGl0OmF9IGFuZCBccmVme2xpdDpifS4KClxzZWN0aW9ue1NjcmV3aW5lc3N9Clxsc3RkZWZpbmVsYW5ndWFnZXtiaW5nb317bW9yZWtleXdvcmRzPXtmb28sYmFyfSxtb3Jla2V5d29yZHM9WzJde2JpbmcsYmFyfX0KJSwKJSBBSEEsIHdvcmRzIGNhbiBvbmx5IGJlIGluIG9uZSBjbGFzcyAoMXN0IG9uZSBkZWNsYXJlZD8pCiUgQlVULCBpbmRleCBpcyBzZXBhcmF0ZSwgYW5kIGNsYXNzbmFtZSBpcyB3aXRob3V0IHRoZSAic3R5bGUiICEhClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1iaW5nbyxrZXl3b3Jkc3R5bGU9XGJmc2VyaWVzLGtleXdvcmRzdHlsZT17WzJdXGl0c2hhcGV9LGluZGV4PXtbMV1ba2V5d29yZHMyXXtiYXIsYmF6fX1dCmZvbyBiYXIgYmF6IGJpbmcgYm9vYm9vClxlbmR7bHN0bGlzdGluZ30Ke1xiZnNlcmllc1xpdHNoYXBlIGJmaXR9CntcaXRzaGFwZVxiZnNlcmllcyBpdGJmfQpccHJpbnRpbmRleApcZW5ke2RvY3VtZW50fQo=" dataencoding="base64" datamimetype="text/plain" dataname="listing.tex">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_TeX_LaTeX ltx_lst_numbers_left ltx_lstlisting" data="XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXHVzZXBhY2thZ2V7bWFrZWlkeH0KXG1ha2VpbmRleApcdXNlcGFja2FnZXtsaXN0aW5nc30KXHVzZXBhY2thZ2VbZHZpcHNuYW1lc117Y29sb3J9ClxiZWdpbntkb2N1bWVudH0KXGxzdHNldHtudW1iZXJzPWxlZnR9ClxzZWN0aW9ue0ludHJvZHVjdGlvbn0KVGhpcyBkb2N1bWVudCBjb250YWlucyB0aGUgZm9sbG93aW5nIGxpc3RpbmdzOgpcbHN0bGlzdG9mbGlzdGluZ3MKClxzZWN0aW9ue0lubGluZSBMaXN0aW5nc30KVmFyaW91cyBkZWxpbWl0ZXJzOiBcbHN0aW5saW5le2Ffd29yZH0sClxsc3RpbmxpbmUhYV93b3JkISwgXGxzdGlubGluZSBBYV93b3JkQSwKXGxzdGlubGluZSZhX3dvcmQmIGFuZCBldmVuIFxsc3RpbmxpbmVeYV93b3JkXiBkb25lLgoKXGRlZlxqdXN0Y29weSMxeyMxfQpJbmRpcmVjdGx5OiBcanVzdGNvcHl7XGxzdGlubGluZXxhX3dvcmR8fTsKYW5kIHdpdGggbWVzc2VkIHVwIGJyYWNlcyBcbHN0aW5saW5le2ZvbyB7IGJhciB9LiUgfQoKewpcbHN0c2V0ewogIG1hdGhlc2NhcGU9dHJ1ZSwKfQpDYXJlZnVsIHdpdGggc3BhY2luZy9tYXRoL21hY3JvczogXGxzdGlubGluZSFmb28oJFxsYW5nbGUgWCBccmFuZ2xlJCkhCn0KXHN1YnNlY3Rpb257U2hvcnRoYW5kc30KTm9ybWFsOiB8QHwgYW5kICR4XnkkClxsc3RNYWtlU2hvcnRJbmxpbmVbbGFuZ3VhZ2U9cGVybCxiYXNpY3N0eWxlPVx0dGZhbWlseV18Clxsc3RNYWtlU2hvcnRJbmxpbmVbbGFuZ3VhZ2U9cGVybCxiYXNpY3N0eWxlPVx0dGZhbWlseV1AClxsc3RNYWtlU2hvcnRJbmxpbmVbbGFuZ3VhZ2U9cGVybCxiYXNpY3N0eWxlPVx0dGZhbWlseV1eCgpMaXN0aW5nMToKfCRmb28tPmJheigvXlxzKi8pIjt8CgpMaXN0aW5nMjoKQCRmb28tPmJheigvXlxzKi8pIjtACgpMaXN0aW5nMzoKXnh5XgpcbHN0RGVsZXRlU2hvcnRJbmxpbmV8Clxsc3REZWxldGVTaG9ydElubGluZUAKXGxzdERlbGV0ZVNob3J0SW5saW5lXgoKTm9ybWFsIGFnYWluOiB8QHwgYW5kICR4XnkkCgpcc2VjdGlvbntBbiB1bnR5cGVkIExpc3Rpbmd9Ck5vIG9wdGlvbnMsIGxhbmd1YWdlLCBldGMKXGJlZ2lue2xzdGxpc3Rpbmd9CnN0dWZmMQpzdHVmZjIKc3R1ZmYzClxlbmR7bHN0bGlzdGluZ30KClxzZWN0aW9ue1NvbWUgQ30KClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1DLGlkZW50aWZpZXJzdHlsZT1cc2xzaGFwZSxkaXJlY3RpdmVzdHlsZT1cdHRmYW1pbHldCiNkZWZpbmUgRVhBTVBMRSB3aGljaHdoYXQKeCA9ICJmb28iOwpicmVhazsKXGVuZHtsc3RsaXN0aW5nfQoKXHNlY3Rpb257QSBQYXNjYWwgTGlzdGluZ30KQSBsaXN0aW5nIHBvcnRpb246ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZmlyc3RsaW5lPTIsbGFzdGxpbmU9NSxjYXB0aW9uPXt9XQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7CgpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOwpXcml0ZSgnbG9uZyAnJyBzdHJpbmcnKTsKV3JpdEUoJ1Bhc2NhbCBrZXl3b3Jkcy4nKTsKXGVuZHtsc3RsaXN0aW5nfQoKQSBudW1iZXJlZCBsaXN0aW5nOgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9UGFzY2FsLG51bWJlcnM9bGVmdCwgbnVtYmVyc3R5bGU9XHRpbnksIHN0ZXBudW1iZXI9MixzdHJpbmdzdHlsZT1cY29sb3J7cmVkfVx0dGZhbWlseSxzaG93c3BhY2VzLHRhYnNpemU9NF0KZm9yIGk6PW1heGludCB0byAwIGRvCgliZWdpbgoJCXsgZG8gbm90aGluZyB9CgllbmQ7CgpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOwpXcml0ZSgnbG9uZyAnJyBzdHJpbmcnKTsKV3JpdEUoJ1Bhc2NhbCBrZXl3b3Jkcy4nKTsKXGVuZHtsc3RsaXN0aW5nfQoKQSBUaXRsZWQgbGlzdGluZzoKXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPVBhc2NhbCx0aXRsZT17QSBiaXQgb2YgUGFzY2FsfV0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpXcml0ZSgnY2FzZSBpbnNlbnNpdGl2ZScpOwpcZW5ke2xzdGxpc3Rpbmd9CgoKQSBDYXB0aW9uZWQgbGlzdGluZyAoa25vd24gYXMgTGlzdGluZyBccmVme3Bhc2NhbGxpc3Rpbmd9KSA6ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsY2FwdGlvbj1Bbm90aGVyIGJpdCBvZiBQYXNjYWwsIGxhYmVsPXBhc2NhbGxpc3RpbmcsZmlyc3RudW1iZXI9MTAwLG51bWJlcnM9bGVmdF0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpcZW5ke2xzdGxpc3Rpbmd9Cgpcc2VjdGlvbntBbiBFbnZpcm9ubWVudH0KXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPVBhc2NhbF0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpcZW5ke2xzdGxpc3Rpbmd9CgpcbHN0bmV3ZW52aXJvbm1lbnR7Y29sb3JlZH1bMV17XGxzdHNldHtsYW5ndWFnZT1QYXNjYWwsbnVtYmVycz1yaWdodCxudW1iZXJzdHlsZT1cY29sb3J7IzF9fX17fQpcYmVnaW57Y29sb3JlZH17cmVkfQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7ClxlbmR7Y29sb3JlZH0KClxiZWdpbntjb2xvcmVkfXtibHVlfQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7ClxlbmR7Y29sb3JlZH0KClxzZWN0aW9ue0ZyYW1pbmcgYW5kIHN1Y2h9Clxsc3RzZXR7YmFja2dyb3VuZGNvbG9yPVxjb2xvcltuYW1lZF17Q2FybmF0aW9uUGlua319ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZnJhbWU9c2luZ2xlLHJ1bGVjb2xvcj1cY29sb3J7cmVkfV0KZm9yIGk6PW1heGludCB0byAwIGRvCmJlZ2luCiAgeyBkbyBub3RoaW5nIH0KZW5kOwpcZW5ke2xzdGxpc3Rpbmd9CgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9UGFzY2FsLGZyYW1lcm91bmQ9dHR0dCxiYWNrZ3JvdW5kY29sb3I9XGNvbG9ye3llbGxvd31dCmZvciBpOj1tYXhpbnQgdG8gMCBkbwpiZWdpbgogIHsgZG8gbm90aGluZyB9CmVuZDsKXGVuZHtsc3RsaXN0aW5nfQpcbHN0c2V0e2JhY2tncm91bmRjb2xvcj19ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZnJhbWU9c2luZ2xlXQpmb3IgaTo9bWF4aW50IHRvIDAgZG8KYmVnaW4KICB7IGRvIG5vdGhpbmcgfQplbmQ7ClxlbmR7bHN0bGlzdGluZ30KClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1QYXNjYWwsZnJhbWU9bGluZXNdCmZvciBpOj1tYXhpbnQgdG8gMCBkbwpiZWdpbgogIHsgZG8gbm90aGluZyB9CmVuZDsKXGVuZHtsc3RsaXN0aW5nfQoKXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPUMsaWRlbnRpZmllcnN0eWxlPVxzbHNoYXBlLGRpcmVjdGl2ZXN0eWxlPVx0dGZhbWlseSwKY2FwdGlvbj1BIEMgbGFuZ3VhZ2UgbGlzdGluZywgZnJhbWU9bGluZXMsYmFja2dyb3VuZGNvbG9yPXtcY29sb3JbY215a117MCwwLDAsMC4xfX1dCiNkZWZpbmUgRVhBTVBMRSB3aGljaHdoYXQKeCA9ICJmb28iOwpicmVhazsKXGVuZHtsc3RsaXN0aW5nfQoKXHNlY3Rpb257TGlzdGluZyB3aXRoIE1hdGh9ClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1jLHRleGNsLGNvbW1lbnRzdHlsZT1cY29sb3J7Z3JlZW59XQovLyBcdXBzaGFwZSBjYWxjdWxhdGUgJGFfe2lqfSQKYVtpXVtqXSA9IGFbal1bal0vYVtpXVtqXTsKXGVuZHtsc3RsaXN0aW5nfQoKXGJlZ2lue2xzdGxpc3Rpbmd9W3RleGNsLGxhbmd1YWdlPWNdCi8vIFx1cHNoYXBlIGNhbGN1bGF0ZSAkYV97aWp9JAphW2ldW2pdID0gYVtqXVtqXS9hW2ldW2pdOwpcZW5ke2xzdGxpc3Rpbmd9CgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9YyxtYXRoZXNjYXBlLG51bWJlcnM9bGVmdCxjb21tZW50c3R5bGU9XGNvbG9ye2dyZWVufV0KLy8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPSAKXHNpbiB4JAphW2ksal09c2luKHgpCmZvbz0iYSB3b3JkIjsKZm9vPSJhICR4XjIkIG1hdGgiOwpcZW5ke2xzdGxpc3Rpbmd9CgpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9Yyxlc2NhcGVjaGFyPVwlLGVzY2FwZWJlZ2luPVx0ZXh0bGVzcyxlc2NhcGVlbmQ9XHRleHRncmVhdGVyLG51bWJlcnM9bGVmdF0KLy8gY2FsY3VsYXRlICUkYV97aWp9JCUKYV97aWp9CiA9IGFfe2pqfS9he2lqfTsKXGVuZHtsc3RsaXN0aW5nfQoKXGJlZ2lue2xzdGxpc3Rpbmd9W2xhbmd1YWdlPWMsbnVtYmVycz1sZWZ0LHN0cmluZ3N0eWxlPVx0dGZhbWlseV0KLy8gY2FsY3VsYXRlICRhX3tpan0kCiRhX3tpan0KID0gYV97amp9L2F7aWp9JDsKLy8gY2FsY3VsYXRlICRhX3tpan0gPSAKXHNpbiB4JAphW2ksal09c2luKHgpCmZvbz0iYSB3b3JkIjsKZm9vPSJhIFwic3RyaW5nIjsKZm9vPSJhICR4XjIkIG1hdGgiOwpcZW5ke2xzdGxpc3Rpbmd9Cgpcc2VjdGlvbntBIFBlcmwgTGlzdGluZ30KXGxzdGlucHV0bGlzdGluZ1tsYW5ndWFnZT1wZXJsXXthbnkuc3R5Lmx0eG1sfQoKXHNlY3Rpb257QSBSZWN1cnNpdmUgXFRlWFwgbGlzdGluZ30KXGxzdGlucHV0bGlzdGluZ1tsYW5ndWFnZT17W0xhVGVYXVRlWH1de2xpc3RpbmcudGV4fQoKQSBzaG9ydGVyIGxpc3RpbmcsIHdpdGggY29sb3JlZCBjcyB0aGF0IGluY2x1ZGUgdGhlIHNsYXNoClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT17W0xhVGVYXVRlWH0sdGV4Y3NzdHlsZT0qe1xjb2xvcntibHVlfVxiZnNlcmllc31dCiAgXGlmdHJ1ZSBzb21ldGhpbmcgXGZpClxlbmR7bHN0bGlzdGluZ30KClxzZWN0aW9ue1Rlc3RpbmcgVGFnfQolIEFIQSwgdGFnc3R5bGUgb25seSBpcyBpbiBlZmZlY3Qgd2l0aCBYTUwgKD8pClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1YTUwsdGFnc3R5bGU9XGJmXQo8ZWxlbWVudCBhdHRyPSd2YWx1ZSc+Y29udGVudDwvZWxlbWVudD4KXGVuZHtsc3RsaXN0aW5nfQpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9WE1MLHRhZ3N0eWxlPVxiZix1c2VrZXl3b3Jkc2ludGFnPWZhbHNlXQo8ZWxlbWVudCBhdHRyPSd2YWx1ZSc+Y29udGVudDwvZWxlbWVudD4KXGVuZHtsc3RsaXN0aW5nfQpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9WE1MLHRhZ3N0eWxlPVxiZixtYXJrZmlyc3RpbnRhZ10KPGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+ClxlbmR7bHN0bGlzdGluZ30KClxzZWN0aW9ue0xpdGVyYXRlIFByb2dyYW1taW5nfQpcYmVnaW57bHN0bGlzdGluZ31bbGFuZ3VhZ2U9Qyxlc2NhcGVjaGFyPUAsbGl0ZXJhdGU9Kns6PX17eyRcZ2V0cyR9fTEgezw9fXt7JFxsZXEkfX0xIHs+PX17eyRcZ2VxJH19MSB7PD59e3skXG5lcSR9fTFdCiAgdmFyIGk6aW50ZWdlcjsKICBpZiAoaTw9MCkgaSA6PSAxO0BcbGFiZWx7bGl0OmF9QAogIGlmIChpPj0wKSBpIDo9IDA7CiAgaWYgKGk8PjApIGkgOj0gMDtAXGxhYmVse2xpdDpifUAKIC8qIEhvd2V2ZXIgbm90IDo9IGhlcmUgKi8KXGVuZHtsc3RsaXN0aW5nfQp3aGVyZSB3ZSBkcmF3IHlvdXIgYXR0ZW50aW9uIHRvIGxpbmVzIFxyZWZ7bGl0OmF9IGFuZCBccmVme2xpdDpifS4KClxzZWN0aW9ue1NjcmV3aW5lc3N9Clxsc3RkZWZpbmVsYW5ndWFnZXtiaW5nb317bW9yZWtleXdvcmRzPXtmb28sYmFyfSxtb3Jla2V5d29yZHM9WzJde2JpbmcsYmFyfX0KJSwKJSBBSEEsIHdvcmRzIGNhbiBvbmx5IGJlIGluIG9uZSBjbGFzcyAoMXN0IG9uZSBkZWNsYXJlZD8pCiUgQlVULCBpbmRleCBpcyBzZXBhcmF0ZSwgYW5kIGNsYXNzbmFtZSBpcyB3aXRob3V0IHRoZSAic3R5bGUiICEhClxiZWdpbntsc3RsaXN0aW5nfVtsYW5ndWFnZT1iaW5nbyxrZXl3b3Jkc3R5bGU9XGJmc2VyaWVzLGtleXdvcmRzdHlsZT17WzJdXGl0c2hhcGV9LGluZGV4PXtbMV1ba2V5d29yZHMyXXtiYXIsYmF6fX1dCmZvbyBiYXIgYmF6IGJpbmcgYm9vYm9vClxlbmR7bHN0bGlzdGluZ30Ke1xiZnNlcmllc1xpdHNoYXBlIGJmaXR9CntcaXRzaGFwZVxiZnNlcmllcyBpdGJmfQpccHJpbnRpbmRleApcZW5ke2RvY3VtZW50fQo=" dataencoding="base64" datamimetype="text/plain" dataname="listing.tex">
         <listingline xml:id="lstnumberx89"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">documentclass</text>{<text class="ltx_lst_identifier">article</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">documentclass</text>{<text class="ltx_lst_identifier">article</text>}</listingline>
         <listingline xml:id="lstnumberx90"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">usepackage</text>{<text class="ltx_lst_identifier">makeidx</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">usepackage</text>{<text class="ltx_lst_identifier">makeidx</text>}</listingline>
         <listingline xml:id="lstnumberx91"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">makeindex</text></listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">makeindex</text></listingline>
         <listingline xml:id="lstnumberx92"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">usepackage</text>{<text class="ltx_lst_identifier">listings</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">usepackage</text>{<text class="ltx_lst_identifier">listings</text>}</listingline>
         <listingline xml:id="lstnumberx93"><tags>
             <tag>5</tag>
             <tag role="refnum">5</tag>
             <tag role="typerefnum">line 5</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">usepackage</text>[<text class="ltx_lst_identifier">dvipsnames</text>]{<text class="ltx_lst_identifier">color</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">usepackage</text>[<text class="ltx_lst_identifier">dvipsnames</text>]{<text class="ltx_lst_identifier">color</text>}</listingline>
         <listingline xml:id="lstnumberx94"><tags>
             <tag>6</tag>
             <tag role="refnum">6</tag>
             <tag role="typerefnum">line 6</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">document</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">document</text>}</listingline>
         <listingline xml:id="lstnumberx95"><tags>
             <tag>7</tag>
             <tag role="refnum">7</tag>
@@ -847,7 +809,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>8</tag>
             <tag role="refnum">8</tag>
             <tag role="typerefnum">line 8</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Introduction</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Introduction</text>}</listingline>
         <listingline xml:id="lstnumberx97"><tags>
             <tag>9</tag>
             <tag role="refnum">9</tag>
@@ -867,22 +829,22 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>12</tag>
             <tag role="refnum">12</tag>
             <tag role="typerefnum">line 12</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Inline</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listings</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Inline</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listings</text>}</listingline>
         <listingline xml:id="lstnumberx101"><tags>
             <tag>13</tag>
             <tag role="refnum">13</tag>
             <tag role="typerefnum">line 13</tag>
-          </tags><text class="ltx_lst_identifier">Various</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">delimiters</text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>{<text class="ltx_lst_identifier">a</text>_<text class="ltx_lst_identifier">word</text>},</listingline>
+          </tags><text class="ltx_lst_identifier">Various</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">delimiters</text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>{<text class="ltx_lst_identifier">a_word</text>},</listingline>
         <listingline xml:id="lstnumberx102"><tags>
             <tag>14</tag>
             <tag role="refnum">14</tag>
             <tag role="typerefnum">line 14</tag>
-          </tags><text class="ltx_lst_identifier">\lstinline</text>!<text class="ltx_lst_identifier">a</text>_<text class="ltx_lst_identifier">word</text>!,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Aa</text>_<text class="ltx_lst_identifier">wordA</text>,</listingline>
+          </tags><text class="ltx_lst_identifier">\lstinline</text>!<text class="ltx_lst_identifier">a_word</text>!,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Aa_wordA</text>,</listingline>
         <listingline xml:id="lstnumberx103"><tags>
             <tag>15</tag>
             <tag role="refnum">15</tag>
             <tag role="typerefnum">line 15</tag>
-          </tags><text class="ltx_lst_identifier">\lstinline</text>&amp;<text class="ltx_lst_identifier">a</text>_<text class="ltx_lst_identifier">word</text>&amp;<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">even</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>^<text class="ltx_lst_identifier">a</text>_<text class="ltx_lst_identifier">word</text>^<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">done</text>.</listingline>
+          </tags><text class="ltx_lst_identifier">\lstinline</text>&amp;<text class="ltx_lst_identifier">a_word</text>&amp;<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">even</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>^<text class="ltx_lst_identifier">a_word</text>^<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">done</text>.</listingline>
         <listingline xml:id="lstnumberx104"><tags>
             <tag>16</tag>
             <tag role="refnum">16</tag>
@@ -892,17 +854,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>17</tag>
             <tag role="refnum">17</tag>
             <tag role="typerefnum">line 17</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">def</text><text class="ltx_lst_identifier">\justcopy</text>#1{#1}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">def</text><text class="ltx_lst_identifier">\justcopy</text>#1{#1}</listingline>
         <listingline xml:id="lstnumberx106"><tags>
             <tag>18</tag>
             <tag role="refnum">18</tag>
             <tag role="typerefnum">line 18</tag>
-          </tags><text class="ltx_lst_identifier">Indirectly</text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\justcopy</text>{<text class="ltx_lst_identifier">\lstinline</text>|<text class="ltx_lst_identifier">a</text>_<text class="ltx_lst_identifier">word</text>|};</listingline>
+          </tags><text class="ltx_lst_identifier">Indirectly</text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\justcopy</text>{<text class="ltx_lst_identifier">\lstinline</text>|<text class="ltx_lst_identifier">a_word</text>|};</listingline>
         <listingline xml:id="lstnumberx107"><tags>
             <tag>19</tag>
             <tag role="refnum">19</tag>
             <tag role="typerefnum">line 19</tag>
-          </tags><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">with</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">messed</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">up</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">braces</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>{<text class="ltx_lst_identifier">foo</text><text class="ltx_lst_space"> </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bar</text><text class="ltx_lst_space"> </text>}.<text class="ltx_lst_comment" font="italic">%<text class="ltx_lst_space"> </text>}</text></listingline>
+          </tags><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">with</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">messed</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">up</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">braces</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>{<text class="ltx_lst_identifier">foo</text><text class="ltx_lst_space"> </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bar</text><text class="ltx_lst_space"> </text>}.<text class="ltx_lst_comment">%<text class="ltx_lst_space" font="italic"> </text><text font="italic">}</text></text></listingline>
         <listingline xml:id="lstnumberx108"><tags>
             <tag>20</tag>
             <tag role="refnum">20</tag>
@@ -932,7 +894,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>25</tag>
             <tag role="refnum">25</tag>
             <tag role="typerefnum">line 25</tag>
-          </tags><text class="ltx_lst_identifier">Careful</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">with</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">spacing</text>/<text class="ltx_lst_identifier">math</text>/<text class="ltx_lst_identifier">macros</text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>!<text class="ltx_lst_identifier">foo</text>($\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">langle</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">X</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">rangle</text>$)!</listingline>
+          </tags><text class="ltx_lst_identifier">Careful</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">with</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">spacing</text>/<text class="ltx_lst_identifier">math</text>/<text class="ltx_lst_identifier">macros</text>:<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\lstinline</text>!<text class="ltx_lst_identifier">foo</text>(<text class="ltx_lst_identifier">$</text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">langle</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">X</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">\rangle$</text>)!</listingline>
         <listingline xml:id="lstnumberx114"><tags>
             <tag>26</tag>
             <tag role="refnum">26</tag>
@@ -947,22 +909,22 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>28</tag>
             <tag role="refnum">28</tag>
             <tag role="typerefnum">line 28</tag>
-          </tags><text class="ltx_lst_identifier">Normal</text>:<text class="ltx_lst_space"> </text>|<text class="ltx_lst_identifier">@</text>|<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">x</text>^<text class="ltx_lst_identifier">y</text>$</listingline>
+          </tags><text class="ltx_lst_identifier">Normal</text>:<text class="ltx_lst_space"> </text>|<text class="ltx_lst_identifier">@</text>|<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$x</text>^<text class="ltx_lst_identifier">y$</text></listingline>
         <listingline xml:id="lstnumberx117"><tags>
             <tag>29</tag>
             <tag role="refnum">29</tag>
             <tag role="typerefnum">line 29</tag>
-          </tags><text class="ltx_lst_identifier">\lstMakeShortInline</text>[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">perl</text>,<text class="ltx_lst_identifier">basicstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>]|</listingline>
+          </tags><text class="ltx_lst_identifier">\lstMakeShortInline</text>[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">perl</text>,<text class="ltx_lst_identifier">basicstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>]|</listingline>
         <listingline xml:id="lstnumberx118"><tags>
             <tag>30</tag>
             <tag role="refnum">30</tag>
             <tag role="typerefnum">line 30</tag>
-          </tags><text class="ltx_lst_identifier">\lstMakeShortInline</text>[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">perl</text>,<text class="ltx_lst_identifier">basicstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>]<text class="ltx_lst_identifier">@</text></listingline>
+          </tags><text class="ltx_lst_identifier">\lstMakeShortInline</text>[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">perl</text>,<text class="ltx_lst_identifier">basicstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>]<text class="ltx_lst_identifier">@</text></listingline>
         <listingline xml:id="lstnumberx119"><tags>
             <tag>31</tag>
             <tag role="refnum">31</tag>
             <tag role="typerefnum">line 31</tag>
-          </tags><text class="ltx_lst_identifier">\lstMakeShortInline</text>[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">perl</text>,<text class="ltx_lst_identifier">basicstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>]^</listingline>
+          </tags><text class="ltx_lst_identifier">\lstMakeShortInline</text>[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">perl</text>,<text class="ltx_lst_identifier">basicstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>]^</listingline>
         <listingline xml:id="lstnumberx120"><tags>
             <tag>32</tag>
             <tag role="refnum">32</tag>
@@ -972,12 +934,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>33</tag>
             <tag role="refnum">33</tag>
             <tag role="typerefnum">line 33</tag>
-          </tags><text class="ltx_lst_identifier">Listing</text>1:</listingline>
+          </tags><text class="ltx_lst_identifier">Listing1</text>:</listingline>
         <listingline xml:id="lstnumberx122"><tags>
             <tag>34</tag>
             <tag role="refnum">34</tag>
             <tag role="typerefnum">line 34</tag>
-          </tags>|$<text class="ltx_lst_identifier">foo</text>-&gt;<text class="ltx_lst_identifier">baz</text>(/^<text class="ltx_lst_identifier">\s</text>*/)”;|</listingline>
+          </tags>|<text class="ltx_lst_identifier">$foo</text>-&gt;<text class="ltx_lst_identifier">baz</text>(/^<text class="ltx_lst_identifier">\s</text>*/)”;|</listingline>
         <listingline xml:id="lstnumberx123"><tags>
             <tag>35</tag>
             <tag role="refnum">35</tag>
@@ -987,12 +949,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>36</tag>
             <tag role="refnum">36</tag>
             <tag role="typerefnum">line 36</tag>
-          </tags><text class="ltx_lst_identifier">Listing</text>2:</listingline>
+          </tags><text class="ltx_lst_identifier">Listing2</text>:</listingline>
         <listingline xml:id="lstnumberx125"><tags>
             <tag>37</tag>
             <tag role="refnum">37</tag>
             <tag role="typerefnum">line 37</tag>
-          </tags><text class="ltx_lst_identifier">@</text>$<text class="ltx_lst_identifier">foo</text>-&gt;<text class="ltx_lst_identifier">baz</text>(/^<text class="ltx_lst_identifier">\s</text>*/)”;<text class="ltx_lst_identifier">@</text></listingline>
+          </tags><text class="ltx_lst_identifier">@$foo</text>-&gt;<text class="ltx_lst_identifier">baz</text>(/^<text class="ltx_lst_identifier">\s</text>*/)”;<text class="ltx_lst_identifier">@</text></listingline>
         <listingline xml:id="lstnumberx126"><tags>
             <tag>38</tag>
             <tag role="refnum">38</tag>
@@ -1002,7 +964,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>39</tag>
             <tag role="refnum">39</tag>
             <tag role="typerefnum">line 39</tag>
-          </tags><text class="ltx_lst_identifier">Listing</text>3:</listingline>
+          </tags><text class="ltx_lst_identifier">Listing3</text>:</listingline>
         <listingline xml:id="lstnumberx128"><tags>
             <tag>40</tag>
             <tag role="refnum">40</tag>
@@ -1032,7 +994,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>45</tag>
             <tag role="refnum">45</tag>
             <tag role="typerefnum">line 45</tag>
-          </tags><text class="ltx_lst_identifier">Normal</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">again</text>:<text class="ltx_lst_space"> </text>|<text class="ltx_lst_identifier">@</text>|<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">x</text>^<text class="ltx_lst_identifier">y</text>$</listingline>
+          </tags><text class="ltx_lst_identifier">Normal</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">again</text>:<text class="ltx_lst_space"> </text>|<text class="ltx_lst_identifier">@</text>|<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$x</text>^<text class="ltx_lst_identifier">y$</text></listingline>
         <listingline xml:id="lstnumberx134"><tags>
             <tag>46</tag>
             <tag role="refnum">46</tag>
@@ -1042,7 +1004,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>47</tag>
             <tag role="refnum">47</tag>
             <tag role="typerefnum">line 47</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">An</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">untyped</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">An</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">untyped</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text>}</listingline>
         <listingline xml:id="lstnumberx136"><tags>
             <tag>48</tag>
             <tag role="refnum">48</tag>
@@ -1052,27 +1014,27 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>49</tag>
             <tag role="refnum">49</tag>
             <tag role="typerefnum">line 49</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx138"><tags>
             <tag>50</tag>
             <tag role="refnum">50</tag>
             <tag role="typerefnum">line 50</tag>
-          </tags><text class="ltx_lst_identifier">stuff</text>1</listingline>
+          </tags><text class="ltx_lst_identifier">stuff1</text></listingline>
         <listingline xml:id="lstnumberx139"><tags>
             <tag>51</tag>
             <tag role="refnum">51</tag>
             <tag role="typerefnum">line 51</tag>
-          </tags><text class="ltx_lst_identifier">stuff</text>2</listingline>
+          </tags><text class="ltx_lst_identifier">stuff2</text></listingline>
         <listingline xml:id="lstnumberx140"><tags>
             <tag>52</tag>
             <tag role="refnum">52</tag>
             <tag role="typerefnum">line 52</tag>
-          </tags><text class="ltx_lst_identifier">stuff</text>3</listingline>
+          </tags><text class="ltx_lst_identifier">stuff3</text></listingline>
         <listingline xml:id="lstnumberx141"><tags>
             <tag>53</tag>
             <tag role="refnum">53</tag>
             <tag role="typerefnum">line 53</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx142"><tags>
             <tag>54</tag>
             <tag role="refnum">54</tag>
@@ -1082,7 +1044,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>55</tag>
             <tag role="refnum">55</tag>
             <tag role="typerefnum">line 55</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Some</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">C</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Some</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">C</text>}</listingline>
         <listingline xml:id="lstnumberx144"><tags>
             <tag>56</tag>
             <tag role="refnum">56</tag>
@@ -1092,7 +1054,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>57</tag>
             <tag role="refnum">57</tag>
             <tag role="typerefnum">line 57</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">C</text>,<text class="ltx_lst_identifier">identifierstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">slshape</text>,<text class="ltx_lst_identifier">directivestyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">C</text>,<text class="ltx_lst_identifier">identifierstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">slshape</text>,<text class="ltx_lst_identifier">directivestyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>]</listingline>
         <listingline xml:id="lstnumberx146"><tags>
             <tag>58</tag>
             <tag role="refnum">58</tag>
@@ -1112,7 +1074,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>61</tag>
             <tag role="refnum">61</tag>
             <tag role="typerefnum">line 61</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx150"><tags>
             <tag>62</tag>
             <tag role="refnum">62</tag>
@@ -1122,7 +1084,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>63</tag>
             <tag role="refnum">63</tag>
             <tag role="typerefnum">line 63</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Pascal</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Pascal</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text>}</listingline>
         <listingline xml:id="lstnumberx152"><tags>
             <tag>64</tag>
             <tag role="refnum">64</tag>
@@ -1132,7 +1094,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>65</tag>
             <tag role="refnum">65</tag>
             <tag role="typerefnum">line 65</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">firstline</text>=2,<text class="ltx_lst_identifier">lastline</text>=5,<text class="ltx_lst_identifier">caption</text>={}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">firstline</text>=2,<text class="ltx_lst_identifier">lastline</text>=5,<text class="ltx_lst_identifier">caption</text>={}]</listingline>
         <listingline xml:id="lstnumberx154"><tags>
             <tag>66</tag>
             <tag role="refnum">66</tag>
@@ -1177,7 +1139,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>74</tag>
             <tag role="refnum">74</tag>
             <tag role="typerefnum">line 74</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx163"><tags>
             <tag>75</tag>
             <tag role="refnum">75</tag>
@@ -1192,7 +1154,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>77</tag>
             <tag role="refnum">77</tag>
             <tag role="typerefnum">line 77</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">numberstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">tiny</text>,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">stepnumber</text>=2,<text class="ltx_lst_identifier">stringstyle</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">red</text>}\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>,<text class="ltx_lst_identifier">showspaces</text>,<text class="ltx_lst_identifier">tabsize</text>=4]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">numberstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">tiny</text>,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">stepnumber</text>=2,<text class="ltx_lst_identifier">stringstyle</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">red</text>}\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>,<text class="ltx_lst_identifier">showspaces</text>,<text class="ltx_lst_identifier">tabsize</text>=4]</listingline>
         <listingline xml:id="lstnumberx166"><tags>
             <tag>78</tag>
             <tag role="refnum">78</tag>
@@ -1237,7 +1199,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>86</tag>
             <tag role="refnum">86</tag>
             <tag role="typerefnum">line 86</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx175"><tags>
             <tag>87</tag>
             <tag role="refnum">87</tag>
@@ -1252,7 +1214,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>89</tag>
             <tag role="refnum">89</tag>
             <tag role="typerefnum">line 89</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">title</text>={<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bit</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">of</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Pascal</text>}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">title</text>={<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bit</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">of</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Pascal</text>}]</listingline>
         <listingline xml:id="lstnumberx178"><tags>
             <tag>90</tag>
             <tag role="refnum">90</tag>
@@ -1282,7 +1244,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>95</tag>
             <tag role="refnum">95</tag>
             <tag role="typerefnum">line 95</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx184"><tags>
             <tag>96</tag>
             <tag role="refnum">96</tag>
@@ -1297,12 +1259,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>98</tag>
             <tag role="refnum">98</tag>
             <tag role="typerefnum">line 98</tag>
-          </tags><text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Captioned</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">listing</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">known</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">as</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ref</text>{<text class="ltx_lst_identifier">pascallisting</text>})<text class="ltx_lst_space"> </text>:</listingline>
+          </tags><text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Captioned</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">listing</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">known</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">as</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ref</text>{<text class="ltx_lst_identifier">pascallisting</text>})<text class="ltx_lst_space"> </text>:</listingline>
         <listingline xml:id="lstnumberx187"><tags>
             <tag>99</tag>
             <tag role="refnum">99</tag>
             <tag role="typerefnum">line 99</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">caption</text>=<text class="ltx_lst_identifier">Another</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bit</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">of</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">label</text>=<text class="ltx_lst_identifier">pascallisting</text>,<text class="ltx_lst_identifier">firstnumber</text>=100,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">caption</text>=<text class="ltx_lst_identifier">Another</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bit</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">of</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">label</text>=<text class="ltx_lst_identifier">pascallisting</text>,<text class="ltx_lst_identifier">firstnumber</text>=100,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>]</listingline>
         <listingline xml:id="lstnumberx188"><tags>
             <tag>100</tag>
             <tag role="refnum">100</tag>
@@ -1327,7 +1289,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>104</tag>
             <tag role="refnum">104</tag>
             <tag role="typerefnum">line 104</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx193"><tags>
             <tag>105</tag>
             <tag role="refnum">105</tag>
@@ -1337,12 +1299,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>106</tag>
             <tag role="refnum">106</tag>
             <tag role="typerefnum">line 106</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">An</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Environment</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">An</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Environment</text>}</listingline>
         <listingline xml:id="lstnumberx195"><tags>
             <tag>107</tag>
             <tag role="refnum">107</tag>
             <tag role="typerefnum">line 107</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>]</listingline>
         <listingline xml:id="lstnumberx196"><tags>
             <tag>108</tag>
             <tag role="refnum">108</tag>
@@ -1367,7 +1329,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>112</tag>
             <tag role="refnum">112</tag>
             <tag role="typerefnum">line 112</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx201"><tags>
             <tag>113</tag>
             <tag role="refnum">113</tag>
@@ -1382,7 +1344,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>115</tag>
             <tag role="refnum">115</tag>
             <tag role="typerefnum">line 115</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">colored</text>}{<text class="ltx_lst_identifier">red</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">colored</text>}{<text class="ltx_lst_identifier">red</text>}</listingline>
         <listingline xml:id="lstnumberx204"><tags>
             <tag>116</tag>
             <tag role="refnum">116</tag>
@@ -1407,7 +1369,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>120</tag>
             <tag role="refnum">120</tag>
             <tag role="typerefnum">line 120</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">colored</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">colored</text>}</listingline>
         <listingline xml:id="lstnumberx209"><tags>
             <tag>121</tag>
             <tag role="refnum">121</tag>
@@ -1417,7 +1379,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>122</tag>
             <tag role="refnum">122</tag>
             <tag role="typerefnum">line 122</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">colored</text>}{<text class="ltx_lst_identifier">blue</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">colored</text>}{<text class="ltx_lst_identifier">blue</text>}</listingline>
         <listingline xml:id="lstnumberx211"><tags>
             <tag>123</tag>
             <tag role="refnum">123</tag>
@@ -1442,7 +1404,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>127</tag>
             <tag role="refnum">127</tag>
             <tag role="typerefnum">line 127</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">colored</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">colored</text>}</listingline>
         <listingline xml:id="lstnumberx216"><tags>
             <tag>128</tag>
             <tag role="refnum">128</tag>
@@ -1452,7 +1414,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>129</tag>
             <tag role="refnum">129</tag>
             <tag role="typerefnum">line 129</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Framing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">such</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Framing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">such</text>}</listingline>
         <listingline xml:id="lstnumberx218"><tags>
             <tag>130</tag>
             <tag role="refnum">130</tag>
@@ -1462,7 +1424,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>131</tag>
             <tag role="refnum">131</tag>
             <tag role="typerefnum">line 131</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frame</text>=<text class="ltx_lst_identifier">single</text>,<text class="ltx_lst_identifier">rulecolor</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">red</text>}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frame</text>=<text class="ltx_lst_identifier">single</text>,<text class="ltx_lst_identifier">rulecolor</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">red</text>}]</listingline>
         <listingline xml:id="lstnumberx220"><tags>
             <tag>132</tag>
             <tag role="refnum">132</tag>
@@ -1487,7 +1449,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>136</tag>
             <tag role="refnum">136</tag>
             <tag role="typerefnum">line 136</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx225"><tags>
             <tag>137</tag>
             <tag role="refnum">137</tag>
@@ -1497,7 +1459,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>138</tag>
             <tag role="refnum">138</tag>
             <tag role="typerefnum">line 138</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frameround</text>=<text class="ltx_lst_identifier">tttt</text>,<text class="ltx_lst_identifier">backgroundcolor</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">yellow</text>}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frameround</text>=<text class="ltx_lst_identifier">tttt</text>,<text class="ltx_lst_identifier">backgroundcolor</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">yellow</text>}]</listingline>
         <listingline xml:id="lstnumberx227"><tags>
             <tag>139</tag>
             <tag role="refnum">139</tag>
@@ -1522,7 +1484,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>143</tag>
             <tag role="refnum">143</tag>
             <tag role="typerefnum">line 143</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx232"><tags>
             <tag>144</tag>
             <tag role="refnum">144</tag>
@@ -1532,7 +1494,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>145</tag>
             <tag role="refnum">145</tag>
             <tag role="typerefnum">line 145</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frame</text>=<text class="ltx_lst_identifier">single</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frame</text>=<text class="ltx_lst_identifier">single</text>]</listingline>
         <listingline xml:id="lstnumberx234"><tags>
             <tag>146</tag>
             <tag role="refnum">146</tag>
@@ -1557,7 +1519,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>150</tag>
             <tag role="refnum">150</tag>
             <tag role="typerefnum">line 150</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx239"><tags>
             <tag>151</tag>
             <tag role="refnum">151</tag>
@@ -1567,7 +1529,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>152</tag>
             <tag role="refnum">152</tag>
             <tag role="typerefnum">line 152</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frame</text>=<text class="ltx_lst_identifier">lines</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">Pascal</text>,<text class="ltx_lst_identifier">frame</text>=<text class="ltx_lst_identifier">lines</text>]</listingline>
         <listingline xml:id="lstnumberx241"><tags>
             <tag>153</tag>
             <tag role="refnum">153</tag>
@@ -1592,7 +1554,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>157</tag>
             <tag role="refnum">157</tag>
             <tag role="typerefnum">line 157</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx246"><tags>
             <tag>158</tag>
             <tag role="refnum">158</tag>
@@ -1602,7 +1564,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>159</tag>
             <tag role="refnum">159</tag>
             <tag role="typerefnum">line 159</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">C</text>,<text class="ltx_lst_identifier">identifierstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">slshape</text>,<text class="ltx_lst_identifier">directivestyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>,</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">C</text>,<text class="ltx_lst_identifier">identifierstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">slshape</text>,<text class="ltx_lst_identifier">directivestyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>,</listingline>
         <listingline xml:id="lstnumberx248"><tags>
             <tag>160</tag>
             <tag role="refnum">160</tag>
@@ -1627,7 +1589,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>164</tag>
             <tag role="refnum">164</tag>
             <tag role="typerefnum">line 164</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx253"><tags>
             <tag>165</tag>
             <tag role="refnum">165</tag>
@@ -1637,17 +1599,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>166</tag>
             <tag role="refnum">166</tag>
             <tag role="typerefnum">line 166</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Listing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">with</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Math</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Listing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">with</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Math</text>}</listingline>
         <listingline xml:id="lstnumberx255"><tags>
             <tag>167</tag>
             <tag role="refnum">167</tag>
             <tag role="typerefnum">line 167</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">texcl</text>,<text class="ltx_lst_identifier">commentstyle</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">green</text>}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">texcl</text>,<text class="ltx_lst_identifier">commentstyle</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">green</text>}]</listingline>
         <listingline xml:id="lstnumberx256"><tags>
             <tag>168</tag>
             <tag role="refnum">168</tag>
             <tag role="typerefnum">line 168</tag>
-          </tags>//<text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">upshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}$</listingline>
+          </tags>//<text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">upshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text></listingline>
         <listingline xml:id="lstnumberx257"><tags>
             <tag>169</tag>
             <tag role="refnum">169</tag>
@@ -1657,7 +1619,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>170</tag>
             <tag role="refnum">170</tag>
             <tag role="typerefnum">line 170</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx259"><tags>
             <tag>171</tag>
             <tag role="refnum">171</tag>
@@ -1667,12 +1629,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>172</tag>
             <tag role="refnum">172</tag>
             <tag role="typerefnum">line 172</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">texcl</text>,<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">texcl</text>,<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>]</listingline>
         <listingline xml:id="lstnumberx261"><tags>
             <tag>173</tag>
             <tag role="refnum">173</tag>
             <tag role="typerefnum">line 173</tag>
-          </tags>//<text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">upshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}$</listingline>
+          </tags>//<text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">upshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text></listingline>
         <listingline xml:id="lstnumberx262"><tags>
             <tag>174</tag>
             <tag role="refnum">174</tag>
@@ -1682,7 +1644,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>175</tag>
             <tag role="refnum">175</tag>
             <tag role="typerefnum">line 175</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx264"><tags>
             <tag>176</tag>
             <tag role="refnum">176</tag>
@@ -1692,32 +1654,32 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>177</tag>
             <tag role="refnum">177</tag>
             <tag role="typerefnum">line 177</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">mathescape</text>,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>,<text class="ltx_lst_identifier">commentstyle</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">green</text>}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">mathescape</text>,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>,<text class="ltx_lst_identifier">commentstyle</text>=<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">green</text>}]</listingline>
         <listingline xml:id="lstnumberx266"><tags>
             <tag>178</tag>
             <tag role="refnum">178</tag>
             <tag role="typerefnum">line 178</tag>
-          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}$</listingline>
+          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text></listingline>
         <listingline xml:id="lstnumberx267"><tags>
             <tag>179</tag>
             <tag role="refnum">179</tag>
             <tag role="typerefnum">line 179</tag>
-          </tags>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}</listingline>
+          </tags><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}</listingline>
         <listingline xml:id="lstnumberx268"><tags>
             <tag>180</tag>
             <tag role="refnum">180</tag>
             <tag role="typerefnum">line 180</tag>
-          </tags><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">jj</text>}/<text class="ltx_lst_identifier">a</text>{<text class="ltx_lst_identifier">ij</text>}$;</listingline>
+          </tags><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a_</text>{<text class="ltx_lst_identifier">jj</text>}/<text class="ltx_lst_identifier">a</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text>;</listingline>
         <listingline xml:id="lstnumberx269"><tags>
             <tag>181</tag>
             <tag role="refnum">181</tag>
             <tag role="typerefnum">line 181</tag>
-          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_space"> </text>=</listingline>
+          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_space"> </text>=</listingline>
         <listingline xml:id="lstnumberx270"><tags>
             <tag>182</tag>
             <tag role="refnum">182</tag>
             <tag role="typerefnum">line 182</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">sin</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x</text>$</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">sin</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x$</text></listingline>
         <listingline xml:id="lstnumberx271"><tags>
             <tag>183</tag>
             <tag role="refnum">183</tag>
@@ -1732,12 +1694,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>185</tag>
             <tag role="refnum">185</tag>
             <tag role="typerefnum">line 185</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=”<text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">x</text>^2$<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">math</text>”;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=”<text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$x</text>^2<text class="ltx_lst_identifier">$</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">math</text>”;</listingline>
         <listingline xml:id="lstnumberx274"><tags>
             <tag>186</tag>
             <tag role="refnum">186</tag>
             <tag role="typerefnum">line 186</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx275"><tags>
             <tag>187</tag>
             <tag role="refnum">187</tag>
@@ -1747,27 +1709,27 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>188</tag>
             <tag role="refnum">188</tag>
             <tag role="typerefnum">line 188</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">escapechar</text>=\<text class="ltx_lst_comment" font="italic">%,escapebegin=\textless,escapeend=\textgreater,numbers=left]</text></listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">escapechar</text>=\<text class="ltx_lst_comment">%<text font="italic">,escapebegin=\textless,escapeend=\textgreater,numbers=left]</text></text></listingline>
         <listingline xml:id="lstnumberx277"><tags>
             <tag>189</tag>
             <tag role="refnum">189</tag>
             <tag role="typerefnum">line 189</tag>
-          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_comment" font="italic">%$a_{ij}$%</text></listingline>
+          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_comment">%<text font="italic">$a_{ij}$%</text></text></listingline>
         <listingline xml:id="lstnumberx278"><tags>
             <tag>190</tag>
             <tag role="refnum">190</tag>
             <tag role="typerefnum">line 190</tag>
-          </tags><text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}</listingline>
+          </tags><text class="ltx_lst_identifier">a_</text>{<text class="ltx_lst_identifier">ij</text>}</listingline>
         <listingline xml:id="lstnumberx279"><tags>
             <tag>191</tag>
             <tag role="refnum">191</tag>
             <tag role="typerefnum">line 191</tag>
-          </tags><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">jj</text>}/<text class="ltx_lst_identifier">a</text>{<text class="ltx_lst_identifier">ij</text>};</listingline>
+          </tags><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a_</text>{<text class="ltx_lst_identifier">jj</text>}/<text class="ltx_lst_identifier">a</text>{<text class="ltx_lst_identifier">ij</text>};</listingline>
         <listingline xml:id="lstnumberx280"><tags>
             <tag>192</tag>
             <tag role="refnum">192</tag>
             <tag role="typerefnum">line 192</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx281"><tags>
             <tag>193</tag>
             <tag role="refnum">193</tag>
@@ -1777,32 +1739,32 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>194</tag>
             <tag role="refnum">194</tag>
             <tag role="typerefnum">line 194</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>,<text class="ltx_lst_identifier">stringstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ttfamily</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">c</text>,<text class="ltx_lst_identifier">numbers</text>=<text class="ltx_lst_identifier">left</text>,<text class="ltx_lst_identifier">stringstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ttfamily</text>]</listingline>
         <listingline xml:id="lstnumberx283"><tags>
             <tag>195</tag>
             <tag role="refnum">195</tag>
             <tag role="typerefnum">line 195</tag>
-          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}$</listingline>
+          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text></listingline>
         <listingline xml:id="lstnumberx284"><tags>
             <tag>196</tag>
             <tag role="refnum">196</tag>
             <tag role="typerefnum">line 196</tag>
-          </tags>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}</listingline>
+          </tags><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}</listingline>
         <listingline xml:id="lstnumberx285"><tags>
             <tag>197</tag>
             <tag role="refnum">197</tag>
             <tag role="typerefnum">line 197</tag>
-          </tags><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">jj</text>}/<text class="ltx_lst_identifier">a</text>{<text class="ltx_lst_identifier">ij</text>}$;</listingline>
+          </tags><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a_</text>{<text class="ltx_lst_identifier">jj</text>}/<text class="ltx_lst_identifier">a</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_identifier">$</text>;</listingline>
         <listingline xml:id="lstnumberx286"><tags>
             <tag>198</tag>
             <tag role="refnum">198</tag>
             <tag role="typerefnum">line 198</tag>
-          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">a</text>_{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_space"> </text>=</listingline>
+          </tags>//<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">calculate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$a_</text>{<text class="ltx_lst_identifier">ij</text>}<text class="ltx_lst_space"> </text>=</listingline>
         <listingline xml:id="lstnumberx287"><tags>
             <tag>199</tag>
             <tag role="refnum">199</tag>
             <tag role="typerefnum">line 199</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">sin</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x</text>$</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">sin</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x$</text></listingline>
         <listingline xml:id="lstnumberx288"><tags>
             <tag>200</tag>
             <tag role="refnum">200</tag>
@@ -1822,12 +1784,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>203</tag>
             <tag role="refnum">203</tag>
             <tag role="typerefnum">line 203</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=”<text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text>$<text class="ltx_lst_identifier">x</text>^2$<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">math</text>”;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=”<text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">$x</text>^2<text class="ltx_lst_identifier">$</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">math</text>”;</listingline>
         <listingline xml:id="lstnumberx292"><tags>
             <tag>204</tag>
             <tag role="refnum">204</tag>
             <tag role="typerefnum">line 204</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx293"><tags>
             <tag>205</tag>
             <tag role="refnum">205</tag>
@@ -1837,7 +1799,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>206</tag>
             <tag role="refnum">206</tag>
             <tag role="typerefnum">line 206</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Perl</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Perl</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Listing</text>}</listingline>
         <listingline xml:id="lstnumberx295"><tags>
             <tag>207</tag>
             <tag role="refnum">207</tag>
@@ -1852,7 +1814,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>209</tag>
             <tag role="refnum">209</tag>
             <tag role="typerefnum">line 209</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Recursive</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">TeX</text>\<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">listing</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">A</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Recursive</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">TeX</text>\<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">listing</text>}</listingline>
         <listingline xml:id="lstnumberx298"><tags>
             <tag>210</tag>
             <tag role="refnum">210</tag>
@@ -1872,17 +1834,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>213</tag>
             <tag role="refnum">213</tag>
             <tag role="typerefnum">line 213</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>={[<text class="ltx_lst_identifier">LaTeX</text>]<text class="ltx_lst_identifier">TeX</text>},<text class="ltx_lst_identifier">texcsstyle</text>=*{<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">blue</text>}\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">bfseries</text>}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>={[<text class="ltx_lst_identifier">LaTeX</text>]<text class="ltx_lst_identifier">TeX</text>},<text class="ltx_lst_identifier">texcsstyle</text>=*{<text class="ltx_lst_identifier">\color</text>{<text class="ltx_lst_identifier">blue</text>}\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">bfseries</text>}]</listingline>
         <listingline xml:id="lstnumberx302"><tags>
             <tag>214</tag>
             <tag role="refnum">214</tag>
             <tag role="typerefnum">line 214</tag>
-          </tags><text class="ltx_lst_space">  </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">iftrue</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">something</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">fi</text></listingline>
+          </tags><text class="ltx_lst_space">  </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">iftrue</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">something</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">fi</text></listingline>
         <listingline xml:id="lstnumberx303"><tags>
             <tag>215</tag>
             <tag role="refnum">215</tag>
             <tag role="typerefnum">line 215</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx304"><tags>
             <tag>216</tag>
             <tag role="refnum">216</tag>
@@ -1892,17 +1854,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>217</tag>
             <tag role="refnum">217</tag>
             <tag role="typerefnum">line 217</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Testing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Tag</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Testing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Tag</text>}</listingline>
         <listingline xml:id="lstnumberx306"><tags>
             <tag>218</tag>
             <tag role="refnum">218</tag>
             <tag role="typerefnum">line 218</tag>
-          </tags><text class="ltx_lst_comment" font="italic">%<text class="ltx_lst_space"> </text>AHA,<text class="ltx_lst_space"> </text>tagstyle<text class="ltx_lst_space"> </text>only<text class="ltx_lst_space"> </text>is<text class="ltx_lst_space"> </text>in<text class="ltx_lst_space"> </text>effect<text class="ltx_lst_space"> </text>with<text class="ltx_lst_space"> </text>XML<text class="ltx_lst_space"> </text>(?)</text></listingline>
+          </tags><text class="ltx_lst_comment">%<text class="ltx_lst_space" font="italic"> </text><text font="italic">AHA,<text class="ltx_lst_space"> </text>tagstyle<text class="ltx_lst_space"> </text>only<text class="ltx_lst_space"> </text>is<text class="ltx_lst_space"> </text>in<text class="ltx_lst_space"> </text>effect<text class="ltx_lst_space"> </text>with<text class="ltx_lst_space"> </text>XML<text class="ltx_lst_space"> </text>(?)</text></text></listingline>
         <listingline xml:id="lstnumberx307"><tags>
             <tag>219</tag>
             <tag role="refnum">219</tag>
             <tag role="typerefnum">line 219</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">XML</text>,<text class="ltx_lst_identifier">tagstyle</text>=<text class="ltx_lst_identifier">\bf</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">XML</text>,<text class="ltx_lst_identifier">tagstyle</text>=<text class="ltx_lst_identifier">\bf</text>]</listingline>
         <listingline xml:id="lstnumberx308"><tags>
             <tag>220</tag>
             <tag role="refnum">220</tag>
@@ -1912,12 +1874,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>221</tag>
             <tag role="refnum">221</tag>
             <tag role="typerefnum">line 221</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx310"><tags>
             <tag>222</tag>
             <tag role="refnum">222</tag>
             <tag role="typerefnum">line 222</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">XML</text>,<text class="ltx_lst_identifier">tagstyle</text>=<text class="ltx_lst_identifier">\bf</text>,<text class="ltx_lst_identifier">usekeywordsintag</text>=<text class="ltx_lst_identifier">false</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">XML</text>,<text class="ltx_lst_identifier">tagstyle</text>=<text class="ltx_lst_identifier">\bf</text>,<text class="ltx_lst_identifier">usekeywordsintag</text>=<text class="ltx_lst_identifier">false</text>]</listingline>
         <listingline xml:id="lstnumberx311"><tags>
             <tag>223</tag>
             <tag role="refnum">223</tag>
@@ -1927,12 +1889,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>224</tag>
             <tag role="refnum">224</tag>
             <tag role="typerefnum">line 224</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx313"><tags>
             <tag>225</tag>
             <tag role="refnum">225</tag>
             <tag role="typerefnum">line 225</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">XML</text>,<text class="ltx_lst_identifier">tagstyle</text>=<text class="ltx_lst_identifier">\bf</text>,<text class="ltx_lst_identifier">markfirstintag</text>]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">XML</text>,<text class="ltx_lst_identifier">tagstyle</text>=<text class="ltx_lst_identifier">\bf</text>,<text class="ltx_lst_identifier">markfirstintag</text>]</listingline>
         <listingline xml:id="lstnumberx314"><tags>
             <tag>226</tag>
             <tag role="refnum">226</tag>
@@ -1942,7 +1904,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>227</tag>
             <tag role="refnum">227</tag>
             <tag role="typerefnum">line 227</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx316"><tags>
             <tag>228</tag>
             <tag role="refnum">228</tag>
@@ -1952,12 +1914,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>229</tag>
             <tag role="refnum">229</tag>
             <tag role="typerefnum">line 229</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Literate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Programming</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Literate</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Programming</text>}</listingline>
         <listingline xml:id="lstnumberx318"><tags>
             <tag>230</tag>
             <tag role="refnum">230</tag>
             <tag role="typerefnum">line 230</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">C</text>,<text class="ltx_lst_identifier">escapechar</text>=<text class="ltx_lst_identifier">@</text>,<text class="ltx_lst_identifier">literate</text>=*{:=}{{$\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">gets</text>$}}1<text class="ltx_lst_space"> </text>{&lt;=}{{$\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">leq</text>$}}1<text class="ltx_lst_space"> </text>{&gt;=}{{$\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">geq</text>$}}1<text class="ltx_lst_space"> </text>{&lt;&gt;}{{$\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">neq</text>$}}1]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">C</text>,<text class="ltx_lst_identifier">escapechar</text>=<text class="ltx_lst_identifier">@</text>,<text class="ltx_lst_identifier">literate</text>=*{:=}{{<text class="ltx_lst_identifier">$</text><text class="ltx_lst_identifier">\gets$</text>}}1<text class="ltx_lst_space"> </text>{&lt;=}{{<text class="ltx_lst_identifier">$</text><text class="ltx_lst_identifier">\leq$</text>}}1<text class="ltx_lst_space"> </text>{&gt;=}{{<text class="ltx_lst_identifier">$</text><text class="ltx_lst_identifier">\geq$</text>}}1<text class="ltx_lst_space"> </text>{&lt;&gt;}{{<text class="ltx_lst_identifier">$</text><text class="ltx_lst_identifier">\neq$</text>}}1]</listingline>
         <listingline xml:id="lstnumberx319"><tags>
             <tag>231</tag>
             <tag role="refnum">231</tag>
@@ -1967,7 +1929,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>232</tag>
             <tag role="refnum">232</tag>
             <tag role="typerefnum">line 232</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_identifier">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;=0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>1;<text class="ltx_lst_identifier">@</text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}<text class="ltx_lst_identifier">@</text></listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_identifier">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;=0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>1;<text class="ltx_lst_identifier">@</text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}<text class="ltx_lst_identifier">@</text></listingline>
         <listingline xml:id="lstnumberx321"><tags>
             <tag>233</tag>
             <tag role="refnum">233</tag>
@@ -1977,7 +1939,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>234</tag>
             <tag role="refnum">234</tag>
             <tag role="typerefnum">line 234</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_identifier">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;&gt;0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>0;<text class="ltx_lst_identifier">@</text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}<text class="ltx_lst_identifier">@</text></listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_identifier">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;&gt;0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>0;<text class="ltx_lst_identifier">@</text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}<text class="ltx_lst_identifier">@</text></listingline>
         <listingline xml:id="lstnumberx323"><tags>
             <tag>235</tag>
             <tag role="refnum">235</tag>
@@ -1987,12 +1949,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>236</tag>
             <tag role="refnum">236</tag>
             <tag role="typerefnum">line 236</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx325"><tags>
             <tag>237</tag>
             <tag role="refnum">237</tag>
             <tag role="typerefnum">line 237</tag>
-          </tags><text class="ltx_lst_identifier">where</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">we</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">draw</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">your</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attention</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">to</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">lines</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ref</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">ref</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}.</listingline>
+          </tags><text class="ltx_lst_identifier">where</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">we</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">draw</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">your</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attention</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">to</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">lines</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ref</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">ref</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}.</listingline>
         <listingline xml:id="lstnumberx326"><tags>
             <tag>238</tag>
             <tag role="refnum">238</tag>
@@ -2002,7 +1964,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>239</tag>
             <tag role="refnum">239</tag>
             <tag role="typerefnum">line 239</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">section</text>{<text class="ltx_lst_identifier">Screwiness</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">section</text>{<text class="ltx_lst_identifier">Screwiness</text>}</listingline>
         <listingline xml:id="lstnumberx328"><tags>
             <tag>240</tag>
             <tag role="refnum">240</tag>
@@ -2012,22 +1974,22 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>241</tag>
             <tag role="refnum">241</tag>
             <tag role="typerefnum">line 241</tag>
-          </tags><text class="ltx_lst_comment" font="italic">%,</text></listingline>
+          </tags><text class="ltx_lst_comment">%<text font="italic">,</text></text></listingline>
         <listingline xml:id="lstnumberx330"><tags>
             <tag>242</tag>
             <tag role="refnum">242</tag>
             <tag role="typerefnum">line 242</tag>
-          </tags><text class="ltx_lst_comment" font="italic">%<text class="ltx_lst_space"> </text>AHA,<text class="ltx_lst_space"> </text>words<text class="ltx_lst_space"> </text>can<text class="ltx_lst_space"> </text>only<text class="ltx_lst_space"> </text>be<text class="ltx_lst_space"> </text>in<text class="ltx_lst_space"> </text>one<text class="ltx_lst_space"> </text>class<text class="ltx_lst_space"> </text>(1st<text class="ltx_lst_space"> </text>one<text class="ltx_lst_space"> </text>declared?)</text></listingline>
+          </tags><text class="ltx_lst_comment">%<text class="ltx_lst_space" font="italic"> </text><text font="italic">AHA,<text class="ltx_lst_space"> </text>words<text class="ltx_lst_space"> </text>can<text class="ltx_lst_space"> </text>only<text class="ltx_lst_space"> </text>be<text class="ltx_lst_space"> </text>in<text class="ltx_lst_space"> </text>one<text class="ltx_lst_space"> </text>class<text class="ltx_lst_space"> </text>(1st<text class="ltx_lst_space"> </text>one<text class="ltx_lst_space"> </text>declared?)</text></text></listingline>
         <listingline xml:id="lstnumberx331"><tags>
             <tag>243</tag>
             <tag role="refnum">243</tag>
             <tag role="typerefnum">line 243</tag>
-          </tags><text class="ltx_lst_comment" font="italic">%<text class="ltx_lst_space"> </text>BUT,<text class="ltx_lst_space"> </text>index<text class="ltx_lst_space"> </text>is<text class="ltx_lst_space"> </text>separate,<text class="ltx_lst_space"> </text>and<text class="ltx_lst_space"> </text>classname<text class="ltx_lst_space"> </text>is<text class="ltx_lst_space"> </text>without<text class="ltx_lst_space"> </text>the<text class="ltx_lst_space"> </text>”style”<text class="ltx_lst_space"> </text>!!</text></listingline>
+          </tags><text class="ltx_lst_comment">%<text class="ltx_lst_space" font="italic"> </text><text font="italic">BUT,<text class="ltx_lst_space"> </text>index<text class="ltx_lst_space"> </text>is<text class="ltx_lst_space"> </text>separate,<text class="ltx_lst_space"> </text>and<text class="ltx_lst_space"> </text>classname<text class="ltx_lst_space"> </text>is<text class="ltx_lst_space"> </text>without<text class="ltx_lst_space"> </text>the<text class="ltx_lst_space"> </text>”style”<text class="ltx_lst_space"> </text>!!</text></text></listingline>
         <listingline xml:id="lstnumberx332"><tags>
             <tag>244</tag>
             <tag role="refnum">244</tag>
             <tag role="typerefnum">line 244</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">bingo</text>,<text class="ltx_lst_identifier">keywordstyle</text>=\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">bfseries</text>,<text class="ltx_lst_identifier">keywordstyle</text>={[2]\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">itshape</text>},<text class="ltx_lst_identifier">index</text>={[1][<text class="ltx_lst_identifier">keywords</text>2]{<text class="ltx_lst_identifier">bar</text>,<text class="ltx_lst_identifier">baz</text>}}]</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">begin</text>{<text class="ltx_lst_identifier">lstlisting</text>}[<text class="ltx_lst_identifier">language</text>=<text class="ltx_lst_identifier">bingo</text>,<text class="ltx_lst_identifier">keywordstyle</text>=\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">bfseries</text>,<text class="ltx_lst_identifier">keywordstyle</text>={[2]\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">itshape</text>},<text class="ltx_lst_identifier">index</text>={[1][<text class="ltx_lst_identifier">keywords2</text>]{<text class="ltx_lst_identifier">bar</text>,<text class="ltx_lst_identifier">baz</text>}}]</listingline>
         <listingline xml:id="lstnumberx333"><tags>
             <tag>245</tag>
             <tag role="refnum">245</tag>
@@ -2037,17 +1999,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>246</tag>
             <tag role="refnum">246</tag>
             <tag role="typerefnum">line 246</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">lstlisting</text>}</listingline>
         <listingline xml:id="lstnumberx335"><tags>
             <tag>247</tag>
             <tag role="refnum">247</tag>
             <tag role="typerefnum">line 247</tag>
-          </tags>{\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">bfseries</text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">itshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bfit</text>}</listingline>
+          </tags>{\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">bfseries</text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">itshape</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bfit</text>}</listingline>
         <listingline xml:id="lstnumberx336"><tags>
             <tag>248</tag>
             <tag role="refnum">248</tag>
             <tag role="typerefnum">line 248</tag>
-          </tags>{\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">itshape</text>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">bfseries</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">itbf</text>}</listingline>
+          </tags>{\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">itshape</text>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">bfseries</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">itbf</text>}</listingline>
         <listingline xml:id="lstnumberx337"><tags>
             <tag>249</tag>
             <tag role="refnum">249</tag>
@@ -2057,12 +2019,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>250</tag>
             <tag role="refnum">250</tag>
             <tag role="typerefnum">line 250</tag>
-          </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">document</text>}</listingline>
+          </tags>\<text class="ltx_lst_texcs ltx_lst_keyword" font="bold">end</text>{<text class="ltx_lst_identifier">document</text>}</listingline>
       </listing>
     </float>
     <para xml:id="S10.p1">
       <p>A shorter listing, with colored cs that include the slash</p>
-      <listing class="ltx_lst_language_TeX_LaTeX ltx_lst_numbers_left ltx_lstlisting" data="ICBcaWZ0cnVlIHNvbWV0aGluZyBcZmk=" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_TeX_LaTeX ltx_lst_numbers_left ltx_lstlisting" data="ICBcaWZ0cnVlIHNvbWV0aGluZyBcZmk=" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx339"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
@@ -2079,26 +2041,26 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">11</tag>Testing Tag</title>
     <para xml:id="S11.p1">
-      <listing class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx340"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_tag" font="bold">&lt;element<text class="ltx_lst_space"> </text>attr=<text class="ltx_lst_string">’value’</text>&gt;</text><text class="ltx_lst_identifier">content</text><text class="ltx_lst_tag" font="bold">&lt;/element&gt;</text></listingline>
+          </tags>&lt;<text class="ltx_lst_keyword" font="bold">element</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attr</text>=<text class="ltx_lst_string">’value’</text>&gt;<text class="ltx_lst_identifier">content</text>&lt;/<text class="ltx_lst_keyword" font="bold">element</text>&gt;</listingline>
       </listing>
-      <listing class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx341"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_tag" font="bold">&lt;element<text class="ltx_lst_space"> </text>attr=<text class="ltx_lst_string">’value’</text>&gt;</text><text class="ltx_lst_identifier">content</text><text class="ltx_lst_tag" font="bold">&lt;/element&gt;</text></listingline>
+          </tags>&lt;<text class="ltx_lst_keyword" font="bold">element</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attr</text>=<text class="ltx_lst_string">’value’</text>&gt;<text class="ltx_lst_identifier">content</text>&lt;/<text class="ltx_lst_keyword" font="bold">element</text>&gt;</listingline>
       </listing>
-      <listing class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx342"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_tag" font="bold">&lt;element<text class="ltx_lst_space"> </text>attr=<text class="ltx_lst_string">’value’</text>&gt;</text><text class="ltx_lst_identifier">content</text><text class="ltx_lst_tag" font="bold">&lt;/element&gt;</text></listingline>
+          </tags>&lt;<text class="ltx_lst_keyword" font="bold">element</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attr</text>=<text class="ltx_lst_string">’value’</text>&gt;<text class="ltx_lst_identifier">content</text>&lt;/<text class="ltx_lst_keyword" font="bold">element</text>&gt;</listingline>
       </listing>
     </para>
   </section>
@@ -2110,56 +2072,32 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">12</tag>Literate Programming</title>
     <para xml:id="S12.p1">
-      <listing class="ltx_lst_language_C ltx_lst_numbers_left ltx_lstlisting" data="ICB2YXIgaTppbnRlZ2VyOwogIGlmIChpPD0wKSBpIDo9IDE7QFxsYWJlbHtsaXQ6YX1ACiAgaWYgKGk+PTApIGkgOj0gMDsKICBpZiAoaTw+MCkgaSA6PSAwO0BcbGFiZWx7bGl0OmJ9QAogLyogSG93ZXZlciBub3QgOj0gaGVyZSAqLw==" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_C ltx_lst_numbers_left ltx_lstlisting" data="ICB2YXIgaTppbnRlZ2VyOwogIGlmIChpPD0wKSBpIDo9IDE7QFxsYWJlbHtsaXQ6YX1ACiAgaWYgKGk+PTApIGkgOj0gMDsKICBpZiAoaTw+MCkgaSA6PSAwO0BcbGFiZWx7bGl0OmJ9QAogLyogSG93ZXZlciBub3QgOj0gaGVyZSAqLw==" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx343"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
           </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_identifier">var</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text>:<text class="ltx_lst_identifier">integer</text>;</listingline>
-        <listingline labels="LABEL:lit:a" xml:id="lstnumberx344"><tags>
+        <listingline xml:id="lstnumberx344"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text><text class="ltx_lst_literate"><Math mode="inline" tex="\leq" text="&lt;=" xml:id="lstnumberx344.m1">
-              <XMath>
-                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-              </XMath>
-            </Math></text>0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\leftarrow" text="leftarrow" xml:id="lstnumberx344.m2">
-              <XMath>
-                <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              </XMath>
-            </Math></text><text class="ltx_lst_space"> </text>1;</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;=0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>1;<text class="ltx_lst_identifier">@</text>\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}<text class="ltx_lst_identifier">@</text></listingline>
         <listingline xml:id="lstnumberx345"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text><text class="ltx_lst_literate"><Math mode="inline" tex="\geq" text="&gt;=" xml:id="lstnumberx345.m1">
-              <XMath>
-                <XMTok meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
-              </XMath>
-            </Math></text>0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\leftarrow" text="leftarrow" xml:id="lstnumberx345.m2">
-              <XMath>
-                <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              </XMath>
-            </Math></text><text class="ltx_lst_space"> </text>0;</listingline>
-        <listingline labels="LABEL:lit:b" xml:id="lstnumberx346"><tags>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&gt;=0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>0;</listingline>
+        <listingline xml:id="lstnumberx346"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text><text class="ltx_lst_literate"><Math mode="inline" tex="\neq" text="not-equals" xml:id="lstnumberx346.m1">
-              <XMath>
-                <XMTok meaning="not-equals" name="neq" role="RELOP">≠</XMTok>
-              </XMath>
-            </Math></text>0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\leftarrow" text="leftarrow" xml:id="lstnumberx346.m2">
-              <XMath>
-                <XMTok name="leftarrow" role="ARROW">←</XMTok>
-              </XMath>
-            </Math></text><text class="ltx_lst_space"> </text>0;</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;&gt;0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>0;<text class="ltx_lst_identifier">@</text>\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}<text class="ltx_lst_identifier">@</text></listingline>
         <listingline xml:id="lstnumberx347"><tags>
             <tag>5</tag>
             <tag role="refnum">5</tag>
             <tag role="typerefnum">line 5</tag>
-          </tags><text class="ltx_lst_space"> </text><text class="ltx_lst_comment" font="italic">/*<text class="ltx_lst_space"> </text>However<text class="ltx_lst_space"> </text>not<text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>here<text class="ltx_lst_space"> </text>*/</text></listingline>
+          </tags><text class="ltx_lst_space"> </text><text class="ltx_lst_comment">/*<text class="ltx_lst_space" font="italic"> </text><text font="italic">However<text class="ltx_lst_space"> </text>not<text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>here<text class="ltx_lst_space"> </text></text>*/</text></listingline>
       </listing>
       <p>where we draw your attention to lines <ref labelref="LABEL:lit:a"/> and <ref labelref="LABEL:lit:b"/>.</p>
     </para>
@@ -2172,24 +2110,16 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
     </tags>
     <title><tag close=" ">13</tag>Screwiness</title>
     <para xml:id="S13.p1">
-      <listing class="ltx_lst_language_bingo ltx_lst_numbers_left ltx_lstlisting" data="Zm9vIGJhciBiYXogYmluZyBib29ib28=" dataencoding="base64" datamimetype="text/plain">
+      <listing backgroundcolor="#000000" class="ltx_lst_language_bingo ltx_lst_numbers_left ltx_lstlisting" data="Zm9vIGJhciBiYXogYmluZyBib29ib28=" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx348"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">foo</text><text class="ltx_lst_space"> </text><indexmark>
-            <indexphrase key="bar"><text font="typewriter">bar</text></indexphrase>
-          </indexmark><text class="ltx_lst_keyword" font="bold">bar</text><text class="ltx_lst_space"> </text><indexmark>
-            <indexphrase key="baz"><text font="typewriter">baz</text></indexphrase>
-          </indexmark><text class="ltx_lst_identifier">baz</text><text class="ltx_lst_space"> </text><indexmark>
-            <indexphrase key="bing"><text font="typewriter">bing</text></indexphrase>
-          </indexmark><text class="ltx_lst_keywords2" font="italic">bing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">booboo</text></listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">foo</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keyword" font="bold">bar</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">baz</text><text class="ltx_lst_space"> </text><text class="ltx_lst_keywords2" font="italic">bing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">booboo</text></listingline>
       </listing>
       <p><text font="bold italic">bfit</text>
 <text font="bold italic">itbf</text></p>
     </para>
+    <index/>
   </section>
-  <index xml:id="idx">
-    <title>Index</title>
-  </index>
 </document>

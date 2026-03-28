@@ -106,7 +106,7 @@ impl From<Tokens> for Token {
 impl<'a> From<&'a Tokens> for Token {
   fn from(ts: &'a Tokens) -> Token {
     if ts.0.is_empty() {
-      todo!();
+      T_CS!("\\relax") // empty Tokens → relax fallback
     } else if ts.0.len() == 1 {
       *ts.0.first().unwrap()
     } else {

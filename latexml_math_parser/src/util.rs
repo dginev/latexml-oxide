@@ -53,6 +53,14 @@ fn node_to_grammar_lexemes_ctx(
   // so we can emit bigop-specific script tokens to reduce earley chart ambiguity.
   let mut last_was_bigop = false;
   for node in child_nodes.into_iter() {
+    // For XMRef nodes: resolve to get the target's role/meaning for lexing,
+    // but keep the ORIGINAL XMRef node in the output so the parse tree
+    // preserves XMRef indirection (matching Perl behavior).
+    // The get_grammatical_role/get_token_meaning functions already resolve XMRef
+    // internally, so we just need to handle the case where the target is a
+    // compound node (XMApp without role) — these need flattening.
+    // Note: we do NOT replace the node variable — we keep the XMRef.
+
     if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
       let role = node.get_attribute("role").unwrap();
       // ARROW/METARELOP-role XMApps (decorated arrows like \xrightarrow{over},

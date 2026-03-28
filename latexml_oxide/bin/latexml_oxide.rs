@@ -21,26 +21,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     err().ok();
   }
-  let mut argv = env::args();
-  argv.next();
+  let mut argv: Vec<String> = env::args().skip(1).collect();
 
-  let source = match argv.next() {
-    Some(s) => s,
-    None => {
-      let err = || {
-        Error!(
-          "latexml_oxide",
-          "",
-          "Please provide a source document! Exiting..."
-        );
-        Ok(())
-      };
-      err().ok();
-      process::exit(1);
-    },
+  // Parse --init=<file> flag (Perl: latexml --init=latex.ltx --dest=dump.ltxml)
+  let init_file = extract_flag(&mut argv, "--init");
+  let dest_flag = extract_flag(&mut argv, "--dest");
+
+  let source = if let Some(ref init) = init_file {
+    init.clone()
+  } else {
+    match argv.first() {
+      Some(s) => s.clone(),
+      None => {
+        eprintln!("Usage: latexml_oxide [--init=<file> --dest=<dump>] <source> [<destination>]");
+        process::exit(1);
+      }
+    }
   };
-  let target = argv.next();
-  // Prepare to convert:
+  let target = dest_flag.or_else(|| argv.get(1).cloned());
+
+  // Prepare converter
   let opts = Config {
     verbosity:               0,
     format:                  OutputFormat::HTML5,
@@ -54,29 +54,45 @@ fn main() -> Result<(), Box<dyn Error>> {
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
-    let message = s!("Could not prepare converter session! : {}", e);
-    let err = || {
-      Error!("latexml_oxide", "session", message);
-      Ok(())
-    };
-    err().ok();
+    eprintln!("Could not prepare converter session: {}", e);
     process::exit(1);
   }
-  // Perform the conversion:
-  let response = converter.convert(source);
 
-  // TODO: Should never have to handle the response log for print?
-  // the right arguments can be passed in so that the response is either captured - and
-  // passed, or printed internally by the logger info!("{:?}\n\n", r.log);
-  if let Some(xml) = response.result {
-    if let Some(target_path) = target {
-      let mut out_fh = File::create(target_path)?;
-      write!(out_fh, "{xml}")?;
-    } else {
-      print!("{xml}");
+  if init_file.is_some() {
+    // Init mode: process file and dump state (Perl: iniTeX)
+    match latexml::ini_tex::dump_format(&mut converter, &source, target.as_deref()) {
+      Ok(count) => {
+        eprintln!("Format dump complete: {} entries written", count);
+      }
+      Err(e) => {
+        eprintln!("Format dump failed: {}", e);
+        process::exit(1);
+      }
+    }
+  } else {
+    // Normal mode: convert document
+    let response = converter.convert(source);
+    if let Some(xml) = response.result {
+      if let Some(target_path) = target {
+        let mut out_fh = File::create(target_path)?;
+        write!(out_fh, "{xml}")?;
+      } else {
+        print!("{xml}");
+      }
     }
   }
 
-  // Normal exit
   process::exit(0);
+}
+
+/// Extract a --flag=value from argv, removing it if found.
+fn extract_flag(argv: &mut Vec<String>, prefix: &str) -> Option<String> {
+  let eq_prefix = format!("{}=", prefix);
+  if let Some(pos) = argv.iter().position(|a| a.starts_with(&eq_prefix)) {
+    let val = argv[pos][eq_prefix.len()..].to_string();
+    argv.remove(pos);
+    Some(val)
+  } else {
+    None
+  }
 }

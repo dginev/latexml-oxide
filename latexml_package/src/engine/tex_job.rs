@@ -53,10 +53,21 @@ LoadDefinitions!({
   // \maxdeadcycles    pi is the maximum allowed value of \deadcycles before an error is generated.
   // Perl: $stomach->leaveHorizontal; $stomach->getGullet->flush;
   DefPrimitive!("\\lx@end@document", {
-    leave_horizontal()?;
-    gullet::flush();
+    // When called during package/definition loading (e.g., expl3's error handler
+    // calls \tex_end:D via \msg_fatal), ignore it. Package errors should not
+    // terminate the entire document processing.
+    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+      leave_horizontal()?;
+      gullet::flush();
+    }
+    // else: silently ignore during definition loading
   });
   Let!("\\end", "\\lx@end@document");
+  // Save the TeX primitive \end under \@@end so that expl3's primitive rename
+  // (\__kernel_primitive:NN \end \tex_end:D) gets the real primitive, not
+  // LaTeX's \end{environment} handler which consumes {} arguments.
+  // In Perl, @@end is the saved TeX \end (latex.ltx saves it).
+  Let!("\\@@end", "\\lx@end@document");
 
   DefRegister!("\\everyjob", Tokens!());
   DefRegister!("\\deadcycles", Number!(0));

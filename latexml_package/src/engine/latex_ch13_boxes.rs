@@ -337,6 +337,8 @@ LoadDefinitions!({
       Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
     },
     // Sizer: width from arg #4 (Dimension), height/depth from body (arg #5)
+    // Perl: sizer => '#5' — uses font.computeBoxesSize(body, vattach => ..., width => ...)
+    // which does proper line breaking and vattach transformation.
     sizer => sub[whatsit] {
       // Width from the "width" property (arg #4 Dimension)
       let w = whatsit.get_property("width")
@@ -350,7 +352,7 @@ LoadDefinitions!({
           // estimate lines, use \baselineskip for line height.
           let (body_w, body_h, body_d) = body.compute_size(SymHashMap::default())?;
           let total_w = body_w.value_of();
-          if total_w > w_val {
+          let (mut ht, mut dp) = if total_w > w_val {
             // Paragraph wrapping: estimate number of lines
             let num_lines = ((total_w as f64) / (w_val as f64)).ceil() as i64;
             // Use \baselineskip (typically 12pt = 786432 sp) for line height
@@ -358,14 +360,33 @@ LoadDefinitions!({
               .unwrap_or(Dimension::new(786432)); // 12pt default
             let line_h = baseline_skip.value_of();
             let total_h = num_lines * line_h;
-            // Height = first line ascender, depth = rest
-            let first_line_h = body_h.value_of().max(line_h * 2 / 3); // ~ascender
-            let d = Dimension::new(total_h - first_line_h);
-            let h = Dimension::new(first_line_h);
-            Ok((w, h, d))
+            // Default: top alignment (first line as height)
+            let first_line_h = body_h.value_of().max(line_h * 2 / 3);
+            (first_line_h, total_h - first_line_h)
           } else {
-            Ok((w, body_h, body_d))
+            (body_h.value_of(), body_d.value_of())
+          };
+          // Perl Font.pm L793-800: apply vattach transformation
+          let vattach = whatsit.get_property("vattach")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+          let total = ht + dp;
+          if vattach == "middle" {
+            let font_size = lookup_font()
+              .and_then(|f| f.get_size().map(|s| s as i64))
+              .unwrap_or(10);
+            let hh = total / 2;
+            let c = font_size * UNITY / 4; // math axis ≈ size/4
+            ht = hh + c;
+            dp = hh - c;
+          } else if vattach == "bottom" {
+            // Align to baseline of bottom row
+            let last_line_d = body_d.value_of().min(total);
+            dp = last_line_d;
+            ht = total - dp;
           }
+          // else: "top"/"baseline" — keep first line as height (default above)
+          Ok((w, Dimension::new(ht), Dimension::new(dp)))
         } else {
           let (_, h, d) = body.compute_size(SymHashMap::default())?;
           Ok((w, h, d))

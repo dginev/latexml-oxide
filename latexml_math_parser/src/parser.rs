@@ -192,8 +192,40 @@ impl MathParser {
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
       note_progress(&s!("{:?} formulae ...", xmath_nodes.len()));
+      // Populate the thread-local idstore for XMRef resolution during parsing.
+      // Perl uses $doc->lookupID which accesses the document's idstore directly.
+      crate::data::set_math_idstore(document.get_idstore_clone());
       for math in xmath_nodes {
         self.parse(math, document)?;
+      }
+      crate::data::clear_math_idstore();
+
+      // Run parse_kludge on unparsed XMath nodes with direct OPEN/CLOSE children.
+      // Collect first, then process (avoid modifying tree during XPath iteration).
+      let kludge_candidates: Vec<Node> = document.findnodes("//ltx:XMath", None);
+      // eprintln!("KLUDGE_SCAN: {} XMath candidates", kludge_candidates.len());
+      for xmath in kludge_candidates {
+        // Use get_child_nodes + manual filter (get_child_elements may miss some nodes)
+        let child_elems: Vec<Node> = xmath.get_child_nodes().into_iter()
+          .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+          .collect();
+        // Skip fully-parsed XMath: single XMDual/XMApp child means parsing succeeded.
+        if child_elems.len() == 1 {
+          let name = child_elems[0].get_name();
+          if name == "XMDual" || name == "XMApp" { continue; }
+        }
+        let has_direct_open = child_elems.iter().any(|ch| {
+          let role = ch.get_attribute("role").unwrap_or_default();
+          (role == "OPEN" || role == "CLOSE") && ch.get_name() == "XMTok"
+        });
+        // Also check for XMArray with adjacent XMTok (unparsed aligned-in-fenced)
+        let has_array_with_tok = !has_direct_open
+          && child_elems.iter().any(|ch| ch.get_name() == "XMArray")
+          && child_elems.iter().any(|ch| ch.get_name() == "XMTok");
+        if has_direct_open || has_array_with_tok {
+          let mut xm = xmath;
+          self.parse_kludge(&mut xm, document);
+        }
       }
 
       //     note_progress("\nMath parsing succeeded:"
@@ -485,12 +517,12 @@ impl MathParser {
       }
       Ok(Some(result))
     } else {
-      // Parse failed — track for post-parse kludge and ltx_math_unparsed
+      // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
       *self.failed.entry_sym(tag).or_insert(0) += 1;
       if tag == arena::pin_static("ltx:XMath") {
         self.failed_xmath_ids.push(node.to_hashable());
-        // Note: parse_kludge can't run here — DOM manipulation inside parser
-        // module breaks Marpa precomputation. Applied in caller instead.
+        // Kludge (OPEN/CLOSE wrapping) runs post-parse in core_interface.rs
+        // using failed_xmath_ids to find the failed nodes.
       }
       Ok(None)
     }
@@ -550,8 +582,110 @@ impl MathParser {
   /// NOTE: Cannot implement DOM manipulation here — any DOM changes inside
   /// the parser module break Marpa grammar precomputation. The kludge logic
   /// must be moved to core_interface.rs (the caller) using failed_xmath_ids.
-  fn parse_kludge(&self, _node: &mut Node, _document: &mut Document) {
-    // No-op — see note above
+  /// Perl: parse_kludge (MathParser.pm L530-566)
+  /// Stack-based matching of OPEN/CLOSE delimiter pairs, wrapping in XMWrap.
+  fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) {
+    use crate::data::get_grammatical_role;
+    let children: Vec<Node> = filter_hints(mathnode.get_child_nodes());
+    if children.is_empty() { return; }
+    let child_names: Vec<String> = children.iter().map(|c| {
+      let r = c.get_attribute("role").unwrap_or_default();
+      format!("{}({})", c.get_name(), r)
+    }).collect();
+    eprintln!("parse_kludge: processing {} children: {:?}", children.len(), child_names);
+
+    // Represent content as either individual nodes or groups needing XMWrap.
+    enum Item { Node(Node), Wrap(Vec<Item>) }
+
+    // Perl: @stack = ([], []) — extra empty level handles unmatched leading CLOSEs.
+    let mut stack: Vec<Vec<Item>> = vec![vec![], vec![]];
+    let roles: Vec<String> = children.iter().map(|c| get_grammatical_role(c)).collect();
+    let mut iter = children.into_iter().zip(roles.into_iter()).peekable();
+
+    while iter.peek().is_some() || stack.len() > 1 {
+      let pair_opt = iter.next();
+      let role = pair_opt.as_ref().map(|(_, r)| r.as_str()).unwrap_or("CLOSE");
+      match role {
+        "OPEN" => {
+          stack.insert(0, vec![Item::Node(pair_opt.unwrap().0)]);
+        },
+        "CLOSE" => {
+          let mut row = stack.remove(0);
+          if let Some((node, _)) = pair_opt {
+            row.push(Item::Node(node));
+          }
+          // Wrap the row if > 1 item
+          let result = if row.len() > 1 {
+            Item::Wrap(row)
+          } else {
+            row.into_iter().next().unwrap_or(Item::Node(
+              Node::new_text("", &document.document).unwrap()))
+          };
+          if stack.is_empty() { stack.push(vec![]); }
+          stack[0].push(result);
+        },
+        _ => {
+          if let Some((node, _)) = pair_opt {
+            stack[0].push(Item::Node(node));
+          }
+        },
+      }
+    }
+
+    // Check if any wrapping happened
+    let items = stack.into_iter().next().unwrap_or_default();
+    let has_wrap = items.iter().any(|i| matches!(i, Item::Wrap(_)));
+    eprintln!("parse_kludge: items={} has_wrap={}", items.len(), has_wrap);
+    if !has_wrap { return; }
+
+    // Rebuild: clear mathnode, then reconstruct with XMWrap DOM elements.
+    document.unrecord_node_ids(mathnode);
+    for mut child in mathnode.get_child_nodes() {
+      child.unbind_node();
+    }
+    // Perl L560-563: top-level Wraps are UNWRAPPED (appendTree extracts content).
+    // But inner Wraps become actual XMWrap elements.
+    fn add_items(items: Vec<Item>, parent: &mut Node, document: &mut Document) {
+      for item in items {
+        match item {
+          Item::Node(mut n) => {
+            n.unlink_node();
+            parent.add_child(&mut n).ok();
+          },
+          Item::Wrap(inner) => {
+            eprintln!("parse_kludge: creating XMWrap with {} inner items", inner.len());
+            match document.open_element_at(parent, "ltx:XMWrap", None, None) {
+              Ok(mut wrap) => {
+                add_items(inner, &mut wrap, document);
+                document.close_element_at(&mut wrap).ok();
+                eprintln!("parse_kludge: XMWrap created, children={}", wrap.get_child_nodes().len());
+              },
+              Err(e) => {
+                eprintln!("parse_kludge: FAILED to create XMWrap: {:?}", e);
+                // Fallback: add items directly
+                add_items(inner, parent, document);
+              },
+            }
+          },
+        }
+      }
+    }
+    // Perl L560-563: at top level, unwrap single Wrap (extract XMWrap contents).
+    // Otherwise, add items directly (inner Wraps become XMWrap elements).
+    let is_single_wrap = items.len() == 1 && matches!(&items[0], Item::Wrap(_));
+    eprintln!("parse_kludge: is_single_wrap={}", is_single_wrap);
+    if is_single_wrap {
+      if let Some(Item::Wrap(inner)) = items.into_iter().next() {
+        let inner_desc: Vec<&str> = inner.iter().map(|i| match i {
+          Item::Node(_) => "Node",
+          Item::Wrap(_) => "Wrap",
+        }).collect();
+        eprintln!("parse_kludge: unwrapping single top-level, inner items: {:?}", inner_desc);
+        add_items(inner, mathnode, document);
+      }
+    } else {
+      add_items(items, mathnode, document);
+    }
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

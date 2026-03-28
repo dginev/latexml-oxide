@@ -744,6 +744,28 @@ impl Document {
   }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+  /// Perl: insertElementBefore — insert a new element before a given point node.
+  /// Creates a new element with the given qname and attributes, inserts it
+  /// before `point` in the DOM tree, and returns the new node.
+  pub fn insert_element_before(
+    &self,
+    point: &Node,
+    qname: &str,
+    attrib: Option<HashMap<String, String>>,
+  ) -> Result<Node> {
+    // Create element in LTX namespace (matching Perl's setNamespace($LTX_NS,'',1))
+    let mut new_node = Node::new(qname, None, &self.document)?;
+    if let Some(attrs) = attrib {
+      for (key, value) in attrs {
+        let _ = new_node.set_attribute(&key, &value);
+      }
+    }
+    // insertBefore: add new_node before point
+    let mut point_mut = point.clone();
+    point_mut.add_prev_sibling(&mut new_node).ok();
+    Ok(new_node)
+  }
+
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(
     &mut self,
@@ -879,7 +901,10 @@ impl Document {
       if !can_auto_close(&node) {
         cant_close.push(node.clone());
       }
-      node = node.get_parent().unwrap();
+      match node.get_parent() {
+        Some(parent) => { node = parent; }
+        None => break, // detached node — treat as not found
+      }
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {
@@ -1064,11 +1089,18 @@ impl Document {
       if !can_auto_close(&n) {
         cant_close.push(n.clone());
       }
-      n = n.get_parent().unwrap();
-      t = n.get_type(); // update to walker's type
+      match n.get_parent() {
+        Some(parent) => {
+          n = parent;
+          t = n.get_type();
+        }
+        None => {
+          t = None; // detached node — stop walking
+        }
+      }
     }
 
-    if t == Some(NodeType::DocumentNode) {
+    if t == Some(NodeType::DocumentNode) || t.is_none() {
       // Didn't find $qname at all!!
       if strict {
         let qname = get_node_qname(node);
@@ -1212,9 +1244,14 @@ impl Document {
         }
       },
       Some(NodeType::ElementNode) => {
-        // TODO: handle properly
-        // let tag = model::get_node_document_qname(&node);
-        let tag = node.get_name();
+        // Get the qualified name (prefix:localname) for namespace-prefixed elements
+        let local_name = node.get_name();
+        let tag = if let Some(ns) = node.get_namespace() {
+          let prefix = ns.get_prefix();
+          if prefix.is_empty() { local_name } else { s!("{}:{}", prefix, local_name) }
+        } else {
+          local_name
+        };
         let children = node.get_child_nodes();
         let mut open_tag = s!("<{tag}");
 
@@ -1652,7 +1689,13 @@ impl Document {
   /// No checking! Use this when you've already verified that `node` can be closed.
   /// and, of course, `node` must be current or some ancestor of it!!!
   pub fn close_node_internal(&mut self, node: &Node) -> Result<()> {
-    let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
+    let closeto = match node.get_parent() {
+      Some(p) => p,
+      None => {
+        // Node has been detached — nothing to close up to.
+        return Ok(());
+      }
+    };
     let mut n = self.close_text_internal()?; // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
       self.close_element_at(&mut n)?;
@@ -1660,7 +1703,13 @@ impl Document {
       if *node == n {
         break;
       }
-      n = n.get_parent().unwrap();
+      match n.get_parent() {
+        Some(parent) => { n = parent; }
+        None => {
+          // Node was detached during close/collapse — bail out safely.
+          break;
+        }
+      }
     }
     self.set_node(&closeto);
     Ok(())
@@ -2497,6 +2546,9 @@ impl Document {
 
   pub fn lookup_id(&self, id: &str) -> Option<&Node> { self.idstore.get(id) }
 
+  /// Clone the idstore for use in thread-local contexts (math parsing).
+  pub fn get_idstore_clone(&self) -> HashMap<String, Node> { self.idstore.clone() }
+
   // ======================================================================
   //  Odd bit:
   //  In an XMDual, in each branch (content, presentation) there will be atoms
@@ -3100,9 +3152,18 @@ impl Document {
               match Namespace::new(&prefix, &ns_uri, &mut root) {
                 Ok(ns) => Some(ns),
                 Err(_) => {
-                  let message = s!("failed to create namespace: {:?}", prefix);
-                  Error!("document", "open_element_internal", message);
-                  None
+                  // Namespace already exists on root — find and reuse it.
+                  // We search declarations then fall back to creating on the
+                  // insertion point (which inherits from root).
+                  let found = root.get_namespace_declarations()
+                    .into_iter()
+                    .find(|ns| ns.get_prefix() == prefix);
+                  if found.is_none() {
+                    // Try creating on the insertion point instead
+                    Namespace::new(&prefix, &ns_uri, point).ok()
+                  } else {
+                    found
+                  }
                 },
               }
             } else {
@@ -3116,14 +3177,28 @@ impl Document {
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode = Node::new(tag, new_ns, &self.document).unwrap();
+    let mut newnode = Node::new(tag, new_ns.clone(), &self.document).unwrap();
     point.add_child(&mut newnode)?;
     if no_ns {
-      // without this explicit set call, an XPath for things such as "ltx:XMath"
-      // fails ???
-      if let Some(ns) = point.get_namespace() {
+      // When no explicit namespace was determined (default namespace element),
+      // try to find the root's default namespace first. This prevents inheriting
+      // the parent's namespace when inside a different namespace context (e.g.,
+      // SVG elements getting svg: prefix on LaTeXML elements like Math/XMath).
+      let root_ns = self.document.get_root_element()
+        .and_then(|r| r.get_namespace());
+      let parent_ns = point.get_namespace();
+      if let Some(ref rns) = root_ns {
+        // Use root's namespace for default-namespace elements
+        let _ = newnode.set_namespace(rns);
+      } else if let Some(ns) = parent_ns {
+        // Fallback: inherit from parent (original behavior)
         newnode.set_namespace(&ns)?;
       }
+    } else if let Some(ref ns) = new_ns {
+      // For explicitly namespaced elements (e.g., svg:svg), ensure the namespace
+      // is set after add_child — Node::new may not properly bind the namespace
+      // when the Namespace was retrieved from get_namespace_declarations().
+      let _ = newnode.set_namespace(ns);
     }
 
     self.record_constructed_node(&newnode);
@@ -3140,8 +3215,10 @@ impl Document {
     let savenode = self.node.clone();
     self.set_node(node);
     let node_qname = get_node_qname(node);
+    // Perl: my $box = getNodeBox($self, $node);
+    let box_opt = self.get_node_box(node);
     for action in self.get_tag_action_list(node_qname, TagOptionName::AfterOpen) {
-      action(self, node)?;
+      action(self, node, box_opt.as_ref())?;
     }
     self.set_node(&savenode);
     Ok(())
@@ -3151,8 +3228,10 @@ impl Document {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
     let node_qname = get_node_qname(node);
+    // Perl: my $box = getNodeBox($self, $node);
+    let box_opt = self.get_node_box(node);
     for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose) {
-      action(self, node)?;
+      action(self, node, box_opt.as_ref())?;
     }
     self.set_node(&savenode);
     Ok(())
@@ -3186,13 +3265,34 @@ impl Document {
     // Now find all xml:id's in the new_children and record replacement id's for them
     let mut id_map = HashMap::default();
     // Find all id's defined in the copy and change the id.
+    // Note: XPath ".//@xml:id" can fail to find namespace-qualified attributes.
+    // Use DOM walking as fallback to ensure all ids are found.
     for child in new_children.iter() {
-      for id in self.findvalues(".//@xml:id", Some(child)) {
+      let mut xpath_ids: Vec<String> = self.findvalues(".//@xml:id", Some(child));
+      if xpath_ids.is_empty() {
+        // Fallback: walk DOM to find xml:id attributes
+        Self::collect_xml_ids_from(child, &mut xpath_ids);
+      }
+      for id in xpath_ids {
         id_map.insert(id.to_string(), self.modify_id(id));
       }
     }
     // Now do the cloning (actually copying) and insertion.
     self.append_clone_aux(node, new_children, &mut id_map)
+  }
+
+  /// Walk DOM to collect xml:id attribute values (fallback when XPath fails).
+  fn collect_xml_ids_from(node: &Node, ids: &mut Vec<String>) {
+    if let Some(id) = node.get_attribute("xml:id") {
+      ids.push(id);
+    } else if let Some(id) = node.get_attribute_ns("id", XML_NS) {
+      ids.push(id);
+    }
+    for child in node.get_child_nodes() {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        Self::collect_xml_ids_from(&child, ids);
+      }
+    }
   }
 
   fn append_clone_aux(
@@ -3216,6 +3316,12 @@ impl Document {
                 let mapped_id = id_map.get(&val).unwrap();
                 let newid = self.record_id_with_node(mapped_id, &new);
                 new.set_attribute(&key, &newid)?;
+                // Update id_map so subsequent idref lookups use the ACTUAL recorded id.
+                // record_id_with_node may change the id (e.g., if there are conflicts),
+                // so the mapped_id and newid may differ.
+                if *mapped_id != newid {
+                  id_map.insert(val.clone(), newid);
+                }
               },
               "idref" => {
                 // Refer to the replacement id if it was replaced
@@ -3685,12 +3791,6 @@ fn serialize_string(string: &str) -> String {
   let mut serialized = string.replace('&', "&amp;");
   serialized = serialized.replace('>', "&gt;");
   serialized = serialized.replace('<', "&lt;");
-  // Remove dis-allowed code-points.
-  // $string =~
-  // s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19}|\x{D800}-\x{DFFF}|\x{FFFE}-\x{FFFF})//g;
-  //  Hmm... the upper ranges gives warning in some Perls...
-  // TODO:
-  // $string =~ s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19})//g;
   serialized
 }
 

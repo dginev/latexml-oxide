@@ -499,10 +499,20 @@ LoadDefinitions!({
           whatsit.set_property("name", name);
         }
         whatsit.set_property("stretchy", true);
-        // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
           whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
         ));
+        // Set canonical reversion: \left + the user-facing delimiter token.
+        // XToken expands \{ → \lx@text@lbrace during macro reading, so the stored
+        // arg reverts to \lx@text@lbrace. Override with the canonical form.
+        let canonical = match entry.char {
+          '{' => Some("\\left\\{"),
+          '}' => Some("\\left\\}"),
+          _ => None,
+        };
+        if let Some(rev_str) = canonical {
+          whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
+        }
       }
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
@@ -527,10 +537,18 @@ LoadDefinitions!({
           whatsit.set_property("name", name);
         }
         whatsit.set_property("stretchy", true);
-        // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
           whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
         ));
+        // Set canonical reversion for brace delimiters (XToken expands \} → \lx@text@rbrace)
+        let canonical = match entry.char {
+          '{' => Some("\\right\\{"),
+          '}' => Some("\\right\\}"),
+          _ => None,
+        };
+        if let Some(rev_str) = canonical {
+          whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
+        }
       }
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
@@ -635,12 +653,6 @@ LoadDefinitions!({
       stored_map!("explicit_mathstyle" => true),
     )
   });
-  // TODO [C2]: \scriptstyle is an ABSOLUTE mathstyle command — it should always
-  // produce fontsize=70% regardless of nesting context. Currently MergeFont adds
-  // "script" relative to existing style, so \scriptstyle inside a subscript
-  // (already script) produces scriptscript (50%) instead of script (70%).
-  // Fix: MergeFont should detect "explicit_mathstyle" and RESET rather than merge.
-  // Affected: calculus.xml (\scriptstyle inside \atop inside subscript).
   DefPrimitive!("\\scriptstyle", {
     MergeFont!(mathstyle => "script");
     Tbox::new(
@@ -1104,6 +1116,10 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
     "\\}" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
     "\\lbrace" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
     "\\rbrace" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\lx@math@lbrace" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\lx@math@rbrace" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\lx@text@lbrace" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
+    "\\lx@text@rbrace" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
     "{" => DelimiterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
     "}" => DelimiterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
     "\\lfloor"=> DelimiterMeta{ char: '\u{230A}',
@@ -1258,6 +1274,16 @@ fn adjust_mathstyle_rec(
       continue; // don't adjust twice (args AND props may share references)
     }
     adjusted.insert(ptr);
+    // Perl L1018: return if $box->getProperty('explicit_mathstyle');
+    // Checked on ALL box types BEFORE dispatch — `return` stops entire recursion.
+    // This preserves \scriptstyle etc. as absolute mathstyle commands.
+    if box_item.get_property("explicit_mathstyle").is_some() {
+      return;
+    }
+    // Perl L1019: next if $box->getProperty('own_mathstyle');
+    if box_item.get_property("own_mathstyle").is_some() {
+      continue;
+    }
     match box_item.data() {
       DigestedData::TBox(b) => {
         adjust_mathstyle_internal(outerstyle, &mut b.borrow_mut());
@@ -1267,16 +1293,6 @@ fn adjust_mathstyle_rec(
         adjust_mathstyle_rec(outerstyle, adjusted, &children);
       },
       DigestedData::Whatsit(w) => {
-        // Check for explicit_mathstyle / own_mathstyle properties
-        {
-          let wb = w.borrow();
-          if wb.get_property("explicit_mathstyle").is_some() {
-            return; // stop recursion entirely for explicit mathstyle
-          }
-          if wb.get_property("own_mathstyle").is_some() {
-            continue; // skip this whatsit but continue others
-          }
-        }
         // Adjust the whatsit's font and get the new style for recursion
         let style = {
           let mut wb = w.borrow_mut();

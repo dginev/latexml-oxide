@@ -99,6 +99,8 @@ LoadDefinitions!({
     \expandafter\csq@fixkern
   \fi}"#);
 
+  // Debug: check csquotes state at end of preamble
+
   // Constructors for quote markers
   DefConstructor!("\\ltxml@oqmark@open",
     "<ltx:text class='ltx_inline-quote ltx_outerquote' _noautoclose='1'>");

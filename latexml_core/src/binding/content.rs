@@ -63,6 +63,9 @@ pub struct InputDefinitionOptions {
   pub raw:           bool,
   /// flag to allow reloading a previously loaded definitions file
   pub reloadable:    bool,
+  /// flag: set @ catcode to LETTER during loading (default true).
+  /// Set to false for packages like xy.tex that need @ to stay as OTHER.
+  pub at_letter:     bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
@@ -78,6 +81,7 @@ impl Default for InputDefinitionOptions {
       withoptions:   None,
       handleoptions: false,
       as_class:      false,
+      at_letter:     true,
     }
   }
 }
@@ -242,8 +246,23 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     return Ok(());
   }
 
-  let is_binding =
-    !options.noltxml && (load_external_binding(&filename)? || load_binding(&filename)?);
+  // Catch Fatal errors during binding loading (e.g., token limit exceeded during
+  // expl3 kernel loading). Convert to non-fatal so document processing continues.
+  let is_binding = if options.noltxml {
+    false
+  } else {
+    match load_external_binding(&filename).and_then(|ext| {
+      if ext { Ok(true) } else { load_binding(&filename) }
+    }) {
+      Ok(v) => v,
+      Err(e) => {
+        Error!("unexpected", &filename, s!("Error loading binding for '{}': {}", filename, e));
+        // Mark as loaded even on error to prevent re-loading via raw path
+        assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+        false
+      }
+    }
+  };
   let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
@@ -267,7 +286,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       }),
     ) {
       is_found_raw = true;
-      load_tex_definitions(&filename, &file, options.reloadable)?;
+      load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
     } else {
       // Mark as loaded even on failure — prevents retrying a missing file
       // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
@@ -573,7 +592,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
-fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool) -> Result<()> {
+fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_letter: bool) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -611,7 +630,7 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool) -> Resu
   };
   let pathname_mouth = Mouth::create(pathname, MouthOptions {
     fordefinitions: true,
-    at_letter: true,
+    at_letter,
     notes: true,
     content,
     ..MouthOptions::default()
@@ -1065,7 +1084,13 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     //   return (-f $result ? $result : undef); }
     // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
     //   return $path; }
-    pathname::kpsewhich(&[file])
+    // When notex is set, don't search for the raw TeX file via kpsewhich.
+    // This prevents non-TeX files (e.g. .lua) from being loaded as raw TeX.
+    if options.notex {
+      None
+    } else {
+      pathname::kpsewhich(&[file])
+    }
   }
 }
 

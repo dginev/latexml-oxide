@@ -88,7 +88,13 @@ impl BoxOps for List {
   }
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { todo!() }
+  /// If called directly, absorb each box individually.
+  fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
+    for box_item in &self.boxes {
+      document.absorb(box_item, None)?;
+    }
+    Ok(Vec::new())
+  }
 
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
   fn compute_size(&self, mut options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
