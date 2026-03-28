@@ -9,7 +9,6 @@ fn csquotes_test() {
 }
 
 #[test]
-#[ignore] // needs frenchb.ldf, hangs in batch
 fn french_test() {
   latexml_test_single("tests/babel/french.tex", "french", DIR, None, None);
 }
