@@ -381,7 +381,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 309 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~19,100 total diff lines across 83 non-zero of 298 paired tests vs Perl. 215/298 paired zero-diff tests (72%). C8+C9 done: QM bra-ket, conditional probability, MIDDLE fences all parsing correctly. Note: diff counts are raw `diff` output lines (including xml:id/tex attr), not filtered structural diffs. Most remaining non-zero diffs are xml:id renumbering (OXIDIZED_DESIGN #9) and `%&#10;` tex attr (intentional).
+**Status (2026-03-28):** 309 pass, 0 fail, 16 ignored. 417 core + 91 contrib modules. Zero cargo test output noise. ~19,419 total diff lines across 84 non-zero of 298 paired tests vs Perl. 214/298 paired zero-diff tests (71%). C8+C9+Greek done: QM bra-ket, conditional probability `(x|y)`, MIDDLE fences, Greek tilde accent. Note: raw diff increase from angle bracket un-remapping (fences +27, sampler +117) offset by semantic improvements (previously unparsed expressions now parse correctly). Most remaining non-zero diffs are xml:id renumbering (OXIDIZED_DESIGN #9) and `%&#10;` tex attr (intentional).
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -442,8 +442,8 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 |----------|------|---------------------|------------|----------------|
 | 1 | C3: `parse_kludgeScripts_rec` | ~1000+ | Hard | kludge (333), operators (345), split (399), functions (235), sampler (subset) |
 | 2 | declare.xml: XMDual wrapping + function roles | ~700 | Hard | declare (975) |
-| 3 | LGR font encoding (cbgreek) | ~520 | Medium | greek (548) |
-| 4 | VERTBAR ambiguity resolution | ~500+ | Hard | sampler, ncases, ambiguous_relations, vertbars, qm |
+| ~~3~~ | ~~LGR font encoding (cbgreek)~~ | ~~done (tilde)~~ | ~~Medium~~ | ~~greek 562→558~~ |
+| ~~4~~ | ~~VERTBAR ambiguity resolution~~ | ~~done (C8+C9)~~ | ~~Hard~~ | ~~sampler, fences, functions now parse~~ |
 | 5 | A3: listing font nesting | ~200 | Medium | listing (458) |
 | ~~6~~ | ~~C4: diagbox package~~ | ~~done~~ | ~~Medium~~ | ~~diagboxtest 240→80~~ |
 | 7 | mathtools S1/S8/S11 | ~500 | Hard | mathtools (3214 total, much is xml:id) |
