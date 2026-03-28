@@ -62,6 +62,10 @@ LoadDefinitions!({
 
   DefConditional!("\\iflatexml", { true });
 
+  // Perl: NewCounter('@XMDECL', 'section', idprefix => 'XMD');
+  // Counter for \lxDeclare IDs, resets per-section (subordinate to section).
+  NewCounter!("@XMDECL", "section", idprefix => "XMD");
+
   // ======================================================================
   // Define the Declare keyval family for \lxDeclare
   DefKeyVal!("Declare", "role", "");
@@ -106,21 +110,17 @@ LoadDefinitions!({
         .unwrap_or_default();
 
       // Generate declaration ID if tag or description present
-      // Perl: next_declaration_id → "S1.XMD4" format (section-scoped)
+      // Perl: next_declaration_id() → StepCounter('@XMDECL'), return \the@XMDECL@ID
+      // Counter @XMDECL is subordinate to section, so it resets per-section:
+      //   S1.XMD1, S1.XMD2, ..., S2.XMD1, S2.XMD2, ...
       let decl_id = if has_tag || has_description {
-        // Step the internal counter
-        let n = lookup_int("XMDECL_COUNTER") + 1;
-        assign_value("XMDECL_COUNTER",
-          Stored::from(latexml_core::common::number::Number::new(n as i64)),
-          Some(Scope::Global));
-        // Perl: the ID prefix comes from the parent counter chain. For XMDECL
-        // within a section, this is the section ID (e.g. "S1").
-        // Get the section-level ID by expanding \thesection@ID
-        let prefix = gullet::do_expand(T_CS!("\\thesection@ID"))
-          .ok().map(|t| { let s = t.to_string(); s.trim().to_string() })
+        step_counter("@XMDECL", false)?;
+        // Perl: DefMacroI(\@@XMDECL@ID, ..., LookupRegister(\c@@XMDECL)->valueOf)
+        // then: ToString(Expand(\the@XMDECL@ID))
+        let id = gullet::do_expand(T_CS!("\\the@XMDECL@ID"))
+          .ok().map(|t| t.to_string().trim().to_string())
           .unwrap_or_default();
-        let prefix = if prefix.is_empty() { String::new() } else { format!("{prefix}.") };
-        format!("{prefix}XMD{n}")
+        id
       } else {
         String::new()
       };
