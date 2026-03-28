@@ -417,7 +417,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 | XY7 | `\cirbuild@` radius | `r="9.75"` from `\R@` register | `r="0"` — `\R@` is zero | Circle not drawn |
 
 Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht`, `\dp` to compute positions. These TeX primitives work at the box level. Our engine handles them but doesn't track the accumulated position for xy's range registers. The `\endxy` macro's `\edef\tmp@{...}` captures register values, but they're all zero.
-- [x] **56. babel suite** (81_babel) — german_test, french_test, page545_test, csquotes_test, greek_test all PASSING (0 diffs). Session 52: precompiled kernel dump infrastructure. Session 53: csquotes catcode fix + fallback quote styles; greek polutonikogreek register. Remaining: numprints (TooManyErrors, needs numprint.sty fixes).
+- [x] **56. babel suite** (81_babel) — ALL 6 PASSING: german_test, french_test, page545_test, csquotes_test, greek_test, numprints_test. Session 57: numprint `n` column type simplified to right-align, `\ltx@text@number` pass-through to avoid schema errors (120→8 errors).
 
 #### mathtools_test mini-plan (per-section parity)
 
@@ -438,15 +438,16 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 
 ### Impact-ordered priorities (by reducible diff lines)
 
-| Priority | Item | Est. reducible diffs | Difficulty | Tests affected |
-|----------|------|---------------------|------------|----------------|
-| 1 | C3: `parse_kludgeScripts_rec` | ~1000+ | Hard | kludge (333), operators (345), split (399), functions (235), sampler (subset) |
-| 2 | declare.xml: XMDual wrapping + function roles | ~700 | Hard | declare (975) |
-| ~~3~~ | ~~LGR font encoding (cbgreek)~~ | ~~done (tilde)~~ | ~~Medium~~ | ~~greek 562→558~~ |
-| ~~4~~ | ~~VERTBAR ambiguity resolution~~ | ~~done (C8+C9)~~ | ~~Hard~~ | ~~sampler, fences, functions now parse~~ |
-| 5 | A3: listing font nesting | ~200 | Medium | listing (458) |
-| ~~6~~ | ~~C4: diagbox package~~ | ~~done~~ | ~~Medium~~ | ~~diagboxtest 240→80~~ |
-| 7 | mathtools S1/S8/S11 | ~500 | Hard | mathtools (3214 total, much is xml:id) |
+| Priority | Item | Real structural diffs | Status |
+|----------|------|----------------------|--------|
+| ~~1~~ | ~~C3: `parse_kludgeScripts_rec`~~ | ~~done~~ | ~~kludge 333→2~~ |
+| 2 | declare.xml: XMDual wrapping + function roles | 547 | Needs domToXPath wildcard system |
+| ~~3~~ | ~~LGR font encoding~~ | ~~done (tilde)~~ | ~~greek 562→558~~ |
+| ~~4~~ | ~~VERTBAR ambiguity (C8+C9)~~ | ~~done~~ | ~~QM/conditional/MIDDLE parsing~~ |
+| ~~5~~ | ~~A3: listing font nesting~~ | ~~done~~ | ~~802→718~~ |
+| ~~6~~ | ~~C4: diagbox package~~ | ~~done~~ | ~~diagboxtest 240→80~~ |
+| 7 | mathtools S1/S8/S11 | ~2000 (much xml:id) | smashoperator, prescripts, MoveEqLeft |
+| 8 | picture environment | 2548 | ~30% ported, many unported features |
 
 ### Alignment gaps
 
@@ -480,7 +481,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [x] expl3.sty — **FULL LOADING**: all 37K lines of expl3-code.tex load completely (20M token limit). All modules: l3keys, l3fp, l3regex, l3box, l3color, l3text, l3legacy. Key fix: pre-define l3file module stubs to prevent undefined-cascade during partial loading. tilde_tricks_test + xparse_test PASS.
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines). German shorthands working (active " dispatch, \captionsgerman). german_test PASSES (was 20 diffs → 0). Remaining: xml:lang timing (AtBeginDocument), non-breaking space from `\ ` (U+0020 vs U+00A0).
 - [x] beamer.cls — **PASSING** (beamer_test). Minimal stub binding: article.cls base, frame env, overlay commands/environments, insert commands. Raw beamer.cls exceeds 5M token limit; stub provides test-level support. 0 errors.
-- [ ] moderncv.cls (2 tests)
+- [x] moderncv.cls — **PASSING** (both cs_cv_test and orc_test). No binding needed; raw TeX processing works.
 
 ### Overarching infrastructure projects
 
@@ -489,7 +490,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete). Only gap: XML comment creation in libxml wrapper (minor).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 - [x] **H. expl3 full loading** — **DONE (1 remaining)**: Session 49: 1500→12 errors. Session 57: Pre-define l3file forward-refs (`\__file_name_expand_end:`, `\__kernel_file_name_sanitize:n`, `\l_file_search_path_seq`) as stubs before loading. Reduces actual errors to 1 (extra `\endcsname` from `\exp_last_unbraced:NNNNo` expansion chain difference). SUPPRESS_UNEXPECTED_ERRORS handles the 1 remaining error. All expl3 modules load correctly; post-load fixups provide correct l3file definitions.
-- [ ] **I. "make formats" build step** — build.rs step for latexml_package: check texlive, run kernel init (latex.ltx + plain.tex), generate compiled Rust modules (`plain_dump.rs`, `latex_dump.rs`) with direct state assignment operations using `LoadDefinitions!()` interface. No runtime dump reader needed — compiled Rust code injects values into state on demand. **Current status**: dump infrastructure produces 22397 entries for latex (Perl: ~19482), 425 for plain (Perl: 606). Dimension/Glue/MuDimension/MuGlue/VecDeque serialization complete. Zero-regression with dump loaded. **Next**: convert text dump → compiled Rust module generation in build.rs.
+- [ ] **I. "make formats" build step** — Embed+runtime approach works: `latex_dump.oxide` (3.4MB, 22K entries) embedded via `include_str!()`, loaded by `dump_reader::load_from_str()`. Zero-regression confirmed. **BLOCKER for full integration**: dump can't serialize primitive aliases (`\exp_after:wN` → `\expandafter`, `\tex_gdef:D` → `\gdef`, etc.) because primitives are closures. Loading dump before expl3 causes undefined primitive errors. **Fix needed**: either (a) generate primitive alias `\let` assignments as compiled Rust, (b) load expl3 bootstrap section separately, or (c) extend dump format to store alias targets by name. Current status: embed works for supplementary state but can't replace expl3 raw loading yet.
 - [x] **E. Precompiled kernel dump** — **UPDATED**: `--init=latex.ltx` now dumps full kernel (22397 entries, was 162). Token limit removed for `--init`. Expl3 loading errors suppressed during dump. Both `plain.tex` (425 entries) and `latex.ltx` (22397 entries) dumps produce zero-regression test results. Infrastructure: dump_writer.rs, dump_reader.rs, dump_loader.rs, ini_tex.rs, State::snapshot/diff.
 - [ ] **F. Post-processing pipeline** — Last step. 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [ ] **L. Arena/SymStr migration audit** — Final step before post-processing. Audit all `arena::to_string()` calls and `String::clone()` calls across the codebase. Replace with: (1) `SymStr` methods where strings are already interned, (2) `arena::with()` family to avoid allocations, (3) `arena::pin()` to convert frequently-used Strings to SymStr. Goal: eliminate unnecessary heap allocations by leveraging the arena's zero-cost interned strings.
