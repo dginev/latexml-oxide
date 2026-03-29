@@ -485,7 +485,15 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 ### Overarching infrastructure projects
 
 - [ ] **J. Rewrite system** — rewrite.rs ~90%. See [`docs/rewrite_subsystem_audit.md`](rewrite_subsystem_audit.md) for full Perl/Rust diff audit (session 59). Operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Session 60 fixes:** R9 font predicate (Document-based bold/caligraphic check), R11 XMDual SUBSCRIPTOP restructuring, `all_descendants_matched` bug fix. **Open issues:**
-  - **R11** XMDual presentation arm missing XMWrap (memory corruption prevents libxml2 double-wrap; tried 3 approaches, all corrupt). Base token role FIXED (session 62: _matched check in apply_lx_declarations).
+  - **R11** XMDual presentation arm missing XMWrap — **BLOCKED on libxml2 Rust binding memory corruption**. Base token role FIXED (session 62: _matched check in apply_lx_declarations).
+    - **Reproduction**: In `set_attributes_wild` (rewrite.rs), after wrapping nodes in XMDual via `document.wrap_nodes("ltx:XMDual", nodes)`, attempting to reparent the children into a new XMWrap node produces corrupted XML output (garbled element names like `<$e��r/>`, `<!`��r/>`).
+    - **Approach 1**: Double `wrap_nodes` — first `wrap_nodes("ltx:XMWrap", nodes)`, then `wrap_nodes("ltx:XMDual", vec![xmwrap])`. Result: corrupted output.
+    - **Approach 2**: Single `wrap_nodes("ltx:XMDual", nodes)`, then `Node::new("XMWrap")` + iterate children with `child.unlink_node()` + `xmwrap.add_child(&mut child)`. Result: corrupted output.
+    - **Approach 3**: Same as #2 but using raw FFI (`xmlUnlinkNode` + `xmlAddChild` from `libxml::bindings`). Result: still corrupted.
+    - **Root cause hypothesis**: The libxml Rust binding's `Node` wrapper uses `Rc<RefCell<_Node>>` with a document-level node tracking table. When nodes are unlinked from one parent and added to another, the tracking table may retain stale references, causing the underlying `xmlNodePtr` memory to be freed or reused. The corruption appears specifically when child nodes of a `wrap_nodes`-created parent are moved to a different parent.
+    - **Impact**: XMDual structure is `[XMApp(content), child1, child2, ...]` instead of Perl's `[XMApp(content), XMWrap(child1, child2, ...)]`. The math parser handles both correctly. Post-processing `pruneXMDuals`/`compactXMDual` uses `element_nodes()` (first=content, second=presentation) which works with both layouts.
+    - **Workaround**: `restructure_scripts_in_dual()` converts POSTSUBSCRIPT→SUBSCRIPTOP in presentation children inline, compensating for the missing XMWrap (which Perl's math parser would process via kludge_scripts).
+    - **To reproduce for upstream bug report**: See commit `c4779db8b` for the three attempted approaches. The simplest reproduction is approach 2: `wrap_nodes` + unlink children + add to new node.
   - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` already implemented; visibility marking may differ from Perl.
   - **R4** Test operator: closure return value ignored.
   - **R1** `Match => Tokens` compilation: full `compile_match1` pipeline missing.
