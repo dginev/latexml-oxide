@@ -357,7 +357,7 @@ impl Rewrite {
               // Rust-side filtering for declare pattern types (content Selects only)
               if let Some(ref dtype) = declare_type {
                 let passes = declare_node_matches(
-                  &node, dtype, declare_base.as_deref(),
+                  document, &node, dtype, declare_base.as_deref(),
                   declare_sub.as_deref(), declare_accent.as_deref(),
                 );
                 if !passes {
@@ -843,7 +843,11 @@ pub fn unmark_wildcards(nodes: &[Node]) {
 }
 
 /// Collect xml:ids of wildcard-marked nodes, generating IDs if needed.
-/// Perl: set_wildcard_ids($document, $node)
+/// Collect xml:ids of wildcard-marked nodes, generating IDs if needed.
+/// Perl: set_wildcard_ids($document, $node) — Rewrite.pm L219-231
+/// Faithfully translated: if node has _wildcard, return its ID.
+/// If node has _matched, skip (already processed by prior rule).
+/// Otherwise recurse into children.
 pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
   if node.get_type() != Some(libxml::tree::NodeType::ElementNode) {
     return vec![];
@@ -852,13 +856,9 @@ pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
     return vec![];
   }
   if node.has_attribute("_wildcard") {
-    // Check if ALL descendant elements are already _matched.
-    // If so, this wildcard's content was fully handled by prior rules.
-    // Perl creates XMDual in this case, then pruneXMDuals collapses it.
-    // We skip to achieve the same end result.
-    if all_descendants_matched(node) {
-      return vec![];
-    }
+    // Perl: unconditionally returns the wildcard's ID.
+    // Even if all descendants are already matched, the ID is still needed
+    // for XMRef in the content arm. pruneXMDuals handles collapsing later.
     let id = if let Some(existing) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
       existing
     } else {
@@ -878,17 +878,30 @@ pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
 }
 
 /// Set attributes on a tree containing wildcards, creating XMDual wrappers.
-/// Perl: setAttributes_wild($document, $attributes, @nodes)
+/// Perl: setAttributes_wild($document, $attributes, @nodes) — Rewrite.pm L195-217
+///
+/// Faithfully translated from Perl. The structure created is:
+/// ```xml
+/// <XMDual role="...">
+///   <XMApp>                    <!-- content arm -->
+///     <XMTok decl_id="..." />  <!-- semantic operator -->
+///     <XMRef idref="..." />    <!-- references to wildcards -->
+///   </XMApp>
+///   <XMWrap>                   <!-- presentation arm -->
+///     [original nodes]         <!-- with _wildcard markers -->
+///   </XMWrap>
+/// </XMDual>
+/// ```
 pub fn set_attributes_wild(
   document: &mut Document, attrs: &HashMap<String, String>,
   nodes: Vec<Node>, _nmatched: usize,
 ) -> Result<()> {
-  // Skip if all nodes already matched
+  // Perl L197: return unless grep { !$_->getAttribute('_matched'); } @nodes;
   if nodes.iter().all(|n| n.has_attribute("_matched")) {
     return Ok(());
   }
   let nowrap = attrs.contains_key("_nowrap");
-  // If nowrap or already XMDual: set attributes on first non-wildcard node
+  // Perl L199-203: _nowrap or single XMDual → set attrs on first non-wildcard node
   if nowrap || (nodes.len() == 1 && nodes[0].get_name() == "XMDual") {
     if let Some(nonwild) = nodes.iter().find(|n| !n.has_attribute("_wildcard")) {
       let mut n = nonwild.clone();
@@ -900,76 +913,46 @@ pub fn set_attributes_wild(
     }
     return Ok(());
   }
-  // First, get wildcard IDs from the nodes before wrapping.
-  // If all wildcards are already _matched (by prior rules), wild_ids is empty.
-  // In that case, Perl creates XMDual but pruneXMDuals collapses it back.
-  // We skip XMDual creation and just set attributes directly.
+
+  // Collect wildcard IDs from the nodes BEFORE wrapping in XMDual.
   let mut wild_ids = Vec::new();
   for n in &nodes {
     wild_ids.extend(set_wildcard_ids(document, n));
   }
-  if wild_ids.is_empty() {
-    // All wildcards already matched — no XMRef targets available.
-    // Perl: creates XMDual → pruneXMDuals collapses it.
-    // Rust: skip XMDual, set attributes directly (same end result).
-    eprintln!("DEBUG wild_ids empty: node={} children={} attrs={:?}",
-      nodes[0].get_name(), nodes[0].get_child_nodes().len(),
-      attrs.keys().filter(|k| !k.starts_with('_')).collect::<Vec<_>>());
-    let mut node = nodes[0].clone();
-    if let Some(role) = attrs.get("role") {
-      let _ = node.set_attribute("role", role);
-    }
-    // Set decl_id on the first non-wildcard child (operator token for accents)
-    for child in node.get_child_nodes() {
-      if child.get_type() == Some(libxml::tree::NodeType::ElementNode)
-        && !child.has_attribute("_wildcard")
-        && !child.has_attribute("_matched")
-      {
-        let mut c = child.clone();
-        for (key, value) in attrs {
-          if key != "role" && !key.starts_with('_') {
-            let _ = c.set_attribute(key, value);
-          }
-        }
-        break;
-      }
-    }
-    if node.get_name() == "XMApp" && attrs.contains_key("role") {
-      let _ = node.set_attribute("_rewrite", "1");
-    }
-    mark_seen_rec(&node);
-    return Ok(());
+
+  // Wrap matched nodes in XMDual.
+  let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
+  let Some(mut dual_node) = wrapper else { return Ok(()); };
+
+  // Set role on XMDual (Perl L209)
+  if let Some(role) = attrs.get("role") {
+    let _ = dual_node.set_attribute("role", role);
   }
 
-  // Wrap matched nodes in XMDual with presentation arm (XMApp > XMTok + XMRef).
-  let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
-  if let Some(mut dual_node) = wrapper {
-    if let Some(role) = attrs.get("role") {
-      let _ = dual_node.set_attribute("role", role);
+  // Build content arm: XMApp > XMTok[attrs] + XMRef[wildcard_ids]
+  let doc = document.get_document();
+  let mut content_app = Node::new("XMApp", None, doc)?;
+  let mut content_op = Node::new("XMTok", None, doc)?;
+  for (key, value) in attrs {
+    if key != "role" && !key.starts_with('_') {
+      let _ = content_op.set_attribute(key, value);
     }
-    // Build content arm: XMApp > XMTok[attrs] + XMRef[wildcard_ids]
-    let doc = document.get_document();
-    let mut content_app = Node::new("XMApp", None, doc)?;
-    let mut content_op = Node::new("XMTok", None, doc)?;
-    for (key, value) in attrs {
-      if key != "role" && !key.starts_with('_') {
-        let _ = content_op.set_attribute(key, value);
-      }
-    }
-    content_app.add_child(&mut content_op)?;
-    for rid in &wild_ids {
-      let mut xmref = Node::new("XMRef", None, doc)?;
-      let _ = xmref.set_attribute("idref", rid);
-      content_app.add_child(&mut xmref)?;
-    }
-    // Insert content arm as first child (before presentation nodes)
-    if let Some(mut first_child) = dual_node.get_first_child() {
-      first_child.add_prev_sibling(&mut content_app)?;
-    } else {
-      dual_node.add_child(&mut content_app)?;
-    }
-    mark_seen_rec(&dual_node);
   }
+  content_app.add_child(&mut content_op)?;
+  for rid in &wild_ids {
+    let mut xmref = Node::new("XMRef", None, doc)?;
+    let _ = xmref.set_attribute("idref", rid);
+    content_app.add_child(&mut xmref)?;
+  }
+
+  // Insert content arm as first child (before presentation nodes)
+  if let Some(mut first_child) = dual_node.get_first_child() {
+    first_child.add_prev_sibling(&mut content_app)?;
+  } else {
+    dual_node.add_child(&mut content_app)?;
+  }
+
+  mark_seen_rec(&dual_node);
   Ok(())
 }
 
@@ -987,21 +970,6 @@ fn mark_seen(node: &Node, nsibs: usize) {
   }
 }
 
-/// Check if all element descendants of a node are already _matched.
-/// Used to detect wildcard nodes whose content was fully processed by prior rules.
-fn all_descendants_matched(node: &Node) -> bool {
-  for child in node.get_child_nodes() {
-    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-      if !child.has_attribute("_matched") {
-        return false;
-      }
-      if !all_descendants_matched(&child) {
-        return false;
-      }
-    }
-  }
-  true
-}
 
 fn mark_seen_rec(node: &Node) {
   if node.has_attribute("_wildcard") {
@@ -1026,7 +994,7 @@ fn mark_seen_rec(node: &Node) {
 /// - "accent": node is XMApp, check accent name in first child, optional base text
 /// - "simple": no extra filtering needed (XPath is specific enough)
 fn declare_node_matches(
-  node: &Node, pattern_type: &str, base_text: Option<&str>,
+  document: &Document, node: &Node, pattern_type: &str, base_text: Option<&str>,
   sub_text: Option<&str>, accent_name: Option<&str>,
 ) -> bool {
   let children = node.get_child_nodes();
@@ -1092,26 +1060,19 @@ fn declare_node_matches(
       true
     },
     "simple" => {
-      // XPath does text matching. Add font check: single-letter math declarations
-      // expect italic font (default). Bold/caligraphic tokens should NOT match.
-      // Perl: font_match_xpaths checks family/series/shape from _font attribute.
-      // _font format: Font[family,series,shape,size,color,bg,opacity,encoding,lang,mathstyle,force]
-      if let Some(font_str) = node.get_property("_font") {
-        // Check series component (2nd field): "bold" should not match "medium"
-        let parts: Vec<&str> = font_str.trim_start_matches("Font[")
-          .trim_end_matches(']').split(',').collect();
-        if parts.len() > 1 {
-          let series = parts[1].trim();
-          if series == "bold" {
-            return false; // Bold token doesn't match non-bold declaration
-          }
+      // Font check: plain declarations (e.g. $x$) should NOT match tokens with
+      // non-default fonts (bold, caligraphic, typewriter).
+      // Perl: font_match_xpaths generates XPath predicates from _font attribute.
+      let font = document.get_node_font(node);
+      if let Some(series) = font.get_series() {
+        if series.as_ref() == "bold" {
+          return false;
         }
-        // Check family (1st field): caligraphic should not match serif
-        if parts.len() > 0 {
-          let family = parts[0].trim();
-          if family == "caligraphic" || family == "typewriter" {
-            return false; // Non-serif font doesn't match plain declaration
-          }
+      }
+      if let Some(family) = font.get_family() {
+        let fam = family.as_ref();
+        if fam == "caligraphic" || fam == "typewriter" {
+          return false;
         }
       }
       true

@@ -41,7 +41,7 @@
     </declare>
     <para xml:id="S1.p1">
       <equation xml:id="S1.Ex1">
-        <Math mode="display" tex="x,x^{\prime},x_{1},x_{n},x_{2n-1},\hat{x},\widehat{x},\mathbf{x}" text="list@(x, x ^ prime, x _ 1, Unknown@(n), Unknown@(2 * n - 1), hat@(x), widehat@(x), x)" xml:id="S1.Ex1.m1">
+        <Math mode="display" tex="x,x^{\prime},x_{1},x_{n},x_{2n-1},\hat{x},\widehat{x},\mathbf{x}" text="list@(x, x ^ prime, x _ 1, Unknown@(n), Unknown@(2 * n - 1), hat@(x), Unknown@(x), x)" xml:id="S1.Ex1.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -53,7 +53,7 @@
                 <XMRef idref="S1.Ex1.m1.6"/>
                 <XMRef idref="S1.Ex1.m1.8"/>
                 <XMRef idref="S1.Ex1.m1.9"/>
-                <XMRef idref="S1.Ex1.m1.10"/>
+                <XMRef idref="S1.Ex1.m1.11"/>
               </XMApp>
               <XMWrap>
                 <XMTok decl_id="S1.XMD4" font="italic" role="ID" xml:id="S1.Ex1.m1.1">x</XMTok>
@@ -110,14 +110,14 @@
                   <XMTok decl_id="S1.XMD4" font="italic" role="ID">x</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMTok decl_id="S1.XMD4" font="bold" role="ID" xml:id="S1.Ex1.m1.10">x</XMTok>
+                <XMTok font="bold" role="ID" xml:id="S1.Ex1.m1.11">x</XMTok>
               </XMWrap>
             </XMDual>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S1.Ex2">
-        <Math mode="display" tex="y,y^{\prime},y_{1},y_{n},y_{2n-1},\hat{y},\widehat{y}" text="list@(y, y ^ prime, y _ 1, y _ n, y _ (2 * n - 1), hat@(y), widehat@(y))" xml:id="S1.Ex2.m1">
+        <Math mode="display" tex="y,y^{\prime},y_{1},y_{n},y_{2n-1},\hat{y},\widehat{y}" text="list@(y, y ^ prime, y _ 1, y _ n, y _ (2 * n - 1), Unknown@(y), Unknown@(y))" xml:id="S1.Ex2.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -128,7 +128,7 @@
                 <XMRef idref="S1.Ex2.m1.4"/>
                 <XMRef idref="S1.Ex2.m1.5"/>
                 <XMRef idref="S1.Ex2.m1.6"/>
-                <XMRef idref="S1.Ex2.m1.7"/>
+                <XMRef idref="S1.Ex2.m1.8"/>
               </XMApp>
               <XMWrap>
                 <XMTok decl_id="S1.XMD9" font="italic" role="ID" xml:id="S1.Ex2.m1.1">y</XMTok>
@@ -170,7 +170,7 @@
                   <XMTok decl_id="S1.XMD9" font="italic" role="ID">y</XMTok>
                 </XMApp>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp role="ID" xml:id="S1.Ex2.m1.7">
+                <XMApp role="ID" xml:id="S1.Ex2.m1.8">
                   <XMTok decl_id="S1.XMD3" name="widehat" role="OVERACCENT">^</XMTok>
                   <XMTok decl_id="S1.XMD9" font="italic" role="ID">y</XMTok>
                 </XMApp>
@@ -220,54 +220,64 @@
     </declare>
     <para xml:id="S2.p1">
       <equation xml:id="S2.Ex3">
-        <Math mode="display" tex="q,q_{a},q_{a,b},\mbox{ but accidentally }q_{a+b}" text="list@(q, q _ a, q _ (list@(a, b)), [ but accidentally ] * q _ (a + b))" xml:id="S2.Ex3.m1">
+        <Math mode="display" tex="q,q_{a},q_{a,b},\mbox{ but accidentally }q_{a+b}" text="list@(q, Unknown@(a), Unknown@(a, ,), [ but accidentally ] * Unknown@(a, +))" xml:id="S2.Ex3.m1">
           <XMath>
             <XMDual>
               <XMApp>
                 <XMTok meaning="list"/>
                 <XMRef idref="S2.Ex3.m1.1"/>
                 <XMRef idref="S2.Ex3.m1.2"/>
-                <XMRef idref="S2.Ex3.m1.3"/>
-                <XMRef idref="S2.Ex3.m1.6"/>
+                <XMRef idref="S2.Ex3.m1.4"/>
+                <XMRef idref="S2.Ex3.m1.8"/>
               </XMApp>
               <XMWrap>
                 <XMTok decl_id="S2.XMD1" font="italic" role="ID" xml:id="S2.Ex3.m1.1">q</XMTok>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.2">
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMDual role="ID" xml:id="S2.Ex3.m1.2">
+                  <XMApp>
+                    <XMTok decl_id="S2.XMD3"/>
+                    <XMRef idref="S2.Ex3.m1.3"/>
+                  </XMApp>
                   <XMTok font="italic" role="ID">q</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
-                </XMApp>
+                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.3">a</XMTok>
+                  </XMApp>
+                </XMDual>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.3">
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMDual role="ID" xml:id="S2.Ex3.m1.4">
+                  <XMApp>
+                    <XMTok decl_id="S2.XMD3"/>
+                    <XMRef idref="S2.Ex3.m1.5"/>
+                    <XMRef idref="S2.Ex3.m1.6"/>
+                  </XMApp>
                   <XMTok font="italic" role="ID">q</XMTok>
-                  <XMDual>
-                    <XMApp>
-                      <XMTok meaning="list"/>
-                      <XMRef idref="S2.Ex3.m1.4"/>
-                      <XMRef idref="S2.Ex3.m1.5"/>
-                    </XMApp>
+                  <XMApp role="POSTSUBSCRIPT" scriptpos="1">
                     <XMWrap>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.4">a</XMTok>
-                      <XMTok fontsize="70%" role="PUNCT">,</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.5">b</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.5">a</XMTok>
+                      <XMTok fontsize="70%" role="PUNCT" xml:id="S2.Ex3.m1.6">,</XMTok>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                     </XMWrap>
-                  </XMDual>
-                </XMApp>
+                  </XMApp>
+                </XMDual>
                 <XMTok role="PUNCT">,</XMTok>
-                <XMApp xml:id="S2.Ex3.m1.6">
+                <XMApp xml:id="S2.Ex3.m1.8">
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMText> but accidentally </XMText>
-                  <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok font="italic" role="ID">q</XMTok>
+                  <XMDual role="ID">
                     <XMApp>
-                      <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                      <XMTok decl_id="S2.XMD3"/>
+                      <XMRef idref="S2.Ex3.m1.10"/>
+                      <XMRef idref="S2.Ex3.m1.9"/>
                     </XMApp>
-                  </XMApp>
+                    <XMTok font="italic" role="ID">q</XMTok>
+                    <XMApp role="POSTSUBSCRIPT" scriptpos="1">
+                      <XMApp>
+                        <XMTok fontsize="70%" meaning="plus" role="ADDOP" xml:id="S2.Ex3.m1.9">+</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S2.Ex3.m1.10">a</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMDual>
                 </XMApp>
               </XMWrap>
             </XMDual>
