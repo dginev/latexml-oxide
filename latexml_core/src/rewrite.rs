@@ -1027,42 +1027,24 @@ fn mark_seen_rec(node: &Node) {
 /// - "simple": no extra filtering needed (XPath is specific enough)
 fn declare_node_matches(
   node: &Node, pattern_type: &str, base_text: Option<&str>,
-  sub_text: Option<&str>, accent_name: Option<&str>,
+  _sub_text: Option<&str>, accent_name: Option<&str>,
 ) -> bool {
   let children = node.get_child_nodes();
   match pattern_type {
-    "subscript" => {
-      // XMApp[@role='POSTSUBSCRIPT'] with children: [base_token, subscript_content]
-      if children.len() < 2 { return false; }
-      // Check base token text
-      if let Some(base) = base_text {
-        if !declare_base_matches(&children[0], base) {
-          return false;
-        }
-      }
-      // For literal subscripts, check subscript content text
-      if let Some(sub) = sub_text {
-        let sub_content = children[1].get_content();
-        if sub_content.trim() != sub {
-          return false;
-        }
-      }
-      true
-    },
-    "prime" => {
-      // XMApp[@role='POSTSUPERSCRIPT'] with children: [base_token, prime_content]
-      if children.len() < 2 { return false; }
-      if let Some(base) = base_text {
-        if !declare_base_matches(&children[0], base) {
-          return false;
-        }
-      }
-      // Verify second child is prime-like (text contains ′ or meaning=prime)
-      let sup = &children[1];
-      let is_prime = sup.get_content().contains('′')
-        || sup.get_property("meaning").as_deref() == Some("prime");
-      if !is_prime { return false; }
-      true
+    "subscript" | "prime" => {
+      // Internal DOM: POSTSUBSCRIPT/POSTSUPERSCRIPT XMApp has 1 child (XMArg).
+      // Base token is the PREVIOUS SIBLING. Setting role on the XMApp would
+      // break serialization (serializer needs role=POSTSUBSCRIPT to add SUBSCRIPTOP).
+      //
+      // For now, these patterns are NOT matched at this level.
+      // The Attributes handler will set decl_id/role on the XMApp ONLY if we
+      // can do so without breaking serialization. This requires Perl-compatible
+      // serializer behavior (adding SUBSCRIPTOP based on structure, not role).
+      //
+      // TODO: Implement subscript/prime matching without breaking serialization.
+      // Options: (1) fix serializer to use structural context, (2) use multi-sibling
+      // matching to find base+subscript pairs.
+      false
     },
     "accent" => {
       // XMApp with children: [accent_op, base_content]
