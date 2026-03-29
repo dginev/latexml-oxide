@@ -513,7 +513,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
     - **To reproduce for upstream bug report**: See commit `c4779db8b` for the three attempted approaches. The simplest reproduction is approach 2: `wrap_nodes` + unlink children + add to new node.
   - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` already implemented; visibility marking may differ from Perl.
   - **R4** Test operator: closure return value ignored.
-  - **R1** `Match => Tokens` compilation: full `compile_match1` pipeline missing.
+  - **R1** `Match => Tokens` compilation: full `compile_match1` pipeline missing. **Partial fix (session 62)**: `.latexml` file loader now uses `compile_declare_pattern` to handle subscript, wildcard, accent, prime patterns from DefMathRewrite match strings. simplemath_src.rs simplified to only MATHPARSER_SPECULATE.
   - **R5** Regexp: doesn't traverse descendant text nodes or modify them.
   - **R6** MultiSelect: single xpath+count instead of per-sub-pattern tuples.
   - **R13** `markXMNodeVisibility` may have gaps.
