@@ -2,7 +2,7 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-29. Only lists open gaps & TODOs; completed items live in git history.
 
 **High-level roadmap:** Engine Parity → Package Bindings → Post-Processing → Production.
 
@@ -341,20 +341,16 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
   - [x] all 28 parse tests passing
 - [x] **700_unit_parse** (3/3)
   - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
-- [ ] **80_complex** (14 pass, 2 ignored = 16 total)
-  - [x] aastex631_deluxetable, aastex_test, acm_aria, aliceblog, cleveref_minimal, equationnest, figure_dual_caption, figure_mixed_content, hyperchars, hypertest, labelled, tcilatex_minimal, versioned_fallback, xii
-  - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
-  - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
-- [x] **81_babel** (5 pass, 1 ignored = 6 total)
-  - [x] csquotes, french, german, greek, page545
-  - [ ] numprints — IGNORED: TooManyErrors (120 errors, numprint `n` column type)
+- [x] **80_complex** (16/16)
+  - [x] aastex631_deluxetable, aastex_test, acm_aria, aliceblog, cleveref_minimal, equationnest, figure_dual_caption, figure_mixed_content, hyperchars, hypertest, labelled, physics, si, tcilatex_minimal, versioned_fallback, xii
+- [x] **81_babel** (6/6)
+  - [x] csquotes, french, german, greek, numprints, page545
 - [x] **82_moderncv** (2/2)
   - [x] cs_cv, orc
 - [x] **83_expl3** (2/2)
   - [x] tilde_tricks, xparse
-- [ ] **84_slides** (1 pass, 1 ignored = 2 total)
-  - [x] slides
-  - [ ] beamer — IGNORED: needs beamer.cls binding
+- [x] **84_slides** (2/2)
+  - [x] slides, beamer
 - [ ] **85_pgf** (0 pass, 2 ignored)
   - [ ] stress_pgfmath, stress_pgfplots — needs pgf.sty
 - [ ] **86_tikz** (0 pass, 10 ignored)
@@ -380,7 +376,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored. 209/294 zero-diff (71%), 33 intentional-only (xml:id + %\n), 52 with real structural diffs. 32,044 total diff lines. Effective parity: 242/294 (82%) when including intentional-only tests. Session 60 (9 commits): **expl3 FULL loading + rewrite fixes + [Default:N] fix.** (1) Rewrite: removed `all_descendants_matched`, font filtering, SUBSCRIPTOP restructuring. declare.xml: 865→835. (2) `\ver@` package guard (faithful Perl translation). (3) **expl3 FULL loading**: removed l3file pre-definitions that blocked 25K lines — ALL 36,765 lines now load, ALL l3 modules available. xparse: 3→0 errors. (4) `[Default:N]` optional parameter fix — default values now stored and used. \pagebreak now works. cs_cv: 4→3 diffs. 200 total conversion errors across all non-tikz tests.
+**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored (all tikz/pgf). Previously-ignored tests now passing: physics, si, beamer, numprints. 126 total conversion errors across all non-tikz tests (56_ams: 14 dangling XMRef, 65_graphics: 1, 80_complex: 83 siunitx, 81_babel: 28 conditional). Session 61: cleanupScripts implementation, conditional skip across mouth boundaries, babel \l@nil fix.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
