@@ -6,7 +6,24 @@ Updated 2026-03-29 (session 62). Only lists open gaps & TODOs; completed items l
 
 **Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 231/298 exact zero-diff (77.5%), 247/298 structural zero-diff (82.9%)**. Total diff lines: 36,777.
 
-**Session 62** (17 commits): **INCLUDE_COMMENTS + \lxDeclare rewrite timing + _matched precedence + guessTableHeaders + figure panel breaks.** (1) Full INCLUDE_COMMENTS pipeline: raw libxml2 FFI for XML comment nodes, state rotation fix, Perl T_COMMENT `%` prefix. (2) \lxDeclare patterns match PRE-parsed DOM (rewrites run before math parser). (3) `apply_lx_declarations` skips `_matched` tokens → correct `role="UNKNOWN"` in XMDual. (4) XMWrap: 3 approaches all cause libxml2 memory corruption — documented with repro steps. (5) simplemath wildcard XMDual fix. (6) guessTableHeaders: `is_ascii_digit()` + double-struck digits (U+1D7D8-U+1D7E1) for cell classification; continuation line check. ding/bbold/fonts at zero-diff. (7) Figure panel standalone break insertion matching Perl's %standalone_panel_names.
+**NOTE:** Some "passing" tests (si, physics, mathtools, numprints) compare against low-quality Rust references far from Perl. These should be audited — tests should fail until bindings mature to Perl parity.
+
+**Session 62** (21 commits): **INCLUDE_COMMENTS + rewrite timing + _matched precedence + guessTableHeaders + figure breaks + listing CSS.**
+1. **INCLUDE_COMMENTS pipeline**: Stomach creates Comment objects, Document.insert_comment() via raw libxml2 FFI (xmlNewDocComment + xmlAddChild). Comment.get_properties() override prevents todo!() panic. State rotation fix: STY_STATE/STD_STATE don't clobber INCLUDE_COMMENTS. Tests use `include_comments=false` matching Perl's CORE_OPTIONS_FOR_TESTS. Perl `%` prefix on T_COMMENT text.
+2. **\lxDeclare rewrite timing**: Critical fix — rewrites run BEFORE math parser (Perl Core.pm L282-289). XPaths changed from POST-parsed XMApp[SUBSCRIPTOP] to PRE-parsed XMTok + POSTSUBSCRIPT sibling with select_count=2. Wildcard paths: `[2,1]` (child 1 of sibling 2).
+3. **_matched token precedence**: `apply_lx_declarations` (fast path) now skips `_matched` tokens. Prevents overwriting role="UNKNOWN" on tokens inside XMDual presentation arms with role="ID" from simple patterns.
+4. **XMWrap**: 3 approaches tried (double wrap_nodes, manual Node::new+reparent, raw FFI reparent) — all cause libxml2 memory corruption. Documented with reproduction steps for upstream bug report. See R11 entry below.
+5. **simplemath wildcard**: Added wildcard_paths to f_* pattern → XMDual wrapping. Structural diffs 14→1.
+6. **guessTableHeaders**: Cell classification fixed: `is_ascii_digit()` instead of `is_numeric()` to match Perl's `\d` (ASCII-only). Extended to include mathematical double-struck digits (U+1D7D8-U+1D7E1 for blackboard bold). Continuation line check from Perl Alignment.pm L1337-1339 (accept mostly-empty outlier rows as data). ding/bbold/fonts now at zero structural diffs.
+7. **Figure panel breaks**: Implemented standalone panel heuristic from Perl's %standalone_panel_names (p, listing, equation, equationgroup, itemize, enumerate, quote, theorem, proof, description, verbatim, math). Inserts `<break class="ltx_break"/>` between consecutive standalone panels. figure_mixed_content break count matches Perl (15 each).
+8. **Listing CSS class sort**: CSS classes in lst_class_begin sorted alphabetically matching Perl's addSSValues behavior. listing structural diffs: 344→186 (46% reduction).
+
+**Remaining structural diff analysis (51 non-zero tests):**
+- **17 tests with 1-6 diffs**: eqnarray (4, \cdots role — intentional), page545 (4, French colon space), tabular (6, ltx_nopad_l/border), ntheorem (4, font italic/slanted), vertbars/IEEE/plainfonts/vmode (2 each, minor edge cases), scripts (4, XMDual ordering), parser_speculate/simplemath (1 each)
+- **Package-specific large gaps**: si (5774), physics (4851), mathtools (2008), beamer (1290), numprints (1245), stmaryrd (361), xcolors (682) — require full package binding maturation
+- **Math parser gaps**: operators (306), qm (206), ambiguous_relations (156), relations (53), artefacts (48), spacing (34) — deep parser structural differences
+- **Rewrite/declaration gaps**: declare (399→443 structural after XMDual improvement, XMWrap blocked), functions (144, needs R1 compile_match1), simplemath (1), mathbbol (51)
+- **Other**: listing (186, font wrapping), figure_mixed_content (116, whitespace/dimensions), xii (234, DTD→RelaxNG — accepted divergence), ncases (236), sampler (371), picture (2548, SVG dimensions), greek (544, LGR encoding), csquotes (32, locale quotes)
 
 **High-level roadmap:** Engine Parity → Package Bindings → Post-Processing → Production.
 
