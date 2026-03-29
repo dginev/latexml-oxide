@@ -485,7 +485,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 ### Overarching infrastructure projects
 
 - [ ] **J. Rewrite system** — rewrite.rs ~90%. See [`docs/rewrite_subsystem_audit.md`](rewrite_subsystem_audit.md) for full Perl/Rust diff audit (session 59). Operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Session 60 fixes:** R9 font predicate (Document-based bold/caligraphic check), R11 XMDual SUBSCRIPTOP restructuring, `all_descendants_matched` bug fix. **Open issues:**
-  - **R11** XMDual presentation arm missing XMWrap (memory corruption prevents libxml2 double-wrap). Base token role still "ID" not "UNKNOWN".
+  - **R11** XMDual presentation arm missing XMWrap (memory corruption prevents libxml2 double-wrap; tried 3 approaches, all corrupt). Base token role FIXED (session 62: _matched check in apply_lx_declarations).
   - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` already implemented; visibility marking may differ from Perl.
   - **R4** Test operator: closure return value ignored.
   - **R1** `Match => Tokens` compilation: full `compile_match1` pipeline missing.
@@ -494,8 +494,8 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
   - **R13** `markXMNodeVisibility` may have gaps.
 - [ ] **K. Declaration system (\lxDeclare)** — Session 60: font matching fixed (bold/caligraphic rejection via Document font system), POSTSUBSCRIPT→SUBSCRIPTOP restructuring inside XMDual, `all_descendants_matched` bug fixed. **Open issues:**
   - Function application patterns `f\WildCard[(\WildCard)]` not supported.
-  - Base token role inside XMDual should be "UNKNOWN" (currently "ID").
-- [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete). Only gap: XML comment creation in libxml wrapper (minor).
+  - Base token role inside XMDual: **FIXED** (session 62: _matched check prevents apply_lx_declarations from overwriting).
+- [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete), XML comment creation (session 62: raw libxml2 FFI).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 - [x] **H. expl3 full loading** — **FULLY FIXED (session 60)**: Removed l3file pre-definitions that caused `\cs_new:Npn` → `\msg_error:nnee` → `read_until` → `read_balanced` to consume 25K+ remaining lines of expl3-code.tex. All 36,765 lines now load completely. ALL expl3 modules available: l3skip, l3keys, l3keyval, l3box, l3coffin, l3color, l3fp, l3regex, l3cctab, l3text, l3legacy. xparse.tex: 3 errors → 0. Removed 34 lines of workarounds from expl3_sty.rs.
 - [ ] **I. "make formats" build step** — Embed+runtime approach works: `latex_dump.oxide` (3.4MB, 22K entries) embedded via `include_str!()`, loaded by `dump_reader::load_from_str()`. Zero-regression confirmed. **BLOCKER for full integration**: dump can't serialize primitive aliases (`\exp_after:wN` → `\expandafter`, `\tex_gdef:D` → `\gdef`, etc.) because primitives are closures. Loading dump before expl3 causes undefined primitive errors. **Fix needed**: either (a) generate primitive alias `\let` assignments as compiled Rust, (b) load expl3 bootstrap section separately, or (c) extend dump format to store alias targets by name. Current status: embed works for supplementary state but can't replace expl3 raw loading yet.
