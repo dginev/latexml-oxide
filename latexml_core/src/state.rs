@@ -429,7 +429,10 @@ impl State {
     };
     let verbosity = options.verbosity.unwrap_or(0);
     // let strict = options.strict.unwrap_or(false);
-    // let include_comments = options.include_comments.unwrap_or(true);
+    // INCLUDE_COMMENTS: Perl defaults to true (Core.pm L143), but our comment
+    // handling doesn't properly convert T_COMMENT tokens to XML comments yet —
+    // they get inserted as text content. Keep disabled until fixed.
+    let _include_comments = options.include_comments.unwrap_or(false);
     // let include_styles = options.include_styles.unwrap_or(false);
     let nomathparse = options.nomathparse.unwrap_or(false);
 
@@ -467,6 +470,9 @@ impl State {
       options.documentid.unwrap_or_default(),
       Some(Scope::Global),
     );
+    // Note: INCLUDE_COMMENTS not enabled by default yet.
+    // Perl defaults to 1, but our T_COMMENT handling inserts comments as text
+    // content instead of XML comments. Needs fixing before enabling.
 
     state
   }
