@@ -9,19 +9,10 @@ LoadDefinitions!({
   LoadPool!("LaTeX");
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
 
-  // Pre-define l3file functions that are forward-referenced during expl3 loading.
-  // In Perl's expansion engine, \exp_last_unbraced:NNNNo at line 11527 of
-  // expl3-code.tex creates these functions. In Rust, the expansion chain fails,
-  // producing an extra \endcsname. Pre-defining prevents undefined errors;
-  // post-load fixup below provides the correct definitions.
-  raw_tex(concat!(
-    r"\begingroup",
-    r"\catcode`\_=11\relax\catcode`\:=11\relax",
-    r"\global\def\__file_name_expand_end:{}",
-    r"\global\def\__kernel_file_name_sanitize:n#1{#1}",
-    r"\global\def\l_file_search_path_seq{}",
-    r"\endgroup",
-  ))?;
+  // NOTE: Pre-definitions for l3file functions removed. The \exp_last_unbraced:NNNNo
+  // at line 11527 of expl3-code.tex now defines these naturally. Previous pre-defs
+  // caused \cs_new:Npn to find them already defined, triggering \msg_error:nnee
+  // which has a complex expansion chain that consumed the rest of the file.
 
   // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
   // Suppress errors during loading: expl3-code.tex has many forward references
@@ -50,30 +41,12 @@ LoadDefinitions!({
     r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // Re-define l3file functions with correct definitions (the pre-defined stubs
-  // were overwritten by the broken expansion chain, now fix them properly).
-  raw_tex(concat!(
-    r"\exp_last_unbraced:NNNNo",
-    r"\cs_gset:Npn \__file_name_expand_cleanup:w #1 \tl_to_str:n { __file_name = } { }",
-    r"\cs_gset:Npn \__file_name_expand_end:",
-    r"{ \msg_expandable_error:nn { kernel } { filename-missing-endcsname }",
-    r"  \cs_end: \__file_name_expand_end: }",
-    r"\cs_gset:Npn \__kernel_file_name_sanitize:n #1",
-    r"{ \exp_args:Ne \__file_name_trim_spaces:n",
-    r"  { \exp_args:Ne \__file_name_strip_quotes:n",
-    r"    { \__file_name_expand:n {#1} } } }",
-  ))?;
-  // Ensure l3file sequences exist (may have failed to create during loading)
+  // Most post-load l3file fixups removed — macros are now correctly defined
+  // by expl3-code.tex's natural processing (pre-definitions removed above).
+  // Only keep sequence creation that may still fail during loading:
   raw_tex(concat!(
     r"\cs_if_exist:NF \g__file_record_seq { \seq_new:N \g__file_record_seq }",
     r"\cs_if_exist:NF \l_file_search_path_seq { \seq_new:N \l_file_search_path_seq }",
-  ))?;
-  // Ensure cctab message exists (used by cctab validation, defined late in expl3-code.tex).
-  // Use \msg_set which overwrites if already defined (avoiding "already defined" error).
-  raw_tex(concat!(
-    r"\msg_set:nnnn{cctab}{invalid-cctab}",
-    r"  {Invalid~code~category~table~'#1'.}",
-    r"  {You~tried~to~use~'#1'~as~a~catcode~table,~but~it~is~not~a~valid~catcode~table.}",
   ))?;
   // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run.
   if state::lookup_catcode(' ') != Some(Catcode::SPACE) {
