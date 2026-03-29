@@ -202,6 +202,7 @@ LoadDefinitions!({
   // Perl: DefPrimitive('\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}', ...)
   // my $symboltype_roles = { '\mathord' => 'ID', '\mathop' => 'BIGOP', '\mathbin' => 'BINOP',
   //   '\mathrel' => 'RELOP', '\mathopen' => 'OPEN', '\mathclose' => 'CLOSE', '\mathpunct' => 'PUNCT' };
+  // locked: prevents raw TeX dump from overriding with version that errors on redefinition
   DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
   sub[(cs, sym_type, fontkind, code)] {
     let mut encoding = fontkind.to_string();
@@ -230,6 +231,8 @@ LoadDefinitions!({
       def_math(cs, None, presentation, opts)?;
     }
   });
+  // Lock so dump loader can't override with raw TeX version (which errors on redefinition)
+  state::assign_value("\\DeclareMathSymbol:locked", true, Some(Scope::Global));
 
   DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
   DefPrimitive!("\\DeclareMathRadical{}{}{}{}{}", None);

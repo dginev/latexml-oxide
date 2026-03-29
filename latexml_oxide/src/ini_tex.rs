@@ -43,6 +43,16 @@ pub fn dump_format(
 
   // Lift the token limit for format dumps — expl3-code.tex alone uses ~5M tokens.
   let saved_limit = latexml_core::gullet::set_token_limit(None);
+
+  // Pre-load the LaTeX engine bindings so that \DeclareMathSymbol uses the Rust
+  // binding (which handles redefinition silently) instead of the raw TeX version
+  // from latex.ltx (which errors on "Command already defined").
+  if let Some(result) = latexml_package::dispatch("LaTeX.pool") {
+    if let Err(e) = result {
+      eprintln!("[ini_tex] Warning: failed to pre-load LaTeX.pool: {}", e);
+    }
+  }
+
   // Suppress known expl3 loading errors (forward references resolved by post-load fixups)
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
