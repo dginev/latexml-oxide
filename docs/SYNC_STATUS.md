@@ -389,20 +389,17 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-25):** 303 pass, 0 fail, 21 ignored. 408 core + 91 contrib modules.
+**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored. 298 paired, 218 zero-diff (73%), 31K total diffs.
 
-### Completed TODO items (session 41)
+### Completed TODO items
 
 - [x] **34. mathtools_test** (56_ams) — PASSING (XML regenerated, diffs accepted)
 - [x] **36. picture_test** (65_graphics) — PASSING (XML regenerated)
 - [x] **40. figure_mixed_content_test** (80_complex) — PASSING (XML regenerated)
 - [x] **48. 70_parse suite** (70_parse) — ALL 28/28 PASSING (XML regenerated; diffs accepted as improvements or documented divergences)
-
-### Active TODO items (ordered)
-
-- [ ] **50. split_test** (53_alignment) — TIMEOUT. Alignment depth guard / nested `$` mode issue.
-- [ ] **38. xytest** (65_graphics) — TooManyErrors. Needs xy.sty binding port (~1000 lines).
-- [ ] **56. babel suite** (81_babel) — TIMEOUT: unbounded memory leak.
+- [x] **50. split_test** (53_alignment) — PASSING (session 51: alignment depth guard, arena safety)
+- [x] **38. xytest** (65_graphics) — PASSING (session 51: SVG infrastructure, xylatexml port)
+- [x] **56. babel suite** (81_babel) — PASSING (session 48-49: expl3 loading, babel hooks, OOM fix)
 
 #### mathtools_test mini-plan (per-section parity)
 
@@ -423,15 +420,15 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Alignment gaps
 
-- [ ] A1. `alignment_skip_data` continuation-line check (173 regressions when added naively)
-- [ ] A3. Font wrapper `<text>` elements during alignment absorption
-- [ ] A4. `{turn}` rotation dimensions inside alignment
-- [ ] B2. Split/gather `$` mode: alignment depth guard. Blocks split_test.
+- [x] A1. `alignment_skip_data` continuation-line check — Perl has dead code (KNOWN_PERL_ERRORS #7). Rust matches Perl behavior.
+- [x] A3. Font wrapper `<text>` elements during alignment absorption — Rust has full parity (verified session 64).
+- [x] A4. `{turn}` rotation dimensions inside alignment — Fixed (session 63: kround + font metrics).
+- [x] B2. Split/gather `$` mode: alignment depth guard. split_test passes (session 51).
 - [ ] B3. listings math: code blocks with math expressions. Blocks listing_test (1661 diffs).
 
 ### Math parser gaps
 
-- [ ] C2. Font specialize / mathstyle absolute reset — `\scriptstyle` inside subscript produces fontsize=50% (scriptscript) instead of 70% (script). `MergeFont!(mathstyle => "script")` adds relative; should RESET when `explicit_mathstyle` is set. See `tex_math.rs:638`. Calculus XML temporarily updated to match 50%; needs fix to restore 70%.
+- [x] C2. Font specialize / mathstyle absolute reset — FIXED (commit 9670bc14b). `explicit_mathstyle` check now before dispatch.
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
 - [ ] C4. ltx_nopad_l on @{}l@{} columns
 - [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
@@ -443,7 +440,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
 - [ ] P1. guessTableHeaders: circled digit classification (ding.xml, tabular.xml, xcolors.xml)
-- [ ] P5. xcolors.xml: color complement/wheel computation, colortbl row cycling. BLOCKED.
+- [ ] P5. xcolors.xml: colortbl row cycling, table structure (thead/tbody). PARTIAL: Color::convert extended models fixed (session 64).
 
 ### Heavy package bindings (distant future)
 

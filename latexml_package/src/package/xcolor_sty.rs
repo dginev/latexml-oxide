@@ -1040,14 +1040,23 @@ LoadDefinitions!({
   });
 
   // \convertcolorspec{model}{spec}{tomodel}{cmd}
+  // Perl: converts color from one model to another, storing result in \cmd
+  // Extended models (HTML, RGB, Hsb, HSB, Gray) use their native ranges.
   DefPrimitive!("\\convertcolorspec{}{}{}{}", sub[(fmodel, spec, tomodel, cmd)] {
     let model_str = do_expand(fmodel)?.to_string();
     let spec_str = do_expand(spec)?.to_string();
     let tomodel_str = do_expand(tomodel)?.to_string();
     let cmd_str = cmd.to_string();
-    let color = parse_xcolor(Some(&model_str), &spec_str, Some(&tomodel_str));
-    let comps: Vec<String> = color.components().iter().map(|c| format!("{}", fixedpt(*c))).collect();
-    let joined = comps.join(",");
+    let color = parse_xcolor(Some(&model_str), &spec_str, None);
+    // Perl: convert to target model and get components in target range
+    let comps = color.components_for_model(&tomodel_str);
+    let formatted: Vec<String> = if tomodel_str == "HTML" {
+      // HTML components as 2-digit uppercase hex
+      comps.iter().map(|c| format!("{:02X}", *c as u32)).collect()
+    } else {
+      comps.iter().map(|c| format!("{}", fixedpt(*c))).collect()
+    };
+    let joined = formatted.join(",");
     def_macro(T_CS!(cmd_str), None, Some(ExpansionBody::from(joined.as_str())), None)?;
     Ok(())
   });

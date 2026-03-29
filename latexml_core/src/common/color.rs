@@ -167,6 +167,8 @@ impl Color {
   }
 
   /// Convert to another model by name. Perl: $self->convert($tomodel)
+  /// Handles both core models (rgb, cmy, cmyk, hsb, gray) and
+  /// extended models (HTML, RGB, Hsb, HSB, Gray, tHsb, wave).
   pub fn convert(&self, to_model: &str) -> Color {
     match to_model {
       "rgb" => self.to_rgb(),
@@ -174,7 +176,27 @@ impl Color {
       "cmyk" => self.to_cmyk(),
       "hsb" => self.to_hsb(),
       "gray" => self.to_gray(),
+      // Extended models map to their core equivalent
+      "HTML" | "RGB" => self.to_rgb(),
+      "Hsb" | "HSB" | "tHsb" => self.to_hsb(),
+      "Gray" => self.to_gray(),
       _ => *self,
+    }
+  }
+
+  /// Return components scaled to the target model's native range.
+  /// Core models use 0-1 range. Extended models use their native ranges:
+  /// HTML/RGB: 0-255, Hsb: h=0-360/s=0-1/b=0-1, HSB: 0-240, Gray: 0-15.
+  /// Perl: Color objects in extended models store components in native range.
+  pub fn components_for_model(&self, model: &str) -> Vec<f64> {
+    let core = self.convert(model);
+    let comps = core.components();
+    match model {
+      "HTML" | "RGB" => comps.iter().map(|c| (c * 255.0).round()).collect(),
+      "Hsb" => vec![(comps[0] * 360.0).round(), comps[1], comps[2]],
+      "HSB" => comps.iter().map(|c| (c * 240.0).round()).collect(),
+      "Gray" => vec![(comps[0] * 15.0).round()],
+      _ => comps,
     }
   }
 
