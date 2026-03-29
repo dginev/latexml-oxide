@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 301 pass, 0 fail, 12 ignored. 209/294 zero-diff (71%), 33 pure xml:id (intentional), 52 with real structural diffs. 32,057 total diff lines (31,053 real + 1,004 intentional xml:id). Session 60: **Rewrite wildcard fix + font matching** — removed incorrect `all_descendants_matched` check in `set_wildcard_ids` (was blocking XMDual creation), added Document-based font filtering for bold/caligraphic (simple declarations don't match styled tokens). declare.xml: 865→847. Full diff inventory below.
+**Status (2026-03-28):** 301 pass, 0 fail, 12 ignored. 209/294 zero-diff (71%), 33 pure xml:id (intentional), 52 with real structural diffs. 32,057 total diff lines (31,053 real + 1,004 intentional xml:id). Effective parity: 259/294 (88%) when including xml:id-only tests. Session 60 (3 commits): **Rewrite system improvements** — (1) removed incorrect `all_descendants_matched` check in `set_wildcard_ids` (was blocking XMDual creation), (2) added Document-based font filtering for bold/caligraphic tokens, (3) restructure POSTSUBSCRIPT→SUBSCRIPTOP inside XMDual presentation arm with XMArg unwrapping. declare.xml: 865→835 (-30).
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
@@ -484,20 +484,17 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 
 ### Overarching infrastructure projects
 
-- [ ] **J. Rewrite system** — rewrite.rs ~85%. See [`docs/rewrite_subsystem_audit.md`](rewrite_subsystem_audit.md) for full Perl/Rust diff audit (session 59). Operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Open issues (by priority):**
-  - **R9** Font predicate missing — `\mathbf{x}` matches `$x$` declaration (bold vs non-bold not distinguished). Need `font_match_xpaths` equivalent.
-  - **R11** XMDual content arm structure differs from Perl (child ordering, missing XMWrap wrapper). Every XMDual node has structural diffs.
-  - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` post-processing not invoked after rewrites. Redundant XMDual nodes remain.
-  - **R4** Test operator: closure return value ignored (should control whether remaining clauses execute).
-  - **R1** `Match => Tokens` compilation: tokens never digested to DOM/XPath (full `compile_match1` pipeline missing).
-  - **R5** Regexp: doesn't traverse descendant text nodes or modify them (acts as filter only).
-  - **R6** MultiSelect: single xpath+count instead of per-sub-pattern `[xpath, nnodes, wilds]` tuples.
-  - **R2** Math decoration filter (`@_pvis and @_cvis`) not applied to math-mode XPaths.
-  - **R13** `markXMNodeVisibility` not implemented.
-- [ ] **K. Declaration system (\lxDeclare)** — Session 59: restructured pattern compiler. Now handles subscript, prime, accent, and wildcard patterns with Rust-side filtering. See audit R14/R15. **Open issues:**
+- [ ] **J. Rewrite system** — rewrite.rs ~90%. See [`docs/rewrite_subsystem_audit.md`](rewrite_subsystem_audit.md) for full Perl/Rust diff audit (session 59). Operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Session 60 fixes:** R9 font predicate (Document-based bold/caligraphic check), R11 XMDual SUBSCRIPTOP restructuring, `all_descendants_matched` bug fix. **Open issues:**
+  - **R11** XMDual presentation arm missing XMWrap (memory corruption prevents libxml2 double-wrap). Base token role still "ID" not "UNKNOWN".
+  - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` already implemented; visibility marking may differ from Perl.
+  - **R4** Test operator: closure return value ignored.
+  - **R1** `Match => Tokens` compilation: full `compile_match1` pipeline missing.
+  - **R5** Regexp: doesn't traverse descendant text nodes or modify them.
+  - **R6** MultiSelect: single xpath+count instead of per-sub-pattern tuples.
+  - **R13** `markXMNodeVisibility` may have gaps.
+- [ ] **K. Declaration system (\lxDeclare)** — Session 60: font matching fixed (bold/caligraphic rejection via Document font system), POSTSUBSCRIPT→SUBSCRIPTOP restructuring inside XMDual, `all_descendants_matched` bug fixed. **Open issues:**
   - Function application patterns `f\WildCard[(\WildCard)]` not supported.
-  - Font matching in declarations missing (R9).
-  - XMDual structure mismatch for wildcard patterns (R11).
+  - Base token role inside XMDual should be "UNKNOWN" (currently "ID").
 - [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete). Only gap: XML comment creation in libxml wrapper (minor).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 - [x] **H. expl3 full loading** — **DONE (1 remaining)**: Session 49: 1500→12 errors. Session 57: Pre-define l3file forward-refs (`\__file_name_expand_end:`, `\__kernel_file_name_sanitize:n`, `\l_file_search_path_seq`) as stubs before loading. Reduces actual errors to 1 (extra `\endcsname` from `\exp_last_unbraced:NNNNo` expansion chain difference). SUPPRESS_UNEXPECTED_ERRORS handles the 1 remaining error. All expl3 modules load correctly; post-load fixups provide correct l3file definitions.
