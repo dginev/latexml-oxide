@@ -2,19 +2,19 @@ use crate::prelude::*;
 
 /// Metadata for a compiled \lxDeclare pattern.
 /// Contains the XPath, pattern type for Rust-side filtering, and wildcard info.
-struct DeclarePattern {
-  xpath:          String,
+pub struct DeclarePattern {
+  pub xpath:          String,
   /// "simple", "subscript", "prime", "accent"
-  pattern_type:   &'static str,
+  pub pattern_type:   &'static str,
   /// Base token text for subscript/prime/accent base matching (e.g. "x")
-  base_text:      Option<String>,
+  pub base_text:      Option<String>,
   /// For literal subscripts: the subscript content text (e.g. "1")
-  sub_text:       Option<String>,
+  pub sub_text:       Option<String>,
   /// For accent patterns: the accent name (e.g. "hat")
-  accent_name:    Option<String>,
+  pub accent_name:    Option<String>,
   #[allow(dead_code)]
-  has_wildcard:   bool,
-  wildcard_paths: Option<Vec<Vec<usize>>>,
+  pub has_wildcard:   bool,
+  pub wildcard_paths: Option<Vec<Vec<usize>>>,
 }
 
 /// Generate an XPath text predicate for a base token specification.
@@ -40,6 +40,11 @@ fn base_text_predicate(base: &str) -> String {
 /// Perl: compile_match1 digests tokens to DOM, then domToXPath.
 /// Rust: pattern-match on body_text string and generate broad XPath
 /// with Rust-side filtering criteria (avoids XPath nested predicate bug).
+/// Public entry point for the .latexml file loader.
+pub fn compile_declare_pattern_pub(body_text: &str) -> DeclarePattern {
+  compile_declare_pattern(body_text)
+}
+
 fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   // === Subscript patterns ===
   // IMPORTANT: Rewrites run BEFORE math parsing. The pre-parsed DOM has:
@@ -176,7 +181,24 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     }
   }
 
-  // === Fallback: unrecognized pattern ===
+  // === Fallback: simple token pattern ===
+  // For single characters/words without special structure, match as XMTok by text.
+  // This handles DefMathRewrite match strings like 'a', 'f', 'x', etc.
+  if !body_text.is_empty() && !body_text.contains('\\') {
+    return DeclarePattern {
+      xpath: format!(
+        "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
+        body_text.replace('\'', "&apos;")),
+      pattern_type: "simple",
+      base_text: None,
+      sub_text: None,
+      accent_name: None,
+      has_wildcard: false,
+      wildcard_paths: None,
+    };
+  }
+
+  // Truly unrecognized pattern (e.g. complex TeX commands without matching rules)
   DeclarePattern {
     xpath: String::new(),
     pattern_type: "unknown",

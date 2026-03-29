@@ -141,21 +141,8 @@ fn add_f_wildcard_rewrite() -> Result<()> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Enable speculative function application for f(x) patterns
+  // Enable speculative function application for f(x) patterns.
+  // The actual rewrite rules (role assignments, wildcard patterns, etc.) are loaded
+  // from simplemath.latexml by the .latexml file loader in core_interface.rs.
   AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
-
-  // Global role assignments (matching Perl simplemath.latexml order)
-  add_math_rewrite("a", "ID")?;
-  add_math_rewrite("b", "ID")?;
-  add_accent_f_rewrite()?;      // \hat{f} → ID (single-node XMApp match)
-  add_f_d_diffop_rewrite()?;     // f_D → DIFFOP (two-sibling, XMWrap)
-  add_f_wildcard_rewrite()?;    // f_* → ID (two-sibling, XMWrap)
-  add_math_rewrite("f", "FUNCTION")?;
-  add_math_rewrite("D", "ID")?;
-  add_math_rewrite("x", "ID")?;
-
-  // Scoped rewrites: within label:sec:restricted, a and b become FUNCTION
-  // MUST be added via UnshiftValue (prepend) so they take priority over global rules.
-  add_math_rewrite_scoped_first("a", "FUNCTION", "label:sec:restricted")?;
-  add_math_rewrite_scoped_first("b", "FUNCTION", "label:sec:restricted")?;
 });

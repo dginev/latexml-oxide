@@ -490,13 +490,6 @@ fn load_latexml_file(path: &str) -> Result<()> {
       None => continue, // No match clause, skip
     };
 
-    // Skip complex patterns: anything with \, _, {, } in the match string
-    // These need full token-level matching (digestion + DOM -> XPath) which we
-    // don't implement yet.
-    if match_str.contains('\\') || match_str.contains('_') || match_str.contains('{') {
-      continue;
-    }
-
     // Build attributes map from the attributes => { ... } section
     let mut attrs = HashMap::default();
     if let Some(role_cap) = ROLE_RE.captures(body) {
@@ -512,22 +505,44 @@ fn load_latexml_file(path: &str) -> Result<()> {
       continue; // No attributes to set
     }
 
-    // Build the XPath for this match.
-    // For math mode, Perl's compile_match digests "$a$", builds DOM, then generates:
-    //   descendant-or-self::ltx:XMTok[text()='a'][@_pvis and @_cvis]
-    // We generate the equivalent XPath directly for single-character matches.
-    let xpath = format!(
-      "descendant-or-self::ltx:XMTok[text()='{}'][@_pvis and @_cvis]",
-      match_str
-    );
-
     // Check for optional scope
     let scope_str = SCOPE_RE.captures(body).map(|s| s[1].to_string());
 
-    // Build the rewrite rule with pre-compiled clauses
+    // Use compile_declare_pattern for all patterns (simple + complex).
+    // The .latexml match strings use the same format as \lxDeclare body_text:
+    //   'f' (simple), 'f_D' (literal subscript), 'f_\WildCard' (wildcard),
+    //   '\hat{f}' (accent), "x^{\prime}" (prime).
+    let pat = latexml_package::package::latexml_sty::compile_declare_pattern_pub(&match_str);
+    if pat.xpath.is_empty() {
+      continue; // Unrecognized pattern, skip
+    }
+
+    // Add declare metadata for Rust-side filtering
+    attrs.insert("_declare_type".to_string(), pat.pattern_type.to_string());
+    if let Some(ref b) = pat.base_text {
+      attrs.insert("_declare_base".to_string(), b.clone());
+    }
+    if let Some(ref s) = pat.sub_text {
+      attrs.insert("_declare_sub".to_string(), s.clone());
+    }
+    if let Some(ref a) = pat.accent_name {
+      attrs.insert("_declare_accent".to_string(), a.clone());
+    }
+
+    // For math mode, append visibility check to XPath
+    let xpath = format!("{}[@_pvis and @_cvis]", pat.xpath);
+
+    // Determine select_count based on pattern type
+    let select_count = match pat.pattern_type {
+      "literal_subscript" | "prime" | "subscript" => Some(2usize),
+      "accent" => Some(1usize),
+      _ => Some(1usize),
+    };
+
+    // Build the rewrite rule
     let mut clauses = Vec::new();
 
-    // Add scope clause if present (compiled during compile_clauses phase)
+    // Add scope clause if present
     if let Some(ref scope) = scope_str {
       clauses.push(RewriteClause::new_uncompiled(
         RewriteOperator::Scope,
@@ -551,7 +566,8 @@ fn load_latexml_file(path: &str) -> Result<()> {
       options: RewriteOptions {
         attributes_map: Some(attrs),
         is_math: true,
-        select_count: Some(1),
+        select_count,
+        wildcard_paths: pat.wildcard_paths,
         ..RewriteOptions::default()
       },
       clauses,
