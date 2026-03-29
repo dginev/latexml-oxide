@@ -1,21 +1,19 @@
 //! Generate Rust source code from a kernel dump file.
 //!
 //! Reads the text dump produced by `dump_writer.rs` and emits a `.rs` file
-//! containing direct `state::assign_value` / `state::install_definition` calls.
-//! The generated module compiles with `latexml_package` and loads via
-//! `LoadDefinitions!()`.
+//! containing typed static data tables. The compiler checks every entry at
+//! build time — no runtime parsing, no text format errors possible.
 //!
 //! Usage:
-//!   1. Generate dump: `latexml_oxide --init=latex.ltx --dest=/tmp/latex_dump.oxide`
-//!   2. Generate Rust: `dump_codegen::generate_rs("/tmp/latex_dump.oxide", "latex_dump.rs")`
+//!   1. Generate dump: `latexml_oxide --init=latex.ltx --dest=/tmp/dump.tmp`
+//!   2. Generate Rust: `dump_codegen::generate_rs("/tmp/dump.tmp", "latex_dump.rs")`
 //!   3. Place in `latexml_package/src/engine/latex_dump.rs`
 //!   4. Load at runtime via `latex_dump::load_definitions()`
 
-use std::io::{BufRead, Write};
+use std::io::Write;
 use std::path::Path;
 
 /// Value entries to skip (runtime-specific or cause regressions).
-/// Must match dump_reader.rs::SKIP_VALUES.
 const SKIP_VALUES: &[&str] = &[
   "INTERPRETING_DEFINITIONS",
   "if_count",
@@ -31,17 +29,17 @@ const SKIP_VALUES: &[&str] = &[
 ];
 
 fn should_skip_value(key: &str) -> bool {
-  SKIP_VALUES.iter().any(|skip| {
-    key == *skip || key.starts_with(skip) || key.ends_with(skip) || key.contains(skip)
-  })
+  SKIP_VALUES
+    .iter()
+    .any(|skip| key == *skip || key.starts_with(skip) || key.ends_with(skip) || key.contains(skip))
 }
 
-/// Escape a string for Rust source code (inside a raw string r#"..."#).
+/// Escape a string for use as a Rust string literal.
 fn rust_escape(s: &str) -> String {
-  // Raw strings can contain anything except the closing delimiter "# sequence.
-  // If the string contains "# we fall back to standard string with escaping.
-  if s.contains("\"#") || s.contains('\r') || s.chars().any(|c| c.is_ascii_control() && c != '\n' && c != '\t') {
-    // Use normal string literal with escapes
+  if s.contains("\"#")
+    || s.contains('\r')
+    || s.chars().any(|c| c.is_ascii_control() && c != '\n' && c != '\t')
+  {
     let mut out = String::with_capacity(s.len() + 8);
     out.push('"');
     for ch in s.chars() {
@@ -78,350 +76,887 @@ fn url_decode(s: &str) -> String {
   result
 }
 
-/// Generate a Rust source file that embeds the dump data as a `const &str`.
-/// The data is loaded at runtime via `dump_reader::load_from_str()`.
-///
-/// Trade-off analysis: Native Rust statements (20K `assign_value` calls) cause
-/// compiler OOM in release mode. The text-embed approach compiles instantly and
-/// loads in ~50ms at runtime — acceptable for a hot path that runs once per invocation.
-pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String> {
-  let content = std::fs::read_to_string(dump_path)
-    .map_err(|e| format!("Failed to read dump: {}", e))?;
+// ---- Parsed entry types ----
 
-  let count = content.lines()
-    .filter(|l| !l.is_empty() && !l.starts_with('#'))
-    .count();
-
-  // Ensure the content doesn't contain the raw string delimiter
-  let delim = if content.contains("\"####") { "\"#####" } else { "\"####" };
-  let open_delim = delim.replace('"', "");
-  let raw_open = format!("r{open_delim}\"");
-  let raw_close = format!("\"{open_delim}");
-
-  let mut out = std::fs::File::create(output_path)
-    .map_err(|e| format!("Failed to create output: {}", e))?;
-
-  writeln!(out, r#"//! Auto-generated LaTeX kernel dump.
-//! DO NOT EDIT — regenerate with: `cargo run --release --bin latexml_oxide -- --init=latex.ltx`
-//!
-//! Embedded as const string, loaded at startup via dump_reader (~50ms).
-//! Native Rust statements would be faster (0ms) but cause compiler OOM for 20K+ entries.
-
-/// Embedded kernel dump data ({count} entries).
-const DUMP_DATA: &str = {raw_open}"#).map_err(|e| format!("Write error: {}", e))?;
-
-  // Write the dump content directly
-  out.write_all(content.as_bytes())
-    .map_err(|e| format!("Write error: {}", e))?;
-
-  writeln!(out, r#"{raw_close};
-
-/// Load the precompiled LaTeX kernel definitions into the global state.
-pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
-  latexml_core::dump_reader::load_from_str(DUMP_DATA)
-    .map_err(latexml_core::common::error::Error::from)?;
-  Ok(())
-}}"#).map_err(|e| format!("Write error: {}", e))?;
-
-  log::info!(
-    "[dump_codegen] Generated {} entries to {} (embedded string)",
-    count, output_path.display()
-  );
-
-  Ok(count)
+struct BoolEntry {
+  key: String,
+  val: bool,
+}
+struct IntEntry {
+  key: String,
+  val: i64,
+}
+struct StrEntry {
+  key: String,
+  val: String,
+}
+struct DimEntry {
+  key: String,
+  val: i64,
+}
+struct GlueEntry {
+  key: String,
+  skip: i64,
+  plus: Option<i64>,
+  pfill: u8, // 0=None, 1=Fil, 2=Fill, 3=Filll
+  minus: Option<i64>,
+  mfill: u8,
+}
+struct CharcodeEntry {
+  key: String,
+  val: u16,
+}
+struct CatcodeEntry {
+  key: String,
+  val: u8,
+}
+struct TokenEntry {
+  key: String,
+  cc: u8,
+  text: String,
+}
+struct TokenListEntry {
+  key: String,
+  tok_start: u32,
+  tok_count: u16,
+}
+struct ExpandEntry {
+  cs: String,
+  nargs: u8,
+  flags: u8, // bit 0=long, bit 1=protected
+  tok_start: u32,
+  tok_count: u16,
+}
+struct TokData {
+  cc: u8,
+  text: String,
 }
 
-/// Generate a single Rust statement from a dump line.
-/// Returns None if the entry should be skipped.
-fn generate_entry(line: &str) -> Result<Option<String>, String> {
-  let parts: Vec<&str> = line.splitn(3, '\t').collect();
-  if parts.len() < 2 {
-    return Ok(None);
-  }
+/// All categorized entries from a dump file.
+#[derive(Default)]
+struct DumpData {
+  // Value table
+  bools: Vec<BoolEntry>,
+  ints: Vec<IntEntry>,
+  strings: Vec<StrEntry>,
+  dims: Vec<DimEntry>,
+  glues: Vec<GlueEntry>,
+  mudims: Vec<DimEntry>,
+  muglues: Vec<GlueEntry>,
+  charcodes: Vec<CharcodeEntry>,
+  catcode_vals: Vec<CatcodeEntry>,
+  single_tokens: Vec<TokenEntry>,
+  token_lists: Vec<TokenListEntry>,
+  nones: Vec<String>,
+  vecdeques: Vec<String>,
 
-  let table = parts[0];
-  let key = url_decode(parts[1]);
-  let data = if parts.len() > 2 { parts[2] } else { "" };
+  // Code tables
+  catcodes: Vec<CatcodeEntry>,
+  lccodes: Vec<CharcodeEntry>,
+  uccodes: Vec<CharcodeEntry>,
+  sfcodes: Vec<CharcodeEntry>,
+  delcodes: Vec<CharcodeEntry>,
+  mathcodes: Vec<CharcodeEntry>,
 
-  match table {
-    "V" => generate_value(&key, data),
-    "M" => generate_meaning(&key, data),
-    _ => Ok(None),
+  // Meaning table
+  let_defs: Vec<TokenEntry>,
+  expandables: Vec<ExpandEntry>,
+
+  // Token pools (flattened)
+  value_tokens: Vec<TokData>,
+  expand_tokens: Vec<TokData>,
+}
+
+impl DumpData {
+  fn total_entries(&self) -> usize {
+    self.bools.len()
+      + self.ints.len()
+      + self.strings.len()
+      + self.dims.len()
+      + self.glues.len()
+      + self.mudims.len()
+      + self.muglues.len()
+      + self.charcodes.len()
+      + self.catcode_vals.len()
+      + self.single_tokens.len()
+      + self.token_lists.len()
+      + self.nones.len()
+      + self.vecdeques.len()
+      + self.catcodes.len()
+      + self.lccodes.len()
+      + self.uccodes.len()
+      + self.sfcodes.len()
+      + self.delcodes.len()
+      + self.mathcodes.len()
+      + self.let_defs.len()
+      + self.expandables.len()
   }
 }
 
-/// Generate a value assignment statement.
-fn generate_value(key: &str, data: &str) -> Result<Option<String>, String> {
-  if should_skip_value(key) {
-    return Ok(None);
+/// Parse dump content into categorized entries.
+fn parse_dump(content: &str) -> DumpData {
+  let mut data = DumpData::default();
+
+  for line in content.lines() {
+    let line = line.trim();
+    if line.is_empty() || line.starts_with('#') {
+      continue;
+    }
+    let parts: Vec<&str> = line.splitn(3, '\t').collect();
+    if parts.len() < 2 {
+      continue;
+    }
+    let table = parts[0];
+    let key = url_decode(parts[1]);
+    let rest = if parts.len() > 2 { parts[2] } else { "" };
+
+    match table {
+      "V" => parse_value(&mut data, &key, rest),
+      "M" => parse_meaning(&mut data, &key, rest),
+      "C" => {
+        let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
+        if val_parts.len() >= 2 {
+          if let Ok(v) = val_parts[1].parse::<u8>() {
+            data.catcodes.push(CatcodeEntry { key, val: v });
+          }
+        }
+      }
+      "LC" => {
+        let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
+        if val_parts.len() >= 2 {
+          if let Ok(v) = val_parts[1].parse::<u16>() {
+            data.lccodes.push(CharcodeEntry { key, val: v });
+          }
+        }
+      }
+      "UC" => {
+        let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
+        if val_parts.len() >= 2 {
+          if let Ok(v) = val_parts[1].parse::<u16>() {
+            data.uccodes.push(CharcodeEntry { key, val: v });
+          }
+        }
+      }
+      "SC" => {
+        let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
+        if val_parts.len() >= 2 {
+          if let Ok(v) = val_parts[1].parse::<u16>() {
+            data.sfcodes.push(CharcodeEntry { key, val: v });
+          }
+        }
+      }
+      "DC" => {
+        let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
+        if val_parts.len() >= 2 {
+          if let Ok(v) = val_parts[1].parse::<u16>() {
+            data.delcodes.push(CharcodeEntry { key, val: v });
+          }
+        }
+      }
+      "MC" => {
+        let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
+        if val_parts.len() >= 2 {
+          if let Ok(v) = val_parts[1].parse::<u16>() {
+            data.mathcodes.push(CharcodeEntry { key, val: v });
+          }
+        }
+      }
+      _ => {} // Skip unknown tables
+    }
   }
 
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
+  data
+}
+
+fn parse_value(data: &mut DumpData, key: &str, rest: &str) {
+  // Skip \ver@ and other runtime-specific entries
+  if key.starts_with("\\ver@") || should_skip_value(key) {
+    return;
+  }
+  let parts: Vec<&str> = rest.splitn(2, '\t').collect();
   if parts.is_empty() {
-    return Ok(None);
+    return;
   }
+  let val_data = parts.get(1).copied().unwrap_or("");
 
-  let key_lit = rust_escape(key);
-  let value_expr = match parts[0] {
-    "N" => "Stored::None".to_string(),
-    "B" => {
-      let v = parts.get(1).map(|s| *s == "1").unwrap_or(false);
-      format!("Stored::Bool({})", v)
-    }
+  match parts[0] {
+    "N" => data.nones.push(key.to_string()),
+    "B" => data.bools.push(BoolEntry {
+      key: key.to_string(),
+      val: val_data == "1",
+    }),
     "I" => {
-      let n: i64 = parts.get(1).unwrap_or(&"0").parse().unwrap_or(0);
-      format!("Stored::Int({})", n)
-    }
-    "S" => {
-      let s = url_decode(parts.get(1).unwrap_or(&""));
-      format!("Stored::from({})", rust_escape(&s))
-    }
-    "CH" => {
-      let n: u16 = parts.get(1).unwrap_or(&"0").parse().unwrap_or(0);
-      format!("Stored::Charcode({})", n)
-    }
-    "CC" => {
-      let n: u8 = parts.get(1).unwrap_or(&"0").parse().unwrap_or(0);
-      format!("Stored::Catcode(Catcode::from({}))", n)
-    }
-    "T" => {
-      let tok_s = parts.get(1).unwrap_or(&"");
-      match generate_token_expr(tok_s) {
-        Some(expr) => format!("Stored::Token({})", expr),
-        None => return Ok(None),
+      if let Ok(v) = val_data.parse::<i64>() {
+        data.ints.push(IntEntry { key: key.to_string(), val: v });
       }
     }
-    "TK" => {
-      let tok_s = parts.get(1).unwrap_or(&"");
-      if tok_s.is_empty() {
-        "Stored::Tokens(Tokens::default())".to_string()
-      } else {
-        let tok_exprs: Vec<String> = tok_s.split(',').filter_map(generate_token_expr).collect();
-        format!("Stored::Tokens(Tokens::from(vec![{}]))", tok_exprs.join(", "))
+    "S" => data.strings.push(StrEntry {
+      key: key.to_string(),
+      val: url_decode(val_data),
+    }),
+    "CH" => {
+      if let Ok(v) = val_data.parse::<u16>() {
+        data.charcodes.push(CharcodeEntry { key: key.to_string(), val: v });
+      }
+    }
+    "CC" => {
+      if let Ok(v) = val_data.parse::<u8>() {
+        data.catcode_vals.push(CatcodeEntry { key: key.to_string(), val: v });
       }
     }
     "D" => {
-      let n: i64 = parts.get(1).unwrap_or(&"0").parse().unwrap_or(0);
-      format!("Stored::Dimension(Dimension({}))", n)
+      if let Ok(v) = val_data.parse::<i64>() {
+        data.dims.push(DimEntry { key: key.to_string(), val: v });
+      }
     }
     "G" => {
-      let g = parts.get(1).unwrap_or(&"0");
-      generate_glue_expr("Glue", g)
+      if let Some(g) = parse_glue_data(key, val_data) {
+        data.glues.push(g);
+      }
     }
     "MD" => {
-      let n: i64 = parts.get(1).unwrap_or(&"0").parse().unwrap_or(0);
-      format!("Stored::MuDimension(MuDimension({}))", n)
+      if let Ok(v) = val_data.parse::<i64>() {
+        data.mudims.push(DimEntry { key: key.to_string(), val: v });
+      }
     }
     "MG" => {
-      let g = parts.get(1).unwrap_or(&"0");
-      generate_glue_expr("MuGlue", g)
-    }
-    "VD" => "Stored::VecDequeStored(VecDeque::new())".to_string(),
-    _ => return Ok(None),
-  };
-
-  Ok(Some(format!(
-    "state::assign_value({}, {}, Some(Scope::Global));",
-    key_lit, value_expr
-  )))
-}
-
-/// Generate a meaning (definition) statement.
-fn generate_meaning(key: &str, data: &str) -> Result<Option<String>, String> {
-  let key_lit = rust_escape(key);
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.is_empty() {
-    return Ok(None);
-  }
-
-  match parts[0] {
-    "N" => Ok(None), // Skip None meanings
-    "E" => {
-      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS
-      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
-      if eparts.len() < 4 {
-        return Ok(None);
+      if let Some(g) = parse_glue_data(key, val_data) {
+        data.muglues.push(g);
       }
-      let nargs: usize = eparts[1].parse().unwrap_or(0);
-      let flags = eparts[2];
-      let tok_data = eparts[3];
-
-      let is_long = flags.contains('L');
-      let is_protected = flags.contains('P');
-
-      let tok_exprs: Vec<String> = tok_data.split(',').filter_map(generate_token_expr).collect();
-      if tok_exprs.is_empty() && !tok_data.is_empty() {
-        return Ok(None);
-      }
-
-      let mut code = String::new();
-      code.push_str(&format!(
-        "{{ let cs = Token {{ text: arena::pin({}), code: Catcode::CS }}; ",
-        key_lit
-      ));
-      code.push_str("if !state::has_meaning(&cs) { ");
-      code.push_str(&format!(
-        "let toks = Tokens::from(vec![{}]); ",
-        tok_exprs.join(", ")
-      ));
-
-      // Build parameter spec
-      if nargs > 0 {
-        code.push_str(&format!(
-          "let params = parse_parameters(&{}, &cs, false).ok(); ",
-          rust_escape(&"{}".repeat(nargs))
-        ));
-      } else {
-        code.push_str("let params = None; ");
-      }
-
-      code.push_str(&format!(
-        "let opts = Some(ExpandableOptions {{ long: {}, protected: {}, nopack_parameters: true, ..ExpandableOptions::default() }}); ",
-        is_long, is_protected
-      ));
-      code.push_str(
-        "if let Ok(exp) = Expandable::new(cs, params, Some(toks.into()), opts) { \
-         state::install_definition(exp, Some(Scope::Global)); } ",
-      );
-      code.push_str("} }");
-
-      Ok(Some(code))
     }
     "T" => {
-      // Token meaning (let-assignment)
-      let tok_s = parts.get(1).unwrap_or(&"");
-      match generate_token_expr(tok_s) {
-        Some(tok_expr) => {
-          let code = format!(
-            "{{ let cs = Token {{ text: arena::pin({}), code: Catcode::CS }}; \
-             if !state::has_meaning(&cs) {{ \
-             state::assign_meaning(&cs, {}, Some(Scope::Global)); }} }}",
-            key_lit, tok_expr
-          );
-          Ok(Some(code))
-        }
-        None => Ok(None),
+      if let Some((cc, text)) = parse_tok(val_data) {
+        data.single_tokens.push(TokenEntry {
+          key: key.to_string(),
+          cc,
+          text,
+        });
       }
     }
-    _ => Ok(None),
+    "TK" => {
+      if val_data.is_empty() {
+        data.token_lists.push(TokenListEntry {
+          key: key.to_string(),
+          tok_start: data.value_tokens.len() as u32,
+          tok_count: 0,
+        });
+      } else {
+        let start = data.value_tokens.len() as u32;
+        let mut count = 0u16;
+        for tok_s in val_data.split(',') {
+          if let Some((cc, text)) = parse_tok(tok_s) {
+            data.value_tokens.push(TokData { cc, text });
+            count += 1;
+          }
+        }
+        data.token_lists.push(TokenListEntry {
+          key: key.to_string(),
+          tok_start: start,
+          tok_count: count,
+        });
+      }
+    }
+    "VD" => data.vecdeques.push(key.to_string()),
+    _ => {}
   }
 }
 
-/// Generate a Rust Token expression from "CC:TEXT" format.
-fn generate_token_expr(s: &str) -> Option<String> {
-  let (cc_str, text) = s.split_once(':')?;
-  let cc: u8 = cc_str.parse().ok()?;
-  let decoded = url_decode(text);
-  Some(format!(
-    "Token {{ text: arena::pin({}), code: Catcode::from({}) }}",
-    rust_escape(&decoded),
-    cc
-  ))
+fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
+  let parts: Vec<&str> = rest.splitn(2, '\t').collect();
+  if parts.is_empty() {
+    return;
+  }
+  match parts[0] {
+    "N" => {} // Skip None meanings
+    "E" => {
+      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
+      if eparts.len() < 4 {
+        return;
+      }
+      let nargs: u8 = eparts[1].parse().unwrap_or(0);
+      let flags_str = eparts[2];
+      let tok_data = eparts[3];
+
+      let mut flags: u8 = 0;
+      if flags_str.contains('L') {
+        flags |= 1;
+      }
+      if flags_str.contains('P') {
+        flags |= 2;
+      }
+
+      let start = data.expand_tokens.len() as u32;
+      let mut count = 0u16;
+      if !tok_data.is_empty() {
+        for tok_s in tok_data.split(',') {
+          if let Some((cc, text)) = parse_tok(tok_s) {
+            data.expand_tokens.push(TokData { cc, text });
+            count += 1;
+          }
+        }
+      }
+      data.expandables.push(ExpandEntry {
+        cs: key.to_string(),
+        nargs,
+        flags,
+        tok_start: start,
+        tok_count: count,
+      });
+    }
+    "T" => {
+      let tok_s = parts.get(1).unwrap_or(&"");
+      if let Some((cc, text)) = parse_tok(tok_s) {
+        data.let_defs.push(TokenEntry { key: key.to_string(), cc, text });
+      }
+    }
+    _ => {}
+  }
 }
 
-/// Generate a Glue or MuGlue expression from serialized format.
-fn generate_glue_expr(type_name: &str, s: &str) -> String {
-  let mut skip = "0".to_string();
-  let mut plus = "None".to_string();
-  let mut pfill = "None".to_string();
-  let mut minus = "None".to_string();
-  let mut mfill = "None".to_string();
+fn parse_tok(s: &str) -> Option<(u8, String)> {
+  let (cc_str, text) = s.split_once(':')?;
+  let cc: u8 = cc_str.parse().ok()?;
+  Some((cc, url_decode(text)))
+}
+
+fn parse_glue_data(key: &str, s: &str) -> Option<GlueEntry> {
+  let mut skip = 0i64;
+  let mut plus = None;
+  let mut pfill = 0u8;
+  let mut minus = None;
+  let mut mfill = 0u8;
 
   for (i, part) in s.split(',').enumerate() {
     if i == 0 {
-      skip = part.to_string();
+      skip = part.parse().ok()?;
     } else if let Some(rest) = part.strip_prefix("pf") {
-      pfill = format!("FillCode::new({})", rest);
+      pfill = rest.parse().unwrap_or(0);
     } else if let Some(rest) = part.strip_prefix('p') {
-      plus = format!("Some({})", rest);
+      plus = Some(rest.parse().ok()?);
     } else if let Some(rest) = part.strip_prefix("mf") {
-      mfill = format!("FillCode::new({})", rest);
+      mfill = rest.parse().unwrap_or(0);
     } else if let Some(rest) = part.strip_prefix('m') {
-      minus = format!("Some({})", rest);
+      minus = Some(rest.parse().ok()?);
     }
   }
 
-  let stored_type = if type_name == "Glue" {
-    "Stored::Glue"
-  } else {
-    "Stored::MuGlue"
-  };
+  Some(GlueEntry { key: key.to_string(), skip, plus, pfill, minus, mfill })
+}
 
-  format!(
-    "{}({} {{ skip: {}, plus: {}, pfill: {}, minus: {}, mfill: {} }})",
-    stored_type, type_name, skip, plus, pfill, minus, mfill
+// ---- Code generation ----
+
+/// Generate a Rust source file with typed static data tables from a text dump.
+/// Every entry is compiler-checked. Zero runtime parsing needed.
+pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String> {
+  let content =
+    std::fs::read_to_string(dump_path).map_err(|e| format!("Failed to read dump: {}", e))?;
+
+  let data = parse_dump(&content);
+  let total = data.total_entries();
+
+  let mut out =
+    std::fs::File::create(output_path).map_err(|e| format!("Failed to create output: {}", e))?;
+
+  // Header
+  writeln!(
+    out,
+    "//! Auto-generated kernel dump — static data tables.\n\
+     //! DO NOT EDIT — regenerate with: `cargo run --release --bin latexml_oxide -- --init=latex.ltx`\n\
+     //!\n\
+     //! {total} entries, compiler-checked at build time. Zero runtime parsing.\n\
+     #![allow(unused)]\n"
   )
-}
+  .map_err(we)?;
 
-const MODULE_HEADER: &str = r#"//! Auto-generated LaTeX kernel dump.
-//! Generated by dump_codegen from a latexml-oxide format dump.
-//! DO NOT EDIT — regenerate with `latexml_oxide --init=latex.ltx --codegen`.
-#![allow(unused)]
+  // Imports
+  writeln!(
+    out,
+    "use std::collections::VecDeque;\n\
+     \n\
+     use latexml_core::common::arena;\n\
+     use latexml_core::common::def_parser::parse_parameters;\n\
+     use latexml_core::common::dimension::Dimension;\n\
+     use latexml_core::common::glue::{{FillCode, Glue}};\n\
+     use latexml_core::common::mudimension::MuDimension;\n\
+     use latexml_core::common::muglue::MuGlue;\n\
+     use latexml_core::common::store::Stored;\n\
+     use latexml_core::definition::expandable::{{Expandable, ExpandableOptions}};\n\
+     use latexml_core::state;\n\
+     use latexml_core::state::Scope;\n\
+     use latexml_core::token::{{Catcode, Token}};\n\
+     use latexml_core::tokens::Tokens;\n"
+  )
+  .map_err(we)?;
 
-use std::collections::VecDeque;
+  // Local struct for expandable definitions
+  writeln!(
+    out,
+    "struct ExpandDef {{\n\
+     {s}cs: &'static str,\n\
+     {s}nargs: u8,\n\
+     {s}flags: u8, // bit 0 = long, bit 1 = protected\n\
+     {s}tok_start: u32,\n\
+     {s}tok_count: u16,\n\
+     }}\n",
+    s = "  "
+  )
+  .map_err(we)?;
 
-use latexml_core::common::arena;
-use latexml_core::common::dimension::Dimension;
-use latexml_core::common::glue::{FillCode, Glue};
-use latexml_core::common::mudimension::MuDimension;
-use latexml_core::common::muglue::MuGlue;
-use latexml_core::common::store::Stored;
-use latexml_core::definition::expandable::{Expandable, ExpandableOptions};
-use latexml_core::state;
-use latexml_core::state::Scope;
-use latexml_core::token::{Catcode, Token};
-use latexml_core::tokens::Tokens;
+  // Emit static arrays
+  emit_bool_array(&mut out, "BOOL_VALUES", &data.bools)?;
+  emit_int_array(&mut out, "INT_VALUES", &data.ints)?;
+  emit_str_array(&mut out, "STRING_VALUES", &data.strings)?;
+  emit_dim_array(&mut out, "DIMENSION_VALUES", &data.dims)?;
+  emit_glue_array(&mut out, "GLUE_VALUES", &data.glues)?;
+  emit_dim_array(&mut out, "MUDIM_VALUES", &data.mudims)?;
+  emit_glue_array(&mut out, "MUGLUE_VALUES", &data.muglues)?;
+  emit_charcode_array(&mut out, "CHARCODE_VALUES", &data.charcodes)?;
+  emit_catcode_array(&mut out, "CATCODE_VALUE_ENTRIES", &data.catcode_vals)?;
+  emit_token_array(&mut out, "SINGLE_TOKEN_VALUES", &data.single_tokens)?;
+  emit_none_array(&mut out, "NONE_VALUES", &data.nones)?;
+  emit_none_array(&mut out, "VECDEQUE_VALUES", &data.vecdeques)?;
 
-pub fn load_definitions() -> latexml_core::common::error::Result<()> {
-"#;
+  // Token list values (V/TK) — entries reference VALUE_TOKENS pool
+  emit_token_list_array(&mut out, "TOKEN_LIST_VALUES", &data.token_lists)?;
+  emit_tok_pool(&mut out, "VALUE_TOKENS", &data.value_tokens)?;
 
-const MODULE_FOOTER: &str = r#"  Ok(())
-}
-"#;
+  // Code tables
+  emit_catcode_array(&mut out, "CATCODE_TABLE", &data.catcodes)?;
+  emit_charcode_array(&mut out, "LCCODE_TABLE", &data.lccodes)?;
+  emit_charcode_array(&mut out, "UCCODE_TABLE", &data.uccodes)?;
+  emit_charcode_array(&mut out, "SFCODE_TABLE", &data.sfcodes)?;
+  emit_charcode_array(&mut out, "DELCODE_TABLE", &data.delcodes)?;
+  emit_charcode_array(&mut out, "MATHCODE_TABLE", &data.mathcodes)?;
 
-/// Generate a compact Rust module that embeds the dump as a static string
-/// and loads it via the existing dump_reader at startup.
-/// This approach is much faster to compile than 20K individual Rust statements.
-pub fn generate_embed_rs(dump_path: &Path, output_dir: &Path) -> Result<usize, String> {
-  // Copy the dump file to the output directory
-  let dump_filename = dump_path.file_name()
-    .ok_or("Invalid dump filename")?
-    .to_string_lossy();
-  let dump_dest = output_dir.join(&*dump_filename);
-  std::fs::copy(dump_path, &dump_dest)
-    .map_err(|e| format!("Failed to copy dump: {}", e))?;
+  // Meaning table
+  emit_token_array(&mut out, "LET_DEFINITIONS", &data.let_defs)?;
+  emit_expand_array(&mut out, "EXPANDABLE_DEFS", &data.expandables)?;
+  emit_tok_pool(&mut out, "EXPAND_TOKENS", &data.expand_tokens)?;
 
-  // Generate the wrapper module
-  let rs_path = output_dir.join("latex_dump.rs");
-  let mut out = std::fs::File::create(&rs_path)
-    .map_err(|e| format!("Failed to create: {}", e))?;
+  // load_definitions function
+  emit_load_fn(&mut out, &data)?;
 
-  let code = format!(
-    r#"//! Auto-generated LaTeX kernel dump loader.
-//! Generated by dump_codegen. DO NOT EDIT.
-//! Regenerate with: `latexml_oxide --init=latex.ltx` then `--codegen=...`
-
-/// The embedded kernel dump data.
-const DUMP_DATA: &str = include_str!("{}");
-
-/// Load the precompiled LaTeX kernel definitions into the global state.
-/// This replaces processing latex.ltx at every test run.
-pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
-  latexml_core::dump_reader::load_from_str(DUMP_DATA)
-    .map_err(|e| latexml_core::common::error::Error::from(e))?;
-  Ok(())
-}}
-"#,
-    dump_filename
+  log::info!(
+    "[dump_codegen] Generated {} entries to {} (static data tables)",
+    total,
+    output_path.display()
   );
 
-  write!(out, "{}", code).map_err(|e| format!("Write error: {}", e))?;
+  Ok(total)
+}
 
-  // Count entries in the dump for reporting
-  let content = std::fs::read_to_string(dump_path)
-    .map_err(|e| format!("Failed to read dump: {}", e))?;
-  let count = content.lines().filter(|l| !l.is_empty() && !l.starts_with('#')).count();
+fn we(e: std::io::Error) -> String {
+  format!("Write error: {}", e)
+}
 
-  log::info!("[dump_codegen] Generated embed module at {}", rs_path.display());
-  Ok(count)
+fn emit_bool_array(out: &mut std::fs::File, name: &str, entries: &[BoolEntry]) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, bool)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), e.val).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_int_array(out: &mut std::fs::File, name: &str, entries: &[IntEntry]) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, i64)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), e.val).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_str_array(out: &mut std::fs::File, name: &str, entries: &[StrEntry]) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, &str)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), rust_escape(&e.val)).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_dim_array(out: &mut std::fs::File, name: &str, entries: &[DimEntry]) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, i64)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), e.val).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_glue_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[GlueEntry],
+) -> Result<(), String> {
+  // (key, skip, plus, pfill, minus, mfill)
+  writeln!(out, "static {name}: &[(&str, i64, Option<i64>, u8, Option<i64>, u8)] = &[").map_err(we)?;
+  for e in entries {
+    let plus_s = match e.plus {
+      Some(v) => format!("Some({v})"),
+      None => "None".to_string(),
+    };
+    let minus_s = match e.minus {
+      Some(v) => format!("Some({v})"),
+      None => "None".to_string(),
+    };
+    writeln!(
+      out,
+      "  ({}, {}, {}, {}, {}, {}),",
+      rust_escape(&e.key),
+      e.skip,
+      plus_s,
+      e.pfill,
+      minus_s,
+      e.mfill
+    )
+    .map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_charcode_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[CharcodeEntry],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, u16)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), e.val).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_catcode_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[CatcodeEntry],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, u8)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), e.val).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_token_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[TokenEntry],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, u8, &str)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}, {}),", rust_escape(&e.key), e.cc, rust_escape(&e.text)).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_none_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[String],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[&str] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  {},", rust_escape(e)).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_token_list_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[TokenListEntry],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, u32, u16)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}, {}),", rust_escape(&e.key), e.tok_start, e.tok_count).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_tok_pool(
+  out: &mut std::fs::File,
+  name: &str,
+  tokens: &[TokData],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(u8, &str)] = &[").map_err(we)?;
+  for t in tokens {
+    writeln!(out, "  ({}, {}),", t.cc, rust_escape(&t.text)).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+fn emit_expand_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[ExpandEntry],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[ExpandDef] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(
+      out,
+      "  ExpandDef {{ cs: {}, nargs: {}, flags: {}, tok_start: {}, tok_count: {} }},",
+      rust_escape(&e.cs),
+      e.nargs,
+      e.flags,
+      e.tok_start,
+      e.tok_count
+    )
+    .map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+/// Emit the load_definitions() function that iterates over all static arrays.
+fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> {
+  let s = "  ";
+  writeln!(
+    out,
+    "/// Load the precompiled kernel definitions into the global state.\n\
+     /// Perl equivalent: LoadFormat → LoadPool(format_dump)\n\
+     pub fn load_definitions() -> latexml_core::common::error::Result<()> {{"
+  )
+  .map_err(we)?;
+
+  // Bool values
+  if !data.bools.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in BOOL_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::Bool(val), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Int values
+  if !data.ints.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in INT_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::Int(val), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // String values
+  if !data.strings.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in STRING_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::from(val), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Dimension values
+  if !data.dims.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in DIMENSION_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::Dimension(Dimension(val)), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Glue values
+  if !data.glues.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, skip, plus, pfill, minus, mfill) in GLUE_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::Glue(Glue {{\n\
+       {s}{s}{s}skip, plus, pfill: FillCode::new(pfill as usize),\n\
+       {s}{s}{s}minus, mfill: FillCode::new(mfill as usize),\n\
+       {s}{s}}}), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // MuDimension values
+  if !data.mudims.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in MUDIM_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::MuDimension(MuDimension(val)), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // MuGlue values
+  if !data.muglues.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, skip, plus, pfill, minus, mfill) in MUGLUE_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::MuGlue(MuGlue {{\n\
+       {s}{s}{s}skip, plus, pfill: FillCode::new(pfill as usize),\n\
+       {s}{s}{s}minus, mfill: FillCode::new(mfill as usize),\n\
+       {s}{s}}}), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Charcode values
+  if !data.charcodes.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in CHARCODE_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::Charcode(val), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Catcode values (in value table, not catcode table)
+  if !data.catcode_vals.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in CATCODE_VALUE_ENTRIES {{\n\
+       {s}{s}state::assign_value(key, Stored::Catcode(Catcode::from(val)), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Single token values
+  if !data.single_tokens.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, cc, text) in SINGLE_TOKEN_VALUES {{\n\
+       {s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc) }};\n\
+       {s}{s}state::assign_value(key, Stored::Token(tok), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Token list values
+  if !data.token_lists.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, tok_start, tok_count) in TOKEN_LIST_VALUES {{\n\
+       {s}{s}let toks: Vec<Token> = VALUE_TOKENS[tok_start as usize..][..tok_count as usize]\n\
+       {s}{s}{s}.iter()\n\
+       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc) }})\n\
+       {s}{s}{s}.collect();\n\
+       {s}{s}state::assign_value(key, Stored::Tokens(Tokens::from(toks)), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // None values
+  if !data.nones.is_empty() {
+    writeln!(
+      out,
+      "{s}for &key in NONE_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::None, Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // VecDeque values
+  if !data.vecdeques.is_empty() {
+    writeln!(
+      out,
+      "{s}for &key in VECDEQUE_VALUES {{\n\
+       {s}{s}state::assign_value(key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Catcode table
+  if !data.catcodes.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key, val) in CATCODE_TABLE {{\n\
+       {s}{s}if let Some(ch) = key.chars().next() {{\n\
+       {s}{s}{s}state::assign_catcode(ch, Catcode::from(val), Some(Scope::Global));\n\
+       {s}{s}}}\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // LC/UC/SF/DC/MC code tables
+  for (array_name, fn_name) in [
+    ("LCCODE_TABLE", "assign_lccode"),
+    ("UCCODE_TABLE", "assign_uccode"),
+    ("SFCODE_TABLE", "assign_sfcode"),
+    ("DELCODE_TABLE", "assign_delcode"),
+    ("MATHCODE_TABLE", "assign_mathcode"),
+  ] {
+    let entries_exist = match array_name {
+      "LCCODE_TABLE" => !data.lccodes.is_empty(),
+      "UCCODE_TABLE" => !data.uccodes.is_empty(),
+      "SFCODE_TABLE" => !data.sfcodes.is_empty(),
+      "DELCODE_TABLE" => !data.delcodes.is_empty(),
+      "MATHCODE_TABLE" => !data.mathcodes.is_empty(),
+      _ => false,
+    };
+    if entries_exist {
+      writeln!(
+        out,
+        "{s}for &(key, val) in {array_name} {{\n\
+         {s}{s}if let Some(ch) = key.chars().next() {{\n\
+         {s}{s}{s}state::{fn_name}(ch, val, Some(Scope::Global));\n\
+         {s}{s}}}\n\
+         {s}}}"
+      )
+      .map_err(we)?;
+    }
+  }
+
+  // Let definitions (M/T)
+  if !data.let_defs.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(cs_name, cc, text) in LET_DEFINITIONS {{\n\
+       {s}{s}let cs = Token {{ text: arena::pin(cs_name), code: Catcode::CS }};\n\
+       {s}{s}if !state::has_meaning(&cs) {{\n\
+       {s}{s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc) }};\n\
+       {s}{s}{s}state::assign_meaning(&cs, tok, Some(Scope::Global));\n\
+       {s}{s}}}\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Expandable definitions (M/E) — the bulk (77% of entries)
+  if !data.expandables.is_empty() {
+    writeln!(
+      out,
+      "{s}for def in EXPANDABLE_DEFS {{\n\
+       {s}{s}let cs = Token {{ text: arena::pin(def.cs), code: Catcode::CS }};\n\
+       {s}{s}if state::has_meaning(&cs) {{ continue; }}\n\
+       {s}{s}let toks: Vec<Token> = EXPAND_TOKENS[def.tok_start as usize..][..def.tok_count as usize]\n\
+       {s}{s}{s}.iter()\n\
+       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc) }})\n\
+       {s}{s}{s}.collect();\n\
+       {s}{s}let params = if def.nargs > 0 {{\n\
+       {s}{s}{s}let proto = \"{{}}\".repeat(def.nargs as usize);\n\
+       {s}{s}{s}parse_parameters(&proto, &cs, false).ok().flatten()\n\
+       {s}{s}}} else {{ None }};\n\
+       {s}{s}let opts = Some(ExpandableOptions {{\n\
+       {s}{s}{s}long: def.flags & 1 != 0,\n\
+       {s}{s}{s}protected: def.flags & 2 != 0,\n\
+       {s}{s}{s}nopack_parameters: true,\n\
+       {s}{s}{s}..ExpandableOptions::default()\n\
+       {s}{s}}});\n\
+       {s}{s}if let Ok(exp) = Expandable::new(cs, params, Some(Tokens::from(toks).into()), opts) {{\n\
+       {s}{s}{s}state::install_definition(exp, Some(Scope::Global));\n\
+       {s}{s}}}\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  writeln!(out, "\n{s}Ok(())\n}}").map_err(we)?;
+
+  Ok(())
 }

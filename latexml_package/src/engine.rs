@@ -76,5 +76,7 @@ mod latex_hook;
 mod latex_other_in_appendices;
 mod latex_semi_undocumented;
 mod latex_tables_3;
-// Precompiled kernel dump (auto-generated, loads LaTeX definitions from dump)
+// Precompiled kernel dumps (auto-generated, loads definitions from format dumps)
+// Perl equivalent: LoadFormat('plain') / LoadFormat('latex')
+pub mod plain_dump;
 pub mod latex_dump;

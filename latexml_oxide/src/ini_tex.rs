@@ -87,7 +87,7 @@ pub fn dump_format(
 
   // Write to temp intermediate format, then codegen to .rs
   let tmp = format!("{}.tmp", dest);
-  let write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
+  let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
   let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(dest))?;
   let _ = std::fs::remove_file(&tmp);
 

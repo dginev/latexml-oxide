@@ -2,11 +2,17 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-29 (session 64). Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-29 (session 65). Only lists open gaps & TODOs; completed items live in git history.
 
 **Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 213/294 structural zero-diff (72%), 246/294 effective (84%)**.
 
 **NOTE:** Some "passing" tests (si, physics, mathtools, numprints) compare against low-quality Rust references far from Perl. These should be audited — tests should fail until bindings mature to Perl parity.
+
+**Session 65**: **Static data table kernel dump + Perl dump parity audit.**
+1. **dump_codegen rewrite**: Generates typed static arrays instead of embedded text. Every entry (21,906) is compiler-checked. Compile time: 19s (was OOM for imperative 20K statements). Static arrays in `.rodata` — LLVM does zero optimization work.
+2. **Infrastructure**: `build.rs` auto-creates no-op stubs for `latex_dump.rs`/`plain_dump.rs`. Both in `.gitignore` (dynamically generated). Module declarations for both in `engine.rs`. LoadFormat hooks ready in `tex.rs`/`latex.rs` (commented pending parity).
+3. **Perl dump parity audit**: Compared Perl `latex_dump.pool.ltxml` (25,585 lines) vs Rust (21,906 entries). Key gaps: 2,427 Let aliases (most target Primitives in compiled .rs), 685 CharDef, 382 Register, 222 Number. Sfcode/Glue match exactly. See task E subtasks E.5–E.11.
+4. **Loading blocked**: Enabling dump loading breaks expl3 hook system (partial state). Need `_loaded` flags (E.8) + conditional expl3 loading (E.9) + Let-to-Primitive aliases (E.7) before enabling.
 
 **Session 64**: **Font decode fix + RDF frontmatter + constructor close tag regex.**
 1. **Font decode**: Empty series/shape codes in FONT_SERIES/FONT_SHAPE now use `Font::default()` (matching Perl's `'' => {}`), and `decode_fontname` initializes with Perl's defaults (series='medium', shape='upright'). Fixes bold symbol fonts (cmbsy10) losing bold property. New zero-diff: plainfonts, bbold, sizes.
@@ -534,12 +540,26 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete), XML comment creation (session 62: raw libxml2 FFI).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 - [x] **H. expl3 full loading** — **FULLY FIXED (session 60)**: Removed l3file pre-definitions that caused `\cs_new:Npn` → `\msg_error:nnee` → `read_until` → `read_balanced` to consume 25K+ remaining lines of expl3-code.tex. All 36,765 lines now load completely. ALL expl3 modules available: l3skip, l3keys, l3keyval, l3box, l3coffin, l3color, l3fp, l3regex, l3cctab, l3text, l3legacy. xparse.tex: 3 errors → 0. Removed 34 lines of workarounds from expl3_sty.rs.
-- [ ] **I. "make formats" build step** — Embed+runtime approach works: `latex_dump.oxide` (3.4MB, 22K entries) embedded via `include_str!()`, loaded by `dump_reader::load_from_str()`. Zero-regression confirmed. **BLOCKER for full integration**: dump can't serialize primitive aliases (`\exp_after:wN` → `\expandafter`, `\tex_gdef:D` → `\gdef`, etc.) because primitives are closures. Loading dump before expl3 causes undefined primitive errors. **Fix needed**: either (a) generate primitive alias `\let` assignments as compiled Rust, (b) load expl3 bootstrap section separately, or (c) extend dump format to store alias targets by name. Current status: embed works for supplementary state but can't replace expl3 raw loading yet.
-- [ ] **E. Precompiled kernel dump → `_dump.rs` compile-time bindings** — `--init=latex.ltx` dumps full kernel (22395 entries, 0 errors — session 64). Infrastructure: dump_writer.rs, dump_reader.rs, dump_codegen.rs, ini_tex.rs. **Upgrade plan:**
-  1. **`build.rs` integration in `latexml_package`**: During compilation, attempt to run `--init=plain.tex` and `--init=latex.ltx` to generate `_dump.rs` precompiled files. Use `dump_codegen.rs` to produce Rust source. If the init file is not discoverable (kpsewhich can't find `plain.tex` or `latex.ltx`), generate an empty no-op stub with the same scaffold (empty `load_definitions()` function).
-  2. **Compile-time vs runtime**: The generated `_dump.rs` files should be compiled as native Rust definitions (not runtime text parsing). The `load_definitions()` function in each `_dump.rs` installs state values and macro definitions at compile time, matching Perl's `make formats` behavior.
-  3. **Fallback**: When a `_dump.rs` is not available (empty stub), fall back to the classic runtime loading path (raw TeX processing of plain.tex/latex.ltx). This matches Perl's behavior where format dumps are optional.
-  4. **Primitive alias blocker**: Dump can't serialize `\exp_after:wN → \expandafter` etc. because primitives are closures. Fix: generate `\let` assignments as compiled Rust in the `_dump.rs`.
+- [ ] **E. Precompiled kernel dump → `_dump.rs` compile-time bindings** — Session 65: **static data table codegen complete**. `dump_codegen.rs` generates typed static arrays (compiler-checked, 19s compile time, was OOM with imperative statements). `build.rs` auto-creates no-op stubs for `latex_dump.rs`/`plain_dump.rs`. Both files in `.gitignore`. LoadFormat hooks in `tex.rs`/`latex.rs` ready but commented out pending parity. **Subtasks:**
+  - [x] E.1 Static data table codegen (`dump_codegen::generate_rs`) — 21,906 entries in typed arrays
+  - [x] E.2 `build.rs` creates stubs when dump files don't exist
+  - [x] E.3 Both `plain_dump.rs` and `latex_dump.rs` module declarations + `.gitignore`
+  - [x] E.4 LoadFormat hooks in `tex.rs` (plain) and `latex.rs` (latex) — commented, ready to enable
+  - [ ] E.5 **Dump parity: serialize Number** — `Stored::Number(Number(i64))` not handled by `dump_writer`. 222 Perl entries missing. Trivial fix.
+  - [ ] E.6 **Dump parity: serialize Register/CharDef** — 685 CharDef + 382 Register in Perl. Serialize `register_type`, `value`, `mathglyph`, `role`. Closures (getter/setter) can't be serialized — must come from compiled `.rs` code.
+  - [ ] E.7 **Dump parity: serialize Let-to-Primitive aliases** — 2,427 Perl `Lt()` entries. Most target Primitives/Conditionals already in compiled `.rs`. Dump should store `\let \foo \bar` as name-to-name alias, resolved at load time by looking up `\bar` in meaning table. Key for expl3 aliases (`\exp_after:wN` → `\expandafter`).
+  - [ ] E.8 **Include `_loaded` flags in dump** — Currently in SKIP_VALUES. Remove `_loaded` for raw TeX files the dump replaces (`expl3-code.tex_loaded`, `latex.ltx_loaded`, etc.). Keep excluding `.sty` binding `_loaded` flags.
+  - [ ] E.9 **Conditional expl3 loading** — When dump sets `expl3-code.tex_loaded=1`, `expl3_sty.rs` must skip 36K-line raw loading. Check `lookup_bool("expl3-code.tex_loaded")` before `input_definitions`.
+  - [ ] E.10 **Enable LoadFormat hooks** — Uncomment calls in `tex.rs`/`latex.rs` once E.5–E.9 complete. Verify all 320 tests still pass.
+  - [ ] E.11 **"make formats" automation** — Makefile/xtask: `cargo build --release && cargo run --release -- --init=plain.tex && cargo run --release -- --init=latex.ltx && cargo build --release`. Circular dep requires two-phase build (like Perl's `make formats`).
+- [ ] **I. Dump Perl parity audit** — Comparison (session 65): Perl 25,585 entries vs Rust 21,906. Key gaps:
+  - Sfcode/Delcode: **MATCH** (70/9 vs 70/10)
+  - Glue/MuGlue: **MATCH** (43/7 vs 43/6)
+  - Catcode table: Perl 855 vs Rust 189 (Perl stores all 256 ASCII chars, Rust only non-default)
+  - Lccode/Uccode: Perl 1035/1028 vs Rust 449/445 (same reason — Perl stores identity mappings)
+  - **Missing types**: Number (222), Register (382), CharDef (685), FontDef (21), Font (32)
+  - **Missing Let aliases**: 2,427 entries — most target Primitives already in compiled `.rs` code
+  - See E.5–E.7 for fix plan.
 - [ ] **F. Post-processing pipeline** — Last step. 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [ ] **L. Arena/SymStr migration audit** — Final step before post-processing. Audit all `arena::to_string()` calls and `String::clone()` calls across the codebase. Replace with: (1) `SymStr` methods where strings are already interned, (2) `arena::with()` family to avoid allocations, (3) `arena::pin()` to convert frequently-used Strings to SymStr. Goal: eliminate unnecessary heap allocations by leveraging the arena's zero-cost interned strings.
 - [ ] **N. Mathtools parsing performance** — The mathtools_test has slowed down considerably due to high ambiguity in math parsing. **Action plan:**
