@@ -2,11 +2,16 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-29 (session 63). Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-29 (session 64). Only lists open gaps & TODOs; completed items live in git history.
 
-**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 124/294 structural zero-diff (42%)**.
+**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 213/294 structural zero-diff (72%), 246/294 effective (84%)**.
 
 **NOTE:** Some "passing" tests (si, physics, mathtools, numprints) compare against low-quality Rust references far from Perl. These should be audited — tests should fail until bindings mature to Perl parity.
+
+**Session 64**: **Font decode fix + RDF frontmatter + constructor close tag regex.**
+1. **Font decode**: Empty series/shape codes in FONT_SERIES/FONT_SHAPE now use `Font::default()` (matching Perl's `'' => {}`), and `decode_fontname` initializes with Perl's defaults (series='medium', shape='upright'). Fixes bold symbol fonts (cmbsy10) losing bold property. New zero-diff: plainfonts, bbold, sizes.
+2. **RDF frontmatter**: Preamble `\lxRDF` stores in frontmatter hash under `"ltx:rdf"` key (matching Perl), not direct `after_open` insertion. New zero-diff: aliceblog.
+3. **Constructor close tag regex**: Removed trailing `\s*` from CLOSE_TAG_RE_STR matching Perl's `s|^</$QNAME_RE\s*>||so`. Converted raw string templates (tex_scripts.rs, figures) to single-line format. New zero-diff: IEEE.
 
 **Session 63**: **Rewrite system API completion + markXMNodeVisibility audit + speculative function application design decision.**
 1. **Rewrite system (J) R4/R5/R6/R13**: Test operator now uses `TestClosure` pattern variant returning `Result<usize>` and gates subsequent clauses (0 = skip). Regexp now traverses `descendant-or-self::text()` nodes with `RegexpClosure` for in-place substitution. MultiSelect uses `MultiSelectPatterns` with per-sub-pattern `(xpath, nnodes, wilds)` tuples. `markXMNodeVisibility` verified complete and attribute values aligned with Perl ("1" not "true").
@@ -403,7 +408,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored (all tikz/pgf). **Perl-vs-Rust parity: 119/306 exact zero-diff (39%), ~210/306 effective parity (69%) when including intentional-only divergences (searchpaths PI, %\n comments, cdots role, xml:id renumbering).** 125 total conversion errors. Session 61 (5 commits): cleanupScripts, \lxDeclare XMApp matching, listing colors, siunitx powers, babel \l@nil.
+**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored (all tikz/pgf). **Perl-vs-Rust parity: 213/294 exact zero-diff (72%), 246/294 effective parity (84%) when including intentional-only divergences.** Session 64 (3 commits): font decode fix, RDF frontmatter, constructor close tag regex. 5 new zero-diff tests (plainfonts, bbold, sizes, aliceblog, IEEE).
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
