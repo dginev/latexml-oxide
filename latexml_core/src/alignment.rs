@@ -1304,13 +1304,13 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec> = Vec::new();
-  // Perl: /^[\s\d]+$/ — \d matches ASCII digits only in Perl 5.
   // Perl L1123: /^[\s\d]+$/ — Perl \d is ASCII-only (0-9).
-  // Use is_numeric() to also match mathematical digits (𝟘-𝟟) from bbold fontmaps,
-  // but exclude circled/parenthesized number forms (①⑴ etc., Unicode No category)
-  // which shouldn't be classified as Integer.
+  // Also include mathematical double-struck digits (U+1D7D8-U+1D7E1, 𝟘-𝟡) since these
+  // are font-decoded equivalents of ASCII 0-9 in blackboard bold fonts. In Perl, these
+  // appear as ASCII digits with font attributes; in Rust they're Unicode codepoints.
+  // Exclude circled/enclosed numerals (❶❷❸ U+2776-, ①②③ U+2460-) which are symbols.
   if !content.is_empty() && content.chars().all(|c| {
-    c.is_whitespace() || (c.is_numeric() && !(('\u{2460}'..='\u{24FF}').contains(&c)))
+    c.is_whitespace() || c.is_ascii_digit() || ('\u{1D7D8}'..='\u{1D7E1}').contains(&c)
   }) {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
@@ -1702,9 +1702,13 @@ fn alignment_skip_data(
   if i >= tab_lines_length {
     return 0;
   }
+  let _header_width = if !tablines.is_empty() { tablines[0].len() } else { 1 };
   let mut n = 1;
   while i + n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold {
+      // TODO: Perl Alignment.pm L1337-1339 has continuation line check here.
+      // Applying it changes behavior for fonts/bbold tables (false positive headers).
+      // Need to investigate further.
       break;
     }
     n += 1;
