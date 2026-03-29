@@ -914,13 +914,18 @@ pub fn set_attributes_wild(
     return Ok(());
   }
 
-  // Collect wildcard IDs from the nodes BEFORE wrapping in XMDual.
+  // Collect wildcard IDs from the nodes BEFORE wrapping.
   let mut wild_ids = Vec::new();
   for n in &nodes {
     wild_ids.extend(set_wildcard_ids(document, n));
   }
 
   // Wrap matched nodes in XMDual.
+  // NOTE: Perl wraps presentation nodes in XMWrap first (L206), then in XMDual (L208),
+  // producing XMDual[XMApp(content), XMWrap(presentation)]. In Rust, reparenting
+  // children to create XMWrap causes libxml2 memory corruption. We keep the
+  // presentation nodes as direct children: XMDual[XMApp(content), node1, node2, ...]
+  // This is a known R11 gap. The math parser handles both structures correctly.
   let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
   let Some(mut dual_node) = wrapper else { return Ok(()); };
 
@@ -953,9 +958,8 @@ pub fn set_attributes_wild(
   }
 
   // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
-  // In Perl, the presentation arm is wrapped in XMWrap, and the math parser's
-  // kludge_scripts converts these to 3-child SUBSCRIPTOP/SUPERSCRIPTOP form.
-  // Since Rust doesn't wrap in XMWrap (memory issues), do the conversion here.
+  // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have
+  // XMWrap, we do the POSTSUBSCRIPT→SUBSCRIPTOP conversion here instead.
   restructure_scripts_in_dual(&dual_node, doc)?;
 
   mark_seen_rec(&dual_node);
