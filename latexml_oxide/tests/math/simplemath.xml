@@ -88,15 +88,21 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="f_{1}(a+b)" text="f _ 1 * (a + b)" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="f_{1}(a+b)" text="Unknown@() * (a + b)" xml:id="S0.Ex4.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMApp role="ID">
-              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-              <XMTok font="italic" role="UNKNOWN">f</XMTok>
-              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-            </XMApp>
+            <XMDual role="ID">
+              <XMApp>
+                <XMTok/>
+                <XMRef idref="S0.Ex4.m1.1"/>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+            </XMDual>
             <XMDual>
               <XMRef idref="S0.Ex4.m1.1"/>
               <XMWrap>

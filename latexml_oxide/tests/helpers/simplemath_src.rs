@@ -113,7 +113,7 @@ fn add_f_d_diffop_rewrite() -> Result<()> {
 
 /// f_* → ID: f with any subscript (except D, handled above) is an identifier.
 /// Two-sibling match (nnodes=2): XMTok[f] + XMApp[POSTSUBSCRIPT].
-/// Wrapped in XMWrap[role=ID] by the rewrite engine.
+/// Wrapped in XMDual[role=ID] by the rewrite engine (via wildcard_paths).
 /// The f_D rule fires first and marks those nodes, so this only catches
 /// remaining subscripted-f patterns (f_1, f_2, etc.).
 #[allow(dead_code)]
@@ -127,6 +127,8 @@ fn add_f_wildcard_rewrite() -> Result<()> {
   let options = latexml_core::rewrite::RewriteOptions {
     xpath: Some(xpath),
     attributes_map: Some(attrs_map),
+    // Wildcard = child 1 of sibling 2 (subscript content in POSTSUBSCRIPT XMApp)
+    wildcard_paths: Some(vec![vec![2, 1]]),
     is_math: true,
     select_count: Some(2),
     ..Default::default()
