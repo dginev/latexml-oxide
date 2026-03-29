@@ -1050,16 +1050,34 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
 /// Perl: skipConditionalBody inner loop (Conditional.pm L127-133) reads tokens directly
 /// from pushback/mouth and manually tracks ALIGN_STATE for { and }.
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
-  while let Some(token) = read_token()? {
-    let cc = token.get_catcode();
-    // Perl L128-130: ALIGN_STATE tracking for { and } now handled by read_token itself
-    if cc.is_active_or_cs() {
-      if let Some(cond_type) = lookup_conditional(&token) {
-        return Ok(Some((token, cond_type)));
-      }
+  loop {
+    match read_token()? {
+      Some(token) => {
+        let cc = token.get_catcode();
+        // Perl L128-130: ALIGN_STATE tracking for { and } now handled by read_token itself
+        if cc.is_active_or_cs() {
+          if let Some(cond_type) = lookup_conditional(&token) {
+            return Ok(Some((token, cond_type)));
+          }
+        }
+      },
+      None => {
+        // Current mouth exhausted. Try closing if autoclosable and there are
+        // more mouths on the stack (TeX continues reading across input boundaries).
+        let (autoclose, stack_len) = {
+          let gullet = gullet!();
+          let ac = gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(false);
+          let sl = gullet.mouthstack.len();
+          (ac, sl)
+        };
+        if autoclose && stack_len > 0 {
+          close_mouth(false)?;
+          continue;
+        }
+        return Ok(None);
+      },
     }
   }
-  Ok(None)
 }
 
 //**********************************************************************

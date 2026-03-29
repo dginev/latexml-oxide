@@ -22,6 +22,10 @@ LoadDefinitions!({
   RawTeX!(r"\expandafter\ifx\csname l@polish\endcsname\relax\newlanguage\l@polish\fi");
   RawTeX!(r"\expandafter\ifx\csname l@turkish\endcsname\relax\newlanguage\l@turkish\fi");
   RawTeX!(r"\expandafter\ifx\csname l@czech\endcsname\relax\newlanguage\l@czech\fi");
+  // Pre-define \l@nil so nil.ldf skips its \edef\bbl@languages block (which would
+  // fail because \bbl@languages is undefined at that point). With \l@nil defined,
+  // nil.ldf's \ifx\l@nil\@undefined check fails and the block is skipped.
+  RawTeX!(r"\expandafter\ifx\csname l@nil\endcsname\relax\newlanguage\l@nil\fi");
 
   // Pre-define \bbl@languages as empty. Babel's language.def loading uses \openin
   // to read hyphenation pattern files, which our system can't find (.ini search paths).

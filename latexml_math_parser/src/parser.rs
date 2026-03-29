@@ -267,8 +267,75 @@ impl MathParser {
   // To solve this, we find & replace all references to such script XMApps by an
   // explicit XMApp with the XMRef refering to the script itself, not the
   // XMApp. (make sense?)
-  pub fn cleanup_scripts(&mut self, _document: &Document) {
-    // todo!();
+  pub fn cleanup_scripts(&mut self, document: &mut Document) {
+    // Perl: cleanupScripts — find script XMApp nodes that may be referenced by XMRef,
+    // and redirect those references to point at the script content (first child) instead
+    // of the XMApp wrapper. This prevents dangling idrefs when the XMApp is consumed
+    // by parsing.
+    static SCRIPT_RE: Lazy<Regex> =
+      Lazy::new(|| Regex::new(r"^(?:PRE|POST|FLOAT)(?:SUB|SUPER)SCRIPT$").unwrap());
+    let apps = document
+      .findnodes("descendant-or-self::*[@xml:id and contains(@role,'SCRIPT')]", None);
+    for mut app in apps {
+      let role = match app.get_attribute("role") {
+        Some(r) => r,
+        None => continue,
+      };
+      if !SCRIPT_RE.is_match(&role) {
+        continue;
+      }
+      let appid = match app.get_attribute("xml:id") {
+        Some(id) => id,
+        None => continue,
+      };
+      // Note: using * instead of ltx:XMRef due to XPath namespace issues in nested predicates
+      let refs_xpath = s!("descendant-or-self::*[@idref = '{}']", appid);
+      let refs = document.findnodes(&refs_xpath, None);
+      if refs.is_empty() {
+        continue;
+      }
+      // Get the script content (first child of the XMApp)
+      let mut script = match app.get_first_child() {
+        Some(child) => child,
+        None => continue,
+      };
+      // Ensure the script has an xml:id so we can create XMRef to it
+      if script.get_attribute("xml:id").is_none() {
+        let _ = document.generate_id(&mut script, "");
+      }
+      let script_id = match script.get_attribute("xml:id") {
+        Some(id) => id,
+        None => continue,
+      };
+      // Unregister the app's id and remove the attribute
+      document.unrecord_id(&appid);
+      let _ = app.remove_attribute("xml:id");
+      // Collect app attributes (except xml:id, which we already removed)
+      let attrs: Vec<(String, String)> = app
+        .get_attributes()
+        .into_iter()
+        .filter(|(name, _)| name != "xml:id")
+        .collect();
+      let ns = app.get_namespace();
+      // Replace each ref with an XMApp containing an XMRef to the script
+      for ref_node in refs {
+        // Build the replacement: ltx:XMApp{attrs}[ltx:XMRef{idref=script_id}]
+        let mut new_app = Node::new("XMApp", None, &document.document).unwrap();
+        for (name, value) in &attrs {
+          let _ = new_app.set_attribute(name, value);
+        }
+        if let Some(ref ns) = ns {
+          let _ = new_app.set_namespace(ns);
+        }
+        let mut xmref = Node::new("XMRef", None, &document.document).unwrap();
+        let _ = xmref.set_attribute("idref", &script_id);
+        if let Some(ref ns) = ns {
+          let _ = xmref.set_namespace(ns);
+        }
+        let _ = new_app.add_child(&mut xmref);
+        let _ = document.replace_tree(new_app, ref_node);
+      }
+    }
   }
   // sub cleanupScripts {
   //   my ($self, $document) = @_;
