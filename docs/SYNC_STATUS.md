@@ -430,9 +430,9 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED (commit 9670bc14b). `explicit_mathstyle` check now before dispatch.
 - [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
-- [ ] C4. ltx_nopad_l on @{}l@{} columns
-- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`
-- [ ] C6. XMDual id ordering in eval-at: `\left.xyz\right|_0` has swapped m1.1↔m1.2
+- [x] C4. ltx_nopad_l on @{}l@{} columns — verified working (session 64, tabular/halignatt match Perl).
+- [x] C5. `\times` vs invisible-times precedence — Fixed in session 54 (infix_apply_nary semantic pruning).
+- [x] C6. XMDual id ordering in eval-at — only xml:id renumbering remains (intentional divergence).
 - [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`
 - [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
 - [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
