@@ -1518,24 +1518,81 @@ impl Document {
   /// Insert a new comment, or append to previous comment.
   /// Does NOT move the current insertion point to the Comment,
   /// but may move up past a text node.
+  /// Perl: Document.pm lines 678-698
   pub fn insert_comment(&mut self, text: &str) -> Result<Node> {
-    // TODO:
+    use std::ffi::CString;
     let trimmed = text.trim_end();
-    let _clean = DASHES_RE.replace_all(trimmed, "__");
+    let clean = DASHES_RE.replace_all(trimmed, "__");
     self.close_text_internal()?; // Close any open text node.
+
+    let comment_text = s!(" {} ", clean);
+
     if self.node.get_type() == Some(NodeType::DocumentNode) {
-      // TODO: add "create_comment" (or equiv) to libxml wrapper
-      // let comment = self.document.create_comment(s!(" {} ",clean));
-      // self.pending.push(comment.clone());
-      // Ok(comment)
-      // } else {
-      //   if let Some(last_child) = self.node.last_child() {
-      //     if last_child.get_type() == NodeType::CommentNode {
-      //       last_child.set_content(s!("{}\n     {} ",comment.get_content(), clean_text));
-      //       return Ok(last_child);
-      //     }
-      //   }
-      //   self.node.add_child(self.document.create_comment(s!(" {} ",clean_text));
+      // At document root: create comment node via raw FFI and add to pending.
+      // The pending nodes are placed before the root element when it's created.
+      unsafe {
+        let c_text = CString::new(comment_text.as_str()).unwrap();
+        let comment_ptr = libxml::bindings::xmlNewDocComment(
+          self.document.doc_ptr(),
+          c_text.as_ptr() as *const u8,
+        );
+        if !comment_ptr.is_null() {
+          // Add as child of document node; will be before root element
+          libxml::bindings::xmlAddChild(
+            self.node.node_ptr(),
+            comment_ptr,
+          );
+        }
+      }
+    } else if let Some(node) = self.get_element() {
+      // Get the nearest element node (Perl: getElement)
+      let prev = node.get_last_child();
+      let prevtype = prev.as_ref().and_then(|n| n.get_type());
+
+      if prevtype == Some(NodeType::CommentNode) {
+        // Merge with previous comment
+        if let Some(mut prev_comment) = prev {
+          let existing = prev_comment.get_content();
+          let merged = s!("{}\n     {} ", existing, clean);
+          prev_comment.set_content(&merged).ok();
+        }
+      } else if prevtype == Some(NodeType::TextNode) {
+        let prev_node = prev.unwrap();
+        // If the node before the text is already a comment, just append new comment
+        // Otherwise, insert before the text to avoid splitting text runs
+        let before_text = prev_node.get_prev_sibling();
+        let before_is_comment =
+          before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
+
+        unsafe {
+          let c_text = CString::new(comment_text.as_str()).unwrap();
+          let comment_ptr = libxml::bindings::xmlNewDocComment(
+            self.document.doc_ptr(),
+            c_text.as_ptr() as *const u8,
+          );
+          if !comment_ptr.is_null() {
+            if before_is_comment {
+              // Append new comment at end (don't merge across text)
+              libxml::bindings::xmlAddChild(node.node_ptr(), comment_ptr);
+            } else {
+              // Insert comment before the text node
+              libxml::bindings::xmlAddPrevSibling(prev_node.node_ptr(), comment_ptr);
+            }
+          }
+        }
+      } else {
+        // Default: append as child
+        unsafe {
+          let c_text = CString::new(comment_text.as_str()).unwrap();
+          let comment_ptr = libxml::bindings::xmlNewDocComment(
+            self.document.doc_ptr(),
+            c_text.as_ptr() as *const u8,
+          );
+          if !comment_ptr.is_null() {
+            libxml::bindings::xmlAddChild(node.node_ptr(), comment_ptr);
+          }
+        }
+      }
     }
     Ok(self.node.clone())
   }

@@ -19,6 +19,7 @@ use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::definition::register::RegisterValue;
+use crate::comment::Comment;
 use crate::{BoxOps, Digested, TexMode, gullet};
 
 
@@ -925,7 +926,9 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
         // Replace NBSP + combining strikethrough (OT1 space position) with actual space
         s.replace("\u{00A0}\u{0335}", " ")
       });
-      Ok(Some(Digested::from(comment)))
+      // Perl: returns LaTeXML::Core::Comment->new($comment)
+      // which gets absorbed as an XML comment node via Document::insertComment
+      Ok(Some(Digested::from(Comment(comment))))
     },
     _ => {
       clear_prefixes(); // Perl Stomach.pm line 247: prefixes shouldn't apply here.

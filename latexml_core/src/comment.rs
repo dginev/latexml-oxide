@@ -25,6 +25,7 @@ impl Object for Comment {
   fn revert(&self) -> Result<Tokens> { Ok(NO_TOKENS) }
 }
 impl BoxOps for Comment {
+  fn get_properties(&self) -> &HashMap<Stored> { &NO_PROPERTIES }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&HashMap<Stored>) -> R {
     caller(&NO_PROPERTIES)
