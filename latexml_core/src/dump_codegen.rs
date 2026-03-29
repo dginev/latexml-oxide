@@ -40,7 +40,7 @@ fn should_skip_value(key: &str) -> bool {
 fn rust_escape(s: &str) -> String {
   // Raw strings can contain anything except the closing delimiter "# sequence.
   // If the string contains "# we fall back to standard string with escaping.
-  if s.contains("\"#") {
+  if s.contains("\"#") || s.contains('\r') || s.chars().any(|c| c.is_ascii_control() && c != '\n' && c != '\t') {
     // Use normal string literal with escapes
     let mut out = String::with_capacity(s.len() + 8);
     out.push('"');
@@ -78,49 +78,54 @@ fn url_decode(s: &str) -> String {
   result
 }
 
-/// Generate a Rust source file from a dump file.
-/// Returns the number of entries generated.
+/// Generate a Rust source file that embeds the dump data as a `const &str`.
+/// The data is loaded at runtime via `dump_reader::load_from_str()`.
+///
+/// Trade-off analysis: Native Rust statements (20K `assign_value` calls) cause
+/// compiler OOM in release mode. The text-embed approach compiles instantly and
+/// loads in ~50ms at runtime — acceptable for a hot path that runs once per invocation.
 pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String> {
-  let file = std::fs::File::open(dump_path)
-    .map_err(|e| format!("Failed to open dump: {}", e))?;
-  let reader = std::io::BufReader::new(file);
+  let content = std::fs::read_to_string(dump_path)
+    .map_err(|e| format!("Failed to read dump: {}", e))?;
+
+  let count = content.lines()
+    .filter(|l| !l.is_empty() && !l.starts_with('#'))
+    .count();
+
+  // Ensure the content doesn't contain the raw string delimiter
+  let delim = if content.contains("\"####") { "\"#####" } else { "\"####" };
+  let open_delim = delim.replace('"', "");
+  let raw_open = format!("r{open_delim}\"");
+  let raw_close = format!("\"{open_delim}");
 
   let mut out = std::fs::File::create(output_path)
     .map_err(|e| format!("Failed to create output: {}", e))?;
 
-  // Write module header
-  write!(out, "{}", MODULE_HEADER)
+  writeln!(out, r#"//! Auto-generated LaTeX kernel dump.
+//! DO NOT EDIT — regenerate with: `cargo run --release --bin latexml_oxide -- --init=latex.ltx`
+//!
+//! Embedded as const string, loaded at startup via dump_reader (~50ms).
+//! Native Rust statements would be faster (0ms) but cause compiler OOM for 20K+ entries.
+
+/// Embedded kernel dump data ({count} entries).
+const DUMP_DATA: &str = {raw_open}"#).map_err(|e| format!("Write error: {}", e))?;
+
+  // Write the dump content directly
+  out.write_all(content.as_bytes())
     .map_err(|e| format!("Write error: {}", e))?;
 
-  let mut count = 0;
-  let mut skipped = 0;
+  writeln!(out, r#"{raw_close};
 
-  for line in reader.lines() {
-    let line = line.map_err(|e| format!("Read error: {}", e))?;
-    let line = line.trim();
-    if line.is_empty() || line.starts_with('#') {
-      continue;
-    }
-
-    match generate_entry(line) {
-      Ok(Some(code)) => {
-        writeln!(out, "  {}", code).map_err(|e| format!("Write error: {}", e))?;
-        count += 1;
-      }
-      Ok(None) => skipped += 1,
-      Err(_e) => skipped += 1,
-    }
-  }
-
-  // Write module footer
-  write!(out, "{}", MODULE_FOOTER)
-    .map_err(|e| format!("Write error: {}", e))?;
+/// Load the precompiled LaTeX kernel definitions into the global state.
+pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
+  latexml_core::dump_reader::load_from_str(DUMP_DATA)
+    .map_err(latexml_core::common::error::Error::from)?;
+  Ok(())
+}}"#).map_err(|e| format!("Write error: {}", e))?;
 
   log::info!(
-    "[dump_codegen] Generated {} entries to {} ({} skipped)",
-    count,
-    output_path.display(),
-    skipped
+    "[dump_codegen] Generated {} entries to {} (embedded string)",
+    count, output_path.display()
   );
 
   Ok(count)
@@ -356,17 +361,15 @@ const MODULE_HEADER: &str = r#"//! Auto-generated LaTeX kernel dump.
 use std::collections::VecDeque;
 
 use latexml_core::common::arena;
-use latexml_core::common::catcode::Catcode;
-use latexml_core::common::def_parser::parse_parameters;
 use latexml_core::common::dimension::Dimension;
 use latexml_core::common::glue::{FillCode, Glue};
 use latexml_core::common::mudimension::MuDimension;
 use latexml_core::common::muglue::MuGlue;
-use latexml_core::common::scope::Scope;
 use latexml_core::common::store::Stored;
 use latexml_core::definition::expandable::{Expandable, ExpandableOptions};
 use latexml_core::state;
-use latexml_core::token::Token;
+use latexml_core::state::Scope;
+use latexml_core::token::{Catcode, Token};
 use latexml_core::tokens::Tokens;
 
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {

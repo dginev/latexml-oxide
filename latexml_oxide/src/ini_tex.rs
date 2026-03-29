@@ -81,12 +81,20 @@ pub fn dump_format(
     snap_size
   );
 
-  // Step 4: Write the dump file.
-  let dest = destination.unwrap_or("latex_dump.oxide");
-  let count = latexml_core::dump_writer::write_dump(Path::new(dest), &diff)?;
-  eprintln!("[ini_tex] Wrote {} entries to {}", count, dest);
+  // Step 4: Write the dump as native Rust source.
+  let default_dest = "latexml_package/src/engine/latex_dump.rs";
+  let dest = destination.unwrap_or(default_dest);
 
-  Ok(count)
+  // Write to temp intermediate format, then codegen to .rs
+  let tmp = format!("{}.tmp", dest);
+  let write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
+  let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(dest))?;
+  let _ = std::fs::remove_file(&tmp);
+
+  eprintln!("[ini_tex] Generated {} Rust definitions to {}", rs_count, dest);
+  eprintln!("Format dump complete: {} entries written", rs_count);
+
+  Ok(rs_count)
 }
 
 /// Generate a compiled Rust module from a dump file.
