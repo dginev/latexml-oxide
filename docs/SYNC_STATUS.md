@@ -4,7 +4,7 @@
 
 Updated 2026-03-29 (session 62). Only lists open gaps & TODOs; completed items live in git history.
 
-**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 230/298 exact zero-diff (77%), 246/298 structural zero-diff (82.5%)**. Total diff lines: 37,158.
+**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 231/298 exact zero-diff (77.5%), 247/298 structural zero-diff (82.9%)**. Total diff lines: 37,119.
 
 **Session 62** (6 commits): **INCLUDE_COMMENTS + \lxDeclare rewrite timing + _matched precedence + XMWrap investigation.** (1) Full INCLUDE_COMMENTS pipeline: raw libxml2 FFI for XML comment nodes, state rotation fix, Perl T_COMMENT `%` prefix format. (2) \lxDeclare patterns now match PRE-parsed DOM (rewrites run before math parser): XPaths match base XMTok + POSTSUBSCRIPT sibling with select_count=2. (3) Fixed base token role: `apply_lx_declarations` now skips `_matched` tokens, so tokens inside XMDual presentation arms correctly show `role="UNKNOWN"` instead of `role="ID"`. (4) XMWrap around presentation arm: all 3 approaches (double wrap_nodes, manual Node::new+reparent, raw FFI reparent) cause libxml2 memory corruption — documented as known gap. declare.xml diff: 1072→1057 (remaining: xml:id + text attr + XMWrap).
 
