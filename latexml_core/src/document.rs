@@ -2642,10 +2642,10 @@ impl Document {
       pvis = true;
     }
     if cvis {
-      node.set_attribute("_cvis", "true")?;
+      node.set_attribute("_cvis", "1")?;
     }
     if pvis {
-      node.set_attribute("_pvis", "true")?;
+      node.set_attribute("_pvis", "1")?;
     }
     if qname == arena::pin_static("ltx:XMDual") {
       let mut children = xml::element_nodes(&node);

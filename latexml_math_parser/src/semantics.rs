@@ -1202,8 +1202,14 @@ pub fn annotated_punct_fenced_modifier(
 
 /// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
 /// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
-/// only parsed as function application when speculation is active. Without speculation,
-/// this parse is pruned and Marpa falls back to `tight_term factor => invisible_times`.
+/// parsed as function application when speculation is active.
+///
+/// **Intentional Rust divergence from Perl**: In Perl (Parse::RecDescent), speculation
+/// only marks tokens with `possibleFunction='yes'` and falls back to invisible-times
+/// multiplication. The Rust Marpa grammar directly produces the function application
+/// parse `f@(x)`, which is the semantically superior interpretation — it avoids an
+/// artificial invisible MULOP token that was a crutch for Parse::RecDescent's
+/// backtracking parser. See docs/OXIDIZED_DESIGN.md.
 ///
 /// MATHPARSER_SPECULATE is enabled by:
 /// - \usepackage[mathparserspeculate]{latexml}

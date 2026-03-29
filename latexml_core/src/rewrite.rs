@@ -10,6 +10,19 @@ use std::fmt;
 use std::rc::Rc;
 
 pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
+/// Test closure: Perl signature is ($document, $node) → $nnodes (0/undef = skip).
+pub type RewriteTestClosure = Rc<dyn Fn(&mut Document, &Node) -> Result<usize>>;
+/// Regexp closure: Perl signature is (\$string) → modified in-place via s///g.
+pub type RewriteRegexpClosure = Rc<dyn Fn(&str) -> Option<String>>;
+
+/// A single sub-pattern in a MultiSelect clause.
+/// Perl: [$xpath, $nnodes, @wilds]
+#[derive(Debug, Clone)]
+pub struct MultiSelectEntry {
+  pub xpath: String,
+  pub nnodes: usize,
+  pub wilds: Vec<WildPath>,
+}
 
 // ======================================================================
 // Defining Rewrite rules that act on the DOM
@@ -59,6 +72,12 @@ pub enum RewritePattern {
   Scope(Scope),
   Tokens(Tokens),
   Closure(RewriteReplaceClosure),
+  /// Test closure: returns number of matched nodes (0 = skip remaining clauses).
+  TestClosure(RewriteTestClosure),
+  /// Compiled regexp substitution: returns Some(modified) or None (no match).
+  RegexpClosure(RewriteRegexpClosure),
+  /// Multiple xpath+count+wilds tuples for MultiSelect.
+  MultiSelectPatterns(Vec<MultiSelectEntry>),
 }
 impl fmt::Debug for RewritePattern {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -67,6 +86,9 @@ impl fmt::Debug for RewritePattern {
       RewritePattern::Scope(x) => write!(f, "{x:?}"),
       RewritePattern::Tokens(x) => write!(f, "{x:?}"),
       RewritePattern::Closure(_) => write!(f, "<Rewrite Replacement Closure>"),
+      RewritePattern::TestClosure(_) => write!(f, "<Rewrite Test Closure>"),
+      RewritePattern::RegexpClosure(_) => write!(f, "<Rewrite Regexp Closure>"),
+      RewritePattern::MultiSelectPatterns(v) => write!(f, "<MultiSelect {} patterns>", v.len()),
     }
   }
 }
@@ -269,18 +291,40 @@ impl Rewrite {
         };
       }
     }
-    // Match => pre-compiled XPath string (for .latexml loader)
-    // When match is already a RewritePattern::String, it's a pre-compiled xpath
+    // Match compilation:
+    // Perl: match => $code → op='test', pattern=$code (closure returns $nnodes)
+    // Perl: match => $string → op='select', pattern=compile_match1($string) ([$xpath, $nnodes, @wilds])
+    // Perl: match => [$array] → op='multi_select', pattern=[compile_match1($_) for @$array]
     if op == RewriteOperator::Match {
-      if let RewritePattern::String(xpath) = pattern {
-        if self.options.select_count.is_none() {
-          self.options.select_count = Some(1);
-        }
-        return RewriteClause {
-          compiled: true,
-          op: RewriteOperator::Select,
-          pattern: RewritePattern::String(xpath),
-        };
+      match pattern {
+        RewritePattern::String(xpath) => {
+          // Pre-compiled XPath string (from .latexml loader)
+          if self.options.select_count.is_none() {
+            self.options.select_count = Some(1);
+          }
+          return RewriteClause {
+            compiled: true,
+            op: RewriteOperator::Select,
+            pattern: RewritePattern::String(xpath),
+          };
+        },
+        RewritePattern::TestClosure(_) => {
+          // match => $code: becomes Test operator
+          return RewriteClause {
+            compiled: true,
+            op: RewriteOperator::Test,
+            pattern,
+          };
+        },
+        RewritePattern::MultiSelectPatterns(_) => {
+          // match => [array]: becomes MultiSelect operator
+          return RewriteClause {
+            compiled: true,
+            op: RewriteOperator::MultiSelect,
+            pattern,
+          };
+        },
+        _ => {},
       }
     }
     RewriteClause { compiled: true, op, pattern }
@@ -508,16 +552,28 @@ impl Rewrite {
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
         Regexp => {
-          // Perl: tests the matched node's text content against a regex.
-          // If it matches, continue with remaining clauses; otherwise skip.
-          if let RewritePattern::String(regex_str) = pattern {
-            let content = tree.get_content();
-            let re = regex::Regex::new(regex_str)
-              .unwrap_or_else(|_| regex::Regex::new("$^").unwrap()); // never-match fallback
-            if re.is_match(&content) {
-              self.apply_clause(document, tree, nmatched, clauses)?;
+          // Perl: finds ALL descendant text nodes via 'descendant-or-self::text()',
+          // applies s///g substitution via compiled closure, and calls setData().
+          if let RewritePattern::RegexpClosure(closure) = pattern {
+            let text_nodes = document.findnodes("descendant-or-self::text()", Some(tree));
+            for mut text_node in text_nodes {
+              let content = text_node.get_content();
+              if let Some(modified) = closure(&content) {
+                let _ = text_node.set_content(&modified);
+              }
             }
-            // else: no match → skip this node (don't mark as seen)
+          } else if let RewritePattern::String(regex_str) = pattern {
+            // Fallback for uncompiled string regex: compile and apply as substitution
+            let re = regex::Regex::new(regex_str)
+              .unwrap_or_else(|_| regex::Regex::new("$^").unwrap());
+            let text_nodes = document.findnodes("descendant-or-self::text()", Some(tree));
+            for mut text_node in text_nodes {
+              let content = text_node.get_content();
+              let result = re.replace_all(&content, "");
+              if result != content {
+                let _ = text_node.set_content(&result);
+              }
+            }
           }
         },
         Label => {
@@ -546,19 +602,49 @@ impl Rewrite {
           self.apply_clause(document, tree, nmatched, clauses)?;
         },
         Test => {
-          // Perl: $nnodes = $code->($document, $tree)
-          // Test invokes a closure that returns the number of matched nodes.
-          // If 0, skip remaining clauses. Otherwise continue with nmatched.
-          if let RewritePattern::Closure(closure) = pattern {
+          // Perl: $nnodes = &$pattern($document, $tree);
+          //       $self->applyClause($document, $tree, $nnodes, @more_clauses) if $nnodes;
+          // Test closure returns node count; if 0/falsy, skip remaining clauses.
+          if let RewritePattern::TestClosure(closure) = pattern {
+            let nnodes = closure(document, tree)?;
+            if nnodes > 0 {
+              self.apply_clause(document, tree, nnodes, clauses)?;
+            }
+          } else if let RewritePattern::Closure(closure) = pattern {
+            // Legacy fallback: RewriteReplaceClosure used as test (always passes)
             let mut node = tree.clone();
-            // The closure modifies the node count; for now just invoke and continue
             closure(document, vec![&mut node])?;
             self.apply_clause(document, tree, nmatched, clauses)?;
           }
         },
         MultiSelect => {
-          // Perl: like Select but matches multiple adjacent nodes
-          if let RewritePattern::String(xpath) = pattern {
+          // Perl: foreach my $subpattern (@$pattern) {
+          //         my ($xpath, $nnodes, @wilds) = @$subpattern;
+          //         my @matches = $document->findnodes($xpath, $tree);
+          //         foreach my $node (@matches) {
+          //           my @w = markWildcards($node, @wilds);
+          //           $self->applyClause($document, $node, $nnodes, @more_clauses);
+          //           unmarkWildcards($node, @w); } }
+          if let RewritePattern::MultiSelectPatterns(entries) = pattern {
+            for entry in entries {
+              let matches = document.findnodes(&entry.xpath, Some(tree));
+              for node in matches {
+                if node.has_attribute("_matched") {
+                  continue;
+                }
+                let marked = if !entry.wilds.is_empty() {
+                  mark_wildcards(&node, &entry.wilds)
+                } else {
+                  vec![]
+                };
+                self.apply_clause(document, &node, entry.nnodes, clauses.clone())?;
+                if !marked.is_empty() {
+                  unmark_wildcards(&marked);
+                }
+              }
+            }
+          } else if let RewritePattern::String(xpath) = pattern {
+            // Legacy fallback: single xpath with shared select_count
             let count = self.options.select_count.unwrap_or(1);
             let matches = document.findnodes(xpath, Some(tree));
             for node in matches {

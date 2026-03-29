@@ -2,11 +2,17 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-29 (session 62). Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-29 (session 63). Only lists open gaps & TODOs; completed items live in git history.
 
-**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 231/298 exact zero-diff (77.5%), 247/298 structural zero-diff (82.9%)**. Total diff lines: 36,777.
+**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 124/294 structural zero-diff (42%)**.
 
 **NOTE:** Some "passing" tests (si, physics, mathtools, numprints) compare against low-quality Rust references far from Perl. These should be audited — tests should fail until bindings mature to Perl parity.
+
+**Session 63**: **Rewrite system API completion + markXMNodeVisibility audit + speculative function application design decision.**
+1. **Rewrite system (J) R4/R5/R6/R13**: Test operator now uses `TestClosure` pattern variant returning `Result<usize>` and gates subsequent clauses (0 = skip). Regexp now traverses `descendant-or-self::text()` nodes with `RegexpClosure` for in-place substitution. MultiSelect uses `MultiSelectPatterns` with per-sub-pattern `(xpath, nnodes, wilds)` tuples. `markXMNodeVisibility` verified complete and attribute values aligned with Perl ("1" not "true").
+2. **Speculative function application**: Documented as intentional divergence (OXIDIZED_DESIGN #18). Rust produces `f@(x)` when MATHPARSER_SPECULATE is set; Perl produces `f * x` with `possibleFunction` marking. The invisible MULOP was a Parse::RecDescent limitation, not a semantic choice.
+3. **Messaging infrastructure task (M)**: Added to work plan — ProgressSpinup/Spindown UX and package loading messages.
+4. **Kernel dump (E)**: Updated — expl3 errors must be fixed (not suppressed), build.rs integration for _dump.rs precompilation.
 
 **Session 62** (21 commits): **INCLUDE_COMMENTS + rewrite timing + _matched precedence + guessTableHeaders + figure breaks + listing CSS.**
 1. **INCLUDE_COMMENTS pipeline**: Stomach creates Comment objects, Document.insert_comment() via raw libxml2 FFI (xmlNewDocComment + xmlAddChild). Comment.get_properties() override prevents todo!() panic. State rotation fix: STY_STATE/STD_STATE don't clobber INCLUDE_COMMENTS. Tests use `include_comments=false` matching Perl's CORE_OPTIONS_FOR_TESTS. Perl `%` prefix on T_COMMENT text.
@@ -501,7 +507,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 
 ### Overarching infrastructure projects
 
-- [ ] **J. Rewrite system** — rewrite.rs ~90%. See [`docs/rewrite_subsystem_audit.md`](rewrite_subsystem_audit.md) for full Perl/Rust diff audit (session 59). Operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Session 60 fixes:** R9 font predicate (Document-based bold/caligraphic check), R11 XMDual SUBSCRIPTOP restructuring, `all_descendants_matched` bug fix. **Open issues:**
+- [ ] **J. Rewrite system** — rewrite.rs ~95%. All operators implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match. **Session 63 fixes:** R4 (Test gating), R5 (Regexp text traversal), R6 (MultiSelect per-pattern tuples), R13 (visibility verified). **Open issues:**
   - **R11** XMDual presentation arm missing XMWrap — **BLOCKED on libxml2 Rust binding memory corruption**. Base token role FIXED (session 62: _matched check in apply_lx_declarations).
     - **Reproduction**: In `set_attributes_wild` (rewrite.rs), after wrapping nodes in XMDual via `document.wrap_nodes("ltx:XMDual", nodes)`, attempting to reparent the children into a new XMWrap node produces corrupted XML output (garbled element names like `<$e��r/>`, `<!`��r/>`).
     - **Approach 1**: Double `wrap_nodes` — first `wrap_nodes("ltx:XMWrap", nodes)`, then `wrap_nodes("ltx:XMDual", vec![xmwrap])`. Result: corrupted output.
@@ -511,12 +517,12 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
     - **Impact**: XMDual structure is `[XMApp(content), child1, child2, ...]` instead of Perl's `[XMApp(content), XMWrap(child1, child2, ...)]`. The math parser handles both correctly. Post-processing `pruneXMDuals`/`compactXMDual` uses `element_nodes()` (first=content, second=presentation) which works with both layouts.
     - **Workaround**: `restructure_scripts_in_dual()` converts POSTSUBSCRIPT→SUBSCRIPTOP in presentation children inline, compensating for the missing XMWrap (which Perl's math parser would process via kludge_scripts).
     - **To reproduce for upstream bug report**: See commit `c4779db8b` for the three attempted approaches. The simplest reproduction is approach 2: `wrap_nodes` + unlink children + add to new node.
-  - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` already implemented; visibility marking may differ from Perl.
-  - **R4** Test operator: closure return value ignored.
+  - **R12** `pruneXMDuals`/`collapseXMDual`/`compactXMDual` already implemented; visibility marking fully implemented.
+  - **R4** Test operator: **FIXED (session 63)** — `TestClosure` pattern variant returns `Result<usize>`, gates subsequent clauses (0 = skip). Matches Perl's `$nnodes = &$pattern($document, $tree); ... if $nnodes;`.
   - **R1** `Match => Tokens` compilation: full `compile_match1` pipeline missing. **Partial fix (session 62)**: `.latexml` file loader now uses `compile_declare_pattern` to handle subscript, wildcard, accent, prime patterns from DefMathRewrite match strings. simplemath_src.rs simplified to only MATHPARSER_SPECULATE.
-  - **R5** Regexp: doesn't traverse descendant text nodes or modify them.
-  - **R6** MultiSelect: single xpath+count instead of per-sub-pattern tuples.
-  - **R13** `markXMNodeVisibility` may have gaps.
+  - **R5** Regexp: **FIXED (session 63)** — now traverses `descendant-or-self::text()` nodes and modifies them in-place. `RegexpClosure` pattern variant for compiled substitutions. Matches Perl's `$text->setData($string)` pattern.
+  - **R6** MultiSelect: **FIXED (session 63)** — `MultiSelectPatterns` variant stores `Vec<MultiSelectEntry>` with per-sub-pattern `(xpath, nnodes, wilds)`. Matches Perl's `foreach my $subpattern (@$pattern)` iteration.
+  - **R13** `markXMNodeVisibility`: **VERIFIED (session 63)** — fully implemented in document.rs, called before rewrites (core_interface.rs) and inside prune_xmduals. Attribute values aligned with Perl ("1" not "true"). Post-processing call sites (Post.pm, Presentation.pm) deferred to item F.
 - [ ] **K. Declaration system (\lxDeclare)** — Session 60: font matching fixed (bold/caligraphic rejection via Document font system), POSTSUBSCRIPT→SUBSCRIPTOP restructuring inside XMDual, `all_descendants_matched` bug fixed. **Open issues:**
   - Function application patterns `f\WildCard[(\WildCard)]` not supported.
   - Base token role inside XMDual: **FIXED** (session 62: _matched check prevents apply_lx_declarations from overwriting).
@@ -524,9 +530,14 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
 - [x] **H. expl3 full loading** — **FULLY FIXED (session 60)**: Removed l3file pre-definitions that caused `\cs_new:Npn` → `\msg_error:nnee` → `read_until` → `read_balanced` to consume 25K+ remaining lines of expl3-code.tex. All 36,765 lines now load completely. ALL expl3 modules available: l3skip, l3keys, l3keyval, l3box, l3coffin, l3color, l3fp, l3regex, l3cctab, l3text, l3legacy. xparse.tex: 3 errors → 0. Removed 34 lines of workarounds from expl3_sty.rs.
 - [ ] **I. "make formats" build step** — Embed+runtime approach works: `latex_dump.oxide` (3.4MB, 22K entries) embedded via `include_str!()`, loaded by `dump_reader::load_from_str()`. Zero-regression confirmed. **BLOCKER for full integration**: dump can't serialize primitive aliases (`\exp_after:wN` → `\expandafter`, `\tex_gdef:D` → `\gdef`, etc.) because primitives are closures. Loading dump before expl3 causes undefined primitive errors. **Fix needed**: either (a) generate primitive alias `\let` assignments as compiled Rust, (b) load expl3 bootstrap section separately, or (c) extend dump format to store alias targets by name. Current status: embed works for supplementary state but can't replace expl3 raw loading yet.
-- [x] **E. Precompiled kernel dump** — **UPDATED**: `--init=latex.ltx` now dumps full kernel (22397 entries, was 162). Token limit removed for `--init`. Expl3 loading errors suppressed during dump. Both `plain.tex` (425 entries) and `latex.ltx` (22397 entries) dumps produce zero-regression test results. Infrastructure: dump_writer.rs, dump_reader.rs, dump_loader.rs, ini_tex.rs, State::snapshot/diff.
+- [ ] **E. Precompiled kernel dump** — `--init=latex.ltx` dumps full kernel (22397 entries). Token limit removed for `--init`. Both `plain.tex` (425 entries) and `latex.ltx` (22397 entries) dumps produce zero-regression test results. Infrastructure: dump_writer.rs, dump_reader.rs, dump_loader.rs, ini_tex.rs, State::snapshot/diff. **Open issues:**
+  1. **Expl3 loading errors must be fixed, not suppressed** — init mode currently suppresses expl3 loading errors. These must be resolved so that `--init` runs error-free with full error reporting enabled.
+  2. **build.rs integration** — during the `build.rs` step of `latexml_package`, attempt to use `--init` mode to prepare all possible `_dump.rs` precompiled files. This automates kernel dump generation as part of the build pipeline.
 - [ ] **F. Post-processing pipeline** — Last step. 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [ ] **L. Arena/SymStr migration audit** — Final step before post-processing. Audit all `arena::to_string()` calls and `String::clone()` calls across the codebase. Replace with: (1) `SymStr` methods where strings are already interned, (2) `arena::with()` family to avoid allocations, (3) `arena::pin()` to convert frequently-used Strings to SymStr. Goal: eliminate unnecessary heap allocations by leveraging the arena's zero-cost interned strings.
+- [ ] **M. Messaging infrastructure** — Two improvements:
+  1. **ProgressSpinup/ProgressSpindown UX**: Improve begin/end message pairing to match Perl's `ProgressSpinup("Loading")` / `ProgressSpindown("Loading")` pattern. Messages should clearly mark stages (Loading, Digesting, Building, Rewriting) with matched begin/end pairs.
+  2. **Package loading messages**: Emit loading notifications when `_sty.rs`, `_cls.rs`, `_def.rs` etc. definition loads are triggered. Best candidates: `LoadDefinitions!()` macro expansion site, or the dispatch table in `package_loader.rs` that maps filenames to compiled bindings.
 
 ### Permanent ignores (5)
 

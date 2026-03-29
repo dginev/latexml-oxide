@@ -625,3 +625,23 @@ This fixes empty XMRef for any parsed expression inside scripts:
 
 The root cause was that `obtain_arg` re-read the original DOM, which still had
 the raw tokens `(`, `n`, `)` — not the parsed `fenced@(n)` XMDual.
+
+### 18. Speculative function application produces Apply, not invisible times
+
+**Decision:** When `MATHPARSER_SPECULATE` is set and an UNKNOWN token `f` is
+followed by a fenced expression `(x)`, Rust produces `f@(x)` (function application)
+rather than Perl's `f * x` (invisible-times multiplication).
+
+In Perl (Parse::RecDescent), the `MaybeFunctions` notation detects the `f(x)` pattern
+but only marks the token with `possibleFunction="yes"` and then deliberately fails the
+production, falling back to invisible-times. This was a limitation of Parse::RecDescent's
+backtracking parser — the grammar couldn't simultaneously produce function application
+and record the speculation.
+
+In Rust (Marpa), the grammar directly produces the semantically correct
+`Apply(f, args)` parse. The invisible MULOP token was a workaround for
+Parse::RecDescent, not a semantically meaningful choice. `f@(x)` is the better
+interpretation from first principles: when a user writes `f(x)` with speculation
+enabled, they likely mean function application.
+
+**Affected tests:** `parser_speculate`, `spacing` (integral expressions).
