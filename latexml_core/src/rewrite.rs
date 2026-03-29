@@ -952,7 +952,99 @@ pub fn set_attributes_wild(
     dual_node.add_child(&mut content_app)?;
   }
 
+  // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
+  // In Perl, the presentation arm is wrapped in XMWrap, and the math parser's
+  // kludge_scripts converts these to 3-child SUBSCRIPTOP/SUPERSCRIPTOP form.
+  // Since Rust doesn't wrap in XMWrap (memory issues), do the conversion here.
+  restructure_scripts_in_dual(&dual_node, doc)?;
+
   mark_seen_rec(&dual_node);
+  Ok(())
+}
+
+/// Convert POSTSUBSCRIPT/POSTSUPERSCRIPT siblings into 3-child XMApp form
+/// inside XMDual's presentation children.
+///
+/// Before: `<base/><XMApp role="POSTSUBSCRIPT"><sub_content/></XMApp>`
+/// After: `<XMApp><SUBSCRIPTOP/><base/><sub_content/></XMApp>`
+///
+/// This matches Perl where the math parser's kludge_scripts processes
+/// the XMWrap presentation arm and restructures scripts.
+fn restructure_scripts_in_dual(
+  dual: &Node,
+  doc: &libxml::tree::document::Document,
+) -> Result<()> {
+  // Iterate over presentation children (skip first child = content arm)
+  let children: Vec<Node> = dual.get_child_nodes().into_iter()
+    .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
+    .collect();
+  if children.len() < 2 { return Ok(()); } // Need at least content + 1 presentation node
+
+  // Look for base + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling pairs
+  let pres_children: Vec<Node> = children.into_iter().skip(1).collect(); // skip content arm
+  let mut i = 0;
+  while i < pres_children.len() {
+    let node = &pres_children[i];
+    if i + 1 < pres_children.len() {
+      let next = &pres_children[i + 1];
+      let next_role = next.get_property("role").unwrap_or_default();
+      if (next_role == "POSTSUBSCRIPT" || next_role == "POSTSUPERSCRIPT")
+        && next.get_name() == "XMApp"
+      {
+        let scriptop = if next_role == "POSTSUBSCRIPT" { "SUBSCRIPTOP" } else { "SUPERSCRIPTOP" };
+
+        // Create new XMApp to hold the restructured script
+        let mut new_app = Node::new("XMApp", None, doc)?;
+        // Create SUBSCRIPTOP/SUPERSCRIPTOP token (Perl uses "post1" scriptpos)
+        let mut scriptop_tok = Node::new("XMTok", None, doc)?;
+        let _ = scriptop_tok.set_attribute("role", scriptop);
+        let _ = scriptop_tok.set_attribute("scriptpos", "post1");
+        new_app.add_child(&mut scriptop_tok)?;
+
+        // Move base node into new_app
+        let mut base = node.clone();
+        base.unlink();
+        new_app.add_child(&mut base)?;
+
+        // Move content from POSTSUBSCRIPT/POSTSUPERSCRIPT into new_app
+        let mut script_node = next.clone();
+        for mut child in script_node.get_child_nodes() {
+          child.unlink();
+          // Unwrap XMArg if present (Perl doesn't use XMArg in the parsed form)
+          if child.get_name() == "XMArg" {
+            // Transfer xml:id from XMArg to its single element child (wildcard ID)
+            let xmarg_id = child.get_property("xml:id");
+            let xmarg_children: Vec<Node> = child.get_child_nodes();
+            if xmarg_children.len() == 1 {
+              let mut inner = xmarg_children[0].clone();
+              inner.unlink();
+              if let Some(ref id) = xmarg_id {
+                if !inner.has_attribute("xml:id") {
+                  let _ = inner.set_attribute("xml:id", id);
+                }
+              }
+              new_app.add_child(&mut inner)?;
+            } else {
+              for mut grandchild in xmarg_children {
+                grandchild.unlink();
+                new_app.add_child(&mut grandchild)?;
+              }
+            }
+          } else {
+            new_app.add_child(&mut child)?;
+          }
+        }
+
+        // Replace the POSTSUBSCRIPT node with the new XMApp
+        script_node.add_prev_sibling(&mut new_app)?;
+        script_node.unlink();
+
+        i += 2; // Skip both base and script
+        continue;
+      }
+    }
+    i += 1;
+  }
   Ok(())
 }
 
