@@ -142,9 +142,50 @@ LoadDefinitions!({
   }, optional => true);
 
   // \resizebox{width}{height}{content}
+  // Perl: \Gscale@@box computes xscale/yscale, wraps in inline-block.
   DefMacro!("\\resizebox", "\\leavevmode\\@ifstar{\\Gscale@@box\\totalheight}{\\Gscale@@box\\height}");
-  DefConstructor!("\\Gscale@@box{}{GraphixDimension}{GraphixDimension}{}", "#4",
-    mode => "restricted_horizontal", enter_horizontal => true);
+  DefConstructor!("\\Gscale@@box{}{GraphixDimension}{GraphixDimension}{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#4</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let heighttype = whatsit.get_arg(1);
+      let use_totalheight = heighttype.as_ref()
+        .map(|h| h.to_attribute().contains("totalheight"))
+        .unwrap_or(false);
+      let target_width = whatsit.get_arg(2);
+      let target_height = whatsit.get_arg(3);
+      if let Some(body) = whatsit.get_arg(4).cloned() {
+        let (w_dim, h_dim, d_dim, _, _, _) = body.clone().get_size(None)?;
+        let w = w_dim.value_of() as f64;
+        let mut h = h_dim.value_of() as f64;
+        let d = d_dim.value_of() as f64;
+        if use_totalheight { h += d; }
+        let tw: Option<f64> = target_width.and_then(|a| {
+          let s = a.to_attribute();
+          if s.is_empty() { None } else {
+            s.trim_end_matches("pt").parse::<f64>().ok().map(|v| v * 65536.0)
+          }
+        });
+        let th: Option<f64> = target_height.and_then(|a| {
+          let s = a.to_attribute();
+          if s.is_empty() { None } else {
+            s.trim_end_matches("pt").parse::<f64>().ok().map(|v| v * 65536.0)
+          }
+        });
+        let mut xscale = 1.0_f64;
+        let mut yscale = 1.0_f64;
+        if let Some(tw_val) = tw { xscale = tw_val / (if w != 0.0 { w } else { 1.0 }); }
+        if let Some(th_val) = th { yscale = th_val / (if h != 0.0 { h } else { 1.0 }); }
+        if tw.is_some() && th.is_none() { yscale = xscale; }
+        if th.is_some() && tw.is_none() { xscale = yscale; }
+        whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
+        whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
+        if let Ok(props) = crate::package::graphics_sty::scaled_properties(body, xscale, yscale) {
+          for (k, v) in props {
+            whatsit.set_property(k, v);
+          }
+        }
+      }
+    });
 
   // == Rotation ==
 

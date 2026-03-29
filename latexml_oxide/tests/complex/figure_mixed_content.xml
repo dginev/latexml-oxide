@@ -21,30 +21,34 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Table 1</tag>
     </tags>
-    <tabular class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt">
-      <tbody>
-        <tr>
-          <td align="center" border="tt"><text fontsize="80%">Head</text></td>
-          <td align="center" border="tt"><text fontsize="80%">Meta</text></td>
-        </tr>
-        <tr>
-          <td align="center" border="bb t"><text fontsize="80%">Body</text></td>
-          <td align="center" border="bb t"><text fontsize="80%">Content</text></td>
-        </tr>
-      </tbody>
-    </tabular>
-    <tabular class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt">
-      <tbody>
-        <tr>
-          <td align="center" border="tt"><text fontsize="80%">Head 2</text></td>
-          <td align="center" border="tt"><text fontsize="80%">Meta 2</text></td>
-        </tr>
-        <tr>
-          <td align="center" border="bb t"><text fontsize="80%">Body 2</text></td>
-          <td align="center" border="bb t"><text fontsize="80%">Content 2</text></td>
-        </tr>
-      </tbody>
-    </tabular>
+    <inline-block class="ltx_figure_panel" depth="12.0pt" height="16.5pt" width="156.1pt" xscale="1.1311766806762178" xtranslate="9.1pt" yscale="1.1311766806762178" ytranslate="-1.7pt">
+      <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
+        <tbody>
+          <tr>
+            <td align="center" border="tt"><text fontsize="80%">Head</text></td>
+            <td align="center" border="tt"><text fontsize="80%">Meta</text></td>
+          </tr>
+          <tr>
+            <td align="center" border="bb t"><text fontsize="80%">Body</text></td>
+            <td align="center" border="bb t"><text fontsize="80%">Content</text></td>
+          </tr>
+        </tbody>
+      </tabular>
+    </inline-block>
+    <inline-block class="ltx_figure_panel" depth="12.0pt" height="16.5pt" width="156.1pt" xscale="1.1311766806762178" xtranslate="9.1pt" yscale="1.1311766806762178" ytranslate="-1.7pt">
+      <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
+        <tbody>
+          <tr>
+            <td align="center" border="tt"><text fontsize="80%">Head 2</text></td>
+            <td align="center" border="tt"><text fontsize="80%">Meta 2</text></td>
+          </tr>
+          <tr>
+            <td align="center" border="bb t"><text fontsize="80%">Body 2</text></td>
+            <td align="center" border="bb t"><text fontsize="80%">Content 2</text></td>
+          </tr>
+        </tbody>
+      </tabular>
+    </inline-block>
     <toccaption><tag close=" "><text fontsize="80%">1</text></tag><text fontsize="80%">table with two resized, minipage, tabulars</text></toccaption>
     <caption fontsize="80%"><tag close=": "><text fontsize="113%">Table 1</text></tag><text fontsize="113%">table with two resized, minipage, tabulars</text></caption>
   </table>
@@ -120,14 +124,26 @@
       <tabular class="ltx_centering" vattach="middle">
         <tbody>
           <tr>
-            <td align="center"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g1"/></td>
-            <td align="center"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g2"/></td>
-            <td align="center"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g3"/></td>
+            <td align="center"><inline-block depth="3.9pt" height="11.7pt" width="142.3pt" xscale="1.5603981839641505" xtranslate="25.6pt" yscale="1.5603981839641505" ytranslate="-2.8pt">
+                <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g1"/>
+              </inline-block></td>
+            <td align="center"><inline-block depth="3.9pt" height="11.7pt" width="142.3pt" xscale="1.5603981839641505" xtranslate="25.6pt" yscale="1.5603981839641505" ytranslate="-2.8pt">
+                <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g2"/>
+              </inline-block></td>
+            <td align="center"><inline-block depth="3.9pt" height="11.7pt" width="142.3pt" xscale="1.5603981839641505" xtranslate="25.6pt" yscale="1.5603981839641505" ytranslate="-2.8pt">
+                <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g3"/>
+              </inline-block></td>
           </tr>
           <tr>
-            <td align="center"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g4"/></td>
-            <td align="center"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g5"/></td>
-            <td align="center"><graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g6"/></td>
+            <td align="center"><inline-block depth="3.9pt" height="11.7pt" width="142.3pt" xscale="1.5603981839641505" xtranslate="25.6pt" yscale="1.5603981839641505" ytranslate="-2.8pt">
+                <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g4"/>
+              </inline-block></td>
+            <td align="center"><inline-block depth="3.9pt" height="11.7pt" width="142.3pt" xscale="1.5603981839641505" xtranslate="25.6pt" yscale="1.5603981839641505" ytranslate="-2.8pt">
+                <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g5"/>
+              </inline-block></td>
+            <td align="center"><inline-block depth="3.9pt" height="11.7pt" width="142.3pt" xscale="1.5603981839641505" xtranslate="25.6pt" yscale="1.5603981839641505" ytranslate="-2.8pt">
+                <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" xml:id="S0.F2.g6"/>
+              </inline-block></td>
           </tr>
         </tbody>
       </tabular>
