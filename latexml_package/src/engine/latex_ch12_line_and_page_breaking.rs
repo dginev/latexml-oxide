@@ -22,7 +22,7 @@ LoadDefinitions!({
   //======================================================================
   DefMacro!("\\pagebreak[Default:4]", sub[(arg_opt)] {
       let arg : u32 = if let Some(arg_t) = arg_opt {
-        arg_t.to_string().parse::<u32>().unwrap()
+        arg_t.to_string().parse::<u32>().unwrap_or(0)
       } else { 0 };
       if arg <= 2 {
         Ok(Tokens!()) }
