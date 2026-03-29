@@ -4,7 +4,7 @@
 
 Updated 2026-03-29 (session 62). Only lists open gaps & TODOs; completed items live in git history.
 
-**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 231/298 exact zero-diff (77.5%), 247/298 structural zero-diff (82.9%)**. Total diff lines: 37,119.
+**Test Results:** 320 pass, 0 fail, 12 ignored (tikz/pgf). **Perl parity: 231/298 exact zero-diff (77.5%), 247/298 structural zero-diff (82.9%)**. Total diff lines: 36,777.
 
 **Session 62** (17 commits): **INCLUDE_COMMENTS + \lxDeclare rewrite timing + _matched precedence + guessTableHeaders + figure panel breaks.** (1) Full INCLUDE_COMMENTS pipeline: raw libxml2 FFI for XML comment nodes, state rotation fix, Perl T_COMMENT `%` prefix. (2) \lxDeclare patterns match PRE-parsed DOM (rewrites run before math parser). (3) `apply_lx_declarations` skips `_matched` tokens → correct `role="UNKNOWN"` in XMDual. (4) XMWrap: 3 approaches all cause libxml2 memory corruption — documented with repro steps. (5) simplemath wildcard XMDual fix. (6) guessTableHeaders: `is_ascii_digit()` + double-struck digits (U+1D7D8-U+1D7E1) for cell classification; continuation line check. ding/bbold/fonts at zero-diff. (7) Figure panel standalone break insertion matching Perl's %standalone_panel_names.
 
