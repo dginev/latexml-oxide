@@ -402,11 +402,10 @@ LoadDefinitions!({
   )?;
 
   // NOTE: The When reverting these, the
-  DefConstructor!("\\lx@post@superscript InScriptStyle",r###"
-  <ltx:XMApp role="POSTSUPERSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
-    <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
-  </ltx:XMApp>
-  "###,
+  DefConstructor!("\\lx@post@superscript InScriptStyle",
+    "<ltx:XMApp role='POSTSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
     reversion => sub[_whatsit,args] {
       unref!(args=>arg);
       Ok(Tokens!(T_SUPER!(), revert_script(arg)?)) },
@@ -415,11 +414,10 @@ LoadDefinitions!({
         w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "") }
   );
 
-  DefConstructor!("\\lx@post@subscript InScriptStyle",r###"
-  <ltx:XMApp role="POSTSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
-    <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
-  </ltx:XMApp>
-  "###
+  DefConstructor!("\\lx@post@subscript InScriptStyle",
+    "<ltx:XMApp role='POSTSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>"
     ,
     reversion => sub[_whatsit,args] {
       unref!(args=>arg);
@@ -429,22 +427,20 @@ LoadDefinitions!({
         w.get_property("prevscript").as_deref(), "SUBSCRIPT", "") }
   );
 
-  DefConstructor!("\\lx@floating@superscript InScriptStyle",r###"
-  <ltx:XMApp role="FLOATSUPERSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
-    <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
-  </ltx:XMApp>
-  "###,
+  DefConstructor!("\\lx@floating@superscript InScriptStyle",
+    "<ltx:XMApp role='FLOATSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
     reversion => sub[_whatsit,args] {
       unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg)?)) }
     sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), None, None, "SUPERSCRIPT", "post") }
   );
-  DefConstructor!("\\lx@floating@subscript InScriptStyle",r###"
-  <ltx:XMApp role="FLOATSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
-    <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
-  </ltx:XMApp>
-  "###,
+  DefConstructor!("\\lx@floating@subscript InScriptStyle",
+    "<ltx:XMApp role='FLOATSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
     reversion => sub[_whatsit,args] {
       unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg)?)) }

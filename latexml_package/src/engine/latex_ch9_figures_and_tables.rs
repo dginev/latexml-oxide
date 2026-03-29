@@ -343,24 +343,22 @@ LoadDefinitions!({
 
   // Perl: latex_constructs.pool.ltxml L3450-3458
   // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.
-  DefEnvironment!("{figure}[]",r###"
-  <ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>
-    #tags
-    #body
-  </ltx:figure>
-  "###,
+  DefEnvironment!("{figure}[]",
+    "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+    #tags\
+    #body\
+    </ltx:figure>",
     properties   => { stored_map!("layout" => "vertical") },
     before_digest => { before_float("figure", None); },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
   // Perl: latex_constructs.pool.ltxml line 3460
-  DefEnvironment!("{figure*}[]",r###"
-  <ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>
-    #tags
-    #body
-  </ltx:figure>
-  "###,
+  DefEnvironment!("{figure*}[]",
+    "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+    #tags\
+    #body\
+    </ltx:figure>",
     properties   => { stored_map!("layout" => "vertical") },
     before_digest => { before_float_ex("figure", None, true); }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
