@@ -592,9 +592,14 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Find all XMTok elements in the document and apply matching declarations
+  // Find all XMTok elements in the document and apply matching declarations.
+  // Skip tokens already marked by the rewrite system (_matched) — these were
+  // handled by subscript/prime/wildcard patterns which take precedence.
   let xmtoks = document.findnodes("descendant-or-self::ltx:XMTok", None);
   for mut tok in xmtoks {
+    if tok.has_attribute("_matched") {
+      continue;
+    }
     let content = tok.get_content();
     let tok_name = tok.get_attribute("name").unwrap_or_default();
     for &(pattern, role, name, meaning) in &declarations {
