@@ -44,16 +44,13 @@ pub fn dump_format(
   // Lift the token limit for format dumps — expl3-code.tex alone uses ~5M tokens.
   let saved_limit = latexml_core::gullet::set_token_limit(None);
 
-  // Pre-load the LaTeX engine bindings so that \DeclareMathSymbol uses the Rust
-  // binding (which handles redefinition silently) instead of the raw TeX version
-  // from latex.ltx (which errors on "Command already defined").
-  if let Some(result) = latexml_package::dispatch("LaTeX.pool") {
-    if let Err(e) = result {
-      eprintln!("[ini_tex] Warning: failed to pre-load LaTeX.pool: {}", e);
-    }
-  }
+  // In init mode, suppress error/warning output during format loading.
+  // Raw latex.ltx redefines commands already in the compiled engine ("already defined"),
+  // and expl3-code.tex has forward references that produce transient errors.
+  // All these errors are benign — the dump captures the final correct state.
+  let prev_suppress = latexml_core::common::error::set_suppress_log_output(true);
 
-  // Suppress known expl3 loading errors (forward references resolved by post-load fixups)
+  // Suppress known expl3 loading errors at the state level too
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
 
@@ -72,6 +69,7 @@ pub fn dump_format(
 
   // Restore limits and suppression
   latexml_core::gullet::restore_token_limit(saved_limit);
+  latexml_core::common::error::set_suppress_log_output(prev_suppress);
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, None);
 

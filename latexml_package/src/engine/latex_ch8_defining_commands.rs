@@ -231,8 +231,6 @@ LoadDefinitions!({
       def_math(cs, None, presentation, opts)?;
     }
   });
-  // Lock so dump loader can't override with raw TeX version (which errors on redefinition)
-  state::assign_value("\\DeclareMathSymbol:locked", true, Some(Scope::Global));
 
   DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
   DefPrimitive!("\\DeclareMathRadical{}{}{}{}{}", None);
