@@ -199,23 +199,28 @@ LoadDefinitions!({
     }
   );
 
-  // \lxRDF — preamble version: store keyvals, create <rdf> at \begin{document}
-  // Perl L184-194: saves as frontmatter entry
+  // \lxRDF — preamble version: store as frontmatter entry
+  // Perl L184-194: push(@{ LookupValue('frontmatter')->{'ltx:rdf'} }, ['ltx:rdf', {%attr}, undef])
   DefPrimitive!("\\lxRDF@preamble[] RequiredKeyVals:RDFa", sub[args] {
     if let Some(kv) = args.get(1) {
-      let attrs = rdf_attributes_from_argwrap(kv);
-      // Ensure complete triple
-      let mut attrs = attrs;
+      let mut attrs = rdf_attributes_from_argwrap(kv);
       if !attrs.contains_key("about") && !attrs.contains_key("aboutlabelref")
         && !attrs.contains_key("aboutidref") {
         attrs.insert(s!("about"), String::new());
       }
-      // Store serialized attrs for frontmatter insertion
-      let serialized: String = attrs.iter()
-        .map(|(k, v)| s!("{}={}", k, v))
-        .collect::<Vec<_>>()
-        .join("\x00");
-      let _ = state::push_value("RDFa_preamble_rdf", serialized);
+      // Store in frontmatter hash under "ltx:rdf" key, matching Perl
+      state::with_value_mut("frontmatter", |val_opt| {
+        let frontmatter = match val_opt {
+          Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+          _ => return Ok::<(), latexml_core::Error>(()),
+        };
+        let tag = s!("ltx:rdf");
+        let empty_content = Digested::from(List::new(Vec::new()));
+        let entry = (tag.clone(), Some(attrs), empty_content);
+        let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
+        f_entry.push(entry);
+        Ok(())
+      })?;
     }
     Ok(Vec::new())
   });
@@ -247,27 +252,12 @@ LoadDefinitions!({
   let _ = state::push_value("@at@begin@document",
     Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")));
 
-  // Add prefix= attribute and insert preamble <rdf> elements when document opens
-  Tag!("ltx:document", after_open => sub[document, node] {
-    // Add prefix= attribute
+  // Add prefix= attribute when document opens
+  Tag!("ltx:document", after_open => sub[_document, node] {
     if let Some(Stored::VecDequeStored(prefixes)) = state::lookup_value("RDFa_prefixes") {
       let prefix_strs: Vec<String> = prefixes.iter().map(|s| s.to_string()).collect();
       if !prefix_strs.is_empty() {
         let _ = node.set_attribute("prefix", &prefix_strs.join(" "));
-      }
-    }
-    // Insert preamble <rdf> elements
-    if let Some(Stored::VecDequeStored(triples)) = state::lookup_value("RDFa_preamble_rdf") {
-      for triple_stored in triples.iter() {
-        let serialized = triple_stored.to_string();
-        if serialized.is_empty() { continue; }
-        let mut rdf = document.open_element("ltx:rdf", None, None)?;
-        for pair in serialized.split('\x00') {
-          if let Some((k, v)) = pair.split_once('=') {
-            let _ = rdf.set_attribute(k, v);
-          }
-        }
-        document.close_element("ltx:rdf")?;
       }
     }
   });
