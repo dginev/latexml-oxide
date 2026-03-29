@@ -17,6 +17,23 @@ struct DeclarePattern {
   wildcard_paths: Option<Vec<Vec<usize>>>,
 }
 
+/// Generate an XPath text predicate for a base token specification.
+fn base_text_predicate(base: &str) -> String {
+  if base.starts_with('\\') {
+    let cmd = base.trim_start_matches('\\');
+    if let Some(inner) = cmd.strip_prefix("mathcal{").and_then(|s| s.strip_suffix('}')) {
+      format!("@font='caligraphic' and text()='{inner}'")
+    } else {
+      match cmd {
+        "varepsilon" => "@meaning='varepsilon'".to_string(),
+        _ => format!("@meaning='{cmd}'"),
+      }
+    }
+  } else {
+    format!("text()='{}'", base.replace('\'', "&apos;"))
+  }
+}
+
 /// Compile a \lxDeclare body_text into pattern metadata.
 /// Handles both wildcard and non-wildcard patterns.
 ///
@@ -26,37 +43,39 @@ struct DeclarePattern {
 fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   // === Subscript patterns ===
   // Wildcard: x_\WildCard, \varepsilon_\WildCard, \mathcal{T}_\WildCard
+  // Match base XMTok, check next sibling is POSTSUBSCRIPT. select_count=2.
+  // NOTE: wildcard subscript uses base XMTok match (like Perl's compile_match1),
+  // NOT POSTSUBSCRIPT XMApp match. The Attributes handler wraps both nodes.
   if let Some(base) = body_text.strip_suffix("_\\WildCard") {
     let base = base.trim().to_string();
+    let base_pred = base_text_predicate(&base);
     return DeclarePattern {
-      // Match XMApp[@role='POSTSUBSCRIPT'] directly — Rust filters base text
-      xpath: "descendant-or-self::*[@role='POSTSUBSCRIPT']".to_string(),
+      xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
       pattern_type: "subscript",
       base_text: Some(base),
       sub_text: None,
       accent_name: None,
       has_wildcard: true,
-      // Wildcard = child 2 (subscript content) of the matched XMApp
-      wildcard_paths: Some(vec![vec![1, 2]]),
+      // Wildcard = sibling 2 (POSTSUBSCRIPT XMApp), child 1 (XMArg subscript content)
+      wildcard_paths: Some(vec![vec![2, 1]]),
     };
   }
   // Braced wildcard subscripts: x_{\WildCard}, x_{\WildCard,\WildCard}
+  // Match base XMTok, check next sibling is POSTSUBSCRIPT.
   if body_text.contains("_{\\WildCard") {
     if let Some(idx) = body_text.find("_{") {
       let base = body_text[..idx].trim().to_string();
+      let base_pred = base_text_predicate(&base);
       // Count wildcards in braces
       let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
       let nwilds = brace_content.matches("\\WildCard").count();
-      // For multi-wildcard subscripts, the subscript content is wrapped in XMWrap
-      // Each wildcard element inside gets its own path
       let wpaths = if nwilds <= 1 {
-        vec![vec![1, 2]]
+        vec![vec![2, 1]]  // sibling 2 (POSTSUBSCRIPT), child 1
       } else {
-        // Multiple wildcards in subscript: each is a child of child[2]
-        (1..=nwilds).map(|i| vec![1, 2, i]).collect()
+        (1..=nwilds).map(|i| vec![2, 1, i]).collect()
       };
       return DeclarePattern {
-        xpath: "descendant-or-self::*[@role='POSTSUBSCRIPT']".to_string(),
+        xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
         pattern_type: "subscript",
         base_text: Some(base),
         sub_text: None,
@@ -67,11 +86,15 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     }
   }
   // Literal subscript: x_1, x_{1}, x_{2n-1}
-  // No \WildCard but has _ subscript
+  // No \WildCard but has _ subscript.
+  // Match base XMTok with select_count=2 (base + POSTSUBSCRIPT sibling).
+  // Perl: compile_match1 digests pattern → [XMTok, XMApp POSTSUBSCRIPT] siblings.
+  // Attributes handler wraps both in XMWrap; math parser restructures.
   if let Some((base, sub)) = parse_subscript_literal(body_text) {
+    let base_pred = format!("text()='{}'", base.replace('\'', "&apos;"));
     return DeclarePattern {
-      xpath: "descendant-or-self::*[@role='POSTSUBSCRIPT']".to_string(),
-      pattern_type: "subscript",
+      xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
+      pattern_type: "literal_subscript",
       base_text: Some(base),
       sub_text: Some(sub),
       accent_name: None,
@@ -118,13 +141,14 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   }
 
   // === Prime pattern ===
-  // x^{\prime} → XMApp[@role='POSTSUPERSCRIPT'] with base x and prime superscript
+  // x^{\prime} → match base XMTok 'x', check next sibling is POSTSUPERSCRIPT with prime
   // body_text is "x^{\\prime}" (backslash-prime in braces)
   if let Some(base) = body_text.strip_suffix("^{\\prime}") {
     let base = base.trim().to_string();
     if !base.is_empty() && !base.contains('\\') {
+      let base_pred = format!("text()='{}'", base.replace('\'', "&apos;"));
       return DeclarePattern {
-        xpath: "descendant-or-self::*[@role='POSTSUPERSCRIPT']".to_string(),
+        xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
         pattern_type: "prime",
         base_text: Some(base),
         sub_text: None,
@@ -138,8 +162,9 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   if body_text.ends_with('\'') && body_text.len() > 1 {
     let base = body_text[..body_text.len() - 1].trim().to_string();
     if !base.is_empty() && !base.contains('\\') {
+      let base_pred = format!("text()='{}'", base.replace('\'', "&apos;"));
       return DeclarePattern {
-        xpath: "descendant-or-self::*[@role='POSTSUPERSCRIPT']".to_string(),
+        xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
         pattern_type: "prime",
         base_text: Some(base),
         sub_text: None,
@@ -459,10 +484,17 @@ LoadDefinitions!({
           if has_wildcard {
             attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
           }
-          // XMApp patterns (subscript, accent, prime) always match a single node
-          let select_count = if pat.pattern_type != "simple" {
-            Some(1usize)
-          } else { None };
+          // Pattern types determine select_count:
+          // - "simple": no explicit count (default 1)
+          // - "accent": matches single XMApp (count 1)
+          // - "subscript"/"literal_subscript": matches base XMTok + POSTSUBSCRIPT (count 2)
+          // - "prime": matches base XMTok + POSTSUPERSCRIPT (count 2)
+          let select_count = match pat.pattern_type {
+            "literal_subscript" | "prime" => Some(2usize),
+            "subscript" => Some(2usize),  // wildcard subscript: base + POSTSUBSCRIPT
+            "accent" => Some(1usize),
+            _ => None,
+          };
           let rewrite = Rewrite::new("math", RewriteOptions {
             xpath: Some(pat.xpath),
             attributes_map: Some(attrs),

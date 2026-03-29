@@ -1027,24 +1027,45 @@ fn mark_seen_rec(node: &Node) {
 /// - "simple": no extra filtering needed (XPath is specific enough)
 fn declare_node_matches(
   node: &Node, pattern_type: &str, base_text: Option<&str>,
-  _sub_text: Option<&str>, accent_name: Option<&str>,
+  sub_text: Option<&str>, accent_name: Option<&str>,
 ) -> bool {
   let children = node.get_child_nodes();
   match pattern_type {
-    "subscript" | "prime" => {
-      // Internal DOM: POSTSUBSCRIPT/POSTSUPERSCRIPT XMApp has 1 child (XMArg).
-      // Base token is the PREVIOUS SIBLING. Setting role on the XMApp would
-      // break serialization (serializer needs role=POSTSUBSCRIPT to add SUBSCRIPTOP).
-      //
-      // For now, these patterns are NOT matched at this level.
-      // The Attributes handler will set decl_id/role on the XMApp ONLY if we
-      // can do so without breaking serialization. This requires Perl-compatible
-      // serializer behavior (adding SUBSCRIPTOP based on structure, not role).
-      //
-      // TODO: Implement subscript/prime matching without breaking serialization.
-      // Options: (1) fix serializer to use structural context, (2) use multi-sibling
-      // matching to find base+subscript pairs.
-      false
+    "literal_subscript" => {
+      // Matched node is the BASE XMTok. Check that next sibling is POSTSUBSCRIPT
+      // with specific subscript content.
+      let next_sib = node.get_next_sibling();
+      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
+      if next_role.as_deref() != Some("POSTSUBSCRIPT") {
+        return false;
+      }
+      // Check subscript content text
+      if let Some(sub) = sub_text {
+        let sub_content = next_sib.as_ref().map(|s| s.get_content()).unwrap_or_default();
+        if sub_content.trim() != sub {
+          return false;
+        }
+      }
+      true
+    },
+    "subscript" => {
+      // Wildcard subscript: matched node is BASE XMTok.
+      // Check that next sibling is POSTSUBSCRIPT.
+      let next_sib = node.get_next_sibling();
+      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
+      next_role.as_deref() == Some("POSTSUBSCRIPT")
+    },
+    "prime" => {
+      // Matched node is BASE XMTok. Check that next sibling is POSTSUPERSCRIPT
+      // with prime content.
+      let next_sib = node.get_next_sibling();
+      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
+      if next_role.as_deref() != Some("POSTSUPERSCRIPT") {
+        return false;
+      }
+      // Check prime content
+      let sup_content = next_sib.as_ref().map(|s| s.get_content()).unwrap_or_default();
+      sup_content.contains('′')
     },
     "accent" => {
       // XMApp with children: [accent_op, base_content]
