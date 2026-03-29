@@ -592,13 +592,21 @@ impl BoxOps for Alignment {
           // Perl L338-339: lpad/rpad from extracted lspaces/rspaces width.
           // When lspaces/rspaces are populated (from cell extraction), use their
           // actual width. When None, use template heuristic as fallback.
+          // Perl L338-339: lpad/rpad from lspaces/rspaces width.
+          // In Perl, lspaces is populated from the left-scan of digested cell boxes.
+          // The left-scan encounters template-injected boxes (vrules, intercol spaces,
+          // fills) and extracts spacing. When lspaces is undef, Perl returns 0.
+          // In Rust, lspaces is not always populated by extraction (extraction stores
+          // None for empty lspaces). We use intercol_reachable_in_before to distinguish:
+          // - Regular columns (|l|): \vrule then \lx@intercol → reachable → threshold
+          // - @{text} columns: text then \lx@intercol → NOT reachable → 0
           let lpad = cell
             .lspaces
             .as_ref()
             .and_then(|ls| ls.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              if cell.has_intercol_before || template_has_fill(&cell.before) {
+              if intercol_reachable_in_before(&cell.before) || template_has_fill(&cell.before) {
                 threshold_02em
               } else {
                 0
@@ -610,6 +618,8 @@ impl BoxOps for Alignment {
             .and_then(|rs| rs.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
+              // Perl: rpad from rspaces. When not extracted, use template.
+              // Only the after tokens determine right padding.
               if template_has_intercol(&cell.after) {
                 threshold_02em
               } else {
@@ -617,11 +627,7 @@ impl BoxOps for Alignment {
               }
             });
           // Perl L340-341: ltx_nopad_l, unless math mode (Perl: `unless $ismath`)
-          // Note: _col_idx>0 guard: column 0 lspaces extraction sometimes misses
-          // \lx@intercol when it's after @{text}. With conditional disable_intercolumn,
-          // this only affects @{text}p{dim} specs — rare. TODO: populate lspaces
-          // more faithfully to remove this guard entirely.
-          if (_col_idx > 0 || self.is_halign) && !ismath && (!empty || has_boxes) && lpad < threshold_02em {
+          if !ismath && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // In math mode, absorb named spacing (like \quad) as XMHint content
@@ -872,9 +878,35 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
-      if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" || s == "\\lx@intercol" {
+      if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" {
         return true;
       }
+    }
+  }
+  false
+}
+
+/// Check if \lx@intercol in the before tokens is reachable by the left-scan.
+/// The left-scan skips: isVerticalRule (\vrule), \relax, isFill (\hfil/\hfill),
+/// isSpace, isHorizontalRule, alignmentSkippable, Comment.
+/// It STOPS at real content (like text from @{text}).
+/// For `\vrule\relax\lx@intercol\hfil`: reachable (vrule is skippable).
+/// For `@{1}\lx@intercol\hfil`: NOT reachable ("1" blocks the scan).
+fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
+  if let Some(ref toks) = tokens {
+    for tok in toks.unlist_ref() {
+      let s = tok.to_string();
+      if s == "\\lx@intercol" || s.contains("intercol") {
+        return true;
+      }
+      // These are skippable by the left-scan in Perl's extractAlignmentColumn
+      if s == "\\vrule" || s == "\\relax" || s == "\\hfil" || s == "\\hfill"
+        || s == "\\hskip" || s == "\\lx@column@trimright"
+      {
+        continue;
+      }
+      // Any other token blocks the scan
+      return false;
     }
   }
   false
