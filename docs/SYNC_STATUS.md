@@ -380,7 +380,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-28):** 320 pass, 0 fail, 12 ignored. 211/298 zero-diff (71%). Session 58 (17 commits): **WildCard XMDual wrapping for \lxDeclare** — full pipeline: domToXPath, mark_wildcards, set_attributes_wild, scope=section, base token filtering, single-wrap-nodes approach. declare.xml: 975→867 (-11%). Also: babel page545 language (14→4), `<p></p>` serialization (abxtest 60→0), tabular column pruning (15→6). New zero-diff: abxtest, cs_cv. 4 WISDOM entries added.
+**Status (2026-03-28):** 301 pass, 0 fail, 12 ignored. 209/294 zero-diff (71%), 33 pure xml:id (intentional), 52 with real structural diffs. 32,057 total diff lines (31,053 real + 1,004 intentional xml:id). Session 60: **Rewrite wildcard fix + font matching** — removed incorrect `all_descendants_matched` check in `set_wildcard_ids` (was blocking XMDual creation), added Document-based font filtering for bold/caligraphic (simple declarations don't match styled tokens). declare.xml: 865→847. Full diff inventory below.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
