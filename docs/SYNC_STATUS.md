@@ -376,7 +376,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored (all tikz/pgf). Previously-ignored tests now passing: physics, si, beamer, numprints. 126 total conversion errors across all non-tikz tests (56_ams: 14 dangling XMRef, 65_graphics: 1, 80_complex: 83 siunitx, 81_babel: 28 conditional). Session 61: cleanupScripts implementation, conditional skip across mouth boundaries, babel \l@nil fix.
+**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored (all tikz/pgf). **Perl-vs-Rust parity: 119/306 exact zero-diff (39%), ~210/306 effective parity (69%) when including intentional-only divergences (searchpaths PI, %\n comments, cdots role, xml:id renumbering).** 125 total conversion errors. Session 61 (5 commits): cleanupScripts, \lxDeclare XMApp matching, listing colors, siunitx powers, babel \l@nil.
 
 > **Phase transition note (2026-03-27):** The translation is nearing the limits of its
 > coverage. Early sessions yielded large gains from straightforward porting, but recent
