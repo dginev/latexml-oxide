@@ -42,27 +42,26 @@ fn base_text_predicate(base: &str) -> String {
 /// with Rust-side filtering criteria (avoids XPath nested predicate bug).
 fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   // === Subscript patterns ===
+  // IMPORTANT: Rewrites run BEFORE math parsing. The pre-parsed DOM has:
+  //   <XMTok>x</XMTok> <XMApp role="POSTSUBSCRIPT"><XMTok>n</XMTok></XMApp>
+  // NOT the post-parsed: <XMApp><XMTok role="SUBSCRIPTOP"/><XMTok>x</XMTok><XMTok>n</XMTok></XMApp>
+  // Match the BASE XMTok, with select_count=2 to include the POSTSUBSCRIPT sibling.
+  // Rust-side filtering verifies the sibling structure.
+
   // Wildcard: x_\WildCard, \varepsilon_\WildCard, \mathcal{T}_\WildCard
-  // After math parsing, x_n becomes XMApp[SUBSCRIPTOP, XMTok(x), XMTok(n)].
-  // Match the XMApp with SUBSCRIPTOP operator and base text.
-  // Perl: compile_match1 digests $x_\WildCard$ → XMApp[SUBSCRIPTOP, x, _WildCard_]
-  //       then domToXPath produces xpath matching the XMApp structure.
   if let Some(base) = body_text.strip_suffix("_\\WildCard") {
     let base = base.trim().to_string();
     let base_pred = base_text_predicate(&base);
     return DeclarePattern {
-      // Match XMApp with SUBSCRIPTOP child and base text child
-      xpath: format!(
-        "descendant-or-self::*[local-name()='XMApp' and \
-         child::*[position()=1 and @meaning='SUBSCRIPTOP'] and \
-         child::*[position()=2 and {base_pred}]]"),
+      // Match the base XMTok; Rust-side filter checks POSTSUBSCRIPT sibling
+      xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
       pattern_type: "subscript",
       base_text: Some(base),
       sub_text: None,
       accent_name: None,
       has_wildcard: true,
-      // Wildcard = child 3 of the XMApp (the subscript content)
-      wildcard_paths: Some(vec![vec![1, 3]]),
+      // Wildcard = child 1 of sibling 2 (the content of POSTSUBSCRIPT XMApp)
+      wildcard_paths: Some(vec![vec![2, 1]]),
     };
   }
   // Braced wildcard subscripts: x_{\WildCard}, x_{\WildCard,\WildCard}
@@ -73,15 +72,12 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
       let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
       let nwilds = brace_content.matches("\\WildCard").count();
       let wpaths = if nwilds <= 1 {
-        vec![vec![1, 3]]  // child 3 of XMApp (subscript content)
+        vec![vec![2, 1]]  // child 1 of sibling 2 (POSTSUBSCRIPT content)
       } else {
-        (1..=nwilds).map(|i| vec![1, 3, i]).collect()
+        (1..=nwilds).map(|i| vec![2, 1, i]).collect()
       };
       return DeclarePattern {
-        xpath: format!(
-          "descendant-or-self::*[local-name()='XMApp' and \
-           child::*[position()=1 and @meaning='SUBSCRIPTOP'] and \
-           child::*[position()=2 and {base_pred}]]"),
+        xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
         pattern_type: "subscript",
         base_text: Some(base),
         sub_text: None,
@@ -92,15 +88,11 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     }
   }
   // Literal subscript: x_1, x_{1}, x_{2n-1}
-  // After parsing: XMApp[SUBSCRIPTOP, XMTok(x), XMTok/XMApp(subscript content)].
-  // Match the XMApp structure with SUBSCRIPTOP operator.
+  // Pre-parsed: XMTok[x] + XMApp[POSTSUBSCRIPT, XMTok[1]]
   if let Some((base, sub)) = parse_subscript_literal(body_text) {
     let base_pred = format!("text()='{}'", base.replace('\'', "&apos;"));
     return DeclarePattern {
-      xpath: format!(
-        "descendant-or-self::*[local-name()='XMApp' and \
-         child::*[position()=1 and @meaning='SUBSCRIPTOP'] and \
-         child::*[position()=2 and {base_pred}]]"),
+      xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
       pattern_type: "literal_subscript",
       base_text: Some(base),
       sub_text: Some(sub),
@@ -155,10 +147,8 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     if !base.is_empty() && !base.contains('\\') {
       let base_pred = format!("text()='{}'", base.replace('\'', "&apos;"));
       return DeclarePattern {
-        xpath: format!(
-          "descendant-or-self::*[local-name()='XMApp' and \
-           child::*[position()=1 and @meaning='SUPERSCRIPTOP'] and \
-           child::*[position()=2 and {base_pred}]]"),
+        // Pre-parsed: XMTok[x] + XMApp[POSTSUPERSCRIPT, XMTok[prime]]
+        xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
         pattern_type: "prime",
         base_text: Some(base),
         sub_text: None,
@@ -174,10 +164,8 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     if !base.is_empty() && !base.contains('\\') {
       let base_pred = format!("text()='{}'", base.replace('\'', "&apos;"));
       return DeclarePattern {
-        xpath: format!(
-          "descendant-or-self::*[local-name()='XMApp' and \
-           child::*[position()=1 and @meaning='SUPERSCRIPTOP'] and \
-           child::*[position()=2 and {base_pred}]]"),
+        // Pre-parsed: XMTok[x] + XMApp[POSTSUPERSCRIPT, XMTok[prime]]
+        xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
         pattern_type: "prime",
         base_text: Some(base),
         sub_text: None,
@@ -498,10 +486,11 @@ LoadDefinitions!({
             attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
           }
           // Pattern types determine select_count:
-          // All patterns now match a single XMApp node (after math parser
-          // restructures subscripts/superscripts into XMApp).
+          // Subscript/prime patterns match base XMTok + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling
+          // (select_count=2, pre-parsed DOM). Accent patterns match the single XMApp.
           let select_count = match pat.pattern_type {
-            "literal_subscript" | "prime" | "subscript" | "accent" => Some(1usize),
+            "literal_subscript" | "prime" | "subscript" => Some(2usize),
+            "accent" => Some(1usize),
             _ => None,
           };
           let rewrite = Rewrite::new("math", RewriteOptions {
