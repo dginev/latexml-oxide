@@ -2,7 +2,9 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-29. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-03-29 (session 62). Only lists open gaps & TODOs; completed items live in git history.
+
+**Session 62** (3 commits): **INCLUDE_COMMENTS fix + \lxDeclare pre-parsed patterns.** (1) Implemented full INCLUDE_COMMENTS pipeline: Stomach creates Comment objects, Document.insert_comment() uses raw libxml2 FFI (xmlNewDocComment+xmlAddChild), Comment.get_properties() prevents todo!() panic, state rotation fix (STY_STATE swap doesn't clobber INCLUDE_COMMENTS). Tests use include_comments=false matching Perl's CORE_OPTIONS_FOR_TESTS. (2) Fixed \lxDeclare patterns to match PRE-parsed DOM (rewrites run before math parser): XPaths now match base XMTok + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling with select_count=2, not POST-parsed XMApp[SUBSCRIPTOP]. (3) Prepend `%` to comment text matching Perl's T_COMMENT format.
 
 **High-level roadmap:** Engine Parity → Package Bindings → Post-Processing → Production.
 
