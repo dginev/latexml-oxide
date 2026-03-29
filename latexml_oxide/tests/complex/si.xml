@@ -1903,7 +1903,7 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
         </tags>
         <title><tag close=" ">2.1.1</tag>forbid-literal-units, inter-unit-product</title>
         <para xml:id="S2.SS1.SSS1.p1">
-          <p><text class="ltx_markedasmath">F</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">lm</text><text class="ltx_markedasmath">cd</text> <break/><text class="ltx_markedasmath">F</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">lm</text><text class="ltx_markedasmath">cd</text><break/><text class="ltx_markedasmath">F</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">lm</text><text class="ltx_markedasmath">cd</text><break/></p>
+          <p><text class="ltx_markedasmath">F</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">lm</text><text class="ltx_markedasmath">cd</text> <break/><text class="ltx_markedasmath">F</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">lm</text><text class="ltx_markedasmath">cd</text><break/><text class="ltx_markedasmath">F</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">lm</text><text class="ltx_markedasmath">cd</text><break/></p>
         </para>
       </subsubsection>
       <subsubsection inlist="toc" xml:id="S2.SS1.SSS2">
@@ -1923,12 +1923,12 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
                   <XMText>K</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\squared" text="[m] / [s]" xml:id="S2.SS1.SSS2.p1.m2">
+            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\textsuperscript{ 2 }" text="[m] / [s 2 ]" xml:id="S2.SS1.SSS2.p1.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMText>m</XMText>
-                  <XMText>s<ERROR class="undefined"/></XMText>
+                  <XMText>s<sup> 2 </sup></XMText>
                 </XMApp>
               </XMath>
             </Math> <break/><Math mode="inline" tex="\text{J}/\text{mol}/\text{K}" text="[J] / [mol] / [K]" xml:id="S2.SS1.SSS2.p1.m3">
@@ -1948,12 +1948,12 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
                   <XMText>K</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\squared" text="[m] / [s]" xml:id="S2.SS1.SSS2.p1.m5">
+            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\textsuperscript{ 2 }" text="[m] / [s 2 ]" xml:id="S2.SS1.SSS2.p1.m5">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMText>m</XMText>
-                  <XMText>s<ERROR class="undefined"/></XMText>
+                  <XMText>s<sup> 2 </sup></XMText>
                 </XMApp>
               </XMath>
             </Math><break/><Math mode="inline" tex="\text{A}/\text{mol}\text{s}" text="[A] / [mols]" xml:id="S2.SS1.SSS2.p1.m6">
@@ -1984,12 +1984,12 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
                   <XMText>K</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\squared" text="[m] / [s]" xml:id="S2.SS1.SSS2.p2.m2">
+            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\textsuperscript{ 2 }" text="[m] / [s 2 ]" xml:id="S2.SS1.SSS2.p2.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMText>m</XMText>
-                  <XMText>s<ERROR class="undefined"/></XMText>
+                  <XMText>s<sup> 2 </sup></XMText>
                 </XMApp>
               </XMath>
             </Math> <break/><Math mode="inline" tex="\text{J}/\text{mol}/\text{K}" text="[J] / [mol] / [K]" xml:id="S2.SS1.SSS2.p2.m3">
@@ -2123,20 +2123,20 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
         </tags>
         <title><tag close=" ">2.1.4</tag>power-font</title>
         <para xml:id="S2.SS1.SSS4.p1">
-          <p><Math mode="inline" tex="\text{m}/\text{s}\squared" text="[m] / [s]" xml:id="S2.SS1.SSS4.p1.m1">
+          <p><Math mode="inline" tex="\text{m}/\text{s}\textsuperscript{ 2 }" text="[m] / [s 2 ]" xml:id="S2.SS1.SSS4.p1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMText>m</XMText>
-                  <XMText>s<ERROR class="undefined"/></XMText>
+                  <XMText>s<sup> 2 </sup></XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\squared" text="[m] / [s]" xml:id="S2.SS1.SSS4.p1.m2">
+            </Math> <break/><Math mode="inline" tex="\text{m}/\text{s}\textsuperscript{ 2 }" text="[m] / [s 2 ]" xml:id="S2.SS1.SSS4.p1.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMText>m</XMText>
-                  <XMText>s<ERROR class="undefined"/></XMText>
+                  <XMText>s<sup> 2 </sup></XMText>
                 </XMApp>
               </XMath>
             </Math><break/></p>
@@ -2199,38 +2199,38 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
         </tags>
         <title><tag close=" ">2.1.6</tag>qualifier-mode, qualifier-phrase</title>
         <para xml:id="S2.SS1.SSS6.p1">
-          <p><Math mode="inline" tex="\text{kg}\text{pol}\squared/\text{mol}\text{cat}/\text{h}" text="[kgpol] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m1">
+          <p><Math mode="inline" tex="\text{kg}\text{pol}\textsuperscript{ 2 }/\text{mol}\text{cat}/\text{h}" text="[kgpol 2 ] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMText>kgpol<ERROR class="undefined"/></XMText>
+                  <XMText>kgpol<sup> 2 </sup></XMText>
                   <XMText>molcat</XMText>
                   <XMText>h</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\squared/\text{mol}\text{cat}/\text{h}" text="[kgpol] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m2">
+            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\textsuperscript{ 2 }/\text{mol}\text{cat}/\text{h}" text="[kgpol 2 ] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMText>kgpol<ERROR class="undefined"/></XMText>
+                  <XMText>kgpol<sup> 2 </sup></XMText>
                   <XMText>molcat</XMText>
                   <XMText>h</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\squared/\text{mol}\text{cat}/\text{h}" text="[kgpol] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m3">
+            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\textsuperscript{ 2 }/\text{mol}\text{cat}/\text{h}" text="[kgpol 2 ] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMText>kgpol<ERROR class="undefined"/></XMText>
+                  <XMText>kgpol<sup> 2 </sup></XMText>
                   <XMText>molcat</XMText>
                   <XMText>h</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\squared/\text{mol}\text{cat}/\text{h}" text="[kgpol] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m4">
+            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\textsuperscript{ 2 }/\text{mol}\text{cat}/\text{h}" text="[kgpol 2 ] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p1.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMText>kgpol<ERROR class="undefined"/></XMText>
+                  <XMText>kgpol<sup> 2 </sup></XMText>
                   <XMText>molcat</XMText>
                   <XMText>h</XMText>
                 </XMApp>
@@ -2238,20 +2238,20 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
             </Math> <break/><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">B</text><text class="ltx_markedasmath">i</text><break/></p>
         </para>
         <para xml:id="S2.SS1.SSS6.p2">
-          <p><Math mode="inline" tex="\text{kg}\text{pol}\squared/\text{mol}\text{cat}/\text{h}" text="[kgpol] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p2.m1">
+          <p><Math mode="inline" tex="\text{kg}\text{pol}\textsuperscript{ 2 }/\text{mol}\text{cat}/\text{h}" text="[kgpol 2 ] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p2.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMText>kgpol<ERROR class="undefined"/></XMText>
+                  <XMText>kgpol<sup> 2 </sup></XMText>
                   <XMText>molcat</XMText>
                   <XMText>h</XMText>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\squared/\text{mol}\text{cat}/\text{h}" text="[kgpol] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p2.m2">
+            </Math> <break/><Math mode="inline" tex="\text{kg}\text{pol}\textsuperscript{ 2 }/\text{mol}\text{cat}/\text{h}" text="[kgpol 2 ] / [molcat] / [h]" xml:id="S2.SS1.SSS6.p2.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
-                  <XMText>kgpol<ERROR class="undefined"/></XMText>
+                  <XMText>kgpol<sup> 2 </sup></XMText>
                   <XMText>molcat</XMText>
                   <XMText>h</XMText>
                 </XMApp>
@@ -2283,36 +2283,36 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
                   <XMText>moldA</XMText>
                 </XMApp>
               </XMath>
-            </Math><break/><text class="ltx_markedasmath">k</text><text class="ltx_markedasmath">g</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath">M</text><text class="ltx_markedasmath">g</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath">M</text><text class="ltx_markedasmath">g</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath"><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text><text class="ltx_markedasmath">g</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath"><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text><text class="ltx_markedasmath">g</text><ERROR class="ltx_markedasmath undefined"/><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><Math mode="inline" tex="/\text{M}\text{g}\squared\text{d}\text{s}" text="absent / [Mgds]" xml:id="S2.SS1.SSS7.p1.m8">
+            </Math><break/><text class="ltx_markedasmath">k</text><text class="ltx_markedasmath">g</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath">M</text><text class="ltx_markedasmath">g</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath">M</text><text class="ltx_markedasmath">g</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath"><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text><text class="ltx_markedasmath">g</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><text class="ltx_markedasmath"><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text><text class="ltx_markedasmath">g</text><sup class="ltx_markedasmath"> 2 </sup><text class="ltx_markedasmath">d</text><text class="ltx_markedasmath">s</text><break/><Math mode="inline" tex="/\text{M}\text{g}\textsuperscript{ 2 }\text{d}\text{s}" text="absent / [Mg 2 ds]" xml:id="S2.SS1.SSS7.p1.m8">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMText>Mg<ERROR class="undefined"/>ds</XMText>
+                  <XMText>Mg<sup> 2 </sup>ds</XMText>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="/\text{M}\text{g}\squared\text{d}\text{s}" text="absent / [Mgds]" xml:id="S2.SS1.SSS7.p1.m9">
+            </Math><break/><Math mode="inline" tex="/\text{M}\text{g}\textsuperscript{ 2 }\text{d}\text{s}" text="absent / [Mg 2 ds]" xml:id="S2.SS1.SSS7.p1.m9">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMText>Mg<ERROR class="undefined"/>ds</XMText>
+                  <XMText>Mg<sup> 2 </sup>ds</XMText>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="/\text{\mu}\text{g}\squared\text{d}\text{s}" text="absent / [μgds]" xml:id="S2.SS1.SSS7.p1.m10">
+            </Math><break/><Math mode="inline" tex="/\text{\mu}\text{g}\textsuperscript{ 2 }\text{d}\text{s}" text="absent / [μg 2 ds]" xml:id="S2.SS1.SSS7.p1.m10">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMText><text><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text>g<ERROR class="undefined"/>ds</XMText>
+                  <XMText><text><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text>g<sup> 2 </sup>ds</XMText>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="/\text{\mu}\text{g}\squared\text{d}\text{s}" text="absent / [μgds]" xml:id="S2.SS1.SSS7.p1.m11">
+            </Math><break/><Math mode="inline" tex="/\text{\mu}\text{g}\textsuperscript{ 2 }\text{d}\text{s}" text="absent / [μg 2 ds]" xml:id="S2.SS1.SSS7.p1.m11">
               <XMath>
                 <XMApp>
                   <XMTok meaning="divide" role="MULOP">/</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMText><text><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text>g<ERROR class="undefined"/>ds</XMText>
+                  <XMText><text><XMTok font="italic" name="mu" role="UNKNOWN">μ</XMTok></text>g<sup> 2 </sup>ds</XMText>
                 </XMApp>
               </XMath>
             </Math><break/></p>
@@ -2970,7 +2970,7 @@ Some text <break/><Math mode="inline" tex="4\,\text{m}/\text{Sv}" text="(4 * [m]
             <td align="center" border="tt">Unit</td>
           </tr>
           <tr>
-            <td align="left" border="t">m<ERROR class="undefined"/>/s</td>
+            <td align="left" border="t">m<sup> 2 </sup>/s</td>
           </tr>
           <tr>
             <td align="left">Pa</td>
