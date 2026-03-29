@@ -117,19 +117,32 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
   }
   // Perl L3403-3405: only add class if >1 panel (complex figure)
   if panels.len() >= 2 {
-    // Check if ALL panels are simple <p> elements (not sub-figures).
-    // Only insert breaks between <p> panels (Perl checks width for row-splitting).
-    let all_p = panels.iter().all(|p| {
+    // Perl: standalone panels get breaks between them.
+    // Perl has width-based row-splitting logic, but without box width tracking,
+    // we use a simpler heuristic: insert break after each "standalone" panel
+    // (p, listing, equation, equationgroup, itemize, enumerate, quote, theorem,
+    // proof, description, verbatim, math) when there are multiple panels.
+    let is_standalone = |p: &libxml::tree::Node| -> bool {
       let qname = latexml_core::document::get_node_qname(p);
-      arena::with(qname, |name| name == "ltx:p")
-    });
+      arena::with(qname, |name| {
+        matches!(name,
+          "ltx:p" | "ltx:listing" | "ltx:math" | "ltx:itemize" | "ltx:enumerate"
+          | "ltx:quote" | "ltx:theorem" | "ltx:proof" | "ltx:description"
+          | "ltx:equation" | "ltx:equationgroup" | "ltx:verbatim")
+      })
+    };
     for i in 0..panels.len() {
       document.add_class(&mut panels[i], "ltx_figure_panel")?;
-      // Insert break AFTER each <p> panel except the last
-      // (only when all panels are simple <p> elements)
-      if all_p && i + 1 < panels.len() {
+    }
+    // Insert breaks between panels.
+    // Perl inserts break before a standalone panel (if there are prior panels in the row),
+    // and after standalone panels at the start. We simplify: insert break between consecutive
+    // panels where either the current or next panel is standalone.
+    for i in 0..panels.len().saturating_sub(1) {
+      if is_standalone(&panels[i]) || is_standalone(&panels[i + 1]) {
         let ns = panels[i].get_namespace();
-        let mut break_node = libxml::tree::Node::new("break", ns, document.get_document()).unwrap();
+        let mut break_node =
+          libxml::tree::Node::new("break", ns, document.get_document()).unwrap();
         let _ = break_node.set_attribute("class", "ltx_break");
         panels[i].add_next_sibling(&mut break_node)?;
       }
