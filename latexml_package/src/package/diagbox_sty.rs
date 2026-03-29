@@ -121,10 +121,20 @@ LoadDefinitions!({
           }
         }
         // Now add groups to DOM
+        // Perl: translate coordinates get Perl's default number formatting
+        // which naturally rounds float artifacts (18.939999... → "18.94")
+        let fmt_coord = |s: &str| -> String {
+          if let Ok(v) = s.parse::<f64>() {
+            let r = (v * 100.0 * (1.0 + 100.0 * f64::EPSILON)).round() / 100.0;
+            if r == 0.0 { return "0".to_string(); }
+            let fs = format!("{:.2}", r);
+            let fs = fs.trim_end_matches('0');
+            fs.trim_end_matches('.').to_string()
+          } else { s.to_string() }
+        };
         for (px, py, pw, ph, content) in groups {
-          // Use document's open/close element API instead of raw libxml
           let mut g_attrs = HashMap::default();
-          g_attrs.insert("transform".to_string(), s!("translate({px},{py})"));
+          g_attrs.insert("transform".to_string(), s!("translate({},{})", fmt_coord(&px), fmt_coord(&py)));
           if !pw.is_empty() { g_attrs.insert("innerwidth".to_string(), pw); }
           if !ph.is_empty() { g_attrs.insert("innerheight".to_string(), ph); }
           g_attrs.insert("class".to_string(), "ltx_svg_fog".to_string());
@@ -233,10 +243,8 @@ LoadDefinitions!({
       let linecolor = kv.and_then(|kv| kv.get_value_digested("linecolor"))
         .map(|v| v.to_string()).unwrap_or_else(|| "#000000".to_string());
 
-      // Round coordinates to avoid float artifacts (e.g. 36.31999999999999 → 36.32)
-      let (ax, ay) = (roundto(ax), roundto(ay));
-      let (bx, by) = (roundto(bx), roundto(by));
-      let (mx, my) = (roundto(mx), roundto(my));
+      // Perl does NOT roundto the coordinates — they inherit precision from h/w/Bh/etc.
+      // Only w and h are rounded; coordinates are raw arithmetic results.
 
       // Perl: setProperties with Dimension($w / $pxppt . 'pt') for width/height
       // In Rust, template uses raw px strings, so store as-is

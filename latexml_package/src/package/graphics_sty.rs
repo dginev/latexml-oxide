@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use latexml_core::common::dimension::attribute_format;
+use latexml_core::common::numeric_ops::kround;
 
 /// Perl: graphics_scaledbox_props($box, $xscale, $yscale) in graphics.sty.ltxml L63-81
 /// Computes scaled dimensions and translation offsets for \scalebox.
@@ -23,7 +24,7 @@ pub fn scaled_properties(
   let xtranslate = (sw - w) * 0.5;
   let ytranslate = (s_total_h - total_h) * (-0.5);
 
-  let dim_attr = |v: f64| attribute_format(v as i64, None);
+  let dim_attr = |v: f64| attribute_format(kround(v), None);
 
   Ok(vec![
     ("width", Stored::from(dim_attr(sw))),
@@ -68,7 +69,7 @@ pub fn rotated_properties(
   let xsh = (wp - w) / 2.0;
   let ysh = (h + d - hp - dp) / 2.0;
 
-  let dim_attr = |v: f64| attribute_format(v as i64, None);
+  let dim_attr = |v: f64| attribute_format(kround(v), None);
   let width_val = if smash { "0.0pt".to_string() } else { dim_attr(wp) };
 
   Ok(vec![
