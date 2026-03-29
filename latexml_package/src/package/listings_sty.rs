@@ -685,14 +685,15 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
     is_leaf = false;
   }
 
-  // Deduplicate CSS classes while preserving order
+  // Deduplicate and sort CSS classes (matching Perl's addSSValues sort behavior)
   let mut seen = std::collections::HashSet::new();
-  let css_string = css_classes
+  let mut deduped: Vec<String> = css_classes
     .iter()
     .filter(|c| seen.insert((*c).clone()))
     .map(|c| format!("ltx_lst_{c}"))
-    .collect::<Vec<_>>()
-    .join(" ");
+    .collect();
+  deduped.sort();
+  let css_string = deduped.join(" ");
 
   let mut result = vec![T_BEGIN!(), T_CS!("\\@listingGroup"), T_BEGIN!()];
   result.extend(ExplodeText!(&css_string));
