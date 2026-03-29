@@ -560,6 +560,7 @@ Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht
   - **Missing types**: Number (222), Register (382), CharDef (685), FontDef (21), Font (32)
   - **Missing Let aliases**: 2,427 entries — most target Primitives already in compiled `.rs` code
   - See E.5–E.7 for fix plan.
+- [ ] **O. Font metric precision** — Minor dimension rounding differences between Perl and Rust (e.g., 96.1pt vs 95.8pt, 90.1pt vs 89.8pt). Affects cells, diagboxtest, vmode (rotated inline-blocks and diagbox SVG coordinates). Root cause: different font metric lookup or pt-rounding between Perl's `Image::Size`/`Font::AFM` and Rust's `standard_metrics.rs`. Low priority since values are within 1% of Perl.
 - [ ] **F. Post-processing pipeline** — Last step. 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [ ] **L. Arena/SymStr migration audit** — Final step before post-processing. Audit all `arena::to_string()` calls and `String::clone()` calls across the codebase. Replace with: (1) `SymStr` methods where strings are already interned, (2) `arena::with()` family to avoid allocations, (3) `arena::pin()` to convert frequently-used Strings to SymStr. Goal: eliminate unnecessary heap allocations by leveraging the arena's zero-cost interned strings.
 - [ ] **N. Mathtools parsing performance** — The mathtools_test has slowed down considerably due to high ambiguity in math parsing. **Action plan:**

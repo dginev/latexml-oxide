@@ -589,51 +589,38 @@ impl BoxOps for Alignment {
           // - Else if template has \hfil/\hfill → centering fill, treat as padding (prevents
           //   incorrect ltx_nopad_l for regular centered/right-aligned columns)
           // - Else → no padding (assume 0, enables ltx_nopad_l)
+          // Perl L338-339: lpad/rpad from extracted lspaces/rspaces width.
+          // When lspaces/rspaces are populated (from cell extraction), use their
+          // actual width. When None, use template heuristic as fallback.
           let lpad = cell
             .lspaces
             .as_ref()
             .and_then(|ls| ls.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              // Perl: lpad from lspaces (\lx@intercol width). When unavailable,
-              // use template tracking: has_intercol_before is set during template
-              // building and correctly distinguishes @{}-disabled columns.
               if cell.has_intercol_before || template_has_fill(&cell.before) {
                 threshold_02em
               } else {
                 0
               }
             });
-          // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
-          // When rspaces is not extracted, check template for intercolumn spacing.
-          // Key insight: @{}c@{} columns have \hfil (centering) but NO \lx@intercol.
-          // Regular columns have \lx@intercol in before OR after tokens.
-          // Use \lx@intercol presence as the primary signal for padding.
           let rpad = cell
             .rspaces
             .as_ref()
             .and_then(|rs| rs.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              // Check after tokens first (direct intercol signal)
               if template_has_intercol(&cell.after) {
                 threshold_02em
-              // If no intercol in after, check before: if before has intercol,
-              // this is a regular column (last column or similar) — assume padding
-              } else if template_has_intercol(&cell.before) {
-                if template_has_fill(&cell.after) { threshold_02em } else { 0 }
-              // Neither before nor after has intercol → @{} on both sides → no padding
               } else {
                 0
               }
             });
           // Perl L340-341: ltx_nopad_l, unless math mode (Perl: `unless $ismath`)
-          // Note: col_idx guard for non-halign tables. Column 0 always has lpad=0
-          // in our alignment because lspaces aren't populated for the first column.
-          // Perl's lpad comes from \tabcolsep which is ~6pt (>0.2em), so ltx_nopad_l
-          // wouldn't fire for column 0 with default spacing. The guard prevents a
-          // false positive. For @{} columns at position 0, the guard incorrectly
-          // suppresses ltx_nopad_l but this is rare.
+          // Note: _col_idx>0 guard: column 0 lspaces extraction sometimes misses
+          // \lx@intercol when it's after @{text}. With conditional disable_intercolumn,
+          // this only affects @{text}p{dim} specs — rare. TODO: populate lspaces
+          // more faithfully to remove this guard entirely.
           if (_col_idx > 0 || self.is_halign) && !ismath && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
