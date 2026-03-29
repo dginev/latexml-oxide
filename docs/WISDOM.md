@@ -706,3 +706,34 @@ section prefix (S1.XMD1, S2.XMD1, etc.). But the `scope` (derived from
 **Key insight:** Any TeX state query (counter values, section IDs, font state)
 in afterConstruct reflects end-of-document state. Store needed values in
 afterDigest as whatsit properties, then use them in afterConstruct.
+
+## 22. Subscript DOM structure: Perl vs Rust
+
+**Context:** Session 59 — `\lxDeclare` literal subscript matching.
+
+**Perl internal DOM:**
+```xml
+<XMApp role="POSTSUBSCRIPT">
+  <XMTok>x</XMTok>           <!-- base is CHILD -->
+  <XMTok>1</XMTok>           <!-- subscript is CHILD -->
+</XMApp>
+```
+
+**Rust internal DOM:**
+```xml
+<XMTok>x</XMTok>                         <!-- base is SIBLING -->
+<XMApp role="POSTSUBSCRIPT">
+  <XMArg><XMTok>1</XMTok></XMArg>        <!-- subscript wrapped in XMArg -->
+</XMApp>
+```
+
+**Consequences:**
+1. `domToXPath` can't match both base and subscript in one node (they're siblings)
+2. Setting `role=ID` on POSTSUBSCRIPT XMApp breaks serialization (serializer needs
+   `role=POSTSUBSCRIPT` to emit `SUBSCRIPTOP` token)
+3. Wildcard paths differ: Perl `[2]` (child 2) vs Rust `[1, 2]` (self, child 2)
+4. Accent arguments are similarly wrapped in XMArg in Rust but not in Perl
+
+**Fix required:** Either (a) change Rust DOM construction to match Perl's structure,
+or (b) fix the serializer to determine SUBSCRIPTOP from structural context
+(parent-child relationship) rather than from the `role` attribute.
