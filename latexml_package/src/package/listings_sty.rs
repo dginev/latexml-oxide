@@ -1464,8 +1464,10 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
   }
   bgroup();
   let _ = stomach::digest(cmd.clone());
+  // Use to_stored() format ("rgb r g b") for round-trip through state storage,
+  // since \lst@@@set@background uses Color::from_stored() to reconstruct the color.
   let color = lookup_font()
-    .and_then(|f| f.color.as_ref().map(|c| c.to_attribute()));
+    .and_then(|f| f.color.as_ref().map(|c| c.to_stored()));
   egroup().ok();
   color
 }
@@ -2343,7 +2345,7 @@ LoadDefinitions!({
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
     let color = lst_extract_color(&cmd_toks);
     if let Some(c) = color {
-      state::assign_value("LISTINGS_BACKGROUND", Stored::String(arena::pin(&c)), None);
+      state::assign_value("LISTINGS_BACKGROUND", Stored::String(arena::pin(&c)), Some(Scope::Global));
     }
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
@@ -2354,6 +2356,8 @@ LoadDefinitions!({
         merge_font(Font { bg: Some(c), ..Font::default() });
       }
     }
+    // Clear after use so subsequent listings don't inherit
+    state::assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
   });
 
   // Rule color handler
@@ -2367,9 +2371,13 @@ LoadDefinitions!({
   });
   DefConstructor!("\\lst@@@set@rulecolor",
     sub[document, _args, props] {
-      let color = props.get("color").map(|v| v.to_string()).unwrap_or_default();
-      if !color.is_empty() {
-        document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color)?;
+      let color_stored = props.get("color").map(|v| v.to_string()).unwrap_or_default();
+      if !color_stored.is_empty() {
+        // Convert from stored format ("rgb r g b") to attribute format ("#RRGGBB")
+        let color_hex = latexml_core::common::color::Color::from_stored(&color_stored)
+          .map(|c| c.to_attribute())
+          .unwrap_or(color_stored);
+        document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color_hex)?;
       }
     },
     properties => {
