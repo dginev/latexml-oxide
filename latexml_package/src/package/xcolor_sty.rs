@@ -1117,13 +1117,19 @@ LoadDefinitions!({
     def_macro(T_CS!("\\@xcolor@row@after"), None, cmd_toks.clone(), None)?;
     def_macro(T_CS!("\\@xcolor@tabular@before"), None, cmd_toks, None)?;
     assign_value("tabular_row_color_first", Stored::Number(Number::new(first_val)), None);
+    // Perl: AssignValue(odd => IsEmpty ? undef : ParseXColor(...))
+    // Must ALWAYS assign — empty colors clear previous values
     if !odd_str.is_empty() {
       let odd = parse_xcolor(None, &odd_str, None);
       assign_value("tabular_row_color_odd", Stored::String(arena::pin(odd.to_stored())), None);
+    } else {
+      assign_value("tabular_row_color_odd", Stored::None, None);
     }
     if !even_str.is_empty() {
       let even = parse_xcolor(None, &even_str, None);
       assign_value("tabular_row_color_even", Stored::String(arena::pin(even.to_stored())), None);
+    } else {
+      assign_value("tabular_row_color_even", Stored::None, None);
     }
     Ok(Vec::new())
   });
@@ -1182,6 +1188,15 @@ LoadDefinitions!({
               merge_font(fontmap!(bg => c));
               let bg_hex = c.to_attribute();
               whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+            }
+          } else {
+            // Color is None (from \rowcolors1{}{}) — clear any inherited bg
+            if let Some(font) = lookup_font() {
+              if font.get_background().is_some() {
+                let mut cleared = (*font).clone();
+                cleared.bg = None;
+                state::assign_value("font", Stored::from(cleared), None);
+              }
             }
           }
         }
