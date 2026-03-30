@@ -278,6 +278,10 @@ LoadDefinitions!({
         }
       }
     }
+    // Pop reversion from state if set by i_dual (preserves ARG catcodes)
+    if let Some(Stored::Tokens(rev_tks)) = pop_value("PENDING_DUAL_REVERSION")? {
+      whatsit.set_property("reversion", Stored::Tokens(rev_tks));
+    }
 
     let props = whatsit.get_properties();
     let cr    = props.get("content_reversion").cloned();

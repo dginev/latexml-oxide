@@ -63,58 +63,69 @@ pub fn i_wrap(keyvals: Option<Tokens>, content: Tokens) -> Tokens {
 /// Creates `\lx@dual[options]{content_with_xmrefs}{wrapped_presentation_with_xmargs}`.
 ///
 /// # Arguments
-/// - `keyvals`: Optional HashMap of key-value attributes (reversion, meaning, role, etc.)
+/// - `keyvals`: Key-value pairs as `(&str, Tokens)` — uses Tokens directly to preserve ARG catcodes
 /// - `content`: Token template for content branch (with #1, #2, ... parameter refs)
 /// - `presentation`: Token template for presentation branch (with #1, #2, ... parameter refs)
 /// - `args`: The actual argument token lists to be shared between branches
 pub fn i_dual(
-  keyvals: Option<&std::collections::HashMap<String, String>>,
+  keyvals: &[(&str, Tokens)],
   content: Tokens,
   presentation: Tokens,
   args: Vec<Tokens>,
 ) -> Result<Tokens> {
-  let mut revargs: Vec<Tokens> = Vec::new();
+  // Keep original args for reversion substitution (actual content, not xmarg refs)
+  let mut orig_args: Vec<Tokens> = Vec::new();
   let mut pargs: Vec<Tokens> = Vec::new();
   let mut cargs: Vec<Tokens> = Vec::new();
 
   for arg in args {
     let id = get_xm_arg_id()?;
-    revargs.push(Tokens::new(vec![i_arg(&id)]));
+    orig_args.push(arg.clone());
     pargs.push(i_xmarg(&id, arg));
     cargs.push(i_xmref(&id));
   }
 
-  // Build optional keyvals string
-  let optional = if let Some(kv) = keyvals {
-    let mut opts = Vec::new();
-    for (key, value) in kv {
-      if !opts.is_empty() {
+  // Separate reversion from other keyvals
+  let mut reversion_tokens: Option<Tokens> = None;
+  let mut opts = Vec::new();
+  let mut opt_count = 0;
+  for (key, value) in keyvals.iter() {
+    if *key == "reversion" {
+      // Substitute actual arg content into reversion template (no ARG tokens remain)
+      let rev_opt: Vec<Option<Cow<Tokens>>> =
+        orig_args.iter().map(|t| Some(Cow::Borrowed(t))).collect();
+      reversion_tokens = Some(value.clone().substitute_parameters(&rev_opt));
+    } else {
+      if opt_count > 0 {
         opts.push(T_OTHER!(","));
       }
       opts.extend(ExplodeText!(key));
       opts.push(T_OTHER!("="));
       opts.push(T_BEGIN!());
-      // For reversion keys, substitute parameter refs
-      let value_toks = Tokenize!(value);
-      if key.ends_with("reversion") {
-        let rev_opt: Vec<Option<Cow<Tokens>>> = revargs.iter().map(|t| Some(Cow::Borrowed(t))).collect();
-        opts.extend(value_toks.substitute_parameters(&rev_opt).unlist());
-      } else {
-        opts.extend(value_toks.unlist());
-      }
+      opts.extend(value.clone().unlist());
       opts.push(T_END!());
+      opt_count += 1;
     }
+  }
+  let optional = if opt_count > 0 {
     Some(Tokens::new(opts))
   } else {
     None
   };
 
+  // Push reversion via state (bypasses keyval string conversion)
+  if let Some(rev) = reversion_tokens {
+    state::push_value("PENDING_DUAL_REVERSION", Stored::Tokens(rev))?;
+  }
+
   // Build content with xmrefs substituted
-  let cargs_opt: Vec<Option<Cow<Tokens>>> = cargs.into_iter().map(|t| Some(Cow::Owned(t))).collect();
+  let cargs_opt: Vec<Option<Cow<Tokens>>> =
+    cargs.into_iter().map(|t| Some(Cow::Owned(t))).collect();
   let content_subst = content.substitute_parameters(&cargs_opt);
 
   // Build presentation with xmargs substituted, wrapped in \lx@wrap
-  let pargs_opt: Vec<Option<Cow<Tokens>>> = pargs.into_iter().map(|t| Some(Cow::Owned(t))).collect();
+  let pargs_opt: Vec<Option<Cow<Tokens>>> =
+    pargs.into_iter().map(|t| Some(Cow::Owned(t))).collect();
   let pres_subst = presentation.substitute_parameters(&pargs_opt);
   let wrapped_pres = i_wrap(None, pres_subst);
 
@@ -133,4 +144,81 @@ pub fn i_dual(
   tks.push(T_END!());
 
   Ok(Tokens::new(tks))
+}
+
+/// Perl: I_keyvals — convert key=value pairs into `[key={value},...]` tokens.
+pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
+  if kv.is_empty() {
+    return Tokens::default();
+  }
+  let mut tks = vec![T_OTHER!("[")];
+  for (i, (key, value)) in kv.iter().enumerate() {
+    if i > 0 {
+      tks.push(T_OTHER!(","));
+    }
+    tks.extend(ExplodeText!(key));
+    tks.push(T_OTHER!("="));
+    tks.push(T_BEGIN!());
+    tks.extend(value.clone().unlist());
+    tks.push(T_END!());
+  }
+  tks.push(T_OTHER!("]"));
+  Tokens::new(tks)
+}
+
+/// Perl: I_apply(kv, op, @args) — generates `\lx@apply[kv]{\lx@wrap{op}}{\lx@wrap{arg1}...}`.
+pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
+  let mut tks = vec![T_CS!("\\lx@apply")];
+  let kvt = i_keyvals(kv);
+  if !kvt.is_empty() {
+    tks.extend(kvt.unlist());
+  }
+  // operator wrapped
+  tks.push(T_BEGIN!());
+  tks.push(T_CS!("\\lx@wrap"));
+  tks.push(T_BEGIN!());
+  tks.extend(op.unlist());
+  tks.push(T_END!());
+  tks.push(T_END!());
+  // args wrapped
+  tks.push(T_BEGIN!());
+  for arg in args {
+    tks.push(T_CS!("\\lx@wrap"));
+    tks.push(T_BEGIN!());
+    tks.extend(arg.unlist());
+    tks.push(T_END!());
+  }
+  tks.push(T_END!());
+  Tokens::new(tks)
+}
+
+/// Perl: I_symbol(kv, text) — generates `\lx@symbol[kv]{text}`.
+pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
+  let mut tks = vec![T_CS!("\\lx@symbol")];
+  let kvt = i_keyvals(kv);
+  if !kvt.is_empty() {
+    tks.extend(kvt.unlist());
+  }
+  tks.push(T_BEGIN!());
+  if let Some(t) = text {
+    tks.extend(t.unlist());
+  }
+  tks.push(T_END!());
+  Tokens::new(tks)
+}
+
+/// Perl: I_superscript(kv, base, script) — generates `\lx@superscript[kv]{base}{script}`.
+pub fn i_superscript(kv: &[(&str, Tokens)], base: Tokens, script: Tokens) -> Tokens {
+  let mut tks = vec![T_CS!("\\lx@superscript")];
+  let kvt = i_keyvals(kv);
+  if !kvt.is_empty() {
+    tks.extend(kvt.unlist());
+  }
+  tks.push(T_BEGIN!());
+  tks.extend(base.unlist());
+  tks.push(T_END!());
+  tks.push(T_BEGIN!());
+  tks.extend(script.unlist());
+  tks.push(T_END!());
+  Tokens::new(tks)
 }

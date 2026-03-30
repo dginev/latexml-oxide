@@ -54,7 +54,7 @@ pub fn rotated_properties(
   // Origin parsing omitted for now (TODO: parse from keyvals)
 
   let total_h = h + d;
-  let rad = angle * std::f64::consts::PI / 180.0;
+  let rad = angle * 3.1415926 / 180.0; // Perl uses this approximation
   let s = rad.sin();
   let c = rad.cos();
   let wp = (w * c).abs() + (total_h * s).abs();
