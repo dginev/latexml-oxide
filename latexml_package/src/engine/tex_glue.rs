@@ -55,8 +55,21 @@ LoadDefinitions!({
     };
     let parent = document.get_node();
     if document::with_node_qname(parent, |name| name == "svg:g") {
-      // TODO: SVG translate handling
-      // TODO: isMath => XMHint element
+      // Perl: TeX_Glue.pool.ltxml L71-76
+      // SVG translate handling — append translate to parent's transform attribute
+      let x = length.px_value(None);
+      if x != 0.0 {
+        let parent = document.get_node_mut();
+        let transform = parent.get_attribute("transform").unwrap_or_default();
+        let new_transform = if transform.is_empty() {
+          s!("translate({x},0)")
+        } else {
+          s!("{transform} translate({x},0)")
+        };
+        parent.set_attribute("transform", &new_transform)?;
+      }
+    } else if in_svg(document) {
+      Warn!("unexpected", "kern", s!("Lost hskip in SVG {length}"));
     } else {
       let spaces = dimension_to_spaces(length);
       if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
