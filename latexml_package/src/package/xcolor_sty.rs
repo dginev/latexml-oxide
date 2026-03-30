@@ -315,22 +315,49 @@ fn apply_func_expr(mut color: Color, func_str: &str) -> Color {
       let func = parts[0].trim();
       let angle: f64 = parts[1].trim().parse().unwrap_or(0.0);
       let full: Option<f64> = parts.get(2).and_then(|s| s.trim().parse().ok());
-      let _model = if func == "wheel" { "Hsb" } else { "tHsb" };
-      // Convert to Hsb, rotate hue, convert back
+      let is_twheel = func == "twheel";
+      // Convert to hsb (internal [0,1] range)
       let hsb = color.to_hsb();
       let (h, s, b_val) = if let Color::Hsb(h, s, b) = hsb { (h, s, b) } else { (0.0, 0.0, 0.0) };
       let h_range = 360.0; // \rangeHsb default
       let circle = if let Some(f) = full { h_range / f } else { 1.0 };
-      // Scale angle: in Perl, h is in [0,1], angle is in Hsb units
-      // Hsb h is already 0..1 internally, angle is in range units
-      // Perl: Color($model, $h + $angle * $circle, $s, $b)
-      // For wheel (Hsb model), angle is in Hsb range (0..360 scaled to 0..1)
-      let new_h = h + angle * circle / h_range;
+      // Perl: Color($model, $h_scaled + $angle * $circle, $s, $b)
+      // h is in [0,1] internally, scale to [0, h_range] for computation
+      let h_scaled = h * h_range;
+      let new_h_scaled = h_scaled + angle * circle;
+      // Convert back to [0,1] — for Hsb, just divide by h_range
+      // For tHsb, apply piecewise-linear mapping first
+      let new_h = if is_twheel {
+        thsb_to_hsb(new_h_scaled, h_range) / h_range
+      } else {
+        new_h_scaled / h_range
+      };
       color = Color::Hsb(new_h, s, b_val);
     }
     remaining = rest;
   }
   color
+}
+
+/// Convert tHsb hue to hsb hue using piecewise-linear mapping.
+/// Perl: \rangetHsb = '60,30;120,60;180,120;210,180;240,240'
+/// Input: tHsb h in [0, h_range], output: hsb h in [0, h_range]
+fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
+  // Piecewise linear map: tHsb→hsb breakpoints (x→y)
+  // Perl: "60,30;120,60;180,120;210,180;240,240" + ";360,360"
+  let breakpoints: &[(f64, f64)] = &[
+    (60.0, 30.0), (120.0, 60.0), (180.0, 120.0),
+    (210.0, 180.0), (240.0, 240.0), (h_range, h_range),
+  ];
+  let (mut x0, mut y0) = (0.0, 0.0);
+  for &(xn, yn) in breakpoints {
+    if h <= xn {
+      return y0 + (yn - y0) / (xn - x0) * (h - x0);
+    }
+    x0 = xn;
+    y0 = yn;
+  }
+  h // fallback: identity for h > h_range
 }
 
 /// Step the color series

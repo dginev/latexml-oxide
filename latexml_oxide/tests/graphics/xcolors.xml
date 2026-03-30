@@ -107,7 +107,7 @@
             <tag role="typerefnum">9th item</tag>
           </tags>
           <para xml:id="S1.I1.i9.p1">
-            <p><text width="20.0pt"><rule color="#FF0000" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FFFF00" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#00FF00" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#00FFFF" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#0000FF" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FF00FF" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FF0000" height="6.5pt" width="20.0pt"/></text></p>
+            <p><text width="20.0pt"><rule color="#FF0000" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FF8000" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FFFF00" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#00FF00" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#0000FF" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FF00FF" height="6.5pt" width="20.0pt"/></text><text width="20.0pt"><rule color="#FF0000" height="6.5pt" width="20.0pt"/></text></p>
           </para>
         </item>
       </itemize>
