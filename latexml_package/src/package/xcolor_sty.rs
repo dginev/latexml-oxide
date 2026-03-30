@@ -458,10 +458,9 @@ LoadDefinitions!({
   DeclareOption!("x11names*", {
     InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
   });
-  // table option
+  // table option — loads colortbl
   DeclareOption!("table", {
-    // colortbl support — define \rowcolor, \columncolor stubs at minimum
-    // Full colortbl would be a separate package binding
+    RequirePackage!("colortbl");
   });
   DeclareOption!("hyperref", None);
 

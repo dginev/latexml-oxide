@@ -266,43 +266,43 @@ A=100*13 = 1300;</p>
     </tags>
     <title><tag close=" ">9</tag>Colored Tables</title>
     <para xml:id="S9.p1">
-      <tabular class="ltx_guessed_headers" vattach="middle">
+      <tabular vattach="middle">
         <tbody>
           <tr>
-            <td align="left" thead="row">test</td>
+            <td align="left">test</td>
             <td align="left">row 1</td>
           </tr>
           <tr>
-            <td align="left" thead="row">test</td>
+            <td align="left">test</td>
             <td align="left">row 2</td>
           </tr>
-          <tr>
-            <td align="left" thead="row"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left">row 3</td>
+          <tr backgroundcolor="#BFBFFF">
+            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 3</text></td>
           </tr>
           <tr>
-            <td align="left" thead="row">test</td>
-            <td align="left">row 4</td>
+            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 4</text></td>
           </tr>
           <tr>
-            <td align="left" thead="row">test</td>
-            <td align="left">row 5</td>
+            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 5</text></td>
           </tr>
           <tr>
-            <td align="left" thead="row">test</td>
-            <td align="left">row 6</td>
+            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 6</text></td>
           </tr>
           <tr>
-            <td align="left" thead="row">test</td>
-            <td align="left">row 7</td>
+            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 7</text></td>
           </tr>
           <tr>
-            <td align="left" thead="row">test</td>
-            <td align="left">row 8</td>
+            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 8</text></td>
           </tr>
           <tr>
-            <td align="right" thead="row">test</td>
-            <td align="left">row 9</td>
+            <td align="left" backgroundcolor="#FFE0E0"><text backgroundcolor="#FFE0E0">test</text></td>
+            <td align="left"><text backgroundcolor="#BFBFFF">row 9</text></td>
           </tr>
         </tbody>
       </tabular>
