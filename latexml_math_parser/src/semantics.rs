@@ -2227,11 +2227,20 @@ pub fn apply_invisible_times(
             }
           })
         } else if op_role_str == "OPERATOR" {
-          // Compound operator application: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
-          // The compound result should absorb next arg via prefix_apply, not invisible-times.
-          // Note: FUNCTION/TRIGFUNCTION/OPFUNCTION Applies are NOT pruned here — they
-          // participate in invisible-times chains like sin@(π)*cos@(2πy).
-          op_role.clone()
+          // Compound operator: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
+          // Should absorb next arg via prefix_apply, not invisible-times.
+          // BUT: applied operator D@(a) should allow invisible-times for D@(a)*(b).
+          // Distinguish: compound = arg[0] is function/operator/trig; applied = arg is regular.
+          let first_arg_role = args.0.first()
+            .and_then(|a| a.as_ref())
+            .and_then(|a| match a {
+              XM::Token(p, _) => p.role.as_deref().map(String::from),
+              XM::Lexeme(lex, _) => lex.split(':').next().map(String::from),
+              _ => None,
+            });
+          let is_compound = matches!(first_arg_role.as_deref(),
+            Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR"));
+          if is_compound { op_role.clone() } else { None }
         } else { None }
       },
       _ => None,
