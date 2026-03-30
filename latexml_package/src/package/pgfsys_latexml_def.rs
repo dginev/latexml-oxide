@@ -460,17 +460,12 @@ LoadDefinitions!({
         )), None)?;
       }
       let mut attrs = string_map!("_autoclose" => "1".to_string());
-      if let Some(Some(kv)) = args.get(0) {
-        // The RequiredKeyVals argument contains key=value pairs
-        // Parse them from the string representation
-        let kv_str = kv.to_string();
-        for pair in kv_str.split(',') {
-          let pair = pair.trim();
-          if let Some((k, v)) = pair.split_once('=') {
-            attrs.insert(k.trim().to_string(), v.trim().to_string());
-          } else if !pair.is_empty() {
-            // bare key with no value — store as key="key"
-            attrs.insert(pair.to_string(), pair.to_string());
+      if let Some(Some(kv_arg)) = args.get(0) {
+        // Perl: $doc->openElement('svg:g', $kv->getHash, _autoclose => 1);
+        if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
+          let hash = kv.get_hash();
+          for (k, v) in hash {
+            attrs.insert(k, v);
           }
         }
       }

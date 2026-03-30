@@ -996,14 +996,22 @@ LoadDefinitions!({
     },
     reversion => sub[_whatsit, args] {
       // Perl: reversion => sub { my ($whatsit, $kv, $body) = @_;
-      //   my $name = $kv->getValue('name');
+      //   my $name  = $kv->getValue('name');
+      //   my $align = $kv->getValue('alignment');
       //   ($name ? (T_CS('\begin'), T_BEGIN, Revert($name), T_END) : ()),
+      //   (IsEmpty($align) ? ()
+      //     : ($kv->getValue('alignment-required')
+      //       ? (T_BEGIN, Revert($align), T_END) : (T_OTHER('['), Revert($align), T_OTHER(']')))),
       //   Revert($body),
       //   ($name ? (T_CS('\end'), T_BEGIN, Revert($name), T_END) : ())); }
       let mut name = String::new();
+      let mut align = String::new();
+      let mut alignment_required = false;
       if let Some(d) = &args[0] {
         if let DigestedData::KeyVals(ref kv) = d.data() {
           name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
+          align = kv.get_value("alignment").map(|v| v.to_string()).unwrap_or_default();
+          alignment_required = kv.has_key("alignment-required");
         }
       }
       let body_rev = match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() };
@@ -1013,6 +1021,18 @@ LoadDefinitions!({
         tks.push(T_BEGIN!());
         tks.extend(Explode!(&name));
         tks.push(T_END!());
+      }
+      // Perl: emit alignment spec if present
+      if !align.is_empty() {
+        if alignment_required {
+          tks.push(T_BEGIN!());
+          tks.extend(Explode!(&align));
+          tks.push(T_END!());
+        } else {
+          tks.push(T_OTHER!("["));
+          tks.extend(Explode!(&align));
+          tks.push(T_OTHER!("]"));
+        }
       }
       tks.extend(body_rev.unlist());
       if !name.is_empty() {
