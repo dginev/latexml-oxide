@@ -10,10 +10,14 @@
 //! creation and pops on `Drop`. This prevents leaked state on early returns
 //! or panics:
 //!
-//! ```ignore
+//! ```rust,no_run
+//! # use latexml_core::common::local_assignments::*;
+//! # use latexml_core::token::Token;
+//! # fn example(token: Token) {
 //! let _guard = local_current_token_guard(token);
 //! // ... do work ...
 //! // guard auto-pops when _guard goes out of scope
+//! # }
 //! ```
 //!
 //! The explicit `set_*/expire_*` pairs still exist for cases where
@@ -195,4 +199,82 @@ pub fn local_state_unlocked_guard(v: bool) -> LocalGuard {
 pub fn local_reading_alignment_guard(alignment: &Digested) -> LocalGuard {
   local_reading_alignment(alignment);
   LocalGuard { expire: || { expire_reading_alignment(); } }
+}
+
+// ============================================================
+// Unit tests
+// ============================================================
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_dual_branch_push_pop() {
+    initialize_localized();
+    assert_eq!(get_dual_branch(), None);
+    set_dual_branch("true");
+    assert_eq!(get_dual_branch(), Some("true"));
+    set_dual_branch("false");
+    assert_eq!(get_dual_branch(), Some("false"));
+    expire_dual_branch();
+    assert_eq!(get_dual_branch(), Some("true"));
+    expire_dual_branch();
+    assert_eq!(get_dual_branch(), None);
+  }
+
+  #[test]
+  fn test_dual_branch_guard_auto_restore() {
+    initialize_localized();
+    assert_eq!(get_dual_branch(), None);
+    {
+      let _guard = local_dual_branch_guard("guarded");
+      assert_eq!(get_dual_branch(), Some("guarded"));
+    }
+    // Guard dropped — value restored
+    assert_eq!(get_dual_branch(), None);
+  }
+
+  #[test]
+  fn test_align_group_count() {
+    initialize_localized();
+    assert_eq!(align_group_count(), 0);
+    local_align_group_count(10);
+    assert_eq!(align_group_count(), 10);
+    increment_align_group_count();
+    assert_eq!(align_group_count(), 11);
+    decrement_align_group_count();
+    assert_eq!(align_group_count(), 10);
+    expire_align_group_count();
+    assert_eq!(align_group_count(), 0);
+  }
+
+  #[test]
+  fn test_align_group_count_guard() {
+    initialize_localized();
+    assert_eq!(align_group_count(), 0);
+    {
+      let _guard = local_align_group_count_guard(42);
+      assert_eq!(align_group_count(), 42);
+      increment_align_group_count();
+      assert_eq!(align_group_count(), 43);
+    }
+    // Guard dropped — outer value restored
+    assert_eq!(align_group_count(), 0);
+  }
+
+  #[test]
+  fn test_state_unlocked() {
+    initialize_localized();
+    assert!(!state_is_unlocked());
+    local_state_unlocked(true);
+    assert!(state_is_unlocked());
+    {
+      let _guard = local_state_unlocked_guard(false);
+      assert!(!state_is_unlocked());
+    }
+    assert!(state_is_unlocked());
+    expire_state_unlocked();
+    assert!(!state_is_unlocked());
+  }
 }
