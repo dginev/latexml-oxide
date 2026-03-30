@@ -635,6 +635,31 @@ fn lst_set_character_class(class: &str, chars: &Tokens) {
   }
 }
 
+/// Build a regex character class string from the character table in state.
+/// Enumerates all printable ASCII chars and checks if they belong to `class`
+/// (letter, digit, or other) via individual `LST_CHAR@{class}@{escaped}` keys.
+/// Perl equivalent: `join('', sort keys %{$$characters{$class}})`
+fn build_char_class(class: &str) -> String {
+  let mut result = String::new();
+  // Check all printable ASCII chars (space through tilde)
+  for b in 0x20u8..=0x7Eu8 {
+    let c = b as char;
+    let escaped = regex::escape(&c.to_string());
+    let key = s!("LST_CHAR@{class}@{escaped}");
+    if matches!(state::lookup_value(&key), Some(Stored::Bool(true))) {
+      // Escape chars that are special inside regex character classes
+      match c {
+        ']' | '\\' | '^' | '-' => {
+          result.push('\\');
+          result.push(c);
+        }
+        _ => result.push(c),
+      }
+    }
+  }
+  result
+}
+
 //======================================================================
 // Region 9: The listing parser (Perl lines 1234-1559)
 // lstProcess, lstProcess_internal, class begin/end, line constructors
@@ -823,24 +848,22 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     lst_get_literal("numbers")
   };
 
-  // Build ID regex from character classes (Perl: join('', sort keys %{$$characters{letter}}))
-  let mut letter_chars = String::from("a-zA-Z@_");
-  let digit_chars = String::from("0-9");
-  // Check if $ is still a letter character (mathescape removes it)
-  let dollar_key = "LST_CHAR@letter@\\$";
-  let dollar_is_letter = !matches!(state::lookup_value(dollar_key), Some(Stored::None));
-  if dollar_is_letter {
-    letter_chars.push('$');
-  }
+  // Build ID regex dynamically from character table in state
+  // Perl: join('', sort keys %{$$characters{letter}})
+  let letter_chars = build_char_class("letter");
+  let digit_chars = build_char_class("digit");
   // Perl: LookupValue('LST@TEXCS') — set when texcs or moretexcs has been used
   let has_texcs = matches!(state::lookup_value("LST@TEXCS"), Some(Stored::Bool(true)));
-  // debug removed
-  let id_pattern = if has_texcs {
-    format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
+  let id_re = if letter_chars.is_empty() {
+    None
   } else {
-    format!("[{letter_chars}][{letter_chars}{digit_chars}]*")
+    let id_pattern = if has_texcs {
+      format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
+    } else {
+      format!("[{letter_chars}][{letter_chars}{digit_chars}]*")
+    };
+    Regex::new(&id_pattern).ok()
   };
-  let id_re = Regex::new(&id_pattern).ok();
 
   // Build delimiter regexes from LST_DELIM_KEYS (Perl: $LaTeXML::DELIM_RE, $LaTeXML::ESCAPE_RE)
   let delim_keys: Vec<String> = match state::lookup_value("LST_DELIM_KEYS") {
@@ -1111,7 +1134,20 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           // For eval classes: match until close, then tokenize the content as TeX
           // Perl: TokenizeBalanced($string) — close delimiter is NOT separately emitted,
           // because lstClassEnd already provides the closing tokens (e.g. $ for mathescape)
-          if let Ok(close_re) = Regex::new(&close_re_str) {
+          if close_re_str == "__NEWLINE__" {
+            // Sentinel: read until newline (for texcl line comments)
+            let content = if let Some(pos) = ctx.listing.find('\n') {
+              let c = ctx.listing[..pos].to_string();
+              ctx.listing = ctx.listing[pos..].to_string();
+              c
+            } else {
+              let c = ctx.listing.clone();
+              ctx.listing.clear();
+              c
+            };
+            let content_tokens = tokenize_balanced(&content);
+            ctx.lsttokens.extend(content_tokens);
+          } else if let Ok(close_re) = Regex::new(&close_re_str) {
             if let Some(cm) = close_re.find(&ctx.listing) {
               let content = ctx.listing[..cm.start()].to_string();
               ctx.listing = ctx.listing[cm.end()..].to_string();
@@ -2441,6 +2477,14 @@ LoadDefinitions!({
         Stored::Tokens(Tokens::new(vec![T_MATH!()])), None);
       state::assign_value("LST_CLASSES@mathescape@end",
         Stored::Tokens(Tokens::new(vec![T_MATH!()])), None);
+      // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{'\$'}
+      state::assign_value("LST_CHAR@letter@\\$", Stored::None, None);
+    } else {
+      // Perl: delete(LookupValue('LST_DELIMITERS')->{'$'})
+      state::assign_value("LST_DELIM@$@open", Stored::None, None);
+      state::assign_value("LST_DELIM@$@close", Stored::None, None);
+      state::assign_value("LST_DELIM@$@class", Stored::None, None);
+      state::assign_value("LST_DELIM@$@escape", Stored::None, None);
     }
     Tokens!()
   });
@@ -2455,6 +2499,8 @@ LoadDefinitions!({
       state::assign_value(&s!("LST_DELIM@{esc}@class"), Stored::String(arena::pin("evaluate")), None);
       state::assign_value(&s!("LST_DELIM@{esc}@escape"), Stored::Bool(true), None);
       state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
+      // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{$escapere}
+      state::assign_value(&s!("LST_CHAR@letter@{esc_re}"), Stored::None, None);
     }
     Tokens!()
   });
