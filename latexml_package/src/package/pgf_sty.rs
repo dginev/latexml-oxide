@@ -3,18 +3,22 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: pgf.sty.ltxml (54 lines)
-  // TODO: Full port requires InputDefinitions("pgf", noltxml => true) which loads
-  // the raw TeX pgf package. Also needs pgfsys-latexml.def driver, \lxSVG@picture
-  // wrapper, and pgfsetcolor integration with font color system.
-  //
-  // Key Perl logic:
-  // 1. DefMacro('\pgfsysdriver', 'pgfsys-latexml.def') — driver selection
-  // 2. InputDefinitions('pgf', type => 'sty', noltxml => 1) — load raw TeX
-  // 3. Let('\pgfutil@IfFileExists', '\IfFileExists')
-  // 4. AtBeginDocument wraps pgfpicture with lxSVG@picture
-  //
-  // Perl source: LaTeXML/lib/LaTeXML/Package/pgf.sty.ltxml
   DefMacro!("\\pgfsysdriver", "pgfsys-latexml.def");
   InputDefinitions!("pgf", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   Let!("\\pgfutil@IfFileExists", "\\IfFileExists");
+
+  // Perl L35-38: pgfsetcolor integration
+  Let!("\\pgfsetcolor@orig", "\\pgfsetcolor");
+  DefMacro!("\\pgfsetcolor{}", "\\pgfsetcolor@orig{#1}\\lxSVG@set@color");
+  DefPrimitive!("\\lxSVG@set@color", {
+    // Perl: MergeFont(color => LookupValue('color_pgfstrokecolor'));
+    // TODO: integrate with font color system when needed
+  });
+
+  // Perl L41-43: XC@mcolor integration
+  RawTeX!("\\ifx\\XC@mcolor\\relax\\let\\XC@mcolor\\@empty\\fi");
+  AddToMacro!("\\XC@mcolor", "\\pgfsetcolor{.}");
+
+  // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
+  RawTeX!("\\AtBeginDocument{\\expandafter\\def\\expandafter\\pgfpicture\\expandafter{\\expandafter\\lxSVG@picture\\pgfpicture}\\expandafter\\def\\expandafter\\endpgfpicture\\expandafter{\\endpgfpicture\\endlxSVG@picture}}");
 });

@@ -33,7 +33,7 @@ fn cycle_test() {
 }
 
 #[test]
-#[ignore] // exceeds 60M token limit — massive pgf math computations
+#[ignore] // exceeds 30M token limit — massive pgf math computations
 fn dominoes_test() {
   latexml_test_single("tests/tikz/dominoes.tex", "dominoes", DIR, None, None);
 }
@@ -44,7 +44,7 @@ fn tikz_figure_test() {
 }
 
 #[test]
-#[ignore] // exceeds 60M token limit — massive pgf computations
+#[ignore] // exceeds 30M token limit — massive pgf computations
 fn unit_tests_by_silviu_test() {
   latexml_test_single("tests/tikz/unit_tests_by_silviu.tex", "unit_tests_by_silviu", DIR, None, None);
 }

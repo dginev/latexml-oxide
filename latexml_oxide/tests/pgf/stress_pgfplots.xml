@@ -8,4 +8,5 @@
   <para xml:id="p1">
     <p>10.0<break/>18.0<break/></p>
   </para>
+  <pagination role="newpage"/>
 </document>

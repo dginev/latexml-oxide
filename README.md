@@ -1,14 +1,14 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.4.0-orange.svg) 
-[![ported tests 99.1%](https://img.shields.io/badge/ported%20tests%20-%2099.1%25%20(329%2F332)-%20%2332a852?style=flat)
+[![ported tests 96.3%](https://img.shields.io/badge/ported%20tests%20-%2096.3%25%20(320%2F332)-%20%2332a852?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
 This project is in an **alpha** stage. Please avoid using it in any real world setting before test parity is reached.
 
 **If the "ported tests" badge above isn't at `100%`, we aren't stable and we aren't ready**.
 
-**Current status (2026-03-30):** 329/332 tests passing (99.1%), 3 ignored (tikz token-limit), 0 failing. 411 core + 91 contrib package bindings. Full 28/28 math parse suite + physics.sty semantic port + mathtools + listing + picture + 9 tikz/pgf pass.
+**Current status (2026-03-30):** 320/332 tests passing (96.3%), 3 ignored (tikz token-limit), 9 failing (pgf/tikz SVG — reference XMLs synced from Perl, pgfsys-latexml.def port in progress). 414 core + 91 contrib package bindings. Full 28/28 math parse suite + physics.sty semantic port + mathtools + listing + picture.
 
 ### Why?
 

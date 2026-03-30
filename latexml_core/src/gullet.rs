@@ -102,10 +102,10 @@ pub struct Gullet {
 
 #[thread_local]
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet {
-  // Safety limit: 60M tokens prevents infinite loops from corrupted macro state.
+  // Safety limit: 30M tokens prevents infinite loops from corrupted macro state.
   // A typical LaTeX document with expl3 processes ~5M tokens. TikZ documents
-  // with complex figures can reach 10-50M tokens due to pgf's TeX-level math engine.
-  token_limit: Some(60_000_000),
+  // with complex figures can reach 10-20M tokens due to pgf's TeX-level math engine.
+  token_limit: Some(30_000_000),
   ..Gullet::default()
 }));
 
