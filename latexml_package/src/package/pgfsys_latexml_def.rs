@@ -125,16 +125,36 @@ LoadDefinitions!({
         );
         document.open_element("ltx:picture", Some(pic_attrs), None)?;
 
+        let minx = match props.get("minx") {
+          Some(Stored::Float(f)) => f.0, _ => 0.0
+        };
+        let miny = match props.get("miny") {
+          Some(Stored::Float(f)) => f.0, _ => 0.0
+        };
+        // Perl L88: viewBox => "$props{minx} $props{miny} $props{pxwidth} $props{pxheight}"
         let svg_attrs = string_map!(
           "version" => "1.1".to_string(),
           "width" => format!("{}", pxwidth),
           "height" => format!("{}", pxheight),
+          "viewBox" => format!("{} {} {} {}", minx, miny, pxwidth, pxheight),
           "overflow" => "visible".to_string()
         );
         document.open_element("svg:svg", Some(svg_attrs), None)?;
+        // Perl L89: style => $props{style} (baseline vertical-align)
+        if let Some(Stored::String(style)) = props.get("style") {
+          let s = arena::to_string(*style);
+          if !s.is_empty() {
+            let svg_node = document.get_node_mut();
+            let _ = svg_node.set_attribute("style", &s);
+          }
+        }
 
-        let x0 = 0.0_f64;
-        let y0 = pxheight;
+        // Perl L91-92: x0=-(0+minx), y0=pxheight+miny
+        let x0 = -(0.0 + minx);
+        let y0 = pxheight + miny;
+        // Avoid -0 in output
+        let x0 = if x0 == 0.0 { 0.0 } else { x0 };
+        let y0 = if y0 == 0.0 { 0.0 } else { y0 };
         let transform = format!("translate({},{}) matrix(1 0 0 -1 0 0)", x0, y0);
         document.open_element("svg:g", Some(string_map!(
           "transform" => transform,
@@ -183,16 +203,38 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] {
       // Perl L106-138: read pgf registers to compute picture dimensions
+      // \pgf@picmaxx,\pgf@picmaxy are now the SIZE of the picture (adjusted by typesetpicturebox)
+      let miny = pgf_reg_dim("\\pgf@picminy");
       let width = pgf_reg_dim("\\pgf@picmaxx");
       let height = pgf_reg_dim("\\pgf@picmaxy");
 
       let w = dim_to_px(width).max(1.0);
       let h = dim_to_px(height).max(1.0);
 
+      // Perl L120-121: baseline shift from \pgf@shift@baseline
+      let shift_tokens = Expand!(T_CS!("\\pgf@shift@baseline"));
+      let shift_str = shift_tokens.to_string();
+      let shift_str = shift_str.trim();
+      let base = if !shift_str.is_empty() && shift_str != "0pt" {
+        if let Ok(shift_dim) = Dimension::from_str(shift_str) {
+          // Perl: $base = ($shift ? $miny->subtract(Dimension($shift))->pxValue : 0)
+          let base_dim = Dimension::new(miny.value_of() - shift_dim.value_of());
+          dim_to_px(base_dim)
+        } else { 0.0 }
+      } else { 0.0 };
+
       whatsit.set_property("minx", Stored::Float(Float::new_f64(0.0)));
       whatsit.set_property("miny", Stored::Float(Float::new_f64(0.0)));
+      whatsit.set_property("width", Stored::Dimension(width));
+      whatsit.set_property("height", Stored::Dimension(height));
+      whatsit.set_property("depth", Stored::Dimension(Dimension::new(0)));
       whatsit.set_property("pxwidth", Stored::Float(Float::new_f64(w)));
       whatsit.set_property("pxheight", Stored::Float(Float::new_f64(h)));
+      // Perl L132: style for vertical alignment
+      if base != 0.0 {
+        let style = format!("vertical-align:{}px", base);
+        whatsit.set_property("style", Stored::String(arena::pin(&style)));
+      }
       // Store raw dimensions for reversion (tex= attribute)
       whatsit.set_property("width_dim", Stored::Dimension(width));
       whatsit.set_property("height_dim", Stored::Dimension(height));
