@@ -379,8 +379,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace formula singlevertbar formula rbrace => fence
            | lbrace formula middle_bar formula rbrace => fence
            | lbrace formula metarelop formula rbrace => fence
-           // Conditional probability: p(x,y|Θ) — safe now that ket uses rangle_close
+           // Conditional probability: p(a|b) — safe now that ket uses rangle_close
            // (not generic close), so |y) no longer matches ket pattern.
+           // NOTE: formula_list variants (x,y|z) don't work due to Marpa limitation:
+           // formula_list completion doesn't propagate to singlevertbar continuation.
+           // Perl handles this via recursive descent context. Tracked as known limitation.
            | lparen formula singlevertbar formula rparen => fence
            | lparen formula_list singlevertbar formula rparen => fence
            | lparen formula singlevertbar formula_list rparen => fence
