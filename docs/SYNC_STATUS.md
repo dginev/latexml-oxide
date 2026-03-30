@@ -434,12 +434,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] C5. `\times` vs invisible-times precedence — Fixed in session 54 (infix_apply_nary semantic pruning).
 - [x] C6. XMDual id ordering in eval-at — only xml:id renumbering remains (intentional divergence).
 - [x] C7. Fenced ket content for scripted_mulop — FIXED: `postfix_script` now chains 3-arg rules (sub+super). `|\times_{i}^{2}\rangle` → `ket@((* _ i) ^ 2)`. Perl leaves unparsed.
-- [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
-- [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
+- [x] C8. QM subject-area pragma — RESOLVED (session 57): `|` restricted to `rangle_close`/`langle_open`, `(x|y)` → `conditional@(x,y)`. Perl leaves unparsed.
+- [x] C9. MIDDLE fence rules — RESOLVED (session 57): `\left(a\middle|b\right)` → `conditional@(a,b)`. Documented divergence from Perl.
 
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
-- [ ] P1. guessTableHeaders: circled digit classification (ding.xml, tabular.xml, xcolors.xml)
+- [x] P1. guessTableHeaders: circled digit classification — already correct (ding.xml, tabular.xml zero-diff with Perl).
 - [ ] P5. xcolors.xml: colortbl row cycling, table structure (thead/tbody). PARTIAL: Color::convert extended models fixed (session 64).
 
 ### Heavy package bindings (distant future)
