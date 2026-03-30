@@ -389,7 +389,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-29):** 320 pass, 0 fail, 12 ignored. 298 paired, 218 zero-diff (73%), 31K total diffs.
+**Status (2026-03-30):** 320 pass, 0 fail, 12 ignored. 298 paired, 218 zero-diff (73%), ~30K total diffs.
 
 ### Completed TODO items
 
@@ -444,7 +444,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Heavy package bindings (distant future)
 
-- [ ] physics.sty (800 lines), siunitx.sty (2000 lines), xy.sty (1000 lines)
+- [ ] physics.sty (800 lines, IN PROGRESS session 67: I_dual infrastructure + bracing/operators/bra-ket/diff/eval/expval, 7112→6085 diffs, 437 meaning attrs vs Perl 508), siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
 - [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
