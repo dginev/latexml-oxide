@@ -2227,7 +2227,7 @@ pub fn apply_invisible_times(
       _ => None,
     };
     if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR")) {
-      // Exception: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
+      // Exception 1: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
       // prefer invisible_times (multiplication). Perl: `fgh` with all FUNCTION → f·g·h.
       let rhs_is_function = right.as_ref().map(|r| {
         let rr = match r {
@@ -2243,6 +2243,9 @@ pub fn apply_invisible_times(
         };
         matches!(rr.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION"))
       }).unwrap_or(false);
+      // Exception 2: OPERATOR * fenced → allow (compound_operator grammar rule generates
+      // the prefix_apply tree, but it's not always available; invisible_times serves as
+      // fallback for D(a)(b) patterns where D is OPERATOR).
       if !rhs_is_function {
         return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
       }

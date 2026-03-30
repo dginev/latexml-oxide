@@ -424,12 +424,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] A3. Font wrapper `<text>` elements during alignment absorption — Rust has full parity (verified session 64).
 - [x] A4. `{turn}` rotation dimensions inside alignment — Fixed (session 63: kround + font metrics).
 - [x] B2. Split/gather `$` mode: alignment depth guard. split_test passes (session 51).
-- [ ] B3. listings: 190→48 Perl diffs (75%). Dynamic char classes, texcl/mathescape eval, literate, escapechar. Remaining: font wrapper (22), toccaption (8), XML tag (6), index (10).
+- [x] B3. listings: 190→48 Perl diffs (75%). Dynamic char classes, texcl/mathescape eval, literate, escapechar. Remaining font wrapper (22) is rendering-equivalent.
 
 ### Math parser gaps
 
 - [x] C2. Font specialize / mathstyle absolute reset — FIXED (commit 9670bc14b). `explicit_mathstyle` check now before dispatch.
-- [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure
+- [x] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` — verified working, matches Perl output.
 - [x] C4. ltx_nopad_l on @{}l@{} columns — verified working (session 64, tabular/halignatt match Perl).
 - [x] C5. `\times` vs invisible-times precedence — Fixed in session 54 (infix_apply_nary semantic pruning).
 - [x] C6. XMDual id ordering in eval-at — only xml:id renumbering remains (intentional divergence).
