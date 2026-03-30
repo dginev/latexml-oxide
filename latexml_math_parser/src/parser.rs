@@ -882,10 +882,26 @@ impl MathParser {
         },
       }
     }
-    if ok_trees + pruned_trees > 10 {
+    // Deduplicate: Marpa can generate identical semantic trees from different derivation
+    // paths (e.g., scripted_factor_r11 vs scripted_factor_r1 for x^2). Each superscript
+    // creates a 2x duplicate, causing 2^N exponential growth for N scripted factors.
+    // Deduplication using structural equality eliminates these duplicates.
+    let pre_dedup = parses.len();
+    if parses.len() > 1 {
+      let mut unique = Vec::with_capacity(parses.len());
+      for tree in parses {
+        if !unique.contains(&tree) {
+          unique.push(tree);
+        }
+      }
+      parses = unique;
+    }
+    let deduped = pre_dedup - parses.len();
+
+    if ok_trees + pruned_trees > 10 || deduped > 0 {
       eprintln!(
-        "MATH_PARSE_STATS: {} grammar_trees ({} semantic, {} pruned) in {:?} | input: {:?}",
-        ok_trees + pruned_trees, ok_trees, pruned_trees, start.elapsed(),
+        "MATH_PARSE_STATS: {} grammar ({} semantic, {} pruned, {} deduped→{}) in {:?} | input: {:?}",
+        ok_trees + pruned_trees, ok_trees, pruned_trees, deduped, parses.len(), start.elapsed(),
         input.trim()
       );
     }
