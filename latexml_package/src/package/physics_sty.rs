@@ -213,10 +213,11 @@ LoadDefinitions!({
   Let!("\\qty", "\\quantity");
 
   // Perl: \lx@physics@fenced — fenced stuff with optional semantics
-  DefPrimitive!("\\lx@physics@fenced{}{}{}{}{}", sub[(cs, semantic, _function, open, close)] {
+  DefPrimitive!("\\lx@physics@fenced{}{}{}{}{}", sub[(cs, semantic, function, open, close)] {
     let cs_tks = cs.clone();
     let semantic_str = semantic.to_string();
     let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
+    let function_tks = function.clone();
     let open_tks = open.clone();
     let close_tks = close.clone();
     let (no_stretch, size_tok) = phys_read_size()?;
@@ -237,8 +238,11 @@ LoadDefinitions!({
       arg1.clone()
     };
 
-    // Presentation
+    // Presentation: [function] open #1 close
     let mut pres = Vec::new();
+    if !function_tks.is_empty() {
+      pres.extend(function_tks.unlist());
+    }
     pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
     pres.push(i_arg("1"));
     pres.extend(phys_close(no_stretch, &size_tok, close_tks).unlist());
@@ -254,7 +258,7 @@ LoadDefinitions!({
   DefMacro!("\\pqty", "\\lx@physics@fenced{\\pqty}{}{}{(}{)}");
   DefMacro!("\\bqty", "\\lx@physics@fenced{\\bqty}{}{}{[}{]}");
   DefMacro!("\\vqty", "\\lx@physics@fenced{\\vqty}{}{}{\u{007C}}{\u{007C}}");
-  DefMacro!("\\Bqty", "\\lx@physics@fenced{\\Bqty}{}{}{{}}{{}}");
+  DefMacro!("\\Bqty", "\\lx@physics@fenced{\\Bqty}{}{}{\\{}{\\}}");
   DefMacro!("\\absolutevalue", "\\lx@physics@fenced{\\absolutevalue}{absolute-value}{}{\\vert}{\\vert}");
   DefMacro!("\\norm", "\\lx@physics@fenced{\\norm}{norm}{}{\\|}{\\|}");
   Let!("\\abs", "\\absolutevalue");
@@ -336,9 +340,9 @@ LoadDefinitions!({
   });
   Let!("\\eval", "\\evaluated");
 
-  // Perl: \order
-  DefMacro!("\\order{}", r"\mathcal{O}\left(#1\right)");
+  // Perl: \order — O(arg) with meaning=order, function=\ordersymbol
   DefMacro!("\\ordersymbol", r"\mathcal{O}");
+  DefMacro!("\\order", "\\lx@physics@fenced{\\order}{order}{\\ordersymbol}{(}{)}");
 
   // Perl: \lx@physics@fencedII — 2-argument fenced
   DefPrimitive!("\\lx@physics@fencedII{}{}{}{}{}", sub[(cs, semantic, _function, open, close)] {
@@ -381,8 +385,8 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\commutator", "\\lx@physics@fencedII{\\commutator}{commutator}{}{[}{]}");
-  DefMacro!("\\anticommutator", "\\lx@physics@fencedII{\\anticommutator}{anticommutator}{}{{}}{{}}");
-  DefMacro!("\\poissonbracket", "\\lx@physics@fencedII{\\poissonbracket}{poisson-bracket}{}{{}}{{}}");
+  DefMacro!("\\anticommutator", "\\lx@physics@fencedII{\\anticommutator}{anticommutator}{}{\\{}{\\}}");
+  DefMacro!("\\poissonbracket", "\\lx@physics@fencedII{\\poissonbracket}{poisson-bracket}{}{\\{}{\\}}");
   Let!("\\comm", "\\commutator");
   Let!("\\acomm", "\\anticommutator");
   Let!("\\pb", "\\poissonbracket");

@@ -223,7 +223,11 @@
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
                   <XMDual xml:id="S1.Ex3.m1.7">
                     <XMRef idref="S1.Ex3.m1.8"/>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.8">x</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="true">{</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex3.m1.8">x</XMTok>
+                      <XMTok role="CLOSE" stretchy="true">}</XMTok>
+                    </XMWrap>
                   </XMDual>
                 </XMWrap>
               </XMDual>
@@ -483,107 +487,159 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex6">
-          <Math class="ltx_math_unparsed" mode="display" tex="\mathcal{O}\left(x^{2}\right)\qquad\mathcal{O}\left(){x^{2}}\qquad\mathcal{O}\left(*\right){\frac{X}{Y}}\qquad\commutator{A}{B}\qquad\commutator\Big{A}{B}\qquad\commutator*{A}{\grande}\qquad\anticommutator{A}{B}\qquad\poissonbracket{A}{B}" xml:id="S1.Ex6.m1">
+          <Math mode="display" tex="\order{x^2}\qquad\order\Big{x^2}\qquad\order*{\grande}\qquad\commutator{A}{B}\qquad\commutator\Big{A}{B}\qquad\commutator*{A}{\grande}\qquad\anticommutator{A}{B}\qquad\poissonbracket{A}{B}" text="list@(order@(x ^ 2), order@(x ^ 2), order@(X / Y), commutator@(A, B), commutator@(A, B), commutator@(A, X / Y), anticommutator@(A, B), poisson-bracket@(A, B))" xml:id="S1.Ex6.m1">
             <XMath>
-              <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="true">(</XMTok>
-                <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                </XMApp>
-                <XMTok role="CLOSE" stretchy="true">)</XMTok>
-              </XMWrap>
-              <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="true">(</XMTok>
-                <XMTok role="CLOSE" stretchy="false">)</XMTok>
-              </XMWrap>
-              <XMApp>
-                <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-              </XMApp>
-              <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="true">(</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
-                <XMTok role="CLOSE" stretchy="true">)</XMTok>
-              </XMWrap>
-              <XMApp>
-                <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-              </XMApp>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="commutator"/>
+                  <XMTok meaning="list"/>
                   <XMRef idref="S1.Ex6.m1.1"/>
-                  <XMRef idref="S1.Ex6.m1.2"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="true">[</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.1">A</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.2">B</XMTok>
-                  <XMTok role="CLOSE" stretchy="true">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="commutator"/>
                   <XMRef idref="S1.Ex6.m1.3"/>
-                  <XMRef idref="S1.Ex6.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok fontsize="160%" role="OPEN" stretchy="false">[</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.3">A</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.4">B</XMTok>
-                  <XMTok fontsize="160%" role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="commutator"/>
                   <XMRef idref="S1.Ex6.m1.5"/>
-                  <XMRef idref="S1.Ex6.m1.6"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.5">A</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMApp xml:id="S1.Ex6.m1.6">
-                    <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                  </XMApp>
-                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="anticommutator"/>
                   <XMRef idref="S1.Ex6.m1.7"/>
-                  <XMRef idref="S1.Ex6.m1.8"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.7">A</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.8">B</XMTok>
-                </XMWrap>
-              </XMDual>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="poisson-bracket"/>
-                  <XMRef idref="S1.Ex6.m1.9"/>
                   <XMRef idref="S1.Ex6.m1.10"/>
+                  <XMRef idref="S1.Ex6.m1.13"/>
+                  <XMRef idref="S1.Ex6.m1.16"/>
+                  <XMRef idref="S1.Ex6.m1.19"/>
                 </XMApp>
                 <XMWrap>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.9">A</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.10">B</XMTok>
+                  <XMDual xml:id="S1.Ex6.m1.1">
+                    <XMApp>
+                      <XMTok meaning="order"/>
+                      <XMRef idref="S1.Ex6.m1.2"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">(</XMTok>
+                        <XMApp xml:id="S1.Ex6.m1.2">
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                          <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.3">
+                    <XMApp>
+                      <XMTok meaning="order"/>
+                      <XMRef idref="S1.Ex6.m1.4"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
+                      <XMWrap>
+                        <XMTok fontsize="160%" role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S1.Ex6.m1.4">
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                          <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                        <XMTok fontsize="160%" role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.5">
+                    <XMApp>
+                      <XMTok meaning="order"/>
+                      <XMRef idref="S1.Ex6.m1.6"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="caligraphic" role="UNKNOWN">O</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S1.Ex6.m1.6">
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.7">
+                    <XMApp>
+                      <XMTok meaning="commutator"/>
+                      <XMRef idref="S1.Ex6.m1.8"/>
+                      <XMRef idref="S1.Ex6.m1.9"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="true">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.8">A</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.9">B</XMTok>
+                      <XMTok role="CLOSE" stretchy="true">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.10">
+                    <XMApp>
+                      <XMTok meaning="commutator"/>
+                      <XMRef idref="S1.Ex6.m1.11"/>
+                      <XMRef idref="S1.Ex6.m1.12"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok fontsize="160%" role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.11">A</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.12">B</XMTok>
+                      <XMTok fontsize="160%" role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.13">
+                    <XMApp>
+                      <XMTok meaning="commutator"/>
+                      <XMRef idref="S1.Ex6.m1.14"/>
+                      <XMRef idref="S1.Ex6.m1.15"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.14">A</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S1.Ex6.m1.15">
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.16">
+                    <XMApp>
+                      <XMTok meaning="anticommutator"/>
+                      <XMRef idref="S1.Ex6.m1.17"/>
+                      <XMRef idref="S1.Ex6.m1.18"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="true">{</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.17">A</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.18">B</XMTok>
+                      <XMTok role="CLOSE" stretchy="true">}</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex6.m1.19">
+                    <XMApp>
+                      <XMTok meaning="poisson-bracket"/>
+                      <XMRef idref="S1.Ex6.m1.20"/>
+                      <XMRef idref="S1.Ex6.m1.21"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="true">{</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.20">A</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex6.m1.21">B</XMTok>
+                      <XMTok role="CLOSE" stretchy="true">}</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMWrap>
               </XMDual>
             </XMath>
