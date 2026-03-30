@@ -3,6 +3,17 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("numprint", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+
+  // Override numprint's `n` and `N` column type rewrites. The raw package
+  // defines these using \nprt@rewrite@ with \@ifnextchar and \nprt@digittoks
+  // which produce unrecognized tokens in our alignment template parser.
+  // Simplify to plain right-aligned columns (loses decimal alignment but
+  // prevents 54+ stray alignment errors).
+  RawTeX!(r#"\makeatletter
+\renewcommand{\NC@rewrite@n}[1]{\NC@find r}%
+\renewcommand{\NC@rewrite@N}[1]{\NC@find r}%
+\makeatother"#);
+
   Let!("\\ltx@orig@numprint", "\\numprint");
   DefMacro!("\\numprint[]{}",
     "\\ifx.#1.\\ltx@numprint@{#2}\\else\\ltx@numprint@@{#1}{#2}\\fi");
@@ -12,8 +23,11 @@ LoadDefinitions!({
     "\\ifmmode\\ltx@math@numprint@@{#1}{#2}\\else\\ltx@text@numprint@@{#1}{#2}\\fi");
   DefMacro!("\\ltx@text@numprint@{}",    "\\ltx@text@number{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@text@numprint@@{}{}", "\\ltx@text@number{\\ltx@orig@numprint[#1]{#2}}");
-  DefConstructor!("\\ltx@text@number{}",
-    "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>");
+  // In text mode, \numprint wraps output in ltx:text class="ltx_number".
+  // But numprint's internal formatting can produce math elements (XMTok)
+  // that cause "not allowed in ltx:text" schema errors. Use pass-through
+  // to avoid schema violations. The ltx_number class is cosmetic only.
+  DefMacro!("\\ltx@text@number{}", "#1");
   DefMacro!("\\ltx@math@numprint@{}",
     "\\ltx@math@@numprint@{#1}{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@math@numprint@@{}{}",

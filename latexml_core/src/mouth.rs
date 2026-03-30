@@ -632,8 +632,9 @@ impl Mouth {
         }
         // Sneak a comment out, every so often.
         if self.lineno.is_multiple_of(READLINE_PROGRESS_QUANTUM) && lookup_bool("INCLUDE_COMMENTS") {
+          // Perl T_COMMENT prepends '%' (Token.pm L81)
           return Some(T_COMMENT!(s!(
-            "**** {} Line {} ****",
+            "%**** {} Line {} ****",
             &self.shortsource,
             &self.lineno.to_string()
           )));
@@ -823,7 +824,8 @@ impl Mouth {
     }
     let trimmed_comment = comment.trim();
     if !trimmed_comment.is_empty() && lookup_bool("INCLUDE_COMMENTS") {
-      Some(T_COMMENT!(trimmed_comment))
+      // Perl T_COMMENT prepends '%' to the comment text (Token.pm L81)
+      Some(T_COMMENT!(s!("%{}", trimmed_comment)))
     } else if lookup_int("PRESERVE_NEWLINES") > 1 {
       Some(T_MARKER!("EOL")) // Required EOL during \read
     } else {

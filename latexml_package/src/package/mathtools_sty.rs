@@ -660,8 +660,7 @@ LoadDefinitions!({
       ExpansionBody::Tokens(Tokens::new(star_body_toks)), None)?;
     // Nostar variant: @nostar@wrapper{#1 ldel}{#2}{#1 rdel}
     let nostar_cs_name = s!("\\MT@delim@{}@nostar", cmd_name);
-    let mut nostar_body_toks: Vec<Token> = vec![];
-    nostar_body_toks.push(T_CS!(&nostar_wrapper_cs));
+    let mut nostar_body_toks: Vec<Token> = vec![T_CS!(&nostar_wrapper_cs)];
     nostar_body_toks.push(T_BEGIN!());
     nostar_body_toks.push(T_PARAM!()); nostar_body_toks.push(T_OTHER!("1"));
     nostar_body_toks.extend(ldel_toks.iter().cloned());
@@ -708,7 +707,7 @@ LoadDefinitions!({
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
     // Create main \cmd with OptionalMatch:* [] expansion closure
-    let cs_clone = cs.clone();
+    let cs_clone = cs;
     let inner_cs = inner_cs_name.clone();
     let after_cs = after_cs_name.clone();
     let ldel_c = ldel_toks.clone();
@@ -777,7 +776,7 @@ LoadDefinitions!({
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
     // Create main \cmd with OptionalMatch:* [] expansion closure
-    let cs_clone = cs.clone();
+    let cs_clone = cs;
     let inner_cs = inner_cs_name.clone();
     let after_cs = after_cs_name.clone();
     let ldel_c = ldel_toks.clone();
@@ -879,8 +878,9 @@ LoadDefinitions!({
   // Perl: UTF(0x2908) — DOWNWARDS DOUBLE ARROW FROM BAR (approximation)
   DefMath!("\\ndownarrow", None, "\u{2908}", role => "ARROW");
   // Perl: UTF(0xD7) = × MULTIPLICATION SIGN
+  // Perl: font => { size => 'Big' } where rationalizeFontSize('Big') = 1.6 * DEFSIZE(10) = 16.0pt
   DefMath!("\\bigtimes", None, "\u{00D7}", role => "MULOP", meaning => "times",
-    font => { size => 1.2 },
+    font => { size => 16.0 },
     dynamic_scriptpos => true);
 
   //======================================================================

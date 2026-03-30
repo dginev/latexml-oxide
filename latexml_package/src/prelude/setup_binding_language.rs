@@ -1641,12 +1641,22 @@ macro_rules! AddToMacro {
     AddToMacro!(into_cs, into_tokens);
   }};
   ($cs:ident, $tokens:ident) => {{
-    // Needs error checking!
     match state::lookup_definition(&$cs)? {
       None => {
-        let message = s!("{} is not an expandable control sequence", $cs);
-        let message2 = "Ignoring addition";
-        Warn!("unexpected", $cs, message, message2); },
+        // Perl: InputDefinitions pre-defines hooks, but not all paths go through it.
+        // When the CS is undefined (e.g., babel's \AtEndOfPackage hooks), create a new
+        // expandable with the given tokens instead of just warning.
+        def_macro(
+          $cs.clone(),
+          None,
+          ExpansionBody::Tokens($tokens.clone()),
+          Some(ExpandableOptions {
+            scope: Some(Scope::Global),
+            nopack_parameters: true,
+            ..ExpandableOptions::default()
+          }),
+        )?;
+      },
       Some(defn) if !defn.is_expandable() => {
         let message = s!("{} is not an expandable control sequence", $cs);
         let message2 = "Ignoring addition";

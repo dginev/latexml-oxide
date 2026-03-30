@@ -23,12 +23,18 @@ LoadDefinitions!({
   });
   RawTeX!(r"\let\@clearrowcolor\lxclearrowcolor");
 
-  // AddToMacro('\@tabular@row@after', '\lx@hidden@noalign{\@clearrowcolor}');
-  RawTeX!(r"\expandafter\def\expandafter\@tabular@row@after\expandafter{\@tabular@row@after\lx@hidden@noalign{\@clearrowcolor}}");
-
-  // AddToMacro('\@tabular@column@before', '\@userowcolor');
-  // Use RawTeX because AddToMacro! compile-time tokenizer splits \@userowcolor
-  RawTeX!(r"\expandafter\def\expandafter\@tabular@column@before\expandafter{\@tabular@column@before\@userowcolor}");
+  // Perl: AddToMacro('\@tabular@row@after', '\lx@hidden@noalign{\@clearrowcolor}');
+  {
+    let cs = T_CS!("\\@tabular@row@after");
+    let tokens = Tokens!(T_CS!("\\lx@hidden@noalign"), T_BEGIN!(), T_CS!("\\@clearrowcolor"), T_END!());
+    AddToMacro!(cs, tokens);
+  }
+  // Perl: AddToMacro('\@tabular@column@before', '\@userowcolor');
+  {
+    let cs = T_CS!("\\@tabular@column@before");
+    let tokens = Tokens!(T_CS!("\\@userowcolor"));
+    AddToMacro!(cs, tokens);
+  }
 
   // DefPrimitive('\@userowcolor', sub {
   //   if (my $rc = LookupValue('tabular_row_color')) {
@@ -87,9 +93,8 @@ LoadDefinitions!({
         let bg_str = arena::with(*bg_sym, |s| s.to_string());
         let current = document.get_node().clone();
         if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
-          if !tr_node.has_attribute("backgroundcolor") {
-            document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
-          }
+          // Always set — explicit \rowcolor overrides cycling from \rowcolors
+          document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
         }
       }
     },

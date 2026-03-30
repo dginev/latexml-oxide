@@ -110,4 +110,11 @@ LoadDefinitions!({
   // latex_constructs.pool.ltxml line 5937-5938:
   // LaTeX now includes textcomp by default.
   RequirePackage!("textcomp");
+
+  // Perl: LoadFormat('latex') — precompiled latex.ltx state (expl3, fonts).
+  // TODO: Enable once dump has full parity (Let, CharDef, Register entries)
+  // and _loaded flags prevent re-loading raw TeX files (expl3-code.tex).
+  // if let Err(e) = crate::engine::latex_dump::load_definitions() {
+  //   log::warn!("latex_dump: {}", e);
+  // }
 });

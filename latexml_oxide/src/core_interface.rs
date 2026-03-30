@@ -322,22 +322,17 @@ impl DigestionAPI for Core {
     if !state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
-      // Post-parse: apply kludge to failed XMath nodes, then mark as unparsed
+      // Post-parse: mark failed XMath nodes as unparsed.
+      // The parser's parse_kludge already handles OPEN/CLOSE wrapping + script attachment
+      // (parse_kludgeScripts_rec), so we only need to add the unparsed CSS class here.
       if !parser.failed_xmath_ids.is_empty() {
-        // Collect failed XMath nodes for kludge processing
-        let mut failed_xmaths = Vec::new();
         for mut math_node in document.findnodes("descendant-or-self::ltx:Math[not(@text)]", None) {
           for xmath_child in document.findnodes("ltx:XMath", Some(&math_node)) {
             if parser.failed_xmath_ids.contains(&xmath_child.to_hashable()) {
-              failed_xmaths.push(xmath_child.clone());
               document.add_class(&mut math_node, "ltx_math_unparsed")?;
               break;
             }
           }
-        }
-        // Apply kludge to each failed XMath — balance OPEN/CLOSE delimiters
-        for mut xmath in failed_xmaths {
-          parse_kludge(&mut xmath, &mut document);
         }
       }
       // Renumber xml:ids inside parsed XMath subtrees to be sequential in document
@@ -495,13 +490,6 @@ fn load_latexml_file(path: &str) -> Result<()> {
       None => continue, // No match clause, skip
     };
 
-    // Skip complex patterns: anything with \, _, {, } in the match string
-    // These need full token-level matching (digestion + DOM -> XPath) which we
-    // don't implement yet.
-    if match_str.contains('\\') || match_str.contains('_') || match_str.contains('{') {
-      continue;
-    }
-
     // Build attributes map from the attributes => { ... } section
     let mut attrs = HashMap::default();
     if let Some(role_cap) = ROLE_RE.captures(body) {
@@ -517,22 +505,44 @@ fn load_latexml_file(path: &str) -> Result<()> {
       continue; // No attributes to set
     }
 
-    // Build the XPath for this match.
-    // For math mode, Perl's compile_match digests "$a$", builds DOM, then generates:
-    //   descendant-or-self::ltx:XMTok[text()='a'][@_pvis and @_cvis]
-    // We generate the equivalent XPath directly for single-character matches.
-    let xpath = format!(
-      "descendant-or-self::ltx:XMTok[text()='{}'][@_pvis and @_cvis]",
-      match_str
-    );
-
     // Check for optional scope
     let scope_str = SCOPE_RE.captures(body).map(|s| s[1].to_string());
 
-    // Build the rewrite rule with pre-compiled clauses
+    // Use compile_declare_pattern for all patterns (simple + complex).
+    // The .latexml match strings use the same format as \lxDeclare body_text:
+    //   'f' (simple), 'f_D' (literal subscript), 'f_\WildCard' (wildcard),
+    //   '\hat{f}' (accent), "x^{\prime}" (prime).
+    let pat = latexml_package::package::latexml_sty::compile_declare_pattern_pub(&match_str);
+    if pat.xpath.is_empty() {
+      continue; // Unrecognized pattern, skip
+    }
+
+    // Add declare metadata for Rust-side filtering
+    attrs.insert("_declare_type".to_string(), pat.pattern_type.to_string());
+    if let Some(ref b) = pat.base_text {
+      attrs.insert("_declare_base".to_string(), b.clone());
+    }
+    if let Some(ref s) = pat.sub_text {
+      attrs.insert("_declare_sub".to_string(), s.clone());
+    }
+    if let Some(ref a) = pat.accent_name {
+      attrs.insert("_declare_accent".to_string(), a.clone());
+    }
+
+    // For math mode, append visibility check to XPath
+    let xpath = format!("{}[@_pvis and @_cvis]", pat.xpath);
+
+    // Determine select_count based on pattern type
+    let select_count = match pat.pattern_type {
+      "literal_subscript" | "prime" | "subscript" => Some(2usize),
+      "accent" => Some(1usize),
+      _ => Some(1usize),
+    };
+
+    // Build the rewrite rule
     let mut clauses = Vec::new();
 
-    // Add scope clause if present (compiled during compile_clauses phase)
+    // Add scope clause if present
     if let Some(ref scope) = scope_str {
       clauses.push(RewriteClause::new_uncompiled(
         RewriteOperator::Scope,
@@ -556,7 +566,8 @@ fn load_latexml_file(path: &str) -> Result<()> {
       options: RewriteOptions {
         attributes_map: Some(attrs),
         is_math: true,
-        select_count: Some(1),
+        select_count,
+        wildcard_paths: pat.wildcard_paths,
         ..RewriteOptions::default()
       },
       clauses,
@@ -597,9 +608,14 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Find all XMTok elements in the document and apply matching declarations
+  // Find all XMTok elements in the document and apply matching declarations.
+  // Skip tokens already marked by the rewrite system (_matched) — these were
+  // handled by subscript/prime/wildcard patterns which take precedence.
   let xmtoks = document.findnodes("descendant-or-self::ltx:XMTok", None);
   for mut tok in xmtoks {
+    if tok.has_attribute("_matched") {
+      continue;
+    }
     let content = tok.get_content();
     let tok_name = tok.get_attribute("name").unwrap_or_default();
     for &(pattern, role, name, meaning) in &declarations {
@@ -626,74 +642,6 @@ fn apply_lx_declarations(document: &mut Document) {
 /// Perl: MathParser.pm parse_kludge().
 /// Balances OPEN/CLOSE delimiters by wrapping matched groups in XMWrap.
 /// Uses document.wrap_nodes for proper namespace handling.
-fn parse_kludge(mathnode: &mut libxml::tree::Node, document: &mut Document) {
-  use latexml_math_parser::get_grammatical_role;
-  let children: Vec<libxml::tree::Node> = mathnode
-    .get_child_elements()
-    .into_iter()
-    .filter(|n| n.get_name() != "XMHint")
-    .collect();
-  if children.is_empty() {
-    return;
-  }
-
-  // Phase 1: Find OPEN/CLOSE pairs and wrap each group using wrap_nodes.
-  // We process innermost pairs first (like matching parentheses).
-  // Iterate until no more OPEN/CLOSE pairs are found.
-  let mut changed = true;
-  while changed {
-    changed = false;
-    let elems = mathnode.get_child_elements();
-    // Find the innermost OPEN that has a matching CLOSE
-    let mut open_idx = None;
-    for (i, n) in elems.iter().enumerate() {
-      let role = get_grammatical_role(n);
-      if role == "OPEN" {
-        open_idx = Some(i);
-      } else if role == "CLOSE" && open_idx.is_some() {
-        // Found innermost OPEN..CLOSE pair
-        let start = open_idx.unwrap();
-        let end = i;
-        // Collect the nodes between OPEN and CLOSE (inclusive)
-        let group: Vec<libxml::tree::Node> =
-          elems[start..=end].to_vec();
-        if group.len() > 1 {
-          let _ = document.wrap_nodes("ltx:XMWrap", group);
-          changed = true;
-        }
-        break; // Restart after wrapping
-      }
-    }
-    // If we found an unmatched OPEN (no CLOSE), wrap OPEN through end
-    if !changed {
-      if let Some(oi) = open_idx {
-        let elems = mathnode.get_child_elements();
-        let start = oi.min(elems.len().saturating_sub(1));
-        if start < elems.len() {
-          let group: Vec<libxml::tree::Node> =
-            elems[start..].to_vec();
-          if group.len() > 1 {
-            let _ = document.wrap_nodes("ltx:XMWrap", group);
-            changed = true;
-          }
-        }
-      }
-    }
-  }
-  // Phase 2: Unwrap ALL top-level XMWrap nodes.
-  // Perl: foreach pair, if kludge is XMWrap, extract children (not the wrapper).
-  // This preserves flat structure for simple expressions like <1>, [1], (1).
-  loop {
-    let top_elems = mathnode.get_child_elements();
-    let wrap_opt = top_elems.into_iter().find(|n| n.get_name() == "XMWrap");
-    if let Some(wrap) = wrap_opt {
-      let _ = document.unwrap_nodes(wrap);
-    } else {
-      break;
-    }
-  }
-}
-
 /// Renumber xml:ids inside parsed XMath subtrees so they are sequential in
 /// document order. The Marpa parser explores multiple parse alternatives,
 /// consuming ID counter slots for pruned nodes (e.g. m1.1, m1.7, m1.12

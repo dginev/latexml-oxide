@@ -60,6 +60,7 @@ pub mod auxhook_sty;
 pub mod avant_sty;
 pub mod babel_sty;
 pub mod balance_sty;
+pub mod beamer_cls;
 pub mod bbding_sty;
 pub mod bbm_sty;
 pub mod bbold_sty;

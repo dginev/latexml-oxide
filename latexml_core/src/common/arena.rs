@@ -75,7 +75,7 @@ fn with_arena_mut<R>(f: impl FnOnce(&mut Interner) -> R) -> R {
     let ptr = &mut *guard as *mut Interner;
     ACTIVE.set(ptr);
     let _cleanup = ArenaCleanup; // drops BEFORE guard (reverse order)
-    f(&mut *guard)
+    f(&mut guard)
   }
 }
 

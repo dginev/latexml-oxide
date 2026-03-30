@@ -179,19 +179,21 @@ and <ref labelref="LABEL:lst:2a"/>,<ref labelref="LABEL:lst:2b"/>,<ref labelref=
     </tags>
     <title><tag close=" ">2</tag>Dingbats</title>
     <para xml:id="S2.p1">
-      <tabular vattach="middle">
-        <tbody>
+      <tabular class="ltx_guessed_headers" vattach="middle">
+        <thead>
           <tr>
-            <td border="r"/>
-            <td align="center">´0</td>
-            <td align="center">´1</td>
-            <td align="center">´2</td>
-            <td align="center">´3</td>
-            <td align="center">´4</td>
-            <td align="center">´5</td>
-            <td align="center">´6</td>
-            <td align="center">´7</td>
+            <td border="r" thead="column"/>
+            <td align="center" thead="column">´0</td>
+            <td align="center" thead="column">´1</td>
+            <td align="center" thead="column">´2</td>
+            <td align="center" thead="column">´3</td>
+            <td align="center" thead="column">´4</td>
+            <td align="center" thead="column">´5</td>
+            <td align="center" thead="column">´6</td>
+            <td align="center" thead="column">´7</td>
           </tr>
+        </thead>
+        <tbody>
           <tr>
             <td align="right" border="r t">´0x</td>
             <td border="t"/>
@@ -549,4 +551,3 @@ and <ref labelref="LABEL:lst:2a"/>,<ref labelref="LABEL:lst:2b"/>,<ref labelref=
     </para>
   </section>
 </document>
-

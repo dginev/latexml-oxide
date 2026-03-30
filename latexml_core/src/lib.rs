@@ -56,6 +56,8 @@ pub mod dump_loader;
 pub mod dump_writer;
 /// Reader for Rust-native kernel dump files
 pub mod dump_reader;
+/// Code generator: dump file → compiled Rust module
+pub mod dump_codegen;
 /// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
 /// Gullet into Boxes
 #[macro_use]

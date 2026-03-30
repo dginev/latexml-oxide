@@ -1,7 +1,5 @@
 use glob::glob;
-use libxml::parser::Parser;
-use libxml::tree::Document as XmlDoc;
-use libxml::tree::{Node, SaveOptions};
+use libxml::tree::Node;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Once;
@@ -45,11 +43,27 @@ pub fn latexml_tests_internal(
 static INIT_LOGGER: Once = Once::new();
 pub fn init_logger() {
   INIT_LOGGER.call_once(|| {
-    latexml_core::util::logger::init(log::LevelFilter::Warn).unwrap();
-    // libxml2 thread-safe initialization is now handled by
-    // latexml_core::ensure_libxml_init() called from Document::new()
+    // Use Off level for clean test output. Error/Warn counting still works
+    // via note_status(); set LATEXML_TEST_LOG=1 to see warnings during debugging.
+    let level = if std::env::var("LATEXML_TEST_LOG").is_ok() {
+      log::LevelFilter::Warn
+    } else {
+      log::LevelFilter::Off
+    };
+    latexml_core::util::logger::init(level).unwrap();
   });
 }
+
+/// Tests whose TeX input is *known* to produce Error/Warn messages in both
+/// the Perl reference implementation and the Rust port.  We suppress log
+/// output for these so that `cargo test` runs cleanly, while still counting
+/// errors internally (MAX_ERRORS check still fires).
+/// Tests where Perl LaTeXML also produces Error/Warn messages.
+/// ONLY add tests here if verified that Perl `bin/latexml` emits errors on the same input.
+const KNOWN_ERROR_TESTS: &[&str] = &[
+  "io",                     // Perl: 2 errors (mode-switch egroup from \readnext)
+  "figure_mixed_content",   // Perl: 1 error (ltx:theorem not allowed in ltx:figure)
+];
 
 pub fn latexml_test_single(
   tex_file_str: &str,
@@ -62,6 +76,10 @@ pub fn latexml_test_single(
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
+  let suppress = KNOWN_ERROR_TESTS.contains(&name);
+  if suppress {
+    latexml_core::common::error::set_suppress_log_output(true);
+  }
   let tex_file = PathBuf::from(tex_file_str);
   let xml_file = tex_file.with_extension("xml");
   if matches!(xml_file.try_exists(), Ok(true)) {
@@ -73,6 +91,9 @@ pub fn latexml_test_single(
     );
   } else {
     // Skip, these could be tex fragment files.
+  }
+  if suppress {
+    latexml_core::common::error::set_suppress_log_output(false);
   }
 }
 
@@ -137,7 +158,6 @@ fn process_texfile(
   name: &str,
   extra_bindings_dispatcher: Option<BindingDispatcher>,
 ) -> Vec<String> {
-  // TODO: continue here...
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     search_paths: None,
@@ -149,8 +169,6 @@ fn process_texfile(
   state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
   // If we want to test the latexml_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
-  // this would have been equivalent to a latexml --path argument, except we require access to
-  // compiled functions, hence the rust-native pass
   if let Some(dispatcher) = extra_bindings_dispatcher {
     state::set_extra_bindings_dispatch(dispatcher);
   }
@@ -160,13 +178,19 @@ fn process_texfile(
   }
 }
 
-/// Loads and serialized the resulting XML for a test file target,
-/// returning it as a vector of line strings for the serialization
-fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
-  let parser = Parser::default();
-  match parser.parse_file(xml_path) {
-    Err(e) => panic!("Faield to parse XML file for {:?}: {:?}", name, e),
-    Ok(dom) => process_dom(dom, name),
+/// Loads the reference XML file as raw text lines, avoiding libxml2
+/// re-serialization which would normalize `<p></p>` to `<p/>`.
+fn process_xmlfile<'a>(xml_path: &'a str, _name: &'a str) -> Vec<String> {
+  match std::fs::read_to_string(xml_path) {
+    Err(e) => panic!("Failed to read XML file {:?}: {:?}", xml_path, e),
+    Ok(contents) => {
+      let mut lines: Vec<String> = contents.split('\n').map(ToString::to_string).collect();
+      // Remove trailing empty line from final newline
+      if lines.last().is_some_and(|l| l.is_empty()) {
+        lines.pop();
+      }
+      lines
+    }
   }
 }
 fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
@@ -184,19 +208,12 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
     std::fs::write(&path2, &libxml_str).ok();
     eprintln!("Saved libxml XML to {path2}");
   }
-  doc_str.split('\n').map(ToString::to_string).collect()
-}
-
-/// Serializes and splits by line a given `XmlDoc`
-fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
-  dom
-    .to_string_with_options(SaveOptions {
-      format: true,
-      ..SaveOptions::default()
-    })
-    .split('\n')
-    .map(ToString::to_string)
-    .collect()
+  let mut lines: Vec<String> = doc_str.split('\n').map(ToString::to_string).collect();
+  // Remove trailing empty line from final newline
+  if lines.last().is_some_and(|l| l.is_empty()) {
+    lines.pop();
+  }
+  lines
 }
 
 /// Provide a default test `Core` engine for simple operations

@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::common::arena;
 use crate::common::arena::SymStr;
 use crate::common::error::*;
+use crate::state::let_i;
 use crate::common::font::{Font, Fontmap};
 use crate::common::model;
 use crate::document::resource::*;
@@ -238,6 +239,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // This prevents double-loading and breaks circular loading chains.
   let loaded_key = s!("{filename}_loaded");
   if !options.reloadable && lookup_bool(&loaded_key) {
+    note_end(&filename);
     return Ok(());
   }
   // Also check without extension (Perl checks name_loaded too)
@@ -268,6 +270,19 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // We found and loaded a binding successfully, mark it as such.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
+    // Perl: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
+    // Set \ver@name.ext = \fmtversion so \RequirePackage with date checks works.
+    // Without this, LaTeX's package loading guard thinks the package isn't loaded.
+    // Perl: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
+    // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
+    // Without this, \RequirePackage date checks fail and packages get re-loaded.
+    if options.handleoptions {
+      let ver_cs = T_CS!(s!("\\ver@{}", filename));
+      if lookup_definition(&ver_cs).ok().flatten().is_none() {
+        let fmtversion_cs = T_CS!("\\fmtversion");
+        let_i(&ver_cs, &fmtversion_cs, Some(Scope::Global));
+      }
+    }
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an
     // available binding dispatcher, in both contributed and core binding names

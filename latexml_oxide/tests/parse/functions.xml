@@ -304,13 +304,15 @@
         <Math class="ltx_math_unparsed" mode="display" tex="p(x,y|\Theta)" xml:id="S3.Ex11.m1">
           <XMath>
             <XMTok font="italic" role="FUNCTION">p</XMTok>
-            <XMTok role="OPEN" stretchy="false">(</XMTok>
-            <XMTok font="italic" role="ID">x</XMTok>
-            <XMTok role="PUNCT">,</XMTok>
-            <XMTok font="italic" role="ID">y</XMTok>
-            <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-            <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
-            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">(</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok font="italic" role="ID">y</XMTok>
+              <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+              <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
+              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            </XMWrap>
           </XMath>
         </Math>
       </equation>
@@ -318,25 +320,38 @@
         <Math class="ltx_math_unparsed" mode="display" tex="p(y|x,\Theta)" xml:id="S3.Ex12.m1">
           <XMath>
             <XMTok font="italic" role="FUNCTION">p</XMTok>
-            <XMTok role="OPEN" stretchy="false">(</XMTok>
-            <XMTok font="italic" role="ID">y</XMTok>
-            <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-            <XMTok font="italic" role="ID">x</XMTok>
-            <XMTok role="PUNCT">,</XMTok>
-            <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
-            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">(</XMTok>
+              <XMTok font="italic" role="ID">y</XMTok>
+              <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+              <XMTok font="italic" role="ID">x</XMTok>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
+              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            </XMWrap>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S3.Ex13">
-        <Math class="ltx_math_unparsed" mode="display" tex="f\left(a\middle|b\right)" xml:id="S3.Ex13.m1">
+        <Math mode="display" tex="f\left(a\middle|b\right)" text="f@(conditional@(a, b))" xml:id="S3.Ex13.m1">
           <XMath>
-            <XMTok font="italic" role="FUNCTION">f</XMTok>
-            <XMTok role="OPEN" stretchy="true">(</XMTok>
-            <XMTok font="italic" role="ID">a</XMTok>
-            <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-            <XMTok font="italic" role="ID">b</XMTok>
-            <XMTok role="CLOSE" stretchy="true">)</XMTok>
+            <XMApp>
+              <XMTok font="italic" role="FUNCTION">f</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S3.Ex13.m1.1"/>
+                  <XMRef idref="S3.Ex13.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="true">(</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S3.Ex13.m1.1">a</XMTok>
+                  <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S3.Ex13.m1.2">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math>
       </equation>
@@ -651,11 +666,13 @@
         <Math class="ltx_math_unparsed" mode="display" tex="f(\rightarrow,\leftarrow)" xml:id="S7.Ex26.m1">
           <XMath>
             <XMTok font="italic" role="FUNCTION">f</XMTok>
-            <XMTok role="OPEN" stretchy="false">(</XMTok>
-            <XMTok name="rightarrow" role="ARROW">→</XMTok>
-            <XMTok role="PUNCT">,</XMTok>
-            <XMTok name="leftarrow" role="ARROW">←</XMTok>
-            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">(</XMTok>
+              <XMTok name="rightarrow" role="ARROW">→</XMTok>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok name="leftarrow" role="ARROW">←</XMTok>
+              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            </XMWrap>
           </XMath>
         </Math>
       </equation>

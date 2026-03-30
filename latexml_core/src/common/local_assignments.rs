@@ -1,13 +1,27 @@
-// We need RAII Guards!
-// https://rust-unofficial.github.io/patterns/patterns/behavioural/RAII.html
-// it would be massively superior to leverage Drop, compared to explicit `expire_*` calls
-
 //! Perl-style local assignments (dynamic scope)
 //!
-//! This module can benefit from some thinking over and refactoring
-//! in principle the "local" scope variables in Perl are a completely standalone feature
-//! (it's global namespace value shadowing until scope expiration)
-//! ... so the push/pop can be modeled with sentry values getting created and dropped (TODO)...
+//! This module provides stack-based dynamic scoping for global state,
+//! matching Perl's `local` mechanism. Each "localized" field uses a `Vec<T>`
+//! as a stack: push to shadow, pop to restore.
+//!
+//! ## RAII Guards
+//!
+//! Each localized variable has a corresponding `Guard` type that pushes on
+//! creation and pops on `Drop`. This prevents leaked state on early returns
+//! or panics:
+//!
+//! ```rust,no_run
+//! # use latexml_core::common::local_assignments::*;
+//! # use latexml_core::token::Token;
+//! # fn example(token: Token) {
+//! let _guard = local_current_token_guard(token);
+//! // ... do work ...
+//! // guard auto-pops when _guard goes out of scope
+//! # }
+//! ```
+//!
+//! The explicit `set_*/expire_*` pairs still exist for cases where
+//! RAII doesn't fit (e.g., cross-function push/pop with different lifetimes).
 
 use once_cell::sync::Lazy;
 use std::cell::RefCell;
@@ -136,4 +150,131 @@ pub fn take_build_template() -> Option<Template> { locals_mut!().build_template.
 pub fn with_current_build_template<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Template>) -> R {
   caller(locals_mut!().build_template.last_mut())
+}
+
+// ============================================================
+// RAII Guards — auto-restore on Drop
+// ============================================================
+
+/// Generic RAII guard that calls an expire function on drop.
+/// Zero-cost when the expire function is a simple fn pointer.
+pub struct LocalGuard {
+  expire: fn(),
+}
+impl Drop for LocalGuard {
+  fn drop(&mut self) { (self.expire)(); }
+}
+
+/// Push a localized current token; returns guard that pops on drop.
+pub fn local_current_token_guard(token: Token) -> LocalGuard {
+  local_current_token(token);
+  LocalGuard { expire: expire_current_token }
+}
+
+/// Push a localized if-frame; returns guard that pops on drop.
+pub fn local_ifframe_guard(frame: Option<Rc<RefCell<IfFrame>>>) -> LocalGuard {
+  set_ifframe(frame);
+  LocalGuard { expire: expire_ifframe }
+}
+
+/// Push a localized dual branch; returns guard that pops on drop.
+pub fn local_dual_branch_guard(mode: &'static str) -> LocalGuard {
+  set_dual_branch(mode);
+  LocalGuard { expire: expire_dual_branch }
+}
+
+/// Push a localized align group count; returns guard that pops on drop.
+pub fn local_align_group_count_guard(v: i32) -> LocalGuard {
+  local_align_group_count(v);
+  LocalGuard { expire: || { expire_align_group_count(); } }
+}
+
+/// Push a localized state unlocked flag; returns guard that pops on drop.
+pub fn local_state_unlocked_guard(v: bool) -> LocalGuard {
+  local_state_unlocked(v);
+  LocalGuard { expire: expire_state_unlocked }
+}
+
+/// Push a localized reading alignment; returns guard that pops on drop.
+pub fn local_reading_alignment_guard(alignment: &Digested) -> LocalGuard {
+  local_reading_alignment(alignment);
+  LocalGuard { expire: || { expire_reading_alignment(); } }
+}
+
+// ============================================================
+// Unit tests
+// ============================================================
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_dual_branch_push_pop() {
+    initialize_localized();
+    assert_eq!(get_dual_branch(), None);
+    set_dual_branch("true");
+    assert_eq!(get_dual_branch(), Some("true"));
+    set_dual_branch("false");
+    assert_eq!(get_dual_branch(), Some("false"));
+    expire_dual_branch();
+    assert_eq!(get_dual_branch(), Some("true"));
+    expire_dual_branch();
+    assert_eq!(get_dual_branch(), None);
+  }
+
+  #[test]
+  fn test_dual_branch_guard_auto_restore() {
+    initialize_localized();
+    assert_eq!(get_dual_branch(), None);
+    {
+      let _guard = local_dual_branch_guard("guarded");
+      assert_eq!(get_dual_branch(), Some("guarded"));
+    }
+    // Guard dropped — value restored
+    assert_eq!(get_dual_branch(), None);
+  }
+
+  #[test]
+  fn test_align_group_count() {
+    initialize_localized();
+    assert_eq!(align_group_count(), 0);
+    local_align_group_count(10);
+    assert_eq!(align_group_count(), 10);
+    increment_align_group_count();
+    assert_eq!(align_group_count(), 11);
+    decrement_align_group_count();
+    assert_eq!(align_group_count(), 10);
+    expire_align_group_count();
+    assert_eq!(align_group_count(), 0);
+  }
+
+  #[test]
+  fn test_align_group_count_guard() {
+    initialize_localized();
+    assert_eq!(align_group_count(), 0);
+    {
+      let _guard = local_align_group_count_guard(42);
+      assert_eq!(align_group_count(), 42);
+      increment_align_group_count();
+      assert_eq!(align_group_count(), 43);
+    }
+    // Guard dropped — outer value restored
+    assert_eq!(align_group_count(), 0);
+  }
+
+  #[test]
+  fn test_state_unlocked() {
+    initialize_localized();
+    assert!(!state_is_unlocked());
+    local_state_unlocked(true);
+    assert!(state_is_unlocked());
+    {
+      let _guard = local_state_unlocked_guard(false);
+      assert!(!state_is_unlocked());
+    }
+    assert!(state_is_unlocked());
+    expire_state_unlocked();
+    assert!(!state_is_unlocked());
+  }
 }

@@ -156,6 +156,7 @@ nostrud exercitation ullamco laboris (nisi ut aliquip).</p>
         <p>Summer intern at the Great group, ABRV City. <break/>Homepage: <ref class="ltx_url" font="typewriter" href="http://www.example.com">http://www.example.com</ref></p>
       </block>
     </para>
+    <pagination role="newpage"/>
   </section>
   <section inlist="toc" xml:id="Sx3">
     <title class="ltx_cv"><text class="ltx_section_mark"/><text class="ltx_cv_heading" font="smallcaps">Professional Appointments</text></title>

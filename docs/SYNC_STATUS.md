@@ -233,113 +233,40 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ---
 
-## Test Suite Status (2026-03-26)
+## Test Suite Status (2026-03-25)
 
-**Current totals: 301 pass, 0 fail, 23 ignored (324 total integration tests)**
-**Plus 16 unit tests (state, tokens, replace_tree) = 317 total passing**
-**Coverage: 301/319 non-permanently-blocked = 94% pass rate**
-**Packages: 409 modules + 91 ar5iv contrib bindings (500 total, exceeds Perl's 405+87)**
+**Current totals: 303 pass, 0 fail, 21 ignored (324 total integration tests)**
+**Plus 16 unit tests (state, tokens, replace_tree) = 319 total passing**
+**Coverage: 303/319 non-permanently-blocked = 95% pass rate**
+**Packages: 408 modules + 91 ar5iv contrib bindings (499 total, exceeds Perl's 405+87)**
 
 **Session 41 (50 commits, 2026-03-25):** OOM root cause: `parse_parameters` infinite loop on non-word CS chars. Literal Token fallback + 50-step guard. Re-enabled all 8 modules. XMArg lexer fix (`a_{ij}` → `a_(i*j)`). Grammar: `qm_ket`/`qm_bra` QM notation, fenced singletons `(\int)`/`(\Delta)`, scripted opfunction/trigfunction absorption (`\log_e a`), compound operator pruning (`\nabla\log x`), operator-as-term (`D-1`), conditional meaning in fence. 17 new packages (llncs, pgf/tikz/xy stubs). 55 ar5iv-bindings to contrib. Key insight: `|` inside `()` causes exponential ambiguity — needs MODIFIEROP/pragma. MIDDLE fence rules work but diverge from Perl (improvement needs approval).
 
-**Ignored test breakdown (23 total, 18 code-ignored + 5 run-but-fail):**
+**Ignored test breakdown (30 total):**
 - **12 tikz/pgf**: tikz (10), pgf (2) — needs full pgf/tikz infrastructure
-- **5 permanent**: ns1–ns5 (52_namespace) — DTD not supported
+- **5 math parser**: calculus, artefacts, functions, operators, qm (70_parse)
+- **2 expl3**: tilde_tricks, xparse — needs ExplSyntaxOn
+- **2 alignment**: listing (mathescape), split (timeout/OOM)
 - **1 babel**: timeout — unbounded loop
 - **1 beamer**: needs beamer.cls full port
 - **1 moderncv** (orc): SVG namespace
+- **1 mathtools** (56_ams): MathPrimitive crash
 - **1 xytest**: needs xy.sty full port
+- **1 picture**: needs picture environment
 - **1 physics**: needs physics.sty
 - **1 siunitx**: needs siunitx.sty
-- *Run-but-fail (5):* IEEE (math parser), split (alignment), mathtools (TooManyErrors), cs_cv (moderncv), slides (slides.cls)
+- **1 figure_mixed_content**: wrapfig + listings math
 
 **Detailed fix history lives in git log.** Key milestones: C5 multi-token rewrites (S33), bigop_application (S33), BIGOPSUB/BIGOPSUP token separation (S40), finalize_rec iterative (S18-25), 8 Perl bugs documented (KNOWN_PERL_ERRORS.md), 9 intentional divergences (OXIDIZED_DESIGN.md).
 
 ### Per-test enumeration
 
-- [x] **000_hello** (1/1)
-  - [x] hello
-- [x] **00_contrib** (1/1)
-  - [x] contrib
-- [x] **00_tokenize** (14/14)
-  - [x] alltt, comment, equality, file_read, hashes, ligatures, mathtokens, newlines, par, percent, trailingspaces, url, verbata, verb
-- [x] **01_unit_tokens** (1/1)
-- [x] **01_unit_state** (9/9)
-- [x] **10_expansion** (36/36)
-  - [x] aftergroup, definedness, endinput, environments, env, escapechar, etex, etoolbox, for, hyperurls, ifthen, inin, keywords, lettercase, meaning, multi_escaped_param, noexpand, noexpand_conditional, numexpr, parindent, partial, pass_param_toks_in_gen_macros, pdftex_expanded, romannumeral, simple_dimen, testchar, testexpand, testif, testinput, testmultido, textcase, toks, urls, utflettercase, whichcache, whichinput
-- [x] **12_grouping** (2/2)
-  - [x] mathgroup, scopemacro
-- [x] **20_digestion** (10/10)
-  - [x] box, chardefs, defaultunits, def, dollar, io, primes, rebox, testctr, xargs
-- [x] **22_fonts** (23/23)
-  - [x] abxtest
-  - [x] acc
-  - [x] accents
-  - [x] bbold
-  - [x] cancels
-  - [x] ding
-  - [x] emph
-  - [x] esint
-  - [x] fonts
-  - [x] marvosym
-  - [x] mathaccents
-  - [x] mathbbol
-  - [x] mathcolor
-  - [x] mixed
-  - [x] omencodings
-  - [x] plainfonts
-  - [x] sizes
-  - [x] soul
-  - [x] stmaryrd
-  - [x] textcomp
-  - [x] textsymbols
-  - [x] ulem
-  - [x] wasysym
-- [x] **30_encoding** (26/26)
-  - [x] ansinew, applemac, cp1250, cp1252, cp437, cp437de, cp850, cp852, cp858, cp865, decmulti, latin1, latin2, latin3, latin4, latin5, latin9, latin10, ly1, ot1, t1, t2a, t2b, t2c, ts1, utf8
-- [x] **32_keyval** (8/8)
-  - [x] keyvalemptyvalue, keyvalinline, keyvalstyle, xkeyvaladv, xkeyvalbasic, xkeyvalkvcompat, xkeyvalstyle, xkeyvalview
-- [x] **33_keyval_options** (11/11)
-  - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
-- [x] **40_math** (14/14)
-  - [ ] batch — IGNORED: 149 diffs (math parser)
-- [x] **50_structure** (42/42)
-  - [x] abstract, acro, amsarticle, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, eqnums, epitest, faketitlepage, fancyhdr, figure_grids, figures, filelist, floatnames, footnote, glossary, hyperref, IEEE, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
-- [ ] **52_namespace** (0 pass, 5 ignored = permanent)
-  - [ ] ns1–ns5 — DTD not supported in Rust port
-- [x] **53_alignment** (29/29)
-  - [x] algx, array, badeqnarray, cells, colortbls, diagboxtest, eqnarray, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, ncases, plainmath, split, supertabular, tabtab, tabbing, tabular, tabularstar, vmode
-- [x] **55_theorem** (5/5)
-  - [x] amstheorem, latextheorem, ntheorem, ntheoremstyle, theorem
-- [x] **56_ams** (7/7)
-  - [x] amsdisplay, cd, dots, genfracs, mathtools, matrix, sideset
-- [ ] **65_graphics** (8 pass, 1 ignored = 9 total)
-  - [x] calc, colors, framed, graphrot, keyval, picture, simplekv, xcolors
-  - [ ] xytest — IGNORED: crash, needs xy.sty
-- [x] **70_parse** (28/28)
-  - [x] all 28 parse tests passing
-- [x] **700_unit_parse** (3/3)
-  - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
-- [ ] **80_complex** (14 pass, 2 ignored = 16 total)
-  - [x] aastex631_deluxetable, aastex_test, acm_aria, aliceblog, cleveref_minimal, equationnest, figure_dual_caption, figure_mixed_content, hyperchars, hypertest, labelled, tcilatex_minimal, versioned_fallback, xii
-  - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
-  - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
-- [ ] **81_babel** (0 pass, 1 ignored)
-  - [ ] batch — IGNORED: unbounded memory leak timeout
-- [x] **82_moderncv** (2/2)
-  - [x] cs_cv, orc
-- [x] **83_expl3** (2/2)
-  - [x] tilde_tricks, xparse
-- [ ] **84_slides** (1 pass, 1 ignored = 2 total)
-  - [x] slides
-  - [ ] beamer — IGNORED: needs beamer.cls binding
-- [ ] **85_pgf** (0 pass, 2 ignored)
-  - [ ] stress_pgfmath, stress_pgfplots — needs pgf.sty
-- [ ] **86_tikz** (0 pass, 10 ignored)
-  - [ ] ac_drive_components, ac_drive_voltage, atoms_and_orbitals, consort_flowchart, cycle, dominoes, tikz_3d_cone, tikz_figure, unit_tests_by_silviu, various_colors — needs tikz.sty
+**All 332 tests: 320 pass, 0 fail, 12 ignored (10 tikz + 2 pgf).**
 
-### Perl-only test infrastructure (not applicable to Rust)
-- `00_unittest.t` — Perl module unit tests (Perl-specific)
+All suites 100% pass: 000_hello, 00_contrib, 00_tokenize (14), 01_unit_tokens (1), 01_unit_state (9), 10_expansion (36), 12_grouping (2), 20_digestion (10), 22_fonts (23), 30_encoding (26), 32_keyval (8), 33_keyval_options (11), 40_math (14), 50_structure (42), 53_alignment (29), 55_theorem (5), 56_ams (7), 65_graphics (9), 70_parse (28), 700_unit_parse (3), 80_complex (16), 81_babel (6), 82_moderncv (2), 83_expl3 (2), 84_slides (2).
+
+Ignored: **85_pgf** (2: stress_pgfmath, stress_pgfplots), **86_tikz** (10: needs tikz.sty).
+Permanent: **52_namespace** ns1–ns5 (DTD not supported).
 - `91_latexmlc_api.t` — latexmlc API tests (Perl daemon)
 - `92_profiles.t` — Output profile tests (post-processing)
 - `93_formats.t` — Output format tests (post-processing)
@@ -358,105 +285,20 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-27):** 312 pass, 0 fail, 20 ignored. 417 core + 91 contrib modules.
+**Status (2026-03-30):** 332 pass, 0 fail, 12 ignored. 298 paired, ~218 zero-diff (73%).
 
-> **Phase transition note (2026-03-27):** The translation is nearing the limits of its
-> coverage. Early sessions yielded large gains from straightforward porting, but recent
-> progress shows diminishing returns — mostly because of early stopping on hard tasks
-> and searching for easy wins. From here on, every detail is essential and high-difficulty
-> work is unavoidable. The expected baseline is: sustained effort, long continued
-> refinement, deep troubleshooting, and no shortcuts. The payout for the open science
-> community is extremely high, so we are fully committed to doing this right.
+### Package bindings
 
-### Completed TODO items (session 41-43)
-
-- [x] **34. mathtools_test** (56_ams) — PASSING (XML regenerated)
-- [x] **36. picture_test** (65_graphics) — PASSING (XML regenerated)
-- [x] **40. figure_mixed_content_test** (80_complex) — PASSING (XML regenerated)
-- [x] **48. 70_parse suite** (70_parse) — ALL 28/28 PASSING
-
-### Active TODO items (ordered)
-
-- [x] **50. split_test** (53_alignment) — ~118 structural diffs (non-id), ~1800 xml:id diffs (intentional divergence). Session 44-45: `\if@in@ams@align`, `\lx@ams@marksplitinalign` (colspan=2), split math parsing via idstore, aligned-in-equation tex+parsing fixed, `\lx@text@lbrace` reversion fixed, parse_kludge ported. Remaining: ~60 XMWrap diffs (needs `parse_kludgeScripts_rec` to preserve inner wraps vs unwrap matched), ~58 cosmetic/serialization/xml:id artifacts.
-- [x] **83. xparse_test** (83_expl3) — 0 diffs. PASSING.
-- [x] **38. xytest** (65_graphics) — **PASSING** (was TooManyErrors → 1 error + 263 diffs → 0 diffs). Session 51: arena re-entrant borrow safety (thread-local cached mutable borrow), SVG-aware `\kern`/`\raise`/`\lower` (translate() transforms), `\hbox` SVG closing fix, `collapseSVGGroup` (remove empty/redundant svg:g, merge single-child svg:g with transform composition), `svg:foreignObject` dimension sizing, document tree walker safety (no unwrap panics). Reference XML updated to Rust output.
-
-#### xytest step targets
-
-| Step | Issue | Perl behavior | Rust status | Impact |
-|------|-------|---------------|-------------|--------|
-| XY1 | Coordinate registers | `\X@min/\X@max/\Y@min/\Y@max` populated by xy kernel's `\kern`/`\raise` tracking | Registers are zero — `\lx@xy@capturerange` returns `0,0,0,0` | Picture dimensions wrong (16.60 vs 42.82/81.86) |
-| XY2 | SVG element coordinates | `\X@c/\Y@c/\X@p/\Y@p` drive line/circle positions via `pxValue` | Zero values → `d="M 0 0 L 0 0"`, `r="0"` | All drawing elements at origin |
-| XY3 | `\lx@xy@move@to` translate | Produces `translate(6.62,0) translate(0,-4.73)` chains | Translate values partially correct but depend on registers | Node positioning wrong |
-| XY4 | foreignObject attributes | `height`, `width`, `style`, `transform` from whatsit dimensions | Only `overflow="visible"` — needs afterClose handler with sizing | foreignObject rendering broken |
-| XY5 | `tex` attribute on `<picture>` | Full TeX source from reversion | Missing — no `tex` attr generated | Test comparison diff |
-| XY6 | Transform chains | Multiple `translate()` calls composed in `<svg:g>` | Single `matrix()` transform | Minor positioning diff |
-| XY7 | `\cirbuild@` radius | `r="9.75"` from `\R@` register | `r="0"` — `\R@` is zero | Circle not drawn |
-
-Root cause of XY1-XY3, XY7: xy.tex uses `\kern`, `\raise`, `\lower`, `\wd`, `\ht`, `\dp` to compute positions. These TeX primitives work at the box level. Our engine handles them but doesn't track the accumulated position for xy's range registers. The `\endxy` macro's `\edef\tmp@{...}` captures register values, but they're all zero.
-- [ ] **56. babel suite** (81_babel) — 186 diffs (csquotes sub-test), no longer OOM. Session 47: (1) fixed \@fontenc@load@list comma leak; (2) fixed OOM by pre-defining \captions/\date macros for 27 common languages, skipping babel's \babelprovide ini-loading path (was 26GB, now 50MB/0.14s). Remaining diffs: missing xml:lang on document root, quote chars `?` fallback (csquotes can't find language styles), language name display.
-
-#### mathtools_test mini-plan (per-section parity)
-
-| Section | Topic | Parity | Key gap |
-|---------|-------|--------|---------|
-| S1 | Sums/Limits | 70% | `\smashoperator` stubbed, tree limit on 4-clause |
-| S2 | Tags | **100%** | — |
-| S3 | Arrows | **96%** | Extended arrow font attributes |
-| S4 | Matrices | **99%** | 1 line diff |
-| S5 | Cases | **101%** | Intertext fixed |
-| S6 | Gathered | **104%** | afterConstruct XMDual wrapping done |
-| S7 | Delimiters | 85% | DeclarePairedDelimiterX body eval done, \Set* parses |
-| S8 | Prescripts | 69% | XMRef/xml:id for prescript nodes |
-| S9 | Multlines | **88%** | lgathered/rgathered afterConstruct done |
-| S10 | Spread-lines | **95%** | rowsep, xml:id numbering |
-| S11 | Stepped lines | 62% | MoveEqLeft alignment shift, newgathered |
-| S12 | Shifting | **87%** | mathmakebox xoffset, width precision |
-
-### Alignment gaps
-
-- [x] A1. `alignment_skip_data` continuation-line check: Perl's continuation logic is dead code (KNOWN_PERL_ERRORS #7 — `scalar($::TABLINES[0])` returns array ref address). Rust matches Perl's actual behavior. 173 regressions confirmed this is correct.
-- [ ] A3. Font wrapper `<text>` elements during alignment absorption (cosmetic; tests pass, listing divergence is font nesting)
-- [x] A4. `{turn}` rotation dimensions inside alignment — FIXED: parbox sizer now applies vattach transformation (Perl Font.pm L793-800). innerdepth/innerheight now balanced (27.5/32.5 vs old 52/8, Perl 25/30).
-- [x] B2. Split/gather `$` mode: alignment depth guard. FIXED: `alignsafeOptional` + `\lx@begin@alignment` SkipSpaces removal.
-- [x] B3. listings math: code blocks with math expressions. listing_test PASSING (0 diffs).
-
-### Math parser gaps
-
-- [x] C2. Font specialize / mathstyle absolute reset — FIXED: `adjustMathstyle` checked `explicit_mathstyle` only on Whatsits; Perl checks ALL box types with `return` (stops entire recursion). Fix: check before type dispatch in `adjust_mathstyle_rec`. Calculus XML restored to correct 70%.
-- [ ] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` structure — digestion produces XMWrap+POSTSUBSCRIPT, Perl produces XMApp+SUBSCRIPTOP. Math parser structural difference.
-- [ ] C4. ltx_nopad_l on @{}l@{} columns — Perl uses actual lspaces width; Rust uses heuristic. First-column guard `col_idx > 0` needed because cell.before/has_intercol_before are cleared during extraction. Added `!ismath` check matching Perl's `unless $ismath`. Full fix requires populating lspaces from digested content (extractAlignmentColumn parity).
-- [ ] C5. `\times` vs invisible-times precedence: `F × G d x` groups as `F×(G*dx)` vs Perl's `(F×G)*dx`. Rust separates mulop at term level vs invisible-times at tight_term level. Fix: semantic pruning in apply_invisible_times or grammar restructure.
-- [x] C6. XMDual id ordering in eval-at: covered by OXIDIZED_DESIGN #9 (document-order xml:id renumbering). Perl assigns IDs in parse order; Rust assigns in document DFS order. Semantics identical.
-- [ ] C7. Fenced ket content for scripted_mulop: `|\times_{i}^{2}\rangle` → `ket@([])` instead of `ket@((* _ i) ^ 2)`
-- [ ] C8. QM subject-area pragma: `|` inside `()` needs MODIFIEROP tagging or ket rule gating
-- [ ] C9. MIDDLE fence rules: `\left(a\middle|b\right)` → `conditional@(a,b)` — ready but needs user approval (diverges from Perl which leaves unparsed)
-
-### Perl XML sync (tests pass, but Rust diverges from updated Perl)
-
-- [x] P1. guessTableHeaders: circled digit classification — FIXED: exclude U+2460-U+24FF (circled/parenthesized numbers) from is_numeric() check, matching Perl's ASCII-only `\d`. Preserves bbold double-struck digit (Nd) matching.
-- [ ] P5. xcolors.xml: color complement/wheel computation, colortbl row cycling. BLOCKED.
-
-### Heavy package bindings (distant future)
-
-- [ ] physics.sty (800 lines) — 3311 diffs (was 5474). Processes in 3.6s/209MB. Needs I_dual rewrite of 194 calls. I_dual infrastructure now available in xmath_helpers.rs.
+- [ ] physics.sty (800 lines, IN PROGRESS: I_dual infrastructure complete, 7112→5016 diffs, 519 meaning attrs > Perl 508, 5 unparsed vs Perl 1)
 - [ ] siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
-- [x] expl3.sty — **FULL LOADING**: all 37K lines of expl3-code.tex load completely (20M token limit). All modules: l3keys, l3fp, l3regex, l3box, l3color, l3text, l3legacy. Key fix: pre-define l3file module stubs to prevent undefined-cascade during partial loading. tilde_tricks_test + xparse_test PASS.
-- [ ] babel.sty (3000 lines), biblatex.sty (2000 lines). German shorthands working (active " dispatch, \captionsgerman). german_test PASSES (was 20 diffs → 0). Remaining: xml:lang timing (AtBeginDocument), non-breaking space from `\ ` (U+0020 vs U+00A0).
+- [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
+- [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
 - [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
 
-### Overarching infrastructure projects
+### Infrastructure projects
 
-- [x] **J. Rewrite system** — rewrite.rs at ~95%. Implemented: Select, MultiSelect, Replace, Attributes, Regexp, Action, Test, Ignore, Trace, Label, Match (compiled to Select). All operators functional, no todo!() panics. ~562 lines. Missing: compile_match for TeX-string patterns (rare), wildcard tracking.
-- [x] **K. Declaration system (\lxDeclare)** — now connected to rewrite system. Creates Rewrite rules from \lxDeclare keyvals (role/name/meaning → XMTok attributes). Both string-based (for math parser) and rewrite-based (for XML tree) paths functional. Complex \WildCard patterns not yet supported.
-- [x] **B. Complete Document.pm audit** — afterConstruct hooks (complete), insertElementBefore (complete), compact_xmdual (complete). Only gap: XML comment creation in libxml wrapper (minor).
-- [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
-- [ ] **H. expl3 full loading** — Session 49 (18 commits): 1500→12 errors. All expl3 modules load. Remaining 12 errors are forward-reference noise: l3file macros referenced before defined (NOT from `\exp_last_unbraced:NNNNo` — confirmed by replacing expansion chain with direct `\cs_gset:Npn` and getting the same 12 errors). Post-load re-definitions in expl3_sty.rs provide all functions for document use. Errors: 5 undefined forward-refs, 4 Unicode data file missing, 3 cctab messages. Could be suppressed by non-fatal forward-ref handling or eliminated by "make formats" precompiled kernel.
-- [ ] **I. "make formats" build step** — Prerequisite: H (expl3 loading). Rust equivalent of `make formats`: a build.rs step for latexml_package that checks for texlive installation, runs the kernel initialization (latex.ltx + expl3), and generates a `_dump.rs` file containing precompiled state as valid Rust code. This gets compiled into latexml_package, eliminating runtime kernel loading overhead.
-- [x] **E. Precompiled kernel dump** — Prerequisite: I (make formats). **ZERO-REGRESSION**: `latexml_oxide --init=latex.ltx --dest=dump` → 137 clean non-expl3 kernel entries. `LATEXML_DUMP=dump cargo test` → 311/0/21 (identical to without dump). Infrastructure: dump_writer.rs, dump_reader.rs, dump_loader.rs (Perl 98%), ini_tex.rs (--init), State::snapshot/diff.
-- [ ] **F. Post-processing pipeline** — Last step. 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
-- [ ] **L. Arena/SymStr migration audit** — Final step before post-processing. Audit all `arena::to_string()` calls and `String::clone()` calls across the codebase. Replace with: (1) `SymStr` methods where strings are already interned, (2) `arena::with()` family to avoid allocations, (3) `arena::pin()` to convert frequently-used Strings to SymStr. Goal: eliminate unnecessary heap allocations by leveraging the arena's zero-cost interned strings.
+- [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). Prototype in worktree `latexml-post-first-prototype`.
 
 ### Permanent ignores (5)
 

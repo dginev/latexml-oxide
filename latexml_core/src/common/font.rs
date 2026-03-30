@@ -134,7 +134,7 @@ static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
 /// Maps the "series code" to an abstract font series name
 static FONT_SERIES: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
   raw_map!(
-    "" => fontmap!(series => "medium"), "m" => fontmap!(series => "medium"),
+    "" => Font::default(), "m" => fontmap!(series => "medium"),
       "mc" => fontmap!(series => "medium"),
     "b"  => fontmap!(series => "bold"),   "bc"  => fontmap!(series => "bold"),
       "bx" => fontmap!(series => "bold"),
@@ -146,7 +146,7 @@ static FONT_SERIES: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
 /// Maps the "shape code" to an abstract font shape name.
 static FONT_SHAPE: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
   raw_map!(
-    "" => fontmap!(shape => "upright"), "n" => fontmap!(shape => "upright"),
+    "" => Font::default(), "n" => fontmap!(shape => "upright"),
       "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"),
       "sl" => fontmap!(shape => "slanted"),
       "sc" => fontmap!(shape => "smallcaps"), "csc" => fontmap!(shape => "smallcaps")
@@ -330,15 +330,17 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
 
 pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>) -> Option<Font> {
   if let Some(cap) = FONT_RE.captures(name) {
-    let mut props = Font::default();
+    // Perl: my %props = (series => 'medium', shape => 'upright', encoding => 'OT1');
+    let mut props = Font {
+      series: Some(Cow::Borrowed(DEFSERIES)),
+      shape: Some(Cow::Borrowed(DEFSHAPE)),
+      encoding: Some(Cow::Borrowed("OT1")),
+      ..Font::default()
+    };
     let fam = cap.get(1).map_or("", |m| m.as_str());
     let ser = cap.get(2).map_or("", |m| m.as_str());
     let shp = cap.get(3).map_or("", |m| m.as_str());
     let size_str = cap.get(4).map_or("", |m| m.as_str());
-    // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property
-    // whitelist as in Perl? but the merge is convenient, especially if we can state "only the
-    // values different from the default Font" which may already work courtesy of "None"? Need
-    // to think it through...
     if let Some(ffam) = lookup_font_family(fam) {
       props = props.merge(ffam.clone());
     }

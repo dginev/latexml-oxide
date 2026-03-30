@@ -26,6 +26,23 @@ fn main() -> Result<(), Box<dyn Error>> {
   // Parse --init=<file> flag (Perl: latexml --init=latex.ltx --dest=dump.ltxml)
   let init_file = extract_flag(&mut argv, "--init");
   let dest_flag = extract_flag(&mut argv, "--dest");
+  // Parse --codegen=<dump_path> flag: generate Rust module from a dump file
+  let codegen_flag = extract_flag(&mut argv, "--codegen");
+
+  // Codegen mode doesn't need a source file — handle it early.
+  if let Some(dump_path) = codegen_flag {
+    let output = dest_flag.unwrap_or_else(|| "latex_dump.rs".to_string());
+    match latexml::ini_tex::codegen_from_dump(&dump_path, &output) {
+      Ok(count) => {
+        eprintln!("Codegen complete: {} entries → {}", count, output);
+        process::exit(0);
+      }
+      Err(e) => {
+        eprintln!("Codegen failed: {}", e);
+        process::exit(1);
+      }
+    }
+  }
 
   let source = if let Some(ref init) = init_file {
     init.clone()

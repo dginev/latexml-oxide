@@ -22,7 +22,7 @@ fn read_intarray_key() -> Result<String> {
       let n = gullet::read_number()?;
       return Ok(intarray_key(t, n.value_of()));
     } else {
-      gullet::unread_one(t.clone());
+      gullet::unread_one(*t);
     }
   }
   Error!(

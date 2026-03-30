@@ -262,7 +262,13 @@ impl Template {
   pub fn get_padding(&self) -> Option<&Dimension> { self.padding.as_ref() }
 
   /// Perl Template.pm L76-80: disableIntercolumn
-  pub fn disable_intercolumn(&mut self) { self.disabled_intercolumn = true; }
+  /// Only sets the flag when there is a current column.
+  /// Perl: `if (my $col = $$self{current_column}) { $$self{disabled_intercolumn} = 1; }`
+  pub fn disable_intercolumn(&mut self) {
+    if !self.columns.is_empty() || !self.repeated.is_empty() {
+      self.disabled_intercolumn = true;
+    }
+  }
 
   /// Perl Template.pm L113-118: finish
   /// Appends \lx@intercol to last column's after unless disabled_intercolumn

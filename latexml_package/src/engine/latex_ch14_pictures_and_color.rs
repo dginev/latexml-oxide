@@ -146,8 +146,8 @@ LoadDefinitions!({
     }
   );
 
-  // \line(slope){length} — decompose pair into separate slope components
-  DefMacro!("\\line Match:( Until:, Until:) {}", "\\lx@pic@line{#2}{#3}{#4}");
+  // \line(slope){length} — Perl: DefConstructor('\line Pair:Number {Float}', ...)
+  DefMacro!("\\line Match:( Until:, Until:) {Float}", "\\lx@pic@line{#2}{#3}{#4}");
   DefConstructor!("\\lx@pic@line{}{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
@@ -179,8 +179,8 @@ LoadDefinitions!({
     }
   );
 
-  // \vector(slope){length} — like \line but with arrow terminator
-  DefMacro!("\\vector Match:( Until:, Until:) {}", "\\lx@pic@vector{#2}{#3}{#4}");
+  // \vector(slope){length} — Perl: DefConstructor('\vector Pair:Number {Float}', ...)
+  DefMacro!("\\vector Match:( Until:, Until:) {Float}", "\\lx@pic@vector{#2}{#3}{#4}");
   DefConstructor!("\\lx@pic@vector{}{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
     alias => "\\vector",
@@ -388,7 +388,7 @@ LoadDefinitions!({
           map.insert("dash", Stored::String(arena::pin(&rest[..end])));
         }
       }
-      map.insert("thick", Stored::String(arena::pin(&s!("{thick}"))));
+      map.insert("thick", Stored::String(arena::pin(s!("{thick}"))));
       Ok(map)
     },
     mode => "text"

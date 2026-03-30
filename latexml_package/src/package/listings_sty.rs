@@ -81,6 +81,28 @@ fn listings_read_raw_lines(environment: &str) -> String {
   lines.join("\n")
 }
 
+/// Read a balanced group from a token slice, starting at tokens[*pos].
+/// *pos should point to a T_BEGIN token. Returns content tokens (without outer braces).
+/// Advances *pos past the closing T_END.
+fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
+  let mut result = Vec::new();
+  if *pos >= tokens.len() || tokens[*pos].get_catcode() != Catcode::BEGIN { return result; }
+  *pos += 1; // skip T_BEGIN
+  let mut level = 1i32;
+  while *pos < tokens.len() && level > 0 {
+    match tokens[*pos].get_catcode() {
+      Catcode::BEGIN => { level += 1; result.push(tokens[*pos]); }
+      Catcode::END => {
+        level -= 1;
+        if level > 0 { result.push(tokens[*pos]); }
+      }
+      _ => { result.push(tokens[*pos]); }
+    }
+    *pos += 1;
+  }
+  result
+}
+
 /// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
   let tokens = latexml_core::mouth::tokenize(text);
@@ -635,6 +657,66 @@ fn lst_set_character_class(class: &str, chars: &Tokens) {
   }
 }
 
+/// Build literate substitution entries from state.
+/// Returns (pattern_string, replacement_tokens, protected_flag) triples.
+fn build_literate_entries() -> Vec<(String, Tokens, bool)> {
+  let keys: Vec<String> = match state::lookup_value("LST_LITERATE_KEYS") {
+    Some(Stored::Tokens(t)) => t.unlist_ref().iter().map(|tok| tok.to_string()).collect(),
+    _ => return Vec::new(),
+  };
+  let mut entries = Vec::new();
+  for pattern in &keys {
+    let repl_key = s!("LST_LIT@{pattern}");
+    let prot_key = s!("LST_LIT@{pattern}@protected");
+    if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
+      let protected = matches!(state::lookup_value(&prot_key), Some(Stored::Bool(true)));
+      entries.push((pattern.clone(), replacement, protected));
+    }
+  }
+  entries
+}
+
+/// Build a regex that matches any literate pattern.
+/// If `inner_only` is true, only include non-protected patterns.
+fn build_literate_re(inner_only: bool) -> Option<Regex> {
+  let entries = build_literate_entries();
+  let patterns: Vec<String> = entries
+    .iter()
+    .filter(|(_, _, protected)| !inner_only || !protected)
+    .map(|(pat, _, _)| regex::escape(pat))
+    .collect();
+  if patterns.is_empty() {
+    None
+  } else {
+    Regex::new(&format!("^({})", patterns.join("|"))).ok()
+  }
+}
+
+/// Build a regex character class string from the character table in state.
+/// Enumerates all printable ASCII chars and checks if they belong to `class`
+/// (letter, digit, or other) via individual `LST_CHAR@{class}@{escaped}` keys.
+/// Perl equivalent: `join('', sort keys %{$$characters{$class}})`
+fn build_char_class(class: &str) -> String {
+  let mut result = String::new();
+  // Check all printable ASCII chars (space through tilde)
+  for b in 0x20u8..=0x7Eu8 {
+    let c = b as char;
+    let escaped = regex::escape(&c.to_string());
+    let key = s!("LST_CHAR@{class}@{escaped}");
+    if matches!(state::lookup_value(&key), Some(Stored::Bool(true))) {
+      // Escape chars that are special inside regex character classes
+      match c {
+        ']' | '\\' | '^' | '-' => {
+          result.push('\\');
+          result.push(c);
+        }
+        _ => result.push(c),
+      }
+    }
+  }
+  result
+}
+
 //======================================================================
 // Region 9: The listing parser (Perl lines 1234-1559)
 // lstProcess, lstProcess_internal, class begin/end, line constructors
@@ -685,26 +767,24 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
     is_leaf = false;
   }
 
-  // Deduplicate CSS classes while preserving order
+  // Deduplicate and sort CSS classes (matching Perl's addSSValues sort behavior)
   let mut seen = std::collections::HashSet::new();
-  let css_string = css_classes
+  let mut deduped: Vec<String> = css_classes
     .iter()
     .filter(|c| seen.insert((*c).clone()))
     .map(|c| format!("ltx_lst_{c}"))
-    .collect::<Vec<_>>()
-    .join(" ");
+    .collect();
+  deduped.sort();
+  let css_string = deduped.join(" ");
 
   let mut result = vec![T_BEGIN!(), T_CS!("\\@listingGroup"), T_BEGIN!()];
   result.extend(ExplodeText!(&css_string));
   result.push(T_END!());
   result.push(T_BEGIN!());
-  // Delimiter chars first (in default font)
+  // Perl: @open built with unshift — parent style before leaf delimiters.
+  // Style tokens (e.g. \itshape, \color{green}) apply to delimiters and content.
+  result.extend(style_tokens);
   result.extend(delim_tokens);
-  if !style_tokens.is_empty() {
-    // Open a group for styling so it's scoped (doesn't affect close delimiters)
-    result.push(T_BEGIN!());
-    result.extend(style_tokens);
-  }
   result
 }
 
@@ -712,7 +792,6 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
 /// Mirrors lstClassBegin: close the style group first, then emit delimiter chars.
 fn lst_class_end(classname: &str) -> Vec<Token> {
   let mut delim_tokens = Vec::new();
-  let mut has_style = false;
   let mut current_class = Some(classname.to_string());
   let mut is_leaf = true;
   while let Some(ref cname) = current_class {
@@ -721,16 +800,6 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
       if let Some(rescanned) = lst_rescan(Some(end)) {
         if is_leaf {
           delim_tokens.extend(rescanned.unlist().to_vec());
-        }
-        // Parent class end tokens (if any) go before delimiter tokens
-      }
-    }
-    // Check if parent class has begin styling (to know if we opened a style group)
-    if !is_leaf {
-      let begin_key = s!("LST_CLASSES@{cname}@begin");
-      if let Some(Stored::Tokens(begin)) = state::lookup_value(&begin_key) {
-        if !begin.is_empty() {
-          has_style = true;
         }
       }
     }
@@ -741,10 +810,7 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
     is_leaf = false;
   }
   let mut result = Vec::new();
-  if has_style {
-    // Close the style group opened by lstClassBegin
-    result.push(T_END!());
-  }
+  // No separate style group to close — style applied at group level
   result.extend(delim_tokens);
   result.push(T_END!());
   result.push(T_END!());
@@ -839,24 +905,22 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     lst_get_literal("numbers")
   };
 
-  // Build ID regex from character classes (Perl: join('', sort keys %{$$characters{letter}}))
-  let mut letter_chars = String::from("a-zA-Z@_");
-  let digit_chars = String::from("0-9");
-  // Check if $ is still a letter character (mathescape removes it)
-  let dollar_key = "LST_CHAR@letter@\\$";
-  let dollar_is_letter = !matches!(state::lookup_value(dollar_key), Some(Stored::None));
-  if dollar_is_letter {
-    letter_chars.push('$');
-  }
+  // Build ID regex dynamically from character table in state
+  // Perl: join('', sort keys %{$$characters{letter}})
+  let letter_chars = build_char_class("letter");
+  let digit_chars = build_char_class("digit");
   // Perl: LookupValue('LST@TEXCS') — set when texcs or moretexcs has been used
   let has_texcs = matches!(state::lookup_value("LST@TEXCS"), Some(Stored::Bool(true)));
-  // debug removed
-  let id_pattern = if has_texcs {
-    format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
+  let id_re = if letter_chars.is_empty() {
+    None
   } else {
-    format!("[{letter_chars}][{letter_chars}{digit_chars}]*")
+    let id_pattern = if has_texcs {
+      format!("\\\\?[{letter_chars}][{letter_chars}{digit_chars}]*")
+    } else {
+      format!("[{letter_chars}][{letter_chars}{digit_chars}]*")
+    };
+    Regex::new(&id_pattern).ok()
   };
-  let id_re = Regex::new(&id_pattern).ok();
 
   // Build delimiter regexes from LST_DELIM_KEYS (Perl: $LaTeXML::DELIM_RE, $LaTeXML::ESCAPE_RE)
   let delim_keys: Vec<String> = match state::lookup_value("LST_DELIM_KEYS") {
@@ -938,8 +1002,8 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     quoted_re: Regex::new(r"^\\\\").unwrap(),
     space_token,
     case_sensitive,
-    literate: Vec::new(),
-    literate_re: None,
+    literate: build_literate_entries(),
+    literate_re: build_literate_re(false),
     firstline: lst_get_number("firstline"),
     lastline: lst_get_number("lastline"),
   };
@@ -1093,7 +1157,32 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       }
     }
 
-    // 2. Literate expressions (TODO: implement when needed)
+    // 2. Literate expressions
+    // Perl: use LITERATE_INNER_RE inside delimited contexts, LITERATE_RE at top level
+    {
+      let lit_re = if end_re.is_some() {
+        // Inside a delimited context: only non-protected patterns
+        build_literate_re(true)
+      } else {
+        ctx.literate_re.clone()
+      };
+      if let Some(ref re) = lit_re {
+        if let Some(m) = re.find(&ctx.listing) {
+          let matched = m.as_str().to_string();
+          ctx.listing = ctx.listing[m.end()..].to_string();
+          ctx.colnum += matched.len() as i64;
+          // Find the replacement tokens for this pattern
+          let repl_key = s!("LST_LIT@{matched}");
+          if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
+            ctx.lsttokens.push(T_CS!("\\@listingLiterate"));
+            ctx.lsttokens.push(T_BEGIN!());
+            ctx.lsttokens.extend(replacement.unlist().to_vec());
+            ctx.lsttokens.push(T_END!());
+          }
+          continue;
+        }
+      }
+    }
 
     // 3. Delimiters — strings, comments, escapes, mathescape
     if let Some(ref delim_re) = ctx.delim_re.clone() {
@@ -1127,7 +1216,20 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           // For eval classes: match until close, then tokenize the content as TeX
           // Perl: TokenizeBalanced($string) — close delimiter is NOT separately emitted,
           // because lstClassEnd already provides the closing tokens (e.g. $ for mathescape)
-          if let Ok(close_re) = Regex::new(&close_re_str) {
+          if close_re_str == "__NEWLINE__" {
+            // Sentinel: read until newline (for texcl line comments)
+            let content = if let Some(pos) = ctx.listing.find('\n') {
+              let c = ctx.listing[..pos].to_string();
+              ctx.listing = ctx.listing[pos..].to_string();
+              c
+            } else {
+              let c = ctx.listing.clone();
+              ctx.listing.clear();
+              c
+            };
+            let content_tokens = tokenize_balanced(&content);
+            ctx.lsttokens.extend(content_tokens);
+          } else if let Ok(close_re) = Regex::new(&close_re_str) {
             if let Some(cm) = close_re.find(&ctx.listing) {
               let content = ctx.listing[..cm.start()].to_string();
               ctx.listing = ctx.listing[cm.end()..].to_string();
@@ -1156,6 +1258,11 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
               let saved_delim = ctx.delim_re.clone();
               let saved_id = ctx.id_re.clone();
               let saved_quoted = ctx.quoted_re.clone();
+              let saved_space = ctx.space_token;
+              // Perl: local $SPACE = visible when inside string class + showstringspaces
+              if classname.starts_with("string") && lst_get_boolean("showstringspaces") {
+                ctx.space_token = T_CS!("\\@lst@visible@space");
+              }
               if !is_recursive {
                 ctx.delim_re = ctx.escape_re.clone();
                 ctx.id_re = None;
@@ -1176,6 +1283,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
               ctx.delim_re = saved_delim;
               ctx.id_re = saved_id;
               ctx.quoted_re = saved_quoted;
+              ctx.space_token = saved_space;
             }
           }
         }
@@ -1405,9 +1513,17 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
 fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   let (mut body, trailer) = lst_process_block(name.clone(), text);
 
-  // Check for caption
+  // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
+  if let Some(ref n) = name {
+    if !n.is_empty() {
+      state::assign_value("LST@toctitle", Stored::from(n.clone()), None);
+    }
+  }
+
+  // Check for caption/title/toctitle — Perl lines 183-193
   let caption_tokens = lst_get_tokens("caption");
   let title_tokens = lst_get_tokens("title");
+  let toctitle_tokens = lst_get_tokens("toctitle");
   let label_tokens = lst_get_tokens("label");
 
   let mut numbered = false;
@@ -1416,9 +1532,18 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   if !caption_tokens.is_empty() {
     numbered = true;
     has_caption = true;
+    // Perl lines 184-188: Extract optional [short caption] from caption text
+    let mut toks: Vec<Token> = caption_tokens.unlist();
+    let mut short_caption = Tokens!();
+    if toks.first().map(|t| t.to_string() == "[").unwrap_or(false) {
+      while !toks.is_empty() && toks[0].to_string() != "]" {
+        short_caption.unlist_mut().push(toks.remove(0));
+      }
+      if !toks.is_empty() { toks.remove(0); } // consume ']'
+    }
     let caption = invoke(
       T_CS!("\\lstlisting@makecaption"),
-      vec![Tokens!(), caption_tokens],
+      vec![short_caption, Tokens::new(toks)],
     );
     let captionpos = lst_get_literal("captionpos");
     if captionpos == "t" {
@@ -1432,6 +1557,11 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
     has_caption = true;
     let title_inv = invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]);
     body.extend(title_inv);
+  } else if !toctitle_tokens.is_empty() {
+    // Perl line 192-193: toctitle without caption/title
+    has_caption = true;
+    let toctitle_inv = invoke(T_CS!("\\lstlisting@maketoctitle"), vec![toctitle_tokens]);
+    body.extend(toctitle_inv);
   }
 
   if !label_tokens.is_empty() {
@@ -1481,8 +1611,10 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
   }
   bgroup();
   let _ = stomach::digest(cmd.clone());
+  // Use to_stored() format ("rgb r g b") for round-trip through state storage,
+  // since \lst@@@set@background uses Color::from_stored() to reconstruct the color.
   let color = lookup_font()
-    .and_then(|f| f.color.as_ref().map(|c| c.to_attribute()));
+    .and_then(|f| f.color.as_ref().map(|c| c.to_stored()));
   egroup().ok();
   color
 }
@@ -1653,18 +1785,58 @@ LoadDefinitions!({
   DefMacro!("\\thelstlisting", "\\arabic{lstlisting}");
 
   // \lstnewenvironment — define new listing environments
-  DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, _n, _opt, _start, _end)] {
+  // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
+  // Creates \begin{name} macro that digests start code (with arg substitution),
+  // then reads raw lines and processes the listing display.
+  DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, n_arg, opt_arg, start_code, end_code)] {
     let env_name = name.to_string();
-    // Simplified: create a macro for \begin{envname} that reads raw lines
-    let env_clone = env_name.clone();
-    let cs = T_CS!(s!("\\begin{{{env_clone}}}"));
-    let params = parse_parameters("OptionalKeyVals:LST", &cs, true)?;
-    let env_inner = env_clone.clone();
+    let n: usize = n_arg.value_of() as usize;
+    // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt)
+    let has_opt = opt_arg.as_ref().is_some_and(|t| !t.is_empty());
+    let mut param_spec = String::new();
+    if has_opt {
+      let opt_text = opt_arg.as_ref().unwrap().to_string();
+      param_spec.push_str(&format!("[Default:{}]", opt_text));
+      // optional counts as one arg
+      for _ in 1..n { param_spec.push_str("{}"); }
+    } else {
+      for _ in 0..n { param_spec.push_str("{}"); }
+    }
+    let cs = T_CS!(s!("\\begin{{{env_name}}}"));
+    let params = if param_spec.is_empty() {
+      None
+    } else {
+      parse_parameters(&param_spec, &cs, true)?
+    };
+    // Capture start/end code tokens for the closure
+    let start_toks = start_code.clone();
+    let end_toks = end_code.clone();
+    let env_inner = env_name.clone();
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |_args: Vec<ArgWrap>| {
+      move |args: Vec<ArgWrap>| {
         bgroup();
         state::assign_value("current_environment", Stored::String(arena::pin(&env_inner)), None);
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_inner)), None)?;
+        // Convert expansion args to format for substitute_parameters
+        let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
+          .map(|a| match a {
+            ArgWrap::None => None,
+            ArgWrap::Tokens(ref t) => Some(Cow::Borrowed(t)),
+            ArgWrap::Token(ref t) => Some(Cow::Owned(Tokens::new(vec![*t]))),
+            other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
+          })
+          .collect();
+        // Perl: lstPushValueLocally(LISTINGS_POSTAMBLE => $end->substituteParameters(@args))
+        if !end_toks.is_empty() {
+          let end_subst = end_toks.substitute_parameters(&sub_args);
+          lst_push_value_locally("LISTINGS_POSTAMBLE", end_subst.unlist().to_vec());
+        }
+        // Perl: Digest($start->substituteParameters(@args))
+        // This executes \lstset{...} which activates language, styles, etc.
+        if !start_toks.is_empty() {
+          let start_subst = start_toks.substitute_parameters(&sub_args);
+          let _digested = stomach::digest(start_subst)?;
+        }
         let text = listings_read_raw_lines(&env_inner);
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
@@ -2320,7 +2492,7 @@ LoadDefinitions!({
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
     let color = lst_extract_color(&cmd_toks);
     if let Some(c) = color {
-      state::assign_value("LISTINGS_BACKGROUND", Stored::String(arena::pin(&c)), None);
+      state::assign_value("LISTINGS_BACKGROUND", Stored::String(arena::pin(&c)), Some(Scope::Global));
     }
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
@@ -2331,6 +2503,8 @@ LoadDefinitions!({
         merge_font(Font { bg: Some(c), ..Font::default() });
       }
     }
+    // Clear after use so subsequent listings don't inherit
+    state::assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
   });
 
   // Rule color handler
@@ -2344,9 +2518,13 @@ LoadDefinitions!({
   });
   DefConstructor!("\\lst@@@set@rulecolor",
     sub[document, _args, props] {
-      let color = props.get("color").map(|v| v.to_string()).unwrap_or_default();
-      if !color.is_empty() {
-        document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color)?;
+      let color_stored = props.get("color").map(|v| v.to_string()).unwrap_or_default();
+      if !color_stored.is_empty() {
+        // Convert from stored format ("rgb r g b") to attribute format ("#RRGGBB")
+        let color_hex = latexml_core::common::color::Color::from_stored(&color_stored)
+          .map(|c| c.to_attribute())
+          .unwrap_or(color_stored);
+        document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color_hex)?;
       }
     },
     properties => {
@@ -2381,6 +2559,14 @@ LoadDefinitions!({
         Stored::Tokens(Tokens::new(vec![T_MATH!()])), None);
       state::assign_value("LST_CLASSES@mathescape@end",
         Stored::Tokens(Tokens::new(vec![T_MATH!()])), None);
+      // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{'\$'}
+      state::assign_value("LST_CHAR@letter@\\$", Stored::None, None);
+    } else {
+      // Perl: delete(LookupValue('LST_DELIMITERS')->{'$'})
+      state::assign_value("LST_DELIM@$@open", Stored::None, None);
+      state::assign_value("LST_DELIM@$@close", Stored::None, None);
+      state::assign_value("LST_DELIM@$@class", Stored::None, None);
+      state::assign_value("LST_DELIM@$@escape", Stored::None, None);
     }
     Tokens!()
   });
@@ -2395,6 +2581,10 @@ LoadDefinitions!({
       state::assign_value(&s!("LST_DELIM@{esc}@class"), Stored::String(arena::pin("evaluate")), None);
       state::assign_value(&s!("LST_DELIM@{esc}@escape"), Stored::Bool(true), None);
       state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
+      // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{$escapere}
+      state::assign_value(&s!("LST_CHAR@letter@{esc_re}"), Stored::None, None);
+      // Register in delimiter keys list
+      lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&esc)]);
     }
     Tokens!()
   });
@@ -2424,9 +2614,42 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // literate handler (simplified)
+  // literate handler — parses {pattern}{replacement}length triples
+  // Perl: UnshiftValue(LST_LITERATE => [ToString($pattern), $replacement, $star, $length])
   DefMacro!("\\lst@@literate OptionalMatch:* Until:\\end", sub [args] {
-    let _ = &args;
+    let protected = args[0].to_string() == "*";
+    let toks = args[1].clone().owned_tokens().unwrap_or(Tokens!());
+    let tokens: Vec<Token> = toks.unlist();
+    let mut i = 0;
+    while i < tokens.len() {
+      // Skip whitespace
+      while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
+      if i >= tokens.len() { break; }
+      // Read pattern: balanced group
+      if tokens[i].get_catcode() != Catcode::BEGIN { break; }
+      let pattern = read_balanced_group(&tokens, &mut i);
+      // Skip whitespace
+      while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
+      if i >= tokens.len() { break; }
+      // Read replacement: balanced group
+      if tokens[i].get_catcode() != Catcode::BEGIN { break; }
+      let replacement = Tokens::new(read_balanced_group(&tokens, &mut i));
+      // Skip whitespace
+      while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
+      // Read length: number token(s)
+      while i < tokens.len() && tokens[i].get_catcode() != Catcode::SPACE
+        && tokens[i].get_catcode() != Catcode::BEGIN { i += 1; }
+      let pattern_str: String = pattern.iter().map(|t| t.to_string()).collect();
+      if !pattern_str.is_empty() {
+        // Store as individual entries keyed by pattern
+        let key = s!("LST_LIT@{pattern_str}");
+        state::assign_value(&key, Stored::from(replacement.clone()), None);
+        let prot_key = s!("LST_LIT@{pattern_str}@protected");
+        state::assign_value(&prot_key, Stored::Bool(protected), None);
+        // Add to pattern list
+        lst_push_value_locally("LST_LITERATE_KEYS", vec![T_OTHER!(&pattern_str)]);
+      }
+    }
     Tokens!()
   });
 

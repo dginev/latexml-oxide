@@ -109,8 +109,15 @@ pub fn parse_parameters(
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
       next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "");
-      if let Some(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
-        // TODO: Add the defaults !
+      if let Some(default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
+        // Store the default value as extra tokens so the Optional parameter
+        // returns it when no [...] is present (Perl: $param->{default}).
+        let default_str = default_captures.get(1).map_or("", |m| m.as_str());
+        let default_tokens = if default_str.is_empty() {
+          vec![]
+        } else {
+          vec![crate::mouth::tokenize_internal(default_str)]
+        };
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
@@ -118,7 +125,7 @@ pub fn parse_parameters(
           } else {
             arena::pin(spec)
           },
-          // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str()))],
+          extra: default_tokens,
           ..Parameter::default()
         };
         if init_flag {

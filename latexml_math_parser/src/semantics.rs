@@ -920,6 +920,60 @@ pub fn infix_apply_nary(
       }
     }
   }
+  // Perl left-to-right: explicit MULOP only takes one factor on the right.
+  // a/bc → (a/b)*c, F×G dx → (F×G)*dx. NOT a/(b*c) or F×(G*dx).
+  // When any explicit (non-invisible) MULOP has a right operand that is an invisible-times
+  // application, extract just the first factor and chain the rest.
+  // Transform: Apply(op, left, Apply(⁢, first, rest...)) → Apply(⁢, Apply(op, left, first), rest...)
+  // Detect explicit (visible) MULOPs: /, ×, etc. — NOT invisible times (⁢ U+2062).
+  let is_explicit_mulop = match &infixop {
+    Some(XM::Lexeme(lex, _)) => {
+      let role = lex.split(':').next().unwrap_or("");
+      let symbol = lex.split(':').nth(2).unwrap_or("");
+      role == "MULOP" && symbol != "\u{2062}" // not invisible times char
+    },
+    Some(XM::Token(props, _)) => {
+      props.role.as_deref() == Some("MULOP")
+        && props.content.as_deref() != Some("\u{2062}")
+    },
+    _ => false,
+  };
+  if is_explicit_mulop {
+    let right_is_invisible_times = match &right {
+      Some(XM::Apply(ref op, ref args, _, _)) => {
+        let op_is_times = match &*op.0 {
+          XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
+          XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
+          _ => false,
+        };
+        op_is_times && args.0.len() >= 2
+      },
+      _ => false,
+    };
+    if right_is_invisible_times {
+      if let Some(XM::Apply(right_op, right_args, right_props, right_meta)) = right {
+        let mut factors = right_args.0;
+        let first = factors.remove(0);
+        // Build Apply(/, left, first)
+        let div_result = Some(XM::Apply(
+          infixop.into(),
+          Args(vec![left, first]),
+          XProps::default(),
+          Meta::default(),
+        ));
+        // Rebuild: Apply(times, div_result, rest...)
+        let mut new_args = vec![div_result];
+        new_args.extend(factors);
+        return Ok(Some(XM::Apply(
+          right_op,
+          Args(new_args),
+          right_props,
+          right_meta,
+        )));
+      }
+    }
+  }
+
   // base case: new apply tree
   let apply_tree = XM::Apply(
     infixop.into(),
@@ -1148,8 +1202,14 @@ pub fn annotated_punct_fenced_modifier(
 
 /// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
 /// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
-/// only parsed as function application when speculation is active. Without speculation,
-/// this parse is pruned and Marpa falls back to `tight_term factor => invisible_times`.
+/// parsed as function application when speculation is active.
+///
+/// **Intentional Rust divergence from Perl**: In Perl (Parse::RecDescent), speculation
+/// only marks tokens with `possibleFunction='yes'` and falls back to invisible-times
+/// multiplication. The Rust Marpa grammar directly produces the function application
+/// parse `f@(x)`, which is the semantically superior interpretation — it avoids an
+/// artificial invisible MULOP token that was a crutch for Parse::RecDescent's
+/// backtracking parser. See docs/OXIDIZED_DESIGN.md.
 ///
 /// MATHPARSER_SPECULATE is enabled by:
 /// - \usepackage[mathparserspeculate]{latexml}
@@ -1871,7 +1931,17 @@ pub fn postfix_script(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => base, op);
-  new_script(base, op.unwrap(), ctxt)
+  // 3-arg rules (e.g. mulop postsubarg postsuperarg): chain both scripts
+  let op2 = args.pop().flatten();
+  let intermediate = new_script(base, op.unwrap(), ActionContext {
+    nodes: ctxt.nodes,
+    document: &mut *ctxt.document,
+  })?;
+  if let Some(op2) = op2 {
+    new_script(intermediate, op2, ctxt)
+  } else {
+    Ok(intermediate)
+  }
 }
 
 pub fn prefix_script(
@@ -2157,17 +2227,26 @@ pub fn apply_invisible_times(
             }
           })
         } else if op_role_str == "OPERATOR" {
-          // Compound operator application: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
-          // The compound result should absorb next arg via prefix_apply, not invisible-times.
-          // Note: FUNCTION/TRIGFUNCTION/OPFUNCTION Applies are NOT pruned here — they
-          // participate in invisible-times chains like sin@(π)*cos@(2πy).
-          op_role.clone()
+          // Compound operator: \nabla\log → Apply(OPERATOR, [OPFUNCTION])
+          // Should absorb next arg via prefix_apply, not invisible-times.
+          // BUT: applied operator D@(a) should allow invisible-times for D@(a)*(b).
+          // Distinguish: compound = arg[0] is function/operator/trig; applied = arg is regular.
+          let first_arg_role = args.0.first()
+            .and_then(|a| a.as_ref())
+            .and_then(|a| match a {
+              XM::Token(p, _) => p.role.as_deref().map(String::from),
+              XM::Lexeme(lex, _) => lex.split(':').next().map(String::from),
+              _ => None,
+            });
+          let is_compound = matches!(first_arg_role.as_deref(),
+            Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR"));
+          if is_compound { op_role.clone() } else { None }
         } else { None }
       },
       _ => None,
     };
     if matches!(role.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION") | Some("OPERATOR")) {
-      // Exception: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
+      // Exception 1: when the RIGHT side is also a FUNCTION/OPFUNCTION/TRIGFUNCTION,
       // prefer invisible_times (multiplication). Perl: `fgh` with all FUNCTION → f·g·h.
       let rhs_is_function = right.as_ref().map(|r| {
         let rr = match r {
@@ -2183,6 +2262,9 @@ pub fn apply_invisible_times(
         };
         matches!(rr.as_deref(), Some("OPFUNCTION") | Some("TRIGFUNCTION") | Some("FUNCTION"))
       }).unwrap_or(false);
+      // Exception 2: OPERATOR * fenced → allow (compound_operator grammar rule generates
+      // the prefix_apply tree, but it's not always available; invisible_times serves as
+      // fallback for D(a)(b) patterns where D is OPERATOR).
       if !rhs_is_function {
         return Err("apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply".into());
       }
@@ -3234,19 +3316,40 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
 
 /// Dirac bra-ket notation helpers.
 /// All produce Apply(meaning, args) wrapped in XMDual with appropriate presentation.
-/// Currently unused — QM grammar rules are disabled due to RELOP ambiguity.
-/// Ready for when context-sensitive QM matching is implemented.
-#[allow(dead_code)]
 fn qm_fenced(
   meaning: &'static str,
   mut args_xm: Vec<Option<XM>>,
-  stuff: Vec<XM>,
+  mut stuff: Vec<XM>,
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   let op = XProps { meaning: Some(Cow::Borrowed(meaning)), ..XProps::default() };
   let mut arg_refs: Vec<&mut XM> = args_xm.iter_mut().filter_map(|a| a.as_mut()).collect();
   let refs: Vec<Option<XM>> = create_xmrefs(arg_refs.as_mut_slice(), ctxt)?
     .into_iter().map(Option::Some).collect();
+  // Propagate xmkey from content args to matching presentation stuff items.
+  // create_xmrefs sets xmkey on the args in args_xm, but stuff was cloned
+  // before that. The presentation-side elements need _xmkey so that the
+  // base_xmath createXMRefs handler can resolve the content-side XMRef.
+  for arg in args_xm.iter().flatten() {
+    let arg_xmkey = match arg {
+      XM::Token(p, _) | XM::Apply(_, _, p, _) | XM::Dual(_, _, p, _) | XM::Wrap(_, p, _) => p.xmkey.clone(),
+      _ => None,
+    };
+    if let Some(ref key) = arg_xmkey {
+      // Find the corresponding non-delimiter item in stuff
+      for item in stuff.iter_mut() {
+        match item {
+          XM::Token(props, _) | XM::Apply(_, _, props, _)
+          | XM::Dual(_, _, props, _) | XM::Wrap(_, props, _)
+            if props.xmkey.is_none() && props.id.is_none() => {
+              props.xmkey = Some(key.clone());
+              break;
+            },
+          _ => {},
+        }
+      }
+    }
+  }
   Ok(Some(XM::Dual(
     Box::new(XM::Apply(op.into(), Args(refs), XProps::default(), Meta::default())),
     Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
@@ -3283,7 +3386,6 @@ pub fn qm_ket(
 }
 
 /// `<a|b>` → inner-product@(a, b) — Perl MathGrammar L382-386
-#[allow(dead_code)]
 pub fn qm_braket(
   _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
@@ -3293,7 +3395,6 @@ pub fn qm_braket(
 }
 
 /// `<a|f|b>` → quantum-operator-product@(a, f, b) — Perl MathGrammar L387-393
-#[allow(dead_code)]
 pub fn qm_bracket(
   _: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {

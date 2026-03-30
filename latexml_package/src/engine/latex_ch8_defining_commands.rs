@@ -202,6 +202,7 @@ LoadDefinitions!({
   // Perl: DefPrimitive('\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}', ...)
   // my $symboltype_roles = { '\mathord' => 'ID', '\mathop' => 'BIGOP', '\mathbin' => 'BINOP',
   //   '\mathrel' => 'RELOP', '\mathopen' => 'OPEN', '\mathclose' => 'CLOSE', '\mathpunct' => 'PUNCT' };
+  // locked: prevents raw TeX dump from overriding with version that errors on redefinition
   DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
   sub[(cs, sym_type, fontkind, code)] {
     let mut encoding = fontkind.to_string();

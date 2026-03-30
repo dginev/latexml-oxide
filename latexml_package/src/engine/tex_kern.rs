@@ -48,7 +48,9 @@ LoadDefinitions!({
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_attribute())))?;
     } else {
       // Add space to document
-      document.absorb_string(&dimension_to_spaces(length), &SymHashMap::default())?;
+      // Use the precise Unicode space mapping from tex_glue (matching Perl's TeX_Glue algorithm),
+      // not the simple threshold version from base_functions.
+      document.absorb_string(&super::tex_glue::dimension_to_spaces(length), &SymHashMap::default())?;
     }
   },
   enter_horizontal => true,

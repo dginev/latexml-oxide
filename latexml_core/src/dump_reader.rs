@@ -24,7 +24,17 @@ use crate::tokens::Tokens;
 pub fn load_native_dump(path: &Path) -> Result<usize, String> {
   let content = std::fs::read_to_string(path)
     .map_err(|e| format!("Failed to read dump file {}: {}", path.display(), e))?;
+  let count = load_from_str_internal(&content, &path.display().to_string())?;
+  Ok(count)
+}
 
+/// Load dump data from a string (used by embedded dump modules).
+/// Returns the number of entries loaded.
+pub fn load_from_str(content: &str) -> Result<usize, String> {
+  load_from_str_internal(content, "<embedded>")
+}
+
+fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, String> {
   let mut count = 0;
   let mut errors = 0;
 
@@ -40,7 +50,7 @@ pub fn load_native_dump(path: &Path) -> Result<usize, String> {
       Err(e) => {
         errors += 1;
         if errors <= 10 {
-          eprintln!(
+          log::warn!(
             "[dump_reader] Line {}: {}: {}",
             lineno + 1,
             e,
@@ -52,12 +62,12 @@ pub fn load_native_dump(path: &Path) -> Result<usize, String> {
   }
 
   if errors > 10 {
-    eprintln!("[dump_reader] ... and {} more errors", errors - 10);
+    log::warn!("[dump_reader] ... and {} more errors", errors - 10);
   }
-  eprintln!(
+  log::info!(
     "[dump_reader] Loaded {} entries from {} ({} errors)",
     count,
-    path.display(),
+    source_name,
     errors
   );
 
@@ -150,6 +160,23 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       let toks = parse_token_list(parts.get(1).unwrap_or(&""))?;
       Stored::Tokens(Tokens::from(toks))
     }
+    "D" => {
+      let n: i64 = parts.get(1).unwrap_or(&"0").parse()
+        .map_err(|e| format!("Bad dimension: {}", e))?;
+      Stored::Dimension(crate::common::dimension::Dimension(n))
+    }
+    "G" => {
+      Stored::Glue(parse_glue(parts.get(1).unwrap_or(&"0"))?)
+    }
+    "MD" => {
+      let n: i64 = parts.get(1).unwrap_or(&"0").parse()
+        .map_err(|e| format!("Bad mudimension: {}", e))?;
+      Stored::MuDimension(crate::common::mudimension::MuDimension(n))
+    }
+    "MG" => {
+      Stored::MuGlue(parse_muglue(parts.get(1).unwrap_or(&"0"))?)
+    }
+    "VD" => Stored::VecDequeStored(std::collections::VecDeque::new()),
     _ => return Ok(false), // Unknown value type
   };
 
@@ -236,7 +263,7 @@ fn parse_token(s: &str) -> Result<Token, String> {
   let (cc_str, text) = s.split_once(':').ok_or("Missing ':' in token")?;
   let cc: u8 = cc_str.parse().map_err(|e| format!("Bad CC: {}", e))?;
   Ok(Token {
-    text: arena::pin(&url_decode(text)),
+    text: arena::pin(url_decode(text)),
     code: Catcode::from(cc),
   })
 }
@@ -265,6 +292,55 @@ fn url_decode(s: &str) -> String {
   result
 }
 
+/// Parse a serialized Glue value: "skip,pN,pfN,mN,mfN"
+fn parse_glue(s: &str) -> Result<crate::common::glue::Glue, String> {
+  use crate::common::glue::{FillCode, Glue};
+  let mut skip = 0i64;
+  let mut plus = None;
+  let mut pfill = None;
+  let mut minus = None;
+  let mut mfill = None;
+  for (i, part) in s.split(',').enumerate() {
+    if i == 0 {
+      skip = part.parse().map_err(|e| format!("Bad glue skip: {}", e))?;
+    } else if let Some(rest) = part.strip_prefix("pf") {
+      pfill = FillCode::new(rest.parse::<usize>().unwrap_or(0));
+    } else if let Some(rest) = part.strip_prefix('p') {
+      plus = Some(rest.parse().map_err(|e| format!("Bad glue plus: {}", e))?);
+    } else if let Some(rest) = part.strip_prefix("mf") {
+      mfill = FillCode::new(rest.parse::<usize>().unwrap_or(0));
+    } else if let Some(rest) = part.strip_prefix('m') {
+      minus = Some(rest.parse().map_err(|e| format!("Bad glue minus: {}", e))?);
+    }
+  }
+  Ok(Glue { skip, plus, pfill, minus, mfill })
+}
+
+/// Parse a serialized MuGlue value (same format as Glue)
+fn parse_muglue(s: &str) -> Result<crate::common::muglue::MuGlue, String> {
+  use crate::common::glue::FillCode;
+  use crate::common::muglue::MuGlue;
+  let mut skip = 0i64;
+  let mut plus = None;
+  let mut pfill = None;
+  let mut minus = None;
+  let mut mfill = None;
+  for (i, part) in s.split(',').enumerate() {
+    if i == 0 {
+      skip = part.parse().map_err(|e| format!("Bad muglue skip: {}", e))?;
+    } else if let Some(rest) = part.strip_prefix("pf") {
+      pfill = FillCode::new(rest.parse::<usize>().unwrap_or(0));
+    } else if let Some(rest) = part.strip_prefix('p') {
+      plus = Some(rest.parse().map_err(|e| format!("Bad muglue plus: {}", e))?);
+    } else if let Some(rest) = part.strip_prefix("mf") {
+      mfill = FillCode::new(rest.parse::<usize>().unwrap_or(0));
+    } else if let Some(rest) = part.strip_prefix('m') {
+      minus = Some(rest.parse().map_err(|e| format!("Bad muglue minus: {}", e))?);
+    }
+  }
+  Ok(MuGlue { skip, plus, pfill, minus, mfill })
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -273,11 +349,11 @@ mod tests {
   fn test_load_native_dump() {
     let path = std::path::Path::new("/tmp/latex_dump.oxide");
     if !path.exists() {
-      eprintln!("No dump file at /tmp/latex_dump.oxide, skipping");
+      println!("No dump file at /tmp/latex_dump.oxide, skipping");
       return;
     }
     let count = load_native_dump(path).unwrap();
     assert!(count > 0, "Expected entries loaded");
-    eprintln!("Loaded {} entries from native dump", count);
+    println!("Loaded {} entries from native dump", count);
   }
 }

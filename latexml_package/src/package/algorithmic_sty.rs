@@ -17,7 +17,7 @@ LoadDefinitions!({
   DefMacro!("\\algorithmic", "\\lx@setup@algorithmic\\lx@orig@algorithmic");
 
   DefPrimitive!("\\lx@setup@algorithmic", {
-    reset_counter(&T_CS!("\\c@ALC@line"))?;
+    ResetCounter!("ALC@line");
     // If not within an algorithm environment, step the counter for its id's
     let in_algorithm = state::with_stacked_values("current_environment", |vals| {
       vals.iter().any(|s| s.to_string() == "algorithm")

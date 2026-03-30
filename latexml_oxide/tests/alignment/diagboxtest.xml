@@ -11,16 +11,16 @@
       <thead>
         <tr>
           <td align="left" border="r t" thead="column row">NW</td>
-          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="13.66" width="15" xml:id="p1.pic1">
-              <line points="0,13.66 15,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="18.92" width="20.76" xml:id="p1.pic1">
+              <line points="0,18.92 20.76,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(7.92,6.83)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,9.46)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
@@ -33,16 +33,16 @@
       <tbody>
         <tr>
           <td align="left" border="r t" thead="row">SE</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="13.66" width="15" xml:id="p1.pic2">
-              <line points="0,13.66 15,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="18.92" width="20.76" xml:id="p1.pic2">
+              <line points="0,18.92 20.76,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(7.92,6.83)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,9.46)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
@@ -53,16 +53,16 @@
         </tr>
         <tr>
           <td align="left" border="r t" thead="row">SW</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="13.66" width="15" xml:id="p1.pic3">
-              <line points="0,13.66 15,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="18.92" width="20.76" xml:id="p1.pic3">
+              <line points="0,0, 20.76,18.92" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,9.46)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(7.92,6.83)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
@@ -73,16 +73,16 @@
         </tr>
         <tr>
           <td align="left" border="b r t" thead="row">NE</td>
-          <td align="center" border="b r t" class="ltx_nopad"><picture height="13.66" width="15" xml:id="p1.pic4">
-              <line points="0,13.66 15,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="18.92" width="20.76" xml:id="p1.pic4">
+              <line points="0,0, 20.76,18.92" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,9.46)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(7.92,6.83)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
@@ -99,24 +99,24 @@
       <thead>
         <tr>
           <td align="left" border="r t" thead="column row">NW</td>
-          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="27.32" width="33.34" xml:id="p2.pic1">
-              <line points="16.67,27.32 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,13.66 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="24.27" width="28.74" xml:id="p2.pic1">
+              <line points="14.37,24.27 28.74,0" stroke="#000000" stroke-width="0.4"/>
+              <line points="0,12.135 28.74,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(26.260000000000005,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,14.81)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="9.17" transform="translate(0,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(0,14.81)">
                 <inline-block>
                   <inline-block align="left">
                     <p>M</p>
@@ -129,24 +129,24 @@
       <tbody>
         <tr>
           <td align="left" border="r t" thead="row">SE</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="27.32" width="33.34" xml:id="p2.pic2">
-              <line points="16.67,27.32 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,13.66 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" width="28.74" xml:id="p2.pic2">
+              <line points="0,24.27 28.74,12.135" stroke="#000000" stroke-width="0.4"/>
+              <line points="0,24.27 14.37,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(26.260000000000005,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,14.81)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="9.17" transform="translate(0,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(16.06,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>M</p>
@@ -157,24 +157,24 @@
         </tr>
         <tr>
           <td align="left" border="r t" thead="row">SW</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="27.32" width="33.34" xml:id="p2.pic3">
-              <line points="16.67,27.32 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,13.66 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" width="28.74" xml:id="p2.pic3">
+              <line points="0,12.135 28.74,24.27" stroke="#000000" stroke-width="0.4"/>
+              <line points="14.37,0 28.74,24.27" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,14.81)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(26.260000000000005,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="9.17" transform="translate(0,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>M</p>
@@ -185,24 +185,24 @@
         </tr>
         <tr>
           <td align="left" border="b r t" thead="row">NE</td>
-          <td align="center" border="b r t" class="ltx_nopad"><picture height="27.32" width="33.34" xml:id="p2.pic4">
-              <line points="16.67,27.32 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,13.66 33.34,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.5" transform="translate(0,0)">
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="24.27" width="28.74" xml:id="p2.pic4">
+              <line points="0,0 14.37,24.27" stroke="#000000" stroke-width="0.4"/>
+              <line points="0,0 28.74,12.135" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,14.81)">
                 <inline-block>
                   <inline-block align="left">
                     <p>A</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="7.08" transform="translate(26.260000000000005,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>B</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="6.83" innerwidth="9.17" transform="translate(0,20.490000000000002)">
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(16.06,14.81)">
                 <inline-block>
                   <inline-block align="right">
                     <p>M</p>
@@ -219,10 +219,10 @@
       <thead>
         <tr>
           <td align="left" border="r t" thead="column row">NW</td>
-          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="75.76" width="95.68" xml:id="p3.pic1">
-              <line points="47.84,75.76 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,37.88 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="68.62" width="86.63" xml:id="p3.pic1">
+              <line points="43.315,68.62 86.63,0" stroke="#000000" stroke-width="0.4"/>
+              <line points="0,34.31 86.63,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>Word</p>
@@ -230,7 +230,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(71.76,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(53.54,42.41)">
                 <inline-block>
                   <inline-block align="right">
                     <p>Word</p>
@@ -238,7 +238,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(0,42.41)">
                 <inline-block>
                   <inline-block align="left">
                     <p>Word</p>
@@ -252,10 +252,10 @@
       <tbody>
         <tr>
           <td align="left" border="r t" thead="row">SE</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="75.76" width="95.68" xml:id="p3.pic2">
-              <line points="47.84,75.76 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,37.88 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="68.62" width="86.63" xml:id="p3.pic2">
+              <line points="0,68.62 86.63,34.31" stroke="#000000" stroke-width="0.4"/>
+              <line points="0,68.62 43.315,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>Word</p>
@@ -263,7 +263,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(71.76,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(53.54,42.41)">
                 <inline-block>
                   <inline-block align="right">
                     <p>Word</p>
@@ -271,7 +271,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(53.54,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>Word</p>
@@ -283,10 +283,10 @@
         </tr>
         <tr>
           <td align="left" border="r t" thead="row">SW</td>
-          <td align="center" border="r t" class="ltx_nopad"><picture height="75.76" width="95.68" xml:id="p3.pic3">
-              <line points="47.84,75.76 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,37.88 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,0)">
+          <td align="center" border="r t" class="ltx_nopad"><picture height="68.62" width="86.63" xml:id="p3.pic3">
+              <line points="0,34.31 86.63,68.62" stroke="#000000" stroke-width="0.4"/>
+              <line points="43.315,0 86.63,68.62" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(0,42.41)">
                 <inline-block>
                   <inline-block align="left">
                     <p>Word</p>
@@ -294,7 +294,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(71.76,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(53.54,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>Word</p>
@@ -302,7 +302,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>Word</p>
@@ -314,10 +314,10 @@
         </tr>
         <tr>
           <td align="left" border="b r t" thead="row">NE</td>
-          <td align="center" border="b r t" class="ltx_nopad"><picture height="75.76" width="95.68" xml:id="p3.pic4">
-              <line points="47.84,75.76 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <line points="0,37.88 95.68,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,0)">
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="68.62" width="86.63" xml:id="p3.pic4">
+              <line points="0,0 43.315,68.62" stroke="#000000" stroke-width="0.4"/>
+              <line points="0,0 86.63,34.31" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(0,42.41)">
                 <inline-block>
                   <inline-block align="left">
                     <p>Word</p>
@@ -325,7 +325,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(71.76,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(53.54,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>Word</p>
@@ -333,7 +333,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="23.92" transform="translate(0,56.82000000000001)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="33.09" transform="translate(53.54,42.41)">
                 <inline-block>
                   <inline-block align="right">
                     <p>Word</p>
@@ -353,16 +353,16 @@
     <tabular class="ltx_guessed_headers" vattach="middle">
       <thead>
         <tr>
-          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="13.2" width="47.78" xml:id="p5.pic1">
-              <line points="0,13.2 47.78,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="4.31" innerwidth="19.17" transform="translate(0,0)">
+          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" width="78.74" xml:id="p5.pic1">
+              <line points="0,0, 78.74,18.26" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="5.96" innerwidth="26.52" transform="translate(0,12.3)">
                 <inline-block>
                   <inline-block align="left">
                     <p>num</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="8.89" innerwidth="23.89" transform="translate(23.89,4.309999999999999)">
+              <g class="ltx_svg_fog" innerheight="12.3" innerwidth="33.06" transform="translate(45.68,0)">
                 <inline-block>
                   <inline-block align="right">
                     <p>alpha</p>
@@ -392,16 +392,16 @@
     <tabular class="ltx_guessed_headers" vattach="middle">
       <thead>
         <tr>
-          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="13.2" width="47.78" xml:id="p6.pic1">
-              <line points="0,13.2 47.78,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="4.31" innerwidth="19.17" transform="translate(0,0)">
+          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" width="78.74" xml:id="p6.pic1">
+              <line points="0,18.26 78.74,0" stroke="#000000" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="5.96" innerwidth="26.52" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p>num</p>
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="8.89" innerwidth="23.89" transform="translate(23.89,4.309999999999999)">
+              <g class="ltx_svg_fog" innerheight="12.3" innerwidth="33.06" transform="translate(45.68,5.96)">
                 <inline-block>
                   <inline-block align="right">
                     <p>alpha</p>
@@ -434,9 +434,9 @@
     <tabular vattach="middle">
       <tbody>
         <tr>
-          <td align="left" border="r t" class="ltx_nopad"><picture height="37.88" width="45" xml:id="p8.pic1">
-              <line points="0,37.88 45,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="22.5" transform="translate(0,0)">
+          <td align="left" border="r t" class="ltx_nopad"><picture height="100" width="100" xml:id="p8.pic1">
+              <line points="0,100 100,0" stroke="blue" stroke-width="2pt"/>
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p><text font="italic">Head</text></p>
@@ -444,7 +444,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="22.5" transform="translate(22.5,18.94)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(68.87,73.79)">
                 <inline-block>
                   <inline-block align="right">
                     <p><text font="italic">Head</text></p>
@@ -464,9 +464,9 @@
     <tabular vattach="middle">
       <tbody>
         <tr>
-          <td align="left" border="r t" class="ltx_nopad"><picture height="37.88" width="45" xml:id="p8.pic2">
-              <line points="0,37.88 45,0" stroke="#000000" stroke-width="0.4"/>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="22.5" transform="translate(0,0)">
+          <td align="left" border="r t" class="ltx_nopad"><picture height="52.42" width="100" xml:id="p8.pic2">
+              <line points="0,52.42 100,0" stroke="blue" stroke-width="2pt"/>
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p><text font="italic">Head</text></p>
@@ -474,7 +474,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="18.94" innerwidth="22.5" transform="translate(22.5,18.94)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(68.87,26.21)">
                 <inline-block>
                   <inline-block align="right">
                     <p><text font="italic">Head</text></p>

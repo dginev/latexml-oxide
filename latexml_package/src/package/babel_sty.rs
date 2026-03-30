@@ -17,16 +17,25 @@ LoadDefinitions!({
   RawTeX!(r"\expandafter\ifx\csname l@portuguese\endcsname\relax\newlanguage\l@portuguese\fi");
   RawTeX!(r"\expandafter\ifx\csname l@russian\endcsname\relax\newlanguage\l@russian\fi");
   RawTeX!(r"\expandafter\ifx\csname l@greek\endcsname\relax\newlanguage\l@greek\fi");
+  RawTeX!(r"\expandafter\ifx\csname l@polutonikogreek\endcsname\relax\newlanguage\l@polutonikogreek\fi");
   RawTeX!(r"\expandafter\ifx\csname l@dutch\endcsname\relax\newlanguage\l@dutch\fi");
   RawTeX!(r"\expandafter\ifx\csname l@polish\endcsname\relax\newlanguage\l@polish\fi");
   RawTeX!(r"\expandafter\ifx\csname l@turkish\endcsname\relax\newlanguage\l@turkish\fi");
   RawTeX!(r"\expandafter\ifx\csname l@czech\endcsname\relax\newlanguage\l@czech\fi");
+  // Pre-define \l@nil so nil.ldf skips its \edef\bbl@languages block (which would
+  // fail because \bbl@languages is undefined at that point). With \l@nil defined,
+  // nil.ldf's \ifx\l@nil\@undefined check fails and the block is skipped.
+  RawTeX!(r"\expandafter\ifx\csname l@nil\endcsname\relax\newlanguage\l@nil\fi");
 
   // Pre-define \bbl@languages as empty. Babel's language.def loading uses \openin
   // to read hyphenation pattern files, which our system can't find (.ini search paths).
   // Without this, \bbl@languages stays undefined, and our error recovery defines it
   // as <ltx:ERROR/> which corrupts babel's list accumulation → infinite recursion → OOM.
   RawTeX!(r"\def\bbl@languages{}");
+
+  // Pre-define babel internals that are normally set by the ini-based loading path
+  // (\babelprovide) which we skip. Without these, \ifcase\bbl@opt@hyphenmap fails.
+  RawTeX!(r"\chardef\bbl@opt@hyphenmap\@ne");
 
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
@@ -48,9 +57,14 @@ LoadDefinitions!({
       let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
         .map(|t| t.to_string()).unwrap_or_default();
       let last_lang = loaded.split(',').map(|s| s.trim())
-        .filter(|s| !s.is_empty()).last().unwrap_or("").to_string();
+        .rfind(|s| !s.is_empty()).unwrap_or("").to_string();
       if !last_lang.is_empty() {
-        gullet::unread(Tokenize!(&s!("\\main@language{{{}}}", last_lang)));
+        gullet::unread(Tokens::new(vec![
+          T_CS!("\\main@language"),
+          T_BEGIN!(),
+          T_OTHER!(last_lang),
+          T_END!(),
+        ]));
       }
     }
   });
@@ -138,23 +152,22 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
       .map(|t| t.to_string()).unwrap_or_default();
-    // Also check \bbl@cl@<lang> which babel sets for each language option
-    // This catches languages from \usepackage[lang]{babel} even when babel
-    // was already loaded from a class option.
-    let opt_list = gullet::do_expand(T_CS!("\\@raw@classoptionslist"))
+    // \opt@babel.sty has the actual \usepackage[...]{babel} options.
+    // Prefer these over \bbl@main@language which may reflect class options.
+    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let lang = if main != "nil" && !main.is_empty() {
+    let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    let lang = if !pkg_last.is_empty() {
+      pkg_last
+    } else if !loaded_last.is_empty() {
+      loaded_last
+    } else if main != "nil" && !main.is_empty() {
       main
-    } else if loaded.contains(',') || loaded.len() > 2 {
-      // Multiple languages loaded: last one is main
-      loaded.split(',').map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty()).last().unwrap_or_default()
-    } else if !loaded.is_empty() && loaded != "nil" {
-      loaded
     } else {
-      // Fallback: use class options
-      opt_list.split(',').map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty()).last().unwrap_or_default()
+      String::new()
     };
     if !lang.is_empty() {
       // Temporarily set @ to LETTER for CS name tokenization
@@ -165,9 +178,24 @@ LoadDefinitions!({
       if lookup_definition(&T_CS!(cs.clone()))?.is_some() {
         stomach::digest(Tokenize!(&cs))?;
       }
-      // Call \ltx@bbl@select@language to set xml:lang
-      let select_cs = s!("\\ltx@bbl@select@language{{{}}}", lang);
-      stomach::digest(Tokenize!(&select_cs))?;
+      // Set font language directly (don't go through stomach::digest which
+      // can interleave with pending babel hook processing).
+      let iso = match lang.as_str() {
+        "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
+        "french" | "francais" | "frenchb" => Some("fr"),
+        "spanish" => Some("es"), "italian" => Some("it"),
+        "english" => Some("en"),
+        "american" | "USenglish" => Some("en-US"),
+        "british" | "UKenglish" => Some("en-GB"),
+        "portuguese" | "portuges" => Some("pt"),
+        "russian" | "russianb" => Some("ru"),
+        "greek" | "polutonikogreek" => Some("el"),
+        "dutch" => Some("nl"), "polish" => Some("pl"),
+        _ => None,
+      };
+      if let Some(code) = iso {
+        merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
+      }
       // Restore @ to OTHER
       state::assign_catcode('@', Catcode::OTHER, None);
 
@@ -273,12 +301,21 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
       .map(|t| t.to_string()).unwrap_or_default();
-    // Prefer the last entry in \bbl@loaded (explicit \usepackage options)
-    // over \bbl@main@language (which may come from class options).
+    // \opt@babel.sty has the actual \usepackage[...]{babel} options.
+    // \bbl@loaded and \bbl@main@language may only reflect class options
+    // because babel's ini-based loading path doesn't run in our engine.
+    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
+      .map(|t| t.to_string()).unwrap_or_default();
     // In babel, the last explicitly loaded language is the main language.
+    // Prefer \opt@babel.sty (explicit package options) over \bbl@loaded
+    // (which may only contain class-option languages).
+    let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
     let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty()).last().unwrap_or_default();
-    let lang_name = if !loaded_last.is_empty() && loaded_last != "nil" {
+      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    let lang_name = if !pkg_last.is_empty() {
+      pkg_last
+    } else if !loaded_last.is_empty() {
       loaded_last
     } else if main != "nil" && !main.is_empty() {
       main
@@ -302,9 +339,7 @@ LoadDefinitions!({
     // Set DOCUMENT_LANGUAGE for xml:lang on <document>
     if let Some(code) = iso {
       state::assign_value("DOCUMENT_LANGUAGE", Stored::from(code.to_string()), Some(Scope::Global));
-      let mut font = Font::default();
-      font.language = Some(Cow::Owned(code.to_string()));
-      merge_font(font);
+      merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
     // Call \captions<lang> to set localized names
     let captions_cs = s!("\\captions{}", lang_name);

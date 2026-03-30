@@ -278,6 +278,10 @@ LoadDefinitions!({
         }
       }
     }
+    // Pop reversion from state if set by i_dual (preserves ARG catcodes)
+    if let Some(Stored::Tokens(rev_tks)) = pop_value("PENDING_DUAL_REVERSION")? {
+      whatsit.set_property("reversion", Stored::Tokens(rev_tks));
+    }
 
     let props = whatsit.get_properties();
     let cr    = props.get("content_reversion").cloned();
@@ -443,7 +447,7 @@ LoadDefinitions!({
         document.set_attribute(&mut r, "idref", idref)?;
       } else {
         // xmkey not resolved — may happen with parser-generated nested structures
-        eprintln!("\x1b[33mWarn:expected:id \x1b[0mUnresolved _xmkey '{}' in createXMRefs", r_xmkey);
+        Warn!("expected", "id", s!("Unresolved _xmkey '{}' in createXMRefs", r_xmkey));
       }
       r.remove_attribute("_xmkey")?;
     }

@@ -1,5 +1,0 @@
-\documentclass{article}
-\input tcilatex
-\begin{document}
-\TEXUX{hello}
-\end{document}

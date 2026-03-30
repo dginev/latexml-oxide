@@ -49,14 +49,14 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
   let mut current_entry = String::new();
   let mut entry_start_line = 0;
 
-  let mut process_entry =
+  let process_entry =
     |entry: &str, start_line: usize, count: &mut usize, errors: &mut usize| {
       match parse_and_execute(entry) {
         Ok(()) => *count += 1,
         Err(e) => {
           *errors += 1;
           if *errors <= 10 {
-            eprintln!(
+            log::warn!(
               "[dump_loader] Line {}: {}: {}",
               start_line,
               e,
@@ -101,9 +101,9 @@ pub fn load_dump(path: &Path) -> Result<usize, String> {
   }
 
   if errors > 10 {
-    eprintln!("[dump_loader] ... and {} more errors", errors - 10);
+    log::warn!("[dump_loader] ... and {} more errors", errors - 10);
   }
-  eprintln!(
+  log::info!(
     "[dump_loader] Loaded {} entries from {} ({} errors)",
     count,
     path.display(),
@@ -158,7 +158,7 @@ fn parse_and_execute(line: &str) -> Result<(), String> {
   } else if let Some(rest) = line.strip_prefix("Dc(") {
     parse_code_table(rest, "delcode")
   } else {
-    Err(format!("Unknown dump entry type"))
+    Err("Unknown dump entry type".to_string())
   }
 }
 
@@ -351,8 +351,8 @@ fn parse_value(input: &str) -> Result<(), String> {
 /// Parse I(E(...)) or I(CD(...)) or I(R(...)) — install definition
 fn parse_install(input: &str) -> Result<(), String> {
   let input = input.trim();
-  if input.starts_with("E(") {
-    parse_install_expandable(&input[2..])
+  if let Some(rest) = input.strip_prefix("E(") {
+    parse_install_expandable(rest)
   } else if input.starts_with("CD(") {
     // CharDef — skip for now (requires more complex parsing)
     Ok(())
@@ -528,8 +528,8 @@ fn parse_token_list(input: &str) -> Result<(Vec<Token>, &str), String> {
 /// Parse parameter specification
 fn parse_parameters(input: &str) -> Result<(Option<Vec<String>>, &str), String> {
   let input = input.trim();
-  if input.starts_with("undef") {
-    return Ok((None, &input[5..]));
+  if let Some(rest) = input.strip_prefix("undef") {
+    return Ok((None, rest));
   }
   if input.starts_with("$P") && !input[2..].starts_with('s') {
     // Single mandatory parameter $P

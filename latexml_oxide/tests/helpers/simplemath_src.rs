@@ -113,7 +113,7 @@ fn add_f_d_diffop_rewrite() -> Result<()> {
 
 /// f_* → ID: f with any subscript (except D, handled above) is an identifier.
 /// Two-sibling match (nnodes=2): XMTok[f] + XMApp[POSTSUBSCRIPT].
-/// Wrapped in XMWrap[role=ID] by the rewrite engine.
+/// Wrapped in XMDual[role=ID] by the rewrite engine (via wildcard_paths).
 /// The f_D rule fires first and marks those nodes, so this only catches
 /// remaining subscripted-f patterns (f_1, f_2, etc.).
 #[allow(dead_code)]
@@ -127,6 +127,8 @@ fn add_f_wildcard_rewrite() -> Result<()> {
   let options = latexml_core::rewrite::RewriteOptions {
     xpath: Some(xpath),
     attributes_map: Some(attrs_map),
+    // Wildcard = child 1 of sibling 2 (subscript content in POSTSUBSCRIPT XMApp)
+    wildcard_paths: Some(vec![vec![2, 1]]),
     is_math: true,
     select_count: Some(2),
     ..Default::default()
@@ -139,21 +141,8 @@ fn add_f_wildcard_rewrite() -> Result<()> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Enable speculative function application for f(x) patterns
+  // Enable speculative function application for f(x) patterns.
+  // The actual rewrite rules (role assignments, wildcard patterns, etc.) are loaded
+  // from simplemath.latexml by the .latexml file loader in core_interface.rs.
   AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
-
-  // Global role assignments (matching Perl simplemath.latexml order)
-  add_math_rewrite("a", "ID")?;
-  add_math_rewrite("b", "ID")?;
-  add_accent_f_rewrite()?;      // \hat{f} → ID (single-node XMApp match)
-  add_f_d_diffop_rewrite()?;     // f_D → DIFFOP (two-sibling, XMWrap)
-  add_f_wildcard_rewrite()?;    // f_* → ID (two-sibling, XMWrap)
-  add_math_rewrite("f", "FUNCTION")?;
-  add_math_rewrite("D", "ID")?;
-  add_math_rewrite("x", "ID")?;
-
-  // Scoped rewrites: within label:sec:restricted, a and b become FUNCTION
-  // MUST be added via UnshiftValue (prepend) so they take priority over global rules.
-  add_math_rewrite_scoped_first("a", "FUNCTION", "label:sec:restricted")?;
-  add_math_rewrite_scoped_first("b", "FUNCTION", "label:sec:restricted")?;
 });

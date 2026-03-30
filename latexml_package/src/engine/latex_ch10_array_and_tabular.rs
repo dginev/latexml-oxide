@@ -143,8 +143,10 @@ LoadDefinitions!({
     // properties => { "isHorizontalRule" => true }
   );
 
-  DefConstructor!("\\vline", "",   // ???
-    // properties => { "isVerticalRule" => true },
+  DefConstructor!("\\vline", "",
+    properties => sub[_args] {
+      Ok(stored_map!("isVerticalRule" => true))
+    },
     sizer      => 0,
   );
   DefRegister!("\\lx@default@arraycolsep", Dimension!("5pt"));

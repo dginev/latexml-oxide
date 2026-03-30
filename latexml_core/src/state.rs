@@ -429,7 +429,13 @@ impl State {
     };
     let verbosity = options.verbosity.unwrap_or(0);
     // let strict = options.strict.unwrap_or(false);
-    // let include_comments = options.include_comments.unwrap_or(true);
+    // INCLUDE_COMMENTS: Perl defaults to true (Core.pm L143).
+    // T_COMMENT tokens are now properly converted to XML comment nodes
+    // via Document::insert_comment using raw libxml2 FFI.
+    // Note: Only set when explicitly specified, because STY_STATE/STD_STATE
+    // use default options and state rotation (swap) would overwrite the
+    // main state's INCLUDE_COMMENTS value.
+    let include_comments = options.include_comments;
     // let include_styles = options.include_styles.unwrap_or(false);
     let nomathparse = options.nomathparse.unwrap_or(false);
 
@@ -467,6 +473,11 @@ impl State {
       options.documentid.unwrap_or_default(),
       Some(Scope::Global),
     );
+    // Perl Core.pm L143: assignValue(INCLUDE_COMMENTS => ..., 'global')
+    // Only set when explicitly specified (not for STY_STATE/STD_STATE defaults)
+    if let Some(ic) = include_comments {
+      state.assign_value("INCLUDE_COMMENTS", ic, Some(Scope::Global));
+    }
 
     state
   }
@@ -935,14 +946,18 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
     );
     let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
   } else {
-    Error!(
-      "undefined",
-      token,
-      s!(
-        "The token {} is not defined. Defining it now as <ltx:ERROR/>",
-        token.stringify()
-      )
-    );
+    // Allow suppression of undefined errors during bulk loading (e.g., expl3-code.tex)
+    // where forward references are later resolved by post-load fixups.
+    if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
+      Error!(
+        "undefined",
+        token,
+        s!(
+          "The token {} is not defined. Defining it now as <ltx:ERROR/>",
+          token.stringify()
+        )
+      );
+    }
     install_definition(
       Constructor {
         cs: *token,
@@ -1654,12 +1669,31 @@ where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
 /// $meaning should be a definition (for defining active control sequences)
 /// or another token, for \let
 pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<Scope>) {
-  let meaning = meaning.into();
-  // HACK!!!????
+  let mut meaning = meaning.into();
   // short-circuit guard to avoid e.g. T_MATH let to itself
   if let Stored::Token(ref mt) = meaning {
     if token == mt {
       return;
+    }
+  }
+  // For \let chains: if the target token has an expandable/primitive definition,
+  // store that definition directly instead of the Token indirection.
+  // This ensures `\let \foo \bar` where \bar is expandable makes \foo expandable too.
+  // Follow at most 50 \let links to avoid cycles.
+  if let Stored::Token(ref target) = meaning {
+    let mut current = *target;
+    for _ in 0..50 {
+      match lookup_meaning(&current) {
+        Some(Stored::Token(next)) => {
+          current = next; // follow chain
+        }
+        Some(Stored::None) | None => break, // dead end — keep as Token
+        Some(defn) => {
+          // Found a real definition — use it directly
+          meaning = defn;
+          break;
+        }
+      }
     }
   }
   let csname_sym = token.pin_cs_name();
@@ -2392,10 +2426,8 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Chars(_) | Strings(_) => true,
     // Expandable: serializable only if it has a Tokens body (not a Closure body)
     Expandable(exp) => {
-      match exp.get_expansion() {
-        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None => true,
-        _ => false,
-      }
+      matches!(exp.get_expansion(),
+        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None)
     },
     // Register: serializable (stores value + type, no closures)
     Register(_) => true,

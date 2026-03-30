@@ -61,8 +61,9 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\endcsname", {
-    Error!("unexpected", "\\endcsname", "Extra \\endcsname");
-    //$stomach->getGullet->showUnexpected);
+    if !state::lookup_bool("SUPPRESS_UNEXPECTED_ERRORS") {
+      Error!("unexpected", "\\endcsname", "Extra \\endcsname");
+    }
   });
 
   //======================================================================

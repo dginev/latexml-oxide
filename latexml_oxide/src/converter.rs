@@ -40,7 +40,11 @@ impl Converter {
       },
       ready: false,
       opts,
-      core: Core::new(CoreOptions::default()),
+      core: Core::new(CoreOptions {
+        // Perl defaults includecomments => 1 for normal conversion
+        include_comments: Some(true),
+        ..CoreOptions::default()
+      }),
     }
   }
   pub fn initialize_session(&mut self) -> Result<()> {

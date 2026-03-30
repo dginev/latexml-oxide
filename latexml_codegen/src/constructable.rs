@@ -24,7 +24,7 @@ macro_rules! LEAD_VALUE_RE_STR (() => (concat!(r"^",VALUE_RE_STR!())));
 macro_rules! COND_RE_STR (() => (concat!(r"[?]", VALUE_RE_STR!())));
 macro_rules! LEAD_COND_RE_STR (() => (concat!(r"^",COND_RE_STR!())));
 macro_rules! OPEN_TAG_RE_STR (() => (concat!(r"\s*<", QNAME_RE_STR!())));
-macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>\s*")));
+macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>")));
 macro_rules! QNAME_KEY_RE_STR (() => (concat!(r"^", QNAME_RE_STR!(),r"\s*=\s*")));
 macro_rules! LEAD_OPEN_TAG_RE_STR (() => (concat!(r"^", OPEN_TAG_RE_STR!())));
 macro_rules! LEAD_CLOSE_TAG_RE_STR (() => (concat!(r"^", CLOSE_TAG_RE_STR!())));

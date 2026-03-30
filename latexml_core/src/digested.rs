@@ -195,6 +195,11 @@ impl From<RegisterValue> for Digested {
     Digested(Rc::new(DigestedData::RegisterValue(value)))
   }
 }
+impl From<Comment> for Digested {
+  fn from(value: Comment) -> Digested {
+    Digested(Rc::new(DigestedData::Comment(value)))
+  }
+}
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
   fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }

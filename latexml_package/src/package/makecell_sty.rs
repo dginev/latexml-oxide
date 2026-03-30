@@ -95,20 +95,35 @@ LoadDefinitions!({
       let dh: f64 = whatsit.get_arg(1).map(|a| a.to_attribute().parse().unwrap_or(1.0)).unwrap_or(1.0);
       let dv: f64 = whatsit.get_arg(2).map(|a| a.to_attribute().parse().unwrap_or(1.0)).unwrap_or(1.0);
       let flip = (dh < 0.0) != (dv < 0.0);
-      // pxValue conversion: sp / 65536 * DPI / 72.27, DPI=100
-      let px = |d: Dimension| -> f64 { d.value_of() as f64 / 65536.0 * 100.0 / 72.27 };
-      let round2 = |v: f64| -> String { s!("{:.2}", v) };
+      // Perl: pxValue rounds to 2dp (roundto default precision=2)
+      let roundto2 = |v: f64| -> f64 {
+        let scale = 100.0_f64;
+        let n = v * scale * (1.0 + 100.0 * f64::EPSILON);
+        let adj = if n < -f64::EPSILON { n - 0.5 } else if n > f64::EPSILON { n + 0.5 } else { 0.0 };
+        adj.trunc() / scale
+      };
+      let px = |d: Dimension| -> f64 { roundto2(d.value_of() as f64 / 65536.0 * 100.0 / 72.27) };
+      // Perl: raw pxValue, NO rounding on dimensions or coordinates
+      // Format like Perl's default float-to-string: minimal digits, trim trailing zeros
+      let fmtpx = |v: f64| -> String {
+        if v == 0.0 { return "0".to_string(); }
+        let s = s!("{:.6}", v);
+        let s = s.trim_end_matches('0');
+        s.trim_end_matches('.').to_string()
+      };
       // Get sizes of A and B (args #4 and #5)
       let (mut aw, mut ah) = (0.0_f64, 0.0_f64);
       let (mut bw, mut bh) = (0.0_f64, 0.0_f64);
+      let mut ad_px = 0.0_f64;
+      let mut bd_px = 0.0_f64;
       if let Some(a) = whatsit.get_arg(4) {
         if let Ok((w,h,d,_,_,_)) = a.clone().get_size(None) {
-          aw = px(w); let a_h = px(h); let a_d = px(d); ah = a_h + a_d;
+          aw = px(w); let a_h = px(h); ad_px = px(d); ah = a_h + ad_px;
         }
       }
       if let Some(b) = whatsit.get_arg(5) {
         if let Ok((w,h,d,_,_,_)) = b.clone().get_size(None) {
-          bw = px(w); let b_h = px(h); let b_d = px(d); bh = b_h + b_d;
+          bw = px(w); let b_h = px(h); bd_px = px(d); bh = b_h + bd_px;
         }
       }
       // Get width from space arg (#3)
@@ -118,43 +133,46 @@ LoadDefinitions!({
           let dim: Dimension = wd.into();
           px(dim)
         } else {
-          // Fallback: try get_size
           let (wd,_,_,_,_,_) = sp.clone().get_size(None)?;
           px(wd)
         }
       } else { 0.0 };
-      // Perl: pxValue rounds to 2dp first, then uses rounded w for h
-      let w_px = round2(w);
-      let w_r: f64 = w_px.parse().unwrap_or(w);
-      let h = w_r * (dv / dh).abs();
-      let h_px = {
-        let s = s!("{:.6}", h);
-        let s = s.trim_end_matches('0');
-        s.trim_end_matches('.').to_string()
-      };
-      let line = if flip { s!("0,{h_px} {w_px},0") } else { s!("0,0, {w_px},{h_px}") };
+      // Perl: $h = $w * abs($diagV / $diagH); — raw pxValue, no rounding
+      let h = w * (dv / dh).abs();
+      let line = if flip { s!("0,{} {},0", fmtpx(h), fmtpx(w)) } else { s!("0,0, {},{}", fmtpx(w), fmtpx(h)) };
       let ax = if flip { 0.0 } else { w - aw };
       let ay = 0.0_f64;
       let bx = if flip { w - bw } else { 0.0 };
       let by = h - bh;
-      // Convert px to pt for width/height attributes
+      // Perl: Dimension($w / $pxppt . 'pt')
       let pxppt = 100.0 / 72.27;
       let to_dim_attr = |v: f64| -> String {
         use latexml_core::common::dimension::attribute_format;
-        attribute_format((v / pxppt * 65536.0) as i64, None)
+        use latexml_core::common::numeric_ops::kround;
+        attribute_format(kround(v / pxppt * 65536.0), None)
       };
-      whatsit.set_property("pxwidth", Stored::from(round2(w)));
-      whatsit.set_property("pxheight", Stored::from(round2(h)));
+      // Perl: picture width/height use &pxValue(#width) which roundto(2dp)
+      let fmtpx2 = |v: f64| -> String {
+        let r = roundto2(v);
+        if r == 0.0 { return "0".to_string(); }
+        let s = s!("{:.2}", r);
+        let s = s.trim_end_matches('0');
+        s.trim_end_matches('.').to_string()
+      };
+      whatsit.set_property("pxwidth", Stored::from(fmtpx2(w)));
+      whatsit.set_property("pxheight", Stored::from(fmtpx2(h)));
       whatsit.set_property("width", Stored::from(to_dim_attr(w)));
       whatsit.set_property("height", Stored::from(to_dim_attr(h)));
       whatsit.set_property("A", whatsit.get_arg(4).cloned().map(Stored::from).unwrap_or(Stored::None));
-      whatsit.set_property("Atransform", Stored::from(s!("{},{ay}", round2(ax))));
-      whatsit.set_property("Aw", Stored::from(round2(aw)));
-      whatsit.set_property("Ah", Stored::from(round2(ah)));
+      whatsit.set_property("Atransform", Stored::from(s!("{},{}", fmtpx(ax), fmtpx(ay))));
+      whatsit.set_property("Aw", Stored::from(fmtpx(aw)));
+      whatsit.set_property("Ah", Stored::from(fmtpx(ah)));
+      whatsit.set_property("Ad", Stored::from(fmtpx(ad_px)));
       whatsit.set_property("B", whatsit.get_arg(5).cloned().map(Stored::from).unwrap_or(Stored::None));
-      whatsit.set_property("Btransform", Stored::from(s!("{},{}", round2(bx), round2(by))));
-      whatsit.set_property("Bw", Stored::from(round2(bw)));
-      whatsit.set_property("Bh", Stored::from(round2(bh)));
+      whatsit.set_property("Btransform", Stored::from(s!("{},{}", fmtpx(bx), fmtpx(by))));
+      whatsit.set_property("Bw", Stored::from(fmtpx(bw)));
+      whatsit.set_property("Bh", Stored::from(fmtpx(bh)));
+      whatsit.set_property("Bd", Stored::from(fmtpx(bd_px)));
       whatsit.set_property("line", Stored::from(line));
       whatsit.set_property("color", Stored::from("#000000".to_string()));
     });

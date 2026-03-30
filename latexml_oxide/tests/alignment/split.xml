@@ -346,15 +346,17 @@
         <XMath>
           <XMTok font="italic" role="UNKNOWN">C</XMTok>
           <XMTok meaning="equals" role="RELOP">=</XMTok>
-          <XMTok role="OPEN" stretchy="true">{</XMTok>
-          <XMArray colsep="0pt" name="aligned">
-            <XMRow>
-              <XMCell/>
-              <XMCell align="left">
-                <XMTok font="italic" role="UNKNOWN">D</XMTok>
-              </XMCell>
-            </XMRow>
-          </XMArray>
+          <XMWrap>
+            <XMTok role="OPEN" stretchy="true">{</XMTok>
+            <XMArray colsep="0pt" name="aligned">
+              <XMRow>
+                <XMCell/>
+                <XMCell align="left">
+                  <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                </XMCell>
+              </XMRow>
+            </XMArray>
+          </XMWrap>
         </XMath>
       </Math>
     </equation>
@@ -392,15 +394,17 @@
           <Math class="ltx_math_unparsed" tex="\displaystyle C\left\{\begin{aligned} &amp;D\end{aligned}\right." xml:id="Ch0.Ex5.m3">
             <XMath>
               <XMTok font="italic" role="UNKNOWN">C</XMTok>
-              <XMTok role="OPEN" stretchy="true">{</XMTok>
-              <XMArray colsep="0pt" name="aligned">
-                <XMRow>
-                  <XMCell/>
-                  <XMCell align="left">
-                    <XMTok font="italic" role="UNKNOWN">D</XMTok>
-                  </XMCell>
-                </XMRow>
-              </XMArray>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">{</XMTok>
+                <XMArray colsep="0pt" name="aligned">
+                  <XMRow>
+                    <XMCell/>
+                    <XMCell align="left">
+                      <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                    </XMCell>
+                  </XMRow>
+                </XMArray>
+              </XMWrap>
             </XMath>
           </Math>
           <MathBranch>
@@ -439,25 +443,27 @@
             <XMath>
               <XMTok font="italic" role="UNKNOWN">A</XMTok>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok role="OPEN" stretchy="true">{</XMTok>
-              <XMArray colsep="0pt" name="aligned">
-                <XMRow>
-                  <XMCell align="right">
-                    <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                  </XMCell>
-                  <XMCell align="left">
-                    <XMText>if</XMText>
-                  </XMCell>
-                </XMRow>
-                <XMRow>
-                  <XMCell align="right">
-                    <XMTok font="italic" role="UNKNOWN">C</XMTok>
-                  </XMCell>
-                  <XMCell align="left">
-                    <XMText>otherwise</XMText>
-                  </XMCell>
-                </XMRow>
-              </XMArray>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">{</XMTok>
+                <XMArray colsep="0pt" name="aligned">
+                  <XMRow>
+                    <XMCell align="right">
+                      <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                    </XMCell>
+                    <XMCell align="left">
+                      <XMText>if</XMText>
+                    </XMCell>
+                  </XMRow>
+                  <XMRow>
+                    <XMCell align="right">
+                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                    </XMCell>
+                    <XMCell align="left">
+                      <XMText>otherwise</XMText>
+                    </XMCell>
+                  </XMRow>
+                </XMArray>
+              </XMWrap>
             </XMath>
           </Math>
           <MathBranch>

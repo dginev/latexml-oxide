@@ -18,7 +18,6 @@ use crate::common::arena;
 use crate::common::store::Stored;
 use crate::definition::Definition; // trait for get_expansion(), get_cs(), etc.
 use crate::state::TableName;
-use crate::token::Token;
 
 /// Write a state diff to a dump file.
 /// Returns the number of entries successfully written.
@@ -38,14 +37,8 @@ pub fn write_dump(
     let table_code = table_to_code(*table);
     let key_str = arena::with(*key, |s| s.to_string());
 
-    // Skip expl3 macros — they have delimited parameters that can't be
-    // faithfully serialized. expl3 naming uses _ (single/double underscore)
-    // and : (argument specifier). Also skip \ver@ package markers.
-    // expl3 loads fresh with correct parameters at runtime.
-    // Skip "msg " keys too (l3msg message text entries).
-    if key_str.contains('_') || key_str.contains(':') || key_str.starts_with("\\ver@")
-      || key_str.starts_with("\\msg ")
-    {
+    // Skip \ver@ package version markers (runtime metadata, not definitions)
+    if key_str.starts_with("\\ver@") {
       skipped += 1;
       continue;
     }
@@ -101,7 +94,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
     }
     Stored::Expandable(exp) => {
       if let Some(crate::definition::ExpansionBody::Tokens(tks)) = exp.get_expansion() {
-        let cs_name = exp.get_cs().with_str(|s| url_encode(s));
+        let cs_name = exp.get_cs().with_str(url_encode);
         let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
         let nargs = exp.get_num_args();
         let mut flags = String::new();
@@ -115,13 +108,37 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         Option::None // Closure-based, can't serialize
       }
     }
+    Stored::Dimension(d) => Some(format!("D\t{}", d.0)),
+    Stored::Glue(g) => {
+      let mut s = format!("G\t{}", g.skip);
+      if let Some(p) = g.plus { s.push_str(&format!(",p{}", p)); }
+      if let Some(ref pf) = g.pfill { s.push_str(&format!(",pf{}", fillcode_index(pf))); }
+      if let Some(m) = g.minus { s.push_str(&format!(",m{}", m)); }
+      if let Some(ref mf) = g.mfill { s.push_str(&format!(",mf{}", fillcode_index(mf))); }
+      Some(s)
+    }
+    Stored::MuDimension(d) => Some(format!("MD\t{}", d.0)),
+    Stored::MuGlue(g) => {
+      let mut s = format!("MG\t{}", g.skip);
+      if let Some(p) = g.plus { s.push_str(&format!(",p{}", p)); }
+      if let Some(ref pf) = g.pfill { s.push_str(&format!(",pf{}", fillcode_index(pf))); }
+      if let Some(m) = g.minus { s.push_str(&format!(",m{}", m)); }
+      if let Some(ref mf) = g.mfill { s.push_str(&format!(",mf{}", fillcode_index(mf))); }
+      Some(s)
+    }
+    Stored::VecDequeStored(vd) if vd.is_empty() => Some("VD\t".to_string()),
     _ => Option::None,
   }
 }
 
+fn fillcode_index(fc: &crate::common::glue::FillCode) -> usize {
+  use crate::common::glue::FillCode::*;
+  match fc { Fil => 1, Fill => 2, Filll => 3 }
+}
+
 fn serialize_token(t: &crate::token::Token) -> String {
   let cc: u8 = t.get_catcode().into();
-  let text = t.with_str(|s| url_encode(s));
+  let text = t.with_str(url_encode);
   format!("{}:{}", cc, text)
 }
 

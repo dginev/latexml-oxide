@@ -48,6 +48,13 @@ LoadDefinitions!({
 
   InnerPool!(latex_hook);
 
+  // Perl: LoadFormat('plain') — precompiled plain.tex state.
+  // TODO: Enable once dump has full parity (Let, CharDef, Register entries).
+  // Requires _loaded flags to prevent re-loading raw TeX files.
+  // if let Err(e) = crate::engine::plain_dump::load_definitions() {
+  //   log::warn!("plain_dump: {}", e);
+  // }
+
   //======================================================================
   // After all other rewrites have acted, a little cleanup
   // [This suggests that it should be (one of) the LAST (math) rewrite applied?

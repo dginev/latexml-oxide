@@ -84,13 +84,31 @@ LoadDefinitions!({
     let _power = gullet::read_arg(ExpansionLevel::Off)?;
   });
   DefPrimitive!("\\DeclareSIPrePower[]", {
-    let _cs = gullet::read_token()?;
-    let _body = gullet::read_arg(ExpansionLevel::Off)?;
+    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let body = gullet::read_arg(ExpansionLevel::Off)?;
+    // Define the power macro: \prefixpower → \textsuperscript{body}
+    let mut toks = vec![T_CS!("\\textsuperscript"), T_BEGIN!()];
+    toks.extend(body.unlist());
+    toks.push(T_END!());
+    def_macro(cs, None, Tokens::new(toks), None)?;
   });
   DefPrimitive!("\\DeclareSIPostPower[]", {
-    let _cs = gullet::read_token()?;
-    let _body = gullet::read_arg(ExpansionLevel::Off)?;
+    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let body = gullet::read_arg(ExpansionLevel::Off)?;
+    // Define the power macro: \squared → \textsuperscript{2}
+    let mut toks = vec![T_CS!("\\textsuperscript"), T_BEGIN!()];
+    toks.extend(body.unlist());
+    toks.push(T_END!());
+    def_macro(cs, None, Tokens::new(toks), None)?;
   });
+
+  // Power macro declarations (Perl: siunitx.sty.ltxml lines 1740-1750)
+  RawTeX!(r"\DeclareSIPrePower \square { 2 }");
+  RawTeX!(r"\DeclareSIPostPower \squared { 2 }");
+  RawTeX!(r"\DeclareSIPrePower \cubic { 3 }");
+  RawTeX!(r"\DeclareSIPostPower \cubed { 3 }");
+  RawTeX!(r"\DeclareSIPrePower \Square { 2 }");
+  RawTeX!(r"\DeclareSIPrePower \ssquare { 2 }");
 
   //======================================================================
   // \per — division separator in units

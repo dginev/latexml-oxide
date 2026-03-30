@@ -6,9 +6,9 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
-    if lookup_int("VERBOSITY") > -1 {
+    if state::current_verbosity() > -1 {
       let content = Expand!(stuff);
-      eprintln!("{content}\n");
+      Note!(s!("{content}"));
     }
   });
   DefPrimitive!("\\typein[]{}", None);

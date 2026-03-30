@@ -365,6 +365,10 @@ impl Alignment {
     if pseudorow {
       self.current_row_mut().unwrap().set_pseudo()
     } else {
+      // Store row number before digest — row hooks may need it (e.g. \rowcolors)
+      // and cannot re-borrow the alignment which is already mutably borrowed.
+      let row_num = self.current_row_number();
+      assign_value("alignmentRowNumber", row_num as i32, None);
       let row_before = stomach::digest(T_CS!("\\lx@alignment@row@before"))?;
       push_box_list(row_before);
     }
@@ -508,7 +512,7 @@ impl BoxOps for Alignment {
       for before in row.before.iter() {
         document.absorb(before, None)?;
       }
-      for (_col_idx, cell) in row.get_columns_mut().iter_mut().enumerate() {
+      for cell in row.get_columns_mut().iter_mut() {
         if cell.skipped {
           continue;
         }
@@ -589,49 +593,45 @@ impl BoxOps for Alignment {
           // - Else if template has \hfil/\hfill → centering fill, treat as padding (prevents
           //   incorrect ltx_nopad_l for regular centered/right-aligned columns)
           // - Else → no padding (assume 0, enables ltx_nopad_l)
+          // Perl L338-339: lpad/rpad from extracted lspaces/rspaces width.
+          // When lspaces/rspaces are populated (from cell extraction), use their
+          // actual width. When None, use template heuristic as fallback.
+          // Perl L338-339: lpad/rpad from lspaces/rspaces width.
+          // In Perl, lspaces is populated from the left-scan of digested cell boxes.
+          // The left-scan encounters template-injected boxes (vrules, intercol spaces,
+          // fills) and extracts spacing. When lspaces is undef, Perl returns 0.
+          // In Rust, lspaces is not always populated by extraction (extraction stores
+          // None for empty lspaces). We use intercol_reachable_in_before to distinguish:
+          // - Regular columns (|l|): \vrule then \lx@intercol → reachable → threshold
+          // - @{text} columns: text then \lx@intercol → NOT reachable → 0
           let lpad = cell
             .lspaces
             .as_ref()
             .and_then(|ls| ls.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              // Perl: lpad from lspaces (\lx@intercol width). When unavailable,
-              // use template tracking: has_intercol_before is set during template
-              // building and correctly distinguishes @{}-disabled columns.
-              if cell.has_intercol_before || template_has_fill(&cell.before) {
+              if intercol_reachable_in_before(&cell.before) || template_has_fill(&cell.before) {
                 threshold_02em
               } else {
                 0
               }
             });
-          // Perl: $rpad = ($$cell{rspaces} ? $$cell{rspaces}->getWidth->valueOf : 0)
-          // When rspaces is not extracted, check template for intercolumn spacing.
-          // Key insight: @{}c@{} columns have \hfil (centering) but NO \lx@intercol.
-          // Regular columns have \lx@intercol in before OR after tokens.
-          // Use \lx@intercol presence as the primary signal for padding.
           let rpad = cell
             .rspaces
             .as_ref()
             .and_then(|rs| rs.get_width(None).ok().flatten())
             .map(|rv| rv.value_of())
             .unwrap_or_else(|| {
-              // Check after tokens first (direct intercol signal)
+              // Perl: rpad from rspaces. When not extracted, use template.
+              // Only the after tokens determine right padding.
               if template_has_intercol(&cell.after) {
                 threshold_02em
-              // If no intercol in after, check before: if before has intercol,
-              // this is a regular column (last column or similar) — assume padding
-              } else if template_has_intercol(&cell.before) {
-                if template_has_fill(&cell.after) { threshold_02em } else { 0 }
-              // Neither before nor after has intercol → @{} on both sides → no padding
               } else {
                 0
               }
             });
           // Perl L340-341: ltx_nopad_l, unless math mode (Perl: `unless $ismath`)
-          // Note: col_idx guard still needed because cell.before/has_intercol_before
-          // are cleared during extraction — lpad heuristic can't distinguish @{} from
-          // default padding on first columns without proper lspaces population.
-          if (_col_idx > 0 || self.is_halign) && !ismath && (!empty || has_boxes) && lpad < threshold_02em {
+          if !ismath && (!empty || has_boxes) && lpad < threshold_02em {
             classes.push("ltx_nopad_l".to_string());
           } else if lpad < threshold_15em {
             // In math mode, absorb named spacing (like \quad) as XMHint content
@@ -882,9 +882,35 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
   if let Some(ref toks) = tokens {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
-      if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" || s == "\\lx@intercol" {
+      if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" {
         return true;
       }
+    }
+  }
+  false
+}
+
+/// Check if \lx@intercol in the before tokens is reachable by the left-scan.
+/// The left-scan skips: isVerticalRule (\vrule), \relax, isFill (\hfil/\hfill),
+/// isSpace, isHorizontalRule, alignmentSkippable, Comment.
+/// It STOPS at real content (like text from @{text}).
+/// For `\vrule\relax\lx@intercol\hfil`: reachable (vrule is skippable).
+/// For `@{1}\lx@intercol\hfil`: NOT reachable ("1" blocks the scan).
+fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
+  if let Some(ref toks) = tokens {
+    for tok in toks.unlist_ref() {
+      let s = tok.to_string();
+      if s == "\\lx@intercol" || s.contains("intercol") {
+        return true;
+      }
+      // These are skippable by the left-scan in Perl's extractAlignmentColumn
+      if s == "\\vrule" || s == "\\relax" || s == "\\hfil" || s == "\\hfill"
+        || s == "\\hskip" || s == "\\lx@column@trimright"
+      {
+        continue;
+      }
+      // Any other token blocks the scan
+      return false;
     }
   }
   false
@@ -1301,13 +1327,13 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec> = Vec::new();
-  // Perl: /^[\s\d]+$/ — \d matches ASCII digits only in Perl 5.
   // Perl L1123: /^[\s\d]+$/ — Perl \d is ASCII-only (0-9).
-  // Use is_numeric() to also match mathematical digits (𝟘-𝟟) from bbold fontmaps,
-  // but exclude circled/parenthesized number forms (①⑴ etc., Unicode No category)
-  // which shouldn't be classified as Integer.
+  // Also include mathematical double-struck digits (U+1D7D8-U+1D7E1, 𝟘-𝟡) since these
+  // are font-decoded equivalents of ASCII 0-9 in blackboard bold fonts. In Perl, these
+  // appear as ASCII digits with font attributes; in Rust they're Unicode codepoints.
+  // Exclude circled/enclosed numerals (❶❷❸ U+2776-, ①②③ U+2460-) which are symbols.
   if !content.is_empty() && content.chars().all(|c| {
-    c.is_whitespace() || (c.is_numeric() && !(('\u{2460}'..='\u{24FF}').contains(&c)))
+    c.is_whitespace() || c.is_ascii_digit() || ('\u{1D7D8}'..='\u{1D7E1}').contains(&c)
   }) {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
@@ -1699,9 +1725,13 @@ fn alignment_skip_data(
   if i >= tab_lines_length {
     return 0;
   }
+  let _header_width = if !tablines.is_empty() { tablines[0].len() } else { 1 };
   let mut n = 1;
   while i + n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold {
+      // TODO: Perl Alignment.pm L1337-1339 has continuation line check here.
+      // Applying it changes behavior for fonts/bbold tables (false positive headers).
+      // Need to investigate further.
       break;
     }
     n += 1;

@@ -95,6 +95,7 @@ fn xy_capture_stroke_fill() -> (String, String, String) {
 
 /// Helper: store SVG path attributes on whatsit for construction time.
 /// Perl: properties => sub { (path => ..., do_stroke => ..., do_fill => 0, dashes => ...) }
+#[allow(dead_code)]
 fn xy_store_path_props(whatsit: &mut impl BoxOps, path: &str, stroke: &str, fill: &str, dashes: &str) {
   whatsit.set_property("xy_path", Stored::String(arena::pin(path)));
   whatsit.set_property("xy_stroke", Stored::String(arena::pin(stroke)));
@@ -548,7 +549,7 @@ LoadDefinitions!({
       let offset: f64 = args.first().and_then(|a| a.as_ref())
         .map(|t| t.value_of() as f64).unwrap_or(0.0);
       let (c, s) = xy_get_orientation();
-      let l_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * 0.707107;
+      let l_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * std::f64::consts::FRAC_1_SQRT_2;
       let x0 = if offset != 0.0 { 0.0 } else { l_px };
       let y0_val = l_px * (offset + 1.0);
       let y1_val = y0_val - l_px * 2.0;
@@ -570,7 +571,7 @@ LoadDefinitions!({
       let offset: f64 = args.first().and_then(|a| a.as_ref())
         .map(|t| t.value_of() as f64).unwrap_or(1.0);
       let (c, s) = xy_get_orientation();
-      let l_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * 0.707107;
+      let l_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * std::f64::consts::FRAC_1_SQRT_2;
       let sweep = if offset > 0.0 { 0 } else { 1 };
       let ex = l_px * -(c + offset * s);
       let ey = l_px * (offset * c - s);
@@ -649,7 +650,7 @@ LoadDefinitions!({
     }
   );
   DefPrimitive!("\\lx@xy@circdir {}", sub[(dir)] {
-    state::assign_value("xy_circle_dir", Stored::String(arena::pin(&dir.to_string())), None);
+    state::assign_value("xy_circle_dir", Stored::String(arena::pin(dir.to_string())), None);
   });
   // Perl L510-515: CIR macros
   ::latexml_core::stomach::raw_tex(concat!(

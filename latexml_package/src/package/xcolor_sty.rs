@@ -315,22 +315,49 @@ fn apply_func_expr(mut color: Color, func_str: &str) -> Color {
       let func = parts[0].trim();
       let angle: f64 = parts[1].trim().parse().unwrap_or(0.0);
       let full: Option<f64> = parts.get(2).and_then(|s| s.trim().parse().ok());
-      let _model = if func == "wheel" { "Hsb" } else { "tHsb" };
-      // Convert to Hsb, rotate hue, convert back
+      let is_twheel = func == "twheel";
+      // Convert to hsb (internal [0,1] range)
       let hsb = color.to_hsb();
       let (h, s, b_val) = if let Color::Hsb(h, s, b) = hsb { (h, s, b) } else { (0.0, 0.0, 0.0) };
       let h_range = 360.0; // \rangeHsb default
       let circle = if let Some(f) = full { h_range / f } else { 1.0 };
-      // Scale angle: in Perl, h is in [0,1], angle is in Hsb units
-      // Hsb h is already 0..1 internally, angle is in range units
-      // Perl: Color($model, $h + $angle * $circle, $s, $b)
-      // For wheel (Hsb model), angle is in Hsb range (0..360 scaled to 0..1)
-      let new_h = h + angle * circle / h_range;
+      // Perl: Color($model, $h_scaled + $angle * $circle, $s, $b)
+      // h is in [0,1] internally, scale to [0, h_range] for computation
+      let h_scaled = h * h_range;
+      let new_h_scaled = h_scaled + angle * circle;
+      // Convert back to [0,1] — for Hsb, just divide by h_range
+      // For tHsb, apply piecewise-linear mapping first
+      let new_h = if is_twheel {
+        thsb_to_hsb(new_h_scaled, h_range) / h_range
+      } else {
+        new_h_scaled / h_range
+      };
       color = Color::Hsb(new_h, s, b_val);
     }
     remaining = rest;
   }
   color
+}
+
+/// Convert tHsb hue to hsb hue using piecewise-linear mapping.
+/// Perl: \rangetHsb = '60,30;120,60;180,120;210,180;240,240'
+/// Input: tHsb h in [0, h_range], output: hsb h in [0, h_range]
+fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
+  // Piecewise linear map: tHsb→hsb breakpoints (x→y)
+  // Perl: "60,30;120,60;180,120;210,180;240,240" + ";360,360"
+  let breakpoints: &[(f64, f64)] = &[
+    (60.0, 30.0), (120.0, 60.0), (180.0, 120.0),
+    (210.0, 180.0), (240.0, 240.0), (h_range, h_range),
+  ];
+  let (mut x0, mut y0) = (0.0, 0.0);
+  for &(xn, yn) in breakpoints {
+    if h <= xn {
+      return y0 + (yn - y0) / (xn - x0) * (h - x0);
+    }
+    x0 = xn;
+    y0 = yn;
+  }
+  h // fallback: identity for h > h_range
 }
 
 /// Step the color series
@@ -458,10 +485,9 @@ LoadDefinitions!({
   DeclareOption!("x11names*", {
     InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
   });
-  // table option
+  // table option — loads colortbl
   DeclareOption!("table", {
-    // colortbl support — define \rowcolor, \columncolor stubs at minimum
-    // Full colortbl would be a separate package binding
+    RequirePackage!("colortbl");
   });
   DeclareOption!("hyperref", None);
 
@@ -971,8 +997,9 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       if let Some(defn) = state::lookup_register_definition(&varname) {
         let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
-        let scaled = (10.0 * n) as i64;
-        defn.set_value(RegisterValue::new(scaled), None, inner);
+        // Perl: setValue((10 * num) . 'pt') — stores as dimension string
+        let dim = Dimension::from_str(&s!("{}pt", 10.0 * n))?;
+        defn.set_value(RegisterValue::Dimension(dim), None, inner);
       }
     }
     Ok(())
@@ -983,8 +1010,9 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       if let Some(defn) = state::lookup_register_definition(&varname) {
         let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
-        let scaled = (100.0 * n) as i64;
-        defn.set_value(RegisterValue::new(scaled), None, inner);
+        // Perl: setValue((100 * num) . 'pt') — stores as dimension string
+        let dim = Dimension::from_str(&s!("{}pt", 100.0 * n))?;
+        defn.set_value(RegisterValue::Dimension(dim), None, inner);
       }
     }
     Ok(())
@@ -1040,14 +1068,23 @@ LoadDefinitions!({
   });
 
   // \convertcolorspec{model}{spec}{tomodel}{cmd}
+  // Perl: converts color from one model to another, storing result in \cmd
+  // Extended models (HTML, RGB, Hsb, HSB, Gray) use their native ranges.
   DefPrimitive!("\\convertcolorspec{}{}{}{}", sub[(fmodel, spec, tomodel, cmd)] {
     let model_str = do_expand(fmodel)?.to_string();
     let spec_str = do_expand(spec)?.to_string();
     let tomodel_str = do_expand(tomodel)?.to_string();
     let cmd_str = cmd.to_string();
-    let color = parse_xcolor(Some(&model_str), &spec_str, Some(&tomodel_str));
-    let comps: Vec<String> = color.components().iter().map(|c| format!("{}", fixedpt(*c))).collect();
-    let joined = comps.join(",");
+    let color = parse_xcolor(Some(&model_str), &spec_str, None);
+    // Perl: convert to target model and get components in target range
+    let comps = color.components_for_model(&tomodel_str);
+    let formatted: Vec<String> = if tomodel_str == "HTML" {
+      // HTML components as 2-digit uppercase hex
+      comps.iter().map(|c| format!("{:02X}", *c as u32)).collect()
+    } else {
+      comps.iter().map(|c| format!("{}", fixedpt(*c))).collect()
+    };
+    let joined = formatted.join(",");
     def_macro(T_CS!(cmd_str), None, Some(ExpansionBody::from(joined.as_str())), None)?;
     Ok(())
   });
@@ -1056,24 +1093,130 @@ LoadDefinitions!({
   DefConditional!("\\if@rowcolors");
   RawTeX!("\\@rowcolorstrue");
 
-  DefPrimitive!("\\rowcolors OptionalMatch:* []{Number}{}{}", sub[(_star, _commands, first, oddcolor, evencolor)] {
+  // Perl L723-726: hook xcolor row commands into tabular lifecycle
+  DefMacro!("\\@xcolor@tabular@before", None);
+  DefMacro!("\\@xcolor@row@after", None);
+  {
+    let cs = T_CS!("\\@tabular@row@after");
+    let tokens = Tokens!(T_CS!("\\@xcolor@row@after"));
+    AddToMacro!(cs, tokens);
+  }
+  {
+    let cs = T_CS!("\\@tabular@before");
+    let tokens = Tokens!(T_CS!("\\@xcolor@tabular@before"));
+    AddToMacro!(cs, tokens);
+  }
+
+  DefPrimitive!("\\rowcolors OptionalMatch:* []{Number}{}{}", sub[(_star, commands, first, oddcolor, evencolor)] {
     let first_val = first.value_of();
     let odd_str = do_expand(oddcolor)?.to_string();
     let even_str = do_expand(evencolor)?.to_string();
+    // Perl L731-732: DefMacroI('\@xcolor@row@after', undef, $commands);
+    //               DefMacroI('\@xcolor@tabular@before', undef, $commands);
+    let cmd_toks = Tokens::new(commands.map(|t| t.revert()).unwrap_or_default());
+    def_macro(T_CS!("\\@xcolor@row@after"), None, cmd_toks.clone(), None)?;
+    def_macro(T_CS!("\\@xcolor@tabular@before"), None, cmd_toks, None)?;
     assign_value("tabular_row_color_first", Stored::Number(Number::new(first_val)), None);
+    // Perl: AssignValue(odd => IsEmpty ? undef : ParseXColor(...))
+    // Must ALWAYS assign — empty colors clear previous values
     if !odd_str.is_empty() {
       let odd = parse_xcolor(None, &odd_str, None);
       assign_value("tabular_row_color_odd", Stored::String(arena::pin(odd.to_stored())), None);
+    } else {
+      assign_value("tabular_row_color_odd", Stored::None, None);
     }
     if !even_str.is_empty() {
       let even = parse_xcolor(None, &even_str, None);
       assign_value("tabular_row_color_even", Stored::String(arena::pin(even.to_stored())), None);
+    } else {
+      assign_value("tabular_row_color_even", Stored::None, None);
     }
     Ok(Vec::new())
   });
 
   DefMacro!("\\showrowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorstrue}");
   DefMacro!("\\hiderowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorsfalse}");
+
+  // Perl xcolor L751: AddToMacro('\@tabular@row@before', '\@tabular@row@before@xcolor');
+  {
+    let cs = T_CS!("\\@tabular@row@before");
+    let tokens = Tokens!(T_CS!("\\@tabular@row@before@xcolor"));
+    AddToMacro!(cs, tokens);
+  }
+
+  // Perl xcolor L757-778: \@tabular@row@before@xcolor — handles \rowcolors cycling
+  // During digestion: checks \if@rowcolors, computes alternating color from row number
+  // During absorption: sets backgroundcolor attribute on ancestor <tr>
+  DefConstructor!("\\lx@tabular@row@before@xcolor",
+    sub[document, _args, props] {
+      if let Some(Stored::String(bg_sym)) = props.get("background") {
+        let bg_str = arena::with(*bg_sym, |s| s.to_string());
+        if !bg_str.is_empty() {
+          let current = document.get_node().clone();
+          if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
+            if !tr_node.has_attribute("backgroundcolor") {
+              document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
+            }
+          }
+        }
+      }
+    },
+    after_digest => sub[whatsit] {
+      if latexml_core::binding::content::if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
+        // Read row number from state (set by start_row before digest) instead of
+        // borrowing the alignment, which is already mutably borrowed during start_row.
+        let n = state::lookup_value("alignmentRowNumber")
+          .and_then(|v| match v {
+            Stored::Int(i) => Some(i as usize),
+            Stored::Number(num) => Some(num.value_of() as usize),
+            _ => None,
+          })
+          .unwrap_or(0);
+        let first = match state::lookup_value("tabular_row_color_first") {
+          Some(Stored::Number(num)) => num.value_of() as usize,
+          _ => 1,
+        };
+        let odd = state::lookup_value("tabular_row_color_odd");
+        let even = state::lookup_value("tabular_row_color_even");
+        if n >= first {
+          // Perl: $n % 2 ? $odd : $even — Perl row numbers are 1-based
+          // Row 1 is odd, row 2 is even, etc.
+          let bg_stored = if n % 2 == 1 { &odd } else { &even };
+          if let Some(Stored::String(sym)) = bg_stored {
+            let color_str = arena::with(*sym, |s| s.to_string());
+            if let Some(c) = latexml_core::common::color::Color::from_stored(&color_str) {
+              merge_font(fontmap!(bg => c));
+              let bg_hex = c.to_attribute();
+              whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+            }
+          } else {
+            // Color is None (from \rowcolors1{}{}) — clear any inherited bg
+            if let Some(font) = lookup_font() {
+              if font.get_background().is_some() {
+                let mut cleared = (*font).clone();
+                cleared.bg = None;
+                state::assign_value("font", Stored::from(cleared), None);
+              }
+            }
+          }
+        }
+      } else {
+        // \hiderowcolors: clear any inherited background from prior \rowcolor.
+        // The alignment scope may carry font bg that cycling rows override but
+        // non-cycling rows inherit. Clear it at the current scope.
+        if let Some(font) = lookup_font() {
+          if font.get_background().is_some() {
+            let mut cleared = (*font).clone();
+            cleared.bg = None;
+            state::assign_value("font", Stored::from(cleared), None);
+          }
+        }
+      }
+      Ok(Vec::new())
+    },
+    reversion => "",
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) });
+  RawTeX!(r"\let\@tabular@row@before@xcolor\lx@tabular@row@before@xcolor");
 
   // Perl xcolor L744-748: \rownum returns current row number from alignment
   def_macro(

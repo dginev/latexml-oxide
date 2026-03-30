@@ -127,7 +127,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // NOTE: bigop rules moved to += section (after `term` is defined) so they
       // can absorb full term (mulop chains like x² * dx), not just tight_term.
       | composed_bigop tight_term => prefix_apply
-      | compound_operator tight_term => prefix_apply
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop
       // Perl: FUNCTION/OPFUNCTION/TRIGFUNCTION + explicit APPLYOP + argument
@@ -327,44 +326,52 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // Uses term_list (comma-separated terms) to avoid matching complex
            // nested expressions. Only fires when content has commas.
            | langle_rel term_list rangle_rel => fenced
+           // Angle-bracket fencing with \langle/\rangle (distinct from parentheses)
+           // Now that langle_open/rangle_close are NOT remapped to lparen/rparen,
+           // we need explicit rules for angle-bracket fenced expressions.
+           | langle_open expression rangle_close => fenced
+           | langle_open formula rangle_close => fenced
+           | langle_open term_list rangle_close => fenced
+           | langle_open formula_list rangle_close => fenced
+           | langle_open formula metarelop expression rangle_close => fence
            | lparen term punct term rparen      => interval
            | lparen term punct term rbracket    => interval
            | lbracket term punct term rbracket  => interval
            | lbracket term punct term rparen  => interval
            | rbracket term punct term lbracket => interval
-           // TODO: Dirac bra-ket notation (QM) — Perl MathGrammar L375-393
-           // Grammar rules using langle_rel/rangle_rel conflict with relational expressions.
-           // QM notation needs context-sensitive handling (e.g. SawNotation('QM') in Perl).
-           // Semantic actions (qm_expectation, qm_bra, qm_ket, qm_braket, qm_bracket)
-           // are implemented and ready for when the grammar can be made context-sensitive.
+           // QM bra-ket uses langle_open/rangle_close (specific ⟨⟩ tokens),
+           // avoiding ambiguity with relational < > (langle_rel/rangle_rel).
+           // Conditional probability uses lparen/rparen (specific () tokens),
+           // avoiding ambiguity with ket (which requires rangle_close).
            //
            // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
            // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
            | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
            | singlevertbar expression singlevertbar => fenced
-           // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE as closing
-           // Ket labels can be expressions, arrows, operators, relops, etc.
-           // e.g. |x⟩, |\rightarrow⟩, |\iff⟩, |\bmod⟩, |\times_{i}^{2}⟩
-           // Future: QM subject-area pragma to control bra-ket vs other notation
-           | singlevertbar expression close => qm_ket
-           | singlevertbar arrow close => qm_ket
-           | singlevertbar metarelop close => qm_ket
-           | singlevertbar operator close => qm_ket
-           | singlevertbar any_bigop close => qm_ket
-           | singlevertbar mulop close => qm_ket
-           | singlevertbar addop close => qm_ket
-           | singlevertbar relop close => qm_ket
-           | singlevertbar modifierop close => qm_ket
-           // Dirac bra: ⟨label| — OPEN as opening, VERTBAR as closing
-           | open expression singlevertbar => qm_bra
-           | open arrow singlevertbar => qm_bra
-           | open metarelop singlevertbar => qm_bra
-           | open operator singlevertbar => qm_bra
-           // Angle-bracket bra-ket with literal < > (QM notation)
-           // BLOCKED: conflicts with relational expressions ({y|y>0} → ket@(y))
-           // Needs QM subject-area pragma to enable safely
-           // | langle_rel expression singlevertbar => qm_bra
-           // | singlevertbar expression rangle_rel => qm_ket
+           // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE:rangle as closing
+           // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
+           // probability (x|y) where ) is a generic CLOSE but not rangle.
+           // Perl MathGrammar uses RANGLE specifically, not generic CLOSE.
+           // Ket labels: expressions, arrows, operators, relops, etc.
+           | singlevertbar expression rangle_close => qm_ket
+           | singlevertbar arrow rangle_close => qm_ket
+           | singlevertbar metarelop rangle_close => qm_ket
+           | singlevertbar operator rangle_close => qm_ket
+           | singlevertbar any_bigop rangle_close => qm_ket
+           | singlevertbar mulop rangle_close => qm_ket
+           | singlevertbar addop rangle_close => qm_ket
+           | singlevertbar relop rangle_close => qm_ket
+           | singlevertbar modifierop rangle_close => qm_ket
+           // Dirac bra: ⟨label| — OPEN:langle as opening, VERTBAR as closing
+           // Restricted to langle_open to avoid ambiguity with parens.
+           | langle_open expression singlevertbar => qm_bra
+           | langle_open arrow singlevertbar => qm_bra
+           | langle_open metarelop singlevertbar => qm_bra
+           | langle_open operator singlevertbar => qm_bra
+           // Braket: ⟨a|b⟩ → inner-product@(a, b)
+           | langle_open expression singlevertbar expression rangle_close => qm_braket
+           // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b)
+           | langle_open expression singlevertbar expression singlevertbar expression rangle_close => qm_bracket
            // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
            | lbrace term punct term rbrace => fence
            | lbrace term punct term punct term rbrace => fence
@@ -372,19 +379,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lbrace formula singlevertbar formula rbrace => fence
            | lbrace formula middle_bar formula rbrace => fence
            | lbrace formula metarelop formula rbrace => fence
-           // Conditional probability: p(x,y|Θ) — BLOCKED: causes exponential ambiguity
-           // with ket rules (singlevertbar expression close => qm_ket) when |
-           // appears inside (). Needs context-sensitive handling (MODIFIEROP role
-           // on | from \lxDeclare, or QM pragma to disable ket rules).
-           // | lparen formula_list singlevertbar formula rparen => fence
-           // | lparen formula singlevertbar formula_list rparen => fence
-           // \middle separator: \left(a\middle|b\right) → conditional@(a^b, x)
-           // MIDDLE tokens are author-explicit (unlike bare |), so safe from ambiguity.
-           // BLOCKED: Perl leaves these unparsed; enabling parses them correctly but
-           // diverges from expected XML. Needs user approval to update test expectations.
-           // | open formula middle_bar formula close => fence
-           // | open formula middle formula close => fence
-           // | lparen formula middle_bar formula rparen => fence
+           // Conditional probability: p(a|b) — safe now that ket uses rangle_close
+           // (not generic close), so |y) no longer matches ket pattern.
+           // NOTE: formula_list variants (x,y|z) don't work due to Marpa limitation:
+           // formula_list completion doesn't propagate to singlevertbar continuation.
+           // Perl handles this via recursive descent context. Tracked as known limitation.
+           | lparen formula singlevertbar formula rparen => fence
+           | lparen formula_list singlevertbar formula rparen => fence
+           | lparen formula singlevertbar formula_list rparen => fence
+           // \middle separator: \left(a\middle|b\right) → fenced with separator
+           // MIDDLE tokens are author-explicit (unlike bare |), so unambiguous.
+           | open formula middle_bar formula close => fence
+           | open formula middle formula close => fence
+           | lparen formula middle_bar formula rparen => fence
            // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
            // Perl MathGrammar: OPEN Expression CLOSE → Fence
            | open expression close => fenced
@@ -465,10 +472,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += trigfunction lparen formula rparen => apply_delimited;
     tight_term += trigfunction lbracket formula rbracket => apply_delimited;
     tight_term += trigfunction fenced_factor => prefix_apply;
+    // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
+    // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
+    // not an entire invisible-times chain. Covers fenced_factor too (since factor += fenced_factor).
+    tight_term += compound_operator factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
-    // Uses existing `unknown` terminal; semantic action checks text is literally "d".
+    // Semantic action checks text is literally "d" and INTOP context.
     // At factor level so it can appear as right operand of invisible_times.
-    factor += unknown factor_base => diffop_apply;
+    // Perl: diffd matches both /UNKNOWN:d/ and /ID:d/ (lxDeclare can set role=ID on d).
+    factor += unknown factor_base => diffop_apply
+      | id factor_base => diffop_apply;
 
     // Perl MathGrammar L720-723: combine SUPOP tokens (\prime\prime → prime2)
     supops = supop
@@ -507,7 +520,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Add scripted mulop as infix operator at term level
     term += tight_term scripted_mulop tight_term => infix_apply_nary;
     // Ket with scripted operator label: |\times_{i}^{2}⟩ → ket@(scripted_mulop)
-    fenced_factor += singlevertbar scripted_mulop close => qm_ket;
+    fenced_factor += singlevertbar scripted_mulop rangle_close => qm_ket;
 
     // Scripted FUNCTION with fenced args: f'(a), f^2(a), f_n(x)
     scripted_function = function postsuperarg => postfix_script

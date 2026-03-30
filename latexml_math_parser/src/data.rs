@@ -6,7 +6,7 @@ use rustc_hash::FxHashMap;
 // Set by the parser before parsing, cleared after.
 // Perl uses $doc->lookupID($idref) which accesses the document's idstore.
 thread_local! {
-  static MATH_IDSTORE: RefCell<Option<FxHashMap<String, Node>>> = RefCell::new(None);
+  static MATH_IDSTORE: RefCell<Option<FxHashMap<String, Node>>> = const { RefCell::new(None) };
 }
 
 /// Set the idstore for XMRef resolution. Called before math parsing starts.

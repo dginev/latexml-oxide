@@ -48,7 +48,7 @@ internal contributors resuming work.
 
 LaTeXML (Perl) has two main programs: `latexml` (TeX→XML) and `latexmlpost` (XML→HTML/MathML).
 The Rust port currently covers the `latexml` pipeline. The `latexmlpost` pipeline is planned
-for Phase 3 (see `mini_3_plan.md`).
+for Phase 3 (post-processing pipeline).
 
 The `latexml` pipeline processes input through five stages:
 1. **Digestion** — Mouth (chars→tokens), Gullet (expansion), Stomach (digestion into boxes/whatsits)
@@ -625,3 +625,58 @@ This fixes empty XMRef for any parsed expression inside scripts:
 
 The root cause was that `obtain_arg` re-read the original DOM, which still had
 the raw tokens `(`, `n`, `)` — not the parsed `fenced@(n)` XMDual.
+
+### 18. Speculative function application produces Apply, not invisible times
+
+**Decision:** When `MATHPARSER_SPECULATE` is set and an UNKNOWN token `f` is
+followed by a fenced expression `(x)`, Rust produces `f@(x)` (function application)
+rather than Perl's `f * x` (invisible-times multiplication).
+
+In Perl (Parse::RecDescent), the `MaybeFunctions` notation detects the `f(x)` pattern
+but only marks the token with `possibleFunction="yes"` and then deliberately fails the
+production, falling back to invisible-times. This was a limitation of Parse::RecDescent's
+backtracking parser — the grammar couldn't simultaneously produce function application
+and record the speculation.
+
+In Rust (Marpa), the grammar directly produces the semantically correct
+`Apply(f, args)` parse. The invisible MULOP token was a workaround for
+Parse::RecDescent, not a semantically meaningful choice. `f@(x)` is the better
+interpretation from first principles: when a user writes `f(x)` with speculation
+enabled, they likely mean function application.
+
+**Affected tests:** `parser_speculate`, `spacing` (integral expressions).
+
+---
+
+### 19. Perl `local` Mechanism — `latexml_core::common::local_assignments`
+
+Perl's `local` keyword provides dynamic scoping: a variable is temporarily overridden
+within a block and automatically restored when the block exits. LaTeXML uses `local`
+extensively for context-dependent state (e.g., `local $LaTeXML::SPACE`, `local @LaTeXML::LIST`,
+`local $LaTeXML::CURRENT_TOKEN`).
+
+**Rust implementation:** `latexml_core::common::local_assignments` provides a thread-local
+stack-based mechanism for global state that needs dynamic scoping. Each "localized" field
+uses a `Vec<T>` as a stack: `push` to shadow, `pop` to restore.
+
+**When to use `local_assignments`:**
+- For GLOBAL state that Perl declares with `local $LaTeXML::VARIABLE`
+- When the variable is accessed across multiple function calls (not just one recursion chain)
+- Examples: `$LaTeXML::CURRENT_TOKEN`, `@LaTeXML::LIST`, `$LaTeXML::ALIGN_STATE`
+
+**When to use struct field save/restore instead:**
+- For state passed through a single recursion chain (e.g., `LstContext.space_token`)
+- When the value is part of a mutable struct passed by reference
+- The save-on-entry / restore-on-exit pattern is equivalent to Perl's `local` in this case:
+  ```rust
+  let saved = ctx.field;
+  ctx.field = new_value;
+  recursive_call(ctx);
+  ctx.field = saved;
+  ```
+
+**Adding a new localized field:**
+1. Add the field to `Localized` struct in `local_assignments.rs`
+2. Add `set_*` / `get_*` / `expire_*` functions following existing patterns
+3. Call `set_*` at scope entry, `expire_*` at scope exit
+4. Ideally, use RAII guards (Drop trait) for automatic cleanup — TODO improvement

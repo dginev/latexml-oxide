@@ -57,21 +57,21 @@
         </Math>
       </equation>
       <equation xml:id="S1.Ex3">
-        <Math mode="display" tex="abc/de" text="(a * b * c) / (d * e)" xml:id="S1.Ex3.m1">
+        <Math mode="display" tex="abc/de" text="((a * b * c) / d) * e" xml:id="S1.Ex3.m1">
           <XMath>
             <XMApp>
-              <XMTok meaning="divide" role="MULOP">/</XMTok>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="ID">a</XMTok>
-                <XMTok font="italic" role="ID">b</XMTok>
-                <XMTok font="italic" role="ID">c</XMTok>
-              </XMApp>
-              <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="ID">a</XMTok>
+                  <XMTok font="italic" role="ID">b</XMTok>
+                  <XMTok font="italic" role="ID">c</XMTok>
+                </XMApp>
                 <XMTok font="italic" role="ID">d</XMTok>
-                <XMTok font="italic" role="ID">e</XMTok>
               </XMApp>
+              <XMTok font="italic" role="ID">e</XMTok>
             </XMApp>
           </XMath>
         </Math>
