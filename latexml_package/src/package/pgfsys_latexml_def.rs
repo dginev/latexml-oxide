@@ -260,6 +260,7 @@ LoadDefinitions!({
   DefMacro!("\\pgfsys@beginpicture", "");
   DefMacro!("\\pgfsys@endpicture", "");
 
+
   // Perl L197-210: \pgfsys@hbox — inserts a box in SVG context
   DefConstructor!("\\pgfsys@hbox{Number}",
     sub[document, _args, props] {

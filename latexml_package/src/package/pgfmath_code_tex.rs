@@ -81,15 +81,27 @@ fn pgfmath_factorial(n: i64) -> f64 {
   }
 }
 
-/// Parse a pgfNumber argument: expand, convert to f64
+/// Parse a pgfNumber argument: expand macros, then convert to f64
+/// Perl: pgfNumber parameter type reads and evaluates the number
 fn parse_pgf_number(arg: &Tokens) -> f64 {
+  // First try direct string (avoids expansion overhead for literal numbers)
   let s = arg.to_string();
   let s = s.trim();
-  // Drop leading double negation
   let s = if s.starts_with("--") { &s[2..] } else { s };
-  // "." is a valid number meaning 0
   if s == "." { return 0.0; }
-  s.parse::<f64>().unwrap_or(0.0)
+  if let Ok(v) = s.parse::<f64>() {
+    return v;
+  }
+  // If direct parse fails (e.g. unexpanded macro), expand and retry
+  if let Ok(expanded) = gullet::do_expand(arg.clone()) {
+    let s = expanded.to_string();
+    let s = s.trim();
+    let s = if s.starts_with("--") { &s[2..] } else { s };
+    if s == "." { return 0.0; }
+    s.parse::<f64>().unwrap_or(0.0)
+  } else {
+    0.0
+  }
 }
 
 // ==================== Simple Number Check ====================
@@ -1111,4 +1123,8 @@ LoadDefinitions!({
 
   // Perl L425: save original \pgfmathparse
   Let!("\\@orig@pgfmathparse", "\\pgfmathparse");
+
+  // Override \pgfmathsincos to use our native sin/cos (for direct calls)
+  DefMacro!("\\pgfmathsincos{}",
+    "\\pgfmathparse{sin(#1)}\\let\\pgfmathresulty\\pgfmathresult\\pgfmathparse{cos(#1)}\\let\\pgfmathresultx\\pgfmathresult");
 });
