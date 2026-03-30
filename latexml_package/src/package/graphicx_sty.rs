@@ -83,7 +83,8 @@ pub fn image_candidates(path: &str) -> String {
 fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   use std::path::{Path, PathBuf};
 
-  let dpi = state::lookup_int("DPI").max(72) as f64;
+  let dpi_val = state::lookup_int("DPI");
+  let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 }; // Perl: our $DPI = 100
   let candidates = whatsit.get_property("candidates")
     .map(|c| c.to_string()).unwrap_or_default();
   let options = whatsit.get_property("options")
@@ -193,11 +194,11 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   let height_pt = h * 72.27 / dpi;
 
   // Perl: Dimension($w * 72.27 / $dpi . 'pt') — parses via TeX fixed-point arithmetic
-  let w_dim = Dimension::from_str(&format!("{width_pt}pt")).unwrap_or(Dimension::new(0));
-  let h_dim = Dimension::from_str(&format!("{height_pt}pt")).unwrap_or(Dimension::new(0));
+  let w_dim = Dimension::from_str(&format!("{width_pt}pt")).unwrap_or_default();
+  let h_dim = Dimension::from_str(&format!("{height_pt}pt")).unwrap_or_default();
   whatsit.set_property("cached_width", Stored::Dimension(w_dim));
   whatsit.set_property("cached_height", Stored::Dimension(h_dim));
-  whatsit.set_property("cached_depth", Stored::Dimension(Dimension::new(0)));
+  whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
 }
 
 /// Read image dimensions (width, height) in pixels from a file.
