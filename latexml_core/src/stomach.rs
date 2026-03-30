@@ -708,7 +708,8 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
     // TODO: This is silly, switch to an owned input_token (it is Copy as of recently).
     let token = maybe_token.take().unwrap().into_owned();
     // info!(target:"invoke_token", "{:?}", token);
-    local_current_token(token);
+    // RAII guard: auto-pops current_token on scope exit (even on early return/panic)
+    let _token_guard = local_current_token_guard(token);
     {
       stomach_mut!().token_stack.push(token);
     }
@@ -776,7 +777,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
         {
           stomach_mut!().token_stack.pop();
         }
-        expire_current_token();
+        drop(_token_guard); // expire current token via RAII
         continue;
       },
       Some(Stored::Conditional(meaning)) => {
@@ -787,7 +788,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
         {
           stomach_mut!().token_stack.pop();
         }
-        expire_current_token();
+        drop(_token_guard); // expire current token via RAII
         continue;
       },
       Some(Stored::Constructor(meaning)) => {
@@ -825,7 +826,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
           s!("Unexpected object in Stomach: {:?}", meaning));
       },
     }
-    expire_current_token();
+    // _token_guard drops here, auto-expiring current token
     break;
   }
   stomach_mut!().token_stack.pop();
