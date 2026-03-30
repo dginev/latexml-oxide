@@ -4,8 +4,16 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: pgf.sty.ltxml (54 lines)
   DefMacro!("\\pgfsysdriver", "pgfsys-latexml.def");
-  InputDefinitions!("pgf", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // Pre-announce the driver binding so find_file discovers it.
+  // Perl's FindFile finds pgfsys-latexml.def.ltxml on disk; in Rust, the binding
+  // exists only in the dispatcher, so we flag it for find_file.
+  state::assign_value("pgfsys-latexml.def_binding_available", true, Some(Scope::Global));
+  // IMPORTANT: Let pgfutil@IfFileExists BEFORE loading raw pgf.
+  // Raw TeX pgfutil-common.tex defines \pgfutil@IfFileExists using \openin (disk only).
+  // Perl overrides it with \IfFileExists which uses FindFile (checks bindings too).
+  // We must do the same before pgfsys.code.tex tries to find the driver file.
   Let!("\\pgfutil@IfFileExists", "\\IfFileExists");
+  InputDefinitions!("pgf", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Perl L35-38: pgfsetcolor integration
   Let!("\\pgfsetcolor@orig", "\\pgfsetcolor");

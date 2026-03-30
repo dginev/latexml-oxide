@@ -35,19 +35,32 @@ LoadDefinitions!({
     let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
-    if let Some(path) = find_file(&filename, Some(
-      FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()})) {
+    // Perl: NOT noltxml! \openin is often used to check file existence,
+    // and we SHOULD find .ltxml (binding) versions too.
+    if let Some(path) = find_file(&filename, None) {
       let content_str = LookupString!(&s!("{}_contents",path));
       let content = if content_str.is_empty() {
         None
       } else {
         Some(content_str)
       };
-      let mouth = Mouth::create(&path, MouthOptions {
+      // Try to create a Mouth for the file. If it fails (e.g., binding-only
+      // file with no disk counterpart), create an empty Mouth so \ifeof
+      // returns false (file exists but has no content to read).
+      match Mouth::create(&path, MouthOptions {
         content,
         .. MouthOptions::default()
-      })?;
-      AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
+      }) {
+        Ok(mouth) => {
+          AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
+        }
+        Err(_) => {
+          // File was found by find_file (possibly as a binding) but
+          // doesn't exist on disk. Create an empty mouth so \ifeof=false.
+          let empty_mouth = Mouth::create("literal:", MouthOptions::default())?;
+          AssignValue!(&s!("input_file:{}", port), empty_mouth, Some(Scope::Global));
+        }
+      }
     }
   });
   DefPrimitive!("\\closein Number", sub[(port)] {

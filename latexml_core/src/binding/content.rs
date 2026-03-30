@@ -1062,20 +1062,14 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // let _nopaths = lookup_bool("REMOTE_REQUEST");
     // let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
 
-    // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
-    // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
-    // if !options.forbid_ltxml {
-    //   if let Some(path) = pathname::find(
-    //     &s!("{}.ltxml", file),
-    //     PathnameFindOptions {
-    //       paths: Some(ltxml_paths),
-    //       installation_subdir: Some(String::from("Package")),
-    //       ..PathnameFindOptions::default()
-    //     },
-    //   ) {
-    //     return Some(path);
-    //   }
-    // }
+    // Rust equivalent of Perl's ".ltxml" check: if the binding dispatcher
+    // has an entry for this file, consider it "found". This is how Perl's
+    // FindFile discovers pgfsys-latexml.def.ltxml etc.
+    // We check the `{file}_binding_available` flag, which binding packages
+    // can set to pre-announce their availability to find_file.
+    if !options.forbid_ltxml && lookup_bool(&s!("{file}_binding_available")) {
+      return Some(file.to_string());
+    }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)
     if !options.notex {
       if let Some(path) = pathname::find(file, PathnameFindOptions {
