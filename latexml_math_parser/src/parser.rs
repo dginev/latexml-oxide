@@ -882,15 +882,12 @@ impl MathParser {
         },
       }
     }
-    if ok_trees + pruned_trees > 100 {
-      // let warning1 = format!(
-      //   "WARNING! too many marpa trees: {:?}, accepted as semantic trees: {:?}",
-      //   ok_trees + pruned_trees,
-      //   ok_trees
-      // );
-      // let warning2 = format!("         on input: {:?}", input);
-      // eprintln!("\n{}", Yellow.bold().paint(warning1));
-      // eprintln!("{}\n", Yellow.paint(warning2));
+    if ok_trees + pruned_trees > 10 {
+      eprintln!(
+        "MATH_PARSE_STATS: {} grammar_trees ({} semantic, {} pruned) in {:?} | input: {:?}",
+        ok_trees + pruned_trees, ok_trees, pruned_trees, start.elapsed(),
+        input.trim()
+      );
     }
 
     match parses.len() {

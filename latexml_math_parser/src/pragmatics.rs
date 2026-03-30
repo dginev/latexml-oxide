@@ -43,6 +43,11 @@ pub enum ValidationPragmatics {
   /// not `∫(F)×Gdx`. Perl's moreOpArgFactors absorbs MulOp chains.
   /// Rejects trees where mulop(bigop_app(narrow), rhs) when rhs is a simple factor.
   BigopPreferWiderAbsorption,
+  /// Prefer binary ADDOP over unary when it follows a complete term.
+  /// In `-12x^2 - 4xy + 2y`, the interior `-` and `+` should be binary operators,
+  /// not unary prefix applied to the following term. Rejects parses where
+  /// prefix_apply(addop, rhs) appears as a non-initial child of an additive chain.
+  PreferBinaryAddop,
 }
 
 impl ValidationPragmatics {
@@ -81,6 +86,7 @@ impl ValidationPragmatics {
       ConsistentCaseFlat,
       ConsistentCaseFlatUnstyled,
       MaximizeScriptAttachment,
+      PreferBinaryAddop,
     ]
   }
 
@@ -110,6 +116,7 @@ impl ValidationPragmatics {
       NoBilateralAbsent => pragma_no_bilateral_absent(tree),
       FunctionsPreferWiderAbsorption => pragma_functions_prefer_wider_absorption(tree),
       BigopPreferWiderAbsorption => pragma_bigop_prefer_wider_absorption(tree),
+      PreferBinaryAddop => pragma_prefer_binary_addop(tree),
       _ => Ok(()),
     }
   }
@@ -710,6 +717,48 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
     }
   }
   Ok(())
+}
+
+/// Prefer binary ADDOP interpretation over unary prefix when the ADDOP
+/// is between terms in an additive chain. Rejects parses where a unary prefix
+/// (like `-x`) appears as a non-first argument to an infix ADDOP application.
+/// For `a - b + c`, this rejects `a + (prefix(-,b+c))` in favor of `(a-b)+c`.
+fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Check: infix ADDOP application where one argument is itself a prefix ADDOP
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_addop = match **op {
+      XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
+      XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
+      _ => false,
+    };
+    if is_addop {
+      // Check arguments: if any non-first argument is a unary prefix ADDOP application,
+      // this parse used unary where binary was more appropriate.
+      let trees = args.trees();
+      for (i, arg) in trees.iter().enumerate() {
+        if i == 0 { continue; } // first arg can legitimately start with unary
+        if is_unary_addop_prefix(arg) {
+          return Err("prefer_binary_addop: non-initial argument is unary ADDOP prefix".into());
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Check if a tree is a unary ADDOP prefix application (like -x or +x).
+fn is_unary_addop_prefix(tree: &XM) -> bool {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_addop = match **op {
+      XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
+      XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
+      _ => false,
+    };
+    if is_addop && args.trees().len() == 1 {
+      return true; // unary prefix: addop(x) with single argument
+    }
+  }
+  false
 }
 
 fn pragma_restrict_numeral_fractions(tree: &XM) -> Result<(), Box<dyn Error>> {
