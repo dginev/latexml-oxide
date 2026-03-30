@@ -454,7 +454,13 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] **J. Rewrite system** — rewrite.rs at ~40%. Missing: `regexp`, `action`, `on_match`. ~300 lines.
 - [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
-- [ ] **L. `local` assignments audit + RAII guards** — (1) Audit ALL `local $LaTeXML::*` in Perl sources. Ensure Rust equivalents use `latexml_core::common::local_assignments` pattern (push/pop stack). Currently tracked: CURRENT_TOKEN, LIST, ALIGN_STATE, reading_alignment, build_template, unlocked, if_frames, dual_branch. Need to find any missing ones and add them. (2) Implement RAII guards (Drop trait) for `local_assignments` — replace explicit `set_*/expire_*` pairs with scope guards that auto-restore on drop (see OXIDIZED_DESIGN #19 TODO). This prevents leaked state on early returns or panics.
+- [ ] **L. `local` assignments audit + RAII guards** — RAII guards implemented (session 64: `LocalGuard` with Drop). Audit completed:
+  - ✅ In `local_assignments`: CURRENT_TOKEN (now RAII), ALIGN_STATE, DUAL_BRANCH, READING_ALIGNMENT, BUILD_TEMPLATE, UNLOCKED, IF_FRAMES
+  - ✅ Via state scoping: INTERNAL_PAR (Scope::Local), FONT (state), LOCATOR (gullet)
+  - ✅ Via struct fields: LIST (box_list), listings vars (LstContext)
+  - 🟡 Manual set/reset (could use RAII): ID_SUFFIX (base_xmath.rs), BOX (stomach)
+  - ❌ Not ported: RECORDING_CONSTRUCTION, CONSTRUCTED_NODES, NNODES, TD/TR (document), DUMPING_KEY
+  - Remaining: convert gullet local_current_token to RAII, convert ID_SUFFIX to RAII, port missing vars as needed.
 - [ ] **B. Complete Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual.
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
 - [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
