@@ -1389,9 +1389,17 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
 fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   let (mut body, trailer) = lst_process_block(name.clone(), text);
 
-  // Check for caption
+  // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
+  if let Some(ref n) = name {
+    if !n.is_empty() {
+      state::assign_value("LST@toctitle", Stored::from(n.clone()), None);
+    }
+  }
+
+  // Check for caption/title/toctitle — Perl lines 183-193
   let caption_tokens = lst_get_tokens("caption");
   let title_tokens = lst_get_tokens("title");
+  let toctitle_tokens = lst_get_tokens("toctitle");
   let label_tokens = lst_get_tokens("label");
 
   let mut numbered = false;
@@ -1416,6 +1424,11 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
     has_caption = true;
     let title_inv = invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]);
     body.extend(title_inv);
+  } else if !toctitle_tokens.is_empty() {
+    // Perl line 192-193: toctitle without caption/title
+    has_caption = true;
+    let toctitle_inv = invoke(T_CS!("\\lstlisting@maketoctitle"), vec![toctitle_tokens]);
+    body.extend(toctitle_inv);
   }
 
   if !label_tokens.is_empty() {

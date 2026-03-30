@@ -759,6 +759,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag role="typerefnum">line 9</tag>
           </tags>1;</listingline>
       </listing>
+      <toccaption>any.sty.ltxml</toccaption>
     </float>
   </section>
   <section inlist="toc" xml:id="S10">
@@ -2021,6 +2022,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag role="typerefnum">line 250</tag>
           </tags>\<text class="ltx_lst_keyword ltx_lst_texcs" font="bold">end</text>{<text class="ltx_lst_identifier">document</text>}</listingline>
       </listing>
+      <toccaption>listing.tex</toccaption>
     </float>
     <para xml:id="S10.p1">
       <p>A shorter listing, with colored cs that include the slash</p>
