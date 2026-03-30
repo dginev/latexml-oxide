@@ -1064,10 +1064,29 @@ LoadDefinitions!({
   DefConditional!("\\if@rowcolors");
   RawTeX!("\\@rowcolorstrue");
 
-  DefPrimitive!("\\rowcolors OptionalMatch:* []{Number}{}{}", sub[(_star, _commands, first, oddcolor, evencolor)] {
+  // Perl L723-726: hook xcolor row commands into tabular lifecycle
+  DefMacro!("\\@xcolor@tabular@before", None);
+  DefMacro!("\\@xcolor@row@after", None);
+  {
+    let cs = T_CS!("\\@tabular@row@after");
+    let tokens = Tokens!(T_CS!("\\@xcolor@row@after"));
+    AddToMacro!(cs, tokens);
+  }
+  {
+    let cs = T_CS!("\\@tabular@before");
+    let tokens = Tokens!(T_CS!("\\@xcolor@tabular@before"));
+    AddToMacro!(cs, tokens);
+  }
+
+  DefPrimitive!("\\rowcolors OptionalMatch:* []{Number}{}{}", sub[(_star, commands, first, oddcolor, evencolor)] {
     let first_val = first.value_of();
     let odd_str = do_expand(oddcolor)?.to_string();
     let even_str = do_expand(evencolor)?.to_string();
+    // Perl L731-732: DefMacroI('\@xcolor@row@after', undef, $commands);
+    //               DefMacroI('\@xcolor@tabular@before', undef, $commands);
+    let cmd_toks = Tokens::new(commands.map(|t| t.revert()).unwrap_or_default());
+    def_macro(T_CS!("\\@xcolor@row@after"), None, cmd_toks.clone(), None)?;
+    def_macro(T_CS!("\\@xcolor@tabular@before"), None, cmd_toks, None)?;
     assign_value("tabular_row_color_first", Stored::Number(Number::new(first_val)), None);
     if !odd_str.is_empty() {
       let odd = parse_xcolor(None, &odd_str, None);

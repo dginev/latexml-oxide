@@ -266,43 +266,45 @@ A=100*13 = 1300;</p>
     </tags>
     <title><tag close=" ">9</tag>Colored Tables</title>
     <para xml:id="S9.p1">
-      <tabular vattach="middle">
+      <tabular class="ltx_guessed_headers" vattach="middle">
+        <thead>
+          <tr backgroundcolor="#BFFFBF">
+            <td align="left" border="t" thead="column"><text backgroundcolor="#BFFFBF">test</text></td>
+            <td align="left" border="t" thead="column"><text backgroundcolor="#BFFFBF">row 1</text></td>
+          </tr>
+        </thead>
         <tbody>
-          <tr backgroundcolor="#BFFFBF">
-            <td align="left"><text backgroundcolor="#BFFFBF">test</text></td>
-            <td align="left"><text backgroundcolor="#BFFFBF">row 1</text></td>
+          <tr backgroundcolor="#FFFF80">
+            <td align="left" border="t"><text backgroundcolor="#FFFF80">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#FFFF80">row 2</text></td>
+          </tr>
+          <tr backgroundcolor="#BFBFFF">
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">row 3</text></td>
           </tr>
           <tr backgroundcolor="#FFFF80">
-            <td align="left"><text backgroundcolor="#FFFF80">test</text></td>
-            <td align="left"><text backgroundcolor="#FFFF80">row 2</text></td>
-          </tr>
-          <tr backgroundcolor="#BFFFBF">
-            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left"><text backgroundcolor="#BFBFFF">row 3</text></td>
-          </tr>
-          <tr backgroundcolor="#FFFF80">
-            <td align="left"><text backgroundcolor="#FFFF80">test</text></td>
-            <td align="left"><text backgroundcolor="#FFFF80">row 4</text></td>
+            <td align="left" border="t"><text backgroundcolor="#FFFF80">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#FFFF80">row 4</text></td>
           </tr>
           <tr>
-            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left"><text backgroundcolor="#BFBFFF">row 5</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">row 5</text></td>
           </tr>
           <tr>
-            <td align="left"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left"><text backgroundcolor="#BFBFFF">row 6</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">row 6</text></td>
           </tr>
           <tr backgroundcolor="#BFFFBF">
-            <td align="left"><text backgroundcolor="#BFFFBF">test</text></td>
-            <td align="left"><text backgroundcolor="#BFFFBF">row 7</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFFFBF">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFFFBF">row 7</text></td>
           </tr>
           <tr backgroundcolor="#FFFF80">
-            <td align="left"><text backgroundcolor="#FFFF80">test</text></td>
-            <td align="left"><text backgroundcolor="#FFFF80">row 8</text></td>
+            <td align="left" border="t"><text backgroundcolor="#FFFF80">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#FFFF80">row 8</text></td>
           </tr>
           <tr backgroundcolor="#BFFFBF">
-            <td align="left" backgroundcolor="#FFE0E0"><text backgroundcolor="#FFE0E0">test</text></td>
-            <td align="left"><text backgroundcolor="#BFFFBF">row 9</text></td>
+            <td align="left" backgroundcolor="#FFE0E0" border="b t"><text backgroundcolor="#FFE0E0">test</text></td>
+            <td align="left" border="b t"><text backgroundcolor="#BFFFBF">row 9</text></td>
           </tr>
         </tbody>
       </tabular>

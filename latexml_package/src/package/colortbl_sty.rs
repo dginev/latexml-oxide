@@ -93,9 +93,8 @@ LoadDefinitions!({
         let bg_str = arena::with(*bg_sym, |s| s.to_string());
         let current = document.get_node().clone();
         if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
-          if !tr_node.has_attribute("backgroundcolor") {
-            document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
-          }
+          // Always set — explicit \rowcolor overrides cycling from \rowcolors
+          document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
         }
       }
     },
