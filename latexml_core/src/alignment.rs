@@ -365,6 +365,10 @@ impl Alignment {
     if pseudorow {
       self.current_row_mut().unwrap().set_pseudo()
     } else {
+      // Store row number before digest — row hooks may need it (e.g. \rowcolors)
+      // and cannot re-borrow the alignment which is already mutably borrowed.
+      let row_num = self.current_row_number();
+      assign_value("alignmentRowNumber", row_num as i32, None);
       let row_before = stomach::digest(T_CS!("\\lx@alignment@row@before"))?;
       push_box_list(row_before);
     }

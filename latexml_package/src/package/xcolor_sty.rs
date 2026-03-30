@@ -1083,6 +1083,63 @@ LoadDefinitions!({
   DefMacro!("\\showrowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorstrue}");
   DefMacro!("\\hiderowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorsfalse}");
 
+  // Perl xcolor L751: AddToMacro('\@tabular@row@before', '\@tabular@row@before@xcolor');
+  RawTeX!(r"\expandafter\def\expandafter\@tabular@row@before\expandafter{\@tabular@row@before\@tabular@row@before@xcolor}");
+
+  // Perl xcolor L757-778: \@tabular@row@before@xcolor — handles \rowcolors cycling
+  // During digestion: checks \if@rowcolors, computes alternating color from row number
+  // During absorption: sets backgroundcolor attribute on ancestor <tr>
+  DefConstructor!("\\lx@tabular@row@before@xcolor",
+    sub[document, _args, props] {
+      if let Some(Stored::String(bg_sym)) = props.get("background") {
+        let bg_str = arena::with(*bg_sym, |s| s.to_string());
+        if !bg_str.is_empty() {
+          let current = document.get_node().clone();
+          if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
+            if !tr_node.has_attribute("backgroundcolor") {
+              document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
+            }
+          }
+        }
+      }
+    },
+    after_digest => sub[whatsit] {
+      if latexml_core::binding::content::if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
+        // Read row number from state (set by start_row before digest) instead of
+        // borrowing the alignment, which is already mutably borrowed during start_row.
+        let n = state::lookup_value("alignmentRowNumber")
+          .and_then(|v| match v {
+            Stored::Int(i) => Some(i as usize),
+            Stored::Number(num) => Some(num.value_of() as usize),
+            _ => None,
+          })
+          .unwrap_or(0);
+        let first = match state::lookup_value("tabular_row_color_first") {
+          Some(Stored::Number(num)) => num.value_of() as usize,
+          _ => 1,
+        };
+        let odd = state::lookup_value("tabular_row_color_odd");
+        let even = state::lookup_value("tabular_row_color_even");
+        if n >= first {
+          // Perl: $n % 2 ? $odd : $even — Perl row numbers are 1-based
+          // Row 1 is odd, row 2 is even, etc.
+          let bg_stored = if n % 2 == 1 { &odd } else { &even };
+          if let Some(Stored::String(sym)) = bg_stored {
+            let color_str = arena::with(*sym, |s| s.to_string());
+            if let Some(c) = latexml_core::common::color::Color::from_stored(&color_str) {
+              merge_font(fontmap!(bg => c));
+              let bg_hex = c.to_attribute();
+              whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+            }
+          }
+        }
+      }
+      Ok(Vec::new())
+    },
+    reversion => "",
+    properties => { Ok(stored_map!("alignmentSkippable" => true)) });
+  RawTeX!(r"\let\@tabular@row@before@xcolor\lx@tabular@row@before@xcolor");
+
   // Perl xcolor L744-748: \rownum returns current row number from alignment
   def_macro(
     T_CS!("\\rownum"),
