@@ -186,7 +186,7 @@ fn process_xmlfile<'a>(xml_path: &'a str, _name: &'a str) -> Vec<String> {
     Ok(contents) => {
       let mut lines: Vec<String> = contents.split('\n').map(ToString::to_string).collect();
       // Remove trailing empty line from final newline
-      if lines.last().map_or(false, |l| l.is_empty()) {
+      if lines.last().is_some_and(|l| l.is_empty()) {
         lines.pop();
       }
       lines
@@ -210,7 +210,7 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
   }
   let mut lines: Vec<String> = doc_str.split('\n').map(ToString::to_string).collect();
   // Remove trailing empty line from final newline
-  if lines.last().map_or(false, |l| l.is_empty()) {
+  if lines.last().is_some_and(|l| l.is_empty()) {
     lines.pop();
   }
   lines

@@ -512,7 +512,7 @@ impl BoxOps for Alignment {
       for before in row.before.iter() {
         document.absorb(before, None)?;
       }
-      for (_col_idx, cell) in row.get_columns_mut().iter_mut().enumerate() {
+      for cell in row.get_columns_mut().iter_mut() {
         if cell.skipped {
           continue;
         }

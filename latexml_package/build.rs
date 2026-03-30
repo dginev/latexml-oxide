@@ -28,7 +28,7 @@ fn main() {
   for dump_name in &["latex_dump.rs", "plain_dump.rs"] {
     let dump_path = engine_dir.join(dump_name);
     if !dump_path.exists() {
-      std::fs::write(&dump_path, STUB).expect(&format!("Failed to write {dump_name} stub"));
+      std::fs::write(&dump_path, STUB).unwrap_or_else(|_| panic!("Failed to write {dump_name} stub"));
     }
     println!("cargo:rerun-if-changed=src/engine/{dump_name}");
   }

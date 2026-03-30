@@ -1822,7 +1822,7 @@ LoadDefinitions!({
           .map(|a| match a {
             ArgWrap::None => None,
             ArgWrap::Tokens(ref t) => Some(Cow::Borrowed(t)),
-            ArgWrap::Token(ref t) => Some(Cow::Owned(Tokens::new(vec![t.clone()]))),
+            ArgWrap::Token(ref t) => Some(Cow::Owned(Tokens::new(vec![*t]))),
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();

@@ -464,7 +464,7 @@ LoadDefinitions!({
             sid
           };
           if !section_id.is_empty() {
-            Some(Scope::Named(arena::pin(&format!("id:{section_id}"))))
+            Some(Scope::Named(arena::pin(format!("id:{section_id}"))))
           } else { None }
         } else { None };
         let mut attrs = FxHashMap::default();

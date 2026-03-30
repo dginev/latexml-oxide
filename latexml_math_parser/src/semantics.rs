@@ -3340,12 +3340,11 @@ fn qm_fenced(
       for item in stuff.iter_mut() {
         match item {
           XM::Token(props, _) | XM::Apply(_, _, props, _)
-          | XM::Dual(_, _, props, _) | XM::Wrap(_, props, _) => {
-            if props.xmkey.is_none() && props.id.is_none() {
+          | XM::Dual(_, _, props, _) | XM::Wrap(_, props, _)
+            if props.xmkey.is_none() && props.id.is_none() => {
               props.xmkey = Some(key.clone());
               break;
-            }
-          },
+            },
           _ => {},
         }
       }
