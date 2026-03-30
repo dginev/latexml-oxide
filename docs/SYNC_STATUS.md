@@ -444,7 +444,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Heavy package bindings (distant future)
 
-- [ ] physics.sty (800 lines, IN PROGRESS session 67: I_dual infrastructure + bracing/operators/bra-ket/diff/eval/expval, 7112→6085 diffs, 437 meaning attrs vs Perl 508), siunitx.sty (2000 lines), xy.sty (1000 lines)
+- [ ] physics.sty (800 lines, IN PROGRESS session 67: I_dual infra + bracing/operators/bra-ket/diff/eval/expval/matrices/Re-Im/qq, 7112→5016 diffs 29.5% reduction, 519 meaning attrs vs Perl 508, 5 unparsed vs Perl 1), siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
 - [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
