@@ -413,11 +413,14 @@ fn is_user_function(name: &str) -> bool {
 struct PgfMathParser<'a> {
   input: &'a [u8],
   pos: usize,
+  /// Set to true when the parsed expression contains dimension units (pt, cm, etc.)
+  /// Used by tikz's \tikz@checkunit via \ifpgfmathunitsdeclared
+  units_declared: bool,
 }
 
 impl<'a> PgfMathParser<'a> {
   fn new(input: &'a str) -> Self {
-    Self { input: input.as_bytes(), pos: 0 }
+    Self { input: input.as_bytes(), pos: 0, units_declared: false }
   }
 
   /// Skip whitespace and braces (Perl: <skip:'[\s\{\}]*'>)
@@ -625,6 +628,7 @@ impl<'a> PgfMathParser<'a> {
       self.skip();
       // NUMBER UNIT
       if let Some(unit) = self.try_unit() {
+        self.units_declared = true;
         return Some(pgfmath_convert(num, &unit));
       }
       // NUMBER REGISTER
@@ -909,14 +913,15 @@ fn format_parse_result(result: f64, input: &str) -> String {
 
 /// Main pgfmathparse evaluation function
 /// Perl: sub pgfmathparse (L316-394)
-fn pgfmathparse_eval(raw_input: &str) -> String {
+/// Returns (result_string, units_declared)
+fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   // Normalize whitespace
   let input: String = raw_input.split_whitespace().collect::<Vec<_>>().join(" ");
   let input = input.trim();
 
   // 1. Simple number check (Perl L332-345)
   if let Some(result) = try_simple_number(input) {
-    return result;
+    return (result, false);
   }
 
   // 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/
@@ -931,11 +936,16 @@ fn pgfmathparse_eval(raw_input: &str) -> String {
     if !remaining.is_empty() {
       // Partial parse — still return what we got
     }
-    return format_parse_result(result, input);
+    return (format_parse_result(result, input), parser.units_declared);
   }
 
   // 4. Fallback
-  "0.0".to_string()
+  ("0.0".to_string(), false)
+}
+
+/// Convenience wrapper that returns only the result string
+fn pgfmathparse_eval(raw_input: &str) -> String {
+  pgfmathparse_eval_with_units(raw_input).0
 }
 
 // ==================== Macro Definitions ====================
@@ -1100,8 +1110,15 @@ LoadDefinitions!({
       Err(_) => Tokens::default(),
     };
     let input = expanded.to_string();
-    let result = pgfmathparse_eval(&input);
-    pgfmath_result_tokens_str(&result)
+    let (result, units) = pgfmathparse_eval_with_units(&input);
+    let mut toks = pgfmath_result_tokens_str(&result);
+    // Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
+    if units {
+      toks.push(T_CS!("\\pgfmathunitsdeclaredtrue"));
+    } else {
+      toks.push(T_CS!("\\pgfmathunitsdeclaredfalse"));
+    }
+    toks
   });
 
   // Perl L442: Let('\pgfmathparse', '\lx@pgfmath@parse');
