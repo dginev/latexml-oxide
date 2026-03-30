@@ -333,99 +333,152 @@
       </para>
       <para xml:id="S1.SS1.p3">
         <equation xml:id="S1.Ex5">
-          <Math class="ltx_math_unparsed" mode="display" tex="\left.x\right|_{0}^{\infty}\qquad\left.(\right|x|_{0}^{\infty}\qquad\left.[\right|x|_{0}^{\infty}\qquad\left.[\right|\sum_{X=0}^{N}|_{0}^{\infty}\qquad\left.*\right|[\sum_{X=0}^{N}|_{0}^{\infty}" xml:id="S1.Ex5.m1">
+          <Math mode="display" tex="\evaluated{x}_{0}^{\infty}\qquad\evaluated(x|_{0}^{\infty}\qquad\evaluated[x|_{0}^{\infty}\qquad\evaluated[\venti|_{0}^{\infty}\qquad\evaluated*[\venti|_{0}^{\infty}" text="list@(evaluated-at@(x, 0, infinity), evaluated-at@(x, 0, infinity), evaluated-at@(x, 0, infinity), evaluated-at@((sum _ (X = 0)) ^ N, 0, infinity), evaluated-at@((sum _ (X = 0)) ^ N, 0, infinity))" xml:id="S1.Ex5.m1">
             <XMath>
-              <XMTok font="italic" role="UNKNOWN">x</XMTok>
-              <XMApp>
-                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMDual>
                 <XMApp>
-                  <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                  <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                </XMApp>
-                <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
-              </XMApp>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">(</XMTok>
-                <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                  <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                  </XMApp>
-                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S1.Ex5.m1.1"/>
+                  <XMRef idref="S1.Ex5.m1.5"/>
+                  <XMRef idref="S1.Ex5.m1.9"/>
+                  <XMRef idref="S1.Ex5.m1.13"/>
+                  <XMRef idref="S1.Ex5.m1.17"/>
                 </XMApp>
                 <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">[</XMTok>
-                  <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
-                  <XMApp>
-                    <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMDual xml:id="S1.Ex5.m1.1">
                     <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                    </XMApp>
-                    <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
-                  </XMApp>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">[</XMTok>
-                    <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                    <XMApp>
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                      <XMApp>
-                        <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                        <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                        <XMApp>
-                          <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
-                          <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                        </XMApp>
-                      </XMApp>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S1.Ex5.m1.2"/>
+                      <XMRef idref="S1.Ex5.m1.3"/>
+                      <XMRef idref="S1.Ex5.m1.4"/>
                     </XMApp>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                        <XMWrap>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.2">x</XMTok>
+                          <XMTok role="VERTBAR" stretchy="true">|</XMTok>
+                        </XMWrap>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.3">0</XMTok>
                       </XMApp>
-                      <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                      <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID" xml:id="S1.Ex5.m1.4">∞</XMTok>
                     </XMApp>
-                    <XMTok meaning="times" role="MULOP">∗</XMTok>
-                    <XMTok role="VERTBAR" stretchy="true">|</XMTok>
-                    <XMWrap>
-                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex5.m1.5">
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S1.Ex5.m1.6"/>
+                      <XMRef idref="S1.Ex5.m1.7"/>
+                      <XMRef idref="S1.Ex5.m1.8"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                        <XMApp>
-                          <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                          <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                          <XMApp>
-                            <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
-                            <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">(</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.6">x</XMTok>
+                          <XMTok role="VERTBAR" stretchy="true">|</XMTok>
+                        </XMWrap>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.7">0</XMTok>
+                      </XMApp>
+                      <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID" xml:id="S1.Ex5.m1.8">∞</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex5.m1.9">
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S1.Ex5.m1.10"/>
+                      <XMRef idref="S1.Ex5.m1.11"/>
+                      <XMRef idref="S1.Ex5.m1.12"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">[</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex5.m1.10">x</XMTok>
+                          <XMTok role="VERTBAR" stretchy="true">|</XMTok>
+                        </XMWrap>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.11">0</XMTok>
+                      </XMApp>
+                      <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID" xml:id="S1.Ex5.m1.12">∞</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex5.m1.13">
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S1.Ex5.m1.14"/>
+                      <XMRef idref="S1.Ex5.m1.15"/>
+                      <XMRef idref="S1.Ex5.m1.16"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">[</XMTok>
+                          <XMApp xml:id="S1.Ex5.m1.14">
+                            <XMTok role="SUPERSCRIPTOP" scriptpos="mid2"/>
+                            <XMApp>
+                              <XMTok role="SUBSCRIPTOP" scriptpos="mid2"/>
+                              <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                              <XMApp>
+                                <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
+                                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                              </XMApp>
+                            </XMApp>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
                           </XMApp>
-                        </XMApp>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                          <XMTok role="VERTBAR" stretchy="true">|</XMTok>
+                        </XMWrap>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.15">0</XMTok>
                       </XMApp>
+                      <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID" xml:id="S1.Ex5.m1.16">∞</XMTok>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex5.m1.17">
+                    <XMApp>
+                      <XMTok meaning="evaluated-at"/>
+                      <XMRef idref="S1.Ex5.m1.18"/>
+                      <XMRef idref="S1.Ex5.m1.19"/>
+                      <XMRef idref="S1.Ex5.m1.20"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMApp>
-                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMApp>
-                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMApp xml:id="S1.Ex5.m1.18">
+                            <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                            <XMApp>
+                              <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                              <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                              <XMApp>
+                                <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">X</XMTok>
+                                <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                              </XMApp>
+                            </XMApp>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">N</XMTok>
+                          </XMApp>
                           <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                          <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                        </XMApp>
-                        <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                        </XMWrap>
+                        <XMTok fontsize="70%" meaning="0" role="NUMBER" xml:id="S1.Ex5.m1.19">0</XMTok>
                       </XMApp>
-                    </XMWrap>
-                  </XMWrap>
+                      <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID" xml:id="S1.Ex5.m1.20">∞</XMTok>
+                    </XMApp>
+                  </XMDual>
                 </XMWrap>
-              </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>
@@ -3362,152 +3415,312 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex36">
-          <Math class="ltx_math_unparsed" mode="display" tex="\outerproduct{a}{b}\qquad\left\langle A\right\rangle\qquad\left\langle A\right\rangle{\Psi}\qquad\left\langle A\right\rangle{\Psi}\qquad\left\langle\frac{X}{Y}\right\rangle{\Psi}\qquad\left\langle*\right\rangle{\frac{X}{Y}}{X^{Y}}\qquad\left\langle*\right\rangle*{\frac{X}{Y}}{\Psi}" xml:id="S1.Ex36.m1">
+          <Math mode="display" tex="\outerproduct{a}{b}\qquad\expectationvalue{A}\qquad\expectationvalue{A}{\Psi}\qquad\expectationvalue{A}{\Psi}\qquad\expectationvalue{\grande}{\Psi}\qquad\expectationvalue*{\grande}{\tall}\qquad\expectationvalue{\grande}{\Psi}" text="list@(outer-product@(a, b), expectation-value@(A), expectation-value@(A, Psi, Psi), expectation-value@(A, Psi, Psi), expectation-value@(X / Y, Psi, Psi), expectation-value@(X / Y, X ^ Y, X ^ Y), expectation-value@(X / Y, Psi, Psi))" xml:id="S1.Ex36.m1">
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="outer-product"/>
+                  <XMTok meaning="list"/>
                   <XMRef idref="S1.Ex36.m1.1"/>
-                  <XMRef idref="S1.Ex36.m1.2"/>
+                  <XMRef idref="S1.Ex36.m1.4"/>
+                  <XMRef idref="S1.Ex36.m1.6"/>
+                  <XMRef idref="S1.Ex36.m1.10"/>
+                  <XMRef idref="S1.Ex36.m1.14"/>
+                  <XMRef idref="S1.Ex36.m1.18"/>
+                  <XMRef idref="S1.Ex36.m1.23"/>
                 </XMApp>
-                <XMApp>
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMWrap>
-                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.1">a</XMTok>
-                    <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
-                  </XMWrap>
-                  <XMWrap>
-                    <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.2">b</XMTok>
-                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-                  </XMWrap>
-                </XMApp>
+                <XMWrap>
+                  <XMDual xml:id="S1.Ex36.m1.1">
+                    <XMApp>
+                      <XMTok meaning="outer-product"/>
+                      <XMRef idref="S1.Ex36.m1.2"/>
+                      <XMRef idref="S1.Ex36.m1.3"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMWrap>
+                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.2">a</XMTok>
+                        <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                      </XMWrap>
+                      <XMWrap>
+                        <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.3">b</XMTok>
+                        <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex36.m1.4">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex36.m1.5"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.5">A</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex36.m1.6">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex36.m1.8"/>
+                      <XMRef idref="S1.Ex36.m1.7"/>
+                      <XMRef idref="S1.Ex36.m1.9"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.7">Ψ</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.8">A</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.9">Ψ</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex36.m1.10">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex36.m1.12"/>
+                      <XMRef idref="S1.Ex36.m1.11"/>
+                      <XMRef idref="S1.Ex36.m1.13"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.11">Ψ</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex36.m1.12">A</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.13">Ψ</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex36.m1.14">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex36.m1.16"/>
+                      <XMRef idref="S1.Ex36.m1.15"/>
+                      <XMRef idref="S1.Ex36.m1.17"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.15">Ψ</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMApp xml:id="S1.Ex36.m1.16">
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                      </XMApp>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.17">Ψ</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex36.m1.18">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex36.m1.21"/>
+                      <XMRef idref="S1.Ex36.m1.20"/>
+                      <XMRef idref="S1.Ex36.m1.22"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMApp xml:id="S1.Ex36.m1.19">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMApp xml:id="S1.Ex36.m1.20">
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">|</XMTok>
+                          <XMApp xml:id="S1.Ex36.m1.21">
+                            <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          </XMApp>
+                          <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                        </XMWrap>
+                        <XMApp xml:id="S1.Ex36.m1.22">
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex36.m1.23">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex36.m1.25"/>
+                      <XMRef idref="S1.Ex36.m1.24"/>
+                      <XMRef idref="S1.Ex36.m1.26"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.24">Ψ</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMApp xml:id="S1.Ex36.m1.25">
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                      </XMApp>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMTok name="Psi" role="UNKNOWN" xml:id="S1.Ex36.m1.26">Ψ</XMTok>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMWrap>
               </XMDual>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMApp>
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                </XMApp>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMApp>
-                <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-              </XMApp>
-              <XMApp>
-                <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
-              </XMApp>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMTok meaning="times" role="MULOP">∗</XMTok>
-              <XMApp>
-                <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-              </XMApp>
-              <XMTok name="Psi" role="UNKNOWN">Ψ</XMTok>
             </XMath>
           </Math>
         </equation>
         <equation xml:id="S1.Ex37">
-          <Math class="ltx_math_unparsed" mode="display" tex="\left\langle n\middle|A\middle|m\right\rangle\qquad\left\langle n\middle|A\middle|m\right\rangle\qquad\left\langle n\middle|\frac{X}{Y}\middle|m\right\rangle\qquad\left\langle*\middle|n\middle|\frac{X}{Y}\right\rangle{X^{Y}}\qquad\left\langle*\middle|*\middle|n\right\rangle{\frac{X}{Y}}{m}" xml:id="S1.Ex37.m1">
+          <Math mode="display" tex="\matrixelement{n}{A}{m}\qquad\matrixelement{n}{A}{m}\qquad\matrixelement{n}{\grande}{m}\qquad\matrixelement*{n}{\grande}{\tall}\qquad\matrixelement{n}{\grande}{m}" text="list@(expectation-value@(A, n, m), expectation-value@(A, n, m), expectation-value@(X / Y, n, m), expectation-value@(X / Y, n, X ^ Y), expectation-value@(X / Y, n, m))" xml:id="S1.Ex37.m1">
             <XMath>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN">n</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">m</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN">n</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">A</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">m</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok font="italic" role="UNKNOWN">n</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+              <XMDual>
                 <XMApp>
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S1.Ex37.m1.1"/>
+                  <XMRef idref="S1.Ex37.m1.6"/>
+                  <XMRef idref="S1.Ex37.m1.11"/>
+                  <XMRef idref="S1.Ex37.m1.16"/>
+                  <XMRef idref="S1.Ex37.m1.20"/>
                 </XMApp>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">m</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">n</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMApp>
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                </XMApp>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMApp>
-                <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
-              </XMApp>
-              <XMWrap>
-                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
-                <XMTok font="italic" role="UNKNOWN">n</XMTok>
-                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
-              </XMWrap>
-              <XMApp>
-                <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-              </XMApp>
-              <XMTok font="italic" role="UNKNOWN">m</XMTok>
+                <XMWrap>
+                  <XMDual xml:id="S1.Ex37.m1.1">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex37.m1.4"/>
+                      <XMRef idref="S1.Ex37.m1.3"/>
+                      <XMRef idref="S1.Ex37.m1.5"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMApp xml:id="S1.Ex37.m1.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.3">n</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">|</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.4">A</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                        </XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.5">m</XMTok>
+                      </XMApp>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex37.m1.6">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex37.m1.9"/>
+                      <XMRef idref="S1.Ex37.m1.8"/>
+                      <XMRef idref="S1.Ex37.m1.10"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMApp xml:id="S1.Ex37.m1.7">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.8">n</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">|</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.9">A</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                        </XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.10">m</XMTok>
+                      </XMApp>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex37.m1.11">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex37.m1.14"/>
+                      <XMRef idref="S1.Ex37.m1.13"/>
+                      <XMRef idref="S1.Ex37.m1.15"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMApp xml:id="S1.Ex37.m1.12">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.13">n</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">|</XMTok>
+                          <XMApp xml:id="S1.Ex37.m1.14">
+                            <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          </XMApp>
+                          <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                        </XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.15">m</XMTok>
+                      </XMApp>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex37.m1.16">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex37.m1.18"/>
+                      <XMRef idref="S1.Ex37.m1.17"/>
+                      <XMRef idref="S1.Ex37.m1.19"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.17">n</XMTok>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMApp xml:id="S1.Ex37.m1.18">
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                      </XMApp>
+                      <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                      <XMApp xml:id="S1.Ex37.m1.19">
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                        <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                      </XMApp>
+                      <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex37.m1.20">
+                    <XMApp>
+                      <XMTok meaning="expectation-value"/>
+                      <XMRef idref="S1.Ex37.m1.23"/>
+                      <XMRef idref="S1.Ex37.m1.22"/>
+                      <XMRef idref="S1.Ex37.m1.24"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+                      <XMApp xml:id="S1.Ex37.m1.21">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.22">n</XMTok>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">|</XMTok>
+                          <XMApp xml:id="S1.Ex37.m1.23">
+                            <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                          </XMApp>
+                          <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                        </XMWrap>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex37.m1.24">m</XMTok>
+                      </XMApp>
+                      <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>

@@ -259,8 +259,81 @@ LoadDefinitions!({
   DefMacro!("\\norm", "\\lx@physics@fenced{\\norm}{norm}{}{\\|}{\\|}");
   Let!("\\abs", "\\absolutevalue");
 
-  // Perl: \evaluated — fenced with sub/superscript limits
-  DefMacro!("\\evaluated{}", r"\left.#1\right\vert ");
+  // Perl: \evaluated — fenced arg, then read sub/superscript limits
+  DefPrimitive!("\\evaluated", {
+    let (no_stretch, size_tok) = phys_read_size()?;
+    let c = Token::from("|");
+    let (arg, open, close) = phys_read_arg(true, |s| {
+      match s {
+        "(" | "[" => Some("|"),
+        _ => None,
+      }
+    })?;
+    let arg = arg.unwrap_or_default();
+    // Read optional sub/superscript
+    let mut lower: Option<Tokens> = None;
+    let mut upper: Option<Tokens> = None;
+    loop {
+      let next = gullet::read_token()?;
+      if let Some(t) = next {
+        if lower.is_none() && t.get_catcode() == Catcode::SUB {
+          lower = Some(gullet::read_arg(ExpansionLevel::Off)?);
+        } else if upper.is_none() && t.get_catcode() == Catcode::SUPER {
+          upper = Some(gullet::read_arg(ExpansionLevel::Off)?);
+        } else {
+          gullet::unread_one(t);
+          break;
+        }
+      } else { break; }
+    }
+    let a1 = Tokens::new(vec![i_arg("1")]);
+    let mut all_args = vec![arg];
+    let mut content_args = vec![a1.clone()];
+    let mut rev = vec![T_CS!("\\evaluated")];
+    rev.extend(phys_rev_size(no_stretch, &size_tok));
+    rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
+
+    let mut pres_suffix = Vec::new();
+    if let Some(lo) = lower {
+      let a2 = Tokens::new(vec![i_arg("2")]);
+      all_args.push(lo);
+      content_args.push(a2.clone());
+      rev.push(T_SUB!());
+      rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+      pres_suffix.push(T_SUB!());
+      pres_suffix.push(T_BEGIN!());
+      pres_suffix.push(i_arg("2"));
+      pres_suffix.push(T_END!());
+    }
+    if let Some(up) = upper {
+      let an = Tokens::new(vec![i_arg(&(all_args.len() + 1).to_string())]);
+      all_args.push(up);
+      content_args.push(an.clone());
+      rev.push(T_SUPER!());
+      rev.extend(phys_rev_arg(an.clone(), &None, &None).unlist());
+      pres_suffix.push(T_SUPER!());
+      pres_suffix.push(T_BEGIN!());
+      pres_suffix.push(i_arg(&all_args.len().to_string()));
+      pres_suffix.push(T_END!());
+    }
+    let reversion = Tokens::new(rev);
+    let content = i_apply(&[],
+      i_symbol(&[("meaning", Tokenize!("evaluated-at"))], None), content_args);
+    let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!("."));
+    let close_tks = close.map(|_| Tokenize!("|")).unwrap_or(Tokenize!("|"));
+    let mut pres = Vec::new();
+    pres.extend(
+      i_wrap(None, Tokens::new([
+        phys_open(no_stretch, &size_tok, open_tks).unlist(),
+        vec![i_arg("1")],
+        phys_close(no_stretch, &size_tok, close_tks).unlist(),
+      ].concat())).unlist()
+    );
+    pres.extend(pres_suffix);
+    let presentation = Tokens::new(pres);
+    let result = i_dual(&[("reversion", reversion)], content, presentation, all_args)?;
+    gullet::unread(result);
+  });
   Let!("\\eval", "\\evaluated");
 
   // Perl: \order
@@ -959,10 +1032,96 @@ LoadDefinitions!({
     "\\lx@physics@qm@product{\\outerproduct}{outer-product}{\\vert}{\\rangle\\langle}{\\vert}");
 
   // Perl: \expectationvalue — ⟨arg⟩ or ⟨arg2|arg1|arg2⟩
-  DefMacro!("\\expectationvalue{}", r"\left\langle #1\right\rangle ");
+  DefPrimitive!("\\expectationvalue", {
+    let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
+    // ** means stretchy (default), * means no stretch, plain means stretchy
+    let size = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
+      if gullet::read_match(&[&Tokenize!("*")])?.is_some() { true } else { false }
+    } else { true };
+    let no_stretch = !size;
+    let open_tks = phys_open(no_stretch, &None, Tokenize!("\\langle"));
+    let middle_tks = phys_mid(no_stretch, &None, Tokenize!("\\vert"));
+    let close_tks = phys_close(no_stretch, &None, Tokenize!("\\rangle"));
+    let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg1 = phys_read_arg_tex()?;
+    let a1 = Tokens::new(vec![i_arg("1")]);
+
+    if let Some(arg1_tks) = arg1 {
+      // With second arg: ⟨arg1|arg0|arg1⟩
+      let a2 = Tokens::new(vec![i_arg("2")]);
+      let a3 = Tokens::new(vec![i_arg("3")]);
+      let mut rev = vec![T_CS!("\\expectationvalue")];
+      if no_stretch { rev.push(T_OTHER!("*")); }
+      rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
+      rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+      let reversion = Tokens::new(rev);
+      let content = i_apply(&[], cfunc, vec![a1.clone(), a2.clone(), a3.clone()]);
+      let mut pres = Vec::new();
+      pres.extend(open_tks.unlist());
+      pres.push(i_arg("2"));
+      pres.extend(middle_tks.clone().unlist());
+      pres.push(i_arg("1"));
+      pres.extend(middle_tks.unlist());
+      pres.push(i_arg("3"));
+      pres.extend(close_tks.unlist());
+      let presentation = Tokens::new(pres);
+      let result = i_dual(&[("reversion", reversion)], content, presentation,
+        vec![arg0, arg1_tks.clone(), arg1_tks])?;
+      gullet::unread(result);
+    } else {
+      // Simple: ⟨arg0⟩
+      let mut rev = vec![T_CS!("\\expectationvalue")];
+      if no_stretch { rev.push(T_OTHER!("*")); }
+      rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
+      let reversion = Tokens::new(rev);
+      let content = i_apply(&[], cfunc, vec![a1.clone()]);
+      let mut pres = Vec::new();
+      pres.extend(open_tks.unlist());
+      pres.push(i_arg("1"));
+      pres.extend(close_tks.unlist());
+      let presentation = Tokens::new(pres);
+      let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0])?;
+      gullet::unread(result);
+    }
+  });
 
   // Perl: \matrixelement — ⟨arg1|arg2|arg3⟩
-  DefMacro!("\\matrixelement{}{}{}", r"\left\langle #1\middle\vert #2\middle\vert #3\right\rangle ");
+  DefPrimitive!("\\matrixelement", {
+    let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
+    let no_stretch = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
+      if gullet::read_match(&[&Tokenize!("*")])?.is_some() { false } else { true }
+    } else { false };
+    let open_tks = phys_open(!no_stretch, &None, Tokenize!("\\langle"));
+    let middle_tks = phys_mid(!no_stretch, &None, Tokenize!("\\vert"));
+    let close_tks = phys_close(!no_stretch, &None, Tokenize!("\\rangle"));
+    let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg1 = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg2 = gullet::read_arg(ExpansionLevel::Off)?;
+    let a1 = Tokens::new(vec![i_arg("1")]);
+    let a2 = Tokens::new(vec![i_arg("2")]);
+    let a3 = Tokens::new(vec![i_arg("3")]);
+
+    let mut rev = vec![T_CS!("\\matrixelement")];
+    if no_stretch { rev.push(T_OTHER!("*")); }
+    rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
+    rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+    rev.extend(phys_rev_arg(a3.clone(), &None, &None).unlist());
+    let reversion = Tokens::new(rev);
+
+    let content = i_apply(&[], cfunc, vec![a2.clone(), a1.clone(), a3.clone()]);
+    let mut pres = Vec::new();
+    pres.extend(open_tks.unlist());
+    pres.push(i_arg("1"));
+    pres.extend(middle_tks.clone().unlist());
+    pres.push(i_arg("2"));
+    pres.extend(middle_tks.unlist());
+    pres.push(i_arg("3"));
+    pres.extend(close_tks.unlist());
+    let presentation = Tokens::new(pres);
+
+    let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0, arg1, arg2])?;
+    gullet::unread(result);
+  });
 
   Let!("\\braket", "\\innerproduct");
   Let!("\\ip", "\\innerproduct");
