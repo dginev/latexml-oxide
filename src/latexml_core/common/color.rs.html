@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/color.rs`."><title>color.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (fda6d37bb 2026-03-27)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>color.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::fmt;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/color.rs`."><title>color.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>color.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::fmt;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::hash::{Hash, Hasher};
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="doccomment">/// Color in a specific color model, matching Perl's LaTeXML::Common::Color hierarchy.
@@ -167,174 +167,196 @@
 <a href=#167 id=167 data-nosnippet>167</a>  }
 <a href=#168 id=168 data-nosnippet>168</a>
 <a href=#169 id=169 data-nosnippet>169</a>  <span class="doccomment">/// Convert to another model by name. Perl: $self-&gt;convert($tomodel)
-<a href=#170 id=170 data-nosnippet>170</a>  </span><span class="kw">pub fn </span>convert(<span class="kw-2">&amp;</span><span class="self">self</span>, to_model: <span class="kw-2">&amp;</span>str) -&gt; Color {
-<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">match </span>to_model {
-<a href=#172 id=172 data-nosnippet>172</a>      <span class="string">"rgb" </span>=&gt; <span class="self">self</span>.to_rgb(),
-<a href=#173 id=173 data-nosnippet>173</a>      <span class="string">"cmy" </span>=&gt; <span class="self">self</span>.to_cmy(),
-<a href=#174 id=174 data-nosnippet>174</a>      <span class="string">"cmyk" </span>=&gt; <span class="self">self</span>.to_cmyk(),
-<a href=#175 id=175 data-nosnippet>175</a>      <span class="string">"hsb" </span>=&gt; <span class="self">self</span>.to_hsb(),
-<a href=#176 id=176 data-nosnippet>176</a>      <span class="string">"gray" </span>=&gt; <span class="self">self</span>.to_gray(),
-<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">_ </span>=&gt; <span class="kw-2">*</span><span class="self">self</span>,
-<a href=#178 id=178 data-nosnippet>178</a>    }
-<a href=#179 id=179 data-nosnippet>179</a>  }
-<a href=#180 id=180 data-nosnippet>180</a>
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="doccomment">/// Convert to hex attribute string. Perl: $self-&gt;toAttribute() = $self-&gt;rgb-&gt;toHex()
-<a href=#182 id=182 data-nosnippet>182</a>  </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-<a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">let </span>rgb = <span class="self">self</span>.to_rgb();
-<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">if let </span>Color::Rgb(r, g, b) = rgb {
-<a href=#185 id=185 data-nosnippet>185</a>      <span class="macro">format!</span>(
-<a href=#186 id=186 data-nosnippet>186</a>        <span class="string">"#{:02X}{:02X}{:02X}"</span>,
-<a href=#187 id=187 data-nosnippet>187</a>        component_to_u8(r),
-<a href=#188 id=188 data-nosnippet>188</a>        component_to_u8(g),
-<a href=#189 id=189 data-nosnippet>189</a>        component_to_u8(b)
-<a href=#190 id=190 data-nosnippet>190</a>      )
-<a href=#191 id=191 data-nosnippet>191</a>    } <span class="kw">else </span>{
-<a href=#192 id=192 data-nosnippet>192</a>      <span class="macro">unreachable!</span>()
-<a href=#193 id=193 data-nosnippet>193</a>    }
-<a href=#194 id=194 data-nosnippet>194</a>  }
-<a href=#195 id=195 data-nosnippet>195</a>
-<a href=#196 id=196 data-nosnippet>196</a>  <span class="doccomment">/// Complement. Perl: $self-&gt;complement
-<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="kw">pub fn </span>complement(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#199 id=199 data-nosnippet>199</a>      Color::Rgb(r, g, b) =&gt; Color::Rgb(<span class="number">1.0 </span>- r, <span class="number">1.0 </span>- g, <span class="number">1.0 </span>- b),
-<a href=#200 id=200 data-nosnippet>200</a>      Color::Cmy(c, m, y) =&gt; Color::Cmy(<span class="number">1.0 </span>- c, <span class="number">1.0 </span>- m, <span class="number">1.0 </span>- y),
-<a href=#201 id=201 data-nosnippet>201</a>      Color::Cmyk(..) =&gt; <span class="self">self</span>.to_cmy().complement().to_cmyk(),
-<a href=#202 id=202 data-nosnippet>202</a>      Color::Hsb(h, s, b) =&gt; {
-<a href=#203 id=203 data-nosnippet>203</a>        <span class="kw">let </span>hp = <span class="kw">if </span><span class="kw-2">*</span>h &lt; <span class="number">0.5 </span>{ h + <span class="number">0.5 </span>} <span class="kw">else </span>{ h - <span class="number">0.5 </span>};
-<a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">let </span>bp = <span class="number">1.0 </span>- b * (<span class="number">1.0 </span>- s);
-<a href=#205 id=205 data-nosnippet>205</a>        <span class="kw">let </span>sp = <span class="kw">if </span>bp == <span class="number">0.0 </span>{ <span class="number">0.0 </span>} <span class="kw">else </span>{ b * s / bp };
-<a href=#206 id=206 data-nosnippet>206</a>        Color::Hsb(hp, sp, bp)
-<a href=#207 id=207 data-nosnippet>207</a>      },
-<a href=#208 id=208 data-nosnippet>208</a>      Color::Gray(g) =&gt; Color::Gray(<span class="number">1.0 </span>- g),
-<a href=#209 id=209 data-nosnippet>209</a>    }
-<a href=#210 id=210 data-nosnippet>210</a>  }
-<a href=#211 id=211 data-nosnippet>211</a>
-<a href=#212 id=212 data-nosnippet>212</a>  <span class="doccomment">/// Mix self*fraction + other*(1-fraction). Perl: $self-&gt;mix($other, $fraction)
-<a href=#213 id=213 data-nosnippet>213</a>  </span><span class="kw">pub fn </span>mix(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color, fraction: f64) -&gt; Color {
-<a href=#214 id=214 data-nosnippet>214</a>    <span class="kw">let </span>(base, other) = <span class="self">self</span>.align_models(other);
-<a href=#215 id=215 data-nosnippet>215</a>    <span class="comment">// Hsb: mix in rgb space then convert back
-<a href=#216 id=216 data-nosnippet>216</a>    </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="kw-2">&amp;</span>base, Color::Hsb(..)) {
-<a href=#217 id=217 data-nosnippet>217</a>      <span class="kw">return </span>base.to_rgb().mix(<span class="kw-2">&amp;</span>other, fraction).to_hsb();
-<a href=#218 id=218 data-nosnippet>218</a>    }
-<a href=#219 id=219 data-nosnippet>219</a>    <span class="kw">let </span>a = base.components();
-<a href=#220 id=220 data-nosnippet>220</a>    <span class="kw">let </span>b = other.components();
-<a href=#221 id=221 data-nosnippet>221</a>    <span class="kw">let </span>mixed: Vec&lt;f64&gt; = a.iter().zip(b.iter()).map(|(ai, bi)| fraction * ai + (<span class="number">1.0 </span>- fraction) * bi).collect();
-<a href=#222 id=222 data-nosnippet>222</a>    from_model_components(base.model(), <span class="kw-2">&amp;</span>mixed)
-<a href=#223 id=223 data-nosnippet>223</a>  }
-<a href=#224 id=224 data-nosnippet>224</a>
-<a href=#225 id=225 data-nosnippet>225</a>  <span class="doccomment">/// Add component-wise. Perl: $self-&gt;add($other)
-<a href=#226 id=226 data-nosnippet>226</a>  </span><span class="kw">pub fn </span>add(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color) -&gt; Color {
-<a href=#227 id=227 data-nosnippet>227</a>    <span class="kw">let </span>(base, other) = <span class="self">self</span>.align_models(other);
-<a href=#228 id=228 data-nosnippet>228</a>    <span class="kw">let </span>a = base.components();
-<a href=#229 id=229 data-nosnippet>229</a>    <span class="kw">let </span>b = other.components();
-<a href=#230 id=230 data-nosnippet>230</a>    <span class="kw">let </span>added: Vec&lt;f64&gt; = a.iter().zip(b.iter()).map(|(ai, bi)| ai + bi).collect();
-<a href=#231 id=231 data-nosnippet>231</a>    from_model_components(base.model(), <span class="kw-2">&amp;</span>added)
+<a href=#170 id=170 data-nosnippet>170</a>  /// Handles both core models (rgb, cmy, cmyk, hsb, gray) and
+<a href=#171 id=171 data-nosnippet>171</a>  /// extended models (HTML, RGB, Hsb, HSB, Gray, tHsb, wave).
+<a href=#172 id=172 data-nosnippet>172</a>  </span><span class="kw">pub fn </span>convert(<span class="kw-2">&amp;</span><span class="self">self</span>, to_model: <span class="kw-2">&amp;</span>str) -&gt; Color {
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="kw">match </span>to_model {
+<a href=#174 id=174 data-nosnippet>174</a>      <span class="string">"rgb" </span>=&gt; <span class="self">self</span>.to_rgb(),
+<a href=#175 id=175 data-nosnippet>175</a>      <span class="string">"cmy" </span>=&gt; <span class="self">self</span>.to_cmy(),
+<a href=#176 id=176 data-nosnippet>176</a>      <span class="string">"cmyk" </span>=&gt; <span class="self">self</span>.to_cmyk(),
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="string">"hsb" </span>=&gt; <span class="self">self</span>.to_hsb(),
+<a href=#178 id=178 data-nosnippet>178</a>      <span class="string">"gray" </span>=&gt; <span class="self">self</span>.to_gray(),
+<a href=#179 id=179 data-nosnippet>179</a>      <span class="comment">// Extended models map to their core equivalent
+<a href=#180 id=180 data-nosnippet>180</a>      </span><span class="string">"HTML" </span>| <span class="string">"RGB" </span>=&gt; <span class="self">self</span>.to_rgb(),
+<a href=#181 id=181 data-nosnippet>181</a>      <span class="string">"Hsb" </span>| <span class="string">"HSB" </span>| <span class="string">"tHsb" </span>=&gt; <span class="self">self</span>.to_hsb(),
+<a href=#182 id=182 data-nosnippet>182</a>      <span class="string">"Gray" </span>=&gt; <span class="self">self</span>.to_gray(),
+<a href=#183 id=183 data-nosnippet>183</a>      <span class="kw">_ </span>=&gt; <span class="kw-2">*</span><span class="self">self</span>,
+<a href=#184 id=184 data-nosnippet>184</a>    }
+<a href=#185 id=185 data-nosnippet>185</a>  }
+<a href=#186 id=186 data-nosnippet>186</a>
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="doccomment">/// Return components scaled to the target model's native range.
+<a href=#188 id=188 data-nosnippet>188</a>  /// Core models use 0-1 range. Extended models use their native ranges:
+<a href=#189 id=189 data-nosnippet>189</a>  /// HTML/RGB: 0-255, Hsb: h=0-360/s=0-1/b=0-1, HSB: 0-240, Gray: 0-15.
+<a href=#190 id=190 data-nosnippet>190</a>  /// Perl: Color objects in extended models store components in native range.
+<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="kw">pub fn </span>components_for_model(<span class="kw-2">&amp;</span><span class="self">self</span>, model: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;f64&gt; {
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="kw">let </span>core = <span class="self">self</span>.convert(model);
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="kw">let </span>comps = core.components();
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="kw">match </span>model {
+<a href=#195 id=195 data-nosnippet>195</a>      <span class="string">"HTML" </span>| <span class="string">"RGB" </span>=&gt; comps.iter().map(|c| (c * <span class="number">255.0</span>).round()).collect(),
+<a href=#196 id=196 data-nosnippet>196</a>      <span class="string">"Hsb" </span>=&gt; <span class="macro">vec!</span>[(comps[<span class="number">0</span>] * <span class="number">360.0</span>).round(), comps[<span class="number">1</span>], comps[<span class="number">2</span>]],
+<a href=#197 id=197 data-nosnippet>197</a>      <span class="string">"HSB" </span>=&gt; comps.iter().map(|c| (c * <span class="number">240.0</span>).round()).collect(),
+<a href=#198 id=198 data-nosnippet>198</a>      <span class="string">"Gray" </span>=&gt; <span class="macro">vec!</span>[(comps[<span class="number">0</span>] * <span class="number">15.0</span>).round()],
+<a href=#199 id=199 data-nosnippet>199</a>      <span class="kw">_ </span>=&gt; comps,
+<a href=#200 id=200 data-nosnippet>200</a>    }
+<a href=#201 id=201 data-nosnippet>201</a>  }
+<a href=#202 id=202 data-nosnippet>202</a>
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="doccomment">/// Convert to hex attribute string. Perl: $self-&gt;toAttribute() = $self-&gt;rgb-&gt;toHex()
+<a href=#204 id=204 data-nosnippet>204</a>  </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">let </span>rgb = <span class="self">self</span>.to_rgb();
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">if let </span>Color::Rgb(r, g, b) = rgb {
+<a href=#207 id=207 data-nosnippet>207</a>      <span class="macro">format!</span>(
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="string">"#{:02X}{:02X}{:02X}"</span>,
+<a href=#209 id=209 data-nosnippet>209</a>        component_to_u8(r),
+<a href=#210 id=210 data-nosnippet>210</a>        component_to_u8(g),
+<a href=#211 id=211 data-nosnippet>211</a>        component_to_u8(b)
+<a href=#212 id=212 data-nosnippet>212</a>      )
+<a href=#213 id=213 data-nosnippet>213</a>    } <span class="kw">else </span>{
+<a href=#214 id=214 data-nosnippet>214</a>      <span class="macro">unreachable!</span>()
+<a href=#215 id=215 data-nosnippet>215</a>    }
+<a href=#216 id=216 data-nosnippet>216</a>  }
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="doccomment">/// Complement. Perl: $self-&gt;complement
+<a href=#219 id=219 data-nosnippet>219</a>  </span><span class="kw">pub fn </span>complement(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Color {
+<a href=#220 id=220 data-nosnippet>220</a>    <span class="kw">match </span><span class="self">self </span>{
+<a href=#221 id=221 data-nosnippet>221</a>      Color::Rgb(r, g, b) =&gt; Color::Rgb(<span class="number">1.0 </span>- r, <span class="number">1.0 </span>- g, <span class="number">1.0 </span>- b),
+<a href=#222 id=222 data-nosnippet>222</a>      Color::Cmy(c, m, y) =&gt; Color::Cmy(<span class="number">1.0 </span>- c, <span class="number">1.0 </span>- m, <span class="number">1.0 </span>- y),
+<a href=#223 id=223 data-nosnippet>223</a>      Color::Cmyk(..) =&gt; <span class="self">self</span>.to_cmy().complement().to_cmyk(),
+<a href=#224 id=224 data-nosnippet>224</a>      Color::Hsb(h, s, b) =&gt; {
+<a href=#225 id=225 data-nosnippet>225</a>        <span class="kw">let </span>hp = <span class="kw">if </span><span class="kw-2">*</span>h &lt; <span class="number">0.5 </span>{ h + <span class="number">0.5 </span>} <span class="kw">else </span>{ h - <span class="number">0.5 </span>};
+<a href=#226 id=226 data-nosnippet>226</a>        <span class="kw">let </span>bp = <span class="number">1.0 </span>- b * (<span class="number">1.0 </span>- s);
+<a href=#227 id=227 data-nosnippet>227</a>        <span class="kw">let </span>sp = <span class="kw">if </span>bp == <span class="number">0.0 </span>{ <span class="number">0.0 </span>} <span class="kw">else </span>{ b * s / bp };
+<a href=#228 id=228 data-nosnippet>228</a>        Color::Hsb(hp, sp, bp)
+<a href=#229 id=229 data-nosnippet>229</a>      },
+<a href=#230 id=230 data-nosnippet>230</a>      Color::Gray(g) =&gt; Color::Gray(<span class="number">1.0 </span>- g),
+<a href=#231 id=231 data-nosnippet>231</a>    }
 <a href=#232 id=232 data-nosnippet>232</a>  }
 <a href=#233 id=233 data-nosnippet>233</a>
-<a href=#234 id=234 data-nosnippet>234</a>  <span class="doccomment">/// Scale all components. Perl: $self-&gt;scale($m)
-<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="kw">pub fn </span>scale(<span class="kw-2">&amp;</span><span class="self">self</span>, m: f64) -&gt; Color {
-<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">let </span>scaled: Vec&lt;f64&gt; = <span class="self">self</span>.components().iter().map(|c| m * c).collect();
-<a href=#237 id=237 data-nosnippet>237</a>    from_model_components(<span class="self">self</span>.model(), <span class="kw-2">&amp;</span>scaled)
-<a href=#238 id=238 data-nosnippet>238</a>  }
-<a href=#239 id=239 data-nosnippet>239</a>
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="doccomment">/// Multiply by component vector. Perl: $self-&gt;multiply(@m)
-<a href=#241 id=241 data-nosnippet>241</a>  </span><span class="kw">pub fn </span>multiply(<span class="kw-2">&amp;</span><span class="self">self</span>, factors: <span class="kw-2">&amp;</span>[f64]) -&gt; Color {
-<a href=#242 id=242 data-nosnippet>242</a>    <span class="kw">let </span>comps = <span class="self">self</span>.components();
-<a href=#243 id=243 data-nosnippet>243</a>    <span class="kw">let </span>result: Vec&lt;f64&gt; = comps.iter().zip(factors.iter()).map(|(c, f)| c * f).collect();
-<a href=#244 id=244 data-nosnippet>244</a>    from_model_components(<span class="self">self</span>.model(), <span class="kw-2">&amp;</span>result)
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="doccomment">/// Mix self*fraction + other*(1-fraction). Perl: $self-&gt;mix($other, $fraction)
+<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="kw">pub fn </span>mix(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color, fraction: f64) -&gt; Color {
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">let </span>(base, other) = <span class="self">self</span>.align_models(other);
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="comment">// Hsb: mix in rgb space then convert back
+<a href=#238 id=238 data-nosnippet>238</a>    </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="kw-2">&amp;</span>base, Color::Hsb(..)) {
+<a href=#239 id=239 data-nosnippet>239</a>      <span class="kw">return </span>base.to_rgb().mix(<span class="kw-2">&amp;</span>other, fraction).to_hsb();
+<a href=#240 id=240 data-nosnippet>240</a>    }
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="kw">let </span>a = base.components();
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="kw">let </span>b = other.components();
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="kw">let </span>mixed: Vec&lt;f64&gt; = a.iter().zip(b.iter()).map(|(ai, bi)| fraction * ai + (<span class="number">1.0 </span>- fraction) * bi).collect();
+<a href=#244 id=244 data-nosnippet>244</a>    from_model_components(base.model(), <span class="kw-2">&amp;</span>mixed)
 <a href=#245 id=245 data-nosnippet>245</a>  }
 <a href=#246 id=246 data-nosnippet>246</a>
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="doccomment">/// Align two colors to the same model for operations.
-<a href=#248 id=248 data-nosnippet>248</a>  /// Perl: if base is gray, convert to other's model; else convert other to base's model.
-<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="kw">fn </span>align_models(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color) -&gt; (Color, Color) {
-<a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">if </span><span class="self">self</span>.model() == other.model() {
-<a href=#251 id=251 data-nosnippet>251</a>      <span class="kw">return </span>(<span class="kw-2">*</span><span class="self">self</span>, <span class="kw-2">*</span>other);
-<a href=#252 id=252 data-nosnippet>252</a>    }
-<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">if </span><span class="self">self</span>.model() == <span class="string">"gray" </span>{
-<a href=#254 id=254 data-nosnippet>254</a>      (<span class="self">self</span>.convert(other.model()), <span class="kw-2">*</span>other)
-<a href=#255 id=255 data-nosnippet>255</a>    } <span class="kw">else </span>{
-<a href=#256 id=256 data-nosnippet>256</a>      (<span class="kw-2">*</span><span class="self">self</span>, other.convert(<span class="self">self</span>.model()))
-<a href=#257 id=257 data-nosnippet>257</a>    }
-<a href=#258 id=258 data-nosnippet>258</a>  }
-<a href=#259 id=259 data-nosnippet>259</a>
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="doccomment">/// Format the RGB components as a comma-separated string for reversion.
-<a href=#261 id=261 data-nosnippet>261</a>  /// Perl: join(',', $color-&gt;rgb-&gt;components)
-<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="kw">pub fn </span>rgb_components_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">let </span>rgb = <span class="self">self</span>.to_rgb();
-<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">let </span>comps = rgb.components();
-<a href=#265 id=265 data-nosnippet>265</a>    comps.iter().map(|c| format_component(<span class="kw-2">*</span>c)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">","</span>)
-<a href=#266 id=266 data-nosnippet>266</a>  }
-<a href=#267 id=267 data-nosnippet>267</a>
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="doccomment">/// Encode for state storage: "model c1 c2 ..."
-<a href=#269 id=269 data-nosnippet>269</a>  </span><span class="kw">pub fn </span>to_stored(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-<a href=#270 id=270 data-nosnippet>270</a>    <span class="kw">let </span>model = <span class="self">self</span>.model();
-<a href=#271 id=271 data-nosnippet>271</a>    <span class="kw">let </span>comps: Vec&lt;String&gt; = <span class="self">self</span>.components().iter().map(|c| format_component(<span class="kw-2">*</span>c)).collect();
-<a href=#272 id=272 data-nosnippet>272</a>    <span class="macro">format!</span>(<span class="string">"{model} {}"</span>, comps.join(<span class="string">" "</span>))
-<a href=#273 id=273 data-nosnippet>273</a>  }
-<a href=#274 id=274 data-nosnippet>274</a>
-<a href=#275 id=275 data-nosnippet>275</a>  <span class="doccomment">/// Decode from state storage format "model c1 c2 ..."
-<a href=#276 id=276 data-nosnippet>276</a>  </span><span class="kw">pub fn </span>from_stored(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Color&gt; {
-<a href=#277 id=277 data-nosnippet>277</a>    <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = s.split_whitespace().collect();
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="kw">if </span>parts.is_empty() {
-<a href=#279 id=279 data-nosnippet>279</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#280 id=280 data-nosnippet>280</a>    }
-<a href=#281 id=281 data-nosnippet>281</a>    <span class="kw">let </span>model = parts[<span class="number">0</span>];
-<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">let </span>comps: Vec&lt;f64&gt; = parts[<span class="number">1</span>..].iter().filter_map(|p| p.parse::&lt;f64&gt;().ok()).collect();
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="prelude-val">Some</span>(from_model_components(model, <span class="kw-2">&amp;</span>comps))
-<a href=#284 id=284 data-nosnippet>284</a>  }
-<a href=#285 id=285 data-nosnippet>285</a>}
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a><span class="doccomment">/// Convert color component float (0.0-1.0) to u8 (0-255).
-<a href=#288 id=288 data-nosnippet>288</a>/// Matches Perl's `roundto($n * 255, 0)` which adds a small epsilon factor.
-<a href=#289 id=289 data-nosnippet>289</a></span><span class="kw">fn </span>component_to_u8(v: f64) -&gt; u8 {
-<a href=#290 id=290 data-nosnippet>290</a>  <span class="kw">let </span>scaled = v.clamp(<span class="number">0.0</span>, <span class="number">1.0</span>) * <span class="number">255.0 </span>* (<span class="number">1.0 </span>+ <span class="number">100.0 </span>* f64::EPSILON);
-<a href=#291 id=291 data-nosnippet>291</a>  scaled.round() <span class="kw">as </span>u8
-<a href=#292 id=292 data-nosnippet>292</a>}
-<a href=#293 id=293 data-nosnippet>293</a>
-<a href=#294 id=294 data-nosnippet>294</a><span class="doccomment">/// Format a float component like Perl: integers without decimal point.
-<a href=#295 id=295 data-nosnippet>295</a></span><span class="kw">pub fn </span>format_component(v: f64) -&gt; String {
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="kw">if </span>(v - v.round()).abs() &lt; <span class="number">1e-10 </span>{
-<a href=#297 id=297 data-nosnippet>297</a>    <span class="macro">format!</span>(<span class="string">"{}"</span>, v.round() <span class="kw">as </span>i64)
-<a href=#298 id=298 data-nosnippet>298</a>  } <span class="kw">else </span>{
-<a href=#299 id=299 data-nosnippet>299</a>    <span class="macro">format!</span>(<span class="string">"{v}"</span>)
-<a href=#300 id=300 data-nosnippet>300</a>  }
-<a href=#301 id=301 data-nosnippet>301</a>}
-<a href=#302 id=302 data-nosnippet>302</a>
-<a href=#303 id=303 data-nosnippet>303</a><span class="doccomment">/// Perl rgb.pm: Phi function for RGB→HSB conversion
-<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">fn </span>phi(x: f64, y: f64, z: f64, u: f64, v: f64) -&gt; Color {
-<a href=#305 id=305 data-nosnippet>305</a>  Color::Hsb(
-<a href=#306 id=306 data-nosnippet>306</a>    (u * (x - z) + v * (x - y)) / (<span class="number">6.0 </span>* (x - z)),
-<a href=#307 id=307 data-nosnippet>307</a>    (x - z) / x,
-<a href=#308 id=308 data-nosnippet>308</a>    x,
-<a href=#309 id=309 data-nosnippet>309</a>  )
-<a href=#310 id=310 data-nosnippet>310</a>}
-<a href=#311 id=311 data-nosnippet>311</a>
-<a href=#312 id=312 data-nosnippet>312</a><span class="doccomment">/// Parse color components from a spec string (comma or space separated)
-<a href=#313 id=313 data-nosnippet>313</a></span><span class="kw">fn </span>parse_components(spec: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;f64&gt; {
-<a href=#314 id=314 data-nosnippet>314</a>  <span class="kw">if </span>spec.contains(<span class="string">','</span>) {
-<a href=#315 id=315 data-nosnippet>315</a>    spec.split(<span class="string">','</span>).filter_map(|s| s.trim().parse::&lt;f64&gt;().ok()).collect()
-<a href=#316 id=316 data-nosnippet>316</a>  } <span class="kw">else </span>{
-<a href=#317 id=317 data-nosnippet>317</a>    spec.split_whitespace().filter_map(|s| s.parse::&lt;f64&gt;().ok()).collect()
-<a href=#318 id=318 data-nosnippet>318</a>  }
-<a href=#319 id=319 data-nosnippet>319</a>}
-<a href=#320 id=320 data-nosnippet>320</a>
-<a href=#321 id=321 data-nosnippet>321</a><span class="doccomment">/// Create a Color from model name and component values
-<a href=#322 id=322 data-nosnippet>322</a></span><span class="kw">pub fn </span>from_model_components(model: <span class="kw-2">&amp;</span>str, comps: <span class="kw-2">&amp;</span>[f64]) -&gt; Color {
-<a href=#323 id=323 data-nosnippet>323</a>  <span class="kw">match </span>model {
-<a href=#324 id=324 data-nosnippet>324</a>    <span class="string">"rgb" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">3 </span>=&gt; Color::Rgb(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>]),
-<a href=#325 id=325 data-nosnippet>325</a>    <span class="string">"cmy" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">3 </span>=&gt; Color::Cmy(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>]),
-<a href=#326 id=326 data-nosnippet>326</a>    <span class="string">"cmyk" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">4 </span>=&gt; Color::Cmyk(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>], comps[<span class="number">3</span>]),
-<a href=#327 id=327 data-nosnippet>327</a>    <span class="string">"hsb" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">3 </span>=&gt; Color::Hsb(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>]),
-<a href=#328 id=328 data-nosnippet>328</a>    <span class="string">"gray" </span><span class="kw">if </span>!comps.is_empty() =&gt; Color::Gray(comps[<span class="number">0</span>]),
-<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">_ </span>=&gt; BLACK,
-<a href=#330 id=330 data-nosnippet>330</a>  }
-<a href=#331 id=331 data-nosnippet>331</a>}
-<a href=#332 id=332 data-nosnippet>332</a>
-<a href=#333 id=333 data-nosnippet>333</a><span class="doccomment">/// Parse a color from model name + spec string.
-<a href=#334 id=334 data-nosnippet>334</a>/// Perl: Color($model, components)-&gt;toCore
-<a href=#335 id=335 data-nosnippet>335</a></span><span class="kw">pub fn </span>color_from_model_spec(model: <span class="kw-2">&amp;</span>str, spec: <span class="kw-2">&amp;</span>str) -&gt; Color {
-<a href=#336 id=336 data-nosnippet>336</a>  <span class="kw">let </span>spec = spec.trim().trim_matches(|c| c == <span class="string">'{' </span>|| c == <span class="string">'}'</span>).trim();
-<a href=#337 id=337 data-nosnippet>337</a>  <span class="kw">let </span>c = parse_components(spec);
-<a href=#338 id=338 data-nosnippet>338</a>  from_model_components(model, <span class="kw-2">&amp;</span>c)
-<a href=#339 id=339 data-nosnippet>339</a>}
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="doccomment">/// Add component-wise. Perl: $self-&gt;add($other)
+<a href=#248 id=248 data-nosnippet>248</a>  </span><span class="kw">pub fn </span>add(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color) -&gt; Color {
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="kw">let </span>(base, other) = <span class="self">self</span>.align_models(other);
+<a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">let </span>a = base.components();
+<a href=#251 id=251 data-nosnippet>251</a>    <span class="kw">let </span>b = other.components();
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="kw">let </span>added: Vec&lt;f64&gt; = a.iter().zip(b.iter()).map(|(ai, bi)| ai + bi).collect();
+<a href=#253 id=253 data-nosnippet>253</a>    from_model_components(base.model(), <span class="kw-2">&amp;</span>added)
+<a href=#254 id=254 data-nosnippet>254</a>  }
+<a href=#255 id=255 data-nosnippet>255</a>
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="doccomment">/// Scale all components. Perl: $self-&gt;scale($m)
+<a href=#257 id=257 data-nosnippet>257</a>  </span><span class="kw">pub fn </span>scale(<span class="kw-2">&amp;</span><span class="self">self</span>, m: f64) -&gt; Color {
+<a href=#258 id=258 data-nosnippet>258</a>    <span class="kw">let </span>scaled: Vec&lt;f64&gt; = <span class="self">self</span>.components().iter().map(|c| m * c).collect();
+<a href=#259 id=259 data-nosnippet>259</a>    from_model_components(<span class="self">self</span>.model(), <span class="kw-2">&amp;</span>scaled)
+<a href=#260 id=260 data-nosnippet>260</a>  }
+<a href=#261 id=261 data-nosnippet>261</a>
+<a href=#262 id=262 data-nosnippet>262</a>  <span class="doccomment">/// Multiply by component vector. Perl: $self-&gt;multiply(@m)
+<a href=#263 id=263 data-nosnippet>263</a>  </span><span class="kw">pub fn </span>multiply(<span class="kw-2">&amp;</span><span class="self">self</span>, factors: <span class="kw-2">&amp;</span>[f64]) -&gt; Color {
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">let </span>comps = <span class="self">self</span>.components();
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">let </span>result: Vec&lt;f64&gt; = comps.iter().zip(factors.iter()).map(|(c, f)| c * f).collect();
+<a href=#266 id=266 data-nosnippet>266</a>    from_model_components(<span class="self">self</span>.model(), <span class="kw-2">&amp;</span>result)
+<a href=#267 id=267 data-nosnippet>267</a>  }
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="doccomment">/// Align two colors to the same model for operations.
+<a href=#270 id=270 data-nosnippet>270</a>  /// Perl: if base is gray, convert to other's model; else convert other to base's model.
+<a href=#271 id=271 data-nosnippet>271</a>  </span><span class="kw">fn </span>align_models(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Color) -&gt; (Color, Color) {
+<a href=#272 id=272 data-nosnippet>272</a>    <span class="kw">if </span><span class="self">self</span>.model() == other.model() {
+<a href=#273 id=273 data-nosnippet>273</a>      <span class="kw">return </span>(<span class="kw-2">*</span><span class="self">self</span>, <span class="kw-2">*</span>other);
+<a href=#274 id=274 data-nosnippet>274</a>    }
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="kw">if </span><span class="self">self</span>.model() == <span class="string">"gray" </span>{
+<a href=#276 id=276 data-nosnippet>276</a>      (<span class="self">self</span>.convert(other.model()), <span class="kw-2">*</span>other)
+<a href=#277 id=277 data-nosnippet>277</a>    } <span class="kw">else </span>{
+<a href=#278 id=278 data-nosnippet>278</a>      (<span class="kw-2">*</span><span class="self">self</span>, other.convert(<span class="self">self</span>.model()))
+<a href=#279 id=279 data-nosnippet>279</a>    }
+<a href=#280 id=280 data-nosnippet>280</a>  }
+<a href=#281 id=281 data-nosnippet>281</a>
+<a href=#282 id=282 data-nosnippet>282</a>  <span class="doccomment">/// Format the RGB components as a comma-separated string for reversion.
+<a href=#283 id=283 data-nosnippet>283</a>  /// Perl: join(',', $color-&gt;rgb-&gt;components)
+<a href=#284 id=284 data-nosnippet>284</a>  </span><span class="kw">pub fn </span>rgb_components_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="kw">let </span>rgb = <span class="self">self</span>.to_rgb();
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">let </span>comps = rgb.components();
+<a href=#287 id=287 data-nosnippet>287</a>    comps.iter().map(|c| format_component(<span class="kw-2">*</span>c)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">","</span>)
+<a href=#288 id=288 data-nosnippet>288</a>  }
+<a href=#289 id=289 data-nosnippet>289</a>
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="doccomment">/// Encode for state storage: "model c1 c2 ..."
+<a href=#291 id=291 data-nosnippet>291</a>  </span><span class="kw">pub fn </span>to_stored(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#292 id=292 data-nosnippet>292</a>    <span class="kw">let </span>model = <span class="self">self</span>.model();
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="kw">let </span>comps: Vec&lt;String&gt; = <span class="self">self</span>.components().iter().map(|c| format_component(<span class="kw-2">*</span>c)).collect();
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="macro">format!</span>(<span class="string">"{model} {}"</span>, comps.join(<span class="string">" "</span>))
+<a href=#295 id=295 data-nosnippet>295</a>  }
+<a href=#296 id=296 data-nosnippet>296</a>
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="doccomment">/// Decode from state storage format "model c1 c2 ..."
+<a href=#298 id=298 data-nosnippet>298</a>  </span><span class="kw">pub fn </span>from_stored(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Color&gt; {
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = s.split_whitespace().collect();
+<a href=#300 id=300 data-nosnippet>300</a>    <span class="kw">if </span>parts.is_empty() {
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#302 id=302 data-nosnippet>302</a>    }
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="kw">let </span>model = parts[<span class="number">0</span>];
+<a href=#304 id=304 data-nosnippet>304</a>    <span class="kw">let </span>comps: Vec&lt;f64&gt; = parts[<span class="number">1</span>..].iter().filter_map(|p| p.parse::&lt;f64&gt;().ok()).collect();
+<a href=#305 id=305 data-nosnippet>305</a>    <span class="prelude-val">Some</span>(from_model_components(model, <span class="kw-2">&amp;</span>comps))
+<a href=#306 id=306 data-nosnippet>306</a>  }
+<a href=#307 id=307 data-nosnippet>307</a>}
+<a href=#308 id=308 data-nosnippet>308</a>
+<a href=#309 id=309 data-nosnippet>309</a><span class="doccomment">/// Convert color component float (0.0-1.0) to u8 (0-255).
+<a href=#310 id=310 data-nosnippet>310</a>/// Matches Perl's `roundto($n * 255, 0)` which adds a small epsilon factor.
+<a href=#311 id=311 data-nosnippet>311</a></span><span class="kw">fn </span>component_to_u8(v: f64) -&gt; u8 {
+<a href=#312 id=312 data-nosnippet>312</a>  <span class="kw">let </span>scaled = v.clamp(<span class="number">0.0</span>, <span class="number">1.0</span>) * <span class="number">255.0 </span>* (<span class="number">1.0 </span>+ <span class="number">100.0 </span>* f64::EPSILON);
+<a href=#313 id=313 data-nosnippet>313</a>  scaled.round() <span class="kw">as </span>u8
+<a href=#314 id=314 data-nosnippet>314</a>}
+<a href=#315 id=315 data-nosnippet>315</a>
+<a href=#316 id=316 data-nosnippet>316</a><span class="doccomment">/// Format a float component like Perl: integers without decimal point.
+<a href=#317 id=317 data-nosnippet>317</a></span><span class="kw">pub fn </span>format_component(v: f64) -&gt; String {
+<a href=#318 id=318 data-nosnippet>318</a>  <span class="kw">if </span>(v - v.round()).abs() &lt; <span class="number">1e-10 </span>{
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="macro">format!</span>(<span class="string">"{}"</span>, v.round() <span class="kw">as </span>i64)
+<a href=#320 id=320 data-nosnippet>320</a>  } <span class="kw">else </span>{
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="macro">format!</span>(<span class="string">"{v}"</span>)
+<a href=#322 id=322 data-nosnippet>322</a>  }
+<a href=#323 id=323 data-nosnippet>323</a>}
+<a href=#324 id=324 data-nosnippet>324</a>
+<a href=#325 id=325 data-nosnippet>325</a><span class="doccomment">/// Perl rgb.pm: Phi function for RGB→HSB conversion
+<a href=#326 id=326 data-nosnippet>326</a></span><span class="kw">fn </span>phi(x: f64, y: f64, z: f64, u: f64, v: f64) -&gt; Color {
+<a href=#327 id=327 data-nosnippet>327</a>  Color::Hsb(
+<a href=#328 id=328 data-nosnippet>328</a>    (u * (x - z) + v * (x - y)) / (<span class="number">6.0 </span>* (x - z)),
+<a href=#329 id=329 data-nosnippet>329</a>    (x - z) / x,
+<a href=#330 id=330 data-nosnippet>330</a>    x,
+<a href=#331 id=331 data-nosnippet>331</a>  )
+<a href=#332 id=332 data-nosnippet>332</a>}
+<a href=#333 id=333 data-nosnippet>333</a>
+<a href=#334 id=334 data-nosnippet>334</a><span class="doccomment">/// Parse color components from a spec string (comma or space separated)
+<a href=#335 id=335 data-nosnippet>335</a></span><span class="kw">fn </span>parse_components(spec: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;f64&gt; {
+<a href=#336 id=336 data-nosnippet>336</a>  <span class="kw">if </span>spec.contains(<span class="string">','</span>) {
+<a href=#337 id=337 data-nosnippet>337</a>    spec.split(<span class="string">','</span>).filter_map(|s| s.trim().parse::&lt;f64&gt;().ok()).collect()
+<a href=#338 id=338 data-nosnippet>338</a>  } <span class="kw">else </span>{
+<a href=#339 id=339 data-nosnippet>339</a>    spec.split_whitespace().filter_map(|s| s.parse::&lt;f64&gt;().ok()).collect()
+<a href=#340 id=340 data-nosnippet>340</a>  }
+<a href=#341 id=341 data-nosnippet>341</a>}
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a><span class="doccomment">/// Create a Color from model name and component values
+<a href=#344 id=344 data-nosnippet>344</a></span><span class="kw">pub fn </span>from_model_components(model: <span class="kw-2">&amp;</span>str, comps: <span class="kw-2">&amp;</span>[f64]) -&gt; Color {
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="kw">match </span>model {
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="string">"rgb" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">3 </span>=&gt; Color::Rgb(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>]),
+<a href=#347 id=347 data-nosnippet>347</a>    <span class="string">"cmy" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">3 </span>=&gt; Color::Cmy(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>]),
+<a href=#348 id=348 data-nosnippet>348</a>    <span class="string">"cmyk" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">4 </span>=&gt; Color::Cmyk(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>], comps[<span class="number">3</span>]),
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="string">"hsb" </span><span class="kw">if </span>comps.len() &gt;= <span class="number">3 </span>=&gt; Color::Hsb(comps[<span class="number">0</span>], comps[<span class="number">1</span>], comps[<span class="number">2</span>]),
+<a href=#350 id=350 data-nosnippet>350</a>    <span class="string">"gray" </span><span class="kw">if </span>!comps.is_empty() =&gt; Color::Gray(comps[<span class="number">0</span>]),
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="kw">_ </span>=&gt; BLACK,
+<a href=#352 id=352 data-nosnippet>352</a>  }
+<a href=#353 id=353 data-nosnippet>353</a>}
+<a href=#354 id=354 data-nosnippet>354</a>
+<a href=#355 id=355 data-nosnippet>355</a><span class="doccomment">/// Parse a color from model name + spec string.
+<a href=#356 id=356 data-nosnippet>356</a>/// Perl: Color($model, components)-&gt;toCore
+<a href=#357 id=357 data-nosnippet>357</a></span><span class="kw">pub fn </span>color_from_model_spec(model: <span class="kw-2">&amp;</span>str, spec: <span class="kw-2">&amp;</span>str) -&gt; Color {
+<a href=#358 id=358 data-nosnippet>358</a>  <span class="kw">let </span>spec = spec.trim().trim_matches(|c| c == <span class="string">'{' </span>|| c == <span class="string">'}'</span>).trim();
+<a href=#359 id=359 data-nosnippet>359</a>  <span class="kw">let </span>c = parse_components(spec);
+<a href=#360 id=360 data-nosnippet>360</a>  from_model_components(model, <span class="kw-2">&amp;</span>c)
+<a href=#361 id=361 data-nosnippet>361</a>}
 </code></pre></div></section></main></body></html>

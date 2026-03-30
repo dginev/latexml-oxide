@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/tex_debugging.rs`."><title>tex_debugging.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (fda6d37bb 2026-03-27)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>tex_debugging.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Debugging
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/tex_debugging.rs`."><title>tex_debugging.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>tex_debugging.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Debugging
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">static </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy&lt;Regex&gt; =
@@ -50,8 +50,8 @@
 <a href=#50 id=50 data-nosnippet>50</a>  // in the spirit of the B Book, "show_token_list" routine, in 292.
 <a href=#51 id=51 data-nosnippet>51</a>  // [This could be a $tokens-&gt;unpackParameters, but for the curious space treatment]
 <a href=#52 id=52 data-nosnippet>52</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\message{}"</span>, sub [(message)] {
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">if </span>lookup_int(<span class="string">"VERBOSITY"</span>) &gt; -<span class="number">1 </span>{
-<a href=#54 id=54 data-nosnippet>54</a>      <span class="macro">eprintln!</span>(<span class="string">"{}"</span>, writable_tokens(<span class="kw-2">&amp;</span>do_expand(message)<span class="question-mark">?</span>));
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">if </span>state::current_verbosity() &gt; -<span class="number">1 </span>{
+<a href=#54 id=54 data-nosnippet>54</a>      <span class="macro">Note!</span>(writable_tokens(<span class="kw-2">&amp;</span>do_expand(message)<span class="question-mark">?</span>).to_string());
 <a href=#55 id=55 data-nosnippet>55</a>    }
 <a href=#56 id=56 data-nosnippet>56</a>  });
 <a href=#57 id=57 data-nosnippet>57</a>
@@ -59,7 +59,7 @@
 <a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\errmessage{}"</span>, sub[(args)] {
 <a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">let </span>message = <span class="macro">Expand!</span>(args);
 <a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">let </span>help = <span class="macro">Expand!</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\the"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\errhelp"</span>)));
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="macro">eprintln!</span>(<span class="string">"{}: {}"</span>, message, help);
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"{}: {}"</span>, message, help));
 <a href=#63 id=63 data-nosnippet>63</a>  });
 <a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\errorcontextlines"</span>, <span class="macro">Number!</span>(<span class="number">5</span>));
 <a href=#65 id=65 data-nosnippet>65</a>
@@ -208,97 +208,96 @@
 <a href=#208 id=208 data-nosnippet>208</a>          };
 <a href=#209 id=209 data-nosnippet>209</a>          meaning = <span class="macro">format!</span>(<span class="string">"{prefixes}macro:{spec}-&gt;{expansion}{p_trailer}"</span>);
 <a href=#210 id=210 data-nosnippet>210</a>        },
-<a href=#211 id=211 data-nosnippet>211</a>        e =&gt; { <span class="comment">// are there other cases that could occur here? should we handle them?
-<a href=#212 id=212 data-nosnippet>212</a>          </span><span class="macro">panic!</span>(<span class="string">"this may be a missing case in \\meaning's implementation: {e}"</span>);
-<a href=#213 id=213 data-nosnippet>213</a>        }
-<a href=#214 id=214 data-nosnippet>214</a>      }
-<a href=#215 id=215 data-nosnippet>215</a>    }
-<a href=#216 id=216 data-nosnippet>216</a>    <span class="macro">ExplodeChars!</span>(meaning)
-<a href=#217 id=217 data-nosnippet>217</a>  });
-<a href=#218 id=218 data-nosnippet>218</a>
-<a href=#219 id=219 data-nosnippet>219</a>  <span class="comment">//======================================================================
-<a href=#220 id=220 data-nosnippet>220</a>  // Showing internal things
-<a href=#221 id=221 data-nosnippet>221</a>  //----------------------------------------------------------------------
-<a href=#222 id=222 data-nosnippet>222</a>
-<a href=#223 id=223 data-nosnippet>223</a>  // \show             c  writes a token's definition on the terminal and to the log file.
-<a href=#224 id=224 data-nosnippet>224</a>  // \showbox          c  writes the contents of a box to the log file.
-<a href=#225 id=225 data-nosnippet>225</a>  // \showlists        c  writes information about current lists to the log file.
-<a href=#226 id=226 data-nosnippet>226</a>  // \showthe          c  writes a value on the terminal and to the log file and interrupts the
-<a href=#227 id=227 data-nosnippet>227</a>  // program. \showboxbreadth   pi is the maximum number of items per level written by \showbox
-<a href=#228 id=228 data-nosnippet>228</a>  // and \showlists. \showboxdepth     pi is the maximum level written by \showbox and \showlists.
-<a href=#229 id=229 data-nosnippet>229</a>
-<a href=#230 id=230 data-nosnippet>230</a>  // Debugging aids; Ignored!
-<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\show Token"</span>, sub[(arg)] {
-<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">let </span>lhs = <span class="kw">if </span>arg.get_catcode() == Catcode::CS {
-<a href=#233 id=233 data-nosnippet>233</a>      <span class="macro">s!</span>(<span class="string">"{arg}="</span>)
-<a href=#234 id=234 data-nosnippet>234</a>    } <span class="kw">else </span>{ String::new() };
-<a href=#235 id=235 data-nosnippet>235</a>    <span class="kw">let </span>stuff = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\meaning"</span>), <span class="macro">vec!</span>[arg]);
-<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">let </span>rhs = writable_tokens(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(stuff));
-<a href=#237 id=237 data-nosnippet>237</a>    <span class="comment">// TODO: add+use `Note!` instead of `eprintln`
-<a href=#238 id=238 data-nosnippet>238</a>    </span><span class="macro">eprintln!</span>(<span class="string">"&gt; {lhs}{rhs}"</span>);
-<a href=#239 id=239 data-nosnippet>239</a>    <span class="macro">eprintln!</span>(<span class="string">"{}"</span>,gullet::get_locator());
-<a href=#240 id=240 data-nosnippet>240</a>  });
-<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showbox Number"</span>, sub[(arg)] {
-<a href=#242 id=242 data-nosnippet>242</a>    <span class="kw">let </span>n     = arg.value_of();
-<a href=#243 id=243 data-nosnippet>243</a>    <span class="macro">Debug!</span>(<span class="string">"Box {n} = {:?}"</span>, lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"box{n}"</span>)));
-<a href=#244 id=244 data-nosnippet>244</a>  });
-<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showlists"</span>, <span class="prelude-val">None</span>);
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showthe Token"</span>, <span class="prelude-val">None</span>);
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\showboxbreadth"</span>, <span class="macro">Number!</span>(<span class="number">5</span>));
-<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\showboxdepth"</span>, <span class="macro">Number!</span>(<span class="number">3</span>));
-<a href=#249 id=249 data-nosnippet>249</a>
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="comment">//======================================================================
-<a href=#251 id=251 data-nosnippet>251</a>  // Tracing
-<a href=#252 id=252 data-nosnippet>252</a>  //----------------------------------------------------------------------
-<a href=#253 id=253 data-nosnippet>253</a>  // \tracingcommands   pi if positive, writes commands to the log file.
-<a href=#254 id=254 data-nosnippet>254</a>  //
-<a href=#255 id=255 data-nosnippet>255</a>  // \tracinglostchars  pi if positive, writes characters not in the current font to the log file.
-<a href=#256 id=256 data-nosnippet>256</a>  //
-<a href=#257 id=257 data-nosnippet>257</a>  // \tracingmacros     pi if positive, writes to the log file when expanding macros and
-<a href=#258 id=258 data-nosnippet>258</a>  //                       arguments .
-<a href=#259 id=259 data-nosnippet>259</a>  //
-<a href=#260 id=260 data-nosnippet>260</a>  // \tracingonline     pi if positive, writes diagnostic output to the terminal as
-<a href=#261 id=261 data-nosnippet>261</a>  //                       well as to the log file.
-<a href=#262 id=262 data-nosnippet>262</a>  //
-<a href=#263 id=263 data-nosnippet>263</a>  // \tracingoutput     pi if positive, writes contents of shipped out
-<a href=#264 id=264 data-nosnippet>264</a>  //                       boxes to the log file.
-<a href=#265 id=265 data-nosnippet>265</a>  //
-<a href=#266 id=266 data-nosnippet>266</a>  // \tracingpages      pi if positive, writes the page-cost calculations
-<a href=#267 id=267 data-nosnippet>267</a>  //                       to the log file.
-<a href=#268 id=268 data-nosnippet>268</a>  //
-<a href=#269 id=269 data-nosnippet>269</a>  // \tracingparagraphs pi if positive, writes a summary of the line-breaking
-<a href=#270 id=270 data-nosnippet>270</a>  //                       calculations to the  log file.
-<a href=#271 id=271 data-nosnippet>271</a>  //
-<a href=#272 id=272 data-nosnippet>272</a>  // \tracingrestores   pi if positive, writes save-stack
-<a href=#273 id=273 data-nosnippet>273</a>  //                       details to the log file.
-<a href=#274 id=274 data-nosnippet>274</a>  //
-<a href=#275 id=275 data-nosnippet>275</a>  // \tracingstats      pi if positive, writes memory usage statistics to the log file.
-<a href=#276 id=276 data-nosnippet>276</a>  //
-<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"tracingmacros"   </span>=&gt; <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">AssignValue!</span>(<span class="string">"tracingcommands" </span>=&gt; <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingmacros"</span>, <span class="macro">Number!</span>(<span class="number">0</span>),
-<a href=#280 id=280 data-nosnippet>280</a>  getter =&gt; { <span class="macro">LookupNumber!</span>(<span class="string">"tracingmacros"</span>) },
-<a href=#281 id=281 data-nosnippet>281</a>  setter =&gt; sub[value,scope,_args] {
-<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">let </span>v = value.value_of();
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="macro">AssignValue!</span>(<span class="string">"tracingmacros" </span>=&gt; v, scope);
-<a href=#284 id=284 data-nosnippet>284</a>    <span class="kw">let </span>p : u8 = lookup_int(<span class="string">"TRACING"</span>) <span class="kw">as </span>u8;
-<a href=#285 id=285 data-nosnippet>285</a>    <span class="macro">AssignValue!</span>(<span class="string">"TRACING" </span>=&gt; <span class="kw">if </span>v &gt; <span class="number">0 </span>{ p | TRACE_MACROS  } <span class="kw">else </span>{ p &amp; !TRACE_MACROS });
-<a href=#286 id=286 data-nosnippet>286</a>  });
-<a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingcommands"</span>, <span class="macro">Number!</span>(<span class="number">0</span>),
-<a href=#288 id=288 data-nosnippet>288</a>  getter =&gt; { <span class="macro">LookupNumber!</span>(<span class="string">"tracingcommands"</span>) },
-<a href=#289 id=289 data-nosnippet>289</a>  setter =&gt; sub[value,scope,_args] {
-<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">let </span>v = value.value_of();
-<a href=#291 id=291 data-nosnippet>291</a>    <span class="macro">AssignValue!</span>(<span class="string">"tracingcommands" </span>=&gt; v, scope);
-<a href=#292 id=292 data-nosnippet>292</a>    <span class="kw">let </span>p : u8 = lookup_int(<span class="string">"TRACING"</span>) <span class="kw">as </span>u8;
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="macro">AssignValue!</span>(<span class="string">"TRACING" </span>=&gt; <span class="kw">if </span>v &gt; <span class="number">0 </span>{ p | TRACE_COMMANDS  } <span class="kw">else </span>{ p &amp; !TRACE_COMMANDS });
-<a href=#294 id=294 data-nosnippet>294</a>  });
-<a href=#295 id=295 data-nosnippet>295</a>
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingonline"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingstats"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingparagraphs"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingpages"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#300 id=300 data-nosnippet>300</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingoutput"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracinglostchars"</span>, <span class="macro">Number!</span>(<span class="number">1</span>));
-<a href=#302 id=302 data-nosnippet>302</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingrestores"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
-<a href=#303 id=303 data-nosnippet>303</a>});
+<a href=#211 id=211 data-nosnippet>211</a>        e =&gt; {
+<a href=#212 id=212 data-nosnippet>212</a>          <span class="comment">// Handle other Stored variants gracefully (e.g., Register, Constructor, etc.)
+<a href=#213 id=213 data-nosnippet>213</a>          </span>meaning = <span class="macro">format!</span>(<span class="string">"{e}"</span>);
+<a href=#214 id=214 data-nosnippet>214</a>        }
+<a href=#215 id=215 data-nosnippet>215</a>      }
+<a href=#216 id=216 data-nosnippet>216</a>    }
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="macro">ExplodeChars!</span>(meaning)
+<a href=#218 id=218 data-nosnippet>218</a>  });
+<a href=#219 id=219 data-nosnippet>219</a>
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="comment">//======================================================================
+<a href=#221 id=221 data-nosnippet>221</a>  // Showing internal things
+<a href=#222 id=222 data-nosnippet>222</a>  //----------------------------------------------------------------------
+<a href=#223 id=223 data-nosnippet>223</a>
+<a href=#224 id=224 data-nosnippet>224</a>  // \show             c  writes a token's definition on the terminal and to the log file.
+<a href=#225 id=225 data-nosnippet>225</a>  // \showbox          c  writes the contents of a box to the log file.
+<a href=#226 id=226 data-nosnippet>226</a>  // \showlists        c  writes information about current lists to the log file.
+<a href=#227 id=227 data-nosnippet>227</a>  // \showthe          c  writes a value on the terminal and to the log file and interrupts the
+<a href=#228 id=228 data-nosnippet>228</a>  // program. \showboxbreadth   pi is the maximum number of items per level written by \showbox
+<a href=#229 id=229 data-nosnippet>229</a>  // and \showlists. \showboxdepth     pi is the maximum level written by \showbox and \showlists.
+<a href=#230 id=230 data-nosnippet>230</a>
+<a href=#231 id=231 data-nosnippet>231</a>  // Debugging aids; Ignored!
+<a href=#232 id=232 data-nosnippet>232</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\show Token"</span>, sub[(arg)] {
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="kw">let </span>lhs = <span class="kw">if </span>arg.get_catcode() == Catcode::CS {
+<a href=#234 id=234 data-nosnippet>234</a>      <span class="macro">s!</span>(<span class="string">"{arg}="</span>)
+<a href=#235 id=235 data-nosnippet>235</a>    } <span class="kw">else </span>{ String::new() };
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">let </span>stuff = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\meaning"</span>), <span class="macro">vec!</span>[arg]);
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="kw">let </span>rhs = writable_tokens(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(stuff));
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"&gt; {lhs}{rhs}\n{}"</span>, gullet::get_locator()));
+<a href=#239 id=239 data-nosnippet>239</a>  });
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showbox Number"</span>, sub[(arg)] {
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="kw">let </span>n     = arg.value_of();
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="macro">Debug!</span>(<span class="string">"Box {n} = {:?}"</span>, lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"box{n}"</span>)));
+<a href=#243 id=243 data-nosnippet>243</a>  });
+<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showlists"</span>, <span class="prelude-val">None</span>);
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showthe Token"</span>, <span class="prelude-val">None</span>);
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\showboxbreadth"</span>, <span class="macro">Number!</span>(<span class="number">5</span>));
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\showboxdepth"</span>, <span class="macro">Number!</span>(<span class="number">3</span>));
+<a href=#248 id=248 data-nosnippet>248</a>
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">//======================================================================
+<a href=#250 id=250 data-nosnippet>250</a>  // Tracing
+<a href=#251 id=251 data-nosnippet>251</a>  //----------------------------------------------------------------------
+<a href=#252 id=252 data-nosnippet>252</a>  // \tracingcommands   pi if positive, writes commands to the log file.
+<a href=#253 id=253 data-nosnippet>253</a>  //
+<a href=#254 id=254 data-nosnippet>254</a>  // \tracinglostchars  pi if positive, writes characters not in the current font to the log file.
+<a href=#255 id=255 data-nosnippet>255</a>  //
+<a href=#256 id=256 data-nosnippet>256</a>  // \tracingmacros     pi if positive, writes to the log file when expanding macros and
+<a href=#257 id=257 data-nosnippet>257</a>  //                       arguments .
+<a href=#258 id=258 data-nosnippet>258</a>  //
+<a href=#259 id=259 data-nosnippet>259</a>  // \tracingonline     pi if positive, writes diagnostic output to the terminal as
+<a href=#260 id=260 data-nosnippet>260</a>  //                       well as to the log file.
+<a href=#261 id=261 data-nosnippet>261</a>  //
+<a href=#262 id=262 data-nosnippet>262</a>  // \tracingoutput     pi if positive, writes contents of shipped out
+<a href=#263 id=263 data-nosnippet>263</a>  //                       boxes to the log file.
+<a href=#264 id=264 data-nosnippet>264</a>  //
+<a href=#265 id=265 data-nosnippet>265</a>  // \tracingpages      pi if positive, writes the page-cost calculations
+<a href=#266 id=266 data-nosnippet>266</a>  //                       to the log file.
+<a href=#267 id=267 data-nosnippet>267</a>  //
+<a href=#268 id=268 data-nosnippet>268</a>  // \tracingparagraphs pi if positive, writes a summary of the line-breaking
+<a href=#269 id=269 data-nosnippet>269</a>  //                       calculations to the  log file.
+<a href=#270 id=270 data-nosnippet>270</a>  //
+<a href=#271 id=271 data-nosnippet>271</a>  // \tracingrestores   pi if positive, writes save-stack
+<a href=#272 id=272 data-nosnippet>272</a>  //                       details to the log file.
+<a href=#273 id=273 data-nosnippet>273</a>  //
+<a href=#274 id=274 data-nosnippet>274</a>  // \tracingstats      pi if positive, writes memory usage statistics to the log file.
+<a href=#275 id=275 data-nosnippet>275</a>  //
+<a href=#276 id=276 data-nosnippet>276</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"tracingmacros"   </span>=&gt; <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">AssignValue!</span>(<span class="string">"tracingcommands" </span>=&gt; <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingmacros"</span>, <span class="macro">Number!</span>(<span class="number">0</span>),
+<a href=#279 id=279 data-nosnippet>279</a>  getter =&gt; { <span class="macro">LookupNumber!</span>(<span class="string">"tracingmacros"</span>) },
+<a href=#280 id=280 data-nosnippet>280</a>  setter =&gt; sub[value,scope,_args] {
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="kw">let </span>v = value.value_of();
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="macro">AssignValue!</span>(<span class="string">"tracingmacros" </span>=&gt; v, scope);
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="kw">let </span>p : u8 = lookup_int(<span class="string">"TRACING"</span>) <span class="kw">as </span>u8;
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="macro">AssignValue!</span>(<span class="string">"TRACING" </span>=&gt; <span class="kw">if </span>v &gt; <span class="number">0 </span>{ p | TRACE_MACROS  } <span class="kw">else </span>{ p &amp; !TRACE_MACROS });
+<a href=#285 id=285 data-nosnippet>285</a>  });
+<a href=#286 id=286 data-nosnippet>286</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingcommands"</span>, <span class="macro">Number!</span>(<span class="number">0</span>),
+<a href=#287 id=287 data-nosnippet>287</a>  getter =&gt; { <span class="macro">LookupNumber!</span>(<span class="string">"tracingcommands"</span>) },
+<a href=#288 id=288 data-nosnippet>288</a>  setter =&gt; sub[value,scope,_args] {
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">let </span>v = value.value_of();
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="macro">AssignValue!</span>(<span class="string">"tracingcommands" </span>=&gt; v, scope);
+<a href=#291 id=291 data-nosnippet>291</a>    <span class="kw">let </span>p : u8 = lookup_int(<span class="string">"TRACING"</span>) <span class="kw">as </span>u8;
+<a href=#292 id=292 data-nosnippet>292</a>    <span class="macro">AssignValue!</span>(<span class="string">"TRACING" </span>=&gt; <span class="kw">if </span>v &gt; <span class="number">0 </span>{ p | TRACE_COMMANDS  } <span class="kw">else </span>{ p &amp; !TRACE_COMMANDS });
+<a href=#293 id=293 data-nosnippet>293</a>  });
+<a href=#294 id=294 data-nosnippet>294</a>
+<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingonline"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingstats"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingparagraphs"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingpages"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingoutput"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#300 id=300 data-nosnippet>300</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracinglostchars"</span>, <span class="macro">Number!</span>(<span class="number">1</span>));
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\tracingrestores"</span>, <span class="macro">Number!</span>(<span class="number">0</span>));
+<a href=#302 id=302 data-nosnippet>302</a>});
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["compile_declare_pattern_pub","load_definitions"],"struct":["DeclarePattern"]};

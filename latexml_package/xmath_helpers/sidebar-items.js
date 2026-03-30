@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_xm_arg_id","i_arg","i_dual","i_wrap","i_xmarg","i_xmref"]};
+window.SIDEBAR_ITEMS = {"fn":["get_xm_arg_id","i_apply","i_arg","i_dual","i_keyvals","i_superscript","i_symbol","i_wrap","i_xmarg","i_xmref"]};

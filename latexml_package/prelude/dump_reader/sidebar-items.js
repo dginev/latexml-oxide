@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_native_dump"]};
+window.SIDEBAR_ITEMS = {"fn":["load_from_str","load_native_dump"]};

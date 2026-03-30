@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dump_format"]};
+window.SIDEBAR_ITEMS = {"fn":["codegen_from_dump","dump_format"]};
