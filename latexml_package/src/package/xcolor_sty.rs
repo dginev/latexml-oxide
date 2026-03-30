@@ -1084,7 +1084,11 @@ LoadDefinitions!({
   DefMacro!("\\hiderowcolors", "\\lx@hidden@noalign{\\global\\@rowcolorsfalse}");
 
   // Perl xcolor L751: AddToMacro('\@tabular@row@before', '\@tabular@row@before@xcolor');
-  RawTeX!(r"\expandafter\def\expandafter\@tabular@row@before\expandafter{\@tabular@row@before\@tabular@row@before@xcolor}");
+  {
+    let cs = T_CS!("\\@tabular@row@before");
+    let tokens = Tokens!(T_CS!("\\@tabular@row@before@xcolor"));
+    AddToMacro!(cs, tokens);
+  }
 
   // Perl xcolor L757-778: \@tabular@row@before@xcolor — handles \rowcolors cycling
   // During digestion: checks \if@rowcolors, computes alternating color from row number
