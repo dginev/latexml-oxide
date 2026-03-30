@@ -172,7 +172,7 @@ LoadDefinitions!({
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
   DefConstructor!("\\@framebox[Dimension][]{}",
     "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
-     (<ltx:text ?#width(width='#width') ?#align(align='#align') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
+     (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
     sizer => "#3",
     before_digest => {
@@ -202,6 +202,13 @@ LoadDefinitions!({
       }
       if let Some(width_val) = args[0].as_ref() {
         props.insert("width", Stored::String(arena::pin(width_val.to_attribute())));
+      }
+      // Perl: ($sep ne '3.0pt' ? (cssstyle => 'padding:' . $sep) : ())
+      if let Some(sep) = lookup_dimension("\\fboxsep") {
+        let sep_str = sep.to_attribute();
+        if sep_str != "3.0pt" {
+          props.insert("cssstyle", Stored::String(arena::pin(s!("padding:{sep_str}"))));
+        }
       }
       Ok(props)
     },
