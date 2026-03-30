@@ -115,14 +115,14 @@ fn phys_read_arg(
       let close_tok = Token::from(close_str);
       let mut tokens = Vec::new();
       let mut level = 1i32;
-      let mut blevel = 0i32;
+      let mut _blevel = 0i32;
       while let Some(tok) = gullet::read_token()? {
         let cc = tok.get_catcode();
         if cc == Catcode::END {
-          blevel -= 1;
+          _blevel -= 1;
           tokens.push(tok);
         } else if cc == Catcode::BEGIN {
-          blevel += 1;
+          _blevel += 1;
           tokens.push(tok);
         } else if tok == close_tok {
           level -= 1;
@@ -262,7 +262,7 @@ LoadDefinitions!({
   // Perl: \evaluated — fenced arg, then read sub/superscript limits
   DefPrimitive!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
-    let c = Token::from("|");
+    let _c = Token::from("|");
     let (arg, open, close) = phys_read_arg(true, |s| {
       match s {
         "(" | "[" => Some("|"),
@@ -656,8 +656,7 @@ LoadDefinitions!({
     // Reversion
     let mut rev = Vec::new();
     rev.extend(cs_tks.unlist());
-    if let Some(ref deg) = degree {
-      let a2 = Tokens::new(vec![i_arg("2")]);
+    if degree.is_some() {
       rev.push(T_OTHER!("["));
       rev.push(i_arg("2"));
       rev.push(T_OTHER!("]"));
@@ -739,7 +738,7 @@ LoadDefinitions!({
     // For partial derivatives: try to read a 3rd {} arg (2nd var)
     let mut tmp3: Option<Tokens> = None;
     if semantic_str.starts_with("partial") {
-      if let Some(ref t2) = tmp2 {
+      if let Some(ref _t2) = tmp2 {
         if open.is_none() {
           // tmp2 was a {} arg, try for 3rd
           let (t3, o3, _c3) = phys_read_arg(false, |s| {
@@ -785,7 +784,7 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
 
       let op = i_apply(&[], cfunc.clone(), vec![a2.clone(), Tokenize!("1"), a3.clone(), Tokenize!("1")]);
-      let content = if let Some(ref e) = expr {
+      let content = if expr.is_some() {
         i_apply(&[], op, vec![a1.clone()])
       } else { op };
 
@@ -825,8 +824,7 @@ LoadDefinitions!({
 
       let mut all_args: Vec<Tokens> = Vec::new();
 
-      if let Some(ref deg) = degree {
-        let a3 = Tokens::new(vec![i_arg("3")]);
+      if degree.is_some() {
         rev.push(T_OTHER!("["));
         rev.push(i_arg("3"));
         rev.push(T_OTHER!("]"));
@@ -959,7 +957,6 @@ LoadDefinitions!({
       let content = i_apply(&[],
         i_symbol(&[("meaning", Tokenize!("inner-product"))], None),
         vec![a1.clone(), a2.clone()]);
-      let sz = &if final_stretch { None } else { Some(T_OTHER!("*")) }; // dummy
       let mut pres = Vec::new();
       pres.extend(phys_open(!final_stretch, &None, Tokenize!("\\langle")).unlist());
       pres.push(i_arg("1"));
