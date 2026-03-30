@@ -1140,6 +1140,11 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
               let saved_delim = ctx.delim_re.clone();
               let saved_id = ctx.id_re.clone();
               let saved_quoted = ctx.quoted_re.clone();
+              let saved_space = ctx.space_token;
+              // Perl: local $SPACE = visible when inside string class + showstringspaces
+              if classname.starts_with("string") && lst_get_boolean("showstringspaces") {
+                ctx.space_token = T_CS!("\\@lst@visible@space");
+              }
               if !is_recursive {
                 ctx.delim_re = ctx.escape_re.clone();
                 ctx.id_re = None;
@@ -1160,6 +1165,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
               ctx.delim_re = saved_delim;
               ctx.id_re = saved_id;
               ctx.quoted_re = saved_quoted;
+              ctx.space_token = saved_space;
             }
           }
         }

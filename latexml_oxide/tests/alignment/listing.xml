@@ -246,7 +246,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>5</tag>
             <tag role="refnum">5</tag>
             <tag role="typerefnum">line 5</tag>
-          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string">’case<text class="ltx_lst_space"> </text>insensitive’</text>);</listingline>
+          </tags><text class="ltx_lst_keyword" font="bold">Write</text>(<text class="ltx_lst_string">’case<text class="ltx_lst_space">␣</text>insensitive’</text>);</listingline>
       </listing>
       <toccaption>A bit of Pascal</toccaption>
       <caption>A bit of Pascal</caption>
@@ -619,12 +619,12 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>5</tag>
             <tag role="refnum">5</tag>
             <tag role="typerefnum">line 5</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space"> </text>word”</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space">␣</text>word”</text>;</listingline>
         <listingline xml:id="lstnumberx67"><tags>
             <tag>6</tag>
             <tag role="refnum">6</tag>
             <tag role="typerefnum">line 6</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space"> </text><Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="lstnumberx67.m1">
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string">”a<text class="ltx_lst_space">␣</text><Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="lstnumberx67.m1">
               <XMath>
                 <XMApp>
                   <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -632,7 +632,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
                   <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                 </XMApp>
               </XMath>
-            </Math><text class="ltx_lst_space"> </text>math”</text>;</listingline>
+            </Math><text class="ltx_lst_space">␣</text>math”</text>;</listingline>
       </listing>
     </para>
     <para xml:id="S8.p4">
@@ -690,17 +690,17 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>7</tag>
             <tag role="refnum">7</tag>
             <tag role="typerefnum">line 7</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space"> </text>word"</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space">␣</text>word"</text>;</listingline>
         <listingline xml:id="lstnumberx78"><tags>
             <tag>8</tag>
             <tag role="refnum">8</tag>
             <tag role="typerefnum">line 8</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space"> </text>\"string"</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space">␣</text>\"string"</text>;</listingline>
         <listingline xml:id="lstnumberx79"><tags>
             <tag>9</tag>
             <tag role="refnum">9</tag>
             <tag role="typerefnum">line 9</tag>
-          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space"> </text>$x^2$<text class="ltx_lst_space"> </text>math"</text>;</listingline>
+          </tags><text class="ltx_lst_identifier">foo</text>=<text class="ltx_lst_string" font="typewriter">"a<text class="ltx_lst_space">␣</text>$x^2$<text class="ltx_lst_space">␣</text>math"</text>;</listingline>
       </listing>
     </para>
   </section>
