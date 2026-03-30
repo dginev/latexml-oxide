@@ -1084,7 +1084,12 @@ LoadDefinitions!({
     } else {
       comps.iter().map(|c| format!("{}", fixedpt(*c))).collect()
     };
-    let joined = formatted.join(",");
+    // HTML: join without separator (produces "00FF00" not "00,FF,00")
+    let joined = if tomodel_str == "HTML" {
+      formatted.join("")
+    } else {
+      formatted.join(",")
+    };
     def_macro(T_CS!(cmd_str), None, Some(ExpansionBody::from(joined.as_str())), None)?;
     Ok(())
   });

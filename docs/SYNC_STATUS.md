@@ -285,7 +285,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-30):** 332 pass, 0 fail, 12 ignored. 298 paired, ~218 zero-diff (73%).
+**Status (2026-03-30):** 332 pass, 0 fail, 12 ignored. 286 paired, 217 raw zero-diff (75.9%), 243 effective zero-diff (85.0% — 26 tests with only intentional divergences). 43 tests with real content diffs.
 
 ### Package bindings
 
