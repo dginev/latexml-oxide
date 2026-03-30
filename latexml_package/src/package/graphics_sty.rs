@@ -136,8 +136,9 @@ LoadDefinitions!({
         gullet::unread_one(tok);
       }
       let dim = gullet::read_dimension()?;
-      // Return the dimension value as tokens for storage
-      Ok(Tokenize!(&dim.to_attribute()))
+      // Return the raw sp value as tokens for lossless round-trip.
+      // to_attribute() rounds to 1 decimal pt, losing precision in scale calculations.
+      Ok(Tokenize!(&dim.value_of().to_string()))
     }
   }, optional => true);
 
@@ -159,16 +160,17 @@ LoadDefinitions!({
         let mut h = h_dim.value_of() as f64;
         let d = d_dim.value_of() as f64;
         if use_totalheight { h += d; }
+        // GraphixDimension stores raw sp value as token string
         let tw: Option<f64> = target_width.and_then(|a| {
           let s = a.to_attribute();
           if s.is_empty() { None } else {
-            s.trim_end_matches("pt").parse::<f64>().ok().map(|v| v * 65536.0)
+            s.parse::<f64>().ok()
           }
         });
         let th: Option<f64> = target_height.and_then(|a| {
           let s = a.to_attribute();
           if s.is_empty() { None } else {
-            s.trim_end_matches("pt").parse::<f64>().ok().map(|v| v * 65536.0)
+            s.parse::<f64>().ok()
           }
         });
         let mut xscale = 1.0_f64;
