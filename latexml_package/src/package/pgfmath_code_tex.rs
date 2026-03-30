@@ -1127,4 +1127,5 @@ LoadDefinitions!({
   // Override \pgfmathsincos to use our native sin/cos (for direct calls)
   DefMacro!("\\pgfmathsincos{}",
     "\\pgfmathparse{sin(#1)}\\let\\pgfmathresulty\\pgfmathresult\\pgfmathparse{cos(#1)}\\let\\pgfmathresultx\\pgfmathresult");
+
 });
