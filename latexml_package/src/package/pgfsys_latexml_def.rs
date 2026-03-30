@@ -4,12 +4,14 @@
 //! Port of the SVG drawing primitives that make pgf/tikz produce SVG output.
 use crate::prelude::*;
 
-/// Helper: convert dimension to px value
-/// Perl: $dim->pxValue  =>  (sp / 65536) * (DPI / 72.27)
+/// Helper: convert dimension to px value, rounded to 2 decimal places
+/// Perl: $dim->pxValue  =>  roundto(sp / UNITY * DPI / 72.27, 2)
 fn dim_to_px(d: Dimension) -> f64 {
   let dpi = state::lookup_int("DPI");
   let dpi = if dpi > 0 { dpi as f64 } else { 100.0 };
-  (d.value_of() as f64 / 65536.0) * (dpi / 72.27)
+  let raw = (d.value_of() as f64 / 65536.0) * (dpi / 72.27);
+  // Perl roundto(n, 2): round to 2 decimal places
+  (raw * 100.0).round() / 100.0
 }
 
 /// Perl: sub SVGNextObject — global counter for clip paths etc.
