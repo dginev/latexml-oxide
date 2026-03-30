@@ -1811,9 +1811,9 @@
                   <XMRef idref="S1.Ex17.m1.1"/>
                   <XMRef idref="S1.Ex17.m1.5"/>
                   <XMRef idref="S1.Ex17.m1.10"/>
-                  <XMRef idref="S1.Ex17.m1.11"/>
                   <XMRef idref="S1.Ex17.m1.12"/>
                   <XMRef idref="S1.Ex17.m1.13"/>
+                  <XMRef idref="S1.Ex17.m1.15"/>
                 </XMApp>
                 <XMWrap>
                   <XMDual lpadding="20.0pt" xml:id="S1.Ex17.m1.1">
@@ -1888,19 +1888,39 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex17.m1.10">
-                    <XMTok meaning="real-part" name="Re" role="OPFUNCTION">ℜ</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                  </XMApp>
+                  <XMDual xml:id="S1.Ex17.m1.10">
+                    <XMApp>
+                      <XMTok meaning="real-part"/>
+                      <XMRef idref="S1.Ex17.m1.11"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="OPFUNCTION" scriptpos="post">Re</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">{</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.11">z</XMTok>
+                        <XMTok role="CLOSE" stretchy="true">}</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMTok meaning="real-part" name="Re" role="OPFUNCTION" xml:id="S1.Ex17.m1.11">ℜ</XMTok>
+                  <XMTok meaning="real-part" name="Re" role="OPFUNCTION" xml:id="S1.Ex17.m1.12">ℜ</XMTok>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex17.m1.12">
-                    <XMTok meaning="imaginary-part" name="Im" role="OPFUNCTION">ℑ</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                  </XMApp>
+                  <XMDual xml:id="S1.Ex17.m1.13">
+                    <XMApp>
+                      <XMTok meaning="imaginary-part"/>
+                      <XMRef idref="S1.Ex17.m1.14"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="OPFUNCTION" scriptpos="post">Im</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">{</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex17.m1.14">z</XMTok>
+                        <XMTok role="CLOSE" stretchy="true">}</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMTok meaning="imaginary-part" name="Im" role="OPFUNCTION" xml:id="S1.Ex17.m1.13">ℑ</XMTok>
+                  <XMTok meaning="imaginary-part" name="Im" role="OPFUNCTION" xml:id="S1.Ex17.m1.15">ℑ</XMTok>
                 </XMWrap>
               </XMDual>
             </XMath>
@@ -1910,48 +1930,88 @@
       <para xml:id="S1.SS3.p5">
         <p>But</p>
         <equation xml:id="S1.Ex18">
-          <Math class="ltx_math_unparsed" mode="display" tex="\Re(\frac{X}{Y})\qquad\Re[\frac{X}{Y}]\qquad\Im(\frac{X}{Y})\qquad\Im[\frac{X}{Y}]" xml:id="S1.Ex18.m1">
+          <Math mode="display" tex="\real(\frac{X}{Y})\qquad\real[\frac{X}{Y}]\qquad\imaginary(\frac{X}{Y})\qquad\imaginary[\frac{X}{Y}]" text="list@(real-part@(X / Y), real-part@(delimited-[]@(X / Y)), imaginary-part@(X / Y), imaginary-part@(delimited-[]@(X / Y)))" xml:id="S1.Ex18.m1">
             <XMath>
-              <XMTok meaning="real-part" name="Re" role="OPFUNCTION">ℜ</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">(</XMTok>
-                <XMApp xml:id="S1.Ex18.m1.2">
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S1.Ex18.m1.1"/>
+                  <XMRef idref="S1.Ex18.m1.3"/>
+                  <XMRef idref="S1.Ex18.m1.5"/>
+                  <XMRef idref="S1.Ex18.m1.7"/>
                 </XMApp>
-                <XMTok role="CLOSE" stretchy="false">)</XMTok>
-              </XMWrap>
-              <XMTok meaning="real-part" name="Re" role="OPFUNCTION">ℜ</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMApp xml:id="S1.Ex18.m1.3">
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                </XMApp>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok meaning="imaginary-part" name="Im" role="OPFUNCTION">ℑ</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">(</XMTok>
-                <XMApp xml:id="S1.Ex18.m1.5">
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                </XMApp>
-                <XMTok role="CLOSE" stretchy="false">)</XMTok>
-              </XMWrap>
-              <XMTok meaning="imaginary-part" name="Im" role="OPFUNCTION">ℑ</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMApp xml:id="S1.Ex18.m1.6">
-                  <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
-                  <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                </XMApp>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
+                <XMWrap>
+                  <XMApp xml:id="S1.Ex18.m1.1">
+                    <XMTok meaning="real-part" role="OPERATOR" scriptpos="post">Re</XMTok>
+                    <XMDual>
+                      <XMRef idref="S1.Ex18.m1.2"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S1.Ex18.m1.2">
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex18.m1.3">
+                    <XMTok meaning="real-part" role="OPERATOR" scriptpos="post">Re</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="delimited-[]"/>
+                        <XMRef idref="S1.Ex18.m1.4"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">[</XMTok>
+                        <XMApp xml:id="S1.Ex18.m1.4">
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex18.m1.5">
+                    <XMTok meaning="imaginary-part" role="OPERATOR" scriptpos="post">Im</XMTok>
+                    <XMDual>
+                      <XMRef idref="S1.Ex18.m1.6"/>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">(</XMTok>
+                        <XMApp xml:id="S1.Ex18.m1.6">
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex18.m1.7">
+                    <XMTok meaning="imaginary-part" role="OPERATOR" scriptpos="post">Im</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="delimited-[]"/>
+                        <XMRef idref="S1.Ex18.m1.8"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">[</XMTok>
+                        <XMApp xml:id="S1.Ex18.m1.8">
+                          <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
+                </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>
@@ -1966,7 +2026,7 @@
       <title><tag close=" ">1.4</tag>Quick quad text</title>
       <para xml:id="S1.SS4.p1">
         <equation xml:id="S1.Ex19">
-          <Math class="ltx_math_unparsed" mode="display" tex="[\quad\text{word or phrase}\quad][\quad\text{*}\quad{wordorphrase}]" xml:id="S1.Ex19.m1">
+          <Math class="ltx_math_unparsed" mode="display" tex="[\quad\mbox{word or phrase}\quad][\mbox{word or phrase}\quad]" xml:id="S1.Ex19.m1">
             <XMath>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
@@ -1975,19 +2035,7 @@
               </XMWrap>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">*</XMText>
-                <XMTok font="italic" role="UNKNOWN">w</XMTok>
-                <XMTok font="italic" role="UNKNOWN">o</XMTok>
-                <XMTok font="italic" role="UNKNOWN">r</XMTok>
-                <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                <XMTok font="italic" role="UNKNOWN">o</XMTok>
-                <XMTok font="italic" role="UNKNOWN">r</XMTok>
-                <XMTok font="italic" role="UNKNOWN">p</XMTok>
-                <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                <XMTok font="italic" role="UNKNOWN">r</XMTok>
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMTok font="italic" role="UNKNOWN">s</XMTok>
-                <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                <XMText>word or phrase</XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
             </XMath>
@@ -1996,7 +2044,7 @@
       </para>
       <para xml:id="S1.SS4.p2">
         <equation xml:id="S1.Ex20">
-          <Math class="ltx_math_unparsed" mode="display" tex="[,\quad],[\quad\text{c.c.}\quad],[\quad\text{if}\quad],[\quad\text{then}\quad],[\quad\text{else}\quad],[\quad\text{otherwise}\quad],[\quad\text{unless}\quad],[\quad\text{given}\quad]" xml:id="S1.Ex20.m1">
+          <Math class="ltx_math_unparsed" mode="display" tex="[,\quad],[\quad\mbox{c.c.}\quad],[\mbox{\quad if\quad}],[\mbox{\quad then\quad}],[\mbox{\quad else\quad}],[\mbox{\quad otherwise\quad}],[\mbox{\quad unless\quad}],[\mbox{\quad given\quad}]" xml:id="S1.Ex20.m1">
             <XMath>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
@@ -2012,128 +2060,238 @@
               <XMTok role="PUNCT">,</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">if</XMText>
+                <XMText> if </XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
               <XMTok role="PUNCT">,</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">then</XMText>
+                <XMText> then </XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
               <XMTok role="PUNCT">,</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">else</XMText>
+                <XMText> else </XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
               <XMTok role="PUNCT">,</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">otherwise</XMText>
+                <XMText> otherwise </XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
               <XMTok role="PUNCT">,</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">unless</XMText>
+                <XMText> unless </XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
               <XMTok role="PUNCT">,</XMTok>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">given</XMText>
+                <XMText> given </XMText>
                 <XMTok role="CLOSE" stretchy="false">]</XMTok>
               </XMWrap>
             </XMath>
           </Math>
         </equation>
         <equation xml:id="S1.Ex21">
-          <Math class="ltx_math_unparsed" mode="display" tex="[\quad\text{using}\quad],[\quad\text{assume}\quad],[\quad\text{since}\quad],[\quad\text{let}\quad],[\quad\text{for}\quad],[\quad\text{all}\quad],[\quad\text{even}\quad],[\quad\text{odd}\quad]," xml:id="S1.Ex21.m1">
+          <Math mode="display" tex="[\mbox{\quad using\quad}],[\mbox{\quad assume\quad}],[\mbox{\quad since\quad}],[\mbox{\quad let\quad}],[\mbox{\quad for\quad}],[\mbox{\quad all\quad}],[\mbox{\quad even\quad}],[\mbox{\quad odd\quad}]," text="list@(delimited-[]@([ using ]), delimited-[]@([ assume ]), delimited-[]@([ since ]), delimited-[]@([ let ]), delimited-[]@([ for ]), delimited-[]@([ all ]), delimited-[]@([ even ]), delimited-[]@([ odd ]))" xml:id="S1.Ex21.m1">
             <XMath>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">using</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">assume</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">since</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">let</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">for</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">all</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">even</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">odd</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
+              <XMDual>
+                <XMRef idref="S1.Ex21.m1.1"/>
+                <XMWrap>
+                  <XMDual xml:id="S1.Ex21.m1.1">
+                    <XMApp>
+                      <XMTok meaning="list"/>
+                      <XMRef idref="S1.Ex21.m1.2"/>
+                      <XMRef idref="S1.Ex21.m1.4"/>
+                      <XMRef idref="S1.Ex21.m1.6"/>
+                      <XMRef idref="S1.Ex21.m1.8"/>
+                      <XMRef idref="S1.Ex21.m1.10"/>
+                      <XMRef idref="S1.Ex21.m1.12"/>
+                      <XMRef idref="S1.Ex21.m1.14"/>
+                      <XMRef idref="S1.Ex21.m1.16"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMDual xml:id="S1.Ex21.m1.2">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.3"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.3"> using </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.4">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.5"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.5"> assume </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.6">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.7"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.7"> since </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.8">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.9"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.9"> let </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.10">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.11"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.11"> for </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.12">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.13"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.13"> all </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.14">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.15"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.15"> even </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMDual xml:id="S1.Ex21.m1.16">
+                        <XMApp>
+                          <XMTok meaning="delimited-[]"/>
+                          <XMRef idref="S1.Ex21.m1.17"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">[</XMTok>
+                          <XMText xml:id="S1.Ex21.m1.17"> odd </XMText>
+                          <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>
         <equation xml:id="S1.Ex22">
-          <Math class="ltx_math_unparsed" mode="display" tex="[\quad\text{integer}\quad],[\quad\text{and}\quad],[\quad\text{or}\quad],[\quad\text{as}\quad],[\quad\text{in}\quad]" xml:id="S1.Ex22.m1">
+          <Math mode="display" tex="[\mbox{\quad integer\quad}],[\mbox{\quad and\quad}],[\mbox{\quad or\quad}],[\mbox{\quad as\quad}],[\mbox{\quad in\quad}]" text="list@(delimited-[]@([ integer ]), delimited-[]@([ and ]), delimited-[]@([ or ]), delimited-[]@([ as ]), delimited-[]@([ in ]))" xml:id="S1.Ex22.m1">
             <XMath>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">integer</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">and</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">or</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">as</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMText lpadding="10.0pt">in</XMText>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S1.Ex22.m1.1"/>
+                  <XMRef idref="S1.Ex22.m1.3"/>
+                  <XMRef idref="S1.Ex22.m1.5"/>
+                  <XMRef idref="S1.Ex22.m1.7"/>
+                  <XMRef idref="S1.Ex22.m1.9"/>
+                </XMApp>
+                <XMWrap>
+                  <XMDual xml:id="S1.Ex22.m1.1">
+                    <XMApp>
+                      <XMTok meaning="delimited-[]"/>
+                      <XMRef idref="S1.Ex22.m1.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMText xml:id="S1.Ex22.m1.2"> integer </XMText>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMDual xml:id="S1.Ex22.m1.3">
+                    <XMApp>
+                      <XMTok meaning="delimited-[]"/>
+                      <XMRef idref="S1.Ex22.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMText xml:id="S1.Ex22.m1.4"> and </XMText>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMDual xml:id="S1.Ex22.m1.5">
+                    <XMApp>
+                      <XMTok meaning="delimited-[]"/>
+                      <XMRef idref="S1.Ex22.m1.6"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMText xml:id="S1.Ex22.m1.6"> or </XMText>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMDual xml:id="S1.Ex22.m1.7">
+                    <XMApp>
+                      <XMTok meaning="delimited-[]"/>
+                      <XMRef idref="S1.Ex22.m1.8"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMText xml:id="S1.Ex22.m1.8"> as </XMText>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMDual xml:id="S1.Ex22.m1.9">
+                    <XMApp>
+                      <XMTok meaning="delimited-[]"/>
+                      <XMRef idref="S1.Ex22.m1.10"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">[</XMTok>
+                      <XMText xml:id="S1.Ex22.m1.10"> in </XMText>
+                      <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>
@@ -2916,7 +3074,7 @@
       <title><tag close=" ">1.6</tag>Dirac bra-ket notation</title>
       <para xml:id="S1.SS6.p1">
         <equation xml:id="S1.Ex30">
-          <Math mode="display" tex="\bra{\phi}\ket{\psi}\quad\text{as opposed to}\quad\bra{\phi}\ket{\psi}" text="list@(inner-product@(phi, psi), [as opposed to], bra@(phi) * ket@(psi))" xml:id="S1.Ex30.m1">
+          <Math mode="display" tex="\bra{\phi}\ket{\psi}\quad\mbox{as opposed to}\quad\bra{\phi}\ket{\psi}" text="list@(inner-product@(phi, psi), [as opposed to], bra@(phi) * ket@(psi))" xml:id="S1.Ex30.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2974,7 +3132,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex31">
-          <Math mode="display" tex="\bra{\phi}\outerproduct{\psi}{\xi}.\quad\text{as opposed to}\quad\bra{\phi}\ket{\psi}\bra{\xi}" text="list@(bra@(phi) * outer-product@(psi, xi), [as opposed to], inner-product@(phi, psi) * bra@(xi))" xml:id="S1.Ex31.m1">
+          <Math mode="display" tex="\bra{\phi}\outerproduct{\psi}{\xi}.\quad\mbox{as opposed to}\quad\bra{\phi}\ket{\psi}\bra{\xi}" text="list@(bra@(phi) * outer-product@(psi, xi), [as opposed to], inner-product@(phi, psi) * bra@(xi))" xml:id="S1.Ex31.m1">
             <XMath>
               <XMDual>
                 <XMApp>

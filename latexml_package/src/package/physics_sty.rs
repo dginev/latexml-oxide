@@ -608,35 +608,100 @@ LoadDefinitions!({
   Let!("\\Tr", "\\Trace");
   Let!("\\pv", "\\principalvalue");
 
+  // Perl: \lx@physics@ReIm — Re/Im with optional braced arg
+  DefPrimitive!("\\lx@physics@ReIm{}{}{}{}", sub[(cs, semantic, raw, function)] {
+    let cs_tks = cs.clone();
+    let semantic_str = semantic.to_string();
+    let raw_tks = raw.clone();
+    let function_tks = function.clone();
+    let (no_stretch, size_tok) = phys_read_size()?;
+    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let arg = phys_read_arg_tex()?;
+
+    if let Some(arg_tks) = arg {
+      let a1 = Tokens::new(vec![i_arg("1")]);
+      let mut rev = Vec::new();
+      rev.extend(cs_tks.unlist());
+      rev.extend(phys_rev_size(no_stretch, &size_tok));
+      rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
+      let reversion = Tokens::new(rev);
+
+      let content = i_apply(&[], cfunc, vec![a1.clone()]);
+      let mut pres = Vec::new();
+      pres.extend(function_tks.unlist());
+      pres.extend(phys_open(no_stretch, &size_tok, Tokenize!("\\lbrace")).unlist());
+      pres.push(i_arg("1"));
+      pres.extend(phys_close(no_stretch, &size_tok, Tokenize!("\\rbrace")).unlist());
+      let presentation = Tokens::new(pres);
+
+      let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg_tks])?;
+      gullet::unread(result);
+    } else {
+      // Bare — just the operator symbol
+      let result = i_dual(
+        &[("role", Tokenize!("OPERATOR")), ("reversion", raw_tks)],
+        cfunc, function_tks, vec![])?;
+      gullet::unread(result);
+    }
+  });
+
+  // Save old \Re and \Im BEFORE redefining (Perl: Let at L329-330, before DefMacro at L349-350)
   Let!("\\real", "\\Re");
   Let!("\\imaginary", "\\Im");
 
+  DefMacro!("\\Re", "\\lx@physics@ReIm{\\Re}{real-part}{\\real}{\\operatorname{Re}}");
+  DefMacro!("\\Im", "\\lx@physics@ReIm{\\Im}{imaginary-part}{\\imaginary}{\\operatorname{Im}}");
+
   //======================================================================
   // Quick quad text
-  DefMacro!("\\qqtext{}", r"\quad\text{#1}\quad");
+  // Perl: OptionalMatch:* — * means no leading \quad
+  // \mbox is used instead of \text for proper text mode handling
+  DefPrimitive!("\\qqtext", {
+    let star = gullet::read_match(&[&Tokenize!("*")])?.is_some();
+    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let mut tks = Vec::new();
+    if !star { tks.push(T_CS!("\\quad")); }
+    tks.push(T_CS!("\\mbox"));
+    tks.push(T_BEGIN!());
+    tks.extend(arg.unlist());
+    tks.push(T_END!());
+    tks.push(T_CS!("\\quad"));
+    gullet::unread(Tokens::new(tks));
+  });
   DefMacro!("\\qcomma", r",\quad");
-  DefMacro!("\\qcc", r"\quad\text{c.c.}\quad");
+  DefPrimitive!("\\qcc", {
+    let star = gullet::read_match(&[&Tokenize!("*")])?.is_some();
+    let mut tks = Vec::new();
+    if !star { tks.push(T_CS!("\\quad")); }
+    tks.push(T_CS!("\\mbox"));
+    tks.push(T_BEGIN!());
+    tks.extend(Tokenize!("c.c.").unlist());
+    tks.push(T_END!());
+    tks.push(T_CS!("\\quad"));
+    gullet::unread(Tokens::new(tks));
+  });
   Let!("\\qq", "\\qqtext");
   Let!("\\qc", "\\qcomma");
-  DefMacro!("\\qif", r"\quad\text{if}\quad");
-  DefMacro!("\\qthen", r"\quad\text{then}\quad");
-  DefMacro!("\\qelse", r"\quad\text{else}\quad");
-  DefMacro!("\\qotherwise", r"\quad\text{otherwise}\quad");
-  DefMacro!("\\qunless", r"\quad\text{unless}\quad");
-  DefMacro!("\\qgiven", r"\quad\text{given}\quad");
-  DefMacro!("\\qusing", r"\quad\text{using}\quad");
-  DefMacro!("\\qassume", r"\quad\text{assume}\quad");
-  DefMacro!("\\qsince", r"\quad\text{since}\quad");
-  DefMacro!("\\qlet", r"\quad\text{let}\quad");
-  DefMacro!("\\qfor", r"\quad\text{for}\quad");
-  DefMacro!("\\qall", r"\quad\text{all}\quad");
-  DefMacro!("\\qeven", r"\quad\text{even}\quad");
-  DefMacro!("\\qodd", r"\quad\text{odd}\quad");
-  DefMacro!("\\qinteger", r"\quad\text{integer}\quad");
-  DefMacro!("\\qand", r"\quad\text{and}\quad");
-  DefMacro!("\\qor", r"\quad\text{or}\quad");
-  DefMacro!("\\qas", r"\quad\text{as}\quad");
-  DefMacro!("\\qin", r"\quad\text{in}\quad");
+  // Perl: foreach word, DefMacroI('\q'.$word, 'OptionalMatch:*', '\mbox{\ifx.#1.\quad\fi'.$word.'\quad}')
+  DefMacro!("\\qif", r"\mbox{\quad if\quad}");
+  DefMacro!("\\qthen", r"\mbox{\quad then\quad}");
+  DefMacro!("\\qelse", r"\mbox{\quad else\quad}");
+  DefMacro!("\\qotherwise", r"\mbox{\quad otherwise\quad}");
+  DefMacro!("\\qunless", r"\mbox{\quad unless\quad}");
+  DefMacro!("\\qgiven", r"\mbox{\quad given\quad}");
+  DefMacro!("\\qusing", r"\mbox{\quad using\quad}");
+  DefMacro!("\\qassume", r"\mbox{\quad assume\quad}");
+  DefMacro!("\\qsince", r"\mbox{\quad since\quad}");
+  DefMacro!("\\qlet", r"\mbox{\quad let\quad}");
+  DefMacro!("\\qfor", r"\mbox{\quad for\quad}");
+  DefMacro!("\\qall", r"\mbox{\quad all\quad}");
+  DefMacro!("\\qeven", r"\mbox{\quad even\quad}");
+  DefMacro!("\\qodd", r"\mbox{\quad odd\quad}");
+  DefMacro!("\\qinteger", r"\mbox{\quad integer\quad}");
+  DefMacro!("\\qand", r"\mbox{\quad and\quad}");
+  DefMacro!("\\qor", r"\mbox{\quad or\quad}");
+  DefMacro!("\\qas", r"\mbox{\quad as\quad}");
+  DefMacro!("\\qin", r"\mbox{\quad in\quad}");
 
   //======================================================================
   // Derivatives
