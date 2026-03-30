@@ -127,7 +127,6 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // NOTE: bigop rules moved to += section (after `term` is defined) so they
       // can absorb full term (mulop chains like x² * dx), not just tight_term.
       | composed_bigop tight_term => prefix_apply
-      | compound_operator tight_term => prefix_apply
       | operator factor => prefix_apply
       | factor_base applyop tight_term => prefix_apply_applyop
       // Perl: FUNCTION/OPFUNCTION/TRIGFUNCTION + explicit APPLYOP + argument
@@ -470,6 +469,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += trigfunction lparen formula rparen => apply_delimited;
     tight_term += trigfunction lbracket formula rbracket => apply_delimited;
     tight_term += trigfunction fenced_factor => prefix_apply;
+    // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
+    // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
+    // not an entire invisible-times chain. Covers fenced_factor too (since factor += fenced_factor).
+    tight_term += compound_operator factor => prefix_apply;
     // Perl IntFactor L640-651: diffd followed by ATOM/UNKNOWN/ID => Apply(DIFFOP(d), var)
     // Semantic action checks text is literally "d" and INTOP context.
     // At factor level so it can appear as right operand of invisible_times.

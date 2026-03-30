@@ -781,8 +781,8 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   result.extend(ExplodeText!(&css_string));
   result.push(T_END!());
   result.push(T_BEGIN!());
-  // Apply styling before delimiters (Perl merges font onto the semantic element,
-  // so both delimiters and content share the same font/color).
+  // Perl: @open built with unshift — parent style before leaf delimiters.
+  // Style tokens (e.g. \itshape, \color{green}) apply to delimiters and content.
   result.extend(style_tokens);
   result.extend(delim_tokens);
   result
