@@ -117,7 +117,13 @@ LoadDefinitions!({
           Some(Stored::Float(f)) => f.0, _ => 1.0
         };
 
-        document.open_element("ltx:picture", None, None)?;
+        // Perl: $document->openElement('ltx:picture');
+        // height/width attributes come from pxValue of the picture dimensions
+        let pic_attrs = string_map!(
+          "height" => format!("{}", pxheight),
+          "width" => format!("{}", pxwidth)
+        );
+        document.open_element("ltx:picture", Some(pic_attrs), None)?;
 
         let svg_attrs = string_map!(
           "version" => "1.1".to_string(),
