@@ -2108,17 +2108,41 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">line 2</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;=0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>1;@\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}@</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text><text class="ltx_lst_literate"><Math mode="inline" tex="\leq" text="&lt;=" xml:id="lstnumberx344.m1">
+              <XMath>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+              </XMath>
+            </Math></text>0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\leftarrow" text="leftarrow" xml:id="lstnumberx344.m2">
+              <XMath>
+                <XMTok name="leftarrow" role="ARROW">←</XMTok>
+              </XMath>
+            </Math></text><text class="ltx_lst_space"> </text>1;@\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">a</text>}@</listingline>
         <listingline xml:id="lstnumberx345"><tags>
             <tag>3</tag>
             <tag role="refnum">3</tag>
             <tag role="typerefnum">line 3</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&gt;=0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>0;</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text><text class="ltx_lst_literate"><Math mode="inline" tex="\geq" text="&gt;=" xml:id="lstnumberx345.m1">
+              <XMath>
+                <XMTok meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+              </XMath>
+            </Math></text>0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\leftarrow" text="leftarrow" xml:id="lstnumberx345.m2">
+              <XMath>
+                <XMTok name="leftarrow" role="ARROW">←</XMTok>
+              </XMath>
+            </Math></text><text class="ltx_lst_space"> </text>0;</listingline>
         <listingline xml:id="lstnumberx346"><tags>
             <tag>4</tag>
             <tag role="refnum">4</tag>
             <tag role="typerefnum">line 4</tag>
-          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text>&lt;&gt;0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text>:=<text class="ltx_lst_space"> </text>0;@\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}@</listingline>
+          </tags><text class="ltx_lst_space">  </text><text class="ltx_lst_keyword" font="bold">if</text><text class="ltx_lst_space"> </text>(<text class="ltx_lst_identifier">i</text><text class="ltx_lst_literate"><Math mode="inline" tex="\neq" text="not-equals" xml:id="lstnumberx346.m1">
+              <XMath>
+                <XMTok meaning="not-equals" name="neq" role="RELOP">≠</XMTok>
+              </XMath>
+            </Math></text>0)<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">i</text><text class="ltx_lst_space"> </text><text class="ltx_lst_literate"><Math mode="inline" tex="\leftarrow" text="leftarrow" xml:id="lstnumberx346.m2">
+              <XMath>
+                <XMTok name="leftarrow" role="ARROW">←</XMTok>
+              </XMath>
+            </Math></text><text class="ltx_lst_space"> </text>0;@\<text class="ltx_lst_identifier">label</text>{<text class="ltx_lst_identifier">lit</text>:<text class="ltx_lst_identifier">b</text>}@</listingline>
         <listingline xml:id="lstnumberx347"><tags>
             <tag>5</tag>
             <tag role="refnum">5</tag>

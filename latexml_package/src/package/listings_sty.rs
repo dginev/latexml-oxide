@@ -81,6 +81,28 @@ fn listings_read_raw_lines(environment: &str) -> String {
   lines.join("\n")
 }
 
+/// Read a balanced group from a token slice, starting at tokens[*pos].
+/// *pos should point to a T_BEGIN token. Returns content tokens (without outer braces).
+/// Advances *pos past the closing T_END.
+fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
+  let mut result = Vec::new();
+  if *pos >= tokens.len() || tokens[*pos].get_catcode() != Catcode::BEGIN { return result; }
+  *pos += 1; // skip T_BEGIN
+  let mut level = 1i32;
+  while *pos < tokens.len() && level > 0 {
+    match tokens[*pos].get_catcode() {
+      Catcode::BEGIN => { level += 1; result.push(tokens[*pos]); }
+      Catcode::END => {
+        level -= 1;
+        if level > 0 { result.push(tokens[*pos]); }
+      }
+      _ => { result.push(tokens[*pos]); }
+    }
+    *pos += 1;
+  }
+  result
+}
+
 /// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
   let tokens = latexml_core::mouth::tokenize(text);
@@ -635,6 +657,41 @@ fn lst_set_character_class(class: &str, chars: &Tokens) {
   }
 }
 
+/// Build literate substitution entries from state.
+/// Returns (pattern_string, replacement_tokens, protected_flag) triples.
+fn build_literate_entries() -> Vec<(String, Tokens, bool)> {
+  let keys: Vec<String> = match state::lookup_value("LST_LITERATE_KEYS") {
+    Some(Stored::Tokens(t)) => t.unlist_ref().iter().map(|tok| tok.to_string()).collect(),
+    _ => return Vec::new(),
+  };
+  let mut entries = Vec::new();
+  for pattern in &keys {
+    let repl_key = s!("LST_LIT@{pattern}");
+    let prot_key = s!("LST_LIT@{pattern}@protected");
+    if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
+      let protected = matches!(state::lookup_value(&prot_key), Some(Stored::Bool(true)));
+      entries.push((pattern.clone(), replacement, protected));
+    }
+  }
+  entries
+}
+
+/// Build a regex that matches any literate pattern.
+/// If `inner_only` is true, only include non-protected patterns.
+fn build_literate_re(inner_only: bool) -> Option<Regex> {
+  let entries = build_literate_entries();
+  let patterns: Vec<String> = entries
+    .iter()
+    .filter(|(_, _, protected)| !inner_only || !protected)
+    .map(|(pat, _, _)| regex::escape(pat))
+    .collect();
+  if patterns.is_empty() {
+    None
+  } else {
+    Regex::new(&format!("^({})", patterns.join("|"))).ok()
+  }
+}
+
 /// Build a regex character class string from the character table in state.
 /// Enumerates all printable ASCII chars and checks if they belong to `class`
 /// (letter, digit, or other) via individual `LST_CHAR@{class}@{escaped}` keys.
@@ -945,8 +1002,8 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     quoted_re: Regex::new(r"^\\\\").unwrap(),
     space_token,
     case_sensitive,
-    literate: Vec::new(),
-    literate_re: None,
+    literate: build_literate_entries(),
+    literate_re: build_literate_re(false),
     firstline: lst_get_number("firstline"),
     lastline: lst_get_number("lastline"),
   };
@@ -1100,7 +1157,32 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       }
     }
 
-    // 2. Literate expressions (TODO: implement when needed)
+    // 2. Literate expressions
+    // Perl: use LITERATE_INNER_RE inside delimited contexts, LITERATE_RE at top level
+    {
+      let lit_re = if end_re.is_some() {
+        // Inside a delimited context: only non-protected patterns
+        build_literate_re(true)
+      } else {
+        ctx.literate_re.clone()
+      };
+      if let Some(ref re) = lit_re {
+        if let Some(m) = re.find(&ctx.listing) {
+          let matched = m.as_str().to_string();
+          ctx.listing = ctx.listing[m.end()..].to_string();
+          ctx.colnum += matched.len() as i64;
+          // Find the replacement tokens for this pattern
+          let repl_key = s!("LST_LIT@{matched}");
+          if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
+            ctx.lsttokens.push(T_CS!("\\@listingLiterate"));
+            ctx.lsttokens.push(T_BEGIN!());
+            ctx.lsttokens.extend(replacement.unlist().to_vec());
+            ctx.lsttokens.push(T_END!());
+          }
+          continue;
+        }
+      }
+    }
 
     // 3. Delimiters — strings, comments, escapes, mathescape
     if let Some(ref delim_re) = ctx.delim_re.clone() {
@@ -2530,9 +2612,42 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // literate handler (simplified)
+  // literate handler — parses {pattern}{replacement}length triples
+  // Perl: UnshiftValue(LST_LITERATE => [ToString($pattern), $replacement, $star, $length])
   DefMacro!("\\lst@@literate OptionalMatch:* Until:\\end", sub [args] {
-    let _ = &args;
+    let protected = args[0].to_string() == "*";
+    let toks = args[1].clone().owned_tokens().unwrap_or(Tokens!());
+    let tokens: Vec<Token> = toks.unlist();
+    let mut i = 0;
+    while i < tokens.len() {
+      // Skip whitespace
+      while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
+      if i >= tokens.len() { break; }
+      // Read pattern: balanced group
+      if tokens[i].get_catcode() != Catcode::BEGIN { break; }
+      let pattern = read_balanced_group(&tokens, &mut i);
+      // Skip whitespace
+      while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
+      if i >= tokens.len() { break; }
+      // Read replacement: balanced group
+      if tokens[i].get_catcode() != Catcode::BEGIN { break; }
+      let replacement = Tokens::new(read_balanced_group(&tokens, &mut i));
+      // Skip whitespace
+      while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
+      // Read length: number token(s)
+      while i < tokens.len() && tokens[i].get_catcode() != Catcode::SPACE
+        && tokens[i].get_catcode() != Catcode::BEGIN { i += 1; }
+      let pattern_str: String = pattern.iter().map(|t| t.to_string()).collect();
+      if !pattern_str.is_empty() {
+        // Store as individual entries keyed by pattern
+        let key = s!("LST_LIT@{pattern_str}");
+        state::assign_value(&key, Stored::from(replacement.clone()), None);
+        let prot_key = s!("LST_LIT@{pattern_str}@protected");
+        state::assign_value(&prot_key, Stored::Bool(protected), None);
+        // Add to pattern list
+        lst_push_value_locally("LST_LITERATE_KEYS", vec![T_OTHER!(&pattern_str)]);
+      }
+    }
     Tokens!()
   });
 
