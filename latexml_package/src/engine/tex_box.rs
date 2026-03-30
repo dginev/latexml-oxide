@@ -561,9 +561,15 @@ LoadDefinitions!({
           let w_em = w.value_f64() / 65536.0 / em;
           let h_em = h.value_f64() / 65536.0 / em;
           let d_em = d.value_f64() / 65536.0 / em;
+          // Perl: emValue uses roundto(val, undef) which strips trailing zeros
+          let fmt_em = |v: f64| {
+            let r = (v * 100.0).round() / 100.0;
+            if r == r.floor() { format!("{}", r as i64) }
+            else { format!("{:.2}", r).trim_end_matches('0').to_string() }
+          };
           document.set_attribute(node, "style",
-            &s!("--ltx-fo-width:{:.2}em;--ltx-fo-height:{:.2}em;--ltx-fo-depth:{:.2}em;",
-              w_em, h_em, d_em))?;
+            &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;",
+              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em)))?;
         }
       }
       if !has_dims && !node.has_attribute("overflow") {
