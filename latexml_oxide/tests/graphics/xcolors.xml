@@ -254,8 +254,8 @@ A=A/100=5.0pt.</p>
 100*13 = 1300.</p>
     </para>
     <para xml:id="S8.p5">
-      <p>A=10*13 = 130;
-A=100*13 = 1300;</p>
+      <p>A=10*13 = 130.0pt;
+A=100*13 = 1300.0pt;</p>
     </para>
   </section>
   <section inlist="toc" xml:id="S9">

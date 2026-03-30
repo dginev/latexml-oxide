@@ -997,8 +997,9 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       if let Some(defn) = state::lookup_register_definition(&varname) {
         let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
-        let scaled = (10.0 * n) as i64;
-        defn.set_value(RegisterValue::new(scaled), None, inner);
+        // Perl: setValue((10 * num) . 'pt') — stores as dimension string
+        let dim = Dimension::from_str(&s!("{}pt", 10.0 * n))?;
+        defn.set_value(RegisterValue::Dimension(dim), None, inner);
       }
     }
     Ok(())
@@ -1009,8 +1010,9 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       if let Some(defn) = state::lookup_register_definition(&varname) {
         let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
-        let scaled = (100.0 * n) as i64;
-        defn.set_value(RegisterValue::new(scaled), None, inner);
+        // Perl: setValue((100 * num) . 'pt') — stores as dimension string
+        let dim = Dimension::from_str(&s!("{}pt", 100.0 * n))?;
+        defn.set_value(RegisterValue::Dimension(dim), None, inner);
       }
     }
     Ok(())
