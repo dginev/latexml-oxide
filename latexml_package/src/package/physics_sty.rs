@@ -1033,7 +1033,7 @@ LoadDefinitions!({
     let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
     // ** means stretchy (default), * means no stretch, plain means stretchy
     let size = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
-      if gullet::read_match(&[&Tokenize!("*")])?.is_some() { true } else { false }
+      gullet::read_match(&[&Tokenize!("*")])?.is_some()
     } else { true };
     let no_stretch = !size;
     let open_tks = phys_open(no_stretch, &None, Tokenize!("\\langle"));
@@ -1086,7 +1086,7 @@ LoadDefinitions!({
   DefPrimitive!("\\matrixelement", {
     let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
     let no_stretch = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
-      if gullet::read_match(&[&Tokenize!("*")])?.is_some() { false } else { true }
+      gullet::read_match(&[&Tokenize!("*")])?.is_none()
     } else { false };
     let open_tks = phys_open(!no_stretch, &None, Tokenize!("\\langle"));
     let middle_tks = phys_mid(!no_stretch, &None, Tokenize!("\\vert"));
@@ -1170,20 +1170,76 @@ LoadDefinitions!({
   // Perl: \antidiagonalmatrix[zero]{diag...}
   DefMacro!("\\antidiagonalmatrix[]{}", "");
 
-  // Perl: \lx@physics@mat — wraps in matrix environment with fencing
-  // Simplified for now
-  DefMacro!("\\matrixquantity{}", r"\begin{pmatrix}#1\end{pmatrix}");
-  DefMacro!("\\pmqty{}", r"\begin{pmatrix}#1\end{pmatrix}");
-  DefMacro!("\\Pmqty{}", r"\begin{pmatrix}#1\end{pmatrix}");
-  DefMacro!("\\bmqty{}", r"\begin{bmatrix}#1\end{bmatrix}");
-  DefMacro!("\\vmqty{}", r"\begin{vmatrix}#1\end{vmatrix}");
-  DefMacro!("\\smallmatrixquantity{}", r"\begin{pmatrix}#1\end{pmatrix}");
-  DefMacro!("\\spmqty{}", r"\begin{pmatrix}#1\end{pmatrix}");
-  DefMacro!("\\sPmqty{}", r"\begin{pmatrix}#1\end{pmatrix}");
-  DefMacro!("\\sbmqty{}", r"\begin{bmatrix}#1\end{bmatrix}");
-  DefMacro!("\\svmqty{}", r"\begin{vmatrix}#1\end{vmatrix}");
-  DefMacro!("\\matrixdeterminant{}", r"\begin{vmatrix}#1\end{vmatrix}");
-  DefMacro!("\\smallmatrixdeterminant{}", r"\begin{vmatrix}#1\end{vmatrix}");
+  // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
+  // Reads optional * then required arg (TeX {} or delimiter-fenced)
+  DefPrimitive!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
+    let cs_tks = cs.clone();
+    let semantic_str = semantic.to_string();
+    let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
+    let env_str = env.to_string();
+    let defopen_tks = defopen.clone();
+    let defclose_tks = defclose.clone();
+    let _alt = gullet::read_match(&[&Tokenize!("*")])?.is_some();
+
+    let cfunc = semantic_opt.map(|s| i_symbol(&[("meaning", Tokenize!(s))], None));
+
+    // Read the body: either {} or delimiter-fenced
+    let (body, open, close) = phys_read_arg(true, physics_delimiters)?;
+    let body = body.unwrap_or_default();
+
+    // Wrap body in matrix environment tokens
+    let mut matrix_tks = vec![T_CS!(&format!("\\{env_str}"))];
+    matrix_tks.extend(body.unlist());
+    matrix_tks.push(T_CS!(&format!("\\end{env_str}")));
+    let matrix = Tokens::new(matrix_tks);
+
+    let a1 = Tokens::new(vec![i_arg("1")]);
+    let mut rev = Vec::new();
+    rev.extend(cs_tks.unlist());
+    rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
+    let reversion = Tokens::new(rev);
+
+    let content = if let Some(cf) = cfunc {
+      i_apply(&[], cf, vec![a1.clone()])
+    } else {
+      a1.clone()
+    };
+
+    // Presentation: open + matrix + close (using default fences if no explicit ones)
+    let open_fence = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(defopen_tks);
+    let close_fence = close.map(|t| Tokenize!(&t.to_string())).unwrap_or(defclose_tks);
+    let mut pres = Vec::new();
+    if !open_fence.is_empty() {
+      pres.extend(phys_open(false, &None, open_fence).unlist());
+    }
+    pres.push(i_arg("1"));
+    if !close_fence.is_empty() {
+      pres.extend(phys_close(false, &None, close_fence).unlist());
+    }
+    let presentation = Tokens::new(pres);
+
+    let result = i_dual(&[("reversion", reversion)], content, presentation, vec![matrix])?;
+    gullet::unread(result);
+  });
+
+  // Perl: \lx@physics@matrix / \lx@physics@smallmatrix environments
+  DefMacro!("\\lx@physics@matrix", "\\lx@ams@matrix{datameaning=matrix}");
+  DefMacro!("\\endlx@physics@matrix", "\\lx@end@ams@matrix");
+  DefMacro!("\\lx@physics@smallmatrix", "\\lx@ams@matrix{datameaning=matrix,style=\\scriptsize}");
+  DefMacro!("\\endlx@physics@smallmatrix", "\\lx@end@ams@matrix");
+
+  DefMacro!("\\matrixquantity", "\\lx@physics@mat{\\matrixquantity}{}{lx@physics@matrix}{}{}");
+  DefMacro!("\\pmqty{}", "\\lx@physics@mat{\\pmqty}{}{lx@physics@matrix}{(}{)}");
+  DefMacro!("\\Pmqty{}", "\\lx@physics@mat{\\Pmqty}{}{lx@physics@matrix}{(}{)}");
+  DefMacro!("\\bmqty{}", "\\lx@physics@mat{\\bmqty}{}{lx@physics@matrix}{[}{]}");
+  DefMacro!("\\vmqty{}", "\\lx@physics@mat{\\vmqty}{}{lx@physics@matrix}{\\vert}{\\vert}");
+  DefMacro!("\\smallmatrixquantity", "\\lx@physics@mat{\\smallmatrixquantity}{}{lx@physics@smallmatrix}{}{}");
+  DefMacro!("\\spmqty{}", "\\lx@physics@mat{\\spmqty}{}{lx@physics@smallmatrix}{(}{)}");
+  DefMacro!("\\sPmqty{}", "\\lx@physics@mat{\\sPmqty}{}{lx@physics@smallmatrix}{(}{)}");
+  DefMacro!("\\sbmqty{}", "\\lx@physics@mat{\\sbmqty}{}{lx@physics@smallmatrix}{[}{]}");
+  DefMacro!("\\svmqty{}", "\\lx@physics@mat{\\svmqty}{}{lx@physics@smallmatrix}{\\vert}{\\vert}");
+  DefMacro!("\\matrixdeterminant", "\\lx@physics@mat{\\matrixdeterminant}{determinant}{matrix}{\\vert}{\\vert}");
+  DefMacro!("\\smallmatrixdeterminant", "\\lx@physics@mat{\\smallmatrixdeterminant}{determinant}{smallmatrix}{\\vert}{\\vert}");
 
   Let!("\\imat", "\\identitymatrix");
   Let!("\\xmat", "\\xmatrix");
