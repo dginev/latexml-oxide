@@ -1148,7 +1148,20 @@ LoadDefinitions!({
   });
 
   // Perl: \xmatrix *{item}{n}{m}
-  DefMacro!("\\xmatrix{}{}{}", "");
+  DefPrimitive!("\\xmatrix{}{}{}", sub[(_item, n, m)] {
+    let item_tks = _item.clone();
+    let n_val: usize = n.to_string().parse().unwrap_or(2);
+    let m_val: usize = m.to_string().parse().unwrap_or(2);
+    let mut tks = Vec::new();
+    for i in 0..n_val {
+      if i > 0 { tks.push(T_CS!("\\\\")); }
+      for j in 0..m_val {
+        if j > 0 { tks.push(T_ALIGN!()); }
+        tks.extend(item_tks.clone().unlist());
+      }
+    }
+    gullet::unread(Tokens::new(tks));
+  });
 
   DefMacro!("\\zeromatrix{}{}", "\\xmatrix{0}{#1}{#2}");
 
@@ -1165,10 +1178,49 @@ LoadDefinitions!({
     gullet::unread(tks);
   });
 
-  // Perl: \diagonalmatrix[zero]{diag...}
-  DefMacro!("\\diagonalmatrix[]{}", "");
-  // Perl: \antidiagonalmatrix[zero]{diag...}
-  DefMacro!("\\antidiagonalmatrix[]{}", "");
+  // Perl: \diagonalmatrix[zero]{diag,diag,...}
+  DefPrimitive!("\\diagonalmatrix[]{}", sub[(z, diag)] {
+    let z_str = z.as_ref().map(|t| t.to_string()).unwrap_or_default();
+    let z_tok = if z_str.is_empty() { T_SPACE!() } else { Token::from(&*z_str) };
+    let diag_str = diag.to_string();
+    let items: Vec<&str> = diag_str.split(',').collect();
+    let n = items.len();
+    let mut tks = Vec::new();
+    for i in 0..n {
+      if i > 0 { tks.push(T_CS!("\\\\")); }
+      for j in 0..n {
+        if j > 0 { tks.push(T_ALIGN!()); }
+        if i == j {
+          tks.extend(Tokenize!(items[i]).unlist());
+        } else {
+          tks.push(z_tok);
+        }
+      }
+    }
+    gullet::unread(Tokens::new(tks));
+  });
+
+  // Perl: \antidiagonalmatrix[zero]{diag,diag,...}
+  DefPrimitive!("\\antidiagonalmatrix[]{}", sub[(z, diag)] {
+    let z_str = z.as_ref().map(|t| t.to_string()).unwrap_or_default();
+    let z_tok = if z_str.is_empty() { T_SPACE!() } else { Token::from(&*z_str) };
+    let diag_str = diag.to_string();
+    let items: Vec<&str> = diag_str.split(',').collect();
+    let n = items.len();
+    let mut tks = Vec::new();
+    for i in 0..n {
+      if i > 0 { tks.push(T_CS!("\\\\")); }
+      for j in 0..n {
+        if j > 0 { tks.push(T_ALIGN!()); }
+        if j == n - i - 1 {
+          tks.extend(Tokenize!(items[n - i - 1]).unlist());
+        } else {
+          tks.push(z_tok);
+        }
+      }
+    }
+    gullet::unread(Tokens::new(tks));
+  });
 
   // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
   // Reads optional * then required arg (TeX {} or delimiter-fenced)

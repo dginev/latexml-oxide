@@ -4363,7 +4363,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex43">
-          <Math mode="display" tex="\smallmatrixquantity(\lx@physics@smallmatrix\imat{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat{1}{2}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{3}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{3}{1}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{1}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\zmat{2}{2}\endlx@physics@smallmatrix)" text="list@(matrix@(Array[[1, 0, 0], [0, 1, 0], [0, 0, 1]]), matrix@(absent), matrix@(Array[[3]]), matrix@(Array[[1]]), matrix@(Array[[3]]), matrix@(absent))" xml:id="S1.Ex43.m1">
+          <Math mode="display" tex="\smallmatrixquantity(\lx@physics@smallmatrix\imat{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat{1}{2}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{3}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{3}{1}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\xmat*{a}{1}{3}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\zmat{2}{2}\endlx@physics@smallmatrix)" text="list@(matrix@(Array[[1, 0, 0], [0, 1, 0], [0, 0, 1]]), matrix@(Array[[1, 1, 1], [1, 1, 1]]), matrix@(Array[[*, *, *], [, *, absent * 3]]), matrix@(Array[[*, *, *], [, *, absent * 1]]), matrix@(Array[[*], [3]]), matrix@(Array[[0, 0], [0, 0]]))" xml:id="S1.Ex43.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -4434,7 +4434,30 @@
                           <XMTok meaning="matrix"/>
                           <XMRef idref="S1.Ex43.m1.6"/>
                         </XMApp>
-                        <XMTok meaning="absent" xml:id="S1.Ex43.m1.6"/>
+                        <XMArray xml:id="S1.Ex43.m1.6">
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                          </XMRow>
+                        </XMArray>
                       </XMDual>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -4452,7 +4475,26 @@
                         <XMArray xml:id="S1.Ex43.m1.9">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMApp>
+                                <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                                <XMTok meaning="absent"/>
+                                <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                              </XMApp>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4473,7 +4515,26 @@
                         <XMArray xml:id="S1.Ex43.m1.12">
                           <XMRow>
                             <XMCell align="center">
-                              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMApp>
+                                <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                                <XMTok meaning="absent"/>
+                                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                              </XMApp>
                             </XMCell>
                           </XMRow>
                         </XMArray>
@@ -4494,6 +4555,11 @@
                         <XMArray xml:id="S1.Ex43.m1.15">
                           <XMRow>
                             <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="times" role="MULOP">∗</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell align="center">
                               <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
                             </XMCell>
                           </XMRow>
@@ -4512,7 +4578,24 @@
                           <XMTok meaning="matrix"/>
                           <XMRef idref="S1.Ex43.m1.18"/>
                         </XMApp>
-                        <XMTok meaning="absent" xml:id="S1.Ex43.m1.18"/>
+                        <XMArray xml:id="S1.Ex43.m1.18">
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                            </XMCell>
+                          </XMRow>
+                        </XMArray>
                       </XMDual>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -4707,7 +4790,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex45">
-          <Math mode="display" tex="\matrixquantity(\lx@physics@matrix\dmat{1,2,3}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\dmat[0]{1,2}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\dmat{1,2&amp;3\\4&amp;5}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\admat{1,2,3}\endlx@physics@matrix)" text="list@(matrix@(absent), matrix@(absent), matrix@(absent), matrix@(absent))" xml:id="S1.Ex45.m1">
+          <Math mode="display" tex="\matrixquantity(\lx@physics@matrix\dmat{1,2,3}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\dmat[0]{1,2}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\dmat{1,2&amp;3\\4&amp;5}\endlx@physics@matrix)\qquad\matrixquantity(\lx@physics@matrix\admat{1,2,3}\endlx@physics@matrix)" text="list@(matrix@(Array[[1, , ], [, 2, ], [, , 3]]), matrix@(Array[[1, 0], [0, 2]]), matrix@(Array[[1, ], [, 2, 3], [4, 5]]), matrix@(Array[[, , 3], [, 2, ], [1, , ]]))" xml:id="S1.Ex45.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -4727,7 +4810,29 @@
                           <XMTok meaning="matrix"/>
                           <XMRef idref="S1.Ex45.m1.3"/>
                         </XMApp>
-                        <XMTok meaning="absent" xml:id="S1.Ex45.m1.3"/>
+                        <XMArray xml:id="S1.Ex45.m1.3">
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell/>
+                            <XMCell/>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok meaning="2" role="NUMBER">2</XMTok>
+                            </XMCell>
+                            <XMCell/>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok meaning="3" role="NUMBER">3</XMTok>
+                            </XMCell>
+                          </XMRow>
+                        </XMArray>
                       </XMDual>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -4742,7 +4847,24 @@
                           <XMTok meaning="matrix"/>
                           <XMRef idref="S1.Ex45.m1.6"/>
                         </XMApp>
-                        <XMTok meaning="absent" xml:id="S1.Ex45.m1.6"/>
+                        <XMArray xml:id="S1.Ex45.m1.6">
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok meaning="0" role="NUMBER">0</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok meaning="0" role="NUMBER">0</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok meaning="2" role="NUMBER">2</XMTok>
+                            </XMCell>
+                          </XMRow>
+                        </XMArray>
                       </XMDual>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -4757,7 +4879,31 @@
                           <XMTok meaning="matrix"/>
                           <XMRef idref="S1.Ex45.m1.9"/>
                         </XMApp>
-                        <XMTok meaning="absent" xml:id="S1.Ex45.m1.9"/>
+                        <XMArray xml:id="S1.Ex45.m1.9">
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell/>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok meaning="2" role="NUMBER">2</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok meaning="3" role="NUMBER">3</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok meaning="4" role="NUMBER">4</XMTok>
+                            </XMCell>
+                            <XMCell align="center">
+                              <XMTok meaning="5" role="NUMBER">5</XMTok>
+                            </XMCell>
+                          </XMRow>
+                        </XMArray>
                       </XMDual>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
@@ -4772,7 +4918,29 @@
                           <XMTok meaning="matrix"/>
                           <XMRef idref="S1.Ex45.m1.12"/>
                         </XMApp>
-                        <XMTok meaning="absent" xml:id="S1.Ex45.m1.12"/>
+                        <XMArray xml:id="S1.Ex45.m1.12">
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok meaning="3" role="NUMBER">3</XMTok>
+                            </XMCell>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell/>
+                            <XMCell align="center">
+                              <XMTok meaning="2" role="NUMBER">2</XMTok>
+                            </XMCell>
+                            <XMCell/>
+                          </XMRow>
+                          <XMRow>
+                            <XMCell align="center">
+                              <XMTok meaning="1" role="NUMBER">1</XMTok>
+                            </XMCell>
+                            <XMCell/>
+                            <XMCell/>
+                          </XMRow>
+                        </XMArray>
                       </XMDual>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
                     </XMWrap>
