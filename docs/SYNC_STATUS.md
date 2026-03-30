@@ -424,7 +424,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] A3. Font wrapper `<text>` elements during alignment absorption — Rust has full parity (verified session 64).
 - [x] A4. `{turn}` rotation dimensions inside alignment — Fixed (session 63: kround + font metrics).
 - [x] B2. Split/gather `$` mode: alignment depth guard. split_test passes (session 51).
-- [ ] B3. listings math: code blocks with math expressions. Blocks listing_test (1661 diffs).
+- [ ] B3. listings: 190→48 Perl diffs (75%). Dynamic char classes, texcl/mathescape eval, literate, escapechar. Remaining: font wrapper (22), toccaption (8), XML tag (6), index (10).
 
 ### Math parser gaps
 
