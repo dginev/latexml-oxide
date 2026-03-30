@@ -464,7 +464,8 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
      //! DO NOT EDIT — regenerate with: `cargo run --release --bin latexml_oxide -- --init=latex.ltx`\n\
      //!\n\
      //! {total} entries, compiler-checked at build time. Zero runtime parsing.\n\
-     #![allow(unused)]\n"
+     #![allow(unused)]\n\
+     #![allow(clippy::type_complexity)]\n"
   )
   .map_err(we)?;
 

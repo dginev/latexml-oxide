@@ -54,6 +54,7 @@ pub fn rotated_properties(
   // Origin parsing omitted for now (TODO: parse from keyvals)
 
   let total_h = h + d;
+  #[allow(clippy::approx_constant)]
   let rad = angle * 3.1415926 / 180.0; // Perl uses this approximation
   let s = rad.sin();
   let c = rad.cos();

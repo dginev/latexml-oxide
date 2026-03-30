@@ -131,8 +131,8 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
           | "ltx:equation" | "ltx:equationgroup" | "ltx:verbatim")
       })
     };
-    for i in 0..panels.len() {
-      document.add_class(&mut panels[i], "ltx_figure_panel")?;
+    for panel in &mut panels {
+      document.add_class(panel, "ltx_figure_panel")?;
     }
     // Insert breaks between panels.
     // Perl inserts break before a standalone panel (if there are prior panels in the row),
