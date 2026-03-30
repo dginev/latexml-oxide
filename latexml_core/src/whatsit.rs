@@ -420,6 +420,16 @@ impl BoxOps for Whatsit {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
       sizer(self)
+    } else if self.has_property("cached_width") || self.has_property("cached_height") {
+      // Perl: when after_digest sets cached dimensions (e.g. image_graphicx_sizer),
+      // compute_size should return them instead of falling through to body/args sum.
+      let w = match self.get_property("cached_width").as_deref() {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      let h = match self.get_property("cached_height").as_deref() {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      let d = match self.get_property("cached_depth").as_deref() {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      return Ok((w, h, d));
     } else {
       // Nothing specified? use #body if any, else sum all box args
       // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize

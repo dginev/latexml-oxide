@@ -192,9 +192,9 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   let width_pt = w * 72.27 / dpi;
   let height_pt = h * 72.27 / dpi;
 
-  // Set cached dimensions on the whatsit (Dimension::new takes scaled points = pt * 65536)
-  let w_dim = Dimension::new((width_pt * 65536.0) as i64);
-  let h_dim = Dimension::new((height_pt * 65536.0) as i64);
+  // Perl: Dimension($w * 72.27 / $dpi . 'pt') — parses via TeX fixed-point arithmetic
+  let w_dim = Dimension::from_str(&format!("{width_pt}pt")).unwrap_or(Dimension::new(0));
+  let h_dim = Dimension::from_str(&format!("{height_pt}pt")).unwrap_or(Dimension::new(0));
   whatsit.set_property("cached_width", Stored::Dimension(w_dim));
   whatsit.set_property("cached_height", Stored::Dimension(h_dim));
   whatsit.set_property("cached_depth", Stored::Dimension(Dimension::new(0)));
