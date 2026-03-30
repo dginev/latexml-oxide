@@ -2583,6 +2583,8 @@ LoadDefinitions!({
       state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
       // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{$escapere}
       state::assign_value(&s!("LST_CHAR@letter@{esc_re}"), Stored::None, None);
+      // Register in delimiter keys list
+      lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&esc)]);
     }
     Tokens!()
   });
