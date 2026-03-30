@@ -440,7 +440,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
 - [x] P1. guessTableHeaders: circled digit classification — already correct (ding.xml, tabular.xml zero-diff with Perl).
-- [ ] P5. xcolors.xml: colortbl row cycling, table structure (thead/tbody). PARTIAL: Color::convert extended models fixed (session 64).
+- [ ] P5. xcolors.xml: colortbl row cycling DONE (session 66). Remaining: border="t" on cells, thead structure, color spectrum (1 line), pt units (1 line).
 
 ### Heavy package bindings (distant future)
 
@@ -452,8 +452,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Overarching infrastructure projects
 
-- [ ] **J. Rewrite system** — rewrite.rs at ~40%. Missing: `regexp`, `action`, `on_match`. ~300 lines.
-- [ ] **K. Declaration system (\lxDeclare)** — simplified post-hoc matching vs Perl's full DeclarationRewrite. ~200 lines.
+- [x] **J. Rewrite system** — regexp, action, on_match all implemented in rewrite.rs. Only 1 package uses regexp/on_match.
+- [x] **K. Declaration system (\lxDeclare)** — fully working. parse/declare.xml zero-diff with Perl. math/declare.xml has 783 diffs (rewrite scope).
 - [ ] **L. `local` assignments audit + RAII guards** — RAII guards implemented (session 64: `LocalGuard` with Drop). Audit completed:
   - ✅ In `local_assignments`: CURRENT_TOKEN (now RAII), ALIGN_STATE, DUAL_BRANCH, READING_ALIGNMENT, BUILD_TEMPLATE, UNLOCKED, IF_FRAMES
   - ✅ Via state scoping: INTERNAL_PAR (Scope::Local), FONT (state), LOCATOR (gullet)
