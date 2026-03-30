@@ -284,6 +284,7 @@ pub mod pdftexcmds_sty;
 pub mod pgf_sty;
 pub mod pgfkeys_sty;
 pub mod pgfmath_sty;
+pub mod pgfmath_code_tex;
 pub mod pgfmathcalc_code_tex;
 pub mod pgfplots_sty;
 pub mod pgfplotstable_sty;

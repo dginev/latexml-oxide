@@ -306,6 +306,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pgf.sty" => package::pgf_sty::load_definitions(),
     "pgfsys-latexml.def" => package::pgfsys_latexml_def::load_definitions(),
     "pgfutil-common.tex" => package::pgfutil_common_tex::load_definitions(),
+    "pgfmath.code.tex" => package::pgfmath_code_tex::load_definitions(),
     "pgfmathcalc.code.tex" => package::pgfmathcalc_code_tex::load_definitions(),
     "pgfplots.sty" => package::pgfplots_sty::load_definitions(),
     "tikz.sty" => package::tikz_sty::load_definitions(),
