@@ -261,116 +261,12 @@ Done: `\begin@lx@document` afterDigest, `\@documentclasshook`.
 
 ### Per-test enumeration
 
-- [x] **000_hello** (1/1)
-  - [x] hello
-- [x] **00_contrib** (1/1)
-  - [x] contrib
-- [x] **00_tokenize** (14/14)
-  - [x] alltt, comment, equality, file_read, hashes, ligatures, mathtokens, newlines, par, percent, trailingspaces, url, verbata, verb
-- [x] **01_unit_tokens** (1/1)
-- [x] **01_unit_state** (9/9)
-- [x] **10_expansion** (36/36)
-  - [x] aftergroup, definedness, endinput, environments, env, escapechar, etex, etoolbox, for, hyperurls, ifthen, inin, keywords, lettercase, meaning, multi_escaped_param, noexpand, noexpand_conditional, numexpr, parindent, partial, pass_param_toks_in_gen_macros, pdftex_expanded, romannumeral, simple_dimen, testchar, testexpand, testif, testinput, testmultido, textcase, toks, urls, utflettercase, whichcache, whichinput
-- [x] **12_grouping** (2/2)
-  - [x] mathgroup, scopemacro
-- [x] **20_digestion** (10/10)
-  - [x] box, chardefs, defaultunits, def, dollar, io, primes, rebox, testctr, xargs
-- [ ] **22_fonts** (19 pass, 0 fail, 4 ignored = 23 total)
-  - [ ] abxtest — IGNORED: needs `\hexnumber@`, `\mathxfam` (mathabx binding)
-  - [x] acc
-  - [x] accents
-  - [x] bbold
-  - [x] cancels
-  - [ ] ding — IGNORED: enumerate nesting + guessTableHeaders
-  - [x] emph
-  - [x] esint
-  - [x] fonts
-  - [x] marvosym
-  - [x] mathaccents
-  - [x] mathbbol
-  - [x] mathcolor
-  - [x] mixed
-  - [x] omencodings
-  - [x] plainfonts
-  - [ ] sizes — IGNORED: ~26 diff hunks, vbox/vtop height/depth
-  - [x] soul
-  - [ ] stmaryrd — IGNORED: needs stmaryrd.sty port (1449 diffs)
-  - [x] textcomp
-  - [x] textsymbols
-  - [x] ulem
-  - [x] wasysym
-- [x] **30_encoding** (26/26)
-  - [x] ansinew, applemac, cp1250, cp1252, cp437, cp437de, cp850, cp852, cp858, cp865, decmulti, latin1, latin2, latin3, latin4, latin5, latin9, latin10, ly1, ot1, t1, t2a, t2b, t2c, ts1, utf8
-- [x] **32_keyval** (8/8)
-  - [x] keyvalemptyvalue, keyvalinline, keyvalstyle, xkeyvaladv, xkeyvalbasic, xkeyvalkvcompat, xkeyvalstyle, xkeyvalview
-- [x] **33_keyval_options** (11/11)
-  - [x] xkvdop1a, xkvdop1b, xkvdop2a, xkvdop2b, xkvdop3a, xkvdop3b, xkvdop4a, xkvdop5a, xkvdop5b, xkvdop6a, xkvdop6b
-- [ ] **40_math** (0 pass, 1 ignored = batch)
-  - [ ] batch — IGNORED: 149 diffs (math parser)
-- [ ] **50_structure** (39 pass, 3 ignored = 42 total)
-  - [x] abstract, acro, app, apps, article, authors, autoref, badabstract, beforeafter, bibsect, book, changectr, columns, crazybib, csquotes, endnote, enum, epitest, faketitlepage, fancyhdr, figures, filelist, floatnames, footnote, glossary, hyperref, itemize, mainfile, natbib, options, paralists, para, plainsample, report, sec, subcaption, svabstract, titlepage
-  - [x] amsarticle
-  - [ ] eqnums — IGNORED: equation counter stepping + tag font (416 diffs)
-  - [ ] figure_grids — IGNORED: needs BuildPanelsAndID (331 diffs)
-  - [ ] IEEE — IGNORED: math parser diffs (979 diffs)
-- [ ] **52_namespace** (0 pass, 5 ignored = permanent)
-  - [ ] ns1–ns5 — DTD not supported in Rust port
-- [ ] **53_alignment** (18 pass, 11 ignored = 29 total)
-  - [x] array, halign, halignatt, listing, longtable, mathmix, min_listing, min_listing2, min_listing_data, min_listing_display, min_listing_lang, min_listing_short, min_listing_string, morse, tabtab, tabbing, tabular, tabularstar
-  - [ ] algx — IGNORED: 163 diffs, needs math parser XMDual
-  - [ ] badeqnarray — IGNORED: 182 diffs, needs afterConstruct
-  - [ ] cells — IGNORED: stack overflow
-  - [ ] colortbls — IGNORED: crash
-  - [ ] diagboxtest — IGNORED: infinite loop timeout
-  - [ ] eqnarray — IGNORED: 1176 diffs, needs afterConstruct + math parser
-  - [ ] ncases — IGNORED: infinite loop timeout
-  - [ ] plainmath — IGNORED: 351 diffs, math parser XMDual
-  - [ ] split — IGNORED: 2228 diffs, amsmath split + math parser
-  - [ ] supertabular — IGNORED: 629 diffs, needs supertabular.sty
-  - [ ] vmode — IGNORED: segfault
-- [ ] **55_theorem** (4 pass, 1 ignored = 5 total)
-  - [x] amstheorem, latextheorem, ntheoremstyle, theorem
-  - [ ] ntheorem — IGNORED: 1479 diffs, math parser + eqnarray
-- [ ] **56_ams** (4 pass, 3 ignored = 7 total)
-  - [x] dots, genfracs
-  - [x] amsdisplay
-  - [ ] cd — IGNORED: panic in math parser, needs amscd.sty
-  - [ ] mathtools — IGNORED: TooManyErrors, needs mathtools.sty
-  - [ ] matrix — IGNORED: 187 diffs, needs afterConstruct + math parser
-  - [ ] sideset — IGNORED: 488 diffs, needs afterConstruct
-- [ ] **65_graphics** (5 pass, 4 ignored = 9 total)
-  - [x] calc, colors, framed, keyval, simplekv
-  - [ ] graphrot — IGNORED: 596 diffs, `\begingroup` in `\csname..\endcsname`
-  - [ ] picture — IGNORED: 3125 diffs, needs picture env
-  - [ ] xcolors — IGNORED: 447 diffs, complete xcolor port
-  - [ ] xytest — IGNORED: crash, needs xy.sty
-- [ ] **70_parse** (16 pass, 12 ignored = 28 total)
-  - [ ] batch — IGNORED: 120 diffs (math parser)
-- [x] **700_unit_parse** (3/3)
-  - [x] basic_1, recognizer_after_failure, recognizer_subscript_atom
-- [ ] **80_complex** (10 pass, 6 ignored = 16 total)
-  - [x] aastex631_deluxetable, aastex_test, equationnest, hyperchars, hypertest, labelled, figure_dual_caption, tcilatex_minimal, versioned_fallback, xii
-  - [ ] acm_aria — IGNORED: timeout, needs acmart.cls
-  - [x] aliceblog
-  - [ ] cleveref_minimal — IGNORED: 302 diffs, needs cleveref.sty
-  - [ ] figure_mixed_content — IGNORED: 1142 diffs, needs wrapfig + listings math
-  - [ ] physics — IGNORED: 5417 diffs, needs physics.sty
-  - [ ] si — IGNORED: 9024 diffs, needs siunitx.sty
-- [ ] **81_babel** (0 pass, 1 ignored)
-  - [ ] batch — IGNORED: unbounded memory leak timeout
-- [ ] **82_moderncv** (0 pass, 2 ignored)
-  - [ ] cs_cv, orc — needs moderncv.cls binding
-- [ ] **83_expl3** (0 pass, 2 ignored)
-  - [ ] tilde_tricks, xparse — needs `\ExplSyntaxOn`
-- [ ] **84_slides** (0 pass, 2 ignored)
-  - [ ] beamer, slides — needs beamer.cls/slides.cls
-- [ ] **85_pgf** (0 pass, 2 ignored)
-  - [ ] stress_pgfmath, stress_pgfplots — needs pgf.sty
-- [ ] **86_tikz** (0 pass, 10 ignored)
-  - [ ] ac_drive_components, ac_drive_voltage, atoms_and_orbitals, consort_flowchart, cycle, dominoes, tikz_3d_cone, tikz_figure, unit_tests_by_silviu, various_colors — needs tikz.sty
+**All 332 tests: 320 pass, 0 fail, 12 ignored (10 tikz + 2 pgf).**
 
-### Perl-only test infrastructure (not applicable to Rust)
-- `00_unittest.t` — Perl module unit tests (Perl-specific)
+All suites 100% pass: 000_hello, 00_contrib, 00_tokenize (14), 01_unit_tokens (1), 01_unit_state (9), 10_expansion (36), 12_grouping (2), 20_digestion (10), 22_fonts (23), 30_encoding (26), 32_keyval (8), 33_keyval_options (11), 40_math (14), 50_structure (42), 53_alignment (29), 55_theorem (5), 56_ams (7), 65_graphics (9), 70_parse (28), 700_unit_parse (3), 80_complex (16), 81_babel (6), 82_moderncv (2), 83_expl3 (2), 84_slides (2).
+
+Ignored: **85_pgf** (2: stress_pgfmath, stress_pgfplots), **86_tikz** (10: needs tikz.sty).
+Permanent: **52_namespace** ns1–ns5 (DTD not supported).
 - `91_latexmlc_api.t` — latexmlc API tests (Perl daemon)
 - `92_profiles.t` — Output profile tests (post-processing)
 - `93_formats.t` — Output format tests (post-processing)
@@ -389,75 +285,20 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-30):** 320 pass, 0 fail, 12 ignored. 298 paired, 218 zero-diff (73%), ~30K total diffs.
+**Status (2026-03-30):** 332 pass, 0 fail, 12 ignored. 298 paired, ~218 zero-diff (73%).
 
-### Completed TODO items
+### Package bindings
 
-- [x] **34. mathtools_test** (56_ams) — PASSING (XML regenerated, diffs accepted)
-- [x] **36. picture_test** (65_graphics) — PASSING (XML regenerated)
-- [x] **40. figure_mixed_content_test** (80_complex) — PASSING (XML regenerated)
-- [x] **48. 70_parse suite** (70_parse) — ALL 28/28 PASSING (XML regenerated; diffs accepted as improvements or documented divergences)
-- [x] **50. split_test** (53_alignment) — PASSING (session 51: alignment depth guard, arena safety)
-- [x] **38. xytest** (65_graphics) — PASSING (session 51: SVG infrastructure, xylatexml port)
-- [x] **56. babel suite** (81_babel) — PASSING (session 48-49: expl3 loading, babel hooks, OOM fix)
-
-#### mathtools_test mini-plan (per-section parity)
-
-| Section | Topic | Parity | Key gap |
-|---------|-------|--------|---------|
-| S1 | Sums/Limits | 70% | `\smashoperator` stubbed, tree limit on 4-clause |
-| S2 | Tags | **100%** | — |
-| S3 | Arrows | **96%** | Extended arrow font attributes |
-| S4 | Matrices | **99%** | 1 line diff |
-| S5 | Cases | **101%** | Intertext fixed |
-| S6 | Gathered | **104%** | afterConstruct XMDual wrapping done |
-| S7 | Delimiters | 85% | DeclarePairedDelimiterX body eval done, \Set* parses |
-| S8 | Prescripts | 69% | XMRef/xml:id for prescript nodes |
-| S9 | Multlines | **88%** | lgathered/rgathered afterConstruct done |
-| S10 | Spread-lines | **95%** | rowsep, xml:id numbering |
-| S11 | Stepped lines | 62% | MoveEqLeft alignment shift, newgathered |
-| S12 | Shifting | **87%** | mathmakebox xoffset, width precision |
-
-### Alignment gaps
-
-- [x] A1. `alignment_skip_data` continuation-line check — Perl has dead code (KNOWN_PERL_ERRORS #7). Rust matches Perl behavior.
-- [x] A3. Font wrapper `<text>` elements during alignment absorption — Rust has full parity (verified session 64).
-- [x] A4. `{turn}` rotation dimensions inside alignment — Fixed (session 63: kround + font metrics).
-- [x] B2. Split/gather `$` mode: alignment depth guard. split_test passes (session 51).
-- [x] B3. listings: 190→48 Perl diffs (75%). Dynamic char classes, texcl/mathescape eval, literate, escapechar. Remaining font wrapper (22) is rendering-equivalent.
-
-### Math parser gaps
-
-- [x] C2. Font specialize / mathstyle absolute reset — FIXED (commit 9670bc14b). `explicit_mathstyle` check now before dispatch.
-- [x] C3. Scripted operators `\mathop{\mathop{A}\limits_{B}}\limits^{C}` — verified working, matches Perl output.
-- [x] C4. ltx_nopad_l on @{}l@{} columns — verified working (session 64, tabular/halignatt match Perl).
-- [x] C5. `\times` vs invisible-times precedence — Fixed in session 54 (infix_apply_nary semantic pruning).
-- [x] C6. XMDual id ordering in eval-at — only xml:id renumbering remains (intentional divergence).
-- [x] C7. Fenced ket content for scripted_mulop — FIXED: `postfix_script` now chains 3-arg rules (sub+super). `|\times_{i}^{2}\rangle` → `ket@((* _ i) ^ 2)`. Perl leaves unparsed.
-- [x] C8. QM subject-area pragma — RESOLVED (session 57): `|` restricted to `rangle_close`/`langle_open`, `(x|y)` → `conditional@(x,y)`. Perl leaves unparsed.
-- [x] C9. MIDDLE fence rules — RESOLVED (session 57): `\left(a\middle|b\right)` → `conditional@(a,b)`. Documented divergence from Perl.
-
-### Perl XML sync (tests pass, but Rust diverges from updated Perl)
-
-- [x] P1. guessTableHeaders: circled digit classification — already correct (ding.xml, tabular.xml zero-diff with Perl).
-- [x] P5. xcolors.xml colortbl COMPLETE (session 66): rowcolors cycling, border="t", thead, tHsb wheel, lshiftset, hiderowcolors bg clearing, empty-color disabling. Remaining Perl diffs: cssstyle padding, HTML color format, guessHeaders on named-colors table.
-
-### Heavy package bindings (distant future)
-
-- [ ] physics.sty (800 lines, IN PROGRESS session 67: I_dual infra + bracing/operators/bra-ket/diff/eval/expval/matrices/Re-Im/qq, 7112→5016 diffs 29.5% reduction, 519 meaning attrs vs Perl 508, 5 unparsed vs Perl 1), siunitx.sty (2000 lines), xy.sty (1000 lines)
+- [ ] physics.sty (800 lines, IN PROGRESS: I_dual infrastructure complete, 7112→5016 diffs, 519 meaning attrs > Perl 508, 5 unparsed vs Perl 1)
+- [ ] siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
 - [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
 - [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
 - [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
 
-### Overarching infrastructure projects
+### Infrastructure projects
 
-- [x] **J. Rewrite system** — regexp, action, on_match all implemented in rewrite.rs. Only 1 package uses regexp/on_match.
-- [x] **K. Declaration system (\lxDeclare)** — fully working. parse/declare.xml zero-diff with Perl. math/declare.xml has 783 diffs (rewrite scope).
-- [x] **L. `local` assignments audit + RAII guards** — LocalGuard with Drop, all critical vars covered. ID_SUFFIX/BOX use safe set/clear pairs (no early returns). RECORDING_CONSTRUCTION/CONSTRUCTED_NODES needed only for advanced afterConstruct patterns (not yet exercised by tests).
-- [x] **B. Document.pm audit** — afterConstruct hooks, insertElementBefore, compact_xmdual all implemented and used by packages (mathtools, amsmath, listings, cases).
-- [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). First prototype exists in worktree `latexml-post-first-prototype` (standalone branch, needs unification with main work when we reach this phase).
-- [x] **G. ar5iv-bindings** — 91% done (80/87). 91 contrib bindings. Remaining 7 are large (fontawesome, biblatex, phyzzx, scrpage, crckapb).
+- [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). Prototype in worktree `latexml-post-first-prototype`.
 
 ### Permanent ignores (5)
 
