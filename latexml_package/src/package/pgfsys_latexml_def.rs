@@ -151,6 +151,36 @@ LoadDefinitions!({
         document.close_element("ltx:picture")?;
       }
     },
+    reversion => sub[whatsit, _args] {
+      // Perl L140-147: reversion produces \hbox to<W>pt{\vbox to<H>pt{...}}
+      let w = whatsit.with_properties(|props| {
+        match props.get("width_dim") {
+          Some(Stored::Dimension(d)) => d.pt_value(None),
+          _ => 0.0
+        }
+      });
+      let h = whatsit.with_properties(|props| {
+        match props.get("height_dim") {
+          Some(Stored::Dimension(d)) => d.pt_value(None),
+          _ => 0.0
+        }
+      });
+      let mut toks: Vec<Token> = vec![T_CS!("\\hbox"), T_SPACE!()];
+      toks.extend(Explode!(format!("to{}pt", w)));
+      toks.push(T_BEGIN!());
+      toks.extend(vec![T_CS!("\\vbox"), T_SPACE!()]);
+      toks.extend(Explode!(format!("to{}pt", h)));
+      toks.push(T_BEGIN!());
+      toks.push(T_CS!("\\pgfpicture"));
+      toks.push(T_CS!("\\makeatletter"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        toks.extend(arg.revert()?.unlist());
+      }
+      toks.push(T_CS!("\\endpgfpicture"));
+      toks.push(T_END!());
+      toks.push(T_END!());
+      Ok(Tokens::new(toks))
+    },
     after_digest => sub[whatsit] {
       // Perl L106-138: read pgf registers to compute picture dimensions
       let width = pgf_reg_dim("\\pgf@picmaxx");
@@ -163,6 +193,9 @@ LoadDefinitions!({
       whatsit.set_property("miny", Stored::Float(Float::new_f64(0.0)));
       whatsit.set_property("pxwidth", Stored::Float(Float::new_f64(w)));
       whatsit.set_property("pxheight", Stored::Float(Float::new_f64(h)));
+      // Store raw dimensions for reversion (tex= attribute)
+      whatsit.set_property("width_dim", Stored::Dimension(width));
+      whatsit.set_property("height_dim", Stored::Dimension(height));
       // Store the content box for construction time
       let content_opt = whatsit.get_arg(1).cloned();
       if let Some(content) = content_opt {
