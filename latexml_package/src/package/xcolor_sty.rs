@@ -1185,6 +1185,17 @@ LoadDefinitions!({
             }
           }
         }
+      } else {
+        // \hiderowcolors: clear any inherited background from prior \rowcolor.
+        // The alignment scope may carry font bg that cycling rows override but
+        // non-cycling rows inherit. Clear it at the current scope.
+        if let Some(font) = lookup_font() {
+          if font.get_background().is_some() {
+            let mut cleared = (*font).clone();
+            cleared.bg = None;
+            state::assign_value("font", Stored::from(cleared), None);
+          }
+        }
       }
       Ok(Vec::new())
     },

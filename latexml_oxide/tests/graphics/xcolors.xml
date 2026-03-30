@@ -287,12 +287,12 @@ A=100*13 = 1300.0pt;</p>
             <td align="left" border="t"><text backgroundcolor="#FFFF80">row 4</text></td>
           </tr>
           <tr>
-            <td align="left" border="t"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left" border="t"><text backgroundcolor="#BFBFFF">row 5</text></td>
+            <td align="left" border="t">test</td>
+            <td align="left" border="t">row 5</td>
           </tr>
           <tr>
-            <td align="left" border="t"><text backgroundcolor="#BFBFFF">test</text></td>
-            <td align="left" border="t"><text backgroundcolor="#BFBFFF">row 6</text></td>
+            <td align="left" border="t">test</td>
+            <td align="left" border="t">row 6</td>
           </tr>
           <tr backgroundcolor="#BFFFBF">
             <td align="left" border="t"><text backgroundcolor="#BFFFBF">test</text></td>
