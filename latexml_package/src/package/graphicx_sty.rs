@@ -119,8 +119,9 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   let mut h = img_h;
 
   // Parse options string for simple cases
-  let mut req_w: Option<f64> = None; // in points
-  let mut req_h: Option<f64> = None;
+  // Perl: image_graphicx_parse uses to_bp() to convert dimensions to big points (1/72 inch)
+  let mut req_w: Option<f64> = None; // in bp (big points)
+  let mut req_h: Option<f64> = None; // in bp
   let mut keep_ratio = false;
   let mut scale: Option<f64> = None;
 
@@ -128,15 +129,16 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
     let opt = opt.trim();
     if let Some(val) = opt.strip_prefix("width=") {
       if let Ok(dim) = Dimension::from_str(val.trim()) {
-        req_w = Some(dim.value_of() as f64 / 65536.0);
+        // to_bp: convert pt to bp (1bp = 1/72 inch, 1pt = 1/72.27 inch)
+        req_w = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
       }
     } else if let Some(val) = opt.strip_prefix("height=") {
       if let Ok(dim) = Dimension::from_str(val.trim()) {
-        req_h = Some(dim.value_of() as f64 / 65536.0);
+        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
       }
     } else if let Some(val) = opt.strip_prefix("totalheight=") {
       if let Ok(dim) = Dimension::from_str(val.trim()) {
-        req_h = Some(dim.value_of() as f64 / 65536.0);
+        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
       }
     } else if opt.starts_with("keepaspectratio") {
       keep_ratio = true;
