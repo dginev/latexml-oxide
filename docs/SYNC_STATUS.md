@@ -77,9 +77,9 @@ Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git hi
 | latex_ch3_sentences_and_paragraphs.rs | OK | `enterHorizontal` now auto via `mode => "text"` |
 | latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag`. `backmatterelement` property for appendix sections implemented (matches Perl `find_insertion_point` behavior). |
 | latex_ch5_packages.rs | MINOR | Done: `\PassOptionsToPackage/Class`, `\OptionNotUsed`, `\@unknownoptionerror`. Missing: `\@onefilewithoptions`, `ProcessOptions` inorder flag |
-| latex_ch7_math_mode_environments.rs | GAPS | Done: `retract_equation()`, `\nonumber`, `\lx@equation@nonumber`, `\lx@equation@retract`, `\lx@equation@settag`/`@`, `{equation*}`, `after_equation` postset branch, alignment-based `{eqnarray}`/`{eqnarray*}` with `eqnarray_bindings()` (3-column template, equationgroup/equation/_Capture_ hooks, row before/after hooks for equation numbering), `\@equationgroup@numbering{}` primitive (parses `{key=val,...}` and calls `prepare_equation_counter()`), `\if@in@firstcolumn` conditional, `\lefteqn{}` macro. Missing: `\intertext`, afterConstruct DOM rearrangement (`rearrangeEqnarray`/`openMathFork`/`closeMathFork`/`addColumnToMathFork`/`equationgroupJoinCols` — transforms `_Capture_` into `MathFork`/`MathBranch`/`tr`/`td` structure) |
-| latex_ch7_math_common_structures.rs | GAPS | Missing: `\frac` sizer, mathstyle property calc |
-| latex_ch7_math_common_delimiters.rs | EMPTY | 0% ported |
+| latex_ch7_math_mode_environments.rs | MINOR | afterConstruct rearrangement fully ported in amsmath_sty.rs (rearrangeAMSSplit/Align/Gather/Multirow). MathFork/MathBranch working. Missing: `\intertext` |
+| latex_ch7_math_common_structures.rs | MINOR | `\frac` and `\stackrel` ported with mathstyle. Missing: `fracSizer` (layout-only, no XML impact) |
+| latex_ch7_math_common_delimiters.rs | N/A | No Perl counterpart — delimiter defs live in plain.rs and tex_math.rs |
 | latex_ch8_defining_commands.rs | GAPS | Missing: `\DeclareMathAccent`, `\DeclareFontShape/Family`, many font declaration primitives |
 | latex_ch9_marginal_notes.rs | GAPS | 50% |
 | latex_ch10_tabbing_environment.rs | OK | Full port: registers, macros, markers, tab tracking, bindings, alignment setup. tabbing_test passes. |
@@ -105,8 +105,8 @@ Files at OK/MINOR (95%+): latex_ch1_fragile_commands, latex_ch1_break_command, l
 | `Tag('ltx:picture', afterOpen => tex attr)` | latex_constructs L5176 | Picture TeX source |
 | `Tag('ltx:g', afterClose => remove if empty)` | latex_constructs L5182 | SVG cleanup |
 | `Tag('ltx:graphics', afterOpen => GenerateID)` | TeX_FileIO L84 | Graphics ID |
-| `Tag('svg:g', afterClose => \&collapseSVGGroup)` | TeX_Box L855 | SVG group collapse (Rust has stub) |
-| `Tag('svg:foreignObject', autoOpen/Close => 1, ...)` | TeX_Box L863 | SVG foreign object |
+| ~~`Tag('svg:g', afterClose => collapseSVGGroup)`~~ | TeX_Box L855 | **DONE** (session 51) |
+| ~~`Tag('svg:foreignObject', autoOpen/Close => 1)`~~ | TeX_Box L863 | **DONE** (session 51) |
 
 ### Present in both (verified OK):
 ltx:section, ltx:document (4 calls), ltx:* (2 calls), ltx:XMDual, ltx:XMText, ltx:Math (3 calls), ltx:emph, ltx:note, ltx:part/chapter/section/.../subparagraph (7 calls), ltx:personname, ltx:titlepage, ltx:item, ltx:inline-item, ltx:equationgroup, ltx:para (2 calls), ltx:theorem, ltx:proof, ltx:figure/table/float (generate_id), ltx:biblist, ltx:bibliography, ltx:bibitem, ltx:bibblock, ltx:text, ltx:td, ltx:p, ltx:appendix (article+book), svg:g (stub).
