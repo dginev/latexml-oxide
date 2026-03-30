@@ -1931,7 +1931,17 @@ pub fn postfix_script(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => base, op);
-  new_script(base, op.unwrap(), ctxt)
+  // 3-arg rules (e.g. mulop postsubarg postsuperarg): chain both scripts
+  let op2 = args.pop().flatten();
+  let intermediate = new_script(base, op.unwrap(), ActionContext {
+    nodes: ctxt.nodes,
+    document: &mut *ctxt.document,
+  })?;
+  if let Some(op2) = op2 {
+    new_script(intermediate, op2, ctxt)
+  } else {
+    Ok(intermediate)
+  }
 }
 
 pub fn prefix_script(
