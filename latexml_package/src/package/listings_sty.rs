@@ -1408,9 +1408,18 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   if !caption_tokens.is_empty() {
     numbered = true;
     has_caption = true;
+    // Perl lines 184-188: Extract optional [short caption] from caption text
+    let mut toks: Vec<Token> = caption_tokens.unlist();
+    let mut short_caption = Tokens!();
+    if toks.first().map(|t| t.to_string() == "[").unwrap_or(false) {
+      while !toks.is_empty() && toks[0].to_string() != "]" {
+        short_caption.unlist_mut().push(toks.remove(0));
+      }
+      if !toks.is_empty() { toks.remove(0); } // consume ']'
+    }
     let caption = invoke(
       T_CS!("\\lstlisting@makecaption"),
-      vec![Tokens!(), caption_tokens],
+      vec![short_caption, Tokens::new(toks)],
     );
     let captionpos = lst_get_literal("captionpos");
     if captionpos == "t" {
