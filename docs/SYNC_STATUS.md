@@ -440,7 +440,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Perl XML sync (tests pass, but Rust diverges from updated Perl)
 
 - [x] P1. guessTableHeaders: circled digit classification — already correct (ding.xml, tabular.xml zero-diff with Perl).
-- [ ] P5. xcolors.xml: colortbl row cycling DONE (session 66). Remaining: border="t" on cells, thead structure, color spectrum (1 line), pt units (1 line).
+- [ ] P5. xcolors.xml 720→572 Perl diffs (session 66): colortbl, rowcolors, border="t", thead, tHsb wheel, lshiftset pt units. Remaining: \hiderowcolors font persistence, named-colors table structure.
 
 ### Heavy package bindings (distant future)
 
