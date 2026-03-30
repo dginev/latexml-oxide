@@ -647,10 +647,191 @@ LoadDefinitions!({
   Let!("\\var", "\\variation");
 
   // Perl: \lx@physics@deriv — derivative (complex multi-arg parsing)
-  // Simplified version: handles the most common cases
-  DefMacro!("\\derivative{}{}", r"\frac{\mathrm{d}#1}{\mathrm{d}#2}");
-  DefMacro!("\\partialderivative{}{}", r"\frac{\partial #1}{\partial #2}");
-  DefMacro!("\\functionalderivative{}{}", r"\frac{\delta #1}{\delta #2}");
+  // Handles: \dv{var}, \dv{f}{x}, \dv[n]{f}{x}, \dv{var}(expr), \dv*{f}{x}
+  // For partial: \pdv{f}{x}{y} (double derivative)
+  DefPrimitive!("\\lx@physics@deriv{}{}{}", sub[(cs, semantic, diff)] {
+    let cs_tks = cs.clone();
+    let semantic_str = semantic.to_string();
+    let diff_tks = diff.clone();
+    let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
+    let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks.clone());
+
+    let inline = gullet::read_match(&[&Tokenize!("*")])?.is_some();
+    let degree = gullet::read_optional(None)?;
+    let tmp1 = gullet::read_arg(ExpansionLevel::Off)?; // 1st required: var1 or expr
+    let (tmp2, open, close) = phys_read_arg(false, |s| {
+      if s == "(" { Some(")") } else { None }
+    })?;
+
+    // For partial derivatives: try to read a 3rd {} arg (2nd var)
+    let mut tmp3: Option<Tokens> = None;
+    if semantic_str.starts_with("partial") {
+      if let Some(ref t2) = tmp2 {
+        if open.is_none() {
+          // tmp2 was a {} arg, try for 3rd
+          let (t3, o3, _c3) = phys_read_arg(false, |s| {
+            if s == "(" { Some(")") } else { None }
+          })?;
+          if o3.is_none() { // only accept {} arg, not (arg)
+            tmp3 = t3;
+          }
+        }
+      }
+    }
+
+    // Determine expr, var, var2
+    let (expr, var, var2) = if tmp3.is_some() {
+      (Some(tmp1.clone()), tmp2.unwrap(), tmp3)
+    } else if let Some(t2) = tmp2 {
+      if open.is_some() {
+        (Some(t2), tmp1, None) // \dv{var}(expr)
+      } else {
+        (Some(tmp1), t2, None) // \dv{expr}{var}
+      }
+    } else {
+      (None, tmp1, None) // \dv{var}
+    };
+
+    // Check if expr is empty
+    let expr = expr.and_then(|e| if e.is_empty() { None } else { Some(e) });
+
+    let frac_cs = if inline { T_CS!("\\ifrac") } else { T_CS!("\\frac") };
+
+    if let Some(v2) = var2 {
+      // Double derivative: \pdv{f}{x}{y}
+      let a1 = Tokens::new(vec![i_arg("1")]); // expr
+      let a2 = Tokens::new(vec![i_arg("2")]); // var1
+      let a3 = Tokens::new(vec![i_arg("3")]); // var2
+
+      let mut rev = Vec::new();
+      rev.extend(cs_tks.unlist());
+      if inline { rev.push(T_OTHER!("*")); }
+      rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
+      rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+      rev.extend(phys_rev_arg(a3.clone(), &None, &None).unlist());
+      let reversion = Tokens::new(rev);
+
+      let op = i_apply(&[], cfunc.clone(), vec![a2.clone(), Tokenize!("1"), a3.clone(), Tokenize!("1")]);
+      let content = if let Some(ref e) = expr {
+        i_apply(&[], op, vec![a1.clone()])
+      } else { op };
+
+      // Presentation: \frac{d^2 expr}{dx dy}
+      let mut numer = Vec::new();
+      numer.extend(i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc.clone(), Tokenize!("2")).unlist());
+      if expr.is_some() { numer.push(i_arg("1")); }
+      let mut denom = Vec::new();
+      denom.extend(i_apply(&[], pfunc.clone(), vec![a2]).unlist());
+      denom.extend(i_apply(&[], pfunc.clone(), vec![a3]).unlist());
+      let pres = Tokens::new([
+        vec![frac_cs, T_BEGIN!()],
+        numer,
+        vec![T_END!(), T_BEGIN!()],
+        denom,
+        vec![T_END!()],
+      ].concat());
+
+      let has_expr = expr.is_some();
+      let mut args = Vec::new();
+      if let Some(e) = expr { args.push(e); } else { args.push(Tokens::default()); }
+      args.push(var);
+      args.push(v2);
+
+      let mut kv = vec![("reversion", reversion)];
+      if !has_expr { kv.push(("role", Tokenize!("DIFFOP"))); }
+      let result = i_dual(&kv, content, pres, args)?;
+      gullet::unread(result);
+    } else {
+      // Single-variable derivative
+      let a1 = Tokens::new(vec![i_arg("1")]); // expr (or placeholder)
+      let a2 = Tokens::new(vec![i_arg("2")]); // var
+
+      let mut rev = Vec::new();
+      rev.extend(cs_tks.unlist());
+      if inline { rev.push(T_OTHER!("*")); }
+
+      let mut all_args: Vec<Tokens> = Vec::new();
+
+      if let Some(ref deg) = degree {
+        let a3 = Tokens::new(vec![i_arg("3")]);
+        rev.push(T_OTHER!("["));
+        rev.push(i_arg("3"));
+        rev.push(T_OTHER!("]"));
+      }
+
+      if open.is_some() {
+        // \dv{var}(expr) — var first, then expr in parens
+        rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+        rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
+      } else if expr.is_some() {
+        // \dv{expr}{var}
+        rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
+        rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+      } else {
+        // \dv{var} alone
+        rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+      }
+      let reversion = Tokens::new(rev);
+
+      let op = i_apply(&[], cfunc, vec![a2.clone(),
+        if degree.is_some() { Tokens::new(vec![i_arg("3")]) } else { Tokens::default() }]);
+
+      let content = if expr.is_some() {
+        i_apply(&[], op, vec![a1.clone()])
+      } else { op };
+
+      let has_expr = expr.is_some();
+      let has_open = open.is_some();
+
+      // Presentation: \frac{d^n expr}{dx^n} or \frac{d expr}{dx}
+      let mut numer = Vec::new();
+      if degree.is_some() {
+        let a3 = Tokens::new(vec![i_arg("3")]);
+        numer.extend(i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc.clone(), a3.clone()).unlist());
+      } else {
+        numer.extend(pfunc.clone().unlist());
+      }
+      if has_expr && !has_open {
+        numer.push(i_arg("1"));
+      }
+      let mut denom = Vec::new();
+      if degree.is_some() {
+        let a3 = Tokens::new(vec![i_arg("3")]);
+        denom.extend(i_superscript(&[], i_apply(&[], pfunc.clone(), vec![a2]), a3).unlist());
+      } else {
+        denom.extend(i_apply(&[], pfunc, vec![a2]).unlist());
+      }
+      let mut pres_tks = vec![frac_cs, T_BEGIN!()];
+      pres_tks.extend(numer);
+      pres_tks.push(T_END!());
+      pres_tks.push(T_BEGIN!());
+      pres_tks.extend(denom);
+      pres_tks.push(T_END!());
+      if has_expr && has_open {
+        pres_tks.push(T_CS!("\\lx@ApplyFunction"));
+        pres_tks.extend(phys_open(false, &None, open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist());
+        pres_tks.push(i_arg("1"));
+        pres_tks.extend(phys_close(false, &None, close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist());
+      }
+      let presentation = Tokens::new(pres_tks);
+      if let Some(e) = expr {
+        all_args.push(e);
+      }
+      all_args.push(var);
+      if let Some(deg) = degree {
+        all_args.push(deg);
+      }
+
+      let mut kv = vec![("reversion", reversion)];
+      if !has_expr { kv.push(("role", Tokenize!("DIFFOP"))); }
+      let result = i_dual(&kv, content, presentation, all_args)?;
+      gullet::unread(result);
+    }
+  });
+
+  DefMacro!("\\derivative", "\\lx@physics@deriv{\\derivative}{derivative}{\\mathrm{d}}");
+  DefMacro!("\\partialderivative", "\\lx@physics@deriv{\\partialderivative}{partial-derivative}{\\partial}");
+  DefMacro!("\\functionalderivative", "\\lx@physics@deriv{\\functionalderivative}{functional-derivative}{\\delta}");
   Let!("\\dv", "\\derivative");
   Let!("\\pdv", "\\partialderivative");
   Let!("\\pderivative", "\\partialderivative");
