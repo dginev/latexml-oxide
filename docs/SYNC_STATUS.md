@@ -285,7 +285,7 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-31):** 332 pass, 0 fail, 12 ignored. 286 paired, 217 raw zero-diff (75.9%), 243 effective zero-diff (85.0% — 26 tests with only intentional divergences). 43 tests with real content diffs. 86_tikz: 4 pass (was 3), 3 fail, 3 ignored — atoms_and_orbitals fixed via PGF shading port.
+**Status (2026-03-31):** 307 pass, 3 fail, 3 ignored. 86_tikz: 4 pass, 3 fail, 3 ignored. All tikz test references synced from fresh Perl output (searchpaths PI stripped, %newline stripped). Remaining 3 failures: color="#000000" model mismatch (Gray(0) vs Rgb(0,0,0)), font metric coordinate diffs, collapseSVGGroup wrapper differences, nested minipage sizing.
 
 ### Package bindings
 
