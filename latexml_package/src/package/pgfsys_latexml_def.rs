@@ -262,6 +262,8 @@ LoadDefinitions!({
 
 
   // Perl L197-210: \pgfsys@hbox — inserts a box in SVG context
+  // Perl: sizer => sub { my $box = $_[0]->getProperty('thebox');
+  //   return ($box ? $box->getSize : (Dimension(0), Dimension(0), Dimension(0))); }
   DefConstructor!("\\pgfsys@hbox{Number}",
     sub[document, _args, props] {
       if let Some(Stored::Digested(thebox)) = props.get("thebox") {
@@ -274,6 +276,18 @@ LoadDefinitions!({
         .unwrap_or(0);
       let boxname = format!("box{}", boxnum);
       if let Some(bx) = state::lookup_value(&boxname) {
+        // Perl: sizer propagates box dimensions to the whatsit
+        if let Stored::Digested(ref digested) = bx {
+          if let Some(RegisterValue::Dimension(w)) = digested.get_width(None).unwrap_or(None) {
+            whatsit.set_property("cached_width", Stored::Dimension(w));
+          }
+          if let Some(RegisterValue::Dimension(h)) = digested.get_height() {
+            whatsit.set_property("cached_height", Stored::Dimension(h));
+          }
+          if let Some(RegisterValue::Dimension(d)) = digested.get_depth() {
+            whatsit.set_property("cached_depth", Stored::Dimension(d));
+          }
+        }
         whatsit.set_property("thebox", bx);
       }
     }

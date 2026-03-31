@@ -520,18 +520,43 @@ LoadDefinitions!({
         }
       }
       // Perl L363-388: Set size and transform on remaining foreignObjects
-      // Read cached dimensions from whatsit properties
       let mut has_dims = false;
       if let Some(wh) = whatsit {
-        let dims = wh.with_properties(|props| {
+        // First try: use whatsit's getSize (which computes from body/args)
+        let mut dims = wh.with_properties(|props| {
           let w = match props.get("cached_width").or_else(|| props.get("width")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
           let h = match props.get("cached_height").or_else(|| props.get("height")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
           let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
+            Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
           (w, h, d)
         });
+        // If dimensions are suspiciously small (single character), try computing
+        // from the actual text content. This handles the case where the foreignObject
+        // auto-opened during character-by-character text absorption, getting only
+        // the first character's dimensions instead of the full text.
+        // Only applies to <text> elements (not Math, graphics, etc.)
+        if dims.0.value_of().abs() < 65536 * 10 { // < 10pt: likely single char
+          let children = latexml_core::common::xml::element_nodes(node);
+          let has_text_only = !children.is_empty() && children.iter().all(|c| {
+            let qn = document::get_node_qname(c);
+            arena::with(qn, |s| s == "ltx:text" || s == "text")
+          });
+          if has_text_only || children.is_empty() {
+            let full_text = node.get_content();
+            if full_text.len() > 1 {
+              let font = wh.get_font().ok().flatten()
+                .map(|f| (*f).clone())
+                .unwrap_or_else(Font::text_default);
+              let (fw, fh, fd) = font.compute_string_size(
+                &full_text, SymHashMap::default());
+              if fw.value_of() > dims.0.value_of() {
+                dims = (fw, fh, fd);
+              }
+            }
+          }
+        }
         let (w, h, d) = dims;
         if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
           has_dims = true;
