@@ -62,6 +62,15 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
   tokens
 }
 
+/// Helper: read a TeX dimension register value by control sequence name
+fn read_dim_register(cs: &str) -> Dimension {
+  if let RegisterValue::Dimension(d) = LookupRegister!(cs) {
+    d
+  } else {
+    Dimension::default()
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L29-31: image suffix list
@@ -404,12 +413,12 @@ LoadDefinitions!({
     }
   );
 
-  // Perl L341-348: clipped path
+  // Perl L341-348: clipped path — obj computed in properties (digestion) to match Perl counter order
   DefConstructor!("\\lxSVG@drawpath@clipped{}{}",
-    sub[document, args, _props] {
+    sub[document, args, props] {
       let d = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
-      let obj = svg_next_object();
+      let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
@@ -429,7 +438,11 @@ LoadDefinitions!({
         "clip-path" => format!("url(#pgfcp{})", obj),
         "_autoclose" => "1".to_string()
       )), None)?;
-    }
+    },
+    properties => sub[_args] {
+      Ok(stored_map!("obj" => svg_next_object()))
+    },
+    sizer => 0
   );
 
   // Perl L351-371: \pgfsys@discardpath
@@ -448,9 +461,9 @@ LoadDefinitions!({
   });
 
   DefConstructor!("\\lxSVG@discardpath@clipped{}",
-    sub[document, args, _props] {
+    sub[document, args, props] {
       let d = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
-      let obj = svg_next_object();
+      let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
@@ -460,7 +473,11 @@ LoadDefinitions!({
         "clip-path" => format!("url(#pgfcp{})", obj),
         "_autoclose" => "1".to_string()
       )), None)?;
-    }
+    },
+    properties => sub[_args] {
+      Ok(stored_map!("obj" => svg_next_object()))
+    },
+    sizer => 0
   );
 
   //===================================================================
@@ -700,10 +717,363 @@ LoadDefinitions!({
   RawTeX!("\\def\\pgfsys@begininvisible#1\\pgfsys@endinvisible{}");
 
   //===================================================================
-  // Shading stubs
+  // 10. Shading
   //===================================================================
-  DefMacro!("\\pgfsys@horishading{}{}{}", "");
-  DefMacro!("\\pgfsys@vertshading{}{}{}", "");
-  DefMacro!("\\pgfsys@radialshading{}{}{}", "");
-  DefMacro!("\\pgfsys@functionalshading{}{}{}", "");
+
+  // Perl L632-639: \lxSVG@sh@create — expands shading ranges into interval calls
+  DefMacro!("\\lxSVG@sh@create", sub[_args] {
+    let mut toks = vec![T_CS!("\\lxSVG@sh@intervals")];
+    toks.extend(gullet::do_expand(T_CS!("\\pgf@sys@shading@ranges"))?.unlist());
+    toks.push(T_BEGIN!());
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgf@sys@shading@end@pos"));
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgf@sys@shading@end@pos"));
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgf@sys@shading@end@rgb"));
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgf@sys@shading@end@rgb"));
+    toks.push(T_END!());
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.push(T_END!());
+    toks
+  });
+
+  // Perl L641-642: \lxSVG@sh@interval@ — stash a single stop
+  DefMacro!("\\lxSVG@sh@interval@{}{}",
+    "\\lxSVG@sh@stashstop{\\lxSVG@sh@stop{#1}{\\pgf@sys@shading@end@pos}#2}");
+
+  // Perl L644-646: \lxSVG@sh@stashstop — digest arg and push to pgf_sh_stops list
+  DefPrimitive!("\\lxSVG@sh@stashstop{}", sub[args] {
+    if let Some(arg) = args.into_iter().next() {
+      if arg.is_some() {
+        let tokens = arg.revert()?;
+        let digested = stomach::digest(tokens)?;
+        state::push_value("pgf_sh_stops", digested)?;
+      }
+    }
+  });
+
+  // Perl L648-654: \lxSVG@sh@stop — creates <svg:stop> element
+  DefConstructor!("\\lxSVG@sh@stop{Dimension}{Dimension}{Float}{Float}{Float}",
+    sub[document, args, _props] {
+      let start_dim = args.get(0).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension());
+      let end_dim = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension());
+      let r: f64 = args.get(2).and_then(|a| a.as_ref()).map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let g: f64 = args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let b: f64 = args.get(4).and_then(|a| a.as_ref()).map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      if let (Some(s), Some(e)) = (start_dim, end_dim) {
+        let s_px = dim_to_px(s);
+        let e_px = dim_to_px(e);
+        let offset = if e_px != 0.0 {
+          floatformat(s_px / e_px)
+        } else {
+          "0".to_string()
+        };
+        let stopcolor = format!("#{:02X}{:02X}{:02X}",
+          (r * 255.0).round() as u8,
+          (g * 255.0).round() as u8,
+          (b * 255.0).round() as u8);
+        document.insert_element("svg:stop", Vec::new(), Some(string_map!(
+          "offset" => offset,
+          "stop-color" => stopcolor
+        )))?;
+      }
+    },
+    sizer => 0
+  );
+
+  // Perl L656-657: \lxSVG@sh@interval — forwards to interval@
+  DefMacro!("\\lxSVG@sh@interval{}{}{}{}",
+    "\\lxSVG@sh@interval@{#1}{#3}");
+
+  // Perl L659-664: \lxSVG@sh@intervals — recursive interval processing
+  DefMacro!("\\lxSVG@sh@intervals{}", sub[args] {
+    if let Some(pt) = args.into_iter().next() {
+      if pt.is_some() {
+        let expanded = gullet::do_expand(pt.revert()?)?;
+        let s = expanded.to_string();
+        if s.trim().is_empty() {
+          return Ok(Tokens::default());
+        }
+        let mut toks = vec![T_CS!("\\lxSVG@sh@interval")];
+        toks.extend(expanded.unlist());
+        toks.push(T_CS!("\\lxSVG@sh@intervals"));
+        return Ok(Tokens::new(toks));
+      }
+    }
+    Ok(Tokens::default())
+  });
+
+  // Perl L667-689: \lxSVG@sh@defstripes — creates linearGradient constructors
+  DefPrimitive!("\\lxSVG@sh@defstripes{}{Number}", sub[args] {
+    let name = args.get(0).map(|a| a.to_string()).unwrap_or_default();
+    let flag: i64 = args.get(1).map(|a| a.value_of()).unwrap_or(0);
+    // Collect digested stops from state
+    let stops: Vec<Digested> = if let Some(Stored::VecDequeStored(vd)) = state::lookup_value("pgf_sh_stops") {
+      vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
+    } else { vec![] };
+    state::assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
+    let x = dim_to_px(read_dim_register("\\pgf@x"));
+    let y = dim_to_px(read_dim_register("\\pgf@y"));
+    let is_vertical = flag == 1;
+
+    // Define \@pgfshading<name>! as a primitive
+    let shading_cs = T_CS!(format!("\\@pgfshading{}!", name));
+    let closure: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| {
+      let objcount = svg_next_object();
+      let zero_sizer: Option<latexml_core::definition::SizingClosure> = Some(Rc::new(|_| Ok((Dimension::default(), Dimension::default(), Dimension::default()))));
+
+      // Define \lxSVG@sh@defs constructor — emits linearGradient with stops
+      let stops_clone = stops.clone();
+      let defs_replacement: ReplacementClosure = Rc::new(move |document, _args, _props| {
+        document.open_element("svg:defs", None, None)?;
+        let mut grad_attrs = string_map!("id" => format!("pgfsh{}", objcount));
+        if is_vertical {
+          grad_attrs.insert("gradientTransform".to_string(), "rotate(90)".to_string());
+        }
+        document.open_element("svg:linearGradient", Some(grad_attrs), None)?;
+        for stop in &stops_clone {
+          document.absorb(stop, None)?;
+        }
+        document.close_element("svg:linearGradient")?;
+        document.close_element("svg:defs")?;
+        Ok(())
+      });
+      def_constructor(T_CS!("\\lxSVG@sh@defs"), None, Some(defs_replacement),
+        ConstructorOptions { sizer: zero_sizer.clone(), ..Default::default() });
+
+      // Define \lxSVG@sh constructor — emits rect with gradient fill
+      let sh_replacement: ReplacementClosure = Rc::new(move |document, _args, _props| {
+        document.insert_element("svg:rect", Vec::new(), Some(string_map!(
+          "width" => format!("{}", x),
+          "height" => format!("{}", y),
+          "style" => format!("fill:url(#pgfsh{});stroke:none", objcount)
+        )))?;
+        Ok(())
+      });
+      def_constructor(T_CS!("\\lxSVG@sh"), None, Some(sh_replacement),
+        ConstructorOptions { sizer: zero_sizer, ..Default::default() });
+
+      // Define \lxSVG@pos macro
+      let pos_toks = mouth::tokenize_internal(
+        &format!("\\pgfpoint{{{x}}}{{{y}}}"));
+      let _ = def_macro(T_CS!("\\lxSVG@pos"), None, pos_toks, None);
+
+      Ok(vec![Digested::default()])
+    }));
+    let lock_key = format!("\\@pgfshading{}!:locked", name);
+    state::install_definition(Primitive {
+      cs: shading_cs,
+      replacement: Some(closure),
+      ..Primitive::default()
+    }, Some(Scope::Global));
+    state::assign_value(&lock_key, true, Scope::Global);
+  });
+
+  // Perl L691-714: \lxSVG@sh@defcircles — creates radialGradient constructors
+  DefPrimitive!("\\lxSVG@sh@defcircles{}", sub[args] {
+    let name = args.get(0).map(|a| a.to_string().trim().to_string()).unwrap_or_default();
+    // Collect digested stops from state
+    let stops: Vec<Digested> = if let Some(Stored::VecDequeStored(vd)) = state::lookup_value("pgf_sh_stops") {
+      vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
+    } else { vec![] };
+    state::assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
+    // Perl: Dimension(ToString(Expand(T_CS('\pgf@sys@shading@end@pos'))))->pxValue
+    let endpos_tokens = gullet::do_expand(T_CS!("\\pgf@sys@shading@end@pos"))?;
+    let endpos_str = endpos_tokens.to_string();
+    let endpos_dim = endpos_str.trim().parse::<f64>().ok()
+      .map(|pts| Dimension::new((pts * 65536.0) as i64))
+      .unwrap_or_else(|| {
+        // Try parsing as TeX dimension (e.g. "28.45274pt")
+        let s = endpos_str.trim().trim_end_matches("pt");
+        let pts: f64 = s.parse().unwrap_or(1.0);
+        Dimension::new((pts * 65536.0) as i64)
+      });
+    let endpos = dim_to_px(endpos_dim);
+    let pgfx = dim_to_px(read_dim_register("\\pgf@x"));
+    let pgfy = dim_to_px(read_dim_register("\\pgf@y"));
+    let fx = floatformat(pgfx * 8.0 / (endpos * 16.0) + 0.5);
+    let fy = floatformat(pgfy * 8.0 / (endpos * 16.0) + 0.5);
+
+    let shading_cs = T_CS!(format!("\\@pgfshading{}!", name));
+    let fx_clone = fx.clone();
+    let fy_clone = fy.clone();
+    let closure: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| {
+      let objcount = svg_next_object();
+      let fx_c = fx_clone.clone();
+      let fy_c = fy_clone.clone();
+      let zero_sizer: Option<latexml_core::definition::SizingClosure> = Some(Rc::new(|_| Ok((Dimension::default(), Dimension::default(), Dimension::default()))));
+
+      // Define \lxSVG@sh@defs — radialGradient with stops
+      let stops_clone = stops.clone();
+      let defs_replacement: ReplacementClosure = Rc::new(move |document, _args, _props| {
+        document.open_element("svg:defs", None, None)?;
+        document.open_element("svg:radialGradient", Some(string_map!(
+          "id" => format!("pgfsh{}", objcount),
+          "fx" => fx_c.clone(),
+          "fy" => fy_c.clone()
+        )), None)?;
+        for stop in &stops_clone {
+          document.absorb(stop, None)?;
+        }
+        document.close_element("svg:radialGradient")?;
+        document.close_element("svg:defs")?;
+        Ok(())
+      });
+      def_constructor(T_CS!("\\lxSVG@sh@defs"), None, Some(defs_replacement),
+        ConstructorOptions { sizer: zero_sizer.clone(), ..Default::default() });
+
+      // Define \lxSVG@sh — circle with gradient fill
+      let sh_replacement: ReplacementClosure = Rc::new(move |document, _args, _props| {
+        document.insert_element("svg:circle", Vec::new(), Some(string_map!(
+          "cx" => format!("{}", endpos),
+          "cy" => format!("{}", endpos),
+          "r" => format!("{}", endpos),
+          "style" => format!("fill:url(#pgfsh{});stroke:none", objcount)
+        )))?;
+        Ok(())
+      });
+      def_constructor(T_CS!("\\lxSVG@sh"), None, Some(sh_replacement),
+        ConstructorOptions { sizer: zero_sizer, ..Default::default() });
+
+      // Define \lxSVG@pos macro
+      let pos_toks = mouth::tokenize_internal(
+        &format!("\\pgfpoint{{{}}}{{{}}}", 2.0 * endpos, 2.0 * endpos));
+      let _ = def_macro(T_CS!("\\lxSVG@pos"), None, pos_toks, None);
+
+      Ok(vec![Digested::default()])
+    }));
+    let lock_key = format!("\\@pgfshading{}!:locked", name);
+    state::install_definition(Primitive {
+      cs: shading_cs,
+      replacement: Some(closure),
+      ..Primitive::default()
+    }, Some(Scope::Global));
+    state::assign_value(&lock_key, true, Scope::Global);
+  });
+
+  // Perl L716-724: \lxSVG@sh@insert — wraps content in translate group
+  // NOTE: Perl uses ptValue not pxValue here (comment says "Something odd with scales")
+  DefConstructor!("\\lxSVG@sh@insert{Dimension}{Dimension}{}",
+    sub[document, args, _props] {
+      let x = args.get(0).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+        .map(|d| d.value_of() as f64 / 65536.0).unwrap_or(0.0);
+      let y = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+        .map(|d| d.value_of() as f64 / 65536.0).unwrap_or(0.0);
+      document.open_element("svg:g", Some(string_map!(
+        "transform" => format!("translate({} {})", floatformat(x), floatformat(y))
+      )), None)?;
+      if let Some(Some(content)) = args.get(2) {
+        document.absorb(content, None)?;
+      }
+      document.close_element("svg:g")?;
+    },
+    sizer => 0
+  );
+
+  // Perl L728-732: \lxSVG@process — update bounding box
+  DefMacro!("\\lxSVG@process{}{}",
+    "\\ifdim\\pgf@picmaxx<#1\\global\\pgf@picmaxx=#1\\fi\\ifdim\\pgf@picmaxy<#2\\global\\pgf@picmaxy=#2\\fi\\ifdim\\pgf@picminx>#1\\global\\pgf@picminx=#1\\fi\\ifdim\\pgf@picminy>#2\\global\\pgf@picminy=#2\\fi");
+
+  // Perl L737-746: \pgfsys@shadinginsidepgfpicture
+  RawTeX!("\\def\\pgfsys@shadinginsidepgfpicture#1{#1\\lxSVG@sh@defs\\pgf@process{\\lxSVG@pos}\\pgf@x=-.5\\pgf@x\\relax\\pgf@y=-.5\\pgf@y\\relax\\lxSVG@sh@insert{\\pgf@x}{\\pgf@y}{\\lxSVG@sh}}");
+
+  // Perl L748-762: \pgfsys@shadingoutsidepgfpicture
+  RawTeX!("\\def\\pgfsys@shadingoutsidepgfpicture#1{\\begingroup\\lxSVG@installcommands#1\\setbox\\pgfpic=\\hbox to0pt{\\lxSVG@sh@defs\\lxSVG@sh}\\pgf@process{\\lxSVG@pos}\\pgf@picminx=0pt\\pgf@picminy=0pt\\pgf@picmaxx=\\pgf@x\\pgf@picmaxy=\\pgf@y\\def\\pgf@shift@baseline{0pt}\\pgfsys@typesetpicturebox{\\pgfpic}\\endgroup}");
+
+  // Perl L766-773: \pgfsys@horishading
+  DefMacro!("\\pgfsys@horishading{}{}{}", sub[args] {
+    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let height = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let specs = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let mut toks = Vec::new();
+    toks.push(T_CS!("\\pgf@parsefunc"));
+    toks.push(T_BEGIN!());
+    toks.extend(specs.unlist());
+    toks.push(T_END!());
+    toks.push(T_CS!("\\lxSVG@sh@create"));
+    toks.push(T_CS!("\\pgf@process"));
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgfpoint"));
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgf@sys@shading@end@pos"));
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.extend(height.unlist());
+    toks.push(T_END!());
+    toks.push(T_END!());
+    toks.push(T_CS!("\\lxSVG@sh@defstripes"));
+    toks.push(T_BEGIN!());
+    toks.extend(name.unlist());
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.push(CharToken!('0'));
+    toks.push(T_END!());
+    toks
+  });
+
+  // Perl L776-782: \pgfsys@vertshading
+  DefMacro!("\\pgfsys@vertshading{}{}{}", sub[args] {
+    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let height = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let specs = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let mut toks = Vec::new();
+    toks.push(T_CS!("\\pgf@parsefunc"));
+    toks.push(T_BEGIN!());
+    toks.extend(specs.unlist());
+    toks.push(T_END!());
+    toks.push(T_CS!("\\lxSVG@sh@create"));
+    toks.push(T_CS!("\\pgf@process"));
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgfpoint"));
+    toks.push(T_BEGIN!());
+    toks.push(T_CS!("\\pgf@sys@shading@end@pos"));
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.extend(height.unlist());
+    toks.push(T_END!());
+    toks.push(T_END!());
+    toks.push(T_CS!("\\lxSVG@sh@defstripes"));
+    toks.push(T_BEGIN!());
+    toks.extend(name.unlist());
+    toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.push(CharToken!('1'));
+    toks.push(T_END!());
+    toks
+  });
+
+  // Perl L784-789: \pgfsys@radialshading
+  DefMacro!("\\pgfsys@radialshading{}{}{}", sub[args] {
+    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let point = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let specs = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let mut toks = Vec::new();
+    toks.push(T_CS!("\\pgf@parsefunc"));
+    toks.push(T_BEGIN!());
+    toks.extend(specs.unlist());
+    toks.push(T_END!());
+    toks.push(T_CS!("\\lxSVG@sh@create"));
+    toks.push(T_CS!("\\pgf@process"));
+    toks.push(T_BEGIN!());
+    toks.extend(point.unlist());
+    toks.push(T_END!());
+    toks.push(T_CS!("\\lxSVG@sh@defcircles"));
+    toks.push(T_BEGIN!());
+    toks.extend(name.unlist());
+    toks.push(T_END!());
+    toks
+  });
+
+  // Perl L792-796: \pgfsys@functionalshading — not implementable (PostScript functions)
+  DefMacro!("\\pgfsys@functionalshading{}{}{}{}", sub[_args] {
+    let toks = mouth::tokenize_internal(
+      "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist();
+    toks
+  });
 });

@@ -274,3 +274,30 @@ The test passes in both because the expected XML was generated with this same bu
 **Rust status:** Identical behavior — 2 `Error:unexpected:}` messages. These are
 expected and match Perl. A future `\read` brace-balancing fix would eliminate these
 errors, but it would also change the test output (requiring XML updates).
+
+---
+
+## 11. `SVGNextObject()` timing inconsistency between clipPaths and shadings
+
+**Perl source:** `pgfsys-latexml.def.ltxml` lines 348, 371, 674, 699
+
+**Symptom:** In Perl, `SVGNextObject()` is called from `properties` closures for both
+clipPaths (lines 348, 371) and shadings (lines 674, 699). Properties closures run
+during the **digestion** phase, so the counter increments in document order (clip1,
+shade2, clip3, shade4...). This is correct but **fragile** — it relies on properties
+closures having the same execution timing as `DefPrimitiveI` bodies.
+
+If clipPaths used a constructor body instead of a properties closure (natural for
+imperative DOM manipulation), the counter would increment during construction phase
+instead of digestion, breaking the interleaving. Perl's design accidentally works
+because Perl's DefConstructor template-based approach naturally uses properties for
+computed values.
+
+**Impact:** None in Perl (the timing happens to be correct). In the Rust port,
+initially placing `svg_next_object()` in the constructor body (construction phase)
+caused all shading IDs to be assigned before clipPath IDs, breaking the interleaving.
+Fixed by matching Perl's properties-based approach.
+
+**Rust fix:** Moved `svg_next_object()` to `properties` closures for clipPath
+constructors (`\lxSVG@drawpath@clipped`, `\lxSVG@discardpath@clipped`), matching
+Perl's digestion-phase counter increment timing.
