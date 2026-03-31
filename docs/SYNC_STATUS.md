@@ -285,7 +285,12 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-31):** 307 pass, 3 fail, 3 ignored. 86_tikz: 4 pass, 3 fail, 3 ignored. All tikz test references synced from fresh Perl output (searchpaths PI stripped, %newline stripped). Remaining 3 failures: color="#000000" model mismatch (Gray(0) vs Rgb(0,0,0)), font metric coordinate diffs, collapseSVGGroup wrapper differences, nested minipage sizing.
+**Status (2026-03-31):** 307 pass, 3 fail, 3 ignored. 86_tikz: 4 pass, 3 fail, 3 ignored.
+
+**Remaining tikz failures (fresh Perl refs):**
+- **tikz_3d_cone** (108 structural diffs): color="#000000" svg:g wrapper (Gray(0)/Rgb(0,0,0) model mismatch — see wisdom), missing wrapper svg:g around bounding box paths (collapseSVGGroup nesting depth), small coordinate diffs (~0.1-0.3px from font metrics), missing TeX comments.
+- **ac_drive_components** (231 structural diffs): ~1pt Y-offset from different `\pgf@picminy` bounding box (downstream of font metric width diffs), missing `stroke-width` merge into root svg:g (collapseSVGGroup missing scope wrapper), nested minipage inner SVG dimensions 206x102 vs 197x104 (large), missing TeX comments.
+- **various_colors** (572 structural diffs): tcolorbox SVG structural differences (largest chunk), listing section nesting, angle bracket `⟨T,w⟩` math parsing (intentional divergence), missing `[` (Perl artifact — our output correct), missing trailing empty `<text>` elements, color precision in tex= attrs.
 
 ### Package bindings
 
