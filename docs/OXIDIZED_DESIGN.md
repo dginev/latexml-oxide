@@ -167,16 +167,51 @@ at compile time. The Font struct stores `Option<Color>` instead of `Option<Cow<s
 eliminating string-parsing at comparison time.
 
 **Parity:** All five Perl color models (rgb, cmy, cmyk, hsb, gray) are supported with
-full inter-conversion. `to_attribute()` produces identical hex strings. Model-aware
-comparison matches Perl's `isDiff` semantics (cmyk black ≠ rgb black).
+full inter-conversion. `to_attribute()` produces identical hex strings.
+
+#### Font Color Comparison: Discriminant-Based Reference Equality
+
+Perl's `Font::isDiff` uses `$x ne $y` — string comparison of *object references*. Two
+Color objects at different memory addresses are "different" even if visually identical.
+This means `Cmyk(0,0,0,1)` (CMYK black) is "different" from `Rgb(0,0,0)` (DEFCOLOR)
+even though both render as `#000000`.
+
+In Rust, we use two comparison functions:
+
+| Function | Mode | Used by |
+|---|---|---|
+| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` then `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
+| `is_diff_font_color_ref` | Exact: `unwrap_or(DEFCOLOR)` then `cx != cy` (derived PartialEq — checks variant + values) | `distance()`, `relative_to()` |
+
+The key insight: **different Color enum variants = different Perl object references**.
+
+- `\color{black}` → `LookupColor("black")` → stored `Rgb(0,0,0)` = DEFCOLOR → not diff
+- `\color[cmyk]{0,0,0,1}` → new `Cmyk(0,0,0,1)` ≠ `Rgb(0,0,0)` → diff (variant differs)
+- `\color[gray]{0.0}` → new `Gray(0.0)` ≠ `Rgb(0,0,0)` → diff (variant differs)
+- `\color{red}` → stored `Rgb(1,0,0)` ≠ `Rgb(0,0,0)` → diff (values differ)
+
+The `color` field uses `Option<Color>` where `None` means "inherited default" (treated
+as `DEFCOLOR = Rgb(0,0,0)` via `unwrap_or`). The `bg` field also uses `Option<Color>`
+but `None` means "transparent" (no background), so it uses the original `is_diff_color`
+which treats `None` as distinct from `Some(Black)`.
+
+**Edge case:** `\color[rgb]{0,0,0}` creates `Rgb(0,0,0)` which equals DEFCOLOR by both
+variant and value — treated as "not different", matching Perl where the stored pre-defined
+`black` object is the same type. If someone defined a *new* Rgb(0,0,0) via `\definecolor`
+then looked it up, Perl would see it as a new reference (diff), but our code would not.
+This theoretical edge case does not appear in any test.
 
 ### 6. Font Defaults: None vs Named Strings
 
 **Decision:** `DEFBACKGROUND = None` and `DEFLANGUAGE = None` (Perl uses `undef`).
+Font `color` also defaults to `None` (not `Some(DEFCOLOR)`), meaning "inherited/unset".
 
 **Rationale:** Perl's `undef` for these defaults is semantically "no value set", not
 "white" or "en". The Rust port uses `Option<Color>` and `Option<Cow<str>>` to represent
-this correctly, rather than sentinel strings.
+this correctly, rather than sentinel strings. For color specifically, `None` enables the
+discriminant-based comparison in section 5 — if the default were `Some(Rgb(0,0,0))`,
+looking up pre-defined `black` would always match and the CMYK/Gray distinction would
+be lost.
 
 **Previous bug:** Early Rust code used `DEFBACKGROUND = "white"` and `DEFLANGUAGE = "en"`,
 which caused spurious font diffs when compared against elements that had no explicit
