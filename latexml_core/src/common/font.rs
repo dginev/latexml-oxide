@@ -406,10 +406,6 @@ pub struct Font {
   pub forcebold:     Option<bool>,
   pub scale:         Option<f64>,
   pub flags:         Option<u8>,
-  /// Whether color was explicitly set via merge (not just inherited).
-  /// NOT included in Hash/PartialEq — provenance metadata only.
-  /// Used by `distance` to detect text element boundaries.
-  pub color_set:     bool,
 }
 
 impl Hash for Font {
@@ -562,7 +558,6 @@ impl Font {
       forcebold:     None,
       scale:         None,
       flags:         None,
-      color_set:     false,
     }
   }
   pub fn math_default() -> Self {
@@ -588,7 +583,6 @@ impl Font {
       forcebold:     None,
       scale:         None,
       flags:         None,
-      color_set:     false,
     }
   }
 
@@ -740,7 +734,6 @@ impl Font {
       forceshape: self.forceshape.or(concrete.forceshape),
       forcebold: self.forcebold.or(concrete.forcebold),
       scale: self.scale.or(concrete.scale),
-      color_set: self.color.is_some() || self.color_set || concrete.color_set,
     }
   }
 
@@ -755,7 +748,6 @@ impl Font {
     }
     if changes.color.is_some() {
       new.color.clone_from(&changes.color);
-      new.color_set = true;
     }
     if changes.bg.is_some() {
       new.bg.clone_from(&changes.bg);
@@ -970,7 +962,6 @@ impl Font {
       forceshape: if flags & FLAG_FORCE_SHAPE != 0 { Some(true) } else { None },
       forcebold: None,
       scale: None,
-      color_set: other.color.is_some() || self.color_set,
     };
     // Note: Perl's merge() has an optional `specialize` option that is passed
     // explicitly (e.g. merge(specialize => $text)). It's NOT keyed on the font name.
@@ -1070,12 +1061,10 @@ impl Font {
     if is_diff_f64(self.size, other.size) {
       distance += 1;
     }
-    // Color: check value difference + provenance (color_set flag).
-    // Perl's isDiff uses reference equality, so even black-on-black
-    // is "different" if the color was explicitly set via \color.
-    if is_diff_font_color(self.color.as_ref(), other.color.as_ref())
-      || (self.color_set != other.color_set)
-    {
+    // Color: use reference-style comparison (different Color variant = different).
+    // Perl's isDiff uses object reference equality: Cmyk(0,0,0,1) ≠ Rgb(0,0,0)
+    // even though both are visually black.
+    if is_diff_font_color_ref(self.color.as_ref(), other.color.as_ref()) {
       distance += 1;
     }
     if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
@@ -1187,7 +1176,9 @@ impl Font {
         ),
       );
     }
-    if is_diff_font_color(self.color.as_ref(), other.color.as_ref()) {
+    // Emit color when Color variants differ (reference-style comparison).
+    // Perl's `ne` treats Cmyk(0,0,0,1) ≠ Rgb(0,0,0) even though both are black.
+    if is_diff_font_color_ref(self.color.as_ref(), other.color.as_ref()) {
       let effective_color = self.color.unwrap_or(DEFCOLOR);
       result.insert(
         "color".to_string(),
@@ -1731,6 +1722,18 @@ fn is_diff_font_color(x: Option<&Color>, y: Option<&Color>) -> bool {
   let cy = y.unwrap_or(&DEFCOLOR);
   if cx == cy { return false; }
   cx.to_rgb() != cy.to_rgb()
+}
+
+/// Reference-style comparison for color field: treats None as DEFCOLOR.
+/// Unlike is_diff_font_color, does NOT fall back to visual to_rgb() comparison.
+/// Cmyk(0,0,0,1) IS different from Rgb(0,0,0) even though both are visually black.
+/// This matches Perl's `ne` reference equality: two Color objects at different
+/// addresses are "different" even if they represent the same visual color.
+/// In our model, different Color variants = different Perl references.
+fn is_diff_font_color_ref(x: Option<&Color>, y: Option<&Color>) -> bool {
+  let cx = x.unwrap_or(&DEFCOLOR);
+  let cy = y.unwrap_or(&DEFCOLOR);
+  cx != cy
 }
 
 /// Matches fonts when both are converted to toString strings.
