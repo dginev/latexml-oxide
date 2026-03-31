@@ -151,6 +151,7 @@ macro_rules! parameter_rust_type {
   (GeneralText) => {Tokens};
   (XGeneralText) => {Tokens};
   (Semiverbatim) => {Tokens};
+  (Until) => {Tokens};
   (UntilBrace) => {Tokens};
   (TeXFileName) => {Tokens};
   (Match) => {Tokens};
