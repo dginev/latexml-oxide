@@ -571,8 +571,9 @@ LoadDefinitions!({
           has_dims = true;
           let w_px = w.px_value(Some(2));
           let h_px = h.px_value(Some(2));
-          let d_px = d.px_value(Some(2));
-          let total_h = latexml_core::common::numeric_ops::round_to(h_px + d_px, Some(2));
+          // Perl L369: my $H = $h->add($d); — add in sp first, then convert to px
+          let total_h_dim = Dimension::new(h.value_of() + d.value_of());
+          let total_h = total_h_dim.px_value(Some(2));
           // Perl L378-382: width and height (total height = h + d)
           if !node.has_attribute("width") {
             document.set_attribute(node, "width", &s!("{}", w_px))?;
@@ -584,18 +585,16 @@ LoadDefinitions!({
           document.set_attribute(node, "transform",
             &s!("matrix(1 0 0 -1 0 {})", h_px))?;
           document.set_attribute(node, "overflow", "visible")?;
-          // Perl L384-387: CSS custom properties in em units
-          let font_size = wh.with_properties(|props| {
-            match props.get("font_size") {
-              Some(Stored::Dimension(d)) => d.value_f64() / 65536.0,
-              _ => 10.0,
-            }
-          });
-          let em = if font_size > 0.0 { font_size } else { 10.0 };
-          let w_em = w.value_f64() / 65536.0 / em;
-          let h_em = h.value_f64() / 65536.0 / em;
-          let d_em = d.value_f64() / 65536.0 / em;
-          // Perl: emValue uses roundto(val, undef) which strips trailing zeros
+          // Perl L373-387: CSS custom properties in em units
+          // Perl: emValue(undef, $font) = roundto($sp / $font->getEMWidth, undef)
+          let em_width = wh.get_font().ok().flatten()
+            .map(|f| f.get_em_width())
+            .unwrap_or(0);
+          let em_width = if em_width > 0 { em_width as f64 } else { 65536.0 * 10.0 };
+          let w_em = w.value_f64() / em_width;
+          let h_em = h.value_f64() / em_width;
+          let d_em = d.value_f64() / em_width;
+          // Perl: roundto(val, undef) strips trailing zeros
           let fmt_em = |v: f64| {
             let r = (v * 100.0).round() / 100.0;
             if r == r.floor() { format!("{}", r as i64) }

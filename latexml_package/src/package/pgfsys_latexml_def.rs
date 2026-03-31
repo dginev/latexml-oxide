@@ -105,7 +105,10 @@ LoadDefinitions!({
         let miny = match props.get("miny") {
           Some(Stored::Float(f)) => f.0, _ => 0.0
         };
-        let transform = format!("matrix(1 0 0 1 {} {})", -minx, -miny);
+        // Avoid "-0" in transform — normalize negative zeros to zero
+        let tx = if minx == 0.0 { 0.0 } else { -minx };
+        let ty = if miny == 0.0 { 0.0 } else { -miny };
+        let transform = format!("matrix(1 0 0 1 {} {})", tx, ty);
         document.open_element("svg:g", Some(string_map!(
           "transform" => transform,
           "_scopebegin" => "1".to_string(),

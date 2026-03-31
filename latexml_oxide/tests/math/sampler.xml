@@ -1263,7 +1263,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMApp width="0pt" xoffset="-15.7pt">
+                      <XMApp width="0pt" xoffset="-17.1pt">
                         <XMTok meaning="multirelation"/>
                         <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
