@@ -304,6 +304,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "xylatexml.tex" => package::xylatexml_tex::load_definitions(),
     "xypic.sty" => package::xypic_sty::load_definitions(),
     "pgf.sty" => package::pgf_sty::load_definitions(),
+    "pgfcircutils.tex" => package::pgfcircutils_tex::load_definitions(),
     "pgfsys-latexml.def" => package::pgfsys_latexml_def::load_definitions(),
     "pgfutil-common.tex" => package::pgfutil_common_tex::load_definitions(),
     "pgfmath.code.tex" => package::pgfmath_code_tex::load_definitions(),

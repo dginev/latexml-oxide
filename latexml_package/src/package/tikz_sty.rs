@@ -17,5 +17,45 @@ LoadDefinitions!({
   DefMacro!("\\pgfmathresult", "0.0");
   DefMacro!("\\tikz@align@temp", "\\pgfmathresult");
   InputDefinitions!("tikz", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // Perl L35-52: \use@@tikzlibrary — loads tikz/pgf library files
+  // Makes sure libraries are loaded as definitions (InputDefinitions) rather than
+  // content, with catcode management for | character.
+  DefPrimitive!("\\use@@tikzlibrary{}", sub[(libs)] {
+    let libs_str = do_expand(libs)?.to_string();
+    for lib in libs_str.split(',') {
+      let lib = lib.trim();
+      if lib.is_empty() {
+        continue;
+      }
+      let loaded_cs = T_CS!(s!("\\\\tikz@library@{lib}@loaded"));
+      if state::lookup_definition(&loaded_cs)?.is_some() {
+        continue; // already loaded
+      }
+      Info!("tikz", lib, &s!("TIKZ LIBRARY {lib}"));
+      Let!(loaded_cs.clone(), T_CS!("\\pgfutil@empty"));
+      // Save and set catcode for | to OTHER (Perl L42-50)
+      let bar_cc = state::lookup_catcode('|');
+      state::assign_catcode('|', Catcode::OTHER, None);
+      // Try tikzlibrary*.code.tex first, then pgflibrary*.code.tex
+      let tikz_name = s!("tikzlibrary{lib}.code");
+      let pgf_name = s!("pgflibrary{lib}.code");
+      let tikz_opts = NewDefault!(InputDefinitionOptions,
+        noerror => true, extension => Some(Cow::Borrowed("tex")));
+      let pgf_opts = NewDefault!(InputDefinitionOptions,
+        noerror => true, extension => Some(Cow::Borrowed("tex")));
+      if input_definitions(&tikz_name, tikz_opts).is_err() {
+        if input_definitions(&pgf_name, pgf_opts).is_err() {
+          Warn!("missing_file", lib,
+            &s!("Can't find tikz library '{}' (neither pgf nor tikz). Anticipate undefined macros.", lib));
+        }
+      }
+      // Restore catcode for |
+      if let Some(cc) = bar_cc {
+        state::assign_catcode('|', cc, None);
+      }
+    }
+    Ok(Vec::new())
+  });
+
   DefMacro!("\\tikzcdset", "\\pgfqkeys{/tikz/commutative diagrams}");
 });
