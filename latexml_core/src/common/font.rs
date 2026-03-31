@@ -381,7 +381,7 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,
 /// every single field needs to be an Option, in order to unambiguously tell the "intend" of
 /// override (Some) vs no intent (None).
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, Default)]
 pub struct Font {
   pub family:        Option<Cow<'static, str>>,
   pub series:        Option<Cow<'static, str>>,
@@ -406,6 +406,10 @@ pub struct Font {
   pub forcebold:     Option<bool>,
   pub scale:         Option<f64>,
   pub flags:         Option<u8>,
+  /// Whether color was explicitly set via merge (not just inherited).
+  /// NOT included in Hash/PartialEq — provenance metadata only.
+  /// Used by `distance` to detect text element boundaries.
+  pub color_set:     bool,
 }
 
 impl Hash for Font {
@@ -417,7 +421,8 @@ impl Hash for Font {
     self.series.hash(hasher);
     self.shape.hash(hasher);
     self.size.map(|size| (size * 1000.0) as i64).hash(hasher);
-    self.color.hash(hasher);
+    // None color hashes same as Some(DEFCOLOR)
+    Some(self.color.unwrap_or(DEFCOLOR)).hash(hasher);
     self.bg.hash(hasher);
     self.opacity.hash(hasher);
     self.encoding.hash(hasher);
@@ -432,6 +437,31 @@ impl Hash for Font {
     self.forceshape.hash(hasher);
     self.scale.map(|scale| (scale * 1000.0) as i64).hash(hasher);
     self.flags.hash(hasher);
+  }
+}
+impl PartialEq for Font {
+  fn eq(&self, other: &Self) -> bool {
+    self.family == other.family
+      && self.series == other.series
+      && self.shape == other.shape
+      && self.size == other.size
+      && !is_diff_font_color(self.color.as_ref(), other.color.as_ref())
+      && self.bg == other.bg
+      && self.opacity == other.opacity
+      && self.encoding == other.encoding
+      && self.language == other.language
+      && self.mathstyle == other.mathstyle
+      && self.mathstylestep == other.mathstylestep
+      && self.name == other.name
+      && self.emph == other.emph
+      && self.scripted == other.scripted
+      && self.fraction == other.fraction
+      && self.forceseries == other.forceseries
+      && self.forcefamily == other.forcefamily
+      && self.forceshape == other.forceshape
+      && self.forcebold == other.forcebold
+      && self.scale == other.scale
+      && self.flags == other.flags
   }
 }
 impl Eq for Font {}
@@ -515,7 +545,7 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed(DEFSHAPE)),
       size:          Some(DEFSIZE),
-      color:         Some(DEFCOLOR),
+      color:         None, // None = inherited default (DEFCOLOR); Some = explicitly set
       bg:            None, // Perl: $DEFBACKGROUND = undef (transparent)
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      Some(Cow::Borrowed(DEFENCODING)),
@@ -532,6 +562,7 @@ impl Font {
       forcebold:     None,
       scale:         None,
       flags:         None,
+      color_set:     false,
     }
   }
   pub fn math_default() -> Self {
@@ -540,7 +571,7 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed("italic")),
       size:          Some(DEFSIZE),
-      color:         Some(DEFCOLOR),
+      color:         None, // None = inherited default (DEFCOLOR); Some = explicitly set
       bg:            None, // Perl: $DEFBACKGROUND = undef
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      None, // Perl has 'OT1' but Rust char decoding uses encoding differently
@@ -557,6 +588,7 @@ impl Font {
       forcebold:     None,
       scale:         None,
       flags:         None,
+      color_set:     false,
     }
   }
 
@@ -674,7 +706,8 @@ impl Font {
       && check(&self.series, &other.series)
       && check(&self.shape, &other.shape)
       && check(&self.size, &other.size)
-      && check(&self.color, &other.color)
+      // For color: None = DEFCOLOR, so compare effective colors
+      && !is_diff_font_color(self.color.as_ref(), other.color.as_ref())
       && check(&self.bg, &other.bg)
       && check(&self.opacity, &other.opacity)
       && check(&self.encoding, &other.encoding)
@@ -707,6 +740,7 @@ impl Font {
       forceshape: self.forceshape.or(concrete.forceshape),
       forcebold: self.forcebold.or(concrete.forcebold),
       scale: self.scale.or(concrete.scale),
+      color_set: self.color.is_some() || self.color_set || concrete.color_set,
     }
   }
 
@@ -721,6 +755,7 @@ impl Font {
     }
     if changes.color.is_some() {
       new.color.clone_from(&changes.color);
+      new.color_set = true;
     }
     if changes.bg.is_some() {
       new.bg.clone_from(&changes.bg);
@@ -935,6 +970,7 @@ impl Font {
       forceshape: if flags & FLAG_FORCE_SHAPE != 0 { Some(true) } else { None },
       forcebold: None,
       scale: None,
+      color_set: other.color.is_some() || self.color_set,
     };
     // Note: Perl's merge() has an optional `specialize` option that is passed
     // explicitly (e.g. merge(specialize => $text)). It's NOT keyed on the font name.
@@ -1034,7 +1070,12 @@ impl Font {
     if is_diff_f64(self.size, other.size) {
       distance += 1;
     }
-    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
+    // Color: check value difference + provenance (color_set flag).
+    // Perl's isDiff uses reference equality, so even black-on-black
+    // is "different" if the color was explicitly set via \color.
+    if is_diff_font_color(self.color.as_ref(), other.color.as_ref())
+      || (self.color_set != other.color_set)
+    {
       distance += 1;
     }
     if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
@@ -1146,12 +1187,13 @@ impl Font {
         ),
       );
     }
-    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
+    if is_diff_font_color(self.color.as_ref(), other.color.as_ref()) {
+      let effective_color = self.color.unwrap_or(DEFCOLOR);
       result.insert(
         "color".to_string(),
         (
-          self.color.as_ref().unwrap().to_attribute(),
-          Font { color: self.color, ..Font::default() },
+          effective_color.to_attribute(),
+          Font { color: Some(effective_color), ..Font::default() },
         ),
       );
     }
@@ -1218,8 +1260,8 @@ impl Font {
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
-    if is_diff_color(othercolor, Some(&DEFCOLOR)) {
-      changes.color.clone_from(&other.color);
+    if is_diff_font_color(othercolor, Some(&DEFCOLOR)) {
+      changes.color = Some(othercolor.copied().unwrap_or(DEFCOLOR));
     }
 
     if let Some(ms) = mathstyle {
@@ -1680,6 +1722,15 @@ fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool { x.is_some() && (y.is_no
 
 fn is_diff_color(x: Option<&Color>, y: Option<&Color>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
+}
+
+/// Like is_diff_color but treats None as DEFCOLOR (for the `color` field).
+/// Visual comparison: Gray(0) == Rgb(0,0,0) since both are black.
+fn is_diff_font_color(x: Option<&Color>, y: Option<&Color>) -> bool {
+  let cx = x.unwrap_or(&DEFCOLOR);
+  let cy = y.unwrap_or(&DEFCOLOR);
+  if cx == cy { return false; }
+  cx.to_rgb() != cy.to_rgb()
 }
 
 /// Matches fonts when both are converted to toString strings.

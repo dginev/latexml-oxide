@@ -19,9 +19,9 @@ fn cancel_color_properties(whatsit: &mut Whatsit) -> Result<()> {
       whatsit.set_property("cancelcolor", Stored::String(arena::pin(cancel_color.to_attribute())));
     }
     // Set inner color for text mode (so content stays in original color)
-    if let Some(ref inner_color) = inner_font.color {
-      whatsit.set_property("innercolor", Stored::String(arena::pin(inner_color.to_attribute())));
-    }
+    // None color = inherited default (DEFCOLOR = black)
+    let inner_color = inner_font.color.unwrap_or(latexml_core::common::color::BLACK);
+    whatsit.set_property("innercolor", Stored::String(arena::pin(inner_color.to_attribute())));
   }
   egroup()?;
   Ok(())
