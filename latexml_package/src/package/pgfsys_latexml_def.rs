@@ -62,6 +62,31 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
   tokens
 }
 
+/// Perl L149-157: DefParameterType('SVGMoveableBox', ...)
+/// Defined in Perl but never used as a parameter type anywhere in the codebase.
+/// Omitted from Rust; add if a use site is discovered.
+
+/// Perl L161-169: foreignObjectCheck
+/// Check whether an svg:foreignObject is open in the ancestor chain,
+/// but don't check beyond an svg:svg node (in case we're nested).
+/// Returns Some(node) if foreignObject is found, None otherwise.
+#[allow(dead_code)]
+fn foreign_object_check(document: &Document) -> Option<Node> {
+  let mut node_opt = Some(document.get_node().clone());
+  while let Some(node) = node_opt {
+    let qname = document::get_node_qname(&node);
+    let qname_str = arena::to_string(qname);
+    if qname_str == "svg:svg" {
+      return None;
+    }
+    if qname_str == "svg:foreignObject" {
+      return Some(node);
+    }
+    node_opt = node.get_parent();
+  }
+  None
+}
+
 /// Helper: read a TeX dimension register value by control sequence name
 fn read_dim_register(cs: &str) -> Dimension {
   if let RegisterValue::Dimension(d) = LookupRegister!(cs) {
@@ -616,6 +641,207 @@ LoadDefinitions!({
   DefConstructor!("\\lxSVG@color@cmy@fill Undigested Undigested Undigested", "");
   DefConstructor!("\\lxSVG@color@gray@stroke Undigested", "");
   DefConstructor!("\\lxSVG@color@gray@fill Undigested", "");
+
+  //===================================================================
+  // 7. Pattern
+  //===================================================================
+
+  // Perl L487-492: \pgfsys@declarepattern{name}{x1}{y1}{x2}{y2}{x step}{y step}{code}{flag}
+  // Expands to \pgfsysprotocol@literal{\lxSVG@setpattern{...}}\lxSVG@(un)coloredpattern{...}
+  DefMacro!("\\pgfsys@declarepattern{} {}{}{}{}{}{} {}{Number}", sub[args] {
+    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let x1 = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let y1 = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let x2 = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let y2 = args.get(4).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let x_step = args.get(5).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let y_step = args.get(6).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let code = args.get(7).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let flag: i64 = args.get(8).map(|a| a.value_of()).unwrap_or(0);
+    let op = if flag == 1 {
+      T_CS!("\\lxSVG@coloredpattern")
+    } else {
+      T_CS!("\\lxSVG@uncoloredpattern")
+    };
+    // Invocation('\pgfsysprotocol@literal',
+    //   Invocation('\lxSVG@setpattern', x1..y_step),
+    //   Invocation($op, name, x_step, y_step, code))
+    let mut toks = vec![T_CS!("\\pgfsysprotocol@literal"), T_BEGIN!()];
+    // \lxSVG@setpattern{x1}{y1}{x2}{y2}{x_step}{y_step}
+    toks.push(T_CS!("\\lxSVG@setpattern"));
+    toks.push(T_BEGIN!()); toks.extend(x1.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(y1.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(x2.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(y2.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(x_step.clone().unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(y_step.clone().unlist()); toks.push(T_END!());
+    toks.push(T_END!()); // close \pgfsysprotocol@literal arg
+    // \lxSVG@(un)coloredpattern{name}{x_step}{y_step}{code}
+    toks.push(op);
+    toks.push(T_BEGIN!()); toks.extend(name.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(x_step.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(y_step.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(code.unlist()); toks.push(T_END!());
+    toks
+  });
+
+  // Perl L494-500: \lxSVG@setpattern — stores pattern bbox/step into pgf registers
+  DefPrimitive!("\\lxSVG@setpattern{Dimension}{Dimension}{Dimension}{Dimension}{Dimension}{Dimension}",
+    sub[(x1, y1, x2, y2, x_step, y_step)] {
+    AssignRegister!("\\pgf@xa", x1.into());
+    AssignRegister!("\\pgf@ya", y1.into());
+    AssignRegister!("\\pgf@xb", x2.into());
+    AssignRegister!("\\pgf@yb", y2.into());
+    AssignRegister!("\\pgf@xc", x_step.into());
+    AssignRegister!("\\pgf@yc", y_step.into());
+  });
+
+  // Perl L502-504: \pgfsys@setpatternuncolored — wraps in pgfsysprotocol@literal
+  DefMacro!("\\pgfsys@setpatternuncolored{}{}{}{}", sub[args] {
+    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let r = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let g = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let b = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    // Invocation('\pgfsysprotocol@literal',
+    //   Invocation('\lxSVG@setpatternuncolored@', name, r, g, b))
+    let mut toks = vec![T_CS!("\\pgfsysprotocol@literal"), T_BEGIN!()];
+    toks.push(T_CS!("\\lxSVG@setpatternuncolored@"));
+    toks.push(T_BEGIN!()); toks.extend(name.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(r.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(g.unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend(b.unlist()); toks.push(T_END!());
+    toks.push(T_END!());
+    toks
+  });
+
+  // Perl L506-507: \pgfsys@setpatterncolored — sets fill to pattern URL
+  // \lxSVG@setcolor{fill}{url(\#pgfpat#1)} — \# produces catcode OTHER '#'
+  DefMacro!("\\pgfsys@setpatterncolored{}", sub[args] {
+    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    // Build: \lxSVG@setcolor{fill}{url(#pgfpat<name>)}
+    let mut toks = vec![T_CS!("\\lxSVG@setcolor")];
+    toks.push(T_BEGIN!()); toks.extend(mouth::tokenize_internal("fill").unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!());
+    toks.extend(mouth::tokenize_internal("url(").unlist());
+    toks.push(T_OTHER!("#"));
+    toks.extend(mouth::tokenize_internal("pgfpat").unlist());
+    toks.extend(name.unlist());
+    toks.push(T_OTHER!(")"));
+    toks.push(T_END!());
+    toks
+  });
+
+  // Perl L509-519: \lxSVG@coloredpattern — pattern with inherent color
+  // <svg:defs><svg:pattern id="pgfpat{name}" patternUnits="userSpaceOnUse"
+  //   width="{x_step}" height="{y_step}">{code}</svg:pattern></svg:defs>
+  DefConstructor!("\\lxSVG@coloredpattern{}{Dimension}{Dimension}{}",
+    sub[document, args, props] {
+      let name = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let x_step = props.get("x_step").map(|v| v.to_string()).unwrap_or_default();
+      let y_step = props.get("y_step").map(|v| v.to_string()).unwrap_or_default();
+      document.open_element("svg:defs", None, None)?;
+      document.open_element("svg:pattern", Some(string_map!(
+        "id" => format!("pgfpat{}", name.trim()),
+        "patternUnits" => "userSpaceOnUse".to_string(),
+        "width" => x_step,
+        "height" => y_step
+      )), None)?;
+      // #4 — the pattern code content is absorbed by the constructor framework
+    },
+    properties => sub[args] {
+      let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+      let y_step = args.get(2).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+      Ok(stored_map!("x_step" => x_step, "y_step" => y_step))
+    },
+    sizer => 0
+  );
+
+  // Perl L521-532: \lxSVG@uncoloredpattern — pattern without inherent color
+  // <svg:defs><svg:pattern id="pgfpat{name}" ...>
+  //   <svg:symbol id="pgfsym{name}">{code}</svg:symbol>
+  // </svg:pattern></svg:defs>
+  DefConstructor!("\\lxSVG@uncoloredpattern{}{Dimension}{Dimension}{}",
+    sub[document, args, props] {
+      let name = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let name = name.trim().to_string();
+      let x_step = props.get("x_step").map(|v| v.to_string()).unwrap_or_default();
+      let y_step = props.get("y_step").map(|v| v.to_string()).unwrap_or_default();
+      document.open_element("svg:defs", None, None)?;
+      document.open_element("svg:pattern", Some(string_map!(
+        "id" => format!("pgfpat{}", name),
+        "patternUnits" => "userSpaceOnUse".to_string(),
+        "width" => x_step,
+        "height" => y_step
+      )), None)?;
+      document.open_element("svg:symbol", Some(string_map!(
+        "id" => format!("pgfsym{}", name)
+      )), None)?;
+      // #4 — the pattern code content is absorbed by the constructor framework
+      // The svg:symbol, svg:pattern, and svg:defs will be auto-closed
+    },
+    properties => sub[args] {
+      let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+      let y_step = args.get(2).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+      Ok(stored_map!("x_step" => x_step, "y_step" => y_step))
+    },
+    sizer => 0
+  );
+
+  // Perl L534-544: \lxSVG@setpatternuncolored@ — applies uncolored pattern with color
+  // Creates a new pattern referencing the symbol, with given stroke/fill color,
+  // then opens an svg:g with fill set to the new pattern URL
+  DefConstructor!("\\lxSVG@setpatternuncolored@{}{}{}{}",
+    sub[document, args, props] {
+      let name = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let name = name.trim().to_string();
+      let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
+      let color = props.get("color").map(|v| v.to_string()).unwrap_or_else(|| "#000000".to_string());
+      // <svg:defs><svg:pattern id="pgfupat{obj}" xlink:href="#pgfpat{name}">
+      document.open_element("svg:defs", None, None)?;
+      document.open_element("svg:pattern", Some(string_map!(
+        "id" => format!("pgfupat{}", obj),
+        "xlink:href" => format!("#pgfpat{}", name)
+      )), None)?;
+      // <svg:g stroke="{color}" fill="{color}">
+      document.open_element("svg:g", Some(string_map!(
+        "stroke" => color.clone(),
+        "fill" => color
+      )), None)?;
+      // <svg:use xlink:href="#pgfsym{name}"/>
+      document.insert_element("svg:use", Vec::new(), Some(string_map!(
+        "xlink:href" => format!("#pgfsym{}", name)
+      )))?;
+      // close svg:g, svg:pattern, svg:defs
+      document.close_element("svg:g")?;
+      document.close_element("svg:pattern")?;
+      document.close_element("svg:defs")?;
+      // <svg:g fill="url(#pgfupat{obj})" _autoclose="1">
+      document.open_element("svg:g", Some(string_map!(
+        "fill" => format!("url(#pgfupat{})", obj),
+        "_autoclose" => "1".to_string()
+      )), None)?;
+    },
+    properties => sub[args] {
+      let obj = svg_next_object();
+      // Color('rgb', r, g, b) — args 2,3,4 are RGB components
+      let r: f64 = args.get(1).and_then(|a| a.as_ref())
+        .map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let g: f64 = args.get(2).and_then(|a| a.as_ref())
+        .map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let b: f64 = args.get(3).and_then(|a| a.as_ref())
+        .map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let color = format!("#{:02X}{:02X}{:02X}",
+        (r * 255.0).round().min(255.0).max(0.0) as u8,
+        (g * 255.0).round().min(255.0).max(0.0) as u8,
+        (b * 255.0).round().min(255.0).max(0.0) as u8);
+      Ok(stored_map!("obj" => obj, "color" => color))
+    },
+    sizer => 0
+  );
 
   //===================================================================
   // 8. Scoping
