@@ -299,6 +299,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Infrastructure projects
 
 - [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). Prototype in worktree `latexml-post-first-prototype`.
+- [ ] **G. Codegen: `Until:` parameter type** — `DefMacro!/DefPrimitive!` proc macros can't parse `Until:\cs` parameter specs. Blocks faithful translation of `\pgf@circ@stripdecimals`, listings `\lst@@style`, and other delimited parameter definitions. Requires extending `latexml_codegen/src/parametrizeable.rs`.
+- [ ] **H. pgfsys pattern system** — 20 missing definitions in pgfsys_latexml_def.rs: SVG pattern declarations, colored/uncolored pattern fill, tikz matrix alignment (`\lxSVG@halign` + 5 helper subs).
 
 ### Permanent ignores (5)
 
