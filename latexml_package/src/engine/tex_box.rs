@@ -67,6 +67,45 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
   }
 }
 
+/// Helper to get (width, height, depth) from a Digested node_box without mutable borrows.
+/// This avoids RefCell conflicts when called during the absorption pipeline.
+/// For simple TBox/Whatsit: reads cached_width/height/depth properties.
+/// For Lists: sums child box widths and takes max height/depth.
+fn fo_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
+  fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
+    d.with_properties(|props| {
+      let w = match props.get("cached_width").or_else(|| props.get("width")) {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      let h = match props.get("cached_height").or_else(|| props.get("height")) {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      (w, h, d)
+    })
+  }
+  // First try: read cached dimensions
+  let dims = read_dims(digested);
+  if dims.0.value_of() != 0 || dims.1.value_of() != 0 || dims.2.value_of() != 0 {
+    return dims;
+  }
+  // If zero dims: for Lists, sum children's dimensions
+  if let DigestedData::List(ref list_cell) = digested.data() {
+    if let Ok(list) = list_cell.try_borrow() {
+      let mut total_w: i64 = 0;
+      let mut max_h: i64 = 0;
+      let mut max_d: i64 = 0;
+      for child in &list.boxes {
+        let (cw, ch, cd) = fo_get_size(child);
+        total_w += cw.value_of();
+        max_h = max_h.max(ch.value_of());
+        max_d = max_d.max(cd.value_of());
+      }
+      return (Dimension::new(total_w), Dimension::new(max_h), Dimension::new(max_d));
+    }
+  }
+  dims
+}
+
 /// Perl: collapseSVGGroup (TeX_Box.pool.ltxml L199-271)
 /// Collapse/remove/unwrap unneeded svg:g elements to reduce tree depth.
 fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
@@ -522,48 +561,18 @@ LoadDefinitions!({
       // Perl L363-388: Set size and transform on remaining foreignObjects
       let mut has_dims = false;
       if let Some(wh) = whatsit {
-        // First try: use whatsit's getSize (which computes from body/args)
-        let mut dims = wh.with_properties(|props| {
-          let w = match props.get("cached_width").or_else(|| props.get("width")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
-          let h = match props.get("cached_height").or_else(|| props.get("height")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
-          let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
-          (w, h, d)
-        });
-        // If dimensions are suspiciously small (single character), try computing
-        // from the actual text content. This handles the case where the foreignObject
-        // auto-opened during character-by-character text absorption, getting only
-        // the first character's dimensions instead of the full text.
-        // Only applies to <text> elements (not Math, graphics, etc.)
-        if dims.0.value_of().abs() < 65536 * 10 { // < 10pt: likely single char
-          let children = latexml_core::common::xml::element_nodes(node);
-          let has_text_only = !children.is_empty() && children.iter().all(|c| {
-            let qn = document::get_node_qname(c);
-            arena::with(qn, |s| s == "ltx:text" || s == "text")
-          });
-          if has_text_only || children.is_empty() {
-            let full_text = node.get_content();
-            if full_text.len() > 1 {
-              let font = wh.get_font().ok().flatten()
-                .map(|f| (*f).clone())
-                .unwrap_or_else(Font::text_default);
-              let (fw, fh, fd) = font.compute_string_size(
-                &full_text, SymHashMap::default());
-              if fw.value_of() > dims.0.value_of() {
-                dims = (fw, fh, fd);
-              }
-            }
-          }
-        }
+        // Perl L368: my ($w, $h, $d) = $whatsit->getSize;
+        // For accumulated Lists (from appendNodeBox), read cached dimensions
+        // or sum up child box dimensions. Avoids mutable borrows that conflict
+        // with the absorption pipeline's active RefCell borrows.
+        let dims = fo_get_size(wh);
         let (w, h, d) = dims;
         if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
           has_dims = true;
           let w_px = w.px_value(Some(2));
           let h_px = h.px_value(Some(2));
           let d_px = d.px_value(Some(2));
-          let total_h = h_px + d_px;
+          let total_h = latexml_core::common::numeric_ops::round_to(h_px + d_px, Some(2));
           // Perl L378-382: width and height (total height = h + d)
           if !node.has_attribute("width") {
             document.set_attribute(node, "width", &s!("{}", w_px))?;

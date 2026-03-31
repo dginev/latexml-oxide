@@ -48,11 +48,18 @@ fn pgf_reg_dim(name: &str) -> Dimension {
 }
 
 /// Helper: format color channel (0.0–1.0) to hex
-fn color_to_hex(r: f64, g: f64, b: f64) -> String {
-  format!("#{:02X}{:02X}{:02X}",
+/// Perl: Color('rgb', r, g, b)->toHex → "#RRGGBB"
+/// Returns tokens (not a string) because # must be catcode OTHER, not PARAMETER.
+fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
+  let hex = format!("{:02X}{:02X}{:02X}",
     (r * 255.0).round().min(255.0).max(0.0) as u8,
     (g * 255.0).round().min(255.0).max(0.0) as u8,
-    (b * 255.0).round().min(255.0).max(0.0) as u8)
+    (b * 255.0).round().min(255.0).max(0.0) as u8);
+  // Perl uses Explode() which creates catcode-12 (OTHER) tokens.
+  // '#' as catcode OTHER, then hex digits as catcode OTHER.
+  let mut tokens = vec![T_OTHER!("#")];
+  tokens.extend(mouth::tokenize_internal(&hex).unlist());
+  tokens
 }
 
 #[rustfmt::skip]
@@ -541,14 +548,12 @@ LoadDefinitions!({
     let r = r.0;
     let g = g.0;
     let b = b.0;
-    let hex = color_to_hex(r, g, b);
-    mouth::tokenize_internal(&hex).unlist()
+    color_to_hex_tokens(r, g, b)
   });
 
   DefMacro!("\\lxSVG@GRAY{Float}", sub[(g)] {
     let v = g.0;
-    let hex = color_to_hex(v, v, v);
-    mouth::tokenize_internal(&hex).unlist()
+    color_to_hex_tokens(v, v, v)
   });
 
   DefMacro!("\\lxSVG@CMYK{Float}{Float}{Float}{Float}", sub[(c, m, y, k)] {
@@ -556,16 +561,14 @@ LoadDefinitions!({
     let m = m.0;
     let y = y.0;
     let k = k.0;
-    let hex = color_to_hex((1.0-c)*(1.0-k), (1.0-m)*(1.0-k), (1.0-y)*(1.0-k));
-    mouth::tokenize_internal(&hex).unlist()
+    color_to_hex_tokens((1.0-c)*(1.0-k), (1.0-m)*(1.0-k), (1.0-y)*(1.0-k))
   });
 
   DefMacro!("\\lxSVG@CMY{Float}{Float}{Float}", sub[(c, m, y)] {
     let c = c.0;
     let m = m.0;
     let y = y.0;
-    let hex = color_to_hex(1.0-c, 1.0-m, 1.0-y);
-    mouth::tokenize_internal(&hex).unlist()
+    color_to_hex_tokens(1.0-c, 1.0-m, 1.0-y)
   });
 
   DefMacro!("\\pgfsys@color@rgb@stroke{}{}{}",

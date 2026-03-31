@@ -74,7 +74,7 @@
           </svg:g>
           <svg:path d="M 0 0 C 27.089745107323232 -1.1686581339399993 49.228945328715234 -12.238258244636 66.417600664176 -33.208800332088" fill="none" stroke="#000000"/>
           <svg:g transform="translate(5.86,0) translate(0,-33.21) translate(4.15,0)">
-            <svg:foreignObject height="11.540000000000001" overflow="visible" style="--ltx-fo-width:3.35em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="46.4"><Math mode="inline" tex="\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="(* _ Z)@(X, Y)" xml:id="p2.pic1.m5">
+            <svg:foreignObject height="11.54" overflow="visible" style="--ltx-fo-width:3.35em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="46.4"><Math mode="inline" tex="\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="(* _ Z)@(X, Y)" xml:id="p2.pic1.m5">
                 <XMath>
                   <XMApp>
                     <XMApp>

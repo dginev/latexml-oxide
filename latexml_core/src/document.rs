@@ -429,6 +429,7 @@ impl Document {
           if qname != arena::pin_static("ltx:document")
             && state::lookup_bool("GENERATE_IDS")
             && !current.has_attribute("xml:id")
+            && !current.has_attribute("id") // SVG elements with plain id don't need xml:id
             && arena::with(qname, |qname_str| can_have_attribute(qname_str, "xml:id"))
           {
             self.generate_id(&mut current, "")?;
@@ -1280,9 +1281,16 @@ impl Document {
           }
         });
         for key in anodes_keys {
-          if key == "id" {
+          // Plain "id" is duplicated by libxml2 when xml:id is set.
+          // Skip it for non-SVG elements (which use xml:id).
+          // SVG elements use plain "id" (not xml:id).
+          if key == "id" && !tag.starts_with("svg:") {
             continue;
-          } // HACK for xml:id
+          }
+          // For SVG elements that have plain "id", skip the xml:id duplicate
+          if key == "xml:id" && tag.starts_with("svg:") && node.get_attribute("id").is_some() {
+            continue;
+          }
           let key_sym = model::get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           arena::with(key_sym, |key_str| {
@@ -1290,8 +1298,9 @@ impl Document {
           })
           .ok();
         }
-        // HACK for xml:id for now, assuming last element
-        if anodes.contains_key("id") {
+        // HACK for xml:id for now, assuming last element.
+        // SVG elements use plain "id" (not xml:id) — skip xml:id conversion for them.
+        if anodes.contains_key("id") && !tag.starts_with("svg:") {
           let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
           write!(open_tag, " xml:id=\"{val_serialized}\"").ok();
         }
@@ -1881,9 +1890,9 @@ impl Document {
 
       let parent = self.node.get_parent().unwrap();
       if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
-        // TODO:
-        // self.append_text_box(parent, self.box_to_absorb);
-        // todo!();
+        // Perl L1136-1137: appendNodeBox to accumulate boxes for autoopened elements
+        let bta = self.box_to_absorb.clone().unwrap();
+        self.append_node_box(&parent, &bta);
       }
       self.node.append_text(text)?;
     }
@@ -1893,6 +1902,11 @@ impl Document {
     else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
+      // Perl L1149-1150: appendNodeBox for autoopened insertion points
+      if self.box_to_absorb.is_some() && point.get_attribute("_autoopened").is_some() {
+        let bta = self.box_to_absorb.clone().unwrap();
+        self.append_node_box(&point, &bta);
+      }
       Debug!(
         "document",
         "open_text_internal",
@@ -1917,21 +1931,53 @@ impl Document {
     Ok(self.node.clone())
   }
 
-  // /// Since xml text nodes don't have attributes to record the origining box,
-  // /// we need to manage the accumulation of autoOpen'ed boxes
-  // /// Indeed, propogate it to ancestors if they were autoOpened for same cause (box)
-  // fn append_text_box(&mut self, node: &Node, thisbox: &Digested) {
-  //   let origbox = self.get_node_box(node);
-  //   if origbox.is_some() && thisbox != &**origbox.as_ref().unwrap() { // if not already the same
-  // box     let newbox = List::new(vec![origbox, thisbox]);
-  //     self.set_node_box(node, newbox);
-  //     let p = node;
-  //     // AND, propogate change to autoOpen'd ancestors based on same initial box
-  //     while (($p = $p->parentNode) && ($p->nodeType == XML_ELEMENT_NODE)
-  //       && $p->getAttribute('_autoopened')
-  //       && (($self->getNodeBox($p) || '') eq $origbox)) {
-  //       $self->setNodeBox($p, $newbox); } }
-  //   return; }
+  /// Perl: appendNodeBox — when material is added to an autoopened element,
+  /// accumulate the record of boxes that created the node.
+  /// Propagates up through autoopened ancestors.
+  fn append_node_box(&mut self, node: &Node, thisbox: &Digested) {
+    let mut node = node.clone();
+    loop {
+      let origbox = self.get_node_box(&node);
+      if let Some(ref orig) = origbox {
+        // Perl: ($box eq $origbox) || ($box eq ($origbox->unlist)[-1]) → skip (dedup)
+        // Use pointer identity on the Rc-wrapped DigestedData
+        let same_as_orig = std::ptr::eq(
+          thisbox.data() as *const DigestedData,
+          orig.data() as *const DigestedData,
+        );
+        let same_as_last = if !same_as_orig {
+          if let DigestedData::List(ref list) = orig.data() {
+            list.borrow().boxes.last().map(|b| std::ptr::eq(
+              thisbox.data() as *const DigestedData,
+              b.data() as *const DigestedData,
+            )).unwrap_or(false)
+          } else { false }
+        } else { false };
+        if !same_as_orig && !same_as_last {
+          // Perl: List($origbox, $box, mode => $origbox->getProperty('mode'))
+          let mode = orig.get_property("mode")
+            .and_then(|m| if let Stored::String(s) = m.as_ref() {
+              Some(s.clone())
+            } else { None });
+          let mut new_list = List::new(vec![orig.clone(), thisbox.clone()]);
+          if let Some(mode_str) = mode {
+            new_list.properties.insert("mode", Stored::String(mode_str));
+          }
+          self.set_node_box(&node, new_list.into());
+        }
+      } else {
+        self.set_node_box(&node, thisbox.clone());
+      }
+      // Propagate to autoopened ancestors
+      match node.get_parent() {
+        Some(parent) if parent.get_type() == Some(NodeType::ElementNode)
+          && parent.get_attribute("_autoopened").is_some() => {
+          node = parent;
+        },
+        _ => break,
+      }
+    }
+  }
 
   // Question: Why do I have math ligatures handled within openMathText_internal,
   // but text ligatures handled within closeText_internal ???
@@ -2336,37 +2382,18 @@ impl Document {
       }
     }
     if key == "xml:id" || key == "id" {
-      // If it's an ID attribute
-      // Do id book keeping
-      self.record_id_with_node(value, node);
-      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
-      // let node_ns = self
-      //   .document
-      //   .get_root_element()
-      //   .unwrap()
-      //   .get_namespace_declarations()
-      //   .into_iter()
-      //   .find(|ns| ns.get_href() == XML_NS)
-      //   .unwrap_or_else(|| {
-      //     node
-      //       .get_namespace_declarations()
-      //       .into_iter()
-      //       .find(|ns| ns.get_href() == XML_NS)
-      //       .unwrap_or_else(|| {
-      //         Namespace::new(
-      //           "xml",
-      //           &XML_NS.to_string().clone(),
-      //           &mut self.document.get_root_element().unwrap(),
-      //         ).unwrap_or_else(|_| {
-      //           panic!(
-      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
-      //             self.document.node_to_string(node),
-      //             self.document.to_string(true)
-      //           )
-      //         })
-      //       })
-      //   });
-      node.set_attribute("xml:id", value)?; // and bypass all ns stuff
+      // Perl: only matches 'xml:id' literally, but our constructors use "id" for
+      // xml:id. For SVG elements, keep plain "id" (SVG spec uses id, not xml:id).
+      let node_qname = get_node_qname(node);
+      let is_svg = arena::with(node_qname, |s| s.starts_with("svg:"));
+      if is_svg && key == "id" {
+        // SVG elements use plain id, not xml:id (matching Perl behavior)
+        node.set_attribute(key, value)?;
+      } else {
+        // LaTeXML elements: always use xml:id
+        self.record_id_with_node(value, node);
+        node.set_attribute("xml:id", value)?;
+      }
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
       // Note: Full model validation (can_have_attribute) is done in node_set_attribute.
