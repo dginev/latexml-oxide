@@ -3,6 +3,7 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
+use latexml_core::common::numeric_ops::round_to;
 
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
@@ -71,7 +72,7 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
 /// This avoids RefCell conflicts when called during the absorption pipeline.
 /// For simple TBox/Whatsit: reads cached_width/height/depth properties.
 /// For Lists: sums child box widths and takes max height/depth.
-fn fo_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
+fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
   fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
     d.with_properties(|props| {
       let w = match props.get("cached_width").or_else(|| props.get("width")) {
@@ -95,7 +96,7 @@ fn fo_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
       let mut max_h: i64 = 0;
       let mut max_d: i64 = 0;
       for child in &list.boxes {
-        let (cw, ch, cd) = fo_get_size(child);
+        let (cw, ch, cd) = fobj_get_size(child);
         total_w += cw.value_of();
         max_h = max_h.max(ch.value_of());
         max_d = max_d.max(cd.value_of());
@@ -605,7 +606,7 @@ LoadDefinitions!({
         // For accumulated Lists (from appendNodeBox), read cached dimensions
         // or sum up child box dimensions. Avoids mutable borrows that conflict
         // with the absorption pipeline's active RefCell borrows.
-        let dims = fo_get_size(wh);
+        let dims = fobj_get_size(wh);
         let (mut w, h, d) = dims;
         // If the foreignObject wraps a block with explicit width (minipage/parbox),
         // use that width instead of the accumulated box widths.
@@ -666,9 +667,9 @@ LoadDefinitions!({
           let w_em = w.value_f64() / em_width;
           let h_em = h.value_f64() / em_width;
           let d_em = d.value_f64() / em_width;
-          // Perl: roundto(val, undef) strips trailing zeros
+          // Perl: roundto(val, undef) uses epsilon-adjusted rounding, strips trailing zeros
           let fmt_em = |v: f64| {
-            let r = (v * 100.0).round() / 100.0;
+            let r = round_to(v, None);
             if r == r.floor() { format!("{}", r as i64) }
             else { format!("{:.2}", r).trim_end_matches('0').to_string() }
           };

@@ -4,6 +4,7 @@
 use crate::prelude::*;
 use std::collections::hash_map::Entry;
 
+
 static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   static_map!("negthinspace" => "", "thinspace" => "\u{2009}",
     "medspace" => "\u{2005}", "thickspace" => "\u{2004}", "space" => " ")
@@ -180,7 +181,6 @@ LoadDefinitions!({
         tks.push(T_END!());
         Ok(Tokens::new(tks))
       }});
-  // });
 
   // # Ignore $kv for the moment?????
   // sub I_subscript {

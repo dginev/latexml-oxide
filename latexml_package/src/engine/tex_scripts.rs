@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use latexml_core::common::font::standard_metrics::STDMETRICS;
 static SCRIPT_NAME_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 
@@ -306,16 +307,28 @@ fn script_sizer(
   };
   let w;
   let (mut h, mut d) = (0.0, 0.0);
-  // Nominal font info ratios (from Perl's TeX_Fonts.pool.ltxml $nominal_fontinfo)
-  // These are ratios of font design size, used for cmsy font dimens.
-  const XHEIGHT_RATIO: f64 = 0.430555; // param #5
-  const SUPERSCRIPT1_RATIO: f64 = 0.412892; // param #13 (displaystyle)
-  const SUPERSCRIPT2_RATIO: f64 = 0.362892; // param #14 (text/scriptstyle)
-  const SUPERSCRIPT3_RATIO: f64 = 0.288889; // param #15 (scriptscriptstyle)
-  const SUBSCRIPT1_RATIO: f64 = 0.15; // param #16
-  // Font dimen values: font_size_sp * ratio
-  let font_scale = base_font_size * 65536.0; // font size in scaled points
-  let xheight = font_scale * XHEIGHT_RATIO;
+  // Look up actual cmsy font dimension parameters at the base font size.
+  // Perl: getFontDimen('cmsy' . ($bfont->getSize || 10), N)
+  // Parameters are stored unnormalized — multiply by font size to get sp values.
+  let cmsy_size = base_font_size as i64;
+  let cmsy_name = format!("cmsy{}", cmsy_size);
+  let get_font_dimen = |param: usize| -> f64 {
+    let lookup = |name: &str| -> Option<f64> {
+      STDMETRICS.get(name).and_then(|m| {
+        if param > 0 && param <= m.parameters.len() {
+          Some(m.parameters[param - 1])
+        } else {
+          None
+        }
+      })
+    };
+    // Try size-specific first, then fall back to cmsy (=cmsy10)
+    lookup(&cmsy_name)
+      .or_else(|| lookup("cmsy"))
+      .unwrap_or(0.0)
+      * base_font_size
+  };
+  let xheight = get_font_dimen(5);
   // Fishing for the scriptpos on the base (if any)
   let inferred_pos = if let Some(Stored::Digested(ref base)) = base_opt {
     let base_pos = base
@@ -360,17 +373,17 @@ fn script_sizer(
     if op == "SUPERSCRIPT" {
       // Perl: $supshift = getFontDimen($syfont, display:13, scriptscript:15, else:14)
       //       $h = max($hb, $hs + max($ds + $xheight / 4, $supshift))
-      let supshift = font_scale
-        * match mathstyle.as_str() {
-          "display" => SUPERSCRIPT1_RATIO,
-          "scriptscript" => SUPERSCRIPT3_RATIO,
-          _ => SUPERSCRIPT2_RATIO,
-        };
+      let supshift = get_font_dimen(
+        match mathstyle.as_str() {
+          "display" => 13,
+          "scriptscript" => 15,
+          _ => 14,
+        });
       h = hb.max(hs + (ds + xheight / 4.0).max(supshift));
     } else {
       // Perl: $subshift = getFontDimen($syfont, 16)
       //       $d = max($db, $ds + max($hs - $xheight * 0.8, $subshift))
-      let subshift = font_scale * SUBSCRIPT1_RATIO;
+      let subshift = get_font_dimen(16);
       d = db.max(ds + (hs - xheight * 0.8).max(subshift));
     }
   }

@@ -21,7 +21,7 @@ use std::fmt;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::rc::Rc;
 
-mod standard_metrics;
+pub mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
 
 pub type Fontmap = Rc<[Option<char>]>;

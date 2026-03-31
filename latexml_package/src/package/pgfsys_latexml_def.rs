@@ -251,7 +251,6 @@ LoadDefinitions!({
       let miny = pgf_reg_dim("\\pgf@picminy");
       let width = pgf_reg_dim("\\pgf@picmaxx");
       let height = pgf_reg_dim("\\pgf@picmaxy");
-
       let w = dim_to_px(width).max(1.0);
       let h = dim_to_px(height).max(1.0);
 
