@@ -145,9 +145,49 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
     children = element_nodes(node);
   }
 
-  // Step 2-3: Pop/push leading/trailing children that mask parent attributes (Perl L218-237)
-  // Skip for now — this optimization moves children outside the parent, which is complex
-  // and less impactful than steps 4-5 for reducing nesting.
+  // Step 2: Pop leading children that completely mask parent attributes (Perl L218-228)
+  // If a leading child svg:g has collapsible attributes covering ALL of parent's attributes,
+  // the child "masks" the parent — move it before parent in the DOM.
+  let nodeattr_count = nodeattr.len();
+  let mut npopped = 0;
+  while !children.is_empty() && is_svg_g(&children[0]) {
+    let c = &children[0];
+    let mut nmasked = 0;
+    for (key, _val) in c.get_attributes() {
+      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key) {
+        nmasked += 1;
+      }
+    }
+    if nmasked != nodeattr_count {
+      break; // child doesn't completely mask parent
+    }
+    // Move child before node in parent
+    let mut child = children.remove(0);
+    node.add_prev_sibling(&mut child)?;
+    npopped += 1;
+  }
+
+  // Step 3: Push trailing children that completely mask parent attributes (Perl L230-237)
+  let mut npushed = 0;
+  while !children.is_empty() && is_svg_g(children.last().unwrap()) {
+    let c = children.last().unwrap();
+    let mut nmasked = 0;
+    for (key, _val) in c.get_attributes() {
+      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key) {
+        nmasked += 1;
+      }
+    }
+    if nmasked != nodeattr_count {
+      break; // child doesn't completely mask parent
+    }
+    // Move child after node in parent
+    let mut child = children.pop().unwrap();
+    node.add_next_sibling(&mut child)?;
+    npushed += 1;
+  }
+  if npopped > 0 || npushed > 0 {
+    children = element_nodes(node);
+  }
 
   // Step 4: Remove redundant svg:g children (same attributes as parent, Perl L239-250)
   let mut nredundant = 0;
@@ -566,7 +606,39 @@ LoadDefinitions!({
         // or sum up child box dimensions. Avoids mutable borrows that conflict
         // with the absorption pipeline's active RefCell borrows.
         let dims = fo_get_size(wh);
-        let (w, h, d) = dims;
+        let (mut w, h, d) = dims;
+        // If the foreignObject wraps a block with explicit width (minipage/parbox),
+        // use that width instead of the accumulated box widths.
+        // Perl: the node_box IS the minipage whatsit with getSize returning the
+        // specified width. Our appendNodeBox creates Lists that sum widths incorrectly.
+        if w.value_of() != 0 {
+          for child_el in &children {
+            let child_qname = document::get_node_qname(child_el);
+            let is_block = arena::with(child_qname, |s|
+              s == "ltx:inline-block" || s == "ltx:_CaptureBlock_");
+            if is_block {
+              if let Some(width_attr) = child_el.get_attribute("width") {
+                // Parse width from attribute (e.g. "28.5pt", "2.85em")
+                let trimmed = width_attr.trim();
+                if let Some(pt_str) = trimmed.strip_suffix("pt") {
+                  if let Ok(val) = pt_str.parse::<f64>() {
+                    w = Dimension::new((val * 65536.0) as i64);
+                    break;
+                  }
+                } else if let Some(em_str) = trimmed.strip_suffix("em") {
+                  if let Ok(val) = em_str.parse::<f64>() {
+                    // 1em = 10pt at default font size
+                    let font_size = wh.get_font().ok().flatten()
+                      .map(|f| f.get_em_width())
+                      .unwrap_or((10.0 * 65536.0) as i64);
+                    w = Dimension::new((val * font_size as f64) as i64);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
         if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
           has_dims = true;
           let w_px = w.px_value(Some(2));
