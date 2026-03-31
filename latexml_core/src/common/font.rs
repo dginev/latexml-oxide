@@ -226,15 +226,15 @@ static METRIC_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     "sansserif_bold_upright"     => "cmssbx",
     "typewriter_medium_upright"  => "cmtt",
     "typewriter_medium_slanted"  => "cmsltt",
-    "math_medium_italic"         => "cmm",
+    "math_medium_italic"         => "cmmi",
     "math_medium_upright"        => "cmr",
-    "math_bold_italic"           => "cmiib"
+    "math_bold_italic"           => "cmmib"
   )
 });
 
 // Fallback fontnames for looking up random Unicode,
 // when they're not in the indicated FontMap
-static METRIC_FALLBACKS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "msam", "msbm"];
+static METRIC_FALLBACKS: [&str; 6] = ["cmr", "cmmi", "cmsy", "cmex", "msam", "msbm"];
 
 // Math bearing atom types
 // 0=Ord, 1=Op, 2=Bin, 3=Rel, 4=Open, 5=Close, 6=Punct, 7=Inner
