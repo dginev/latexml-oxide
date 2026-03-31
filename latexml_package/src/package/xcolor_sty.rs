@@ -707,6 +707,10 @@ LoadDefinitions!({
     }
     merge_font(fontmap!(color => color));
 
+    // Perl L569: digest \XC@mcolor (triggers \pgfsetcolor{.} when pgf is loaded,
+    // synchronizing the PGF stroke/fill color system with xcolor)
+    digest(Tokens!(T_CS!("\\XC@mcolor")))?;
+
     // Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
     // Return a reversion-only Tbox so \color appears in tex= attributes
     let rgb = color.to_rgb();
