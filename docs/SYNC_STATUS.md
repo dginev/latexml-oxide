@@ -288,9 +288,12 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 **Status (2026-03-31):** 307 pass, 3 fail, 3 ignored. 86_tikz: 4 pass, 3 fail, 3 ignored.
 
 **Remaining tikz failures (fresh Perl refs):**
-- **tikz_3d_cone** (108 structural diffs): color="#000000" svg:g wrapper (Gray(0)/Rgb(0,0,0) model mismatch — see wisdom), missing wrapper svg:g around bounding box paths (collapseSVGGroup nesting depth), small coordinate diffs (~0.1-0.3px from font metrics), missing TeX comments.
-- **ac_drive_components** (231 structural diffs): ~1pt Y-offset from different `\pgf@picminy` bounding box (downstream of font metric width diffs), missing `stroke-width` merge into root svg:g (collapseSVGGroup missing scope wrapper), nested minipage inner SVG dimensions 206x102 vs 197x104 (large), missing TeX comments.
-- **various_colors** (572 structural diffs): tcolorbox SVG structural differences (largest chunk), listing section nesting, angle bracket `⟨T,w⟩` math parsing (intentional divergence), missing `[` (Perl artifact — our output correct), missing trailing empty `<text>` elements, color precision in tex= attrs.
+
+**Investigation finding:** SVG group nesting IS correct. Verified by disabling collapseSVGGroup — raw output shows proper nested fill→stroke→stroke-width→scope structure. The collapsed output matches Perl's attribute merging. All SVG Tag rules (svg:g afterClose, svg:foreignObject autoOpen/autoClose) match Perl.
+
+- **tikz_3d_cone** (108 structural diffs): color="#000000" on svg:g wrapper vs XMApp (Gray(0)/Rgb(0,0,0) model mismatch — visual-equivalent, accepted), small font metric coordinate diffs (~0.1-0.3px, bounding box height 9.19 vs 8.92), missing TeX comments.
+- **ac_drive_components** (231 structural diffs): ~1pt Y-offset (downstream of text width differences → different `\pgf@picminy` bounding box), nested minipage inner SVG dimensions 206x102 vs 197x104 (text width accumulation differs), small text width diffs (0.38px for regular, 0.45px for bold), missing TeX comments.
+- **various_colors** (572 structural diffs): tcolorbox SVG (largest chunk — internal tikzpicture), listing nesting depth, angle bracket `⟨T,w⟩` math (intentional divergence), missing `[` (PERL ARTIFACT — our output correct), missing trailing empty `<text>` (cosmetic), XMTok color="#000000" (color model cascade).
 
 ### Package bindings
 
