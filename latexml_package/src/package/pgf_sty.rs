@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use latexml_core::common::color::Color;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -15,12 +16,17 @@ LoadDefinitions!({
   Let!("\\pgfutil@IfFileExists", "\\IfFileExists");
   InputDefinitions!("pgf", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // Perl L35-38: pgfsetcolor integration
+  // Perl L35-38: pgfsetcolor integration — merge font color from pgfstrokecolor
   Let!("\\pgfsetcolor@orig", "\\pgfsetcolor");
   DefMacro!("\\pgfsetcolor{}", "\\pgfsetcolor@orig{#1}\\lxSVG@set@color");
   DefPrimitive!("\\lxSVG@set@color", {
     // Perl: MergeFont(color => LookupValue('color_pgfstrokecolor'));
-    // TODO: integrate with font color system when needed
+    if let Some(Stored::String(color_str)) = state::lookup_value("color_pgfstrokecolor") {
+      let cs = arena::to_string(color_str);
+      if let Some(color) = Color::from_stored(&cs) {
+        MergeFont!(color => color);
+      }
+    }
   });
 
   // Perl L41-43: XC@mcolor integration
