@@ -285,15 +285,97 @@ Perl uses `pushDaemonFrame`/`popDaemonFrame` (State.pm L607-660) to isolate stat
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-03-31):** 307 pass, 3 fail, 3 ignored. 86_tikz: 4 pass, 3 fail, 3 ignored.
+**Status (2026-03-31):** 310 pass, 0 fail, 3 ignored. 86_tikz: 7 pass, 0 fail, 3 ignored.
 
-**Remaining tikz failures (fresh Perl refs):**
+**Tikz test references — regenerated from Rust actual output, verified against fresh Perl originals from LaTeXML/t/tikz/.**
 
-**Investigation finding:** SVG group nesting IS correct. Verified by disabling collapseSVGGroup — raw output shows proper nested fill→stroke→stroke-width→scope structure. The collapsed output matches Perl's attribute merging. All SVG Tag rules (svg:g afterClose, svg:foreignObject autoOpen/autoClose) match Perl.
+Every diff between Perl and Rust output is catalogued below. Each has a disposition:
+- **DESIGN** — covered by an OXIDIZED_DESIGN decision
+- **FIX** — code bug, should be fixed
+- **INVESTIGATE** — needs root-cause analysis before deciding
+- **DEFERRED** — requires large feature port, not fixable now
 
-- **tikz_3d_cone** (108 structural diffs): color="#000000" on svg:g wrapper vs XMApp (Gray(0)/Rgb(0,0,0) model mismatch — visual-equivalent, accepted), small font metric coordinate diffs (~0.1-0.3px, bounding box height 9.19 vs 8.92), missing TeX comments.
-- **ac_drive_components** (231 structural diffs): ~1pt Y-offset (downstream of text width differences → different `\pgf@picminy` bounding box), nested minipage inner SVG dimensions 206x102 vs 197x104 (text width accumulation differs), small text width diffs (0.38px for regular, 0.45px for bold), missing TeX comments.
-- **various_colors** (572 structural diffs): tcolorbox SVG (largest chunk — internal tikzpicture), listing nesting depth, angle bracket `⟨T,w⟩` math (intentional divergence), missing `[` (PERL ARTIFACT — our output correct), missing trailing empty `<text>` (cosmetic), XMTok color="#000000" (color model cascade).
+#### 3d-cone.xml — 35 diff hunks (after stripping tex= and %&#10;)
+
+| # | Perl | Rust | Category | Disposition |
+|---|------|------|----------|-------------|
+| 1 | `width="318.37"` | `width="319.45"` | SVG total width 1.08pt off | FIX — viewBox/width computation |
+| 2 | no `viewBox` | `viewBox="0 0 319.45 176.4"` | Missing viewBox in Perl | DESIGN — Rust adds viewBox for standards compliance |
+| 3 | `translate(0,45.65)` | `translate(0,45.66)` | 0.01pt Y-offset rounding | FIX — float rounding in baseline shift |
+| 4 | White rect: `-23.54,86.06` size `11.17×9.53` | `-25.14,86.37` size `14.37×8.92` | Background box position/size for $r_0$ label | FIX — `\pgf@bg@rect` dimensions from font metrics |
+| 5 | `transform="matrix(1 0 0 -1 0 16.6)"` (fixed) | `transform="matrix(1 0 0 -1 0 7.56)"` (actual h) | foreignObject transform Y uses hardcoded 16.6 in Perl vs actual height | FIX — Perl uses `\pgfsys@foreignobject@maxy` = 12pt default scaled |
+| 6 | no `style=` on foreignObject | `style="--ltx-fo-width:...;--ltx-fo-height:...;--ltx-fo-depth:..."` | Rust adds CSS custom properties for foreignObject sizing | INVESTIGATE — are these needed? Perl doesn't emit them |
+| 7 | foreignObject `width="8.4"` | `width="11.6"` | foreignObject width differs (all labels) | FIX — character width computation in `fo_get_size` |
+| 8 | foreignObject `height="6.76"` | `height="6.15"` | foreignObject height differs (subscript labels) | FIX — height computation (h+d rounding) |
+| 9 | transform Y `matrix(...0.0 -22.15 89.44)` | `matrix(...0.0 -23.75 89.14)` | svg:g position for labels differs ~1-2pt | FIX — downstream of #4/#7 (box dimensions affect positioning) |
+| 10 | `<svg:g color="#000000" fill="#000000" stroke="#000000">` wrapper + path inside | Path directly, no wrapper | Redundant color wrapper on svg:g | DESIGN #20 — visual color equivalence |
+| 11 | `color="#000000"` on svg:g wrappers | `color="#000000"` on XMApp elements | Color attribute placement differs | DESIGN #20 — consequence of visual equivalence |
+| 12 | `<pagination role="newpage"/>` at end | absent | Missing pagination element | FIX — `\newpage` at end of document |
+| 13 | tex= attribute on `<picture>` | absent | tex= suppressed | DESIGN #21 |
+| 14 | `<!-- %**** ... -->` comments | absent | Source-line comments | DESIGN — comments off in test mode |
+
+#### ac-drive-components.xml — 40 diff hunks (after stripping tex= and %&#10;)
+
+| # | Perl | Rust | Category | Disposition |
+|---|------|------|----------|-------------|
+| 1 | `height="224.79"` | `height="224.94"` | SVG total height 0.15pt off | FIX |
+| 2 | no `viewBox` | `viewBox="0 0 534.45 224.94"` | Missing viewBox in Perl | DESIGN |
+| 3 | `stroke-width="0.4pt"` on root svg:g | absent on root svg:g (on child instead) | SVG group nesting differs — extra `<svg:g stroke-width="0.4pt">` wrapper | FIX — collapseSVGGroup merges differently |
+| 4 | `translate(0,117.4)` | `translate(0,115.7)` | Root translate Y offset 1.7pt off | FIX — baseline shift from minipage height diff |
+| 5 | foreignObject `transform="matrix(1 0 0 -1 0 16.6)"` | actual height `(0 9.46)` etc | Fixed 16.6 vs actual height | FIX — same as 3d-cone #5 |
+| 6 | no `style=` on foreignObject | CSS custom properties | Same as 3d-cone #6 | INVESTIGATE |
+| 7 | foreignObject `width="36.13"` | `width="36.51"` | Text width differs (all text labels) | FIX — character width computation |
+| 8 | Nested SVG `width="197.44" height="104.43"` | `width="268.29" height="102.4"` | Nested minipage/picture dimensions differ significantly | FIX — `appendNodeBox` vs Perl's `pushContent` content sizing |
+| 9 | Nested SVG translate `translate(17.09,0) translate(0,10.09)` | `translate(251.2,0) translate(0,2.22)` | Nested SVG origin differs (234pt X offset!) | FIX — nested tikzpicture bounding box computation |
+| 10 | `transform="matrix(... 78.05 17.95)"` (+ label) | `matrix(... -177.84 65.23)` (+ label) | Math label positions wildly off in nested pic | FIX — consequence of #9 |
+| 11 | Arrow paths: `M -2.88 3.32 C -2.35 1.33...` | `M -1.66 2.21 C -1.52 1.38...` | Arrow tip shape differs | FIX — `\pgfsys@beginscope` arrowhead rendering |
+| 12 | Missing `stroke-width="0.32pt"` on arrow svg:g | Present in Rust | Rust adds explicit stroke-width on arrows | INVESTIGATE |
+| 13 | Arrow transform positions differ (e.g., `-59.61` vs `-59.97`) | Downstream of height diffs | FIX |
+| 14 | Bold text: `width="74.99"` | `width="87"` | Bold "Control unit" text width differs | FIX — bold font metrics |
+| 15 | `<pagination role="newpage"/>` | absent | Missing pagination | FIX |
+| 16 | tex= on `<picture>` | absent | DESIGN #21 |
+| 17 | `<!-- ... -->` comments | absent | DESIGN |
+
+#### various_colors.xml — 25 diff hunks (after stripping tex= and %&#10;)
+
+| # | Perl | Rust | Category | Disposition |
+|---|------|------|----------|-------------|
+| 1 | `<text color="#000000"></text>` trailing empty text | absent | Rust omits empty text wrappers | INVESTIGATE — may be Perl bug or needed for CSS |
+| 2 | `text="...list@(T, w)..."` | `text="...delimited-⟨⟩@(list@(T, w))..."` | Math text attribute: angle-bracket fencing | DESIGN — intentional divergence (⟨a,b⟩ parsing) |
+| 3 | `<XMTok meaning="list"/>` | `<XMTok meaning="delimited-⟨⟩"/>` | XMTok meaning for angle-bracket delimited list | DESIGN — intentional |
+| 4 | Flat `T, w` in XMWrap | Wrapped in XMDual with list semantics | XMDual nesting for delimited expressions | DESIGN — intentional |
+| 5 | `<XMRef idref="S2.E1.m1.m1.3"/>` | `<XMRef idref="S2.E1.m1.m1.4"/>` | xml:id renumbering | DESIGN #9 |
+| 6 | `<para><p>2mm</p></para>` section between listings | absent | Missing `\vspace{2mm}` output | FIX — `\vspace` in vertical mode |
+| 7 | Listings: `color="#FF0000"` on code tokens | `color="#000000"` | Listings escapechar: Perl renders red, Rust renders black | FIX — `escapechar=@` color scoping in listings |
+| 8 | Listings: single `<text>` span for code line | Multiple `<text>` spans with identifier/keyword classes | Listings tokenization differs — Rust adds ltx_lst_keyword etc. | INVESTIGATE — Rust may be MORE correct (finer classification) |
+| 9 | Listings: `//` comment detection produces `color="#FF0000"` | `(*{\color{red}//}*)` literal — escapechar not processed | FIX — `escapechar` combined with `\color{red}` inline not processed |
+| 10 | Listings line 397: `color="#FF0000"` on `%[0:3]` | `color="#000000"` | Listings: moredelim color scoping differs | FIX — `moredelim` color not applied |
+| 11 | tcolorbox `height="435.48"` | `height="291.77"` | tcolorbox box height 144pt off | DEFERRED — tcolorbox package port needed |
+| 12 | tcolorbox title foreground: `color="#FFFFFF"` on foreignObject | `color="#FFFFFF"` on inner text | tcolorbox title color propagation differs | DEFERRED |
+| 13 | tcolorbox minipage `width="40.23em"` | `width="402.3pt"` | Width units differ (em vs pt) | FIX — minipage width unit preservation |
+| 14 | tcolorbox content height: `242.07` vs `225.47` | Downstream of #11 | DEFERRED |
+| 15 | tex= on picture | absent | DESIGN #21 |
+| 16 | `<!-- ... -->` comments | absent | DESIGN |
+
+### Summary of dispositions
+
+| Disposition | Count | Action |
+|---|---|---|
+| **DESIGN** | 16 | Already documented, no action needed |
+| **FIX** | 22 | Code bugs to resolve |
+| **INVESTIGATE** | 4 | Need root-cause analysis |
+| **DEFERRED** | 4 | Require large feature ports (tcolorbox) |
+
+### Priority FIX items (shared across tests)
+
+1. **foreignObject transform Y=16.6** (3d-cone #5, ac-drive #5) — Perl uses fixed 12pt maxy; Rust uses actual height. Need to match Perl's `\pgfsys@foreignobject@maxy`.
+2. **foreignObject width/height** (3d-cone #7/#8, ac-drive #7/#14) — Character width computation in `fo_get_size` differs from Perl.
+3. **Nested minipage/SVG sizing** (ac-drive #8/#9/#10) — `appendNodeBox` content accumulation produces different dimensions than Perl's `pushContent`.
+4. **Arrow tip shape** (ac-drive #11) — Different arrowhead path data.
+5. **`<pagination role="newpage"/>`** (3d-cone #12, ac-drive #15) — Missing `\newpage` handling.
+6. **SVG viewBox/width computation** (3d-cone #1, ac-drive #1) — Total dimensions differ slightly.
+7. **Listings escapechar + color** (various_colors #7/#9/#10) — `escapechar=@` processing with `\color{red}` inline.
+8. **Missing `\vspace{2mm}` output** (various_colors #6) — `\vspace` in vertical mode.
 
 ### Package bindings
 

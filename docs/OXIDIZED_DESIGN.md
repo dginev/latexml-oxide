@@ -715,3 +715,69 @@ uses a `Vec<T>` as a stack: `push` to shadow, `pop` to restore.
 2. Add `set_*` / `get_*` / `expire_*` functions following existing patterns
 3. Call `set_*` at scope entry, `expire_*` at scope exit
 4. Ideally, use RAII guards (Drop trait) for automatic cleanup — TODO improvement
+
+### 20. Color Comparison: Visual Equivalence
+
+**Decision:** In latexml-oxide, two `Color` values are compared by variant and values
+(structural equality), not by object identity. `Color::Rgb(0.0, 0.0, 0.0)` equals
+`Color::Rgb(0.0, 0.0, 0.0)` regardless of how or when they were created. Colors from
+different models (e.g., `Gray(0)` vs `Rgb(0,0,0)`) ARE considered different even when
+visually equivalent — the comparison is by variant + values, not by conversion to a
+common model.
+
+**Perl behavior:** `Font.pm`'s `isDiff` uses Perl's `ne` operator on unoverloaded
+`Color` objects, which compares memory addresses (reference equality). Two Color objects
+with identical values (e.g., both `Color::rgb(0,0,0)`) are considered "different" if
+they are different Perl objects. This produces incidental `color="#000000"` attributes on
+elements when the author explicitly sets `\color{black}` in a scope that already has
+black as the default color.
+
+**Observable differences:**
+
+- `\color{black}` in a black context produces NO `color="#000000"` attribute (Perl may
+  produce one due to reference inequality)
+- `\color[gray]{0}` vs default `Rgb(0,0,0)` DOES produce a `color` attribute because
+  `Gray(0) != Rgb(0,0,0)` (different Color variants)
+- SVG elements like `svg:g` do not get redundant `color="#000000" fill="#000000"
+  stroke="#000000"` attributes when the parent already establishes black
+
+**Implementation:** Two comparison functions in `font.rs`:
+
+| Function | Mode | Used by |
+|---|---|---|
+| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` then `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
+| `is_diff_font_color_ref` | Variant+values (no `to_rgb` fallback) | `distance()`, `relative_to()` |
+
+Both treat `None` (inherited default) as equivalent to `DEFCOLOR = Rgb(0,0,0)` via
+`unwrap_or(DEFCOLOR)`.
+
+**Rationale:** Perl's reference-inequality semantics are an accident of its object
+model, not an intentional design. When a user writes `\color{black}` in a context that
+is already black, the redundant `color="#000000"` attribute carries no information. The
+Rust port's structural equality produces cleaner output without changing any visible
+rendering. Cross-model comparison (`Gray(0)` vs `Rgb(0,0,0)`) still detects the
+difference because the Color enum variant differs, preserving the ability to distinguish
+colors specified via different models — see also section 5 ("Font Color Comparison:
+Discriminant-Based Reference Equality").
+
+**Impact:** Tikz SVG tests show fewer `color`/`fill`/`stroke` attributes than Perl
+output. This is the primary source of remaining diffs in `tikz_3d_cone` and
+`ac_drive_components` tests.
+
+### 21. No `tex=` Attribute on `<picture>` Elements
+
+**Decision:** The `tex=` attribute on `<ltx:picture>` elements is suppressed by default.
+It is only emitted when the environment variable `LATEXML_SVG_TEX_ATTRIBUTE=true` is set.
+
+**Perl behavior:** Perl emits a `tex=` attribute on `<picture>` containing the full TeX
+source of the tikz/pgf picture environment. This can be extremely long (thousands of
+characters of raw pgf commands) and is not used by downstream consumers.
+
+**Rationale:** The `tex=` attribute on pictures is a debugging artifact. It inflates the
+XML output size significantly (often 10x the rest of the element) with raw pgf
+instructions that are illegible and serve no rendering or accessibility purpose. Making
+it opt-in via an environment variable keeps it available for debugging while producing
+cleaner default output.
+
+**Impact:** All tikz/pgf test reference XMLs omit the `tex=` attribute on `<picture>`
+elements. When copying test XMLs from Perl, strip `tex="..."` from `<picture>` tags.
