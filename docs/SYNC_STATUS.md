@@ -289,7 +289,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Package bindings
 
-- [ ] physics.sty (800 lines, IN PROGRESS: I_dual infrastructure complete, 7112→5016 diffs, 519 meaning attrs > Perl 508, 5 unparsed vs Perl 1)
+- [x] physics.sty (800 lines, COMPLETE: 0 diffs, all meaning attrs match)
 - [ ] siunitx.sty (2000 lines), xy.sty (1000 lines)
 - [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
 - [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
