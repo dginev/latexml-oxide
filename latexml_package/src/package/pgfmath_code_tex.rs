@@ -944,7 +944,7 @@ fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
 }
 
 /// Convenience wrapper that returns only the result string
-fn pgfmathparse_eval(raw_input: &str) -> String {
+pub fn pgfmathparse_eval(raw_input: &str) -> String {
   pgfmathparse_eval_with_units(raw_input).0
 }
 
