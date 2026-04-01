@@ -14,6 +14,7 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 
 use crate::document::{element_children, NodeData, PostDocument};
+use super::operator_dictionary;
 
 /// Math style levels.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -96,11 +97,16 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
 pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   let children = element_children(xmath);
   let results: Vec<NodeData> = children.iter().map(|c| pmml(doc, c)).collect();
-  if results.len() == 1 {
+  let mut result = if results.len() == 1 {
     results.into_iter().next().unwrap()
   } else {
     pmml_row(results)
-  }
+  };
+  // Adjust spacing to match TeX rules (Perl's adjust_spacing)
+  adjust_spacing(&mut result);
+  // Clean up internal _role/_lspace/_rspace before serialization
+  clean_internal_attrs(&mut result);
+  result
 }
 
 /// Core dispatch: convert a single XMath node to Presentation MathML.
@@ -394,6 +400,17 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
       } else if !is_fence && stretchy == "true" {
         attrs.insert("stretchy".to_string(), "true".to_string());
       }
+    }
+
+    // Store internal spacing attributes for adjust_spacing.
+    // Port of Perl's `stylizeContent` lines 821-826.
+    attrs.insert("_role".to_string(), role.clone());
+    let props = operator_dictionary::opdict_lookup(&text, &role);
+    if props.lspace > 0.0 {
+      attrs.insert("_lspace".to_string(), fmt_em(props.lspace));
+    }
+    if props.rspace > 0.0 {
+      attrs.insert("_rspace".to_string(), fmt_em(props.rspace));
     }
   }
 
@@ -883,6 +900,254 @@ pub fn font_to_mathvariant(font: &str) -> Option<&'static str> {
       } else {
         None
       }
+    }
+  }
+}
+
+// ======================================================================
+// TeX spacing adjustment
+//
+// Port of Perl's `adjust_spacing` / `space_walk` / `adjust_pair`.
+// Walks adjacent pairs in mrow and adjusts lspace/rspace to match TeX spacing.
+
+/// TeX spacing values: thin=3mu, med=4mu, thick=5mu (in em = mu/18)
+const TEX_SPACING: [f64; 4] = [0.0, 0.167, 0.222, 0.2778];
+
+/// Spacing epsilon — ignore differences below this (em)
+const SPACING_EPSILON: f64 = 0.01;
+
+/// Map LaTeXML role to TeX atom type.
+fn role_to_atom_type(role: &str) -> &'static str {
+  match role {
+    "ATOM" | "UNKNOWN" | "ID" | "NUMBER" | "POSTFIX" | "FUNCTION"
+    | "DIFFOP" | "SUPOP" | "ELIDEOP" => "Ord",
+    "OPFUNCTION" | "TRIGFUNCTION" | "BIGOP" | "SUMOP" | "INTOP"
+    | "LIMITOP" | "OPERATOR" => "Op",
+    "ADDOP" | "MULOP" | "BINOP" | "APPLYOP" | "COMPOSEOP" => "Bin",
+    "RELOP" | "METARELOP" | "MODIFIEROP" | "MODIFIER" | "ARROW" => "Rel",
+    "OPEN" => "Open",
+    "CLOSE" => "Close",
+    "PUNCT" | "VERTBAR" | "PERIOD" => "Punct",
+    "ARRAY" | "POSTSUBSCRIPT" | "POSTSUPERSCRIPT"
+    | "FLOATSUPERSCRIPT" | "FLOATSUBSCRIPT" => "Inner",
+    "MIDDLE" => "Ord",
+    _ => "Ord",
+  }
+}
+
+/// Get TeX spacing code for a pair of atom types.
+fn atompair_spacing(left: &str, right: &str) -> i32 {
+  match (left, right) {
+    ("Ord", "Op") | ("Op", "Ord") | ("Op", "Op") | ("Close", "Op") => 1,
+    ("Ord", "Bin") | ("Bin", "Ord") | ("Bin", "Open") | ("Bin", "Inner")
+    | ("Close", "Bin") | ("Inner", "Bin") | ("Bin", "Op") => -2,
+    ("Ord", "Rel") | ("Rel", "Ord") | ("Op", "Rel") | ("Rel", "Open")
+    | ("Rel", "Inner") | ("Close", "Rel") | ("Inner", "Rel") | ("Rel", "Op") => -3,
+    ("Ord", "Inner") | ("Op", "Inner") | ("Close", "Inner") | ("Inner", "Inner")
+    | ("Inner", "Open") | ("Punct", "Ord") | ("Punct", "Op") | ("Punct", "Rel")
+    | ("Punct", "Open") | ("Punct", "Close") | ("Punct", "Punct") | ("Punct", "Inner")
+    | ("Inner", "Ord") => -1,
+    ("Inner", "Op") => 1,
+    _ => 0,
+  }
+}
+
+/// Map MathML tag to TeX atom type.
+fn m_atom_type(tag: &str) -> Option<&'static str> {
+  match tag {
+    "m:mfrac" => Some("Ord"),
+    "m:marray" => Some("Inner"),
+    "m:mspace" => Some("Ord"),
+    _ => None,
+  }
+}
+
+/// Check if a MathML tag is an embellished operator container.
+fn is_embellisher_tag(tag: &str) -> bool {
+  matches!(tag, "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover")
+}
+
+/// Check if a MathML tag is mrow-like.
+fn is_mrow_like(tag: &str) -> bool {
+  matches!(tag, "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd")
+}
+
+/// Check if text is an invisible operator.
+fn is_invisible_op(text: &str) -> bool {
+  !text.is_empty() && text.chars().all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
+}
+
+/// Format em value.
+fn fmt_em(val: f64) -> String {
+  if val.abs() < SPACING_EPSILON { return "0em".to_string(); }
+  let s = format!("{:.3}", val);
+  let s = s.trim_end_matches('0').trim_end_matches('.');
+  format!("{}em", s)
+}
+
+/// Get role from a NodeData, following embellished operators.
+fn get_node_role(node: &NodeData) -> String {
+  match node {
+    NodeData::Element { tag, attributes, children } => {
+      if is_embellisher_tag(tag) {
+        if let Some(base) = children.first() {
+          return get_node_role(base);
+        }
+      }
+      attributes.as_ref()
+        .and_then(|a| a.get("_role"))
+        .cloned()
+        .unwrap_or_default()
+    }
+    _ => String::new(),
+  }
+}
+
+fn get_node_tag(node: &NodeData) -> &str {
+  match node {
+    NodeData::Element { tag, .. } => tag,
+    _ => "",
+  }
+}
+
+fn get_node_text(node: &NodeData) -> String {
+  match node {
+    NodeData::Text(t) => t.clone(),
+    NodeData::Element { children, .. } => children.iter().map(|c| get_node_text(c)).collect(),
+    _ => String::new(),
+  }
+}
+
+fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
+  if let NodeData::Element { attributes, .. } = node {
+    let attrs = attributes.get_or_insert_with(HashMap::new);
+    attrs.insert(key.to_string(), value.to_string());
+  }
+}
+
+fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
+  match node {
+    NodeData::Element { attributes, .. } => {
+      attributes.as_ref()
+        .and_then(|a| a.get(key))
+        .and_then(|v| v.strip_suffix("em"))
+        .and_then(|v| v.parse::<f64>().ok())
+        .unwrap_or(0.0)
+    }
+    _ => 0.0,
+  }
+}
+
+/// Adjust spacing between two adjacent nodes.
+fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
+  let prev_role_s = get_node_role(prev);
+  let next_role_s = get_node_role(next);
+  let prev_role = if prev_role_s.is_empty() { "ATOM" } else { &prev_role_s };
+  let next_role = if next_role_s.is_empty() { "ATOM" } else { &next_role_s };
+
+  let prev_type = m_atom_type(get_node_tag(prev))
+    .unwrap_or_else(|| role_to_atom_type(prev_role));
+  let next_type = m_atom_type(get_node_tag(next))
+    .unwrap_or_else(|| role_to_atom_type(next_role));
+
+  let tex_code = atompair_spacing(prev_type, next_type);
+  let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
+
+  let prev_dict_right = get_node_attr_f64(prev, "_rspace");
+  let next_dict_left = get_node_attr_f64(next, "_lspace");
+  let default = prev_dict_right + next_dict_left;
+  let target = tex_space;
+
+  if (target - default).abs() <= SPACING_EPSILON {
+    return;
+  }
+
+  let prev_tag = get_node_tag(prev).to_string();
+  let next_tag = get_node_tag(next).to_string();
+
+  if prev_tag == "m:mo" && next_tag == "m:mo" {
+    let n = next_dict_left;
+    let rem = target - n;
+    if rem >= 0.0 {
+      set_node_attr(prev, "rspace", &fmt_em(if rem > SPACING_EPSILON { rem } else { 0.0 }));
+    } else {
+      let p = prev_dict_right;
+      let rem2 = target - p;
+      if rem2 >= 0.0 {
+        set_node_attr(next, "lspace", &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }));
+      }
+    }
+  } else if prev_tag == "m:mo" {
+    set_node_attr(prev, "rspace", &fmt_em(target));
+  } else if next_tag == "m:mo" {
+    set_node_attr(next, "lspace", &fmt_em(target));
+  }
+}
+
+/// Walk the MathML tree and adjust spacing.
+pub fn adjust_spacing(node: &mut NodeData) {
+  let tag = get_node_tag(node).to_string();
+
+  if matches!(tag.as_str(), "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
+    return;
+  }
+
+  if is_mrow_like(&tag) {
+    if let NodeData::Element { children, .. } = node {
+      for child in children.iter_mut() {
+        adjust_spacing(child);
+      }
+      let len = children.len();
+      if len >= 2 {
+        let mut i = 0;
+        while i + 1 < len {
+          let j = i + 1;
+          // Skip invisible operators
+          if j + 1 < len && get_node_tag(&children[j]) == "m:mo"
+            && is_invisible_op(&get_node_text(&children[j]))
+          {
+            if j + 1 < len {
+              let (left, right) = children.split_at_mut(j + 1);
+              if let Some(next) = right.first_mut() {
+                adjust_pair(&mut left[i], next);
+              }
+            }
+            i = j + 1;
+          } else {
+            let (left, right) = children.split_at_mut(j);
+            if let Some(next) = right.first_mut() {
+              adjust_pair(&mut left[i], next);
+            }
+            i = j;
+          }
+        }
+      }
+    }
+  } else {
+    if let NodeData::Element { children, .. } = node {
+      for child in children.iter_mut() {
+        adjust_spacing(child);
+      }
+    }
+  }
+}
+
+/// Clean up internal _role/_lspace/_rspace attributes before serialization.
+pub fn clean_internal_attrs(node: &mut NodeData) {
+  if let NodeData::Element { attributes, children, .. } = node {
+    if let Some(attrs) = attributes {
+      attrs.remove("_role");
+      attrs.remove("_lspace");
+      attrs.remove("_rspace");
+      attrs.remove("_largeop");
+      attrs.remove("_lpadding");
+      attrs.remove("_rpadding");
+      if attrs.is_empty() {
+        *attributes = None;
+      }
+    }
+    for child in children {
+      clean_internal_attrs(child);
     }
   }
 }
