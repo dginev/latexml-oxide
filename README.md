@@ -1,14 +1,14 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.4.0-orange.svg) 
-[![ported tests 96.3%](https://img.shields.io/badge/ported%20tests%20-%2096.3%25%20(320%2F332)-%20%2332a852?style=flat)
+[![ported tests 99.5%](https://img.shields.io/badge/ported%20tests%20-%2099.5%25%20(383%2F385)-%20%2332a852?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
 This project is in an **alpha** stage. Please avoid using it in any real world setting before test parity is reached.
 
 **If the "ported tests" badge above isn't at `100%`, we aren't stable and we aren't ready**.
 
-**Current status (2026-03-30):** 320/332 tests passing (96.3%), 3 ignored (tikz token-limit), 9 failing (pgf/tikz SVG — reference XMLs synced from Perl, pgfsys-latexml.def port in progress). 414 core + 91 contrib package bindings. Full 28/28 math parse suite + physics.sty semantic port + mathtools + listing + picture.
+**Current status (2026-04-01):** 383/385 tests passing (99.5%), 2 ignored (tikz token-limit). 414 core + 91 contrib package bindings. Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
 
 ### Why?
 
