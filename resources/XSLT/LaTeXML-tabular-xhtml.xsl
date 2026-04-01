@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/=====================================================================\ 
+/=====================================================================\
 |  LaTeXML-tabular-xhtml.xsl                                          |
 |  Converting tabular to xhtml                                        |
 |=====================================================================|
@@ -29,6 +29,7 @@
        See the CONTEXT discussion in LaTeXML-common -->
 
   <xsl:strip-space elements="ltx:tabular ltx:thead ltx:tbody ltx:tfoot ltx:tr"/>
+  <xsl:preserve-space elements="ltx:td"/>
 
   <xsl:template match="ltx:tabular">
     <xsl:param name="context"/>
@@ -148,6 +149,16 @@
               <xsl:text> </xsl:text>
             </xsl:if>
             <xsl:text>ltx_rowspan</xsl:text>
+            <xsl:text> </xsl:text>
+            <xsl:value-of select="f:class-pref('ltx_rowspan_',@rowspan)"/>
+          </xsl:if>
+          <xsl:if test="@colspan and $context = 'inline'">
+            <xsl:if test="@thead or @border or @rowspan">
+              <xsl:text> </xsl:text>
+            </xsl:if>
+            <xsl:text>ltx_colspan</xsl:text>
+            <xsl:text> </xsl:text>
+            <xsl:value-of select="f:class-pref('ltx_colspan_',@colspan)"/>
           </xsl:if>
         </xsl:with-param>
         <xsl:with-param name="extra_style">
@@ -172,11 +183,14 @@
           </xsl:choose>
         </xsl:with-param>
       </xsl:call-template>
-      <xsl:if test="@colspan">
-        <xsl:attribute name='colspan'><xsl:value-of select='@colspan'/></xsl:attribute>
-      </xsl:if>
-      <xsl:if test="@rowspan">
-        <xsl:attribute name='rowspan'><xsl:value-of select='@rowspan'/></xsl:attribute>
+      <!-- add colspan, rowspan but NOT on fake td elements -->
+      <xsl:if test="$context != 'inline'">
+        <xsl:if test="@colspan">
+          <xsl:attribute name='colspan'><xsl:value-of select='@colspan'/></xsl:attribute>
+        </xsl:if>
+        <xsl:if test="@rowspan">
+          <xsl:attribute name='rowspan'><xsl:value-of select='@rowspan'/></xsl:attribute>
+        </xsl:if>
       </xsl:if>
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$context"/>

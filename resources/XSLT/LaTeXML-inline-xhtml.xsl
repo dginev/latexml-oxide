@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/=====================================================================\ 
+/=====================================================================\
 |  LaTeXML-inline-xhtml.xsl                                           |
 |  Converting various inline-level elements to xhtml                  |
 |=====================================================================|
@@ -22,7 +22,7 @@
 
   <!-- ======================================================================
        Various inline-level elements:
-       ltx:text, ltx:emph, ltx:del, ltx:sub, ltx:sup, ltx:acronym, ltx:rule,
+       ltx:text, ltx:emph, ltx:del, ltx:sub, ltx:sup, ltx:rule,
        ltx:anchor, ltx:ref, ltx:cite, ltx:bibref
        ====================================================================== -->
 
@@ -30,12 +30,15 @@
        in inline mode, and so set the inner context to 'inline'.
        See the CONTEXT discussion in LaTeXML-common -->
 
+  <xsl:preserve-space elements="ltx:text"/>
   <xsl:template match="ltx:text">
     <xsl:param name="context"/>
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
-      <xsl:call-template name="add_attributes"/>
+      <xsl:call-template name="add_attributes">
+        <xsl:with-param name="extra_classes" select="f:if(@width,'ltx_inline-block','')"/>
+      </xsl:call-template>
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
@@ -72,6 +75,7 @@
     </xsl:element>
   </xsl:template>
 
+  <xsl:preserve-space elements="ltx:emph"/>
   <xsl:template match="ltx:emph">
     <xsl:param name="context"/>
     <xsl:element name="em" namespace="{$html_ns}">
@@ -90,6 +94,7 @@
     </xsl:element>
   </xsl:template>
 
+  <xsl:preserve-space elements="ltx:del"/>
   <xsl:template match="ltx:del">
     <xsl:param name="context"/>
     <xsl:element name="del" namespace="{$html_ns}">
@@ -108,6 +113,7 @@
     </xsl:element>
   </xsl:template>
 
+  <xsl:preserve-space elements="ltx:sub"/>
   <xsl:template match="ltx:sub">
     <xsl:param name="context"/>
     <xsl:element name="sub" namespace="{$html_ns}">
@@ -126,6 +132,7 @@
     </xsl:element>
   </xsl:template>
 
+  <xsl:preserve-space elements="ltx:sup"/>
   <xsl:template match="ltx:sup">
     <xsl:param name="context"/>
     <xsl:element name="sup" namespace="{$html_ns}">
@@ -144,7 +151,10 @@
     </xsl:element>
   </xsl:template>
 
-  <xsl:template match="ltx:glossaryref[@href] | ltx:acronym[@href]">
+  <xsl:template match="ltx:glossarydefinition"/>
+
+  <xsl:preserve-space elements="ltx:glossaryref"/>
+  <xsl:template match="ltx:glossaryref[@href]">
     <xsl:param name="context"/>
     <xsl:element name="a" namespace="{$html_ns}">
       <xsl:attribute name="href"><xsl:value-of select="f:url(@href)"/></xsl:attribute>
@@ -154,14 +164,14 @@
     </xsl:element>
   </xsl:template>
 
-  <xsl:template match="ltx:glossaryref | ltx:acronym">
+  <xsl:template match="ltx:glossaryref">
     <xsl:param name="context"/>
     <xsl:apply-templates select="." mode="inner">
       <xsl:with-param name="context" select="context"/>
     </xsl:apply-templates>
   </xsl:template>
 
-  <xsl:template match="ltx:glossaryref | ltx:acronym" mode="inner">
+  <xsl:template match="ltx:glossaryref" mode="inner">
     <xsl:param name="context"/>
     <xsl:element name="{f:if(contains(@show,'short'),'abbr','span')}" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
@@ -185,13 +195,13 @@
 
   <xsl:template match="ltx:rule" mode="styling">
     <xsl:param name="context"/>
-    <xsl:apply-imports/>
+    <xsl:apply-templates select="." mode="base-styling"/>
     <xsl:choose>
       <xsl:when test="@color">
-        <xsl:value-of select="concat('background:',@color,';display:inline-block;')"/>
+        <xsl:value-of select="concat('--ltx-bg-color:',@color,';display:inline-block;')"/>
       </xsl:when>
       <!-- Note: width doesn't affect an inline element, but we don't want to be a block -->
-      <xsl:otherwise>background:black;display:inline-block;</xsl:otherwise>
+      <xsl:otherwise>--ltx-bg-color:black;display:inline-block;</xsl:otherwise>
     </xsl:choose>
   </xsl:template>
 
@@ -211,10 +221,11 @@
     </xsl:element>
   </xsl:template>
 
+  <xsl:preserve-space elements="ltx:ref"/>
   <xsl:template match="ltx:ref">
     <xsl:param name="context"/>
     <xsl:choose>
-      <xsl:when test="not(@href) or @href=''">
+      <xsl:when test="not(@href) or @href='' or contains(@class,'ltx_nolink')">
         <xsl:element name="span" namespace="{$html_ns}">
           <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
           <xsl:call-template name="add_id"/>
@@ -250,7 +261,7 @@
           </xsl:apply-templates>
         </xsl:element>
       </xsl:otherwise>
-    </xsl:choose>    
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template match="ltx:ref//ltx:ref">
@@ -271,6 +282,7 @@
     </xsl:element>
   </xsl:template>
 
+  <xsl:preserve-space elements="ltx:anchor"/>
   <xsl:template match="ltx:anchor">
     <xsl:param name="context"/>
     <xsl:element name="a" namespace="{$html_ns}">
@@ -291,6 +303,7 @@
   </xsl:template>
 
   <!-- avoid empty cite's from nocite -->
+  <xsl:preserve-space elements="ltx:cite"/>
   <xsl:template match="ltx:cite"/>
   <xsl:template match="ltx:cite[child::*[not(self::ltx:bibref) or @show!='nothing']]">
     <xsl:param name="context"/>
@@ -311,6 +324,5 @@
   </xsl:template>
 
   <!-- ltx:bibref not handled, since it is translated to ref in crossref module -->
-    
-</xsl:stylesheet>
 
+</xsl:stylesheet>

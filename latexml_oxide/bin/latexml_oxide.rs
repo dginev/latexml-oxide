@@ -103,7 +103,9 @@ fn main() -> Result<(), Box<dyn Error>> {
       // Auto-select stylesheet from --format
       let effective_stylesheet = stylesheet_flag.clone().or_else(|| {
         match format_flag.as_deref() {
-          Some("html5") | Some("html") | Some("xhtml") =>
+          Some("html5") =>
+            Some("resources/XSLT/LaTeXML-html5.xsl".to_string()),
+          Some("html") | Some("xhtml") =>
             Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string()),
           Some("epub") | Some("epub3") =>
             Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
