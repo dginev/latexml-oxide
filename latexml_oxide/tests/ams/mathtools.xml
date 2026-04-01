@@ -62,7 +62,7 @@
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                     <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                    <XMApp width="0pt" xoffset="-15.7pt">
+                    <XMApp width="0pt" xoffset="-17.1pt">
                       <XMTok meaning="multirelation"/>
                       <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                       <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
@@ -132,7 +132,7 @@
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                     <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                    <XMApp width="0pt" xoffset="-31.3pt">
+                    <XMApp width="0pt" xoffset="-34.2pt">
                       <XMTok meaning="multirelation"/>
                       <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                       <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
@@ -1331,7 +1331,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p2">
       <equation xml:id="S4.Ex24">
-        <Math mode="display" tex="\begin{matrix}lalalalalala&amp;l\\&#10;l&amp;l\end{matrix}" text="matrix@(Array[[l * a * l * a * l * a * l * a * l * a * l * a, l], [l, l]])" xml:id="S4.Ex24.m1">
+        <Math mode="display" tex="\begin{matrix}[l]lalalalalala&amp;l\\&#10;l&amp;l\end{matrix}" text="matrix@(Array[[l * a * l * a * l * a * l * a * l * a * l * a, l], [l, l]])" xml:id="S4.Ex24.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1377,7 +1377,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p3">
       <equation xml:id="S4.Ex25">
-        <Math mode="display" tex="\begin{matrix}rererererere&amp;r\\&#10;r&amp;r\end{matrix}" text="matrix@(Array[[r * e * r * e * r * e * r * e * r * e * r * e, r], [r, r]])" xml:id="S4.Ex25.m1">
+        <Math mode="display" tex="\begin{matrix}[r]rererererere&amp;r\\&#10;r&amp;r\end{matrix}" text="matrix@(Array[[r * e * r * e * r * e * r * e * r * e * r * e, r], [r, r]])" xml:id="S4.Ex25.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1423,7 +1423,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p4">
       <equation xml:id="S4.Ex26">
-        <Math mode="display" tex="\begin{pmatrix}ppppppp&amp;foo\\&#10;l&amp;ppppppppppppppp\end{pmatrix}" text="matrix@(Array[[p * p * p * p * p * p * p, f * o * o], [l, p * p * p * p * p * p * p * p * p * p * p * p * p * p * p]])" xml:id="S4.Ex26.m1">
+        <Math mode="display" tex="\begin{pmatrix}[l]ppppppp&amp;foo\\&#10;l&amp;ppppppppppppppp\end{pmatrix}" text="matrix@(Array[[p * p * p * p * p * p * p, f * o * o], [l, p * p * p * p * p * p * p * p * p * p * p * p * p * p * p]])" xml:id="S4.Ex26.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1526,7 +1526,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p6">
       <equation xml:id="S4.Ex28">
-        <Math mode="display" tex="\begin{Bmatrix}B&amp;B\\&#10;B&amp;BBBBBBBrBBBBBB\end{Bmatrix}" text="matrix@(Array[[B, B], [B, B * B * B * B * B * B * B * r * B * B * B * B * B * B]])" xml:id="S4.Ex28.m1">
+        <Math mode="display" tex="\begin{Bmatrix}[r]B&amp;B\\&#10;B&amp;BBBBBBBrBBBBBB\end{Bmatrix}" text="matrix@(Array[[B, B], [B, B * B * B * B * B * B * B * r * B * B * B * B * B * B]])" xml:id="S4.Ex28.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1617,7 +1617,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p8">
       <equation xml:id="S4.Ex30">
-        <Math mode="display" tex="\begin{Vmatrix}V&amp;V\\&#10;VVVVVVcVVVVVV&amp;bar\end{Vmatrix}" text="norm@(matrix@(Array[[V, V], [V * V * V * V * V * V * c * V * V * V * V * V * V, b * a * r]]))" xml:id="S4.Ex30.m1">
+        <Math mode="display" tex="\begin{Vmatrix}[c]V&amp;V\\&#10;VVVVVVcVVVVVV&amp;bar\end{Vmatrix}" text="norm@(matrix@(Array[[V, V], [V * V * V * V * V * V * c * V * V * V * V * V * V, b * a * r]]))" xml:id="S4.Ex30.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -6390,7 +6390,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S10.p14">
       <equation xml:id="S10.Ex79">
-        <Math mode="display" tex="\sum_{\begin{subarray}i\in\Lambda\\&#10;0&lt;j&lt;n\end{subarray}}P(i,j)" text="(sum _ (list@(Array[[i element-of Lambda], [0 &lt; j &lt; n]])))@(P * open-interval@(i, j))" xml:id="S10.Ex79.m1">
+        <Math mode="display" tex="\sum_{\begin{subarray}{l}i\in\Lambda\\&#10;0&lt;j&lt;n\end{subarray}}P(i,j)" text="(sum _ (list@(Array[[i element-of Lambda], [0 &lt; j &lt; n]])))@(P * open-interval@(i, j))" xml:id="S10.Ex79.m1">
           <XMath>
             <XMApp>
               <XMApp>

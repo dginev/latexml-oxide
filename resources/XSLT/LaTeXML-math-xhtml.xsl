@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/=====================================================================\ 
+/=====================================================================\
 |  LaTeXML-math-mathml.xsl                                            |
 |  copy MathML for xhtml                                              |
 |=====================================================================|
@@ -26,8 +26,8 @@
   <!-- Use MathML (if available in source) -->
   <xsl:param name="USE_MathML">true</xsl:param>
   <!-- If NOT using MathML, should we avoid using images to represent pure numbers? -->
-  <xsl:param name="NO_NUMBER_IMAGES">true</xsl:param>
-   
+  <xsl:param name="USE_NUMBER_IMAGES"></xsl:param>
+
   <!-- The namespace to use on MathML elements (typically MathML_NAMESPACE or none) -->
   <xsl:param name="mml_ns">
     <xsl:value-of select="f:if($USE_NAMESPACES,$MathML_NAMESPACE,'')"/>
@@ -42,10 +42,10 @@
         <xsl:apply-templates select="." mode="as-MathML"/>
       </xsl:when>
       <!-- Optionally avoid using images for pure numbers -->
-      <xsl:when test="$NO_NUMBER_IMAGES and ltx:XMath[count(*)=1][ltx:XMTok[1][@role='NUMBER']]">
+      <xsl:when test="not($USE_NUMBER_IMAGES) and ltx:XMath[count(*)=1][ltx:XMTok[1][@role='NUMBER']]">
         <xsl:value-of select="ltx:XMath/ltx:XMTok/text()"/>
       </xsl:when>
-      <xsl:when test="$NO_NUMBER_IMAGES and
+      <xsl:when test="not($USE_NUMBER_IMAGES) and
                       ltx:XMath[count(*)=1][ltx:XMApp[count(*)=2
                                         and ltx:XMTok[1][@meaning='minus']
                                         and ltx:XMTok[2][@role='NUMBER']]]">
@@ -100,7 +100,7 @@
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:call-template name="add_id"/>
       <xsl:call-template name="add_attributes">
-      </xsl:call-template>      
+      </xsl:call-template>
       <xsl:value-of select="@tex"/>
     </xsl:element>
   </xsl:template>
@@ -123,12 +123,13 @@
   <!-- Copy MathML, as is -->
   <xsl:template match="m:*">
     <xsl:element name="{local-name()}" namespace="{$mml_ns}">
+      <xsl:call-template name="add_style"/>
       <xsl:for-each select="@*">
         <xsl:apply-templates select="." mode="copy-attribute"/>
       </xsl:for-each>
       <xsl:choose>
         <!-- If annotation-xml in a DIFFERENT namespace, copy as foreign markup -->
-        <xsl:when test="local-name()='annotation-xml'                              
+        <xsl:when test="local-name()='annotation-xml'
                         and not(namespace-uri(child::*) = $MathML_NAMESPACE)">
           <xsl:apply-templates mode='copy-foreign'/>
         </xsl:when>

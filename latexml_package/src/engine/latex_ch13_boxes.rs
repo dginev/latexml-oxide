@@ -416,9 +416,12 @@ LoadDefinitions!({
     sub[document, args, props] {
       let attachment = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let vattach = translate_attachment(&attachment);
-      let width = props.get("width").map(|w| w.to_string())
-        .or_else(|| args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_attribute()))
-        .unwrap_or_default();
+      let width = match props.get("width") {
+        Some(Stored::Dimension(d)) => d.to_attribute(),
+        Some(w) => w.to_string(),
+        None => args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_attribute())
+          .unwrap_or_default(),
+      };
       let mut attr = string_map!("class" => "ltx_minipage");
       if !width.is_empty() { attr.insert("width".to_string(), width); }
       attr.insert("vattach".to_string(), vattach.to_string());
@@ -443,7 +446,7 @@ LoadDefinitions!({
         state::assign_register("\\hsize", rv.clone(), None, Vec::new())?;
         state::assign_register("\\textwidth", rv.clone(), None, Vec::new())?;
         state::assign_register("\\columnwidth", rv, None, Vec::new())?;
-        whatsit.set_property("width", Stored::from(width_arg.to_attribute()));
+        whatsit.set_property("width", Stored::Dimension(dim));
       }
       whatsit.set_property("vattach", Stored::from(vattach.to_string()));
       Let!("\\\\", "\\lx@newline");

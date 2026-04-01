@@ -519,6 +519,21 @@ pub fn insert_block(
       tag == "ltx:XMText",
     )
   });
+  // Perl L420-421: in SVG context, convert width from Dimension (pt) to em units
+  let mut block_attr = block_attr;
+  if is_svg {
+    if let Some(width_str) = block_attr.get("width").cloned() {
+      if let Some(pt_val) = width_str.strip_suffix("pt").and_then(|s| s.parse::<f64>().ok()) {
+        // Convert pt to em using content's font em width
+        let em_width = contents.get_font().ok().flatten()
+          .map(|f| f.get_em_width())
+          .unwrap_or((10.0 * 65536.0) as i64);
+        let em_val = (pt_val * 65536.0) / em_width as f64;
+        let em_rounded = latexml_core::common::numeric_ops::round_to(em_val, None);
+        block_attr.insert("width".to_string(), format!("{}em", em_rounded));
+      }
+    }
+  }
   let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
   if is_xmath && !is_xmtext {
     // but math always needs this
@@ -541,6 +556,7 @@ pub fn insert_block(
   document.close_to_node(&context, true)?;
 
   // Perl: Hack: apparently TeX doesn't shift (vattach) a single node in a vbox/vtop/...
+  #[allow(clippy::redundant_locals)]
   let mut block_attr = block_attr;
   let mut ignorable_attr = ignorable_attr;
   if nnodes == 1 && block_attr.contains_key("vattach") && is_v_attached(&nodes[0]) {

@@ -436,7 +436,7 @@
         <tr>
           <td align="left" border="r t" class="ltx_nopad"><picture height="100" width="100" xml:id="p8.pic1">
               <line points="0,100 100,0" stroke="blue" stroke-width="2pt"/>
-              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(0,0)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="30.09" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p><text font="italic">Head</text></p>
@@ -444,7 +444,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(68.87,73.79)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="30.09" transform="translate(69.91,73.79)">
                 <inline-block>
                   <inline-block align="right">
                     <p><text font="italic">Head</text></p>
@@ -466,7 +466,7 @@
         <tr>
           <td align="left" border="r t" class="ltx_nopad"><picture height="52.42" width="100" xml:id="p8.pic2">
               <line points="0,52.42 100,0" stroke="blue" stroke-width="2pt"/>
-              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(0,0)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="30.09" transform="translate(0,0)">
                 <inline-block>
                   <inline-block align="left">
                     <p><text font="italic">Head</text></p>
@@ -474,7 +474,7 @@
                   </inline-block>
                 </inline-block>
               </g>
-              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="31.13" transform="translate(68.87,26.21)">
+              <g class="ltx_svg_fog" innerheight="26.21" innerwidth="30.09" transform="translate(69.91,26.21)">
                 <inline-block>
                   <inline-block align="right">
                     <p><text font="italic">Head</text></p>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/=====================================================================\ 
+/=====================================================================\
 |  Common utility functions for stylesheet; for inclusion             |
 |=====================================================================|
 | Part of LaTeXML:                                                    |
@@ -20,6 +20,7 @@
     xmlns:date  = "http://exslt.org/dates-and-times"
     xmlns:func  = "http://exslt.org/functions"
     xmlns:f     = "http://dlmf.nist.gov/LaTeXML/functions"
+    xmlns:aria  = "http://www.w3.org/ns/wai-aria"
     xmlns:xhtml = "http://www.w3.org/1999/xhtml"
     extension-element-prefixes="func f exsl string date"
     exclude-result-prefixes = "ltx f func string">
@@ -38,22 +39,27 @@
   <!-- What version of RDFa to generate. [Set to "1.0" for broken behaviour] -->
   <xsl:param name="RDFA_VERSION"></xsl:param>
 
-  <!-- Whether to use Namespaces in the generated xml/xhtml/...-->  
+  <!-- Whether to use Namespaces in the generated xml/xhtml/...-->
   <xsl:param name="USE_NAMESPACES">true</xsl:param>
-  
+
   <!-- Whether to use HTML5 constructs in the generated html. -->
   <xsl:param name="USE_HTML5"></xsl:param>
- 
+
   <!-- The XHTML namespace -->
   <xsl:param name="XHTML_NAMESPACE">http://www.w3.org/1999/xhtml</xsl:param>
 
   <!-- Whether to use xml:id instead of plain ole id;
-       Not sure if we ever should; probably depends on embedded schema, as well? -->  
+       Not sure if we ever should; probably depends on embedded schema, as well? -->
   <xsl:param name="USE_XMLID"></xsl:param>
 
   <!-- The namespace to use on html elements (typically XHTML_NAMESPACE or none) -->
   <xsl:param name="html_ns">
     <xsl:value-of select="f:if($USE_NAMESPACES,$XHTML_NAMESPACE,'')"/>
+  </xsl:param>
+
+  <!-- Whether to convert foreign-namespaced attributes into html-style data-* attributes -->
+  <xsl:param name="USE_DATA_ATTRIBUTES">
+    <xsl:value-of select="$USE_HTML5"/>
   </xsl:param>
 
   <!-- ======================================================================
@@ -81,7 +87,7 @@
     <xsl:if test="//ltx:date[@role='creation' or @role='conversion'][1]">
       <xsl:comment>
         <xsl:text>Document created on </xsl:text>
-        <xsl:value-of select='//ltx:date/node()'/>
+        <xsl:value-of select="translate(//ltx:date/node(),'-','‐')"/>
         <xsl:text>.</xsl:text>
       </xsl:comment>
       <xsl:text>&#x0A;</xsl:text>
@@ -227,30 +233,50 @@
        Dimension utilities
        [hopefully only see units of px or pt?
   -->
-  
+
+  <func:function name="f:dimunit">
+    <xsl:param name="value"/>
+    <func:result>
+      <xsl:choose>
+        <xsl:when test="contains($value,'px')">px</xsl:when>
+        <xsl:when test="contains($value,'pt')">pt</xsl:when>
+        <xsl:otherwise></xsl:otherwise>
+      </xsl:choose>
+    </func:result>
+  </func:function>
+
+  <func:function name="f:dimvalue">
+    <xsl:param name="value"/>
+    <xsl:variable name="unit"><xsl:value-of select="f:dimunit($value)"/></xsl:variable>
+    <func:result>
+      <xsl:value-of select="number(substring-before($value,$unit))"/>
+    </func:result>
+  </func:function>
+
   <func:function name="f:adddim">
     <xsl:param name="value1"/>
     <xsl:param name="value2"/>
+    <xsl:variable name="unit1"><xsl:value-of select="f:dimunit($value1)"/></xsl:variable>
+    <xsl:variable name="unit2"><xsl:value-of select="f:dimunit($value2)"/></xsl:variable>
     <func:result>
-      <xsl:value-of select="concat(f:dimpx($value1)+f:dimpx($value2),'px')"/>
-      </func:result>
-  </func:function>
-
-  <func:function name="f:halfdiff">
-    <xsl:param name="value1"/>
-    <xsl:param name="value2"/>
-    <func:result>
-      <xsl:value-of select="concat((f:dimpx($value1)-f:dimpx($value2)) div 2,'px')"/>
-      </func:result>
+      <xsl:choose>
+        <xsl:when test="$unit1 = $unit2">
+          <xsl:value-of select="concat(f:dimvalue($value1)+f:dimvalue($value2),$unit1)"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="concat(f:dimpx($value1)+f:dimpx($value2),'px')"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </func:result>
   </func:function>
 
   <func:function name="f:half">
     <xsl:param name="value"/>
+    <xsl:variable name="unit"><xsl:value-of select="f:dimunit($value)"/></xsl:variable>
     <func:result>
-      <xsl:value-of select="concat(f:dimpx($value) div 2,'px')"/>
+      <xsl:value-of select="concat(f:dimvalue($value) div 2,$unit)"/>
       </func:result>
   </func:function>
-
 
   <func:function name="f:dimpx">
     <xsl:param name="value"/>
@@ -295,6 +321,10 @@
     <xsl:if test="not($value = '')">
       <xsl:attribute name="{$name}"><xsl:value-of select="$value"/></xsl:attribute>
     </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="copy_foreign_attributes">
+    <xsl:apply-templates select="@*[(namespace-uri() != '') and (namespace-uri() != 'http://www.w3.org/XML/1998/namespace')]" mode='copy-attribute'/>
   </xsl:template>
 
   <!-- This copies WHATEVER, in WHATEVER namespace.
@@ -354,28 +384,77 @@
     </xsl:element>
   </xsl:template>
 
-  <xsl:template match="@*" mode='copy-attribute'>
+  <!-- Tricky to set up templates for attributes with & without namespaces that override correctly -->
+
+  <!-- Copy NON-namespaced attributes -->
+  <xsl:template match="@*[namespace-uri() = '']" mode='copy-attribute'>
     <xsl:attribute name="{local-name()}" namespace="{namespace-uri()}">
       <xsl:value-of select="."/>
     </xsl:attribute>
   </xsl:template>
 
+  <!-- Except those known to contain urls which may need relativizing...-->
+  <xsl:template match="@href | @src | @action" mode='copy-attribute' priority='1'>
+    <xsl:attribute name="{local-name()}">
+      <xsl:value-of select="f:url(.)"/>
+    </xsl:attribute>
+  </xsl:template>
+
+  <!-- Attributes in foreign namespaces are preserved or copied into data-XXX style attributes -->
+  <xsl:template match="@*[(namespace-uri() != '') and (namespace-uri() != 'http://www.w3.org/XML/1998/namespace')]" mode='copy-attribute'>
+    <xsl:variable name="prefix"><xsl:value-of select="substring-before(name(),':')"/></xsl:variable>
+    <xsl:choose>
+      <xsl:when test="$USE_HTML5='true' and $prefix = 'aria'">
+        <!-- ARIA attributes are copied along into the HTML5 convention -->
+        <xsl:choose>
+          <xsl:when test="local-name() = 'role'">
+            <xsl:attribute name="role">
+              <xsl:value-of select="."/>
+            </xsl:attribute>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:attribute name="{concat('aria-',local-name())}">
+              <xsl:value-of select="."/>
+            </xsl:attribute>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:when test="$USE_DATA_ATTRIBUTES != 'true'">
+        <!-- TRY to use the same namespace prefix -->
+        <xsl:call-template name="add_namespace">
+          <xsl:with-param name="prefix" select="$prefix"/>
+          <xsl:with-param name="url" select="namespace-uri()"/>
+        </xsl:call-template>
+        <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
+          <xsl:value-of select="."/>
+        </xsl:attribute>
+      </xsl:when>
+      <xsl:when test="$prefix = 'data'">
+        <xsl:attribute name="{concat('data-',local-name())}">
+          <xsl:value-of select="."/>
+        </xsl:attribute>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:attribute name="{concat('data-',$prefix,'-',local-name())}">
+          <xsl:value-of select="."/>
+        </xsl:attribute>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <!-- With the exception of xml:* attributes, which are generally dropped -->
+  <xsl:template match="@xml:*" mode='copy-attribute'/>
+  <!-- Except for xml:id and xml:lang; For some formats, the xml: prefix is omitted -->
   <xsl:template match="@xml:id" mode='copy-attribute'>
     <xsl:attribute name="{f:if($USE_XMLID,'xml:id','id')}">
       <xsl:value-of select="."/>
     </xsl:attribute>
   </xsl:template>
 
+  <!-- and xml:lang, similarly -->
   <xsl:template match="@xml:lang" mode='copy-attribute'>
     <xsl:attribute name="{f:if($USE_XMLID,'xml:lang','lang')}">
       <xsl:value-of select="."/>
-    </xsl:attribute>
-  </xsl:template>
-
-  <!-- this is risky, assuming we know which are urls...-->
-  <xsl:template match="@href | @src | @action" mode='copy-attribute'>
-    <xsl:attribute name="{local-name()}">
-      <xsl:value-of select="f:url(.)"/>
     </xsl:attribute>
   </xsl:template>
 
@@ -409,8 +488,12 @@
       <xsl:with-param name="extra_style" select="string($extra_style)"/>
     </xsl:call-template>
     <xsl:apply-templates select="." mode="add_RDFa"/>
+    <xsl:if test="@xml:lang">
+      <xsl:apply-templates select="@xml:lang" mode="copy-attribute"/>
+    </xsl:if>
+    <xsl:call-template name="copy_foreign_attributes"/>
   </xsl:template>
-      
+
   <!-- Add a class attribute value to the current html element
        according to the attributes of the context element:
        * the element name (this should be prefixed somehow!!!)
@@ -418,8 +501,11 @@
        * attributes in the Fontable.attribute set
        * content passed in via the parameter $extra_classes.
 
-       HOOKS: 
-       (1) define template with mode="classes", possibly calling <xsl:apply-imports/>
+       HOOKS:
+       (1) override by defining a more specific template with mode="classes"
+       that applies templates with mode="base-classes".
+       [ <xsl:apply-imports/> would be more elegant, but Xalan apparently doesn't
+       see an IMPORTED template that calls <xsl:apply-imports/> ???]
        (2) pass in parameter $extra_classes
   -->
   <xsl:template name="add_classes">
@@ -428,7 +514,7 @@
       <xsl:with-param name="name" select="'class'"/>
       <xsl:with-param name="value">
         <xsl:apply-templates select="." mode="classes"/>
-        <xsl:if test="$extra_classes">
+        <xsl:if test="$extra_classes and ($extra_classes != '')">
           <xsl:text> </xsl:text>
           <xsl:value-of select="$extra_classes"/>
         </xsl:if>
@@ -437,6 +523,10 @@
   </xsl:template>
 
   <xsl:template match="*" mode="classes">
+    <xsl:apply-templates select="." mode="base-classes"/>
+  </xsl:template>
+
+  <xsl:template match="*" mode="base-classes">
     <xsl:value-of select="concat('ltx_',local-name(.))"/>
     <xsl:if test="@class">
       <xsl:value-of select="concat(' ',@class)"/> <!--Whatever strings that were given! -->
@@ -446,6 +536,9 @@
     </xsl:if>
     <xsl:if test="@role">
       <xsl:value-of select="concat(' ',f:class-pref('ltx_role_',@role))"/>
+    </xsl:if>
+    <xsl:if test="@lists">
+      <xsl:value-of select="concat(' ',f:class-pref('ltx_list_',@lists))"/>
     </xsl:if>
     <xsl:if test="@align">
       <xsl:value-of select="concat(' ',f:class-pref('ltx_align_',@align))"/>
@@ -457,7 +550,7 @@
       <xsl:value-of select="concat(' ',f:class-pref('ltx_align_float',@float))"/>
     </xsl:if>
     <xsl:if test="@framed">
-      <xsl:value-of select="concat(' ',f:class-pref('ltx_framed_',@framed))"/>
+      <xsl:value-of select="concat(' ','ltx_framed ',f:class-pref('ltx_framed_',@framed))"/>
     </xsl:if>
   </xsl:template>
 
@@ -469,10 +562,11 @@
        Note that width & height (& padding versions)
        will be ignored in most cases... silly CSS.
        Note that some attributes clash because they're setting
-       the same CSS property; there's no combining here (yet?).   
+       the same CSS property; there's no combining here (yet?).
 
-       HOOKS: 
-       (1) define template with mode="styling", possibly calling <xsl:apply-imports/>
+       HOOKS:
+       (1) override by defining a more specific template with mode="classes"
+       that applies templates with mode="base-styling".
        (2) pass in parameter $extra_style
   -->
   <xsl:template name="add_style">
@@ -489,6 +583,10 @@
   </xsl:template>
 
   <xsl:template match="*" mode="styling">
+    <xsl:apply-templates select="." mode="base-styling"/>
+  </xsl:template>
+
+  <xsl:template match="*" mode="base-styling">
     <xsl:if test="@fontsize">
       <xsl:value-of select="concat('font-size:',@fontsize,';')"/>
     </xsl:if>
@@ -512,15 +610,21 @@
     <xsl:if test="@yoffset">
       <xsl:value-of select="concat('position:relative; bottom:',@yoffset,';')"/>
     </xsl:if>
-    <xsl:if test="@color"><xsl:value-of select="concat('color:',@color,';')"/></xsl:if>
+    <xsl:if test="@color">
+      <xsl:value-of select="concat('--ltx-fg-color:',@color,';')"/>
+    </xsl:if>
+    <xsl:if test="@mathcolor">
+      <xsl:value-of select="concat('--ltx-fg-color:',@mathcolor,';')"/>
+    </xsl:if>
     <xsl:if test="@backgroundcolor">
-      <xsl:value-of select="concat('background-color:',@backgroundcolor,';')"/>
+      <xsl:value-of select="concat('--ltx-bg-color:',@backgroundcolor,';')"/>
+    </xsl:if>
+    <xsl:if test="@mathbackground">
+      <xsl:value-of select="concat('--ltx-bg-color:',@mathbackground,';')"/>
     </xsl:if>
     <xsl:if test="@opacity"><xsl:value-of select="concat('opacity:',@opacity,';')"/></xsl:if>
     <xsl:if test="@framecolor">
-      <xsl:value-of select="'border-color: '"/>
-      <xsl:value-of select="@framecolor"/>
-      <xsl:value-of select="';'"/>
+      <xsl:value-of select="concat('--ltx-border-color:',@framecolor,';')"/>
     </xsl:if>
     <xsl:if test="@cssstyle"><xsl:value-of select="concat(@cssstyle,';')"/></xsl:if>
   </xsl:template>
@@ -535,12 +639,6 @@
         <!-- apparently we shouldn't put the innerheigth & innerdepth into the style;
          seems to mess up the positioning? -->
         <xsl:text>transform:</xsl:text>
-        <xsl:apply-templates select='.' mode="transformable-transform"/>
-        <xsl:text>;</xsl:text>
-        <xsl:text>-webkit-transform:</xsl:text>
-        <xsl:apply-templates select='.' mode="transformable-transform"/>
-        <xsl:text>;</xsl:text>
-        <xsl:text>-ms-transform:</xsl:text>
         <xsl:apply-templates select='.' mode="transformable-transform"/>
         <xsl:text>;</xsl:text>
       </xsl:with-param>
@@ -563,7 +661,7 @@
 
   <!-- Add an RDFa attributes from the context element to the current one.
        All of these attributes (except content) could be IRI (ie. URL),
-       as well as term(s), CURIE, etc.  So, should f:url(.) be applied? 
+       as well as term(s), CURIE, etc.  So, should f:url(.) be applied?
        It either needs to be written safely enough, or a safer version applied-->
   <xsl:template match="*" mode="add_RDFa">
     <!-- perhaps we want to disallow these being spread around?
@@ -626,7 +724,7 @@
         <xsl:with-param name="url">
           <xsl:choose>
             <xsl:when test="substring-before(substring-after($prefix,' '),' ')">
-              <xsl:value-of select="substring-before(substring-after($prefix,' '),' ')"/>           
+              <xsl:value-of select="substring-before(substring-after($prefix,' '),' ')"/>
             </xsl:when>
             <xsl:otherwise>
               <xsl:value-of select="substring-after($prefix,' ')"/>
@@ -663,7 +761,4 @@
                             ',',@data)"/>
     </xsl:attribute>
   </xsl:template>
-
 </xsl:stylesheet>
-
-

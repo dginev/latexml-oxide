@@ -21,7 +21,7 @@ use std::fmt;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::rc::Rc;
 
-mod standard_metrics;
+pub mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
 
 pub type Fontmap = Rc<[Option<char>]>;
@@ -226,15 +226,15 @@ static METRIC_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     "sansserif_bold_upright"     => "cmssbx",
     "typewriter_medium_upright"  => "cmtt",
     "typewriter_medium_slanted"  => "cmsltt",
-    "math_medium_italic"         => "cmm",
+    "math_medium_italic"         => "cmmi",
     "math_medium_upright"        => "cmr",
-    "math_bold_italic"           => "cmiib"
+    "math_bold_italic"           => "cmmib"
   )
 });
 
 // Fallback fontnames for looking up random Unicode,
 // when they're not in the indicated FontMap
-static METRIC_FALLBACKS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "msam", "msbm"];
+static METRIC_FALLBACKS: [&str; 6] = ["cmr", "cmmi", "cmsy", "cmex", "msam", "msbm"];
 
 // Math bearing atom types
 // 0=Ord, 1=Op, 2=Bin, 3=Rel, 4=Open, 5=Close, 6=Punct, 7=Inner
@@ -381,7 +381,7 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,
 /// every single field needs to be an Option, in order to unambiguously tell the "intend" of
 /// override (Some) vs no intent (None).
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, Default)]
 pub struct Font {
   pub family:        Option<Cow<'static, str>>,
   pub series:        Option<Cow<'static, str>>,
@@ -417,7 +417,8 @@ impl Hash for Font {
     self.series.hash(hasher);
     self.shape.hash(hasher);
     self.size.map(|size| (size * 1000.0) as i64).hash(hasher);
-    self.color.hash(hasher);
+    // None color hashes same as Some(DEFCOLOR)
+    Some(self.color.unwrap_or(DEFCOLOR)).hash(hasher);
     self.bg.hash(hasher);
     self.opacity.hash(hasher);
     self.encoding.hash(hasher);
@@ -432,6 +433,31 @@ impl Hash for Font {
     self.forceshape.hash(hasher);
     self.scale.map(|scale| (scale * 1000.0) as i64).hash(hasher);
     self.flags.hash(hasher);
+  }
+}
+impl PartialEq for Font {
+  fn eq(&self, other: &Self) -> bool {
+    self.family == other.family
+      && self.series == other.series
+      && self.shape == other.shape
+      && self.size == other.size
+      && !is_diff_font_color(self.color.as_ref(), other.color.as_ref())
+      && self.bg == other.bg
+      && self.opacity == other.opacity
+      && self.encoding == other.encoding
+      && self.language == other.language
+      && self.mathstyle == other.mathstyle
+      && self.mathstylestep == other.mathstylestep
+      && self.name == other.name
+      && self.emph == other.emph
+      && self.scripted == other.scripted
+      && self.fraction == other.fraction
+      && self.forceseries == other.forceseries
+      && self.forcefamily == other.forcefamily
+      && self.forceshape == other.forceshape
+      && self.forcebold == other.forcebold
+      && self.scale == other.scale
+      && self.flags == other.flags
   }
 }
 impl Eq for Font {}
@@ -515,7 +541,7 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed(DEFSHAPE)),
       size:          Some(DEFSIZE),
-      color:         Some(DEFCOLOR),
+      color:         None, // None = inherited default (DEFCOLOR); Some = explicitly set
       bg:            None, // Perl: $DEFBACKGROUND = undef (transparent)
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      Some(Cow::Borrowed(DEFENCODING)),
@@ -540,7 +566,7 @@ impl Font {
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed("italic")),
       size:          Some(DEFSIZE),
-      color:         Some(DEFCOLOR),
+      color:         None, // None = inherited default (DEFCOLOR); Some = explicitly set
       bg:            None, // Perl: $DEFBACKGROUND = undef
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
       encoding:      None, // Perl has 'OT1' but Rust char decoding uses encoding differently
@@ -674,7 +700,8 @@ impl Font {
       && check(&self.series, &other.series)
       && check(&self.shape, &other.shape)
       && check(&self.size, &other.size)
-      && check(&self.color, &other.color)
+      // For color: None = DEFCOLOR, so compare effective colors
+      && !is_diff_font_color(self.color.as_ref(), other.color.as_ref())
       && check(&self.bg, &other.bg)
       && check(&self.opacity, &other.opacity)
       && check(&self.encoding, &other.encoding)
@@ -1034,7 +1061,10 @@ impl Font {
     if is_diff_f64(self.size, other.size) {
       distance += 1;
     }
-    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
+    // Color: use reference-style comparison (different Color variant = different).
+    // Perl's isDiff uses object reference equality: Cmyk(0,0,0,1) ≠ Rgb(0,0,0)
+    // even though both are visually black.
+    if is_diff_font_color_ref(self.color.as_ref(), other.color.as_ref()) {
       distance += 1;
     }
     if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
@@ -1146,12 +1176,15 @@ impl Font {
         ),
       );
     }
-    if is_diff_color(self.color.as_ref(), other.color.as_ref()) {
+    // Emit color when Color variants differ (reference-style comparison).
+    // Perl's `ne` treats Cmyk(0,0,0,1) ≠ Rgb(0,0,0) even though both are black.
+    if is_diff_font_color_ref(self.color.as_ref(), other.color.as_ref()) {
+      let effective_color = self.color.unwrap_or(DEFCOLOR);
       result.insert(
         "color".to_string(),
         (
-          self.color.as_ref().unwrap().to_attribute(),
-          Font { color: self.color, ..Font::default() },
+          effective_color.to_attribute(),
+          Font { color: Some(effective_color), ..Font::default() },
         ),
       );
     }
@@ -1218,8 +1251,8 @@ impl Font {
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
-    if is_diff_color(othercolor, Some(&DEFCOLOR)) {
-      changes.color.clone_from(&other.color);
+    if is_diff_font_color(othercolor, Some(&DEFCOLOR)) {
+      changes.color = Some(othercolor.copied().unwrap_or(DEFCOLOR));
     }
 
     if let Some(ms) = mathstyle {
@@ -1680,6 +1713,27 @@ fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool { x.is_some() && (y.is_no
 
 fn is_diff_color(x: Option<&Color>, y: Option<&Color>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
+}
+
+/// Like is_diff_color but treats None as DEFCOLOR (for the `color` field).
+/// Visual comparison: Gray(0) == Rgb(0,0,0) since both are black.
+fn is_diff_font_color(x: Option<&Color>, y: Option<&Color>) -> bool {
+  let cx = x.unwrap_or(&DEFCOLOR);
+  let cy = y.unwrap_or(&DEFCOLOR);
+  if cx == cy { return false; }
+  cx.to_rgb() != cy.to_rgb()
+}
+
+/// Reference-style comparison for color field: treats None as DEFCOLOR.
+/// Unlike is_diff_font_color, does NOT fall back to visual to_rgb() comparison.
+/// Cmyk(0,0,0,1) IS different from Rgb(0,0,0) even though both are visually black.
+/// This matches Perl's `ne` reference equality: two Color objects at different
+/// addresses are "different" even if they represent the same visual color.
+/// In our model, different Color variants = different Perl references.
+fn is_diff_font_color_ref(x: Option<&Color>, y: Option<&Color>) -> bool {
+  let cx = x.unwrap_or(&DEFCOLOR);
+  let cy = y.unwrap_or(&DEFCOLOR);
+  cx != cy
 }
 
 /// Matches fonts when both are converted to toString strings.

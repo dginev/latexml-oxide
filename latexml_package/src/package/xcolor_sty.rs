@@ -707,6 +707,10 @@ LoadDefinitions!({
     }
     merge_font(fontmap!(color => color));
 
+    // Perl L569: digest \XC@mcolor (triggers \pgfsetcolor{.} when pgf is loaded,
+    // synchronizing the PGF stroke/fill color system with xcolor)
+    digest(Tokens!(T_CS!("\\XC@mcolor")))?;
+
     // Perl: Box(undef,undef,undef, Invocation(\color, T_OTHER('rgb'), T_OTHER(comps)))
     // Return a reversion-only Tbox so \color appears in tex= attributes
     let rgb = color.to_rgb();
@@ -1084,7 +1088,12 @@ LoadDefinitions!({
     } else {
       comps.iter().map(|c| format!("{}", fixedpt(*c))).collect()
     };
-    let joined = formatted.join(",");
+    // HTML: join without separator (produces "00FF00" not "00,FF,00")
+    let joined = if tomodel_str == "HTML" {
+      formatted.join("")
+    } else {
+      formatted.join(",")
+    };
     def_macro(T_CS!(cmd_str), None, Some(ExpansionBody::from(joined.as_str())), None)?;
     Ok(())
   });

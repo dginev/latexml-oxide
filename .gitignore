@@ -25,3 +25,6 @@ profs/*
 
 # Auto-generated kernel dumps (created by build.rs / --init)
 latexml_package/src/engine/*_dump.rs
+
+# Post-processing test actual output
+*-post-actual.xml

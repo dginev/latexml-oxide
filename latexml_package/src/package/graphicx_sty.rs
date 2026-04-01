@@ -77,6 +77,168 @@ pub fn image_candidates(path: &str) -> String {
   }
 }
 
+/// Perl: image_graphicx_sizer from LaTeXML::Util::Image
+/// Reads image dimensions from candidates, applies graphicx options (height/width/scale),
+/// and sets the whatsit's cached size properties so PGF/tikz get correct box dimensions.
+fn image_graphicx_sizer(whatsit: &mut Whatsit) {
+  use std::path::{Path, PathBuf};
+
+  let dpi_val = state::lookup_int("DPI");
+  let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 }; // Perl: our $DPI = 100
+  let candidates = whatsit.get_property("candidates")
+    .map(|c| c.to_string()).unwrap_or_default();
+  let options = whatsit.get_property("options")
+    .map(|c| c.to_string()).unwrap_or_default();
+
+  // Try to read actual image dimensions from file
+  let mut img_w: f64 = 0.0;
+  let mut img_h: f64 = 0.0;
+  let source_dir = state::lookup_string("SOURCEDIRECTORY");
+  for candidate in candidates.split(',') {
+    let candidate = candidate.trim();
+    if candidate.is_empty() { continue; }
+    let full_path = if Path::new(candidate).is_absolute() {
+      PathBuf::from(candidate)
+    } else if !source_dir.is_empty() {
+      PathBuf::from(&source_dir).join(candidate)
+    } else {
+      PathBuf::from(candidate)
+    };
+    if let Some((w, h)) = read_image_dimensions(&full_path) {
+      img_w = w as f64;
+      img_h = h as f64;
+      break;
+    }
+  }
+
+  if img_w <= 0.0 || img_h <= 0.0 { return; }
+
+  // Apply graphicx options (height, width, scale, keepaspectratio)
+  // Perl: image_graphicx_size applies parsed transformations
+  let dppt = dpi / 72.27; // dots per point
+  let mut w = img_w;
+  let mut h = img_h;
+
+  // Parse options string for simple cases
+  // Perl: image_graphicx_parse uses to_bp() to convert dimensions to big points (1/72 inch)
+  let mut req_w: Option<f64> = None; // in bp (big points)
+  let mut req_h: Option<f64> = None; // in bp
+  let mut keep_ratio = false;
+  let mut scale: Option<f64> = None;
+
+  for opt in options.split(',') {
+    let opt = opt.trim();
+    if let Some(val) = opt.strip_prefix("width=") {
+      if let Ok(dim) = Dimension::from_str(val.trim()) {
+        // to_bp: convert pt to bp (1bp = 1/72 inch, 1pt = 1/72.27 inch)
+        req_w = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
+      }
+    } else if let Some(val) = opt.strip_prefix("height=") {
+      if let Ok(dim) = Dimension::from_str(val.trim()) {
+        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
+      }
+    } else if let Some(val) = opt.strip_prefix("totalheight=") {
+      if let Ok(dim) = Dimension::from_str(val.trim()) {
+        req_h = Some(dim.value_of() as f64 / 65536.0 * 72.0 / 72.27);
+      }
+    } else if opt.starts_with("keepaspectratio") {
+      keep_ratio = true;
+    } else if let Some(val) = opt.strip_prefix("scale=") {
+      scale = val.trim().parse::<f64>().ok();
+    }
+  }
+
+  // Apply transformations (matching Perl image_graphicx_size logic)
+  if let Some(s) = scale {
+    w = (w * s).ceil();
+    h = (h * s).ceil();
+  }
+  if req_w.is_some() || req_h.is_some() {
+    let target_w = req_w.map(|rw| rw * dppt);
+    let target_h = req_h.map(|rh| rh * dppt);
+    if keep_ratio {
+      match (target_w, target_h) {
+        (Some(tw), Some(th)) => {
+          // Both specified with keepaspectratio: use the more restrictive
+          if w > 0.0 && h > 0.0 {
+            if tw / w < th / h {
+              let th2 = h * tw / w;
+              w = tw;
+              h = th2;
+            } else {
+              let tw2 = w * th / h;
+              w = tw2;
+              h = th;
+            }
+          }
+        },
+        (Some(tw), None) => {
+          if w > 0.0 { h = h * tw / w; w = tw; }
+        },
+        (None, Some(th)) => {
+          if h > 0.0 { w = w * th / h; h = th; }
+        },
+        (None, None) => {},
+      }
+    } else {
+      if let Some(tw) = target_w { w = tw; }
+      if let Some(th) = target_h { h = th; }
+    }
+  }
+  // Perl: ceil pixel dimensions after applying transforms
+  w = w.ceil();
+  h = h.ceil();
+
+  // Convert pixel dimensions back to points, then to scaled points (sp)
+  let width_pt = w * 72.27 / dpi;
+  let height_pt = h * 72.27 / dpi;
+
+  // Perl: Dimension($w * 72.27 / $dpi . 'pt') — parses via TeX fixed-point arithmetic
+  let w_dim = Dimension::from_str(&format!("{width_pt}pt")).unwrap_or_default();
+  let h_dim = Dimension::from_str(&format!("{height_pt}pt")).unwrap_or_default();
+  whatsit.set_property("cached_width", Stored::Dimension(w_dim));
+  whatsit.set_property("cached_height", Stored::Dimension(h_dim));
+  whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
+}
+
+/// Read image dimensions (width, height) in pixels from a file.
+/// Supports PNG and JPEG formats.
+fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
+  use std::io::Read;
+  let mut file = std::fs::File::open(path).ok()?;
+  let mut header = [0u8; 32];
+  file.read_exact(&mut header).ok()?;
+
+  // PNG: signature + IHDR chunk
+  if &header[0..8] == b"\x89PNG\r\n\x1a\n" {
+    let width = u32::from_be_bytes([header[16], header[17], header[18], header[19]]);
+    let height = u32::from_be_bytes([header[20], header[21], header[22], header[23]]);
+    return Some((width, height));
+  }
+
+  // JPEG: look for SOF marker
+  if header[0] == 0xFF && header[1] == 0xD8 {
+    // Read the full file for JPEG parsing
+    let mut data = header.to_vec();
+    file.read_to_end(&mut data).ok()?;
+    let mut i = 2;
+    while i + 9 < data.len() {
+      if data[i] != 0xFF { break; }
+      let marker = data[i + 1];
+      // SOF markers: 0xC0-0xCF (except 0xC4 DHT, 0xC8 JPG, 0xCC DAC)
+      if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
+        let height = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
+        let width = u16::from_be_bytes([data[i + 7], data[i + 8]]) as u32;
+        return Some((width, height));
+      }
+      let len = u16::from_be_bytes([data[i + 2], data[i + 3]]) as usize;
+      i += 2 + len;
+    }
+  }
+
+  None
+}
+
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
   // (See LaTeXML::Post::Graphics for suggested postprocessing)
@@ -140,6 +302,7 @@ LoadDefinitions!({
 
   // The graphicx-style \includegraphics with keyval options.
   // Perl: properties callback computes path, candidates, options from keyval args.
+  // Perl also has: sizer => \&image_graphicx_sizer — computes box dimensions from image file.
   DefConstructor!(
     "\\@includegraphicx OptionalMatch:* OptionalKeyVals:Gin Semiverbatim",
     "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
@@ -177,6 +340,11 @@ LoadDefinitions!({
       }
       let options = options_vec.join(",");
       Ok(stored_map!("path" => path, "candidates" => candidates, "options" => options))
+    },
+    after_digest => sub[whatsit] {
+      // Perl: sizer => \&image_graphicx_sizer
+      // Compute box dimensions from image file + graphicx options
+      image_graphicx_sizer(whatsit);
     }
   );
 });

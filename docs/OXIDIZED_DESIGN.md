@@ -167,16 +167,51 @@ at compile time. The Font struct stores `Option<Color>` instead of `Option<Cow<s
 eliminating string-parsing at comparison time.
 
 **Parity:** All five Perl color models (rgb, cmy, cmyk, hsb, gray) are supported with
-full inter-conversion. `to_attribute()` produces identical hex strings. Model-aware
-comparison matches Perl's `isDiff` semantics (cmyk black ≠ rgb black).
+full inter-conversion. `to_attribute()` produces identical hex strings.
+
+#### Font Color Comparison: Discriminant-Based Reference Equality
+
+Perl's `Font::isDiff` uses `$x ne $y` — string comparison of *object references*. Two
+Color objects at different memory addresses are "different" even if visually identical.
+This means `Cmyk(0,0,0,1)` (CMYK black) is "different" from `Rgb(0,0,0)` (DEFCOLOR)
+even though both render as `#000000`.
+
+In Rust, we use two comparison functions:
+
+| Function | Mode | Used by |
+|---|---|---|
+| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` then `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
+| `is_diff_font_color_ref` | Exact: `unwrap_or(DEFCOLOR)` then `cx != cy` (derived PartialEq — checks variant + values) | `distance()`, `relative_to()` |
+
+The key insight: **different Color enum variants = different Perl object references**.
+
+- `\color{black}` → `LookupColor("black")` → stored `Rgb(0,0,0)` = DEFCOLOR → not diff
+- `\color[cmyk]{0,0,0,1}` → new `Cmyk(0,0,0,1)` ≠ `Rgb(0,0,0)` → diff (variant differs)
+- `\color[gray]{0.0}` → new `Gray(0.0)` ≠ `Rgb(0,0,0)` → diff (variant differs)
+- `\color{red}` → stored `Rgb(1,0,0)` ≠ `Rgb(0,0,0)` → diff (values differ)
+
+The `color` field uses `Option<Color>` where `None` means "inherited default" (treated
+as `DEFCOLOR = Rgb(0,0,0)` via `unwrap_or`). The `bg` field also uses `Option<Color>`
+but `None` means "transparent" (no background), so it uses the original `is_diff_color`
+which treats `None` as distinct from `Some(Black)`.
+
+**Edge case:** `\color[rgb]{0,0,0}` creates `Rgb(0,0,0)` which equals DEFCOLOR by both
+variant and value — treated as "not different", matching Perl where the stored pre-defined
+`black` object is the same type. If someone defined a *new* Rgb(0,0,0) via `\definecolor`
+then looked it up, Perl would see it as a new reference (diff), but our code would not.
+This theoretical edge case does not appear in any test.
 
 ### 6. Font Defaults: None vs Named Strings
 
 **Decision:** `DEFBACKGROUND = None` and `DEFLANGUAGE = None` (Perl uses `undef`).
+Font `color` also defaults to `None` (not `Some(DEFCOLOR)`), meaning "inherited/unset".
 
 **Rationale:** Perl's `undef` for these defaults is semantically "no value set", not
 "white" or "en". The Rust port uses `Option<Color>` and `Option<Cow<str>>` to represent
-this correctly, rather than sentinel strings.
+this correctly, rather than sentinel strings. For color specifically, `None` enables the
+discriminant-based comparison in section 5 — if the default were `Some(Rgb(0,0,0))`,
+looking up pre-defined `black` would always match and the CMYK/Gray distinction would
+be lost.
 
 **Previous bug:** Early Rust code used `DEFBACKGROUND = "white"` and `DEFLANGUAGE = "en"`,
 which caused spurious font diffs when compared against elements that had no explicit
@@ -680,3 +715,69 @@ uses a `Vec<T>` as a stack: `push` to shadow, `pop` to restore.
 2. Add `set_*` / `get_*` / `expire_*` functions following existing patterns
 3. Call `set_*` at scope entry, `expire_*` at scope exit
 4. Ideally, use RAII guards (Drop trait) for automatic cleanup — TODO improvement
+
+### 20. Color Comparison: Visual Equivalence
+
+**Decision:** In latexml-oxide, two `Color` values are compared by variant and values
+(structural equality), not by object identity. `Color::Rgb(0.0, 0.0, 0.0)` equals
+`Color::Rgb(0.0, 0.0, 0.0)` regardless of how or when they were created. Colors from
+different models (e.g., `Gray(0)` vs `Rgb(0,0,0)`) ARE considered different even when
+visually equivalent — the comparison is by variant + values, not by conversion to a
+common model.
+
+**Perl behavior:** `Font.pm`'s `isDiff` uses Perl's `ne` operator on unoverloaded
+`Color` objects, which compares memory addresses (reference equality). Two Color objects
+with identical values (e.g., both `Color::rgb(0,0,0)`) are considered "different" if
+they are different Perl objects. This produces incidental `color="#000000"` attributes on
+elements when the author explicitly sets `\color{black}` in a scope that already has
+black as the default color.
+
+**Observable differences:**
+
+- `\color{black}` in a black context produces NO `color="#000000"` attribute (Perl may
+  produce one due to reference inequality)
+- `\color[gray]{0}` vs default `Rgb(0,0,0)` DOES produce a `color` attribute because
+  `Gray(0) != Rgb(0,0,0)` (different Color variants)
+- SVG elements like `svg:g` do not get redundant `color="#000000" fill="#000000"
+  stroke="#000000"` attributes when the parent already establishes black
+
+**Implementation:** Two comparison functions in `font.rs`:
+
+| Function | Mode | Used by |
+|---|---|---|
+| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` then `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
+| `is_diff_font_color_ref` | Variant+values (no `to_rgb` fallback) | `distance()`, `relative_to()` |
+
+Both treat `None` (inherited default) as equivalent to `DEFCOLOR = Rgb(0,0,0)` via
+`unwrap_or(DEFCOLOR)`.
+
+**Rationale:** Perl's reference-inequality semantics are an accident of its object
+model, not an intentional design. When a user writes `\color{black}` in a context that
+is already black, the redundant `color="#000000"` attribute carries no information. The
+Rust port's structural equality produces cleaner output without changing any visible
+rendering. Cross-model comparison (`Gray(0)` vs `Rgb(0,0,0)`) still detects the
+difference because the Color enum variant differs, preserving the ability to distinguish
+colors specified via different models — see also section 5 ("Font Color Comparison:
+Discriminant-Based Reference Equality").
+
+**Impact:** Tikz SVG tests show fewer `color`/`fill`/`stroke` attributes than Perl
+output. This is the primary source of remaining diffs in `tikz_3d_cone` and
+`ac_drive_components` tests.
+
+### 21. No `tex=` Attribute on `<picture>` Elements
+
+**Decision:** The `tex=` attribute on `<ltx:picture>` elements is suppressed by default.
+It is only emitted when the environment variable `LATEXML_SVG_TEX_ATTRIBUTE=true` is set.
+
+**Perl behavior:** Perl emits a `tex=` attribute on `<picture>` containing the full TeX
+source of the tikz/pgf picture environment. This can be extremely long (thousands of
+characters of raw pgf commands) and is not used by downstream consumers.
+
+**Rationale:** The `tex=` attribute on pictures is a debugging artifact. It inflates the
+XML output size significantly (often 10x the rest of the element) with raw pgf
+instructions that are illegible and serve no rendering or accessibility purpose. Making
+it opt-in via an environment variable keeps it available for debugging while producing
+cleaner default output.
+
+**Impact:** All tikz/pgf test reference XMLs omit the `tex=` attribute on `<picture>`
+elements. When copying test XMLs from Perl, strip `tex="..."` from `<picture>` tags.

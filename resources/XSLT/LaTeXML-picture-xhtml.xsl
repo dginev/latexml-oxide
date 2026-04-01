@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/=====================================================================\ 
+/=====================================================================\
 |  LaTeXML-picture-svg.xsl                                            |
 |  Converting pictures to SVG for xhtml                               |
 |=====================================================================|
@@ -81,7 +81,7 @@
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:call-template name="add_id"/>
       <xsl:call-template name="add_attributes">
-      </xsl:call-template>      
+      </xsl:call-template>
       <xsl:value-of select="@tex"/>
     </xsl:element>
   </xsl:template>
@@ -89,33 +89,60 @@
   <!-- Top level generated svg:svg element gets id & class from ltx:picture
        If ltx:picture/svg:svg had any of those, they got lost! -->
   <xsl:template match="ltx:picture" mode="as-svg">
-    <xsl:element name="svg" namespace="{$svg_ns}">
-      <!-- copy id, class, style from parent ltx:picture -->
-      <xsl:call-template name="add_id"/>
-      <xsl:call-template name="add_attributes"/>
-      <!-- but copy other svg:svg attributes -->
-      <xsl:for-each select="svg:svg/@*">
-        <xsl:apply-templates select="." mode="copy-attribute"/>
-      </xsl:for-each>
-      <xsl:apply-templates select="svg:svg/*"/>
+    <!-- Wrap in inline-block, to ensure CSS works (eg, mtext in Firefox) -->
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:attribute name="class">ltx_inline-block</xsl:attribute>
+      <xsl:element name="svg" namespace="{$svg_ns}">
+        <!-- copy id, class from parent ltx:picture, but do NOT derive css style from size -->
+        <xsl:call-template name="add_id"/>
+        <xsl:call-template name="add_classes"/>
+        <xsl:call-template name="copy_foreign_attributes"/>
+        <xsl:apply-templates select="." mode="add_RDFa"/>
+        <!-- but copy other svg:svg attributes -->
+        <xsl:for-each select="svg:svg/@*">
+          <xsl:apply-templates select="." mode="copy-attribute"/>
+        </xsl:for-each>
+        <xsl:apply-templates select="svg:svg/*"/>
+      </xsl:element>
     </xsl:element>
   </xsl:template>
 
   <xsl:template match="svg:*">
     <xsl:element name="{local-name()}" namespace="{$svg_ns}">
+      <!-- prepare style attribute first -->
+      <xsl:if test="@style or (@stroke and @stroke!='none') or (@fill and @fill!='none') or @color">
+        <xsl:attribute name="style">
+          <xsl:if test="@stroke and @stroke!='none'">
+            <xsl:value-of select="concat('--ltx-stroke-color:',@stroke,';')"/>
+          </xsl:if>
+          <xsl:if test="@fill and @fill!='none'">
+            <xsl:value-of select="concat('--ltx-fill-color:',@fill,';')"/>
+          </xsl:if>
+          <xsl:if test="@color">
+            <xsl:value-of select="concat('--ltx-fg-color:',@color,';')"/>
+          </xsl:if>
+          <xsl:if test="@style">
+            <xsl:value-of select="@style"/>
+          </xsl:if>
+        </xsl:attribute>
+      </xsl:if>
       <xsl:for-each select="@*">
         <xsl:choose>
+          <!--  Apparently no "xml:" is OK, and preferred in ePub ?
           <xsl:when test="local-name() = 'id'">
             <xsl:attribute name="{f:if($USE_NAMESPACES,'xml:id','id')}">
               <xsl:value-of select="."/>
             </xsl:attribute>
           </xsl:when>
+          -->
           <!-- are these the attributes to watch for in svg? (urls)-->
           <xsl:when test="name() = 'href' or name() = 'src'">
             <xsl:attribute name="{local-name()}">
               <xsl:value-of select="f:url(.)"/>
             </xsl:attribute>
           </xsl:when>
+          <!-- ignore style attribute here, handled separately -->
+          <xsl:when test="name() = 'style'"></xsl:when>
           <!-- Apparently, these attributes SHOULD have the xlink prefix, even in HTML5
           <xsl:when test="name()='xlink:href' or name()='xlink:role' or name()='xlink:arcrole'">
             <xsl:attribute name="{local-name()}"
@@ -130,15 +157,22 @@
             </xsl:attribute>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
+            <xsl:apply-templates select="." mode="copy-attribute"/>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:for-each>
       <xsl:choose>
         <!-- If foreignObject in a DIFFERENT namespace, copy as foreign markup -->
-        <xsl:when test="local-name()='foreignObject'
-                        and not(namespace-uri(child::*) = $SVG_NAMESPACE)">
-          <xsl:apply-templates mode='copy-foreign'/>
+        <xsl:when test="local-name()='foreignObject'">
+          <!-- Wrap contents (twice) to support more CSS layout options -->
+          <xsl:element name="span" namespace="{$html_ns}">
+            <xsl:attribute name="class">ltx_foreignobject_container</xsl:attribute>
+            <xsl:element name="span" namespace="{$html_ns}">
+              <xsl:attribute name="class">ltx_foreignobject_content</xsl:attribute>
+
+              <xsl:apply-templates mode='copy-foreign'/>
+            </xsl:element>
+          </xsl:element>
         </xsl:when>
         <xsl:otherwise>
           <xsl:apply-templates/>

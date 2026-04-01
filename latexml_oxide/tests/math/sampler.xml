@@ -1263,7 +1263,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
                       <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                      <XMApp width="0pt" xoffset="-15.7pt">
+                      <XMApp width="0pt" xoffset="-17.1pt">
                         <XMTok meaning="multirelation"/>
                         <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                         <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
@@ -1563,7 +1563,7 @@ are not currently tested.</p>
           <tag>(24)</tag>
           <tag role="refnum">24</tag>
         </tags>
-        <Math mode="display" tex="\begin{matrix}-1&amp;3\\&#10;2&amp;-4\end{matrix},\qquad\begin{matrix}-1&amp;3\\&#10;2&amp;-4\end{matrix},\qquad\begin{Vmatrix}-1&amp;3\\&#10;2&amp;-4\end{Vmatrix},\qquad\begin{Vmatrix}-1&amp;3\\&#10;2&amp;-4\end{Vmatrix}" text="list@(matrix@(Array[[- 1, 3], [2, - 4]]), matrix@(Array[[- 1, 3], [2, - 4]]), norm@(matrix@(Array[[- 1, 3], [2, - 4]])), norm@(matrix@(Array[[- 1, 3], [2, - 4]])))" xml:id="S4.E24.m1">
+        <Math mode="display" tex="\begin{matrix}-1&amp;3\\&#10;2&amp;-4\end{matrix},\qquad\begin{matrix}[r]-1&amp;3\\&#10;2&amp;-4\end{matrix},\qquad\begin{Vmatrix}-1&amp;3\\&#10;2&amp;-4\end{Vmatrix},\qquad\begin{Vmatrix}[r]-1&amp;3\\&#10;2&amp;-4\end{Vmatrix}" text="list@(matrix@(Array[[- 1, 3], [2, - 4]]), matrix@(Array[[- 1, 3], [2, - 4]]), norm@(matrix@(Array[[- 1, 3], [2, - 4]])), norm@(matrix@(Array[[- 1, 3], [2, - 4]])))" xml:id="S4.E24.m1">
           <XMath>
             <XMDual>
               <XMApp>

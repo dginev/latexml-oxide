@@ -3,6 +3,7 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
+use latexml_core::common::numeric_ops::round_to;
 
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
@@ -67,6 +68,45 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
   }
 }
 
+/// Helper to get (width, height, depth) from a Digested node_box without mutable borrows.
+/// This avoids RefCell conflicts when called during the absorption pipeline.
+/// For simple TBox/Whatsit: reads cached_width/height/depth properties.
+/// For Lists: sums child box widths and takes max height/depth.
+fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
+  fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
+    d.with_properties(|props| {
+      let w = match props.get("cached_width").or_else(|| props.get("width")) {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      let h = match props.get("cached_height").or_else(|| props.get("height")) {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
+        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+      (w, h, d)
+    })
+  }
+  // First try: read cached dimensions
+  let dims = read_dims(digested);
+  if dims.0.value_of() != 0 || dims.1.value_of() != 0 || dims.2.value_of() != 0 {
+    return dims;
+  }
+  // If zero dims: for Lists, sum children's dimensions
+  if let DigestedData::List(ref list_cell) = digested.data() {
+    if let Ok(list) = list_cell.try_borrow() {
+      let mut total_w: i64 = 0;
+      let mut max_h: i64 = 0;
+      let mut max_d: i64 = 0;
+      for child in &list.boxes {
+        let (cw, ch, cd) = fobj_get_size(child);
+        total_w += cw.value_of();
+        max_h = max_h.max(ch.value_of());
+        max_d = max_d.max(cd.value_of());
+      }
+      return (Dimension::new(total_w), Dimension::new(max_h), Dimension::new(max_d));
+    }
+  }
+  dims
+}
+
 /// Perl: collapseSVGGroup (TeX_Box.pool.ltxml L199-271)
 /// Collapse/remove/unwrap unneeded svg:g elements to reduce tree depth.
 fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
@@ -106,9 +146,49 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
     children = element_nodes(node);
   }
 
-  // Step 2-3: Pop/push leading/trailing children that mask parent attributes (Perl L218-237)
-  // Skip for now — this optimization moves children outside the parent, which is complex
-  // and less impactful than steps 4-5 for reducing nesting.
+  // Step 2: Pop leading children that completely mask parent attributes (Perl L218-228)
+  // If a leading child svg:g has collapsible attributes covering ALL of parent's attributes,
+  // the child "masks" the parent — move it before parent in the DOM.
+  let nodeattr_count = nodeattr.len();
+  let mut npopped = 0;
+  while !children.is_empty() && is_svg_g(&children[0]) {
+    let c = &children[0];
+    let mut nmasked = 0;
+    for (key, _val) in c.get_attributes() {
+      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key) {
+        nmasked += 1;
+      }
+    }
+    if nmasked != nodeattr_count {
+      break; // child doesn't completely mask parent
+    }
+    // Move child before node in parent
+    let mut child = children.remove(0);
+    node.add_prev_sibling(&mut child)?;
+    npopped += 1;
+  }
+
+  // Step 3: Push trailing children that completely mask parent attributes (Perl L230-237)
+  let mut npushed = 0;
+  while !children.is_empty() && is_svg_g(children.last().unwrap()) {
+    let c = children.last().unwrap();
+    let mut nmasked = 0;
+    for (key, _val) in c.get_attributes() {
+      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key) {
+        nmasked += 1;
+      }
+    }
+    if nmasked != nodeattr_count {
+      break; // child doesn't completely mask parent
+    }
+    // Move child after node in parent
+    let mut child = children.pop().unwrap();
+    node.add_next_sibling(&mut child)?;
+    npushed += 1;
+  }
+  if npopped > 0 || npushed > 0 {
+    children = element_nodes(node);
+  }
 
   // Step 4: Remove redundant svg:g children (same attributes as parent, Perl L239-250)
   let mut nredundant = 0;
@@ -520,25 +600,53 @@ LoadDefinitions!({
         }
       }
       // Perl L363-388: Set size and transform on remaining foreignObjects
-      // Read cached dimensions from whatsit properties
       let mut has_dims = false;
       if let Some(wh) = whatsit {
-        let dims = wh.with_properties(|props| {
-          let w = match props.get("cached_width").or_else(|| props.get("width")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
-          let h = match props.get("cached_height").or_else(|| props.get("height")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
-          let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
-            Some(Stored::Dimension(d)) => *d, _ => Dimension::new(0) };
-          (w, h, d)
-        });
-        let (w, h, d) = dims;
+        // Perl L368: my ($w, $h, $d) = $whatsit->getSize;
+        // For accumulated Lists (from appendNodeBox), read cached dimensions
+        // or sum up child box dimensions. Avoids mutable borrows that conflict
+        // with the absorption pipeline's active RefCell borrows.
+        let dims = fobj_get_size(wh);
+        let (mut w, h, d) = dims;
+        // If the foreignObject wraps a block with explicit width (minipage/parbox),
+        // use that width instead of the accumulated box widths.
+        // Perl: the node_box IS the minipage whatsit with getSize returning the
+        // specified width. Our appendNodeBox creates Lists that sum widths incorrectly.
+        if w.value_of() != 0 {
+          for child_el in &children {
+            let child_qname = document::get_node_qname(child_el);
+            let is_block = arena::with(child_qname, |s|
+              s == "ltx:inline-block" || s == "ltx:_CaptureBlock_");
+            if is_block {
+              if let Some(width_attr) = child_el.get_attribute("width") {
+                // Parse width from attribute (e.g. "28.5pt", "2.85em")
+                let trimmed = width_attr.trim();
+                if let Some(pt_str) = trimmed.strip_suffix("pt") {
+                  if let Ok(val) = pt_str.parse::<f64>() {
+                    w = Dimension::new((val * 65536.0) as i64);
+                    break;
+                  }
+                } else if let Some(em_str) = trimmed.strip_suffix("em") {
+                  if let Ok(val) = em_str.parse::<f64>() {
+                    // 1em = 10pt at default font size
+                    let font_size = wh.get_font().ok().flatten()
+                      .map(|f| f.get_em_width())
+                      .unwrap_or((10.0 * 65536.0) as i64);
+                    w = Dimension::new((val * font_size as f64) as i64);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
         if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
           has_dims = true;
           let w_px = w.px_value(Some(2));
           let h_px = h.px_value(Some(2));
-          let d_px = d.px_value(Some(2));
-          let total_h = h_px + d_px;
+          // Perl L369: my $H = $h->add($d); — add in sp first, then convert to px
+          let total_h_dim = Dimension::new(h.value_of() + d.value_of());
+          let total_h = total_h_dim.px_value(Some(2));
           // Perl L378-382: width and height (total height = h + d)
           if !node.has_attribute("width") {
             document.set_attribute(node, "width", &s!("{}", w_px))?;
@@ -550,20 +658,24 @@ LoadDefinitions!({
           document.set_attribute(node, "transform",
             &s!("matrix(1 0 0 -1 0 {})", h_px))?;
           document.set_attribute(node, "overflow", "visible")?;
-          // Perl L384-387: CSS custom properties in em units
-          let font_size = wh.with_properties(|props| {
-            match props.get("font_size") {
-              Some(Stored::Dimension(d)) => d.value_f64() / 65536.0,
-              _ => 10.0,
-            }
-          });
-          let em = if font_size > 0.0 { font_size } else { 10.0 };
-          let w_em = w.value_f64() / 65536.0 / em;
-          let h_em = h.value_f64() / 65536.0 / em;
-          let d_em = d.value_f64() / 65536.0 / em;
+          // Perl L373-387: CSS custom properties in em units
+          // Perl: emValue(undef, $font) = roundto($sp / $font->getEMWidth, undef)
+          let em_width = wh.get_font().ok().flatten()
+            .map(|f| f.get_em_width())
+            .unwrap_or(0);
+          let em_width = if em_width > 0 { em_width as f64 } else { 65536.0 * 10.0 };
+          let w_em = w.value_f64() / em_width;
+          let h_em = h.value_f64() / em_width;
+          let d_em = d.value_f64() / em_width;
+          // Perl: roundto(val, undef) uses epsilon-adjusted rounding, strips trailing zeros
+          let fmt_em = |v: f64| {
+            let r = round_to(v, None);
+            if r == r.floor() { format!("{}", r as i64) }
+            else { format!("{:.2}", r).trim_end_matches('0').to_string() }
+          };
           document.set_attribute(node, "style",
-            &s!("--ltx-fo-width:{:.2}em;--ltx-fo-height:{:.2}em;--ltx-fo-depth:{:.2}em;",
-              w_em, h_em, d_em))?;
+            &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;",
+              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em)))?;
         }
       }
       if !has_dims && !node.has_attribute("overflow") {

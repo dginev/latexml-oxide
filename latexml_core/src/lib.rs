@@ -1,6 +1,7 @@
 //! The Core of latexml - roughly the equivalent of TeX conversion.
 #![feature(thread_local)]
 #![allow(missing_docs)]
+#![allow(clippy::invisible_characters)] // Font metrics contain real zero-width Unicode chars from TFM files
 extern crate rustc_hash;
 
 /// Auxiliary macros

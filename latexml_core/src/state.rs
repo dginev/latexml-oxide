@@ -628,8 +628,6 @@ impl State {
     };
     match scope {
       Scope::Global => {
-        // We are going to change the model, where we first count the total number of definitions to
-        // pop, and then pop them, in order to never mutably morrow more than once at a time.
         let mut undo_count = 0;
 
         // Remove bindings made in all frames down-to & including the next lower locked frame

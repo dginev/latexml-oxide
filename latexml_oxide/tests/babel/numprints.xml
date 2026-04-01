@@ -17,30 +17,23 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1">
       <title>Basics</title>
       <para xml:id="S1.SS0.SSS0.Px1.p1">
-        <p>-123,456; <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>123,456; <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>3.141,592,7<Math mode="inline" tex="{}\times{}" text="*" xml:id="S1.SS0.SSS0.Px1.p1.m1">
-            <XMath>
-              <XMTok meaning="times" role="MULOP">×</XMTok>
-            </XMath>
-          </Math>10<sup>-3.1</sup></p>
+        <p><text class="ltx_number">-123,456</text>; <text class="ltx_number">±123,456</text>; <text class="ltx_number">±3.141,592,7×10<sup>-3.1</sup></text></p>
       </para>
     </paragraph>
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px2">
       <title>Text vs Math</title>
       <para xml:id="S1.SS0.SSS0.Px2.p1">
-        <p>123,456.134<Math mode="inline" tex="{}\times{}" text="*" xml:id="S1.SS0.SSS0.Px2.p1.m1">
-            <XMath>
-              <XMTok meaning="times" role="MULOP">×</XMTok>
-            </XMath>
-          </Math>10<sup>123</sup> and <Math mode="inline" tex="\ltx@math@@numprint@{123456.134e123}{123{,}456{.}134{}\times{}10^{123}}" text="123456.134e123" xml:id="S1.SS0.SSS0.Px2.p1.m2">
+        <p><text class="ltx_number">123,456.134×10<sup>123</sup></text> and <Math mode="inline" tex="\ltx@math@@numprint@{123456.134e123}{123{,}456{.}134×10^{123}}" text="123456.134e123" xml:id="S1.SS0.SSS0.Px2.p1.m1">
             <XMath>
               <XMDual>
                 <XMTok font="italic" meaning="123456.134e123" role="NUMBER">123456.134e123</XMTok>
                 <XMWrap>
                   <XMTok meaning="123" role="NUMBER">123</XMTok>
                   <XMTok role="PUNCT">,</XMTok>
-                  <XMApp xml:id="S1.SS0.SSS0.Px2.p1.m2.2">
-                    <XMTok meaning="times" role="MULOP">×</XMTok>
+                  <XMApp xml:id="S1.SS0.SSS0.Px2.p1.m1.2">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="456.134" role="NUMBER">456.134</XMTok>
+                    <XMTok role="UNKNOWN">×</XMTok>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok meaning="10" role="NUMBER">10</XMTok>
@@ -56,38 +49,38 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px3">
       <title>Exponents</title>
       <para xml:id="S1.SS0.SSS0.Px3.p1">
-        <p>Pure exponents: 10<sup>43,242</sup>; -10<sup>43,242</sup>; <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>10<sup>43,242</sup>.</p>
+        <p>Pure exponents: <text class="ltx_number">10<sup>43,242</sup></text>; <text class="ltx_number">-10<sup>43,242</sup></text>; <text class="ltx_number">±10<sup>43,242</sup></text>.</p>
       </para>
     </paragraph>
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px4">
       <title>Expansion</title>
       <para xml:id="S1.SS0.SSS0.Px4.p1">
-        <p>1,234.567,8</p>
+        <p><text class="ltx_number">1,234.567,8</text></p>
       </para>
     </paragraph>
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px5">
       <title>Units</title>
       <para xml:id="S1.SS0.SSS0.Px5.p1">
-        <p>-123,456 <Math mode="inline" tex="\mathrm{N/mm^{2}}" text="N / mm ^ 2" xml:id="S1.SS0.SSS0.Px5.p1.m2">
-            <XMath>
-              <XMApp>
-                <XMTok meaning="divide" role="MULOP">/</XMTok>
-                <XMTok role="UNKNOWN">N</XMTok>
+        <p><text class="ltx_number">-123,456 <Math mode="inline" tex="\mathrm{N/mm^{2}}" text="N / mm ^ 2" xml:id="S1.SS0.SSS0.Px5.p1.m2">
+              <XMath>
                 <XMApp>
-                  <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                  <XMTok role="UNKNOWN">mm</XMTok>
-                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  <XMTok meaning="divide" role="MULOP">/</XMTok>
+                  <XMTok role="UNKNOWN">N</XMTok>
+                  <XMApp>
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                    <XMTok role="UNKNOWN">mm</XMTok>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
                 </XMApp>
-              </XMApp>
-            </XMath>
-          </Math>
-360</p>
+              </XMath>
+            </Math></text>
+<text class="ltx_number">360</text></p>
       </para>
     </paragraph>
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px6">
       <title>Counters and Lengths</title>
       <para xml:id="S1.SS0.SSS0.Px6.p1">
-        <p>Page: 0</p>
+        <p>Page: <text class="ltx_number">0</text></p>
       </para>
       <para xml:id="S1.SS0.SSS0.Px6.p2">
         <p>Lengths:

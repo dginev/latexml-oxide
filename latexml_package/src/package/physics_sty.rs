@@ -1255,12 +1255,12 @@ LoadDefinitions!({
     let items: Vec<&str> = diag_str.split(',').collect();
     let n = items.len();
     let mut tks = Vec::new();
-    for i in 0..n {
+    for (i, item) in items.iter().enumerate() {
       if i > 0 { tks.push(T_CS!("\\\\")); }
       for j in 0..n {
         if j > 0 { tks.push(T_ALIGN!()); }
         if i == j {
-          tks.extend(Tokenize!(items[i]).unlist());
+          tks.extend(Tokenize!(item).unlist());
         } else {
           tks.push(z_tok);
         }

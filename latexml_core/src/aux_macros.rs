@@ -65,7 +65,8 @@ macro_rules! string_map {
 /// (inferred at time of use)
 #[macro_export]
 macro_rules! raw_map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr => $val:expr ),* $(,)?) => {{
+    #[allow(unused_mut)]
     let mut map = HashMap::default();
     $( map.insert($key, $val); )*
     map
