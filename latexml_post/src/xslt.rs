@@ -6,11 +6,37 @@
 
 use libxml::tree::Node;
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::fs;
+use std::os::raw::c_char;
 use std::path::Path;
 
-use crate::document::PostDocument;
+use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
+
+// libxslt + libexslt FFI bindings
+extern "C" {
+  fn exsltRegisterAll();
+  fn xsltParseStylesheetFile(filename: *const u8) -> *mut XsltStylesheet;
+  fn xsltApplyStylesheet(
+    style: *mut XsltStylesheet,
+    doc: *mut std::ffi::c_void,
+    params: *mut *const c_char,
+  ) -> *mut std::ffi::c_void;
+  fn xsltSaveResultToString(
+    doc_txt_ptr: *mut *mut u8,
+    doc_txt_len: *mut i32,
+    result: *mut std::ffi::c_void,
+    style: *mut XsltStylesheet,
+  ) -> i32;
+  fn xsltFreeStylesheet(style: *mut XsltStylesheet);
+  fn xmlFreeDoc(doc: *mut std::ffi::c_void);
+}
+
+#[repr(C)]
+struct XsltStylesheet {
+  _data: [u8; 0],
+}
 
 /// Resource type information.
 struct ResourceInfo {
@@ -160,19 +186,13 @@ impl Processor for XSLT {
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     let stylesheet_path = match &self.stylesheet_path {
-      Some(p) => p,
+      Some(p) => p.clone(),
       None => return Ok(vec![doc]),
     };
 
-    // XSLT transformation requires libxslt bindings
-    // For now, log the intent and return the document unchanged
-    log::info!(
-      "Would apply XSLT stylesheet: {} with {} parameters",
-      stylesheet_path,
-      self.parameters.len()
-    );
+    log::info!("Applying XSLT stylesheet: {}", stylesheet_path);
 
-    // Handle resource elements
+    // Handle resource elements first (before transformation removes them)
     if !self.no_resources {
       let resource_nodes = doc.findnodes("//ltx:resource[@src]");
       for node in &resource_nodes {
@@ -183,11 +203,98 @@ impl Processor for XSLT {
       }
     }
 
-    // NOTE: XSLT transformation requires libxslt bindings (not yet available in libxml crate).
-    // When available: let result_doc = stylesheet.transform(&doc.get_document(), &params)?;
-    // let result_doc = stylesheet.transform(&doc.get_document(), &self.parameters)?;
+    // Apply XSLT transformation via libxslt FFI
+    let c_stylesheet_path = CString::new(stylesheet_path.as_str())
+      .map_err(|e| PostError::Processing(format!("Invalid stylesheet path: {}", e)))?;
 
-    Ok(vec![doc])
+    unsafe {
+      // Register EXSLT extension functions (if(), etc.)
+      exsltRegisterAll();
+
+      // Parse the stylesheet
+      let style = xsltParseStylesheetFile(c_stylesheet_path.as_ptr() as *const u8);
+      if style.is_null() {
+        return Err(PostError::Processing(format!(
+          "Failed to parse XSLT stylesheet: {}", stylesheet_path
+        )));
+      }
+
+      // Build parameters array (null-terminated array of key/value pairs)
+      let mut param_c_strings: Vec<CString> = Vec::new();
+      let mut param_ptrs: Vec<*const c_char> = Vec::new();
+      for (key, value) in &self.parameters {
+        let c_key = CString::new(key.as_str()).unwrap();
+        let c_value = CString::new(format!("'{}'", value)).unwrap();
+        param_ptrs.push(c_key.as_ptr());
+        param_ptrs.push(c_value.as_ptr());
+        param_c_strings.push(c_key);
+        param_c_strings.push(c_value);
+      }
+      param_ptrs.push(std::ptr::null());
+
+      // Serialize and re-parse for transformation (xsltApplyStylesheet consumes the doc)
+      let doc_xml = doc.to_xml_string();
+
+      // Parse a fresh copy for transformation (xsltApplyStylesheet takes ownership)
+      let parser = libxml::parser::Parser::default();
+      let transform_doc = parser.parse_string(&doc_xml)
+        .map_err(|e| PostError::Processing(format!("Failed to re-parse document: {:?}", e)))?;
+
+      // Get the raw pointer (this is platform-specific but works with standard libxml)
+      let raw_doc_ptr = transform_doc.doc_ptr() as *mut std::ffi::c_void;
+
+      // Apply the transformation
+      let result = xsltApplyStylesheet(style, raw_doc_ptr, param_ptrs.as_mut_ptr());
+      if result.is_null() {
+        xsltFreeStylesheet(style);
+        return Err(PostError::Processing(
+          "XSLT transformation failed".to_string()
+        ));
+      }
+
+      // Serialize the result to string
+      let mut txt_ptr: *mut u8 = std::ptr::null_mut();
+      let mut txt_len: i32 = 0;
+      let ret = xsltSaveResultToString(&mut txt_ptr, &mut txt_len, result, style);
+
+      let result_string = if ret == 0 && !txt_ptr.is_null() && txt_len > 0 {
+        let s = String::from_utf8_lossy(
+          std::slice::from_raw_parts(txt_ptr, txt_len as usize)
+        ).to_string();
+        libc::free(txt_ptr as *mut std::ffi::c_void);
+        s
+      } else {
+        // Fallback: try to serialize using xmlDocDumpMemoryEnc
+        String::new()
+      };
+
+      // Cleanup
+      xmlFreeDoc(result);
+      xsltFreeStylesheet(style);
+      // Don't free transform_doc — it's owned by the libxml Document
+
+      if result_string.is_empty() {
+        return Err(PostError::Processing(
+          "XSLT produced empty output".to_string()
+        ));
+      }
+
+      // Create a new PostDocument from the result
+      let result_doc = PostDocument::new_from_string(
+        &result_string,
+        PostDocumentOptions {
+          destination: doc.destination.clone(),
+          destination_directory: doc.destination_directory.clone(),
+          site_directory: doc.site_directory.clone(),
+          source: doc.source.clone(),
+          source_directory: doc.source_directory.clone(),
+          searchpaths: Some(doc.searchpaths.clone()),
+          ..PostDocumentOptions::default()
+        },
+      ).map_err(|e| PostError::Processing(format!("Failed to parse XSLT result: {}", e)))?;
+
+      Ok(vec![result_doc])
+    }
   }
 }
 

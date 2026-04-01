@@ -1,12 +1,14 @@
 /// latexmlpost_oxide — Post-process LaTeXML XML output.
 ///
 /// Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--noscan] [--nocrossref]
-///        [--dest output.xml] input.xml
+///        [--stylesheet path.xsl] [--dest output.xml] input.xml
 
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::mathml::MathML;
 use latexml_post::processor::Processor;
+use latexml_post::xslt::XSLT;
 use latexml_post::Post;
+use std::collections::HashMap;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -15,6 +17,7 @@ fn main() {
   let mut dest_path = None;
   let mut pmml = false;
   let mut keep_xmath = false;
+  let mut stylesheet = None;
 
   let mut i = 1;
   while i < args.len() {
@@ -22,6 +25,12 @@ fn main() {
       "--pmml" => pmml = true,
       "--keepXMath" | "--xmath" => keep_xmath = true,
       "--noscan" | "--nocrossref" => {} // accepted but no-op for now
+      "--stylesheet" => {
+        i += 1;
+        if i < args.len() {
+          stylesheet = Some(args[i].clone());
+        }
+      }
       "--dest" => {
         i += 1;
         if i < args.len() {
@@ -35,12 +44,12 @@ fn main() {
   }
 
   let input_path = input_path.unwrap_or_else(|| {
-    eprintln!("Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--dest output.xml] input.xml");
+    eprintln!("Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--stylesheet path.xsl] [--dest output] input.xml");
     std::process::exit(1);
   });
 
   // Default to pmml if nothing specified
-  if !pmml {
+  if !pmml && stylesheet.is_none() {
     pmml = true;
   }
 
@@ -62,6 +71,19 @@ fn main() {
   if pmml {
     let mathml = MathML::new_presentation().with_keep_xmath(keep_xmath);
     processors.push(Box::new(mathml));
+  }
+
+  if let Some(ref xsl_path) = stylesheet {
+    let searchpaths = vec![
+      "resources/XSLT".to_string(),
+      ".".to_string(),
+    ];
+    let xslt = XSLT::new(xsl_path, HashMap::new(), false, None, searchpaths)
+      .unwrap_or_else(|e| {
+        eprintln!("Failed to create XSLT processor: {}", e);
+        std::process::exit(1);
+      });
+    processors.push(Box::new(xslt));
   }
 
   let results = post.process_chain(doc, &mut processors)
