@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let pmml_flag = argv.iter().any(|a| a == "--pmml");
   let keep_xmath_flag = argv.iter().any(|a| a == "--keepXMath" || a == "--xmath");
   let stylesheet_flag = extract_flag(&mut argv, "--stylesheet");
+  let format_flag = extract_flag(&mut argv, "--format");
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref"].contains(&a.as_str()));
@@ -98,11 +99,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Normal mode: convert document
     let response = converter.convert(source);
     if let Some(xml) = response.result {
-      if post_flag || pmml_flag || stylesheet_flag.is_some() {
+      // Auto-select stylesheet from --format
+      let effective_stylesheet = stylesheet_flag.clone().or_else(|| {
+        match format_flag.as_deref() {
+          Some("html5") | Some("html") | Some("xhtml") =>
+            Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string()),
+          Some("epub") | Some("epub3") =>
+            Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
+          _ => None,
+        }
+      });
+      let do_post = post_flag || pmml_flag || effective_stylesheet.is_some() || format_flag.is_some();
+
+      if do_post {
         // Post-process the XML
         let output = run_post_processing(
-          &xml, pmml_flag || post_flag, keep_xmath_flag,
-          stylesheet_flag.as_deref(),
+          &xml, pmml_flag || post_flag || format_flag.is_some(),
+          keep_xmath_flag,
+          effective_stylesheet.as_deref(),
         );
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
