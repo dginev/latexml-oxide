@@ -2,7 +2,9 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-03-23. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-01. Only lists open gaps & TODOs; completed items live in git history.
+
+**Test inventory:** 382 tests pass (335 integration + 1 post + 39+7 latexml_post). 296 paired tests: 215 exact zero-diff (72%), 238 effectively zero-diff (80%), 17,591 real diff lines. Full TeX→HTML pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex`.
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
