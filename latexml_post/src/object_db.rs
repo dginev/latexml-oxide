@@ -65,6 +65,7 @@ impl Value {
       Value::String(s) => s.clone(),
       Value::Int(n) => n.to_string(),
       Value::Bool(b) => b.to_string(),
+      Value::Xml(node) => node.get_content(),
       Value::Null => String::new(),
       _ => String::new(),
     }
@@ -102,7 +103,8 @@ impl std::fmt::Display for Value {
       Value::Int(n) => write!(f, "{}", n),
       Value::Bool(b) => write!(f, "{}", b),
       Value::Null => Ok(()),
-      Value::List(_) | Value::Hash(_) | Value::Xml(_) => Ok(()),
+      Value::Xml(node) => write!(f, "{}", node.get_content()),
+      Value::List(_) | Value::Hash(_) => Ok(()),
     }
   }
 }

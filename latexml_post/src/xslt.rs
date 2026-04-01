@@ -6,36 +6,16 @@
 
 use libxml::tree::Node;
 use std::collections::HashMap;
-use std::ffi::CString;
 use std::fs;
-use std::os::raw::c_char;
 use std::path::Path;
 
 use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
 
-// libxslt + libexslt FFI bindings
+// EXSLT registration — not yet available in the libxslt crate.
+// TODO: Add exsltRegisterAll to the rust-libxslt crate (L3).
 extern "C" {
   fn exsltRegisterAll();
-  fn xsltParseStylesheetFile(filename: *const u8) -> *mut XsltStylesheet;
-  fn xsltApplyStylesheet(
-    style: *mut XsltStylesheet,
-    doc: *mut std::ffi::c_void,
-    params: *mut *const c_char,
-  ) -> *mut std::ffi::c_void;
-  fn xsltSaveResultToString(
-    doc_txt_ptr: *mut *mut u8,
-    doc_txt_len: *mut i32,
-    result: *mut std::ffi::c_void,
-    style: *mut XsltStylesheet,
-  ) -> i32;
-  fn xsltFreeStylesheet(style: *mut XsltStylesheet);
-  fn xmlFreeDoc(doc: *mut std::ffi::c_void);
-}
-
-#[repr(C)]
-struct XsltStylesheet {
-  _data: [u8; 0],
 }
 
 /// Resource type information.
@@ -203,178 +183,113 @@ impl Processor for XSLT {
       }
     }
 
-    // Apply XSLT transformation via libxslt FFI
-    let c_stylesheet_path = CString::new(stylesheet_path.as_str())
-      .map_err(|e| PostError::Processing(format!("Invalid stylesheet path: {}", e)))?;
+    // Register EXSLT extension functions (str:tokenize, etc.)
+    // TODO: Move to rust-libxslt crate (L3)
+    unsafe { exsltRegisterAll(); }
 
-    unsafe {
-      // Register EXSLT extension functions (if(), etc.)
-      exsltRegisterAll();
+    // Parse the stylesheet using the libxslt crate
+    let mut stylesheet = libxslt::parser::parse_file(&stylesheet_path)
+      .map_err(|e| PostError::Processing(format!("Failed to parse XSLT stylesheet: {}", e)))?;
 
-      // Parse the stylesheet
-      let style = xsltParseStylesheetFile(c_stylesheet_path.as_ptr() as *const u8);
-      if style.is_null() {
-        return Err(PostError::Processing(format!(
-          "Failed to parse XSLT stylesheet: {}", stylesheet_path
-        )));
-      }
+    // Serialize and re-parse for transformation (transform consumes the doc)
+    let doc_xml = doc.to_xml_string();
+    let parser = libxml::parser::Parser::default();
+    let transform_doc = parser.parse_string(&doc_xml)
+      .map_err(|e| PostError::Processing(format!("Failed to re-parse document: {:?}", e)))?;
 
-      // Build parameters array (null-terminated array of key/value pairs)
-      let mut param_c_strings: Vec<CString> = Vec::new();
-      let mut param_ptrs: Vec<*const c_char> = Vec::new();
-      for (key, value) in &self.parameters {
-        let c_key = CString::new(key.as_str()).unwrap();
-        let c_value = CString::new(format!("'{}'", value)).unwrap();
-        param_ptrs.push(c_key.as_ptr());
-        param_ptrs.push(c_value.as_ptr());
-        param_c_strings.push(c_key);
-        param_c_strings.push(c_value);
-      }
-      param_ptrs.push(std::ptr::null());
+    // Build parameters
+    let params: Vec<(&str, &str)> = self.parameters.iter()
+      .map(|(k, v)| (k.as_str(), v.as_str()))
+      .collect();
 
-      // Serialize and re-parse for transformation (xsltApplyStylesheet consumes the doc)
-      let doc_xml = doc.to_xml_string();
+    // Apply the transformation
+    let result_doc = stylesheet.transform(&transform_doc, params)
+      .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))?;
 
-      // Parse a fresh copy for transformation (xsltApplyStylesheet takes ownership)
-      let parser = libxml::parser::Parser::default();
-      let transform_doc = parser.parse_string(&doc_xml)
-        .map_err(|e| PostError::Processing(format!("Failed to re-parse document: {:?}", e)))?;
+    // Serialize the result
+    let result_string = result_doc.to_string_with_options(libxml::tree::SaveOptions {
+      format: false,
+      no_declaration: false,
+      no_empty_tags: false,
+      no_xhtml: false,
+      xhtml: false,
+      as_xml: false,
+      as_html: false,
+      non_significant_whitespace: false,
+    });
 
-      // Get the raw pointer (this is platform-specific but works with standard libxml)
-      let raw_doc_ptr = transform_doc.doc_ptr() as *mut std::ffi::c_void;
-
-      // Apply the transformation
-      let result = xsltApplyStylesheet(style, raw_doc_ptr, param_ptrs.as_mut_ptr());
-      if result.is_null() {
-        xsltFreeStylesheet(style);
-        return Err(PostError::Processing(
-          "XSLT transformation failed".to_string()
-        ));
-      }
-
-      // Serialize the result to string
-      let mut txt_ptr: *mut u8 = std::ptr::null_mut();
-      let mut txt_len: i32 = 0;
-      let ret = xsltSaveResultToString(&mut txt_ptr, &mut txt_len, result, style);
-
-      let result_string = if ret == 0 && !txt_ptr.is_null() && txt_len > 0 {
-        let s = String::from_utf8_lossy(
-          std::slice::from_raw_parts(txt_ptr, txt_len as usize)
-        ).to_string();
-        libc::free(txt_ptr as *mut std::ffi::c_void);
-        s
-      } else {
-        // Fallback: try to serialize using xmlDocDumpMemoryEnc
-        String::new()
-      };
-
-      // Cleanup
-      xmlFreeDoc(result);
-      xsltFreeStylesheet(style);
-      // Don't free transform_doc — it's owned by the libxml Document
-
-      if result_string.is_empty() {
-        return Err(PostError::Processing(
-          "XSLT produced empty output".to_string()
-        ));
-      }
-
-      // Create a new PostDocument from the result
-      let result_doc = PostDocument::new_from_string(
-        &result_string,
-        PostDocumentOptions {
-          destination: doc.destination.clone(),
-          destination_directory: doc.destination_directory.clone(),
-          site_directory: doc.site_directory.clone(),
-          source: doc.source.clone(),
-          source_directory: doc.source_directory.clone(),
-          searchpaths: Some(doc.searchpaths.clone()),
-          ..PostDocumentOptions::default()
-        },
-      ).map_err(|e| PostError::Processing(format!("Failed to parse XSLT result: {}", e)))?;
-
-      Ok(vec![result_doc])
+    if result_string.is_empty() {
+      return Err(PostError::Processing("XSLT produced empty output".to_string()));
     }
+
+    // Create a new PostDocument from the result
+    let result_doc = PostDocument::new_from_string(
+      &result_string,
+      PostDocumentOptions {
+        destination: doc.destination.clone(),
+        destination_directory: doc.destination_directory.clone(),
+        site_directory: doc.site_directory.clone(),
+        source: doc.source.clone(),
+        source_directory: doc.source_directory.clone(),
+        searchpaths: Some(doc.searchpaths.clone()),
+        ..PostDocumentOptions::default()
+      },
+    ).map_err(|e| PostError::Processing(format!("Failed to parse XSLT result: {}", e)))?;
+
+    Ok(vec![result_doc])
   }
 }
 
-/// Find an XSLT stylesheet file in the search paths.
-fn find_stylesheet(name: &str, searchpaths: &[String]) -> Result<String, PostError> {
-  // Check if it's already a full path
-  if Path::new(name).exists() {
-    return Ok(name.to_string());
+// ======================================================================
+// File search helpers
+
+fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, PostError> {
+  if Path::new(stylesheet).is_file() {
+    return Ok(stylesheet.to_string());
   }
-
-  // Try with .xsl extension
-  let with_ext = if !name.ends_with(".xsl") {
-    format!("{}.xsl", name)
-  } else {
-    name.to_string()
-  };
-
-  // Search in paths + installation subdirectory
-  for path in searchpaths {
-    let candidate = format!("{}/{}", path, with_ext);
-    if Path::new(&candidate).exists() {
-      return Ok(candidate);
+  for sp in searchpaths {
+    let p = format!("{}/{}", sp, stylesheet);
+    if Path::new(&p).is_file() {
+      return Ok(p);
     }
   }
-
-  // Try resources/XSLT subdirectory
-  let install_path = format!("resources/XSLT/{}", with_ext);
-  if Path::new(&install_path).exists() {
-    return Ok(install_path);
-  }
-
   Err(PostError::Processing(format!(
     "No stylesheet '{}' found!",
-    name
+    stylesheet
   )))
 }
 
-/// Find a resource file in the search paths.
 fn find_resource_file(
-  name: &str,
+  src: &str,
   info: Option<&ResourceInfo>,
   search_paths: &[&str],
 ) -> Option<String> {
-  // Direct path check
-  if Path::new(name).exists() {
-    return Some(name.to_string());
+  let name = Path::new(src).file_name()?.to_str()?;
+  let mut candidates = vec![src.to_string()];
+  if let Some(info) = info {
+    candidates.push(format!("{}/{}", info.subdir, name));
+    candidates.push(format!("{}/{}", info.subdir, src));
   }
-
-  // Try with extension
-  let candidates = if let Some(ri) = info {
-    vec![name.to_string(), format!("{}.{}", name, ri.extension)]
-  } else {
-    vec![name.to_string()]
-  };
-
   for candidate in &candidates {
-    for path in search_paths {
-      let full = format!("{}/{}", path, candidate);
-      if Path::new(&full).exists() {
-        return Some(full);
-      }
+    if Path::new(candidate).is_file() {
+      return Some(candidate.clone());
     }
-    // Try installation subdir
-    if let Some(ri) = info {
-      let install = format!("{}/{}", ri.subdir, candidate);
-      if Path::new(&install).exists() {
-        return Some(install);
+    for sp in search_paths {
+      let p = format!("{}/{}", sp, candidate);
+      if Path::new(&p).is_file() {
+        return Some(p);
       }
     }
   }
   None
 }
 
-/// Compute a simple relative path.
-fn relative_path(path: &str, base: &str) -> String {
-  let p = Path::new(path);
-  let b = Path::new(base);
-  if let Ok(rel) = p.strip_prefix(b) {
+fn relative_path(target: &str, base: &str) -> String {
+  let target_path = Path::new(target);
+  let base_path = Path::new(base);
+  if let Ok(rel) = target_path.strip_prefix(base_path) {
     rel.to_string_lossy().to_string()
   } else {
-    path.to_string()
+    target.to_string()
   }
 }

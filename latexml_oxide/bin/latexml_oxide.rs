@@ -120,6 +120,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           cmml_flag,
           keep_xmath_flag,
           effective_stylesheet.as_deref(),
+          target.as_deref(),
         );
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -149,11 +150,17 @@ fn run_post_processing(
   cmml: bool,
   keep_xmath: bool,
   stylesheet: Option<&str>,
+  destination: Option<&str>,
 ) -> String {
   use latexml_post::document::{PostDocument, PostDocumentOptions};
+  use latexml_post::object_db::ObjectDB;
   use latexml_post::processor::Processor;
 
-  let doc = match PostDocument::new_from_string(xml, PostDocumentOptions::default()) {
+  let mut opts = PostDocumentOptions::default();
+  if let Some(dest) = destination {
+    opts.destination = Some(dest.to_string());
+  }
+  let doc = match PostDocument::new_from_string(xml, opts) {
     Ok(d) => d,
     Err(e) => {
       eprintln!("Post-processing: failed to parse XML: {}", e);
@@ -161,6 +168,35 @@ fn run_post_processing(
     }
   };
 
+  // Phase 1: Scan — collect structural info into ObjectDB
+  let db = ObjectDB::new();
+  let mut scanner = latexml_post::scan::Scan::new(db);
+  let scan_nodes = scanner.to_process(&doc);
+  let doc = match scanner.process(doc, scan_nodes) {
+    Ok(mut docs) => docs.remove(0),
+    Err(e) => {
+      eprintln!("Post-processing: Scan failed: {}", e);
+      return xml.to_string();
+    }
+  };
+
+  // Phase 2: CrossRef — resolve references using the scanned DB
+  let db = scanner.db; // Transfer ownership of populated DB
+  let mut crossref = latexml_post::crossref::CrossRef::new(
+    db,
+    latexml_post::crossref::UrlStyle::File,
+    true, // number_sections
+  );
+  let xref_nodes = crossref.to_process(&doc);
+  let doc = match crossref.process(doc, xref_nodes) {
+    Ok(mut docs) => docs.remove(0),
+    Err(e) => {
+      eprintln!("Post-processing: CrossRef failed: {}", e);
+      return xml.to_string();
+    }
+  };
+
+  // Phase 3: MathML + XSLT chain
   let mut post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
 

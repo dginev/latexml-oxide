@@ -393,10 +393,11 @@ impl CrossRef {
           if let Some(val) = entry.get_value(k) {
             if val.is_truthy() {
               ok = true;
+              let text = val.to_string();
               stuff.push(NodeData::Element {
                 tag: "ltx:text".to_string(),
                 attributes: Some(HashMap::from([("class".to_string(), class.to_string())])),
-                children: vec![NodeData::Text(val.to_string())],
+                children: vec![NodeData::Text(text)],
               });
               break;
             }
@@ -549,8 +550,13 @@ impl CrossRef {
   }
 
   fn fill_in_frags(&self, doc: &PostDocument) {
-    for node in doc.findnodes("//*[@xml:id]") {
-      if let Some(id) = node.get_attribute("xml:id") {
+    for node in &doc.findnodes("//*[@xml:id]") {
+      // NOTE: get_attribute("xml:id") may not work in all libxml2 builds;
+      // get_property("id") is more reliable for xml: namespace attributes.
+      // TODO: Fix in rust-libxml — get_attribute should handle xml: prefix.
+      let id = node.get_attribute("xml:id")
+        .or_else(|| node.get_property("id"));
+      if let Some(id) = id {
         if let Some(entry) = self.db.lookup(&format!("ID:{}", id)) {
           if let Some(fragid) = entry.get_string("fragid") {
             let mut n = node.clone();
@@ -562,7 +568,8 @@ impl CrossRef {
   }
 
   fn fill_in_refs(&mut self, doc: &mut PostDocument) {
-    let refs = doc.findnodes("descendant::*[@idref or @labelref]");
+    let mut refs = doc.findnodes("//*[@idref]");
+    refs.extend(doc.findnodes("//*[@labelref]"));
     for ref_node in &refs {
       let tag = doc.get_qname(ref_node).unwrap_or_default();
       if tag == "ltx:XMRef" {
@@ -630,7 +637,7 @@ impl CrossRef {
   }
 
   fn fill_in_bibrefs(&mut self, doc: &mut PostDocument) {
-    let bibrefs = doc.findnodes("descendant::ltx:bibref");
+    let bibrefs = doc.findnodes("//ltx:bibref");
     for bibref in &bibrefs {
       let keys_str = bibref.get_attribute("bibrefs").unwrap_or_default();
       let _show = bibref.get_attribute("show").unwrap_or_else(|| "refnum".to_string());

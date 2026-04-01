@@ -524,14 +524,22 @@ impl PostDocument {
               log::warn!("No namespace on '{}'", tag);
             }
             // Find or create namespace for this prefix.
-            // First try to look up an existing declaration on this node/ancestors,
-            // then create a new one if not found.
+            // Prefer the default namespace (empty prefix) if it matches the target URI,
+            // so elements like ltx:ref are created as <ref> not <ltx:ref>.
             let ns = nsuri.and_then(|uri| {
-              // Check local declarations first
+              // First check if the default namespace matches — prefer it to avoid ltx: prefix
               parent.get_namespace_declarations().into_iter()
-                .find(|ns| ns.get_prefix() == prefix)
+                .find(|ns| ns.get_prefix().is_empty() && ns.get_href() == uri)
                 .or_else(|| {
-                  // Check ancestor declarations
+                  parent.get_namespaces(&self.document).into_iter()
+                    .find(|ns| ns.get_prefix().is_empty() && ns.get_href() == uri)
+                })
+                // Fall back to matching prefix
+                .or_else(|| {
+                  parent.get_namespace_declarations().into_iter()
+                    .find(|ns| ns.get_prefix() == prefix)
+                })
+                .or_else(|| {
                   parent.get_namespaces(&self.document).into_iter()
                     .find(|ns| ns.get_prefix() == prefix)
                 })
