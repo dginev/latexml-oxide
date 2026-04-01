@@ -403,7 +403,7 @@ Every diff between fresh Perl and Rust output is catalogued below. Each has a di
 
 ### Upcoming
 
-- [ ] **I. Unified CLI** — Extend `latexml_oxide` binary to support both core conversion and post-processing in a single invocation, following the `LaTeXML.pm` interface in Perl. Wire `latexml_post` pipeline into `converter.rs` with `--post`, `--pmml`, `--cmml`, `--keepXMath`, `--scan`, `--crossref`, `--dest` flags.
+- [x] **I. Unified CLI** — `latexml_oxide` binary supports `--post`, `--pmml`, `--keepXMath`, `--stylesheet=path.xsl`, `--dest=output` flags for integrated conversion+post-processing. Single command: `latexml_oxide --post --pmml --stylesheet=LaTeXML-all-xhtml.xsl --dest=paper.html paper.tex`. Remaining: `--cmml`, `--scan`, `--crossref`.
 
 ### Permanent ignores (5)
 

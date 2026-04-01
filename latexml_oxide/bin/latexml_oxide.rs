@@ -28,6 +28,14 @@ fn main() -> Result<(), Box<dyn Error>> {
   let dest_flag = extract_flag(&mut argv, "--dest");
   // Parse --codegen=<dump_path> flag: generate Rust module from a dump file
   let codegen_flag = extract_flag(&mut argv, "--codegen");
+  // Parse --post flag: enable post-processing (MathML, XSLT)
+  let post_flag = argv.iter().any(|a| a == "--post");
+  let pmml_flag = argv.iter().any(|a| a == "--pmml");
+  let keep_xmath_flag = argv.iter().any(|a| a == "--keepXMath" || a == "--xmath");
+  let stylesheet_flag = extract_flag(&mut argv, "--stylesheet");
+  // Remove boolean flags
+  argv.retain(|a| !["--post", "--pmml", "--keepXMath", "--xmath",
+    "--noscan", "--nocrossref"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -50,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match argv.first() {
       Some(s) => s.clone(),
       None => {
-        eprintln!("Usage: latexml_oxide [--init=<file> --dest=<dump>] <source> [<destination>]");
+        eprintln!("Usage: latexml_oxide [--post] [--pmml] [--keepXMath] [--stylesheet=path.xsl] [--dest=output] <source>");
         process::exit(1);
       }
     }
@@ -90,16 +98,80 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Normal mode: convert document
     let response = converter.convert(source);
     if let Some(xml) = response.result {
-      if let Some(target_path) = target {
-        let mut out_fh = File::create(target_path)?;
-        write!(out_fh, "{xml}")?;
+      if post_flag || pmml_flag || stylesheet_flag.is_some() {
+        // Post-process the XML
+        let output = run_post_processing(
+          &xml, pmml_flag || post_flag, keep_xmath_flag,
+          stylesheet_flag.as_deref(),
+        );
+        if let Some(target_path) = target {
+          let mut out_fh = File::create(target_path)?;
+          write!(out_fh, "{output}")?;
+        } else {
+          print!("{output}");
+        }
       } else {
-        print!("{xml}");
+        // Output raw XML
+        if let Some(target_path) = target {
+          let mut out_fh = File::create(target_path)?;
+          write!(out_fh, "{xml}")?;
+        } else {
+          print!("{xml}");
+        }
       }
     }
   }
 
   process::exit(0);
+}
+
+/// Run the post-processing pipeline on XML output.
+fn run_post_processing(
+  xml: &str,
+  pmml: bool,
+  keep_xmath: bool,
+  stylesheet: Option<&str>,
+) -> String {
+  use latexml_post::document::{PostDocument, PostDocumentOptions};
+  use latexml_post::processor::Processor;
+
+  let doc = match PostDocument::new_from_string(xml, PostDocumentOptions::default()) {
+    Ok(d) => d,
+    Err(e) => {
+      eprintln!("Post-processing: failed to parse XML: {}", e);
+      return xml.to_string();
+    }
+  };
+
+  let mut post = latexml_post::Post::new();
+  let mut processors: Vec<Box<dyn Processor>> = Vec::new();
+
+  if pmml {
+    let mathml = latexml_post::mathml::MathML::new_presentation()
+      .with_keep_xmath(keep_xmath);
+    processors.push(Box::new(mathml));
+  }
+
+  if let Some(xsl_path) = stylesheet {
+    let searchpaths = vec![
+      "resources/XSLT".to_string(),
+      ".".to_string(),
+    ];
+    match latexml_post::xslt::XSLT::new(
+      xsl_path, std::collections::HashMap::new(), false, None, searchpaths
+    ) {
+      Ok(xslt) => processors.push(Box::new(xslt)),
+      Err(e) => eprintln!("Post-processing: XSLT error: {}", e),
+    }
+  }
+
+  match post.process_chain(doc, &mut processors) {
+    Ok(results) => results[0].to_xml_string(),
+    Err(e) => {
+      eprintln!("Post-processing failed: {}", e);
+      xml.to_string()
+    }
+  }
 }
 
 /// Extract a --flag=value from argv, removing it if found.
