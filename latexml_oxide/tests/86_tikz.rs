@@ -22,7 +22,6 @@ fn atoms_and_orbitals_test() {
 }
 
 #[test]
-#[ignore] // >1000 errors from unported tikz shapes/arrows libraries
 fn consort_flowchart_test() {
   latexml_test_single("tests/tikz/consort-flowchart.tex", "consort-flowchart", DIR, None, None);
 }

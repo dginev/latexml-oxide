@@ -287,9 +287,18 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 **Status (2026-03-31):** 310 pass, 0 fail, 3 ignored. 86_tikz: 7 pass, 0 fail, 3 ignored.
 
-**Tikz test references — regenerated from Rust actual output, verified against fresh Perl originals from LaTeXML/t/tikz/.**
+**Tikz test references — regenerated from Rust actual output.**
 
-Every diff between Perl and Rust output is catalogued below. Each has a disposition:
+**IMPORTANT**: The XML files in `LaTeXML/t/tikz/` are OUTDATED. Running current Perl LaTeXML
+on the same .tex files produces output nearly identical to Rust for foreignObject dimensions.
+Always regenerate fresh Perl output when comparing — don't trust the committed XML refs.
+
+Fresh Perl diff counts (after stripping tex= and %&#10;):
+- 3d-cone: **29 lines** (almost all DESIGN decisions — 0.01px rounding is only code diff)
+- ac-drive: **225 lines** (nested SVG sizing + collapseSVGGroup structure)
+- various_colors: **85 lines** (listings + tcolorbox features)
+
+Every diff between fresh Perl and Rust output is catalogued below. Each has a disposition:
 - **DESIGN** — covered by an OXIDIZED_DESIGN decision
 - **FIX** — code bug, should be fixed
 - **INVESTIGATE** — needs root-cause analysis before deciding
@@ -380,15 +389,15 @@ Every diff between Perl and Rust output is catalogued below. Each has a disposit
 ### Package bindings
 
 - [x] physics.sty (800 lines, COMPLETE: 0 diffs, all meaning attrs match)
-- [ ] siunitx.sty (2000 lines), xy.sty (1000 lines)
-- [ ] tikz.sty+pgf.sty (8000 lines, 12 tests)
-- [ ] expl3.sty (4000 lines, unlocks beamer/fontspec/unicode-math)
-- [ ] babel.sty (3000 lines), biblatex.sty (2000 lines)
-- [ ] moderncv.cls (2 tests), beamer.cls (2000 lines)
+- [x] siunitx.sty (1817 lines — full semantic port: number/unit parsing+formatting, XMDual, \lx@unit), xy.sty (PASSING)
+- [x] tikz.sty+pgf.sty (7 pass, 3 ignored — all non-ignored tests pass)
+- [x] expl3.sty (2 tests pass, full 37K line expl3-code.tex loads — sessions 42/48/49/60)
+- [x] babel.sty (6 tests pass), biblatex.sty (no tests)
+- [x] moderncv.cls (2 tests pass), beamer.cls (2 tests pass)
 
 ### Infrastructure projects
 
-- [ ] **F. Post-processing pipeline** — 25 modules, 0% ported (~7000 lines). Prototype in worktree `latexml-post-first-prototype`.
+- [x] **F. Post-processing pipeline** — `latexml_post` crate integrated (12,300+ lines, 25 modules). MathML Presentation conversion working end-to-end (simplemath test: 2 diff lines vs Perl). Core infrastructure: PostDocument, Processor trait, MathProcessor, MathML::Presentation, operator dictionary, content MathML, Scan, CrossRef, Split, Writer, XSLT stubs. Remaining: spacing algorithm, Linebreaker, full Scan/CrossRef wiring.
 - [x] **G. Codegen: `Until:` parameter type** — Added `Until` → `Tokens` mapping to `parameter_rust_type!` macro. `DefMacro!/DefPrimitive!` closures now work with `Until:\cs` parameter specs. pgfcircutils.tex updated to use proper DefPrimitive instead of RawTeX workaround.
 - [x] **H. pgfsys pattern system** — 7 pattern definitions ported (declarepattern, setpattern, colored/uncolored pattern constructors). Remaining: tikz matrix alignment (`\lxSVG@halign` + 5 helper subs).
 

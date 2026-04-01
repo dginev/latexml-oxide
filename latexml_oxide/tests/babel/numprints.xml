@@ -17,30 +17,23 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1">
       <title>Basics</title>
       <para xml:id="S1.SS0.SSS0.Px1.p1">
-        <p>-123,456; <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>123,456; <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>3.141,592,7<Math mode="inline" tex="{}\times{}" text="*" xml:id="S1.SS0.SSS0.Px1.p1.m1">
-            <XMath>
-              <XMTok meaning="times" role="MULOP">×</XMTok>
-            </XMath>
-          </Math>10<sup>-3.1</sup></p>
+        <p>-123,456; ±123,456; ±3.141,592,7×10<sup>-3.1</sup></p>
       </para>
     </paragraph>
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px2">
       <title>Text vs Math</title>
       <para xml:id="S1.SS0.SSS0.Px2.p1">
-        <p>123,456.134<Math mode="inline" tex="{}\times{}" text="*" xml:id="S1.SS0.SSS0.Px2.p1.m1">
-            <XMath>
-              <XMTok meaning="times" role="MULOP">×</XMTok>
-            </XMath>
-          </Math>10<sup>123</sup> and <Math mode="inline" tex="\ltx@math@@numprint@{123456.134e123}{123{,}456{.}134{}\times{}10^{123}}" text="123456.134e123" xml:id="S1.SS0.SSS0.Px2.p1.m2">
+        <p>123,456.134×10<sup>123</sup> and <Math mode="inline" tex="\ltx@math@@numprint@{123456.134e123}{123{,}456{.}134×10^{123}}" text="123456.134e123" xml:id="S1.SS0.SSS0.Px2.p1.m1">
             <XMath>
               <XMDual>
                 <XMTok font="italic" meaning="123456.134e123" role="NUMBER">123456.134e123</XMTok>
                 <XMWrap>
                   <XMTok meaning="123" role="NUMBER">123</XMTok>
                   <XMTok role="PUNCT">,</XMTok>
-                  <XMApp xml:id="S1.SS0.SSS0.Px2.p1.m2.2">
-                    <XMTok meaning="times" role="MULOP">×</XMTok>
+                  <XMApp xml:id="S1.SS0.SSS0.Px2.p1.m1.2">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok meaning="456.134" role="NUMBER">456.134</XMTok>
+                    <XMTok role="UNKNOWN">×</XMTok>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok meaning="10" role="NUMBER">10</XMTok>
@@ -56,7 +49,7 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px3">
       <title>Exponents</title>
       <para xml:id="S1.SS0.SSS0.Px3.p1">
-        <p>Pure exponents: 10<sup>43,242</sup>; -10<sup>43,242</sup>; <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>10<sup>43,242</sup>.</p>
+        <p>Pure exponents: 10<sup>43,242</sup>; -10<sup>43,242</sup>; ±10<sup>43,242</sup>.</p>
       </para>
     </paragraph>
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px4">

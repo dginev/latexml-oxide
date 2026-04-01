@@ -24,9 +24,10 @@ LoadDefinitions!({
   DefMacro!("\\ltx@text@numprint@{}",    "\\ltx@text@number{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@text@numprint@@{}{}", "\\ltx@text@number{\\ltx@orig@numprint[#1]{#2}}");
   // In text mode, \numprint wraps output in ltx:text class="ltx_number".
-  // But numprint's internal formatting can produce math elements (XMTok)
-  // that cause "not allowed in ltx:text" schema errors. Use pass-through
-  // to avoid schema violations. The ltx_number class is cosmetic only.
+  // Perl uses a constructor wrapping in <ltx:text class='ltx_number'>,
+  // but our numprint internally uses \ensuremath which produces XMTok elements
+  // that cause schema violations inside ltx:text. Use pass-through for now.
+  // TODO: Fix numprint internals to use text-mode symbols, then enable this.
   DefMacro!("\\ltx@text@number{}", "#1");
   DefMacro!("\\ltx@math@numprint@{}",
     "\\ltx@math@@numprint@{#1}{\\ltx@orig@numprint{#1}}");
@@ -63,14 +64,23 @@ LoadDefinitions!({
   DefConstructor!("\\ltx@mark@units{}", "#1", reversion => "#1");
 
   // Sign symbols (Perl L79-84)
-  DefMacro!(T_CS!("\\nprt@sign@+"),  None, "\\ifmmode+\\else+\\fi");
-  DefMacro!(T_CS!("\\nprt@sign@-"),  None, "\\ifmmode-\\else-\\fi");
-  DefMacro!(T_CS!("\\nprt@sign@+-"), None, "\\ifmmode\\pm\\else\\pm\\fi");
+  DefPrimitive!("\\ltx@text@plus", "+");
+  DefPrimitive!("\\ltx@text@minus", "-");
+  DefPrimitive!("\\ltx@text@plusminus", "\u{00B1}");
+  DefMacro!(T_CS!("\\nprt@sign@+"),  None, "\\ifmmode+\\else\\ltx@text@plus\\fi");
+  DefMacro!(T_CS!("\\nprt@sign@-"),  None, "\\ifmmode-\\else\\ltx@text@minus\\fi");
+  DefMacro!(T_CS!("\\nprt@sign@+-"), None, "\\ifmmode\\pm\\else\\ltx@text@plusminus\\fi");
 
   // Product sign (Perl L87-94)
   // CS names with special chars — use RawTeX to define
   RawTeX!(r"\expandafter\def\csname ltx@text@prod\string\times\endcsname{×}");
   RawTeX!(r"\expandafter\def\csname ltx@text@prod\string\cdot\endcsname{⋅}");
 
-  DefMacro!("\\npunitcommand{}", "\\ensuremath{\\mathrm{#1}}");
+  // Product sign: override \nprt@prod to use text × directly (Perl L87-94)
+  DefMacro!("\\npproductsign{}",
+    "\\ifmmode #1\\else\\@ifundefined{ltx@text@prod\\string #1}{\\def\\nprt@prod{\\ensuremath{{}#1{}}}}{\\def\\nprt@prod{\\csname ltx@text@prod\\string #1\\endcsname}}\\fi");
+  // Directly set \nprt@prod to text × (the raw package sets it to \ensuremath{}\times{})
+  RawTeX!(r"\makeatletter\def\nprt@prod{×}\makeatother");
+
+  DefMacro!("\\npunitcommand{}", "\\ensuremath{\\mathrm{\\ltx@mark@units #1}}");
 });

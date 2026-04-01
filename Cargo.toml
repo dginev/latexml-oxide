@@ -5,7 +5,8 @@ members = [
   "latexml_package",
   "latexml_math_parser",
   "latexml_contrib",
-  "latexml_oxide"
+  "latexml_oxide",
+  "latexml_post"
 ]
 resolver = "2"
 

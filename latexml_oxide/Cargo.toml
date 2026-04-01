@@ -31,3 +31,6 @@ latexml_core = {path = "../latexml_core"}
 latexml_package = {path = "../latexml_package"}
 latexml_contrib = {path = "../latexml_contrib"}
 latexml_math_parser = {path = "../latexml_math_parser"}
+
+[dev-dependencies]
+latexml_post = {path = "../latexml_post"}
