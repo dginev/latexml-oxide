@@ -31,11 +31,12 @@ fn main() -> Result<(), Box<dyn Error>> {
   // Parse --post flag: enable post-processing (MathML, XSLT)
   let post_flag = argv.iter().any(|a| a == "--post");
   let pmml_flag = argv.iter().any(|a| a == "--pmml");
+  let cmml_flag = argv.iter().any(|a| a == "--cmml");
   let keep_xmath_flag = argv.iter().any(|a| a == "--keepXMath" || a == "--xmath");
   let stylesheet_flag = extract_flag(&mut argv, "--stylesheet");
   let format_flag = extract_flag(&mut argv, "--format");
   // Remove boolean flags
-  argv.retain(|a| !["--post", "--pmml", "--keepXMath", "--xmath",
+  argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
@@ -109,12 +110,14 @@ fn main() -> Result<(), Box<dyn Error>> {
           _ => None,
         }
       });
-      let do_post = post_flag || pmml_flag || effective_stylesheet.is_some() || format_flag.is_some();
+      let do_post = post_flag || pmml_flag || cmml_flag || effective_stylesheet.is_some() || format_flag.is_some();
 
       if do_post {
         // Post-process the XML
         let output = run_post_processing(
-          &xml, pmml_flag || post_flag || format_flag.is_some(),
+          &xml,
+          pmml_flag || post_flag || format_flag.is_some(),
+          cmml_flag,
           keep_xmath_flag,
           effective_stylesheet.as_deref(),
         );
@@ -143,6 +146,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn run_post_processing(
   xml: &str,
   pmml: bool,
+  cmml: bool,
   keep_xmath: bool,
   stylesheet: Option<&str>,
 ) -> String {
@@ -164,6 +168,12 @@ fn run_post_processing(
     let mathml = latexml_post::mathml::MathML::new_presentation()
       .with_keep_xmath(keep_xmath);
     processors.push(Box::new(mathml));
+  }
+
+  if cmml {
+    let cmathml = latexml_post::mathml::MathML::new_content()
+      .with_keep_xmath(keep_xmath);
+    processors.push(Box::new(cmathml));
   }
 
   if let Some(xsl_path) = stylesheet {
