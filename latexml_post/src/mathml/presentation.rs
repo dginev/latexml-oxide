@@ -325,6 +325,17 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
   let mut text = node.get_content();
   let meaning = node.get_attribute("meaning");
 
+  // Handle special meanings
+  if meaning.as_deref() == Some("absent") {
+    // "absent" means an empty placeholder (e.g., missing LHS in aligned equations).
+    // Perl renders this as an empty <m:mi/>.
+    return NodeData::Element {
+      tag: "m:mi".to_string(),
+      attributes: None,
+      children: vec![],
+    };
+  }
+
   // Determine tag based on role
   let tag = match role.as_str() {
     "NUMBER" => "m:mn",
