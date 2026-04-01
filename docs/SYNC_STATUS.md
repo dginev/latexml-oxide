@@ -401,6 +401,10 @@ Every diff between fresh Perl and Rust output is catalogued below. Each has a di
 - [x] **G. Codegen: `Until:` parameter type** — Added `Until` → `Tokens` mapping to `parameter_rust_type!` macro. `DefMacro!/DefPrimitive!` closures now work with `Until:\cs` parameter specs. pgfcircutils.tex updated to use proper DefPrimitive instead of RawTeX workaround.
 - [x] **H. pgfsys pattern system** — 7 pattern definitions ported (declarepattern, setpattern, colored/uncolored pattern constructors). Remaining: tikz matrix alignment (`\lxSVG@halign` + 5 helper subs).
 
+### Upcoming
+
+- [ ] **I. Unified CLI** — Extend `latexml_oxide` binary to support both core conversion and post-processing in a single invocation, following the `LaTeXML.pm` interface in Perl. Wire `latexml_post` pipeline into `converter.rs` with `--post`, `--pmml`, `--cmml`, `--keepXMath`, `--scan`, `--crossref`, `--dest` flags.
+
 ### Permanent ignores (5)
 
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

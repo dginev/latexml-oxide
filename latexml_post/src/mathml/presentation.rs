@@ -252,6 +252,20 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       // Fenced: (args)
       pmml_parenthesize(doc, op, args)
     }
+    _ if meaning == "multirelation" => {
+      // Multirelation: a = b = c (interleaved args and operators)
+      // Port of `Apply:?:multirelation` handler.
+      let mut items = Vec::new();
+      for (i, arg) in args.iter().enumerate() {
+        if i > 0 && i % 2 == 1 {
+          // Odd positions are operators in multirelation
+          items.push(pmml(doc, arg));
+        } else {
+          items.push(pmml(doc, arg));
+        }
+      }
+      pmml_row(items)
+    }
     _ => {
       // Default: function application
       if meaning == "limit-from" && !args.is_empty() {
@@ -345,7 +359,12 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
       }
     }
   } else if tag == "m:mi" && text.chars().count() == 1 {
-    // Single char mi without font → italic is default, no attr needed
+    // Single char mi without font → check if it's a named symbol (not a variable).
+    // Named symbols (e.g., \Box → □) should use mathvariant="normal".
+    if node.get_attribute("name").is_some() {
+      attrs.insert("mathvariant".to_string(), "normal".to_string());
+    }
+    // Regular letters default to italic (MathML default for single-char mi)
   } else if tag == "m:mi" && text.chars().count() > 1 {
     // Multi-char mi without font → should be normal (function name)
     attrs.insert("mathvariant".to_string(), "normal".to_string());
@@ -363,11 +382,17 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
       }
     }
 
-    // Copy stretchy attribute from source XMTok
-    // (only on OPEN/CLOSE roles, not on accents/operators)
+    // Copy stretchy attribute from source XMTok only when it differs from MathML defaults.
+    // Port of Perl's `($stretchy xor $props{stretchy}) ? (stretchy => ...) : ()`.
+    // In MathML, OPEN/CLOSE/MIDDLE operators are stretchy by default.
+    // We only need to emit stretchy="false" for fences (to override default),
+    // or stretchy="true" for non-fence operators.
+    let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
     if let Some(ref stretchy) = stretchy_attr {
-      if matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE") {
-        attrs.insert("stretchy".to_string(), stretchy.clone());
+      if is_fence && stretchy == "false" {
+        attrs.insert("stretchy".to_string(), "false".to_string());
+      } else if !is_fence && stretchy == "true" {
+        attrs.insert("stretchy".to_string(), "true".to_string());
       }
     }
   }
