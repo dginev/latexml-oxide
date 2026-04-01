@@ -196,18 +196,20 @@ fn ams_align_bindings() -> Result<()> {
 /// Perl: \@ams@aligned@bindings — for aligned/alignedat/split within math
 fn ams_aligned_bindings() -> Result<()> {
   use latexml_core::alignment::cell::Cell;
-  use latexml_core::alignment::template::TemplateConfig;
+  use latexml_core::alignment::template::{Align, TemplateConfig};
 
   let col1 = Cell {
     before: Some(Tokens::new(vec![
       T_CS!("\\hfil"), T_CS!("\\displaystyle"),
     ])),
+    align: Some(Align::Right),  // \hfil before → right-aligned
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
     before: Some(Tokens::new(vec![T_CS!("\\displaystyle")])),
     after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
+    align: Some(Align::Left),  // \hfil after → left-aligned
     empty: true,
     ..Cell::default()
   };
