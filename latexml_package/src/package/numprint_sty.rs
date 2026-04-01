@@ -24,11 +24,14 @@ LoadDefinitions!({
   DefMacro!("\\ltx@text@numprint@{}",    "\\ltx@text@number{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@text@numprint@@{}{}", "\\ltx@text@number{\\ltx@orig@numprint[#1]{#2}}");
   // In text mode, \numprint wraps output in ltx:text class="ltx_number".
-  // Perl uses a constructor wrapping in <ltx:text class='ltx_number'>,
-  // but our numprint internally uses \ensuremath which produces XMTok elements
-  // that cause schema violations inside ltx:text. Use pass-through for now.
-  // TODO: Fix numprint internals to use text-mode symbols, then enable this.
-  DefMacro!("\\ltx@text@number{}", "#1");
+  // Port of Perl: DefConstructor('\ltx@text@number{}',
+  //   "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>",
+  //   enterHorizontal => 1);
+  // Use \ifmmode guard: skip wrapping in math mode (ltx:text invalid inside XMath).
+  DefMacro!("\\ltx@text@number{}",
+    "\\ifmmode#1\\else\\ltx@text@number@wrap{#1}\\fi");
+  DefConstructor!("\\ltx@text@number@wrap{}",
+    "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>");
   DefMacro!("\\ltx@math@numprint@{}",
     "\\ltx@math@@numprint@{#1}{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@math@numprint@@{}{}",
