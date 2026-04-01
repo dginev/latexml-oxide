@@ -85,7 +85,6 @@ fn simplemath_post_test() {
 }
 
 #[test]
-#[ignore] // hyperref test needs Scan+CrossRef processors — not yet wired up
 fn hyperref_post_test() {
   post_test("hyperref", 0);
 }

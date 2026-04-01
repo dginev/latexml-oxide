@@ -12,8 +12,9 @@ use std::path::Path;
 use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
 
-// EXSLT registration — not yet available in the libxslt crate.
-// TODO: Add exsltRegisterAll to the rust-libxslt crate (L3).
+// EXSLT registration — needed for str:tokenize, math:*, etc. used in LaTeXML stylesheets.
+// The rust-libxslt crate doesn't yet expose this.
+// TODO: Add exsltRegisterAll() to the rust-libxslt crate.
 extern "C" {
   fn exsltRegisterAll();
 }

@@ -190,7 +190,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] **L1. Deep clone for `rust-libxml`** — Add `xmlCopyNode` FFI wrapper. Current `Node::clone()` is a reference copy (same ptr). Need `node.deep_copy()` that calls `xmlCopyNode(ptr, 1)` for proper DOM cloning. Required for: Scan storing XML node values, Perl's `cloneNode(1)` pattern. Without this, we store text content (get_content()) instead of XML nodes, losing inline markup in titles and descriptions.
 - [ ] **L2. `get_attribute("xml:id")` for `rust-libxml`** — `Node::get_attribute("xml:id")` returns None on some builds. Workaround: `get_property("id")`. The xml: prefix is a built-in namespace that should be handled transparently.
-- [ ] **L3. Migrate to `rust-libxslt` crate** — Replace raw FFI bindings in `latexml_post/src/xslt.rs` with [`rust-libxslt`](https://github.com/KWARC/rust-libxslt). Current code uses manual `extern "C"` for `xsltParseStylesheetFile`, `xsltApplyStylesheet`, `xsltSaveResultToString`, `exsltRegisterAll`. The crate provides safe Rust wrappers.
+- [x] **L3. Migrate to `rust-libxslt` crate** — Done. Replaced raw FFI with `libxslt = "0.1.2"` crate. Only `exsltRegisterAll()` still uses FFI (not yet in the crate).
 - [ ] **L4. Default namespace handling in `rust-libxml`** — `Node::new_child(ns, localname)` always uses the explicit prefix from the Namespace object, even when the element's namespace matches the document's default namespace. This creates `<ltx:ref>` instead of `<ref>` when the default xmlns is already the LaTeXML namespace. Workaround: check if default namespace matches before looking up prefixed namespace.
 
 ### Diff reduction tasks
