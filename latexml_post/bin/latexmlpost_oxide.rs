@@ -1,7 +1,7 @@
-/// latexmlpost_oxide — Post-process LaTeXML XML output.
-///
-/// Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--noscan] [--nocrossref]
-///        [--stylesheet path.xsl] [--dest output.xml] input.xml
+//! latexmlpost_oxide — Post-process LaTeXML XML output.
+//!
+//! Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--noscan] [--nocrossref]
+//!        [--stylesheet path.xsl] [--dest output.xml] input.xml
 
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::mathml::MathML;

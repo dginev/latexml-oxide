@@ -1,6 +1,7 @@
 #![allow(dead_code)] // Library in progress — many APIs not yet consumed externally
 #![allow(clippy::collapsible_match, clippy::collapsible_if)]
 #![allow(clippy::if_same_then_else)] // Intentional per-type branches for FMT_SPEC clarity
+#![allow(clippy::cloned_ref_to_slice_refs)] // Node::clone() is Rc clone (cheap), needed for &[Node] APIs
 //! Post-processing pipeline for latexml_oxide.
 //!
 //! Rust port of `LaTeXML::Post` — the driver that orchestrates

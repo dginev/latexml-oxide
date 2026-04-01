@@ -24,7 +24,7 @@ const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 /// Handles both namespace-aware and plain attribute access.
 pub fn get_xml_id(node: &Node) -> Option<String> {
   node.get_attribute_ns("id", XML_NS)
-    .or_else(|| get_xml_id(&node))
+    .or_else(|| get_xml_id(node))
     .or_else(|| {
       // Fallback: check properties hash for "id" key in xml namespace
       let props = node.get_properties();
@@ -456,7 +456,7 @@ impl PostDocument {
     prefix: &str,
     reusable: bool,
   ) -> Option<String> {
-    if let Some(id) = get_xml_id(&node) {
+    if let Some(id) = get_xml_id(node) {
       return Some(id);
     }
 
@@ -696,16 +696,12 @@ impl PostDocument {
     if let Some(mut parent) = old_node.get_parent() {
       // Save following siblings
       let mut save = Vec::new();
-      loop {
-        if let Some(mut last) = parent.get_last_child() {
-          if last == *old_node {
-            break;
-          }
-          last.unlink_node();
-          save.insert(0, last);
-        } else {
+      while let Some(mut last) = parent.get_last_child() {
+        if last == *old_node {
           break;
         }
+        last.unlink_node();
+        save.insert(0, last);
       }
 
       // Remove the old node

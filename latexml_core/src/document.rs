@@ -1957,7 +1957,7 @@ impl Document {
           // Perl: List($origbox, $box, mode => $origbox->getProperty('mode'))
           let mode = orig.get_property("mode")
             .and_then(|m| if let Stored::String(s) = m.as_ref() {
-              Some(s.clone())
+              Some(*s)
             } else { None });
           let mut new_list = List::new(vec![orig.clone(), thisbox.clone()]);
           if let Some(mode_str) = mode {

@@ -150,19 +150,15 @@ impl MakeBibliography {
               // Walk up parent chain to check if referrer is inside a bibitem
               let mut rid = ref_id.clone();
               let mut is_from_bib = false;
-              loop {
-                if let Some(entry) = self.db.lookup(&format!("ID:{}", rid)) {
-                  let entry_type = entry.get_string("type").unwrap_or("");
-                  if entry_type == "ltx:bibitem" {
-                    is_from_bib = true;
-                    break;
-                  }
-                  match entry.get_string("parent").map(String::from) {
-                    Some(parent) => rid = parent,
-                    None => break,
-                  }
-                } else {
+              while let Some(entry) = self.db.lookup(&format!("ID:{}", rid)) {
+                let entry_type = entry.get_string("type").unwrap_or("");
+                if entry_type == "ltx:bibitem" {
+                  is_from_bib = true;
                   break;
+                }
+                match entry.get_string("parent").map(String::from) {
+                  Some(parent) => rid = parent,
+                  None => break,
                 }
               }
               if !is_from_bib {

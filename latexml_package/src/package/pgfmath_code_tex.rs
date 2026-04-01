@@ -21,7 +21,7 @@ fn pgfmath_result_str(value: f64) -> String {
   if value.is_nan() || value.is_infinite() {
     return "0.0".to_string();
   }
-  let clamped = value.max(-MAX_PGF_NUMBER).min(MAX_PGF_NUMBER);
+  let clamped = value.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
   if clamped == (clamped as i64) as f64 {
     // Integer result — pgf prints with .0 suffix
     return format!("{}.0", clamped as i64);
@@ -87,7 +87,7 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
   // First try direct string (avoids expansion overhead for literal numbers)
   let s = arg.to_string();
   let s = s.trim();
-  let s = if s.starts_with("--") { &s[2..] } else { s };
+  let s = s.strip_prefix("--").unwrap_or(s);
   if s == "." { return 0.0; }
   if let Ok(v) = s.parse::<f64>() {
     return v;
@@ -96,7 +96,7 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
   if let Ok(expanded) = gullet::do_expand(arg.clone()) {
     let s = expanded.to_string();
     let s = s.trim();
-    let s = if s.starts_with("--") { &s[2..] } else { s };
+    let s = s.strip_prefix("--").unwrap_or(s);
     if s == "." { return 0.0; }
     s.parse::<f64>().unwrap_or(0.0)
   } else {
@@ -155,7 +155,7 @@ fn try_simple_number(input: &str) -> Option<String> {
       };
     } else {
       // sign == '-'
-      if !result.contains(|c: char| c >= '1' && c <= '9') {
+      if !result.contains(|c: char| ('1'..='9').contains(&c)) {
         result = "0.0".to_string();
       } else if decimals.is_none() {
         result = format!("{}.0", result);
@@ -335,9 +335,7 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   let cs_name = format!("\\pgfmath{}@", name);
   let cs_tok = Token { text: arena::pin(&cs_name), code: Catcode::CS };
   // Check if the function is defined
-  if state::lookup_definition(&cs_tok).ok()?.is_none() {
-    return None;
-  }
+  state::lookup_definition(&cs_tok).ok()?.as_ref()?;
   // Build invocation tokens: \pgfmath{name}@{arg1}{arg2}...
   let mut tokens: Vec<Token> = vec![cs_tok];
   for arg in args {
@@ -883,13 +881,7 @@ fn pgfmath_cmp_op(op: &str, left: f64, right: f64) -> f64 {
 /// Perl: L383-393 of pgfmath.code.tex.ltxml
 fn format_parse_result(result: f64, input: &str) -> String {
   // Overflow check
-  let result = if result > MAX_PGF_NUMBER {
-    MAX_PGF_NUMBER
-  } else if result < -MAX_PGF_NUMBER {
-    -MAX_PGF_NUMBER
-  } else {
-    result
-  };
+  let result = result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
 
   // Integer result
   if result == (result as i64) as f64 {
@@ -932,7 +924,7 @@ fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   if let Some(result) = parser.formula() {
     // Perl L378: forgive trailing ) or ]
     let remaining = parser.remaining_trimmed()
-      .trim_start_matches(|c: char| c == ')' || c == ']');
+      .trim_start_matches([')', ']']);
     if !remaining.is_empty() {
       // Partial parse — still return what we got
     }
@@ -1105,10 +1097,7 @@ LoadDefinitions!({
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
     // Expand tokens and convert to string
-    let expanded = match gullet::do_expand(tokens) {
-      Ok(t) => t,
-      Err(_) => Tokens::default(),
-    };
+    let expanded = gullet::do_expand(tokens).unwrap_or_default();
     let input = expanded.to_string();
     let (result, units) = pgfmathparse_eval_with_units(&input);
     let mut toks = pgfmath_result_tokens_str(&result);
@@ -1126,10 +1115,7 @@ LoadDefinitions!({
 
   // Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
   DefMacro!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
-    let expanded = match gullet::do_expand(tokens) {
-      Ok(t) => t,
-      Err(_) => Tokens::default(),
-    };
+    let expanded = gullet::do_expand(tokens).unwrap_or_default();
     let input = expanded.to_string();
     let result = pgfmathparse_eval(&input);
     let mut toks = vec![T_CS!("\\def"), T_CS!("\\lx@pgfmathresult"), T_BEGIN!()];

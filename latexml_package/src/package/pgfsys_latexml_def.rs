@@ -52,9 +52,9 @@ fn pgf_reg_dim(name: &str) -> Dimension {
 /// Returns tokens (not a string) because # must be catcode OTHER, not PARAMETER.
 fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
   let hex = format!("{:02X}{:02X}{:02X}",
-    (r * 255.0).round().min(255.0).max(0.0) as u8,
-    (g * 255.0).round().min(255.0).max(0.0) as u8,
-    (b * 255.0).round().min(255.0).max(0.0) as u8);
+    (r * 255.0).round().clamp(0.0, 255.0) as u8,
+    (g * 255.0).round().clamp(0.0, 255.0) as u8,
+    (b * 255.0).round().clamp(0.0, 255.0) as u8);
   // Perl uses Explode() which creates catcode-12 (OTHER) tokens.
   // '#' as catcode OTHER, then hex digits as catcode OTHER.
   let mut tokens = vec![T_OTHER!("#")];
@@ -62,9 +62,9 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
   tokens
 }
 
-/// Perl L149-157: DefParameterType('SVGMoveableBox', ...)
-/// Defined in Perl but never used as a parameter type anywhere in the codebase.
-/// Omitted from Rust; add if a use site is discovered.
+// Perl L149-157: DefParameterType('SVGMoveableBox', ...)
+// Defined in Perl but never used as a parameter type anywhere in the codebase.
+// Omitted from Rust; add if a use site is discovered.
 
 /// Perl L161-169: foreignObjectCheck
 /// Check whether an svg:foreignObject is open in the ancestor chain,
@@ -425,7 +425,7 @@ LoadDefinitions!({
   // Perl L337-339: unclipped path — emit svg:path
   DefConstructor!("\\lxSVG@drawpath@unclipped{}{}",
     sub[document, args, _props] {
-      let d = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       if !d.is_empty() {
         let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
         let mut attrs = string_map!("d" => d);
@@ -440,7 +440,7 @@ LoadDefinitions!({
   // Perl L341-348: clipped path — obj computed in properties (digestion) to match Perl counter order
   DefConstructor!("\\lxSVG@drawpath@clipped{}{}",
     sub[document, args, props] {
-      let d = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
       document.open_element("svg:clipPath", Some(string_map!(
@@ -486,7 +486,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\lxSVG@discardpath@clipped{}",
     sub[document, args, props] {
-      let d = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
@@ -526,7 +526,7 @@ LoadDefinitions!({
         )), None)?;
       }
       let mut attrs = string_map!("_autoclose" => "1".to_string());
-      if let Some(Some(kv_arg)) = args.get(0) {
+      if let Some(Some(kv_arg)) = args.first() {
         // Perl: $doc->openElement('svg:g', $kv->getHash, _autoclose => 1);
         if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
           let hash = kv.get_hash();
@@ -648,7 +648,7 @@ LoadDefinitions!({
   // Perl L487-492: \pgfsys@declarepattern{name}{x1}{y1}{x2}{y2}{x step}{y step}{code}{flag}
   // Expands to \pgfsysprotocol@literal{\lxSVG@setpattern{...}}\lxSVG@(un)coloredpattern{...}
   DefMacro!("\\pgfsys@declarepattern{} {}{}{}{}{}{} {}{Number}", sub[args] {
-    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let x1 = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let y1 = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let x2 = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
@@ -697,7 +697,7 @@ LoadDefinitions!({
 
   // Perl L502-504: \pgfsys@setpatternuncolored — wraps in pgfsysprotocol@literal
   DefMacro!("\\pgfsys@setpatternuncolored{}{}{}{}", sub[args] {
-    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let r = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let g = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let b = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
@@ -716,7 +716,7 @@ LoadDefinitions!({
   // Perl L506-507: \pgfsys@setpatterncolored — sets fill to pattern URL
   // \lxSVG@setcolor{fill}{url(\#pgfpat#1)} — \# produces catcode OTHER '#'
   DefMacro!("\\pgfsys@setpatterncolored{}", sub[args] {
-    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     // Build: \lxSVG@setcolor{fill}{url(#pgfpat<name>)}
     let mut toks = vec![T_CS!("\\lxSVG@setcolor")];
     toks.push(T_BEGIN!()); toks.extend(mouth::tokenize_internal("fill").unlist()); toks.push(T_END!());
@@ -735,7 +735,7 @@ LoadDefinitions!({
   //   width="{x_step}" height="{y_step}">{code}</svg:pattern></svg:defs>
   DefConstructor!("\\lxSVG@coloredpattern{}{Dimension}{Dimension}{}",
     sub[document, args, props] {
-      let name = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let name = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let x_step = props.get("x_step").map(|v| v.to_string()).unwrap_or_default();
       let y_step = props.get("y_step").map(|v| v.to_string()).unwrap_or_default();
       document.open_element("svg:defs", None, None)?;
@@ -749,9 +749,9 @@ LoadDefinitions!({
     },
     properties => sub[args] {
       let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
-        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+        .map(dim_to_px).unwrap_or(0.0);
       let y_step = args.get(2).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
-        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+        .map(dim_to_px).unwrap_or(0.0);
       Ok(stored_map!("x_step" => x_step, "y_step" => y_step))
     },
     sizer => 0
@@ -763,7 +763,7 @@ LoadDefinitions!({
   // </svg:pattern></svg:defs>
   DefConstructor!("\\lxSVG@uncoloredpattern{}{Dimension}{Dimension}{}",
     sub[document, args, props] {
-      let name = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let name = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let name = name.trim().to_string();
       let x_step = props.get("x_step").map(|v| v.to_string()).unwrap_or_default();
       let y_step = props.get("y_step").map(|v| v.to_string()).unwrap_or_default();
@@ -782,9 +782,9 @@ LoadDefinitions!({
     },
     properties => sub[args] {
       let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
-        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+        .map(dim_to_px).unwrap_or(0.0);
       let y_step = args.get(2).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
-        .map(|d| dim_to_px(d)).unwrap_or(0.0);
+        .map(dim_to_px).unwrap_or(0.0);
       Ok(stored_map!("x_step" => x_step, "y_step" => y_step))
     },
     sizer => 0
@@ -795,7 +795,7 @@ LoadDefinitions!({
   // then opens an svg:g with fill set to the new pattern URL
   DefConstructor!("\\lxSVG@setpatternuncolored@{}{}{}{}",
     sub[document, args, props] {
-      let name = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let name = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let name = name.trim().to_string();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
       let color = props.get("color").map(|v| v.to_string()).unwrap_or_else(|| "#000000".to_string());
@@ -834,9 +834,9 @@ LoadDefinitions!({
       let b: f64 = args.get(3).and_then(|a| a.as_ref())
         .map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
       let color = format!("#{:02X}{:02X}{:02X}",
-        (r * 255.0).round().min(255.0).max(0.0) as u8,
-        (g * 255.0).round().min(255.0).max(0.0) as u8,
-        (b * 255.0).round().min(255.0).max(0.0) as u8);
+        (r * 255.0).round().clamp(0.0, 255.0) as u8,
+        (g * 255.0).round().clamp(0.0, 255.0) as u8,
+        (b * 255.0).round().clamp(0.0, 255.0) as u8);
       Ok(stored_map!("obj" => obj, "color" => color))
     },
     sizer => 0
@@ -853,14 +853,9 @@ LoadDefinitions!({
 
   DefConstructor!("\\lxSVG@closescope",
     sub[document, _args, _props] {
-      loop {
-        match document.maybe_close_element("svg:g") {
-          Ok(Some(node)) => {
-            if node.get_attribute("_scopebegin").is_some() {
-              break;
-            }
-          }
-          _ => break,
+      while let Ok(Some(node)) = document.maybe_close_element("svg:g") {
+        if node.get_attribute("_scopebegin").is_some() {
+          break;
         }
       }
     }
@@ -889,7 +884,7 @@ LoadDefinitions!({
   DefConstructor!("\\lxSVG@includegraphics{}{} Semiverbatim",
     "<ltx:graphics graphic='#3' options='#options'/>",
     properties => sub[args] {
-      let w = args.get(0).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let w = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let h = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let graphic = args.get(2).and_then(|a| a.as_ref()).map(|a| a.to_string().trim().to_string()).unwrap_or_default();
       let mut options_parts = Vec::new();
@@ -927,7 +922,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\pgfsys@invoke{}",
     sub[document, args, _props] {
-      if let Some(Some(arg)) = args.get(0) {
+      if let Some(Some(arg)) = args.first() {
         document.absorb(arg, None)?;
       }
     }
@@ -986,7 +981,7 @@ LoadDefinitions!({
   // Perl L648-654: \lxSVG@sh@stop — creates <svg:stop> element
   DefConstructor!("\\lxSVG@sh@stop{Dimension}{Dimension}{Float}{Float}{Float}",
     sub[document, args, _props] {
-      let start_dim = args.get(0).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension());
+      let start_dim = args.first().and_then(|a| a.as_ref()).and_then(|a| a.get_dimension());
       let end_dim = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension());
       let r: f64 = args.get(2).and_then(|a| a.as_ref()).map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
       let g: f64 = args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
@@ -1036,7 +1031,7 @@ LoadDefinitions!({
 
   // Perl L667-689: \lxSVG@sh@defstripes — creates linearGradient constructors
   DefPrimitive!("\\lxSVG@sh@defstripes{}{Number}", sub[args] {
-    let name = args.get(0).map(|a| a.to_string()).unwrap_or_default();
+    let name = args.first().map(|a| a.to_string()).unwrap_or_default();
     let flag: i64 = args.get(1).map(|a| a.value_of()).unwrap_or(0);
     // Collect digested stops from state
     let stops: Vec<Digested> = if let Some(Stored::VecDequeStored(vd)) = state::lookup_value("pgf_sh_stops") {
@@ -1102,7 +1097,7 @@ LoadDefinitions!({
 
   // Perl L691-714: \lxSVG@sh@defcircles — creates radialGradient constructors
   DefPrimitive!("\\lxSVG@sh@defcircles{}", sub[args] {
-    let name = args.get(0).map(|a| a.to_string().trim().to_string()).unwrap_or_default();
+    let name = args.first().map(|a| a.to_string().trim().to_string()).unwrap_or_default();
     // Collect digested stops from state
     let stops: Vec<Digested> = if let Some(Stored::VecDequeStored(vd)) = state::lookup_value("pgf_sh_stops") {
       vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
@@ -1186,7 +1181,7 @@ LoadDefinitions!({
   // NOTE: Perl uses ptValue not pxValue here (comment says "Something odd with scales")
   DefConstructor!("\\lxSVG@sh@insert{Dimension}{Dimension}{}",
     sub[document, args, _props] {
-      let x = args.get(0).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
+      let x = args.first().and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
         .map(|d| d.value_of() as f64 / 65536.0).unwrap_or(0.0);
       let y = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
         .map(|d| d.value_of() as f64 / 65536.0).unwrap_or(0.0);
@@ -1213,7 +1208,7 @@ LoadDefinitions!({
 
   // Perl L766-773: \pgfsys@horishading
   DefMacro!("\\pgfsys@horishading{}{}{}", sub[args] {
-    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let height = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let specs = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let mut toks = Vec::new();
@@ -1244,7 +1239,7 @@ LoadDefinitions!({
 
   // Perl L776-782: \pgfsys@vertshading
   DefMacro!("\\pgfsys@vertshading{}{}{}", sub[args] {
-    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let height = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let specs = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let mut toks = Vec::new();
@@ -1275,7 +1270,7 @@ LoadDefinitions!({
 
   // Perl L784-789: \pgfsys@radialshading
   DefMacro!("\\pgfsys@radialshading{}{}{}", sub[args] {
-    let name = args.get(0).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let point = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let specs = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let mut toks = Vec::new();
@@ -1297,8 +1292,8 @@ LoadDefinitions!({
 
   // Perl L792-796: \pgfsys@functionalshading — not implementable (PostScript functions)
   DefMacro!("\\pgfsys@functionalshading{}{}{}{}", sub[_args] {
-    let toks = mouth::tokenize_internal(
-      "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist();
-    toks
+    
+    mouth::tokenize_internal(
+      "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist()
   });
 });

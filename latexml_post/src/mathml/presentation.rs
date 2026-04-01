@@ -1,7 +1,7 @@
 //! Presentation MathML rendering rules.
 //!
-//! Port of `LaTeXML::Post::MathML::Presentation` (146 lines)
-//! + the presentation portion of `LaTeXML::Post::MathML` (main module, ~1000 lines).
+//! Port of `LaTeXML::Post::MathML::Presentation` (146 lines) +
+//! the presentation portion of `LaTeXML::Post::MathML` (main module, ~1000 lines).
 //! Converts XMath nodes to Presentation MathML elements (mi, mo, mn, mrow, etc.).
 //!
 //! Key concepts:
@@ -1024,7 +1024,7 @@ fn get_node_tag(node: &NodeData) -> &str {
 fn get_node_text(node: &NodeData) -> String {
   match node {
     NodeData::Text(t) => t.clone(),
-    NodeData::Element { children, .. } => children.iter().map(|c| get_node_text(c)).collect(),
+    NodeData::Element { children, .. } => children.iter().map(get_node_text).collect(),
     _ => String::new(),
   }
 }

@@ -164,12 +164,7 @@ impl CrossRef {
     let mut prefix = String::new();
     let mut shown_so_far = shown.to_string();
 
-    loop {
-      let entry = match self.db.lookup(&format!("ID:{}", current_id)) {
-        Some(e) => e,
-        None => break,
-      };
-
+    while let Some(entry) = self.db.lookup(&format!("ID:{}", current_id)) {
       let mut pieces = Vec::new();
       let mut is_dup = false;
 

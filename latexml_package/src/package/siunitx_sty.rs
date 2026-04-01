@@ -122,7 +122,7 @@ fn six_begin_processing(kv: Option<&KeyVals>) {
         let other_name = name.trim_start_matches('\\');
         let expansion = Tokens::new(vec![T_OTHER!(other_name)]);
         if let Ok(def) = Expandable::new(
-          token.clone(),
+          token,
           None,
           Some(ExpansionBody::Tokens(expansion)),
           None,
@@ -393,7 +393,7 @@ fn six_apply_mathligatures(tokens: Vec<Token>) -> Vec<Token> {
     let name = t.to_string();
     match name.as_str() {
       "+" => {
-        if iter.peek().map_or(false, |n| n.to_string() == "-") {
+        if iter.peek().is_some_and(|n| n.to_string() == "-") {
           iter.next();
           result.push(T_CS!("\\pm"));
         } else {
@@ -492,7 +492,7 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
         Some(n) => results.push(SixParseResult::Parsed(n)),
         None => break,
       }
-      if tokens.first().map_or(false, |t| t.to_string() == ";") {
+      if tokens.first().is_some_and(|t| t.to_string() == ";") {
         tokens.remove(0);
       } else {
         break;
@@ -781,8 +781,8 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           let a2 = arg2.as_deref();
 
           if let Some(a2) = a2 {
-            let has_content = a2.get_integer().map_or(false, |i| !i.is_empty())
-              || a2.get_fraction().map_or(false, |f| !f.is_empty());
+            let has_content = a2.get_integer().is_some_and(|i| !i.is_empty())
+              || a2.get_fraction().is_some_and(|f| !f.is_empty());
             if !six_get_bool("retain-zero-exponent") && !has_content {
               return a1.map(|n| six_format_number_inner(n, 0)).unwrap_or_default();
             }
@@ -796,7 +796,7 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             base, fa2,
           );
 
-          let has_mantissa = a1.map_or(false, |n| {
+          let has_mantissa = a1.is_some_and(|n| {
             n.get_integer().is_some() || n.get_fraction().is_some() || n.is_operator()
           });
           let times = if has_mantissa {
@@ -1076,7 +1076,7 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
 
 /// Format product of units
 fn six_format_unitproduct(bracketed: bool, units: &[SixUnit]) -> Tokens {
-  let formatted: Vec<Tokens> = units.iter().map(|u| six_format_1unit(u)).collect();
+  let formatted: Vec<Tokens> = units.iter().map(six_format_1unit).collect();
   let inter = six_get_op(
     &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
     "inter-unit-product",
@@ -1140,7 +1140,7 @@ fn six_parse_literalunits(expr: &Tokens) -> Tokens {
           iter.next();
           let mut g = Vec::new();
           let mut level = 1;
-          while let Some(t2) = iter.next() {
+          for t2 in iter.by_ref() {
             if t2.get_catcode() == Catcode::END { level -= 1; if level == 0 { break; } }
             else if t2.get_catcode() == Catcode::BEGIN { level += 1; }
             g.push(t2);
@@ -1240,7 +1240,7 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(iter: &mut std::iter::Peekabl
       iter.next();
       let mut result = String::new();
       let mut level = 1;
-      while let Some(t) = iter.next() {
+      for t in iter.by_ref() {
         if t.get_catcode() == Catcode::END { level -= 1; if level == 0 { break; } }
         else if t.get_catcode() == Catcode::BEGIN { level += 1; }
         result.push_str(&t.to_string());

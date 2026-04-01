@@ -43,12 +43,11 @@ LoadDefinitions!({
         noerror => true, extension => Some(Cow::Borrowed("tex")));
       let pgf_opts = NewDefault!(InputDefinitionOptions,
         noerror => true, extension => Some(Cow::Borrowed("tex")));
-      if input_definitions(&tikz_name, tikz_opts).is_err() {
-        if input_definitions(&pgf_name, pgf_opts).is_err() {
+      if input_definitions(&tikz_name, tikz_opts).is_err()
+        && input_definitions(&pgf_name, pgf_opts).is_err() {
           Warn!("missing_file", lib,
             &s!("Can't find tikz library '{}' (neither pgf nor tikz). Anticipate undefined macros.", lib));
         }
-      }
       // Restore catcode for |
       if let Some(cc) = bar_cc {
         state::assign_catcode('|', cc, None);

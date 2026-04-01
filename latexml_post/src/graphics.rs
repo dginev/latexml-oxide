@@ -231,10 +231,10 @@ impl Graphics {
 
   /// Find graphicspath from processing instructions.
   fn find_graphics_paths(&self, doc: &PostDocument) -> Vec<String> {
+    let re = regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
     let mut paths = Vec::new();
     for pi in doc.findnodes(".//processing-instruction('latexml')") {
       let text = pi.get_content();
-      let re = regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
       if let Some(cap) = re.captures(&text) {
         paths.push(cap[1].to_string());
       }

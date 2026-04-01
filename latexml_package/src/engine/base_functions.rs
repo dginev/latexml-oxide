@@ -556,6 +556,7 @@ pub fn insert_block(
   document.close_to_node(&context, true)?;
 
   // Perl: Hack: apparently TeX doesn't shift (vattach) a single node in a vbox/vtop/...
+  #[allow(clippy::redundant_locals)]
   let mut block_attr = block_attr;
   let mut ignorable_attr = ignorable_attr;
   if nnodes == 1 && block_attr.contains_key("vattach") && is_v_attached(&nodes[0]) {

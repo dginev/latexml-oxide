@@ -429,7 +429,7 @@ impl BoxOps for Whatsit {
         Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
       let d = match self.get_property("cached_depth").as_deref() {
         Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
-      return Ok((w, h, d));
+      Ok((w, h, d))
     } else {
       // Nothing specified? use #body if any, else sum all box args
       // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
