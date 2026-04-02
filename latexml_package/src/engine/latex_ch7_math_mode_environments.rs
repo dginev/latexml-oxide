@@ -255,7 +255,12 @@ pub fn eqnarray_bindings() -> Result<()> {
   let mut xml_attrs = HashMap::default();
   xml_attrs.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
   // Perl: colsep => LookupDimension('\arraycolsep')->multiply(2)
-  // TODO: compute colsep from \arraycolsep
+  if let Ok(Some(acol)) = state::lookup_register("\\arraycolsep", Vec::new()) {
+    let colsep = acol.pt_value(None) * 2.0;
+    if colsep > 0.0 {
+      xml_attrs.insert(String::from("colsep"), s!("{}pt", colsep));
+    }
+  }
 
   let mut properties = SymHashMap::default();
   properties.insert("preserve_structure", Stored::Bool(true));
