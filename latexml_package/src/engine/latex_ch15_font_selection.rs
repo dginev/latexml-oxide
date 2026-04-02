@@ -193,4 +193,30 @@ LoadDefinitions!({
     })));
     Ok(Vec::new())
   });
+
+  // Perl L5333-5339: \DeclareTextFontCommand — creates a text font command.
+  // Simplified: \cmd{} → {\font #1} (group with font change).
+  DefPrimitive!("\\DeclareTextFontCommand DefToken {}", sub[(cmd, font)] {
+    let cs = cmd.clone();
+    let font_rev: Tokens = font.into();
+    // Build expansion: {<font> #1}
+    let mut expansion = vec![T_BEGIN!()];
+    expansion.extend(font_rev.unlist());
+    expansion.push(T_PARAM!());
+    expansion.push(T_OTHER!("1"));
+    expansion.push(T_END!());
+    let params = parse_parameters("{}", &cs, false)?;
+    def_macro(cs, params,
+      Some(ExpansionBody::Tokens(Tokens::new(expansion))), None)?;
+  });
+
+  // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
+  DefPrimitive!("\\mathversion{}", sub[(version)] {
+    let v = version.to_string();
+    match v.trim() {
+      "bold" => { MergeFont!(forcebold => true); },
+      "normal" => { MergeFont!(forcebold => false); },
+      _ => {},
+    }
+  });
 });

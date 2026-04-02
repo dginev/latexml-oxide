@@ -90,6 +90,9 @@ LoadDefinitions!({
   DefPrimitive!("\\textregistered", "\u{00AE}"); // REGISTERED SIGN
   DefPrimitive!("\\texttrademark", "\u{2122}"); // TRADE MARK SIGN
   DefConstructor!("\\textsuperscript{}", "<ltx:sup>#1</ltx:sup>",  mode => "text");
+  // Perl L5424-5425: locked variant for \@makefnmark
+  DefConstructor!("\\@textsuperscript{}", "<ltx:sup>#1</ltx:sup>",
+    mode => "text", locked => true);
   DefConstructor!("\\textsubscript{}", "<ltx:sub>#1</ltx:sub>",  mode => "text");
   // This is something coming from xetex/xelatex ? Why define this way?
   //DefConstructor!("\\realsuperscript{}', "<ltx:text yoffset='0.5em'
