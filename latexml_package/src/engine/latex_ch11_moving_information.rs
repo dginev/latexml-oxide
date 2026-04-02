@@ -31,7 +31,9 @@ LoadDefinitions!({
       document.set_node(&savenode);
     }
   },
-  reversion => "", // TODO: implement for DUAL_BRANCH
+  // Perl L3847-3848: disappear in tex=/content-tex unless outside DUAL_BRANCH.
+  // Empty reversion: \label contributes no visible content to tex= attributes.
+  reversion => "",
   properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
   after_digest => sub[whatsit] {
     if let Some(arg1) = whatsit.get_arg(1) {
