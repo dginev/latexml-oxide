@@ -196,7 +196,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **D1. Header guessing row headers** — Already working: bold cells get `thead="column"` in `<thead>`.
 - [x] **D2. Equation numbering** — Already working: `(1)`, `(2)` tags produced for equation/align envs.
-- [ ] **D3. Listings escapechar + color** — `moredelim=**[is][\color{red}]{@}{@}` not processed. ~50 diff lines in various_colors.
+- [x] **D3. Listings escapechar + color** — moredelim style markup ported, escapeinside delimiter registration fixed. various_colors: 85→75 Perl diffs.
 
 ### SVG color groups — FIXED (2026-04-01)
 
