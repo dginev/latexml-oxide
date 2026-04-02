@@ -88,16 +88,16 @@ LoadDefinitions!({
 
   // \smashoperator — destructures argument to recognize operators and scripts.
   // Perl: \smashoperator[align]{op_sub_sup} → destructure → \lx@@smashoperator{align}{op}{sub}{sup}
-  // The 6-param decomposition extracts the operator token; scripts become part of the
-  // \lx@@smashoperator structure. Our stub extracts just the operator token, matching
-  // the Perl's tex reversion behavior (scripts absorbed into the operator structure).
-  DefMacro!("\\smashoperator[]{}", "\\lx@smashoperator{#1}#2{}{}{}{}{}{}\\end");
-  DefMacro!("\\lx@smashoperator{} {}{}{}{}{}{} Until:\\end", "#2");
+  // \smashoperator — passes operator+scripts through directly.
+  // Perl L112-177: full decomposition with SUMOP structure and width zeroing.
+  // Our math parser can't handle the SUMOP structure yet, so we use the simple
+  // passthrough. The visual width "smashing" is cosmetic.
+  DefMacro!("\\smashoperator[]{}", "#2");
 
-  // \adjustlimits — Perl: {lim1} DefToken InScriptStyle {lim2} DefToken InScriptStyle
-  // Produces two subscripted limit operators. The afterDigest adjusts depth/height
-  // for visual alignment — cosmetic only. Our params read 6 balanced groups where
-  // #2 and #5 are _ tokens (consumed silently by TeX when followed by subscript content).
+  // \adjustlimits — Perl L180-199: two subscripted limit operators with aligned
+  // depth/height. The afterDigest computes max depth/height — cosmetic only.
+  // We use the simple macro form since the DefConstructor structure causes
+  // cascading diffs from scriptpos='mid' attributes.
   DefMacro!("\\adjustlimits{}{}{}{}{}{}", "#1_{#3}#4_{#6}");
 
   DefConstructor!("\\SwapAboveDisplaySkip", "");
