@@ -1325,8 +1325,8 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   DefMath!("\\smallint", None, "\u{222B}",
     meaning => "integral", role => "INTOP",
+    font => { size => 9.0 },
     dynamic_scriptpos => true, mathstyle => "text");
-  // TODO: font => { size => 9 }
   DefMath!("\\sum",    None, "\u{2211}", role => "SUMOP", meaning => "sum",
     dynamic_scriptpos => true, dynamic_mathstyle => true);
   DefMath!("\\prod",   None, "\u{220F}", role => "SUMOP", meaning => "product",
