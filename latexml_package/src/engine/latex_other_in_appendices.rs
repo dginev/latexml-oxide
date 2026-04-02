@@ -123,6 +123,27 @@ LoadDefinitions!({
 
   Let!("\\@begindocumenthook", "\\@empty");
 
+  // Perl L1015-1028: float page management stubs (LaTeXML doesn't do page layout)
+  DefMacro!("\\@topnewpage{}", "#1");
+  DefMacro!("\\@next{}{}{}{}", "\\ifx#2\\@empty #4\\else\\expandafter\\@xnext #2\\@@#1#2#3\\fi");
+  Let!("\\@elt", "\\relax");
+  DefMacro!("\\@freelist", "");
+  DefMacro!("\\@currbox", "");
+  DefMacro!("\\@toplist", "");
+  DefMacro!("\\@botlist", "");
+  DefMacro!("\\@midlist", "");
+  DefMacro!("\\@currlist", "");
+  DefMacro!("\\@deferlist", "");
+  DefMacro!("\\@dbltoplist", "");
+  DefMacro!("\\@dbldeferlist", "");
+  DefMacro!("\\@startcolumn", "");
+
+  // Perl L5796-5799: .aux file stubs (no-ops since LaTeXML doesn't read .aux)
+  DefMacro!("\\bibdata{}", "");
+  DefMacro!("\\bibcite{}{}", "");
+  DefMacro!("\\citation{}", "");
+  DefMacro!("\\contentsline{}{}{}", "");
+
   DefMacro!("\\@qend", { Tokens::new(Explode!("end")) });
   DefMacro!("\\@qrelax", { Tokens::new(Explode!("relax")) });
   DefMacro!("\\@spaces", r"\space\space\space\space");
