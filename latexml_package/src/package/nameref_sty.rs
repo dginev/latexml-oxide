@@ -1,9 +1,9 @@
 use crate::prelude::*;
 LoadDefinitions!({
-  // TODO:
-  // RequirePackage!("refcount");
-  // RequirePackage!("gettitlestring");
-  // RequirePackage!("ltxcmds");
+  // Perl: loads these packages
+  RequirePackage!("refcount");
+  RequirePackage!("gettitlestring");
+  RequirePackage!("ltxcmds");
 
   // We want to display the actual "name" of the labeled structure (e.g. \section),
   //   which is accessible via show="title"
