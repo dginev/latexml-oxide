@@ -4,7 +4,7 @@
 
 Updated 2026-04-02. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 390 tests pass (337 integration + 1 post + 39+7+6 latexml_post unit tests). Full TeX→HTML pipeline with cross-references and citations: `latexml_oxide --format=html5 --dest=paper.html paper.tex`.
+**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 298 paired tests: 220 zero-diff (73%), 31,961 total diff lines. Full TeX→HTML pipeline with cross-references, citations, and ar5iv-compatible CLI: `latexml_oxide --format=html5 --pmml --mathtex --noinvisibletimes --nocomments --dest=paper.html paper.tex`.
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
