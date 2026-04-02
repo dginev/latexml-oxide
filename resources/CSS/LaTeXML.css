@@ -1,5 +1,6 @@
 /*======================================================================
  Core CSS for LaTeXML documents converted to (X)HTML */
+
 /* Generic Page layout */
 .ltx_page_header,
 .ltx_page_footer { font-size:0.8em; }
@@ -29,10 +30,11 @@
 .ltx_page_footer:before {
     content:"."; display:block; height:0; clear:both; visibility:hidden; }
 
-.ltx_page_logo     { font-size:80%; margin-top: 5px; clear:both; float:right; }
-.ltx_page_logo a   { font-variant: small-caps; }
+.ltx_page_logo     { font-size:90%; margin-top: 5px; clear:both; float:right; }
+a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_page_logo img { vertical-align:-3px; }
-
+.ltx_page_navbar .ltx_LaTeXML_logo,
+.ltx_page_logo .ltx_LaTeXML_logo { font-size:110%; }
 /* if shown */
 .ltx_page_navbar li { white-space:nowrap; display:block; overflow:hidden; }
 /* If ref got turned into span, it's "this section"*/
@@ -52,14 +54,16 @@
 .ltx_runin { display:inline; }
 .ltx_runin:after { content:" "; }
 .ltx_runin + .ltx_para,
-.ltx_runin + .ltx_para p,
-.ltx_runin + p { display:inline; }
+.ltx_runin + .ltx_para p:first-child,
+.ltx_runin + p:first-child {
+    display:inline; }
 
 .ltx_outdent { margin-left: -2em; }
 
-/* .ltx_chapter_title, etc should be in ltx-article.css etc.
- */
-.ltx_page_main { margin:0px; padding:1em 3em 1em 2em; }
+/* .ltx_chapter_title, etc should be in ltx-article.css etc. */
+.ltx_page_main { margin:0px auto;
+    padding:1em 3em 1em 2em;
+    padding:min(1em,1.5%) min(3em,4.5%) min(1em,1.5%) min(2em, 3%); }
 .ltx_tocentry  { list-style-type:none; }
 
 /* support for common author block layouts.*/
@@ -87,16 +91,81 @@
 /*======================================================================
   Para level */
 .ltx_float {
-    margin: 1ex 3em 1ex 3em; }    
-td.ltx_subfigure,
-td.ltx_subtable,
-td.ltx_subfloat { width:50%; }
+    margin: 1ex clamp(1em, 4.5%, 3em) 1ex clamp(1em, 4.5%, 3em); }
+
+/* Multiple subfigures via flexbox */
+.ltx_flex_figure {
+  display: flex;
+  flex-flow: row wrap;
+  width: auto;
+  max-width: 60rem;
+  position: relative;
+  justify-content: center;
+  align-items: baseline;
+  object-fit: contain;
+  margin-bottom: 1rem;
+}
+
+.ltx_flex_size_1,
+.ltx_flex_size_1 .ltx_tabular,
+.ltx_flex_size_1 .ltx_graphics {
+  max-width:60rem;
+}
+.ltx_flex_size_2,
+.ltx_flex_size_2 .ltx_tabular,
+.ltx_flex_size_2 .ltx_graphics {
+  max-width: calc(0.44*60rem);
+}
+.ltx_flex_size_3,
+.ltx_flex_size_3 .ltx_tabular,
+.ltx_flex_size_3 .ltx_graphics {
+  max-width: calc(0.30*60rem);
+}
+.ltx_flex_size_4,
+.ltx_flex_size_4 .ltx_tabular,
+.ltx_flex_size_4 .ltx_graphics {
+  max-width: calc(0.24*60rem);
+}
+/*Default: More than 4 items, tricky.
+  quite often intended to auto-reflow... */
+.ltx_flex_size_many,
+.ltx_flex_size_many .ltx_tabular,
+.ltx_flex_size_many .ltx_graphics {
+  max-width: calc(0.24*60rem);
+}
+
+/* flex row breaks */
+.ltx_flex_figure .ltx_flex_break {
+  flex-basis: 100%;
+  height: 0;
+}
+
+/* layout preference */
+.ltx_flex_figure .ltx_subgraphics,
+.ltx_flex_figure .ltx_subfigure,
+.ltx_flex_figure .ltx_subfloat,
+.ltx_flex_figure .ltx_subtable {
+  flex: 1 1 0px;
+  margin: 0.1rem;
+}
+.ltx_subgraphics, .ltx_subfigure, .ltx_subtable, .ltx_subfloat {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.ltx_subgraphics > .ltx_figure,
+.ltx_subfigure > .ltx_figure,
+.ltx_subtable > .ltx_figure,
+.ltx_subfloat > .ltx_figure {
+  margin:0em;
+}
+
 /* theorems, figure, tables, floats captions.. */
 /*======================================================================
  Blocks, Lists, Floats */
 .ltx_p,
 .ltx_quote,
 .ltx_block,
+.ltx_logical-block,
 .ltx_para {
     display: block; }
 
@@ -118,9 +187,21 @@ td.ltx_subfloat { width:50%; }
 .ltx_td.ltx_align_center, .ltx_th.ltx_align_center { white-space:nowrap; }
 .ltx_td.ltx_align_left.ltx_wrap,   .ltx_th.ltx_align_left.ltx_wrap,
 .ltx_td.ltx_align_right.ltx_wrap,  .ltx_th.ltx_align_right.ltx_wrap,
-.ltx_td.ltx_align_center.ltx_wrap, .ltx_th.ltx_align_center.ltx_wrap { white-space:normal; }
+.ltx_td.ltx_align_center.ltx_wrap, .ltx_th.ltx_align_center.ltx_wrap,
+.ltx_td.ltx_align_justify,  .ltx_th.ltx_align_justify { white-space:normal; }
 
-.ltx_inline-block { display:inline-block; }
+.ltx_tabular .ltx_tabular { width:100%; }
+.ltx_inline-block,
+.ltx_inline-logical-block { display:inline-block; text-indent:0px; }
+
+/* tabbing is always a standalone paragraph-level construct */
+.ltx_tabular.ltx_tabbing {
+  display: table; }
+
+/* avoid padding when aligning adjacent columns, e.g. for split decimals */
+.ltx_norightpad { padding-right:0!important; }
+.ltx_noleftpad  { padding-left:0!important; }
+.ltx_nopad      { padding:0!important; }
 
 /* equations in non-aligned mode (not normally used) */
 .ltx_eqn_div { display:block; width:95%; text-align:center; }
@@ -130,10 +211,14 @@ td.ltx_subfloat { width:50%; }
 .ltx_eqn_row   { display:table-row; }
 .ltx_eqn_cell  { display:table-cell; width:auto; }
 
-table.ltx_eqn_align tr.ltx_equation td.ltx_align_left + td.ltx_align_right { padding-left:3em; }
+/* Padding between column pairs in ams align */
+table.ltx_eqn_align tr.ltx_equation td.ltx_align_left + td.ltx_align_right,
+table.ltx_eqn_align tr.ltx_equation td.ltx_align_left + td.ltx_align_center,
+table.ltx_eqn_align tr.ltx_equation td.ltx_align_center + td.ltx_align_right,
+table.ltx_eqn_align tr.ltx_equation td.ltx_align_center + td.ltx_align_center  { padding-left:3em; }
 table.ltx_eqn_eqnarray tr.ltx_eqn_lefteqn + tr td.ltx_align_right { min-width:2em; }
 
-.ltx_eqn_eqno { max-width:0em; overflow:visible; }
+.ltx_eqn_eqno { max-width:0em; overflow:visible; white-space: nowrap; }
 .ltx_eqn_eqno.ltx_align_right .ltx_tag { float:right; }
 
 .ltx_eqn_center_padleft,
@@ -150,18 +235,25 @@ table.ltx_eqn_eqnarray tr.ltx_eqn_lefteqn + tr td.ltx_align_right { min-width:2e
     display:block; }
 .ltx_itemize .ltx_item,
 .ltx_enumerate .ltx_item {
-    display: list-item; }
+    display: list-item; white-space:nowrap; }
 
 /* Position the tag to look like a normal item bullet. */
 li.ltx_item > .ltx_tag {
     display:inline-block; margin-left:-1.5em; min-width:1.5em;
     text-align:right; }
-.ltx_item .ltx_tag + .ltx_para,
-.ltx_item .ltx_tag + .ltx_para .ltx_p  { display:inline; }
+.ltx_item .ltx_tag + .ltx_para {
+    display:inline-block; vertical-align:top;}
+.ltx_item .ltx_tag + .ltx_para .ltx_p  {
+    display:inline; }
+.ltx_item > .ltx_para > .ltx_p:first-child {
+    text-indent:0em; }
+
+.ltx_item > .ltx_para > .ltx_p { margin-top:0em; margin-bottom:0em; }
+dd.ltx_item { margin-bottom:0.5em; }
 
 /* NOTE: Need to try harder to get runin appearance? */
 dl.ltx_description dt { margin-right:0.5em; float:left;
-                    font-weight:bold; font-size:95%; }
+                        font-weight:bold; font-size:95%; }
 dl.ltx_description dd { margin-left:5em; }
 dl.ltx_description dl.ltx_description dd { margin-left:3em; }
 
@@ -171,10 +263,10 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
 
 /* Bibliographies */
 .ltx_bibliography dt { margin-right:0.5em; float:left; }
-.ltx_bibliography dd { margin-left:3em; }
+.ltx_bibliography dd { margin-left: clamp(1em, 4.5%, 3em); }
 /*.ltx_biblist { list-style-type:none; }*/
 .ltx_bibitem { list-style-type:none; }
-.ltx_bibtag { font-weight:bold; margin-left:-2em; width:3em; }
+.ltx_bibitem .ltx_tag { font-weight:bold; margin-left:-2em; width:3em; }
 /*.bibitem-tag + div { display:inline; }*/
 .ltx_bib_title { font-style:italic; }
 .ltx_bib_article .bib-title { font-style:normal !important; }
@@ -188,16 +280,17 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
 /* Listings */
 .ltx_listing {
     display:block;
-    margin: 1ex 3em 1ex 3em;
+    margin: 1ex 3em 1ex 0em;
     overflow-x:auto;
     text-align: left; }
 .ltx_float .ltx_listing {
     margin: 0; }
 .ltx_listingline { white-space:nowrap; min-height:1em; }
+.ltx_lst_space { white-space: pre; }
 .ltx_lst_numbers_left .ltx_listingline .ltx_tag {
     background-color:transparent;
     margin-left:-3em; width:2.5em;
-    position:absolute; 
+    position:absolute;
     text-align:right; }
 .ltx_lst_numbers_right .ltx_listingline .ltx_tag {
     background-color:transparent;
@@ -208,7 +301,9 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
     position:absolute; left:0em;
     max-width:0em; text-align:right; }
 */
-.ltx_parbox {text-indent:0em; }
+.ltx_parbox {
+    text-indent:0em;
+    display: inline-block; }
 
 /* NOTE that it is CRITICAL to put position:relative outside & absolute inside!!
    I wish I understood why!
@@ -221,7 +316,9 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
     display:block;
     position:absolute;bottom:0pt;left:0pt; }
 .ltx_transformed_inner > .ltx_p {text-indent:0em; margin:0; padding:0; }
+
 /* If simulating a table (html5), try to get rowspan to work...sorta? */
+span.ltx_tabular { position:relative; }
 span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 
 /* by default, p doesn't indent */
@@ -232,16 +329,25 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 
 /*======================================================================
   Columns */
-.ltx_page_column1 {
-    width:44%; float:left; } /* IE uses % of wrong container*/
+.ltx_page_columns {
+    display: flex; }
+.ltx_page_column1,
 .ltx_page_column2 {
-    width:44%; float:right; }
-.ltx_page_columns > .ltx_page_column1 {
-    width:48%; float:left; }
-.ltx_page_columns > .ltx_page_column2 {
-    width:48%; float:right; }
-.ltx_page_columns:after {
-    content:"."; display:block; height:0; clear:both; visibility:hidden; }
+    flex:100%;
+    margin: 0 20px;
+ }
+@media screen and (max-width: 60em){
+  .ltx_page_columns {
+     flex-direction: column; }
+  .ltx_page_column1 > ul,
+  .ltx_page_column1 > ol,
+  .ltx_page_column1 > dl {
+     margin-bottom: 0; }
+  .ltx_page_column2 > ul,
+  .ltx_page_column2 > ol,
+  .ltx_page_column2 > dl {
+     margin-top: 0; }
+}
 
 /*======================================================================
  Borders and such */
@@ -254,9 +360,23 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 .ltx_td,
 .ltx_th      { display:table-cell; }
 
-.ltx_framed  { border:1px solid black;}
 .ltx_tabular .ltx_td,
 .ltx_tabular .ltx_th { padding:0.1em 0.5em; }
+.ltx_tabular .ltx_td.ltx_nopad_l,
+.ltx_tabular .ltx_th.ltx_nopad_l { padding-left:0; }
+.ltx_tabular .ltx_td.ltx_nopad_r,
+.ltx_tabular .ltx_th.ltx_nopad_r { padding-right:0; }
+
+/* min-height does NOT apply to tr! */
+.ltx_tabular .ltx_tr td:first-child::after,
+.ltx_tabular .ltx_tr th:first-child::after {
+   content: "";
+   display: inline-block;
+   vertical-align: top;
+   min-height: 1em;
+}
+
+
 /* regular lines */
 .ltx_border_t  { border-top:1px solid black; }
 .ltx_border_r  { border-right:1px solid black; }
@@ -273,6 +393,8 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 .ltx_border_B  { border-bottom:1px solid gray; }
 .ltx_border_L  { border-left:1px solid gray; }
 /* Framing */
+.ltx_framed    { padding:3pt; }
+span.ltx_framed       { display:inline-block; text-indent:0; } /* avoid padding/margin collapse */
 .ltx_framed_rectangle { border-style:solid; border-width:1px; }
 .ltx_framed_top       { border-top-style:solid; border-top-width:1px; }
 .ltx_framed_left      { border-left-style:solid; border-left-width:1px; }
@@ -283,6 +405,8 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
                         border-bottom-style:solid; border-bottom-width:1px; }
 .ltx_framed_leftright { border-left-style:solid; border-left-width:1px;
                         border-right-style:solid; border-right-width:1px; }
+
+.ltx_rule { vertical-align: bottom; height: 0.4pt; width: 0.4pt; }
 
 /*======================================================================
  Misc */
@@ -295,7 +419,7 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 .ltx_note_content {
      max-width: 70%; font-size:90%; left:15%;
      text-align:left;
-     background-color: white; 
+     background-color: white;
      padding: 0.5em 1em 0.5em 1.5em;
      border: 1px solid black; border-radius: 0 5px 5px 5px; box-shadow: 5px 5px 10px gray; }
 .ltx_note_mark    { color:blue; }
@@ -305,18 +429,44 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 .ltx_note:hover .ltx_note_content,
 .ltx_note .ltx_note_content:hover {
    display:block; position:absolute; z-index:10; }
+.ltx_note.ltx_marginpar_left { display:none; }
 
 .ltx_ERROR        { color:red; }
 .ltx_rdf          { display:none; }
-.ltx_missing      { color:red;} 
+.ltx_missing      { color:red;}
 .ltx_nounicode    { color:red; }
+.ltx_nodisplay    { display:none; }
 /*======================================================================
- SVG (pgf/tikz ?) basics */
-
+ SVG (pgf/tikz & xy) basics
+ */
+/* Heuristically adjust for content uncentered within line-box */
+foreignObject {
+    translate: 0 0.1em;
+    --ltx-fo-width: 100%; }
+/* Use flex to vertically center foreignObject,
+   to accommodate potentially tall line-box */
+.ltx_foreignobject_container {
+    display:flex;
+    align-items:center;
+    height:100%;
+    width:var(--ltx-fo-width);
+}
+/* Also horizontally for single math, since Chrome adds a lot of left/right spacing. */
+.ltx_foreignobject_container:has( > .ltx_foreignobject_content > math:only-child) {
+    justify-content:center;
+}
+/* If multiple children, give more space to avoid unexpected line breaks
+   due to font differences. */
+.ltx_foreignobject_container:has( > .ltx_foreignobject_content > :not(:only-child)) {
+    width:calc(1.1 * var(--ltx-fo-width));
+}
+/* line height 0 just for this layer, to keep the line-box compact */
+.ltx_foreignobject_content {
+    display:block;
+}
 /* Stuff appearing in svg:foreignObject */
 .ltx_svg_fog foreignObject  { margin:0; padding:0; overflow:visible; }
 .ltx_svg_fog foreignObject > p { margin:0; padding:0; display:block; }
-/*.ltx_svg_fog foreignObject > p { margin:0; padding:0; display:block; white-space:nowrap; }*/
 
 /*======================================================================
  Low-level Basics */
@@ -335,13 +485,24 @@ span.ltx_rowspan { position:absolute; top:0; bottom:0; }
 .ltx_font_upright    { font-style: normal; font-variant:normal; }
 .ltx_font_slanted    { font-style: oblique; font-variant:normal; }
 .ltx_font_smallcaps  { font-variant: small-caps; font-style:normal; }
-.ltx_font_oldstyle   { font-variant: oldstyle-nums;  /* experimental css3 ? Doesn't seem to work!*/
-                       font-style:normal; 
-                       -moz-font-feature-settings: "onum";
-                       -ms-font-feature-settings: "onum";
-                       -webkit-font-feature-settings: "onum";
-                       font-variant-numeric: oldstyle-nums; }
+.ltx_font_oldstyle   { font-variant-numeric: oldstyle-nums; }
 .ltx_font_mathcaligraphic { font-family: "Lucida Calligraphy", "Zapf Chancery","URW Chancery L"; }
+/* Fallbacks for when content+mathvariant cannot be mapped to Unicode */
+.ltx_mathvariant_italic        { font-style: italic; }
+.ltx_mathvariant_bold          { font-weight: bold; }
+.ltx_mathvariant_bold-italic   { font-style: italic; font-weight: bold; }
+.ltx_mathvariant_sans-serif             { font-family: sans-serif; }
+.ltx_mathvariant-bold-sans-serif        { font-family: sans-serif; font-weight: bold; }
+.ltx_mathvariant-sans-serif-italic      { font-family: sans-serif; font-style: italic; }
+.ltx_mathvariant-bold-sans-serif-italic { font-family: sans-serif; font-style: italic; font-weight: bold; }
+.ltx_mathvariant_monospace     { font-family: monospace; }
+/* Can we say anything generic about double-struck, script or fraktur ? */
+.ltx_mathvariant_double-struck { font-weight: bold; }
+.ltx_mathvariant_script        { font-family: "Lucida Calligraphy", "Zapf Chancery","URW Chancery L", cursive; }
+.ltx_mathvariant_bold-script   { font-family: "Lucida Calligraphy", "Zapf Chancery","URW Chancery L", cursive; font-weight: bold; }
+.ltx_mathvariant-fraktur       { }/* ??? */
+.ltx_mathvariant_bold-fraktur  { font-weight: bold; }
+
 /*
 
 .ltx_font_mathscript { ? }
@@ -357,20 +518,90 @@ cite                 { font-style: normal; }
 /* Dubious stuff */
 .ltx_hflipped {
     display:inline-block;
-    -moz-transform: scaleX(-1);
-    -o-transform: scaleX(-1);
-    -webkit-transform: scaleX(-1);
-    transform: scaleX(-1);
-    filter: FlipH;
-    -ms-fliter: "FlipH"; }
+    transform: scaleX(-1); }
 .ltx_vflipped {
     display:inline-block;
-    -moz-transform: scaleY(-1);
-    -o-transform: scaleY(-1);
-    -webkit-transform: scaleY(-1);
-    transform: scaleY(-1);
-    filter: FlipV;
-    -ms-fliter: "FlipV"; }
+    transform: scaleY(-1); }
 
 /* .ltx_phantom handled in xslt */
 
+.ltx_minipage {
+  align-self: normal;
+  display: inline-block;
+}
+.ltx_minipage > .ltx_graphics {
+  max-width:100%;
+}
+
+.ltx_overlay {position:relative; }
+.ltx_overlay > span:nth-child(2) {position:absolute; left:0; }
+
+/* Apply light/dark color mode themes */
+@media (prefers-color-scheme: light) {
+  [style*="--ltx-fg-color:"] {
+    color: var(--ltx-fg-color);
+  }
+  [style*="--ltx-bg-color:"] {
+    background-color: var(--ltx-bg-color);
+  }
+  [style*="--ltx-border-color:"] {
+    border-color: var(--ltx-border-color);
+  }
+  [style*="--ltx-fill-color:"] {
+    fill: var(--ltx-fill-color);
+  }
+  [style*="--ltx-stroke-color:"] {
+    stroke: var(--ltx-stroke-color);
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    background-color: black;
+    color: white;
+  }
+  /* The :root rule does not appear to propagate color: into SVG foreignObject */
+  .ltx_foreignobject_content {
+    color: var(--fn-fg-color-to-dark-mode, white);
+  }
+  /* We eventually want to cover the full range of possible attributes where color
+      customization is expected in latexml's HTML format. This will be easier once
+      CSS @function becomes widely available in browsers.
+
+    Emulate a "function" via a custom property, declared on each node of interest.
+    Note that we may have multiple color properties set at the same time, for example
+    both foreground and background color, which could lead to a var naming collision.
+    So we are carefully using different variable names. */ 
+  [style*="color:"] {
+    --fn-fg-color-to-dark-mode:
+      hsl(from var(--ltx-fg-color)
+        h s calc(100 - l));
+    --fn-bg-color-to-dark-mode:
+      hsl(from var(--ltx-bg-color)
+        h s calc(100 - l));
+    --fn-border-color-to-dark-mode:
+      hsl(from var(--ltx-border-color)
+        h s calc(100 - l));
+    --fn-fill-color-to-dark-mode:
+      hsl(from var(--ltx-fill-color)
+        h s calc(100 - l));
+    --fn-stroke-color-to-dark-mode:
+      hsl(from var(--ltx-stroke-color)
+        h s calc(100 - l));
+  }
+  /* Apply the function to the correct color property in context: */
+  [style*="--ltx-fg-color:"] {
+    color: var(--fn-fg-color-to-dark-mode); 
+  }
+  [style*="--ltx-bg-color:"] {
+    background-color: var(--fn-bg-color-to-dark-mode);
+  }
+  [style*="--ltx-border-color:"] {
+    border-color: var(--fn-border-color-to-dark-mode);
+  }
+  [style*="--ltx-fill-color:"] {
+    fill: var(--fn-fill-color-to-dark-mode);
+  }
+  [style*="--ltx-stroke-color:"] {
+    stroke: var(--fn-stroke-color-to-dark-mode);
+  }
+}

@@ -1,5 +1,6 @@
 
 .ltx_title_document      { font-size:170%; text-align:center; margin:1em 0 1em 0; }
+.ltx_dates,
 .ltx_authors,
 .ltx_role_author         { text-align:center; margin:1em 0 1em 0; }
 .ltx_role_author .ltx_personname  { font-size: 120%; }
@@ -20,7 +21,11 @@
 
 .ltx_title_part          { font-size:250%; font-weight:bold; margin-bottom:1em; }
 .ltx_title_appendix,
+.ltx_title_bibliography,
+.ltx_title_index,
+.ltx_title_glossary,
 .ltx_title_chapter       { font-size:250%; font-weight:bold; margin-bottom:1em; }
+.ltx_title_appendix .ltx_tag,
 .ltx_title_chapter .ltx_tag { display:block; font-size:90%; margin-bottom:0.5em; }
 .ltx_title_section       { font-size:140%; font-weight:bold; margin-bottom:1em; }
 .ltx_title_subsection    { font-size:120%; font-weight:bold; margin-bottom:1em; }
@@ -48,13 +53,16 @@
 .ltx_table .ltx_caption,
 .ltx_figure .ltx_caption { text-align:justify; }
 
-/* first p in para gets indented */
-.ltx_para > .ltx_p:first-child { text-indent:2em; }
+/* first p in para gets indented; , even 1st in section if marked "no" first child */
+.ltx_para > .ltx_p:first-child,
+section.ltx_pruned_first > .ltx_title + .ltx_para > .ltx_p,
+section.ltx_indent_first > .ltx_title + .ltx_para > .ltx_p { text-indent:2em; }
 /* except the initial in a section */
 section > .ltx_title +.ltx_para > .ltx_p,
 section > .ltx_title +.ltx_date +.ltx_para > .ltx_p {text-indent:0em; }
 
-.ltx_itemize { margin-left:1em; }
+.ltx_itemize,
+.ltx_enumerate { margin-left:1em; }
 
 .ltx_theorem { margin-top:0.5em; margin-bottom:0.5em; }
 .ltx_theorem .ltx_title { margin-bottom:0.1em; font-weight:normal; }
