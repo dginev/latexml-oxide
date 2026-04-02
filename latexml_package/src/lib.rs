@@ -206,6 +206,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "cleveref.sty" => package::cleveref_sty::load_definitions(),
     "hypcap.sty" => package::hypcap_sty::load_definitions(),
     "hyperref.sty" => package::hyperref_sty::load_definitions(),
+    "IEEEtran.cls" => package::ieeetran_cls::load_definitions(),
     "hyperxmp.sty" => package::hyperxmp_sty::load_definitions(),
     "nameref.sty" => package::nameref_sty::load_definitions(),
     "nomencl.sty" => package::nomencl_sty::load_definitions(),
