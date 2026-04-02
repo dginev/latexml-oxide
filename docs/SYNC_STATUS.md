@@ -210,7 +210,7 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 - [x] **A7. `--path=<dir>`** — add search paths for finding packages and inputs. Repeatable. Passed to `CoreOptions::search_paths`.
 - [x] **A8. `--mathtex`** — wraps PMML in `<m:semantics>` with `<m:annotation encoding='application/x-tex'>` containing the formula's TeX source.
 - [x] **A9. `--noinvisibletimes`** — replaces invisible times (U+2062) with zero-width space (U+200B) in MathML. Thread-local flag in presentation.rs.
-- [ ] **A10. `--timeout=<seconds>`** — conversion timeout. Perl uses `alarm()` signal. Need: timeout wrapper around conversion, possibly via `std::thread` + timeout.
+- [x] **A10. `--timeout=<seconds>`** — conversion timeout via thread-local deadline checked in the digest loop. Fatal error on timeout.
 - [x] **A11. `--nocomments`** — omit XML comments from output. Maps to `CoreOptions::include_comments = Some(false)`.
 
 ### Diff reduction tasks

@@ -1,8 +1,35 @@
 use once_cell::sync::Lazy;
 use std::borrow::Cow;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::rc::Rc;
+use std::time::Instant;
+
+// Conversion timeout: thread-local deadline. When set, digest loops check it.
+thread_local! {
+  static CONVERSION_DEADLINE: Cell<Option<Instant>> = const { Cell::new(None) };
+}
+
+/// Set a conversion timeout (seconds from now). 0 = no timeout.
+pub fn set_timeout(seconds: u64) {
+  if seconds > 0 {
+    CONVERSION_DEADLINE.with(|d| d.set(Some(Instant::now() + std::time::Duration::from_secs(seconds))));
+  } else {
+    CONVERSION_DEADLINE.with(|d| d.set(None));
+  }
+}
+
+/// Check if conversion has timed out. Returns Err if deadline exceeded.
+pub fn check_timeout() -> Result<()> {
+  CONVERSION_DEADLINE.with(|d| {
+    if let Some(deadline) = d.get() {
+      if Instant::now() > deadline {
+        fatal!(Timeout, Convert, "Conversion timed out!");
+      }
+    }
+    Ok(())
+  })
+}
 
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
@@ -619,6 +646,8 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     Some(comment) => Some(comment),
     None => gullet::read_x_token(Some(true), false, None)?,
   } {
+    // Check conversion timeout
+    check_timeout()?;
     // done if we run out of tokens
     found_token = true;
     // first, check for alignment case
