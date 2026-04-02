@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let preload_flags = extract_flags(&mut argv, "--preload");
   let path_flags = extract_flags(&mut argv, "--path");
   // Timeout
-  let _timeout_flag = extract_flag(&mut argv, "--timeout"); // TODO: implement timeout (A10)
+  let timeout_flag = extract_flag(&mut argv, "--timeout");
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
@@ -114,6 +114,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
   } else {
     // Normal mode: convert document
+    // Set conversion timeout if specified
+    if let Some(ref timeout_str) = timeout_flag {
+      if let Ok(secs) = timeout_str.parse::<u64>() {
+        latexml_core::stomach::set_timeout(secs);
+      }
+    }
     let response = converter.convert(source);
     if let Some(xml) = response.result {
       // Auto-select stylesheet from --format
