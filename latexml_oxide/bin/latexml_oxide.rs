@@ -36,9 +36,18 @@ fn main() -> Result<(), Box<dyn Error>> {
   let stylesheet_flag = extract_flag(&mut argv, "--stylesheet");
   let format_flag = extract_flag(&mut argv, "--format");
   let nodefaultresources_flag = argv.iter().any(|a| a == "--nodefaultresources");
+  let nocomments_flag = argv.iter().any(|a| a == "--nocomments");
+  let nomathparse_flag = argv.iter().any(|a| a == "--nomathparse");
+  // Repeatable flags
+  let css_flags = extract_flags(&mut argv, "--css");
+  let preload_flags = extract_flags(&mut argv, "--preload");
+  let path_flags = extract_flags(&mut argv, "--path");
+  // Timeout
+  let _timeout_flag = extract_flag(&mut argv, "--timeout"); // TODO: implement timeout (A10)
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
-    "--noscan", "--nocrossref", "--nodefaultresources"].contains(&a.as_str()));
+    "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
+    "--nomathparse"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -79,6 +88,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     mode:                    None,
     bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+    preload:                 if preload_flags.is_empty() { None } else { Some(preload_flags) },
+    search_paths:            if path_flags.is_empty() { None } else { Some(path_flags) },
+    include_comments:        if nocomments_flag { Some(false) } else { None },
+    nomathparse:             if nomathparse_flag { Some(true) } else { None },
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
@@ -125,6 +138,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           effective_stylesheet.as_deref(),
           target.as_deref(),
           nodefaultresources_flag,
+          &css_flags,
         );
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -156,6 +170,7 @@ fn run_post_processing(
   stylesheet: Option<&str>,
   destination: Option<&str>,
   nodefaultresources: bool,
+  css_files: &[String],
 ) -> String {
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
@@ -222,8 +237,13 @@ fn run_post_processing(
       "resources/XSLT".to_string(),
       ".".to_string(),
     ];
+    // Pass --css files as XSLT parameter (Perl: $params{CSS} = '"file1|file2"')
+    let mut xslt_params = std::collections::HashMap::new();
+    if !css_files.is_empty() {
+      xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_files.join("|")));
+    }
     match latexml_post::xslt::XSLT::new(
-      xsl_path, std::collections::HashMap::new(), nodefaultresources, None, searchpaths
+      xsl_path, xslt_params, nodefaultresources, None, searchpaths
     ) {
       Ok(xslt) => processors.push(Box::new(xslt)),
       Err(e) => eprintln!("Post-processing: XSLT error: {}", e),
@@ -249,4 +269,16 @@ fn extract_flag(argv: &mut Vec<String>, prefix: &str) -> Option<String> {
   } else {
     None
   }
+}
+
+/// Extract ALL occurrences of a `--flag=value` argument (for repeatable flags like --css, --path)
+fn extract_flags(argv: &mut Vec<String>, prefix: &str) -> Vec<String> {
+  let eq_prefix = format!("{}=", prefix);
+  let mut values = Vec::new();
+  while let Some(pos) = argv.iter().position(|a| a.starts_with(&eq_prefix)) {
+    let val = argv[pos][eq_prefix.len()..].to_string();
+    argv.remove(pos);
+    values.push(val);
+  }
+  values
 }

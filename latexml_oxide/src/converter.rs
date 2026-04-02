@@ -33,6 +33,13 @@ pub struct Converter {
 impl Converter {
   // TODO: use the config
   pub fn from_config(opts: Config) -> Converter {
+    let core = Core::new(CoreOptions {
+      include_comments: opts.include_comments.or(Some(true)),
+      preload:          opts.preload.clone(),
+      search_paths:     opts.search_paths.clone(),
+      nomathparse:      opts.nomathparse,
+      ..CoreOptions::default()
+    });
     Converter {
       runtime: Runtime {
         status:      String::new(),
@@ -40,11 +47,7 @@ impl Converter {
       },
       ready: false,
       opts,
-      core: Core::new(CoreOptions {
-        // Perl defaults includecomments => 1 for normal conversion
-        include_comments: Some(true),
-        ..CoreOptions::default()
-      }),
+      core,
     }
   }
   pub fn initialize_session(&mut self) -> Result<()> {
