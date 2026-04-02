@@ -2,9 +2,9 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-01. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-02. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 382 tests pass (335 integration + 1 post + 39+7 latexml_post). 296 paired tests: 240 effectively zero-diff (81%), 17,575 real diff lines. Full TeX→HTML pipeline with cross-references and citations: `latexml_oxide --format=html5 --dest=paper.html paper.tex`.
+**Test inventory:** 390 tests pass (337 integration + 1 post + 39+7+6 latexml_post unit tests). Full TeX→HTML pipeline with cross-references and citations: `latexml_oxide --format=html5 --dest=paper.html paper.tex`.
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
@@ -127,7 +127,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | ntheorem.sty | GAPS | Missing: `\colorbox` for shaded theorems |
 | caption.sty | MINOR | Missing: KeyVals, CAPTION_ value storage |
 
-All other packages OK: calc, report, appendix, multicol, booktabs, remreset, chngcntr, physics (0 diffs), siunitx (1817 lines), tikz+pgf (7/7 pass), expl3 (37K lines load), babel (6 pass), moderncv (2 pass), beamer (2 pass).
+All other packages OK: calc, report, appendix, multicol, booktabs, remreset, chngcntr, physics (0 diffs), siunitx (1817 lines), tikz+pgf (7/7 pass), expl3 (37K lines load), babel (6 pass), moderncv (2 pass), beamer (2 pass). txfonts: ~130 symbols ported.
 
 ---
 
@@ -165,7 +165,7 @@ Fresh Perl diffs (after stripping tex= and %&#10;):
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-04-01):** 390 pass, 0 fail, 0 ignored.
+**Status (2026-04-02):** 390 pass, 0 fail, 0 ignored.
 
 ### Completed infrastructure
 - [x] **F. Post-processing pipeline** — `latexml_post` crate (12,300+ lines, 25 modules). MathML Presentation+Content, XSLT via libxslt FFI.
