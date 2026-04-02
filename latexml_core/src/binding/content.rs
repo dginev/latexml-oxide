@@ -200,6 +200,19 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // TODO: This needs reorganization, bindings are not found as "files" in rust,
   // we need to have a registry (we don't yet)
 
+  // Perl: early-stop if already loaded (checks request_loaded, name_loaded, etc.)
+  // This prevents double-loading and breaks circular loading chains.
+  // IMPORTANT: check BEFORE printing "Loading..." message to avoid spurious output.
+  let loaded_key = s!("{filename}_loaded");
+  if !options.reloadable && lookup_bool(&loaded_key) {
+    return Ok(());
+  }
+  // Also check without extension (Perl checks name_loaded too)
+  let name_loaded_key = s!("{name}_loaded");
+  if !options.reloadable && name != filename && lookup_bool(&name_loaded_key) {
+    return Ok(());
+  }
+
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", filename));
   def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
@@ -233,19 +246,6 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     digest(Tokens!(
       T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
     ))?;
-  }
-
-  // Perl: early-stop if already loaded (checks request_loaded, name_loaded, etc.)
-  // This prevents double-loading and breaks circular loading chains.
-  let loaded_key = s!("{filename}_loaded");
-  if !options.reloadable && lookup_bool(&loaded_key) {
-    note_end(&filename);
-    return Ok(());
-  }
-  // Also check without extension (Perl checks name_loaded too)
-  let name_loaded_key = s!("{name}_loaded");
-  if !options.reloadable && name != filename && lookup_bool(&name_loaded_key) {
-    return Ok(());
   }
 
   // Catch Fatal errors during binding loading (e.g., token limit exceeded during
