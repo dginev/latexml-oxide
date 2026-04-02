@@ -220,20 +220,34 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMWrap rule='kludge'>#1</ltx:XMWrap>)(#1)",
     enter_horizontal => true,
     reversion => "#1");
-  // TODO:
-  // DefConstructor!("\\lx@padded[MuDimension]{MuDimension}{}",
-  //   "#3",
-  //   afterConstruct => sub {
-  //     my ($document, $whatsit) = @_;
-  //     my $node = $document->getLastChildElement($document->getNode);
-  //     if ($document->getNodeQName($node) eq 'ltx:XMDual') {
-  //       my (@ch) = $node->childNodes;
-  //       $node = $ch[1]; }
-  //     if (my $lpadding = $whatsit->getArg(1)) {
-  //       $document->setAttribute($node, lpadding => $lpadding); }
-  //     if (my $rpadding = $whatsit->getArg(2)) {
-  //       $document->setAttribute($node, rpadding => $rpadding); } },
-  //   reversion => '#3');
+  // Perl L197-209: \lx@padded sets lpadding/rpadding on the absorbed content.
+  // afterConstruct sets attributes on the last child (skipping XMDual wrapper).
+  DefConstructor!("\\lx@padded[MuDimension]{MuDimension}{}",
+    "#3",
+    after_construct => sub[document, whatsit] {
+      let node = document.get_node();
+      if let Some(mut last) = node.get_last_child() {
+        // If last child is XMDual, use its second child (presentation)
+        if document::with_node_qname(&last, |qn| qn == "ltx:XMDual") {
+          if let Some(ch2) = last.get_child_nodes().into_iter().nth(1) {
+            last = ch2;
+          }
+        }
+        if let Some(lpad) = whatsit.get_arg(0) {
+          let val = lpad.to_string();
+          if !val.is_empty() {
+            document.set_attribute(&mut last, "lpadding", &val)?;
+          }
+        }
+        if let Some(rpad) = whatsit.get_arg(1) {
+          let val = rpad.to_string();
+          if !val.is_empty() {
+            document.set_attribute(&mut last, "rpadding", &val)?;
+          }
+        }
+      }
+    },
+    reversion => "#3");
 
   // #======================================================================
   // # Building XMDuals for Mathematical Parallel markup

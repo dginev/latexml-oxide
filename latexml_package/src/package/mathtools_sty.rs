@@ -557,7 +557,10 @@ LoadDefinitions!({
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
   DefPrimitive!("\\@end@multlined", { egroup()?; });
 
-  // \shoveright / \shoveleft — TODO: \@MT@shove has complex sub{} body
+  // Perl L590-599: \@MT@shove stores alignment direction for current row.
+  // Perl: LookupValue('Alignment')->currentRowNumber → sets MULTIROW_ALIGNMENT_RULE hash.
+  // Currently passes content through; the alignment shifting is cosmetic
+  // and requires deep integration with the alignment row tracking.
   DefMacro!("\\shoveright[]{}", "#2");
   DefMacro!("\\shoveleft[]{}", "#2");
 

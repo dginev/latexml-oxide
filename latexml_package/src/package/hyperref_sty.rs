@@ -5,31 +5,24 @@ LoadDefinitions!({
   // Perl #2736: newer hyperref.sty depends on etoolbox.sty
   RequirePackage!("iftex");
   RequirePackage!("etoolbox");
-  // Some of the requirements not yet applicable/supported in latexml
-  //TODO: RequirePackage!("ltxcmds");
-  //RequirePackage("pdftexcmds");
-  //RequirePackage("infwarerr");
-
-  // This is actually important in practice (arXiv), and its location is sensitive
-  // in a complex document the order between loading keyval.sty and xkeyval.sty
-  // determines the argument patterns to some macros, e.g. \setkeys
-  // so emulating the exact raw .sty order of loading is the only way to ensure
-  // robust conversions in latexml for all files that succeed in pdflatex
-  //TODO: RequirePackage!("keyval");
-
-  //TODO: RequirePackage!("kvsetkeys");
-  //TODO: RequirePackage!("kvdefinekeys");
-  //RequirePackage("pdfescape");
-  //RequirePackage("hycolor");
-  //RequirePackage("letltxmacro");
-  //RequirePackage("auxhook");
-  //TODO: RequirePackage!("kvoptions");
-  //RequirePackage("intcalc");
-  //RequirePackage("etexcmds");
+  // Perl: loads these packages to match hyperref's real dependencies
+  RequirePackage!("ltxcmds");
+  //RequirePackage("pdftexcmds");  // not ported
+  //RequirePackage("infwarerr");   // not ported
+  RequirePackage!("keyval");
+  RequirePackage!("kvsetkeys");
+  RequirePackage!("kvdefinekeys");
+  //RequirePackage("pdfescape");   // not ported
+  //RequirePackage("hycolor");     // not ported
+  //RequirePackage("letltxmacro"); // not ported
+  //RequirePackage("auxhook");     // not ported
+  RequirePackage!("kvoptions");
+  //RequirePackage("intcalc");     // not ported
+  //RequirePackage("etexcmds");    // not ported
   RequirePackage!("nameref");
   RequirePackage!("url");
-  //TODO: RequirePackage!("bitset");
-  //RequirePackage("atbegshi");
+  RequirePackage!("bitset");
+  //RequirePackage("atbegshi");    // not ported
 
   // Can we load hyperref, to get all it's random sundry definitions?
   // No, too many weird extra packages loaded.
