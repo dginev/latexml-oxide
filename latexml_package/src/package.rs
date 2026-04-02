@@ -1,4 +1,5 @@
 pub mod algorithm2e_sty;
+pub mod ar5iv_sty;
 pub mod algorithmic_sty;
 pub mod amstex_sty;
 // Supported package bindings

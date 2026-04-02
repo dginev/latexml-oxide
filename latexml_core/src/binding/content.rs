@@ -696,7 +696,9 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
 
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
-fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
+/// Perl Package.pm: PassOptions($name, $ext, @options)
+/// Stores options to be processed when the package/class is loaded.
+pub fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
   let key = s!("opt@{}.{}", name, ext);
   for opt in options {
     push_value(&key, arena::pin(&opt))?;

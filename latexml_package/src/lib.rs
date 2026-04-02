@@ -88,6 +88,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "neurips_2020.sty" => package::neurips_sty::load_definitions(),
     "neurips_2021.sty" => package::neurips_sty::load_definitions(),
     "algorithm2e.sty" => package::algorithm2e_sty::load_definitions(),
+    "ar5iv.sty" => package::ar5iv_sty::load_definitions(),
     "algorithmic.sty" => package::algorithmic_sty::load_definitions(),
     "numprint.sty" => package::numprint_sty::load_definitions(),
     "titling.sty" => package::titling_sty::load_definitions(),
