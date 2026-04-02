@@ -1716,7 +1716,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p9">
       <equation xml:id="S4.Ex31">
-        <Math mode="display" tex="\begin{vmatrix}a&amp;blblblbllbblblblblblblbl\\&#10;c&amp;d\end{vmatrix}" text="determinant@(matrix@(Array[[a, blblblbllbblblblblblblbl], [c, d]]))" xml:id="S4.Ex31.m1">
+        <Math mode="display" tex="\begin{vmatrix}[l]a&amp;blblblbllbblblblblblblbl\\&#10;c&amp;d\end{vmatrix}" text="determinant@(matrix@(Array[[a, blblblbllbblblblblblblbl], [c, d]]))" xml:id="S4.Ex31.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1730,10 +1730,10 @@ Then a switch of tag forms.</p>
                 <XMTok role="OPEN" stretchy="true">|</XMTok>
                 <XMArray xml:id="S4.Ex31.m1.1">
                   <XMRow>
-                    <XMCell align="center">
+                    <XMCell align="left">
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                     </XMCell>
-                    <XMCell align="center">
+                    <XMCell align="left">
                       <XMArg rule="Anything">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
@@ -1763,10 +1763,10 @@ Then a switch of tag forms.</p>
                     </XMCell>
                   </XMRow>
                   <XMRow>
-                    <XMCell align="center">
+                    <XMCell align="left">
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
                     </XMCell>
-                    <XMCell align="center">
+                    <XMCell align="left">
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                     </XMCell>
                   </XMRow>
@@ -1780,7 +1780,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p10">
       <equation xml:id="S4.Ex32">
-        <Math mode="display" tex="\begin{bmatrix}a&amp;-b\\&#10;-c&amp;d\end{bmatrix}\begin{bmatrix}a&amp;-b\\&#10;-c&amp;d\end{bmatrix}" text="matrix@(Array[[a, - b], [- c, d]]) * matrix@(Array[[a, - b], [- c, d]])" xml:id="S4.Ex32.m1">
+        <Math mode="display" tex="\begin{bmatrix}a&amp;-b\\&#10;-c&amp;d\end{bmatrix}\begin{bmatrix}[r]a&amp;-b\\&#10;-c&amp;d\end{bmatrix}" text="matrix@(Array[[a, - b], [- c, d]]) * matrix@(Array[[a, - b], [- c, d]])" xml:id="S4.Ex32.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1827,10 +1827,10 @@ Then a switch of tag forms.</p>
                   <XMTok role="OPEN" stretchy="true">[</XMTok>
                   <XMArray xml:id="S4.Ex32.m1.2">
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
@@ -1838,13 +1838,13 @@ Then a switch of tag forms.</p>
                       </XMCell>
                     </XMRow>
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
                         </XMApp>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                       </XMCell>
                     </XMRow>
@@ -1859,7 +1859,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p11">
       <equation xml:id="S4.Ex33">
-        <Math mode="display" tex="\begin{Vmatrix}e&amp;-f\\&#10;-g&amp;h\end{Vmatrix}\begin{Vmatrix}e&amp;-f\\&#10;-g&amp;h\end{Vmatrix}" text="norm@(matrix@(Array[[e, - f], [- g, h]])) * norm@(matrix@(Array[[e, - f], [- g, h]]))" xml:id="S4.Ex33.m1">
+        <Math mode="display" tex="\begin{Vmatrix}e&amp;-f\\&#10;-g&amp;h\end{Vmatrix}\begin{Vmatrix}[r]e&amp;-f\\&#10;-g&amp;h\end{Vmatrix}" text="norm@(matrix@(Array[[e, - f], [- g, h]])) * norm@(matrix@(Array[[e, - f], [- g, h]]))" xml:id="S4.Ex33.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1912,10 +1912,10 @@ Then a switch of tag forms.</p>
                   <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
                   <XMArray xml:id="S4.Ex33.m1.2">
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
@@ -1923,13 +1923,13 @@ Then a switch of tag forms.</p>
                       </XMCell>
                     </XMRow>
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
                         </XMApp>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
                       </XMCell>
                     </XMRow>
@@ -1944,7 +1944,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p12">
       <equation xml:id="S4.Ex34">
-        <Math mode="display" tex="\begin{bmatrix}a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}\begin{bmatrix}a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}" text="matrix@(Array[[a, - b * b * b * b * b], [- c, d]]) * matrix@(Array[[a, - b * b * b * b * b], [- c, d]])" xml:id="S4.Ex34.m1">
+        <Math mode="display" tex="\begin{bmatrix}a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}\begin{bmatrix}[r]a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}" text="matrix@(Array[[a, - b * b * b * b * b], [- c, d]]) * matrix@(Array[[a, - b * b * b * b * b], [- c, d]])" xml:id="S4.Ex34.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -1998,10 +1998,10 @@ Then a switch of tag forms.</p>
                   <XMTok role="OPEN" stretchy="true">[</XMTok>
                   <XMArray xml:id="S4.Ex34.m1.2">
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
@@ -2016,13 +2016,13 @@ Then a switch of tag forms.</p>
                       </XMCell>
                     </XMRow>
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
                         </XMApp>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                       </XMCell>
                     </XMRow>
@@ -2037,7 +2037,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p13">
       <equation xml:id="S4.Ex35">
-        <Math mode="display" tex="\begin{Vmatrix}e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}\begin{Vmatrix}e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}" text="norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]])) * norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]]))" xml:id="S4.Ex35.m1">
+        <Math mode="display" tex="\begin{Vmatrix}e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}\begin{Vmatrix}[r]e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}" text="norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]])) * norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]]))" xml:id="S4.Ex35.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2097,10 +2097,10 @@ Then a switch of tag forms.</p>
                   <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
                   <XMArray xml:id="S4.Ex35.m1.2">
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
@@ -2115,13 +2115,13 @@ Then a switch of tag forms.</p>
                       </XMCell>
                     </XMRow>
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
                         </XMApp>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
                       </XMCell>
                     </XMRow>
@@ -2136,7 +2136,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p14">
       <equation xml:id="S4.Ex36">
-        <Math mode="display" tex="\begin{bmatrix}a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}\begin{bmatrix}a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}" text="matrix@(Array[[a, - b * b * b * b * b], [- c, d]]) * matrix@(Array[[a, - b * b * b * b * b], [- c, d]])" xml:id="S4.Ex36.m1">
+        <Math mode="display" tex="\begin{bmatrix}a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}\begin{bmatrix}[r]a&amp;-bbbbb\\&#10;-c&amp;d\end{bmatrix}" text="matrix@(Array[[a, - b * b * b * b * b], [- c, d]]) * matrix@(Array[[a, - b * b * b * b * b], [- c, d]])" xml:id="S4.Ex36.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2190,10 +2190,10 @@ Then a switch of tag forms.</p>
                   <XMTok role="OPEN" stretchy="true">[</XMTok>
                   <XMArray xml:id="S4.Ex36.m1.2">
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
@@ -2208,13 +2208,13 @@ Then a switch of tag forms.</p>
                       </XMCell>
                     </XMRow>
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
                         </XMApp>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>
                       </XMCell>
                     </XMRow>
@@ -2229,7 +2229,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p15">
       <equation xml:id="S4.Ex37">
-        <Math mode="display" tex="\begin{Vmatrix}e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}\begin{Vmatrix}e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}" text="norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]])) * norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]]))" xml:id="S4.Ex37.m1">
+        <Math mode="display" tex="\begin{Vmatrix}e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}\begin{Vmatrix}[r]e&amp;-fffff\\&#10;-g&amp;h\end{Vmatrix}" text="norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]])) * norm@(matrix@(Array[[e, - f * f * f * f * f], [- g, h]]))" xml:id="S4.Ex37.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -2289,10 +2289,10 @@ Then a switch of tag forms.</p>
                   <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
                   <XMArray xml:id="S4.Ex37.m1.2">
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">e</XMTok>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
@@ -2307,13 +2307,13 @@ Then a switch of tag forms.</p>
                       </XMCell>
                     </XMRow>
                     <XMRow>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMApp>
                           <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
                         </XMApp>
                       </XMCell>
-                      <XMCell align="center">
+                      <XMCell align="right">
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
                       </XMCell>
                     </XMRow>

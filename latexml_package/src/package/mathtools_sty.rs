@@ -481,30 +481,31 @@ LoadDefinitions!({
     "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,alignment=#1,left=\\lx@left\\|,right=\\lx@right\\|}");
   DefMacro!("\\csname endVmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
-  // Starred small matrices — complex \@smallmatrix@star@tmp with sub{} body
-  // TODO: \@smallmatrix@star@tmp has complex sub{} body — stubbed to simple forwarding
+  // Perl L502-538: Starred small matrices — \@smallmatrix@star@tmp reads alignment
+  // from optional arg or falls back to mathtoolsset smallmatrix-align option.
+  // We use \ifx/#1/ pattern to only pass alignment when explicitly given.
   DefMacro!("\\csname smallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=matrix,datameaning=matrix,style=\\scriptsize}");
+    "\\lx@ams@matrix{name=matrix,datameaning=matrix,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
   DefMacro!("\\csname endsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname psmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right),style=\\scriptsize}");
+    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right),style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
   DefMacro!("\\csname endpsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname bsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right],style=\\scriptsize}");
+    "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right],style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
   DefMacro!("\\csname endbsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname Bsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\},style=\\scriptsize}");
+    "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\},style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
   DefMacro!("\\csname endBsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname vsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|,style=\\scriptsize}");
+    "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
   DefMacro!("\\csname endvsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname Vsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|,style=\\scriptsize}");
+    "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
   DefMacro!("\\csname endVsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   // Non-starred small matrices
