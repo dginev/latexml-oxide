@@ -813,12 +813,11 @@ LoadDefinitions!({
     if let Some(vattach_arg) = kv.get_value("vattach") {
       if !vattach_arg.is_empty() {
         let va = vattach_arg.to_attribute();
-        // Perl: translateAttachment converts t→top, b→bottom, c→center
+        // Perl: translateAttachment converts t→top, b→bottom, c→middle
         let translated = match va.as_str() {
           "t" => "top",
           "b" => "bottom",
-          "c" => "center",
-          "" | "None" => "middle", // empty/None → default middle
+          "c" | "" | "None" => "middle", // c/empty/None → default middle
           other => other,
         };
         attrs.insert(String::from("vattach"), translated.to_string());
