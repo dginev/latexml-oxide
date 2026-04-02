@@ -336,8 +336,9 @@ LoadDefinitions!({
     <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/>\
     <ltx:XMArg>#2</ltx:XMArg>\
     <ltx:XMArg>#1</ltx:XMArg>\
-    </ltx:XMApp>" /* TODO
-                   * properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } } */
+    </ltx:XMApp>",
+    // Perl: properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
+    properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_boxing_level())) }
   );
   DefMacro!("\\hidewidth", None);
   DefMacro!("\\multispan{Number}", sub[(span)] {
@@ -825,8 +826,7 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B. p. 354
 
-  // TODO: Not yet done!!
-  // tabbing stuff!!!
+  // Plain TeX tabbing — \settabs stub (no structured tabbing in plain)
 
   DefMacro!("\\settabs", None);
   //======================================================================
@@ -834,9 +834,8 @@ LoadDefinitions!({
 
   DefPrimitive!("\\hang", None);
 
-  // TODO: \item, \itemitem not done!
-  // This could probably be adopted from LaTeX, if the <itemize> could auto-open
-  // and close!
+  // Plain TeX \item/\itemitem — simple hanging indent with \textindent.
+  // No auto-opening <itemize> — plain TeX doesn't have structured lists.
   DefMacro!("\\hang", r"\hangindent\parindent");
   DefMacro!("\\item", r"\par\hang\textindent");
   DefMacro!(
