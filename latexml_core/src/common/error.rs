@@ -108,6 +108,71 @@ pub fn initialize_report() {
   *report = LogState::default();
 }
 
+/// Build a status message matching Perl's `getStatusMessage()`.
+/// Format: "N warnings; M errors; K fatal error; L undefined macros[\foo, \bar]; P missing files[x.sty]"
+/// Returns "No obvious problems" when no issues detected.
+pub fn get_status_message() -> String {
+  let report = REPORT.borrow();
+  let mut parts = Vec::new();
+  if report.warning > 0 {
+    parts.push(format!(
+      "{} warning{}",
+      report.warning,
+      if report.warning > 1 { "s" } else { "" }
+    ));
+  }
+  if report.error > 0 {
+    parts.push(format!(
+      "{} error{}",
+      report.error,
+      if report.error > 1 { "s" } else { "" }
+    ));
+  }
+  if report.fatal {
+    parts.push("1 fatal error".to_string());
+  }
+  let undef_keys: Vec<String> =
+    report.undefined.keys().map(|k| crate::common::arena::to_string(*k)).collect();
+  if !undef_keys.is_empty() {
+    parts.push(format!(
+      "{} undefined macro{}[{}]",
+      undef_keys.len(),
+      if undef_keys.len() > 1 { "s" } else { "" },
+      undef_keys.join(", ")
+    ));
+  }
+  let miss_keys: Vec<String> =
+    report.missing.keys().map(|k| crate::common::arena::to_string(*k)).collect();
+  if !miss_keys.is_empty() {
+    parts.push(format!(
+      "{} missing file{}[{}]",
+      miss_keys.len(),
+      if miss_keys.len() > 1 { "s" } else { "" },
+      miss_keys.join(", ")
+    ));
+  }
+  if parts.is_empty() {
+    "No obvious problems".to_string()
+  } else {
+    parts.join("; ")
+  }
+}
+
+/// Compute the status code from the report state (Perl getStatusCode).
+/// 3 = fatal, 2 = errors, 1 = warnings, 0 = clean.
+pub fn get_status_code() -> usize {
+  let report = REPORT.borrow();
+  if report.fatal {
+    3
+  } else if report.error > 0 {
+    2
+  } else if report.warning > 0 {
+    1
+  } else {
+    0
+  }
+}
+
 #[macro_export]
 macro_rules! Debug {
   ($category:expr, $object:expr, $message:expr) => {{

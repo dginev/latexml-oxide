@@ -6,7 +6,7 @@ use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
 use latexml_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
-use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report, report_mut, s};
+use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report_mut, s};
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -64,11 +64,10 @@ impl Converter {
   }
 
   pub fn bind_log(&mut self) {
-    // TODO
+    latexml_core::util::logger::bind_log();
   }
   pub fn flush_log(&mut self) -> String {
-    // TODO
-    s!("mock flush log")
+    latexml_core::util::logger::flush_log()
   }
 
   pub fn convert(mut self, source: String) -> ConversionResponse {
@@ -223,7 +222,8 @@ impl Converter {
       },
     };
 
-    self.runtime.status_code = report!().status_code;
+    self.runtime.status = latexml_core::common::error::get_status_message();
+    self.runtime.status_code = latexml_core::common::error::get_status_code();
     // alarm(0)
 
     // 2.2 Bookkeeping in case fatal errors occurred
@@ -295,7 +295,8 @@ impl Converter {
     if self.opts.verbosity >= 0 {
       Info!("arena", "strings_allocated", arena::len());
     }
-    Info!("status", "conversion", self.runtime.status_code);
+    // Perl: Note("Conversion complete: " . $$runtime{status});
+    Info!("Conversion complete: {}", self.runtime.status);
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

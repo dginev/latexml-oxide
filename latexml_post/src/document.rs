@@ -24,9 +24,9 @@ const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 /// Handles both namespace-aware and plain attribute access.
 pub fn get_xml_id(node: &Node) -> Option<String> {
   node.get_attribute_ns("id", XML_NS)
-    .or_else(|| get_xml_id(node))
+    .or_else(|| node.get_attribute("xml:id"))
     .or_else(|| {
-      // Fallback: check properties hash for "id" key in xml namespace
+      // Fallback: check properties hash for "id" key
       let props = node.get_properties();
       props.get("id").cloned()
     })
@@ -218,6 +218,87 @@ impl PostDocument {
       opts.source_directory = Some(".".to_string());
     }
     Ok(Self::new(doc, opts))
+  }
+
+  /// Create a new sub-document from an element node.
+  ///
+  /// Port of Perl `Post::Document::newDocument`.
+  /// The element is imported into a fresh XML document.
+  /// Resources, processing instructions, and class attributes are copied from the parent.
+  pub fn new_document(&self, mut root: Node, destination: &str) -> Self {
+    use libxml::tree::Document as XmlDocument;
+    // Create a fresh XML document and adopt the node as root.
+    // The node may already be unlinked from its original document.
+    let mut new_xml_doc = XmlDocument::new().expect("create XML doc");
+    // Try import first; if that fails (detached node), set directly
+    if let Ok(imported) = new_xml_doc.import_node(&mut root) {
+      new_xml_doc.set_root_element(&imported);
+    } else {
+      new_xml_doc.set_root_element(&root);
+    }
+
+    let opts = PostDocumentOptions {
+      destination:           Some(destination.to_string()),
+      source:                self.source.clone(),
+      source_directory:      self.source_directory.clone(),
+      searchpaths:           Some(self.searchpaths.clone()),
+      ..PostDocumentOptions::default()
+    };
+    let mut subdoc = Self::new_internal(new_xml_doc, opts);
+
+    // Copy namespaces
+    subdoc.namespaces = self.namespaces.clone();
+    subdoc.namespace_uris = self.namespace_uris.clone();
+
+    // Record IDs
+    for node in subdoc.findnodes("//*[@xml:id]") {
+      if let Some(id) = get_xml_id(&node) {
+        subdoc.idcache.insert(id, node);
+      }
+    }
+
+    // Record the parent document's root ID
+    if let Some(ref root_el) = self.get_document_element() {
+      if let Some(root_id) = get_xml_id(root_el) {
+        subdoc.split_from_id = Some(root_id);
+      }
+    }
+
+    // Copy processing instructions
+    for mut pi in self.findnodes(".//processing-instruction('latexml')") {
+      if let Ok(mut pi_clone) = subdoc.document.import_node(&mut pi) {
+        if let Some(mut doc_node) = subdoc.document.get_root_element() {
+          doc_node.add_prev_sibling(&mut pi_clone).ok();
+        }
+      }
+    }
+
+    // Copy resource elements (Perl: addNodes for ltx:resource)
+    let resources: Vec<NodeData> = self.findnodes("descendant::ltx:resource")
+      .iter()
+      .map(|r| NodeData::XmlNode(r.clone()))
+      .collect();
+    if !resources.is_empty() {
+      if let Some(mut doc_root) = subdoc.get_document_element() {
+        subdoc.add_nodes(&mut doc_root, &resources);
+      }
+    }
+
+    // Copy class from top-level document element (Perl L777-782)
+    if let Some(parent_root) = self.get_document_element() {
+      if let Some(pclass) = parent_root.get_attribute("class") {
+        if let Some(mut doc_root) = subdoc.get_document_element() {
+          let existing = doc_root.get_attribute("class").unwrap_or_default();
+          if existing.is_empty() {
+            doc_root.set_attribute("class", &pclass).ok();
+          } else {
+            doc_root.set_attribute("class", &format!("{} {}", existing, pclass)).ok();
+          }
+        }
+      }
+    }
+
+    subdoc
   }
 
   // ======================================================================
