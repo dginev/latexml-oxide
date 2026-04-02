@@ -280,11 +280,38 @@ LoadDefinitions!({
     }
   );
 
-  // \multiput(pos)(delta){n}{body} — Perl expands to n \put commands via macro.
-  // Use Match:(/Until: to decompose coordinates, avoiding Pair digestion issues.
-  // Simplified: just place the body at the initial position.
-  // TODO: full multiput loop expansion with delta stepping
-  DefMacro!("\\multiput Match:( Until:, Until:) Match:( Until:, Until:) {}{}", "\\put(#2,#3){#8}");
+  // Perl L5166-5175: \multiput expands to n \put commands with coordinate stepping.
+  DefMacro!("\\multiput Match:( Until:, Until:) Match:( Until:, Until:) {}{}", sub[args] {
+    // args: 0=Match:(, 1=x, 2=y, 3=Match:(, 4=dx, 5=dy, 6=n, 7=body
+    let x_str = args.get(1).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
+    let y_str = args.get(2).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
+    let dx_str = args.get(4).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
+    let dy_str = args.get(5).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
+    let n: i64 = args.get(6).map(|a| a.revert().unwrap_or_default().to_string()
+      .trim().parse().unwrap_or(1)).unwrap_or(1);
+    let body = args.get(7).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+
+    let mut x: f64 = x_str.trim().parse().unwrap_or(0.0);
+    let mut y: f64 = y_str.trim().parse().unwrap_or(0.0);
+    let dx: f64 = dx_str.trim().parse().unwrap_or(0.0);
+    let dy: f64 = dy_str.trim().parse().unwrap_or(0.0);
+
+    let mut result = Vec::new();
+    for _ in 0..n {
+      result.push(T_CS!("\\put"));
+      result.push(T_OTHER!("("));
+      result.extend(Explode!(s!("{}", x)));
+      result.push(T_OTHER!(","));
+      result.extend(Explode!(s!("{}", y)));
+      result.push(T_OTHER!(")"));
+      result.push(T_BEGIN!());
+      result.extend(body.clone().unlist());
+      result.push(T_END!());
+      x += dx;
+      y += dy;
+    }
+    Ok(Tokens::new(result))
+  });
 
   // Box commands for picture mode
   // Perl: \pic@makebox@ Undigested RequiredKeyVals Pair []{} — the master box constructor

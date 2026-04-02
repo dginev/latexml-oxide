@@ -284,12 +284,19 @@ LoadDefinitions!({
   DefMacro!("\\cdp@list", "\\@empty");
   Let!("\\cdp@elt", "\\relax");
   DefPrimitive!("\\DeclareFontEncoding{}{}{}", sub[(encoding, x, y)] {
-    // TODO:
-    // AddToMacro!(T_CS!("\\cdp@list"), T_CS!("\\cdp@elt"),
-    //   T_BEGIN!(), encoding.unlist(), T_END,
-    //   T_BEGIN!(), T_CS!("\\default@family"), *T_END,
-    //   T_BEGIN!(), T_CS!("\\default@series"), *T_END,
-    //   T_BEGIN!(), T_CS!("\\default@shape"),  *T_END);
+    // Perl: AddToMacro(\cdp@list, \cdp@elt{enc}{family}{series}{shape})
+    let cdp_cs = T_CS!("\\cdp@list");
+    let enc_toks = encoding.clone().unlist();
+    let mut cdp_tokens_vec = vec![T_CS!("\\cdp@elt"), T_BEGIN!()];
+    cdp_tokens_vec.extend(enc_toks);
+    cdp_tokens_vec.extend(vec![
+      T_END!(),
+      T_BEGIN!(), T_CS!("\\default@family"), T_END!(),
+      T_BEGIN!(), T_CS!("\\default@series"), T_END!(),
+      T_BEGIN!(), T_CS!("\\default@shape"), T_END!(),
+    ]);
+    let cdp_tokens = Tokens::new(cdp_tokens_vec);
+    AddToMacro!(cdp_cs, cdp_tokens);
 
     let e = Expand!(encoding);
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
