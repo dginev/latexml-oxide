@@ -54,6 +54,11 @@ pub enum ValidationPragmatics {
   /// or parentheses form a flat product — associativity doesn't matter semantically,
   /// and enumerating all groupings causes exponential ambiguity.
   FlattenSimpleInvisibleTimesChains,
+  /// In `a = b + c + d`, the `=` must be at the outermost level.
+  /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean
+  /// treating a relation as a term in an arithmetic expression.
+  /// Exception: fenced relations like `(x=0)` used as modifiers.
+  RelopsAreOutermost,
 }
 
 impl ValidationPragmatics {
@@ -71,6 +76,7 @@ impl ValidationPragmatics {
       RestrictNumeralFractions,
       NoBilateralAbsent,
       FlattenSimpleInvisibleTimesChains,
+      RelopsAreOutermost,
     ]
   }
   /// Pragmatic rules that are executed at the end of the parse process,
@@ -125,6 +131,8 @@ impl ValidationPragmatics {
       BigopPreferWiderAbsorption => pragma_bigop_prefer_wider_absorption(tree),
       PreferBinaryAddop => pragma_prefer_binary_addop(tree),
       FlattenSimpleInvisibleTimesChains => pragma_flatten_simple_invisible_times(tree),
+      RelopsAreOutermost => pragma_relops_are_outermost(tree),
+      // TODO: implement
       _ => Ok(()),
     }
   }
@@ -230,18 +238,24 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
 
 fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ..) = tree {
-    if let XM::Lexeme(ref _lexeme, ref atom_meta) = **op {
-      if let Some(ref fences) = atom_meta.fenced {
-        if fences.as_str() == "parens" {
-          return Err(
-            "pruning non-argument parenthetical atom, used as LHS of function application".into(),
-          );
+    match &**op {
+      XM::Lexeme(ref _lexeme, ref atom_meta) => {
+        if let Some(ref fences) = atom_meta.fenced {
+          if fences.as_str() == "parens" {
+            return Err(
+              "pruning non-argument parenthetical atom, used as LHS of function application"
+                .into(),
+            );
+          }
         }
       }
+      _ => {}
     }
   }
   Ok(())
 }
+
+
 
 fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, ..) = tree {
@@ -933,6 +947,11 @@ static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, String>> = Lazy::new(|| {
 /// (no fences, no operators, no numbers), then prune — only left-associative grouping
 /// `Apply(invisible_times, [Apply(invisible_times, [...]), single])` survives.
 fn pragma_flatten_simple_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>> {
+  check_invisible_times_recursive(tree)
+}
+
+/// Recursively check all subtrees for right-associative invisible-times chains.
+fn check_invisible_times_recursive(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     if let XM::Lexeme(ref oplexeme, _) = **op {
       if oplexeme == "x.invisible_operator" {
@@ -941,8 +960,6 @@ fn pragma_flatten_simple_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>
           let rhs = trees[1];
           // Check if the RHS is itself an invisible-times application
           if is_invisible_times_apply(rhs) && all_simple_identifiers(tree) {
-            // This is a right-associative grouping of simple identifiers — prune it.
-            // Only the left-associative form should survive.
             return Err(
               "Pruning right-associative invisible-times of simple identifier chain. \
                Flat left-associative product is the only reasonable reading."
@@ -951,6 +968,10 @@ fn pragma_flatten_simple_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>
           }
         }
       }
+    }
+    // Recurse into all subtrees
+    for subtree in args.trees() {
+      check_invisible_times_recursive(subtree)?;
     }
   }
   Ok(())
@@ -966,29 +987,81 @@ fn is_invisible_times_apply(tree: &XM) -> bool {
   false
 }
 
-/// Check if ALL leaf tokens in a tree are simple unfenced identifiers
-/// (UNKNOWN role, no fences, no numbers, no operators)
+/// Check if ALL leaf tokens in a tree are simple unfenced atoms
+/// (identifiers or numbers, no fences, no operators)
 fn all_simple_identifiers(tree: &XM) -> bool {
   match tree {
     XM::Lexeme(name, meta) => {
-      // Simple identifier: UNKNOWN or ID role, no fences
+      // Simple atom: UNKNOWN, ID, or NUMBER role, no fences
       meta.fenced.is_none()
-        && (name.starts_with("UNKNOWN") || name.starts_with("ID"))
+        && (name.starts_with("UNKNOWN") || name.starts_with("ID") || name.starts_with("NUMBER"))
     },
     XM::Apply(Operator(op), ref args, ..) => {
-      // For invisible-times applications, check operator and all args
       if let XM::Lexeme(ref oplexeme, _) = **op {
+        // For invisible-times applications, check operator and all args
         if oplexeme == "x.invisible_operator" {
+          return args.trees().iter().all(|a| all_simple_identifiers(a));
+        }
+        // Scripted atoms (subscript/superscript of simple identifiers) are also simple
+        if oplexeme.starts_with("SUBSCRIPTOP")
+          || oplexeme.starts_with("SUPERSCRIPTOP")
+          || oplexeme.starts_with("POSTSUPERSCRIPT")
+          || oplexeme.starts_with("POSTSUBSCRIPT")
+        {
           return args.trees().iter().all(|a| all_simple_identifiers(a));
         }
       }
       false
     },
     XM::Token(ref props, _) => {
-      // Token with UNKNOWN/ID role
-      props.role.as_deref().is_some_and(|r| r == "UNKNOWN" || r == "ID")
-        && props.meaning.as_deref() != Some("absent")
+      // Token with UNKNOWN/ID/NUMBER role
+      props.role.as_deref().is_some_and(|r| {
+        r == "UNKNOWN" || r == "ID" || r == "NUMBER"
+      }) && props.meaning.as_deref() != Some("absent")
     },
+    _ => false,
+  }
+}
+
+/// In `a = b + c + d`, RELOP must be at the outermost level.
+/// Rejects parses where an ADDOP or MULOP contains an unfenced RELOP child.
+/// Exception: fenced relations like `(x=0)` are allowed as terms.
+fn pragma_relops_are_outermost(tree: &XM) -> Result<(), Box<dyn Error>> {
+  check_relops_recursive(tree, false)
+}
+
+fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), Box<dyn Error>> {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    if let XM::Lexeme(ref name, _) = **op {
+      let is_addop = name.starts_with("ADDOP");
+      let is_mulop = name.starts_with("MULOP") || name == "x.invisible_operator";
+      let is_relop = name.starts_with("RELOP");
+
+      // If we're inside an addop/mulop and this node is a relop, reject
+      if inside_addop_or_mulop && is_relop {
+        return Err(
+          "Pruning: RELOP found inside ADDOP/MULOP — relations must be at the outermost level"
+            .into(),
+        );
+      }
+
+      let child_context = inside_addop_or_mulop || is_addop || is_mulop;
+      for subtree in args.trees() {
+        // Don't propagate into fenced subtrees — (x=0) as a term is fine
+        if !is_fenced(subtree) {
+          check_relops_recursive(subtree, child_context)?;
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Check if a tree represents a fenced (parenthesized) expression.
+fn is_fenced(tree: &XM) -> bool {
+  match tree {
+    XM::Lexeme(_, ref meta) => meta.fenced.is_some(),
+    XM::Apply(_, _, _, ref meta) => meta.fenced.is_some(),
     _ => false,
   }
 }
