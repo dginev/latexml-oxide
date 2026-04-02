@@ -199,13 +199,20 @@ impl MathParser {
       // Perl uses $doc->lookupID which accesses the document's idstore directly.
       crate::data::set_math_idstore(document.get_idstore_clone());
       for math in xmath_nodes {
+        let math_ref = math.clone();
         self.parse(math, document)?;
-        // Store parse tree count in state for \ltx@count@parses
-        latexml_core::state::assign_value(
-          "LAST_PARSETREES_COUNT",
-          latexml_core::state::Stored::from(self.last_parsetrees_count as i64),
-          None,
-        );
+        // Store parse tree count as attribute on the Math element for diagnostics.
+        // Find the ancestor ltx:Math of this XMath node and set _parsetrees.
+        if self.last_parsetrees_count > 0 {
+          if let Some(mut math_parent) = math_ref.get_parent() {
+            if math_parent.get_name() == "Math" {
+              let _ = math_parent.set_attribute(
+                "_parsetrees",
+                &self.last_parsetrees_count.to_string(),
+              );
+            }
+          }
+        }
       }
       crate::data::clear_math_idstore();
 

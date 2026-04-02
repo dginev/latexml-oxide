@@ -341,6 +341,25 @@ impl DigestionAPI for Core {
       // order. The Marpa parser explores multiple parse alternatives, consuming ID
       // counter slots for pruned nodes. This pass reassigns IDs post-parse.
       renumber_math_ids(&mut document);
+      // Fill in \ltx@count@parses markers with actual parse tree counts.
+      // Each marker is <ltx:text _parsetrees_marker="true">0</ltx:text>.
+      // Find the preceding ltx:Math[@_parsetrees] and copy the count.
+      let markers = document.findnodes("//*[@_parsetrees_marker='true']", None);
+      for mut marker in markers {
+        let count = {
+          let preceding = document.findnodes("preceding::ltx:Math[@_parsetrees][1]", Some(&marker));
+          preceding.into_iter().last()
+            .and_then(|m| m.get_attribute("_parsetrees"))
+            .unwrap_or_else(|| "0".to_string())
+        };
+        // Replace the text content with the actual count
+        for mut child in marker.get_child_nodes() {
+          child.unlink_node();
+        }
+        let _ = marker.append_text(&count);
+        // Remove the marker attribute
+        let _ = marker.remove_attribute("_parsetrees_marker");
+      }
     }
 
     note_begin("Finalizing");
