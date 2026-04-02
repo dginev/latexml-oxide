@@ -174,10 +174,18 @@ impl Converter {
     );
     let digested = match digest_result {
       Err(e) => {
-        // TODO digestion failed, report
         report_mut!().status_code = 3;
         e.log_fatal();
-        Digested::from(List::new(Vec::new()))
+        // Perl L251-259: If digestion failed, try finishDigestion to salvage
+        // whatever was partially consumed. This allows partial recovery where
+        // the beginning of the document is valid but an error occurs midway.
+        match self.core.digest_internal() {
+          Ok(salvaged) if !salvaged.is_empty().unwrap_or(true) => {
+            Info!("recovery", "digest", "Salvaged partial output after fatal error");
+            salvaged
+          }
+          _ => Digested::from(List::new(Vec::new())),
+        }
       },
       Ok(d) => d,
     };

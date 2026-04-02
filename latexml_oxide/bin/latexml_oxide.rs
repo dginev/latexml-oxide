@@ -145,6 +145,22 @@ struct Cli {
   #[arg(short = 'q', long)]
   quiet: bool,
 
+  /// Assign an ID to the document root element
+  #[arg(long, value_name = "ID")]
+  documentid: Option<String>,
+
+  /// Site directory for relative path resolution
+  #[arg(long, value_name = "DIR")]
+  sitedirectory: Option<String>,
+
+  /// Source directory for relative path resolution
+  #[arg(long, value_name = "DIR")]
+  sourcedirectory: Option<String>,
+
+  /// Additional XSLT parameters (repeatable, key=value)
+  #[arg(long = "xsltparameter", value_name = "KEY=VALUE")]
+  xslt_parameters: Vec<String>,
+
   // === Dev/internal flags ===
   /// Init mode: process and dump format state
   #[arg(long, value_name = "FILE")]
@@ -242,6 +258,13 @@ fn main() -> Result<(), Box<dyn Error>> {
       Some(latexml_core::state::Scope::Global),
     );
   }
+  // Perl Core.pm L48: DOCUMENTID value
+  if let Some(ref docid) = cli.documentid {
+    latexml_core::state::assign_value(
+      "DOCUMENTID", latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
+      Some(latexml_core::state::Scope::Global),
+    );
+  }
 
   if cli.init.is_some() {
     // Init mode: process file and dump state
@@ -302,6 +325,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           split: split_enabled,
           split_xpath,
           split_naming: cli.splitnaming.as_deref(),
+          xslt_parameters: &cli.xslt_parameters,
         });
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -346,13 +370,14 @@ struct PostOptions<'a> {
   split: bool,
   split_xpath: Option<String>,
   split_naming: Option<&'a str>,
+  xslt_parameters: &'a [String],
 }
 
 /// Run the post-processing pipeline on XML output.
 fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let PostOptions { pmml, cmml, keep_xmath, stylesheet, destination,
     nodefaultresources, css_files, js_files, noinvisibletimes, mathtex,
-    navigationtoc, split, ref split_xpath, split_naming } = *opts;
+    navigationtoc, split, ref split_xpath, split_naming, xslt_parameters } = *opts;
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
   use latexml_post::processor::Processor;
@@ -457,6 +482,12 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
     if let Some(navtoc) = navigationtoc {
       xslt_params.insert("NAVIGATIONTOC".to_string(), format!("\"{}\"", navtoc));
+    }
+    // --xsltparameter key=value pairs
+    for param in xslt_parameters {
+      if let Some((key, value)) = param.split_once('=') {
+        xslt_params.insert(key.to_string(), format!("\"{}\"", value));
+      }
     }
     match latexml_post::xslt::XSLT::new(
       xsl_path, xslt_params, nodefaultresources, None, searchpaths,
