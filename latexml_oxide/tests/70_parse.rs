@@ -142,3 +142,8 @@ fn terms_test() {
 fn vertbars_test() {
   latexml_test_single("tests/parse/vertbars.tex", "vertbars", DIR, None, None);
 }
+
+#[test]
+fn count_parses_test() {
+  latexml_test_single("tests/parse/count_parses.tex", "count_parses", DIR, None, None);
+}
