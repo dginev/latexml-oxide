@@ -39,6 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let nocomments_flag = argv.iter().any(|a| a == "--nocomments");
   let nomathparse_flag = argv.iter().any(|a| a == "--nomathparse");
   let noinvisibletimes_flag = argv.iter().any(|a| a == "--noinvisibletimes");
+  let mathtex_flag = argv.iter().any(|a| a == "--mathtex");
   // Repeatable flags
   let css_flags = extract_flags(&mut argv, "--css");
   let preload_flags = extract_flags(&mut argv, "--preload");
@@ -48,7 +49,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
-    "--nomathparse", "--noinvisibletimes"].contains(&a.as_str()));
+    "--nomathparse", "--noinvisibletimes", "--mathtex"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -141,6 +142,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           nodefaultresources_flag,
           &css_flags,
           noinvisibletimes_flag,
+          mathtex_flag,
         );
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -174,6 +176,7 @@ fn run_post_processing(
   nodefaultresources: bool,
   css_files: &[String],
   noinvisibletimes: bool,
+  mathtex: bool,
 ) -> String {
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
@@ -226,7 +229,8 @@ fn run_post_processing(
   if pmml {
     let mathml = latexml_post::mathml::MathML::new_presentation()
       .with_keep_xmath(keep_xmath)
-      .with_invisible_times(!noinvisibletimes);
+      .with_invisible_times(!noinvisibletimes)
+      .with_mathtex(mathtex);
     processors.push(Box::new(mathml));
   }
 
