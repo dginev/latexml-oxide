@@ -128,6 +128,11 @@ pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
   prev
 }
 
+/// Set the pushback limit (maximum pushback stack size before fatal error).
+pub fn set_pushback_limit(limit: Option<usize>) {
+  gullet_mut!().pushback_limit = limit;
+}
+
 /// Restore the token limit and progress from a previous set_token_limit call.
 pub fn restore_token_limit(saved: (Option<usize>, usize)) {
   let mut g = gullet_mut!();

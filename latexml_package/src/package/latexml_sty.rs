@@ -236,8 +236,15 @@ LoadDefinitions!({
   });
 
   // Perl L57-59: bibconfig KeyVal — comma-separated bib config values.
-  // DefKeyVal with code closure not supported; use DefKeyVal + option handler.
   DefKeyVal!("LTXML", "bibconfig", "Semiverbatim");
+
+  // Perl L87-98: Limit options — set global limits for infinite-loop protection.
+  // These are DefKeyVal with code closures; since our macro doesn't support code,
+  // we define them as DeclareOption and handle in ProcessOptions.
+  DefKeyVal!("LTXML", "tokenlimit", "Number");
+  DefKeyVal!("LTXML", "iflimit", "Number");
+  DefKeyVal!("LTXML", "absorblimit", "Number");
+  DefKeyVal!("LTXML", "pushbacklimit", "Number");
 
   // Lexeme serialization for math formulas
   DeclareOption!("mathlexemes", {
@@ -282,6 +289,26 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
+
+  // Apply limit options from keyvals (Perl L87-98)
+  if let Some(v) = state::lookup_value("KV@LTXML@tokenlimit") {
+    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
+    if limit > 0 { gullet::set_token_limit(Some(limit)); }
+  }
+  if let Some(v) = state::lookup_value("KV@LTXML@iflimit") {
+    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
+    if limit > 0 { state::assign_value("if_limit", Stored::from(limit as i64), Some(Scope::Global)); }
+  }
+  if let Some(v) = state::lookup_value("KV@LTXML@absorblimit") {
+    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
+    if limit > 0 { state::assign_value("absorb_limit", Stored::from(limit as i64), Some(Scope::Global)); }
+  }
+  if let Some(v) = state::lookup_value("KV@LTXML@pushbacklimit") {
+    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
+    if limit > 0 {
+      gullet::set_pushback_limit(Some(limit));
+    }
+  }
 
   DefConditional!("\\iflatexml", { true });
 

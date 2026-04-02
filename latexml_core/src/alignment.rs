@@ -473,14 +473,16 @@ impl BoxOps for Alignment {
       return Ok(Vec::new());
     }
 
-    // # Guard via the absorb limit to avoid infinite loops
-    // TODO
-    // if ($LaTeXML::ABSORB_LIMIT) {
-    //   my $absorb_counter = $state->lookupValue("absorb_count") || 0;
-    //   $state->assignValue(absorb_count => ++$absorb_counter, "global");
-    //   if ($absorb_counter > $LaTeXML::ABSORB_LIMIT) {
-    //     Fatal("timeout", "absorb_limit", $self,
-    //       "Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?"); } }
+    // Guard via the absorb limit to avoid infinite loops (Perl L478-483)
+    let absorb_limit = crate::state::lookup_int("absorb_limit");
+    if absorb_limit > 0 {
+      let mut absorb_count = crate::state::lookup_int("absorb_count");
+      absorb_count += 1;
+      crate::state::assign_value("absorb_count", absorb_count, Some(crate::state::Scope::Global));
+      if absorb_count > absorb_limit {
+        fatal!(Timeout, Convert, s!("Whatsit absorb limit of {} exceeded, infinite loop?", absorb_limit));
+      }
+    }
 
     // We _should_ attach boxes to the alignment and rows,
     // but (ATM) we"ve only got sensible boxes for the cells.
