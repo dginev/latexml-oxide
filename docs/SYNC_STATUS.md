@@ -213,10 +213,10 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 - [x] **A10. `--timeout=<seconds>`** — conversion timeout via thread-local deadline checked in the digest loop. Fatal error on timeout.
 - [x] **A11. `--nocomments`** — omit XML comments from output. Maps to `CoreOptions::include_comments = Some(false)`.
 - [x] **A12. `--javascript=<url>`** — inject `<script>` elements. Repeatable. Passed as XSLT parameter `JAVASCRIPT`.
-- [ ] **A13. `--source=<dir>`** — specify source directory. Parsed but not yet wired.
-- [ ] **A14. `--log=<path>`** — redirect log output to file. Parsed but not yet wired.
+- [x] **A13. `--source=<file>`** — specify source file (overrides positional argument).
+- [x] **A14. `--log=<path>`** — write conversion log to file after processing.
 - [x] **A15. `--navigationtoc=context`** — navigation TOC. Passed as XSLT parameter `NAVIGATIONTOC`.
-- [ ] **A16. `--whatsin=directory`** — directory-mode conversion.
+- [x] **A16. `--whatsin=directory`** — directory mode: adds source dir to search paths. Auto-detected from trailing `/`.
 
 ### Diff reduction tasks
 
