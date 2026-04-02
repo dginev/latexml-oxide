@@ -45,6 +45,9 @@ pub struct MathML {
   /// Whether to emit invisible times (U+2062). When false, replaces with zero-width space.
   /// Perl: $$MATHPROCESSOR{invisibletimes} — defaults to true.
   invisible_times: bool,
+  /// Whether to include TeX source annotation in parallel MathML.
+  /// Perl: --mathtex adds <m:annotation encoding='application/x-tex'>
+  mathtex: bool,
 }
 
 impl MathML {
@@ -59,6 +62,7 @@ impl MathML {
       line_width: 80,
       keep_xmath: false,
       invisible_times: true,
+      mathtex: false,
     }
   }
 
@@ -73,6 +77,7 @@ impl MathML {
       line_width: 80,
       keep_xmath: false,
       invisible_times: true,
+      mathtex: false,
     }
   }
 
@@ -94,6 +99,12 @@ impl MathML {
   /// Perl: --noinvisibletimes
   pub fn with_invisible_times(mut self, emit: bool) -> Self {
     self.invisible_times = emit;
+    self
+  }
+
+  /// Enable TeX source annotation in MathML output (--mathtex).
+  pub fn with_mathtex(mut self, enable: bool) -> Self {
+    self.mathtex = enable;
     self
   }
 }
@@ -134,10 +145,37 @@ impl MathProcessor for MathML {
       MML_MIMETYPE
     };
 
+    // If mathtex is enabled, wrap in <m:semantics> with TeX annotation
+    let final_xml = if self.mathtex {
+      let tex_str = xmath.get_parent()
+        .and_then(|p| p.get_attribute("tex"))
+        .unwrap_or_default();
+      if tex_str.is_empty() {
+        xml
+      } else {
+        NodeData::Element {
+          tag: "m:semantics".to_string(),
+          attributes: None,
+          children: vec![
+            xml,
+            NodeData::Element {
+              tag: "m:annotation".to_string(),
+              attributes: Some(HashMap::from([
+                ("encoding".to_string(), "application/x-tex".to_string()),
+              ])),
+              children: vec![NodeData::Text(tex_str)],
+            },
+          ],
+        }
+      }
+    } else {
+      xml
+    };
+
     Some(MathConversion {
       processor_name: self.name.clone(),
       mimetype: Some(mimetype.to_string()),
-      xml: Some(xml),
+      xml: Some(final_xml),
       string: None,
       src: None,
       width: None,

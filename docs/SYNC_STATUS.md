@@ -208,7 +208,7 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 - [x] **A5. `--css=<file>`** — inject additional CSS `<link>` elements into the HTML output. Repeatable. Passed as XSLT parameter.
 - [x] **A6. `--preload=<file>`** — preload a `.sty` file before processing. Repeatable. Passed to `CoreOptions::preload`.
 - [x] **A7. `--path=<dir>`** — add search paths for finding packages and inputs. Repeatable. Passed to `CoreOptions::search_paths`.
-- [ ] **A8. `--mathtex`** — add TeX source annotation to parallel MathML markup. Perl adds `m:annotation[@encoding='application/x-tex']` alongside PMML. Need: MathML processor option to emit tex annotation.
+- [x] **A8. `--mathtex`** — wraps PMML in `<m:semantics>` with `<m:annotation encoding='application/x-tex'>` containing the formula's TeX source.
 - [x] **A9. `--noinvisibletimes`** — replaces invisible times (U+2062) with zero-width space (U+200B) in MathML. Thread-local flag in presentation.rs.
 - [ ] **A10. `--timeout=<seconds>`** — conversion timeout. Perl uses `alarm()` signal. Need: timeout wrapper around conversion, possibly via `std::thread` + timeout.
 - [x] **A11. `--nocomments`** — omit XML comments from output. Maps to `CoreOptions::include_comments = Some(false)`.
