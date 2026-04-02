@@ -11,10 +11,26 @@
 //! - Style context tracks display/text/script/scriptscript levels
 
 use libxml::tree::Node;
+use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::document::{element_children, NodeData, PostDocument};
 use super::operator_dictionary;
+
+// Thread-local flag for invisible times emission.
+// When false, U+2062 is replaced with U+200B (zero-width space).
+thread_local! {
+  static INVISIBLE_TIMES: Cell<bool> = const { Cell::new(true) };
+}
+
+/// Set whether to emit invisible times (called by MathML processor before rendering).
+pub fn set_invisible_times(emit: bool) {
+  INVISIBLE_TIMES.with(|f| f.set(emit));
+}
+
+fn get_invisible_times() -> bool {
+  INVISIBLE_TIMES.with(|f| f.get())
+}
 
 /// Math style levels.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -401,6 +417,11 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
   // Minus sign normalization
   if text == "-" && matches!(role.as_str(), "ADDOP" | "OPERATOR") {
     text = "\u{2212}".to_string(); // MINUS SIGN
+  }
+
+  // Perl L772-775: when invisibletimes is false, replace U+2062 with U+200B
+  if text == "\u{2062}" && !get_invisible_times() {
+    text = "\u{200B}".to_string(); // ZERO WIDTH SPACE
   }
 
   let mut attrs = HashMap::new();
