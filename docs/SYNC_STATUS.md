@@ -87,13 +87,13 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | Module | Status | Open Gaps |
 |--------|--------|-----------|
-| gullet.rs | MINOR | `readArg` isolation; `read_register_value` coercions |
-| stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP) |
-| document.rs | MINOR | `insertElementBefore()` done. Missing: XML comment creation (needs libxml2 FFI) |
-| alignment.rs | MINOR | padding CSS classes, ABSORB_LIMIT guard |
-| rewrite.rs | MINOR | ~90% ported. All core ops (Select/Replace/XPath/Wildcards/Seen). Missing: `compile_regexp`, `digest_rewrite` |
+| gullet.rs | MINOR | `readArg` isolation (type ergonomics) |
+| stomach.rs | OK | Mathcode decoding fully implemented (MATH_CLASS_ROLE matches Perl) |
+| document.rs | MINOR | XML comment creation (needs libxml2 FFI) |
+| alignment.rs | OK | Padding CSS classes and ABSORB_LIMIT guard both implemented |
+| rewrite.rs | MINOR | ~90% ported. Missing: `compile_regexp`, `digest_rewrite` |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_findall` |
-| font.rs | OK | `DEFSIZE` reads from state via `defsize()` |
+| font.rs | OK | `defsize()` reads NOMINAL_FONT_SIZE from state |
 
 ---
 
