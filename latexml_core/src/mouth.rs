@@ -177,8 +177,12 @@ impl Mouth {
     } else if source.is_empty() {
       Mouth::new("", Some(options))
     } else {
+      let (_dir, name, ext) = pathname::split(source);
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
       options.source = Some(source.to_string());
+      if options.shortsource.is_none() {
+        options.shortsource = Some(if ext.is_empty() { name.to_string() } else { s!("{}.{}", name, ext) });
+      }
       Mouth::new(source, Some(options))
     }
   }
@@ -189,13 +193,17 @@ impl Mouth {
         foodtype: FoodType::Literal,
         ..Mouth::default()
       },
-      Some(opts) => Mouth {
-        foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
-        fordefinitions: opts.fordefinitions,
-        at_letter: opts.at_letter,
-        notes: opts.notes,
-        source: opts.source.unwrap_or_default(),
-        ..Mouth::default()
+      Some(opts) => {
+        let shortsource = opts.shortsource.unwrap_or_else(|| s!("String"));
+        Mouth {
+          foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
+          fordefinitions: opts.fordefinitions,
+          at_letter: opts.at_letter,
+          notes: opts.notes,
+          source: opts.source.unwrap_or_default(),
+          shortsource,
+          ..Mouth::default()
+        }
       },
     };
     mouth.open(text)?;

@@ -4,1333 +4,1156 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:svg="http://www.w3.org/2000/svg">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <para class="ltx_noindent" xml:id="p1">
-    <p> <text yoffset="10.0pt"> <picture height="473.03" width="244.51" xml:id="p1.pic1">
-          <svg:svg height="473.03" overflow="visible" version="1.1" viewBox="0 0 244.51 473.03" width="244.51">
-            <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,473.03) matrix(1 0 0 -1 0 0) translate(141.19,0) translate(0,468.28)">
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 0.28 0.01 L 0.22 0.02 L 0.22 0.64 L 0.28 0.63 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -0.03 -0.06 L -0.09 -0.04 L -0.09 0.58 L -0.03 0.57 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 0.28 0.63 L -0.03 0.57 L -0.09 0.58 L 0.22 0.64 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -0.03 -0.06 L 0.28 0.01 L 0.28 0.63 L -0.03 0.57 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.01192 0.00233 0.0 0.01192 0.04 0.42)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">88</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 1.16 -0.08 L 0.99 -0.05 L 0.99 1.51 L 1.16 1.48 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 0.37 -0.22 L 0.21 -0.19 L 0.21 1.37 L 0.37 1.34 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 1.16 1.48 L 0.37 1.34 L 0.21 1.37 L 0.99 1.51 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 0.37 -0.22 L 1.16 -0.08 L 1.16 1.48 L 0.37 1.34 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.02975 0.00539 0.0 0.02975 0.56 0.96)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">87</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 2.49 -0.3 L 2.24 -0.24 L 2.24 2.26 L 2.49 2.2 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 1.24 -0.49 L 0.99 -0.43 L 0.99 2.07 L 1.24 2.01 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 2.49 2.2 L 1.24 2.01 L 0.99 2.07 L 2.24 2.26 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 1.24 -0.49 L 2.49 -0.3 L 2.49 2.2 L 1.24 2.01 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.04762 0.0073 0.0 0.04762 1.53 1.39)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">86</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 4.12 -0.65 L 3.83 -0.57 L 3.83 2.87 L 4.12 2.79 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 2.4 -0.84 L 2.11 -0.76 L 2.11 2.67 L 2.4 2.59 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 4.12 2.79 L 2.4 2.59 L 2.11 2.67 L 3.83 2.87 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 2.4 -0.84 L 4.12 -0.65 L 4.12 2.79 L 2.4 2.59 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.06548 0.0075 0.0 0.06548 2.81 1.73)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">85</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 5.86 -1.13 L 5.56 -1.03 L 5.56 3.35 L 5.86 3.24 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 3.67 -1.28 L 3.37 -1.18 L 3.37 3.2 L 3.67 3.09 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 5.86 3.24 L 3.67 3.09 L 3.37 3.2 L 5.56 3.35 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 3.67 -1.28 L 5.86 -1.13 L 5.86 3.24 L 3.67 3.09 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.08334 0.00569 0.0 0.08334 4.19 1.97)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">84</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 7.46 -1.75 L 7.21 -1.63 L 7.21 3.68 L 7.46 3.56 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 4.8 -1.8 L 4.55 -1.68 L 4.55 3.63 L 4.8 3.51 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 7.46 3.56 L 4.8 3.51 L 4.55 3.63 L 7.21 3.68 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 4.8 -1.8 L 7.46 -1.75 L 7.46 3.56 L 4.8 3.51 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.1012 0.00175 0.0 0.1012 5.43 2.11)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">83</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 8.69 -2.51 L 8.53 -2.37 L 8.53 3.88 L 8.69 3.74 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 5.57 -2.41 L 5.41 -2.26 L 5.41 3.99 L 5.57 3.84 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 8.69 3.74 L 5.57 3.84 L 5.41 3.99 L 8.53 3.88 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 5.57 -2.41 L 8.69 -2.51 L 8.69 3.74 L 5.57 3.84 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.11905 -0.00412 0.0 0.11905 6.31 2.16)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">82</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 9.35 -3.41 L 9.32 -3.24 L 9.32 3.95 L 9.35 3.78 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 5.75 -3.1 L 5.72 -2.93 L 5.72 4.25 L 5.75 4.09 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 9.35 3.78 L 5.75 4.09 L 5.72 4.25 L 9.32 3.95 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 5.75 -3.1 L 9.35 -3.41 L 9.35 3.78 L 5.75 4.09 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.1369 -0.01157 0.0 0.1369 6.6 2.1)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">81</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 9.24 -4.42 L 9.38 -4.23 L 9.38 3.9 L 9.24 3.71 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 5.18 -3.9 L 5.32 -3.71 L 5.32 4.42 L 5.18 4.23 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 9.24 3.71 L 5.18 4.23 L 5.32 4.42 L 9.38 3.9 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 5.18 -3.9 L 9.24 -4.42 L 9.24 3.71 L 5.18 4.23 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.15475 -0.01988 0.0 0.15475 6.14 1.94)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">80</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 8.29 -5.54 L 8.6 -5.33 L 8.6 3.73 L 8.29 3.52 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 3.76 -4.8 L 4.07 -4.59 L 4.07 4.47 L 3.76 4.26 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 8.29 3.52 L 3.76 4.26 L 4.07 4.47 L 8.6 3.73 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 3.76 -4.8 L 8.29 -5.54 L 8.29 3.52 L 3.76 4.26 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.17262 -0.02827 0.0 0.17262 4.83 1.68)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">79</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 6.46 -6.77 L 6.94 -6.53 L 6.94 3.47 L 6.46 3.23 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 1.46 -5.83 L 1.94 -5.59 L 1.94 4.41 L 1.46 4.17 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 6.46 3.23 L 1.46 4.17 L 1.94 4.41 L 6.94 3.47 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 1.46 -5.83 L 6.46 -6.77 L 6.46 3.23 L 1.46 4.17 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.19048 -0.0358 0.0 0.19048 2.65 1.29)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">78</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 3.84 -8.08 L 4.47 -7.82 L 4.47 3.11 L 3.84 2.86 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -1.63 -6.99 L -1 -6.73 L -1 4.2 L -1.63 3.95 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 3.84 2.86 L -1.63 3.95 L -1 4.2 L 4.47 3.11 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -1.63 -6.99 L 3.84 -8.08 L 3.84 2.86 L -1.63 3.95 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.20834 -0.0415 0.0 0.20834 -0.34 0.78)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">77</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 0.58 -9.46 L 1.32 -9.19 L 1.32 2.69 L 0.58 2.41 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -5.36 -8.3 L -4.62 -8.02 L -4.62 3.86 L -5.36 3.58 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 0.58 2.41 L -5.36 3.58 L -4.62 3.86 L 1.32 2.69 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -5.36 -8.3 L 0.58 -9.46 L 0.58 2.41 L -5.36 3.58 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.2262 -0.04454 0.0 0.2262 -3.96 0.14)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">76</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -3.07 -10.92 L -2.28 -10.62 L -2.28 2.19 L -3.07 1.89 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -9.48 -9.76 L -8.68 -9.46 L -8.68 3.35 L -9.48 3.05 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -3.07 1.89 L -9.48 3.05 L -8.68 3.35 L -2.28 2.19 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -9.48 -9.76 L -3.07 -10.92 L -3.07 1.89 L -9.48 3.05 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.24405 -0.04424 0.0 0.24405 -7.96 -0.63)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">75</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -6.81 -12.43 L -6.02 -12.11 L -6.02 1.64 L -6.81 1.32 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -13.68 -11.38 L -12.9 -11.06 L -12.9 2.69 L -13.68 2.37 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -6.81 1.32 L -13.68 2.37 L -12.9 2.69 L -6.02 1.64 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -13.68 -11.38 L -6.81 -12.43 L -6.81 1.32 L -13.68 2.37 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.2619 -0.04012 0.0 0.2619 -12.06 -1.54)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">74</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -10.27 -14.01 L -9.57 -13.66 L -9.57 1.02 L -10.27 0.68 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -17.61 -13.16 L -16.91 -12.82 L -16.91 1.87 L -17.61 1.52 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -10.27 0.68 L -17.61 1.52 L -16.91 1.87 L -9.57 1.02 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -17.61 -13.16 L -10.27 -14.01 L -10.27 0.68 L -17.61 1.52 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.27977 -0.03209 0.0 0.27977 -15.88 -2.58)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">73</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -13.11 -15.64 L -12.56 -15.27 L -12.56 0.35 L -13.11 -0.02 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -20.92 -15.11 L -20.37 -14.74 L -20.37 0.88 L -20.92 0.52 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -13.11 -0.02 L -20.92 0.52 L -20.37 0.88 L -12.56 0.35 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -20.92 -15.11 L -13.11 -15.64 L -13.11 -0.02 L -20.92 0.52 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.29762 -0.02036 0.0 0.29762 -19.07 -3.77)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">72</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -14.98 -17.35 L -14.65 -16.96 L -14.65 -0.4 L -14.98 -0.79 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -23.26 -17.2 L -22.93 -16.81 L -22.93 -0.25 L -23.26 -0.64 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -14.98 -0.79 L -23.26 -0.64 L -22.93 -0.25 L -14.65 -0.4 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -23.26 -17.2 L -14.98 -17.35 L -14.98 -0.79 L -23.26 -0.64 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.31548 -0.0055 0.0 0.31548 -21.3 -5.08)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">71</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -15.59 -19.13 L -15.54 -18.72 L -15.54 -1.23 L -15.59 -1.64 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -24.34 -19.44 L -24.28 -19.03 L -24.28 -1.53 L -24.34 -1.94 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -15.59 -1.64 L -24.34 -1.94 L -24.28 -1.53 L -15.54 -1.23 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -24.34 -19.44 L -15.59 -19.13 L -15.59 -1.64 L -24.34 -1.94 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.33333 0.01157 0.0 0.33333 -22.28 -6.52)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">70</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -14.75 -21.02 L -15 -20.58 L -15 -2.15 L -14.75 -2.58 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -23.97 -21.8 L -24.22 -21.36 L -24.22 -2.93 L -23.97 -3.36 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -14.75 -2.58 L -23.97 -3.36 L -24.22 -2.93 L -15 -2.15 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -23.97 -21.8 L -14.75 -21.02 L -14.75 -2.58 L -23.97 -3.36 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.3512 0.02968 0.0 0.3512 -21.79 -8.08)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">69</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -12.36 -23.02 L -12.92 -22.56 L -12.92 -3.19 L -12.36 -3.64 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -22.04 -24.26 L -22.6 -23.81 L -22.6 -4.43 L -22.04 -4.89 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -12.36 -3.64 L -22.04 -4.89 L -22.6 -4.43 L -12.92 -3.19 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -22.04 -24.26 L -12.36 -23.02 L -12.36 -3.64 L -22.04 -4.89 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.36905 0.04744 0.0 0.36905 -19.75 -9.75)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">68</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -8.43 -25.15 L -9.28 -24.67 L -9.28 -4.36 L -8.43 -4.84 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -18.58 -26.81 L -19.44 -26.34 L -19.44 -6.03 L -18.58 -6.5 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -8.43 -4.84 L -18.58 -6.5 L -19.44 -6.03 L -9.28 -4.36 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -18.58 -26.81 L -8.43 -25.15 L -8.43 -4.84 L -18.58 -6.5 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.38692 0.06339 0.0 0.38692 -16.18 -11.51)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">67</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -3.11 -27.44 L -4.23 -26.94 L -4.23 -5.69 L -3.11 -6.19 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -13.74 -29.43 L -14.85 -28.94 L -14.85 -7.69 L -13.74 -8.19 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -3.11 -6.19 L -13.74 -8.19 L -14.85 -7.69 L -4.23 -5.69 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -13.74 -29.43 L -3.11 -27.44 L -3.11 -6.19 L -13.74 -8.19 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.40475 0.07607 0.0 0.40475 -11.22 -13.37)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">66</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 3.3 -29.9 L 2 -29.37 L 2 -7.19 L 3.3 -7.71 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -7.79 -32.11 L -9.1 -31.58 L -9.1 -9.4 L -7.79 -9.92 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 3.3 -7.71 L -7.79 -9.92 L -9.1 -9.4 L 2 -7.19 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -7.79 -32.11 L 3.3 -29.9 L 3.3 -7.71 L -7.79 -9.92 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.42262 0.0842 0.0 0.42262 -5.17 -15.3)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">65</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 10.44 -32.54 L 9.02 -31.99 L 9.02 -8.87 L 10.44 -9.42 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -1.13 -34.81 L -2.54 -34.27 L -2.54 -11.15 L -1.13 -11.69 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 10.44 -9.42 L -1.13 -11.69 L -2.54 -11.15 L 9.02 -8.87 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -1.13 -34.81 L 10.44 -32.54 L 10.44 -9.42 L -1.13 -11.69 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.44048 0.08675 0.0 0.44048 1.61 -17.3)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">64</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 17.8 -35.37 L 16.38 -34.81 L 16.38 -10.75 L 17.8 -11.31 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 5.77 -37.55 L 4.35 -36.99 L 4.35 -12.93 L 5.77 -13.49 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 17.8 -11.31 L 5.77 -13.49 L 4.35 -12.93 L 16.38 -10.75 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 5.77 -37.55 L 17.8 -35.37 L 17.8 -11.31 L 5.77 -13.49 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.45834 0.08307 0.0 0.45834 8.62 -19.38)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">63</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 24.87 -38.4 L 23.56 -37.81 L 23.56 -12.82 L 24.87 -13.4 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 12.38 -40.32 L 11.06 -39.73 L 11.06 -14.73 L 12.38 -15.32 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 24.87 -13.4 L 12.38 -15.32 L 11.06 -14.73 L 23.56 -12.82 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 12.38 -40.32 L 24.87 -38.4 L 24.87 -13.4 L 12.38 -15.32 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.4762 0.07295 0.0 0.4762 15.33 -21.51)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">62</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 31.1 -41.62 L 30 -41.01 L 30 -15.08 L 31.1 -15.69 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 18.14 -43.11 L 17.03 -42.5 L 17.03 -16.56 L 18.14 -17.17 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 31.1 -15.69 L 18.14 -17.17 L 17.03 -16.56 L 30 -15.08 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 18.14 -43.11 L 31.1 -41.62 L 31.1 -15.69 L 18.14 -17.17 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.49406 0.05667 0.0 0.49406 21.2 -23.72)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">61</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 35.98 -45.02 L 35.18 -44.39 L 35.18 -17.52 L 35.98 -18.15 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 22.54 -45.94 L 21.75 -45.31 L 21.75 -18.44 L 22.54 -19.07 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 35.98 -18.15 L 22.54 -19.07 L 21.75 -18.44 L 35.18 -17.52 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 22.54 -45.94 L 35.98 -45.02 L 35.98 -18.15 L 22.54 -19.07 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.51192 0.035 0.0 0.51192 25.72 -26)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">60</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 39.05 -48.59 L 38.65 -47.94 L 38.65 -20.13 L 39.05 -20.78 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 25.15 -48.83 L 24.75 -48.18 L 24.75 -20.37 L 25.15 -21.02 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 39.05 -20.78 L 25.15 -21.02 L 24.75 -20.37 L 38.65 -20.13 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 25.15 -48.83 L 39.05 -48.59 L 39.05 -20.78 L 25.15 -21.02 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.52975 0.00922 0.0 0.52975 28.44 -28.36)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">59</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 39.99 -52.3 L 40.03 -51.62 L 40.03 -22.88 L 39.99 -23.55 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 25.62 -51.8 L 25.66 -51.13 L 25.66 -22.38 L 25.62 -23.06 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 39.99 -23.55 L 25.62 -23.06 L 25.66 -22.38 L 40.03 -22.88 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 25.62 -51.8 L 39.99 -52.3 L 39.99 -23.55 L 25.62 -23.06 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.54762 -0.01901 0.0 0.54762 29.02 -30.82)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">58</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 38.6 -56.13 L 39.11 -55.43 L 39.11 -25.75 L 38.6 -26.45 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 23.76 -54.87 L 24.27 -54.18 L 24.27 -24.49 L 23.76 -25.19 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 38.6 -26.45 L 23.76 -25.19 L 24.27 -24.49 L 39.11 -25.75 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 23.76 -54.87 L 38.6 -56.13 L 38.6 -26.45 L 23.76 -25.19 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.56548 -0.04779 0.0 0.56548 27.27 -33.38)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">57</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 34.84 -60.05 L 35.83 -59.33 L 35.83 -28.7 L 34.84 -29.43 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 19.53 -58.08 L 20.52 -57.36 L 20.52 -26.74 L 19.53 -27.46 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 34.84 -29.43 L 19.53 -27.46 L 20.52 -26.74 L 35.83 -28.7 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 19.53 -58.08 L 34.84 -60.05 L 34.84 -29.43 L 19.53 -27.46 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.58334 -0.07498 0.0 0.58334 23.15 -36.07)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">56</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 28.87 -64.03 L 30.28 -63.28 L 30.28 -31.73 L 28.87 -32.47 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 13.09 -61.44 L 14.5 -60.7 L 14.5 -29.14 L 13.09 -29.88 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 28.87 -32.47 L 13.09 -29.88 L 14.5 -29.14 L 30.28 -31.73 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 13.09 -61.44 L 28.87 -64.03 L 28.87 -32.47 L 13.09 -29.88 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.60118 -0.09848 0.0 0.60118 16.82 -38.89)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">55</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 21.01 -68.04 L 22.76 -67.28 L 22.76 -34.78 L 21.01 -35.55 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 4.76 -64.99 L 6.51 -64.22 L 6.51 -31.73 L 4.76 -32.49 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 21.01 -35.55 L 4.76 -32.49 L 6.51 -31.73 L 22.76 -34.78 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 4.76 -64.99 L 21.01 -68.04 L 21.01 -35.55 L 4.76 -32.49 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.61905 -0.11633 0.0 0.61905 8.6 -41.86)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">54</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 11.74 -72.07 L 13.72 -71.29 L 13.72 -37.85 L 11.74 -38.64 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -4.98 -68.74 L -2.99 -67.96 L -2.99 -34.52 L -4.98 -35.31 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 11.74 -38.64 L -4.98 -35.31 L -2.99 -34.52 L 13.72 -37.85 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -4.98 -68.74 L 11.74 -72.07 L 11.74 -38.64 L -4.98 -35.31 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.6369 -0.12689 0.0 0.6369 -1.03 -44.99)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">53</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 1.67 -76.1 L 3.76 -75.3 L 3.76 -40.92 L 1.67 -41.73 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -15.51 -72.72 L -13.42 -71.91 L -13.42 -37.54 L -15.51 -38.35 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 1.67 -41.73 L -15.51 -38.35 L -13.42 -37.54 L 3.76 -40.92 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -15.51 -72.72 L 1.67 -76.1 L 1.67 -41.73 L -15.51 -38.35 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.65477 -0.12895 0.0 0.65477 -11.45 -48.29)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">52</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -8.47 -80.13 L -6.43 -79.29 L -6.43 -43.99 L -8.47 -44.82 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -26.12 -76.93 L -24.08 -76.09 L -24.08 -40.79 L -26.12 -41.62 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -8.47 -44.82 L -26.12 -41.62 L -24.08 -40.79 L -6.43 -43.99 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -26.12 -76.93 L -8.47 -80.13 L -8.47 -44.82 L -26.12 -41.62 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.6726 -0.1219 0.0 0.6726 -21.95 -51.76)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">51</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -17.94 -84.14 L -16.09 -83.29 L -16.09 -47.04 L -17.94 -47.89 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -36.07 -81.36 L -34.22 -80.51 L -34.22 -44.26 L -36.07 -45.12 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -17.94 -47.89 L -36.07 -45.12 L -34.22 -44.26 L -16.09 -47.04 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -36.07 -81.36 L -17.94 -84.14 L -17.94 -47.89 L -36.07 -45.12 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.69048 -0.10579 0.0 0.69048 -31.78 -55.41)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">50</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -26.01 -88.15 L -24.49 -87.28 L -24.49 -50.09 L -26.01 -50.97 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -44.6 -86.02 L -43.08 -85.14 L -43.08 -47.96 L -44.6 -48.84 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -26.01 -50.97 L -44.6 -48.84 L -43.08 -47.96 L -24.49 -50.09 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -44.6 -86.02 L -26.01 -88.15 L -26.01 -50.97 L -44.6 -48.84 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.70833 -0.08125 0.0 0.70833 -40.2 -59.23)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">49</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -31.98 -92.19 L -30.94 -91.29 L -30.94 -53.17 L -31.98 -54.06 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -51.04 -90.88 L -50 -89.98 L -50 -51.86 L -51.04 -52.76 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -31.98 -54.06 L -51.04 -52.76 L -50 -51.86 L -30.94 -53.17 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -51.04 -90.88 L -31.98 -92.19 L -31.98 -54.06 L -51.04 -52.76 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.7262 -0.04967 0.0 0.7262 -46.54 -63.21)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">48</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -35.32 -96.26 L -34.84 -95.34 L -34.84 -56.28 L -35.32 -57.2 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -54.85 -95.92 L -54.37 -95 L -54.37 -55.94 L -54.85 -56.86 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -35.32 -57.2 L -54.85 -56.86 L -54.37 -55.94 L -34.84 -56.28 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -54.85 -95.92 L -35.32 -96.26 L -35.32 -57.2 L -54.85 -56.86 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.74405 -0.01295 0.0 0.74405 -50.24 -67.33)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">47</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -35.64 -100.41 L -35.79 -99.47 L -35.79 -59.47 L -35.64 -60.42 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -55.64 -101.11 L -55.78 -100.16 L -55.78 -60.17 L -55.64 -61.11 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -35.64 -60.42 L -55.64 -61.11 L -55.78 -60.17 L -35.79 -59.47 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -55.64 -101.11 L -35.64 -100.41 L -35.64 -60.42 L -55.64 -61.11 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.76192 0.02646 0.0 0.76192 -50.91 -71.58)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">46</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -32.76 -104.67 L -33.55 -103.71 L -33.55 -62.77 L -32.76 -63.74 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -53.23 -106.4 L -54.01 -105.44 L -54.01 -64.5 L -53.23 -65.47 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -32.76 -63.74 L -53.23 -65.47 L -54.01 -64.5 L -33.55 -62.77 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -53.23 -106.4 L -32.76 -104.67 L -32.76 -63.74 L -53.23 -65.47 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.77975 0.0659 0.0 0.77975 -48.39 -75.95)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">45</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -26.71 -109.08 L -28.12 -108.09 L -28.12 -66.22 L -26.71 -67.21 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -47.64 -111.77 L -49.05 -110.78 L -49.05 -68.91 L -47.64 -69.9 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -26.71 -67.21 L -47.64 -69.9 L -49.05 -68.91 L -28.12 -66.22 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -47.64 -111.77 L -26.71 -109.08 L -26.71 -67.21 L -47.64 -69.9 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.79762 0.10252 0.0 0.79762 -42.69 -80.4)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">44</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -17.76 -113.67 L -19.71 -112.66 L -19.71 -69.86 L -17.76 -70.87 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -39.16 -117.18 L -41.12 -116.17 L -41.12 -73.36 L -39.16 -74.37 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -17.76 -70.87 L -39.16 -74.37 L -41.12 -73.36 L -19.71 -69.86 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -39.16 -117.18 L -17.76 -113.67 L -17.76 -70.87 L -39.16 -74.37 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.81548 0.13359 0.0 0.81548 -34.1 -84.93)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">43</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -6.41 -118.48 L -8.79 -117.45 L -8.79 -73.7 L -6.41 -74.74 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -28.28 -122.59 L -30.67 -121.56 L -30.67 -77.82 L -28.28 -78.85 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -6.41 -74.74 L -28.28 -78.85 L -30.67 -77.82 L -8.79 -73.7 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -28.28 -122.59 L -6.41 -118.48 L -6.41 -74.74 L -28.28 -78.85 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.83334 0.15662 0.0 0.83334 -23.11 -89.51)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">42</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 6.66 -123.53 L 3.99 -122.48 L 3.99 -77.8 L 6.66 -78.85 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -15.69 -127.98 L -18.35 -126.93 L -18.35 -82.25 L -15.69 -83.3 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 6.66 -78.85 L -15.69 -83.3 L -18.35 -82.25 L 3.99 -77.8 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -15.69 -127.98 L 6.66 -123.53 L 6.66 -78.85 L -15.69 -83.3 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.8512 0.16959 0.0 0.8512 -10.4 -94.13)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">41</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 20.59 -128.84 L 17.82 -127.77 L 17.82 -82.15 L 20.59 -83.22 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -2.22 -133.34 L -4.99 -132.26 L -4.99 -86.64 L -2.22 -87.72 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 20.59 -83.22 L -2.22 -87.72 L -4.99 -86.64 L 17.82 -82.15 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -2.22 -133.34 L 20.59 -128.84 L 20.59 -83.22 L -2.22 -87.72 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.86906 0.17116 0.0 0.86906 3.17 -98.78)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">40</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 34.45 -134.42 L 31.78 -133.32 L 31.78 -86.77 L 34.45 -87.86 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 11.17 -138.64 L 8.5 -137.54 L 8.5 -90.99 L 11.17 -92.08 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 34.45 -87.86 L 11.17 -92.08 L 8.5 -90.99 L 31.78 -86.77 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 11.17 -138.64 L 34.45 -134.42 L 34.45 -87.86 L 11.17 -92.08 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.8869 0.16075 0.0 0.8869 16.67 -103.47)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">39</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 47.26 -140.27 L 44.87 -139.15 L 44.87 -91.65 L 47.26 -92.77 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 23.51 -143.9 L 21.13 -142.78 L 21.13 -95.29 L 23.51 -96.41 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 47.26 -92.77 L 23.51 -96.41 L 21.13 -95.29 L 44.87 -91.65 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 23.51 -143.9 L 47.26 -140.27 L 47.26 -92.77 L 23.51 -96.41 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.90475 0.13861 0.0 0.90475 29.13 -108.18)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">38</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 58.09 -146.36 L 56.17 -145.22 L 56.17 -96.79 L 58.09 -97.93 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 33.87 -149.14 L 31.95 -148 L 31.95 -99.56 L 33.87 -100.71 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 58.09 -97.93 L 33.87 -100.71 L 31.95 -99.56 L 56.17 -96.79 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 33.87 -149.14 L 58.09 -146.36 L 58.09 -97.93 L 33.87 -100.71 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.92262 0.10583 0.0 0.92262 39.6 -112.93)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">37</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 66.1 -152.68 L 64.81 -151.52 L 64.81 -102.15 L 66.1 -103.31 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 41.42 -154.37 L 40.12 -153.2 L 40.12 -103.83 L 41.42 -105 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 66.1 -103.31 L 41.42 -105 L 40.12 -103.83 L 64.81 -102.15 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 41.42 -154.37 L 66.1 -152.68 L 66.1 -103.31 L 41.42 -105 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.94048 0.06433 0.0 0.94048 47.26 -117.73)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">36</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 70.65 -159.19 L 70.09 -158 L 70.09 -107.7 L 70.65 -108.88 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 45.5 -159.63 L 44.94 -158.44 L 44.94 -108.14 L 45.5 -109.32 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 70.65 -108.88 L 45.5 -109.32 L 44.94 -108.14 L 70.09 -107.7 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 45.5 -159.63 L 70.65 -159.19 L 70.65 -108.88 L 45.5 -109.32 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.95833 0.0167 0.0 0.95833 51.44 -122.6)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">35</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 71.29 -165.85 L 71.54 -164.64 L 71.54 -113.4 L 71.29 -114.61 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 45.67 -164.96 L 45.91 -163.75 L 45.91 -112.51 L 45.67 -113.72 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 71.29 -114.61 L 45.67 -113.72 L 45.91 -112.51 L 71.54 -113.4 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 45.67 -164.96 L 71.29 -165.85 L 71.29 -114.61 L 45.67 -113.72 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.97618 -0.03389 0.0 0.97618 51.73 -127.55)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">34</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 67.85 -172.61 L 68.91 -171.38 L 68.91 -119.2 L 67.85 -120.43 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 41.76 -170.41 L 42.82 -169.18 L 42.82 -117 L 41.76 -118.23 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 67.85 -120.43 L 41.76 -118.23 L 42.82 -117 L 68.91 -119.2 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 41.76 -170.41 L 67.85 -172.61 L 67.85 -120.43 L 41.76 -118.23 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.99405 -0.08401 0.0 0.99405 47.93 -132.63)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">33</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 60.44 -179.44 L 62.27 -178.18 L 62.27 -125.07 L 60.44 -126.32 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 33.88 -176.02 L 35.72 -174.77 L 35.72 -121.65 L 33.88 -122.9 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 60.44 -126.32 L 33.88 -122.9 L 35.72 -121.65 L 62.27 -125.07 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 33.88 -176.02 L 60.44 -179.44 L 60.44 -126.32 L 33.88 -122.9 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0119 -0.13008 0.0 1.0119 40.16 -137.84)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">32</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 49.45 -186.27 L 51.96 -185 L 51.96 -130.94 L 49.45 -132.21 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 22.43 -181.84 L 24.93 -180.57 L 24.93 -126.51 L 22.43 -127.79 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 49.45 -132.21 L 22.43 -127.79 L 24.93 -126.51 L 51.96 -130.94 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 22.43 -181.84 L 49.45 -186.27 L 49.45 -132.21 L 22.43 -127.79 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.02975 -0.1687 0.0 1.02975 28.82 -143.21)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">31</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 35.55 -193.08 L 38.57 -191.78 L 38.57 -136.79 L 35.55 -138.09 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 8.06 -187.91 L 11.08 -186.62 L 11.08 -131.62 L 8.06 -132.92 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 35.55 -138.09 L 8.06 -132.92 L 11.08 -131.62 L 38.57 -136.79 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 8.06 -187.91 L 35.55 -193.08 L 35.55 -138.09 L 8.06 -132.92 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0476 -0.19688 0.0 1.0476 14.56 -148.76)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">30</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 19.63 -199.83 L 22.98 -198.51 L 22.98 -142.58 L 19.63 -143.9 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -8.33 -194.26 L -4.99 -192.94 L -4.99 -137.01 L -8.33 -138.33 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 19.63 -143.9 L -8.33 -138.33 L -4.99 -137.01 L 22.98 -142.58 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -8.33 -194.26 L 19.63 -199.83 L 19.63 -143.9 L -8.33 -138.33 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.06548 -0.21227 0.0 1.06548 -1.72 -154.52)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">29</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 2.77 -206.51 L 6.21 -205.16 L 6.21 -148.3 L 2.77 -149.64 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -25.67 -200.91 L -22.23 -199.56 L -22.23 -142.7 L -25.67 -144.04 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 2.77 -149.64 L -25.67 -144.04 L -22.23 -142.7 L 6.21 -148.3 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -25.67 -200.91 L 2.77 -206.51 L 2.77 -149.64 L -25.67 -144.04 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.08333 -0.21336 0.0 1.08333 -18.94 -160.48)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">28</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -13.87 -213.1 L -10.57 -211.73 L -10.57 -153.93 L -13.87 -155.29 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -42.77 -207.86 L -39.47 -206.49 L -39.47 -148.69 L -42.77 -150.05 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -13.87 -155.29 L -42.77 -150.05 L -39.47 -148.69 L -10.57 -153.93 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -42.77 -207.86 L -13.87 -213.1 L -13.87 -155.29 L -42.77 -150.05 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.1012 -0.1996 0.0 1.1012 -35.94 -166.66)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">27</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -29.08 -219.61 L -26.16 -218.22 L -26.16 -159.48 L -29.08 -160.87 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -58.45 -215.11 L -55.53 -213.72 L -55.53 -154.98 L -58.45 -156.36 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -29.08 -160.87 L -58.45 -156.36 L -55.53 -154.98 L -26.16 -159.48 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -58.45 -215.11 L -29.08 -219.61 L -29.08 -160.87 L -58.45 -156.36 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.11903 -0.17145 0.0 1.11903 -51.51 -173.05)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">26</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -41.74 -226.06 L -39.42 -224.65 L -39.42 -164.97 L -41.74 -166.38 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -71.58 -222.64 L -69.26 -221.23 L -69.26 -161.55 L -71.58 -162.96 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -41.74 -166.38 L -71.58 -162.96 L -69.26 -161.55 L -39.42 -164.97 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -71.58 -222.64 L -41.74 -226.06 L -41.74 -166.38 L -71.58 -162.96 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.13692 -0.13042 0.0 1.13692 -64.53 -179.64)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">25</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -50.86 -232.49 L -49.31 -231.06 L -49.31 -170.44 L -50.86 -171.87 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -81.17 -230.42 L -79.62 -228.99 L -79.62 -168.37 L -81.17 -169.8 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -50.86 -171.87 L -81.17 -169.8 L -79.62 -168.37 L -49.31 -170.44 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -81.17 -230.42 L -50.86 -232.49 L -50.86 -171.87 L -81.17 -169.8 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.15475 -0.07898 0.0 1.15475 -74 -186.41)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">24</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -55.67 -238.93 L -55.03 -237.48 L -55.03 -175.93 L -55.67 -177.38 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -86.45 -238.4 L -85.81 -236.95 L -85.81 -175.39 L -86.45 -176.84 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -55.67 -177.38 L -86.45 -176.84 L -85.81 -175.39 L -55.03 -175.93 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -86.45 -238.4 L -55.67 -238.93 L -55.67 -177.38 L -86.45 -176.84 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.17262 -0.02043 0.0 1.17262 -79.17 -193.34)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">23</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -55.7 -245.45 L -56.04 -243.97 L -56.04 -181.48 L -55.7 -182.96 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -86.94 -246.53 L -87.29 -245.06 L -87.29 -182.57 L -86.94 -184.04 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -55.7 -182.96 L -86.94 -184.04 L -87.29 -182.57 L -56.04 -181.48 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -86.94 -246.53 L -55.7 -245.45 L -55.7 -182.96 L -86.94 -184.04 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.19048 0.04134 0.0 1.19048 -79.55 -200.4)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">22</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -50.76 -252.09 L -52.1 -250.59 L -52.1 -187.16 L -50.76 -188.66 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -82.48 -254.77 L -83.81 -253.27 L -83.81 -189.84 L -82.48 -191.34 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -50.76 -188.66 L -82.48 -191.34 L -83.81 -189.84 L -52.1 -187.16 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -82.48 -254.77 L -50.76 -252.09 L -50.76 -188.66 L -82.48 -191.34 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.20834 0.10213 0.0 1.20834 -74.98 -207.57)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">21</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -41.06 -258.9 L -43.31 -257.39 L -43.31 -193.02 L -41.06 -194.54 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -73.24 -263.04 L -75.5 -261.52 L -75.5 -197.16 L -73.24 -198.67 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -41.06 -194.54 L -73.24 -198.67 L -75.5 -197.16 L -43.31 -193.02 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -73.24 -263.04 L -41.06 -258.9 L -41.06 -194.54 L -73.24 -198.67 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.2262 0.15762 0.0 1.2262 -65.63 -214.81)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">20</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -27.09 -265.95 L -30.14 -264.41 L -30.14 -199.11 L -27.09 -200.65 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -59.75 -271.3 L -62.8 -269.76 L -62.8 -204.46 L -59.75 -206 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -27.09 -200.65 L -59.75 -206 L -62.8 -204.46 L -30.14 -199.11 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -59.75 -271.3 L -27.09 -265.95 L -27.09 -200.65 L -59.75 -206 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.24406 0.20381 0.0 1.24406 -52.03 -222.1)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">19</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -9.7 -273.28 L -13.36 -271.72 L -13.36 -205.48 L -9.7 -207.04 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -42.82 -279.51 L -46.48 -277.95 L -46.48 -211.7 L -42.82 -213.27 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -9.7 -207.04 L -42.82 -213.27 L -46.48 -211.7 L -13.36 -205.48 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -42.82 -279.51 L -9.7 -273.28 L -9.7 -207.04 L -42.82 -213.27 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.26192 0.23717 0.0 1.26192 -35 -229.41)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">18</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 10.01 -280.93 L 5.99 -279.34 L 5.99 -212.16 L 10.01 -213.75 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -23.58 -287.62 L -27.6 -286.04 L -27.6 -218.86 L -23.58 -220.44 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 10.01 -213.75 L -23.58 -220.44 L -27.6 -218.86 L 5.99 -212.16 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -23.58 -287.62 L 10.01 -280.93 L 10.01 -213.75 L -23.58 -220.44 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.27975 0.25496 0.0 1.27975 -15.64 -236.72)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">17</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 30.74 -288.91 L 26.63 -287.3 L 26.63 -219.18 L 30.74 -220.79 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -3.32 -295.62 L -7.43 -294.01 L -7.43 -225.89 L -3.32 -227.5 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 30.74 -220.79 L -3.32 -227.5 L -7.43 -225.89 L 26.63 -219.18 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -3.32 -295.62 L 30.74 -288.91 L 30.74 -220.79 L -3.32 -227.5 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.29762 0.25557 0.0 1.29762 4.74 -244.03)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">16</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 51.09 -297.23 L 47.17 -295.6 L 47.17 -226.55 L 51.09 -228.18 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 16.57 -303.49 L 12.64 -301.86 L 12.64 -232.81 L 16.57 -234.44 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 51.09 -228.18 L 16.57 -234.44 L 12.64 -232.81 L 47.17 -226.55 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 16.57 -303.49 L 51.09 -297.23 L 51.09 -228.18 L 16.57 -234.44 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.31548 0.23843 0.0 1.31548 24.73 -251.32)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">15</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 69.65 -305.89 L 66.19 -304.24 L 66.19 -234.25 L 69.65 -235.9 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 34.65 -311.25 L 31.2 -309.6 L 31.2 -239.61 L 34.65 -241.26 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 69.65 -235.9 L 34.65 -241.26 L 31.2 -239.61 L 66.19 -234.25 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 34.65 -311.25 L 69.65 -305.89 L 69.65 -235.9 L 34.65 -241.26 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.33333 0.20427 0.0 1.33333 42.92 -258.61)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">14</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 85.07 -314.86 L 82.34 -313.18 L 82.34 -242.26 L 85.07 -243.93 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 49.61 -318.93 L 46.88 -317.25 L 46.88 -246.32 L 49.61 -248 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 85.07 -243.93 L 49.61 -248 L 46.88 -246.32 L 82.34 -242.26 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 49.61 -318.93 L 85.07 -314.86 L 85.07 -243.93 L 49.61 -248 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.3512 0.155 0.0 1.3512 57.99 -265.9)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">13</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 96.23 -324.09 L 94.43 -322.4 L 94.43 -250.53 L 96.23 -252.23 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 60.3 -326.55 L 58.5 -324.86 L 58.5 -252.99 L 60.3 -254.69 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 96.23 -252.23 L 60.3 -254.69 L 58.5 -252.99 L 94.43 -250.53 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 60.3 -326.55 L 96.23 -324.09 L 96.23 -252.23 L 60.3 -254.69 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.36905 0.09364 0.0 1.36905 68.79 -273.22)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">12</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 102.25 -333.55 L 101.53 -331.83 L 101.53 -259.03 L 102.25 -260.75 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 65.84 -334.18 L 65.13 -332.47 L 65.13 -259.66 L 65.84 -261.38 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 102.25 -260.75 L 65.84 -261.38 L 65.13 -259.66 L 101.53 -259.03 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 65.84 -334.18 L 102.25 -333.55 L 102.25 -260.75 L 65.84 -261.38 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.3869 0.02415 0.0 1.3869 74.45 -280.59)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">11</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 102.59 -343.16 L 103.04 -341.42 L 103.04 -267.68 L 102.59 -269.42 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 65.72 -341.88 L 66.17 -340.14 L 66.17 -266.4 L 65.72 -268.14 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 102.59 -269.42 L 65.72 -268.14 L 66.17 -266.4 L 103.04 -267.68 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 65.72 -341.88 L 102.59 -343.16 L 102.59 -269.42 L 65.72 -268.14 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.40475 -0.04878 0.0 1.40475 74.44 -288.05)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text font="sansserif">10</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 97.11 -352.86 L 98.71 -351.1 L 98.71 -276.42 L 97.11 -278.18 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 59.77 -349.7 L 61.37 -347.94 L 61.37 -273.26 L 59.77 -275.03 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 97.11 -278.18 L 59.77 -275.03 L 61.37 -273.26 L 98.71 -276.42 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 59.77 -349.7 L 97.11 -352.86 L 97.11 -278.18 L 59.77 -275.03 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.4226 -0.12022 0.0 1.4226 73.52 -296.05)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">9</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 86.04 -362.59 L 88.72 -360.8 L 88.72 -285.19 L 86.04 -286.97 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 48.23 -357.73 L 50.91 -355.94 L 50.91 -280.33 L 48.23 -282.11 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 86.04 -286.97 L 48.23 -282.11 L 50.91 -280.33 L 88.72 -285.19 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 48.23 -357.73 L 86.04 -362.59 L 86.04 -286.97 L 48.23 -282.11 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.44048 -0.18518 0.0 1.44048 62.15 -304.01)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">8</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 70.04 -372.28 L 73.64 -370.47 L 73.64 -293.92 L 70.04 -295.72 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 31.76 -366 L 35.36 -364.2 L 35.36 -287.65 L 31.76 -289.45 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 70.04 -295.72 L 31.76 -289.45 L 35.36 -287.65 L 73.64 -293.92 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 31.76 -366 L 70.04 -372.28 L 70.04 -295.72 L 31.76 -289.45 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.45833 -0.23892 0.0 1.45833 45.85 -312.12)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">7</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 50.1 -381.88 L 54.39 -380.05 L 54.39 -302.56 L 50.1 -304.39 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M 11.35 -374.59 L 15.64 -372.77 L 15.64 -295.28 L 11.35 -297.1 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 50.1 -304.39 L 11.35 -297.1 L 15.64 -295.28 L 54.39 -302.56 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M 11.35 -374.59 L 50.1 -381.88 L 50.1 -304.39 L 11.35 -297.1 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.4762 -0.27744 0.0 1.4762 25.62 -320.39)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">6</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M 27.53 -391.35 L 32.23 -389.5 L 32.23 -311.07 L 27.53 -312.92 Z"/>
-              </svg:g>
-              <svg:g color="#333333" fill="#333333" stroke="#333333">
-                <svg:path d="M -11.68 -383.54 L -6.98 -381.69 L -6.98 -303.26 L -11.68 -305.11 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 27.53 -312.92 L -11.68 -305.11 L -6.98 -303.26 L 32.23 -311.07 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -11.68 -383.54 L 27.53 -391.35 L 27.53 -312.92 L -11.68 -305.11 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.49403 -0.29765 0.0 1.49403 2.76 -328.84)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">5</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M 7.58 -332.12 L -31.79 -324.24 L -27.87 -322.08 L 11.5 -329.95 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -40.29 -399.09 L -0.92 -406.97 L 3.01 -404.61 L -36.36 -396.73 Z"/>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -0.92 -406.97 L 3.01 -404.61 L 11.5 -329.95 L 7.58 -332.12 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -40.29 -399.09 L -0.92 -406.97 L 7.58 -332.12 L -31.79 -324.24 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.46667 -0.29999 0.16667 1.5 -19.5 -348.08)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">4</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -12.68 -356.88 L -52.05 -349.01 L -48.25 -348.69 L -8.88 -356.56 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -72.41 -418.21 L -33.04 -426.08 L -29.1 -425.29 L -68.47 -417.42 Z"/>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -33.04 -426.08 L -29.1 -425.29 L -8.88 -356.56 L -12.68 -356.88 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -72.41 -418.21 L -33.04 -426.08 L -12.68 -356.88 L -52.05 -349.01 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.41669 -0.29999 0.41667 1.5 -43.08 -372.84)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">3</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -35.47 -381.87 L -74.84 -373.99 L -71.26 -375.51 L -31.89 -383.38 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -105.95 -437.76 L -66.58 -445.64 L -62.64 -446.43 L -102.01 -438.55 Z"/>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -66.58 -445.64 L -62.64 -446.43 L -31.89 -383.38 L -35.47 -381.87 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -105.95 -437.76 L -66.58 -445.64 L -35.47 -381.87 L -74.84 -373.99 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.36667 -0.29999 0.66666 1.5 -69.19 -397.83)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">2</text></svg:foreignObject>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -60.78 -407.08 L -100.15 -399.21 L -96.88 -402.53 L -57.51 -410.4 Z"/>
-              </svg:g>
-              <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
-                <svg:path d="M -140.92 -457.76 L -101.55 -465.64 L -97.61 -468 L -136.98 -460.13 Z"/>
-              </svg:g>
-              <svg:g color="#1A1A1A" fill="#1A1A1A" stroke="#1A1A1A">
-                <svg:path d="M -101.55 -465.64 L -97.61 -468 L -57.51 -410.4 L -60.78 -407.08 Z"/>
-              </svg:g>
-              <svg:g color="#000000" fill="#000000" stroke="#000000">
-                <svg:path d="M -140.92 -457.76 L -101.55 -465.64 L -60.78 -407.08 L -100.15 -399.21 Z"/>
-              </svg:g>
-              <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.31668 -0.29999 0.91667 1.5 -97.81 -423.04)">
-                <svg:foreignObject color="#FFFFFF" height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text font="sansserif">1</text></svg:foreignObject>
-              </svg:g>
-            </svg:g>
-          </svg:svg>
-        </picture></text></p>
+  <para xml:id="p1">
+    <picture height="524.77" width="244.51" xml:id="p1.pic1">
+      <svg:svg height="524.77" overflow="visible" version="1.1" viewBox="0 0 244.51 524.77" width="244.51">
+        <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,524.77) matrix(1 0 0 -1 0 0) translate(141.19,0) translate(0,0.3)">
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 0.28 0.06 L 0.22 0.04 L 0.22 0.67 L 0.28 0.68 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -0.03 -0.01 L -0.09 -0.02 L -0.09 0.61 L -0.03 0.62 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 0.28 0.68 L -0.03 0.62 L -0.09 0.61 L 0.22 0.67 Z"/>
+          </svg:g>
+          <svg:path d="M -0.03 -0.01 L 0.28 0.06 L 0.28 0.68 L -0.03 0.62 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.01192 0.00233 0.0 0.01192 0.04 0.47)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">88</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 1.16 0.22 L 0.99 0.19 L 0.99 1.75 L 1.16 1.79 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 0.37 0.08 L 0.21 0.05 L 0.21 1.61 L 0.37 1.64 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 1.16 1.79 L 0.37 1.64 L 0.21 1.61 L 0.99 1.75 Z"/>
+          </svg:g>
+          <svg:path d="M 0.37 0.08 L 1.16 0.22 L 1.16 1.79 L 0.37 1.64 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.02975 0.00539 0.0 0.02975 0.56 1.26)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">87</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 2.49 0.49 L 2.24 0.43 L 2.24 2.93 L 2.49 2.99 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 1.24 0.3 L 0.99 0.24 L 0.99 2.74 L 1.24 2.8 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 2.49 2.99 L 1.24 2.8 L 0.99 2.74 L 2.24 2.93 Z"/>
+          </svg:g>
+          <svg:path d="M 1.24 0.3 L 2.49 0.49 L 2.49 2.99 L 1.24 2.8 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.04762 0.0073 0.0 0.04762 1.53 2.18)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">86</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 4.12 0.84 L 3.83 0.76 L 3.83 4.2 L 4.12 4.28 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 2.4 0.65 L 2.11 0.57 L 2.11 4 L 2.4 4.08 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 4.12 4.28 L 2.4 4.08 L 2.11 4 L 3.83 4.2 Z"/>
+          </svg:g>
+          <svg:path d="M 2.4 0.65 L 4.12 0.84 L 4.12 4.28 L 2.4 4.08 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.06548 0.0075 0.0 0.06548 2.81 3.22)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">85</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 5.86 1.28 L 5.56 1.18 L 5.56 5.55 L 5.86 5.65 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 3.67 1.13 L 3.37 1.03 L 3.37 5.4 L 3.67 5.51 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 5.86 5.65 L 3.67 5.51 L 3.37 5.4 L 5.56 5.55 Z"/>
+          </svg:g>
+          <svg:path d="M 3.67 1.13 L 5.86 1.28 L 5.86 5.65 L 3.67 5.51 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.08334 0.00569 0.0 0.08334 4.19 4.38)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">84</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 7.46 1.8 L 7.21 1.68 L 7.21 6.99 L 7.46 7.11 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 4.8 1.75 L 4.55 1.63 L 4.55 6.94 L 4.8 7.07 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 7.46 7.11 L 4.8 7.07 L 4.55 6.94 L 7.21 6.99 Z"/>
+          </svg:g>
+          <svg:path d="M 4.8 1.75 L 7.46 1.8 L 7.46 7.11 L 4.8 7.07 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.1012 0.00175 0.0 0.1012 5.43 5.66)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">83</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 8.69 2.41 L 8.53 2.26 L 8.53 8.51 L 8.69 8.66 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 5.57 2.51 L 5.41 2.37 L 5.41 8.62 L 5.57 8.76 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 8.69 8.66 L 5.57 8.76 L 5.41 8.62 L 8.53 8.51 Z"/>
+          </svg:g>
+          <svg:path d="M 5.57 2.51 L 8.69 2.41 L 8.69 8.66 L 5.57 8.76 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.11905 -0.00412 0.0 0.11905 6.31 7.08)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">82</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 9.35 3.1 L 9.32 2.93 L 9.32 10.12 L 9.35 10.29 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 5.75 3.41 L 5.72 3.24 L 5.72 10.42 L 5.75 10.59 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 9.35 10.29 L 5.75 10.59 L 5.72 10.42 L 9.32 10.12 Z"/>
+          </svg:g>
+          <svg:path d="M 5.75 3.41 L 9.35 3.1 L 9.35 10.29 L 5.75 10.59 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.1369 -0.01157 0.0 0.1369 6.6 8.61)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">81</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 9.24 3.9 L 9.38 3.71 L 9.38 11.83 L 9.24 12.02 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 5.18 4.42 L 5.32 4.23 L 5.32 12.35 L 5.18 12.54 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 9.24 12.02 L 5.18 12.54 L 5.32 12.35 L 9.38 11.83 Z"/>
+          </svg:g>
+          <svg:path d="M 5.18 4.42 L 9.24 3.9 L 9.24 12.02 L 5.18 12.54 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.15475 -0.01988 0.0 0.15475 6.14 10.26)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">80</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 8.29 4.8 L 8.6 4.59 L 8.6 13.65 L 8.29 13.86 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 3.76 5.54 L 4.07 5.33 L 4.07 14.39 L 3.76 14.6 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 8.29 13.86 L 3.76 14.6 L 4.07 14.39 L 8.6 13.65 Z"/>
+          </svg:g>
+          <svg:path d="M 3.76 5.54 L 8.29 4.8 L 8.29 13.86 L 3.76 14.6 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.17262 -0.02827 0.0 0.17262 4.83 12.02)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">79</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 6.46 5.83 L 6.94 5.59 L 6.94 15.59 L 6.46 15.83 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 1.46 6.77 L 1.94 6.53 L 1.94 16.53 L 1.46 16.77 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 6.46 15.83 L 1.46 16.77 L 1.94 16.53 L 6.94 15.59 Z"/>
+          </svg:g>
+          <svg:path d="M 1.46 6.77 L 6.46 5.83 L 6.46 15.83 L 1.46 16.77 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.19048 -0.0358 0.0 0.19048 2.65 13.88)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">78</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 3.84 6.99 L 4.47 6.73 L 4.47 17.67 L 3.84 17.93 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -1.63 8.08 L -1 7.82 L -1 18.76 L -1.63 19.01 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 3.84 17.93 L -1.63 19.01 L -1 18.76 L 4.47 17.67 Z"/>
+          </svg:g>
+          <svg:path d="M -1.63 8.08 L 3.84 6.99 L 3.84 17.93 L -1.63 19.01 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.20834 -0.0415 0.0 0.20834 -0.34 15.85)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">77</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 0.58 8.3 L 1.32 8.02 L 1.32 19.89 L 0.58 20.17 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -5.36 9.46 L -4.62 9.19 L -4.62 21.06 L -5.36 21.34 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 0.58 20.17 L -5.36 21.34 L -4.62 21.06 L 1.32 19.89 Z"/>
+          </svg:g>
+          <svg:path d="M -5.36 9.46 L 0.58 8.3 L 0.58 20.17 L -5.36 21.34 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.2262 -0.04454 0.0 0.2262 -3.96 17.9)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">76</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -3.07 9.76 L -2.28 9.46 L -2.28 22.27 L -3.07 22.57 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -9.48 10.92 L -8.68 10.62 L -8.68 23.43 L -9.48 23.73 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -3.07 22.57 L -9.48 23.73 L -8.68 23.43 L -2.28 22.27 Z"/>
+          </svg:g>
+          <svg:path d="M -9.48 10.92 L -3.07 9.76 L -3.07 22.57 L -9.48 23.73 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.24405 -0.04424 0.0 0.24405 -7.96 20.05)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">75</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -6.81 11.38 L -6.02 11.06 L -6.02 24.8 L -6.81 25.13 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -13.68 12.43 L -12.9 12.11 L -12.9 25.86 L -13.68 26.18 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -6.81 25.13 L -13.68 26.18 L -12.9 25.86 L -6.02 24.8 Z"/>
+          </svg:g>
+          <svg:path d="M -13.68 12.43 L -6.81 11.38 L -6.81 25.13 L -13.68 26.18 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.2619 -0.04012 0.0 0.2619 -12.06 22.28)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">74</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -10.27 13.16 L -9.57 12.82 L -9.57 27.5 L -10.27 27.85 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -17.61 14.01 L -16.91 13.66 L -16.91 28.35 L -17.61 28.69 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -10.27 27.85 L -17.61 28.69 L -16.91 28.35 L -9.57 27.5 Z"/>
+          </svg:g>
+          <svg:path d="M -17.61 14.01 L -10.27 13.16 L -10.27 27.85 L -17.61 28.69 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.27977 -0.03209 0.0 0.27977 -15.88 24.59)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">73</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -13.11 15.11 L -12.56 14.74 L -12.56 30.36 L -13.11 30.73 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -20.92 15.64 L -20.37 15.27 L -20.37 30.9 L -20.92 31.26 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -13.11 30.73 L -20.92 31.26 L -20.37 30.9 L -12.56 30.36 Z"/>
+          </svg:g>
+          <svg:path d="M -20.92 15.64 L -13.11 15.11 L -13.11 30.73 L -20.92 31.26 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.29762 -0.02036 0.0 0.29762 -19.07 26.98)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">72</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -14.98 17.2 L -14.65 16.81 L -14.65 33.37 L -14.98 33.76 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -23.26 17.35 L -22.93 16.96 L -22.93 33.52 L -23.26 33.91 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -14.98 33.76 L -23.26 33.91 L -22.93 33.52 L -14.65 33.37 Z"/>
+          </svg:g>
+          <svg:path d="M -23.26 17.35 L -14.98 17.2 L -14.98 33.76 L -23.26 33.91 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.31548 -0.0055 0.0 0.31548 -21.3 29.47)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">71</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -15.59 19.44 L -15.54 19.03 L -15.54 36.52 L -15.59 36.94 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -24.34 19.13 L -24.28 18.72 L -24.28 36.22 L -24.34 36.63 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -15.59 36.94 L -24.34 36.63 L -24.28 36.22 L -15.54 36.52 Z"/>
+          </svg:g>
+          <svg:path d="M -24.34 19.13 L -15.59 19.44 L -15.59 36.94 L -24.34 36.63 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.33333 0.01157 0.0 0.33333 -22.28 32.05)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">70</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -14.75 21.8 L -15 21.36 L -15 39.8 L -14.75 40.23 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -23.97 21.02 L -24.22 20.58 L -24.22 39.02 L -23.97 39.45 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -14.75 40.23 L -23.97 39.45 L -24.22 39.02 L -15 39.8 Z"/>
+          </svg:g>
+          <svg:path d="M -23.97 21.02 L -14.75 21.8 L -14.75 40.23 L -23.97 39.45 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.3512 0.02968 0.0 0.3512 -21.79 34.74)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">69</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -12.36 24.26 L -12.92 23.81 L -12.92 43.18 L -12.36 43.63 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -22.04 23.02 L -22.6 22.56 L -22.6 41.93 L -22.04 42.39 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -12.36 43.63 L -22.04 42.39 L -22.6 41.93 L -12.92 43.18 Z"/>
+          </svg:g>
+          <svg:path d="M -22.04 23.02 L -12.36 24.26 L -12.36 43.63 L -22.04 42.39 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.36905 0.04744 0.0 0.36905 -19.75 37.53)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">68</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -8.43 26.81 L -9.28 26.34 L -9.28 46.65 L -8.43 47.13 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -18.58 25.15 L -19.44 24.67 L -19.44 44.98 L -18.58 45.46 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -8.43 47.13 L -18.58 45.46 L -19.44 44.98 L -9.28 46.65 Z"/>
+          </svg:g>
+          <svg:path d="M -18.58 25.15 L -8.43 26.81 L -8.43 47.13 L -18.58 45.46 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.38692 0.06339 0.0 0.38692 -16.18 40.45)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">67</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -3.11 29.43 L -4.23 28.94 L -4.23 50.18 L -3.11 50.68 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -13.74 27.44 L -14.85 26.94 L -14.85 48.19 L -13.74 48.69 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -3.11 50.68 L -13.74 48.69 L -14.85 48.19 L -4.23 50.18 Z"/>
+          </svg:g>
+          <svg:path d="M -13.74 27.44 L -3.11 29.43 L -3.11 50.68 L -13.74 48.69 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.40475 0.07607 0.0 0.40475 -11.22 43.51)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">66</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 3.3 32.11 L 2 31.58 L 2 53.77 L 3.3 54.29 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -7.79 29.9 L -9.1 29.37 L -9.1 51.56 L -7.79 52.08 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 3.3 54.29 L -7.79 52.08 L -9.1 51.56 L 2 53.77 Z"/>
+          </svg:g>
+          <svg:path d="M -7.79 29.9 L 3.3 32.11 L 3.3 54.29 L -7.79 52.08 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.42262 0.0842 0.0 0.42262 -5.17 46.7)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">65</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 10.44 34.81 L 9.02 34.27 L 9.02 57.39 L 10.44 57.94 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -1.13 32.54 L -2.54 31.99 L -2.54 55.12 L -1.13 55.66 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 10.44 57.94 L -1.13 55.66 L -2.54 55.12 L 9.02 57.39 Z"/>
+          </svg:g>
+          <svg:path d="M -1.13 32.54 L 10.44 34.81 L 10.44 57.94 L -1.13 55.66 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.44048 0.08675 0.0 0.44048 1.61 50.05)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">64</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 17.8 37.55 L 16.38 36.99 L 16.38 61.05 L 17.8 61.61 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 5.77 35.37 L 4.35 34.81 L 4.35 58.87 L 5.77 59.43 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 17.8 61.61 L 5.77 59.43 L 4.35 58.87 L 16.38 61.05 Z"/>
+          </svg:g>
+          <svg:path d="M 5.77 35.37 L 17.8 37.55 L 17.8 61.61 L 5.77 59.43 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.45834 0.08307 0.0 0.45834 8.62 53.55)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">63</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 24.87 40.32 L 23.56 39.73 L 23.56 64.72 L 24.87 65.31 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 12.38 38.4 L 11.06 37.81 L 11.06 62.81 L 12.38 63.4 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 24.87 65.31 L 12.38 63.4 L 11.06 62.81 L 23.56 64.72 Z"/>
+          </svg:g>
+          <svg:path d="M 12.38 38.4 L 24.87 40.32 L 24.87 65.31 L 12.38 63.4 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.4762 0.07295 0.0 0.4762 15.33 57.2)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">62</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 31.1 43.11 L 30 42.5 L 30 68.43 L 31.1 69.04 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 18.14 41.62 L 17.03 41.01 L 17.03 66.95 L 18.14 67.56 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 31.1 69.04 L 18.14 67.56 L 17.03 66.95 L 30 68.43 Z"/>
+          </svg:g>
+          <svg:path d="M 18.14 41.62 L 31.1 43.11 L 31.1 69.04 L 18.14 67.56 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.49406 0.05667 0.0 0.49406 21.2 61.01)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">61</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 35.98 45.94 L 35.18 45.31 L 35.18 72.18 L 35.98 72.81 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 22.54 45.02 L 21.75 44.39 L 21.75 71.26 L 22.54 71.9 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 35.98 72.81 L 22.54 71.9 L 21.75 71.26 L 35.18 72.18 Z"/>
+          </svg:g>
+          <svg:path d="M 22.54 45.02 L 35.98 45.94 L 35.98 72.81 L 22.54 71.9 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.51192 0.035 0.0 0.51192 25.72 64.97)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">60</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 39.05 48.83 L 38.65 48.18 L 38.65 75.99 L 39.05 76.64 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 25.15 48.59 L 24.75 47.94 L 24.75 75.75 L 25.15 76.4 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 39.05 76.64 L 25.15 76.4 L 24.75 75.75 L 38.65 75.99 Z"/>
+          </svg:g>
+          <svg:path d="M 25.15 48.59 L 39.05 48.83 L 39.05 76.64 L 25.15 76.4 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.52975 0.00922 0.0 0.52975 28.44 69.06)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">59</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 39.99 51.8 L 40.03 51.13 L 40.03 79.87 L 39.99 80.55 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 25.62 52.3 L 25.66 51.62 L 25.66 80.37 L 25.62 81.05 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 39.99 80.55 L 25.62 81.05 L 25.66 80.37 L 40.03 79.87 Z"/>
+          </svg:g>
+          <svg:path d="M 25.62 52.3 L 39.99 51.8 L 39.99 80.55 L 25.62 81.05 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.54762 -0.01901 0.0 0.54762 29.02 73.29)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">58</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 38.6 54.87 L 39.11 54.18 L 39.11 83.86 L 38.6 84.56 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 23.76 56.13 L 24.27 55.43 L 24.27 85.11 L 23.76 85.81 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 38.6 84.56 L 23.76 85.81 L 24.27 85.11 L 39.11 83.86 Z"/>
+          </svg:g>
+          <svg:path d="M 23.76 56.13 L 38.6 54.87 L 38.6 84.56 L 23.76 85.81 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.56548 -0.04779 0.0 0.56548 27.27 77.62)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">57</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 34.84 58.08 L 35.83 57.36 L 35.83 87.98 L 34.84 88.7 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 19.53 60.05 L 20.52 59.33 L 20.52 89.95 L 19.53 90.67 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 34.84 88.7 L 19.53 90.67 L 20.52 89.95 L 35.83 87.98 Z"/>
+          </svg:g>
+          <svg:path d="M 19.53 60.05 L 34.84 58.08 L 34.84 88.7 L 19.53 90.67 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.58334 -0.07498 0.0 0.58334 23.15 82.06)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">56</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 28.87 61.44 L 30.28 60.7 L 30.28 92.26 L 28.87 93 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 13.09 64.03 L 14.5 63.28 L 14.5 94.84 L 13.09 95.58 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 28.87 93 L 13.09 95.58 L 14.5 94.84 L 30.28 92.26 Z"/>
+          </svg:g>
+          <svg:path d="M 13.09 64.03 L 28.87 61.44 L 28.87 93 L 13.09 95.58 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.60118 -0.09848 0.0 0.60118 16.82 86.58)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">55</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 21.01 64.99 L 22.76 64.22 L 22.76 96.72 L 21.01 97.49 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 4.76 68.04 L 6.51 67.28 L 6.51 99.77 L 4.76 100.54 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 21.01 97.49 L 4.76 100.54 L 6.51 99.77 L 22.76 96.72 Z"/>
+          </svg:g>
+          <svg:path d="M 4.76 68.04 L 21.01 64.99 L 21.01 97.49 L 4.76 100.54 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.61905 -0.11633 0.0 0.61905 8.6 91.18)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">54</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 11.74 68.74 L 13.72 67.96 L 13.72 101.39 L 11.74 102.18 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -4.98 72.07 L -2.99 71.29 L -2.99 104.72 L -4.98 105.51 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 11.74 102.18 L -4.98 105.51 L -2.99 104.72 L 13.72 101.39 Z"/>
+          </svg:g>
+          <svg:path d="M -4.98 72.07 L 11.74 68.74 L 11.74 102.18 L -4.98 105.51 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.6369 -0.12689 0.0 0.6369 -1.03 95.83)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">53</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 1.67 72.72 L 3.76 71.91 L 3.76 106.28 L 1.67 107.09 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -15.51 76.1 L -13.42 75.3 L -13.42 109.67 L -15.51 110.48 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 1.67 107.09 L -15.51 110.48 L -13.42 109.67 L 3.76 106.28 Z"/>
+          </svg:g>
+          <svg:path d="M -15.51 76.1 L 1.67 72.72 L 1.67 107.09 L -15.51 110.48 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.65477 -0.12895 0.0 0.65477 -11.45 100.53)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">52</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -8.47 76.93 L -6.43 76.09 L -6.43 111.4 L -8.47 112.23 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -26.12 80.13 L -24.08 79.29 L -24.08 114.6 L -26.12 115.43 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -8.47 112.23 L -26.12 115.43 L -24.08 114.6 L -6.43 111.4 Z"/>
+          </svg:g>
+          <svg:path d="M -26.12 80.13 L -8.47 76.93 L -8.47 112.23 L -26.12 115.43 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.6726 -0.1219 0.0 0.6726 -21.95 105.29)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">51</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -17.94 81.36 L -16.09 80.51 L -16.09 116.75 L -17.94 117.61 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -36.07 84.14 L -34.22 83.29 L -34.22 119.53 L -36.07 120.39 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -17.94 117.61 L -36.07 120.39 L -34.22 119.53 L -16.09 116.75 Z"/>
+          </svg:g>
+          <svg:path d="M -36.07 84.14 L -17.94 81.36 L -17.94 117.61 L -36.07 120.39 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.69048 -0.10579 0.0 0.69048 -31.78 110.09)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">50</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -26.01 86.02 L -24.49 85.14 L -24.49 122.33 L -26.01 123.2 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -44.6 88.15 L -43.08 87.28 L -43.08 124.46 L -44.6 125.34 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -26.01 123.2 L -44.6 125.34 L -43.08 124.46 L -24.49 122.33 Z"/>
+          </svg:g>
+          <svg:path d="M -44.6 88.15 L -26.01 86.02 L -26.01 123.2 L -44.6 125.34 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.70833 -0.08125 0.0 0.70833 -40.2 114.94)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">49</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -31.98 90.88 L -30.94 89.98 L -30.94 128.1 L -31.98 129 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -51.04 92.19 L -50 91.29 L -50 129.41 L -51.04 130.31 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -31.98 129 L -51.04 130.31 L -50 129.41 L -30.94 128.1 Z"/>
+          </svg:g>
+          <svg:path d="M -51.04 92.19 L -31.98 90.88 L -31.98 129 L -51.04 130.31 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.7262 -0.04967 0.0 0.7262 -46.54 119.86)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">48</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -35.32 95.92 L -34.84 95 L -34.84 134.06 L -35.32 134.98 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -54.85 96.26 L -54.37 95.34 L -54.37 134.4 L -54.85 135.32 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -35.32 134.98 L -54.85 135.32 L -54.37 134.4 L -34.84 134.06 Z"/>
+          </svg:g>
+          <svg:path d="M -54.85 96.26 L -35.32 95.92 L -35.32 134.98 L -54.85 135.32 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.74405 -0.01295 0.0 0.74405 -50.24 124.85)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">47</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -35.64 101.11 L -35.79 100.16 L -35.79 140.16 L -35.64 141.1 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -55.64 100.41 L -55.78 99.47 L -55.78 139.46 L -55.64 140.41 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -35.64 141.1 L -55.64 140.41 L -55.78 139.46 L -35.79 140.16 Z"/>
+          </svg:g>
+          <svg:path d="M -55.64 100.41 L -35.64 101.11 L -35.64 141.1 L -55.64 140.41 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.76192 0.02646 0.0 0.76192 -50.91 129.93)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">46</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -32.76 106.4 L -33.55 105.44 L -33.55 146.37 L -32.76 147.33 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -53.23 104.67 L -54.01 103.71 L -54.01 144.64 L -53.23 145.6 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -32.76 147.33 L -53.23 145.6 L -54.01 144.64 L -33.55 146.37 Z"/>
+          </svg:g>
+          <svg:path d="M -53.23 104.67 L -32.76 106.4 L -32.76 147.33 L -53.23 145.6 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.77975 0.0659 0.0 0.77975 -48.39 135.13)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">45</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -26.71 111.77 L -28.12 110.78 L -28.12 152.65 L -26.71 153.64 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -47.64 109.08 L -49.05 108.09 L -49.05 149.96 L -47.64 150.95 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -26.71 153.64 L -47.64 150.95 L -49.05 149.96 L -28.12 152.65 Z"/>
+          </svg:g>
+          <svg:path d="M -47.64 109.08 L -26.71 111.77 L -26.71 153.64 L -47.64 150.95 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.79762 0.10252 0.0 0.79762 -42.69 140.45)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">44</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -17.76 117.18 L -19.71 116.17 L -19.71 158.98 L -17.76 159.99 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -39.16 113.67 L -41.12 112.66 L -41.12 155.47 L -39.16 156.48 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -17.76 159.99 L -39.16 156.48 L -41.12 155.47 L -19.71 158.98 Z"/>
+          </svg:g>
+          <svg:path d="M -39.16 113.67 L -17.76 117.18 L -17.76 159.99 L -39.16 156.48 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.81548 0.13359 0.0 0.81548 -34.1 145.92)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">43</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -6.41 122.59 L -8.79 121.56 L -8.79 165.3 L -6.41 166.34 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -28.28 118.48 L -30.67 117.45 L -30.67 161.19 L -28.28 162.22 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -6.41 166.34 L -28.28 162.22 L -30.67 161.19 L -8.79 165.3 Z"/>
+          </svg:g>
+          <svg:path d="M -28.28 118.48 L -6.41 122.59 L -6.41 166.34 L -28.28 162.22 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.83334 0.15662 0.0 0.83334 -23.11 151.56)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">42</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 6.66 127.98 L 3.99 126.93 L 3.99 171.61 L 6.66 172.66 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -15.69 123.53 L -18.35 122.48 L -18.35 167.16 L -15.69 168.21 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 6.66 172.66 L -15.69 168.21 L -18.35 167.16 L 3.99 171.61 Z"/>
+          </svg:g>
+          <svg:path d="M -15.69 123.53 L 6.66 127.98 L 6.66 172.66 L -15.69 168.21 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.8512 0.16959 0.0 0.8512 -10.4 157.38)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">41</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 20.59 133.34 L 17.82 132.26 L 17.82 177.88 L 20.59 178.95 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -2.22 128.84 L -4.99 127.77 L -4.99 173.39 L -2.22 174.46 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 20.59 178.95 L -2.22 174.46 L -4.99 173.39 L 17.82 177.88 Z"/>
+          </svg:g>
+          <svg:path d="M -2.22 128.84 L 20.59 133.34 L 20.59 178.95 L -2.22 174.46 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.86906 0.17116 0.0 0.86906 3.17 163.39)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">40</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 34.45 138.64 L 31.78 137.54 L 31.78 184.1 L 34.45 185.2 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 11.17 134.42 L 8.5 133.32 L 8.5 179.88 L 11.17 180.98 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 34.45 185.2 L 11.17 180.98 L 8.5 179.88 L 31.78 184.1 Z"/>
+          </svg:g>
+          <svg:path d="M 11.17 134.42 L 34.45 138.64 L 34.45 185.2 L 11.17 180.98 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.8869 0.16075 0.0 0.8869 16.67 169.6)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">39</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 47.26 143.9 L 44.87 142.78 L 44.87 190.28 L 47.26 191.4 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 23.51 140.27 L 21.13 139.15 L 21.13 186.64 L 23.51 187.76 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 47.26 191.4 L 23.51 187.76 L 21.13 186.64 L 44.87 190.28 Z"/>
+          </svg:g>
+          <svg:path d="M 23.51 140.27 L 47.26 143.9 L 47.26 191.4 L 23.51 187.76 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.90475 0.13861 0.0 0.90475 29.13 175.99)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">38</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 58.09 149.14 L 56.17 148 L 56.17 196.43 L 58.09 197.57 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 33.87 146.36 L 31.95 145.22 L 31.95 193.65 L 33.87 194.79 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 58.09 197.57 L 33.87 194.79 L 31.95 193.65 L 56.17 196.43 Z"/>
+          </svg:g>
+          <svg:path d="M 33.87 146.36 L 58.09 149.14 L 58.09 197.57 L 33.87 194.79 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.92262 0.10583 0.0 0.92262 39.6 182.57)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">37</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 66.1 154.37 L 64.81 153.2 L 64.81 202.57 L 66.1 203.74 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 41.42 152.68 L 40.12 151.52 L 40.12 200.88 L 41.42 202.05 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 66.1 203.74 L 41.42 202.05 L 40.12 200.88 L 64.81 202.57 Z"/>
+          </svg:g>
+          <svg:path d="M 41.42 152.68 L 66.1 154.37 L 66.1 203.74 L 41.42 202.05 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.94048 0.06433 0.0 0.94048 47.26 189.32)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">36</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 70.65 159.63 L 70.09 158.44 L 70.09 208.75 L 70.65 209.93 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 45.5 159.19 L 44.94 158 L 44.94 208.31 L 45.5 209.5 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 70.65 209.93 L 45.5 209.5 L 44.94 208.31 L 70.09 208.75 Z"/>
+          </svg:g>
+          <svg:path d="M 45.5 159.19 L 70.65 159.63 L 70.65 209.93 L 45.5 209.5 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.95833 0.0167 0.0 0.95833 51.44 196.22)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">35</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 71.29 164.96 L 71.54 163.75 L 71.54 214.99 L 71.29 216.2 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 45.67 165.85 L 45.91 164.64 L 45.91 215.88 L 45.67 217.09 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 71.29 216.2 L 45.67 217.09 L 45.91 215.88 L 71.54 214.99 Z"/>
+          </svg:g>
+          <svg:path d="M 45.67 165.85 L 71.29 164.96 L 71.29 216.2 L 45.67 217.09 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.97618 -0.03389 0.0 0.97618 51.73 203.25)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">34</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 67.85 170.41 L 68.91 169.18 L 68.91 221.36 L 67.85 222.59 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 41.76 172.61 L 42.82 171.38 L 42.82 223.56 L 41.76 224.79 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 67.85 222.59 L 41.76 224.79 L 42.82 223.56 L 68.91 221.36 Z"/>
+          </svg:g>
+          <svg:path d="M 41.76 172.61 L 67.85 170.41 L 67.85 222.59 L 41.76 224.79 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(0.99405 -0.08401 0.0 0.99405 47.93 210.4)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">33</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 60.44 176.02 L 62.27 174.77 L 62.27 227.89 L 60.44 229.14 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 33.88 179.44 L 35.72 178.18 L 35.72 231.3 L 33.88 232.55 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 60.44 229.14 L 33.88 232.55 L 35.72 231.3 L 62.27 227.89 Z"/>
+          </svg:g>
+          <svg:path d="M 33.88 179.44 L 60.44 176.02 L 60.44 229.14 L 33.88 232.55 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0119 -0.13008 0.0 1.0119 40.16 217.62)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">32</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 49.45 181.84 L 51.96 180.57 L 51.96 234.62 L 49.45 235.9 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 22.43 186.27 L 24.93 185 L 24.93 239.05 L 22.43 240.33 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 49.45 235.9 L 22.43 240.33 L 24.93 239.05 L 51.96 234.62 Z"/>
+          </svg:g>
+          <svg:path d="M 22.43 186.27 L 49.45 181.84 L 49.45 235.9 L 22.43 240.33 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.02975 -0.1687 0.0 1.02975 28.82 224.9)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">31</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 35.55 187.91 L 38.57 186.62 L 38.57 241.61 L 35.55 242.9 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 8.06 193.08 L 11.08 191.78 L 11.08 246.78 L 8.06 248.07 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 35.55 242.9 L 8.06 248.07 L 11.08 246.78 L 38.57 241.61 Z"/>
+          </svg:g>
+          <svg:path d="M 8.06 193.08 L 35.55 187.91 L 35.55 242.9 L 8.06 248.07 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0476 -0.19688 0.0 1.0476 14.56 232.23)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">30</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 19.63 194.26 L 22.98 192.94 L 22.98 248.87 L 19.63 250.19 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -8.33 199.83 L -4.99 198.51 L -4.99 254.44 L -8.33 255.76 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 19.63 250.19 L -8.33 255.76 L -4.99 254.44 L 22.98 248.87 Z"/>
+          </svg:g>
+          <svg:path d="M -8.33 199.83 L 19.63 194.26 L 19.63 250.19 L -8.33 255.76 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.06548 -0.21227 0.0 1.06548 -1.72 239.57)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">29</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 2.77 200.91 L 6.21 199.56 L 6.21 256.43 L 2.77 257.77 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -25.67 206.51 L -22.23 205.16 L -22.23 262.03 L -25.67 263.37 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 2.77 257.77 L -25.67 263.37 L -22.23 262.03 L 6.21 256.43 Z"/>
+          </svg:g>
+          <svg:path d="M -25.67 206.51 L 2.77 200.91 L 2.77 257.77 L -25.67 263.37 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.08333 -0.21336 0.0 1.08333 -18.94 246.93)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">28</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -13.87 207.86 L -10.57 206.49 L -10.57 264.3 L -13.87 265.66 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -42.77 213.1 L -39.47 211.73 L -39.47 269.54 L -42.77 270.9 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -13.87 265.66 L -42.77 270.9 L -39.47 269.54 L -10.57 264.3 Z"/>
+          </svg:g>
+          <svg:path d="M -42.77 213.1 L -13.87 207.86 L -13.87 265.66 L -42.77 270.9 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.1012 -0.1996 0.0 1.1012 -35.94 254.29)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">27</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -29.08 215.11 L -26.16 213.72 L -26.16 272.47 L -29.08 273.85 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -58.45 219.61 L -55.53 218.22 L -55.53 276.97 L -58.45 278.35 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -29.08 273.85 L -58.45 278.35 L -55.53 276.97 L -26.16 272.47 Z"/>
+          </svg:g>
+          <svg:path d="M -58.45 219.61 L -29.08 215.11 L -29.08 273.85 L -58.45 278.35 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.11903 -0.17145 0.0 1.11903 -51.51 261.67)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">26</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -41.74 222.64 L -39.42 221.23 L -39.42 280.91 L -41.74 282.32 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -71.58 226.06 L -69.26 224.65 L -69.26 284.33 L -71.58 285.74 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -41.74 282.32 L -71.58 285.74 L -69.26 284.33 L -39.42 280.91 Z"/>
+          </svg:g>
+          <svg:path d="M -71.58 226.06 L -41.74 222.64 L -41.74 282.32 L -71.58 285.74 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.13692 -0.13042 0.0 1.13692 -64.53 269.06)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">25</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -50.86 230.42 L -49.31 228.99 L -49.31 289.6 L -50.86 291.03 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -81.17 232.49 L -79.62 231.06 L -79.62 291.68 L -81.17 293.11 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -50.86 291.03 L -81.17 293.11 L -79.62 291.68 L -49.31 289.6 Z"/>
+          </svg:g>
+          <svg:path d="M -81.17 232.49 L -50.86 230.42 L -50.86 291.03 L -81.17 293.11 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.15475 -0.07898 0.0 1.15475 -74 276.5)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">24</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -55.67 238.4 L -55.03 236.95 L -55.03 298.5 L -55.67 299.95 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -86.45 238.93 L -85.81 237.48 L -85.81 299.04 L -86.45 300.49 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -55.67 299.95 L -86.45 300.49 L -85.81 299.04 L -55.03 298.5 Z"/>
+          </svg:g>
+          <svg:path d="M -86.45 238.93 L -55.67 238.4 L -55.67 299.95 L -86.45 300.49 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.17262 -0.02043 0.0 1.17262 -79.17 283.99)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">23</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -55.7 246.53 L -56.04 245.06 L -56.04 307.55 L -55.7 309.03 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -86.94 245.45 L -87.29 243.97 L -87.29 306.47 L -86.94 307.94 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -55.7 309.03 L -86.94 307.94 L -87.29 306.47 L -56.04 307.55 Z"/>
+          </svg:g>
+          <svg:path d="M -86.94 245.45 L -55.7 246.53 L -55.7 309.03 L -86.94 307.94 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.19048 0.04134 0.0 1.19048 -79.55 291.58)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">22</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -50.76 254.77 L -52.1 253.27 L -52.1 316.7 L -50.76 318.2 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -82.48 252.09 L -83.81 250.59 L -83.81 314.02 L -82.48 315.52 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -50.76 318.2 L -82.48 315.52 L -83.81 314.02 L -52.1 316.7 Z"/>
+          </svg:g>
+          <svg:path d="M -82.48 252.09 L -50.76 254.77 L -50.76 318.2 L -82.48 315.52 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.20834 0.10213 0.0 1.20834 -74.98 299.28)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">21</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -41.06 263.04 L -43.31 261.52 L -43.31 325.89 L -41.06 327.41 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -73.24 258.9 L -75.5 257.39 L -75.5 321.75 L -73.24 323.27 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -41.06 327.41 L -73.24 323.27 L -75.5 321.75 L -43.31 325.89 Z"/>
+          </svg:g>
+          <svg:path d="M -73.24 258.9 L -41.06 263.04 L -41.06 327.41 L -73.24 323.27 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.2262 0.15762 0.0 1.2262 -65.63 307.13)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">20</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -27.09 271.3 L -30.14 269.76 L -30.14 335.07 L -27.09 336.61 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -59.75 265.95 L -62.8 264.41 L -62.8 329.72 L -59.75 331.26 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -27.09 336.61 L -59.75 331.26 L -62.8 329.72 L -30.14 335.07 Z"/>
+          </svg:g>
+          <svg:path d="M -59.75 265.95 L -27.09 271.3 L -27.09 336.61 L -59.75 331.26 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.24406 0.20381 0.0 1.24406 -52.03 315.16)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">19</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -9.7 279.51 L -13.36 277.95 L -13.36 344.19 L -9.7 345.75 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -42.82 273.28 L -46.48 271.72 L -46.48 337.96 L -42.82 339.53 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -9.7 345.75 L -42.82 339.53 L -46.48 337.96 L -13.36 344.19 Z"/>
+          </svg:g>
+          <svg:path d="M -42.82 273.28 L -9.7 279.51 L -9.7 345.75 L -42.82 339.53 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.26192 0.23717 0.0 1.26192 -35 323.38)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">18</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 10.01 287.62 L 5.99 286.04 L 5.99 353.21 L 10.01 354.8 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -23.58 280.93 L -27.6 279.34 L -27.6 346.52 L -23.58 348.11 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 10.01 354.8 L -23.58 348.11 L -27.6 346.52 L 5.99 353.21 Z"/>
+          </svg:g>
+          <svg:path d="M -23.58 280.93 L 10.01 287.62 L 10.01 354.8 L -23.58 348.11 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.27975 0.25496 0.0 1.27975 -15.64 331.82)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">17</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 30.74 295.62 L 26.63 294.01 L 26.63 362.13 L 30.74 363.73 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -3.32 288.91 L -7.43 287.3 L -7.43 355.42 L -3.32 357.02 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 30.74 363.73 L -3.32 357.02 L -7.43 355.42 L 26.63 362.13 Z"/>
+          </svg:g>
+          <svg:path d="M -3.32 288.91 L 30.74 295.62 L 30.74 363.73 L -3.32 357.02 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.29762 0.25557 0.0 1.29762 4.74 340.5)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">16</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 51.09 303.49 L 47.17 301.86 L 47.17 370.92 L 51.09 372.54 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 16.57 297.23 L 12.64 295.6 L 12.64 364.66 L 16.57 366.29 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 51.09 372.54 L 16.57 366.29 L 12.64 364.66 L 47.17 370.92 Z"/>
+          </svg:g>
+          <svg:path d="M 16.57 297.23 L 51.09 303.49 L 51.09 372.54 L 16.57 366.29 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.31548 0.23843 0.0 1.31548 24.73 349.4)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">15</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 69.65 311.25 L 66.19 309.6 L 66.19 379.59 L 69.65 381.24 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 34.65 305.89 L 31.2 304.24 L 31.2 374.23 L 34.65 375.88 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 69.65 381.24 L 34.65 375.88 L 31.2 374.23 L 66.19 379.59 Z"/>
+          </svg:g>
+          <svg:path d="M 34.65 305.89 L 69.65 311.25 L 69.65 381.24 L 34.65 375.88 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.33333 0.20427 0.0 1.33333 42.92 358.54)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">14</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 85.07 318.93 L 82.34 317.25 L 82.34 388.18 L 85.07 389.85 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 49.61 314.86 L 46.88 313.18 L 46.88 384.11 L 49.61 385.79 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 85.07 389.85 L 49.61 385.79 L 46.88 384.11 L 82.34 388.18 Z"/>
+          </svg:g>
+          <svg:path d="M 49.61 314.86 L 85.07 318.93 L 85.07 389.85 L 49.61 385.79 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.3512 0.155 0.0 1.3512 57.99 367.89)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">13</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 96.23 326.55 L 94.43 324.86 L 94.43 396.72 L 96.23 398.42 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 60.3 324.09 L 58.5 322.4 L 58.5 394.27 L 60.3 395.96 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 96.23 398.42 L 60.3 395.96 L 58.5 394.27 L 94.43 396.72 Z"/>
+          </svg:g>
+          <svg:path d="M 60.3 324.09 L 96.23 326.55 L 96.23 398.42 L 60.3 395.96 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.36905 0.09364 0.0 1.36905 68.79 377.43)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">12</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 102.25 334.18 L 101.53 332.47 L 101.53 405.27 L 102.25 406.99 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 65.84 333.55 L 65.13 331.83 L 65.13 404.63 L 65.84 406.35 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 102.25 406.99 L 65.84 406.35 L 65.13 404.63 L 101.53 405.27 Z"/>
+          </svg:g>
+          <svg:path d="M 65.84 333.55 L 102.25 334.18 L 102.25 406.99 L 65.84 406.35 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.3869 0.02415 0.0 1.3869 74.45 387.14)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">11</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 102.59 341.88 L 103.04 340.14 L 103.04 413.88 L 102.59 415.62 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 65.72 343.16 L 66.17 341.42 L 66.17 415.16 L 65.72 416.9 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 102.59 415.62 L 65.72 416.9 L 66.17 415.16 L 103.04 413.88 Z"/>
+          </svg:g>
+          <svg:path d="M 65.72 343.16 L 102.59 341.88 L 102.59 415.62 L 65.72 416.9 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.40475 -0.04878 0.0 1.40475 74.44 396.99)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="13.84"><text color="#FFFFFF" font="sansserif">10</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 97.11 349.7 L 98.71 347.94 L 98.71 422.62 L 97.11 424.38 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 59.77 352.86 L 61.37 351.1 L 61.37 425.78 L 59.77 427.54 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 97.11 424.38 L 59.77 427.54 L 61.37 425.78 L 98.71 422.62 Z"/>
+          </svg:g>
+          <svg:path d="M 59.77 352.86 L 97.11 349.7 L 97.11 424.38 L 59.77 427.54 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.4226 -0.12022 0.0 1.4226 73.52 406.52)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">9</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 86.04 357.73 L 88.72 355.94 L 88.72 431.56 L 86.04 433.34 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 48.23 362.59 L 50.91 360.8 L 50.91 436.42 L 48.23 438.2 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 86.04 433.34 L 48.23 438.2 L 50.91 436.42 L 88.72 431.56 Z"/>
+          </svg:g>
+          <svg:path d="M 48.23 362.59 L 86.04 357.73 L 86.04 433.34 L 48.23 438.2 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.44048 -0.18518 0.0 1.44048 62.15 416.3)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">8</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 70.04 366 L 73.64 364.2 L 73.64 440.75 L 70.04 442.56 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 31.76 372.28 L 35.36 370.47 L 35.36 447.02 L 31.76 448.83 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 70.04 442.56 L 31.76 448.83 L 35.36 447.02 L 73.64 440.75 Z"/>
+          </svg:g>
+          <svg:path d="M 31.76 372.28 L 70.04 366 L 70.04 442.56 L 31.76 448.83 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.45833 -0.23892 0.0 1.45833 45.85 426.16)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">7</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 50.1 374.59 L 54.39 372.77 L 54.39 450.26 L 50.1 452.09 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M 11.35 381.88 L 15.64 380.05 L 15.64 457.54 L 11.35 459.37 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 50.1 452.09 L 11.35 459.37 L 15.64 457.54 L 54.39 450.26 Z"/>
+          </svg:g>
+          <svg:path d="M 11.35 381.88 L 50.1 374.59 L 50.1 452.09 L 11.35 459.37 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.4762 -0.27744 0.0 1.4762 25.62 436.08)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">6</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M 27.53 383.54 L 32.23 381.69 L 32.23 460.11 L 27.53 461.96 Z"/>
+          </svg:g>
+          <svg:g color="#333333" fill="#333333" stroke="#333333">
+            <svg:path d="M -11.68 391.35 L -6.98 389.5 L -6.98 467.93 L -11.68 469.78 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 27.53 461.96 L -11.68 469.78 L -6.98 467.93 L 32.23 460.11 Z"/>
+          </svg:g>
+          <svg:path d="M -11.68 391.35 L 27.53 383.54 L 27.53 461.96 L -11.68 469.78 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.49403 -0.29765 0.0 1.49403 2.76 446.04)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">5</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M 7.58 473.95 L -31.79 481.82 L -27.87 483.99 L 11.5 476.11 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -40.29 406.97 L -0.92 399.09 L 3.01 401.46 L -36.36 409.33 Z"/>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -0.92 399.09 L 3.01 401.46 L 11.5 476.11 L 7.58 473.95 Z"/>
+          </svg:g>
+          <svg:path d="M -40.29 406.97 L -0.92 399.09 L 7.58 473.95 L -31.79 481.82 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.46667 -0.29999 0.16667 1.5 -19.5 457.98)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">4</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -12.68 487.41 L -52.05 495.28 L -48.25 495.6 L -8.88 487.73 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -72.41 426.08 L -33.04 418.21 L -29.1 419 L -68.47 426.87 Z"/>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -33.04 418.21 L -29.1 419 L -8.88 487.73 L -12.68 487.41 Z"/>
+          </svg:g>
+          <svg:path d="M -72.41 426.08 L -33.04 418.21 L -12.68 487.41 L -52.05 495.28 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.41669 -0.29999 0.41667 1.5 -43.08 471.45)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">3</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -35.47 501.54 L -74.84 509.41 L -71.26 507.9 L -31.89 500.02 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -105.95 445.64 L -66.58 437.76 L -62.64 436.98 L -102.01 444.85 Z"/>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -66.58 437.76 L -62.64 436.98 L -31.89 500.02 L -35.47 501.54 Z"/>
+          </svg:g>
+          <svg:path d="M -105.95 445.64 L -66.58 437.76 L -35.47 501.54 L -74.84 509.41 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.36667 -0.29999 0.66666 1.5 -69.19 485.57)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">2</text></svg:foreignObject>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -60.78 516.32 L -100.15 524.2 L -96.88 520.87 L -57.51 513 Z"/>
+          </svg:g>
+          <svg:g color="#4D4D4D" fill="#4D4D4D" stroke="#4D4D4D">
+            <svg:path d="M -140.92 465.64 L -101.55 457.76 L -97.61 455.4 L -136.98 463.28 Z"/>
+          </svg:g>
+          <svg:g color="#1A1A1A" fill="#191919" stroke="#191919">
+            <svg:path d="M -101.55 457.76 L -97.61 455.4 L -57.51 513 L -60.78 516.32 Z"/>
+          </svg:g>
+          <svg:path d="M -140.92 465.64 L -101.55 457.76 L -60.78 516.32 L -100.15 524.2 Z"/>
+          <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.31668 -0.29999 0.91667 1.5 -97.81 500.36)">
+            <svg:foreignObject height="9.07" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.66em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.07)" width="6.92"><text color="#FFFFFF" font="sansserif">1</text></svg:foreignObject>
+          </svg:g>
+        </svg:g>
+      </svg:svg>
+    </picture>
   </para>
-  <pagination role="newpage"/>
 </document>

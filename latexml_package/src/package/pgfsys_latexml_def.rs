@@ -62,6 +62,7 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
   tokens
 }
 
+
 // Perl L149-157: DefParameterType('SVGMoveableBox', ...)
 // Defined in Perl but never used as a parameter type anywhere in the codebase.
 // Omitted from Rust; add if a use site is discovered.
@@ -98,6 +99,8 @@ fn read_dim_register(cs: &str) -> Dimension {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (protocol fix is applied at \pgfsys@invoke below)
+
   // Perl L29-31: image suffix list
   DefMacro!("\\pgfsys@imagesuffixlist",
     ".svg:.png:.gif:.jpg:.jpeg:.eps:.ps:.postscript:.ai:.pdf:");
@@ -424,16 +427,68 @@ LoadDefinitions!({
 
   // Perl L337-339: unclipped path — emit svg:path
   DefConstructor!("\\lxSVG@drawpath@unclipped{}{}",
-    sub[document, args, _props] {
+    sub[document, args, props] {
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       if !d.is_empty() {
         let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+
+        // Read per-path colors from properties (captured during digestion via properties closure)
+        let fill_color = props.get("pgf_fillcolor").map(|v| v.to_string()).unwrap_or_default();
+        let stroke_color = props.get("pgf_strokecolor").map(|v| v.to_string()).unwrap_or_default();
+        let mut opened_groups = 0;
+
+        // Find the inherited fill/stroke from the nearest ancestor svg:g
+        let mut inherited_fill = String::new();
+        let mut inherited_stroke = String::new();
+        {
+          let mut n = document.get_node().clone();
+          loop {
+            if let Some(f) = n.get_attribute("fill") { if inherited_fill.is_empty() { inherited_fill = f; } }
+            if let Some(s) = n.get_attribute("stroke") { if inherited_stroke.is_empty() { inherited_stroke = s; } }
+            if !inherited_fill.is_empty() && !inherited_stroke.is_empty() { break; }
+            match n.get_parent() {
+              Some(p) => n = p,
+              None => break,
+            }
+          }
+        }
+
+        // Only wrap path in svg:g if color differs from inherited
+        if !stroke_color.is_empty() && stroke_color != inherited_stroke {
+          document.open_element("svg:g", Some(string_map!(
+            "stroke" => stroke_color,
+            "_autoclose" => "1".to_string()
+          )), None)?;
+          opened_groups += 1;
+        }
+        if !fill_color.is_empty() && fill_color != inherited_fill {
+          document.open_element("svg:g", Some(string_map!(
+            "fill" => fill_color,
+            "_autoclose" => "1".to_string()
+          )), None)?;
+          opened_groups += 1;
+        }
+
         let mut attrs = string_map!("d" => d);
         if !style.is_empty() {
           attrs.insert("style".to_string(), style);
         }
         document.insert_element("svg:path", Vec::new(), Some(attrs))?;
+
+        // Close the color groups we opened
+        for _ in 0..opened_groups {
+          document.close_element("svg:g")?;
+        }
       }
+    },
+    properties => {
+      // Capture colors from state during digestion, before scope is popped
+      let fc = state::lookup_value("pgf@svg@fillcolor").map(|v| v.to_string()).unwrap_or_default();
+      let sc = state::lookup_value("pgf@svg@strokecolor").map(|v| v.to_string()).unwrap_or_default();
+      stored_map!(
+        "pgf_fillcolor" => Stored::String(arena::pin(&fc)),
+        "pgf_strokecolor" => Stored::String(arena::pin(&sc))
+      )
     }
   );
 
@@ -585,61 +640,148 @@ LoadDefinitions!({
 
   DefMacro!("\\lxSVG@setcolor{}{}", "\\ifpgfpicture\\lxSVG@begingroup{#1={#2}}\\fi");
 
+  // Combined color macros: set both stroke AND fill.
+  // These override the TeX definitions from pgfsys-common-svg.def which use
+  // SVG-specific \pgf@sys@svg@gs@color that we don't support.
+  // Perl only defines the rgb version; we also need gray/cmyk/cmy because
+  // in Perl the .ltxml has priority over TeX \def, but in Rust we need locked.
   DefMacro!("\\pgfsys@color@rgb{}{}{}",
-    "\\ifpgfpicture\\pgfsys@color@rgb@stroke{#1}{#2}{#3}\\pgfsys@color@rgb@fill{#1}{#2}{#3}\\fi");
+    "\\ifpgfpicture\\pgfsys@color@rgb@stroke{#1}{#2}{#3}\\pgfsys@color@rgb@fill{#1}{#2}{#3}\\fi",
+    locked => true);
+  DefMacro!("\\pgfsys@color@gray{}",
+    "\\ifpgfpicture\\pgfsys@color@gray@stroke{#1}\\pgfsys@color@gray@fill{#1}\\fi",
+    locked => true);
+  DefMacro!("\\pgfsys@color@cmyk{}{}{}{}",
+    "\\ifpgfpicture\\pgfsys@color@cmyk@stroke{#1}{#2}{#3}{#4}\\pgfsys@color@cmyk@fill{#1}{#2}{#3}{#4}\\fi",
+    locked => true);
+  DefMacro!("\\pgfsys@color@cmy{}{}{}",
+    "\\ifpgfpicture\\pgfsys@color@cmy@stroke{#1}{#2}{#3}\\pgfsys@color@cmy@fill{#1}{#2}{#3}\\fi",
+    locked => true);
 
-  DefMacro!("\\lxSVG@RGB{Float}{Float}{Float}", sub[(r, g, b)] {
-    let r = r.0;
-    let g = g.0;
-    let b = b.0;
+  // Perl: DefMacro('\lxSVG@RGB{}{}{}', sub { Explode(Color('rgb', $_[1], $_[2], $_[3])->toHex); });
+  // Use plain {} parameters (not {Float}) so these macros expand correctly
+  // inside \edef (which pgfsysprotocol@literalbuffered uses for protocol accumulation).
+  // {Float} parameters fail during \edef because the Float reader interacts
+  // badly with the expansion-mode token stream.
+  DefMacro!("\\lxSVG@RGB{}{}{}", sub[args] {
+    let r: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let g: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let b: f64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     color_to_hex_tokens(r, g, b)
   });
 
-  DefMacro!("\\lxSVG@GRAY{Float}", sub[(g)] {
-    let v = g.0;
+  DefMacro!("\\lxSVG@GRAY{}", sub[args] {
+    let v: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     color_to_hex_tokens(v, v, v)
   });
 
-  DefMacro!("\\lxSVG@CMYK{Float}{Float}{Float}{Float}", sub[(c, m, y, k)] {
-    let c = c.0;
-    let m = m.0;
-    let y = y.0;
-    let k = k.0;
+  DefMacro!("\\lxSVG@CMYK{}{}{}{}", sub[args] {
+    let c: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let m: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let y: f64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let k: f64 = args.get(3).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     color_to_hex_tokens((1.0-c)*(1.0-k), (1.0-m)*(1.0-k), (1.0-y)*(1.0-k))
   });
 
-  DefMacro!("\\lxSVG@CMY{Float}{Float}{Float}", sub[(c, m, y)] {
-    let c = c.0;
-    let m = m.0;
-    let y = y.0;
+  DefMacro!("\\lxSVG@CMY{}{}{}", sub[args] {
+    let c: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let m: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let y: f64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     color_to_hex_tokens(1.0-c, 1.0-m, 1.0-y)
   });
 
+  // All color fill/stroke macros: compute hex and store in pgf state.
+  // The stored colors are applied by \lxSVG@drawpath@unclipped during path construction.
+  // Also call the old \lxSVG@begingroup path through the protocol for the initial setup.
   DefMacro!("\\pgfsys@color@rgb@stroke{}{}{}",
-    "\\lxSVG@color@rgb@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@RGB{#1}{#2}{#3}}");
+    "\\lxSVG@color@rgb@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@RGB{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@rgb@fill{}{}{}",
-    "\\lxSVG@color@rgb@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@RGB{#1}{#2}{#3}}");
+    "\\lxSVG@color@rgb@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@RGB{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@cmyk@stroke{}{}{}{}",
-    "\\lxSVG@color@cmyk@stroke{#1}{#2}{#3}{#4}\\lxSVG@begingroup{stroke=\\lxSVG@CMYK{#1}{#2}{#3}{#4}}");
+    "\\lxSVG@color@cmyk@stroke{#1}{#2}{#3}{#4}\\lxSVG@begingroup{stroke=\\lxSVG@CMYK{#1}{#2}{#3}{#4}}", locked => true);
   DefMacro!("\\pgfsys@color@cmyk@fill{}{}{}{}",
-    "\\lxSVG@color@cmyk@fill{#1}{#2}{#3}{#4}\\lxSVG@begingroup{fill=\\lxSVG@CMYK{#1}{#2}{#3}{#4}}");
+    "\\lxSVG@color@cmyk@fill{#1}{#2}{#3}{#4}\\lxSVG@begingroup{fill=\\lxSVG@CMYK{#1}{#2}{#3}{#4}}", locked => true);
   DefMacro!("\\pgfsys@color@cmy@stroke{}{}{}",
-    "\\lxSVG@color@cmy@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@CMY{#1}{#2}{#3}}");
+    "\\lxSVG@color@cmy@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@CMY{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@cmy@fill{}{}{}",
-    "\\lxSVG@color@cmy@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@CMY{#1}{#2}{#3}}");
+    "\\lxSVG@color@cmy@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@CMY{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@gray@stroke{}",
-    "\\lxSVG@color@gray@stroke{#1}\\lxSVG@begingroup{stroke=\\lxSVG@GRAY{#1}}");
+    "\\lxSVG@color@gray@stroke{#1}\\lxSVG@begingroup{stroke=\\lxSVG@GRAY{#1}}", locked => true);
   DefMacro!("\\pgfsys@color@gray@fill{}",
-    "\\lxSVG@color@gray@fill{#1}\\lxSVG@begingroup{fill=\\lxSVG@GRAY{#1}}");
+    "\\lxSVG@color@gray@fill{#1}\\lxSVG@begingroup{fill=\\lxSVG@GRAY{#1}}", locked => true);
 
-  DefConstructor!("\\lxSVG@color@rgb@stroke Undigested Undigested Undigested", "");
-  DefConstructor!("\\lxSVG@color@rgb@fill Undigested Undigested Undigested", "");
-  DefConstructor!("\\lxSVG@color@cmyk@stroke Undigested Undigested Undigested Undigested", "");
-  DefConstructor!("\\lxSVG@color@cmyk@fill Undigested Undigested Undigested Undigested", "");
-  DefConstructor!("\\lxSVG@color@cmy@stroke Undigested Undigested Undigested", "");
-  DefConstructor!("\\lxSVG@color@cmy@fill Undigested Undigested Undigested", "");
-  DefConstructor!("\\lxSVG@color@gray@stroke Undigested", "");
-  DefConstructor!("\\lxSVG@color@gray@fill Undigested", "");
+  // (duplicate sub versions removed — the DefMacro versions above handle all color models)
+
+  // The \lxSVG@color@*@fill/stroke constructors store the hex color in state.
+  // The color is applied by \lxSVG@drawpath@unclipped during path construction,
+  // wrapping paths in svg:g elements with the correct fill/stroke attributes.
+  // This approach works around the timing issue where Whatsits created during
+  // tikz option processing are not captured in the digested content.
+
+  fn rgb_hex(args: &[&ArgWrap]) -> String {
+    let r: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
+    let g: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
+    let b: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
+    format!("#{:02X}{:02X}{:02X}", (r*255.0).round().clamp(0.0,255.0) as u8,
+      (g*255.0).round().clamp(0.0,255.0) as u8, (b*255.0).round().clamp(0.0,255.0) as u8)
+  }
+  fn gray_hex(args: &[&ArgWrap]) -> String {
+    let v: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
+    format!("#{:02X}{:02X}{:02X}", (v*255.0).round().clamp(0.0,255.0) as u8,
+      (v*255.0).round().clamp(0.0,255.0) as u8, (v*255.0).round().clamp(0.0,255.0) as u8)
+  }
+  fn cmyk_hex(args: &[&ArgWrap]) -> String {
+    let c: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
+    let m: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
+    let y: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
+    let k: f64 = args[3].to_string().trim().parse().unwrap_or(0.0);
+    format!("#{:02X}{:02X}{:02X}",
+      ((1.0-c)*(1.0-k)*255.0).round().clamp(0.0,255.0) as u8,
+      ((1.0-m)*(1.0-k)*255.0).round().clamp(0.0,255.0) as u8,
+      ((1.0-y)*(1.0-k)*255.0).round().clamp(0.0,255.0) as u8)
+  }
+  fn cmy_hex(args: &[&ArgWrap]) -> String {
+    let c: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
+    let m: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
+    let y: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
+    format!("#{:02X}{:02X}{:02X}",
+      ((1.0-c)*255.0).round().clamp(0.0,255.0) as u8,
+      ((1.0-m)*255.0).round().clamp(0.0,255.0) as u8,
+      ((1.0-y)*255.0).round().clamp(0.0,255.0) as u8)
+  }
+
+  DefPrimitive!("\\lxSVG@color@rgb@stroke{}{}{}", sub[args] {
+    let hex = rgb_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@rgb@fill{}{}{}", sub[args] {
+    let hex = rgb_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@cmyk@stroke{}{}{}{}", sub[args] {
+    let hex = cmyk_hex(&[&args[0], &args[1], &args[2], &args[3]]);
+    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@cmyk@fill{}{}{}{}", sub[args] {
+    let hex = cmyk_hex(&[&args[0], &args[1], &args[2], &args[3]]);
+    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@cmy@stroke{}{}{}", sub[args] {
+    let hex = cmy_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@cmy@fill{}{}{}", sub[args] {
+    let hex = cmy_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@gray@stroke{}", sub[args] {
+    let hex = gray_hex(&[&args[0]]);
+    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@gray@fill{}", sub[args] {
+    let hex = gray_hex(&[&args[0]]);
+    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+  });
 
   //===================================================================
   // 7. Pattern
@@ -920,13 +1062,22 @@ LoadDefinitions!({
   // 12. Reusable objects
   //===================================================================
 
-  DefConstructor!("\\pgfsys@invoke{}",
-    sub[document, args, _props] {
-      if let Some(Some(arg)) = args.first() {
-        document.absorb(arg, None)?;
-      }
-    }
-  );
+  // Perl: DefConstructor('\pgfsys@invoke{}', sub { no warnings 'recursion';
+  //   my ($document, $arg) = @_; $document->absorb($arg); return; }, sizer => 0);
+  // Perl: DefConstructor('\pgfsys@invoke{}', sub { $document->absorb($arg); }, sizer => 0);
+  //
+  // The TeX protocol subsystem accumulates content in \pgfsysprotocol@currentprotocol
+  // Perl: DefConstructor('\pgfsys@invoke{}', sub {
+  //   no warnings 'recursion'; $document->absorb($arg); }, sizer => 0);
+  // Use DefPrimitive to read the token argument and re-digest it so that
+  // constructors like \lxSVG@begingroup@ fire during digestion.
+  // DefMacro #1 causes timing issues (constructors fire too late).
+  // DefConstructor with absorb() works BUT only if the argument is properly digested.
+  // Perl: DefConstructor('\pgfsys@invoke{}', sub {
+  //   no warnings 'recursion'; $document->absorb($arg); }, sizer => 0);
+  // Use DefMacro to ensure content flows back through the normal pipeline.
+  // The content is already pre-expanded (hex computed in Rust).
+  DefMacro!("\\pgfsys@invoke{}", "#1", locked => true);
 
   DefMacro!("\\pgfsys@markposition{}", "");
 
