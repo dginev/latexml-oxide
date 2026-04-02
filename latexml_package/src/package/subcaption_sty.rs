@@ -105,9 +105,21 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // \lx@subcaption@addinlist — constructor that sets inlist attribute on parent
-  // Perl: "^ inlist='#1'" — attribute-only constructor (not yet supported in proc macro)
-  DefMacro!("\\lx@subcaption@addinlist{}", "");
+  // Perl L116-117: \lx@subcaption@addinlist — sets inlist attribute on parent.
+  // Perl uses "^ inlist='#1'" which sets attribute on ancestor element.
+  DefConstructor!("\\lx@subcaption@addinlist{}", "",
+    reversion => "",
+    after_construct => sub[document, whatsit] {
+      if let Some(inlist) = whatsit.get_arg(1) {
+        let val = inlist.to_string();
+        if !val.is_empty() {
+          let node = document.get_node();
+          if let Some(mut parent) = node.get_parent() {
+            document.set_attribute(&mut parent, "inlist", &val)?;
+          }
+        }
+      }
+    });
 
   //======================================================================
   // \subref — delegates to \ref
