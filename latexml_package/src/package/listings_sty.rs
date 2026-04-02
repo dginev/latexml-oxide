@@ -636,11 +636,27 @@ fn lst_add_delimiter(
     // Register this delimiter in the delimiter list
     lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
 
-    // Perl: lstSetClassStyle($class, undef, begin => $openTeX, end => $closeTeX,
-    //   class => $oldclass, cssclass => $cssclass)
-    // The begin/end tokens INCLUDE the delimiter characters (unless invisible)
-    let open_tex = if invisible { Tokens!() }
-      else { Tokens::new(vec![T_OTHER!(&open_str)]) };
+    // Perl L593-607: lstSetClassStyle with openTeX/closeTeX.
+    // If style is TeX markup (not a style name), prepend it to open tokens.
+    let style_is_markup = !style_re.is_match(style)
+      && !style.is_empty()
+      && style != "None"
+      && style.contains('\\'); // TeX markup contains backslash
+    let style_tokens = if style_is_markup {
+      mouth::tokenize_internal(style)
+    } else {
+      Tokens!()
+    };
+    let open_tex = if invisible {
+      if style_is_markup { style_tokens.clone() } else { Tokens!() }
+    } else if style_is_markup {
+      // Perl: Tokens($styleTeX->unlist, $open)
+      let mut toks = style_tokens.clone().unlist();
+      toks.push(T_OTHER!(&open_str));
+      Tokens::new(toks)
+    } else {
+      Tokens::new(vec![T_OTHER!(&open_str)])
+    };
     let close_tex = if invisible || close_str.is_empty() { Tokens!() }
       else { Tokens::new(vec![T_OTHER!(&close_str)]) };
 
