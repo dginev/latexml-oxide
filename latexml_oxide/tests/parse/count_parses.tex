@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage{latexml}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\makeatletter
+\newcommand{\countparses}{\ltx@count@parses}
+\makeatother
+\begin{document}
+
+% Cat 1: Consecutive identical unknowns
+$ppppppp$ has \countparses{} parses.
+
+$ppppppppppppppp$ has \countparses{} parses.
+
+% Cat 2: Consecutive mixed unknowns
+$cocococococo$ has \countparses{} parses.
+
+$BBBBBBBrBBBBBB$ has \countparses{} parses.
+
+% Cat 3: Scripted factor deduplication
+$a_2 = b_2 + c_2 - d_2 + e_2$ has \countparses{} parses.
+
+$-12x^2 y^4 - 12xy^5 + 2y^6 - a^3 b^3$ has \countparses{} parses.
+
+% Cat 4: Mixed operators with invisible times
+$xy + xy + \int xy\,dx + xy + xy + xy + xy + xy + xy$ has \countparses{} parses.
+
+% Cat 5: VERTBAR ambiguity
+$\langle B | \sum_k f_k | C \rangle$ has \countparses{} parses.
+
+% Cat 6: Function application
+$f(x) = \int h(x)\,dx$ has \countparses{} parses.
+
+% Cat 7: Simple cases
+$x+y$ has \countparses{} parses.
+
+$x^2$ has \countparses{} parses.
+
+$\frac{a}{b}$ has \countparses{} parses.
+
+\end{document}
