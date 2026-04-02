@@ -106,6 +106,8 @@ pub struct MathParser {
   /// XMath nodes that failed to parse (stored as hashable IDs for post-parse class marking)
   pub failed_xmath_ids:   Vec<usize>,
   n_parsed:               usize,
+  /// Grammar tree count from the last successful parse (for \ltx@count@parses)
+  pub last_parsetrees_count: usize,
   // strict: bool,
   // warned: bool,
   // xnode: Option<Node>,
@@ -131,6 +133,7 @@ impl Default for MathParser {
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
       n_parsed: 0,
+      last_parsetrees_count: 0,
       // strict: true,
       // warned: false,
       // xnode: None,
@@ -197,6 +200,12 @@ impl MathParser {
       crate::data::set_math_idstore(document.get_idstore_clone());
       for math in xmath_nodes {
         self.parse(math, document)?;
+        // Store parse tree count in state for \ltx@count@parses
+        latexml_core::state::assign_value(
+          "LAST_PARSETREES_COUNT",
+          latexml_core::state::Stored::from(self.last_parsetrees_count as i64),
+          None,
+        );
       }
       crate::data::clear_math_idstore();
 
@@ -897,6 +906,9 @@ impl MathParser {
       parses = unique;
     }
     let deduped = pre_dedup - parses.len();
+
+    // Store count for \ltx@count@parses diagnostic macro
+    self.last_parsetrees_count = ok_trees + pruned_trees;
 
     if ok_trees + pruned_trees > 10 {
       log::warn!(
