@@ -595,14 +595,12 @@ LoadDefinitions!({
   DefMacro!("\\SGML", "\\textsc{sgml}");
   DefMacro!("\\HTML", "\\textsc{html}");
 
-  // Diagnostic macro: produces the Marpa parse tree count for the preceding formula.
-  // Reads LAST_PARSETREES_COUNT from state, set by the math parser after each formula.
-  // Usage: $x^2$ \ltx@count@parses → produces the number of grammar trees enumerated.
-  DefMacro!("\\ltx@count@parses", {
-    let count: i64 = match state::lookup_value("LAST_PARSETREES_COUNT") {
-      Some(Stored::Number(n)) => n.0,
-      _ => 0,
-    };
-    Tokens::new(Explode!(s!("{}", count)))
-  });
+  // Diagnostic constructor: emits a marker that gets filled with the Marpa parse tree count
+  // for the preceding formula, after math parsing completes.
+  // Usage: $x^2$ \ltx@count@parses → becomes the count of grammar trees.
+  // The math parser sets _parsetrees on each Math element, then a post-parse step
+  // in core_interface fills in the markers.
+  DefConstructor!("\\ltx@count@parses",
+    "<ltx:text class='ltx_count_parses' _parsetrees_marker='true'>0</ltx:text>",
+    enter_horizontal => true);
 });
