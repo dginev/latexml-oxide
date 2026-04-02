@@ -1353,8 +1353,10 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
         Some(NodeType::ElementNode) => {
           with_node_qname(&ch, |chtag| match chtag {
             "ltx:text" => {
-              if inferred_classes.first() != Some(&ColumnSpec::Text) {
-                // Font would be useful, but haven't "resolved" it, yet!
+              // Perl L1136-1137: $class .= 't' unless $class eq 't'
+              // Only skip if the LAST class was also Text (not just first).
+              // This preserves "tt" for cells with two text elements.
+              if inferred_classes.last() != Some(&ColumnSpec::Text) {
                 inferred_classes.push(ColumnSpec::Text);
               }
             },
@@ -1437,8 +1439,14 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   } else if inferred_classes.len() == 1 {
     inferred_classes[0]
   } else {
-    // TODO: What do we do for multi-class detection?
-    ColumnSpec::Unknown
+    // Perl L1151: multi-class detection.
+    // "tt" (all Text) → MultiText, mixed math+text → MathAltText
+    let all_text = inferred_classes.iter().all(|c| matches!(c, ColumnSpec::Text));
+    if all_text {
+      ColumnSpec::MultiText
+    } else {
+      ColumnSpec::Unknown
+    }
   }
 }
 
