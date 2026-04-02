@@ -35,8 +35,12 @@ static DEFCOLOR: Color = color::BLACK;
 // These are intentionally None in text_default/math_default.
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
-// TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
-static DEFSIZE: f64 = 10.0;
+/// Perl: sub defsize() { return $STATE->lookupValue('NOMINAL_FONT_SIZE') || 10; }
+/// Reads NOMINAL_FONT_SIZE from state, defaulting to 10.0.
+fn defsize() -> f64 {
+  let v = lookup_int("NOMINAL_FONT_SIZE");
+  if v > 0 { v as f64 } else { 10.0 }
+}
 
 pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
 pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"];
@@ -540,7 +544,7 @@ impl Font {
       family:        Some(Cow::Borrowed(DEFFAMILY)),
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed(DEFSHAPE)),
-      size:          Some(DEFSIZE),
+      size:          Some(defsize()),
       color:         None, // None = inherited default (DEFCOLOR); Some = explicitly set
       bg:            None, // Perl: $DEFBACKGROUND = undef (transparent)
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
@@ -565,7 +569,7 @@ impl Font {
       family:        Some(Cow::Borrowed("math")),
       series:        Some(Cow::Borrowed(DEFSERIES)),
       shape:         Some(Cow::Borrowed("italic")),
-      size:          Some(DEFSIZE),
+      size:          Some(defsize()),
       color:         None, // None = inherited default (DEFCOLOR); Some = explicitly set
       bg:            None, // Perl: $DEFBACKGROUND = undef
       opacity:       Some(Cow::Borrowed(DEFOPACITY)),
@@ -616,7 +620,7 @@ impl Font {
     // Size: use temporary string for formatting
     let size_str;
     if let Some(siz) = self.size {
-      if (siz - DEFSIZE).abs() > 0.001 {
+      if (siz - defsize()).abs() > 0.001 {
         size_str = siz.to_string();
         parts.push(&size_str);
       }
@@ -1273,7 +1277,7 @@ impl Font {
     let family = self.family.as_deref().unwrap_or("serif");
     let series = self.series.as_deref().unwrap_or("medium");
     let shape = self.shape.as_deref().unwrap_or("upright");
-    let size = self.size.unwrap_or(DEFSIZE) as i64;
+    let size = self.size.unwrap_or(defsize()) as i64;
     let key = format!("{family}_{series}_{shape}");
     if let Some(name) = METRIC_MAP.get(key.as_str()) {
       let fullname = format!("{name}{size}");
@@ -1313,17 +1317,17 @@ impl Font {
   }
 
   pub fn get_em_width(&self) -> i64 {
-    let size = self.get_size().unwrap_or(DEFSIZE);
+    let size = self.get_size().unwrap_or(defsize());
     let m = self.get_metric(None);
     (size * m.emwidth).trunc() as i64
   }
   pub fn get_ex_height(&self) -> i64 {
-    let size = self.get_size().unwrap_or(DEFSIZE);
+    let size = self.get_size().unwrap_or(defsize());
     let m = self.get_metric(None);
     (size * m.exheight).trunc() as i64
   }
   pub fn get_mu_width(&self) -> i64 {
-    let size = self.get_size().unwrap_or(DEFSIZE);
+    let size = self.get_size().unwrap_or(defsize());
     let m = self.get_metric(None);
     (size * m.emwidth / 18.0).trunc() as i64
   }
@@ -1345,7 +1349,7 @@ impl Font {
         Dimension::default(),
       );
     }
-    let size = self.get_size().unwrap_or(DEFSIZE);
+    let size = self.get_size().unwrap_or(defsize());
     let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     let chars: Vec<char> = text.chars().collect();
@@ -1383,7 +1387,7 @@ impl Font {
   /// Get nominal width, height base ?
   /// Probably should be using data from FontMetric ???
   pub fn get_nominal_size(&self) -> (Dimension, Dimension, Dimension) {
-    let size = self.get_size().unwrap_or(DEFSIZE);
+    let size = self.get_size().unwrap_or(defsize());
     let u = size * UNITY_F64;
     (
       Dimension::new_f64(0.75 * u),
@@ -1519,7 +1523,7 @@ impl Font {
     let mut prevbox: Option<&Digested> = None;
     let mut prevspace: f64 = 0.0;
     // Perl L711: my $size = int($self->getSize || DEFSIZE() || 10);
-    let size = self.get_size().unwrap_or(DEFSIZE) as i64;
+    let size = self.get_size().unwrap_or(defsize()) as i64;
     let (mut wd, mut ht, mut dp): (f64, i64, i64) = (0.0, 0, 0);
     for bx in boxes {
       let (w, h, d) = self.compute_boxes_size_box(bx)?;
@@ -1648,7 +1652,7 @@ impl Font {
       (lines[0][0], lines[0][1], lines[0][2])
     } else {
       // Perl L779-780: baseline adjustment
-      let size = self.get_size().unwrap_or(DEFSIZE) as i64;
+      let size = self.get_size().unwrap_or(defsize()) as i64;
       let baseline = {
         let bl_pt = BASELINE_MAP
           .get(&size)
@@ -2020,10 +2024,10 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
 /// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
 pub fn rationalize_font_size(size: &str) -> f64 {
   if let Some(symbolic) = FONT_SIZE.get(size) {
-    *symbolic * DEFSIZE
+    *symbolic * defsize()
   } else {
     // Perl: return $size — if not a symbolic name, return the numeric value as-is
-    size.parse::<f64>().unwrap_or(DEFSIZE)
+    size.parse::<f64>().unwrap_or(defsize())
   }
 }
 
