@@ -25,7 +25,18 @@ static PARAMSPECT_CHECK_RE: Lazy<Regex> =
 pub fn parse_prototype(proto: &str, init_flag: bool) -> Result<(Token, Option<Parameters>)> {
   let cs;
   let normalized_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
-    cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));
+    let csname_content = captures.get(1).map_or("", |m| m.as_str());
+    // At compile time, reject \csname patterns with braces — these produce CS names
+    // like \begin{env} that can cause infinite loops in the proc macro expansion.
+    // Starred environments (\csname eqnarray*\endcsname) are fine.
+    if !init_flag && (csname_content.contains('{') || csname_content.contains('}')) {
+      panic!(
+        "\\csname...\\endcsname with braces in definition prototype is not supported at compile time: \"{}\". \
+         Use RawTeX!() or runtime DefMacroI() for CS names containing {{}} characters.",
+        proto
+      );
+    }
+    cs = T_CS!(s!("\\{}", csname_content));
     // also replace in proto
     CSNAME_MACRO_RE.replace(proto, "")
   } else if let Some(captures) = CS_RE.captures(proto) {
