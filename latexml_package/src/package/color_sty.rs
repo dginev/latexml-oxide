@@ -5,7 +5,7 @@ use latexml_core::common::color::{self, Color, color_from_model_spec};
 /// If model is given, constructs the Color directly.
 /// If no model, looks up the named color from state.
 /// Perl: ParseColor($model, $spec) in color.sty.ltxml
-fn parse_color(model: Option<&str>, spec: &str) -> Color {
+pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
   let spec = spec.trim().trim_matches(|c| c == '{' || c == '}').trim();
   if let Some(model) = model {
     let model_lc = model.to_lowercase();

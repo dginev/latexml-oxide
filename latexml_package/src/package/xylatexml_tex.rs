@@ -43,7 +43,12 @@ fn xy_get_orientation() -> (f64, f64) {
 
 /// Helper: get stroke color from font
 fn xy_stroke_color() -> String {
-  // TODO: read font color from state when color support is richer
+  // Read font color from state (Perl: LookupValue('font')->getColor)
+  if let Some(font) = state::lookup_font() {
+    if let Some(color) = font.get_color() {
+      return color.to_attribute();
+    }
+  }
   String::from("#000000")
 }
 
@@ -350,8 +355,13 @@ LoadDefinitions!({
   // Color support (Perl L101-109)
   DefMacro!("\\xycolor@ {}", "");
   DefMacro!("\\xylocalColor@ {}{}", "\\def\\preStyle@@{\\addtostyletoks@{\\bgroup\\lx@xy@usecolor{#1}{#2}}}\\def\\postStyle@@{\\addtostyletoks@{\\egroup}}\\modXYstyle@");
-  DefPrimitive!("\\lx@xy@usecolor {}{}", sub[(_spec, _model)] {
-    // TODO: MergeFont(color => ParseColor($model, $spec))
+  DefPrimitive!("\\lx@xy@usecolor {}{}", sub[(spec, model)] {
+    // Perl L101-109: MergeFont(color => ParseColor($model, $spec))
+    let model_str = model.to_string();
+    let spec_str = spec.to_string();
+    let model_opt = if model_str.trim().is_empty() { None } else { Some(model_str.trim()) };
+    let color = crate::package::color_sty::parse_color(model_opt, spec_str.trim());
+    MergeFont!(color => color);
   });
 
   // Direction calculation (Perl L175-179)
