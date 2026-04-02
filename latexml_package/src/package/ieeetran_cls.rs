@@ -1,408 +1,211 @@
+//! IEEEtran.cls — IEEE Transactions document class
+//! Perl: IEEEtran.cls.ltxml — 458 lines
 use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: IEEEtran.cls.ltxml — IEEE Transactions document class
+  // Option conditionals (Perl L18-108)
+  TeX!(r"
+\newif\ifCLASSOPTIONonecolumn       \CLASSOPTIONonecolumnfalse
+\newif\ifCLASSOPTIONtwocolumn       \CLASSOPTIONtwocolumntrue
+\newif\ifCLASSOPTIONoneside         \CLASSOPTIONonesidetrue
+\newif\ifCLASSOPTIONtwoside         \CLASSOPTIONtwosidefalse
+\newif\ifCLASSOPTIONfinal           \CLASSOPTIONfinaltrue
+\newif\ifCLASSOPTIONdraft           \CLASSOPTIONdraftfalse
+\newif\ifCLASSOPTIONdraftcls        \CLASSOPTIONdraftclsfalse
+\newif\ifCLASSOPTIONdraftclsnofoot  \CLASSOPTIONdraftclsnofootfalse
+\newif\ifCLASSOPTIONpeerreview      \CLASSOPTIONpeerreviewfalse
+\newif\ifCLASSOPTIONpeerreviewca    \CLASSOPTIONpeerreviewcafalse
+\newif\ifCLASSOPTIONjournal         \CLASSOPTIONjournaltrue
+\newif\ifCLASSOPTIONconference      \CLASSOPTIONconferencefalse
+\newif\ifCLASSOPTIONtechnote        \CLASSOPTIONtechnotefalse
+\newif\ifCLASSOPTIONnofonttune      \CLASSOPTIONnofonttunefalse
+\newif\ifCLASSOPTIONcaptionsoff     \CLASSOPTIONcaptionsofffalse
+\newif\ifCLASSOPTIONcomsoc          \CLASSOPTIONcomsocfalse
+\newif\ifCLASSOPTIONcompsoc         \CLASSOPTIONcompsocfalse
+\newif\ifCLASSOPTIONtransmag        \CLASSOPTIONtransmagfalse
+\newif\ifCLASSOPTIONromanappendices \CLASSOPTIONromanappendicesfalse
+\newif\ifCLASSINFOpdf               \CLASSINFOpdftrue
+\DeclareOption{9pt}{\def\CLASSOPTIONpt{9}\def\@ptsize{0}}
+\DeclareOption{10pt}{\def\CLASSOPTIONpt{10}\def\@ptsize{0}}
+\DeclareOption{11pt}{\def\CLASSOPTIONpt{11}\def\@ptsize{1}}
+\DeclareOption{12pt}{\def\CLASSOPTIONpt{12}\def\@ptsize{2}}
+\DeclareOption{letterpaper}{\def\CLASSOPTIONpaper{letter}}
+\DeclareOption{a4paper}{\def\CLASSOPTIONpaper{a4}}
+\DeclareOption{oneside}{\CLASSOPTIONonesidetrue\CLASSOPTIONtwosidefalse}
+\DeclareOption{twoside}{\CLASSOPTIONtwosidetrue\CLASSOPTIONonesidefalse}
+\DeclareOption{onecolumn}{\CLASSOPTIONonecolumntrue\CLASSOPTIONtwocolumnfalse}
+\DeclareOption{twocolumn}{\CLASSOPTIONtwocolumntrue\CLASSOPTIONonecolumnfalse}
+\DeclareOption{draft}{\CLASSOPTIONdrafttrue\CLASSOPTIONdraftclstrue}
+\DeclareOption{draftcls}{\CLASSOPTIONdraftfalse\CLASSOPTIONdraftclstrue}
+\DeclareOption{final}{\CLASSOPTIONdraftfalse\CLASSOPTIONdraftclsfalse}
+\DeclareOption{journal}{\CLASSOPTIONjournaltrue\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotefalse}
+\DeclareOption{conference}{\CLASSOPTIONjournalfalse\CLASSOPTIONconferencetrue\CLASSOPTIONtechnotefalse}
+\DeclareOption{technote}{\CLASSOPTIONjournalfalse\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotetrue}
+\DeclareOption{peerreview}{\CLASSOPTIONpeerreviewtrue\CLASSOPTIONjournalfalse}
+\DeclareOption{peerreviewca}{\CLASSOPTIONpeerreviewtrue\CLASSOPTIONpeerreviewcatrue}
+\DeclareOption{nofonttune}{\CLASSOPTIONnofonttunetrue}
+\DeclareOption{captionsoff}{\CLASSOPTIONcaptionsofftrue}
+\DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse\CLASSOPTIONtransmagfalse}
+\DeclareOption{compsoc}{\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsoctrue\CLASSOPTIONtransmagfalse}
+\DeclareOption{transmag}{\CLASSOPTIONtransmagtrue\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsocfalse}
+\DeclareOption{romanappendices}{\CLASSOPTIONromanappendicestrue}
+  ");
 
-  // RawTeX block: conditionals and option declarations
-  RawTeX!(r"\newif\ifCLASSOPTIONonecolumn       \CLASSOPTIONonecolumnfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONtwocolumn       \CLASSOPTIONtwocolumntrue");
-  RawTeX!(r"\newif\ifCLASSOPTIONoneside         \CLASSOPTIONonesidetrue");
-  RawTeX!(r"\newif\ifCLASSOPTIONtwoside         \CLASSOPTIONtwosidefalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONfinal           \CLASSOPTIONfinaltrue");
-  RawTeX!(r"\newif\ifCLASSOPTIONdraft           \CLASSOPTIONdraftfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONdraftcls        \CLASSOPTIONdraftclsfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONdraftclsnofoot  \CLASSOPTIONdraftclsnofootfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONpeerreview      \CLASSOPTIONpeerreviewfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONpeerreviewca    \CLASSOPTIONpeerreviewcafalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONjournal         \CLASSOPTIONjournaltrue");
-  RawTeX!(r"\newif\ifCLASSOPTIONconference      \CLASSOPTIONconferencefalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONtechnote        \CLASSOPTIONtechnotefalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONnofonttune      \CLASSOPTIONnofonttunefalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONcaptionsoff     \CLASSOPTIONcaptionsofffalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONcomsoc          \CLASSOPTIONcomsocfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONcompsoc         \CLASSOPTIONcompsocfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONtransmag        \CLASSOPTIONtransmagfalse");
-  RawTeX!(r"\newif\ifCLASSOPTIONromanappendices \CLASSOPTIONromanappendicesfalse");
-  RawTeX!(r"\newif\ifCLASSINFOpdf               \CLASSINFOpdffalse");
-  RawTeX!(r"\CLASSINFOpdftrue");
-
-  // DeclareOption for paper sizes, layout, modes
-  RawTeX!(r"\DeclareOption{9pt}{\def\CLASSOPTIONpt{9}\def\@ptsize{0}}");
-  RawTeX!(r"\DeclareOption{10pt}{\def\CLASSOPTIONpt{10}\def\@ptsize{0}}");
-  RawTeX!(r"\DeclareOption{11pt}{\def\CLASSOPTIONpt{11}\def\@ptsize{1}}");
-  RawTeX!(r"\DeclareOption{12pt}{\def\CLASSOPTIONpt{12}\def\@ptsize{2}}");
-  RawTeX!(r"\DeclareOption{letterpaper}{\setlength{\paperwidth}{8.5in}\setlength{\paperheight}{11in}\def\CLASSOPTIONpaper{letter}\def\CLASSINFOpaperwidth{8.5in}\def\CLASSINFOpaperheight{11in}}");
-  RawTeX!(r"\DeclareOption{a4paper}{\setlength{\paperwidth}{210mm}\setlength{\paperheight}{297mm}\def\CLASSOPTIONpaper{a4}\def\CLASSINFOpaperwidth{210mm}\def\CLASSINFOpaperheight{297mm}}");
-  RawTeX!(r"\DeclareOption{cspaper}{\setlength{\paperwidth}{7.875in}\setlength{\paperheight}{10.75in}\def\CLASSOPTIONpaper{ieeecs}\def\CLASSINFOpaperwidth{7.875in}\def\CLASSINFOpaperheight{10.75in}}");
-  RawTeX!(r"\DeclareOption{oneside}{\@twosidefalse\@mparswitchfalse\CLASSOPTIONonesidetrue\CLASSOPTIONtwosidefalse}");
-  RawTeX!(r"\DeclareOption{twoside}{\@twosidetrue\@mparswitchtrue\CLASSOPTIONtwosidetrue\CLASSOPTIONonesidefalse}");
-  RawTeX!(r"\DeclareOption{onecolumn}{\CLASSOPTIONonecolumntrue\CLASSOPTIONtwocolumnfalse}");
-  RawTeX!(r"\DeclareOption{twocolumn}{\CLASSOPTIONtwocolumntrue\CLASSOPTIONonecolumnfalse}");
-  RawTeX!(r"\DeclareOption{draft}{\CLASSOPTIONdrafttrue\CLASSOPTIONdraftclstrue\CLASSOPTIONdraftclsnofootfalse}");
-  RawTeX!(r"\DeclareOption{draftcls}{\CLASSOPTIONdraftfalse\CLASSOPTIONdraftclstrue\CLASSOPTIONdraftclsnofootfalse}");
-  RawTeX!(r"\DeclareOption{draftclsnofoot}{\CLASSOPTIONdraftfalse\CLASSOPTIONdraftclstrue\CLASSOPTIONdraftclsnofoottrue}");
-  RawTeX!(r"\DeclareOption{final}{\CLASSOPTIONdraftfalse\CLASSOPTIONdraftclsfalse\CLASSOPTIONdraftclsnofootfalse}");
-  RawTeX!(r"\DeclareOption{journal}{\CLASSOPTIONpeerreviewfalse\CLASSOPTIONpeerreviewcafalse\CLASSOPTIONjournaltrue\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotefalse}");
-  RawTeX!(r"\DeclareOption{conference}{\CLASSOPTIONpeerreviewfalse\CLASSOPTIONpeerreviewcafalse\CLASSOPTIONjournalfalse\CLASSOPTIONconferencetrue\CLASSOPTIONtechnotefalse}");
-  RawTeX!(r"\DeclareOption{technote}{\CLASSOPTIONpeerreviewfalse\CLASSOPTIONpeerreviewcafalse\CLASSOPTIONjournalfalse\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotetrue}");
-  RawTeX!(r"\DeclareOption{peerreview}{\CLASSOPTIONpeerreviewtrue\CLASSOPTIONpeerreviewcafalse\CLASSOPTIONjournalfalse\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotefalse}");
-  RawTeX!(r"\DeclareOption{peerreviewca}{\CLASSOPTIONpeerreviewtrue\CLASSOPTIONpeerreviewcatrue\CLASSOPTIONjournalfalse\CLASSOPTIONconferencefalse\CLASSOPTIONtechnotefalse}");
-  RawTeX!(r"\DeclareOption{nofonttune}{\CLASSOPTIONnofonttunetrue}");
-  RawTeX!(r"\DeclareOption{captionsoff}{\CLASSOPTIONcaptionsofftrue}");
-  RawTeX!(r"\DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse\CLASSOPTIONtransmagfalse\RequirePackage{newtxmath}}");
-  RawTeX!(r"\DeclareOption{compsoc}{\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsoctrue\CLASSOPTIONtransmagfalse}");
-  RawTeX!(r"\DeclareOption{transmag}{\CLASSOPTIONtransmagtrue\CLASSOPTIONcomsocfalse\CLASSOPTIONcompsocfalse}");
-  RawTeX!(r"\DeclareOption{romanappendices}{\CLASSOPTIONromanappendicestrue}");
-
-  // Catch-all: pass unknown options to article
-  DeclareOption!(None, {
-    Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
+  // Pass unknown options to article
+  DeclareOption!(None, sub {
+    let opt = Expand!(T_CS!("\\CurrentOption")).to_string();
+    pass_options("article", "cls", &[&opt])?;
   });
-
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
 
-  // Perl: DefMacro('\IEEEtitleabstractindextext{}', '#1');
+  // Front matter macros (Perl L134-165)
   DefMacro!("\\IEEEtitleabstractindextext{}", "#1");
-  DefMacro!("\\IEEEdisplaynontitleabstractindextext", None);
-  DefMacro!("\\IEEEdisplaynotcompsoctitleabstractindextext", None);
-  DefMacro!("\\IEEEcompsoctitleabstractindextext", None);
+  DefMacro!("\\IEEEdisplaynontitleabstractindextext", "");
+  DefMacro!("\\IEEEdisplaynotcompsoctitleabstractindextext", "");
+  DefMacro!("\\IEEEcompsoctitleabstractindextext", "");
   Let!("\\IEEEpeerreviewmaketitle", "\\maketitle");
-  DefMacro!("\\IEEEoverridecommandlockouts", None);
-  DefMacro!("\\overrideIEEEmargins", None);
-
-  DefMacro!("\\IEEEaftertitletext{}", None);
-  DefMacro!("\\IEEEspecialpapernotice{}", None);
-
-  DefMacro!("\\IEEEmembership{}", None);
+  DefMacro!("\\IEEEoverridecommandlockouts", "");
+  DefMacro!("\\overrideIEEEmargins", "");
+  DefMacro!("\\IEEEaftertitletext{}", "");
+  DefMacro!("\\IEEEspecialpapernotice{}", "");
+  DefMacro!("\\IEEEmembership{}", "");
   DefMacro!("\\IEEEauthorblockN{}", "#1");
+  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
+  DefMacro!("\\IEEEauthorblockA{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
 
-  // Perl: DefConstructor('\@@@affiliation{}',
-  //   "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefConstructor!("\\@@@affiliation{}",
-    "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  // Perl: DefMacro('\IEEEauthorblockA{}',
-  //   '\@add@to@frontmatter{ltx:creator}{\@@@affiliation{#1}}');
-  DefMacro!("\\IEEEauthorblockA{}",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-
-  // IEEEkeywords environment
-  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\@IEEEkeywords");
-  DefMacro!(T_CS!("\\end{IEEEkeywords}"), None, "\\@endIEEEkeywords");
+  // IEEEkeywords environment (Perl L152-155)
+  DefMacro!("\\csname begin{IEEEkeywords}\\endcsname", "\\@IEEEkeywords");
+  DefMacro!("\\csname end{IEEEkeywords}\\endcsname", "\\@endIEEEkeywords");
   Let!("\\@endIEEEkeywords", "\\relax");
   DefMacro!("\\@IEEEkeywords XUntil:\\@endIEEEkeywords",
     "\\@add@frontmatter{ltx:keywords}[name={\\IEEEkeywordsname}]{#1}");
+
   DefMacro!("\\IEEEraisesectionheading{}", "#1");
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
-
   DefMacro!("\\IEEEcompsocitemizethanks{}", "\\thanks{#1}");
-  DefMacro!("\\IEEEcompsocthanksitem[]", None);
-  DefMacro!("\\IEEEauthorrefmark", None);
-  DefMacro!("\\IEEEtriggeratref{}", None);
-
+  DefMacro!("\\IEEEcompsocthanksitem[]", "");
+  DefMacro!("\\IEEEauthorrefmark", "");
+  DefMacro!("\\IEEEtriggeratref{}", "");
   DefMacro!("\\IEEEpubid{}", "\\@add@frontmatter{ltx:note}[role=publicationid]{pubid: #1}");
-  DefMacro!("\\IEEEpubidadjcol", None);
+  DefMacro!("\\IEEEpubidadjcol", "");
 
-  // Section numbering: compsoc vs standard
-  RawTeX!(r"\ifCLASSOPTIONcompsoc
+  // Section numbering (Perl L167-182)
+  TeX!(r"
+\ifCLASSOPTIONcompsoc
 \def\thesection{\arabic{section}}
 \def\thesubsection{\thesection.\arabic{subsection}}
 \def\thesubsubsection{\thesubsection.\arabic{subsubsection}}
-\def\theparagraph{\thesubsubsection.\arabic{paragraph}}
 \else
 \def\thesection{\Roman{section}}
 \def\thesubsection{\mbox{\thesection-\Alph{subsection}}}
 \def\thesubsubsection{\thesubsection\arabic{subsubsection}}
 \def\theparagraph{\thesubsubsection\alph{paragraph}}
-\fi");
+\fi
+  ");
 
-  // Font switches for section titles
-  DefPrimitive!("\\ltx@ieeetran@it", None,
-    font => {shape => "italic", family => "serif", series => "medium"}, locked => true);
-  DefPrimitive!("\\ltx@ieeetran@sc", None,
-    font => {shape => "smallcaps", family => "serif", series => "medium"}, locked => true);
-
+  // Font primitives (Perl L183-186)
+  DefPrimitive!("\\ltx@ieeetran@it", None, font => { shape => "italic", family => "serif", series => "medium" }, locked => true);
+  DefPrimitive!("\\ltx@ieeetran@sc", None, font => { shape => "smallcaps", family => "serif", series => "medium" }, locked => true);
   DefMacro!("\\format@title@font@section", "\\ltx@ieeetran@sc");
   DefMacro!("\\format@title@font@subsection", "\\ltx@ieeetran@it");
   DefMacro!("\\figurename", "Fig.");
   DefMacro!("\\tablename", "TABLE");
   DefMacro!("\\thetable", "\\Roman{table}");
 
-  // IEEEQEDclosed — end-of-proof symbol
+  // QED symbols (Perl L194-198)
   DefConstructor!("\\IEEEQEDclosed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     enter_horizontal => true);
   Let!("\\IEEEQEDopen", "\\IEEEQEDclosed");
   Let!("\\IEEEQED", "\\IEEEQEDclosed");
 
-  // Perl: DefMacro('\IEEEQEDhere', sub { PopValue('QED@stack') ... })
-  DefMacro!("\\IEEEQEDhere", sub[_args] {
-    let t = state::pop_value("QED@stack")?.unwrap_or(Stored::None);
-    match t {
-      Stored::Tokens(toks) if !toks.is_empty() => toks,
-      _ => Tokens!(),
-    }
-  });
+  // IEEEproof environment (Perl L206-229)
+  DefEnvironment!("{IEEEproof}[]",
+    "<ltx:proof class='ltx_runin'>\
+     <ltx:title font='italic' _force_font='true' class='ltx_runin'>\\textbf{\\textit{Proof:}}</ltx:title>\
+     #body\
+     </ltx:proof>");
 
-  // IEEEproof environment
-  DefEnvironment!("{IEEEproof} OptionalUndigested",
-    "<ltx:proof class='#class'><ltx:title font='#titlefont' _force_font='true' class='#titleclass'>#title</ltx:title>#body",
-    after_construct => sub[doc, _whatsit] {
-      doc.maybe_close_element("ltx:proof")?;
-    },
-    after_digest_begin => sub[_whatsit] {
-      state::push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))))?;
-    },
-    properties => {
-      let title = stomach::digest(
-        Tokenize!("\\textbf{\\textit{Proof:}}"))?;
-      // Perl: extracts font from 2nd element of unlist for titlefont
-      let titlefont = title.unlist().get(1)
-        .and_then(|d| d.get_font().ok().flatten().map(|f| f.into_owned()));
-      let mut props = stored_map!("title" => title, "titleclass" => "ltx_runin");
-      if let Some(font) = titlefont {
-        props.insert("titlefont", Stored::Font(Rc::new(font)));
-      }
-      Ok(props)
-    },
-    before_digest_end => {
-      let qed = state::pop_value("QED@stack")?;
-      match qed {
-        Some(Stored::Tokens(toks)) if !toks.is_empty() => {
-          return Ok(vec![stomach::digest(toks)?]);
-        },
-        _ => {},
-      }
-    }
-  );
+  // Lengths (Perl L231-236)
+  TeX!(r"
+\newlength\abovecaptionskip
+\newlength\belowcaptionskip
+\setlength\abovecaptionskip{0.5\baselineskip}
+\setlength\belowcaptionskip{0pt}
+  ");
 
-  // Lengths
-  RawTeX!(r"\newlength\abovecaptionskip");
-  RawTeX!(r"\newlength\belowcaptionskip");
-  RawTeX!(r"\setlength\abovecaptionskip{0.5\baselineskip}");
-  RawTeX!(r"\setlength\belowcaptionskip{0pt}");
-
-  // IEEEbiography environments
+  // IEEEbiography environments (Perl L238-247)
   DefEnvironment!("{IEEEbiography}[]{}",
-    "<ltx:float class='biography'><ltx:tabular><ltx:tr><ltx:td>#1</ltx:td><ltx:td><ltx:inline-block><ltx:text class='ltx_font_bold'>#2</ltx:text> #body</ltx:inline-block></ltx:td></ltx:tr></ltx:tabular></ltx:float>");
+    "<ltx:float class='biography'><ltx:tabular>\
+     <ltx:tr><ltx:td>#1</ltx:td><ltx:td><ltx:inline-block><ltx:text class='ltx_font_bold'>#2</ltx:text> \
+     #body</ltx:inline-block></ltx:td></ltx:tr>\
+     </ltx:tabular></ltx:float>");
   DefEnvironment!("{IEEEbiographynophoto}[]{}",
-    "<ltx:float class='biography'><ltx:tabular><ltx:tr><ltx:td><ltx:inline-block><ltx:text class='ltx_font_bold'>#2</ltx:text> #body</ltx:inline-block></ltx:td></ltx:tr></ltx:tabular></ltx:float>");
+    "<ltx:float class='biography'><ltx:tabular>\
+     <ltx:tr><ltx:td><ltx:inline-block><ltx:text class='ltx_font_bold'>#2</ltx:text> \
+     #body</ltx:inline-block></ltx:td></ltx:tr>\
+     </ltx:tabular></ltx:float>");
 
-  // IEEEnonumber / IEEEyesnumber / IEEEyessubnumber / IEEEnosubnumber
-  // Perl: These manipulate EQUATION_NUMBERING and EQUATIONROW_TAGS state
-  // For now, simplified stubs that handle the common cases
-  // Perl: IEEEnonumber manipulates EQUATION_NUMBERING and EQUATIONROW_TAGS
-  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
-    // Suppress numbering for current row (no star) or all rows (star)
-    if star.is_some() {
-      // Star: retract all future equations in this group
-      with_value_mut("EQUATION_NUMBERING", |val_opt| {
-        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
-          numbering.insert("retract", true.into());
-          numbering.remove("counter");
-        }
-      });
-    } else {
-      // No star: retract current equation only
-      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
-        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
-          tags.insert("retract", true.into());
-          tags.remove("counter");
-        }
-      });
-    }
-  });
-  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
-    // Perl: if currently in subequation mode, step equation counter to exit
-    let in_subeq = state::lookup_value("EQUATION_NUMBERING")
-      .map(|v| if let Stored::HashStored(h) = v {
-        h.get("counter").map(|c| c.to_string()) == Some("subequation".to_string())
-      } else { false })
-      .unwrap_or(false);
-    if in_subeq {
-      ref_step_counter("equation", false)?;
-    }
-    // Restore numbering
-    if star.is_some() {
-      with_value_mut("EQUATION_NUMBERING", |val_opt| {
-        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
-          numbering.remove("retract");
-          numbering.remove("counter");
-        }
-      });
-    } else {
-      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
-        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
-          tags.insert("noretract", true.into());
-          tags.remove("counter");
-        }
-      });
-    }
-  });
-  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
-    // Switch to sub-equation counter
-    if star.is_some() {
-      with_value_mut("EQUATION_NUMBERING", |val_opt| {
-        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
-          numbering.insert("counter", Stored::from("subequation"));
-        }
-      });
-    } else {
-      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
-        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
-          tags.insert("counter", Stored::from("subequation"));
-        }
-      });
-    }
-    // If preset, step the subequation counter
-    let has_preset = state::lookup_value("EQUATION_NUMBERING")
-      .map(|v| if let Stored::HashStored(h) = v { h.contains_key("preset") } else { false })
-      .unwrap_or(false)
-      || state::lookup_value("EQUATIONROW_TAGS")
-      .map(|v| if let Stored::HashStored(h) = v { h.contains_key("preset") } else { false })
-      .unwrap_or(false);
-    if has_preset {
-      ref_step_counter("subequation", false)?;
-    }
-  });
-  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
-    // Switch back to equation counter
-    if star.is_some() {
-      with_value_mut("EQUATION_NUMBERING", |val_opt| {
-        if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
-          numbering.insert("counter", Stored::from("equation"));
-        }
-      });
-    } else {
-      with_value_mut("EQUATIONROW_TAGS", |val_opt| {
-        if let Some(Stored::HashStored(ref mut tags)) = val_opt {
-          tags.insert("counter", Stored::from("equation"));
-        }
-      });
-    }
-  });
+  // IEEEeqnarray (Perl L299-332) — map to eqnarray
+  DefMacro!("\\csname IEEEeqnarray\\endcsname{}", "\\eqnarray");
+  Let!("\\csname endIEEEeqnarray\\endcsname", "\\endeqnarray");
+  DefMacro!("\\csname IEEEeqnarray*\\endcsname{}", "\\csname eqnarray*\\endcsname");
+  Let!("\\csname endIEEEeqnarray*\\endcsname", "\\csname endeqnarray*\\endcsname");
+  DefMacro!("\\IEEEeqnarraynumspace", "");
 
-  // IEEEeqnarray => eqnarray
-  DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
-  Let!(T_CS!("\\endIEEEeqnarray"), T_CS!("\\endeqnarray"));
-  // Perl: DefMacroI(T_CS('\IEEEeqnarray*'), '{}', T_CS('\eqnarray*'));
-  // Must use T_CS! for the expansion so * is part of the CS name, not a separate token.
-  {
-    let params = parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?;
-    def_macro(T_CS!("\\IEEEeqnarray*"), params, Tokens!(T_CS!("\\eqnarray*")), None)?;
-  }
-  Let!(T_CS!("\\endIEEEeqnarray*"), T_CS!("\\endeqnarray*"));
+  // IEEEnonumber/yesnumber stubs (Perl L252-294) — simplified
+  DefMacro!("\\IEEEnonumber OptionalMatch:*", "\\nonumber");
+  DefMacro!("\\IEEEyesnumber OptionalMatch:*", "");
+  DefMacro!("\\IEEEyessubnumber OptionalMatch:*", "");
+  DefMacro!("\\IEEEnosubnumber OptionalMatch:*", "");
 
-  // Column types for IEEEeqnarray: L, C, R
-  DefColumnType!("L", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
-  DefColumnType!("C", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
-  DefColumnType!("R", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
+  // Column types (Perl L308-314)
+  DefColumnType!('L', "\\hfil", "");
+  DefColumnType!('C', "\\hfil", "\\hfil");
+  DefColumnType!('R', "", "\\hfil");
 
-  // IEEEeqnarraybox
-  DefMacro!("\\IEEEeqnarraybox",
-    "\\ifmmode\\def\\@tempa{\\let\\endIEEEeqnarraybox\\endIEEEeqnarrayboxm\\IEEEeqnarrayboxm}\\else\\def\\@tempa{\\let\\endIEEEeqnarraybox\\endIEEEeqnarrayboxt\\IEEEeqnarrayboxt}\\fi\\@tempa");
-  DefMacro!("\\IEEEeqnarrayboxm OptionalMatch:* {}",
-    "\\@array@bindings{#2}\\@@IEEE@array{#2}\\lx@begin@alignment");
-  DefMacro!(T_CS!("\\endIEEEeqnarrayboxm"), None,
-    "\\lx@end@alignment\\@end@array");
-  DefMacro!("\\IEEEeqnarrayboxt OptionalMatch:* {}",
-    "\\lx@begin@inline@math\\@array@bindings{#2}\\@@IEEE@array{#2}\\lx@begin@alignment");
-  DefMacro!(T_CS!("\\endIEEEeqnarrayboxt"), None,
-    "\\lx@end@alignment\\@end@array\\lx@end@inline@math");
+  Let!("\\appendices", "\\appendix");
 
+  // Bibliography style
+  AssignMapping!("BIBSTYLES_IEEEtran", "citestyle" => "numbers", "sort" => "true");
 
-  DefConstructor!("\\@@IEEE@array[] Undigested DigestedBody", "#3",
-    before_digest => sub { bgroup(); },
-    reversion => "\\begin{IEEEeqnarraybox}[#1]{#2}#3\\end{IEEEeqnarraybox}"
-  );
-
-  DefMacro!("\\IEEEeqnarraynumspace", None);
-
-  Let!(T_CS!("\\appendices"), T_CS!("\\appendix"));
-
-  // BIBSTYLES
-  state::assign_value("BIBSTYLES_IEEEtran_citestyle", Stored::String(arena::pin("numbers")), None);
-  state::assign_value("BIBSTYLES_IEEEtran_sort", Stored::String(arena::pin("true")), None);
-
-  // IED list support macros
+  // IED list stubs (Perl L340-347)
   DefMacro!("\\IEEEsetlabelwidth{}", "\\settowidth{\\labelwidth}{#1}");
-  DefMacro!("\\IEEEusemathlabelsep", None);
-  DefMacro!("\\IEEEtriggercmd{}", None);
-  DefMacro!("\\IEEElabelindent", None);
-  DefMacro!("\\IEEEcalcleftmargin{}", None);
-  DefMacro!("\\IEEEiedlabeljustifyc", None);
-  DefMacro!("\\IEEEiedlabeljustifyl", None);
-  DefMacro!("\\IEEEiedlabeljustifyr", None);
+  DefMacro!("\\IEEEusemathlabelsep", "");
+  DefMacro!("\\IEEEtriggercmd{}", "");
+  DefMacro!("\\IEEElabelindent", "");
+  DefMacro!("\\IEEEcalcleftmargin{}", "");
+  DefMacro!("\\IEEEiedlabeljustifyc", "");
+  DefMacro!("\\IEEEiedlabeljustifyl", "");
+  DefMacro!("\\IEEEiedlabeljustifyr", "");
 
-  // IEEEitemize, IEEEenumerate, IEEEdescription
+  // IEEEitemize/enumerate/description (Perl L351-366)
   DefEnvironment!("{IEEEitemize}[]",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
-    properties => { BeginItemize!("itemize", "@item") },
-    before_digest_end => { Digest!("\\par") },
-    locked => true,
-    mode => "internal_vertical"
-  );
+    mode => "internal_vertical");
   DefEnvironment!("{IEEEenumerate}[]",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
-    properties => { BeginItemize!("enumerate", "enum") },
-    before_digest_end => { Digest!("\\par") },
-    locked => true,
-    mode => "internal_vertical"
-  );
+    mode => "internal_vertical");
   DefEnvironment!("{IEEEdescription}[]",
     "<ltx:description xml:id='#id'>#body</ltx:description>",
-    before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
-    properties => { BeginItemize!("description", "@desc") },
-    before_digest_end => { Digest!("\\par") },
-    locked => true,
-    mode => "internal_vertical"
-  );
+    mode => "internal_vertical");
 
-  // Override LaTeX's default IED lists
+  // Override standard lists (Perl L369-380)
   Let!("\\itemize", "\\IEEEitemize");
   Let!("\\enditemize", "\\endIEEEitemize");
   Let!("\\enumerate", "\\IEEEenumerate");
   Let!("\\endenumerate", "\\endIEEEenumerate");
   Let!("\\description", "\\IEEEdescription");
   Let!("\\enddescription", "\\endIEEEdescription");
-  Let!(T_CS!("\\begin{itemize}"), "\\IEEEitemize");
-  Let!(T_CS!("\\end{itemize}"), "\\endIEEEitemize");
-  Let!(T_CS!("\\begin{enumerate}"), "\\IEEEenumerate");
-  Let!(T_CS!("\\end{enumerate}"), "\\endIEEEenumerate");
-  Let!(T_CS!("\\begin{description}"), "\\IEEEdescription");
-  Let!(T_CS!("\\end{description}"), "\\endIEEEdescription");
 
-  // String macros
+  // String macros (Perl L383-395)
   DefMacro!("\\contentsname", "Contents");
   DefMacro!("\\listfigurename", "List of Figures");
   DefMacro!("\\listtablename", "List of Tables");
   DefMacro!("\\refname", "References");
   DefMacro!("\\indexname", "Index");
-  DefMacro!("\\figurename", "Fig.");
-  DefMacro!("\\tablename", "TABLE");
   DefMacro!("\\figurename", "Figure");
   DefMacro!("\\partname", "Part");
   DefMacro!("\\appendixname", "Appendix");
@@ -410,7 +213,7 @@ LoadDefinitions!({
   DefMacro!("\\IEEEkeywordsname", "Index Terms");
   DefMacro!("\\IEEEproofname", "Proof");
 
-  // Legacy command aliases
+  // Legacy aliases (Perl L398-439)
   Let!("\\authorblockA", "\\IEEEauthorblockA");
   Let!("\\authorblockN", "\\IEEEauthorblockN");
   Let!("\\authorrefmark", "\\IEEEauthorrefmark");
@@ -419,51 +222,37 @@ LoadDefinitions!({
   Let!("\\pubidadjcol", "\\IEEEpubidadjcol");
   Let!("\\specialpapernotice", "\\IEEEspecialpapernotice");
 
-  // Legacy environment aliases
-  DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
-  DefMacro!(T_CS!("\\end{keywords}"), None, "\\@endIEEEkeywords");
-  // Perl: \keywords can take either {} or bare text
-  // If next token is T_BEGIN, use \keywords@onearg, otherwise \@IEEEkeywords
-  DefMacro!("\\keywords", sub[_args] {
-    if gullet::if_next(T_BEGIN!())? {
-      Tokens!(T_CS!("\\keywords@onearg"))
-    } else {
-      Tokens!(T_CS!("\\@IEEEkeywords"))
-    }
-  });
-  DefMacro!("\\keywords@onearg{}", "\\@IEEEkeywords #1 \\@endIEEEkeywords");
+  // Keywords environment aliases
+  DefMacro!("\\csname begin{keywords}\\endcsname", "\\@IEEEkeywords");
+  DefMacro!("\\csname end{keywords}\\endcsname", "\\@endIEEEkeywords");
 
   // Legacy IED list aliases
   Let!("\\labelindent", "\\IEEElabelindent");
   Let!("\\calcleftmargin", "\\IEEEcalcleftmargin");
   Let!("\\setlabelwidth", "\\IEEEsetlabelwidth");
   Let!("\\usemathlabelsep", "\\IEEEusemathlabelsep");
-  Let!("\\iedlabeljustifyc", "\\IEEEiedlabeljustifyc");
-  Let!("\\iedlabeljustifyl", "\\IEEEiedlabeljustifyl");
-  Let!("\\iedlabeljustifyr", "\\IEEEiedlabeljustifyr");
 
-  // QED aliases
+  // QED/proof aliases
   Let!("\\QED", "\\IEEEQED");
   Let!("\\QEDclosed", "\\IEEEQEDclosed");
   Let!("\\QEDopen", "\\IEEEQEDopen");
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true,
-    reversion => "\\qed"
-  );
-
+    enter_horizontal => true, reversion => "\\qed");
   Let!("\\proof", "\\IEEEproof");
   Let!("\\endproof", "\\endIEEEproof");
+
+  // Biography aliases
   Let!("\\biography", "\\IEEEbiography");
   Let!("\\biographynophoto", "\\IEEEbiographynophoto");
   Let!("\\endbiography", "\\endIEEEbiography");
   Let!("\\endbiographynophoto", "\\endIEEEbiographynophoto");
 
-  // BibTeX style control
-  DefMacro!("\\bstctlcite[]{}", None);
+  // bstctlcite stub (Perl L445)
+  DefMacro!("\\bstctlcite[]{}", "");
 
-  // Disable internal alignment environment
-  DefMacro!(T_CS!("\\begin{@IEEEauthorhalign}"), None, "\\relax");
-  DefMacro!(T_CS!("\\end{@IEEEauthorhalign}"), None, "\\relax");
+  // Disable internal alignment env (Perl L453-454)
+  DefMacro!("\\csname begin{@IEEEauthorhalign}\\endcsname", "\\relax");
+  DefMacro!("\\csname end{@IEEEauthorhalign}\\endcsname", "\\relax");
 });
