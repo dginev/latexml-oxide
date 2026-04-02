@@ -212,11 +212,11 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 - [x] **A9. `--noinvisibletimes`** — replaces invisible times (U+2062) with zero-width space (U+200B) in MathML. Thread-local flag in presentation.rs.
 - [x] **A10. `--timeout=<seconds>`** — conversion timeout via thread-local deadline checked in the digest loop. Fatal error on timeout.
 - [x] **A11. `--nocomments`** — omit XML comments from output. Maps to `CoreOptions::include_comments = Some(false)`.
-- [ ] **A12. `--javascript=<url>`** — inject additional `<script>` elements into HTML output. Like `--css`, passed as XSLT parameter (`JAVASCRIPT`).
-- [ ] **A13. `--source=<dir>`** — specify source directory (for directory-mode conversion). Perl sets SOURCEDIRECTORY.
-- [ ] **A14. `--log=<path>`** — redirect log/warning output to a file. Perl uses `$LOG_FH`.
-- [ ] **A15. `--navigationtoc=context`** — generate navigation TOC in the output. Perl passes as XSLT parameter.
-- [ ] **A16. `--whatsin=directory`** — process a directory of TeX files. Perl's `DataSize::Directory` mode.
+- [x] **A12. `--javascript=<url>`** — inject `<script>` elements. Repeatable. Passed as XSLT parameter `JAVASCRIPT`.
+- [ ] **A13. `--source=<dir>`** — specify source directory. Parsed but not yet wired.
+- [ ] **A14. `--log=<path>`** — redirect log output to file. Parsed but not yet wired.
+- [x] **A15. `--navigationtoc=context`** — navigation TOC. Passed as XSLT parameter `NAVIGATIONTOC`.
+- [ ] **A16. `--whatsin=directory`** — directory-mode conversion.
 
 ### Diff reduction tasks
 

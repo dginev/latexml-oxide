@@ -42,10 +42,14 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mathtex_flag = argv.iter().any(|a| a == "--mathtex");
   // Repeatable flags
   let css_flags = extract_flags(&mut argv, "--css");
+  let js_flags = extract_flags(&mut argv, "--javascript");
   let preload_flags = extract_flags(&mut argv, "--preload");
   let path_flags = extract_flags(&mut argv, "--path");
-  // Timeout
+  // Value flags
   let timeout_flag = extract_flag(&mut argv, "--timeout");
+  let navigationtoc_flag = extract_flag(&mut argv, "--navigationtoc");
+  let _source_flag = extract_flag(&mut argv, "--source"); // TODO A13
+  let _log_flag = extract_flag(&mut argv, "--log"); // TODO A14
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
@@ -138,18 +142,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
       if do_post {
         // Post-process the XML
-        let output = run_post_processing(
-          &xml,
-          pmml_flag || post_flag || format_flag.is_some(),
-          cmml_flag,
-          keep_xmath_flag,
-          effective_stylesheet.as_deref(),
-          target.as_deref(),
-          nodefaultresources_flag,
-          &css_flags,
-          noinvisibletimes_flag,
-          mathtex_flag,
-        );
+        let output = run_post_processing(&xml, &PostOptions {
+          pmml: pmml_flag || post_flag || format_flag.is_some(),
+          cmml: cmml_flag,
+          keep_xmath: keep_xmath_flag,
+          stylesheet: effective_stylesheet.as_deref(),
+          destination: target.as_deref(),
+          nodefaultresources: nodefaultresources_flag,
+          css_files: &css_flags,
+          js_files: &js_flags,
+          noinvisibletimes: noinvisibletimes_flag,
+          mathtex: mathtex_flag,
+          navigationtoc: navigationtoc_flag.as_deref(),
+        });
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
           write!(out_fh, "{output}")?;
@@ -171,19 +176,25 @@ fn main() -> Result<(), Box<dyn Error>> {
   process::exit(0);
 }
 
-/// Run the post-processing pipeline on XML output.
-fn run_post_processing(
-  xml: &str,
+struct PostOptions<'a> {
   pmml: bool,
   cmml: bool,
   keep_xmath: bool,
-  stylesheet: Option<&str>,
-  destination: Option<&str>,
+  stylesheet: Option<&'a str>,
+  destination: Option<&'a str>,
   nodefaultresources: bool,
-  css_files: &[String],
+  css_files: &'a [String],
+  js_files: &'a [String],
   noinvisibletimes: bool,
   mathtex: bool,
-) -> String {
+  navigationtoc: Option<&'a str>,
+}
+
+/// Run the post-processing pipeline on XML output.
+fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
+  let PostOptions { pmml, cmml, keep_xmath, stylesheet, destination,
+    nodefaultresources, css_files, js_files, noinvisibletimes, mathtex,
+    navigationtoc } = *opts;
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
   use latexml_post::processor::Processor;
@@ -252,10 +263,16 @@ fn run_post_processing(
       "resources/XSLT".to_string(),
       ".".to_string(),
     ];
-    // Pass --css files as XSLT parameter (Perl: $params{CSS} = '"file1|file2"')
+    // Pass --css/--javascript/--navigationtoc as XSLT parameters
     let mut xslt_params = std::collections::HashMap::new();
     if !css_files.is_empty() {
       xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_files.join("|")));
+    }
+    if !js_files.is_empty() {
+      xslt_params.insert("JAVASCRIPT".to_string(), format!("\"{}\"", js_files.join("|")));
+    }
+    if let Some(navtoc) = navigationtoc {
+      xslt_params.insert("NAVIGATIONTOC".to_string(), format!("\"{}\"", navtoc));
     }
     match latexml_post::xslt::XSLT::new(
       xsl_path, xslt_params, nodefaultresources, None, searchpaths
