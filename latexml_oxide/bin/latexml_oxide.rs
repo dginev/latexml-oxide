@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate latexml_core;
 use latexml::converter::Converter;
 use latexml_core::common::{Config, DataSize, OutputFormat};
 use std::env;

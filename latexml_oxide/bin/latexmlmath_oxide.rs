@@ -10,34 +10,38 @@ use latexml_core::state;
 use latexml_math_parser::*;
 
 fn main() -> Result<()> {
-  if latexml_core::util::logger::init(log::LevelFilter::Info).is_err() {
-    Error!(
-      "latexml_oxide",
-      "logger",
-      "Failed to load logger, aborting. Please check latexml_core::util::logger installed correctly."
-    );
-  }
-  let mut argv = env::args();
-  argv.next();
+  let mut argv: Vec<String> = env::args().skip(1).collect();
 
-  let source = match argv.next() {
-    Some(s) => s,
+  // Parse flags
+  let pmml_flag = argv.iter().any(|a| a == "--pmml" || a == "--presentationmathml");
+  let cmml_flag = argv.iter().any(|a| a == "--cmml" || a == "--contentmathml");
+  let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
+  argv.retain(|a| !["--pmml", "--presentationmathml", "--cmml", "--contentmathml",
+    "--quiet", "-q"].contains(&a.as_str()));
+
+  let log_level = if quiet_flag { log::LevelFilter::Warn } else { log::LevelFilter::Info };
+  latexml_core::util::logger::init(log_level).ok();
+
+  let source = match argv.first() {
+    Some(s) => s.clone(),
     None => {
-      Error!(
-        "latexml_oxide",
-        "",
-        "Please provide a TeX formula on input! Exiting..."
-      );
+      eprintln!("Usage: latexmlmath_oxide [--pmml] [--cmml] [--quiet] '<formula>'");
       process::exit(1);
     },
   };
+
   let mut core_engine = new_test_engine();
   let (lexemes, mut lex_nodes, xmath_opt, mut doc) =
     lex_single_tex_formula(&source, &mut core_engine);
-  assert!(!lexemes.is_empty());
-  eprintln!("\n\nlexemes: {lexemes:?}\n");
+  if lexemes.is_empty() {
+    Error!("latexmlmath", "lex", "No lexemes produced from input");
+    process::exit(1);
+  }
+  if !quiet_flag {
+    eprintln!("lexemes: {lexemes:?}");
+  }
 
-  state::set_nomathparse_flag(false); // nomathparse is "true" while lexing, but "false" while parsing
+  state::set_nomathparse_flag(false);
   let mut parser = MathParser::default();
   if let Ok(Some(parse_tree)) = parser.parse_lexemes(lexemes, &lex_nodes, &mut doc) {
     let mut xmath = xmath_opt.unwrap();
@@ -51,13 +55,41 @@ fn main() -> Result<()> {
       .set_attribute("text", &text_form(&xml_tree, &doc))
       .unwrap();
 
-    println!(
-      "\n{}",
-      doc.get_document().to_string_with_options(SaveOptions {
+    if pmml_flag || cmml_flag {
+      // Post-process with MathML
+      let xml_str = doc.get_document().to_string_with_options(SaveOptions {
         format: true,
         ..SaveOptions::default()
-      })
-    );
+      });
+      use latexml_post::document::{PostDocument, PostDocumentOptions};
+      use latexml_post::processor::Processor;
+      let post_doc = PostDocument::new_from_string(&xml_str, PostDocumentOptions::default())
+        .expect("parse XML for MathML post-processing");
+      let mut post = latexml_post::Post::new();
+      let mut processors: Vec<Box<dyn Processor>> = Vec::new();
+      if pmml_flag {
+        processors.push(Box::new(latexml_post::mathml::MathML::new_presentation()));
+      }
+      if cmml_flag {
+        processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
+      }
+      match post.process_chain(post_doc, &mut processors) {
+        Ok(results) => println!("{}", results[0].to_xml_string()),
+        Err(e) => {
+          eprintln!("MathML post-processing failed: {}", e);
+          process::exit(1);
+        }
+      }
+    } else {
+      // Raw XML output
+      println!(
+        "{}",
+        doc.get_document().to_string_with_options(SaveOptions {
+          format: true,
+          ..SaveOptions::default()
+        })
+      );
+    }
   } else {
     Warn!("math", "parse", "Grammar did not recognize expression.");
     process::exit(1);
