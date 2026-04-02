@@ -42,6 +42,9 @@ pub struct MathML {
   line_width: u32,
   /// Whether to keep the XMath nodes alongside the generated MathML.
   keep_xmath: bool,
+  /// Whether to emit invisible times (U+2062). When false, replaces with zero-width space.
+  /// Perl: $$MATHPROCESSOR{invisibletimes} — defaults to true.
+  invisible_times: bool,
 }
 
 impl MathML {
@@ -55,6 +58,7 @@ impl MathML {
       linebreaking: false,
       line_width: 80,
       keep_xmath: false,
+      invisible_times: true,
     }
   }
 
@@ -68,6 +72,7 @@ impl MathML {
       linebreaking: false,
       line_width: 80,
       keep_xmath: false,
+      invisible_times: true,
     }
   }
 
@@ -81,6 +86,14 @@ impl MathML {
   /// Keep XMath nodes in the output alongside MathML.
   pub fn with_keep_xmath(mut self, keep: bool) -> Self {
     self.keep_xmath = keep;
+    self
+  }
+
+  /// Set whether to emit invisible times (U+2062) in MathML output.
+  /// When false, invisible times is replaced with zero-width space (U+200B).
+  /// Perl: --noinvisibletimes
+  pub fn with_invisible_times(mut self, emit: bool) -> Self {
+    self.invisible_times = emit;
     self
   }
 }
@@ -106,6 +119,9 @@ impl Processor for MathML {
 
 impl MathProcessor for MathML {
   fn convert_node(&self, doc: &PostDocument, xmath: &Node) -> Option<MathConversion> {
+    // Set invisible_times flag for rendering
+    presentation::set_invisible_times(self.invisible_times);
+
     let xml = if self.content_mathml {
       content::convert_to_cmml(doc, xmath)
     } else {

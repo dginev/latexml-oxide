@@ -38,6 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let nodefaultresources_flag = argv.iter().any(|a| a == "--nodefaultresources");
   let nocomments_flag = argv.iter().any(|a| a == "--nocomments");
   let nomathparse_flag = argv.iter().any(|a| a == "--nomathparse");
+  let noinvisibletimes_flag = argv.iter().any(|a| a == "--noinvisibletimes");
   // Repeatable flags
   let css_flags = extract_flags(&mut argv, "--css");
   let preload_flags = extract_flags(&mut argv, "--preload");
@@ -47,7 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
-    "--nomathparse"].contains(&a.as_str()));
+    "--nomathparse", "--noinvisibletimes"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -139,6 +140,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           target.as_deref(),
           nodefaultresources_flag,
           &css_flags,
+          noinvisibletimes_flag,
         );
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -171,6 +173,7 @@ fn run_post_processing(
   destination: Option<&str>,
   nodefaultresources: bool,
   css_files: &[String],
+  noinvisibletimes: bool,
 ) -> String {
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
@@ -222,13 +225,15 @@ fn run_post_processing(
 
   if pmml {
     let mathml = latexml_post::mathml::MathML::new_presentation()
-      .with_keep_xmath(keep_xmath);
+      .with_keep_xmath(keep_xmath)
+      .with_invisible_times(!noinvisibletimes);
     processors.push(Box::new(mathml));
   }
 
   if cmml {
     let cmathml = latexml_post::mathml::MathML::new_content()
-      .with_keep_xmath(keep_xmath);
+      .with_keep_xmath(keep_xmath)
+      .with_invisible_times(!noinvisibletimes);
     processors.push(Box::new(cmathml));
   }
 
