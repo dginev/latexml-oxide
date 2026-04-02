@@ -79,15 +79,16 @@ impl Axis {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ColumnSpec {
-  Integer, // 'i'
-  Empty,   // '_'
-  Unknown, // '?'
-  Text,    // 't'
-  Math,    // 'm'
+  Integer,   // 'i'
+  Empty,     // '_'
+  Unknown,   // '?'
+  Text,      // 't'
+  MultiText, // 'tt' — multiple text elements (e.g. colorbox + text)
+  Math,      // 'm'
   /// Math *and* Text, alternating
   MathAltText, // 'mx'
-  D,       // 'd'
-  Graphics, // 'g'
+  D,         // 'd'
+  Graphics,  // 'g'
 }
 impl ColumnSpec {
   /// The cell comparator.
@@ -121,7 +122,13 @@ impl ColumnSpec {
         Empty => 0.05,
         Text => 0.0,
         MathAltText => 0.2,
-        _ => 0.75,
+        _ => 0.75, // includes MultiText — Perl fallthrough 0.75
+      },
+      MultiText => match other {
+        Empty => 0.05,
+        MultiText => 0.0,
+        MathAltText => 0.2,
+        _ => 0.75, // Perl: "tt" not in diff table → 0.75 fallthrough
       },
       Unknown => match other {
         Empty => 0.05,
@@ -156,6 +163,7 @@ impl Display for ColumnSpec {
       ColumnSpec::Empty => write!(f, "_"),
       ColumnSpec::Unknown => write!(f, "?"),
       ColumnSpec::Text => write!(f, "t"),
+      ColumnSpec::MultiText => write!(f, "tt"),
       ColumnSpec::Math => write!(f, "m"),
       ColumnSpec::MathAltText => write!(f, "mx"),
       ColumnSpec::D => write!(f, "d"),
