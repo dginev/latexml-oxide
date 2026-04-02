@@ -144,6 +144,20 @@ LoadDefinitions!({
   DefMacro!("\\citation{}", "");
   DefMacro!("\\contentsline{}{}{}", "");
 
+  // Perl L5511,5814-5826: text formatting stubs (no-ops)
+  DefMacro!("\\@preamblecmds", None, "");
+  DefMacro!("\\nocorrlist", None, ",.");
+  DefMacro!("\\text@command{}", "");
+  DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
+  TeX!("\\newif\\ifmaybe@ic");
+  DefMacro!("\\maybe@ic", None, "");
+  DefMacro!("\\maybe@ic@", None, "");
+  DefMacro!("\\sw@slant", None, "");
+  DefMacro!("\\fix@penalty", None, "");
+  // Perl L4857: \@finalstrut — empty strut for alignment
+  DefMacro!("\\@finalstrut{}",
+    "\\unskip\\ifhmode\\nobreak\\fi\\vrule\\@width\\z@\\@height\\z@\\@depth\\dp#1");
+
   DefMacro!("\\@qend", { Tokens::new(Explode!("end")) });
   DefMacro!("\\@qrelax", { Tokens::new(Explode!("relax")) });
   DefMacro!("\\@spaces", r"\space\space\space\space");
