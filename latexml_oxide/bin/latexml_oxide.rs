@@ -44,12 +44,13 @@ fn main() -> Result<(), Box<dyn Error>> {
   let css_flags = extract_flags(&mut argv, "--css");
   let js_flags = extract_flags(&mut argv, "--javascript");
   let preload_flags = extract_flags(&mut argv, "--preload");
-  let path_flags = extract_flags(&mut argv, "--path");
+  let mut path_flags = extract_flags(&mut argv, "--path");
   // Value flags
   let timeout_flag = extract_flag(&mut argv, "--timeout");
   let navigationtoc_flag = extract_flag(&mut argv, "--navigationtoc");
-  let _source_flag = extract_flag(&mut argv, "--source"); // TODO A13
-  let _log_flag = extract_flag(&mut argv, "--log"); // TODO A14
+  let source_flag = extract_flag(&mut argv, "--source");
+  let log_flag = extract_flag(&mut argv, "--log");
+  let whatsin_flag = extract_flag(&mut argv, "--whatsin");
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
@@ -70,18 +71,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
   }
 
+  // Determine source: --source flag overrides positional arg (Perl Config.pm L212)
   let source = if let Some(ref init) = init_file {
     init.clone()
+  } else if let Some(ref src) = source_flag {
+    src.clone()
   } else {
     match argv.first() {
       Some(s) => s.clone(),
       None => {
-        eprintln!("Usage: latexml_oxide [--post] [--pmml] [--keepXMath] [--stylesheet=path.xsl] [--dest=output] <source>");
+        eprintln!("Usage: latexml_oxide [options] <source>");
         process::exit(1);
       }
     }
   };
   let target = dest_flag.or_else(|| argv.get(1).cloned());
+
+  // --whatsin=directory: auto-detect from trailing / or explicit flag (Perl Config.pm L220-225)
+  let is_directory_mode = whatsin_flag.as_deref() == Some("directory")
+    || source.ends_with('/');
+  if is_directory_mode {
+    if let Ok(abs_source) = std::fs::canonicalize(&source) {
+      path_flags.push(abs_source.to_string_lossy().to_string());
+    } else {
+      path_flags.push(source.clone());
+    }
+  }
 
   // Prepare converter
   let opts = Config {
@@ -169,6 +184,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         } else {
           print!("{xml}");
         }
+      }
+    }
+    // --log: write conversion log to file (Perl: UseLog/NoteLog)
+    if let Some(ref log_path) = log_flag {
+      if let Ok(mut log_fh) = File::create(log_path) {
+        let _ = write!(log_fh, "{}", response.log);
+        eprintln!("Log written to {}", log_path);
       }
     }
   }
