@@ -100,7 +100,11 @@ LoadDefinitions!({
     let mode = state::lookup_string("MODE");
     matches!(mode.as_str(), "restricted_horizontal" | "internal_vertical" | "math")
   });
-  DefConditional!("\\ifmmode", { lookup_bool("IN_MATH") });
+  // Perl: LookupValue('MODE') =~ /math$/
+  DefConditional!("\\ifmmode", {
+    let mode = state::lookup_string("MODE");
+    mode.ends_with("math")
+  });
 
   //======================================================================
   // I/O testing
