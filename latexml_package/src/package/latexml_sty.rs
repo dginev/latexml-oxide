@@ -235,10 +235,9 @@ LoadDefinitions!({
     AssignValue!("BIB_CONFIG", Stored::Strings(Rc::new([arena::pin("bbl")])), Scope::Global);
   });
 
-  // bibconfig KeyVal: comma-separated list of bib config values
-  // e.g. \usepackage[bibconfig=bib,bbl]{latexml}
-  // TODO: DefKeyVal!("LTXML", "bibconfig", "Semiverbatim", "", code => ...)
-  // For now, the bibtex/nobibtex options cover the main use cases.
+  // Perl L57-59: bibconfig KeyVal — comma-separated bib config values.
+  // DefKeyVal with code closure not supported; use DefKeyVal + option handler.
+  DefKeyVal!("LTXML", "bibconfig", "Semiverbatim");
 
   // Lexeme serialization for math formulas
   DeclareOption!("mathlexemes", {

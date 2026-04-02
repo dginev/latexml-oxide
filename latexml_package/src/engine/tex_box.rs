@@ -701,7 +701,7 @@ LoadDefinitions!({
       hack_vbox_attachment(whatsit, "bottom");
       whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
-      // TODO: Height arith for BoxSpecification 'to'/'spread'
+      // Note: BoxSpecification 'to'/'spread' height not used in XML output
     }
   );
 
@@ -722,7 +722,7 @@ LoadDefinitions!({
       hack_vbox_attachment(whatsit, "top");
       whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
       whatsit.set_property("is_vbox", true);
-      // TODO: Height arith for BoxSpecification 'to'/'spread'
+      // Note: BoxSpecification 'to'/'spread' height not used in XML output
     }
   );
 
