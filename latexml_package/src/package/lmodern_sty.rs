@@ -1,7 +1,3 @@
 use crate::prelude::*;
-
-#[rustfmt::skip]
-LoadDefinitions!({
-  // Perl: lmodern.sty.ltxml
-  // Nothing to do here....
-});
+// lmodern.sty — no-op (font package, nothing to do for LaTeXML)
+LoadDefinitions!({});
