@@ -51,10 +51,15 @@ fn main() -> Result<(), Box<dyn Error>> {
   let source_flag = extract_flag(&mut argv, "--source");
   let log_flag = extract_flag(&mut argv, "--log");
   let whatsin_flag = extract_flag(&mut argv, "--whatsin");
+  // Split options
+  let split_flag = argv.iter().any(|a| a == "--split");
+  let splitat_flag = extract_flag(&mut argv, "--splitat");
+  let splitnaming_flag = extract_flag(&mut argv, "--splitnaming");
+  let splitpath_flag = extract_flag(&mut argv, "--splitpath");
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
-    "--nomathparse", "--noinvisibletimes", "--mathtex"].contains(&a.as_str()));
+    "--nomathparse", "--noinvisibletimes", "--mathtex", "--split"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -153,7 +158,20 @@ fn main() -> Result<(), Box<dyn Error>> {
           _ => None,
         }
       });
-      let do_post = post_flag || pmml_flag || cmml_flag || effective_stylesheet.is_some() || format_flag.is_some();
+      let do_post = post_flag || pmml_flag || cmml_flag || effective_stylesheet.is_some()
+        || format_flag.is_some() || split_flag || splitat_flag.is_some();
+
+      // Build split XPath from --splitat (Perl Config.pm make_splitpaths)
+      let split_enabled = split_flag || splitat_flag.is_some()
+        || splitnaming_flag.is_some() || splitpath_flag.is_some();
+      let split_xpath = if split_enabled {
+        splitpath_flag.or_else(|| {
+          let splitat = splitat_flag.as_deref().unwrap_or("section");
+          Some(make_splitpaths(splitat))
+        })
+      } else {
+        None
+      };
 
       if do_post {
         // Post-process the XML
@@ -169,6 +187,9 @@ fn main() -> Result<(), Box<dyn Error>> {
           noinvisibletimes: noinvisibletimes_flag,
           mathtex: mathtex_flag,
           navigationtoc: navigationtoc_flag.as_deref(),
+          split: split_enabled,
+          split_xpath,
+          split_naming: splitnaming_flag.as_deref(),
         });
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -210,13 +231,16 @@ struct PostOptions<'a> {
   noinvisibletimes: bool,
   mathtex: bool,
   navigationtoc: Option<&'a str>,
+  split: bool,
+  split_xpath: Option<String>,
+  split_naming: Option<&'a str>,
 }
 
 /// Run the post-processing pipeline on XML output.
 fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let PostOptions { pmml, cmml, keep_xmath, stylesheet, destination,
     nodefaultresources, css_files, js_files, noinvisibletimes, mathtex,
-    navigationtoc } = *opts;
+    navigationtoc, split, ref split_xpath, split_naming } = *opts;
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
   use latexml_post::processor::Processor;
@@ -260,6 +284,38 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       return xml.to_string();
     }
   };
+
+  // Phase 2.5: Split — split document into multiple pages if requested
+  let doc = if split {
+    if let Some(ref xpath) = split_xpath {
+      let naming = match split_naming {
+        Some("id") | None => latexml_post::split::SplitNaming::Id,
+        Some("idrelative") => latexml_post::split::SplitNaming::IdRelative,
+        Some("label") => latexml_post::split::SplitNaming::Label,
+        Some("labelrelative") => latexml_post::split::SplitNaming::LabelRelative,
+        Some(other) => {
+          eprintln!("Unknown splitnaming '{}', using 'id'", other);
+          latexml_post::split::SplitNaming::Id
+        }
+      };
+      let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
+      let split_nodes = splitter.to_process(&doc);
+      match splitter.process(doc, split_nodes) {
+        Ok(mut docs) => {
+          // For now, we only output the first (root) document
+          // Multi-file output would need the Writer processor
+          if docs.len() > 1 {
+            eprintln!("Split into {} documents", docs.len());
+          }
+          docs.remove(0)
+        }
+        Err(e) => {
+          eprintln!("Post-processing: Split failed: {}", e);
+          return xml.to_string();
+        }
+      }
+    } else { doc }
+  } else { doc };
 
   // Phase 3: MathML + XSLT chain
   let mut post = latexml_post::Post::new();
@@ -323,6 +379,44 @@ fn extract_flag(argv: &mut Vec<String>, prefix: &str) -> Option<String> {
   } else {
     None
   }
+}
+
+/// Build the XPath expression for splitting at a given level.
+///
+/// Port of Perl `Config.pm::make_splitpaths`.
+fn make_splitpaths(splitat: &str) -> String {
+  let ancestors: &[&str] = match splitat {
+    "part" => &[],
+    "chapter" => &["part"],
+    "section" => &["part", "chapter"],
+    "subsection" => &["part", "chapter", "section"],
+    "subsubsection" => &["part", "chapter", "section", "subsection"],
+    _ => &["part", "chapter"],
+  };
+  let back = ["bibliography", "appendix", "index"];
+  let mut paths = Vec::new();
+  // Add the target level and all ancestor levels
+  let all_units: Vec<&str> = std::iter::once(splitat).chain(ancestors.iter().copied()).collect();
+  for unit in &all_units {
+    paths.push(format!("//ltx:{}", unit));
+    for b in &back {
+      let mut conditions = vec![format!("preceding-sibling::ltx:{}", unit)];
+      // Add parent conditions from this unit's ancestors
+      let unit_ancestors: &[&str] = match *unit {
+        "part" => &[],
+        "chapter" => &["part"],
+        "section" => &["part", "chapter"],
+        "subsection" => &["part", "chapter", "section"],
+        "subsubsection" => &["part", "chapter", "section", "subsection"],
+        _ => &[],
+      };
+      for anc in unit_ancestors {
+        conditions.push(format!("parent::ltx:{}", anc));
+      }
+      paths.push(format!("//ltx:{}[{}]", b, conditions.join(" or ")));
+    }
+  }
+  paths.join(" | ")
 }
 
 /// Extract ALL occurrences of a `--flag=value` argument (for repeatable flags like --css, --path)

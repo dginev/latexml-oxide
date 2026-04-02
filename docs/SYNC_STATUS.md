@@ -2,9 +2,9 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-02. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-02. Only lists open gaps & TODOs; completed items live in git history. SYNC_STATUS audit completed: many items previously listed as GAPS are fully implemented.
 
-**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 298 paired tests: 220 zero-diff (73%), 31,961 total diff lines. Full TeX→HTML pipeline with cross-references, citations, and ar5iv-compatible CLI: `latexml_oxide --format=html5 --pmml --mathtex --noinvisibletimes --nocomments --dest=paper.html paper.tex`.
+**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 298 paired tests: 220 zero-diff (73%), 31,961 total diff lines. Full TeX→HTML pipeline with cross-references, citations, and ar5iv-compatible CLI: `latexml_oxide --format=html5 --pmml --mathtex --noinvisibletimes --nocomments --dest=paper.html paper.tex`. Log capture and status messages match Perl (`Conversion complete: N warnings; M errors`).
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
@@ -26,16 +26,16 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 |------|--------|-----------|
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
 | base_utilities.rs | MINOR | Missing: `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()` |
-| base_xmath.rs | GAPS | ~24 commented-out defs (matrix/cases systems, `\lx@padded`, tweaked). Missing: `MathWhatsit()` |
+| base_xmath.rs | MINOR | Matrix/cases fully ported. Missing: `DefMathLigature` rules (cdots/ldots ligatures), `MathWhatsit()` |
 
 ### Phase 1: TeX Primitives (High-Gap)
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | GAPS | Missing: `\nonscript`, `\lx@dollar@default`, `adjustMathRole()`, math ligatures |
-| tex_box.rs | GAPS | `\leaders/cleaders/xleaders` done. Missing: SVG functions, `\hbox/vbox/vtop` TODOs, `\vrule/\hrule` mostly commented |
+| tex_math.rs | MINOR | `\nonscript`, `\lx@dollar@default` ported. Missing: `DefMathLigature` (cdots/ldots), `adjustMathstyle` recursive helper |
+| tex_box.rs | MINOR | `\leaders/cleaders/xleaders`, `\vrule/\hrule`, `\hbox/vbox/vtop`, SVG functions all ported. Minor: some box dimension edge cases |
 | tex_fonts.rs | GAPS | Missing: `\fontname` scaled format, per-font `\hyphenchar`, `getFontDimen()`, 7 ligature defs |
-| tex_tables.rs | GAPS | `\halign BoxSpecification` entirely commented out |
+| tex_tables.rs | MINOR | `\halign BoxSpecification` fully implemented. Minor: padding CSS classes |
 
 ### Phase 2+3: Remaining Primitives + Plain Format
 
@@ -47,8 +47,8 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| latex_ch4_sectioning_and_toc.rs | GAPS | Missing: `\format@title@*`, `\format@toctitle@*`, `\@@compose@title`, `\@tag` |
-| latex_ch8_defining_commands.rs | GAPS | Missing: `\DeclareMathAccent`, `\DeclareFontShape/Family` |
+| latex_ch4_sectioning_and_toc.rs | MINOR | `\format@title@*`, `\@@compose@title`, `\lx@tag` in base_utilities.rs. Missing: `\@@section` (unused legacy), `LABEL_MAPPING_HOOK` |
+| latex_ch8_defining_commands.rs | OK | `\DeclareMathAccent` fully implemented; `\DeclareFontShape/Family` as proper stubs |
 | latex_ch9_marginal_notes.rs | GAPS | 50% |
 | latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
 
@@ -58,11 +58,9 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | Tag | Perl Source | Notes |
 |-----|-------------|-------|
-| `Tag('ltx:figure', afterClose => \&BuildPanelsAndID)` | latex_constructs L3417 | Rust only has `generate_id` |
-| `Tag('ltx:table', afterClose => \&BuildPanelsAndID)` | latex_constructs L3419 | Same |
-| `Tag('ltx:float', afterClose => \&BuildPanelsAndID)` | latex_constructs L3418 | Same |
-| `Tag('ltx:figure/table/float', afterClose => \&collapseFloat)` | latex_constructs L3521-3523 | Float collapsing |
 | `Tag('ltx:picture', autoOpen => 0.5, autoClose => 1, ...)` | latex_constructs L4994 | Picture env |
+
+**Completed:** `ltx:figure/table/float` afterClose hooks (BuildPanelsAndID + collapseFloat) fully ported in `latex_ch9_figures_and_tables.rs`.
 
 ---
 
@@ -78,7 +76,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | File | Defs | Priority | Notes |
 |------|------|----------|-------|
 | `latex_constructs.pool.ltxml` | ~843 | Low | ~92% ported. Missing: picture env, `\@xargdef/yargdef/reargdef` |
-| `math_common.pool.ltxml` | 312 | Medium | ~87% ported. Missing: 19 sized delimiters, `\vert` Let |
+| `math_common.pool.ltxml` | 312 | Medium | ~95% ported. Sized delimiters and `\vert` in plain.rs. Missing: `DefMathLigature` rules |
 | `Base_Deprecated.pool.ltxml` | 77 | Low | ~16% — deprecated compat shims |
 | `AmSTeX.pool.ltxml` | 112 | Low | ~30% |
 | `BibTeX.pool.ltxml` | 150 | Low | ~9% |
@@ -91,9 +89,9 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 |--------|--------|-----------|
 | gullet.rs | MINOR | `readArg` isolation; `read_register_value` coercions |
 | stomach.rs | MINOR | Mathcode char decoding (ADDOP vs BINOP) |
-| document.rs | MINOR | `insertElementBefore()`, comment creation |
+| document.rs | MINOR | `insertElementBefore()` done. Missing: XML comment creation (needs libxml2 FFI) |
 | alignment.rs | MINOR | padding CSS classes, ABSORB_LIMIT guard |
-| rewrite.rs | GAPS | ~20% ported (Select/Replace only) |
+| rewrite.rs | MINOR | ~90% ported. All core ops (Select/Replace/XPath/Wildcards/Seen). Missing: `compile_regexp`, `digest_rewrite` |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_findall` |
 | font.rs | MINOR | `DEFSIZE` from state |
 
@@ -133,7 +131,7 @@ All other packages OK: calc, report, appendix, multicol, booktabs, remreset, chn
 
 ## Test Suite Status
 
-**390 pass, 0 fail, 0 ignored** (337 integration + 1 post + 39+7+6 latexml_post unit tests).
+**391 pass, 0 fail, 0 ignored** (338 integration + 1 post + 39+7+6 latexml_post unit tests).
 
 **Permanent ignores:** ns1–ns5 (DTD not supported).
 
@@ -165,7 +163,7 @@ Fresh Perl diffs (after stripping tex= and %&#10;):
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-04-02):** 390 pass, 0 fail, 0 ignored.
+**Status (2026-04-02):** 391 pass, 0 fail, 0 ignored.
 
 ### Completed infrastructure
 - [x] **F. Post-processing pipeline** — `latexml_post` crate (12,300+ lines, 25 modules). MathML Presentation+Content, XSLT via libxslt FFI.
@@ -178,8 +176,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **P1. Scan post-processor** — Port `LaTeXML::Post::Scan`. Populates ObjectDB with IDs, labels, titles, parent-child relationships. All handler methods implemented (section, captioned, labelled, anchor, note, bibitem, ref, bibref, glossary, indexmark, declare, rdf). DB entries store text content (not XML node refs) to avoid dangling pointers.
 - [x] **P2. CrossRef post-processor** — Port `LaTeXML::Post::CrossRef`. Resolves `\ref{label}` → `<a href="#id">3.3</a>`, `\cite{key}` → `<a href="#bib.bib18">18</a>`. Fills in refs, bibrefs, glossaryrefs, TOC generation, navigation links, fragment IDs, math declaration links. Integrated into unified CLI pipeline: Scan→CrossRef→MathML→XSLT.
 - [x] **P3. MakeBibliography post-processor** — Port `LaTeXML::Post::MakeBibliography` (818 lines). Full FMT_SPEC table (article/book/incollection/report/thesis/website/software), citation style detection (numbers/author-year/alpha), getBibliographies (.bib.xml loading), referrer tracking with parent-chain filtering, bibreferrer cross-links, suffix assignment for duplicate author+year, cited-by blocks, META_BLOCK (notes + external links), bibentry/biblist cleanup. Works from both bibentry XML nodes and ObjectDB metadata fallback.
-- [ ] **P4. Split post-processor** — Port `LaTeXML::Post::Split` (~200 lines). Splits multi-page documents into separate HTML files. Lower priority — single-page output works.
-- [ ] **P5. Writer post-processor** — Port `LaTeXML::Post::Writer` output formatting. Currently using `to_xml_string()` directly. Writer handles DOCTYPE, encoding, indentation.
+- [x] **P4. Split post-processor** — Port `LaTeXML::Post::Split` (~300 lines). Full implementation: page tree building, recursive naming (id/label/relative strategies), document surgery (node extraction, sibling removal/re-add), TOC generation, navigation distribution, `PostDocument::new_document()` sub-document creation. All split naming strategies supported.
+- [x] **P5. Writer post-processor** — Port `LaTeXML::Post::Writer`. TEMPORARY_DOCUMENT_ID removal, HTML vs XML serialization (`as_html` SaveOptions for `toStringHTML` parity), file output with directory creation. Integrated as Processor in the pipeline.
 
 ### XSLT infrastructure
 

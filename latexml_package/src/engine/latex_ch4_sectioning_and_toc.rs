@@ -259,36 +259,11 @@ LoadDefinitions!({
   // The following macros provide a few layers of customization
   // in particular for supporting localization for different languages.
   //----------------------------------------------------------------------
-  // \format@title@{type}{title}
-  // Format a title (or caption) appropriately for type.
-  // This is usually somewhat verbose, but establishes the context that this is a Chapter, or
-  // Figure, or whatever invokes \format@title@type{title} if that macro is defined, else
-  // composes \lx@fnum@@{type} title. Define \format@title@type{title} if the default is not
-  // appropriate.
-
-  // TODO:
-  // DefMacro!("\\format@title@{}{}",
-  // "{\\@ifundefined{format@title@#1}{\\@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname
-  // format@title@#1\\endcsname{#2}}}");
-
-  // \format@toctitle@{type}{toctitle}
-  // Format a toctitle (or toccaption) appropriately for type.
-  // This is usually somewhat concise, and the context implies that this is a Chapter, Figure or
-  // whatever invokes \format@toctitle@type{title} if that macro is defined, else composes
-  // \lx@fnum@toc@@{type} title Define \format@toctitle@type{title} if the default is not
-  // appropriate.
-
-  // TODO:
-  // DefMacro!("\\format@toctitle@{}{}",
-  // "{\\@ifundefined{format@toctitle@#1}{\\@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname
-  // format@toctitle@#1\\endcsname{#2}}}"); DefMacro!("\\@@compose@title{}{}", "\\@tag[][
-  // ]{#1}#2");
-  // DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1' close='#2'>#3</ltx:tag>)()");
-
-  //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the
-  //// type. This would be useful for the titles in links; thus can be plain (unicode) text.
-  //// However, I hate setting up even more machinery & options and dragging yet another form
-  //// around....
+  // \lx@format@title@@{type}{title} — implemented in base_utilities.rs
+  // \lx@format@toctitle@@{type}{toctitle} — implemented in base_utilities.rs
+  // \lx@@compose@title{}{} — implemented in base_utilities.rs
+  // \lx@tag[][ ]{}{} — implemented in base_utilities.rs
+  //
   // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
 
   // DefConstructor!(

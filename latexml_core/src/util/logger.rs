@@ -2,9 +2,44 @@ use ansi_term::Colour::{Green, Red, White, Yellow};
 use ansi_term::Style;
 use log::max_level;
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
+use std::cell::RefCell;
 
 struct LatexmlLogger;
 static LOGGER: LatexmlLogger = LatexmlLogger;
+
+/// Thread-local log capture buffer. When enabled, log messages are
+/// appended here (without ANSI colors) in addition to stderr.
+#[thread_local]
+static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
+
+/// Start capturing log output into the buffer (Perl: bind_log).
+pub fn bind_log() {
+  *LOG_BUFFER.borrow_mut() = Some(String::new());
+}
+
+/// Flush and return the captured log output, stopping capture (Perl: flush_log).
+pub fn flush_log() -> String {
+  LOG_BUFFER.borrow_mut().take().unwrap_or_default()
+}
+
+/// Strip ANSI escape sequences from a string for log file output.
+fn strip_ansi(s: &str) -> String {
+  // Match ESC[ ... m sequences
+  let mut result = String::with_capacity(s.len());
+  let mut in_escape = false;
+  for c in s.chars() {
+    if in_escape {
+      if c == 'm' {
+        in_escape = false;
+      }
+    } else if c == '\x1b' {
+      in_escape = true;
+    } else {
+      result.push(c);
+    }
+  }
+  result
+}
 
 /// prints a single line to STDERR
 #[macro_export]
@@ -74,6 +109,14 @@ impl log::Log for LatexmlLogger {
       }
       .to_string()
         + &details.to_string();
+
+      // Capture to log buffer if active (strip ANSI for clean log text)
+      if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut() {
+        if let Some(ref mut log) = *buf {
+          log.push_str(&strip_ansi(&painted_message));
+          log.push('\n');
+        }
+      }
 
       println_stderr!("\r{}", painted_message);
     }

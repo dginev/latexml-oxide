@@ -1,9 +1,11 @@
 //! XML file output processor.
 //!
 //! Port of `LaTeXML::Post::Writer`.
-//! Serializes the XML document to a file or stdout.
+//! Serializes the XML document to a file or stdout,
+//! handling DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup,
+//! and HTML vs XML serialization.
 
-use libxml::tree::Node;
+use libxml::tree::{Node, SaveOptions};
 use std::fs;
 
 use crate::document::PostDocument;
@@ -43,7 +45,6 @@ impl Processor for Writer {
   }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
-    // Writer processes the document element (anything can be printed)
     match doc.get_document_element() {
       Some(el) => vec![el],
       None => vec![],
@@ -56,18 +57,29 @@ impl Processor for Writer {
       None => return Ok(vec![doc]),
     };
 
-    // Remove TEMPORARY_DOCUMENT_ID if present
+    // Remove TEMPORARY_DOCUMENT_ID if present (Perl Writer.pm L41-42)
     if let Some(id) = root.get_attribute("xml:id") {
       if id == "TEMPORARY_DOCUMENT_ID" {
         let _ = root.remove_attribute("xml:id");
       }
     }
 
-    // Serialize
-    let serialized = doc.to_xml_string();
+    // Serialize: HTML uses toStringHTML, XML uses toString(1)  (Perl Writer.pm L44-47)
+    let serialized = if self.is_html {
+      doc.get_document().to_string_with_options(SaveOptions {
+        as_html: true,
+        format:  true,
+        ..SaveOptions::default()
+      })
+    } else {
+      doc.get_document().to_string_with_options(SaveOptions {
+        format: true,
+        ..SaveOptions::default()
+      })
+    };
 
     if let Some(destination) = doc.get_destination() {
-      // Write to file
+      // Create destination directory if needed
       if let Some(destdir) = doc.get_destination_directory() {
         fs::create_dir_all(destdir).map_err(|e| {
           PostError::Io(std::io::Error::new(
@@ -82,8 +94,8 @@ impl Processor for Writer {
           format!("Couldn't write '{}': {}", destination, e),
         ))
       })?;
+      log::info!("Wrote '{}' ({})", destination, serialized.len());
     } else {
-      // Write to stdout
       print!("{}", serialized);
     }
 
