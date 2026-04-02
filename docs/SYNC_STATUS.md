@@ -192,6 +192,27 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **L3. Migrate to `rust-libxslt` crate** — Done. Replaced raw FFI with `libxslt = "0.1.2"` crate. Only `exsltRegisterAll()` still uses FFI (not yet in the crate).
 - [ ] **L4. Default namespace handling in `rust-libxml`** — `Node::new_child(ns, localname)` always uses the explicit prefix from the Namespace object, even when the element's namespace matches the document's default namespace. This creates `<ltx:ref>` instead of `<ref>` when the default xmlns is already the LaTeXML namespace. Workaround: check if default namespace matches before looking up prefixed namespace.
 
+### ar5iv conversion parity
+
+Target: full support for the ar5iv production command:
+```
+latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
+  --preload=ar5iv.sty --path=.../bindings --path=.../supported_originals \
+  --format=html5 --pmml --mathtex --noinvisibletimes --timeout=2700 --nocomments
+```
+
+- [x] **A1. `--dest`** — destination output path.
+- [x] **A2. `--format=html5`** — HTML5 output via XSLT stylesheet.
+- [x] **A3. `--pmml`** — Presentation MathML generation.
+- [x] **A4. `--nodefaultresources`** — suppress built-in CSS/JS resource copying.
+- [ ] **A5. `--css=<file>`** — inject additional CSS `<link>` elements into the HTML output. Perl passes these as XSLT parameters (`CSS`), which the stylesheet expands into `<link>` tags. Need: CLI parsing of `--css` (repeatable), forwarding to XSLT params.
+- [ ] **A6. `--preload=<file>`** — preload a `.sty` file before processing the document. Perl loads it via `RequirePackage` during initialization. Need: CLI parsing, pass to `CoreOptions::preload`.
+- [ ] **A7. `--path=<dir>`** — add search paths for finding packages and inputs. Perl appends to `@paths`. Need: CLI parsing (repeatable), pass to `CoreOptions::search_paths`.
+- [ ] **A8. `--mathtex`** — add TeX source annotation to parallel MathML markup. Perl adds `m:annotation[@encoding='application/x-tex']` alongside PMML. Need: MathML processor option to emit tex annotation.
+- [ ] **A9. `--noinvisibletimes`** — strip invisible times character (U+2062) from MathML output. Perl checks `$$MATHPROCESSOR{invisibletimes}` flag. Need: MathML processor option.
+- [ ] **A10. `--timeout=<seconds>`** — conversion timeout. Perl uses `alarm()` signal. Need: timeout wrapper around conversion, possibly via `std::thread` + timeout.
+- [ ] **A11. `--nocomments`** — omit XML comments from output. Perl sets `includecomments => 0` in Core options, which suppresses `%`-line comments and progress markers. Need: CLI flag, maps to `CoreOptions::include_comments = Some(false)`.
+
 ### Diff reduction tasks
 
 - [x] **D1. Header guessing row headers** — Already working: bold cells get `thead="column"` in `<thead>`.
