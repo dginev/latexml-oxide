@@ -35,9 +35,10 @@ fn main() -> Result<(), Box<dyn Error>> {
   let keep_xmath_flag = argv.iter().any(|a| a == "--keepXMath" || a == "--xmath");
   let stylesheet_flag = extract_flag(&mut argv, "--stylesheet");
   let format_flag = extract_flag(&mut argv, "--format");
+  let nodefaultresources_flag = argv.iter().any(|a| a == "--nodefaultresources");
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
-    "--noscan", "--nocrossref"].contains(&a.as_str()));
+    "--noscan", "--nocrossref", "--nodefaultresources"].contains(&a.as_str()));
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -123,6 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           keep_xmath_flag,
           effective_stylesheet.as_deref(),
           target.as_deref(),
+          nodefaultresources_flag,
         );
         if let Some(target_path) = target {
           let mut out_fh = File::create(target_path)?;
@@ -153,6 +155,7 @@ fn run_post_processing(
   keep_xmath: bool,
   stylesheet: Option<&str>,
   destination: Option<&str>,
+  nodefaultresources: bool,
 ) -> String {
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
@@ -220,7 +223,7 @@ fn run_post_processing(
       ".".to_string(),
     ];
     match latexml_post::xslt::XSLT::new(
-      xsl_path, std::collections::HashMap::new(), false, None, searchpaths
+      xsl_path, std::collections::HashMap::new(), nodefaultresources, None, searchpaths
     ) {
       Ok(xslt) => processors.push(Box::new(xslt)),
       Err(e) => eprintln!("Post-processing: XSLT error: {}", e),

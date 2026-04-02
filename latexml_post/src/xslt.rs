@@ -174,8 +174,13 @@ impl Processor for XSLT {
     log::info!("Applying XSLT stylesheet: {}", stylesheet_path);
 
     // Handle resource elements first (before transformation removes them)
-    if !self.no_resources {
-      let resource_nodes = doc.findnodes("//ltx:resource[@src]");
+    let resource_nodes = doc.findnodes("//ltx:resource[@src]");
+    if self.no_resources {
+      // Perl L64-65: remove resource nodes so XSLT won't generate CSS/JS links
+      for mut node in resource_nodes {
+        node.unlink_node();
+      }
+    } else {
       for node in &resource_nodes {
         if let Some(src) = node.get_attribute("src") {
           let resource_type = node.get_attribute("type");
