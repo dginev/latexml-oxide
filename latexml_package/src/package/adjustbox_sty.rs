@@ -20,7 +20,17 @@ LoadDefinitions!({
   // we need to RE-digest the box, to apply the changed color!
   DefMacro!("\\@bgcolorbox{}", "{\\let\\color\\pagecolor\\hbox{#1\\lx@RE@BOXCONTENT}}");
 
-  // \lx@RE@BOXCONTENT: complex sub{} body — stub as no-op
-  // In Perl: looks up \collectedbox register, reverts & re-digests the box
-  DefMacro!("\\lx@RE@BOXCONTENT", None);
+  // Perl L44-48: looks up \collectedbox register, reverts & re-digests the box.
+  DefPrimitive!("\\lx@RE@BOXCONTENT", sub[_args] {
+    if let Ok(Some(cbox_val)) = state::lookup_register("\\collectedbox", Vec::new()) {
+      let box_name = s!("box{}", cbox_val.value_of());
+      if let Some(boxed) = state::lookup_value(&box_name) {
+        if let Stored::Digested(d) = boxed {
+          let reverted = d.revert()?;
+          return stomach::digest(reverted).map(|d| vec![d]);
+        }
+      }
+    }
+    Ok(Vec::new())
+  });
 });

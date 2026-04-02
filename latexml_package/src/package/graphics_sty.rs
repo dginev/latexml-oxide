@@ -248,9 +248,25 @@ LoadDefinitions!({
 
   // == Graphics path and inclusion ==
 
+  // Perl L248-260: \graphicspath DirectoryList — pushes paths and inserts PIs.
+  // Perl uses DirectoryList param type; we use {} and parse braced groups manually.
   DefConstructor!("\\graphicspath{}", "",
-    after_digest => sub[_whatsit] {
-      // TODO: push paths to GRAPHICSPATHS
+    after_digest => sub[whatsit] {
+      let arg = whatsit.get_arg(0).map(|a| a.to_string()).unwrap_or_default();
+      // Parse {dir1}{dir2}... — each directory is a braced group
+      let root = state::lookup_value("SOURCEDIRECTORY")
+        .map(|v| v.to_string()).unwrap_or_default();
+      for dir in arg.split('}') {
+        let dir = dir.trim_start_matches('{').trim();
+        if !dir.is_empty() {
+          let path = if root.is_empty() || dir.starts_with('/') {
+            dir.to_string()
+          } else {
+            s!("{}/{}", root, dir)
+          };
+          let _ = state::push_value("GRAPHICSPATHS", Stored::String(arena::pin(path)));
+        }
+      }
     });
 
   // Perl: DefMacro('\includegraphics OptionalMatch:* [][] Semiverbatim',
