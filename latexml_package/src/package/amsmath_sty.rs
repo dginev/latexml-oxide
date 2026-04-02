@@ -6,8 +6,8 @@ use crate::prelude::*;
 // Eventually, go through the doc and implement it all.
 //**********************************************************************
 
-// DG:
-// TODO: Most of this binding is not ported yet.
+// amsmath.sty — ~90% ported. Core: operators, text, subequations, matrices,
+// align, cfrac, MultiIntegral, options. See SYNC_STATUS for remaining gaps.
 
 /// Perl: amsAlignmentBindings($template, %properties) — amsmath.sty.ltxml lines 107-120
 /// Simple alignment bindings for ams environments (no equation rearrangement)
