@@ -898,9 +898,9 @@ impl MathParser {
     }
     let deduped = pre_dedup - parses.len();
 
-    if ok_trees + pruned_trees > 10 || deduped > 0 {
-      eprintln!(
-        "MATH_PARSE_STATS: {} grammar ({} semantic, {} pruned, {} deduped→{}) in {:?} | input: {:?}",
+    if ok_trees + pruned_trees > 10 {
+      log::warn!(
+        "Ambiguous math: {} grammar trees ({} semantic, {} pruned, {} deduped→{}) in {:?} for: {}",
         ok_trees + pruned_trees, ok_trees, pruned_trees, deduped, parses.len(), start.elapsed(),
         input.trim()
       );
