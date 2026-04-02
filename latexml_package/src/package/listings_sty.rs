@@ -2642,6 +2642,8 @@ LoadDefinitions!({
       state::assign_value(&s!("LST_DELIM@{esc1}@class"), Stored::String(arena::pin("evaluate")), None);
       state::assign_value(&s!("LST_DELIM@{esc1}@escape"), Stored::Bool(true), None);
       state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
+      // Register in delimiter keys so it's picked up by delimiter regex builder
+      lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&esc1)]);
     }
     Tokens!()
   });
