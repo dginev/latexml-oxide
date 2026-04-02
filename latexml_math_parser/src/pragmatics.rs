@@ -48,6 +48,12 @@ pub enum ValidationPragmatics {
   /// not unary prefix applied to the following term. Rejects parses where
   /// prefix_apply(addop, rhs) appears as a non-initial child of an additive chain.
   PreferBinaryAddop,
+  /// For invisible-times chains of simple unfenced tokens (e.g., `ppppp`, `xyz`),
+  /// enforce left-associative grouping: `((p·p)·p)·p` not `p·(p·(p·p))`.
+  /// In mathematical practice, consecutive identifiers without explicit operators
+  /// or parentheses form a flat product — associativity doesn't matter semantically,
+  /// and enumerating all groupings causes exponential ambiguity.
+  FlattenSimpleInvisibleTimesChains,
 }
 
 impl ValidationPragmatics {
@@ -64,6 +70,7 @@ impl ValidationPragmatics {
       PostfixTermsAreFencedIfSingleArguments,
       RestrictNumeralFractions,
       NoBilateralAbsent,
+      FlattenSimpleInvisibleTimesChains,
     ]
   }
   /// Pragmatic rules that are executed at the end of the parse process,
@@ -117,6 +124,7 @@ impl ValidationPragmatics {
       FunctionsPreferWiderAbsorption => pragma_functions_prefer_wider_absorption(tree),
       BigopPreferWiderAbsorption => pragma_bigop_prefer_wider_absorption(tree),
       PreferBinaryAddop => pragma_prefer_binary_addop(tree),
+      FlattenSimpleInvisibleTimesChains => pragma_flatten_simple_invisible_times(tree),
       _ => Ok(()),
     }
   }
@@ -913,3 +921,74 @@ static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, String>> = Lazy::new(|| {
   }
   map
 });
+
+/// For invisible-times chains of simple unfenced tokens, enforce left-associative grouping.
+///
+/// Mathematical practice: `pppppp` is always read as a flat product `p·p·p·p·p·p`.
+/// The grammar produces exponentially many associativity groupings (Catalan number growth),
+/// but they are all semantically identical for simple identifier chains.
+///
+/// Rule: if `Apply(invisible_times, [lhs, rhs])` where `rhs` is itself
+/// `Apply(invisible_times, ...)`, AND all leaf operands are simple unfenced identifiers
+/// (no fences, no operators, no numbers), then prune — only left-associative grouping
+/// `Apply(invisible_times, [Apply(invisible_times, [...]), single])` survives.
+fn pragma_flatten_simple_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>> {
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    if let XM::Lexeme(ref oplexeme, _) = **op {
+      if oplexeme == "x.invisible_operator" {
+        let trees = args.trees();
+        if trees.len() == 2 {
+          let rhs = trees[1];
+          // Check if the RHS is itself an invisible-times application
+          if is_invisible_times_apply(rhs) && all_simple_identifiers(tree) {
+            // This is a right-associative grouping of simple identifiers — prune it.
+            // Only the left-associative form should survive.
+            return Err(
+              "Pruning right-associative invisible-times of simple identifier chain. \
+               Flat left-associative product is the only reasonable reading."
+                .into(),
+            );
+          }
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Check if a tree node is an invisible-times application
+fn is_invisible_times_apply(tree: &XM) -> bool {
+  if let XM::Apply(Operator(op), ..) = tree {
+    if let XM::Lexeme(ref oplexeme, _) = **op {
+      return oplexeme == "x.invisible_operator";
+    }
+  }
+  false
+}
+
+/// Check if ALL leaf tokens in a tree are simple unfenced identifiers
+/// (UNKNOWN role, no fences, no numbers, no operators)
+fn all_simple_identifiers(tree: &XM) -> bool {
+  match tree {
+    XM::Lexeme(name, meta) => {
+      // Simple identifier: UNKNOWN or ID role, no fences
+      meta.fenced.is_none()
+        && (name.starts_with("UNKNOWN") || name.starts_with("ID"))
+    },
+    XM::Apply(Operator(op), ref args, ..) => {
+      // For invisible-times applications, check operator and all args
+      if let XM::Lexeme(ref oplexeme, _) = **op {
+        if oplexeme == "x.invisible_operator" {
+          return args.trees().iter().all(|a| all_simple_identifiers(a));
+        }
+      }
+      false
+    },
+    XM::Token(ref props, _) => {
+      // Token with UNKNOWN/ID role
+      props.role.as_deref().is_some_and(|r| r == "UNKNOWN" || r == "ID")
+        && props.meaning.as_deref() != Some("absent")
+    },
+    _ => false,
+  }
+}
