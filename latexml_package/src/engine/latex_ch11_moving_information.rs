@@ -436,10 +436,27 @@ LoadDefinitions!({
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]))
   }, robust => true);
 
-  // # NOTE: Eventually needs to be recognized by MakeBibliography
-  // DefConstructor('\nocite Semiverbatim',
-  //   "<ltx:cite><ltx:bibref show='nothing' bibrefs='#bibrefs'/></ltx:cite>",
-  //   properties => sub { (bibrefs => CleanBibKey($_[1])) });
+  // Perl L4271-4278: \nocite — defer to document end for MakeBibliography
+  DefMacro!("\\nocite{}", sub[args] {
+    let key = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let mut toks = vec![T_CS!("\\lx@mark@nocite"), T_BEGIN!()];
+    toks.extend(key.unlist());
+    toks.push(T_END!());
+    let _ = state::push_value("@at@end@document", Stored::Tokens(Tokens::new(toks)));
+    Ok(Tokens!())
+  });
+  DefConstructor!(
+    "\\lx@mark@nocite Semiverbatim",
+    "<ltx:cite><ltx:bibref show='nothing' bibrefs='#bibrefs' inlist='#bibunit'/></ltx:cite>",
+    properties => sub[args] {
+      let key = args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+      // Perl CleanBibKey: trim + remove internal spaces
+      let bibrefs: String = key.chars().filter(|c| !c.is_whitespace()).collect();
+      let bibunit = state::lookup_value("CITE_UNIT")
+        .map(|v| v.to_string()).unwrap_or_default();
+      Ok(stored_map!("bibrefs" => bibrefs, "bibunit" => bibunit))
+    }
+  );
 });
 
 pub(crate) fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
