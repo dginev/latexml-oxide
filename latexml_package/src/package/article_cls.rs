@@ -36,12 +36,10 @@ LoadDefinitions!( {
     "twocolumn",
     r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"
   );
-  // TODO:
-  // DeclareOption!("openbib",
-  // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
-  // }); DeclareOption!("leqno", || { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
-  // }); DeclareOption!("fleqn", || { assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
-  // });
+  // Perl: openbib, leqno, fleqn options
+  DeclareOption!("openbib", None);
+  DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
+  DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
 
   ProcessOptions!();
 

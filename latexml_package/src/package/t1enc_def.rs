@@ -3,9 +3,8 @@ LoadDefinitions!({
   //**********************************************************************
   // Predefine, then load standard file.
 
-  // TODO:
-  // Predefine Ogonek, it's defined in t1enc.def as ugly ooalign
-  //DefAccent('\k', "\x{0328}", "\x{02DB}");
+  // Predefine Ogonek — t1enc.def defines it as ugly ooalign fallback
+  DefAccent!("\\k", '\u{0328}', "\u{02DB}");
 
   // Now read the rest from the REAL t1enc.
   InputDefinitions!("t1enc", extension => Some("def".into()), noltxml => true);

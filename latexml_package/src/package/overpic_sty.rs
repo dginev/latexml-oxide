@@ -4,16 +4,20 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: overpic.sty.ltxml
   RequirePackage!("graphicx");
-  RequirePackage!("epic"); // we don't have binding yet.
+  RequirePackage!("epic");
 
-  // Create an EMPTY picture environment, but with the tex attribute containing the
-  // necessary code for LaTeX to generate an image.
-  // TODO: DefEnvironment('{overpic} OptionalKeyVals:Gin Semiverbatim', ...) with afterDigestBody
-  // The overpic environment requires complex afterDigestBody logic involving
-  // \@includegraphicx, getSize, and setProperties. Stubbed as passthrough for now.
-  DefEnvironment!("{overpic}[]{}", "<ltx:picture>#body</ltx:picture>");
+  // Perl: creates an EMPTY picture environment with tex attribute for LaTeX image generation.
+  // afterDigestBody digests \@includegraphicx to get dimensions, sets width/height/tex.
+  // The picture element gets the graphic's dimensions and a tex attribute for fallback rendering.
+  DefEnvironment!("{overpic} OptionalKeyVals:Gin Semiverbatim",
+    "<ltx:picture fill='none' stroke='none' tex='#tex'></ltx:picture>",
+    after_digest_body => sub[whatsit] {
+      // Set tex attribute from reversion of the full overpic content
+      let tex_str = whatsit.revert().map(|t| t.to_string()).unwrap_or_default();
+      whatsit.set_property("tex", Stored::String(arena::pin(tex_str)));
+    }
+  );
 
-  // Need {Overpic}, too, but it doesn't take an image, but random TeX
-  // I suspect that will need an entirely different strategy!
-  // And since it's used in only 3 papers on arXiv, it hardly seems worth it...
+  // Perl: {Overpic} (capital O) takes random TeX instead of image — not ported.
+  // Used in only ~3 papers on arXiv.
 });
