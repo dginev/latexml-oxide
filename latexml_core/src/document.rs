@@ -1532,13 +1532,15 @@ impl Document {
     use std::ffi::CString;
     let trimmed = text.trim_end();
     let clean = DASHES_RE.replace_all(trimmed, "__");
-    self.close_text_internal()?; // Close any open text node.
+    // Perl does NOT close the text node here — it uses getElement() to find
+    // the nearest element, then inserts the comment relative to element children.
+    // This preserves self.node as the current text node, so subsequent text
+    // appends correctly and ligatures fire on the full text run.
 
     let comment_text = s!(" {} ", clean);
 
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       // At document root: create comment node via raw FFI and add to pending.
-      // The pending nodes are placed before the root element when it's created.
       unsafe {
         let c_text = CString::new(comment_text.as_str()).unwrap();
         let comment_ptr = libxml::bindings::xmlNewDocComment(
@@ -1546,7 +1548,6 @@ impl Document {
           c_text.as_ptr() as *const u8,
         );
         if !comment_ptr.is_null() {
-          // Add as child of document node; will be before root element
           libxml::bindings::xmlAddChild(
             self.node.node_ptr(),
             comment_ptr,
@@ -1896,10 +1897,12 @@ impl Document {
       }
       self.node.append_text(text)?;
     }
-    // TODO: Perl lines 1139-1144 — if lastChild is a comment node and its previous sibling is
+    // Perl lines 1139-1144: if lastChild is a comment node and its previous sibling is
     // a text node, swap them to avoid splitting text runs, then recurse.
-    // Requires insertAfter support.
-    else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
+    // This avoids libxml text-node merging which would bypass ligature processing.
+    else if self.swap_comment_text_if_needed(text)? {
+      // Handled by recursive call
+    } else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
       // Perl L1149-1150: appendNodeBox for autoopened insertion points
@@ -1929,6 +1932,32 @@ impl Document {
       }
     }
     Ok(self.node.clone())
+  }
+
+  /// Perl lines 1139-1144: Avoid splitting text runs across comments.
+  /// If the current node's lastChild is a comment and the previous sibling is a text node,
+  /// swap them so the text node is last, set it as current, and recurse to append new text.
+  /// Returns true if the swap+append was performed, false otherwise.
+  fn swap_comment_text_if_needed(&mut self, text: &str) -> Result<bool> {
+    if self.node.get_type() != Some(NodeType::ElementNode) {
+      return Ok(false);
+    }
+    if let Some(last_child) = self.node.get_last_child() {
+      if last_child.get_type() == Some(NodeType::CommentNode) {
+        if let Some(mut prev_text) = last_child.get_prev_sibling() {
+          if prev_text.get_type() == Some(NodeType::TextNode) {
+            // Swap: move text node after comment node
+            let mut comment_node = last_child;
+            comment_node.add_next_sibling(&mut prev_text)?;
+            // Set current node to the text node and recurse
+            self.set_node(&prev_text);
+            self.open_text_internal(text)?;
+            return Ok(true);
+          }
+        }
+      }
+    }
+    Ok(false)
   }
 
   /// Perl: appendNodeBox — when material is added to an autoopened element,

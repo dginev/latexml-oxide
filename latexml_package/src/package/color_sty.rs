@@ -31,7 +31,6 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
-      Info!("undefined", name, &s!("color '{}' is undefined...", name));
       color::BLACK
     },
   }

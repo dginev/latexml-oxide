@@ -229,6 +229,28 @@ fn ams_aligned_bindings() -> Result<()> {
 }
 
 LoadDefinitions!({
+  // Package options (Perl L44-57)
+  DeclareOption!("centertags", None);
+  DeclareOption!("tbtags", None);
+  DeclareOption!("sumlimits", None);
+  DeclareOption!("nosumlimits", None);
+  DeclareOption!("intlimits", None);
+  DeclareOption!("nointlimits", None);
+  DeclareOption!("namelimits", None);
+  DeclareOption!("nonamelimits", None);
+  DeclareOption!("alignedleftspaceyes", None);
+  DeclareOption!("alignedleftspaceno", None);
+  DeclareOption!("alignedleftspaceyesifneg", None);
+  DeclareOption!("reqno", {
+    state::assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::None));
+  });
+  DeclareOption!("leqno", {
+    state::assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
+  });
+  DeclareOption!("fleqn", {
+    state::assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", Some(Stored::Bool(true)));
+  });
+
   Let!("\\@xp", "\\expandafter");
   Let!("\\@nx", "\\noexpand");
   // sub-packages:
@@ -1200,11 +1222,39 @@ LoadDefinitions!({
       #2\
     </ltx:XMApp>");
 
-  // Section 4.12: Continued fractions (simplified — no mathstyle switching)
-  DefMacro!("\\cfrac[]{}{}", "\\frac{#2}{#3}");
+  // Section 4.12: Continued fractions
+  // Perl: saves mathstyle, then uses \lx@inner@cfrac with InFractionStyle args.
+  // Simplified: use continued-fraction meaning, display mathstyle.
+  assign_value("CFRACSTYLE", Stored::String(arena::pin("display")), Some(Scope::Global));
+  DefConstructor!("\\cfrac[] InFractionStyle InFractionStyle",
+    "<ltx:XMApp>\
+      <ltx:XMTok name='cfrac' meaning='continued-fraction'/>\
+      <ltx:XMArg>#2</ltx:XMArg>\
+      <ltx:XMArg>#3</ltx:XMArg>\
+    </ltx:XMApp>");
+  DefConstructor!("\\cfracstyle{}", "",
+    after_digest => sub[whatsit] {
+      let style_str = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+      let style = match style_str.trim() {
+        "d" => "display",
+        "i" => "inline",
+        other => other,
+      };
+      assign_value("CFRACSTYLE", Stored::String(arena::pin(style)), None);
+    });
 
   // Section 7.4: Multiple integrals dispatch
-  DefMacro!("\\MultiIntegral{}", "\\int");
+  // Perl: n=0→\idotsint, n=1→\int, n=2→\iint, n=3→\iiint, n≥4→\iiiint
+  DefMacro!("\\MultiIntegral{}", sub[args] {
+    let n: i32 = args[0].to_string().trim().parse().unwrap_or(1);
+    match n {
+      0 => Tokens!(T_CS!("\\idotsint")),
+      1 => Tokens!(T_CS!("\\int")),
+      2 => Tokens!(T_CS!("\\iint")),
+      3 => Tokens!(T_CS!("\\iiint")),
+      _ => Tokens!(T_CS!("\\iiiint")),
+    }
+  });
 
   // Section 9.4: Accent aliases (Perl L1297-1306)
   Let!("\\Hat", "\\hat");

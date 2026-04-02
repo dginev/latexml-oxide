@@ -122,7 +122,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| amsmath.sty | GAPS | ~65% ported. Missing: `\text{}`, operators, `{subequations}` |
+| amsmath.sty | MINOR | ~90% ported. Core complete: operators, text, subequations, matrices, align, cfrac, MultiIntegral, options. Missing: cfrac mathstyle tracking |
 | listings.sty | GAPS | Missing: `literate`, `extendedchars`, `directivestyle`/`stringstyle` propagation, `title=`/`caption=` |
 | ntheorem.sty | GAPS | Missing: `\colorbox` for shaded theorems |
 | caption.sty | MINOR | Missing: KeyVals, CAPTION_ value storage |
@@ -133,10 +133,9 @@ All other packages OK: calc, report, appendix, multicol, booktabs, remreset, chn
 
 ## Test Suite Status
 
-**382 pass, 0 fail, 3 ignored** (335 integration + 1 post + 39+7 latexml_post unit tests).
+**390 pass, 0 fail, 0 ignored** (337 integration + 1 post + 39+7+6 latexml_post unit tests).
 
-**Ignored:** dominoes, unit_tests_by_silviu, consort_flowchart (complex tikz).
-**Permanent:** ns1–ns5 (DTD not supported).
+**Permanent ignores:** ns1–ns5 (DTD not supported).
 
 ---
 
@@ -166,7 +165,7 @@ Fresh Perl diffs (after stripping tex= and %&#10;):
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-04-01):** 382 pass, 0 fail, 3 ignored.
+**Status (2026-04-01):** 390 pass, 0 fail, 0 ignored.
 
 ### Completed infrastructure
 - [x] **F. Post-processing pipeline** — `latexml_post` crate (12,300+ lines, 25 modules). MathML Presentation+Content, XSLT via libxslt FFI.
@@ -178,7 +177,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **P1. Scan post-processor** — Port `LaTeXML::Post::Scan`. Populates ObjectDB with IDs, labels, titles, parent-child relationships. All handler methods implemented (section, captioned, labelled, anchor, note, bibitem, ref, bibref, glossary, indexmark, declare, rdf). DB entries store text content (not XML node refs) to avoid dangling pointers.
 - [x] **P2. CrossRef post-processor** — Port `LaTeXML::Post::CrossRef`. Resolves `\ref{label}` → `<a href="#id">3.3</a>`, `\cite{key}` → `<a href="#bib.bib18">18</a>`. Fills in refs, bibrefs, glossaryrefs, TOC generation, navigation links, fragment IDs, math declaration links. Integrated into unified CLI pipeline: Scan→CrossRef→MathML→XSLT.
-- [ ] **P3. MakeBibliography post-processor** — Port `LaTeXML::Post::MakeBibliography` (~400 lines). Generates bibliography section from `\bibitem` entries, numbers citations, creates back-references. Depends on P1 (Scan).
+- [x] **P3. MakeBibliography post-processor** — Port `LaTeXML::Post::MakeBibliography` (818 lines). Full FMT_SPEC table (article/book/incollection/report/thesis/website/software), citation style detection (numbers/author-year/alpha), getBibliographies (.bib.xml loading), referrer tracking with parent-chain filtering, bibreferrer cross-links, suffix assignment for duplicate author+year, cited-by blocks, META_BLOCK (notes + external links), bibentry/biblist cleanup. Works from both bibentry XML nodes and ObjectDB metadata fallback.
 - [ ] **P4. Split post-processor** — Port `LaTeXML::Post::Split` (~200 lines). Splits multi-page documents into separate HTML files. Lower priority — single-page output works.
 - [ ] **P5. Writer post-processor** — Port `LaTeXML::Post::Writer` output formatting. Currently using `to_xml_string()` directly. Writer handles DOCTYPE, encoding, indentation.
 
@@ -195,9 +194,17 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Diff reduction tasks
 
-- [ ] **D1. Header guessing row headers** — `classify_alignment_cell` treats both header/data as "Text". Add font-awareness (bold = header). ~172 diff lines across 5 tests.
-- [ ] **D2. Equation numbering** — Missing `(1)`, `(2)` equation labels. Needs `\@eqnnum` output in aligned environments.
-- [ ] **D3. Listings escapechar + color** — `escapechar=@` with `\color{red}` inline not processed. ~50 diff lines in various_colors.
+- [x] **D1. Header guessing row headers** — Already working: bold cells get `thead="column"` in `<thead>`.
+- [x] **D2. Equation numbering** — Already working: `(1)`, `(2)` tags produced for equation/align envs.
+- [ ] **D3. Listings escapechar + color** — `moredelim=**[is][\color{red}]{@}{@}` not processed. ~50 diff lines in various_colors.
+
+### SVG color groups — FIXED (2026-04-01)
+
+**Root causes found and fixed:**
+1. Missing combined color macros (`\pgfsys@color@gray`, `\pgfsys@color@cmyk`, `\pgfsys@color@cmy`) — tikz calls `\pgfsetcolor{gray}` which resolves to `\csname pgfsys@color@gray\endcsname` (combined, no @fill/@stroke suffix). We only had `\pgfsys@color@rgb` combined.
+2. Whatsit timing: DefConstructor Whatsits created during tikz option processing were lost before document construction. Fix: store hex colors in pgf state (`pgf@svg@fillcolor`, `pgf@svg@strokecolor`), read via properties closure in `\lxSVG@drawpath@unclipped`.
+
+**Result:** dominoes + unit_tests_by_silviu un-ignored. 390 pass, 0 ignored.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

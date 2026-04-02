@@ -227,17 +227,60 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       }
     }
     "OVERACCENT" if !args.is_empty() => {
+      // Perl MathML.pm L1492-1504: check if base is XMApp with UNDERACCENT → m:munderover
+      let base = &args[0];
+      let base_qname = doc.get_qname(base);
+      let base_children = element_children(base);
+      if base_qname.as_deref() == Some("ltx:XMApp") && base_children.len() == 2 {
+        let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
+        if inner_role == "UNDERACCENT" {
+          // Combine into m:munderover: base_of_inner, under_accent, over_accent
+          return NodeData::Element {
+            tag: "m:munderover".to_string(),
+            attributes: Some(HashMap::from([
+              ("accent".to_string(), "true".to_string()),
+              ("accentunder".to_string(), "true".to_string()),
+            ])),
+            children: vec![
+              pmml(doc, &base_children[1]),  // the actual base
+              pmml(doc, &base_children[0]),   // the under-accent
+              pmml(doc, op),                  // the over-accent
+            ],
+          };
+        }
+      }
       NodeData::Element {
         tag: "m:mover".to_string(),
         attributes: Some(HashMap::from([("accent".to_string(), "true".to_string())])),
-        children: vec![pmml(doc, &args[0]), pmml(doc, op)],
+        children: vec![pmml(doc, base), pmml(doc, op)],
       }
     }
     "UNDERACCENT" if !args.is_empty() => {
+      // Perl MathML.pm L1507-1519: check if base is XMApp with OVERACCENT → m:munderover
+      let base = &args[0];
+      let base_qname = doc.get_qname(base);
+      let base_children = element_children(base);
+      if base_qname.as_deref() == Some("ltx:XMApp") && base_children.len() == 2 {
+        let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
+        if inner_role == "OVERACCENT" {
+          return NodeData::Element {
+            tag: "m:munderover".to_string(),
+            attributes: Some(HashMap::from([
+              ("accent".to_string(), "true".to_string()),
+              ("accentunder".to_string(), "true".to_string()),
+            ])),
+            children: vec![
+              pmml(doc, &base_children[1]),  // the actual base
+              pmml(doc, op),                  // the under-accent
+              pmml(doc, &base_children[0]),   // the over-accent
+            ],
+          };
+        }
+      }
       NodeData::Element {
         tag: "m:munder".to_string(),
         attributes: Some(HashMap::from([("accentunder".to_string(), "true".to_string())])),
-        children: vec![pmml(doc, &args[0]), pmml(doc, op)],
+        children: vec![pmml(doc, base), pmml(doc, op)],
       }
     }
     "POSTFIX" if !args.is_empty() => {

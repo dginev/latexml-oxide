@@ -714,6 +714,16 @@ fn build_char_class(class: &str) -> String {
       }
     }
   }
+  // Also check extended chars (128-255) for extendedchars support
+  for code in 128u32..=255 {
+    if let Some(c) = char::from_u32(code) {
+      let escaped = regex::escape(&c.to_string());
+      let key = s!("LST_CHAR@{class}@{escaped}");
+      if matches!(state::lookup_value(&key), Some(Stored::Bool(true))) {
+        result.push(c);
+      }
+    }
+  }
   result
 }
 
@@ -2532,9 +2542,22 @@ LoadDefinitions!({
       stored_map!("color" => Stored::String(arena::pin(&color)))
     });
 
-  // Extended chars handler
+  // Extended chars handler — Perl: listings.sty.ltxml L836-845
+  // Adds/removes characters 128-255 from the letter class
   DefMacro!("\\lst@@extendedchars Until:\\end", sub [args] {
-    let _ = &args;
+    let val = args[0].to_string();
+    let enable = val == "true";
+    for code in 128u32..=255 {
+      if let Some(ch) = char::from_u32(code) {
+        let escaped = regex::escape(&ch.to_string());
+        let key = s!("LST_CHAR@letter@{escaped}");
+        if enable {
+          state::assign_value(&key, Stored::Bool(true), None);
+        } else {
+          state::assign_value(&key, Stored::None, None);
+        }
+      }
+    }
     Tokens!()
   });
 

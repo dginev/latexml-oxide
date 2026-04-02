@@ -162,8 +162,10 @@ impl DigestionAPI for Core {
     let digestion_note = s!("Digesting {}", name);
     note_begin(&digestion_note);
     // $self->initializestate::$mode . ".pool", @{ $$self{preload} || [] }) unless
-    // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
-    // (!pathname::is_literaldata($request));
+    // $options{noinitialize};
+    if !pathname::is_literaldata(&request) {
+      state::assign_value("SOURCEFILE", arena::pin(&request), None);
+    }
     if let Some(dir) = dir_opt {
       let dir = dir.to_str().unwrap_or(".");
       {
@@ -241,7 +243,7 @@ impl DigestionAPI for Core {
                 .collect::<Vec<&str>>()
                 .join(",")
             });
-            let attributes = map! {s!("paths") => paths_string};
+            let attributes = map! {s!("searchpaths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
         }

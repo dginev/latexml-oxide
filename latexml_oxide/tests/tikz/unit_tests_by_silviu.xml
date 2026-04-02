@@ -15,7 +15,7 @@
     <title><tag close=" ">1</tag>Environments</title>
     <para xml:id="S1.p1">
       <p>Rectangles
- <picture height="6.51" width="12.47" xml:id="S1.p1.pic1">
+<picture height="6.51" width="12.47" xml:id="S1.p1.pic1">
           <svg:svg height="6.51" overflow="visible" version="1.1" viewBox="0 0 12.47 6.51" width="12.47">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.51) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
               <svg:path d="M 0 0 h 11.92 v 5.96 h -11.92 Z" style="fill:none"/>
@@ -23,7 +23,7 @@
           </svg:svg>
         </picture>
 and
- <picture height="6.51" width="12.47" xml:id="S1.p1.pic2">
+<picture height="6.51" width="12.47" xml:id="S1.p1.pic2">
           <svg:svg height="6.51" overflow="visible" version="1.1" viewBox="0 0 12.47 6.51" width="12.47">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.51) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,-5.68)">
               <svg:path d="M 0 5.96 h 11.92 v 5.96 h -11.92 Z" style="fill:none"/>
@@ -31,15 +31,14 @@ and
           </svg:svg>
         </picture>.
 Inline
- <picture height="12.47" width="12.47" xml:id="S1.p1.pic3">
+<picture height="12.47" width="12.47" xml:id="S1.p1.pic3">
           <svg:svg height="12.47" overflow="visible" version="1.1" viewBox="0 0 12.47 12.47" width="12.47">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,12.47) matrix(1 0 0 -1 0 0) translate(6.23,0) translate(0,6.23)">
               <svg:path d="M 5.96 0 C 5.96 3.29 3.29 5.96 0 5.96 C -3.29 5.96 -5.96 3.29 -5.96 0 C -5.96 -3.29 -3.29 -5.96 0 -5.96 C 3.29 -5.96 5.96 -3.29 5.96 0 Z M 0 0" style="fill:none"/>
             </svg:g>
           </svg:svg>
         </picture>.
-Hello
-</p>
+Hello</p>
     </para>
   </section>
   <section inlist="toc" xml:id="S2">
@@ -73,8 +72,7 @@ Hello
     </tags>
     <title><tag close=" ">3</tag>Coordinates</title>
     <para xml:id="S3.p1">
-      <p>Points
-</p>
+      <p>Points</p>
     </para>
     <para xml:id="S3.p2">
       <picture height="79.02" width="121.02" xml:id="S3.p2.pic1">
@@ -457,7 +455,7 @@ Hello
     <title><tag close=" ">4</tag>Paths</title>
     <para xml:id="S4.p1">
       <p>General:
- <picture height="179.14" width="348.46" xml:id="S4.p1.pic1">
+<picture height="179.14" width="348.46" xml:id="S4.p1.pic1">
           <svg:svg height="179.14" overflow="visible" version="1.1" viewBox="0 0 348.46 179.14" width="348.46">
             <svg:g transform="translate(0,179.14) matrix(1 0 0 -1 0 0) translate(39.67,0) translate(0,21.11)">
               <svg:g color="#FF0000" fill="#FF0000" stroke="#FF0000" stroke-width="0.8pt">
@@ -469,10 +467,10 @@ Hello
                   <svg:foreignObject height="11.61" overflow="visible" style="--ltx-fo-width:5.07em;--ltx-fo-height:0.64em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 8.92)" width="70.11">start part 1</svg:foreignObject>
                 </svg:g>
                 <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 44.26 5.19)">
-                  <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:7.29em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="100.89">straight segment</svg:foreignObject>
+                  <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:7.29em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="100.9">straight segment</svg:foreignObject>
                 </svg:g>
                 <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 83.63 35.91)">
-                  <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:7.54em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="104.35">end first segment</svg:foreignObject>
+                  <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:7.54em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="104.36">end first segment</svg:foreignObject>
                 </svg:g>
                 <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 241.11 75.28)">
                   <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:4.56em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="63.07">end part 1</svg:foreignObject>
@@ -487,7 +485,7 @@ Hello
     </para>
     <para xml:id="S4.p2">
       <p>pgfpath(moveto,lineto,curveto):
- <picture height="39.92" width="158.03" xml:id="S4.p2.pic1">
+<picture height="39.92" width="158.03" xml:id="S4.p2.pic1">
           <svg:svg height="39.92" overflow="visible" version="1.1" viewBox="0 0 158.03 39.92" width="158.03">
             <svg:g fill="#FFFF00" stroke="#000000" stroke-width="0.4pt" transform="translate(0,39.92) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
               <svg:path d="M 0 0 L 39.37 39.37 L 78.74 39.37 C 39.37 39.37 157.48 39.37 118.11 0"/>
@@ -497,7 +495,7 @@ Hello
     </para>
     <para xml:id="S4.p3">
       <p>pgfclosepath:
- <picture height="239.82" width="239.82" xml:id="S4.p3.pic1">
+<picture height="239.82" width="239.82" xml:id="S4.p3.pic1">
           <svg:svg height="239.82" overflow="visible" version="1.1" viewBox="0 0 239.82 239.82" width="239.82">
             <svg:g transform="translate(0,239.82) matrix(1 0 0 -1 0 0) translate(3.46,0) translate(0,82.2)">
               <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
@@ -512,7 +510,7 @@ Hello
     </para>
     <para xml:id="S4.p4">
       <p>pgfpath(arc,arcaxes):
- <picture height="157.76" width="275.73" xml:id="S4.p4.pic1">
+<picture height="157.76" width="275.73" xml:id="S4.p4.pic1">
           <svg:svg height="157.76" overflow="visible" version="1.1" viewBox="0 0 275.73 157.76" width="275.73">
             <svg:g transform="translate(0,157.76) matrix(1 0 0 -1 0 0) translate(0.14,0) translate(0,0.14)">
               <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
@@ -527,9 +525,9 @@ Hello
     </para>
     <para xml:id="S4.p5">
       <p>pgfpathellipse:
- <picture height="240.75" width="276.01" xml:id="S4.p5.pic1">
+<picture height="240.75" width="276.01" xml:id="S4.p5.pic1">
           <svg:svg height="240.75" overflow="visible" version="1.1" viewBox="0 0 276.01 240.75" width="276.01">
-            <svg:g transform="translate(0,240.75) matrix(1 0 0 -1 0 0) translate(39.65,0) translate(0,83.13)">
+            <svg:g transform="translate(0,240.75) matrix(1 0 0 -1 0 0) translate(39.65,0) translate(0,83.14)">
               <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
                 <svg:path d="M 0 0 M 0 0 L 236.22 0 M 0 78.74 L 236.22 78.74 M 0 157.45 L 236.22 157.45 M 0 0 L 0 157.48 M 78.74 0 L 78.74 157.48 M 157.48 0 L 157.48 157.48 M 236.19 0 L 236.19 157.48 M 236.22 157.48" style="fill:none"/>
               </svg:g>
@@ -545,7 +543,7 @@ Hello
     </para>
     <para xml:id="S4.p6">
       <p>rectangle:
- <picture height="157.9" width="276.01" xml:id="S4.p6.pic1">
+<picture height="157.9" width="276.01" xml:id="S4.p6.pic1">
           <svg:svg height="157.9" overflow="visible" version="1.1" viewBox="0 0 276.01 157.9" width="276.01">
             <svg:g transform="translate(0,157.9) matrix(1 0 0 -1 0 0) translate(0.14,0) translate(0,0.28)">
               <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
@@ -560,7 +558,7 @@ Hello
     </para>
     <para xml:id="S4.p7">
       <p>grid
- <picture height="103.47" width="142.84" xml:id="S4.p7.pic1">
+<picture height="103.47" width="142.84" xml:id="S4.p7.pic1">
           <svg:svg height="103.47" overflow="visible" version="1.1" viewBox="0 0 142.84 103.47" width="142.84">
             <svg:g fill="#000000" stroke="#000000" transform="translate(0,103.47) matrix(1 0 0 -1 0 0) translate(12.36,0) translate(0,12.36)">
               <svg:g stroke-width="0.8pt">
@@ -575,7 +573,7 @@ Hello
     </para>
     <para xml:id="S4.p8">
       <p>pgfpathparabola:
- <picture height="197.4" width="158.03" xml:id="S4.p8.pic1">
+<picture height="197.4" width="158.03" xml:id="S4.p8.pic1">
           <svg:svg height="197.4" overflow="visible" version="1.1" viewBox="0 0 158.03 197.4" width="158.03">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,197.4) matrix(1 0 0 -1 0 0) translate(79.02,0) translate(0,0.28)">
               <svg:g color="#FF0000" fill="#FF0000" stroke="#FF0000">
@@ -593,7 +591,7 @@ Hello
     </para>
     <para xml:id="S4.p9">
       <p>sine, cosine:
- <picture height="236.77" width="315.38" xml:id="S4.p9.pic1">
+<picture height="236.77" width="315.38" xml:id="S4.p9.pic1">
           <svg:svg height="236.77" overflow="visible" version="1.1" viewBox="0 0 315.38 236.77" width="315.38">
             <svg:g transform="translate(0,236.77) matrix(1 0 0 -1 0 0) translate(79.02,0) translate(0,157.76)">
               <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
@@ -608,7 +606,7 @@ Hello
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="79.29" width="158.03" xml:id="S4.p9.pic2">
+<picture height="79.29" width="158.03" xml:id="S4.p9.pic2">
           <svg:svg height="79.29" overflow="visible" version="1.1" viewBox="0 0 158.03 79.29" width="158.03">
             <svg:g fill="#BF8040" stroke="#000000" stroke-width="0.4pt" transform="translate(0,79.29) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,39.65)">
               <svg:path d="M 0 0 C 12.83 20.16 25.12 39.37 39.37 39.37 C 53.62 39.37 65.91 20.16 78.74 0 C 91.57 -20.16 103.86 -39.37 118.11 -39.37 C 132.36 -39.37 144.65 -20.16 157.48 0"/>
@@ -618,7 +616,7 @@ Hello
     </para>
     <para xml:id="S4.p10">
       <p>rounded corners
- <picture height="158.03" width="236.77" xml:id="S4.p10.pic1">
+<picture height="158.03" width="236.77" xml:id="S4.p10.pic1">
           <svg:svg height="158.03" overflow="visible" version="1.1" viewBox="0 0 236.77 158.03" width="236.77">
             <svg:g transform="translate(0,158.03) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
               <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
@@ -630,7 +628,7 @@ Hello
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="75.44" width="71.77" xml:id="S4.p10.pic2">
+<picture height="75.44" width="71.77" xml:id="S4.p10.pic2">
           <svg:svg height="75.44" overflow="visible" version="1.1" viewBox="0 0 71.77 75.44" width="71.77">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,75.44) matrix(1 0 0 -1 0 0) translate(32.13,0) translate(0,37.72)">
               <svg:path d="M 36.12 4.48 L 15.42 32.97 C 13.62 35.44 9.81 36.68 6.9 35.73 L -26.59 24.85 C -29.49 23.91 -31.85 20.66 -31.85 17.61 L -31.85 -17.61 C -31.85 -20.66 -29.49 -23.91 -26.59 -24.85 L 6.9 -35.73 C 9.81 -36.68 13.62 -35.44 15.42 -32.97 L 36.12 -4.48 C 37.91 -2 37.91 2 36.12 4.48 Z" style="fill:none"/>
@@ -650,7 +648,7 @@ Hello
       <picture height="7.47" width="118.66" xml:id="S5.p1.pic1">
         <svg:svg height="7.47" overflow="visible" version="1.1" viewBox="0 0 118.66 7.47" width="118.66">
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,7.47) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,3.74)">
-            <svg:path d="M 0 0 L 3.46 3.46 L 10.38 -3.46 L 17.3 3.46 L 24.21 -3.46 L 31.13 3.46 L 38.05 -3.46 L 44.97 3.46 L 51.89 -3.46 L 58.81 3.46 L 62.27 0 L 118.11 0" style="fill:none"/>
+            <svg:path d="M 0 0 L 3.46 3.46 L 10.38 -3.46 L 17.3 3.46 L 24.21 -3.46 L 31.13 3.46 L 38.05 -3.46 L 44.97 3.46 L 51.89 -3.46 L 58.81 3.46 L 65.73 -3.46 L 72.64 3.46 L 79.56 -3.46 L 86.48 3.46 L 93.4 -3.46 L 100.32 3.46 L 107.24 -3.46 L 114.16 3.46 L 117.61 0 L 118.11 0" style="fill:none"/>
           </svg:g>
         </svg:svg>
       </picture>
@@ -666,89 +664,89 @@ Hello
           </svg:g>
         </svg:svg>
       </picture>
-      <picture height="276.14" width="129.9" xml:id="S5.p2.pic2">
-        <svg:svg height="276.14" overflow="visible" version="1.1" viewBox="0 0 129.9 276.14" width="129.9">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,276.14) matrix(1 0 0 -1 0 0) translate(6.18,0) translate(0,197.13)">
-            <svg:g fill="#FFDA00" stroke="#FFB500">
-              <svg:path d="M 0 0 M -5.91 0 L -2.39 -1.74 L -1.83 -5.62 L 0.91 -2.81 L 4.78 -3.47 L 2.95 0 L 4.78 3.47 L 0.91 2.81 L -1.83 5.62 L -2.39 1.74 Z"/>
-            </svg:g>
-            <svg:g fill="#FFE200" stroke="#FFC400">
-              <svg:path d="M -4.12 22.75 L -0.53 19.28 L -1.36 14.36 L 3.05 16.69 L 7.48 14.39 L 6.62 19.3 L 10.18 22.8 L 5.24 23.5 L 3.02 27.97 L 0.82 23.49 Z"/>
-            </svg:g>
-            <svg:g fill="#FFDF00" stroke="#FFBF00">
-              <svg:path d="M 10.7 40.41 L 11.48 38.66 L 10.48 37.03 L 12.38 37.23 L 13.62 35.78 L 14.02 37.65 L 15.79 38.38 L 14.13 39.34 L 13.98 41.24 L 12.56 39.96 Z"/>
-            </svg:g>
-            <svg:g fill="#FFCC00" stroke="#FF9900">
-              <svg:path d="M 25.07 58.68 L 25.28 53.34 L 20.99 50.14 L 26.14 48.68 L 27.85 43.62 L 30.83 48.06 L 36.18 48.13 L 32.87 52.33 L 34.46 57.44 L 29.44 55.59 Z"/>
-            </svg:g>
-            <svg:g fill="#FFFC00" stroke="#FFFA00">
-              <svg:path d="M 47.84 62.23 L 47.04 59.64 L 44.46 58.83 L 46.68 57.27 L 46.65 54.57 L 48.81 56.2 L 51.38 55.34 L 50.5 57.9 L 52.11 60.07 L 49.41 60.03 Z"/>
-            </svg:g>
-            <svg:g fill="#FFB900" stroke="#FF7300">
-              <svg:path d="M 69.78 62.3 L 68.23 60.09 L 65.53 60.11 L 67.15 57.95 L 66.3 55.39 L 68.85 56.27 L 71.02 54.66 L 70.98 57.36 L 73.18 58.93 L 70.59 59.72 Z"/>
-            </svg:g>
-            <svg:g fill="#FF8F00" stroke="#FF1F00">
-              <svg:path d="M 92.08 58.01 L 88.3 55.29 L 83.92 56.86 L 85.34 52.43 L 82.5 48.75 L 87.15 48.73 L 89.76 44.89 L 91.22 49.3 L 95.68 50.61 L 91.94 53.36 Z"/>
-            </svg:g>
-            <svg:g fill="#FFE600" stroke="#FFCC00">
-              <svg:path d="M 111.06 44.14 L 105.86 42.85 L 101.84 46.4 L 101.46 41.05 L 96.84 38.33 L 101.81 36.32 L 102.98 31.08 L 106.43 35.19 L 111.76 34.68 L 108.92 39.23 Z"/>
-            </svg:g>
-            <svg:g fill="#FFE200" stroke="#FFC400">
-              <svg:path d="M 121.78 23.16 L 117.03 23.83 L 114.89 28.12 L 112.79 23.81 L 108.05 23.09 L 111.5 19.76 L 110.71 15.03 L 114.94 17.28 L 119.2 15.07 L 118.37 19.79 Z"/>
-            </svg:g>
-            <svg:g fill="#FFD200" stroke="#FFA600">
-              <svg:path d="M 123.44 0.5 L 120.26 2.04 L 119.73 5.54 L 117.27 2.99 L 113.78 3.57 L 115.44 0.45 L 113.82 -2.69 L 117.3 -2.08 L 119.79 -4.6 L 120.27 -1.09 Z"/>
-            </svg:g>
-            <svg:g fill="#FFFF00" stroke="#FFFF00">
-              <svg:path d="M 123.18 -21.24 L 119.62 -18.7 L 119.68 -14.32 L 116.17 -16.93 L 112.02 -15.52 L 113.42 -19.67 L 110.79 -23.17 L 115.17 -23.13 L 117.69 -26.71 L 119 -22.53 Z"/>
-            </svg:g>
-            <svg:g fill="#FFD900" stroke="#FFB300">
-              <svg:path d="M 116.64 -43.36 L 113.93 -39.43 L 115.63 -34.97 L 111.06 -36.34 L 107.34 -33.34 L 107.23 -38.11 L 103.23 -40.72 L 107.73 -42.3 L 108.97 -46.91 L 111.87 -43.12 Z"/>
-            </svg:g>
-            <svg:g fill="#FF9C00" stroke="#FF3800">
-              <svg:path d="M 98.59 -60.15 L 98.63 -55.6 L 102.4 -53.05 L 98.08 -51.61 L 96.82 -47.23 L 94.12 -50.89 L 89.57 -50.74 L 92.21 -54.45 L 90.66 -58.73 L 95 -57.35 Z"/>
-            </svg:g>
-            <svg:g fill="#FF9900" stroke="#FF3300">
-              <svg:path d="M 75.68 -60.96 L 76.25 -59.54 L 77.75 -59.21 L 76.58 -58.23 L 76.73 -56.7 L 75.43 -57.51 L 74.02 -56.9 L 74.39 -58.39 L 73.38 -59.53 L 74.9 -59.64 Z"/>
-            </svg:g>
-            <svg:g fill="#FF9000" stroke="#FF2100">
-              <svg:path d="M 54.8 -66.82 L 57.06 -62.19 L 62.16 -61.43 L 58.45 -57.84 L 59.3 -52.76 L 54.74 -55.18 L 50.17 -52.8 L 51.07 -57.88 L 47.39 -61.5 L 52.5 -62.21 Z"/>
-            </svg:g>
-            <svg:g fill="#FFFA00" stroke="#FFF500">
-              <svg:path d="M 35.05 -65.77 L 36.03 -62.35 L 39.4 -61.2 L 36.44 -59.22 L 36.4 -55.66 L 33.6 -57.86 L 30.2 -56.8 L 31.42 -60.14 L 29.36 -63.05 L 32.92 -62.92 Z"/>
-            </svg:g>
-            <svg:g fill="#FFF500" stroke="#FFEB00">
-              <svg:path d="M 20.51 -74.82 L 19.19 -69.72 L 22.65 -65.74 L 17.39 -65.42 L 14.68 -60.9 L 12.74 -65.8 L 7.61 -66.99 L 11.67 -70.34 L 11.21 -75.59 L 15.66 -72.76 Z"/>
-            </svg:g>
-            <svg:g fill="#FFFB00" stroke="#FFF700">
-              <svg:path d="M 7.1 -87.06 L 5.71 -85.67 L 6.07 -83.73 L 4.32 -84.62 L 2.59 -83.68 L 2.9 -85.62 L 1.47 -86.97 L 3.41 -87.28 L 4.25 -89.06 L 5.15 -87.31 Z"/>
-            </svg:g>
-            <svg:g fill="#FFBE00" stroke="#FF7D00">
-              <svg:path d="M 6.51 -106.92 L 3.03 -104.85 L 2.77 -100.81 L -0.28 -103.48 L -4.2 -102.48 L -2.6 -106.2 L -4.76 -109.63 L -0.73 -109.26 L 1.85 -112.37 L 2.75 -108.42 Z"/>
-            </svg:g>
-            <svg:g fill="#FFA400" stroke="#FF4A00">
-              <svg:path d="M 4.54 -126.64 L 2.01 -125.77 L 1.31 -123.19 L -0.31 -125.32 L -2.97 -125.2 L -1.45 -127.39 L -2.39 -129.89 L 0.17 -129.11 L 2.25 -130.78 L 2.31 -128.11 Z"/>
-            </svg:g>
-            <svg:g fill="#FF8300" stroke="#FF0800">
-              <svg:path d="M 10.06 -145.09 L 7.39 -145.13 L 5.85 -142.95 L 5.06 -145.5 L 2.52 -146.3 L 4.7 -147.84 L 4.67 -150.5 L 6.8 -148.9 L 9.33 -149.76 L 8.47 -147.23 Z"/>
+      <picture height="276.14" width="128.35" xml:id="S5.p2.pic2">
+        <svg:svg height="276.14" overflow="visible" version="1.1" viewBox="0 0 128.35 276.14" width="128.35">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,276.14) matrix(1 0 0 -1 0 0) translate(5.12,0) translate(0,197.13)">
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 0 0 M -4.84 0 L -1.96 -1.42 L -1.5 -4.61 L 0.75 -2.3 L 3.92 -2.85 L 2.42 0 L 3.92 2.85 L 0.75 2.3 L -1.5 4.61 L -1.96 1.42 Z"/>
             </svg:g>
             <svg:g fill="#FFBF00" stroke="#FF8000">
-              <svg:path d="M 22.57 -159.24 L 19.47 -160.57 L 16.61 -158.77 L 16.92 -162.14 L 14.32 -164.3 L 17.61 -165.04 L 18.87 -168.18 L 20.6 -165.28 L 23.97 -165.05 L 21.74 -162.51 Z"/>
+              <svg:path d="M -1.57 21.93 L 0.74 19.7 L 0.21 16.52 L 3.05 18.03 L 5.9 16.54 L 5.35 19.71 L 7.64 21.96 L 4.46 22.42 L 3.03 25.3 L 1.61 22.41 Z"/>
             </svg:g>
-            <svg:g fill="#FFC200" stroke="#FF8500">
-              <svg:path d="M 39.37 -167.26 L 36.25 -170.27 L 32 -169.4 L 33.9 -173.3 L 31.77 -177.07 L 36.06 -176.47 L 38.99 -179.67 L 39.74 -175.4 L 43.69 -173.6 L 39.86 -171.56 Z"/>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 9.19 41.66 L 10.5 38.73 L 8.82 35.98 L 12.02 36.32 L 14.11 33.87 L 14.78 37.02 L 17.75 38.25 L 14.96 39.86 L 14.71 43.07 L 12.32 40.92 Z"/>
             </svg:g>
-            <svg:g fill="#FFAA00" stroke="#FF5400">
-              <svg:path d="M 57.67 -169.4 L 55.29 -173.96 L 50.17 -174.58 L 53.78 -178.26 L 52.79 -183.31 L 57.4 -181.02 L 61.9 -183.53 L 61.15 -178.43 L 64.92 -174.93 L 59.84 -174.07 Z"/>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 26.6 55.86 L 26.72 52.65 L 24.15 50.72 L 27.24 49.85 L 28.27 46.8 L 30.06 49.47 L 33.28 49.51 L 31.29 52.04 L 32.25 55.11 L 29.23 54 Z"/>
             </svg:g>
-            <svg:g fill="#FFD200" stroke="#FFA600">
-              <svg:path d="M 75.59 -166.51 L 74.7 -171.9 L 69.75 -174.22 L 74.6 -176.74 L 75.28 -182.16 L 79.17 -178.32 L 84.54 -179.35 L 82.09 -174.46 L 84.73 -169.68 L 79.32 -170.5 Z"/>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 47.71 62.99 L 46.77 59.91 L 43.7 58.95 L 46.33 57.1 L 46.3 53.88 L 48.87 55.82 L 51.92 54.79 L 50.88 57.84 L 52.79 60.42 L 49.58 60.37 Z"/>
             </svg:g>
-            <svg:g fill="#FFFE00" stroke="#FFFC00">
-              <svg:path d="M 92.62 -160.08 L 93.41 -164.16 L 90.49 -167.13 L 94.62 -167.64 L 96.54 -171.33 L 98.3 -167.56 L 102.4 -166.88 L 99.37 -164.04 L 99.98 -159.93 L 96.34 -161.94 Z"/>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 69.9 63.07 L 68.05 60.43 L 64.84 60.46 L 66.77 57.89 L 65.75 54.84 L 68.79 55.89 L 71.38 53.97 L 71.32 57.19 L 73.94 59.05 L 70.87 60 Z"/>
             </svg:g>
-            <svg:g fill="#FFD200" stroke="#FFA600">
-              <svg:path d="M 104.62 -146.43 L 106.95 -149.97 L 105.35 -153.9 L 109.44 -152.78 L 112.68 -155.51 L 112.87 -151.28 L 116.47 -149.04 L 112.51 -147.54 L 111.5 -143.43 L 108.85 -146.74 Z"/>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 91.06 56.1 L 88.45 54.22 L 85.42 55.31 L 86.4 52.24 L 84.44 49.7 L 87.65 49.69 L 89.46 47.03 L 90.47 50.08 L 93.56 50.98 L 90.97 52.88 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 108.59 42.06 L 105.47 41.28 L 103.06 43.41 L 102.84 40.2 L 100.07 38.57 L 103.05 37.36 L 103.75 34.22 L 105.81 36.68 L 109.01 36.38 L 107.31 39.11 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 119.52 22.41 L 116.34 22.86 L 114.9 25.74 L 113.49 22.85 L 110.31 22.37 L 112.63 20.13 L 112.1 16.96 L 114.94 18.47 L 117.79 16.99 L 117.23 20.16 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 122.95 0.49 L 120.06 1.9 L 119.58 5.08 L 117.35 2.76 L 114.17 3.29 L 115.69 0.45 L 114.21 -2.41 L 117.37 -1.84 L 119.63 -4.13 L 120.08 -0.95 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 121.46 -20.96 L 118.83 -19.1 L 118.88 -15.88 L 116.3 -17.8 L 113.26 -16.76 L 114.28 -19.81 L 112.35 -22.38 L 115.57 -22.35 L 117.42 -24.98 L 118.38 -21.91 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 114.59 -42.22 L 112.77 -39.57 L 113.91 -36.57 L 110.83 -37.48 L 108.33 -35.47 L 108.25 -38.68 L 105.56 -40.44 L 108.59 -41.51 L 109.43 -44.61 L 111.38 -42.06 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 97.72 -58.34 L 97.74 -55.12 L 100.41 -53.32 L 97.36 -52.3 L 96.46 -49.21 L 94.55 -51.8 L 91.34 -51.69 L 93.21 -54.31 L 92.11 -57.33 L 95.18 -56.36 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 75.87 -63.49 L 77.07 -60.51 L 80.21 -59.82 L 77.75 -57.75 L 78.06 -54.55 L 75.33 -56.25 L 72.39 -54.96 L 73.16 -58.08 L 71.03 -60.49 L 74.24 -60.72 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 54.79 -63.9 L 56.2 -61.01 L 59.38 -60.54 L 57.06 -58.3 L 57.59 -55.13 L 54.75 -56.64 L 51.9 -55.16 L 52.46 -58.32 L 50.16 -60.58 L 53.35 -61.03 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 34.96 -65.26 L 35.84 -62.17 L 38.88 -61.14 L 36.21 -59.34 L 36.17 -56.13 L 33.65 -58.11 L 30.58 -57.16 L 31.68 -60.18 L 29.82 -62.8 L 33.04 -62.68 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 18.49 -72.48 L 17.69 -69.36 L 19.8 -66.94 L 16.59 -66.74 L 14.93 -63.98 L 13.75 -66.97 L 10.62 -67.7 L 13.1 -69.74 L 12.82 -72.95 L 15.53 -71.22 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 8.88 -87.67 L 6.61 -85.39 L 7.2 -82.23 L 4.33 -83.68 L 1.51 -82.14 L 2.01 -85.32 L -0.33 -87.53 L 2.85 -88.04 L 4.23 -90.94 L 5.69 -88.08 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 5.26 -106.82 L 2.5 -105.18 L 2.29 -101.97 L -0.13 -104.09 L -3.25 -103.3 L -1.98 -106.25 L -3.7 -108.97 L -0.49 -108.68 L 1.56 -111.15 L 2.27 -108.02 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 5.35 -126.54 L 2.31 -125.49 L 1.46 -122.38 L -0.48 -124.95 L -3.69 -124.8 L -1.86 -127.44 L -2.99 -130.45 L 0.09 -129.52 L 2.6 -131.53 L 2.67 -128.31 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 10.8 -144.72 L 7.58 -144.76 L 5.72 -142.14 L 4.77 -145.21 L 1.7 -146.17 L 4.33 -148.02 L 4.29 -151.24 L 6.87 -149.31 L 9.91 -150.34 L 8.88 -147.3 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 22.41 -159.43 L 19.46 -160.69 L 16.73 -158.98 L 17.03 -162.18 L 14.56 -164.24 L 17.69 -164.95 L 18.89 -167.94 L 20.53 -165.17 L 23.74 -164.96 L 21.62 -162.54 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 38.8 -168.84 L 36.49 -171.08 L 33.34 -170.43 L 34.74 -173.32 L 33.16 -176.12 L 36.34 -175.68 L 38.52 -178.05 L 39.08 -174.88 L 42 -173.55 L 39.17 -172.04 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 57.6 -172.31 L 56.11 -175.15 L 52.92 -175.54 L 55.17 -177.84 L 54.55 -181 L 57.43 -179.57 L 60.24 -181.13 L 59.77 -177.95 L 62.13 -175.76 L 58.96 -175.22 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 76.57 -169.75 L 76.05 -172.92 L 73.13 -174.29 L 75.99 -175.77 L 76.39 -178.96 L 78.68 -176.7 L 81.84 -177.31 L 80.4 -174.43 L 81.95 -171.61 L 78.77 -172.1 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 93.48 -161.21 L 94.09 -164.37 L 91.83 -166.66 L 95.03 -167.06 L 96.51 -169.91 L 97.87 -167 L 101.04 -166.47 L 98.7 -164.27 L 99.17 -161.09 L 96.36 -162.65 Z"/>
+            </svg:g>
+            <svg:g fill="#FFBF00" stroke="#FF8000">
+              <svg:path d="M 105.95 -147.21 L 107.71 -149.9 L 106.5 -152.88 L 109.6 -152.03 L 112.06 -154.1 L 112.21 -150.89 L 114.94 -149.19 L 111.93 -148.06 L 111.16 -144.93 L 109.15 -147.44 Z"/>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -774,14 +772,14 @@ Hello
     <title><tag close=" ">6</tag>More Paths</title>
     <para xml:id="S6.p1">
       <p>fill, stroke
- <picture height="39.37" width="39.37" xml:id="S6.p1.pic1">
+<picture height="39.37" width="39.37" xml:id="S6.p1.pic1">
           <svg:svg height="39.37" overflow="visible" version="1.1" viewBox="0 0 39.37 39.37" width="39.37">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,39.37) matrix(1 0 0 -1 0 0)">
               <svg:path d="M 0 0 L 39.37 39.37 L 39.37 0" style="stroke:none"/>
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="39.92" width="39.92" xml:id="S6.p1.pic2">
+<picture height="39.92" width="39.92" xml:id="S6.p1.pic2">
           <svg:svg height="39.92" overflow="visible" version="1.1" viewBox="0 0 39.92 39.92" width="39.92">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,39.92) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
               <svg:path d="M 0 0 L 39.37 39.37 L 39.37 0" style="fill:none"/>
@@ -791,7 +789,7 @@ Hello
     </para>
     <para xml:id="S6.p2">
       <p>clip
- <picture height="39.92" width="39.92" xml:id="S6.p2.pic1">
+<picture height="39.92" width="39.92" xml:id="S6.p2.pic1">
           <svg:svg height="39.92" overflow="visible" version="1.1" viewBox="0 0 39.92 39.92" width="39.92">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,39.92) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
               <svg:clipPath id="pgfcp9">
@@ -804,7 +802,7 @@ Hello
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="25.59" width="86.61" xml:id="S6.p2.pic2">
+<picture height="25.59" width="86.61" xml:id="S6.p2.pic2">
           <svg:svg height="25.59" overflow="visible" version="1.1" viewBox="0 0 86.61 25.59" width="86.61">
             <svg:g fill="#000000" stroke="#000000" transform="translate(0,25.59) matrix(1 0 0 -1 0 0) translate(3.94,0) translate(0,1.97)">
               <svg:g stroke-width="2.84528pt">
@@ -816,14 +814,14 @@ Hello
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="25.01" width="103.75" xml:id="S6.p2.pic3">
+<picture height="25.01" width="103.75" xml:id="S6.p2.pic3">
           <svg:svg height="25.01" overflow="visible" version="1.1" viewBox="0 0 103.75 25.01" width="103.75">
             <svg:g fill="#000000" stroke="#000000" stroke-width="1.0pt" transform="translate(0,25.01) matrix(1 0 0 -1 0 0) translate(12.5,0) translate(0,12.5)">
               <svg:g color="#FF0000" fill="#FF0000" stroke="#FF0000">
                 <svg:path d="M 11.81 0 C 11.81 6.52 6.52 11.81 0 11.81 C -6.52 11.81 -11.81 6.52 -11.81 0 C -11.81 -6.52 -6.52 -11.81 0 -11.81 C 6.52 -11.81 11.81 -6.52 11.81 0 Z M 0 0"/>
-                <svg:g stroke="#000000">
-                  <svg:path d="M 51.18 0 C 51.18 6.52 45.89 11.81 39.37 11.81 C 32.85 11.81 27.56 6.52 27.56 0 C 27.56 -6.52 32.85 -11.81 39.37 -11.81 C 45.89 -11.81 51.18 -6.52 51.18 0 Z M 39.37 0"/>
-                </svg:g>
+              </svg:g>
+              <svg:g color="#FF0000" fill="#FF0000" stroke="#000000">
+                <svg:path d="M 51.18 0 C 51.18 6.52 45.89 11.81 39.37 11.81 C 32.85 11.81 27.56 6.52 27.56 0 C 27.56 -6.52 32.85 -11.81 39.37 -11.81 C 45.89 -11.81 51.18 -6.52 51.18 0 Z M 39.37 0"/>
               </svg:g>
               <svg:g color="#FF0000" fill="#FF0000" stroke="#FF0000">
                 <svg:path d="M 90.55 0 C 90.55 6.52 85.26 11.81 78.74 11.81 C 72.22 11.81 66.93 6.52 66.93 0 C 66.93 -6.52 72.22 -11.81 78.74 -11.81 C 85.26 -11.81 90.55 -6.52 90.55 0 Z M 78.74 0"/>
@@ -831,7 +829,7 @@ Hello
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="0.55" width="39.92" xml:id="S6.p2.pic4">
+<picture height="1" width="39.92" xml:id="S6.p2.pic4">
           <svg:svg height="1" overflow="visible" version="1.1" viewBox="0 0 39.92 1" width="39.92">
             <svg:g fill="#000000" stroke="#000000" transform="translate(0,1) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
               <svg:g stroke-width="0.4pt">
@@ -846,20 +844,20 @@ Hello
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="55.12" width="74.8" xml:id="S6.p2.pic5">
+<picture height="55.12" width="74.8" xml:id="S6.p2.pic5">
           <svg:svg height="55.12" overflow="visible" version="1.1" viewBox="0 0 74.8 55.12" width="74.8">
             <svg:g fill="#000000" fill-rule="evenodd" stroke="#000000" stroke-width="0.4pt" transform="translate(0,55.12) matrix(1 0 0 -1 0 0) translate(27.56,0) translate(0,27.56)">
               <svg:path d="M 27.56 0 C 27.56 15.22 15.22 27.56 0 27.56 C -15.22 27.56 -27.56 15.22 -27.56 0 C -27.56 -15.22 -15.22 -27.56 0 -27.56 C 15.22 -27.56 27.56 -15.22 27.56 0 Z M 0 0 M 47.24 0 C 47.24 15.22 34.91 27.56 19.69 27.56 C 4.46 27.56 -7.87 15.22 -7.87 0 C -7.87 -15.22 4.46 -27.56 19.69 -27.56 C 34.91 -27.56 47.24 -15.22 47.24 0 Z M 19.69 0" style="stroke:none"/>
             </svg:g>
           </svg:svg>
         </picture>
- <picture height="55.12" width="74.8" xml:id="S6.p2.pic6">
+<picture height="55.12" width="74.8" xml:id="S6.p2.pic6">
           <svg:svg height="55.12" overflow="visible" version="1.1" viewBox="0 0 74.8 55.12" width="74.8">
             <svg:g fill="#000000" fill-rule="nonzero" stroke="#000000" stroke-width="0.4pt" transform="translate(0,55.12) matrix(1 0 0 -1 0 0) translate(27.56,0) translate(0,27.56)">
               <svg:path d="M 27.56 0 C 27.56 15.22 15.22 27.56 0 27.56 C -15.22 27.56 -27.56 15.22 -27.56 0 C -27.56 -15.22 -15.22 -27.56 0 -27.56 C 15.22 -27.56 27.56 -15.22 27.56 0 Z M 0 0 M 47.24 0 C 47.24 15.22 34.91 27.56 19.69 27.56 C 4.46 27.56 -7.87 15.22 -7.87 0 C -7.87 -15.22 4.46 -27.56 19.69 -27.56 C 34.91 -27.56 47.24 -15.22 47.24 0 Z M 19.69 0" style="stroke:none"/>
             </svg:g>
           </svg:svg>
-        </picture><break/> <picture height="5.96" width="11.92" xml:id="S6.p2.pic7">
+        </picture><break/><picture height="5.96" width="11.92" xml:id="S6.p2.pic7">
           <svg:svg height="5.96" overflow="visible" version="1.1" viewBox="0 0 11.92 5.96" width="11.92">
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,5.96) matrix(1 0 0 -1 0 0)">
               <svg:path d="M 11.92 0 C 11.92 6.58 6.58 11.92 0 11.92 C -6.58 11.92 -11.92 6.58 -11.92 0 C -11.92 -6.58 -6.58 -11.92 0 -11.92 C 6.58 -11.92 11.92 -6.58 11.92 0 Z M 0 0" style="fill:none"/>
@@ -876,7 +874,7 @@ Hello
     </tags>
     <title><tag close=" ">7</tag>Arrows</title>
     <para xml:id="S7.p1">
-      <picture height="0.55" width="39.92" xml:id="S7.p1.pic1">
+      <picture height="1" width="39.92" xml:id="S7.p1.pic1">
         <svg:svg height="1" overflow="visible" version="1.1" viewBox="0 0 39.92 1" width="39.92">
           <svg:g fill="#000000" stroke="#000000" transform="translate(0,1) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
             <svg:g stroke-width="0.4pt">
@@ -1022,7 +1020,7 @@ Hello
     <para xml:id="S8.p1">
       <picture height="147.77" width="103.2" xml:id="S8.p1.pic1">
         <svg:svg height="147.77" overflow="visible" version="1.1" viewBox="0 0 103.2 147.77" width="103.2">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,147.77) matrix(1 0 0 -1 0 0) translate(36.22,0) translate(0,130.49)">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,147.77) matrix(1 0 0 -1 0 0) translate(36.22,0) translate(0,130.5)">
             <svg:clipPath id="pgfcp10">
               <svg:path d="M -35.95 -17 L -35.95 17 L 29.03 17 L 35.95 10.08 L 35.95 -17 Z M 29.03 17 L 29.03 10.08 L 35.95 10.08 L 29.03 10.08"/>
             </svg:clipPath>
@@ -1037,7 +1035,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#808080"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh11);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -1151,7 +1149,7 @@ Hello
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt">
               <svg:path d="M 232.62 78.19 L 3.6 78.19 L 3.6 9.54 L 232.62 9.54 Z M 3.6 9.54" style="fill:none"/>
               <svg:g transform="matrix(2.0 0.0 0.0 2.0 12.83 46.44)">
-                <svg:foreignObject height="25.1" overflow="visible" style="--ltx-fo-width:7.61em;--ltx-fo-height:0.81em;--ltx-fo-depth:1em;" transform="matrix(1 0 0 -1 0 11.26)" width="105.28">MathML: <Math mode="inline" tex="\sum_{i=1}^{10}t_{i}" text="((sum _ (i = 1)) ^ 10)@(t _ i)" xml:id="S8.p3.pic1.m1">
+                <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:4.51em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.61)" width="62.46">MathML: <Math mode="inline" tex="\sum_{i=1}^{10}t_{i}" text="((sum _ (i = 1)) ^ 10)@(t _ i)" xml:id="S8.p3.pic1.m1">
                     <XMath>
                       <XMApp>
                         <XMApp>
@@ -1178,30 +1176,30 @@ Hello
               </svg:g>
               <svg:g color="#FFCCCC" fill="#FFCCCC" stroke="#FFCCCC">
                 <svg:path d="M 303.04 155.24 L 127.41 124.28 L 134.88 81.88 L 310.52 112.85 Z M 134.88 81.88" style="stroke:none"/>
-                <svg:g transform="matrix(1.96964 0.34729 -0.34729 1.96964 141.43 97.87)">
-                  <svg:foreignObject color="#000000" height="12.3" overflow="visible" style="--ltx-fo-width:5.78em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="79.95"><text color="#000000">More: <Math mode="inline" tex="\int e^{-x}dx" text="integral@(e ^ (- x) * differential-d@(x))" xml:id="S8.p3.pic1.m2">
-                        <XMath>
+              </svg:g>
+              <svg:g color="#FFCCCC" transform="matrix(1.96964 0.34729 -0.34729 1.96964 141.43 97.87)">
+                <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:2.86em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="39.63"><text color="#000000">More: <Math mode="inline" tex="\int e^{-x}dx" text="integral@(e ^ (- x) * differential-d@(x))" xml:id="S8.p3.pic1.m2">
+                      <XMath>
+                        <XMApp>
+                          <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
                           <XMApp>
-                            <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+                            <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
                             <XMApp>
-                              <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
+                              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                              <XMTok font="italic" role="UNKNOWN">e</XMTok>
                               <XMApp>
-                                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">e</XMTok>
-                                <XMApp>
-                                  <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
-                                </XMApp>
-                              </XMApp>
-                              <XMApp>
-                                <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                                <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
                               </XMApp>
                             </XMApp>
+                            <XMApp>
+                              <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                            </XMApp>
                           </XMApp>
-                        </XMath>
-                      </Math></text></svg:foreignObject>
-                </svg:g>
+                        </XMApp>
+                      </XMath>
+                    </Math></text></svg:foreignObject>
               </svg:g>
             </svg:g>
           </svg:g>
@@ -1215,10 +1213,12 @@ Hello
             <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
               <svg:path d="M 0 0 M 0 0 L 314.96 0 M 0 78.74 L 314.96 78.74 M 0 157.48 L 314.96 157.48 M 0 236.19 L 314.96 236.19 M 0 0 L 0 236.22 M 78.74 0 L 78.74 236.22 M 157.48 0 L 157.48 236.22 M 236.22 0 L 236.22 236.22 M 314.93 0 L 314.93 236.22 M 314.96 236.22" style="fill:none"/>
             </svg:g>
-            <svg:g color="#FFCCCC" fill="#FFCCCC" stroke="#FFCCCC" stroke-width="0.4pt">
-              <svg:path d="M 192.24 107.8 h 53.44 v 21.52 h -53.44 Z" style="stroke:none"/>
-              <svg:g transform="matrix(1.0 0.0 0.0 1.0 196.85 115.1)">
-                <svg:foreignObject color="#000000" height="12.3" overflow="visible" style="--ltx-fo-width:3.2em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="44.22"><Math mode="inline" tex="\int_{0}^{\infty}e^{-x}dx" text="((integral _ 0) ^ infinity)@(e ^ (- x) * differential-d@(x))" xml:id="S8.p4.pic1.m1">
+            <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt">
+              <svg:g color="#FFCCCC" fill="#FFCCCC" stroke="#FFCCCC">
+                <svg:path d="M 189.48 107.8 h 58.96 v 21.52 h -58.96 Z" style="stroke:none"/>
+              </svg:g>
+              <svg:g color="#FFCCCC" transform="matrix(1.0 0.0 0.0 1.0 194.09 115.1)">
+                <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:3.59em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="49.74"><Math mode="inline" tex="\int_{0}^{\infty}e^{-x}dx" text="((integral _ 0) ^ infinity)@(e ^ (- x) * differential-d@(x))" xml:id="S8.p4.pic1.m1">
                     <XMath>
                       <XMApp color="#000000">
                         <XMApp>
@@ -1259,10 +1259,10 @@ Hello
             <svg:path d="M 21.73 0 C 21.73 12 12 21.73 0 21.73 C -12 21.73 -21.73 12 -21.73 0 C -21.73 -12 -12 -21.73 0 -21.73 C 12 -21.73 21.73 -12 21.73 0 Z M 0 0" style="fill:none"/>
             <svg:path d="M -21.45 0 L 21.45 0" style="fill:none"/>
             <svg:g transform="matrix(1.0 0.0 0.0 1.0 -3.65 7.58)">
-              <svg:text transform="matrix(1 0 0 -1 0 0)">q</svg:text>
+              <svg:foreignObject height="8.65" overflow="visible" style="--ltx-fo-width:0.53em;--ltx-fo-height:0.43em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 5.96)" width="7.3">q</svg:foreignObject>
             </svg:g>
             <svg:g transform="matrix(1.0 0.0 0.0 1.0 -6.92 -13.81)">
-              <svg:text transform="matrix(1 0 0 -1 0 0)">01</svg:text>
+              <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="13.84">01</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -1370,16 +1370,20 @@ Hello
     </tags>
     <title><tag close=" ">9</tag>Matrices</title>
     <para xml:id="S9.p1">
-      <picture height="24.41" width="25.37" xml:id="S9.p1.pic1">
-        <svg:svg height="24.41" overflow="visible" version="1.1" viewBox="0 0 25.37 24.41" width="25.37">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,24.41) matrix(1 0 0 -1 0 0) translate(12.68,0) translate(0,12.2) matrix(1.0 0.0 0.0 1.0 -8.07 0)">
-            <svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 7.59)">
-              <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 7.59)">
-                <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" fill="#000000" stroke="#000000" transform="matrix(1 0 0 -1 0 0) translate(8.07,0) matrix(1.0 0.0 0.0 1.0 -3.46 -2.98)">
-                  <svg:foreignObject height="5.96" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 5.96)" width="6.92">a</svg:foreignObject>
-                </svg:g>
-              </svg:g>
-            </svg:g>
+      <picture height="42.43" width="659.22" xml:id="S9.p1.pic1">
+        <svg:svg height="42.43" overflow="visible" version="1.1" viewBox="0 0 659.22 42.43" width="659.22">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,42.43) matrix(1 0 0 -1 0 0) translate(329.62,0) translate(0,21.22) matrix(1.0 0.0 0.0 1.0 -325 16.6)">
+            <svg:foreignObject height="33.21" overflow="visible" style="--ltx-fo-width:46.98em;--ltx-fo-height:0em;--ltx-fo-depth:2.4em;" transform="matrix(1 0 0 -1 0 0)" width="650.01"><inline-block vattach="bottom">
+                <ERROR class="undefined"/>
+                <p width="0.0pt"/>
+                <p width="0.0pt"/>
+                <p><text font="nullfont"><svg:svg>
+                      <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -3.46 -2.98)">
+                        <svg:foreignObject height="5.96" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 5.96)" width="6.92"><text font="serif">a</text></svg:foreignObject>
+                      </svg:g>
+                      <svg:g/>
+                    </svg:svg></text></p>
+              </inline-block></svg:foreignObject>
           </svg:g>
         </svg:svg>
       </picture>
@@ -1600,11 +1604,11 @@ Hello
             <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
               <svg:path d="M 0 0 M 0 0 L 118.11 0 M 0 39.37 L 118.11 39.37 M 0 78.73 L 118.11 78.73 M 0 0 L 0 78.74 M 39.37 0 L 39.37 78.74 M 78.74 0 L 78.74 78.74 M 118.1 0 L 118.1 78.74 M 118.11 78.74" style="fill:none"/>
             </svg:g>
-            <svg:g color="#FF0000" fill="#FF0000" stroke="#FF0000" stroke-width="0.4pt">
-              <svg:g transform="matrix(1.73206 1.0 -1.0 1.73206 35.02 9.12)">
-                <svg:foreignObject color="#000000" height="9.61" overflow="visible" style="--ltx-fo-width:3.17em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.61)" width="43.86">rotated</svg:foreignObject>
+            <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt">
+              <svg:g color="#FF0000" transform="matrix(1.73206 1.0 -1.0 1.73206 35.02 9.12)">
+                <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:3.17em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.61)" width="43.86">rotated</svg:foreignObject>
               </svg:g>
-              <svg:g color="#000000" transform="matrix(1.0 0.0 0.0 1.0 32.79 35.91)">
+              <svg:g transform="matrix(1.0 0.0 0.0 1.0 32.79 35.91)">
                 <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:5.12em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="70.8">shifted only</svg:foreignObject>
               </svg:g>
             </svg:g>
@@ -1639,27 +1643,38 @@ Hello
       <picture height="79.29" width="118.66" xml:id="S11.p1.pic1">
         <svg:svg height="79.29" overflow="visible" version="1.1" viewBox="0 0 118.66 79.29" width="118.66">
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,79.29) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
-            <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z" style="stroke:none"/>
             <svg:defs>
-              <svg:pattern id="pgfupat12" xlink:href="#pgfpat21">
-                <svg:g fill="#000000" stroke="#000000">
-                  <svg:use xlink:href="#pgfsym21"/>
-                </svg:g>
+              <svg:pattern height="39" id="pgfpat21" patternUnits="userSpaceOnUse" width="39">
+                <svg:symbol id="pgfsym21">
+                  <svg:g>
+                    <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z" style="stroke:none"/>
+                  </svg:g>
+                  <svg:defs>
+                    <svg:pattern id="pgfupat12" xlink:href="#pgfpat21">
+                      <svg:g fill="#000000" stroke="#000000">
+                        <svg:use xlink:href="#pgfsym21"/>
+                      </svg:g>
+                    </svg:pattern>
+                  </svg:defs>
+                  <svg:g fill="#000000">
+                    <svg:path d="M 0 0 M 0 0 L 0 78.74 L 59.06 78.74 L 59.06 0 Z M 59.06 78.74"/>
+                  </svg:g>
+                  <svg:g fill="url(#pgfupat12)"/>
+                  <svg:g>
+                    <svg:defs>
+                      <svg:pattern id="pgfupat13" xlink:href="#pgfpat21">
+                        <svg:g fill="#FF0000" stroke="#FF0000">
+                          <svg:use xlink:href="#pgfsym21"/>
+                        </svg:g>
+                      </svg:pattern>
+                    </svg:defs>
+                  </svg:g>
+                  <svg:g fill="#000000">
+                    <svg:path d="M 59.06 0 M 59.06 0 L 59.06 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
+                  </svg:g>
+                </svg:symbol>
               </svg:pattern>
             </svg:defs>
-            <svg:g fill="url(#pgfupat12)">
-              <svg:path d="M 0 0 M 0 0 L 0 78.74 L 59.06 78.74 L 59.06 0 Z M 59.06 78.74"/>
-            </svg:g>
-            <svg:defs>
-              <svg:pattern id="pgfupat13" xlink:href="#pgfpat21">
-                <svg:g fill="#FF0000" stroke="#FF0000">
-                  <svg:use xlink:href="#pgfsym21"/>
-                </svg:g>
-              </svg:pattern>
-            </svg:defs>
-            <svg:g fill="url(#pgfupat13)">
-              <svg:path d="M 59.06 0 M 59.06 0 L 59.06 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
-            </svg:g>
           </svg:g>
         </svg:svg>
       </picture>
@@ -1668,12 +1683,20 @@ Hello
       <picture height="79.29" width="118.66" xml:id="S11.p2.pic1">
         <svg:svg height="79.29" overflow="visible" version="1.1" viewBox="0 0 118.66 79.29" width="118.66">
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,79.29) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
-            <svg:g fill="#008000">
-              <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z"/>
-            </svg:g>
-            <svg:g fill="url(#pgfpat22)">
-              <svg:path d="M 0 0 M 0 0 L 0 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
-            </svg:g>
+            <svg:defs>
+              <svg:pattern height="39" id="pgfpat22" patternUnits="userSpaceOnUse" width="39">
+                <svg:symbol id="pgfsym22">
+                  <svg:g fill="#000000">
+                    <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z"/>
+                  </svg:g>
+                  <svg:g/>
+                  <svg:g fill="#000000">
+                    <svg:path d="M 0 0 M 0 0 L 0 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
+                  </svg:g>
+                  <svg:g fill="url(#pgfpat22)"/>
+                </svg:symbol>
+              </svg:pattern>
+            </svg:defs>
           </svg:g>
         </svg:svg>
       </picture>
@@ -1689,10 +1712,10 @@ Hello
                 </svg:g>
               </svg:pattern>
             </svg:defs>
-            <svg:g fill="url(#pgfupat14)">
+            <svg:g fill="#000000">
               <svg:path d="M 0 0 M 0 0 L 0 78.74 L 59.06 78.74 L 59.06 0 Z M 59.06 78.74"/>
             </svg:g>
-            <svg:g fill="url(#pgfpat22)">
+            <svg:g fill="#000000">
               <svg:path d="M 59.06 0 M 59.06 0 L 59.06 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
             </svg:g>
           </svg:g>
@@ -1766,17 +1789,15 @@ Hello
             <svg:g color="#FFFF00" fill="#FFFF00" stroke="#FFFF00">
               <svg:path d="M -39.37 -39.37 M -39.37 -39.37 L -39.37 39.37 L 39.37 39.37 L 39.37 -39.37 Z M 39.37 39.37" style="stroke:none"/>
             </svg:g>
-            <svg:g color="#000000" fill="#000000" stroke="#000000">
-              <svg:path d="M -31.5 -31.5 M -31.5 -31.5 L -31.5 31.5 L 31.5 31.5 L 31.5 -31.5 Z M 31.5 31.5" style="stroke:none"/>
-            </svg:g>
+            <svg:path d="M -31.5 -31.5 M -31.5 -31.5 L -31.5 31.5 L 31.5 31.5 L 31.5 -31.5 Z M 31.5 31.5" style="stroke:none"/>
             <svg:g color="#0000FF" fill="#0000FF" stroke="#0000FF">
               <svg:path d="M 0 0 M 39.37 0 C 39.37 21.74 21.74 39.37 0 39.37 C -21.74 39.37 -39.37 21.74 -39.37 0 C -39.37 -21.74 -21.74 -39.37 0 -39.37 C 21.74 -39.37 39.37 -21.74 39.37 0 Z M 0 0" style="stroke:none"/>
             </svg:g>
             <svg:g color="#8080FF" fill="#8080FF" stroke="#8080FF" stroke-width="0.4pt">
               <svg:path d="M -19.69 -39.37 M -19.69 -39.37 L -19.69 39.37 L 19.69 39.37 L 19.69 -39.37 Z M 19.69 39.37" style="stroke:none"/>
             </svg:g>
-            <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0 0.0 0.0 1.0 -32.52 -3.46)">
-              <svg:foreignObject color="#FFFFFF" height="12.3" overflow="visible" style="--ltx-fo-width:4.7em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="65.03">foreground</svg:foreignObject>
+            <svg:g color="#FFFFFF" fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0 0.0 0.0 1.0 -32.52 -3.46)">
+              <svg:foreignObject color="#000000" height="12.3" overflow="visible" style="--ltx-fo-width:4.7em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="65.03"><text color="#FFFFFF">foreground</text></svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -1807,7 +1828,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#000000"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh16);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -1826,7 +1847,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#000000"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh18);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -1845,7 +1866,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#000000"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh20);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -1874,13 +1895,13 @@ Hello
                     <svg:stop offset="1.0" stop-color="#800080"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh22);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
             </svg:g>
-            <svg:g fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0 0.0 0.0 1.0 9.35 14.88)">
-              <svg:foreignObject color="#FFFFFF" height="9.61" overflow="visible" style="--ltx-fo-width:4.37em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.61)" width="60.42"><text font="smallcaps">Awesome!</text></svg:foreignObject>
+            <svg:g color="#FFFFFF" fill="#FFFFFF" stroke="#FFFFFF" transform="matrix(1.0 0.0 0.0 1.0 9.35 14.88)">
+              <svg:foreignObject color="#000000" height="9.61" overflow="visible" style="--ltx-fo-width:4.37em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.61)" width="60.42"><text color="#FFFFFF" font="smallcaps">Awesome!</text></svg:foreignObject>
             </svg:g>
             <svg:clipPath id="pgfcp23">
               <svg:path d="M 118.11 0 M 118.11 0 L 118.11 78.74 L 157.48 78.74 L 157.48 0 Z M 157.48 78.74"/>
@@ -1899,7 +1920,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#800080"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh24);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -1982,11 +2003,11 @@ Hello
       </picture>
     </para>
     <para xml:id="S14.p4">
-      <picture height="201.41" width="599.72" xml:id="S14.p4.pic1">
-        <svg:svg height="201.41" overflow="visible" version="1.1" viewBox="0 0 599.72 201.41" width="599.72">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,201.41) matrix(1 0 0 -1 0 0) translate(33.56,0) translate(0,31.26)">
+      <picture height="201.41" width="595.11" xml:id="S14.p4.pic1">
+        <svg:svg height="201.41" overflow="visible" version="1.1" viewBox="0 0 595.11 201.41" width="595.11">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,201.41) matrix(1 0 0 -1 0 0) translate(31.26,0) translate(0,31.26)">
             <svg:path d="M 69.44 69.44" style="fill:none"/>
-            <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -28.95 -26.65)">
+            <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -26.65 -26.65)">
               <svg:g class="ltx_nestedsvg" transform="matrix(1 0 0 1 0 0)">
                 <svg:defs>
                   <svg:linearGradient gradientTransform="rotate(90)" id="pgfsh30">
@@ -2004,10 +2025,10 @@ Hello
             </svg:g>
             <svg:path d="M 69.44 0" style="fill:none"/>
             <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 5.74 -14.5)">
-              <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:9.26em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="128.18">first two applications</svg:foreignObject>
+              <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:9.26em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="128.19">first two applications</svg:foreignObject>
             </svg:g>
             <svg:path d="M 266.29 69.44" style="fill:none"/>
-            <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 167.9 -26.65)">
+            <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 170.2 -26.65)">
               <svg:g class="ltx_nestedsvg" transform="matrix(1 0 0 1 0 0)">
                 <svg:defs>
                   <svg:linearGradient gradientTransform="rotate(90)" id="pgfsh31">
@@ -2028,7 +2049,7 @@ Hello
               <svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:7.34em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.61)" width="101.51">third application</svg:foreignObject>
             </svg:g>
             <svg:path d="M 463.15 69.44" style="fill:none"/>
-            <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 364.75 -26.65)">
+            <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 367.05 -26.65)">
               <svg:g class="ltx_nestedsvg" transform="matrix(1 0 0 1 0 0)">
                 <svg:defs>
                   <svg:linearGradient gradientTransform="rotate(90)" id="pgfsh32">
@@ -2150,7 +2171,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#000000"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh41);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -2169,7 +2190,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#000000"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh43);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -2188,7 +2209,7 @@ Hello
                     <svg:stop offset="1.0" stop-color="#000000"/>
                   </svg:linearGradient>
                 </svg:defs>
-                <svg:g transform="translate(-69.44 -69.44)">
+                <svg:g transform="translate(-69.44499 -69.44499)">
                   <svg:rect height="138.89" style="fill:url(#pgfsh45);stroke:none" width="138.89"/>
                 </svg:g>
               </svg:g>
@@ -2214,7 +2235,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 0 -8.51)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2226,7 +2247,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -48.43 -8.51)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2238,7 +2259,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -24.21 -17.02)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2250,7 +2271,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -48.43 -17.02)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2262,7 +2283,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -24.21 0)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2274,7 +2295,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -48.43 0)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2286,7 +2307,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -24.21 0)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2298,7 +2319,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 -48.43 0)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2310,7 +2331,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 54.53 0)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2322,7 +2343,7 @@ Hello
               <svg:path d="M -78.74 -39.37 M -78.74 0 L 78.74 0 M -78.74 -39.37 L -78.74 39.37 M 0 -39.37 L 0 39.37 M 78.71 -39.37 L 78.71 39.37 M 78.74 39.37" style="fill:none"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(2.0 0.0 0.0 2.0 54.53 -39.37)">
-              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.21">text</svg:foreignObject>
+              <svg:foreignObject height="8.51" overflow="visible" style="--ltx-fo-width:1.75em;--ltx-fo-height:0.62em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.51)" width="24.22">text</svg:foreignObject>
             </svg:g>
           </svg:g>
         </svg:svg>
@@ -2689,7 +2710,7 @@ Hello
             <svg:g color="#808080" fill="#808080" stroke="#808080" stroke-width="0.2pt">
               <svg:path d="M 0 0 M 0 0 L 78.74 0 M 0 39.37 L 78.74 39.37 M 0 78.73 L 78.74 78.73 M 0 0 L 0 78.74 M 39.37 0 L 39.37 78.74 M 78.73 0 L 78.73 78.74 M 78.74 78.74" style="fill:none"/>
             </svg:g>
-            <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1.0 0.0 0.0 1.0 -90.68 1.09)">
+            <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1.0 0.0 0.0 1.0 -86.06 1.09)">
               <svg:g class="ltx_nestedsvg" fill="#000000" fill-opacity="0.5" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(-2.18,0) translate(0,38.28) translate(-37.19,0) translate(37.19,0) translate(37.19,0) translate(118.11,0)">
                 <svg:g fill="#FFFFFF" stroke="#FF0000" stroke-width="8.61108pt">
                   <svg:path d="M 72.78 0 C 72.78 17.85 58.31 32.32 40.46 32.32 C 22.61 32.32 8.13 17.85 8.13 0 C 8.13 -17.85 22.61 -32.32 40.46 -32.32 C 58.31 -32.32 72.78 -17.85 72.78 0 Z M 40.46 0"/>
@@ -2713,7 +2734,7 @@ Hello
             <svg:g color="#FF0000" fill="#FF0000" stroke="#FF0000">
               <svg:path d="M 39.37 0 C 39.37 21.74 21.74 39.37 0 39.37 C -21.74 39.37 -39.37 21.74 -39.37 0 C -39.37 -21.74 -21.74 -39.37 0 -39.37 C 21.74 -39.37 39.37 -21.74 39.37 0 Z M 0 0" style="fill:none"/>
             </svg:g>
-            <svg:g color="#000000" fill="#000000" stroke="#000000" stroke-opacity="0.5">
+            <svg:g color="#000000" stroke-opacity="0.5">
               <svg:path d="M 78.74 0 C 78.74 21.74 61.11 39.37 39.37 39.37 C 17.63 39.37 0 21.74 0 0 C 0 -21.74 17.63 -39.37 39.37 -39.37 C 61.11 -39.37 78.74 -21.74 78.74 0 Z M 39.37 0" style="fill:none"/>
             </svg:g>
           </svg:g>
@@ -2792,7 +2813,7 @@ Hello
           </svg:g>
         </svg:svg>
       </picture>
-      <picture height="0" width="0" xml:id="S17.p1.pic4">
+      <picture height="1" width="1" xml:id="S17.p1.pic4">
         <svg:svg height="1" overflow="visible" version="1.1" viewBox="0 0 1 1" width="1">
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,1) matrix(1 0 0 -1 0 0)">
             <svg:path d="M 6.92 0 C 6.92 3.82 3.82 6.92 0 6.92 C -3.82 6.92 -6.92 3.82 -6.92 0 C -6.92 -3.82 -3.82 -6.92 0 -6.92 C 3.82 -6.92 6.92 -3.82 6.92 0 Z" style="fill:none"/>
@@ -2809,13 +2830,13 @@ Hello
     </tags>
     <title><tag close=" ">18</tag>Fun Patterns</title>
     <para xml:id="S18.p1">
-      <picture height="210.63" width="453.93" xml:id="S18.p1.pic1">
-        <svg:svg height="210.63" overflow="visible" version="1.1" viewBox="0 0 453.93 210.63" width="453.93">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,210.63) matrix(1 0 0 -1 0 0) translate(226.97,0) translate(0,105.31) matrix(1.0 0.0 0.0 1.0 -222.35 -100.7)">
-            <svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(79.97,0) translate(0,61.33)">
+      <picture height="210.63" width="440.09" xml:id="S18.p1.pic1">
+        <svg:svg height="210.63" overflow="visible" version="1.1" viewBox="0 0 440.09 210.63" width="440.09">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,210.63) matrix(1 0 0 -1 0 0) translate(220.05,0) translate(0,105.32) matrix(1.0 0.0 0.0 1.0 -215.44 -100.7)">
+            <svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(77.67,0) translate(0,61.33)">
               <svg:path d="M 39.37 39.37" style="fill:none"/>
-              <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -75.36 -56.72)">
-                <svg:foreignObject height="192.18" overflow="visible" style="--ltx-fo-width:16.67em;--ltx-fo-height:13.89em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 192.18)" width="230.62">YAY! <picture height="192.18" width="192.18" xml:id="S18.p1.pic1.pic1">
+              <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -73.06 -56.72)">
+                <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:2.53em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.61)" width="34.98">YAY!<picture height="192.18" width="192.18" xml:id="S18.p1.pic1.pic1">
                     <svg:svg height="192.18" overflow="visible" version="1.1" viewBox="0 0 192.18 192.18" width="192.18">
                       <svg:g transform="translate(0,192.18) matrix(1 0 0 -1 0 0)">
                         <svg:defs>
