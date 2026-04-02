@@ -205,13 +205,13 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 - [x] **A2. `--format=html5`** — HTML5 output via XSLT stylesheet.
 - [x] **A3. `--pmml`** — Presentation MathML generation.
 - [x] **A4. `--nodefaultresources`** — suppress built-in CSS/JS resource copying.
-- [ ] **A5. `--css=<file>`** — inject additional CSS `<link>` elements into the HTML output. Perl passes these as XSLT parameters (`CSS`), which the stylesheet expands into `<link>` tags. Need: CLI parsing of `--css` (repeatable), forwarding to XSLT params.
-- [ ] **A6. `--preload=<file>`** — preload a `.sty` file before processing the document. Perl loads it via `RequirePackage` during initialization. Need: CLI parsing, pass to `CoreOptions::preload`.
-- [ ] **A7. `--path=<dir>`** — add search paths for finding packages and inputs. Perl appends to `@paths`. Need: CLI parsing (repeatable), pass to `CoreOptions::search_paths`.
+- [x] **A5. `--css=<file>`** — inject additional CSS `<link>` elements into the HTML output. Repeatable. Passed as XSLT parameter.
+- [x] **A6. `--preload=<file>`** — preload a `.sty` file before processing. Repeatable. Passed to `CoreOptions::preload`.
+- [x] **A7. `--path=<dir>`** — add search paths for finding packages and inputs. Repeatable. Passed to `CoreOptions::search_paths`.
 - [ ] **A8. `--mathtex`** — add TeX source annotation to parallel MathML markup. Perl adds `m:annotation[@encoding='application/x-tex']` alongside PMML. Need: MathML processor option to emit tex annotation.
 - [ ] **A9. `--noinvisibletimes`** — strip invisible times character (U+2062) from MathML output. Perl checks `$$MATHPROCESSOR{invisibletimes}` flag. Need: MathML processor option.
 - [ ] **A10. `--timeout=<seconds>`** — conversion timeout. Perl uses `alarm()` signal. Need: timeout wrapper around conversion, possibly via `std::thread` + timeout.
-- [ ] **A11. `--nocomments`** — omit XML comments from output. Perl sets `includecomments => 0` in Core options, which suppresses `%`-line comments and progress markers. Need: CLI flag, maps to `CoreOptions::include_comments = Some(false)`.
+- [x] **A11. `--nocomments`** — omit XML comments from output. Maps to `CoreOptions::include_comments = Some(false)`.
 
 ### Diff reduction tasks
 

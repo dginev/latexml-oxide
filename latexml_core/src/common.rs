@@ -96,6 +96,14 @@ pub struct Config {
   pub mode:                    Option<DigestionMode>,
   pub bindings_dispatch:       Option<BindingDispatcher>,
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// Packages to preload before processing (e.g. --preload=ar5iv.sty)
+  pub preload:                 Option<Vec<String>>,
+  /// Additional search paths for finding packages/inputs (e.g. --path=dir)
+  pub search_paths:            Option<Vec<String>>,
+  /// Whether to include XML comments in output (--nocomments sets false)
+  pub include_comments:        Option<bool>,
+  /// Whether to skip math parsing (--nomathparse)
+  pub nomathparse:             Option<bool>,
 }
 impl Default for Config {
   fn default() -> Self {
@@ -109,6 +117,10 @@ impl Default for Config {
       mode:                    Some(DigestionMode::LaTeX),
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      preload:                 None,
+      search_paths:            None,
+      include_comments:        None,
+      nomathparse:             None,
     }
   }
 }
