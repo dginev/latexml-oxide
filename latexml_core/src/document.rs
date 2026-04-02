@@ -2569,8 +2569,8 @@ impl Document {
   fn record_id_with_node(&mut self, id: &str, node: &Node) -> String {
     let prev_opt = if let Some(prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
-      // Can we recover?
-      if &self.node != prev {
+      // Can we recover? Only conflict if a DIFFERENT node already has this id.
+      if node != prev {
         Some(prev.clone())
       } else {
         None
