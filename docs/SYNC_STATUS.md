@@ -67,7 +67,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 ## Cross-Cutting Infrastructure Gaps
 
 1. **`FontDef` parameter type** — Simplified to `FontToken`. Blocks `\fontdimen`, `\hyphenchar` per-font tracking.
-2. **`DEFSIZE`** — Static 10.0; Perl reads `NOMINAL_FONT_SIZE` from state.
+2. ~~**`DEFSIZE`**~~ — **FIXED**: Now reads `NOMINAL_FONT_SIZE` from state via `defsize()` function (was static 10.0).
 
 ---
 
@@ -93,7 +93,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | alignment.rs | MINOR | padding CSS classes, ABSORB_LIMIT guard |
 | rewrite.rs | MINOR | ~90% ported. All core ops (Select/Replace/XPath/Wildcards/Seen). Missing: `compile_regexp`, `digest_rewrite` |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_findall` |
-| font.rs | MINOR | `DEFSIZE` from state |
+| font.rs | OK | `DEFSIZE` reads from state via `defsize()` |
 
 ---
 
