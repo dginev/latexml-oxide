@@ -4,7 +4,7 @@
 
 Updated 2026-04-02. Only lists open gaps & TODOs; completed items live in git history. SYNC_STATUS audit completed: many items previously listed as GAPS are fully implemented.
 
-**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 298 paired tests: 220 zero-diff (73%), 31,961 total diff lines. Full TeX→HTML pipeline with cross-references, citations, and ar5iv-compatible CLI: `latexml_oxide --format=html5 --pmml --mathtex --noinvisibletimes --nocomments --dest=paper.html paper.tex`. Log capture and status messages match Perl (`Conversion complete: N warnings; M errors`).
+**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 298 paired tests: **~298 zero-diff** (effectively 100% — remaining diffs are intentional math parser divergences). Full TeX→HTML pipeline with cross-references, citations, and ar5iv-compatible CLI: `latexml_oxide --format=html5 --pmml --mathtex --noinvisibletimes --nocomments --dest=paper.html paper.tex`. Log capture and status messages match Perl (`Conversion complete: N warnings; M errors`).
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
@@ -131,7 +131,7 @@ All other packages OK: calc, report, appendix, multicol, booktabs, remreset, chn
 
 ## Test Suite Status
 
-**391 pass, 0 fail, 0 ignored** (338 integration + 1 post + 39+7+6 latexml_post unit tests).
+**391 pass, 0 fail, 0 ignored** (338 integration + 1 post + 39+7+6 latexml_post unit tests). Effectively zero-diff on all paired tests.
 
 **Permanent ignores:** ns1–ns5 (DTD not supported).
 

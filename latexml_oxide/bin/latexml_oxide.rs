@@ -10,17 +10,6 @@ use std::process;
 use std::rc::Rc;
 
 fn main() -> Result<(), Box<dyn Error>> {
-  if latexml_core::util::logger::init(log::LevelFilter::Info).is_err() {
-    let err = || {
-      Error!(
-        "latexml",
-        "logger",
-        "Failed to load logger. Please check latexml_core::util::logger installed correctly."
-      );
-      Ok(())
-    };
-    err().ok();
-  }
   let mut argv: Vec<String> = env::args().skip(1).collect();
 
   // Parse --init=<file> flag (Perl: latexml --init=latex.ltx --dest=dump.ltxml)
@@ -56,10 +45,30 @@ fn main() -> Result<(), Box<dyn Error>> {
   let splitat_flag = extract_flag(&mut argv, "--splitat");
   let splitnaming_flag = extract_flag(&mut argv, "--splitnaming");
   let splitpath_flag = extract_flag(&mut argv, "--splitpath");
+  // Verbosity: --verbose / --quiet (Perl: -v increments, --quiet sets to -1)
+  let verbose_flag = argv.iter().any(|a| a == "--verbose" || a == "-v");
+  let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
+  // Preamble/postamble
+  let preamble_flag = extract_flag(&mut argv, "--preamble");
+  let postamble_flag = extract_flag(&mut argv, "--postamble");
+  // Input encoding
+  let inputencoding_flag = extract_flag(&mut argv, "--inputencoding");
+  // Number sections control
+  let nonumbersections_flag = argv.iter().any(|a| a == "--nonumbersections");
   // Remove boolean flags
   argv.retain(|a| !["--post", "--pmml", "--cmml", "--keepXMath", "--xmath",
     "--noscan", "--nocrossref", "--nodefaultresources", "--nocomments",
-    "--nomathparse", "--noinvisibletimes", "--mathtex", "--split"].contains(&a.as_str()));
+    "--nomathparse", "--noinvisibletimes", "--mathtex", "--split",
+    "--verbose", "-v", "--quiet", "-q", "--nonumbersections"].contains(&a.as_str()));
+
+  // Initialize logger with verbosity level (Perl: -v increments, --quiet sets -1)
+  let verbosity: i32 = if quiet_flag { -1 } else if verbose_flag { 1 } else { 0 };
+  let log_level = match verbosity {
+    v if v < 0 => log::LevelFilter::Warn,
+    0 => log::LevelFilter::Info,
+    _ => log::LevelFilter::Debug,
+  };
+  latexml_core::util::logger::init(log_level).ok();
 
   // Codegen mode doesn't need a source file — handle it early.
   if let Some(dump_path) = codegen_flag {
@@ -105,12 +114,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   // Prepare converter
   let opts = Config {
-    verbosity:               0,
+    verbosity,
     format:                  OutputFormat::HTML5,
     whatsin:                 DataSize::Document,
     whatsout:                DataSize::Document,
-    preamble:                None,
-    postamble:               None,
+    preamble:                preamble_flag,
+    postamble:               postamble_flag,
     mode:                    None,
     bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
@@ -123,6 +132,15 @@ fn main() -> Result<(), Box<dyn Error>> {
   if let Err(e) = converter.prepare_session(&opts) {
     eprintln!("Could not prepare converter session: {}", e);
     process::exit(1);
+  }
+
+  // Wire --nonumbersections into state (Perl Config.pm L478)
+  if nonumbersections_flag {
+    latexml_core::state::assign_value("no_number_sections", true, Some(latexml_core::state::Scope::Global));
+  }
+  // Wire --inputencoding (Perl Config.pm: sets inputencoding to load fontenc)
+  if let Some(ref _enc) = inputencoding_flag {
+    // TODO: trigger \usepackage[enc]{inputenc} — for now, UTF-8 is assumed
   }
 
   if init_file.is_some() {
