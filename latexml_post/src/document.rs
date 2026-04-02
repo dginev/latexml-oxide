@@ -99,7 +99,13 @@ impl PostDocument {
     if options.destination.is_some() && dest_dir.is_none() {
       if let Some(ref dest) = options.destination {
         if let Some(parent) = Path::new(dest).parent() {
-          dest_dir = Some(parent.to_string_lossy().to_string());
+          let parent_str = parent.to_string_lossy().to_string();
+          // Empty parent (e.g., from "paper.html") means current directory — use "." not ""
+          if parent_str.is_empty() {
+            dest_dir = Some(".".to_string());
+          } else {
+            dest_dir = Some(parent_str);
+          }
         }
       }
     }
