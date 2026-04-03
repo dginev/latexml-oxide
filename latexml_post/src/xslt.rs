@@ -212,14 +212,17 @@ impl Processor for XSLT {
     let result_doc = stylesheet.transform(&transform_doc, params)
       .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))?;
 
-    // Serialize the result
+    // Serialize as XML (not as_html). The as_html serializer in libxml2 drops
+    // closing tags after void elements like <br>, corrupting span nesting.
+    // We fix HTML5-specific issues (self-closing non-void tags, closing void tags)
+    // via regex post-processing in the binary's run_post_processing.
     let result_string = result_doc.to_string_with_options(libxml::tree::SaveOptions {
       format: false,
       no_declaration: false,
       no_empty_tags: false,
       no_xhtml: false,
       xhtml: false,
-      as_xml: false,
+      as_xml: true,
       as_html: false,
       non_significant_whitespace: false,
     });

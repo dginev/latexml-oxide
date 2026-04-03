@@ -186,6 +186,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **P3. MakeBibliography post-processor** — Port `LaTeXML::Post::MakeBibliography` (818 lines). Full FMT_SPEC table (article/book/incollection/report/thesis/website/software), citation style detection (numbers/author-year/alpha), getBibliographies (.bib.xml loading), referrer tracking with parent-chain filtering, bibreferrer cross-links, suffix assignment for duplicate author+year, cited-by blocks, META_BLOCK (notes + external links), bibentry/biblist cleanup. Works from both bibentry XML nodes and ObjectDB metadata fallback.
 - [x] **P4. Split post-processor** — Port `LaTeXML::Post::Split` (~300 lines). Full implementation: page tree building, recursive naming (id/label/relative strategies), document surgery (node extraction, sibling removal/re-add), TOC generation, navigation distribution, `PostDocument::new_document()` sub-document creation. All split naming strategies supported.
 - [x] **P5. Writer post-processor** — Port `LaTeXML::Post::Writer`. TEMPORARY_DOCUMENT_ID removal, HTML vs XML serialization (`as_html` SaveOptions for `toStringHTML` parity), file output with directory creation. Integrated as Processor in the pipeline.
+- [ ] **P6. Graphics post-processor** — Port `LaTeXML::Post::Graphics` (337 lines) + `LaTeXML::Util::Image`. Current state: skeleton in `latexml_post/src/graphics.rs` (284 lines) with file path resolution, type properties, and aspect ratio classification — but NO actual image I/O, format conversion, or dimension reading. Needed: (a) Read PNG/JPEG/GIF dimensions from file headers, (b) Copy source images to destination directory, (c) Set `imagesrc`/`imagewidth`/`imageheight` attributes on `<ltx:graphics>` elements, (d) Support `graphicspath` processing instructions, (e) Format conversion (PDF/EPS→PNG via ImageMagick). Phase 1 (copy+dimensions) covers 80%+ of real-world use. The Perl version uses Image::Magick for complex transforms (rotation, clipping, scaling). See also `latexml_package/src/package/graphicx_sty.rs` for compile-time image candidate searching.
+- [ ] **P7. MathML intent attribute** — ar5iv.sty.ltxml monkey-patches `LaTeXML::Post::MathML::outerWrapper` to add `intent=":literal"` on all `<math>` elements. Port this as a post-processing option or direct integration in `latexml_post/src/presentation.rs`.
 
 ### XSLT infrastructure
 
@@ -246,7 +248,9 @@ Grammar restructuring tasks to reduce raw parse tree counts. Target: <200 raw tr
 
 - [ ] **M9. `tight_opterm` vs `applied_func` interaction** — `tight_opterm` treats bare functions as multiplicands (`2 sin` = `2 * sin`), while `applied_func` treats them as function application (`sin x` = `sin(x)`). For `2 sin x`: both `(2 * sin)(x)` and `2 * sin(x)` are derivable. The grammar relies on precedence (tight_opterm at term level, applied_func at tight_term level) but Marpa explores both. **Expected impact:** Moderate for function-heavy formulas. **Investigation:** Count tree increase for `N sin x` vs `sin x` patterns.
 
-- [ ] **M10. Time-budgeted tree enumeration** — Instead of a fixed 5000-tree limit, use a time budget (e.g., 50ms per formula). Combined with online deduplication, this caps worst-case latency without limiting well-behaved formulas. Also: reduce `max_consecutive_dupes` from 64 to 32 (empirically, if 32 consecutive trees are all duplicates, no new unique parse will appear). **Expected impact:** Caps worst-case latency to 50ms/formula. Does not reduce ambiguity but limits its impact. **Risk:** May miss valid parses in highly-ambiguous grammars. **Investigation:** Profile whether the valid parse always appears in the first 1000 trees for current test cases.
+- [ ] **M10. Target: ≤10 unique parses** — All testable formulas should produce at most 10 unique parse trees after deduplication. Current worst cases: `attn_lrate` (5000 raw, 0 semantic), `attn_where_head` (385 raw), `prescripted_quad` (5000 raw). The raw tree counts can remain high (grammar ambiguity), but semantic pruning + deduplication must converge to ≤10 unique. Track via `700_unit_parse.rs::parse_tree_count_limits`.
+
+- [ ] **M11. Time-budgeted tree enumeration** — Instead of a fixed 5000-tree limit, use a time budget (e.g., 50ms per formula). Combined with online deduplication, this caps worst-case latency without limiting well-behaved formulas. Also: reduce `max_consecutive_dupes` from 64 to 32 (empirically, if 32 consecutive trees are all duplicates, no new unique parse will appear). **Expected impact:** Caps worst-case latency to 50ms/formula. Does not reduce ambiguity but limits its impact. **Risk:** May miss valid parses in highly-ambiguous grammars. **Investigation:** Profile whether the valid parse always appears in the first 1000 trees for current test cases.
 
 ### Diff reduction tasks
 
@@ -319,6 +323,24 @@ Scaling: 1eq→8, 2eq→192 (24x), 3eq→1792 (9.3x), 4eq→5000+ (capped). Supe
 **Results:** Mathtools test: 5.35s → 3.47s (35% faster). Pre-script formula `{}^4_{12}C^{5+}_2\quad...`: 1.1s → 25ms (44x). Three previously-unparsable formulas now parse correctly.
 
 **Grammar restructuring plan (TODO items M1–M10 below).**
+
+### Preload + option handling — FIXED (2026-04-03)
+
+**Problem:** `--preload=ar5iv.sty` had no effect — `INCLUDE_STYLES` never set to true, raw `.sty` files like `nips_2017.sty` couldn't load.
+
+**Root causes found and fixed (session 85):**
+
+1. **Preloads not loaded.** `Converter::initialize_session` passed only `vec!["TeX.pool"]` to `initialize_singletons`, ignoring user preloads from `CoreOptions::preload`. Fixed: extend preload list with user entries.
+
+2. **Preload options not handled.** `initialize_singletons` used `InputDefinitionOptions::default()` (with `handleoptions: false`) for all preloads. Perl's `initializeState` extracts the extension, sets `handleoptions => true` for `.sty`/`.cls`. Fixed: parse extension and set `handleoptions` accordingly.
+
+3. **Duplicate ar5iv_sty binding.** Both `latexml_package` and `latexml_contrib` had `ar5iv_sty.rs`, with the contrib version (stale) loaded first via `extra_bindings_dispatch`. The stale version didn't call `pass_options`. Fixed: removed `ar5iv_sty` from `latexml_package`, unified in `latexml_contrib` with full `pass_options` implementation.
+
+4. **Missing early stubs.** `\@unknownoptionerror`, `\AtBeginDocument`, `\@addtofilelist` are defined in LaTeX.pool but needed during preload-time `ProcessOptions`/`handleoptions`. Added no-op stubs in `latex_hook.rs` (guarded by `IsDefined!`), overwritten when LaTeX.pool loads.
+
+5. **`\@addtofilelist` guard.** `input_definitions` called `\@addtofilelist` unconditionally when `handleoptions: true`, failing before LaTeX.pool. Now guarded by `lookup_definition` check.
+
+**Result:** `--preload=ar5iv.sty` now correctly sets `INCLUDE_STYLES=true`, enabling raw TeX loading for custom `.sty` files (nips_2017, etc.). Test: 1706.03762 "Attention Is All You Need" processes with natbib, geometry, raw nips_2017.sty.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

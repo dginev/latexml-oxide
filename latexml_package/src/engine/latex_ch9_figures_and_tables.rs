@@ -379,6 +379,35 @@ LoadDefinitions!({
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
+  // Perl: latex_constructs.pool.ltxml L3199-3212 — internal @float/@dblfloat
+  // Used by raw TeX packages (e.g., nips_2017.sty) via \@float{type}[placement]
+  // Since the float type arg isn't known at compile time, we use a properties
+  // closure to call beforeFloat dynamically.
+  DefEnvironment!("{@float}{}[]",
+    "<ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'>\
+    #tags#body\
+    </ltx:float>",
+    properties => sub[args] {
+      let float_type = args.get(0).and_then(|a| a.as_ref())
+        .map(|d| d.to_string()).unwrap_or_default();
+      before_float(&float_type, None);
+      Ok(stored_map!("layout" => "vertical"))
+    },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+  DefEnvironment!("{@dblfloat}{}[]",
+    "<ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'>\
+    #tags#body\
+    </ltx:float>",
+    properties => sub[args] {
+      let float_type = args.get(0).and_then(|a| a.as_ref())
+        .map(|d| d.to_string()).unwrap_or_default();
+      before_float_ex(&float_type, None, true);
+      Ok(stored_map!("layout" => "vertical"))
+    },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+
   DefPrimitive!("\\flushbottom",      None);
   DefPrimitive!("\\suppressfloats[]", None);
 

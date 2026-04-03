@@ -57,8 +57,11 @@ impl Converter {
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
       set_extra_bindings_dispatch(closure.clone());
     }
-    // Prepare LaTeXML object
-    self.core.initialize_singletons(vec![s!("TeX.pool")])?;
+    // Prepare LaTeXML object — load TeX pool + user preloads
+    // Perl: $self->initializeState($mode.".pool", @{$$self{preload} || []})
+    let mut preloads = vec![s!("TeX.pool")];
+    preloads.extend(self.core.preload.iter().cloned());
+    self.core.initialize_singletons(preloads)?;
     self.ready = true;
     Ok(())
   }

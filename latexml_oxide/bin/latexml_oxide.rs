@@ -308,7 +308,9 @@ fn main() -> Result<(), Box<dyn Error>> {
       latexml_core::stomach::set_timeout(secs);
     }
 
+    let source_for_post = source.clone();
     let response = converter.convert(source);
+    let _ = &source_for_post; // keep alive for post-processing
     if let Some(xml) = response.result {
       // Auto-select stylesheet from --format
       let effective_stylesheet = cli.stylesheet.clone().or_else(|| {
@@ -337,12 +339,17 @@ fn main() -> Result<(), Box<dyn Error>> {
       };
 
       if do_post {
+        let source_dir = Path::new(&source_for_post)
+          .parent()
+          .map(|p| p.to_string_lossy().to_string())
+          .unwrap_or_else(|| ".".to_string());
         let output = run_post_processing(&xml, &PostOptions {
           pmml: cli.pmml || cli.post || cli.format.is_some(),
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
           destination: target.as_deref(),
+          source_directory: Some(&source_dir),
           nodefaultresources: cli.nodefaultresources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
@@ -410,6 +417,7 @@ struct PostOptions<'a> {
   keep_xmath: bool,
   stylesheet: Option<&'a str>,
   destination: Option<&'a str>,
+  source_directory: Option<&'a str>,
   nodefaultresources: bool,
   css_files: &'a [String],
   js_files: &'a [String],
@@ -425,8 +433,8 @@ struct PostOptions<'a> {
 /// Run the post-processing pipeline on XML output.
 fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let PostOptions { pmml, cmml, keep_xmath, stylesheet, destination,
-    nodefaultresources, css_files, js_files, noinvisibletimes, mathtex,
-    navigationtoc, split, ref split_xpath, split_naming, xslt_parameters } = *opts;
+    source_directory, nodefaultresources, css_files, js_files, noinvisibletimes,
+    mathtex, navigationtoc, split, ref split_xpath, split_naming, xslt_parameters } = *opts;
   use latexml_post::document::{PostDocument, PostDocumentOptions};
   use latexml_post::object_db::ObjectDB;
   use latexml_post::processor::Processor;
@@ -434,6 +442,13 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let mut opts = PostDocumentOptions::default();
   if let Some(dest) = destination {
     opts.destination = Some(dest.to_string());
+  }
+  if let Some(src_dir) = source_directory {
+    opts.source_directory = Some(src_dir.to_string());
+    // Also add source dir to search paths for file resolution
+    let mut sp = opts.searchpaths.take().unwrap_or_default();
+    sp.push(src_dir.to_string());
+    opts.searchpaths = Some(sp);
   }
   let doc = match PostDocument::new_from_string(xml, opts) {
     Ok(d) => d,
@@ -471,7 +486,20 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   };
 
-  // Phase 2.5: Split
+  // Phase 2.5: Graphics
+  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true);
+  let graphics_nodes = graphics_proc.to_process(&doc);
+  let doc = if !graphics_nodes.is_empty() {
+    match graphics_proc.process(doc, graphics_nodes) {
+      Ok(mut docs) => docs.remove(0),
+      Err(e) => {
+        eprintln!("Post-processing: Graphics failed: {}", e);
+        return xml.to_string();
+      }
+    }
+  } else { doc };
+
+  // Phase 2.75: Split
   let doc = if split {
     if let Some(ref xpath) = split_xpath {
       let naming = match split_naming {
@@ -547,7 +575,32 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   }
 
   match post.process_chain(doc, &mut processors) {
-    Ok(results) => results[0].to_xml_string(),
+    Ok(results) => {
+      let output = results[0].to_xml_string();
+      // Fix self-closing non-void HTML elements for HTML5 output.
+      // libxml2's XML serializer produces <span/> for empty spans, but HTML5
+      // parsers treat <span/> as an opening tag, causing unclosed elements.
+      if stylesheet.map_or(false, |s| s.contains("html")) {
+        // Fix 1: Expand self-closing non-void elements: <span/> → <span></span>
+        let re = regex::Regex::new(
+          r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>"
+        ).unwrap();
+        let output = re.replace_all(&output, "<$1$2></$1>").to_string();
+        // Fix 2: Remove closing tags for void elements: </br>, </img>, </hr> etc.
+        // These are invalid in HTML5 and break nesting when present.
+        let void_close_re = regex::Regex::new(
+          r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>"
+        ).unwrap();
+        let output = void_close_re.replace_all(&output, "").to_string();
+        // Fix 3: Normalize self-closing void elements: <br ... /> → <br ...>
+        let void_selfclose_re = regex::Regex::new(
+          r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>"
+        ).unwrap();
+        void_selfclose_re.replace_all(&output, "<$1$2>").to_string()
+      } else {
+        output
+      }
+    },
     Err(e) => {
       eprintln!("Post-processing failed: {}", e);
       xml.to_string()

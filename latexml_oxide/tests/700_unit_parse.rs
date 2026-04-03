@@ -282,6 +282,53 @@ fn parse_tree_count_limits() {
       start_BIGOPSUB:start:32 UNKNOWN:a:33 end_BIGOPSUB:end:34 UNKNOWN:Y:35 \
       start_POSTSUBSCRIPT:start:36 UNKNOWN:i:37 end_POSTSUBSCRIPT:end:38 ",
      1792),
+
+    // --- 1706.03762 "Attention Is All You Need" formulas ---
+
+    // MultiHead(Q,K,V) = Concat(head_1,...,head_h) W^O  (27 tokens, 115 raw)
+    ("attn_multihead",
+     "UNKNOWN:MultiHead:1 OPEN:(:2 UNKNOWN:Q:3 PUNCT:,:4 UNKNOWN:K:5 PUNCT:,:6 \
+      UNKNOWN:V:7 CLOSE:):8 RELOP:equals:9 UNKNOWN:Concat:10 OPEN:(:11 UNKNOWN:head:12 \
+      start_POSTSUBSCRIPT:start:13 NUMBER:1:14 end_POSTSUBSCRIPT:end:15 PUNCT:,:16 \
+      ID:ldots:17 PUNCT:,:18 UNKNOWN:head:19 start_POSTSUBSCRIPT:start:20 UNKNOWN:h:21 \
+      end_POSTSUBSCRIPT:end:22 CLOSE:):23 UNKNOWN:W:24 start_POSTSUPERSCRIPT:start:25 \
+      UNKNOWN:O:26 end_POSTSUPERSCRIPT:end:27 ",
+     128),
+
+    // where head_i = Attention(QW^Q_i, KW^K_i, VW^V_i)  (35 tokens, 385 raw)
+    ("attn_where_head",
+     "ATOM:where:1 UNKNOWN:head:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:i:4 \
+      end_POSTSUBSCRIPT:end:5 RELOP:equals:6 UNKNOWN:Attention:7 OPEN:(:8 UNKNOWN:Q:9 \
+      UNKNOWN:W:10 start_POSTSUPERSCRIPT:start:11 UNKNOWN:Q:12 end_POSTSUPERSCRIPT:end:13 \
+      start_POSTSUBSCRIPT:start:14 UNKNOWN:i:15 end_POSTSUBSCRIPT:end:16 PUNCT:,:17 \
+      UNKNOWN:K:18 UNKNOWN:W:19 start_POSTSUPERSCRIPT:start:20 UNKNOWN:K:21 \
+      end_POSTSUPERSCRIPT:end:22 start_POSTSUBSCRIPT:start:23 UNKNOWN:i:24 \
+      end_POSTSUBSCRIPT:end:25 PUNCT:,:26 UNKNOWN:V:27 UNKNOWN:W:28 \
+      start_POSTSUPERSCRIPT:start:29 UNKNOWN:V:30 end_POSTSUPERSCRIPT:end:31 \
+      start_POSTSUBSCRIPT:start:32 UNKNOWN:i:33 end_POSTSUBSCRIPT:end:34 CLOSE:):35 ",
+     512),
+
+    // lrate = d_model^{-0.5} · min(step_num^{-0.5}, step_num · warmup_steps^{-1.5})
+    // (53 tokens, 5000 raw — dominated by consecutive UNKNOWN coalescence)
+    ("attn_lrate",
+     "UNKNOWN:l:1 UNKNOWN:r:2 UNKNOWN:a:3 UNKNOWN:t:4 UNKNOWN:e:5 RELOP:equals:6 \
+      UNKNOWN:d:7 start_POSTSUBSCRIPT:start:8 ATOM:model:9 end_POSTSUBSCRIPT:end:10 \
+      start_POSTSUPERSCRIPT:start:11 ATOM:-0.5:12 end_POSTSUPERSCRIPT:end:13 \
+      MULOP:cdot:14 OPFUNCTION:minimum:15 OPEN:(:16 UNKNOWN:s:17 UNKNOWN:t:18 \
+      UNKNOWN:e:19 UNKNOWN:p:20 UNKNOWN:_:21 UNKNOWN:n:22 UNKNOWN:u:23 UNKNOWN:m:24 \
+      start_POSTSUPERSCRIPT:start:25 ATOM:-0.5:26 end_POSTSUPERSCRIPT:end:27 PUNCT:,:28 \
+      UNKNOWN:s:29 UNKNOWN:t:30 UNKNOWN:e:31 UNKNOWN:p:32 UNKNOWN:_:33 UNKNOWN:n:34 \
+      UNKNOWN:u:35 UNKNOWN:m:36 MULOP:cdot:37 UNKNOWN:w:38 UNKNOWN:a:39 UNKNOWN:r:40 \
+      UNKNOWN:m:41 UNKNOWN:u:42 UNKNOWN:p:43 UNKNOWN:_:44 UNKNOWN:s:45 UNKNOWN:t:46 \
+      UNKNOWN:e:47 UNKNOWN:p:48 UNKNOWN:s:49 start_POSTSUPERSCRIPT:start:50 ATOM:-1.5:51 \
+      end_POSTSUPERSCRIPT:end:52 CLOSE:):53 ",
+     5000),  // TODO: M5 consecutive UNKNOWN coalescing should fix this
+
+    // warmup_steps  (12 tokens, 233 raw — consecutive UNKNOWN)
+    ("attn_warmup_steps",
+     "UNKNOWN:w:1 UNKNOWN:a:2 UNKNOWN:r:3 UNKNOWN:m:4 UNKNOWN:u:5 UNKNOWN:p:6 \
+      UNKNOWN:_:7 UNKNOWN:s:8 UNKNOWN:t:9 UNKNOWN:e:10 UNKNOWN:p:11 UNKNOWN:s:12 ",
+     233),
   ];
 
   for (name, lexemes, max_allowed) in &cases {

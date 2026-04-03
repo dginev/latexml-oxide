@@ -242,7 +242,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
   // \@addtofilelist before reading the file, so \@filelist is available inside)
-  if options.handleoptions {
+  if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
     digest(Tokens!(
       T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
     ))?;

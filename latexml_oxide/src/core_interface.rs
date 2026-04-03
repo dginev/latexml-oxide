@@ -108,7 +108,19 @@ impl DigestionAPI for Core {
     let dump_path = std::env::var("LATEXML_DUMP").ok();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
-      input_definitions(&preload, InputDefinitionOptions::default())?;
+      // Perl: initializeState extracts extension, sets handleoptions for .sty/.cls
+      // This matches Package.pm L2551-2571 — preloads with .sty/.cls get option handling
+      let (name, ext) = if let Some(pos) = preload.rfind('.') {
+        (preload[..pos].to_string(), preload[pos + 1..].to_string())
+      } else {
+        (preload.clone(), String::from("sty"))
+      };
+      let handleoptions = ext == "sty" || ext == "cls";
+      input_definitions(&name, InputDefinitionOptions {
+        extension: Some(ext.into()),
+        handleoptions,
+        ..InputDefinitionOptions::default()
+      })?;
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
 

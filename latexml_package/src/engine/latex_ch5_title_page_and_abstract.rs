@@ -111,14 +111,24 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:date}[role=creation]{\\today}"
   );
 
+  // Perl: latex_constructs.pool.ltxml L1128-1129
+  // In case \@maketitle defines \And/\AND — we can't emulate that, so map them to \and
+  // for and_split to properly separate authors.
+  Let!("\\And", "\\and");
+  Let!("\\AND", "\\and");
+
   // Doesn't produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
+  // Locked: raw TeX packages (e.g., nips_2017.sty) may \renewcommand{\maketitle}, but
+  // LaTeXML's frontmatter handling must take precedence. Perl achieves this by having
+  // the compiled binding override raw TeX; we use `locked` to prevent raw overwrite.
   DefMacro!(
     "\\maketitle",
     r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
 \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
 \global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
-\global\let\author\relax\global\let\date\relax\global\let\and\relax"
+\global\let\author\relax\global\let\date\relax\global\let\and\relax",
+    locked => true
   );
   // In case \maketitle isn't used in the document, let's check for it.
   AddToMacro!("\\@startsection@hook", "\\lx@frontmatter@fallback");
