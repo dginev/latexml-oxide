@@ -533,12 +533,16 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let mut post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
 
+  // ar5iv.sty.ltxml: adds intent=":literal" on all <math> elements
+  let intent_literal = xml.contains("package=\"ar5iv");
+
   if pmml {
     processors.push(Box::new(
       latexml_post::mathml::MathML::new_presentation()
         .with_keep_xmath(keep_xmath)
         .with_invisible_times(!noinvisibletimes)
-        .with_mathtex(mathtex),
+        .with_mathtex(mathtex)
+        .with_intent_literal(intent_literal),
     ));
   }
   if cmml {

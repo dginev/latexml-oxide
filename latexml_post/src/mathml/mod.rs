@@ -48,6 +48,9 @@ pub struct MathML {
   /// Whether to include TeX source annotation in parallel MathML.
   /// Perl: --mathtex adds <m:annotation encoding='application/x-tex'>
   mathtex: bool,
+  /// Whether to add intent=":literal" on all <math> elements.
+  /// ar5iv.sty.ltxml monkey-patches outerWrapper to add this.
+  intent_literal: bool,
 }
 
 impl MathML {
@@ -63,6 +66,7 @@ impl MathML {
       keep_xmath: false,
       invisible_times: true,
       mathtex: false,
+      intent_literal: false,
     }
   }
 
@@ -78,7 +82,15 @@ impl MathML {
       keep_xmath: false,
       invisible_times: true,
       mathtex: false,
+      intent_literal: false,
     }
+  }
+
+  /// Enable intent=":literal" on all <math> elements.
+  /// Perl: ar5iv.sty.ltxml monkey-patches outerWrapper for this.
+  pub fn with_intent_literal(mut self, enable: bool) -> Self {
+    self.intent_literal = enable;
+    self
   }
 
   /// Enable line-breaking with the given width.
@@ -254,6 +266,11 @@ impl MathProcessor for MathML {
       if let Some(class) = math.get_attribute("class") {
         attrs.insert("class".to_string(), class);
       }
+    }
+
+    // ar5iv.sty.ltxml: intent=":literal" for all math elements
+    if self.intent_literal {
+      attrs.insert("intent".to_string(), ":literal".to_string());
     }
 
     NodeData::Element {
