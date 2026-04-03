@@ -17,7 +17,7 @@ struct Cli {
   source_positional: Option<String>,
 
   /// Destination output file
-  #[arg(long)]
+  #[arg(long, alias = "destination")]
   dest: Option<String>,
 
   /// Source file (overrides positional argument)
@@ -38,11 +38,11 @@ struct Cli {
   post: bool,
 
   /// Generate Presentation MathML
-  #[arg(long)]
+  #[arg(long, alias = "presentationmathml")]
   pmml: bool,
 
   /// Generate Content MathML
-  #[arg(long)]
+  #[arg(long, alias = "contentmathml")]
   cmml: bool,
 
   /// Keep XMath in output alongside MathML
@@ -67,12 +67,16 @@ struct Cli {
   nocomments: bool,
 
   /// Disable math parsing
-  #[arg(long)]
+  #[arg(long, alias = "noparse")]
   nomathparse: bool,
 
   /// Disable section numbering
-  #[arg(long)]
+  #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
+
+  /// Output type (currently only "document" supported; "archive" auto-detected from --dest)
+  #[arg(long, value_name = "TYPE")]
+  whatsout: Option<String>,
 
   // === Repeatable flags ===
   /// CSS files to inject (repeatable)
