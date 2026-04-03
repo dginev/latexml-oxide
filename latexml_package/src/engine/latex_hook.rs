@@ -1,5 +1,29 @@
 use crate::prelude::*;
 
+/// Perl: DefAutoload — define a macro that auto-loads a package on first use.
+/// When the command is first invoked, it loads the specified package (via RequirePackage),
+/// then re-emits the original CS so it gets re-executed with the proper definition.
+fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
+  use latexml_core::definition::ExpansionBody;
+  let cs_tok = T_CS!(cs_name);
+  // Don't overwrite if already defined
+  if IsDefined!(&cs_tok) {
+    return Ok(());
+  }
+  let pkg_name = package.to_string();
+  let cs_for_closure = cs_tok.clone();
+  def_macro(
+    cs_tok,
+    None,
+    ExpansionBody::Closure(Rc::new(move |_args| {
+      require_package(&pkg_name, RequireOptions::default())?;
+      Ok(Tokens::new(vec![cs_for_closure.clone()]))
+    })),
+    None,
+  )?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
@@ -46,6 +70,15 @@ LoadDefinitions!({
     // TODO:
     // DefAutoload!(ltx3trigger, "expl3.pool.ltxml");
   }
+
+  // OmniBus autoloads: define commands that auto-load their packages on first use.
+  // Perl: OmniBus.cls.ltxml DefAutoload entries.
+  // When first invoked, the macro loads the package, then re-emits itself.
+  def_autoload("\\mathfrak", "amsfonts")?;
+  def_autoload("\\mathbb", "amsfonts")?;
+  def_autoload("\\Bbb", "amsfonts")?;
+  def_autoload("\\theoremstyle", "amsthm")?;
+  def_autoload("\\numberwithin", "amsmath")?;
 
   // # Darn; we need to be even more clever, since we need to simulate an amstex command, as well.
   // # For example \documentstyle[...]{amsppt} must switch to AMSTeX mode, _NOT_ LaTeX mode!!!!
