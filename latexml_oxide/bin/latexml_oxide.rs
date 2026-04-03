@@ -364,11 +364,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             } else {
               format!("{}.zip", target_path.trim_end_matches(".html").trim_end_matches(".xml"))
             };
+            ensure_parent_dir(&zip_dest);
             pack_output_zip(&zip_dest, &output, &response.log, &response.status)?;
           } else {
             print!("{output}");
           }
         } else if let Some(ref target_path) = target {
+          ensure_parent_dir(target_path);
           let mut out_fh = File::create(target_path)?;
           write!(out_fh, "{output}")?;
         } else {
@@ -376,6 +378,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
       } else {
         if let Some(ref target_path) = target {
+          ensure_parent_dir(target_path);
           let mut out_fh = File::create(target_path)?;
           write!(out_fh, "{xml}")?;
         } else {
@@ -389,6 +392,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       || cli.whatsin.as_deref() == Some("archive");
     if let Some(ref log_path) = cli.log {
       if !is_zip_output {
+        ensure_parent_dir(log_path);
         if let Ok(mut log_fh) = File::create(log_path) {
           let _ = write!(log_fh, "{}", response.log);
           eprintln!("Log written to {}", log_path);
@@ -552,6 +556,15 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 }
 
 /// Build the XPath expression for splitting at a given level.
+/// Ensure the parent directory of a file path exists, creating it recursively if needed.
+fn ensure_parent_dir(path: &str) {
+  if let Some(parent) = Path::new(path).parent() {
+    if !parent.as_os_str().is_empty() {
+      let _ = std::fs::create_dir_all(parent);
+    }
+  }
+}
+
 fn make_splitpaths(splitat: &str) -> String {
   let ancestors: &[&str] = match splitat {
     "part" => &[],

@@ -238,6 +238,16 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 
 **Result:** dominoes + unit_tests_by_silviu un-ignored. 390 pass, 0 ignored.
 
+### Math parser dedup fix — FIXED (2026-04-02)
+
+`XProps::PartialEq` (derived) compared internal `xmkey`/`id`/`idref` bookkeeping fields, preventing deduplication of structurally identical parse trees. Custom `PartialEq` now skips those fields. `\ltx@count@parses` diagnostic now reports post-dedup count.
+
+**Result:** Parse counts dropped from 32–1280 to 1–3 for all test formulas. `∑∑ f_a(c^a) g_b(c^b)` went from 1024 distinct parses to 1.
+
+### CLI directory creation — FIXED (2026-04-02)
+
+`--dest=html/paper.html` now creates parent directories recursively via `ensure_parent_dir()`. Applied to output file, ZIP archive, and log file paths.
+
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
 

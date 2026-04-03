@@ -22,7 +22,7 @@
             <XMTok font="italic" role="UNKNOWN">p</XMTok>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">21</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p2">
     <p><Math mode="inline" tex="ppppppppppppppp" text="p * p * p * p * p * p * p * p * p * p * p * p * p * p * p" xml:id="p2.m1">
@@ -46,7 +46,7 @@
             <XMTok font="italic" role="UNKNOWN">p</XMTok>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">987</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p3">
     <p><Math mode="inline" tex="cocococococo" text="c * o * c * o * c * o * c * o * c * o * c * o" xml:id="p3.m1">
@@ -67,7 +67,7 @@
             <XMTok font="italic" role="UNKNOWN">o</XMTok>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">233</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p4">
     <p><Math mode="inline" tex="BBBBBBBrBBBBBB" text="B * B * B * B * B * B * B * r * B * B * B * B * B * B" xml:id="p4.m1">
@@ -90,7 +90,7 @@
             <XMTok font="italic" role="UNKNOWN">B</XMTok>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">610</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p5">
     <p><Math mode="inline" tex="a_{2}=b_{2}+c_{2}-d_{2}+e_{2}" text="a _ 2 = ((b _ 2 + c _ 2) - d _ 2) + e _ 2" xml:id="p5.m1">
@@ -133,7 +133,7 @@
             </XMApp>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">32</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p6">
     <p><Math mode="inline" tex="-12x^{2}y^{4}-12xy^{5}+2y^{6}-a^{3}b^{3}" text="((- 12 * x ^ 2 * y ^ 4 - 12 * x * y ^ 5) + 2 * y ^ 6) - a ^ 3 * b ^ 3" xml:id="p6.m1">
@@ -197,7 +197,7 @@
             </XMApp>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">64</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p7">
     <p><Math mode="inline" tex="xy+xy+\int xy\,dx+xy+xy+xy+xy+xy+xy" text="x * y + x * y + integral@(x * y * differential-d@(x)) + x * y + x * y + x * y + x * y + x * y + x * y" xml:id="p7.m1">
@@ -258,7 +258,7 @@
             </XMApp>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">1280</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
   </para>
   <para xml:id="p8">
     <p><Math mode="inline" tex="\langle B|\sum_{k}f_{k}|C\rangle" text="delimited-⟨⟩@(B * absolute-value@((sum _ k)@(f _ k)) * C)" xml:id="p8.m1">
@@ -301,7 +301,7 @@
             </XMWrap>
           </XMDual>
         </XMath>
-      </Math> has <text class="ltx_count_parses">32</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">3</text> parses.</p>
   </para>
   <para xml:id="p9">
     <p><Math mode="inline" tex="f(x)=\int h(x)\,dx" text="f * x = integral@(h * x * differential-d@(x))" xml:id="p9.m1">
@@ -341,7 +341,7 @@
             </XMApp>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">32</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
   </para>
   <para xml:id="p10">
     <p><Math mode="inline" tex="x+y" text="x + y" xml:id="p10.m1">
@@ -363,7 +363,7 @@
             <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
   <para xml:id="p12">
     <p><Math mode="inline" tex="\frac{a}{b}" text="a / b" xml:id="p12.m1">
@@ -374,6 +374,6 @@
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">1</text> parses.</p>
   </para>
 </document>

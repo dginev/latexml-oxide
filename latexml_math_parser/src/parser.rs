@@ -915,7 +915,8 @@ impl MathParser {
     let deduped = pre_dedup - parses.len();
 
     // Store count for \ltx@count@parses diagnostic macro
-    self.last_parsetrees_count = ok_trees + pruned_trees;
+    // Use post-dedup count (distinct semantic trees), not raw grammar count
+    self.last_parsetrees_count = parses.len();
 
     if ok_trees + pruned_trees > 10 {
       log::warn!(
