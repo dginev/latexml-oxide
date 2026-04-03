@@ -963,30 +963,32 @@ pub fn require_resource(mut resource: Resource) {
 }
 
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
-  input_definitions(name, InputDefinitionOptions {
+  let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
-    options,
-    after,
+    options: options.clone(),
+    after: after.clone(),
     notex: true,
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
-  })
-  // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1,
-  // noerror => 1,     %options)) {
-  //   return $success; }
-  // else {
-  //   $STATE>noteStatus(missing => $class . '.cls');
-  //   let alternate = 'OmniBus';    # was 'article'
-  //   Warn('missing_file', $class, $STATE>getStomach->getGullet,
-  //     "Can't find binding for class $class (using $alternate)",
-  //     maybeReportSearchPaths());
-  // if (let success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions =>
-  // 1, %options)) {     return $success; }
-  //   else {
-  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE>getStomach->getGullet,
-  //       "Can't find binding for class $alternate (installation error)");
-  //     return; } } }
+  });
+  // Perl: if class not found, fall back to OmniBus
+  if result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")) {
+    if name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
+      Warn!("missing_file", name, format!("Can't find binding for class {name} (using OmniBus)"));
+      note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
+      return input_definitions("OmniBus", InputDefinitionOptions {
+        extension: Some(Cow::Borrowed("cls")),
+        options,
+        after,
+        notex: true,
+        handleoptions: true,
+        noerror: true,
+        ..InputDefinitionOptions::default()
+      });
+    }
+  }
+  result
 }
 
 /// configuration for searching for a file in the local filesystem
