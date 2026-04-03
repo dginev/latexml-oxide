@@ -529,6 +529,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | function postsuperarg postsubarg => postfix_script;
     tight_term += scripted_function fenced_factor => prefix_apply;
     tight_term += scripted_function lparen formula rparen => apply_delimited;
+    // Also register as applied_func so they chain: f_a(c^a) g_b(c^b)
+    // uses tight_term applied_func => apply_invisible_times
+    applied_func += scripted_function fenced_factor => prefix_apply;
+    applied_func += scripted_function lparen formula rparen => apply_delimited;
 
     // Scripted OPFUNCTION with bare/fenced args: \log_e a, \det_S x
     scripted_opfunction = opfunction postsuperarg => postfix_script
@@ -538,6 +542,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += scripted_opfunction tight_term => prefix_apply;
     tight_term += scripted_opfunction fenced_factor => prefix_apply;
     tight_term += scripted_opfunction lparen formula rparen => apply_delimited;
+    applied_func += scripted_opfunction fenced_factor => prefix_apply;
+    applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
 
     // Scripted TRIGFUNCTION: \sin^2 x, \cos_n x
     scripted_trigfunction = trigfunction postsuperarg => postfix_script
@@ -547,6 +553,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += scripted_trigfunction tight_term => prefix_apply;
     tight_term += scripted_trigfunction fenced_factor => prefix_apply;
     tight_term += scripted_trigfunction lparen formula rparen => apply_delimited;
+    applied_func += scripted_trigfunction fenced_factor => prefix_apply;
+    applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
 
     // standalone top-level variants of floating scripts:
     floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;

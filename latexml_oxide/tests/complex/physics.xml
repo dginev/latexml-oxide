@@ -1748,57 +1748,95 @@
       </para>
       <para xml:id="S1.SS3.p4">
         <equation xml:id="S1.Ex16">
-          <Math class="ltx_math_unparsed" mode="display" tex="\tr\rho\qquad\tr(\tall)\qquad\Tr\rho\qquad\rank M\qquad\erf(x)\qquad\Res[f(z)]" xml:id="S1.Ex16.m1">
+          <Math mode="display" tex="\tr\rho\qquad\tr(\tall)\qquad\Tr\rho\qquad\rank M\qquad\erf(x)\qquad\Res[f(z)]" text="list@(trace@(rho), trace@(X ^ Y), trace@(rho), rank@(M), error-function@(x), residue@(delimited-[]@(f * z)))" xml:id="S1.Ex16.m1">
             <XMath>
-              <XMTok meaning="trace" role="OPFUNCTION" scriptpos="post">tr</XMTok>
-              <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
-              <XMDual xml:id="S1.Ex16.m1.5">
+              <XMDual>
                 <XMApp>
-                  <XMTok meaning="trace"/>
+                  <XMTok meaning="list"/>
                   <XMRef idref="S1.Ex16.m1.1"/>
-                </XMApp>
-                <XMApp>
-                  <XMTok role="OPFUNCTION" scriptpos="post">tr</XMTok>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="true">(</XMTok>
-                    <XMApp xml:id="S1.Ex16.m1.1">
-                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                      <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
-                    </XMApp>
-                    <XMTok role="CLOSE" stretchy="true">)</XMTok>
-                  </XMWrap>
-                </XMApp>
-              </XMDual>
-              <XMTok meaning="trace" role="OPFUNCTION" scriptpos="post">Tr</XMTok>
-              <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
-              <XMTok meaning="rank" role="OPFUNCTION" scriptpos="post">rank</XMTok>
-              <XMTok font="italic" role="UNKNOWN">M</XMTok>
-              <XMDual xml:id="S1.Ex16.m1.6">
-                <XMApp>
-                  <XMTok meaning="error-function"/>
                   <XMRef idref="S1.Ex16.m1.2"/>
+                  <XMRef idref="S1.Ex16.m1.5"/>
+                  <XMRef idref="S1.Ex16.m1.6"/>
+                  <XMRef idref="S1.Ex16.m1.7"/>
+                  <XMRef idref="S1.Ex16.m1.10"/>
                 </XMApp>
-                <XMApp>
-                  <XMTok role="OPFUNCTION" scriptpos="post">erf</XMTok>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="true">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.2">x</XMTok>
-                    <XMTok role="CLOSE" stretchy="true">)</XMTok>
-                  </XMWrap>
-                </XMApp>
-              </XMDual>
-              <XMTok meaning="residue" role="OPFUNCTION" scriptpos="post">Res</XMTok>
-              <XMWrap>
-                <XMTok role="OPEN" stretchy="false">[</XMTok>
-                <XMTok font="italic" role="UNKNOWN">f</XMTok>
                 <XMWrap>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMApp xml:id="S1.Ex16.m1.1">
+                    <XMTok meaning="trace" role="OPFUNCTION" scriptpos="post">tr</XMTok>
+                    <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex16.m1.2">
+                    <XMApp>
+                      <XMTok meaning="trace"/>
+                      <XMRef idref="S1.Ex16.m1.4"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="OPFUNCTION" scriptpos="post">tr</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">(</XMTok>
+                        <XMApp xml:id="S1.Ex16.m1.4">
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" role="UNKNOWN">X</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">Y</XMTok>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex16.m1.5">
+                    <XMTok meaning="trace" role="OPFUNCTION" scriptpos="post">Tr</XMTok>
+                    <XMTok font="italic" name="rho" role="UNKNOWN">ρ</XMTok>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex16.m1.6">
+                    <XMTok meaning="rank" role="OPFUNCTION" scriptpos="post">rank</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex16.m1.7">
+                    <XMApp>
+                      <XMTok meaning="error-function"/>
+                      <XMRef idref="S1.Ex16.m1.9"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="OPFUNCTION" scriptpos="post">erf</XMTok>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="true">(</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.9">x</XMTok>
+                        <XMTok role="CLOSE" stretchy="true">)</XMTok>
+                      </XMWrap>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex16.m1.10">
+                    <XMTok meaning="residue" role="OPFUNCTION" scriptpos="post">Res</XMTok>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="delimited-[]"/>
+                        <XMRef idref="S1.Ex16.m1.12"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" stretchy="false">[</XMTok>
+                        <XMApp xml:id="S1.Ex16.m1.12">
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                          <XMDual>
+                            <XMRef idref="S1.Ex16.m1.13"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.13">z</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
+                        <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                  </XMApp>
                 </XMWrap>
-                <XMTok role="CLOSE" stretchy="false">]</XMTok>
-              </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>
