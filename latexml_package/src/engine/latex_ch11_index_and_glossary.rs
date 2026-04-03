@@ -16,192 +16,191 @@ fn add_index_phrase_key(node: &mut Node) -> Result<()> {
 /// Perl: CleanIndexKey — trim whitespace, remove trailing punctuation.
 fn clean_index_key(key: &str) -> String {
   let key = key.trim();
-  // Remove trailing punctuation
   key.trim_end_matches(['.', ',', ';']).to_string()
 }
 
+/// Perl: process_index_phrases — expand \index{a!b@c|see{d}} into
+/// \@index{\@indexphrase{a}\@indexphrase[c]{b}} etc.
+///
+/// Port of latex_constructs.pool.ltxml L4528-4591
+fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
+  let token_list = tokens.unlist();
+  if token_list.is_empty() {
+    return Ok(Tokens::new(vec![]));
+  }
+
+  // Add terminal ! if not present
+  let mut toks = token_list;
+  if toks.last().map(|t| t.with_str(|s| s != "!")).unwrap_or(true) {
+    toks.push(T_OTHER!("!"));
+  }
+
+  let mut expansion: Vec<Token> = Vec::new();
+  let mut phrase: Vec<Token> = Vec::new();
+  let mut sortas: Vec<Token> = Vec::new();
+  let mut style: Option<String> = None;
+  let mut i = 0;
+
+  while i < toks.len() {
+    let tok = toks[i].clone();
+    let s = tok.with_str(|s| s.to_string());
+    i += 1;
+
+    if s == "\"" && i < toks.len() {
+      // Escaped character: take next token literally
+      phrase.push(toks[i].clone());
+      i += 1;
+    } else if s == "@" {
+      // Sort key: everything before @ is the sort key
+      while phrase.last().map(|t| t.with_str(|s| s.trim().is_empty())).unwrap_or(false) {
+        phrase.pop();
+      }
+      sortas = phrase;
+      phrase = Vec::new();
+    } else if s == "!" || s == "|" {
+      // End of phrase
+      while phrase.last().map(|t| t.with_str(|s| s.trim().is_empty())).unwrap_or(false) {
+        phrase.pop();
+      }
+      if !phrase.is_empty() {
+        expansion.push(T_CS!("\\@indexphrase"));
+        if !sortas.is_empty() {
+          expansion.push(T_OTHER!("["));
+          expansion.extend(sortas.drain(..));
+          expansion.push(T_OTHER!("]"));
+        }
+        expansion.push(T_BEGIN!());
+        expansion.extend(phrase.drain(..));
+        expansion.push(T_END!());
+      }
+      sortas.clear();
+
+      if s == "|" {
+        // Collect remaining tokens as style/see/seealso
+        if i < toks.len() && toks.last().map(|t| t.with_str(|s| s == "!")).unwrap_or(false) {
+          // Remove terminal ! stopbit
+          toks.pop();
+        }
+        let extra: String = toks[i..].iter().map(|t| t.with_str(|s| s.to_string())).collect();
+        if extra.starts_with("see{") || extra.starts_with("see {") {
+          // \@indexsee{content}
+          // Skip "see{", collect until "}"
+          expansion.push(T_CS!("\\@indexsee"));
+          // Find the content between { and }
+          let content = extra.trim_start_matches("see").trim();
+          let content = content.strip_prefix('{').unwrap_or(content);
+          let content = content.strip_suffix('}').unwrap_or(content);
+          expansion.push(T_BEGIN!());
+          expansion.extend(Explode!(content));
+          expansion.push(T_END!());
+        } else if extra.starts_with("seealso{") || extra.starts_with("seealso {") {
+          expansion.push(T_CS!("\\@indexseealso"));
+          let content = extra.trim_start_matches("seealso").trim();
+          let content = content.strip_prefix('{').unwrap_or(content);
+          let content = content.strip_suffix('}').unwrap_or(content);
+          expansion.push(T_BEGIN!());
+          expansion.extend(Explode!(content));
+          expansion.push(T_END!());
+        } else if extra == "(" {
+          style = Some("rangestart".to_string());
+        } else if extra == ")" {
+          style = Some("rangeend".to_string());
+        } else if !extra.is_empty() {
+          // Style name (e.g., textbf → bold)
+          style = Some(match extra.as_str() {
+            "textbf" | "bf" => "bold".to_string(),
+            "textit" | "it" | "emph" => "italic".to_string(),
+            "textrm" | "rm" => String::new(),
+            other => other.to_string(),
+          });
+        }
+        break; // Consumed everything after |
+      }
+    } else if phrase.is_empty() && s.trim().is_empty() {
+      // Skip leading whitespace
+    } else {
+      phrase.push(tok);
+    }
+  }
+
+  // Wrap in \@index[style]{...}
+  let mut result = vec![T_BEGIN!(), T_CS!("\\normalfont"), T_CS!("\\@index")];
+  if let Some(ref sty) = style {
+    if !sty.is_empty() {
+      result.push(T_OTHER!("["));
+      result.extend(Explode!(sty));
+      result.push(T_OTHER!("]"));
+    }
+  }
+  result.push(T_BEGIN!());
+  result.extend(expansion);
+  result.push(T_END!());
+  result.push(T_END!());
+  Ok(Tokens::new(result))
+}
+
 LoadDefinitions!({
-  // #======================================================================
-  // # C.11.5 Index and Glossary
-  // #======================================================================
-
-  // # ---- The index commands
-  // # Format of Index entries:
-  // #   \index{entry!entry}  gives multilevel index
-  // # Each entry:
-  // #   foo@bar  sorts on "foo" but prints "bar"
-  // # The entries can end with a |expression:
-  // #   \index{...|(}    this page starts a range for foo
-  // #   \index{...|)}    this page ends a range
-  // #           The last two aren't handled in any particular way.
-  // #           We _could_ mark start & end, and then the postprocessor would
-  // #           need to fill in all likely links... ???
-  // #   \index{...|see{key}}  cross reference.
-  // #   \index{...|seealso{key}}  cross reference.
-  // #   \index{...|textbf}  (etc) causes the number to be printed in bold!
-  // #
-  // # I guess the formula is that
-  // #    \index{foo|whatever{pi}{pa}{po}}  => \whatever{pi}{pa}{po}{page}
-  // # How should this get interpreted??
-  // our %index_style = (textbf => 'bold', bf => 'bold', textrm => '', rm => '',
-  //   textit => 'italic', it => 'italic', emph => 'italic');    # What else?
-  //     # A bit screwy, but....
-  //     # Expand \index{a!b!...} into \@index{\@indexphrase{a}\@indexphrase{b}...}
-
-  // sub process_index_phrases {
-  //   my ($gullet, $phrases) = @_;
-  //   my @expansion = ();
-  //   # Split the text into phrases, separated by "!"
-  //   my @tokens = $phrases->unlist;
-  //   return unless @tokens;
-  //   push(@tokens, T_OTHER('!')) unless $tokens[-1]->getString eq '!';    # Add terminal !
-  //   my @phrase = ();
-  //   my @sortas = ();
-  //   my $style;
-  //   while (@tokens) {
-  //     my $tok    = shift(@tokens);
-  //     my $string = $tok->getString;
-  //     if ($string eq '"') {
-  //       push(@phrase, shift(@tokens)); }
-  //     elsif ($string eq '@') {
-  //       while (@phrase && ($phrase[-1]->getString =~ /\s/)) { pop(@phrase); }    # Trim
-  //       @sortas = @phrase; @phrase = (); }
-  //     elsif (($string eq '!') || ($string eq '|')) {
-  //       while (@phrase && ($phrase[-1]->getString =~ /\s/)) { pop(@phrase); }    # Trim
-  //       push(@expansion, T_CS('\@indexphrase'),
-  //         (@sortas ? (T_OTHER('['), @sortas, T_OTHER(']')) : ()),
-  //         T_BEGIN, @phrase, T_END)
-  //         if @phrase;
-  //       @phrase = (); @sortas = ();
-  //       if ($string eq '|') {
-  //         pop(@tokens);    # Remove the extra "!" stopbit.
-  //         my $extra = ToString(Tokens(@tokens));
-  //         if ($extra =~ /^see\s*{/) { push(@expansion, T_CS('\@indexsee'), @tokens[3 ..
-  // $#tokens]); }         elsif ($extra =~ /^seealso\s*\{/) { push(@expansion,
-  // T_CS('\@indexseealso'), @tokens[7 .. $#tokens]); }         elsif ($extra eq '(') { $style =
-  // 'rangestart'; }                     # ?         elsif ($extra eq ')') { $style = 'rangeend';
-  // }                       # ?         else                  { $style = $index_style{$extra} ||
-  // $extra; }         @tokens = (); } }
-  //     elsif (!@phrase && ($string =~ /\s/)) { }                                # Skip leading
-  // whitespace     else {
-  //       push(@phrase, $tok); } }
-  //   @expansion = (T_CS('\@index'),
-  //     ($style ? (T_OTHER('['), T_OTHER($style), T_OTHER(']')) : ()),
-  //     T_BEGIN, @expansion, T_END);
-  //   return (T_BEGIN,T_CS('\normalfont'), @expansion, T_END); }
-
-  // DefMacro('\index{}', \&process_index_phrases);
-
   Tag!("ltx:indexphrase", after_close => sub[_document, node] {
     add_index_phrase_key(node)?;
   });
   Tag!("ltx:glossaryphrase", after_close => sub[_document, node] {
     add_index_phrase_key(node)?;
   });
-  // ltx:indexsee does NOT get a key (at this stage)
 
-  // DefConstructor('\@index[]{}', "^<ltx:indexmark style='#1'>#2</ltx:indexmark>",
-  //   mode => 'text', reversion => '', sizer => 0);
+  // \@index[style][inlist]{phrases} → <ltx:indexmark>
+  DefConstructor!("\\@index[][]{}", "^<ltx:indexmark style='#1' inlist='#2'>#3</ltx:indexmark>",
+    bounded => true,
+    mode => "restricted_horizontal",
+    sizer => 0
+  );
 
-  // DefConstructor('\@indexphrase[]{}',
-  //   "<ltx:indexphrase key='#key' _standalone_font='true'>#2</ltx:indexphrase>",
-  //   properties => { key => sub { CleanIndexKey($_[1]); } });
-  // DefConstructor('\@indexsee{}',
-  //   "<ltx:indexsee key='#key' name='#name' _standalone_font='true'>#1</ltx:indexsee>",
-  //   properties => { name => sub { DigestIf('\seename') } });
+  // \@indexphrase[sortkey]{phrase} → <ltx:indexphrase>
+  DefConstructor!("\\@indexphrase[]{}", "<ltx:indexphrase key='#key'>#2</ltx:indexphrase>",
+    properties => sub[args] {
+      let key = args[0].as_ref()
+        .map(|a| clean_index_key(&a.to_string()))
+        .unwrap_or_default();
+      if key.is_empty() {
+        Ok(stored_map!())
+      } else {
+        Ok(stored_map!("key" => key))
+      }
+    }
+  );
 
-  // DefConstructor('\@indexseealso{}',
-  //   "<ltx:indexsee key='#key' name='#name' _standalone_font='true'>#1</ltx:indexsee>",
-  //   properties => { name => sub { DigestIf('\alsoname') } });
+  // \@indexsee{key} → <ltx:indexsee>
+  DefConstructor!("\\@indexsee{}", "<ltx:indexsee key='#key'>#1</ltx:indexsee>",
+    properties => sub[args] {
+      let key = args[0].as_ref()
+        .map(|a| clean_index_key(&a.to_string()))
+        .unwrap_or_default();
+      Ok(stored_map!("key" => key))
+    }
+  );
 
-  // DefConstructor('\glossary{}',
-  //   "<ltx:glossaryphrase role='glossary' key='#key'>#1</ltx:glossaryphrase>",
-  //   properties => { key => sub { CleanIndexKey($_[1]); } },
-  //   sizer => 0);
+  // \@indexseealso{key} → <ltx:indexsee>
+  DefConstructor!("\\@indexseealso{}", "<ltx:indexsee key='#key'>#1</ltx:indexsee>",
+    properties => sub[args] {
+      let key = args[0].as_ref()
+        .map(|a| clean_index_key(&a.to_string()))
+        .unwrap_or_default();
+      Ok(stored_map!("key" => key))
+    }
+  );
 
-  // #======================================================================
-  // # This converts an indexphrase node into a sortable string.
-  // # Seems the XML nodes are the best place to handle it (rather than Boxes),
-  // # although some of the special cases (see, @, may end up tricky)
-  // sub indexify {
-  //   my ($node, $document) = @_;
-  //   my $type = $node->nodeType;
-  //   if ($type == XML_TEXT_NODE) {
-  //     my $string = $node->textContent;
-  //     $string =~ s/\W//g;    # to be safe (if perhaps non-unique?)
-  //     $string =~ s/\s//g;    # Or remove entirely? Eventually worry about many=>1 mapping???
-  //     return $string; }
-  //   elsif ($type == XML_ELEMENT_NODE) {
-  //     if ($document->getModel->getNodeQName($node) eq 'ltx:Math') {
-  //       return indexify_tex($node->getAttribute('tex')); }
-  //     else {
-  //       return join('', map { indexify($_, $document) } $node->childNodes); } }
-  //   elsif ($type == XML_DOCUMENT_FRAG_NODE) {
-  //     return join('', map { indexify($_, $document) } content_nodes($node)); }
-  //   else {
-  //     return ""; } }
-
-  // # Try to clean up a TeX string into something
-  // # Could walk the math tree and handle XMDual specially, but need to xref args.
-  // # But also we'd have unicode showing up, which we'd like to latinize...
-  // sub indexify_tex {
-  //   my ($string) = @_;
-  //   $string =~ s/(\\\@|\\,|\\:|\\;|\\!|\\ |\\\/|)//g;
-  //   $string =~
-  // s/(\\mathrm|\\mathit|\\mathbf|\\mathsf|\\mathtt|\\mathcal|\\mathscr|\\mbox|\\rm|\\it|\\bf|\\
-  // tt|\\small|\\tiny)//g;   $string =~ s/\\left\b//g; $string =~ s/\\right\b//g;
-  //   $string =~ s/(\\|\{|\})//g;
-  //   $string =~ s/\W//g;    # to be safe (if perhaps non-unique?)
-  //   $string =~ s/\s//g;    # Or remove entirely? Eventually worry about many=>1 mapping???
-  //   return $string; }
-
-  // # ---- Creating the index itself
-
-  // AssignValue(INDEXLEVEL => 0);
-
-  // Tag('ltx:indexentry', autoClose => 1);
-
-  // sub closeIndexPhrase {
-  //   my ($document) = @_;
-  //   if ($document->isCloseable('ltx:indexphrase')) {
-  //     $document->closeElement('ltx:indexphrase'); }
-  //   return; }
-
-  // sub doIndexItem {
-  //   my ($document, $level) = @_;
-  //   $document->closeElement('ltx:indexrefs') if $document->isCloseable('ltx:indexrefs');
-  //   closeIndexPhrase($document);
-  //   my $l = LookupValue('INDEXLEVEL');
-  //   while ($l < $level) {
-  //     $document->openElement('ltx:indexlist'); $l++; }
-  //   while ($l > $level) {
-  //     $document->closeElement('ltx:indexlist'); $l--; }
-  //   AssignValue(INDEXLEVEL => $l);
-  //   if ($level) {
-  //     $document->openElement('ltx:indexentry');
-  //     $document->openElement('ltx:indexphrase'); }
-  //   return; }
-
-  // DefConstructor('\index@dotfill', undef, sub {
-  //     my ($document) = @_;
-  //     closeIndexPhrase($document);
-  //     $document->openElement('ltx:indexrefs'); });
-  // DefConstructor('\index@item',       undef, sub { doIndexItem($_[0], 1); });
-  // DefConstructor('\index@subitem',    undef, sub { doIndexItem($_[0], 2); });
-  // DefConstructor('\index@subsubitem', undef, sub { doIndexItem($_[0], 3); });
-  // DefConstructor('\index@done',       undef, sub { doIndexItem($_[0], 0); });
+  // \index{phrases} — expand to \@index via process_index_phrases
+  DefMacro!("\\index {}", sub[(phrases)] {
+    process_index_phrases(Tokens::new(phrases.revert()))
+  });
 
   DefMacro!("\\indexname", "Index");
-  // Simplified {theindex} — Perl has complex index item handling
   DefEnvironment!("{theindex}",
     "<ltx:index xml:id='#id'>#body</ltx:index>");
 
-  // Perl: latex_constructs.pool.ltxml L4587
   DefPrimitive!("\\indexspace", None);
   DefPrimitive!("\\makeindex", None);
   DefPrimitive!("\\makeglossary", None);
 
-  // Stub for \index — just discard the argument for now.
-  // Full process_index_phrases expansion is deferred.
-  DefPrimitive!("\\index {}", None);
+  DefMacro!("\\seename", "see");
+  DefMacro!("\\alsoname", "see also");
 });

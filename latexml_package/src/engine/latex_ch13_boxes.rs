@@ -92,6 +92,8 @@ LoadDefinitions!({
     }
   });
 
+  // Perl: DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');
+  // Note: wiring to \vskip causes paragraph breaks in moderncv — keep as stub for now
   DefPrimitive!("\\vspace OptionalMatch:* {}", None);
   DefPrimitive!("\\addvspace {}", None);
   DefPrimitive!("\\addpenalty {}", None);
