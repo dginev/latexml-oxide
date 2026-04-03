@@ -238,6 +238,13 @@ LoadDefinitions!({
   // Perl L57-59: bibconfig KeyVal — comma-separated bib config values.
   DefKeyVal!("LTXML", "bibconfig", "Semiverbatim");
 
+  // Perl L63-86: Image scaling options — saved as processing instructions
+  // via \lx@save@parameter at \begin{document} time.
+  DefKeyVal!("LTXML", "DPI", "Number");
+  DefKeyVal!("LTXML", "magnify", "Number");
+  DefKeyVal!("LTXML", "upsample", "Number");
+  DefKeyVal!("LTXML", "zoomout", "Number");
+
   // Perl L87-98: Limit options — set global limits for infinite-loop protection.
   // These are DefKeyVal with code closures; since our macro doesn't support code,
   // we define them as DeclareOption and handle in ProcessOptions.
@@ -307,6 +314,24 @@ LoadDefinitions!({
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
       gullet::set_pushback_limit(Some(limit));
+    }
+  }
+
+  // Save image scaling parameters as processing instructions
+  // Perl: DefKeyVal with code => AtBeginDocument(\lx@save@parameter{key}{value})
+  // These PIs are read by the Graphics post-processor.
+  for param_name in &["DPI", "magnify", "upsample", "zoomout"] {
+    let key = s!("KV@LTXML@{}", param_name);
+    if let Some(v) = state::lookup_value(&key) {
+      let val = v.to_string().trim().to_string();
+      if !val.is_empty() {
+        // Store for PI emission at document construction time
+        state::assign_value(
+          &s!("PI@latexml@{}", param_name),
+          Stored::String(arena::pin(&val)),
+          Some(Scope::Global),
+        );
+      }
     }
   }
 
