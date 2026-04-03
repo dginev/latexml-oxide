@@ -200,6 +200,32 @@ LoadDefinitions!({
   DefPrimitive!("\\indexspace", None);
   DefPrimitive!("\\makeindex", None);
   DefPrimitive!("\\makeglossary", None);
+  // Perl: DefMacro('\printindex', '\@printindex');
+  // \printindex and \@printindex produce a stub index TOC
+  DefConstructor!("\\printindex", "<ltx:index xml:id='#id' lists='idx'><ltx:title>#name</ltx:title></ltx:index>",
+    properties => {
+      Ok(stored_map!("name" => stomach::digest(T_CS!("\\indexname"))?))
+    }
+  );
+
+  // Perl: \glossary{} — simplified glossary entry
+  DefConstructor!("\\glossary{}", "<ltx:glossaryphrase role='glossary' key='#key'>#1</ltx:glossaryphrase>",
+    properties => sub[args] {
+      let key = args[0].as_ref()
+        .map(|a| clean_index_key(&a.to_string()))
+        .unwrap_or_default();
+      Ok(stored_map!("key" => key))
+    },
+    sizer => 0
+  );
+
+  DefMacro!("\\glossaryname", "Glossary");
+  DefConstructor!("\\printglossary",
+    "<ltx:glossary xml:id='#id'><ltx:title>#name</ltx:title></ltx:glossary>",
+    properties => {
+      Ok(stored_map!("name" => stomach::digest(T_CS!("\\glossaryname"))?))
+    }
+  );
 
   DefMacro!("\\seename", "see");
   DefMacro!("\\alsoname", "see also");
