@@ -31,9 +31,13 @@ macro_rules! LEAD_CLOSE_TAG_RE_STR (() => (concat!(r"^", CLOSE_TAG_RE_STR!())));
 
 macro_rules! SPECIALS (() => (r"\#\?&\\"));
 // Quoted special characters (or semi-special)
+// Includes: \X where X is a special, ##, \&amp;, &amp;,
+// and \word (backslash + letters = TeX CS in text position, treated as literal text).
 macro_rules! QUOTED_SPECIALS (
     () => (concat!(r"\\\\\\[",SPECIALS!(),
-                   r"]|\\#\\#|\\&amp;|&amp;"))); // or special cases: doubled #, \&amp;, &amp;
+                   r"]|\\#\\#|\\&amp;|&amp;",
+                   r"|\\[a-zA-Z@]+"  // \textbf, \textit etc. — literal text insertion
+                   ))); // or special cases: doubled #, \&amp;, &amp;
 macro_rules! LEAD_QUOTED_RE_STR (() => (
   concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),"'\"])+)")));
 macro_rules! LEAD_RANDOM_TEXT_RE_STR (() => (
@@ -143,8 +147,13 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     replacement = float_res.to_string();
   }
   let mut operations = Vec::new();
+  let mut _iter_count = 0u32;
 
   while !replacement.is_empty() {
+    _iter_count += 1;
+    if _iter_count > 1000 {
+      panic!("compile_replacement_tokens: infinite loop detected after 1000 iterations. Remaining template: {:?}", &replacement[..replacement.len().min(200)]);
+    }
     let mut current_tag = String::new();
 
     // ?test(ifclause)(elseclause)

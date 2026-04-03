@@ -66,13 +66,10 @@ LoadDefinitions!({
   Let!("\\IEEEQED", "\\IEEEQEDclosed");
 
   // IEEEproof environment (Perl L206-229)
-
-  // ERROR! INFINITE LOOP IN rustc COMPILATION !!!
-  //
-  // DefEnvironment!("{IEEEproof}[]",
-  //   "<ltx:proof class='ltx_runin'><ltx:title font='italic' _force_font='true' class='ltx_runin'>\\textbf{\\textit{Proof:}}</ltx:title>#body</ltx:proof>");
+  // Perl digests \\textbf{\\textit{Proof:}} producing font="bold italic".
+  // Our codegen treats \\word as literal text, so use explicit attributes instead.
   DefEnvironment!("{IEEEproof}[]",
-    "<ltx:proof class='ltx_runin'><ltx:title font='italic' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>");
+    "<ltx:proof class='ltx_runin'><ltx:title font='bold italic' _force_font='true' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>");
 
   // // IEEEeqnarray (Perl L299-332) — map to eqnarray
   // DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
