@@ -1343,14 +1343,25 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm h,0)" xml:id="S4.T1.m7">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="open-interval@(plus-or-minus h, 0)" xml:id="S4.T1.m7">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m7.1"/>
+                      <XMRef idref="S4.T1.m7.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m7.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m7.2">0</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{8}" text="1 / 8" xml:id="S4.T1.m8">
@@ -1365,14 +1376,25 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(0,\pm h)" xml:id="S4.T1.m9">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,\pm h)" text="open-interval@(0, plus-or-minus h)" xml:id="S4.T1.m9">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m9.1"/>
+                      <XMRef idref="S4.T1.m9.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m9.1">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m9.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{8}" text="1 / 8" xml:id="S4.T1.m10">
@@ -1533,25 +1555,44 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" xml:id="S4.T1.m11">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" text="open-interval@(plus-or-minus (1 / 2) * h, plus-or-minus (1 / 2) * h)" xml:id="S4.T1.m11">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m11.1"/>
+                      <XMRef idref="S4.T1.m11.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m11.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m11.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{4}" text="1 / 4" xml:id="S4.T1.m12">
@@ -1795,23 +1836,45 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm h,0)" xml:id="S4.T1.m17">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="open-interval@(plus-or-minus h, 0)" xml:id="S4.T1.m17">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m17.1"/>
+                      <XMRef idref="S4.T1.m17.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m17.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m17.2">0</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
-              </Math>, <Math class="ltx_math_unparsed" mode="inline" tex="(0,\pm h)" xml:id="S4.T1.m18">
+              </Math>, <Math mode="inline" tex="(0,\pm h)" text="open-interval@(0, plus-or-minus h)" xml:id="S4.T1.m18">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m18.1"/>
+                      <XMRef idref="S4.T1.m18.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m18.1">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m18.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{24}" text="1 / 24" xml:id="S4.T1.m19">
@@ -1826,25 +1889,44 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" xml:id="S4.T1.m20">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" text="open-interval@(plus-or-minus (1 / 2) * h, plus-or-minus (1 / 2) * h)" xml:id="S4.T1.m20">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m20.1"/>
+                      <XMRef idref="S4.T1.m20.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m20.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m20.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{6}" text="1 / 6" xml:id="S4.T1.m21">
@@ -2063,23 +2145,37 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{6}h,0)" xml:id="S4.T1.m25">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{6}h,0)" text="open-interval@(plus-or-minus (1 / 3) * square-root@(6) * h, 0)" xml:id="S4.T1.m25">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMTok meaning="6" role="NUMBER">6</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m25.1"/>
+                      <XMRef idref="S4.T1.m25.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m25.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMTok meaning="6" role="NUMBER">6</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m25.2">0</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{8}" text="1 / 8" xml:id="S4.T1.m26">
@@ -2094,33 +2190,52 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\tfrac{1}{6}\sqrt{6}h,\pm\tfrac{1}{2}\sqrt{2}h)" xml:id="S4.T1.m27">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{6}\sqrt{6}h,\pm\tfrac{1}{2}\sqrt{2}h)" text="open-interval@(plus-or-minus (1 / 6) * square-root@(6) * h, plus-or-minus (1 / 2) * square-root@(2) * h)" xml:id="S4.T1.m27">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="6" role="NUMBER">6</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMTok meaning="6" role="NUMBER">6</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMTok meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m27.1"/>
+                      <XMRef idref="S4.T1.m27.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m27.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="6" role="NUMBER">6</XMTok>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMTok meaning="6" role="NUMBER">6</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m27.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMTok meaning="2" role="NUMBER">2</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{8}" text="1 / 8" xml:id="S4.T1.m28">
@@ -2354,23 +2469,45 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm h,0)" xml:id="S4.T1.m32">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="open-interval@(plus-or-minus h, 0)" xml:id="S4.T1.m32">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m32.1"/>
+                      <XMRef idref="S4.T1.m32.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m32.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m32.2">0</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
-              </Math>, <Math class="ltx_math_unparsed" mode="inline" tex="(0,\pm h)" xml:id="S4.T1.m33">
+              </Math>, <Math mode="inline" tex="(0,\pm h)" text="open-interval@(0, plus-or-minus h)" xml:id="S4.T1.m33">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m33.1"/>
+                      <XMRef idref="S4.T1.m33.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m33.1">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m33.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{9}" text="1 / 9" xml:id="S4.T1.m34">
@@ -2385,15 +2522,28 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm h,\pm h)" xml:id="S4.T1.m35">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,\pm h)" text="open-interval@(plus-or-minus h, plus-or-minus h)" xml:id="S4.T1.m35">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m35.1"/>
+                      <XMRef idref="S4.T1.m35.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m35.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m35.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{36}" text="1 / 36" xml:id="S4.T1.m36">
@@ -2563,33 +2713,52 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{3}h,\pm\tfrac{1}{3}\sqrt{3}h)" xml:id="S4.T1.m37">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{3}h,\pm\tfrac{1}{3}\sqrt{3}h)" text="open-interval@(plus-or-minus (1 / 3) * square-root@(3) * h, plus-or-minus (1 / 3) * square-root@(3) * h)" xml:id="S4.T1.m37">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMTok meaning="3" role="NUMBER">3</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                    <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                  </XMApp>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMTok meaning="3" role="NUMBER">3</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m37.1"/>
+                      <XMRef idref="S4.T1.m37.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m37.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMTok meaning="3" role="NUMBER">3</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m37.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMTok meaning="3" role="NUMBER">3</XMTok>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{1}{4}" text="1 / 4" xml:id="S4.T1.m38">
@@ -2842,39 +3011,67 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,0)" xml:id="S4.T1.m43">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,0)" text="open-interval@(plus-or-minus square-root@(3 / 5) * h, 0)" xml:id="S4.T1.m43">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
+                  <XMDual>
                     <XMApp>
-                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                      <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m43.1"/>
+                      <XMRef idref="S4.T1.m43.2"/>
                     </XMApp>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m43.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMApp>
+                              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                              <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                              <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                            </XMApp>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m43.2">0</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
-              </Math>, <Math class="ltx_math_unparsed" mode="inline" tex="(0,\pm\sqrt{\tfrac{3}{5}}h)" xml:id="S4.T1.m44">
+              </Math>, <Math mode="inline" tex="(0,\pm\sqrt{\tfrac{3}{5}}h)" text="open-interval@(0, plus-or-minus square-root@(3 / 5) * h)" xml:id="S4.T1.m44">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="0" role="NUMBER">0</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
+                  <XMDual>
                     <XMApp>
-                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                      <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m44.1"/>
+                      <XMRef idref="S4.T1.m44.2"/>
                     </XMApp>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok meaning="0" role="NUMBER" xml:id="S4.T1.m44.1">0</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m44.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMApp>
+                              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                              <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                              <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                            </XMApp>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center"><Math mode="inline" tex="\tfrac{10}{81}" text="10 / 81" xml:id="S4.T1.m45">
@@ -2889,31 +3086,50 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" border="b" class="ltx_nopad_l" thead="row"><Math class="ltx_math_unparsed" mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,\pm\sqrt{\tfrac{3}{5}}h)" xml:id="S4.T1.m46">
+            <td align="left" border="b" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,\pm\sqrt{\tfrac{3}{5}}h)" text="open-interval@(plus-or-minus square-root@(3 / 5) * h, plus-or-minus square-root@(3 / 5) * h)" xml:id="S4.T1.m46">
                 <XMath>
-                  <XMTok role="OPEN" stretchy="false">(</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
+                  <XMDual>
                     <XMApp>
-                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                      <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S4.T1.m46.1"/>
+                      <XMRef idref="S4.T1.m46.2"/>
                     </XMApp>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="PUNCT">,</XMTok>
-                  <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMApp>
-                      <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                      <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
-                      <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
-                    </XMApp>
-                  </XMApp>
-                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMApp xml:id="S4.T1.m46.1">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMApp>
+                              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                              <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                              <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                            </XMApp>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMApp xml:id="S4.T1.m46.2">
+                        <XMTok meaning="plus-or-minus" name="pm" role="ADDOP">±</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok meaning="square-root"/>
+                            <XMApp>
+                              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                              <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+                              <XMTok fontsize="70%" meaning="5" role="NUMBER">5</XMTok>
+                            </XMApp>
+                          </XMApp>
+                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
                 </XMath>
               </Math></td>
             <td align="center" border="b"><Math mode="inline" tex="\tfrac{25}{324}" text="25 / 324" xml:id="S4.T1.m47">

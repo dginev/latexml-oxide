@@ -301,34 +301,70 @@
     <title><tag close=" ">3</tag>Probability functions</title>
     <para xml:id="S3.p1">
       <equation xml:id="S3.Ex11">
-        <Math class="ltx_math_unparsed" mode="display" tex="p(x,y|\Theta)" xml:id="S3.Ex11.m1">
+        <Math mode="display" tex="p(x,y|\Theta)" text="p@(conditional@(open-interval@(x, y), Theta))" xml:id="S3.Ex11.m1">
           <XMath>
-            <XMTok font="italic" role="FUNCTION">p</XMTok>
-            <XMWrap>
-              <XMTok role="OPEN" stretchy="false">(</XMTok>
-              <XMTok font="italic" role="ID">x</XMTok>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMTok font="italic" role="ID">y</XMTok>
-              <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-              <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
-              <XMTok role="CLOSE" stretchy="false">)</XMTok>
-            </XMWrap>
+            <XMApp>
+              <XMTok font="italic" role="FUNCTION">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S3.Ex11.m1.1"/>
+                  <XMRef idref="S3.Ex11.m1.4"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMDual xml:id="S3.Ex11.m1.1">
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S3.Ex11.m1.2"/>
+                      <XMRef idref="S3.Ex11.m1.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="ID" xml:id="S3.Ex11.m1.2">x</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok font="italic" role="ID" xml:id="S3.Ex11.m1.3">y</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMTok name="Theta" role="UNKNOWN" xml:id="S3.Ex11.m1.4">Θ</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math>
       </equation>
       <equation xml:id="S3.Ex12">
-        <Math class="ltx_math_unparsed" mode="display" tex="p(y|x,\Theta)" xml:id="S3.Ex12.m1">
+        <Math mode="display" tex="p(y|x,\Theta)" text="p@(conditional@(y, open-interval@(x, Theta)))" xml:id="S3.Ex12.m1">
           <XMath>
-            <XMTok font="italic" role="FUNCTION">p</XMTok>
-            <XMWrap>
-              <XMTok role="OPEN" stretchy="false">(</XMTok>
-              <XMTok font="italic" role="ID">y</XMTok>
-              <XMTok role="VERTBAR" stretchy="false">|</XMTok>
-              <XMTok font="italic" role="ID">x</XMTok>
-              <XMTok role="PUNCT">,</XMTok>
-              <XMTok name="Theta" role="UNKNOWN">Θ</XMTok>
-              <XMTok role="CLOSE" stretchy="false">)</XMTok>
-            </XMWrap>
+            <XMApp>
+              <XMTok font="italic" role="FUNCTION">p</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="conditional"/>
+                  <XMRef idref="S3.Ex12.m1.1"/>
+                  <XMRef idref="S3.Ex12.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S3.Ex12.m1.1">y</XMTok>
+                  <XMTok role="MIDDLE" stretchy="false">|</XMTok>
+                  <XMDual xml:id="S3.Ex12.m1.2">
+                    <XMApp>
+                      <XMTok meaning="open-interval"/>
+                      <XMRef idref="S3.Ex12.m1.3"/>
+                      <XMRef idref="S3.Ex12.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="ID" xml:id="S3.Ex12.m1.3">x</XMTok>
+                      <XMTok role="PUNCT">,</XMTok>
+                      <XMTok name="Theta" role="UNKNOWN" xml:id="S3.Ex12.m1.4">Θ</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
           </XMath>
         </Math>
       </equation>

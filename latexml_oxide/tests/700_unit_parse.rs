@@ -172,3 +172,128 @@ fn parse_failure_with_full_document() {
     "serialized XML should not contain null bytes"
   );
 }
+
+/// Grammar ambiguity regression tests.
+/// Track raw Marpa tree counts for known-ambiguous formulas.
+/// Each formula has a limit based on the current grammar. If a grammar change
+/// increases the count, the test fails — preventing ambiguity regressions.
+/// If a grammar change DECREASES the count, update the limit downward.
+#[test]
+fn parse_tree_count_limits() {
+  let mut parser = MathParser::default();
+
+  // (name, lexemes, max_allowed_raw_trees)
+  let cases: Vec<(&str, &str, usize)> = vec![
+    // mathtools: 4-equation bigop formula with \quad separators
+    ("bigop_quad_4eq",
+     "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 ATOM:a:5 end_BIGOPSUB:end:6 \
+      start_BIGOPSUP:start:7 ID:infinity:8 end_BIGOPSUP:end:9 UNKNOWN:V:10 \
+      start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 PUNCT:quad:14 \
+      UNKNOWN:X:15 RELOP:equals:16 SUMOP:sum:17 start_BIGOPSUB:start:18 ATOM:a:19 \
+      end_BIGOPSUB:end:20 start_BIGOPSUP:start:21 NUMBER:3456:22 end_BIGOPSUP:end:23 \
+      UNKNOWN:X:24 start_POSTSUBSCRIPT:start:25 UNKNOWN:i:26 end_POSTSUBSCRIPT:end:27 \
+      PUNCT:quad:28 UNKNOWN:Y:29 RELOP:equals:30 SUMOP:sum:31 start_BIGOPSUB:start:32 \
+      ATOM:a:33 end_BIGOPSUB:end:34 UNKNOWN:Y:35 start_POSTSUBSCRIPT:start:36 UNKNOWN:i:37 \
+      end_POSTSUBSCRIPT:end:38 PUNCT:quad:39 UNKNOWN:Z:40 RELOP:equals:41 BIGOP:T:42 \
+      start_BIGOPSUB:start:43 ATOM:a:44 end_BIGOPSUB:end:45 UNKNOWN:Z:46 \
+      start_POSTSUBSCRIPT:start:47 UNKNOWN:i:48 end_POSTSUBSCRIPT:end:49 ",
+     5000),  // TODO: reduce grammar ambiguity
+
+    // mathtools: 24 alternating UNKNOWN letters from vsmallmatrix
+    ("unknown_letters_24",
+     "UNKNOWN:b:1 UNKNOWN:l:2 UNKNOWN:b:3 UNKNOWN:l:4 UNKNOWN:b:5 UNKNOWN:l:6 \
+      UNKNOWN:b:7 UNKNOWN:l:8 UNKNOWN:l:9 UNKNOWN:b:10 UNKNOWN:b:11 UNKNOWN:l:12 \
+      UNKNOWN:b:13 UNKNOWN:l:14 UNKNOWN:b:15 UNKNOWN:l:16 UNKNOWN:b:17 UNKNOWN:l:18 \
+      UNKNOWN:b:19 UNKNOWN:l:20 UNKNOWN:b:21 UNKNOWN:l:22 UNKNOWN:b:23 UNKNOWN:l:24 ",
+     5000),  // TODO: reduce grammar ambiguity
+
+    // sampler: 4-equation bigop formula with comma separators
+    ("bigop_comma_4eq",
+     "UNKNOWN:X:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 ATOM:a:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 \
+      end_POSTSUBSCRIPT:end:10 PUNCT:,:11 UNKNOWN:X:12 RELOP:equals:13 SUMOP:sum:14 \
+      start_BIGOPSUB:start:15 ATOM:a:16 end_BIGOPSUB:end:17 UNKNOWN:X:18 \
+      start_POSTSUBSCRIPT:start:19 UNKNOWN:i:20 end_POSTSUBSCRIPT:end:21 PUNCT:,:22 \
+      UNKNOWN:X:23 RELOP:equals:24 SUMOP:sum:25 start_BIGOPSUB:start:26 ATOM:a:27 \
+      end_BIGOPSUB:end:28 UNKNOWN:X:29 start_POSTSUBSCRIPT:start:30 UNKNOWN:i:31 \
+      end_POSTSUBSCRIPT:end:32 PUNCT:,:33 UNKNOWN:X:34 RELOP:equals:35 SUMOP:sum:36 \
+      start_BIGOPSUB:start:37 ATOM:a:38 end_BIGOPSUB:end:39 UNKNOWN:X:40 \
+      start_POSTSUBSCRIPT:start:41 UNKNOWN:i:42 end_POSTSUBSCRIPT:end:43 ",
+     3840),
+
+    // mathtools: pre-scripted formula (was 5000 before formulae split, now ~5000 raw)
+    ("prescripted_quad",
+     "start_FLOATSUPERSCRIPT:start:1 NUMBER:4:2 end_FLOATSUPERSCRIPT:end:3 \
+      start_POSTSUBSCRIPT:start:4 NUMBER:12:5 end_POSTSUBSCRIPT:end:6 UNKNOWN:C:7 \
+      start_POSTSUPERSCRIPT:start:8 ATOM:5p:9 end_POSTSUPERSCRIPT:end:10 \
+      start_POSTSUBSCRIPT:start:11 NUMBER:2:12 end_POSTSUBSCRIPT:end:13 PUNCT:quad:14 \
+      start_FLOATSUPERSCRIPT:start:15 NUMBER:14:16 end_FLOATSUPERSCRIPT:end:17 \
+      start_POSTSUBSCRIPT:start:18 NUMBER:2:19 end_POSTSUBSCRIPT:end:20 UNKNOWN:C:21 \
+      start_POSTSUPERSCRIPT:start:22 ATOM:5p:23 end_POSTSUPERSCRIPT:end:24 \
+      start_POSTSUBSCRIPT:start:25 NUMBER:2:26 end_POSTSUBSCRIPT:end:27 PUNCT:quad:28 \
+      start_FLOATSUPERSCRIPT:start:29 NUMBER:4:30 end_FLOATSUPERSCRIPT:end:31 \
+      start_POSTSUBSCRIPT:start:32 NUMBER:12:33 end_POSTSUBSCRIPT:end:34 UNKNOWN:C:35 \
+      start_POSTSUPERSCRIPT:start:36 ATOM:5p:37 end_POSTSUPERSCRIPT:end:38 \
+      start_POSTSUBSCRIPT:start:39 NUMBER:2:40 end_POSTSUBSCRIPT:end:41 PUNCT:quad:42 \
+      start_FLOATSUPERSCRIPT:start:43 NUMBER:14:44 end_FLOATSUPERSCRIPT:end:45 UNKNOWN:C:46 \
+      start_POSTSUPERSCRIPT:start:47 ATOM:5p:48 end_POSTSUPERSCRIPT:end:49 \
+      start_POSTSUBSCRIPT:start:50 NUMBER:2:51 end_POSTSUBSCRIPT:end:52 PUNCT:quad:53 \
+      start_FLOATSUBSCRIPT:start:54 NUMBER:2:55 end_FLOATSUBSCRIPT:end:56 UNKNOWN:C:57 \
+      start_POSTSUPERSCRIPT:start:58 ATOM:5p:59 end_POSTSUPERSCRIPT:end:60 \
+      start_POSTSUBSCRIPT:start:61 NUMBER:2:62 end_POSTSUBSCRIPT:end:63 ",
+     5000),  // TODO: reduce grammar ambiguity
+
+    // mathtools: xy+xy+∫xy dx+xy+... (28 tokens)
+    ("intop_chain",
+     "UNKNOWN:x:1 UNKNOWN:y:2 ADDOP:plus:3 UNKNOWN:x:4 UNKNOWN:y:5 ADDOP:plus:6 \
+      INTOP:integral:7 UNKNOWN:x:8 UNKNOWN:y:9 ATOM:dx:10 ADDOP:plus:11 UNKNOWN:x:12 \
+      UNKNOWN:y:13 ADDOP:plus:14 UNKNOWN:x:15 UNKNOWN:y:16 ADDOP:plus:17 UNKNOWN:x:18 \
+      UNKNOWN:y:19 ADDOP:plus:20 UNKNOWN:x:21 UNKNOWN:y:22 ADDOP:plus:23 UNKNOWN:x:24 \
+      UNKNOWN:y:25 ADDOP:plus:26 UNKNOWN:x:27 UNKNOWN:y:28 ",
+     768),
+
+    // 1-equation bigop (baseline)
+    ("bigop_1eq",
+     "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:a:5 \
+      end_BIGOPSUB:end:6 start_BIGOPSUP:start:7 UNKNOWN:b:8 end_BIGOPSUP:end:9 \
+      UNKNOWN:V:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
+     16),
+
+    // 2-equation bigop with \quad
+    ("bigop_quad_2eq",
+     "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:a:5 \
+      end_BIGOPSUB:end:6 start_BIGOPSUP:start:7 UNKNOWN:b:8 end_BIGOPSUP:end:9 \
+      UNKNOWN:V:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 \
+      PUNCT:quad:14 UNKNOWN:X:15 RELOP:equals:16 SUMOP:sum:17 start_BIGOPSUB:start:18 \
+      UNKNOWN:a:19 end_BIGOPSUB:end:20 start_BIGOPSUP:start:21 UNKNOWN:b:22 \
+      end_BIGOPSUP:end:23 UNKNOWN:X:24 start_POSTSUBSCRIPT:start:25 UNKNOWN:i:26 \
+      end_POSTSUBSCRIPT:end:27 ",
+     192),
+
+    // 3-equation bigop with \quad
+    ("bigop_quad_3eq",
+     "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:a:5 \
+      end_BIGOPSUB:end:6 start_BIGOPSUP:start:7 UNKNOWN:b:8 end_BIGOPSUP:end:9 \
+      UNKNOWN:V:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 \
+      PUNCT:quad:14 UNKNOWN:X:15 RELOP:equals:16 SUMOP:sum:17 start_BIGOPSUB:start:18 \
+      UNKNOWN:a:19 end_BIGOPSUB:end:20 start_BIGOPSUP:start:21 UNKNOWN:b:22 \
+      end_BIGOPSUP:end:23 UNKNOWN:X:24 start_POSTSUBSCRIPT:start:25 UNKNOWN:i:26 \
+      end_POSTSUBSCRIPT:end:27 PUNCT:quad:28 UNKNOWN:Y:29 RELOP:equals:30 SUMOP:sum:31 \
+      start_BIGOPSUB:start:32 UNKNOWN:a:33 end_BIGOPSUB:end:34 UNKNOWN:Y:35 \
+      start_POSTSUBSCRIPT:start:36 UNKNOWN:i:37 end_POSTSUBSCRIPT:end:38 ",
+     1792),
+  ];
+
+  for (name, lexemes, max_allowed) in &cases {
+    let start = std::time::Instant::now();
+    let count = parser.count_raw_trees(lexemes);
+    let elapsed = start.elapsed();
+    let n = count.unwrap_or(0);
+    eprintln!("{name}: {n} raw trees in {elapsed:?} (limit: {max_allowed})");
+    assert!(
+      n <= *max_allowed,
+      "{name}: {n} raw trees exceeds limit of {max_allowed}. \
+       Grammar change increased ambiguity."
+    );
+  }
+}

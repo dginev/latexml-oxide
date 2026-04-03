@@ -304,11 +304,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | statement vertbar statements => vertbar_modifier;
 
     // Perl MathGrammar: Formulae = Formula (endPunct Formula)* → NewFormulae()
-    formula_list = statement punct statement => formulae_apply
-      | formula_list punct statement => formulae_apply
+    // Separate nonterminal from expression-level formula_list to avoid ambiguity:
+    // expression-level formula_list uses formula_list_apply (rejects relops),
+    // while formulae uses formulae_apply (accepts full statements).
+    formulae = statement punct statement => formulae_apply
+      | formulae punct statement => formulae_apply
       // Period also separates formulae
       | statement period statement => formulae_apply
-      | formula_list period statement => formulae_apply;
+      | formulae period statement => formulae_apply;
 
     // Extensions, now that we have more category variables defined
     fenced_factor = lbrace expression rbrace    => fenced
@@ -611,6 +614,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Chain scripts: first sub then super, or vice versa (like scripted_factor_r1/r2)
     // Use bigop-specific script tokens when available (from lexer),
     // fall back to generic POSTSUBSCRIPT/POSTSUPERSCRIPT for compatibility
+    // Single-script bigop: one sub or one super
     scripted_bigop_r1 = any_bigop bigopsuparg => postfix_script
       | any_bigop bigopsubarg => postfix_script
       | any_bigop postsuperarg => postfix_script
@@ -703,7 +707,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
     // These already have valid prefix interpretations inside expressions.
     orphan_op = mulop | binop | diffop | supop | modifierop;
-    anything = formula_list | statements | anyop | anyscript |
+    anything = formulae | formula_list | statements | anyop | anyscript |
       anyop anyop => compound_operator_2 |
       // Perl MathGrammar L81: leading orphan operator (tabular fragment).
       // Only at the start rule (anything) — not recursive, not inside subexpressions.

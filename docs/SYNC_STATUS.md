@@ -224,6 +224,30 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 - [x] **A15. `--navigationtoc=context`** — navigation TOC. Passed as XSLT parameter `NAVIGATIONTOC`.
 - [x] **A16. `--whatsin=directory`** — directory mode: adds source dir to search paths. Auto-detected from trailing `/`.
 
+### Math parser ambiguity reduction (M-series)
+
+Grammar restructuring tasks to reduce raw parse tree counts. Target: <200 raw trees for any 4-equation `\quad`-separated formula. Ordered by expected impact.
+
+- [ ] **M1. Canonical double-script rules** — Replace chained `scripted_factor_r2 = scripted_factor_r12 postsuperarg | scripted_factor_r11 postsubarg` with direct 3-arg rules `factor_base postsubarg postsuperarg => postfix_script`. Same for `scripted_bigop`: replace `scripted_bigop_r1 + second_script` chaining with `any_bigop bigopsubarg bigopsuparg => postfix_script`. Eliminates 2^N script-ordering duplication at the grammar level. **Expected impact:** 2^N → 1 for script ordering, halving tree counts for each doubly-scripted term. Must handle both token orderings (sub-first and super-first) in a single rule. **Risk:** The TeX lexer emits tokens in source order; need to verify both orderings are recognized without introducing new ambiguity. **Investigation:** Check whether Marpa's recognition of `r12 postsuperarg` vs `r11 postsubarg` actually produces duplicate trees, or whether token ordering prevents this. If tokens are always in source order, the existing rules may already be unambiguous and the 2^N comes from elsewhere.
+
+- [ ] **M2. Restrict bigop argument absorption** — Change `bigop_application = scripted_bigop term` to `scripted_bigop tight_term` for the non-delimited case. Bigops absorb only juxtaposed factors (tight_term), not full addop chains (term). `∑ a + b = ∑(a) + b` instead of `∑(a+b)`. The current grammar allows both, with semantic pruning selecting one — but Marpa explores both paths. **Expected impact:** ~2x reduction per bigop by eliminating the over-absorption path. **Risk:** Some formulas like `∑_{i=1}^n f(x_i) Δx` need tight_term absorption to work correctly. The delimited path `scripted_bigop fenced_factor` already handles `∑(a+b)`. **Investigation:** Audit all test cases containing SUMOP/INTOP/BIGOP to verify no regressions. The Perl grammar's `addOpArgs` absorbs `Factor moreOpArgFactors` (multiplicative chains), not full expressions — this change would match Perl more closely.
+
+- [ ] **M3. PUNCT-separator disambiguation** — Eliminate competition between `statements punct statement => list_apply` and `formulae = statement punct statement => formulae_apply` for the same input. Options: (a) Remove `statements punct statement` entirely, routing all PUNCT-separated content through `formulae`. The `formulae_apply` action already falls back to `list` semantics for non-relational content. (b) Create a `quad_punct` token class for `\quad`/`\qquad` (distinct from comma-PUNCT), with dedicated `quad_formulae` rule. (c) Make `list_apply` reject when both items are relational (already done) AND make `formulae_apply` reject when neither is relational (already done), but also handle the mixed case by making one reject mixed. **Expected impact:** 2x per PUNCT separator eliminated. **Risk:** Option (a) breaks `\int\quad\int` (two bare bigops). Option (b) requires lexer changes. Option (c) is safest but least impactful. **Investigation:** Count how many test formulas have mixed-relational PUNCT content.
+
+- [ ] **M4. Diffop grammar-level filtering** — Move the "is it `d`?" check from semantic action (`diffop_apply`) to lexer/grammar. The lexer can annotate UNKNOWN:d tokens with a `_possible_diffop` hint. Grammar adds `diffop_unknown factor_base => diffop_apply` using a separate token, instead of `unknown factor_base => diffop_apply` which tries ALL unknowns. **Expected impact:** Eliminates ~50% of pruned trees for bigop formulas (the `diffop_apply: first token is not 'd'` rejections). **Risk:** The `d` token may have role=ID (from `\lxDeclare`), not just UNKNOWN. Need to handle both. **Investigation:** Check how many different roles `d` tokens have across all test cases.
+
+- [ ] **M5. Consecutive UNKNOWN coalescing** — Add pre-parser pass that merges N consecutive single-character UNKNOWN tokens (without operators between them) into a single ATOM token. Targets the `blblblbl...` case from vsmallmatrix (24 letters → 5000 trees). In matrix contexts, consecutive letters are text, not a product of variables. **Expected impact:** Eliminates Catalan-number growth for text-in-math patterns. **Risk:** Legitimate juxtaposition like `xy` = `x*y` must not be coalesced. Heuristic: only coalesce when ALL tokens are single-character and there are ≥8 consecutive UNKNOWNs. **Investigation:** Survey how Perl handles consecutive letters in matrix cells — does it treat them as invisible-times chains?
+
+- [ ] **M6. Script order canonicalization pragma** — Add `ValidationPragmatics::CanonicalScriptOrder` that normalizes all `XMApp[SUBSCRIPTOP/SUPERSCRIPTOP]` nesting to a canonical order (always subscript inside superscript). Applied during `get_tree` evaluation, making all 2^N script-ordering derivations compare equal immediately. Unlike M1 (grammar-level fix), this is a semantic-level fix that doesn't change the grammar. **Expected impact:** Same as M1 but without grammar changes. Works as a fallback if M1 proves too complex. **Risk:** Must preserve the distinction between `x_a^b` and `x^{a_b}` (nested script vs double script).
+
+- [ ] **M7. `function_call` nonterminal consolidation** — Currently function application is spread across `applied_func`, `tight_term +=`, and `tight_opterm`. For example, `function lparen formula rparen => apply_delimited` appears in both `tight_term` and `applied_func`. Consolidate into a single `function_call` nonterminal. **Expected impact:** Reduces chart size for function-heavy formulas. **Risk:** Changes to function application rules have historically caused subtle regressions. **Investigation:** Catalog all places where function application rules appear and identify true duplicates.
+
+- [ ] **M8. `fenced_factor` rule audit** — The `fenced_factor` nonterminal has 32+ alternatives. Several create ambiguity: `lparen term_list rparen` vs `lparen formula_list rparen` (same input, different nonterminal paths). `langle_rel term_list rangle_rel` vs `langle_open term_list rangle_close` (same content, different delimiter tokens). Audit and remove redundant alternatives. **Expected impact:** Small per-formula reduction, but affects every fenced expression. **Risk:** Some "redundant" rules handle different token types from the lexer (RELOP vs OPEN for `<`). **Investigation:** Check which fenced_factor alternatives are actually reached by test cases.
+
+- [ ] **M9. `tight_opterm` vs `applied_func` interaction** — `tight_opterm` treats bare functions as multiplicands (`2 sin` = `2 * sin`), while `applied_func` treats them as function application (`sin x` = `sin(x)`). For `2 sin x`: both `(2 * sin)(x)` and `2 * sin(x)` are derivable. The grammar relies on precedence (tight_opterm at term level, applied_func at tight_term level) but Marpa explores both. **Expected impact:** Moderate for function-heavy formulas. **Investigation:** Count tree increase for `N sin x` vs `sin x` patterns.
+
+- [ ] **M10. Time-budgeted tree enumeration** — Instead of a fixed 5000-tree limit, use a time budget (e.g., 50ms per formula). Combined with online deduplication, this caps worst-case latency without limiting well-behaved formulas. Also: reduce `max_consecutive_dupes` from 64 to 32 (empirically, if 32 consecutive trees are all duplicates, no new unique parse will appear). **Expected impact:** Caps worst-case latency to 50ms/formula. Does not reduce ambiguity but limits its impact. **Risk:** May miss valid parses in highly-ambiguous grammars. **Investigation:** Profile whether the valid parse always appears in the first 1000 trees for current test cases.
+
 ### Diff reduction tasks
 
 - [x] **D1. Header guessing row headers** — Already working: bold cells get `thead="column"` in `<thead>`.
@@ -247,6 +271,54 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 ### CLI directory creation — FIXED (2026-04-02)
 
 `--dest=html/paper.html` now creates parent directories recursively via `ensure_parent_dir()`. Applied to output file, ZIP archive, and log file paths.
+
+### Math parser performance — IN PROGRESS (2026-04-03)
+
+**Problem:** Marpa grammar produces exponentially many parse trees for multi-equation formulas. Three multiplicative ambiguity sources compound, producing 5000+ raw trees for 4-equation `\quad`-separated formulas (800ms parse time in release mode).
+
+**Ambiguity root causes (first principles analysis):**
+
+**A. Script ordering duplication (2^N per formula).**
+`scripted_factor_r2` and `scripted_bigop` allow both sub-then-super and super-then-sub orderings via chained intermediate nonterminals. For `x_a^b`: path 1 is `(factor_base postsubarg) postsuperarg` via `scripted_factor_r12 → r2`, path 2 is `(factor_base postsuperarg) postsubarg` via `scripted_factor_r11 → r2`. Both produce identical semantic trees. With N doubly-scripted terms, this creates 2^N derivation paths. For 4 equations of `∑_a^b V_i` (2 scripted terms each, 8 total): 2^8 = 256 duplicate derivations.
+
+**B. Bigop argument absorption ambiguity (2x per bigop).**
+For `∑_a^b V_i`, the grammar allows: (a) `bigop_application(∑_a^b, term(V_i))` — bigop absorbs argument, vs (b) `∑_a^b` as standalone statement + `V_i` as separate term joined by invisible-times. Both are valid grammar paths; semantic pruning selects the correct one, but Marpa explores both.
+
+**C. PUNCT-separator competition (2x per separator).**
+For `A \quad B`: both `statements(A, punct, B)` via `list_apply` and `formulae(A, punct, B)` via `formulae_apply` match. Semantic filtering resolves (formulae requires relational content, list rejects both-relational), but the grammar generates both derivation paths. Mixed-relational content (one relational, one not) passes BOTH filters.
+
+**D. Diffop speculative parsing (additive overhead).**
+`factor += unknown factor_base => diffop_apply` tries differential interpretation for EVERY `UNKNOWN` token followed by a factor. Semantic action rejects ("`d` check failed") but Marpa already explored the path. Adds ~50% pruned trees to bigop formulas.
+
+**E. Consecutive UNKNOWN token explosion (Catalan-number growth).**
+For N adjacent UNKNOWN tokens (`b l b l...`), the `tight_term factor => apply_invisible_times` rule creates Catalan(N) derivation paths for binary tree structures. 24 letters → 5000+ raw trees (all pruned since single-letter invisible-times chains are semantically rejected).
+
+**Measured raw tree counts (regression test in `700_unit_parse.rs::parse_tree_count_limits`):**
+
+| Formula pattern | Tokens | Raw trees | Time | Source |
+|---|---|---|---|---|
+| `V = ∑_a^b V_i` (1 eq) | 13 | 8 | 3ms | baseline |
+| `V=∑V_i \quad X=∑X_i` (2 eq) | 27 | 192 | 5ms | mathtools |
+| `V=∑V_i \quad X=∑X_i \quad Y=∑Y_i` (3 eq) | 38 | 1792 | 17ms | mathtools |
+| `V=∑V_i \quad ... \quad Z=T Z_i` (4 eq) | 49 | 5000+ | 55ms | mathtools |
+| `X=∑X_i, X=∑X_i, X=∑X_i, X=∑X_i` (4 eq, comma) | 43 | 3840 | 34ms | sampler |
+| `{}^4_{12}C^{5+}_2 \quad ...` (5 pre-scripted) | 63 | 5000+ | 62ms | mathtools |
+| `xy+xy+∫xy dx+xy+...` (28 tokens) | 28 | 768 | 6ms | mathtools |
+| `blblblbllbblblblblblblbl` (24 UNKNOWN) | 24 | 5000+ | 17ms | mathtools |
+
+Scaling: 1eq→8, 2eq→192 (24x), 3eq→1792 (9.3x), 4eq→5000+ (capped). Super-linear growth from multiplicative ambiguity sources.
+
+**Fixes applied (session 84):**
+
+1. **`formulae` nonterminal split.** Split `formula_list` into `formula_list` (expression-level, `formula_list_apply`) + `formulae` (statement-level, `formulae_apply`). Previously both shared the nonterminal name, creating massive cross-rule ambiguity. Pre-script formula: 5000→159 raw trees (31x reduction), now parses successfully (was 0 semantic trees).
+
+2. **Online deduplication.** `parses.contains(&tree)` check during tree enumeration. Convergence after 64 consecutive non-novel trees (duplicates or pruned). Eliminates redundant 2^N enumeration once all unique parses found.
+
+3. **Regression test.** `700_unit_parse.rs::parse_tree_count_limits` tracks raw tree counts for 8 problematic formulas. Prevents ambiguity regressions from grammar changes.
+
+**Results:** Mathtools test: 5.35s → 3.47s (35% faster). Pre-script formula `{}^4_{12}C^{5+}_2\quad...`: 1.1s → 25ms (44x). Three previously-unparsable formulas now parse correctly.
+
+**Grammar restructuring plan (TODO items M1–M10 below).**
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

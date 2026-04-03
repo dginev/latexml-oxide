@@ -186,6 +186,30 @@ impl MathParser {
     result.is_ok()
   }
 
+  /// Count the number of raw Marpa grammar trees for a lexeme string (for unit testing).
+  /// This counts ALL derivation trees the grammar produces, before semantic pruning
+  /// and deduplication. Useful for detecting grammar ambiguity.
+  /// Returns the count, or None if recognition fails.
+  pub fn count_raw_trees(&mut self, input: &str) -> Option<usize> {
+    let parse_result = match self.engine.run_recognizer(ByteScanner::new(Cursor::new(input))) {
+      Ok(r) => r,
+      Err(_) => {
+        self.reset_engine();
+        return None;
+      }
+    };
+    let mut count = 0usize;
+    let max = 5000;
+    for _val in parse_result {
+      count += 1;
+      if count >= max {
+        break;
+      }
+    }
+    self.reset_engine();
+    Some(count)
+  }
+
   pub fn parse_math(&mut self, document: &mut Document) -> Result<()> {
     self.clear();
     self.cleanup_scripts(document);
@@ -867,16 +891,27 @@ impl MathParser {
     let parse_result = self
       .engine
       .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
-    let mut parses = Vec::new();
+    let mut parses: Vec<XM> = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
+    let mut deduped = 0usize;
+    let mut consecutive_dupes = 0usize;
     let start = std::time::Instant::now();
     let max_trees = 5000; // Hard limit on parse tree enumeration
     let max_time = std::time::Duration::from_secs(30); // 30 second timeout
+    // Convergence: if we've seen enough consecutive duplicates without
+    // a new unique tree, the grammar ambiguity is purely structural
+    // (script attachment ordering). Stop early.
+    let max_consecutive_dupes = 64;
     for val in parse_result {
-      // Truncate if too many trees or too much time — don't abort entirely,
-      // since deduplication often reduces thousands of grammar trees to just a few.
+      // Truncate if too many trees or too much time
       if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+        break;
+      }
+      // Early convergence: stop if we keep seeing only duplicates.
+      // The grammar produces 2^N duplicates from script attachment ordering.
+      // Once we've found all unique parses, every new tree is a duplicate.
+      if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
         break;
       }
       match self.actions.get_tree(
@@ -888,29 +923,25 @@ impl MathParser {
         Ok(tree_opt) => {
           if let Some(tree) = tree_opt {
             ok_trees += 1;
-            parses.push(tree);
+            // Online deduplication: check if this tree is already in our unique set
+            if parses.contains(&tree) {
+              deduped += 1;
+              consecutive_dupes += 1;
+            } else {
+              parses.push(tree);
+              consecutive_dupes = 0;
+            }
           }
         },
         Err(_prune_err) => {
           pruned_trees += 1;
+          // Pruned trees also count toward convergence if we have unique parses
+          if !parses.is_empty() {
+            consecutive_dupes += 1;
+          }
         },
       }
     }
-    // Deduplicate: Marpa can generate identical semantic trees from different derivation
-    // paths (e.g., scripted_factor_r11 vs scripted_factor_r1 for x^2). Each superscript
-    // creates a 2x duplicate, causing 2^N exponential growth for N scripted factors.
-    // Deduplication using structural equality eliminates these duplicates.
-    let pre_dedup = parses.len();
-    if parses.len() > 1 {
-      let mut unique = Vec::with_capacity(parses.len());
-      for tree in parses {
-        if !unique.contains(&tree) {
-          unique.push(tree);
-        }
-      }
-      parses = unique;
-    }
-    let deduped = pre_dedup - parses.len();
 
     // Store count for \ltx@count@parses diagnostic macro
     // Use post-dedup count (distinct semantic trees), not raw grammar count
@@ -918,8 +949,8 @@ impl MathParser {
 
     if ok_trees + pruned_trees > 10 {
       log::warn!(
-        "Ambiguous math: {} grammar trees ({} semantic, {} pruned, {} deduped→{}) in {:?} for: {}",
-        ok_trees + pruned_trees, ok_trees, pruned_trees, deduped, parses.len(), start.elapsed(),
+        "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
+        ok_trees + pruned_trees + deduped, ok_trees + deduped, pruned_trees, deduped, parses.len(), start.elapsed(),
         input.trim()
       );
     }
@@ -954,9 +985,6 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
 
-    // Timeout guard: if the input has many tokens, it might cause exponential
-    // Marpa ambiguity (e.g. BIGOP tokens like \neg). Use a thread-based timeout.
-    let _token_count = input_string.split_whitespace().count();
     match self.parse_marpa(&input_string, nodes, document) {
       Ok(mut parse_tree) => {
         self.reset_engine(); // Reset for next parse (engine is in completed state)
