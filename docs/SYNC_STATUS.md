@@ -2,9 +2,17 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-02. Only lists open gaps & TODOs; completed items live in git history. SYNC_STATUS audit completed: many items previously listed as GAPS are fully implemented.
+Updated 2026-04-03. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 298 paired tests: **~298 zero-diff** (effectively 100% — remaining diffs are intentional math parser divergences). Full TeX→HTML pipeline with cross-references, citations, and ar5iv-compatible CLI: `latexml_oxide --format=html5 --pmml --mathtex --noinvisibletimes --nocomments --dest=paper.html paper.tex`. Log capture and status messages match Perl (`Conversion complete: N warnings; M errors`).
+**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). ~298 paired tests at effectively zero-diff (remaining diffs are intentional math parser divergences).
+
+**Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
+```
+latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletimes \
+  --nodefaultresources --preload=ar5iv.sty --timeout=2700 --log=log.txt \
+  --dest=output.zip input.zip
+```
+Features: clap CLI (30+ options), OmniBus fallback, DefAutoload, \index/\glossary, error recovery, log capture, status messages.
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
