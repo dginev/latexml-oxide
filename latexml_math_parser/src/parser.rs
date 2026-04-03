@@ -874,12 +874,10 @@ impl MathParser {
     let max_trees = 5000; // Hard limit on parse tree enumeration
     let max_time = std::time::Duration::from_secs(30); // 30 second timeout
     for val in parse_result {
-      // Bail out if too many trees or too much time
+      // Truncate if too many trees or too much time — don't abort entirely,
+      // since deduplication often reduces thousands of grammar trees to just a few.
       if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
-        return Err(format!(
-          "Parse aborted: {} trees ({} ok, {} pruned) in {:?}",
-          ok_trees + pruned_trees, ok_trees, pruned_trees, start.elapsed()
-        ).into());
+        break;
       }
       match self.actions.get_tree(
         self.builder.clone(),
