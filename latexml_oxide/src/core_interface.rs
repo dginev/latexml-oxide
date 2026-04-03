@@ -73,8 +73,24 @@ pub trait DigestionAPI {
   fn convert_file(&mut self, filepath: String) -> Result<Document>;
   fn convert_document(&mut self, digested: Digested) -> Result<Document>;
   // Mocks
-  fn load_preamble(&mut self, _preamble: String) {}
-  fn load_postamble(&mut self, _preamble: String) {}
+  /// Load preamble content. Perl: Core.pm loadPreamble
+  fn load_preamble(&mut self, preamble: String) {
+    let content = if preamble == "standard_preamble.tex" {
+      "literal:\\documentclass{article}\\begin{document}".to_string()
+    } else {
+      preamble
+    };
+    crate::core_interface::input_content(&content, InputOptions::default()).ok();
+  }
+  /// Load postamble content. Perl: Core.pm loadPostamble
+  fn load_postamble(&mut self, postamble: String) {
+    let content = if postamble == "standard_postamble.tex" {
+      "literal:\\end{document}".to_string()
+    } else {
+      postamble
+    };
+    crate::core_interface::input_content(&content, InputOptions::default()).ok();
+  }
 }
 
 impl DigestionAPI for Core {
