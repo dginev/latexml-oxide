@@ -273,6 +273,7 @@ pub mod nicefrac_sty;
 pub mod nomencl_sty;
 pub mod nopageno_sty;
 pub mod ntheorem_sty;
+pub mod omnibus_cls;
 pub mod orcidlink_sty;
 pub mod ot4_fontmap;
 pub mod overpic_sty;

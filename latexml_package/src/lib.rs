@@ -52,6 +52,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "amsproc.cls" => package::amsproc_cls::load_definitions(),
     "acmart.cls" => package::acmart_cls::load_definitions(),
     "article.cls" => package::article_cls::load_definitions(),
+    "OmniBus.cls" => package::omnibus_cls::load_definitions(),
     "babel.sty" => package::babel_sty::load_definitions(),
     "beamer.cls" => package::beamer_cls::load_definitions(),
     "balance.sty" => package::balance_sty::load_definitions(),
