@@ -31,9 +31,9 @@ pub struct Converter {
 }
 
 impl Converter {
-  // TODO: use the config
   pub fn from_config(opts: Config) -> Converter {
     let core = Core::new(CoreOptions {
+      verbosity:        Some(opts.verbosity),
       include_comments: opts.include_comments.or(Some(true)),
       preload:          opts.preload.clone(),
       search_paths:     opts.search_paths.clone(),
