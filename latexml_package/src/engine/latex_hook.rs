@@ -74,11 +74,20 @@ LoadDefinitions!({
   // OmniBus autoloads: define commands that auto-load their packages on first use.
   // Perl: OmniBus.cls.ltxml DefAutoload entries.
   // When first invoked, the macro loads the package, then re-emits itself.
+  // amsfonts
   def_autoload("\\mathfrak", "amsfonts")?;
   def_autoload("\\mathbb", "amsfonts")?;
   def_autoload("\\Bbb", "amsfonts")?;
+  // amsthm
   def_autoload("\\theoremstyle", "amsthm")?;
+  // amsmath
   def_autoload("\\numberwithin", "amsmath")?;
+  def_autoload("\\align", "amsmath")?;
+  def_autoload("\\subequations", "amsmath")?;
+  def_autoload("\\multline", "amsmath")?;
+  // ams_support (AMS article metadata)
+  def_autoload("\\curraddr", "ams_support")?;
+  def_autoload("\\subjclass", "ams_support")?;
 
   // # Darn; we need to be even more clever, since we need to simulate an amstex command, as well.
   // # For example \documentstyle[...]{amsppt} must switch to AMSTeX mode, _NOT_ LaTeX mode!!!!
