@@ -420,11 +420,19 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
   }
 
   // Perl L772-775: when invisibletimes is false, replace U+2062 with U+200B
-  if text == "\u{2062}" && !get_invisible_times() {
+  let is_replaced_invisible_times = text == "\u{2062}" && !get_invisible_times();
+  if is_replaced_invisible_times {
     text = "\u{200B}".to_string(); // ZERO WIDTH SPACE
   }
 
   let mut attrs = HashMap::new();
+
+  // Perl: zero-width space <mo> needs lspace/rspace="0em" to prevent browser
+  // default operator spacing that creates visible gaps between letters.
+  if is_replaced_invisible_times && tag == "m:mo" {
+    attrs.insert("lspace".to_string(), "0em".to_string());
+    attrs.insert("rspace".to_string(), "0em".to_string());
+  }
 
   // Math variant from font
   if let Some(ref f) = font {
