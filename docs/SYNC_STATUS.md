@@ -4,7 +4,7 @@
 
 Updated 2026-04-03. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). ~298 paired tests at effectively zero-diff (remaining diffs are intentional math parser divergences).
+**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 318 paired tests: 225 zero-diff + 26 intentional-only (xml:id renumbering, %&#10;) = **251 at architectural ceiling**. 67 with real structural diffs. 31,514 total diff lines.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
