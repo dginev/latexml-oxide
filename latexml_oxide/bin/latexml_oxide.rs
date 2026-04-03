@@ -4,6 +4,7 @@ use latexml_core::common::{Config, DataSize, OutputFormat};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 
@@ -214,8 +215,30 @@ fn main() -> Result<(), Box<dyn Error>> {
   };
   let target = cli.dest.clone();
 
-  // --whatsin=directory: auto-detect from trailing /
+  // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
+  let _archive_tempdir; // hold tempdir alive for the duration of processing
+  let is_archive_mode = cli.whatsin.as_deref() == Some("archive")
+    || source.ends_with(".tar.gz") || source.ends_with(".tgz")
+    || source.ends_with(".zip") || source.ends_with(".tar");
+  let source = if is_archive_mode {
+    let (tempdir, main_tex) = match unpack_archive(&source) {
+      Ok(r) => r,
+      Err(e) => {
+        eprintln!("Failed to unpack archive '{}': {}", source, e);
+        process::exit(1);
+      }
+    };
+    let dir_str = tempdir.path().to_string_lossy().to_string();
+    path_flags.push(dir_str.clone());
+    _archive_tempdir = Some(tempdir);
+    main_tex
+  } else {
+    _archive_tempdir = None;
+    source
+  };
+
+  // --whatsin=directory: auto-detect from trailing /
   let is_directory_mode =
     cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
   if is_directory_mode {
@@ -327,14 +350,28 @@ fn main() -> Result<(), Box<dyn Error>> {
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
         });
-        if let Some(target_path) = target {
+        let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
+          || cli.whatsin.as_deref() == Some("archive");
+        if is_zip_output {
+          // whatsout=archive: pack output into ZIP
+          if let Some(ref target_path) = target {
+            let zip_dest = if target_path.ends_with(".zip") {
+              target_path.clone()
+            } else {
+              format!("{}.zip", target_path.trim_end_matches(".html").trim_end_matches(".xml"))
+            };
+            pack_output_zip(&zip_dest, &output, &response.log, &response.status)?;
+          } else {
+            print!("{output}");
+          }
+        } else if let Some(ref target_path) = target {
           let mut out_fh = File::create(target_path)?;
           write!(out_fh, "{output}")?;
         } else {
           print!("{output}");
         }
       } else {
-        if let Some(target_path) = target {
+        if let Some(ref target_path) = target {
           let mut out_fh = File::create(target_path)?;
           write!(out_fh, "{xml}")?;
         } else {
@@ -343,11 +380,15 @@ fn main() -> Result<(), Box<dyn Error>> {
       }
     }
 
-    // --log: write conversion log to file
+    // --log: write conversion log to file (skip if already packed into ZIP)
+    let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
+      || cli.whatsin.as_deref() == Some("archive");
     if let Some(ref log_path) = cli.log {
-      if let Ok(mut log_fh) = File::create(log_path) {
-        let _ = write!(log_fh, "{}", response.log);
-        eprintln!("Log written to {}", log_path);
+      if !is_zip_output {
+        if let Ok(mut log_fh) = File::create(log_path) {
+          let _ = write!(log_fh, "{}", response.log);
+          eprintln!("Log written to {}", log_path);
+        }
       }
     }
   }
@@ -538,4 +579,137 @@ fn make_splitpaths(splitat: &str) -> String {
     }
   }
   paths.join(" | ")
+}
+
+/// Unpack a ZIP (primary) or tar.gz archive into a temp directory.
+/// Returns (TempDir, main_tex_path).
+///
+/// Port of Perl LaTeXML::Util::Pack::unpack_source.
+fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {
+  let tempdir = tempfile::tempdir()?;
+  let dest = tempdir.path();
+
+  if archive_path.ends_with(".zip") {
+    // Primary format: ZIP
+    let file = File::open(archive_path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+    for i in 0..archive.len() {
+      let mut entry = archive.by_index(i)?;
+      let outpath = dest.join(entry.mangled_name());
+      if entry.is_dir() {
+        std::fs::create_dir_all(&outpath)?;
+      } else {
+        if let Some(parent) = outpath.parent() {
+          std::fs::create_dir_all(parent)?;
+        }
+        let mut outfile = File::create(&outpath)?;
+        std::io::copy(&mut entry, &mut outfile)?;
+      }
+    }
+  } else if archive_path.ends_with(".tar.gz") || archive_path.ends_with(".tgz") {
+    let file = File::open(archive_path)?;
+    let gz = flate2::read::GzDecoder::new(file);
+    let mut archive = tar::Archive::new(gz);
+    archive.unpack(dest)?;
+  } else if archive_path.ends_with(".tar") {
+    let file = File::open(archive_path)?;
+    let mut archive = tar::Archive::new(file);
+    archive.unpack(dest)?;
+  } else {
+    return Err(format!("Unsupported archive format: {}", archive_path).into());
+  }
+
+  // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
+  // or one containing \documentclass)
+  let main_tex = find_main_tex(dest)?;
+  Ok((tempdir, main_tex))
+}
+
+/// Find the main .tex file in an unpacked directory.
+/// Strategy: look for files containing \documentclass, prefer the largest one.
+fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
+  let mut candidates: Vec<(PathBuf, u64)> = Vec::new();
+
+  fn collect_tex_files(dir: &Path, candidates: &mut Vec<(PathBuf, u64)>) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+          collect_tex_files(&path, candidates);
+        } else if path.extension().is_some_and(|e| e == "tex") {
+          let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+          candidates.push((path, size));
+        }
+      }
+    }
+  }
+
+  collect_tex_files(dir, &mut candidates);
+
+  if candidates.is_empty() {
+    return Err("No .tex files found in archive".into());
+  }
+
+  // First pass: find files with \documentclass
+  let mut doc_class_files: Vec<(PathBuf, u64)> = Vec::new();
+  for (path, size) in &candidates {
+    if let Ok(content) = std::fs::read_to_string(path) {
+      if content.contains("\\documentclass") || content.contains("\\documentstyle") {
+        doc_class_files.push((path.clone(), *size));
+      }
+    }
+  }
+
+  // Prefer file with \documentclass; if multiple, pick the largest
+  let main = if !doc_class_files.is_empty() {
+    doc_class_files.sort_by(|a, b| b.1.cmp(&a.1));
+    doc_class_files[0].0.clone()
+  } else {
+    // No \documentclass found — pick the largest .tex file
+    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    candidates[0].0.clone()
+  };
+
+  Ok(main.to_string_lossy().to_string())
+}
+
+/// Pack the conversion output into a ZIP archive (whatsout=archive).
+/// Includes the HTML/XML output, log, and status.
+fn pack_output_zip(
+  zip_path: &str,
+  output: &str,
+  log: &str,
+  status: &str,
+) -> Result<(), Box<dyn Error>> {
+  use zip::write::SimpleFileOptions;
+  let file = File::create(zip_path)?;
+  let mut zip = zip::ZipWriter::new(file);
+  let options = SimpleFileOptions::default()
+    .compression_method(zip::CompressionMethod::Deflated);
+
+  // Derive output filename from zip name: paper.zip → paper.html
+  let stem = Path::new(zip_path)
+    .file_stem()
+    .and_then(|s| s.to_str())
+    .unwrap_or("document");
+
+  // Write the main output file
+  let output_name = format!("{}.html", stem);
+  zip.start_file(&output_name, options)?;
+  zip.write_all(output.as_bytes())?;
+
+  // Write the log
+  if !log.is_empty() {
+    let log_name = format!("{}.log", stem);
+    zip.start_file(&log_name, options)?;
+    zip.write_all(log.as_bytes())?;
+  }
+
+  // Write status
+  zip.start_file("status", options)?;
+  zip.write_all(status.as_bytes())?;
+
+  zip.finish()?;
+  eprintln!("Output written to {}", zip_path);
+  Ok(())
 }

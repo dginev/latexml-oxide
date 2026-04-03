@@ -20,6 +20,10 @@ path = "bin/latexmlmath_oxide.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+flate2 = "1"
+tar = "0.4"
+zip = "2"
+tempfile = "3"
 log = "0.4"
 libxml = "0.3.3"
 once_cell = "1.17.0"
