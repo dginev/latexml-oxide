@@ -21,7 +21,7 @@ pub struct Operator(pub Box<XM>);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Args(pub Vec<Option<XM>>);
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Default)]
 /// The allowed properties on any newly created XMath nodes
 /// during grammatical processing
 pub struct XProps {
@@ -59,6 +59,31 @@ pub struct XProps {
   pub lpadding:  Option<Cow<'static, str>>,
   pub rpadding:  Option<Cow<'static, str>>,
 }
+/// Custom PartialEq: ignores `xmkey`, `id`, and `idref` which are bookkeeping
+/// fields for XMDual/XMRef resolution. Structurally identical parse trees that
+/// differ only in these internal reference keys should be considered equal
+/// for deduplication purposes.
+impl PartialEq for XProps {
+  fn eq(&self, other: &Self) -> bool {
+    self.content == other.content
+      && self.role == other.role
+      && self.meaning == other.meaning
+      && self.name == other.name
+      && self.scriptpos == other.scriptpos
+      // Skip: id, idref, xmkey — bookkeeping for Dual/Ref resolution
+      && self.font == other.font
+      && self.fontref == other.fontref
+      && self.stretchy == other.stretchy
+      && self.possible_function == other.possible_function
+      && self.mathstyle == other.mathstyle
+      && self.thickness == other.thickness
+      && self.decl_id == other.decl_id
+      && self.lpadding == other.lpadding
+      && self.rpadding == other.rpadding
+  }
+}
+impl Eq for XProps {}
+
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     // stub with Debug for now
@@ -468,6 +493,37 @@ impl XM {
   }
 
   /// given a tree, return the base operator name, if any
+  /// Simple text summary for debug logging (no DOM access needed)
+  pub fn text_summary(&self) -> String {
+    match self {
+      XM::Lexeme(name, meta) => {
+        let fenced = meta.fenced.as_deref().unwrap_or("");
+        if fenced.is_empty() { name.to_string() } else { format!("{name}[{fenced}]") }
+      },
+      XM::Token(props, _) => {
+        let role = props.role.as_deref().unwrap_or("?");
+        let meaning = props.meaning.as_deref().unwrap_or("");
+        if meaning.is_empty() { role.to_string() } else { format!("{role}:{meaning}") }
+      },
+      XM::Apply(op, args, ..) => {
+        let op_str = op.0.text_summary();
+        let args_str: Vec<String> = args.trees().iter().map(|a| a.text_summary()).collect();
+        format!("{}@({})", op_str, args_str.join(", "))
+      },
+      XM::Dual(c, p, ..) => format!("Dual({}, {})", c.text_summary(), p.text_summary()),
+      XM::Wrap(items, ..) => {
+        let items_str: Vec<String> = items.iter().map(|i| i.text_summary()).collect();
+        format!("Wrap({})", items_str.join(", "))
+      },
+      XM::Choices(ref trees) => format!("Choices({})", trees.len()),
+      XM::Ref(idx) => format!("Ref({})", idx),
+      XM::Arg(items) => {
+        let items_str: Vec<String> = items.iter().map(|i| i.text_summary()).collect();
+        format!("Arg({})", items_str.join(", "))
+      },
+    }
+  }
+
   pub fn base_operator_name(&self) -> String {
     match self {
       XM::Lexeme(ref name, _) => name.to_string(),
