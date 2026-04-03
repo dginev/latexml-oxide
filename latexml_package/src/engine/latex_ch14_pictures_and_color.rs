@@ -81,8 +81,9 @@ LoadDefinitions!({
   // {picture} environment: (width,height) with optional (origin-x,origin-y)
   // Pair now survives digestion via RegisterValue::Pair, so properties can extract coordinates.
   DefEnvironment!("{picture} Pair OptionalPair",
-    "<ltx:picture width='#width' height='#height' fill='none' stroke='none' unitlength='#unitlength'>\
-      #body\
+    "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
+      fill='none' stroke='none' unitlength='#unitlength'>\
+      ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
     mode => "text",
     before_digest => {
@@ -105,11 +106,26 @@ LoadDefinitions!({
       let fmt_pt = |v: f64| -> String {
         if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
       };
-      Ok(stored_map!(
+      let mut map = stored_map!(
         "width"      => Stored::String(arena::pin(fmt_pt(w))),
         "height"     => Stored::String(arena::pin(fmt_pt(h))),
         "unitlength" => Stored::String(arena::pin(fmt_pt(unit)))
-      ))
+      );
+      // Origin from OptionalPair — Perl: origin-x, origin-y, transform
+      if let Some(d) = args[1].as_ref() {
+        if let DigestedData::RegisterValue(RegisterValue::Pair(p)) = d.data() {
+          let ox = p.x.0 * unit;
+          let oy = p.y.0 * unit;
+          map.insert("origin-x", Stored::String(arena::pin(fmt_pt(ox))));
+          map.insert("origin-y", Stored::String(arena::pin(fmt_pt(oy))));
+          // Perl: translate(negate(origin).pxValue)
+          let tx = px_value(-ox);
+          let ty = px_value(-oy);
+          map.insert("transform", Stored::String(arena::pin(
+            format!("translate({},{})", fmt_px(tx), fmt_px(ty)))));
+        }
+      }
+      Ok(map)
     }
   );
 
@@ -117,7 +133,7 @@ LoadDefinitions!({
   // Now that Pair survives digestion (RegisterValue::Pair), use it directly.
   DefMacro!("\\put SkipSpaces Match:( Until:, Until:) {}", "\\lx@pic@put(#2,#3){#4\\relax}");
   DefConstructor!("\\lx@pic@put Pair {}",
-    "<ltx:g transform='#transform' innerdepth='#innerdepth' innerheight='#innerheight'>#2</ltx:g>",
+    "<ltx:g transform='#transform' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth'>#2</ltx:g>",
     alias => "\\put",
     mode  => "text",
     properties => sub[args] {
@@ -137,12 +153,22 @@ LoadDefinitions!({
       let tx = px_value(x * unit);
       let ty = px_value(y * unit);
       let transform_str = format!("translate({},{})", fmt_px(tx), fmt_px(ty));
-      // TODO: compute actual inner dimensions from body getSize
-      Ok(stored_map!(
-        "transform" => Stored::String(arena::pin(&transform_str)),
-        "innerdepth" => "0.0pt",
-        "innerheight" => "0.0pt"
-      ))
+      // Perl: $box->getSize to extract inner dimensions
+      let (iw, ih, id) = if let Some(body) = args[1].as_ref() {
+        let (w, h, d, _, _, _) = body.clone().get_size(None)?;
+        // Perl: $w = undef if $w && ($w->ptValue == 0)
+        let w_opt = if w.value_of() == 0 { None } else { Some(w) };
+        (w_opt, Some(h), Some(d))
+      } else {
+        (None, None, None)
+      };
+      let mut map = stored_map!(
+        "transform" => Stored::String(arena::pin(&transform_str))
+      );
+      if let Some(w) = iw { map.insert("innerwidth", Stored::Dimension(w)); }
+      if let Some(h) = ih { map.insert("innerheight", Stored::Dimension(h)); }
+      if let Some(d) = id { map.insert("innerdepth", Stored::Dimension(d)); }
+      Ok(map)
     }
   );
 
@@ -246,7 +272,41 @@ LoadDefinitions!({
   DefConstructor!("\\lx@pic@oval [Float] Pair []",
     "<ltx:rect x='#ox' y='#oy' width='#owidth' height='#oheight' rx='#radius'\
       stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
-    alias => "\\oval"
+    alias => "\\oval",
+    properties => sub[args] {
+      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // Perl: $r = ($r ? picScale($r) : Dimension('40pt'))
+      let r_requested: f64 = args[0].as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(40.0) * unit)
+        .unwrap_or(40.0);
+      // Extract size from Pair
+      let (sx, sy) = match args[1].as_ref() {
+        Some(d) => match d.data() {
+          DigestedData::RegisterValue(RegisterValue::Pair(p)) => (p.x.0 * unit, p.y.0 * unit),
+          _ => (0.0, 0.0),
+        },
+        None => (0.0, 0.0),
+      };
+      let (hx, hy) = (sx * 0.5, sy * 0.5);
+      // Perl: $r = $r->smaller($halfsize->getX->absolute)->smaller($halfsize->getY->absolute)
+      let r = r_requested.min(hx.abs()).min(hy.abs());
+      Ok(stored_map!(
+        "ox"      => Stored::String(arena::pin(fmt_px(px_value(-hx)))),
+        "oy"      => Stored::String(arena::pin(fmt_px(px_value(-hy)))),
+        "owidth"  => Stored::String(arena::pin(fmt_px(px_value(sx)))),
+        "oheight" => Stored::String(arena::pin(fmt_px(px_value(sy)))),
+        "radius"  => Stored::String(arena::pin(fmt_px(px_value(r)))),
+        "thick"   => Stored::String(arena::pin(s!("{thick}"))),
+        "color"   => "#000000"
+      ))
+    }
   );
 
   // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates
@@ -381,30 +441,68 @@ LoadDefinitions!({
       };
       // args: [0]=cs, [1]=kv_text, [2]=size(Pair), [3]=pos, [4]=box
       let kv_str = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+
+      // Perl: $box->getSize — extract (width, height, depth) from body
+      let (w, h, d) = if let Some(body) = args[4].as_ref() {
+        let (bw, bh, bd, _, _, _) = body.clone().get_size(None)?;
+        (bw, bh, bd)
+      } else {
+        (Dimension::default(), Dimension::default(), Dimension::default())
+      };
+      let ht = Dimension::new(h.value_of() + d.value_of()); // total height = h + d
+
       // Extract frame size from Pair parameter (args[2])
-      let (fw, fh) = match args[2].as_ref() {
+      let (mut ww, mut hh) = match args[2].as_ref() {
         Some(d) => match d.data() {
           DigestedData::RegisterValue(RegisterValue::Pair(p)) => {
-            let w = p.x.0 * unit;
-            let h = p.y.0 * unit;
-            let fmt_pt = |v: f64| -> String {
-              if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
-            };
-            (fmt_pt(w), fmt_pt(h))
+            (Dimension::new((p.x.0 * unit * 65536.0) as i64),
+             Dimension::new((p.y.0 * unit * 65536.0) as i64))
           },
-          _ => ("0".into(), "0".into()),
+          _ => (Dimension::default(), Dimension::default()),
         },
-        None => ("0".into(), "0".into()),
+        None => (Dimension::default(), Dimension::default()),
       };
-      // TODO: compute actual inner dimensions from body getSize
+
+      // Perl: position-based shift computation
+      let (mut xshift, mut yshift) = (Dimension::default(), Dimension::default());
+      if ww.value_of() != 0 || hh.value_of() != 0 {
+        let pos = args[3].as_ref().map(|d| d.to_string().to_lowercase()).unwrap_or_default();
+        // x positioning
+        if pos.contains('l') {
+          xshift = Dimension::default(); // left-aligned: x = 0
+        } else if pos.contains('r') {
+          xshift = Dimension::new(ww.value_of() - w.value_of()); // right-aligned
+        } else {
+          xshift = Dimension::new((ww.value_of() - w.value_of()) / 2); // centered
+        }
+        // y positioning
+        if pos.contains('b') {
+          yshift = Dimension::default(); // bottom-aligned: y = 0
+        } else if pos.contains('t') {
+          yshift = Dimension::new(hh.value_of() - ht.value_of()); // top-aligned
+        } else {
+          yshift = Dimension::new((hh.value_of() - ht.value_of()) / 2); // centered
+        }
+      } else {
+        ww = w;
+        hh = Dimension::new(h.value_of() + d.value_of());
+      }
+
+      // Frame dimensions: use ww/hh if nonzero, else content size
+      let fw = if ww.value_of() != 0 { ww } else { w };
+      let fh = if hh.value_of() != 0 { hh } else { Dimension::new(h.value_of() + d.value_of()) };
+
+      let xs_px = px_value(xshift.pt_value(None));
+      let ys_px = px_value(yshift.pt_value(None));
+
       let mut map = stored_map!(
-        "innerwidth" => "",
-        "innerheight" => "0.0pt",
-        "innerdepth" => "0.0pt",
-        "fwidth" => Stored::String(arena::pin(&fw)),
-        "fheight" => Stored::String(arena::pin(&fh)),
-        "xshift" => "0",
-        "yshift" => "0"
+        "innerwidth" => Stored::Dimension(w),
+        "innerheight" => Stored::Dimension(h),
+        "innerdepth" => Stored::Dimension(d),
+        "fwidth" => Stored::Dimension(fw),
+        "fheight" => Stored::Dimension(fh),
+        "xshift" => Stored::String(arena::pin(fmt_px(xs_px))),
+        "yshift" => Stored::String(arena::pin(fmt_px(ys_px)))
       );
       if kv_str.contains("framed") {
         map.insert("framed", Stored::Bool(true));
