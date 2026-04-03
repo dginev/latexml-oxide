@@ -9,18 +9,16 @@
   <abstract name="Abstract">
     <p>Uncertainty from blah, blah</p>
   </abstract>
-  <para xml:id="p1">
-    <ERROR class="undefined"/>
-    <ERROR class="undefined"/>
-    <p>Stuff, More Stuff</p>
-  </para>
+  <keywords name="\IEEEkeywordsname">
+Stuff, More Stuff
+</keywords>
   <section inlist="toc" xml:id="section1">
     <tags>
-      <tag>1</tag>
-      <tag role="refnum">1</tag>
-      <tag role="typerefnum">§1</tag>
+      <tag>I</tag>
+      <tag role="refnum">I</tag>
+      <tag role="typerefnum">§I</tag>
     </tags>
-    <title><tag close=" ">1</tag>A Theorem</title>
+    <title><tag close=" ">I</tag><text font="smallcaps">A Theorem</text></title>
     <theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:th1" xml:id="Thmtheorem1">
       <tags>
         <tag>Theorem 1</tag>
@@ -32,22 +30,23 @@
         <p><text font="italic">Whenever this, then that.</text></p>
       </para>
     </theorem>
-    <para xml:id="section1.p1">
-      <ERROR class="undefined"/>
-      <p>[Proof of Theorem <ref labelref="LABEL:th1"/>]
-Because I say so.</p>
-    </para>
-    <para xml:id="section1.p2">
-      <p>This completes the proof.</p>
-    </para>
+    <proof class="ltx_runin">
+      <title class="ltx_runin">Proof:</title>
+      <para xml:id="section1.p1">
+        <p>Because I say so.</p>
+      </para>
+      <para xml:id="section1.p2">
+        <p>This completes the proof.</p>
+      </para>
+    </proof>
   </section>
   <section inlist="toc" labels="LABEL:eqn:expl" xml:id="section2">
     <tags>
-      <tag>2</tag>
-      <tag role="refnum">2</tag>
-      <tag role="typerefnum">§2</tag>
+      <tag>II</tag>
+      <tag role="refnum">II</tag>
+      <tag role="typerefnum">§II</tag>
     </tags>
-    <title><tag close=" ">2</tag>IEEE style eqnarray</title>
+    <title><tag close=" ">II</tag><text font="smallcaps">IEEE style eqnarray</text></title>
     <para xml:id="section2.p1">
       <p>Normal numbering.
 <ERROR class="undefined"/>rCl
