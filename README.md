@@ -1,14 +1,14 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.5.0-orange.svg) 
-[![ported tests 99.5%](https://img.shields.io/badge/ported%20tests%20-%2099.5%25%20(383%2F385)-%20%2332a852?style=flat)
+[![ported tests 100%](https://img.shields.io/badge/ported%20tests%20-%20100%25%20(391%2F391)-%20%2332a852?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
 This project is in an **alpha** stage. Please avoid using it in any real world setting before test parity is reached.
 
 **If the "ported tests" badge above isn't at `100%`, we aren't stable and we aren't ready**.
 
-**Current status (2026-04-01):** 383/385 tests passing (99.5%), 2 ignored (tikz token-limit). 414 core + 91 contrib package bindings. Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
+**Current status (2026-04-02):** 391/391 tests passing (100%), 0 ignored. 414 core + 91 contrib package bindings. Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
 
 ### Why?
 
