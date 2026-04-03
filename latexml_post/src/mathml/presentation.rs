@@ -441,10 +441,14 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
       if tag == "m:mi" && text.chars().count() == 1 {
         if variant != "italic" {
           attrs.insert("mathvariant".to_string(), variant.to_string());
+          // Chrome doesn't support mathvariant; add CSS class fallback
+          attrs.insert("class".to_string(), format!("ltx_mathvariant_{variant}"));
         }
         // else italic is default for single-char mi
       } else if variant != "normal" {
         attrs.insert("mathvariant".to_string(), variant.to_string());
+        // Chrome doesn't support mathvariant; add CSS class fallback
+        attrs.insert("class".to_string(), format!("ltx_mathvariant_{variant}"));
       }
     }
   } else if tag == "m:mi" && text.chars().count() == 1 {
