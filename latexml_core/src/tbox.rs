@@ -193,11 +193,40 @@ impl BoxOps for Tbox {
 
     if !text.is_empty() {
       if mode == *MATH_SYM {
-        Ok(vec![document.insert_math_token(
-          &text,
-          Stored::cast_to_string_hash(&self.properties),
-          Some(font),
-        )?])
+        // Perl: DefMath ?#isMath — in text context, produce plain text.
+        // Check if we're inside a math element by walking up the DOM.
+        // This handles \And in author frontmatter (text) while preserving
+        // \times inside XMText within math.
+        let in_math_context = {
+          let mut node = document.node.clone();
+          let mut found = false;
+          loop {
+            let qname = crate::document::get_node_qname(&node);
+            let name = arena::to_string(qname);
+            if name.contains("XM") || name.contains("Math") {
+              found = true;
+              break;
+            }
+            match node.get_parent() {
+              Some(parent) => node = parent,
+              None => break,
+            }
+          }
+          found
+        };
+        if in_math_context {
+          Ok(vec![document.insert_math_token(
+            &text,
+            Stored::cast_to_string_hash(&self.properties),
+            Some(font),
+          )?])
+        } else {
+          // Text fallback: produce plain text (Perl's ?#isMath else branch)
+          match document.open_text(&text, font)? {
+            None => Ok(Vec::new()),
+            Some(node) => Ok(vec![node]),
+          }
+        }
       } else {
         match document.open_text(&text, font)? {
           None => Ok(Vec::new()),

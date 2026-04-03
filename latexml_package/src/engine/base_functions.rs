@@ -939,10 +939,11 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
 
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
   // Perl: SplitTokens($tokens, T_CS('\and'))
-  // Also split on \And and \AND — Perl aliases them via Let, but amsmath may
-  // override \And with DefMath. The meaning-based check in split_tokens handles
-  // the Let case; we also add explicit \And/\AND for robustness.
-  split_tokens(tokens, vec![T_CS!("\\and"), T_CS!("\\And"), T_CS!("\\AND")])
+  // Only split on \and. The meaning-based check in split_tokens also matches
+  // \AND (which is Let to \and). \And is NOT split here — amsmath overrides
+  // its definition with DefMath, so it stays as a text "&" separator inside
+  // <personname>, matching Perl's behavior.
+  split_tokens(tokens, vec![T_CS!("\\and")])
     .into_iter()
     .flat_map(|t| {
       let mut with_cs = vec![cs, T_BEGIN!()];
