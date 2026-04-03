@@ -478,6 +478,21 @@ impl State {
     if let Some(ic) = include_comments {
       state.assign_value("INCLUDE_COMMENTS", ic, Some(Scope::Global));
     }
+    // Perl Core.pm L47: INCLUDE_PATH_PIS (default true) — emit searchpath PIs
+    state.assign_value("INCLUDE_PATH_PIS", true, Some(Scope::Global));
+    // Perl Core.pm L43: STRICT (default false)
+    if let Some(strict) = options.strict {
+      state.assign_value("STRICT", strict, Some(Scope::Global));
+    }
+    // Perl Core.pm L62: NOMATHPARSE
+    state.assign_value("NOMATHPARSE", nomathparse, Some(Scope::Global));
+    // Perl Core.pm L61: PERL_INPUT_ENCODING (default utf-8)
+    let enc = state.input_encoding.as_deref().unwrap_or("utf-8");
+    state.assign_value(
+      "PERL_INPUT_ENCODING",
+      Stored::String(arena::pin(enc)),
+      Some(Scope::Global),
+    );
 
     state
   }
