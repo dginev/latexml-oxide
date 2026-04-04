@@ -31,8 +31,7 @@ LoadDefinitions!({
   InnerPool!(etex); // unless... ?
   InnerPool!(pdftex); // unless... ?
 
-  // TODO: should we port the deprecations to rust? postpone for now.
-  // InnerPool!(base_deprecated);
+  InnerPool!(base_deprecated);
   InnerPool!(plain);
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

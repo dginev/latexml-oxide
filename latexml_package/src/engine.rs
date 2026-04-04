@@ -26,6 +26,8 @@ pub mod tex_tables;
 
 pub mod base_functions; // auxiliary functions
 pub(crate) mod tex_scripts;
+// Deprecated aliases
+mod base_deprecated;
 // eTeX Pool
 pub mod etex;
 // pdfTeX Pool
