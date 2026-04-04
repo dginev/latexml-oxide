@@ -146,8 +146,9 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] **E1. Precompile kernel dumps on `cargo build`** — Design in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version check. Manual generation still required.
 - [ ] **E2. `\newpage` in SVG/tikz context** — `\lx@newpage` is defined but `<pagination>` elements are missing from 10 tikz test outputs. The `^` prefix float-up may not work inside tikzpicture's SVG mode. Affects 10 tests (~22 diff lines).
-- [ ] **E3. Reduce TooManyErrors aborts** — 6 arxiv papers abort due to cascading errors from missing packages. Need: (a) increase MAX_ERRORS default for real-world papers, (b) better error recovery so `\end{document}` still produces partial output after Fatal, (c) match Perl's error tolerance.
-- [ ] **E4. Fix `\@@eqnarray` recursion** — Paper 2511.03798 hits infinite recursion: `\@@eqnarray` → `$` → `\lx@begin@inline@math` → `\@@eqnarray` cycle. Root cause: eqnarray triggered inside inline math mode by jheppub.sty.
+- [ ] **E3. FindFile_fallback for versioned packages** — Perl Package.pm L2141-2210 strips version/arxiv suffixes from missing package names to find existing bindings (e.g. `natbib-arxiv_v2.sty` → `natbib.sty`). Strips: `_arx`, `_arxiv`, `_conference`, `_v1.2`, `_old`, `_final`, `_custom`, etc. Also strips prefixes (`rw_`, `my_`, `preprint_`). Critical for arXiv papers that bundle modified copies of standard packages.
+- [ ] **E4. Reduce TooManyErrors aborts** — 6 arxiv papers abort due to cascading errors from missing packages. Need: (a) increase MAX_ERRORS default for real-world papers, (b) better error recovery so `\end{document}` still produces partial output after Fatal, (c) match Perl's error tolerance.
+- [ ] **E5. Fix `\@@eqnarray` recursion** — Paper 2511.03798 hits infinite recursion: `\@@eqnarray` → `$` → `\lx@begin@inline@math` → `\@@eqnarray` cycle. Root cause: eqnarray triggered inside inline math mode by jheppub.sty.
 
 ### Open TODO items — Math Parser & Post-Processing
 
