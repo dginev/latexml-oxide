@@ -285,11 +285,12 @@ macro_rules! prop_digested {
       ),
       None => Vec::new(),
       other => {
-        eprintln!(
+        log::warn!(
           "Please extend the api_macros::prop_digested macro to support: {:?}",
           other
         );
-        todo!();
+        // Return empty vec instead of panicking
+        Vec::new()
       },
     }
   };

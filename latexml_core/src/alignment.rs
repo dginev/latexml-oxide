@@ -440,12 +440,12 @@ impl BoxOps for Alignment {
     &self,
     _options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    todo!();
+    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
   }
   fn get_font(&self) -> Result<Option<Cow<'_, crate::common::font::Font>>> {
-    todo!();
+    Ok(None)
   }
-  fn get_string(&self) -> Result<Cow<'_, str>> { todo!() }
+  fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed("")) }
 
   fn compute_size_and_cache(
     &mut self,

@@ -317,13 +317,13 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, _args: Vec<ArgWrap>) -> Option<RegisterValue> { todo!() }
+  fn value_of(&self, _args: Vec<ArgWrap>) -> Option<RegisterValue> { None }
   /// runs the setter to assign the value for a register
   fn set_value(&self, _value: RegisterValue, _scope: Option<Scope>, _args: Vec<ArgWrap>) {
-    todo!();
+    log::warn!("set_value called on non-register definition");
   }
   fn register_type(&self) -> Option<RegisterType> { None }
-  fn get_reversion_spec(&self) -> Option<Reversion> { todo!() }
+  fn get_reversion_spec(&self) -> Option<Reversion> { None }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }
 
   fn stringify_type(&self, deftype: &str) -> String {

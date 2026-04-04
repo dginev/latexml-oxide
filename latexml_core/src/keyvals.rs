@@ -146,7 +146,7 @@ impl BoxOps for KeyVals {
   }
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
-    todo!();
+    log::warn!("set_property on KeyVals not supported");
   }
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(None) } // TODO
@@ -906,7 +906,9 @@ impl KeyVals {
           tks.push(T_OTHER!(exp_str));
         },
         ArgWrap::Token(vtk) => tks.push(vtk),
-        _ => todo!(),
+        other => {
+          log::warn!("Unexpected ArgWrap variant in KeyVals revert: {:?}", other);
+        },
       }
     }
     Ok(Tokens::new(tks))
