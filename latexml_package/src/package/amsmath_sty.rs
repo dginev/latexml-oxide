@@ -1221,13 +1221,13 @@ LoadDefinitions!({
       #2\
     </ltx:XMApp>");
 
-  // Section 4.12: Continued fractions
-  // Perl: saves mathstyle, then uses \lx@inner@cfrac with InFractionStyle args.
-  // Simplified: use continued-fraction meaning, display mathstyle.
+  // Section 4.12: Continued fractions — Perl L1098-1125
+  // Perl saves mathstyle context and conditionally sets 'text' vs display.
+  // The mathstyle attribute tells the MathML renderer which fraction style to use.
   assign_value("CFRACSTYLE", Stored::String(arena::pin("display")), Some(Scope::Global));
   DefConstructor!("\\cfrac[] InFractionStyle InFractionStyle",
     "<ltx:XMApp>\
-      <ltx:XMTok name='cfrac' meaning='continued-fraction'/>\
+      <ltx:XMTok name='cfrac' meaning='continued-fraction' mathstyle='display'/>\
       <ltx:XMArg>#2</ltx:XMArg>\
       <ltx:XMArg>#3</ltx:XMArg>\
     </ltx:XMApp>");
