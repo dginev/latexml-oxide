@@ -395,7 +395,25 @@ impl Rewrite {
             return Ok(());
           }
           if let RewritePattern::String(xpath) = pattern {
-            let matches = document.findnodes(xpath, Some(tree));
+            // Try subtree context first; if 0 results, retry from document root
+            // and filter to descendants of `tree`. This works around rust-libxml
+            // XPath namespace issues when called on a subtree context.
+            let mut matches = document.findnodes(xpath, Some(tree));
+            if matches.is_empty() {
+              // Retry without context and filter to descendants of tree.
+              // Works around rust-libxml XPath failing on subtree context.
+              let all = document.findnodes(xpath, None);
+              if !all.is_empty() {
+                matches = all.into_iter().filter(|n| {
+                  let mut parent = n.get_parent();
+                  while let Some(p) = parent {
+                    if p == *tree { return true; }
+                    parent = p.get_parent();
+                  }
+                  false
+                }).collect();
+              }
+            }
             // Only apply wildcard filtering on content Selects, not scope Selects
             let is_content_select = !xpath.contains("xml:id") && !xpath.contains("@id=");
             let wilds = if is_content_select {
