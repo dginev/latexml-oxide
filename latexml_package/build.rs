@@ -11,9 +11,9 @@
 use std::env;
 use std::path::Path;
 
-const STUB: &str = r#"//! No-op kernel dump (not yet generated).
-//! Generate with: cargo run --release --bin latexml_oxide -- --init=latex.ltx
-//! The engine will use classic runtime loading instead.
+const STUB: &str = r#"// No-op kernel dump (not yet generated).
+// Generate with: cargo run --release --bin latexml_oxide -- --init=latex.ltx
+// The engine will use classic runtime loading instead.
 
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {
   Ok(())
@@ -22,6 +22,7 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {
 
 fn main() {
   let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+  let out_dir = env::var("OUT_DIR").unwrap();
   let engine_dir = Path::new(&manifest_dir).join("src/engine");
 
   // Ensure both dump files exist (Perl: plain_dump + latex_dump)
@@ -31,6 +32,12 @@ fn main() {
       std::fs::write(&dump_path, STUB).unwrap_or_else(|_| panic!("Failed to write {dump_name} stub"));
     }
     println!("cargo:rerun-if-changed=src/engine/{dump_name}");
+  }
+
+  // Ensure latex_dump_loader.rs exists in OUT_DIR (included by latex_dump.rs)
+  let loader_path = Path::new(&out_dir).join("latex_dump_loader.rs");
+  if !loader_path.exists() {
+    std::fs::write(&loader_path, STUB).unwrap_or_else(|_| panic!("Failed to write latex_dump_loader.rs stub"));
   }
 
   println!("cargo:rerun-if-changed=build.rs");

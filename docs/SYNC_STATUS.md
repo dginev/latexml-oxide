@@ -4,7 +4,7 @@
 
 Updated 2026-04-03. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). 318 paired tests: 225 zero-diff + 26 intentional-only (xml:id renumbering, %&#10;) = **251 at architectural ceiling**. 67 with real structural diffs. 31,514 total diff lines.
+**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests at zero structural diff against Perl reference XMLs. 4 tolerated post-processing diffs in `simplemath_post_test`.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -39,7 +39,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | MINOR | `\nonscript`, `\lx@dollar@default` ported. DefMathLigature in plain.rs. Missing: `adjustMathstyle` recursive helper |
+| tex_math.rs | OK | `\nonscript`, `\lx@dollar@default` ported. DefMathLigature in plain.rs. `adjustMathstyle` fully ported (recursive helper). |
 | tex_box.rs | MINOR | `\leaders/cleaders/xleaders`, `\vrule/\hrule`, `\hbox/vbox/vtop`, SVG functions all ported. Minor: some box dimension edge cases |
 | tex_fonts.rs | MINOR | `\fontname`, `\hyphenchar` ported. Ligatures in plain.rs. Missing: `\fontdimen` full array semantics, `getFontDimen()` helper |
 | tex_tables.rs | MINOR | `\halign BoxSpecification` fully implemented. Minor: padding CSS classes |
@@ -239,9 +239,9 @@ Grammar restructuring tasks to reduce raw parse tree counts. Target: <200 raw tr
 
 - [x] **M6. Script order canonicalization pragma** — **NOT NEEDED.** M1 investigation proved script ordering is not the source of ambiguity (tokens come in source order, only one derivation path per input). No canonicalization needed.
 
-- [ ] **M7. `function_call` nonterminal consolidation** — Currently function application is spread across `applied_func`, `tight_term +=`, and `tight_opterm`. For example, `function lparen formula rparen => apply_delimited` appears in both `tight_term` and `applied_func`. Consolidate into a single `function_call` nonterminal. **Expected impact:** Reduces chart size for function-heavy formulas. **Risk:** Changes to function application rules have historically caused subtle regressions. **Investigation:** Catalog all places where function application rules appear and identify true duplicates.
+- [x] **M7. `function_call` nonterminal consolidation** — **PARTIALLY CONSOLIDATED.** Moved `apply_delimited` rules (6 rules: function/opfunction/trigfunction × lparen/lbracket) into `applied_func` for chaining support. Removed 6 duplicate scripted variant rules from `tight_term` (scripted_function/opfunction/trigfunction fenced_factor + lparen) — these were in BOTH `tight_term` and `applied_func`, creating 2x ambiguity per site. Kept base function type tight_term rules as "priority boosters" — removing them changes Marpa tree enumeration order. Also: max_consecutive_dupes 64→32, 200ms convergence budget after first unique parse. All 407 tests pass.
 
-- [ ] **M8. `fenced_factor` rule audit** — The `fenced_factor` nonterminal has 32+ alternatives. Several create ambiguity: `lparen term_list rparen` vs `lparen formula_list rparen` (same input, different nonterminal paths). `langle_rel term_list rangle_rel` vs `langle_open term_list rangle_close` (same content, different delimiter tokens). Audit and remove redundant alternatives. **Expected impact:** Small per-formula reduction, but affects every fenced expression. **Risk:** Some "redundant" rules handle different token types from the lexer (RELOP vs OPEN for `<`). **Investigation:** Check which fenced_factor alternatives are actually reached by test cases.
+- [x] **M8. `fenced_factor` rule audit** — **PARTIALLY AUDITED.** Removed `langle_open expression rangle_close` (subsumed by `langle_open formula rangle_close` since every expression is a formula — 2x ambiguity for `⟨a⟩`). `langle_rel` vs `langle_open` are different lexer tokens — no overlap. `lparen term_list rparen` vs `lparen formula_list rparen` overlap for simple terms but produce different inner structures (term_list_apply vs formula_list_apply) — kept both as the semantic difference is intentional. All 407 tests pass.
 
 - [ ] **M9. `tight_opterm` vs `applied_func` interaction** — `tight_opterm` treats bare functions as multiplicands (`2 sin` = `2 * sin`), while `applied_func` treats them as function application (`sin x` = `sin(x)`). For `2 sin x`: both `(2 * sin)(x)` and `2 * sin(x)` are derivable. The grammar relies on precedence (tight_opterm at term level, applied_func at tight_term level) but Marpa explores both. **Expected impact:** Moderate for function-heavy formulas. **Investigation:** Count tree increase for `N sin x` vs `sin x` patterns.
 

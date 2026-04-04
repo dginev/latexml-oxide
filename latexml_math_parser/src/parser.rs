@@ -902,7 +902,11 @@ impl MathParser {
     // Convergence: if we've seen enough consecutive duplicates without
     // a new unique tree, the grammar ambiguity is purely structural
     // (script attachment ordering). Stop early.
-    let max_consecutive_dupes = 64;
+    let max_consecutive_dupes = 32;
+    // Time-budget convergence: once we have unique parses, stop after
+    // this budget. For formulas where all trees are pruned (no unique
+    // parse yet), use a longer budget before giving up.
+    let converge_budget = std::time::Duration::from_millis(200);
     for val in parse_result {
       // Truncate if too many trees or too much time
       if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
@@ -914,6 +918,14 @@ impl MathParser {
       if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
         break;
       }
+      // Time-budget convergence: if we have unique parses and have spent
+      // >200ms, stop — the remaining trees are overwhelmingly duplicates.
+      if !parses.is_empty() && start.elapsed() > converge_budget {
+        break;
+      }
+      // Note: we intentionally do NOT abort when no parse has been found
+      // even after extended time — valid parses can appear late in the
+      // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
       match self.actions.get_tree(
         self.builder.clone(),
         val,

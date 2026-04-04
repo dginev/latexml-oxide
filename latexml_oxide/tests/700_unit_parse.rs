@@ -197,7 +197,7 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:38 PUNCT:quad:39 UNKNOWN:Z:40 RELOP:equals:41 BIGOP:T:42 \
       start_BIGOPSUB:start:43 ATOM:a:44 end_BIGOPSUB:end:45 UNKNOWN:Z:46 \
       start_POSTSUBSCRIPT:start:47 UNKNOWN:i:48 end_POSTSUBSCRIPT:end:49 ",
-     5000),  // TODO: reduce grammar ambiguity (bigop absorption)
+     5000),  // Still capped at 5000 — bigop absorption ambiguity remains
 
     // mathtools: 24 alternating UNKNOWN letters from vsmallmatrix
     // M4: diffop filtering eliminated Catalan-number growth (5000 → 1)
