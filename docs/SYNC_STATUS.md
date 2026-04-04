@@ -4,7 +4,9 @@
 
 Updated 2026-04-04. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: ~208/289 zero-diff, ~25K diff lines across 81 non-zero tests (mostly xml:id renumbering + package binding gaps).
+**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: 221/298 zero-diff (74.2%), ~31K diff lines across 77 non-zero tests (xml:id renumbering + math parser structural diffs + SVG differences).
+
+**arxiv sandbox:** 36/47 papers produce meaningful HTML output. 6 fail (cascading errors from missing packages), 5 timeout (>60s, mostly tikz-heavy).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
