@@ -191,6 +191,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "svjour2.cls" => package::svjour3_cls::load_definitions(),
     "svjour3.cls" => package::svjour3_cls::load_definitions(),
     "inst_support.sty" => package::inst_support_sty::load_definitions(),
+    "JHEP.cls" => package::jhep_cls::load_definitions(),
     "JHEP2.cls" => package::jhep2_cls::load_definitions(),
     "JHEP3.cls" => package::jhep3_cls::load_definitions(),
     "keyval.sty" => package::keyval_sty::load_definitions(),
