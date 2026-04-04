@@ -298,6 +298,7 @@ pub mod pgfutil_common_tex;
 pub mod physics_sty;
 pub mod pifont_sty;
 pub mod placeins_sty;
+pub mod pstricks_sty;
 pub mod pos_cls;
 pub mod prettyref_sty;
 pub mod preview_sty;
