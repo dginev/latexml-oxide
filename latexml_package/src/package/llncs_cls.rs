@@ -108,6 +108,27 @@ LoadDefinitions!({
 \def\solutionname{Solution}
 \def\remarkname{Remark}"#);
 
+  // Pre-define theorem environments — Perl uses \spnewtheorem with capfont/bodyfont
+  RawTeX!("\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}");
+  RawTeX!("\\@ifundefined{claim}{\\newtheorem*{claim}{Claim}}{}");
+  RawTeX!("\\@ifundefined{conjecture}{\\newtheorem{conjecture}[theorem]{Conjecture}}{}");
+  RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}[theorem]{Corollary}}{}");
+  RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}[theorem]{Definition}}{}");
+  RawTeX!("\\@ifundefined{example}{\\newtheorem{example}[theorem]{Example}}{}");
+  RawTeX!("\\@ifundefined{exercise}{\\newtheorem{exercise}[theorem]{Exercise}}{}");
+  RawTeX!("\\@ifundefined{lemma}{\\newtheorem{lemma}[theorem]{Lemma}}{}");
+  RawTeX!("\\@ifundefined{note}{\\newtheorem{note}[theorem]{Note}}{}");
+  RawTeX!("\\@ifundefined{problem}{\\newtheorem{problem}[theorem]{Problem}}{}");
+  RawTeX!("\\@ifundefined{property}{\\newtheorem{property}[theorem]{Property}}{}");
+  RawTeX!("\\@ifundefined{proposition}{\\newtheorem{proposition}[theorem]{Proposition}}{}");
+  RawTeX!("\\@ifundefined{question}{\\newtheorem{question}[theorem]{Question}}{}");
+  RawTeX!("\\@ifundefined{solution}{\\newtheorem{solution}[theorem]{Solution}}{}");
+  RawTeX!("\\@ifundefined{remark}{\\newtheorem{remark}[theorem]{Remark}}{}");
+
+  // \spnewtheorem stub — complex Perl macro (deferred)
+  DefMacro!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", "");
+  Let!("\\spdefaulttheorem", "\\spnewtheorem");
+
   //======================================================================
   // Blackboard bold letters
   DefConstructor!("\\bbbc",   "\u{2102}",   enter_horizontal => true);
