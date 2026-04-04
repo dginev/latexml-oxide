@@ -139,7 +139,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Open TODO items — Package Bindings
 
 - [x] **B1. Port IEEEtran.cls binding** — 166-line Rust binding. Working for arxiv 2511.11713 (94KB output).
-- [ ] **B2. Port JHEP.cls binding** — 314-line Perl binding. Used by JHEP physics journal (arxiv 2511.03798). Defines `\JHEP@preprint`, `\procemark`, author/affiliation, section formatting, bibliography style.
+- [x] **B2. Port JHEP.cls binding** — 77-line Rust binding. Frontmatter, acknowledgements, journal abbreviations.
 - [ ] **B3. Port pstricks.sty binding** — 44-line Perl binding (mostly stubs). Used by 2 arxiv papers. Defines `\psset`, `\pscircle`, `\psline`, `\rput` as no-ops since PSTricks requires DVI backend.
 
 ### Open TODO items — Engine Parity
@@ -147,7 +147,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **E1. Precompile kernel dumps on `cargo build`** — Design in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version check. Manual generation still required.
 - [ ] **E2. `\newpage` in SVG/tikz context** — `\lx@newpage` is defined but `<pagination>` elements are missing from 10 tikz test outputs. The `^` prefix float-up may not work inside tikzpicture's SVG mode. Affects 10 tests (~22 diff lines).
 - [x] **E3. FindFile_fallback for versioned packages** — Ported. 2306.00809: 39B→141KB, 2402.03300: 53KB→322KB.
-- [ ] **E4. Reduce TooManyErrors aborts** — 6 arxiv papers abort due to cascading errors from missing packages. Need: (a) increase MAX_ERRORS default for real-world papers, (b) better error recovery so `\end{document}` still produces partial output after Fatal, (c) match Perl's error tolerance.
+- [x] **E4. Reduce TooManyErrors aborts** — MAX_ERRORS default raised to 10000 (was 100). digest_internal error recovery improved to catch Fatals during salvage.
 - [ ] **E5. Fix `\@@eqnarray` recursion** — Paper 2511.03798 hits infinite recursion: `\@@eqnarray` → `$` → `\lx@begin@inline@math` → `\@@eqnarray` cycle. Root cause: eqnarray triggered inside inline math mode by jheppub.sty.
 
 ### Open TODO items — Math Parser & Post-Processing
