@@ -68,20 +68,48 @@ LoadDefinitions!({
   DefConstructor!("\\ack", "<ltx:acknowledgements>");
   DefConstructor!("\\endack", "</ltx:acknowledgements>");
 
-  // Keywords — Perl L136-137 (simplified)
-  DefMacro!("\\keyword", "\\@keyword");
-  DefMacro!("\\@keyword XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:keywords}{#1}");
-  Let!("\\@keyword@cut", "\\relax");
-  DefMacro!("\\PACS{}", "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
-  DefMacro!("\\MSC{}", "\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}");
-  DefMacro!("\\JEL{}", "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
+  // Acknowledgements tag — Perl L125
+  Tag!("ltx:acknowledgements", auto_close => true);
 
-  // Figures — Perl L165-178
+  // Keywords — Perl L130-153
+  // keyword environment and macros with XUntil pattern
+  DefMacro!("\\begin{keyword}", "\\begingroup\\@keyword");
+  DefMacro!("\\end{keyword}", "\\@keyword@cut\\endgroup");
+  DefMacro!("\\keyword", "\\@keyword");
+  DefMacro!("\\endkeyword", "\\@keyword@cut");
+  DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
+  DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
+  DefMacro!("\\JEL", "\\@keyword@cut\\@JEL");
+  DefMacro!("\\UK", "\\@keyword@cut\\@UK");
+
+  DefMacro!("\\@keyword XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\@PACS XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
+  DefMacro!("\\@MSC{} XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme={#1 MSC}]{#2}");
+  DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
+  DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=UK]{#1}");
+  DefConstructor!("\\@keyword@cut", "");
+
+  // Document structure — Perl L158-163
+  DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
+  DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
+
+  // Theorems — Perl L168-175
+  Let!("\\newdefinition", "\\newtheorem");
+  Let!("\\newproof", "\\newtheorem");
+
+  // Registers — Perl L180-183
+  DefRegister!("\\eqnarraycolsep" => Dimension!("1pt"));
+  DefRegister!("\\eqnbaselineskip" => Glue!("14pt"));
+  DefRegister!("\\eqnlineskip" => Glue!("2pt"));
+  DefRegister!("\\eqntopsep" => Glue!("12pt"));
+
+  // Figures — Perl L186-191
   DefMacro!("\\printfigures{}", "");
   DefMacro!("\\printtables{}", "");
   DefMacro!("\\MARK{}", "");
+  DefMacro!("\\mpfootnotemark", "");
 
-  // Float environment (Perl L182-191)
+  // Float environment
   DefEnvironment!("{esmark}",  "#body");
   DefMacro!("\\figmark{}{}", "");
   DefMacro!("\\tabmark{}{}", "");
