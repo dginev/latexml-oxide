@@ -221,6 +221,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "fontspec.sty" => package::fontspec_sty::load_definitions(),
     "inputenc.sty" => package::inputenc_sty::load_definitions(),
     "textcomp.sty" => package::textcomp_sty::load_definitions(),
+    "texvc.sty" => package::texvc_sty::load_definitions(),
     "listings.sty" => package::listings_sty::load_definitions(),
     "listingsutf8.sty" => package::listingsutf8_sty::load_definitions(),
     "longtable.sty" => package::longtable_sty::load_definitions(),
