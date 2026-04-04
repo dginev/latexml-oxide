@@ -88,14 +88,50 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 ---
 
-## Package Bindings (open gaps only)
+## Package Bindings — Exhaustive Translation Audit
 
-| Package | Status | Notes |
-|---------|--------|-------|
-| amsmath.sty | MINOR | ~95% ported. Minor: cfrac mathstyle tracking |
-| listings.sty | MINOR | ~95% ported. Missing: literate `*` (protected) flag enforcement |
+**Goal: translate every `.sty.ltxml` and `.cls.ltxml` in Perl to Rust, exhaustively.**
 
-All other packages OK. 411 packages (433+ dispatch entries) + 91 ar5iv contrib bindings.
+Current: 155 FULL, 25 PARTIAL, 207 STUB, 19 MISSING (of ~406 total Perl bindings).
+
+### MISSING bindings (no Rust file — ordered by impact)
+
+| Perl binding | Lines | Priority | Notes |
+|---|---|---|---|
+| pstricks_support.sty | 1057 | Medium | Full PSTricks drawing — pstricks.sty stub exists |
+| pst-node.sty | 557 | Low | PSTricks node connections |
+| amsppt.sty | 500 | Low | AMSTeX plain TeX compat |
+| aa_support.sty | 469 | Medium | Astronomy & Astrophysics journal support |
+| iopart_support.sty | 345 | Medium | IOP Publishing journal support |
+| proofwiki.sty | 326 | Low | ProofWiki |
+| mn2e_support.sty | 252 | Medium | MNRAS journal |
+| lxRDFa.sty | 236 | Low | RDFa semantic annotations |
+| turing.sty | 222 | Low | Turing machine typesetting |
+| elsart_support_core.sty | 191 | Medium | Elsevier article core |
+| texvc.sty | 183 | Low | MediaWiki TeX |
+| elsart_support.sty | 175 | Medium | Elsevier article |
+| SIunits.sty | 39 | Low | Old SI units (superseded by siunitx) |
+
+### PARTIAL bindings (Rust exists, <50% of Perl — ordered by gap size)
+
+| Perl binding | Perl L | Rust L | Ratio | Priority | Key missing |
+|---|---|---|---|---|---|
+| beamer.cls | 1364 | 48 | 4% | High | 96% missing: overlay specs, themes, blocks, columns |
+| aas_support.sty | 617 | 269 | 44% | Medium | Author/affil handling, table notes, journal abbrevs |
+| revtex4_support.sty | 433 | 208 | 48% | Medium | Author footnotes, bibliography, appendix |
+| algorithm2e.sty | 235 | 96 | 41% | Medium | Algorithm environment formatting |
+| braket.sty | 149 | 27 | 18% | Low | Dirac notation (mostly handled by math parser) |
+| inst_support.sty | 121 | 25 | 21% | Low | Institution handling |
+| subfig.sty | 118 | 20 | 17% | Medium | Subfigure handling |
+| html.sty | 110 | 30 | 27% | Low | LaTeX2HTML compat |
+| titling.sty | 100 | 40 | 40% | Low | Title page formatting |
+| authblk.sty | 99 | 25 | 25% | Medium | Author/affiliation blocks |
+| amsmath.sty | ~600 | ~550 | 95% | Low | cfrac mathstyle |
+| listings.sty | ~500 | ~470 | 95% | Low | literate `*` flag |
+
+### STUB bindings (3-19 lines, basic no-op)
+
+207 packages have only skeletal stubs. Most are low-priority (rarely used or just import macros). Key high-traffic stubs to flesh out: `subfigure.sty`, `wrapfig.sty`, `longtable.sty`, `floatrow.sty`, `minted.sty`.
 
 ---
 
@@ -140,7 +176,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [x] **B1. Port IEEEtran.cls binding** — 166-line Rust binding. Working for arxiv 2511.11713 (94KB output).
 - [x] **B2. Port JHEP.cls binding** — 77-line Rust binding. Frontmatter, acknowledgements, journal abbreviations.
-- [ ] **B3. Port pstricks.sty binding** — 44-line Perl binding (mostly stubs). Used by 2 arxiv papers. Defines `\psset`, `\pscircle`, `\psline`, `\rput` as no-ops since PSTricks requires DVI backend.
+- [x] **B3. Port pstricks.sty binding** — 55-line Rust stub (DVI-only, all commands no-op or passthrough).
 
 ### Open TODO items — Engine Parity
 
