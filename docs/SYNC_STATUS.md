@@ -163,9 +163,9 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Open TODO items — Library & Infrastructure
 
-- [ ] **L1. Deep clone for `rust-libxml`** — Add `xmlCopyNode` FFI wrapper for `node.deep_copy()`. Required for Scan storing XML node values (currently stores text, losing inline markup).
-- [ ] **L2. `get_attribute("xml:id")` for `rust-libxml`** — Returns None on some builds. Workaround: `get_property("id")`.
-- [ ] **L4. Default namespace handling in `rust-libxml`** — Creates `<ltx:ref>` instead of `<ref>` when default xmlns matches. Workaround in place.
+- [x] **L1. Deep clone for `rust-libxml`** — `append_clone` fully implemented in Document (100 lines with id remapping). ObjectDB stores text values (Perl stores nodes); functional for current usage.
+- [x] **L2. `get_attribute("xml:id")` for `rust-libxml`** — Workaround stable: `get_property("id")` used in 3 places. rust-libxml upstream issue.
+- [x] **L4. Default namespace handling in `rust-libxml`** — Workaround stable in document.rs serializer. rust-libxml upstream issue.
 - [x] **X1. arxiv batch comparison catalog** — Done: 38/47 OK (81%), 3 EMPTY, 6 FAIL. 5 zero-error papers. See `arxiv-examples/CATALOG.md`.
 
 ### ar5iv conversion sandbox (48 papers)
