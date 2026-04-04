@@ -158,8 +158,8 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Open TODO items — Math Parser & Post-Processing
 
-- [ ] **S1. siunitx unit tree builder** — `six_convert_units_from_tokens` handles simple unit chains. Missing: non-unit content passthrough (`\pi`, `\frac{}`), literal notation (`m^2.s`), complex number formatting (`I_dual`). Currently ~6900 normalized diffs vs Perl.
-- [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has 859 diffs. Key issues: subscript content not math-parsed inside `\hat{x}` patterns, `decl_id` not propagated to all matching tokens, wildcard pattern `\WildCard` matching incomplete.
+- [ ] **S1. siunitx unit tree builder** — `six_convert_units_from_tokens` handles simple unit chains. Missing: non-unit content passthrough (`\pi`, `\frac{}`). Root cause: `\lx@six@unitobject` is a no-op DefPrimitive; Perl overrides it with a `protected` DefMacro that expands to `\mathrm{presentation}` in the literalunits fallback path. Fix requires implementing `protected` macro expansion in the engine (tokens stay unexpanded during normal gullet expansion but expand during stomach digestion). Investigated 4 times with 3 different approaches (DefMacro override, literalunits handler, DefPrimitive with digest) — all too broad without `protected` support.
+- [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has ~400 diffs. Key issues: subscript content not math-parsed inside `\hat{x}` patterns, `decl_id` not propagated to all matching tokens, wildcard pattern `\WildCard` matching incomplete. Requires deep rewrite system structural work.
 
 ### Open TODO items — Library & Infrastructure
 
