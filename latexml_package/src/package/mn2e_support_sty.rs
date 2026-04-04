@@ -82,4 +82,83 @@ LoadDefinitions!({
   DefMacro!("\\lrr", "Living Rev. Relativity");
   DefMacro!("\\na", "New A");
   DefMacro!("\\nar", "New A Rev.");
+
+  // Bold Greek — Perl L66-97
+  DefMacro!("\\mn@boldsymbol{}", "\\boldsymbol{#1}");
+  DefMacro!("\\balpha", "\\mn@boldsymbol{\\alpha}");
+  DefMacro!("\\bbeta", "\\mn@boldsymbol{\\beta}");
+  DefMacro!("\\bgamma", "\\mn@boldsymbol{\\gamma}");
+  DefMacro!("\\bdelta", "\\mn@boldsymbol{\\delta}");
+  DefMacro!("\\bepsilon", "\\mn@boldsymbol{\\epsilon}");
+  DefMacro!("\\bzeta", "\\mn@boldsymbol{\\zeta}");
+  DefMacro!("\\boldeta", "\\mn@boldsymbol{\\eta}");
+  DefMacro!("\\btheta", "\\mn@boldsymbol{\\theta}");
+  DefMacro!("\\biota", "\\mn@boldsymbol{\\iota}");
+  DefMacro!("\\bkappa", "\\mn@boldsymbol{\\kappa}");
+  DefMacro!("\\blambda", "\\mn@boldsymbol{\\lambda}");
+  DefMacro!("\\bmu", "\\mn@boldsymbol{\\mu}");
+  DefMacro!("\\bnu", "\\mn@boldsymbol{\\nu}");
+  DefMacro!("\\bxi", "\\mn@boldsymbol{\\xi}");
+  DefMacro!("\\bpi", "\\mn@boldsymbol{\\pi}");
+  DefMacro!("\\brho", "\\mn@boldsymbol{\\rho}");
+  DefMacro!("\\bsigma", "\\mn@boldsymbol{\\sigma}");
+  DefMacro!("\\btau", "\\mn@boldsymbol{\\tau}");
+  DefMacro!("\\bupsilon", "\\mn@boldsymbol{\\upsilon}");
+  DefMacro!("\\bphi", "\\mn@boldsymbol{\\phi}");
+  DefMacro!("\\bchi", "\\mn@boldsymbol{\\chi}");
+  DefMacro!("\\bpsi", "\\mn@boldsymbol{\\psi}");
+  DefMacro!("\\bomega", "\\mn@boldsymbol{\\omega}");
+
+  // Degree fractions — Perl L109-117
+  DefMacro!("\\aas@fstack{}", "\\ensuremath{.\\!^{\\mathrm{#1}}}");
+
+  // Math relations — Perl L131-149
+  DefMath!("\\sol", "\u{2A9D}", role => "RELOP", meaning => "similar-to-or-less-than");
+  DefMath!("\\sog", "\u{2A9E}", role => "RELOP", meaning => "similar-to-or-greater-than");
+  DefMath!("\\lse", "\u{2A8D}", role => "RELOP", meaning => "less-than-or-similar-to-or-equal");
+  DefMath!("\\gse", "\u{2A8E}", role => "RELOP", meaning => "greater-than-or-similar-to-or-equal");
+  DefMath!("\\leogr", "\u{2276}", role => "RELOP", meaning => "less-than-or-greater-than");
+  DefMath!("\\grole", "\u{2277}", role => "RELOP", meaning => "greater-than-or-less-than");
+  DefMath!("\\loa", "\u{2A85}", role => "RELOP", meaning => "less-than-or-approximately-equals");
+  DefMath!("\\goa", "\u{2A86}", role => "RELOP", meaning => "greater-than-or-approximately-equals");
+  DefMath!("\\lid", "\u{2266}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\gid", "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefMath!("\\leqslant", "\u{2A7D}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\geqslant", "\u{2A7E}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefPrimitive!("\\micron", "\u{00B5}m");
+
+  // Font macros — Perl L153-161
+  DefMacro!("\\rmn{}", "\\mathrm{#1}");
+  DefMacro!("\\romn{}", "\\mathrm{#1}");
+  DefMacro!("\\itl{}", "\\mathit{#1}");
+  DefMacro!("\\bld{}", "\\mathbf{#1}");
+  DefMacro!("\\textbfit{}", "\\textbf{\\textit{#1}}");
+  DefMacro!("\\textbfss{}", "\\textbf{\\textsf{#1}}");
+  DefMacro!("\\bmath{}", "\\mn@boldsymbol{#1}");
+
+  Let!("\\upi", "\\pi");
+  Let!("\\umu", "\\mu");
+  Let!("\\upartial", "\\partial");
+
+  // Table/proof — Perl L174-192
+  DefMacro!("\\contcaption", "\\caption{continued}");
+  DefMacro!("\\proofname", "Proof");
+  DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
+
+  DefMacro!("\\loadboldmathitalic", "");
+  DefMacro!("\\loadboldgreek", "");
+  DefMacro!("\\fixfootnotes", "");
+  DefMacro!("\\bibtitle", "References");
+  DefMacro!("\\makeRLlabel{}", "#1");
+  DefMacro!("\\makeRRlabel{}", "#1");
+  DefMacro!("\\makenewlabel{}", "#1");
+  DefMacro!("\\boxit{}", "#1");
+  DefRegister!("\\smallindent" => Glue!("1.5em"));
+  Let!("\\fullhline", "\\hline");
+  DefMacro!("\\sevensize", "\\small");
+  DefMacro!("\\plate", "");
+
+  Let!("\\@internalcite", "\\cite");
+  DefMacro!("\\shortcite", "\\cite");
+  DefMacro!("\\citename{}", "#1");
 });
