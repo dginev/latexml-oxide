@@ -73,8 +73,8 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 |--------|--------|-----------|
 | gullet.rs | MINOR | `readArg` isolation (type ergonomics) |
 | document.rs | MINOR | XML comment creation (needs libxml2 FFI) |
-| rewrite.rs | MINOR | ~98% ported. `domToXPath` ported (L686-850). Missing: `digest_rewrite` helper |
-| pathname.rs | OK | `pathname_make`, `pathname_relative`, `pathname_findall` ported |
+| rewrite.rs | OK | ~98% ported. `digest_rewrite` not needed (different Rust approach) |
+| pathname.rs | OK | Fully ported (`make`, `relative`, `findall` added) |
 
 ---
 
