@@ -33,7 +33,30 @@ LoadDefinitions!({
   DefMacro!("\\AMS{}",  "\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}");
   DefMacro!("\\PAC{}",  "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
 
-  // Bibliography — Perl L130-175
+  // Theorem environments — Perl L69-91
+  RawTeX!("\\theoremstyle{plain}");
+  RawTeX!("\\@ifundefined{cor}{\\newtheorem{cor}[thm]{Corollary}}{}");
+  RawTeX!("\\@ifundefined{lem}{\\newtheorem{lem}[thm]{Lemma}}{}");
+  RawTeX!("\\@ifundefined{claim}{\\newtheorem{claim}[thm]{Claim}}{}");
+  RawTeX!("\\@ifundefined{conj}{\\newtheorem{conj}[thm]{Conjecture}}{}");
+  RawTeX!("\\@ifundefined{prop}{\\newtheorem{prop}[thm]{Proposition}}{}");
+  RawTeX!("\\@ifundefined{defn}{\\newtheorem{defn}[thm]{Definition}}{}");
+  RawTeX!("\\@ifundefined{exmp}{\\newtheorem{exmp}[thm]{Example}}{}");
+  RawTeX!("\\@ifundefined{rem}{\\newtheorem{rem}[thm]{Remark}}{}");
+  RawTeX!("\\@ifundefined{note}{\\newtheorem{note}{Note}}{}");
+
+  // Nuclear isotopes — Perl L60-65
+  DefMacro!("\\nuc{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
+  DefMacro!("\\itnuc{}{}", "\\ensuremath{{}^{#2}\\textit{#1}}");
+
+  // Caption continuations — Perl L108-110
+  DefMacro!("\\contcaption", "\\caption{continued}");
+  DefMacro!("\\contfigurecaption", "\\caption{continued}");
+  DefMacro!("\\conttablecaption", "\\caption{continued}");
+
+  // Bibliography — Perl L117-175
+  DefEnvironment!("{subbibitems}", "#body");
+  DefMacro!("\\cv", "");
   DefMacro!("\\biboptions{}", "");
   DefMacro!("\\bibliographystyle{}", "");
   DefMacro!("\\harvarditem[]{}{}{}",
@@ -44,4 +67,30 @@ LoadDefinitions!({
   DefMacro!("\\harvardyearleft", "(");
   DefMacro!("\\harvardyearright", ")");
   DefMacro!("\\citestyle{}", "");
+
+  // Shorthands — Perl L124-128
+  DefMacro!("\\AND", "\\&");
+  DefMacro!("\\etal", "et al.");
+  DefMacro!("\\Elproofname", "Proof.");
+  DefMacro!("\\proofname", "Proof.");
+
+  // Dimensions — Perl L132-139
+  DefMacro!("\\cropwidth", "297mm");
+  DefMacro!("\\cropheight", "210mm");
+  DefMacro!("\\cropleft", "0mm");
+  DefMacro!("\\croptop", "0mm");
+  DefRegister!("\\rulepreskip" => Dimension!("4pt"));
+  DefMacro!("\\setleftmargin{}{}", "");
+
+  // Misc — Perl L143-175
+  Let!("\\realpageref", "\\pageref");
+  DefMacro!("\\snm", "");
+  DefEnvironment!("{NoHyper}", "#body");
+  DefMacro!("\\mpfootnotemark", "");
+  DefMacro!("\\FMSlash", "\\protect\\pFMSlash");
+  DefMacro!("\\pFMSlash{}", "#1/");
+  DefMacro!("\\pFMslash{}", "#1/");
+  DefMacro!("\\Slashbox", "/");
+  DefMacro!("\\slashbox", "/");
+  DefMacro!("\\query{}", "");
 });
