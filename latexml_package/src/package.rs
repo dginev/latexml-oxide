@@ -115,6 +115,8 @@ pub mod ed_sty;
 pub mod ellipsis_sty;
 pub mod elsart_cls;
 pub mod elsart_sty;
+pub mod elsart_support_core_sty;
+pub mod elsart_support_sty;
 pub mod elsarticle_cls;
 pub mod empheq_sty;
 pub mod emulateapj_cls;

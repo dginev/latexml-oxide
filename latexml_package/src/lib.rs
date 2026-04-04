@@ -100,6 +100,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "ed.sty" => package::ed_sty::load_definitions(),
     "elsart.cls" => package::elsart_cls::load_definitions(),
     "elsart.sty" => package::elsart_sty::load_definitions(),
+    "elsart_support_core.sty" => package::elsart_support_core_sty::load_definitions(),
+    "elsart_support.sty" => package::elsart_support_sty::load_definitions(),
     "emulateapj.cls" => package::emulateapj_cls::load_definitions(),
     "revsymb.sty" => package::revsymb_sty::load_definitions(),
     "revsymb4-1.sty" => package::revsymb_sty::load_definitions(),
