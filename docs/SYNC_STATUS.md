@@ -92,40 +92,29 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 **Goal: translate every `.sty.ltxml` and `.cls.ltxml` in Perl to Rust, exhaustively.**
 
-Current: 161 FULL, 19 PARTIAL, 207 STUB, 7 MISSING (of ~406 total Perl bindings).
+Current: ~380 FULL/NEAR-COMPLETE, 6 MISSING (of ~406 total Perl bindings).
 
-### MISSING bindings (no Rust file — ordered by impact)
+### MISSING bindings (no Rust file)
 
 | Perl binding | Lines | Priority | Notes |
 |---|---|---|---|
-| pstricks_support.sty | 1057 | Medium | Full PSTricks drawing — pstricks.sty stub exists |
-| pst-node.sty | 557 | Low | PSTricks node connections |
-| amsppt.sty | 500 | Low | AMSTeX plain TeX compat |
-| proofwiki.sty | 326 | Low | ProofWiki |
-| lxRDFa.sty | 236 | Low | RDFa semantic annotations |
-| turing.sty | 222 | Low | Turing machine typesetting |
-| SIunits.sty | 39 | Low | Old SI units (superseded by siunitx) |
+| pstricks_support.sty | 1057 | Low | DVI-only drawing; pstricks.sty stub exists |
+| pst-node.sty | 557 | Low | PSTricks node connections (DVI-only) |
+| amsppt.sty | 500 | Low | AMSTeX plain TeX compat (rare) |
+| proofwiki.sty | 326 | Low | ProofWiki (niche) |
+| lxRDFa.sty | 236 | Low | RDFa semantic annotations (niche) |
+| turing.sty | 222 | Low | Turing machine typesetting (niche) |
 
-### PARTIAL bindings (Rust exists, <80% of Perl — ordered by gap size)
+### Remaining gaps in ported bindings
 
-| Perl binding | Perl L | Rust L | Ratio | Priority | Key missing |
-|---|---|---|---|---|---|
-| beamer.cls | 1364 | 158 | 12% | High | 88% missing: overlay specs, themes |
-| aas_support.sty | 617 | 269 | 44% | Medium | Author/affil handling, table notes |
-| revtex4_support.sty | 433 | 280 | 65% | Low | relocateInstitute DOM surgery |
-| algorithm2e.sty | 235 | 115 | 49% | Medium | \lx@prepend@indentation DOM prepend |
-| braket.sty | 149 | 40 | 27% | Low | Dirac notation (mostly math parser) |
-| inst_support.sty | 121 | 46 | 38% | Low | relocateInstitute callback |
-| subfig.sty | 118 | 72 | 61% | Low | \newsubfloat dynamic env creation |
-| html.sty | 110 | 55 | 50% | Low | rawhtml/htmlonly skip (simplified) |
-| titling.sty | 100 | 49 | 49% | Low | Thanks handling |
-| authblk.sty | 99 | 39 | 39% | Medium | Author/affiliation relocation |
-| amsmath.sty | ~600 | ~550 | 95% | Low | cfrac mathstyle |
-| listings.sty | ~500 | ~470 | 95% | Low | literate `*` flag |
-
-### STUB bindings (3-19 lines, basic no-op)
-
-207 packages have only skeletal stubs. Most are low-priority (rarely used or just import macros). Key high-traffic stubs to flesh out: `subfigure.sty`, `wrapfig.sty`, `longtable.sty`, `floatrow.sty`, `minted.sty`.
+| Binding | Gap | Notes |
+|---|---|---|
+| beamer.cls | 88% | Overlay specs, themes — by far largest gap |
+| algorithm2e.sty | DOM prepend | `\lx@prepend@indentation` needs constructor body |
+| newfloat.sty | 70% | Dynamic float env creation partially ported |
+| authblk/inst_support | callbacks | `relocateInstitute`/`authblkRelocateAffil` DOM surgery |
+| amsmath.sty | 5% | cfrac mathstyle |
+| listings.sty | 5% | literate `*` flag |
 
 ---
 
@@ -171,6 +160,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **B1. Port IEEEtran.cls binding** — 166-line Rust binding. Working for arxiv 2511.11713 (94KB output).
 - [x] **B2. Port JHEP.cls binding** — 77-line Rust binding. Frontmatter, acknowledgements, journal abbreviations.
 - [x] **B3. Port pstricks.sty binding** — 55-line Rust stub (DVI-only, all commands no-op or passthrough).
+- [x] **B4. Expand 9 PARTIAL bindings** — revtex4_support, aas_support, braket (pipe-splitting), algorithm2e, subfig, inst_support, html, titling, authblk (+423 lines total).
 
 ### Open TODO items — Engine Parity
 
@@ -178,7 +168,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **E2. `\newpage` in SVG/tikz context** — `\lx@newpage` is defined but `<pagination>` elements are missing from 10 tikz test outputs. The `^` prefix float-up may not work inside tikzpicture's SVG mode. Affects 10 tests (~22 diff lines).
 - [x] **E3. FindFile_fallback for versioned packages** — Ported. 2306.00809: 39B→141KB, 2402.03300: 53KB→322KB.
 - [x] **E4. Reduce TooManyErrors aborts** — MAX_ERRORS default raised to 10000 (was 100). digest_internal error recovery improved to catch Fatals during salvage.
-- [ ] **E5. Fix `\@@eqnarray` recursion** — Paper 2511.03798 hits infinite recursion: `\@@eqnarray` → `$` → `\lx@begin@inline@math` → `\@@eqnarray` cycle. Root cause: eqnarray triggered inside inline math mode by jheppub.sty.
+- [x] **E5. Fix `\@@eqnarray` recursion** — Fixed: eqnarray/inline math cycle broken.
 
 ### Open TODO items — Math Parser & Post-Processing
 
