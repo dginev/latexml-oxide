@@ -9,6 +9,7 @@ LoadDefinitions!({
   // Ensure only unbreakable mode is possible
   DefMacro!("\\tcb@init@breakable", "\\tcb@init@unbreakable");
 
+  RequirePackage!("expl3");
   RequirePackage!("xparse");
 
   InputDefinitions!("tcolorbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
