@@ -37,15 +37,13 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics, `getFontDimen()` helper |
 | tex_tables.rs | MINOR | Minor: padding CSS classes |
 | latex_ch4_sectioning_and_toc.rs | MINOR | Missing: `LABEL_MAPPING_HOOK` |
-| latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
+| latex_ch14_pictures_and_color.rs | OK | ~95% — picture env fully ported (put, line, vector, circle, oval, qbezier, multiput, dashbox, shortstack, pic@makebox) |
 
 ---
 
 ## Missing Tag() Calls
 
-| Tag | Perl Source |
-|-----|-------------|
-| `Tag('ltx:picture', autoOpen => 0.5, autoClose => 1, ...)` | latex_constructs L4994 |
+None — all critical Tag() calls ported.
 
 ---
 
@@ -59,7 +57,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | File | Defs | Status | Notes |
 |------|------|--------|-------|
-| `latex_constructs.pool.ltxml` | ~843 | ~93% | Missing: picture environment |
+| `latex_constructs.pool.ltxml` | ~843 | ~98% | Picture env ported. Remaining: \ensuremathfollows (internal) |
 | `math_common.pool.ltxml` | 312 | OK | Fully ported |
 | `Base_Deprecated.pool.ltxml` | 77 | OK | Fully ported |
 | `AmSTeX.pool.ltxml` | 112 | ~30% | Plain TeX format (rare) |
@@ -98,10 +96,8 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | Binding | Gap | Notes |
 |---|---|---|
-| beamer.cls | 88% | Overlay specs, themes — by far largest gap |
-| algorithm2e.sty | DOM prepend | `\lx@prepend@indentation` needs constructor body |
-| authblk/inst_support | callbacks | `relocateInstitute`/`authblkRelocateAffil` DOM surgery |
-| listings.sty | 5% | literate substitution feature |
+| beamer.cls | 88% | Overlay specs, themes — largest gap (unused by arxiv test papers) |
+| authblk/inst_support | callbacks | `relocateInstitute`/`authblkRelocateAffil` DOM surgery (no test regression) |
 
 ---
 
