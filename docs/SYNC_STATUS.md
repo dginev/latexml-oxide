@@ -31,7 +31,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
+| base_parameter_types.rs | MINOR | `DirectoryList`, `CommaList`, `DigestUntil` stubbed (low usage); `Variable` reversion safe fallback |
 | base_xmath.rs | MINOR | Missing: `MathWhatsit()` |
 | tex_box.rs | MINOR | Minor box dimension edge cases |
 | tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics, `getFontDimen()` helper |

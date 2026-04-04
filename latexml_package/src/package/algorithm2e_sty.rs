@@ -33,11 +33,13 @@ LoadDefinitions!({
       after_float(whatsit);
     }
   );
-  // {algorithm*} and {algorithm2e} — same as {algorithm}
+  // {algorithm*}, {algorithm2e}, {algorithm2e*} — same as {algorithm} — Perl L63
   Let!("\\algorithm*", "\\algorithm");
   Let!("\\endalgorithm*", "\\endalgorithm");
   Let!("\\algorithm2e", "\\algorithm");
   Let!("\\endalgorithm2e", "\\endalgorithm");
+  state::let_i(&T_CS!("\\algorithm2e*"), &T_CS!("\\algorithm"), None);
+  state::let_i(&T_CS!("\\endalgorithm2e*"), &T_CS!("\\endalgorithm"), None);
 
   DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
   DefMacro!("\\lx@algo@strut SkipMatch:\\par", "");
