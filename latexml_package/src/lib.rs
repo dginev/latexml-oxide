@@ -332,6 +332,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "kvsetkeys.sty" => package::kvsetkeys_sty::load_definitions(),
     "amsbook.cls" => package::amsbook_cls::load_definitions(),
     "aa.cls" => package::aa_cls::load_definitions(),
+    "aa_support.sty" => package::aa_support_sty::load_definitions(),
     "elsarticle.cls" => package::elsarticle_cls::load_definitions(),
     "iopams.sty" => package::iopams_sty::load_definitions(),
     "ijcai.sty" => package::ijcai_sty::load_definitions(),
