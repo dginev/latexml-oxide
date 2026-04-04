@@ -692,11 +692,37 @@ fn apply_lx_declarations(document: &mut Document) {
     }
     let content = tok.get_content();
     let tok_name = tok.get_attribute("name").unwrap_or_default();
+    // Find the section scope of this token (ancestor section's xml:id)
+    let tok_scope = {
+      let mut scope = String::new();
+      let mut cur = tok.get_parent();
+      while let Some(p) = cur {
+        if p.get_name() == "section" {
+          scope = p.get_property("id")
+            .or_else(|| p.get_attribute("xml:id"))
+            .unwrap_or_default();
+          break;
+        }
+        cur = p.get_parent();
+      }
+      scope
+    };
+
     for &(pattern, role, name, meaning, decl_id) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
       if matches {
+        // Check scope: if decl_id has a section prefix (e.g. "S1" from "S1.XMD1"),
+        // only apply to tokens within that section
+        if !decl_id.is_empty() {
+          if let Some(section_prefix) = decl_id.split('.').next() {
+            if !section_prefix.is_empty() && !tok_scope.is_empty()
+              && tok_scope != section_prefix {
+              continue; // Wrong section — skip this declaration
+            }
+          }
+        }
         if !role.is_empty() {
           let _ = tok.set_attribute("role", role);
         }

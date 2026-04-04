@@ -804,7 +804,7 @@
                 <XMDual xml:id="S6.Ex11.m1.3">
                   <XMApp>
                     <XMTok meaning="foo" role="UNKNOWN"/>
-                    <XMTok decl_id="S1.XMD4" font="italic" role="ID">x</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   </XMApp>
                   <XMTok font="bold" role="UNKNOWN">foo</XMTok>
                 </XMDual>
