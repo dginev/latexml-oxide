@@ -359,7 +359,7 @@ LoadDefinitions!({
       // Note: \ier/\iere/\ieme use \xspace (matching raw french.ldf).
       // \primo/\secundo/... use \FBthickkern (matching french.ldf FrenchEnumerate).
       // \No/\Nos/\no/\nos use \xspace.
-      stomach::digest(Tokenize!(r"\def\FBthickkern{\kern+.3em}"))?;
+      stomach::digest(Tokenize!(r"\def\FBthickkern{\thinspace}"))?;
       stomach::digest(Tokenize!(r"\def\ieme{\up{e}\xspace}\def\iemes{\up{es}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\ier{\up{er}\xspace}\def\iers{\up{ers}\xspace}"))?;
       stomach::digest(Tokenize!(r"\def\iere{\up{re}\xspace}\def\ieres{\up{res}\xspace}"))?;
