@@ -174,7 +174,7 @@
                   <XMApp>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                      <XMApp>
+                      <XMApp role="MULOP">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok meaning="times" role="MULOP">×</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
@@ -278,7 +278,7 @@
                       <XMTok role="VERTBAR" stretchy="false">|</XMTok>
                       <XMApp xml:id="S1.I1.i12.p1.m1.1">
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMApp>
+                        <XMApp role="MULOP">
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok meaning="times" role="MULOP">×</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
@@ -327,7 +327,7 @@
                     <XMApp>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                        <XMApp>
+                        <XMApp role="MULOP">
                           <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                           <XMTok meaning="times" role="MULOP">×</XMTok>
                           <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>

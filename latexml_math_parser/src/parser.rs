@@ -287,6 +287,30 @@ impl MathParser {
       // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
+      // Perl DecorateOperator: propagate operator role from base to scripted XMApp.
+      // When SCRIPTOP wraps an operator-like base (MULOP, ADDOP, etc.), the
+      // resulting XMApp should carry the base's role. Done as post-parse DOM
+      // walk to avoid affecting parse tree selection semantics.
+      for mut xmapp in document.findnodes("//ltx:XMApp", None) {
+        if xmapp.get_attribute("role").is_some() {
+          continue; // already has a role
+        }
+        let children: Vec<Node> = xmapp.get_child_elements();
+        if children.len() >= 2 {
+          let op_role = children[0].get_attribute("role");
+          if matches!(op_role.as_deref(), Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")) {
+            if let Some(base_role) = children[1].get_attribute("role") {
+              if matches!(base_role.as_str(),
+                "MULOP" | "ADDOP" | "BINOP" | "RELOP" | "ARROW" | "METARELOP"
+                | "MODIFIER" | "MODIFIEROP" | "OPERATOR" | "DIFFOP")
+              {
+                let _ = xmapp.set_attribute("role", &base_role);
+              }
+            }
+          }
+        }
+      }
+
       // Note: ltx_math_unparsed class is NOT applied here because any DOM
       // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
       // grammar precomputation for subsequent test runs. Applied in caller instead.
