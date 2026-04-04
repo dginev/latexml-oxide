@@ -47,14 +47,19 @@ fn pgf_reg_dim(name: &str) -> Dimension {
   }
 }
 
+/// Convert a color channel (0.0–1.0) to u8 (0-255), matching Perl's roundto rounding.
+/// Uses the same epsilon nudge as color.rs::component_to_u8 to ensure consistency
+/// between font color attributes and SVG fill/stroke attributes.
+fn channel_to_u8(v: f64) -> u8 {
+  let scaled = v.clamp(0.0, 1.0) * 255.0 * (1.0 + 100.0 * f64::EPSILON);
+  scaled.round() as u8
+}
+
 /// Helper: format color channel (0.0–1.0) to hex
 /// Perl: Color('rgb', r, g, b)->toHex → "#RRGGBB"
 /// Returns tokens (not a string) because # must be catcode OTHER, not PARAMETER.
 fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
-  let hex = format!("{:02X}{:02X}{:02X}",
-    (r * 255.0).round().clamp(0.0, 255.0) as u8,
-    (g * 255.0).round().clamp(0.0, 255.0) as u8,
-    (b * 255.0).round().clamp(0.0, 255.0) as u8);
+  let hex = format!("{:02X}{:02X}{:02X}", channel_to_u8(r), channel_to_u8(g), channel_to_u8(b));
   // Perl uses Explode() which creates catcode-12 (OTHER) tokens.
   // '#' as catcode OTHER, then hex digits as catcode OTHER.
   let mut tokens = vec![T_OTHER!("#")];
@@ -722,13 +727,12 @@ LoadDefinitions!({
     let r: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
     let g: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
     let b: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
-    format!("#{:02X}{:02X}{:02X}", (r*255.0).round().clamp(0.0,255.0) as u8,
-      (g*255.0).round().clamp(0.0,255.0) as u8, (b*255.0).round().clamp(0.0,255.0) as u8)
+    format!("#{:02X}{:02X}{:02X}", channel_to_u8(r), channel_to_u8(g), channel_to_u8(b))
   }
   fn gray_hex(args: &[&ArgWrap]) -> String {
     let v: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
-    format!("#{:02X}{:02X}{:02X}", (v*255.0).round().clamp(0.0,255.0) as u8,
-      (v*255.0).round().clamp(0.0,255.0) as u8, (v*255.0).round().clamp(0.0,255.0) as u8)
+    let c = channel_to_u8(v);
+    format!("#{:02X}{:02X}{:02X}", c, c, c)
   }
   fn cmyk_hex(args: &[&ArgWrap]) -> String {
     let c: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
@@ -736,18 +740,13 @@ LoadDefinitions!({
     let y: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
     let k: f64 = args[3].to_string().trim().parse().unwrap_or(0.0);
     format!("#{:02X}{:02X}{:02X}",
-      ((1.0-c)*(1.0-k)*255.0).round().clamp(0.0,255.0) as u8,
-      ((1.0-m)*(1.0-k)*255.0).round().clamp(0.0,255.0) as u8,
-      ((1.0-y)*(1.0-k)*255.0).round().clamp(0.0,255.0) as u8)
+      channel_to_u8((1.0-c)*(1.0-k)), channel_to_u8((1.0-m)*(1.0-k)), channel_to_u8((1.0-y)*(1.0-k)))
   }
   fn cmy_hex(args: &[&ArgWrap]) -> String {
     let c: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
     let m: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
     let y: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
-    format!("#{:02X}{:02X}{:02X}",
-      ((1.0-c)*255.0).round().clamp(0.0,255.0) as u8,
-      ((1.0-m)*255.0).round().clamp(0.0,255.0) as u8,
-      ((1.0-y)*255.0).round().clamp(0.0,255.0) as u8)
+    format!("#{:02X}{:02X}{:02X}", channel_to_u8(1.0-c), channel_to_u8(1.0-m), channel_to_u8(1.0-y))
   }
 
   DefPrimitive!("\\lxSVG@color@rgb@stroke{}{}{}", sub[args] {
