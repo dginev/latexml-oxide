@@ -66,6 +66,10 @@ struct Cli {
   #[arg(long)]
   nocomments: bool,
 
+  /// Use .bbl file instead of running BibTeX (for arXiv-like builds)
+  #[arg(long)]
+  nobibtex: bool,
+
   /// Disable math parsing
   #[arg(long, alias = "noparse")]
   nomathparse: bool,
@@ -279,6 +283,14 @@ fn main() -> Result<(), Box<dyn Error>> {
   }
 
   // Wire state-level options
+  if cli.nobibtex {
+    // Set BIB_CONFIG to ['bbl'] — skip BibTeX, use pre-existing .bbl file
+    latexml_core::state::assign_value(
+      "BIB_CONFIG",
+      latexml_core::common::store::Stored::Strings(std::rc::Rc::new([latexml_core::common::arena::pin("bbl")])),
+      Some(latexml_core::state::Scope::Global),
+    );
+  }
   if cli.nonumbersections {
     latexml_core::state::assign_value(
       "no_number_sections", true,
