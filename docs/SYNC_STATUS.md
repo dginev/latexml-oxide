@@ -136,14 +136,30 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] siunitx `\lx@six@unitobject@collapsible` macro (Perl L1227-1249)
 - [x] M12/M13: Script argument 2^N ambiguity eliminated (removed `expression` from postsubarg/postsuperarg/bigopsub/bigopsup — 8-333x raw tree reduction)
 
-### Open TODO items
+### Open TODO items — Package Bindings
 
-- [ ] **L1. Deep clone for `rust-libxml`** — Add `xmlCopyNode` FFI wrapper for `node.deep_copy()`. Required for storing XML node values in Scan (currently stores text, losing inline markup).
+- [ ] **B1. Port IEEEtran.cls binding** — 458-line Perl binding. Used by IEEE conference papers (arxiv 2511.11713). Defines class options, `\IEEEauthorblockN/A`, `{IEEEkeywords}`, section numbering (Roman), `{IEEEproof}`, `\IEEEurl`, `\IEEEPARstart`. LoadClass('article') as parent.
+- [ ] **B2. Port JHEP.cls binding** — 314-line Perl binding. Used by JHEP physics journal (arxiv 2511.03798). Defines `\JHEP@preprint`, `\procemark`, author/affiliation, section formatting, bibliography style.
+- [ ] **B3. Port pstricks.sty binding** — 44-line Perl binding (mostly stubs). Used by 2 arxiv papers. Defines `\psset`, `\pscircle`, `\psline`, `\rput` as no-ops since PSTricks requires DVI backend.
+
+### Open TODO items — Engine Parity
+
+- [ ] **E1. Precompile kernel dumps on `cargo build`** — Design in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version check. Manual generation still required.
+- [ ] **E2. `\newpage` in SVG/tikz context** — `\lx@newpage` is defined but `<pagination>` elements are missing from 10 tikz test outputs. The `^` prefix float-up may not work inside tikzpicture's SVG mode. Affects 10 tests (~22 diff lines).
+- [ ] **E3. Reduce TooManyErrors aborts** — 6 arxiv papers abort due to cascading errors from missing packages. Need: (a) increase MAX_ERRORS default for real-world papers, (b) better error recovery so `\end{document}` still produces partial output after Fatal, (c) match Perl's error tolerance.
+- [ ] **E4. Fix `\@@eqnarray` recursion** — Paper 2511.03798 hits infinite recursion: `\@@eqnarray` → `$` → `\lx@begin@inline@math` → `\@@eqnarray` cycle. Root cause: eqnarray triggered inside inline math mode by jheppub.sty.
+
+### Open TODO items — Math Parser & Post-Processing
+
+- [ ] **S1. siunitx unit tree builder** — `six_convert_units_from_tokens` handles simple unit chains. Missing: non-unit content passthrough (`\pi`, `\frac{}`), literal notation (`m^2.s`), complex number formatting (`I_dual`). Currently ~6900 normalized diffs vs Perl.
+- [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has 859 diffs. Key issues: subscript content not math-parsed inside `\hat{x}` patterns, `decl_id` not propagated to all matching tokens, wildcard pattern `\WildCard` matching incomplete.
+
+### Open TODO items — Library & Infrastructure
+
+- [ ] **L1. Deep clone for `rust-libxml`** — Add `xmlCopyNode` FFI wrapper for `node.deep_copy()`. Required for Scan storing XML node values (currently stores text, losing inline markup).
 - [ ] **L2. `get_attribute("xml:id")` for `rust-libxml`** — Returns None on some builds. Workaround: `get_property("id")`.
 - [ ] **L4. Default namespace handling in `rust-libxml`** — Creates `<ltx:ref>` instead of `<ref>` when default xmlns matches. Workaround in place.
-- [ ] **E1. Precompile kernel dumps on `cargo build`** — Design documented in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version checking and text dump embedding. Manual generation still required.
-- [ ] **S1. siunitx unit tree builder** — `six_convert_units_from_tokens` handles simple unit chains. Missing: non-unit content passthrough (`\pi`, `\frac{}`), literal notation (`m^2.s`), complex number formatting (`I_dual`). Currently ~6900 normalized diffs vs Perl.
-- [ ] **X1. arxiv-examples batch comparison** — Run `arxiv-examples/compare.sh` on all 47 papers, catalog results (success/failure/diffs), identify top conversion blockers. Use parallel subagents for throughput.
+- [ ] **X1. arxiv batch comparison catalog** — Systematic comparison of all 47 papers. Current: 36 OK, 6 fail, 5 timeout. Track diff counts per paper, identify top-5 blockers.
 
 ### ar5iv conversion sandbox (47 papers)
 
