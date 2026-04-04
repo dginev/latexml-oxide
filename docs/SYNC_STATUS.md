@@ -92,7 +92,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 **Goal: translate every `.sty.ltxml` and `.cls.ltxml` in Perl to Rust, exhaustively.**
 
-Current: 155 FULL, 25 PARTIAL, 207 STUB, 19 MISSING (of ~406 total Perl bindings).
+Current: 161 FULL, 19 PARTIAL, 207 STUB, 7 MISSING (of ~406 total Perl bindings).
 
 ### MISSING bindings (no Rust file — ordered by impact)
 
@@ -101,31 +101,25 @@ Current: 155 FULL, 25 PARTIAL, 207 STUB, 19 MISSING (of ~406 total Perl bindings
 | pstricks_support.sty | 1057 | Medium | Full PSTricks drawing — pstricks.sty stub exists |
 | pst-node.sty | 557 | Low | PSTricks node connections |
 | amsppt.sty | 500 | Low | AMSTeX plain TeX compat |
-| aa_support.sty | 469 | Medium | Astronomy & Astrophysics journal support |
-| iopart_support.sty | 345 | Medium | IOP Publishing journal support |
 | proofwiki.sty | 326 | Low | ProofWiki |
-| mn2e_support.sty | 252 | Medium | MNRAS journal |
 | lxRDFa.sty | 236 | Low | RDFa semantic annotations |
 | turing.sty | 222 | Low | Turing machine typesetting |
-| elsart_support_core.sty | 191 | Medium | Elsevier article core |
-| texvc.sty | 183 | Low | MediaWiki TeX |
-| elsart_support.sty | 175 | Medium | Elsevier article |
 | SIunits.sty | 39 | Low | Old SI units (superseded by siunitx) |
 
-### PARTIAL bindings (Rust exists, <50% of Perl — ordered by gap size)
+### PARTIAL bindings (Rust exists, <80% of Perl — ordered by gap size)
 
 | Perl binding | Perl L | Rust L | Ratio | Priority | Key missing |
 |---|---|---|---|---|---|
-| beamer.cls | 1364 | 48 | 4% | High | 96% missing: overlay specs, themes, blocks, columns |
-| aas_support.sty | 617 | 269 | 44% | Medium | Author/affil handling, table notes, journal abbrevs |
-| revtex4_support.sty | 433 | 208 | 48% | Medium | Author footnotes, bibliography, appendix |
-| algorithm2e.sty | 235 | 96 | 41% | Medium | Algorithm environment formatting |
-| braket.sty | 149 | 27 | 18% | Low | Dirac notation (mostly handled by math parser) |
-| inst_support.sty | 121 | 25 | 21% | Low | Institution handling |
-| subfig.sty | 118 | 20 | 17% | Medium | Subfigure handling |
-| html.sty | 110 | 30 | 27% | Low | LaTeX2HTML compat |
-| titling.sty | 100 | 40 | 40% | Low | Title page formatting |
-| authblk.sty | 99 | 25 | 25% | Medium | Author/affiliation blocks |
+| beamer.cls | 1364 | 158 | 12% | High | 88% missing: overlay specs, themes |
+| aas_support.sty | 617 | 269 | 44% | Medium | Author/affil handling, table notes |
+| revtex4_support.sty | 433 | 280 | 65% | Low | relocateInstitute DOM surgery |
+| algorithm2e.sty | 235 | 115 | 49% | Medium | \lx@prepend@indentation DOM prepend |
+| braket.sty | 149 | 40 | 27% | Low | Dirac notation (mostly math parser) |
+| inst_support.sty | 121 | 46 | 38% | Low | relocateInstitute callback |
+| subfig.sty | 118 | 72 | 61% | Low | \newsubfloat dynamic env creation |
+| html.sty | 110 | 55 | 50% | Low | rawhtml/htmlonly skip (simplified) |
+| titling.sty | 100 | 49 | 49% | Low | Thanks handling |
+| authblk.sty | 99 | 39 | 39% | Medium | Author/affiliation relocation |
 | amsmath.sty | ~600 | ~550 | 95% | Low | cfrac mathstyle |
 | listings.sty | ~500 | ~470 | 95% | Low | literate `*` flag |
 

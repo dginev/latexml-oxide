@@ -4,16 +4,16 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: aas_support.sty.ltxml — support macros for AAS styles
 
-  // Package dependencies
-  // RequirePackage!("aas_macros"); // not yet ported — raw TeX defs
+  // Package dependencies — Perl L28-39
+  RequirePackage!("aas_macros");
   RequirePackage!("url");
   RequirePackage!("longtable");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   RequirePackage!("array");
-  // RequirePackage!("lineno"); // not yet ported
+  RequirePackage!("lineno");
   RequirePackage!("amssymb");
-  // RequirePackage!("epsf"); // not yet ported
+  RequirePackage!("epsf");
   RequirePackage!("ulem");
 
   // 2.1.3 Editorial Information
@@ -72,8 +72,22 @@ LoadDefinitions!({
   DefPrimitive!("\\and", None);
   DefMacro!("\\authoremail", "\\email");
 
+  // Affiliation marks — Perl L126-132
+  DefMacro!("\\altaffilmark{}", "\\@altaffilmark{#1}");
+  DefConstructor!("\\@altaffilmark{}", "<ltx:note role='affiliationmark' mark='#1'/>",
+    enter_horizontal => true);
+  DefConstructor!("\\altaffiltext{}{}", "<ltx:note role='affiliationtext' mark='#1'>#2</ltx:note>");
+
   DefMacro!("\\software{}", "\\@add@frontmatter{ltx:note}[role=software]{#1}");
   DefMacro!("\\submitjournal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+
+  // DOI — Perl L137-138
+  DefConstructor!("\\doi{}", "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
+    enter_horizontal => true);
+
+  // Collaboration — Perl L139-141
+  DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
+  DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
   DefMacro!("\\nocollaboration{}", "");
 
   // 2.5 Keywords
@@ -95,6 +109,26 @@ LoadDefinitions!({
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
   DefMacro!("\\gridline{}", "");
 
+  // Plate environments — Perl L179-201
+  DefEnvironment!("{plate}[]",
+    "<ltx:float xml:id='#id' class='ltx_float_plate'>#tags#body</ltx:float>",
+    mode => "internal_vertical"
+  );
+  DefEnvironment!("{plate*}[]",
+    "<ltx:float xml:id='#id' class='ltx_float_plate'>#tags#body</ltx:float>",
+    mode => "internal_vertical"
+  );
+
+  // Fig macros — Perl L205-221
+  DefMacro!("\\aas@fig Semiverbatim {Dimension}{}",
+    "\\begin{figure}\\caption{#3}\\includegraphics[width=#2]{#1}\\end{figure}");
+  DefMacro!("\\fig Semiverbatim", "\\aas@fig{#1}");
+  Let!("\\leftfig", "\\fig");
+  Let!("\\rightfig", "\\fig");
+  Let!("\\boxedfig", "\\fig");
+  DefMacro!("\\rotatefig{Number} Semiverbatim {Dimension}{}",
+    "\\begin{figure}\\caption{#4}\\includegraphics[width=#3,angle=#1]{#2}\\end{figure}");
+
   // 2.9 Acknowledgements
   Tag!("ltx:acknowledgements", auto_close => true);
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements>");
@@ -112,9 +146,20 @@ LoadDefinitions!({
   DefMacro!("\\mathletters", "\\lx@equationgroup@subnumbering@begin");
   DefMacro!("\\endmathletters", "\\lx@equationgroup@subnumbering@end");
 
-  // 2.13 Citations
+  // 2.12 Equations — Perl L261
+  DefMacro!("\\eqnum{}", "");
+
+  // 2.13 Citations — Perl L264-293
   DefMacro!("\\markcite{}", "");
   RequirePackage!("natbib");
+
+  // References environment — Perl L283-293
+  DefConstructor!("\\references",
+    "<ltx:bibliography xml:id='#id'><ltx:biblist>");
+  DefConstructor!("\\endreferences",
+    "</ltx:biblist></ltx:bibliography>");
+  Let!("\\reference", "\\bibitem");
+
   RequirePackage!("graphicx");
 
   // 2.14 Electronic Art
@@ -139,6 +184,19 @@ LoadDefinitions!({
   Let!("\\endsplitdeluxetable", "\\enddeluxetable");
   state::let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
   state::let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
+
+  // Decimal table conditionals — Perl L338-345
+  DefConditional!("\\ifcolnumberson");
+  DefConditional!("\\ifdeluxedecimals");
+  DefMacro!("\\deluxedecimals", "\\global\\deluxedecimalstrue");
+  RawTeX!("\\global\\deluxedecimalsfalse");
+  Let!("\\decimals", "\\deluxedecimals");
+  DefMacro!("\\colnumbers", "");
+  DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
+  Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
+
+  // Hidden column environment — Perl L374
+  DefEnvironment!("{eatone}", "");
 
   DefMacro!("\\phn", "\\phantom{0}");
   DefMacro!("\\phd", "\\phantom{.}");
@@ -230,15 +288,41 @@ LoadDefinitions!({
   DefMacro!("\\threequarters", "\\ifmmode\\case{3}{4}\\else\\text@threequarters\\fi");
   DefPrimitive!("\\text@threequarters", "\u{00BE}");
 
+  // Photometric bands — Perl L529-533
+  DefPrimitive!("\\ubvr", "UBVR");
+  DefPrimitive!("\\ub", "U\u{2000}B");
+  DefPrimitive!("\\bv", "B\u{2000}V");
+  DefPrimitive!("\\vr", "V\u{2000}R");
+  DefPrimitive!("\\ur", "U\u{2000}R");
+
   // amssymb aliases
-  // RequirePackage!("latexsym"); // not yet ported
+  RequirePackage!("latexsym");
   RequirePackage!("amssymb");
 
   Let!("\\la", "\\lesssim");
   Let!("\\ga", "\\gtrsim");
 
-  // 2.17.5 Hypertext
-  DefMacro!("\\anchor Semiverbatim Semiverbatim", "#2");
+  // Nominal conversion constants — Perl L545-560
+  DefMacro!("\\nomSolarEffTemp", "\\leavevmode\\hbox{\\boldmath$\\mathcal{T}^{\\rm N}_{\\mathrm{eff}\\odot}$}");
+  DefMacro!("\\nomTerrEqRadius", "\\leavevmode\\hbox{\\boldmath$\\mathcal{R}^{\\rm N}_{E\\mathrm e}$}");
+  DefMacro!("\\nomTerrPolarRadius", "\\leavevmode\\hbox{\\boldmath$\\mathcal{R}^{\\rm N}_{E\\mathrm p}$}");
+  DefMacro!("\\nomJovianEqRadius", "\\leavevmode\\hbox{\\boldmath$\\mathcal{R}^{\\rm N}_{J\\mathrm e}$}");
+  DefMacro!("\\nomJovianPolarRadius", "\\leavevmode\\hbox{\\boldmath$\\mathcal{R}^{\\rm N}_{J\\mathrm p}$}");
+  DefMacro!("\\nomTerrMass", "\\leavevmode\\hbox{\\boldmath$(\\mathcal{GM})^{\\rm N}_{\\mathrm E}$}");
+  DefMacro!("\\nomJovianMass", "\\leavevmode\\hbox{\\boldmath$(\\mathcal{GM})^{\\rm N}_{\\mathrm J}$}");
+  DefMacro!("\\Qnom", "\\leavevmode\\hbox{\\boldmath$\\mathcal{Q}^{\\rm N}_{\\odot}$}");
+  Let!("\\Qn", "\\Qnom");
+  DefMacro!("\\nom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{\\odot}$}");
+  DefMacro!("\\Eenom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{Ee}$}");
+  DefMacro!("\\Epnom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{Ep}$}");
+  DefMacro!("\\Jenom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{Je}$}");
+  DefMacro!("\\Jpnom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{Jp}$}");
+
+  // 2.17.5 Hypertext — Perl L563-577
+  DefConstructor!("\\anchor Semiverbatim Semiverbatim", "<ltx:ref href='#1'>#2</ltx:ref>",
+    enter_horizontal => true);
+  DefConstructor!("\\@@email Semiverbatim", "<ltx:ref href='mailto:#1'>#1</ltx:ref>",
+    enter_horizontal => true);
 
   // Misc
   DefMacro!("\\eqsecnum",

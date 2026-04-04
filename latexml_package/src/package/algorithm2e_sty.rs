@@ -10,8 +10,9 @@ LoadDefinitions!({
   InputDefinitions!("algorithm2e", extension => Some("sty".into()), noltxml => true);
 
   Let!("\\@mathsemicolon", "\\;");
-  // Counter setup
-  NewCounter!("algorithm", "");
+  // Counter setup — Perl L53-60
+  RawTeX!("\\expandafter\\ifx\\csname algocf@within\\endcsname\\relax\\newcounter{algorithm}\\else\\newcounter{algorithm}[\\algocf@within]\\fi");
+  RawTeX!("\\expandafter\\ifx\\csname algocf@within\\endcsname\\relax\\else\\def\\thealgorithm{\\csname the\\algocf@within\\endcsname.\\@arabic\\c@algorithm}\\fi");
   DefMacro!("\\fnum@algorithm", "\\algorithmcfname\\nobreakspace\\thealgorithm");
   DefMacro!("\\fnum@font@algorithm", "\\bf");
   DefMacro!("\\ext@algorithm", "loa");
@@ -42,13 +43,19 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@strut SkipMatch:\\par", "");
   DefMacro!("\\@marker{}", "");
 
-  // Par management — prevents double line breaks
+  // Par dedup — Perl L109-116
+  // Conditional that prevents double-\par from producing blank lines
+  DefConditional!("\\if@lx@algo@par SkipSpaces");
+  DefMacro!("\\lx@algo@setpar", "");
+  DefMacro!("\\lx@algo@newpar{}{}", "#2");
+
+  // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
-    "\\lx@algo@endline\\lx@algo@startline");
+    "\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parx",
-    "\\lx@algo@endline\\lx@algo@startline");
+    "\\lx@algo@newpar{PARx}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parb",
-    "\\lx@algo@endline\\lx@algo@startline");
+    "\\lx@algo@newpar{PARb}{\\lx@algo@endline\\lx@algo@startline}");
 
   // Block and group macros
   DefMacro!("\\algocf@group{}", "#1");
@@ -83,14 +90,23 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@indentline", "\\hskip\\skiprule\\lx@algo@rule\\hskip\\skiptext");
   DefConstructor!("\\lx@algo@rule", "<ltx:rule width='1px' height='100%'/>");
 
-  // Line start/end constructors
+  // Register for tracking indentation — Perl L156-163
+  DefRegister!("\\lx@algo@indentation" => Tokens!());
+  DefMacro!("\\lx@algo@push@indentation{}", "\\expandafter\\lx@algo@indentation\\expandafter{\\the\\lx@algo@indentation#1}");
+
+  // Line start/end — Perl L170-178, L180-190
   DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>");
   DefConstructor!("\\lx@algo@@endline", "</ltx:listingline>");
   DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline");
-  DefMacro!("\\lx@algo@endline", "\\lx@algo@@endline");
+  DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
 
-  // Indentation prepending
+  // Indentation prepending — Perl L197-198
+  DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
   DefConstructor!("\\lx@prepend@indentation@{}", "");
 
-  DefMacro!("\\lx@strippar{}", "#1");
+  // Line numbering — Perl L195, L210-221
+  DefConstructor!("\\algocf@printnl{}", "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
+
+  // Strip trailing pars — Perl L141-145
+  DefMacro!("\\lx@strippar{}", "#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx");
 });

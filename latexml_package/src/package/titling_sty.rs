@@ -34,7 +34,20 @@ LoadDefinitions!({
   Let!("\\lx@titling@maketitle", "\\maketitle");
   DefMacro!("\\maketitle",
     "\\global\\let\\theauthor\\@author\\global\\let\\thedate\\@date\\global\\let\\thetitle\\@title\\lx@titling@maketitle");
+  // Default formatting — Perl L57-64
+  RawTeX!("\\pretitle{\\begin{center}\\LARGE}");
+  RawTeX!("\\posttitle{\\par\\end{center}\\vskip 0.5em}");
+  RawTeX!("\\preauthor{\\begin{center}\\large\\lineskip 0.5em\\begin{tabular}[t]{c}}");
+  RawTeX!("\\postauthor{\\end{tabular}\\end{center}}");
+  RawTeX!("\\predate{\\begin{center}\\large}");
+  RawTeX!("\\postdate{\\par\\end{center}}");
+
+  // Titling page environment — Perl L88
+  DefEnvironment!("{titlingpage}", "");
+
   DefMacro!("\\killtitle",         "");
   DefMacro!("\\keepthetitle",      "");
   DefMacro!("\\emptythanks",       "");
+  DefMacro!("\\@bsmtitlempty",     "");
+  DefMacro!("\\appendiargdef{}{}", "");
 });

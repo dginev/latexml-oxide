@@ -2,14 +2,15 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: revtex4_support.sty.ltxml — support macros for RevTeX4 class
+  // Perl: revtex4_support.sty.ltxml — 433 lines
+  // Support macros for RevTeX4 class (APS journals)
 
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
-  // RequirePackage!("revsymb"); // not yet ported
+  RequirePackage!("revsymb");
   RequirePackage!("url");
   RequirePackage!("longtable");
-  // RequirePackage!("dcolumn"); // not yet ported
+  RequirePackage!("dcolumn");
 
   // 4.3 Title/Author
   DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
@@ -81,31 +82,56 @@ LoadDefinitions!({
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
   DefMacro!("\\pagesofar", "");
 
-  // Endnotes
+  // Endnotes — Perl L119-149
   NewCounter!("endnote");
+  DefConstructor!("\\endnote[]{}", "<ltx:note role='endnote' mark='#mark' xml:id='#id'>#tags#2</ltx:note>",
+    mode => "internal_vertical");
+  DefConstructor!("\\endnotemark[]", "<ltx:note role='endnotemark' mark='#mark' xml:id='#id'>#tags</ltx:note>",
+    mode => "restricted_horizontal", enter_horizontal => true);
+  DefConstructor!("\\endnotetext[]{}", "<ltx:note role='endnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
+    mode => "internal_vertical");
 
-  // Math
+  // 6. Math — Perl L159-176
   Let!("\\case", "\\frac");
   Let!("\\slantfrac", "\\frac");
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
     mode => "restricted_horizontal");
 
+  // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171
+  DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  DefConstructor!("\\pmb{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  DefMacro!("\\eqnum{}", "");
+  DefMacro!("\\mathletters", "");
+  DefMacro!("\\endmathletters", "");
+
   // Citations
   DefMacro!("\\onlinecite", "\\citealp");
   Let!("\\textcite", "\\citet");
 
-  // Tables
+  // 8. Citations — Perl L185-203
+  DefConstructor!("\\references",
+    "<ltx:bibliography xml:id='#id'><ltx:biblist>");
+  DefConstructor!("\\endreferences",
+    "</ltx:biblist></ltx:bibliography>");
+
+  // 10. Tables — Perl L215-245
   DefEnvironment!("{ruledtabular}", "#body");
+  DefEnvironment!("{quasitable}", "#body");
   DefMacro!("\\squeezetable", "");
   DefMacro!("\\toprule", "\\hline\\hline");
   DefMacro!("\\colrule", "\\hline");
   DefMacro!("\\botrule", "\\hline\\hline");
   DefMacro!("\\frstrut", "");
   DefMacro!("\\lrstrut", "");
+  Let!("\\tableftsep", "\\tabcolsep");
+  Let!("\\tabmidsep", "\\tabcolsep");
+  Let!("\\tabrightsep", "\\tabcolsep");
   Let!("\\tablenote", "\\footnote");
   Let!("\\tablenotemark", "\\footnotemark");
   Let!("\\tablenotetext", "\\footnotetext");
   Let!("\\tableline", "\\colrule");
+  RawTeX!("\\newcolumntype{d}{D{.}{.}{-1}}");
 
   // Floats
   DefPrimitive!("\\printfigures", None);
@@ -121,7 +147,7 @@ LoadDefinitions!({
   DefMacro!("\\MakeTextUppercase", "\\uppercase");
   DefMacro!("\\NoCaseChange", "");
 
-  // Macro & control stubs
+  // Macro & control stubs — Perl L280-295
   DefMacro!("\\absbox", "");
   DefMacro!("\\addstuff{}{}", "");
   DefMacro!("\\appdef{}{}", "");
@@ -135,6 +161,8 @@ LoadDefinitions!({
   DefMacro!("\\removephantombox", "");
   DefMacro!("\\removestuff", "");
   DefMacro!("\\replacestuff{}{}", "");
+  DefMacro!("\\say[]", "");
+  DefMacro!("\\saythe[]", "");
 
   // i18n
   DefMacro!("\\copyrightname", "??");
@@ -147,36 +175,44 @@ LoadDefinitions!({
   DefMacro!("\\tocname", "Contents");
   DefMacro!("\\volumename", "volume");
 
-  // Document info
+  // Document info — Perl L309-316
   DefMacro!("\\volumenumber{}", "#1");
   DefMacro!("\\volumeyear{}", "#1");
   DefMacro!("\\issuenumber{}", "#1");
   DefMacro!("\\bibinfo{}{}", "#2");
   DefMacro!("\\eprint{}", "eprint #1");
   DefMacro!("\\eid{}", "#1");
+  DefMacro!("\\startpage{}", "\\pageref{FirstPage}{#1}");
+  DefMacro!("\\endpage", "\\pageref{LastPage}{#1}");
 
-  // Extra stubs
+  // Extra stubs — Perl L319-323
   DefMacro!("\\flushing", "");
   DefMacro!("\\triggerpar", "\\par");
   DefMacro!("\\fullinterlineskip", "");
+  DefRegister!("\\intertabularlinepenalty", Number(100));
 
   DefMacro!("\\FL", "");
   DefMacro!("\\FR", "");
   DefMacro!("\\draft", "");
   DefMacro!("\\tighten", "");
 
-  // Journal abbreviations
+  // Journal abbreviations — Perl L336-365
   DefMacro!("\\ao", "Appl.~Opt.~");
   DefMacro!("\\ap", "Appl.~Phys.~");
   DefMacro!("\\apl", "Appl.~Phys.~Lett.~");
   DefMacro!("\\apj", "Astrophys.~J.~");
   DefMacro!("\\bell", "Bell Syst.~Tech.~J.~");
   DefMacro!("\\jqe", "IEEE J.~Quantum Electron.~");
+  DefMacro!("\\assp", "IEEE Trans.~Acoust.~Speech Signal Process.~");
+  DefMacro!("\\aprop", "IEEE Trans.~Antennas Propag.~");
+  DefMacro!("\\mtt", "IEEE Trans.~Microwave Theory Tech.~");
+  DefMacro!("\\iovs", "Invest.~Opthalmol.~Vis.~Sci.~");
   DefMacro!("\\jcp", "J.~Chem.~Phys.~");
   DefMacro!("\\jmo", "J.~Mod.~Opt.~");
   DefMacro!("\\josa", "J.~Opt.~Soc.~Am.~");
   DefMacro!("\\josaa", "J.~Opt.~Soc.~Am.~A ");
   DefMacro!("\\josab", "J.~Opt.~Soc.~Am.~B ");
+  DefMacro!("\\jpp", "J.~Phys.~(Paris) ");
   DefMacro!("\\nat", "Nature (London) ");
   DefMacro!("\\oc", "Opt.~Commun.~");
   DefMacro!("\\ol", "Opt.~Lett.~");
@@ -188,12 +224,38 @@ LoadDefinitions!({
   DefMacro!("\\pre", "Phys.~Rev.~E ");
   DefMacro!("\\prl", "Phys.~Rev.~Lett.~");
   DefMacro!("\\rmp", "Rev.~Mod.~Phys.~");
+  DefMacro!("\\pspie", "Proc.~Soc.~Photo-Opt.~Instrum.~Eng.~");
+  DefMacro!("\\sjqe", "Sov.~J.~Quantum Elecron.~");
+  DefMacro!("\\vr", "Vision Res.~");
 
-  // Internal macros
+  // Internal macros — Perl L370-431
   DefMacro!("\\@revmess{}{}", "");
   DefMacro!("\\@ptsize", "0");
+  DefMacro!("\\@journal", "pra");
 
-  // newif stubs
+  // Document style options — Perl L372-393
+  DefMacro!("\\ds@preprint", "\\global\\preprintstytrue \\def\\@ptsize{2}");
+  DefMacro!("\\ds@twoside", "");
+  DefMacro!("\\ds@draft", "");
+  DefMacro!("\\ds@amsfonts", "\\@amsfontstrue");
+  DefMacro!("\\ds@amssymb", "\\@amssymbolstrue");
+  DefMacro!("\\ds@titlepage", "\\@titlepagefalse");
+  DefMacro!("\\ds@twocolumn", "");
+  DefMacro!("\\ds@tighten", "\\@tightenlinestrue");
+  DefMacro!("\\ds@floats", "\\@floatstrue");
+  DefMacro!("\\ds@eqsecnum", "\\global\\secnumberstrue");
+  DefMacro!("\\ds@pra", "\\def\\@journal{pra}");
+  DefMacro!("\\ds@prb", "\\def\\@journal{prb}");
+  DefMacro!("\\ds@prc", "\\def\\@journal{prc}");
+  DefMacro!("\\ds@prd", "\\def\\@journal{prd}");
+  DefMacro!("\\ds@pre", "\\def\\@journal{pre}");
+  DefMacro!("\\ds@prl", "\\def\\@journal{prl}");
+  DefMacro!("\\ds@josaa", "\\def\\@journal{josaa}");
+  DefMacro!("\\ds@josab", "\\def\\@journal{josab}");
+  DefMacro!("\\ds@aplop", "\\def\\@journal{aplop}");
+  Let!("\\ds@manuscript", "\\ds@preprint");
+
+  // newif stubs — Perl L396-414
   TeX!(r"
   \newif\ifpreprintsty \global\preprintstyfalse
   \newif\if@amsfonts  \@amsfontsfalse
@@ -202,7 +264,14 @@ LoadDefinitions!({
   \newif\if@tightenlines \@tightenlinesfalse
   \newif\if@floats \@floatsfalse
   \newif\ifsecnumbers \global\secnumbersfalse
+  \@namedef{ds@11pt}{\def\@ptsize{1}}
+  \@namedef{ds@12pt}{\def\@ptsize{2}}
+  \@namedef{ds@aps}{\def\@society{aps}}
+  \@namedef{ds@osa}{\def\@society{osa}}
   ");
 
+  // Environment manipulation — Perl L425-430
   DefMacro!("\\replace@command{}{}", "\\global\\let#1#2 #1");
+  DefMacro!("\\replace@environment{}{}", "");
+  DefMacro!("\\glet@environment{}{}", "");
 });
