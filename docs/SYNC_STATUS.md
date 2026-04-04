@@ -4,12 +4,12 @@
 
 Updated 2026-04-03. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests at zero structural diff against Perl reference XMLs. 4 tolerated post-processing diffs in `simplemath_post_test`.
+**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: ~208/289 zero-diff, ~25K diff lines across 81 non-zero tests (mostly xml:id renumbering + package binding gaps).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
 latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletimes \
-  --nodefaultresources --preload=ar5iv.sty --timeout=2700 --log=log.txt \
+  --nodefaultresources --nobibtex --preload=ar5iv.sty --timeout=2700 --log=log.txt \
   --dest=output.zip input.zip
 ```
 Features: clap CLI (30+ options), OmniBus fallback, DefAutoload, \index/\glossary, error recovery, log capture, status messages.
