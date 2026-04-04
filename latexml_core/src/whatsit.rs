@@ -106,9 +106,12 @@ impl Whatsit {
   pub fn get_definition(&self) -> Rc<dyn Definition> { Rc::clone(&self.definition) }
   /// accessor for the argument at index `n` (starting from 1)
   /// Access argument at 1-based index `n` (matching Perl's `$whatsit->getArg(n)`).
-  /// Panics if n == 0 — use 1-based indexing.
+  /// Returns None for n == 0 (defensive — Perl convention uses 1-based indexing).
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
-    assert!(n > 0, "get_arg() uses 1-based indexing (Perl convention). Use get_arg(1) for the first argument.");
+    if n == 0 {
+      log::warn!("get_arg(0) called — Perl convention uses 1-based indexing");
+      return None;
+    }
     match self.args.get(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,

@@ -1212,10 +1212,20 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   }
   // Apply the collected outer border assignments
   for (row_idx, col_idx, value) in outer_border_right_assignments.into_iter() {
-    alignment.rows[row_idx].get_columns_mut()[col_idx].border_right = value;
+    if let Some(row) = alignment.rows.get_mut(row_idx) {
+      let cols = row.get_columns_mut();
+      if col_idx < cols.len() {
+        cols[col_idx].border_right = value;
+      }
+    }
   }
   for (row_idx, col_idx, value) in outer_border_bottom_assignments.into_iter() {
-    alignment.rows[row_idx].get_columns_mut()[col_idx].border_bottom = value;
+    if let Some(row) = alignment.rows.get_mut(row_idx) {
+      let cols = row.get_columns_mut();
+      if col_idx < cols.len() {
+        cols[col_idx].border_bottom = value;
+      }
+    }
   }
   // Now, do some border massaging...
   for row in alignment.rows.iter_mut() {
