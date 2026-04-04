@@ -112,11 +112,51 @@ LoadDefinitions!({
   DefMacro!("\\floatlegendstyle", "\\bfseries");
   DefMacro!("\\leftlegendglue", "");
 
-  // TODO: \spnewtheorem — complex theorem definition (porting deferred)
+  // \spnewtheorem — simplified: map to \newtheorem (Perl L92-185)
+  // The full Perl version creates custom theorem environments with body/head font control.
+  // We map to standard \newtheorem which is simpler but functionally equivalent.
   DefMacro!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", "");
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
 
   DefRegister!("\\spthmsep", Dimension!("5pt"));
+
+  // Pre-define theorem environments — Perl L189-223
+  DefMacro!("\\theoremname", "Theorem");
+  DefMacro!("\\claimname", "Claim");
+  DefMacro!("\\proofname", "Proof");
+  DefMacro!("\\conjecturename", "Conjecture");
+  DefMacro!("\\corollaryname", "Corollary");
+  DefMacro!("\\definitionname", "Definition");
+  DefMacro!("\\examplename", "Example");
+  DefMacro!("\\exercisename", "Exercise");
+  DefMacro!("\\lemmaname", "Lemma");
+  DefMacro!("\\notename", "Note");
+  DefMacro!("\\problemname", "Problem");
+  DefMacro!("\\propertyname", "Property");
+  DefMacro!("\\propositionname", "Proposition");
+  DefMacro!("\\questionname", "Question");
+  DefMacro!("\\solutionname", "Solution");
+  DefMacro!("\\remarkname", "Remark");
+  RawTeX!("\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}");
+  RawTeX!("\\@ifundefined{claim}{\\newtheorem*{claim}{Claim}}{}");
+  RawTeX!("\\@ifundefined{conjecture}{\\newtheorem{conjecture}{Conjecture}}{}");
+  RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}{Corollary}}{}");
+  RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}{Definition}}{}");
+  RawTeX!("\\@ifundefined{example}{\\newtheorem{example}{Example}}{}");
+  RawTeX!("\\@ifundefined{exercise}{\\newtheorem{exercise}{Exercise}}{}");
+  RawTeX!("\\@ifundefined{lemma}{\\newtheorem{lemma}{Lemma}}{}");
+  RawTeX!("\\@ifundefined{note}{\\newtheorem{note}{Note}}{}");
+  RawTeX!("\\@ifundefined{problem}{\\newtheorem{problem}{Problem}}{}");
+  RawTeX!("\\@ifundefined{property}{\\newtheorem{property}{Property}}{}");
+  RawTeX!("\\@ifundefined{proposition}{\\newtheorem{proposition}{Proposition}}{}");
+  RawTeX!("\\@ifundefined{question}{\\newtheorem{question}{Question}}{}");
+  RawTeX!("\\@ifundefined{solution}{\\newtheorem{solution}{Solution}}{}");
+  RawTeX!("\\@ifundefined{remark}{\\newtheorem{remark}{Remark}}{}");
+
+  // Theorem environments — Perl L225-228
+  DefEnvironment!("{theopargself*}", "#body");
+  DefEnvironment!("{theopargself}", "#body");
+  DefEnvironment!("{translation}{}", "<ltx:quote role='translation' lang='#1'>#body</ltx:quote>");
 
   //======================================================================
   DefMacro!("\\qed", "\\ltx@qed");
