@@ -78,6 +78,8 @@ pub enum RewritePattern {
   RegexpClosure(RewriteRegexpClosure),
   /// Multiple xpath+count+wilds tuples for MultiSelect.
   MultiSelectPatterns(Vec<MultiSelectEntry>),
+  /// Pre-resolved node list (for scope resolution via DOM walking instead of XPath).
+  NodeList(Vec<Node>),
 }
 impl fmt::Debug for RewritePattern {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -89,6 +91,7 @@ impl fmt::Debug for RewritePattern {
       RewritePattern::TestClosure(_) => write!(f, "<Rewrite Test Closure>"),
       RewritePattern::RegexpClosure(_) => write!(f, "<Rewrite Regexp Closure>"),
       RewritePattern::MultiSelectPatterns(v) => write!(f, "<MultiSelect {} patterns>", v.len()),
+      RewritePattern::NodeList(v) => write!(f, "<NodeList {} nodes>", v.len()),
     }
   }
 }
@@ -276,12 +279,29 @@ impl Rewrite {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
           }
-          let xpath = format!(
-            "descendant-or-self::*[@xml:id='{0}' or @id='{0}']", id_part);
+          // Use get_property("id") for xml:id lookup (L2 workaround)
+          // findnodes with @xml:id='...' fails in rust-libxml
+          let target_id = id_part.to_string();
+          let scope_nodes: Vec<Node> = document.findnodes("descendant-or-self::*", None)
+            .into_iter()
+            .filter(|n| {
+              n.get_property("id").as_deref() == Some(&target_id)
+                || n.get_attribute("xml:id").as_deref() == Some(&target_id)
+            })
+            .collect();
+          if !scope_nodes.is_empty() {
+            // Found the scoped element — use it as the tree root for subsequent clauses
+            return RewriteClause {
+              compiled: true,
+              op: RewriteOperator::Select,
+              pattern: RewritePattern::NodeList(scope_nodes),
+            };
+          }
+          // Scope not found — ignore this rule
           return RewriteClause {
             compiled: true,
-            op: RewriteOperator::Select,
-            pattern: RewritePattern::String(xpath),
+            op: RewriteOperator::Ignore,
+            pattern: RewritePattern::String(String::new()),
           };
         }
         return RewriteClause {
@@ -367,6 +387,13 @@ impl Rewrite {
     if let Some(RewriteClause { compiled: _, op, pattern }) = clauses.pop_front() {
       match op {
         Select => {
+          // NodeList variant: pre-resolved nodes from scope DOM walking
+          if let RewritePattern::NodeList(nodes) = pattern {
+            for node in nodes {
+              self.apply_clause(document, node, 1, clauses.clone())?;
+            }
+            return Ok(());
+          }
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree));
             // Only apply wildcard filtering on content Selects, not scope Selects
