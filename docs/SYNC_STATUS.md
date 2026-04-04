@@ -180,11 +180,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **L1. Deep clone for `rust-libxml`** — Add `xmlCopyNode` FFI wrapper for `node.deep_copy()`. Required for Scan storing XML node values (currently stores text, losing inline markup).
 - [ ] **L2. `get_attribute("xml:id")` for `rust-libxml`** — Returns None on some builds. Workaround: `get_property("id")`.
 - [ ] **L4. Default namespace handling in `rust-libxml`** — Creates `<ltx:ref>` instead of `<ref>` when default xmlns matches. Workaround in place.
-- [ ] **X1. arxiv batch comparison catalog** — Systematic comparison of all 47 papers. Current: 36 OK, 6 fail, 5 timeout. Track diff counts per paper, identify top-5 blockers.
+- [ ] **X1. arxiv batch comparison catalog** — Systematic comparison of all 48 papers. Current: 42/48 produce output (88%), 6 fail (4 timeout, 1 pgf arrows, 1 wrong main file). Track diff counts per paper.
 
-### ar5iv conversion sandbox (47 papers)
+### ar5iv conversion sandbox (48 papers)
 
-`arxiv-examples/` contains 47 arXiv papers for parity testing between latexml-oxide and latexmlc. Run `arxiv-examples/compare.sh [id]` to generate and compare HTML output.
+`arxiv-examples/` contains 48 arXiv papers for parity testing between latexml-oxide and latexmlc. Run `arxiv-examples/compare.sh [id]` to generate and compare HTML output.
 
 Papers span 2007–2026, covering diverse LaTeX packages (natbib, hyperref, amsmath, tikz, beamer, siunitx, physics, listings, etc.). Key test targets:
 - Citation resolution (natbib `\citep`/`\citet`)

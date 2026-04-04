@@ -7,7 +7,7 @@ LoadDefinitions!({
   RequirePackage!("fancyhdr");
   RequirePackage!("color");
   RequirePackage!("algorithm");
-  // RequirePackage!("algorithmic"); // not yet ported
+  RequirePackage!("algorithmic");
   RequirePackage!("natbib");
 
   // Citations
