@@ -693,18 +693,28 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
     };
     if is_invisible_times {
       let trees = args.trees();
-      // Check non-terminal positions for bare OPFUNCTION tokens
+      // Check non-terminal positions for bare OPFUNCTION/TRIGFUNCTION tokens.
+      // Both types absorb bare arguments via prefix_apply. If they appear as
+      // standalone factors in an invisible_times chain (not the last element),
+      // the competing parse with absorption is preferred.
+      // FUNCTION is excluded — it only absorbs fenced (parenthesized) args,
+      // so `f * x` (invisible_times) is correct for bare FUNCTION.
       if trees.len() >= 3 {
         for i in 0..trees.len() - 1 {
-          let is_bare_opfunction = match trees[i] {
-            XM::Token(ref props, _) => props.role.as_deref() == Some("OPFUNCTION"),
-            XM::Lexeme(ref lex, _) => lex.starts_with("OPFUNCTION:"),
+          let is_bare_absorbing_func = match trees[i] {
+            XM::Token(ref props, _) => matches!(
+              props.role.as_deref(),
+              Some("OPFUNCTION") | Some("TRIGFUNCTION")
+            ),
+            XM::Lexeme(ref lex, _) => {
+              lex.starts_with("OPFUNCTION:") || lex.starts_with("TRIGFUNCTION:")
+            },
             _ => false,
           };
-          if is_bare_opfunction {
+          if is_bare_absorbing_func {
             return Err(
-              "Prune: bare OPFUNCTION in N-ary invisible_times chain (non-terminal) — \
-               prefer absorption (opfunction@(next_arg))."
+              "Prune: bare OPFUNCTION/TRIGFUNCTION in N-ary invisible_times chain \
+               (non-terminal) — prefer absorption via prefix_apply."
                 .into(),
             );
           }
