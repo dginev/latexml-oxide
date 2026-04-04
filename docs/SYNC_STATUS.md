@@ -61,7 +61,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 |------|------|----------|-------|
 | `latex_constructs.pool.ltxml` | ~843 | Low | ~93% ported. Missing: picture env |
 | `math_common.pool.ltxml` | 312 | OK | Fully ported (DefMathLigature, all symbols) |
-| `Base_Deprecated.pool.ltxml` | 77 | Low | ~16% — deprecated compat shims |
+| `Base_Deprecated.pool.ltxml` | 77 | OK | Fully ported — ~80 deprecation aliases |
 | `AmSTeX.pool.ltxml` | 112 | Low | ~30% |
 | `BibTeX.pool.ltxml` | 150 | Low | ~9% |
 
@@ -165,7 +165,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Open TODO items — Engine Parity
 
 - [ ] **E1. Precompile kernel dumps on `cargo build`** — Design in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version check. Manual generation still required.
-- [ ] **E2. `\newpage` in SVG/tikz context** — `\lx@newpage` is defined but `<pagination>` elements are missing from 10 tikz test outputs. The `^` prefix float-up may not work inside tikzpicture's SVG mode. Affects 10 tests (~22 diff lines).
+- [x] **E2. `\newpage` in SVG/tikz context** — Resolved: Perl tikz reference XMLs are outdated. Fresh Perl output matches Rust (no pagination). Not a code bug.
 - [x] **E3. FindFile_fallback for versioned packages** — Ported. 2306.00809: 39B→141KB, 2402.03300: 53KB→322KB.
 - [x] **E4. Reduce TooManyErrors aborts** — MAX_ERRORS default raised to 10000 (was 100). digest_internal error recovery improved to catch Fatals during salvage.
 - [x] **E5. Fix `\@@eqnarray` recursion** — Fixed: eqnarray/inline math cycle broken.
