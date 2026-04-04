@@ -3,9 +3,11 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-  RequirePackage!("xkeyval");
-  // Perl also loads keyval, ifpdf, ifvtex, ifxetex — most are handled by iftex
-  RequirePackage!("iftex");
+  // Dependencies — Perl L22-25
+  RequirePackage!("keyval");
+  RequirePackage!("ifpdf");
+  RequirePackage!("ifvtex");
+  RequirePackage!("ifxetex");
 
   // All geometry macros are no-ops (page layout not meaningful for XML)
   DefMacro!("\\geometry{}", None);
