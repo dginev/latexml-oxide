@@ -189,6 +189,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "IEEEtran.cls" => package::ieeetran_cls::load_definitions(),
     "import.sty" => package::import_sty::load_definitions(),
     "iopart.cls" => package::iopart_cls::load_definitions(),
+    "iopart_support.sty" => package::iopart_support_sty::load_definitions(),
     "svjour.cls" => package::svjour_cls::load_definitions(),
     "svjour1.cls" => package::svjour3_cls::load_definitions(),
     "svjour2.cls" => package::svjour3_cls::load_definitions(),

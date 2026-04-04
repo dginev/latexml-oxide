@@ -215,6 +215,7 @@ pub mod inputenc_sty;
 pub mod inst_support_sty;
 pub mod intcalc_sty;
 pub mod iopams_sty;
+pub mod iopart_support_sty;
 pub mod iopart_cls;
 pub mod jhep_cls;
 pub mod jhep2_cls;
