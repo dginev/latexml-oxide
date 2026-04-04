@@ -1170,10 +1170,11 @@ fn six_parse_literalunits(expr: &Tokens) -> Tokens {
   Tokens::new(result)
 }
 
-/// Perl: six_process_units — simplified top-level unit processing
-/// Full unit semantic processing requires the siunitx_macros mapping which
-/// is complex. For now, fall back to literal unit parsing for non-macro units,
-/// and let the macro expansion handle unit macros.
+/// Perl: six_process_units — top-level unit processing
+/// Tries structured unit parsing first, falls back to literal parsing.
+/// For mixed content (\pi . \mm . \mrad), resolves \lx@six@unitobject tokens
+/// to their \mathrm{presentation} BEFORE falling to literalunits, while the
+/// siunitx_macros mapping is still active.
 fn six_process_units(expr: &Tokens) -> Tokens {
   let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
   if let Some(defns) = six_convert_units_from_tokens(&expanded) {
@@ -1182,7 +1183,70 @@ fn six_process_units(expr: &Tokens) -> Tokens {
       return six_format_units(&units);
     }
   }
-  six_parse_literalunits(&expanded)
+  // Fallback: resolve any \lx@six@unitobject tokens to their presentation
+  // while the siunitx_macros mapping is still active, then parse as literal.
+  let resolved = six_resolve_unit_objects(&expanded);
+  six_parse_literalunits(&resolved)
+}
+
+/// Replace \lx@six@unitobject{name} tokens with \mathrm{presentation} tokens.
+/// Must be called while siunitx_macros mapping is active (inside \SI{}{} processing).
+fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
+  let toks = tokens.clone().unlist();
+  let mut result = Vec::new();
+  let mut iter = toks.into_iter().peekable();
+  let mut had_substitution = false;
+
+  while let Some(t) = iter.next() {
+    let ts = t.to_string();
+    if ts == "\\lx@six@unitobject" {
+      if let Some(name) = read_brace_group_str(&mut iter) {
+        if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+          let encoded_str = arena::with(encoded, |s| s.to_string());
+          if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+            let pres = defn.presentation;
+            if !pres.is_empty() {
+              // Emit raw presentation tokens — six_parse_literalunits will wrap
+              // LETTER tokens in \mathrm{} as needed
+              result.extend(pres.unlist());
+              had_substitution = true;
+              continue;
+            }
+          }
+        }
+        // Fallback: emit name as raw text
+        result.extend(ExplodeText!(&name));
+        had_substitution = true;
+      }
+    } else if ts == "\\lx@six@unitobject@arg" {
+      if let Some(name) = read_brace_group_str(&mut iter) {
+        if let Some(arg) = read_brace_group_str(&mut iter) {
+          if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+            let encoded_str = arena::with(encoded, |s| s.to_string());
+            if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+              let pres = defn.presentation;
+              if !pres.is_empty() {
+                result.extend(pres.unlist());
+                result.push(T_BEGIN!());
+                result.extend(ExplodeText!(&arg));
+                result.push(T_END!());
+                had_substitution = true;
+                continue;
+              }
+            }
+          }
+        }
+      }
+    } else {
+      result.push(t);
+    }
+  }
+
+  if had_substitution {
+    Tokens::new(result)
+  } else {
+    tokens.clone() // No changes — return original
+  }
 }
 
 /// Parse expanded tokens looking for \lx@six@unitobject{name} patterns

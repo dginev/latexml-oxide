@@ -131,38 +131,60 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
   </para>
   <para xml:id="p3">
     <p>Semantic again:
-<Math mode="inline" tex="0.094\text{\,}\pi\,\lx@six@unitobject\lx@six@unitobject\,\lx@six@unitobject\lx@six@unitobject" text="0.094 * pi" xml:id="p3.m1">
+<Math mode="inline" tex="0.094\text{\,}\pi\,\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{r}\mathrm{a}\mathrm{d}" text="0.094 * (pi * mm * mrad)" xml:id="p3.m1">
         <XMath>
           <XMApp>
             <XMText meaning="times" role="MULOP" xml:id="p3.m1.1"> </XMText>
             <XMTok meaning="0.094" role="NUMBER">0.094</XMTok>
-            <XMTok font="italic" name="pi" role="UNKNOWN" rpadding="3.3pt">π</XMTok>
+            <XMApp xml:id="p3.m1.3">
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" name="pi" role="UNKNOWN" rpadding="1.7pt">π</XMTok>
+              <XMTok role="UNKNOWN" rpadding="1.7pt">mm</XMTok>
+              <XMTok role="UNKNOWN">mrad</XMTok>
+            </XMApp>
           </XMApp>
         </XMath>
       </Math><break/></p>
   </para>
   <para xml:id="p4">
-    <p><Math mode="inline" tex="0.094\text{\,}\frac{\mathrm{1}}{\mathrm{3}}\,\lx@six@unitobject\lx@six@unitobject\,\lx@six@unitobject\lx@six@unitobject" text="0.094 * (1 / 3)" xml:id="p4.m1">
+    <p><Math mode="inline" tex="0.094\text{\,}\frac{\mathrm{1}}{\mathrm{3}}\,\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{r}\mathrm{a}\mathrm{d}" text="0.094 * ((1 / 3) * mm * mrad)" xml:id="p4.m1">
         <XMath>
           <XMApp>
             <XMText meaning="times" role="MULOP" xml:id="p4.m1.1"> </XMText>
             <XMTok meaning="0.094" role="NUMBER">0.094</XMTok>
-            <XMApp rpadding="3.3pt" xml:id="p4.m1.3">
-              <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-              <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+            <XMApp xml:id="p4.m1.3">
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp rpadding="1.7pt">
+                <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+              </XMApp>
+              <XMTok role="UNKNOWN" rpadding="1.7pt">mm</XMTok>
+              <XMTok role="UNKNOWN">mrad</XMTok>
             </XMApp>
           </XMApp>
         </XMath>
       </Math><break/></p>
   </para>
   <para xml:id="p5">
-    <p><Math mode="inline" tex="0.094\text{\,}\pi\lx@six@unitobject\lx@six@unitobject\lx@six@unitobject\,\lx@six@unitobject\lx@six@unitobject\lx@six@unitobject@arg" text="0.094 * pi" xml:id="p5.m1">
+    <p><Math mode="inline" tex="0.094\text{\,}\pi\mathrm{/}\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{r}\mathrm{a}\mathrm{d}^{3}" text="0.094 * ((pi / mm) * mrad ^ 3)" xml:id="p5.m1">
         <XMath>
           <XMApp>
             <XMText meaning="times" role="MULOP" xml:id="p5.m1.1"> </XMText>
             <XMTok meaning="0.094" role="NUMBER">0.094</XMTok>
-            <XMTok font="italic" name="pi" role="UNKNOWN" rpadding="1.7pt">π</XMTok>
+            <XMApp xml:id="p5.m1.3">
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMApp>
+                <XMTok meaning="divide" role="MULOP">/</XMTok>
+                <XMTok font="italic" name="pi" role="UNKNOWN">π</XMTok>
+                <XMTok role="UNKNOWN" rpadding="1.7pt">mm</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok role="UNKNOWN">mrad</XMTok>
+                <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
+              </XMApp>
+            </XMApp>
           </XMApp>
         </XMath>
       </Math><break/></p>
