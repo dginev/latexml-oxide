@@ -2280,6 +2280,9 @@ pub fn apply_invisible_times(
       return Err("apply_invisible_times: left is bigop/scripted bigop, prefer absorption".into());
     }
   }
+  // Note: bare OPFUNCTION absorption (diffd@(x) vs diffd*x) is handled by
+  // the FunctionsPreferWiderAbsorption pragmatic, which compares competing
+  // trees and rejects the narrow parse.
   // Perl: scripted function application — f^2(a), f'(a), g_n(x).
   // When left is a scripted Apply whose base has FUNCTION/OPFUNCTION/TRIGFUNCTION role,
   // and right is a fenced XMDual (from parenthesized fencing), produce function

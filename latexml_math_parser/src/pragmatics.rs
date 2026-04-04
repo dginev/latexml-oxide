@@ -678,6 +678,40 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
       }
     }
   }
+  // Also check N-ary invisible_times chains for bare OPFUNCTION in non-terminal
+  // positions. E.g. Apply(×, [f@(x), d, x]) where d is bare OPFUNCTION at index 1
+  // (not the last). The competing parse Apply(×, [f@(x), d@(x)]) is preferred.
+  // This covers the pattern: ∫ f(x) \diffd x → f@(x) * diffd@(x), not f@(x)*d*x.
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_invisible_times = match **op {
+      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("times")
+          && props.role.as_deref() == Some("MULOP")
+      },
+      _ => false,
+    };
+    if is_invisible_times {
+      let trees = args.trees();
+      // Check non-terminal positions for bare OPFUNCTION tokens
+      if trees.len() >= 3 {
+        for i in 0..trees.len() - 1 {
+          let is_bare_opfunction = match trees[i] {
+            XM::Token(ref props, _) => props.role.as_deref() == Some("OPFUNCTION"),
+            XM::Lexeme(ref lex, _) => lex.starts_with("OPFUNCTION:"),
+            _ => false,
+          };
+          if is_bare_opfunction {
+            return Err(
+              "Prune: bare OPFUNCTION in N-ary invisible_times chain (non-terminal) — \
+               prefer absorption (opfunction@(next_arg))."
+                .into(),
+            );
+          }
+        }
+      }
+    }
+  }
   Ok(())
 }
 

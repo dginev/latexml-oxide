@@ -330,6 +330,13 @@ fn parse_tree_count_limits() {
      "UNKNOWN:w:1 UNKNOWN:a:2 UNKNOWN:r:3 UNKNOWN:m:4 UNKNOWN:u:5 UNKNOWN:p:6 \
       UNKNOWN:_:7 UNKNOWN:s:8 UNKNOWN:t:9 UNKNOWN:e:10 UNKNOWN:p:11 UNKNOWN:s:12 ",
      1),  // M4: was 233, now 1
+    // diffd parsing: integral + function + diffd
+    // Should have diffd@(x) not diffd * x
+    ("integral_diffd",
+     "INTOP:integral:1 start_BIGOPSUB:start:2 ID:a:3 end_BIGOPSUB:end:4 \
+      start_BIGOPSUP:start:5 ID:b:6 end_BIGOPSUP:end:7 FUNCTION:f:8 \
+      OPEN:(:9 UNKNOWN:x:10 CLOSE:):11 OPFUNCTION:d:12 UNKNOWN:x:13 ",
+     100),  // should be low (2 unique, ~94 raw)
   ];
 
   for (name, lexemes, max_allowed) in &cases {

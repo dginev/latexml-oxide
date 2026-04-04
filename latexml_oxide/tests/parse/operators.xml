@@ -282,7 +282,7 @@
         </Math>
       </equation>
       <equation xml:id="S1.Ex5">
-        <Math mode="display" tex="\int_{a}^{b}f(x)\diffd x" text="((integral _ a) ^ b)@(f@(x) * diffd * x)" xml:id="S1.Ex5.m1">
+        <Math mode="display" tex="\int_{a}^{b}f(x)\diffd x" text="((integral _ a) ^ b)@(f@(x) * diffd@(x))" xml:id="S1.Ex5.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -310,8 +310,10 @@
                     </XMWrap>
                   </XMApp>
                 </XMDual>
-                <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
-                <XMTok role="UNKNOWN">x</XMTok>
+                <XMApp>
+                  <XMTok name="diffd" role="OPFUNCTION" rpadding="-1.7pt" scriptpos="post">d</XMTok>
+                  <XMTok role="UNKNOWN">x</XMTok>
+                </XMApp>
               </XMApp>
             </XMApp>
           </XMath>
