@@ -92,7 +92,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 **Goal: translate every `.sty.ltxml` and `.cls.ltxml` in Perl to Rust, exhaustively.**
 
-Current: ~380 FULL/NEAR-COMPLETE, 6 MISSING (of ~406 total Perl bindings).
+Current: ~400 FULL/NEAR-COMPLETE, 5 MISSING (of ~406 total Perl bindings). Zero `todo!()` panics.
 
 ### MISSING bindings (no Rust file)
 
@@ -102,7 +102,6 @@ Current: ~380 FULL/NEAR-COMPLETE, 6 MISSING (of ~406 total Perl bindings).
 | pst-node.sty | 557 | Low | PSTricks node connections (DVI-only) |
 | amsppt.sty | 500 | Low | AMSTeX plain TeX compat (rare) |
 | proofwiki.sty | 326 | Low | ProofWiki (niche) |
-| lxRDFa.sty | 236 | Low | RDFa semantic annotations (niche) |
 | turing.sty | 222 | Low | Turing machine typesetting (niche) |
 
 ### Remaining gaps in ported bindings
