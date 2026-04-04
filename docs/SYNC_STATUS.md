@@ -161,6 +161,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **B2. Port JHEP.cls binding** — 77-line Rust binding. Frontmatter, acknowledgements, journal abbreviations.
 - [x] **B3. Port pstricks.sty binding** — 55-line Rust stub (DVI-only, all commands no-op or passthrough).
 - [x] **B4. Expand 9 PARTIAL bindings** — revtex4_support, aas_support, braket (pipe-splitting), algorithm2e, subfig, inst_support, html, titling, authblk (+423 lines total).
+- [x] **B5. Expand 7 more bindings** — jheppub (full port), iopart_support (journal abbrevs, bibliography), JHEP.cls (journal refs, arXiv links), elsart_support (theorems, isotopes), elsart_support_core (keyword env), mn2e_support (bold Greek, math relations), texvc (Greek, aliases). +630 lines total.
 
 ### Open TODO items — Engine Parity
 
