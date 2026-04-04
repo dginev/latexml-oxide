@@ -752,6 +752,40 @@ LoadDefinitions!({
     )
   });
 
+  // Math spacing: medspace, thickspace, and negatives — Perl latex_constructs L2510-2525
+  DefPrimitive!("\\medspace", {
+    Tbox::new(
+      *EMPTY_SYM, None, None,
+      Tokens!(T_CS!("\\medspace")),
+      stored_map!("name" => "medspace", "width" => Dimension::from_str("0.22222em")?,
+        "isSpace"=>true),
+    )
+  });
+  DefPrimitive!("\\negmedspace", {
+    Tbox::new(
+      *EMPTY_SYM, None, None,
+      Tokens!(T_CS!("\\negmedspace")),
+      stored_map!("name" => "negmedspace", "width" => Dimension::from_str("-0.22222em")?,
+        "isSpace"=>true),
+    )
+  });
+  DefPrimitive!("\\thickspace", {
+    Tbox::new(
+      arena::pin_static("\u{2004}"), None, None,
+      Tokens!(T_CS!("\\thickspace")),
+      stored_map!("name" => "thickspace", "width" => Dimension::from_str("0.27778em")?,
+        "isSpace"=>true),
+    )
+  });
+  DefPrimitive!("\\negthickspace", {
+    Tbox::new(
+      arena::pin_static("\u{2004}"), None, None,
+      Tokens!(T_CS!("\\negthickspace")),
+      stored_map!("name" => "negthickspace", "width" => Dimension::from_str("-0.27778em")?,
+        "isSpace"=>true),
+    )
+  });
+
   // Perl: plain_base.pool.ltxml L447
   DefPrimitive!("\\hglue Glue", sub[(length)] {
     let s = dimension_to_spaces(length);
