@@ -2,11 +2,11 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-04. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-05. Only lists open gaps & TODOs; completed items live in git history.
 
 **Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: 246/314 effective zero-diff (78%), ~18K meaningful diff lines across 68 non-zero tests. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K).
 
-**arxiv sandbox:** 37/47 papers produce meaningful HTML output (~10.4MB total). 5 fail (cascading errors), 5 timeout (>60s, mostly tikz-heavy).
+**arxiv sandbox:** 42/48 papers produce output (88%). 6 fail (4 timeout, 1 pgf arrows, 1 wrong main file).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -55,15 +55,15 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 ---
 
-## Unported Perl Files
+## Unported Perl Engine Files
 
-| File | Defs | Priority | Notes |
-|------|------|----------|-------|
-| `latex_constructs.pool.ltxml` | ~843 | Low | ~93% ported. Missing: picture env |
-| `math_common.pool.ltxml` | 312 | OK | Fully ported (DefMathLigature, all symbols) |
-| `Base_Deprecated.pool.ltxml` | 77 | OK | Fully ported — ~80 deprecation aliases |
-| `AmSTeX.pool.ltxml` | 112 | Low | ~30% |
-| `BibTeX.pool.ltxml` | 150 | Low | ~9% |
+| File | Defs | Status | Notes |
+|------|------|--------|-------|
+| `latex_constructs.pool.ltxml` | ~843 | ~93% | Missing: picture environment |
+| `math_common.pool.ltxml` | 312 | OK | Fully ported |
+| `Base_Deprecated.pool.ltxml` | 77 | OK | Fully ported |
+| `AmSTeX.pool.ltxml` | 112 | ~30% | Plain TeX format (rare) |
+| `BibTeX.pool.ltxml` | 956 | 0% | Skipped via `--nobibtex` in production |
 
 ---
 
