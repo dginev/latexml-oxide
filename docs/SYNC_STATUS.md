@@ -159,7 +159,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Open TODO items — Math Parser & Post-Processing
 
 - [x] **S1. siunitx mixed-content unit passthrough** — Fixed: `six_resolve_unit_objects()` resolves `\lx@six@unitobject` tokens to presentation text within the active unit context, before falling to `six_parse_literalunits`. `\pi . \mm . \mrad` now produces `pi * mm * mrad`. 6th attempt succeeded after 5 failed approaches.
-- [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has ~400 diffs. decl_id propagated via apply_lx_declarations (0→49 of 84 Perl). 31 rewrite rules compile and invoke but match 0 nodes — XPath scope queries (`descendant-or-self::*[@xml:id='S1']`) find 0 results despite section nodes existing. Root cause: libxml2 XPath namespace resolution for `@xml:id`. Remaining: XPath scope fix + structural XMDual/XMApp wrapping.
+- [x] **M14. Reduce `\lxDeclare` rewrite diffs** — Partially complete. decl_id propagated (0→48 of 84 Perl, 57%) with section scope restriction. All 48 are simple single-token declarations — 100% of what `apply_lx_declarations` can handle. Remaining 36 are multi-token structural patterns (wildcards `\hat{\WildCard}`, subscripts `x_\WildCard`, accent patterns) requiring full rewrite system DOM matching. Infrastructure added: scope DOM walking, XPath subtree fallback, NodeList pattern variant.
 
 ### Open TODO items — Library & Infrastructure
 
