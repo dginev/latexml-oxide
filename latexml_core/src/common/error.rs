@@ -99,7 +99,8 @@ pub fn get_status(status: LogStatus) -> usize {
         0
       }
     },
-    _ => todo!(),
+    Undefined => report.undefined.0.values().sum(),
+    Missing => report.missing.0.values().sum(),
   }
 }
 

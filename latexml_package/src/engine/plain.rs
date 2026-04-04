@@ -310,25 +310,36 @@ LoadDefinitions!({
 
   // "Initialized" alignment; presets spacing, but since we're ignoring it anyway...
   Let!("\\ialign", "\\halign");
-  // Overlapping alignments ???
+  // Overlapping alignments.
+  // Perl: plain_base.pool.ltxml L121-137
   DefMacro!(
     "\\oalign{}",
     r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // TODO: What are the full arguments to alignment_bindings ?
-  // DefConstructor!("\\@@oalign{}", "#1",
-  //   reversion    => "\\oalign{#1}", bounded => true, mode => "text",
-  //   before_digest => sub { alignment_bindings('l', ); });
+  DefConstructor!("\\@@oalign{}", "#1",
+    reversion => "\\oalign{#1}", bounded => true, mode => "text",
+    before_digest => sub {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::parse_alignment_template;
+      if let Ok(template) = parse_alignment_template("l") {
+        alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
+      }
+    });
 
-  // This is actually different; the lines should lie ontop of each other.
-  // How should this be represented?
-  // TODO: What are the full arguments to alignment_bindings ?
-  // DefMacro("\\ooalign{}",
-  //   r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}");
-  // DefConstructor!("\\@@ooalign{}",
-  //   "#1",
-  //   reversion    => "\\ooalign{#1}", bounded => true, mode => "text",
-  //   before_digest => sub { alignment_bindings('l'); });
+  // Lines lie on top of each other.
+  DefMacro!(
+    "\\ooalign{}",
+    r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}"
+  );
+  DefConstructor!("\\@@ooalign{}", "#1",
+    reversion => "\\ooalign{#1}", bounded => true, mode => "text",
+    before_digest => sub {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::parse_alignment_template;
+      if let Ok(template) = parse_alignment_template("l") {
+        alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
+      }
+    });
 
   DefConstructor!(
     "\\buildrel Until:\\over {}",
@@ -459,13 +470,10 @@ LoadDefinitions!({
     "\\newlanguage DefToken",
     r"\alloc@@{language}\global\chardef#1=\allocationnumber"
   );
-  DefMacro!(
-    "\\e@alloc{}{}{}{}{}{}",
-    r"\global\advance#3\@ne
-  \allocationnumber#3\relax
-  \global#2#6\allocationnumber"
-  );
-  DefMacro!("\\alloc@{}{}{}{}", r"\e@alloc#2#3{\count1#1}#4\float@count");
+  // Perl: latex_bootstrap.pool.ltxml L49 — 6 args, delegates to \lx@alloc@
+  DefMacro!("\\e@alloc{}{}{}{}{}{}", r"\lx@alloc@{#1}{#3}{#2}{#6}", locked => true);
+  // Perl: plain_bootstrap.pool.ltxml L32 — 5 args, delegates to \lx@alloc@
+  DefMacro!("\\alloc@{}{}{}{}{}", r"\lx@alloc@{#2}{\count1#1}{#3}{#5}", locked => true);
   DefMacro!(
     "\\newread",
     r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n"

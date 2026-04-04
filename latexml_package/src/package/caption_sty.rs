@@ -4,11 +4,63 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: caption.sty.ltxml
   // Basically all of this is ignorable (other than needing the macros defined).
+  // In principle, we could make use of some of the fonts...
 
-  // Key-value pairs are all ignorable for now
-  // DefKeyVal not yet supported in Rust, so we just define the user-facing macros
+  // Perl L24-59: DefKeyVal declarations for caption package
+  DefKeyVal!("caption", "format", "", "");
+  DefKeyVal!("caption", "indentation", "Dimension", "0pt");
+  DefKeyVal!("caption", "labelformat", "", "default");
+  DefKeyVal!("caption", "labelsep", "", "");
+  DefKeyVal!("caption", "textformat", "", "");
+  DefKeyVal!("caption", "justification", "", "");
+  DefKeyVal!("caption", "singlelinecheck", "", "");
+  DefKeyVal!("caption", "font", "", "");
+  DefKeyVal!("caption", "labelfont", "", "");
+  DefKeyVal!("caption", "textfont", "", "");
+  DefKeyVal!("caption", "font+", "", "");
+  DefKeyVal!("caption", "labelfont+", "", "");
+  DefKeyVal!("caption", "textfont+", "", "");
+  DefKeyVal!("caption", "margin", "Dimension", "0pt");
+  DefKeyVal!("caption", "margin*", "Dimension", "0pt");
+  DefKeyVal!("caption", "minmargin", "Dimension", "0pt");
+  DefKeyVal!("caption", "maxmargin", "Dimension", "0pt");
+  DefKeyVal!("caption", "parskip", "Dimension", "0pt");
+  DefKeyVal!("caption", "width", "Dimension", "0pt");
+  DefKeyVal!("caption", "oneside", "", "");
+  DefKeyVal!("caption", "twoside", "", "");
+  DefKeyVal!("caption", "hangindent", "Dimension", "0pt");
+  DefKeyVal!("caption", "style", "", "");
+  DefKeyVal!("caption", "skip", "Dimension", "0pt");
+  DefKeyVal!("caption", "position", "", "");
+  DefKeyVal!("caption", "figureposition", "", "");
+  DefKeyVal!("caption", "tableposition", "", "");
+  DefKeyVal!("caption", "list", "", "");
+  DefKeyVal!("caption", "listformat", "", "");
+  DefKeyVal!("caption", "name", "", "");
+  DefKeyVal!("caption", "type", "", "");
 
-  DefMacro!("\\captionsetup[]{}", "");
+  // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key} in state
+  DefPrimitive!("\\captionsetup[]{}", sub[(_ignore, kv)] {
+    // Parse the braced argument as key=value pairs and store each
+    let kv_str = kv.to_string();
+    for pair in kv_str.split(',') {
+      let pair = pair.trim();
+      if pair.is_empty() { continue; }
+      let (key, value) = if let Some(eq_pos) = pair.find('=') {
+        (pair[..eq_pos].trim(), pair[eq_pos+1..].trim())
+      } else {
+        (pair, "true")
+      };
+      if !key.is_empty() {
+        let state_key = s!("CAPTION_{}", key);
+        state::assign_value(
+          &state_key,
+          Stored::String(arena::pin(value)),
+          None,
+        );
+      }
+    }
+  });
   DefMacro!("\\DeclareCaptionStyle{}[]{}", "");
   DefMacro!("\\DeclareCaptionLabelFormat{}{}", "");
   DefMacro!("\\DeclareCaptionLabelSeparator{}{}", "");

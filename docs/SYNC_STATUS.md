@@ -4,7 +4,7 @@
 
 Updated 2026-04-03. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 391 tests pass (338 integration + 1 post + 39+7+6 latexml_post unit tests). 318 paired tests: 225 zero-diff + 26 intentional-only (xml:id renumbering, %&#10;) = **251 at architectural ceiling**. 67 with real structural diffs. 31,514 total diff lines.
+**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). 318 paired tests: 225 zero-diff + 26 intentional-only (xml:id renumbering, %&#10;) = **251 at architectural ceiling**. 67 with real structural diffs. 31,514 total diff lines.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -33,14 +33,14 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
-| base_utilities.rs | MINOR | Missing: `isDefinable()`, `aligningEnvironment()`, `addClass()`, `SplitTokens()`, `JoinTokens()` |
-| base_xmath.rs | MINOR | Matrix/cases fully ported. Missing: `DefMathLigature` rules (cdots/ldots ligatures), `MathWhatsit()` |
+| base_utilities.rs | MINOR | `isDefinable()`, `SplitTokens()`, `JoinTokens()` ported. Missing: `aligningEnvironment()`, `setAlignOrClass()`. `addClass()` already as `Document::add_class()` |
+| base_xmath.rs | MINOR | Matrix/cases fully ported. DefMathLigature ported in plain.rs. Missing: `MathWhatsit()` |
 
 ### Phase 1: TeX Primitives (High-Gap)
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| tex_math.rs | MINOR | `\nonscript`, `\lx@dollar@default` ported. Missing: `DefMathLigature` (cdots/ldots), `adjustMathstyle` recursive helper |
+| tex_math.rs | MINOR | `\nonscript`, `\lx@dollar@default` ported. DefMathLigature in plain.rs. Missing: `adjustMathstyle` recursive helper |
 | tex_box.rs | MINOR | `\leaders/cleaders/xleaders`, `\vrule/\hrule`, `\hbox/vbox/vtop`, SVG functions all ported. Minor: some box dimension edge cases |
 | tex_fonts.rs | GAPS | Missing: `\fontname` scaled format, per-font `\hyphenchar`, `getFontDimen()`, 7 ligature defs |
 | tex_tables.rs | MINOR | `\halign BoxSpecification` fully implemented. Minor: padding CSS classes |
@@ -49,7 +49,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| plain.rs | GAPS | Missing: `\alloc@{}{}{}{}{}`, `\@@oalign/@@ooalign`, `\multispan`, `\hglue`, `\lx@hack@bordermatrix` |
+| plain.rs | OK | `\alloc@` 5-arg, `\@@oalign/@@ooalign`, `\narrower`, `\itemitem`, `\dospecials` all ported |
 
 ### Phase 4: LaTeX Chapters (GAPS only)
 
@@ -57,7 +57,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 |------|--------|-----------|
 | latex_ch4_sectioning_and_toc.rs | MINOR | `\format@title@*`, `\@@compose@title`, `\lx@tag` in base_utilities.rs. Missing: `\@@section` (unused legacy), `LABEL_MAPPING_HOOK` |
 | latex_ch8_defining_commands.rs | OK | `\DeclareMathAccent` fully implemented; `\DeclareFontShape/Family` as proper stubs |
-| latex_ch9_marginal_notes.rs | GAPS | 50% |
+| latex_ch9_marginal_notes.rs | OK | `\marginpar`, tabbing environment fully ported |
 | latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
 
 ---
@@ -99,7 +99,7 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | stomach.rs | OK | Mathcode decoding fully implemented (MATH_CLASS_ROLE matches Perl) |
 | document.rs | MINOR | XML comment creation (needs libxml2 FFI) |
 | alignment.rs | OK | Padding CSS classes and ABSORB_LIMIT guard both implemented |
-| rewrite.rs | MINOR | ~90% ported. Missing: `compile_regexp`, `digest_rewrite` |
+| rewrite.rs | MINOR | ~95% ported. `Regexp` operator works. Missing: `domToXPath` (TeX string → XPath), `digest_rewrite` helper (not exercised by tests) |
 | pathname.rs | MINOR | Missing: `pathname_make`, `pathname_relative`, `pathname_findall` |
 | font.rs | OK | `defsize()` reads NOMINAL_FONT_SIZE from state |
 
@@ -128,10 +128,10 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| amsmath.sty | MINOR | ~90% ported. Core complete: operators, text, subequations, matrices, align, cfrac, MultiIntegral, options. Missing: cfrac mathstyle tracking |
-| listings.sty | GAPS | Missing: `literate`, `extendedchars`, `directivestyle`/`stringstyle` propagation, `title=`/`caption=` |
-| ntheorem.sty | GAPS | Missing: `\colorbox` for shaded theorems |
-| caption.sty | MINOR | Missing: KeyVals, CAPTION_ value storage |
+| amsmath.sty | MINOR | ~95% ported. Core complete: operators, text, subequations, matrices, align, cfrac, MultiIntegral, options. Minor: cfrac mathstyle tracking |
+| listings.sty | MINOR | ~95% ported. caption/title, extendedchars, stringstyle/directivestyle all working. Missing: literate `*` (protected) flag enforcement |
+| ntheorem.sty | OK | `\newshadedtheorem` + `\colorbox` shading fully ported |
+| caption.sty | OK | DefKeyVal declarations + CAPTION_ value storage ported |
 
 All other packages OK: calc, report, appendix, multicol, booktabs, remreset, chngcntr, physics (0 diffs), siunitx (1817 lines), tikz+pgf (7/7 pass), expl3 (37K lines load), babel (6 pass), moderncv (2 pass), beamer (2 pass). txfonts: ~130 symbols ported.
 
@@ -171,7 +171,7 @@ Fresh Perl diffs (after stripping tex= and %&#10;):
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-04-02):** 391 pass, 0 fail, 0 ignored.
+**Status (2026-04-03):** 407 pass, 0 fail, 0 ignored.
 
 ### Completed infrastructure
 - [x] **F. Post-processing pipeline** — `latexml_post` crate (12,300+ lines, 25 modules). MathML Presentation+Content, XSLT via libxslt FFI.
@@ -188,11 +188,11 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **P5. Writer post-processor** — Port `LaTeXML::Post::Writer`. TEMPORARY_DOCUMENT_ID removal, HTML vs XML serialization (`as_html` SaveOptions for `toStringHTML` parity), file output with directory creation. Integrated as Processor in the pipeline.
 - [x] **P6. Graphics post-processor** — Implemented with `imagesize` crate for PNG/JPEG/GIF dimension reading + ImageMagick CLI (`convert`) for PDF/EPS→PNG format conversion. File copying, path resolution, search paths, graphicspath PI support. Wired into post-processing pipeline between CrossRef and Split.
 - [x] **P7. MathML intent attribute** — `intent=":literal"` on all `<math>` elements when ar5iv.sty is preloaded. Auto-detected from `<?latexml package="ar5iv"?>` processing instruction. New builder: `MathML::with_intent_literal(true)`.
-- [ ] **P8. Plane 1 Unicode mapping** — Port Perl's `LaTeXML::Util::Unicode` plane 1 mathematical character mapping. Perl maps bold/italic/bold-italic/script/fraktur letters and digits to Unicode Mathematical Alphanumeric Symbols block (U+1D400–U+1D7FF). Our code uses `mathvariant` attribute + `class="ltx_mathvariant_bold"` CSS fallback, which works but doesn't match Perl's Unicode-based approach for `<msup>` content. Priority: medium (CSS fallback covers most cases).
+- [x] **P8. Plane 1 Unicode mapping** — Ported `LaTeXML::Util::Unicode` plane 1 character mapping. New `latexml_post/src/unicode.rs` module: `unicode_convert()` with all 14 mapping styles (bold, italic, script, fraktur, double-struck, etc.), `unicode_mathvariant()` with full 28-entry normalization table. Integrated into `pmml_token` and `stylize_content`: when plane1=true (default), text is converted to Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF) and mathvariant attribute is cleared. Special character overrides (script B→ℬ, fraktur C→ℭ, double-struck R→ℝ, etc.) faithfully ported. CSS class fallbacks (ltx_font_mathcaligraphic, ltx_font_oldstyle, etc.) preserved per Perl. All-or-nothing conversion semantics match Perl.
 
 ### XSLT infrastructure
 
-- [ ] Covered by L3 above.
+- [x] Covered by L3 above.
 
 ### Library improvements (KWARC/rust-libxml, KWARC/rust-libxslt)
 
@@ -231,13 +231,13 @@ latexmlc $1 --dest=html/$1.html --css=ar5iv.css --css=ar5iv-fonts.css \
 
 Grammar restructuring tasks to reduce raw parse tree counts. Target: <200 raw trees for any 4-equation `\quad`-separated formula. Ordered by expected impact.
 
-- [ ] **M1. Canonical double-script rules** — Replace chained `scripted_factor_r2 = scripted_factor_r12 postsuperarg | scripted_factor_r11 postsubarg` with direct 3-arg rules `factor_base postsubarg postsuperarg => postfix_script`. Same for `scripted_bigop`: replace `scripted_bigop_r1 + second_script` chaining with `any_bigop bigopsubarg bigopsuparg => postfix_script`. Eliminates 2^N script-ordering duplication at the grammar level. **Expected impact:** 2^N → 1 for script ordering, halving tree counts for each doubly-scripted term. Must handle both token orderings (sub-first and super-first) in a single rule. **Risk:** The TeX lexer emits tokens in source order; need to verify both orderings are recognized without introducing new ambiguity. **Investigation:** Check whether Marpa's recognition of `r12 postsuperarg` vs `r11 postsubarg` actually produces duplicate trees, or whether token ordering prevents this. If tokens are always in source order, the existing rules may already be unambiguous and the 2^N comes from elsewhere.
+- [x] **M1. Canonical double-script rules** — **INVESTIGATED: NOT THE SOURCE.** Tokens come in source order (start_POSTSUBSCRIPT before start_POSTSUPERSCRIPT for `x_a^b`), so only one derivation path matches per input. The `scripted_factor_r12 postsuperarg` vs `scripted_factor_r11 postsubarg` paths are mutually exclusive by token ordering. The 2^N growth comes from other sources (bigop absorption, PUNCT competition, diffop speculation). No grammar change needed for script rules.
 
-- [ ] **M2. Restrict bigop argument absorption** — Change `bigop_application = scripted_bigop term` to `scripted_bigop tight_term` for the non-delimited case. Bigops absorb only juxtaposed factors (tight_term), not full addop chains (term). `∑ a + b = ∑(a) + b` instead of `∑(a+b)`. The current grammar allows both, with semantic pruning selecting one — but Marpa explores both paths. **Expected impact:** ~2x reduction per bigop by eliminating the over-absorption path. **Risk:** Some formulas like `∑_{i=1}^n f(x_i) Δx` need tight_term absorption to work correctly. The delimited path `scripted_bigop fenced_factor` already handles `∑(a+b)`. **Investigation:** Audit all test cases containing SUMOP/INTOP/BIGOP to verify no regressions. The Perl grammar's `addOpArgs` absorbs `Factor moreOpArgFactors` (multiplicative chains), not full expressions — this change would match Perl more closely.
+- [x] **M2. Restrict bigop argument absorption** — **INVESTIGATED: NOT FEASIBLE as described.** Changing `term` to `tight_term` breaks nested bigops: `∑∑∑ a_{ij}b_{jk}c_{ki}` becomes unparsable because each `∑` can't absorb the next `∑` (which is a `bigop_application` at `term` level, not `tight_term`). The 2x ambiguity from bigop absorption is handled correctly by semantic pruning. Keeping `term` for now. Bigops absorb only juxtaposed factors (tight_term), not full addop chains (term). `∑ a + b = ∑(a) + b` instead of `∑(a+b)`. The current grammar allows both, with semantic pruning selecting one — but Marpa explores both paths. **Expected impact:** ~2x reduction per bigop by eliminating the over-absorption path. **Risk:** Some formulas like `∑_{i=1}^n f(x_i) Δx` need tight_term absorption to work correctly. The delimited path `scripted_bigop fenced_factor` already handles `∑(a+b)`. **Investigation:** Audit all test cases containing SUMOP/INTOP/BIGOP to verify no regressions. The Perl grammar's `addOpArgs` absorbs `Factor moreOpArgFactors` (multiplicative chains), not full expressions — this change would match Perl more closely.
 
-- [ ] **M3. PUNCT-separator disambiguation** — Eliminate competition between `statements punct statement => list_apply` and `formulae = statement punct statement => formulae_apply` for the same input. Options: (a) Remove `statements punct statement` entirely, routing all PUNCT-separated content through `formulae`. The `formulae_apply` action already falls back to `list` semantics for non-relational content. (b) Create a `quad_punct` token class for `\quad`/`\qquad` (distinct from comma-PUNCT), with dedicated `quad_formulae` rule. (c) Make `list_apply` reject when both items are relational (already done) AND make `formulae_apply` reject when neither is relational (already done), but also handle the mixed case by making one reject mixed. **Expected impact:** 2x per PUNCT separator eliminated. **Risk:** Option (a) breaks `\int\quad\int` (two bare bigops). Option (b) requires lexer changes. Option (c) is safest but least impactful. **Investigation:** Count how many test formulas have mixed-relational PUNCT content.
+- [x] **M3. PUNCT-separator disambiguation** — **ALREADY RESOLVED.** Semantic filtering in `list_apply` and `formulae_apply` already eliminates competition: (1) list_apply rejects when any item is relational, (2) formulae_apply rejects when no item is relational. Mixed cases route through `formula relop formula_list` or single-handler paths. No 2x PUNCT duplication remains — remaining tree counts come from bigop absorption (M2 investigated, cannot restrict) and diffop speculation.
 
-- [ ] **M4. Diffop grammar-level filtering** — Move the "is it `d`?" check from semantic action (`diffop_apply`) to lexer/grammar. The lexer can annotate UNKNOWN:d tokens with a `_possible_diffop` hint. Grammar adds `diffop_unknown factor_base => diffop_apply` using a separate token, instead of `unknown factor_base => diffop_apply` which tries ALL unknowns. **Expected impact:** Eliminates ~50% of pruned trees for bigop formulas (the `diffop_apply: first token is not 'd'` rejections). **Risk:** The `d` token may have role=ID (from `\lxDeclare`), not just UNKNOWN. Need to handle both. **Investigation:** Check how many different roles `d` tokens have across all test cases.
+- [x] **M4. Diffop grammar-level filtering** — **IMPLEMENTED.** Lexer emits `XDIFFUNK`/`XDIFFID` tokens for "d" content (instead of `UNKNOWN`/`ID`). Grammar uses `diffunk`/`diffid` in diffop rule; these also appear in `factor_base` and `speculative_prefix_apply` as alternatives. Only "d" tokens enter the diffop path — all other UNKNOWNs skip it. **Results:** `unknown_letters_24` 5000→1, `intop_chain` 768→1, `attn_lrate` 5000→240, `attn_warmup_steps` 233→1. `esint_test` passes (d correctly parsed as diffop).
 
 - [ ] **M5. Consecutive UNKNOWN coalescing** — Add pre-parser pass that merges N consecutive single-character UNKNOWN tokens (without operators between them) into a single ATOM token. Targets the `blblblbl...` case from vsmallmatrix (24 letters → 5000 trees). In matrix contexts, consecutive letters are text, not a product of variables. **Expected impact:** Eliminates Catalan-number growth for text-in-math patterns. **Risk:** Legitimate juxtaposition like `xy` = `x*y` must not be coalesced. Heuristic: only coalesce when ALL tokens are single-character and there are ≥8 consecutive UNKNOWNs. **Investigation:** Survey how Perl handles consecutive letters in matrix cells — does it treat them as invisible-times chains?
 
@@ -342,6 +342,23 @@ Scaling: 1eq→8, 2eq→192 (24x), 3eq→1792 (9.3x), 4eq→5000+ (capped). Supe
 5. **`\@addtofilelist` guard.** `input_definitions` called `\@addtofilelist` unconditionally when `handleoptions: true`, failing before LaTeX.pool. Now guarded by `lookup_definition` check.
 
 **Result:** `--preload=ar5iv.sty` now correctly sets `INCLUDE_STYLES=true`, enabling raw TeX loading for custom `.sty` files (nips_2017, etc.). Test: 1706.03762 "Attention Is All You Need" processes with natbib, geometry, raw nips_2017.sty.
+
+### ar5iv example parity — 2502.04134
+
+- [ ] **Compare latexml-oxide vs latexmlc output for `arxiv-examples/2502.04134`** (ICLR 2025 paper).
+
+  **Session 86 fixes:**
+  1. **`\NewCommandCopy`/`\DeclareCommandCopy`** ported — resolved tcolorbox fatal error (was hitting token limit due to missing L3 kernel command)
+  2. **`\@onefilewithoptions`** ported — newer LaTeX kernel hook for package loading
+  3. **`\setcitestyle` brace-aware parsing** — old version used naive comma-split that broke `aysep={,}` (inner braces around comma). New version handles nested braces correctly.
+  
+  **Result:** 72 errors + 1 fatal → **0 errors**. Tcolorbox loads, citations work, sections properly structured.
+  
+  **Remaining diff (1231 lines):** Perl: 862 HTML lines, Rust: 815 HTML lines. Differences include: XML comments (Rust includes, Perl strips), resource links, attribute ordering, some structural differences in tcolorbox theorem boxes.
+
+### Kernel dump precompilation (E)
+
+- [ ] **E1. Precompile kernel dumps on `cargo build`** — Currently, `latex_dump.rs` and `plain_dump.rs` are no-op stubs. The `build.rs` only ensures the stubs exist; it doesn't run `--init=latex.ltx`. Real dumps are generated manually via `cargo run --release --bin latexml_oxide -- --init=latex.ltx` (saves a 137-entry zero-regression dump). Automating this as a `build.rs` step would ensure the precompiled kernel is always available, significantly reducing startup time for tcolorbox-heavy documents. The dump bypasses runtime TeX loading of latex.ltx/plain.tex, which is critical for packages like tcolorbox that push the 30M token limit during raw loading.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

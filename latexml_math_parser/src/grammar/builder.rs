@@ -10,6 +10,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(atom ~ "ATOM");
   token!(unknown ~ "UNKNOWN");
   token!(id ~ "ID");
+  // M4: Specialized tokens for "d" that could be differential operators.
+  // Lexer emits XDIFFUNK/XDIFFID instead of UNKNOWN/ID for "d" content.
+  // These are added as alternatives everywhere unknown/id appear, plus in the diffop rule.
+  token!(diffunk ~ "XDIFFUNK");
+  token!(diffid ~ "XDIFFID");
   token!(array ~ "ARRAY");
   token!(number ~ "NUMBER");
   token!(punct ~ "PUNCT");
@@ -82,7 +87,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // `2 \sin` is handled via dedicated tight_term rules below.
     // Perl MathGrammar L315: ATOM_OR_ID : ATOM | ID | ARRAY
     // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
-    factor_base = unknown | number | id | atom | array;
+    // M4: diffunk/diffid are added as factor_base alternatives so "d" tokens
+    // can appear anywhere unknown/id appear. The diffop rule only uses diffunk/diffid.
+    factor_base = unknown | number | id | atom | array | diffunk | diffid;
     // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
     // Also handle unmatched delimiters for cases-like patterns.
     fenced_array = open array close => fenced
@@ -419,6 +426,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     trig_arg = factor
       | fenced_factor
       | unknown fenced_factor => speculative_prefix_apply
+      | diffunk fenced_factor => speculative_prefix_apply
       | function fenced_factor => prefix_apply
       | opfunction fenced_factor => prefix_apply
       // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
@@ -447,7 +455,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
     // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
     // tokens get speculative function application. ID always uses invisible-times.
-    tight_term += unknown fenced_factor => speculative_prefix_apply;
+    tight_term += unknown fenced_factor => speculative_prefix_apply
+      | diffunk fenced_factor => speculative_prefix_apply;
     // FUNCTION followed by fenced args => function application (Perl: addArgs/addEasyArgs)
     // f(x) => f@(x) when f has role=FUNCTION (from DefMathRewrite or \lxDeclare).
     // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
@@ -483,8 +492,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Semantic action checks text is literally "d" and INTOP context.
     // At factor level so it can appear as right operand of invisible_times.
     // Perl: diffd matches both /UNKNOWN:d/ and /ID:d/ (lxDeclare can set role=ID on d).
-    factor += unknown factor_base => diffop_apply
-      | id factor_base => diffop_apply;
+    // M4: Only "d" tokens can be diffops. diffunk/diffid are emitted by the
+    // lexer for tokens with content "d". This prevents Marpa from exploring
+    // the diffop path for every UNKNOWN token (was ~90% of pruned trees).
+    factor += diffunk factor_base => diffop_apply
+      | diffid factor_base => diffop_apply;
 
     // Perl MathGrammar L720-723: combine SUPOP tokens (\prime\prime → prime2)
     supops = supop
@@ -627,13 +639,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
     // moreOpArgFactors chains factors with MulOp or invisible times.
     //
-    // bigop_application is a dedicated nonterminal that:
-    // - Acts as tight_term on the LEFT (2∫ works via invisible times)
-    // - Absorbs full factor chains on the RIGHT (∫ x² dx → ∫(x²*dx))
-    // - Does NOT recurse back into tight_term → bigop cycle (avoids ambiguity)
-    //
-    // Once inside bigop_application, invisible_times and mulop extend the
-    // argument chain without re-entering the bigop dispatch.
+    // bigop_application absorbs `term` (not just tight_term) because:
+    // - Nested bigops: ∑∑∑ a_{ij}b_{jk}c_{ki} needs each ∑ to absorb the next
+    // - bigop_application is lifted to term level, so inner bigops are terms
+    // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
+    // The semantic pruning already handles the ∑ a + b case correctly.
     bigop_application = any_bigop term => prefix_apply
       | scripted_bigop term => prefix_apply
       | composed_bigop term => prefix_apply;

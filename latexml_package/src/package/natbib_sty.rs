@@ -569,6 +569,112 @@ LoadDefinitions!({
   //======================================================================
   // 2.9 Selecting Citation Punctuation
 
+  // Perl: natbib.sty.ltxml L360-408 — \setcitestyle with KeyVals
+  DefKeyVal!("natbib", "authoryear", "");
+  DefKeyVal!("natbib", "numbers", "");
+  DefKeyVal!("natbib", "super", "");
+  DefKeyVal!("natbib", "round", "");
+  DefKeyVal!("natbib", "square", "");
+  DefKeyVal!("natbib", "curly", "");
+  DefKeyVal!("natbib", "angle", "");
+  DefKeyVal!("natbib", "open", "");
+  DefKeyVal!("natbib", "close", "");
+  DefKeyVal!("natbib", "semicolon", "");
+  DefKeyVal!("natbib", "comma", "");
+  DefKeyVal!("natbib", "citesep", "");
+  DefKeyVal!("natbib", "aysep", "");
+  DefKeyVal!("natbib", "yysep", "");
+  DefKeyVal!("natbib", "notesep", "");
+
+  // \setcitestyle — parse key=value pairs and set CITE_* values
+  // Perl: setCitationStyle called with getPairs from RequiredKeyVals:natbib
+  DefPrimitive!("\\setcitestyle{}", sub[(kv)] {
+    // Brace-aware comma splitting for key=value pairs like: authoryear,round,citesep={;},aysep={,}
+    let kv_str = kv.to_string();
+    let mut pairs: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut depth = 0i32;
+    for ch in kv_str.chars() {
+      if ch == '{' { depth += 1; current.push(ch); }
+      else if ch == '}' { depth -= 1; current.push(ch); }
+      else if ch == ',' && depth == 0 {
+        pairs.push(current.trim().to_string());
+        current = String::new();
+      } else {
+        current.push(ch);
+      }
+    }
+    if !current.trim().is_empty() { pairs.push(current.trim().to_string()); }
+
+    for pair in &pairs {
+      let pair = pair.trim();
+      if pair.is_empty() { continue; }
+      let (key, value) = if let Some(eq_pos) = pair.find('=') {
+        let v = pair[eq_pos+1..].trim();
+        // Strip outer braces from value: {;} → ;
+        let v = if v.starts_with('{') && v.ends_with('}') {
+          &v[1..v.len()-1]
+        } else { v };
+        (pair[..eq_pos].trim(), Some(v.to_string()))
+      } else {
+        (pair.as_ref(), None)
+      };
+      match key {
+        "authoryear" => { assign_value("CITE_STYLE", arena::pin("authoryear"), None); },
+        "numbers" => { assign_value("CITE_STYLE", arena::pin("numbers"), None); },
+        "super" => { assign_value("CITE_STYLE", arena::pin("super"), None); },
+        "round" => {
+          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_OTHER!("("))), None);
+          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_OTHER!(")"))), None);
+        },
+        "square" => {
+          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_OTHER!("["))), None);
+          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_OTHER!("]"))), None);
+        },
+        "curly" => {
+          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_BEGIN!())), None);
+          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_END!())), None);
+        },
+        "angle" => {
+          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_OTHER!("<"))), None);
+          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_OTHER!(">"))), None);
+        },
+        "open" => if let Some(v) = value {
+          assign_value("CITE_OPEN", Stored::Tokens(mouth::tokenize_internal(&v)), None);
+        },
+        "close" => if let Some(v) = value {
+          assign_value("CITE_CLOSE", Stored::Tokens(mouth::tokenize_internal(&v)), None);
+        },
+        "semicolon" => {
+          assign_value("CITE_SEPARATOR", Stored::Tokens(Tokens!(T_OTHER!(";"))), None);
+        },
+        "comma" => {
+          assign_value("CITE_SEPARATOR", Stored::Tokens(Tokens!(T_OTHER!(","))), None);
+        },
+        "citesep" => if let Some(v) = value {
+          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          assign_value("CITE_SEPARATOR", Stored::Tokens(toks), None);
+        },
+        "aysep" => if let Some(v) = value {
+          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          assign_value("CITE_AY_SEPARATOR", Stored::Tokens(toks), None);
+        },
+        "yysep" => if let Some(v) = value {
+          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          assign_value("CITE_YY_SEPARATOR", Stored::Tokens(toks), None);
+        },
+        "notesep" => if let Some(v) = value {
+          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          assign_value("CITE_NOTE_SEPARATOR", Stored::Tokens(toks), None);
+        },
+        _ => {
+          assign_value("CITE_STYLE", arena::pin("authoryear"), None);
+          Info!("unexpected", key, s!("Unexpected Citation Style keyword '{key}' using authoryear"));
+        }
+      }
+    }
+  });
+
   // \bibpunct
   DefPrimitive!("\\bibpunct[]{}{}{}{}{}{}", sub[args] {
     let mut it = args.into_iter();
@@ -906,51 +1012,8 @@ LoadDefinitions!({
 
   DefMacro!("\\natexlab{}", "#1");
 
-  // setcitestyle: KeyVal-based style setting (simplified: delegates to bibpunct-like logic)
-  DefMacro!("\\setcitestyle{}", sub[(keyvals_arg)] {
-    let kv_str = keyvals_arg.to_string();
-    // Parse simple key=value or bare-key pairs
-    for item in kv_str.split(',') {
-      let item = item.trim();
-      if item.is_empty() { continue; }
-      let (k, v) = if let Some(pos) = item.find('=') {
-        (&item[..pos], &item[pos+1..])
-      } else {
-        (item, "true")
-      };
-      match k {
-        "authoryear" => { assign_value("CITE_STYLE", arena::pin("authoryear"), None); },
-        "numbers" => { assign_value("CITE_STYLE", arena::pin("numbers"), None); },
-        "super" => { assign_value("CITE_STYLE", arena::pin("super"), None); },
-        "round" => { set_citation_style(&[("round", "1")]); },
-        "square" => { set_citation_style(&[("square", "1")]); },
-        "open" => {
-          let tks = mouth::tokenize_internal(v);
-          assign_value("CITE_OPEN", Stored::Tokens(tks), None);
-        },
-        "close" => {
-          let tks = mouth::tokenize_internal(v);
-          assign_value("CITE_CLOSE", Stored::Tokens(tks), None);
-        },
-        "semicolon" => { set_citation_style(&[("semicolon", "1")]); },
-        "comma" => { set_citation_style(&[("comma", "1")]); },
-        "aysep" => {
-          let tks = mouth::tokenize_internal(v);
-          assign_value("CITE_AY_SEPARATOR", Stored::Tokens(tks), None);
-        },
-        "yysep" => {
-          let tks = mouth::tokenize_internal(v);
-          assign_value("CITE_YY_SEPARATOR", Stored::Tokens(tks), None);
-        },
-        "notesep" => {
-          let tks = mouth::tokenize_internal(v);
-          assign_value("CITE_NOTE_SEPARATOR", Stored::Tokens(tks), None);
-        },
-        _ => {}
-      }
-    }
-    Ok(Tokens!())
-  });
+  // \setcitestyle — removed old naive implementation (no brace-aware parsing).
+  // The brace-aware version is defined earlier in the file (after DefKeyVal declarations).
 });
 
 // Helper: peel a brace-delimited argument from a token list

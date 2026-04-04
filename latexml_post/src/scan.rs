@@ -236,10 +236,10 @@ impl Scan {
       sp.push("primary", Value::Bool(true));
       sp.push("children", Value::List(Vec::new()));
       if let Some(title_node) = doc.findnode_at("ltx:title", node) {
-        sp.push("title", Value::from(title_node.get_content()));
+        sp.push("title", Value::from(title_text_content(&title_node)));
       }
       if let Some(toctitle_node) = doc.findnode_at("ltx:toctitle", node) {
-        sp.push("toctitle", Value::from(toctitle_node.get_content()));
+        sp.push("toctitle", Value::from(title_text_content(&toctitle_node)));
       }
       if let Some(stub) = node.get_attribute("stub") {
         sp.push("stub", Value::from(stub));
@@ -660,6 +660,41 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
 fn get_xml_id(node: &Node) -> Option<String> {
   node.get_attribute("xml:id")
     .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
+}
+
+/// Extract text content from a node tree, honoring `open`/`close` attributes on `ltx:tag`.
+///
+/// Perl uses cloneNode(1) + full DOM rendering, so `<tag close=" ">A</tag>GPT-4o`
+/// renders as "A GPT-4o". Our get_content() would give "AGPT-4o".
+/// This function inserts the `open`/`close` attribute values around tag elements.
+fn title_text_content(node: &Node) -> String {
+  let mut result = String::new();
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    match c.get_type() {
+      Some(NodeType::TextNode) => {
+        result.push_str(&c.get_content());
+      }
+      Some(NodeType::ElementNode) => {
+        let name = c.get_name();
+        if name == "tag" {
+          // Honor open/close attributes on <ltx:tag>
+          if let Some(open) = c.get_attribute("open") {
+            result.push_str(&open);
+          }
+          result.push_str(&title_text_content(&c));
+          if let Some(close) = c.get_attribute("close") {
+            result.push_str(&close);
+          }
+        } else {
+          result.push_str(&title_text_content(&c));
+        }
+      }
+      _ => {}
+    }
+    child = c.get_next_sibling();
+  }
+  result
 }
 
 // NOTE: Perl uses cloneNode(1) for deep DOM copies. Our libxml bindings only

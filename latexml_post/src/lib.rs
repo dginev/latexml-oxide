@@ -49,6 +49,7 @@ pub mod scan;
 pub mod split;
 pub mod svg;
 pub mod tex_math;
+pub mod unicode;
 pub mod unicode_math;
 pub mod writer;
 pub mod xmath;

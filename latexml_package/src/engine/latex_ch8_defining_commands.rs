@@ -338,6 +338,17 @@ LoadDefinitions!({
   DefPrimitive!("\\addtoversion{}{}", None);
   DefPrimitive!("\\TextSymbolUnavailable{}", None);
 
+  // LaTeX3 ltcmd: \NewCommandCopy and \DeclareCommandCopy
+  // These are semantic \let equivalents from the 2023+ LaTeX kernel.
+  // Not in Perl LaTeXML (too new), but needed for modern packages (tcolorbox, etc.).
+  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
+    state::let_i(&new_cs, &old_cs, None);
+  });
+  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
+    state::let_i(&new_cs, &old_cs, None);
+  });
+  DefMacro!("\\ShowCommand Token", "");
+
   TeX!(
     r#"""
   \DeclareSymbolFont{operators}   {OT1}{cmr} {m}{n}

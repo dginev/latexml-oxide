@@ -197,15 +197,16 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:38 PUNCT:quad:39 UNKNOWN:Z:40 RELOP:equals:41 BIGOP:T:42 \
       start_BIGOPSUB:start:43 ATOM:a:44 end_BIGOPSUB:end:45 UNKNOWN:Z:46 \
       start_POSTSUBSCRIPT:start:47 UNKNOWN:i:48 end_POSTSUBSCRIPT:end:49 ",
-     5000),  // TODO: reduce grammar ambiguity
+     5000),  // TODO: reduce grammar ambiguity (bigop absorption)
 
     // mathtools: 24 alternating UNKNOWN letters from vsmallmatrix
+    // M4: diffop filtering eliminated Catalan-number growth (5000 → 1)
     ("unknown_letters_24",
      "UNKNOWN:b:1 UNKNOWN:l:2 UNKNOWN:b:3 UNKNOWN:l:4 UNKNOWN:b:5 UNKNOWN:l:6 \
       UNKNOWN:b:7 UNKNOWN:l:8 UNKNOWN:l:9 UNKNOWN:b:10 UNKNOWN:b:11 UNKNOWN:l:12 \
       UNKNOWN:b:13 UNKNOWN:l:14 UNKNOWN:b:15 UNKNOWN:l:16 UNKNOWN:b:17 UNKNOWN:l:18 \
       UNKNOWN:b:19 UNKNOWN:l:20 UNKNOWN:b:21 UNKNOWN:l:22 UNKNOWN:b:23 UNKNOWN:l:24 ",
-     5000),  // TODO: reduce grammar ambiguity
+     1),  // M4: was 5000, now 1 (diffop filtering)
 
     // sampler: 4-equation bigop formula with comma separators
     ("bigop_comma_4eq",
@@ -250,7 +251,7 @@ fn parse_tree_count_limits() {
       UNKNOWN:y:13 ADDOP:plus:14 UNKNOWN:x:15 UNKNOWN:y:16 ADDOP:plus:17 UNKNOWN:x:18 \
       UNKNOWN:y:19 ADDOP:plus:20 UNKNOWN:x:21 UNKNOWN:y:22 ADDOP:plus:23 UNKNOWN:x:24 \
       UNKNOWN:y:25 ADDOP:plus:26 UNKNOWN:x:27 UNKNOWN:y:28 ",
-     768),
+     1),  // M4: was 768, now 1 (no UNKNOWN tokens match diffop)
 
     // 1-equation bigop (baseline)
     ("bigop_1eq",
@@ -322,13 +323,13 @@ fn parse_tree_count_limits() {
       UNKNOWN:m:41 UNKNOWN:u:42 UNKNOWN:p:43 UNKNOWN:_:44 UNKNOWN:s:45 UNKNOWN:t:46 \
       UNKNOWN:e:47 UNKNOWN:p:48 UNKNOWN:s:49 start_POSTSUPERSCRIPT:start:50 ATOM:-1.5:51 \
       end_POSTSUPERSCRIPT:end:52 CLOSE:):53 ",
-     5000),  // TODO: M5 consecutive UNKNOWN coalescing should fix this
+     240),  // M4: was 5000, now 240 (diffop filtering)
 
     // warmup_steps  (12 tokens, 233 raw — consecutive UNKNOWN)
     ("attn_warmup_steps",
      "UNKNOWN:w:1 UNKNOWN:a:2 UNKNOWN:r:3 UNKNOWN:m:4 UNKNOWN:u:5 UNKNOWN:p:6 \
       UNKNOWN:_:7 UNKNOWN:s:8 UNKNOWN:t:9 UNKNOWN:e:10 UNKNOWN:p:11 UNKNOWN:s:12 ",
-     233),
+     1),  // M4: was 233, now 1
   ];
 
   for (name, lexemes, max_allowed) in &cases {

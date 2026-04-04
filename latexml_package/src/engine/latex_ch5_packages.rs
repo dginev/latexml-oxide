@@ -150,12 +150,24 @@ LoadDefinitions!({
     //   LoadClass($class, withoptions => 1);
     //   return; });
   );
-  // DefPrimitive!("\\@onefilewithoptions {} [][] {}",
-  // sub[(name,option1,option2,ext)] {
-  //   // InputDefinitions(ToString(Expand($name)),
-  //   //    type => ToString(Expand($ext)), options => $option1);
-  //   Ok(Vec::new())
-  // });
+  // Perl: latex_constructs.pool.ltxml L900-903
+  DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[(name, option1, _option2, ext)] {
+    let name_str = Expand!(name).to_string();
+    let ext_str = Expand!(ext).to_string();
+    let opts_str = match option1 {
+      Some(o) => Expand!(o).to_string(),
+      None => String::new(),
+    };
+    let options: Vec<String> = opts_str.split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect();
+    let _ = input_definitions(&name_str, NewDefault!(InputDefinitionOptions,
+      extension => Some(Cow::Owned(ext_str)),
+      handleoptions => true,
+      options => options
+    ));
+  });
 
   DefMacro!("\\CurrentOption", None);
 
