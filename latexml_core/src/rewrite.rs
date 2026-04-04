@@ -399,16 +399,15 @@ impl Rewrite {
             // and filter to descendants of `tree`. This works around rust-libxml
             // XPath namespace issues when called on a subtree context.
             let mut matches = document.findnodes(xpath, Some(tree));
-            if matches.is_empty() {
-              // Retry without context and filter to descendants of tree.
-              // Works around rust-libxml XPath failing on subtree context.
+            if matches.is_empty() && !xpath.contains("xml:id") && !xpath.contains("@id=") {
               let all = document.findnodes(xpath, None);
               if !all.is_empty() {
+                let tree_ptr = tree.node_ptr();
                 matches = all.into_iter().filter(|n| {
-                  let mut parent = n.get_parent();
-                  while let Some(p) = parent {
-                    if p == *tree { return true; }
-                    parent = p.get_parent();
+                  let mut cur = n.get_parent();
+                  while let Some(p) = cur {
+                    if std::ptr::eq(p.node_ptr(), tree_ptr) { return true; }
+                    cur = p.get_parent();
                   }
                   false
                 }).collect();
