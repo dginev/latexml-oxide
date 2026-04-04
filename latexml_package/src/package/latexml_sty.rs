@@ -425,7 +425,7 @@ LoadDefinitions!({
           },
           _ => Vec::new(),
         };
-        decls.push(format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning));
+        decls.push(format!("{}\t{}\t{}\t{}\t{}", body_text, role, name_val, meaning, decl_id));
         // Mathcode decoding for single-char bodies
         if body_text.chars().count() == 1 {
           let ch = body_text.chars().next().unwrap();

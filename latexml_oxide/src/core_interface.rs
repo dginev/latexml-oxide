@@ -664,13 +664,13 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Parse declarations: "token_text\trole\tname\tmeaning" per line
-  let declarations: Vec<(&str, &str, &str, &str)> = decls_str
+  // Parse declarations: "token_text\trole\tname\tmeaning\tdecl_id" per line
+  let declarations: Vec<(&str, &str, &str, &str, &str)> = decls_str
     .lines()
     .filter_map(|line| {
-      let parts: Vec<&str> = line.splitn(4, '\t').collect();
-      if parts.len() == 4 {
-        Some((parts[0], parts[1], parts[2], parts[3]))
+      let parts: Vec<&str> = line.splitn(5, '\t').collect();
+      if parts.len() >= 4 {
+        Some((parts[0], parts[1], parts[2], parts[3], *parts.get(4).unwrap_or(&"")))
       } else {
         None
       }
@@ -691,7 +691,7 @@ fn apply_lx_declarations(document: &mut Document) {
     }
     let content = tok.get_content();
     let tok_name = tok.get_attribute("name").unwrap_or_default();
-    for &(pattern, role, name, meaning) in &declarations {
+    for &(pattern, role, name, meaning, decl_id) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
@@ -704,6 +704,9 @@ fn apply_lx_declarations(document: &mut Document) {
         }
         if !meaning.is_empty() {
           let _ = tok.set_attribute("meaning", meaning);
+        }
+        if !decl_id.is_empty() {
+          let _ = tok.set_attribute("decl_id", decl_id);
         }
         break; // First matching declaration wins
       }
