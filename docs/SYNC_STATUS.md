@@ -141,6 +141,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **L4. Default namespace handling in `rust-libxml`** — Creates `<ltx:ref>` instead of `<ref>` when default xmlns matches. Workaround in place.
 - [ ] **E1. Precompile kernel dumps on `cargo build`** — Design documented in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version checking and text dump embedding. Manual generation still required.
 - [ ] **S1. siunitx unit tree builder** — `six_convert_units_from_tokens` handles simple unit chains. Missing: non-unit content passthrough (`\pi`, `\frac{}`), literal notation (`m^2.s`), complex number formatting (`I_dual`). Currently ~6900 normalized diffs vs Perl.
+- [ ] **X1. arxiv-examples batch comparison** — Run `arxiv-examples/compare.sh` on all 47 papers, catalog results (success/failure/diffs), identify top conversion blockers. Use parallel subagents for throughput.
 
 ### ar5iv conversion sandbox (47 papers)
 
