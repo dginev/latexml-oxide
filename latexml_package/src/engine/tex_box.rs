@@ -1192,7 +1192,7 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
     Some(Stored::Tokens(tokens)) => gullet::unread(tokens),
     Some(Stored::Token(token)) => gullet::unread_one(token),
     None | Some(Stored::None) => {},
-    Some(other) => panic!("afterAssignment should be a token, got: {}", other),
+    Some(other) => log::warn!("afterAssignment should be a token, got: {}", other),
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {

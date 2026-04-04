@@ -28,7 +28,7 @@ fn before_equation() -> Result<()> {
       has_preset = numbering.contains_key("preset");
       match numbering.get("counter") {
         Some(Stored::String(v)) => arena::to_string(*v),
-        Some(other) => panic!("eq counter should be stored as string, was instead: {other:?}"),
+        Some(other) => { log::warn!("eq counter should be stored as string, was instead: {other:?}"); String::from("equation") },
         _ => String::from("equation"),
       }
     } else {
