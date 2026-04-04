@@ -6,7 +6,7 @@ Updated 2026-04-04. Only lists open gaps & TODOs; completed items live in git hi
 
 **Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: 221/298 zero-diff (74.2%), ~31K diff lines across 77 non-zero tests (xml:id renumbering + math parser structural diffs + SVG differences).
 
-**arxiv sandbox:** 36/47 papers produce meaningful HTML output. 6 fail (cascading errors from missing packages), 5 timeout (>60s, mostly tikz-heavy).
+**arxiv sandbox:** 37/47 papers produce meaningful HTML output (~10.4MB total). 5 fail (cascading errors), 5 timeout (>60s, mostly tikz-heavy).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -138,7 +138,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Open TODO items — Package Bindings
 
-- [ ] **B1. Port IEEEtran.cls binding** — 458-line Perl binding. Used by IEEE conference papers (arxiv 2511.11713). Defines class options, `\IEEEauthorblockN/A`, `{IEEEkeywords}`, section numbering (Roman), `{IEEEproof}`, `\IEEEurl`, `\IEEEPARstart`. LoadClass('article') as parent.
+- [x] **B1. Port IEEEtran.cls binding** — 166-line Rust binding. Working for arxiv 2511.11713 (94KB output).
 - [ ] **B2. Port JHEP.cls binding** — 314-line Perl binding. Used by JHEP physics journal (arxiv 2511.03798). Defines `\JHEP@preprint`, `\procemark`, author/affiliation, section formatting, bibliography style.
 - [ ] **B3. Port pstricks.sty binding** — 44-line Perl binding (mostly stubs). Used by 2 arxiv papers. Defines `\psset`, `\pscircle`, `\psline`, `\rput` as no-ops since PSTricks requires DVI backend.
 
@@ -146,7 +146,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 - [ ] **E1. Precompile kernel dumps on `cargo build`** — Design in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version check. Manual generation still required.
 - [ ] **E2. `\newpage` in SVG/tikz context** — `\lx@newpage` is defined but `<pagination>` elements are missing from 10 tikz test outputs. The `^` prefix float-up may not work inside tikzpicture's SVG mode. Affects 10 tests (~22 diff lines).
-- [ ] **E3. FindFile_fallback for versioned packages** — Perl Package.pm L2141-2210 strips version/arxiv suffixes from missing package names to find existing bindings (e.g. `natbib-arxiv_v2.sty` → `natbib.sty`). Strips: `_arx`, `_arxiv`, `_conference`, `_v1.2`, `_old`, `_final`, `_custom`, etc. Also strips prefixes (`rw_`, `my_`, `preprint_`). Critical for arXiv papers that bundle modified copies of standard packages.
+- [x] **E3. FindFile_fallback for versioned packages** — Ported. 2306.00809: 39B→141KB, 2402.03300: 53KB→322KB.
 - [ ] **E4. Reduce TooManyErrors aborts** — 6 arxiv papers abort due to cascading errors from missing packages. Need: (a) increase MAX_ERRORS default for real-world papers, (b) better error recovery so `\end{document}` still produces partial output after Fatal, (c) match Perl's error tolerance.
 - [ ] **E5. Fix `\@@eqnarray` recursion** — Paper 2511.03798 hits infinite recursion: `\@@eqnarray` → `$` → `\lx@begin@inline@math` → `\@@eqnarray` cycle. Root cause: eqnarray triggered inside inline math mode by jheppub.sty.
 

@@ -423,9 +423,15 @@ impl DigestionAPI for Core {
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
     while gullet::has_more_input() {
-      let next_bodies: Vec<Digested> = stomach::digest_next_body(None)?;
-      // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
-      boxes.extend(next_bodies);
+      // Perl finishDigestion L219-220: loop consuming input even after errors.
+      // Catch Fatal errors (TooManyErrors, etc.) so we can still produce partial output.
+      match stomach::digest_next_body(None) {
+        Ok(next_bodies) => boxes.extend(next_bodies),
+        Err(e) => {
+          log::warn!("digest_internal: error during recovery digestion: {:?}", e);
+          break;
+        }
+      }
     }
     gullet::flush();
     Ok(Digested::from(List::new(boxes)))
