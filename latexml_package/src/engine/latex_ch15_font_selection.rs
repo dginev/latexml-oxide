@@ -38,6 +38,9 @@ LoadDefinitions!({
   DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}");
 
   // For fonts not allowed in math!!!
+  // Perl L5226: \not@math@alphabet@@ checks if we're in math mode
+  // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
+  DefPrimitive!("\\not@math@alphabet{}{}", "");
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
     if lookup_bool("IN_MATH") {
       let c = c.to_string();
