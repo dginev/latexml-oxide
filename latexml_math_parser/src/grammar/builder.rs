@@ -503,21 +503,22 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | bigop | sumop | intop | limitop | diffop | vertbar | supops
       | modifierop | operator;
     // Script content: expressions, statements (period/comma-separated), or bare operators
-    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap
-      | start_postsubscript statements end_postsubscript => faux_wrap
+    // Script content: `statements` is the primary catch-all (derives everything
+    // expression/formula derive). `formula_list` is kept separately because
+    // it uses formula_list_apply (different semantics from list_apply in statements).
+    // IMPORTANT: Do NOT add `expression` — it's a strict subset of `statements`,
+    // and having both creates 2^N ambiguity (2x per script argument).
+    postsubarg = start_postsubscript statements end_postsubscript => faux_wrap
       | start_postsubscript formula_list end_postsubscript => faux_wrap
       | start_postsubscript script_op end_postsubscript => faux_wrap;
-    postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap
-      | start_postsuperscript statements end_postsuperscript => faux_wrap
+    postsuperarg = start_postsuperscript statements end_postsuperscript => faux_wrap
       | start_postsuperscript formula_list end_postsuperscript => faux_wrap
       | start_postsuperscript script_op end_postsuperscript => faux_wrap;
     // Bigop-specific script args — separated tokens to reduce earley chart competition
-    bigopsubarg = start_bigopsub expression end_bigopsub => faux_wrap
-      | start_bigopsub statements end_bigopsub => faux_wrap
+    bigopsubarg = start_bigopsub statements end_bigopsub => faux_wrap
       | start_bigopsub formula_list end_bigopsub => faux_wrap
       | start_bigopsub script_op end_bigopsub => faux_wrap;
-    bigopsuparg = start_bigopsup expression end_bigopsup => faux_wrap
-      | start_bigopsup statements end_bigopsup => faux_wrap
+    bigopsuparg = start_bigopsup statements end_bigopsup => faux_wrap
       | start_bigopsup formula_list end_bigopsup => faux_wrap
       | start_bigopsup script_op end_bigopsup => faux_wrap;
     floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap

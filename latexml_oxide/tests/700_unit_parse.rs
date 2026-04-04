@@ -183,8 +183,11 @@ fn parse_tree_count_limits() {
   let mut parser = MathParser::default();
 
   // (name, lexemes, max_allowed_raw_trees)
+  // Raw tree counts annotated with first-principles analysis of correct parse count.
   let cases: Vec<(&str, &str, usize)> = vec![
     // mathtools: 4-equation bigop formula with \quad separators
+    // Correct parse: 1 (each equation unambiguous, \quad separates formulae)
+    // Remaining 15 raw: PUNCT list_apply vs formulae_apply (3 separators × ~2x)
     ("bigop_quad_4eq",
      "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 ATOM:a:5 end_BIGOPSUB:end:6 \
       start_BIGOPSUP:start:7 ID:infinity:8 end_BIGOPSUP:end:9 UNKNOWN:V:10 \
@@ -197,7 +200,7 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:38 PUNCT:quad:39 UNKNOWN:Z:40 RELOP:equals:41 BIGOP:T:42 \
       start_BIGOPSUB:start:43 ATOM:a:44 end_BIGOPSUB:end:45 UNKNOWN:Z:46 \
       start_POSTSUBSCRIPT:start:47 UNKNOWN:i:48 end_POSTSUBSCRIPT:end:49 ",
-     5000),  // Still capped at 5000 — bigop absorption ambiguity remains
+     15),
 
     // mathtools: 24 alternating UNKNOWN letters from vsmallmatrix
     // M4: diffop filtering eliminated Catalan-number growth (5000 → 1)
@@ -209,6 +212,7 @@ fn parse_tree_count_limits() {
      1),  // M4: was 5000, now 1 (diffop filtering)
 
     // sampler: 4-equation bigop formula with comma separators
+    // Correct parse: 1. Remaining: PUNCT list/formulae competition (3 commas)
     ("bigop_comma_4eq",
      "UNKNOWN:X:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 ATOM:a:5 \
       end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 \
@@ -220,9 +224,10 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:32 PUNCT:,:33 UNKNOWN:X:34 RELOP:equals:35 SUMOP:sum:36 \
       start_BIGOPSUB:start:37 ATOM:a:38 end_BIGOPSUB:end:39 UNKNOWN:X:40 \
       start_POSTSUBSCRIPT:start:41 UNKNOWN:i:42 end_POSTSUBSCRIPT:end:43 ",
-     3840),
+     15),
 
-    // mathtools: pre-scripted formula (was 5000 before formulae split, now ~5000 raw)
+    // mathtools: pre-scripted formula with 5 items and \quad separators
+    // Correct parse: ~3 (pre-script attachment ambiguity). Remaining: PUNCT + float interaction
     ("prescripted_quad",
      "start_FLOATSUPERSCRIPT:start:1 NUMBER:4:2 end_FLOATSUPERSCRIPT:end:3 \
       start_POSTSUBSCRIPT:start:4 NUMBER:12:5 end_POSTSUBSCRIPT:end:6 UNKNOWN:C:7 \
@@ -242,7 +247,7 @@ fn parse_tree_count_limits() {
       start_FLOATSUBSCRIPT:start:54 NUMBER:2:55 end_FLOATSUBSCRIPT:end:56 UNKNOWN:C:57 \
       start_POSTSUPERSCRIPT:start:58 ATOM:5p:59 end_POSTSUPERSCRIPT:end:60 \
       start_POSTSUBSCRIPT:start:61 NUMBER:2:62 end_POSTSUBSCRIPT:end:63 ",
-     5000),  // TODO: reduce grammar ambiguity
+     81),
 
     // mathtools: xy+xy+∫xy dx+xy+... (28 tokens)
     ("intop_chain",
@@ -254,13 +259,15 @@ fn parse_tree_count_limits() {
      1),  // M4: was 768, now 1 (no UNKNOWN tokens match diffop)
 
     // 1-equation bigop (baseline)
+    // Correct parse: 1 (V = Σ_a^b V_i). Now exactly 1 raw tree.
     ("bigop_1eq",
      "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:a:5 \
       end_BIGOPSUB:end:6 start_BIGOPSUP:start:7 UNKNOWN:b:8 end_BIGOPSUP:end:9 \
       UNKNOWN:V:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
-     16),
+     1),
 
     // 2-equation bigop with \quad
+    // Correct parse: 1. Remaining 3: PUNCT list/formulae (1 separator × 3 paths)
     ("bigop_quad_2eq",
      "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:a:5 \
       end_BIGOPSUB:end:6 start_BIGOPSUP:start:7 UNKNOWN:b:8 end_BIGOPSUP:end:9 \
@@ -269,9 +276,10 @@ fn parse_tree_count_limits() {
       UNKNOWN:a:19 end_BIGOPSUB:end:20 start_BIGOPSUP:start:21 UNKNOWN:b:22 \
       end_BIGOPSUP:end:23 UNKNOWN:X:24 start_POSTSUBSCRIPT:start:25 UNKNOWN:i:26 \
       end_POSTSUBSCRIPT:end:27 ",
-     192),
+     3),
 
     // 3-equation bigop with \quad
+    // Correct parse: 1. Remaining 7: PUNCT competition (2 separators × ~3 paths)
     ("bigop_quad_3eq",
      "UNKNOWN:V:1 RELOP:equals:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:a:5 \
       end_BIGOPSUB:end:6 start_BIGOPSUP:start:7 UNKNOWN:b:8 end_BIGOPSUP:end:9 \
@@ -282,11 +290,12 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:27 PUNCT:quad:28 UNKNOWN:Y:29 RELOP:equals:30 SUMOP:sum:31 \
       start_BIGOPSUB:start:32 UNKNOWN:a:33 end_BIGOPSUB:end:34 UNKNOWN:Y:35 \
       start_POSTSUBSCRIPT:start:36 UNKNOWN:i:37 end_POSTSUBSCRIPT:end:38 ",
-     1792),
+     7),
 
     // --- 1706.03762 "Attention Is All You Need" formulas ---
 
-    // MultiHead(Q,K,V) = Concat(head_1,...,head_h) W^O  (27 tokens, 115 raw)
+    // MultiHead(Q,K,V) = Concat(head_1,...,head_h) W^O
+    // Correct parse: 1. Remaining 16: speculative function app on MultiHead/Concat × comma competition
     ("attn_multihead",
      "UNKNOWN:MultiHead:1 OPEN:(:2 UNKNOWN:Q:3 PUNCT:,:4 UNKNOWN:K:5 PUNCT:,:6 \
       UNKNOWN:V:7 CLOSE:):8 RELOP:equals:9 UNKNOWN:Concat:10 OPEN:(:11 UNKNOWN:head:12 \
@@ -294,9 +303,10 @@ fn parse_tree_count_limits() {
       ID:ldots:17 PUNCT:,:18 UNKNOWN:head:19 start_POSTSUBSCRIPT:start:20 UNKNOWN:h:21 \
       end_POSTSUBSCRIPT:end:22 CLOSE:):23 UNKNOWN:W:24 start_POSTSUPERSCRIPT:start:25 \
       UNKNOWN:O:26 end_POSTSUPERSCRIPT:end:27 ",
-     128),
+     16),
 
-    // where head_i = Attention(QW^Q_i, KW^K_i, VW^V_i)  (35 tokens, 385 raw)
+    // where head_i = Attention(QW^Q_i, KW^K_i, VW^V_i)
+    // Correct parse: 1. Remaining 4: speculative function app × comma list paths
     ("attn_where_head",
      "ATOM:where:1 UNKNOWN:head:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:i:4 \
       end_POSTSUBSCRIPT:end:5 RELOP:equals:6 UNKNOWN:Attention:7 OPEN:(:8 UNKNOWN:Q:9 \
@@ -307,10 +317,10 @@ fn parse_tree_count_limits() {
       end_POSTSUBSCRIPT:end:25 PUNCT:,:26 UNKNOWN:V:27 UNKNOWN:W:28 \
       start_POSTSUPERSCRIPT:start:29 UNKNOWN:V:30 end_POSTSUPERSCRIPT:end:31 \
       start_POSTSUBSCRIPT:start:32 UNKNOWN:i:33 end_POSTSUBSCRIPT:end:34 CLOSE:):35 ",
-     512),
+     4),
 
     // lrate = d_model^{-0.5} · min(step_num^{-0.5}, step_num · warmup_steps^{-1.5})
-    // (53 tokens, 5000 raw — dominated by consecutive UNKNOWN coalescence)
+    // Correct parse: 1. Remaining 15: comma list paths + speculative function app
     ("attn_lrate",
      "UNKNOWN:l:1 UNKNOWN:r:2 UNKNOWN:a:3 UNKNOWN:t:4 UNKNOWN:e:5 RELOP:equals:6 \
       UNKNOWN:d:7 start_POSTSUBSCRIPT:start:8 ATOM:model:9 end_POSTSUBSCRIPT:end:10 \
@@ -323,7 +333,7 @@ fn parse_tree_count_limits() {
       UNKNOWN:m:41 UNKNOWN:u:42 UNKNOWN:p:43 UNKNOWN:_:44 UNKNOWN:s:45 UNKNOWN:t:46 \
       UNKNOWN:e:47 UNKNOWN:p:48 UNKNOWN:s:49 start_POSTSUPERSCRIPT:start:50 ATOM:-1.5:51 \
       end_POSTSUPERSCRIPT:end:52 CLOSE:):53 ",
-     240),  // M4: was 5000, now 240 (diffop filtering)
+     15),
 
     // warmup_steps  (12 tokens, 233 raw — consecutive UNKNOWN)
     ("attn_warmup_steps",
@@ -332,11 +342,47 @@ fn parse_tree_count_limits() {
      1),  // M4: was 233, now 1
     // diffd parsing: integral + function + diffd
     // Should have diffd@(x) not diffd * x
+    // ∫_a^b f(x) dx — correct parses: 2 (f@(x)*d@(x) vs f@(x*d@(x)))
     ("integral_diffd",
      "INTOP:integral:1 start_BIGOPSUB:start:2 ID:a:3 end_BIGOPSUB:end:4 \
       start_BIGOPSUP:start:5 ID:b:6 end_BIGOPSUP:end:7 FUNCTION:f:8 \
       OPEN:(:9 UNKNOWN:x:10 CLOSE:):11 OPFUNCTION:d:12 UNKNOWN:x:13 ",
-     100),  // should be low (2 unique, ~94 raw)
+     14),
+
+    // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
+    // All produce ≤10 unique parses (M10 target achieved).
+
+    // Vertbar inherent ambiguity: a|a|+b|b|+c|c|  (10 unique, 54 raw)
+    ("vertbar_abs_sum",
+     "UNKNOWN:a:1 VERTBAR:|:2 UNKNOWN:a:3 VERTBAR:|:4 ADDOP:plus:5 UNKNOWN:b:6 \
+      VERTBAR:|:7 UNKNOWN:b:8 VERTBAR:|:9 ADDOP:plus:10 UNKNOWN:c:11 VERTBAR:|:12 \
+      UNKNOWN:c:13 VERTBAR:|:14 ",
+     54),
+
+    // Opfunction chaining: F G H a  (9 unique, 54 raw)
+    ("opfunc_chain_3",
+     "OPFUNCTION:F:1 OPFUNCTION:G:2 OPFUNCTION:H:3 ID:a:4 ",
+     54),
+
+    // Double vertbar norms: ||x|| a ||y||  (9 unique, 13 raw)
+    ("double_vertbar_norms",
+     "VERTBAR:|:1 VERTBAR:|:2 UNKNOWN:x:3 VERTBAR:|:4 VERTBAR:|:5 ID:a:6 \
+      VERTBAR:|:7 VERTBAR:|:8 UNKNOWN:y:9 VERTBAR:|:10 VERTBAR:|:11 ",
+     13),
+
+    // Multiple opfunctions with \qquad  (8 unique, 5000 raw — opfunction absorption combinatorics)
+    ("opfunc_multi_qquad",
+     "OPFUNCTION:tr:1 UNKNOWN:rho:2 PUNCT:qquad:3 UNKNOWN:tr(XY):4 PUNCT:qquad:5 \
+      OPFUNCTION:Tr:6 UNKNOWN:rho:7 PUNCT:qquad:8 OPFUNCTION:rank:9 UNKNOWN:M:10 \
+      PUNCT:qquad:11 UNKNOWN:erf(x):12 PUNCT:qquad:13 OPFUNCTION:Res:14 OPEN:[:15 \
+      UNKNOWN:f:16 OPEN:(:17 UNKNOWN:z:18 CLOSE:):19 CLOSE:]:20 ",
+     5000),
+
+    // Trig chain: sin πx cos 2πy  (6 unique, 12 raw)
+    ("trig_chain",
+     "TRIGFUNCTION:sine:1 UNKNOWN:pi:2 MULOP:times:3 UNKNOWN:x:4 \
+      TRIGFUNCTION:cosine:5 NUMBER:2:6 UNKNOWN:pi:7 MULOP:times:8 UNKNOWN:y:9 ",
+     12),
   ];
 
   for (name, lexemes, max_allowed) in &cases {
@@ -352,3 +398,4 @@ fn parse_tree_count_limits() {
     );
   }
 }
+
