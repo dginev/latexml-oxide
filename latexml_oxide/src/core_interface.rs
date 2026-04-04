@@ -108,14 +108,32 @@ impl DigestionAPI for Core {
     let dump_path = std::env::var("LATEXML_DUMP").ok();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
-      // Perl: initializeState extracts extension, sets handleoptions for .sty/.cls
-      // This matches Package.pm L2551-2571 — preloads with .sty/.cls get option handling
-      let (name, ext) = if let Some(pos) = preload.rfind('.') {
-        (preload[..pos].to_string(), preload[pos + 1..].to_string())
+      // Perl: initializeState extracts extension and options from "name.ext[opt1,opt2]"
+      // Parse bracket options: "latexml.sty[nobibtex]" → name="latexml", ext="sty", options=["nobibtex"]
+      let (preload_base, options) = if let Some(bracket_pos) = preload.find('[') {
+        let base = preload[..bracket_pos].to_string();
+        let opts_str = preload[bracket_pos + 1..].trim_end_matches(']');
+        let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        (base, opts)
       } else {
-        (preload.clone(), String::from("sty"))
+        (preload.clone(), vec![])
+      };
+      let (name, ext) = if let Some(pos) = preload_base.rfind('.') {
+        (preload_base[..pos].to_string(), preload_base[pos + 1..].to_string())
+      } else {
+        (preload_base.clone(), String::from("sty"))
       };
       let handleoptions = ext == "sty" || ext == "cls";
+      // Pass package options via state (Perl: \PassOptionsToPackage equivalent)
+      if !options.is_empty() {
+        let opt_key = format!("opt@{name}.{ext}");
+        let opt_str = options.join(",");
+        state::assign_value(
+          &opt_key,
+          latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(&opt_str)),
+          Some(Scope::Global),
+        );
+      }
       input_definitions(&name, InputDefinitionOptions {
         extension: Some(ext.into()),
         handleoptions,
