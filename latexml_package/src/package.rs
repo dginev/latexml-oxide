@@ -248,6 +248,7 @@ pub mod marvosym_sty;
 pub mod mathabx_sty;
 pub mod mathbbol_sty;
 pub mod mathdots_sty;
+pub mod mn2e_support_sty;
 pub mod mathpazo_sty;
 pub mod mathpple_sty;
 pub mod mathptm_sty;
