@@ -33,7 +33,6 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | base_parameter_types.rs | GAPS | `DirectoryList`, `CommaList`, `DigestUntil` unported; `Variable` reversion `todo!()` |
-| base_utilities.rs | MINOR | `isDefinable()`, `SplitTokens()`, `JoinTokens()` ported. Missing: `aligningEnvironment()`, `setAlignOrClass()`. `addClass()` already as `Document::add_class()` |
 | base_xmath.rs | MINOR | Matrix/cases fully ported. DefMathLigature ported in plain.rs. Missing: `MathWhatsit()` |
 
 ### Phase 1: TeX Primitives (High-Gap)
@@ -42,22 +41,19 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 |------|--------|-----------|
 | tex_math.rs | MINOR | `\nonscript`, `\lx@dollar@default` ported. DefMathLigature in plain.rs. Missing: `adjustMathstyle` recursive helper |
 | tex_box.rs | MINOR | `\leaders/cleaders/xleaders`, `\vrule/\hrule`, `\hbox/vbox/vtop`, SVG functions all ported. Minor: some box dimension edge cases |
-| tex_fonts.rs | GAPS | Missing: `\fontname` scaled format, per-font `\hyphenchar`, `getFontDimen()`, 7 ligature defs |
+| tex_fonts.rs | MINOR | `\fontname`, `\hyphenchar` ported. Ligatures in plain.rs. Missing: `\fontdimen` full array semantics, `getFontDimen()` helper |
 | tex_tables.rs | MINOR | `\halign BoxSpecification` fully implemented. Minor: padding CSS classes |
 
 ### Phase 2+3: Remaining Primitives + Plain Format
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| plain.rs | OK | `\alloc@` 5-arg, `\@@oalign/@@ooalign`, `\narrower`, `\itemitem`, `\dospecials` all ported |
 
 ### Phase 4: LaTeX Chapters (GAPS only)
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | latex_ch4_sectioning_and_toc.rs | MINOR | `\format@title@*`, `\@@compose@title`, `\lx@tag` in base_utilities.rs. Missing: `\@@section` (unused legacy), `LABEL_MAPPING_HOOK` |
-| latex_ch8_defining_commands.rs | OK | `\DeclareMathAccent` fully implemented; `\DeclareFontShape/Family` as proper stubs |
-| latex_ch9_marginal_notes.rs | OK | `\marginpar`, tabbing environment fully ported |
 | latex_ch14_pictures_and_color.rs | GAPS | 30% — picture environment not implemented |
 
 ---
@@ -239,9 +235,9 @@ Grammar restructuring tasks to reduce raw parse tree counts. Target: <200 raw tr
 
 - [x] **M4. Diffop grammar-level filtering** — **IMPLEMENTED.** Lexer emits `XDIFFUNK`/`XDIFFID` tokens for "d" content (instead of `UNKNOWN`/`ID`). Grammar uses `diffunk`/`diffid` in diffop rule; these also appear in `factor_base` and `speculative_prefix_apply` as alternatives. Only "d" tokens enter the diffop path — all other UNKNOWNs skip it. **Results:** `unknown_letters_24` 5000→1, `intop_chain` 768→1, `attn_lrate` 5000→240, `attn_warmup_steps` 233→1. `esint_test` passes (d correctly parsed as diffop).
 
-- [ ] **M5. Consecutive UNKNOWN coalescing** — Add pre-parser pass that merges N consecutive single-character UNKNOWN tokens (without operators between them) into a single ATOM token. Targets the `blblblbl...` case from vsmallmatrix (24 letters → 5000 trees). In matrix contexts, consecutive letters are text, not a product of variables. **Expected impact:** Eliminates Catalan-number growth for text-in-math patterns. **Risk:** Legitimate juxtaposition like `xy` = `x*y` must not be coalesced. Heuristic: only coalesce when ALL tokens are single-character and there are ≥8 consecutive UNKNOWNs. **Investigation:** Survey how Perl handles consecutive letters in matrix cells — does it treat them as invisible-times chains?
+- [x] **M5. Consecutive UNKNOWN coalescing** — **RESOLVED by M4.** The diffop filtering eliminated the Catalan-number growth: `unknown_letters_24` went from 5000 raw trees to 1. The remaining invisible-times chain has only one derivation path (left-recursive). No pre-parser coalescing needed.
 
-- [ ] **M6. Script order canonicalization pragma** — Add `ValidationPragmatics::CanonicalScriptOrder` that normalizes all `XMApp[SUBSCRIPTOP/SUPERSCRIPTOP]` nesting to a canonical order (always subscript inside superscript). Applied during `get_tree` evaluation, making all 2^N script-ordering derivations compare equal immediately. Unlike M1 (grammar-level fix), this is a semantic-level fix that doesn't change the grammar. **Expected impact:** Same as M1 but without grammar changes. Works as a fallback if M1 proves too complex. **Risk:** Must preserve the distinction between `x_a^b` and `x^{a_b}` (nested script vs double script).
+- [x] **M6. Script order canonicalization pragma** — **NOT NEEDED.** M1 investigation proved script ordering is not the source of ambiguity (tokens come in source order, only one derivation path per input). No canonicalization needed.
 
 - [ ] **M7. `function_call` nonterminal consolidation** — Currently function application is spread across `applied_func`, `tight_term +=`, and `tight_opterm`. For example, `function lparen formula rparen => apply_delimited` appears in both `tight_term` and `applied_func`. Consolidate into a single `function_call` nonterminal. **Expected impact:** Reduces chart size for function-heavy formulas. **Risk:** Changes to function application rules have historically caused subtle regressions. **Investigation:** Catalog all places where function application rules appear and identify true duplicates.
 
