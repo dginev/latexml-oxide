@@ -351,9 +351,10 @@ impl DigestionAPI for Core {
           for rule in rules {
             if let Stored::Rewrite(mut rewrite_rule) = rule {
               rewrite_rule.compile_clauses(&mut document);
-              rewrites.push(rewrite_rule); // clone the Rc
+              rewrites.push(rewrite_rule);
             }
           }
+          // 31 rules compiled for declare test; XPath matching issue prevents application
           // Step 2: invoke the rewrite rules
           for mut rewrite_rule in rewrites {
             rewrite_rule.invoke(&mut document, &root)?;

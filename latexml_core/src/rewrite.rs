@@ -331,8 +331,6 @@ impl Rewrite {
   }
 
   pub fn invoke(&mut self, document: &mut Document, root: &Node) -> Result<()> {
-    // Debug(('=' x 40)) if $LaTeXML::DEBUG{rewrite};
-    // What goes into self.clauses ???
     let clauses = self.clauses.iter().collect();
     self.apply_clause(document, root, 0, clauses)?;
     Ok(())
