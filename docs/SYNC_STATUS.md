@@ -4,7 +4,7 @@
 
 Updated 2026-04-04. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: 221/298 zero-diff (74.2%), ~31K diff lines across 77 non-zero tests (xml:id renumbering + math parser structural diffs + SVG differences).
+**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: 246/314 effective zero-diff (78%), ~18K meaningful diff lines across 68 non-zero tests. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K).
 
 **arxiv sandbox:** 37/47 papers produce meaningful HTML output (~10.4MB total). 5 fail (cascading errors), 5 timeout (>60s, mostly tikz-heavy).
 
@@ -162,6 +162,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **B4. Expand 9 PARTIAL bindings** — revtex4_support, aas_support, braket (pipe-splitting), algorithm2e, subfig, inst_support, html, titling, authblk (+423 lines total).
 - [x] **B5. Expand 7 more bindings** — jheppub (full port), iopart_support (journal abbrevs, bibliography), JHEP.cls (journal refs, arXiv links), elsart_support (theorems, isotopes), elsart_support_core (keyword env), mn2e_support (bold Greek, math relations), texvc (Greek, aliases). +630 lines total.
 - [x] **B6. Expand IEEEtran, OmniBus, aa_support, cfrac** — IEEEtran (options, biography, eqnarray), OmniBus (requires, altaffilmark, references, metadata), aa_support (14 requires, abstract, theorems), amsmath cfrac mathstyle.
+- [x] **B7. Expand sv_support, subfloat, psfrag, llncs, geometry** — sv_support (15 theorem envs), subfloat (container envs), psfrag (rescan macros), llncs (15 theorems), geometry (requires fix).
 
 ### Open TODO items — Engine Parity
 
