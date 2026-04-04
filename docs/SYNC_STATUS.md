@@ -159,7 +159,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 ### Open TODO items — Math Parser & Post-Processing
 
 - [x] **S1. siunitx mixed-content unit passthrough** — Fixed: `six_resolve_unit_objects()` resolves `\lx@six@unitobject` tokens to presentation text within the active unit context, before falling to `six_parse_literalunits`. `\pi . \mm . \mrad` now produces `pi * mm * mrad`. 6th attempt succeeded after 5 failed approaches.
-- [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has ~400 diffs. Key issues: subscript content not math-parsed inside `\hat{x}` patterns, `decl_id` not propagated to all matching tokens, wildcard pattern `\WildCard` matching incomplete. Requires deep rewrite system structural work.
+- [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has ~400 diffs. decl_id now propagated (0→49 of 84 Perl). Remaining: subscript content not matched (35 missing decl_id), structural XMDual/XMApp wrapping differences.
 
 ### Open TODO items — Library & Infrastructure
 
