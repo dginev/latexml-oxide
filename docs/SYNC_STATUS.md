@@ -341,16 +341,16 @@ Scaling: 1eq→8, 2eq→192 (24x), 3eq→1792 (9.3x), 4eq→5000+ (capped). Supe
 
 ### ar5iv example parity — 2502.04134
 
-- [ ] **Compare latexml-oxide vs latexmlc output for `arxiv-examples/2502.04134`** (ICLR 2025 paper).
+- [x] **Compare latexml-oxide vs latexmlc output for `arxiv-examples/2502.04134`** (ICLR 2025 paper).
 
-  **Session 86 fixes:**
-  1. **`\NewCommandCopy`/`\DeclareCommandCopy`** ported — resolved tcolorbox fatal error (was hitting token limit due to missing L3 kernel command)
-  2. **`\@onefilewithoptions`** ported — newer LaTeX kernel hook for package loading
-  3. **`\setcitestyle` brace-aware parsing** — old version used naive comma-split that broke `aysep={,}` (inner braces around comma). New version handles nested braces correctly.
-  
-  **Result:** 72 errors + 1 fatal → **0 errors**. Tcolorbox loads, citations work, sections properly structured.
-  
-  **Remaining diff (1231 lines):** Perl: 862 HTML lines, Rust: 815 HTML lines. Differences include: XML comments (Rust includes, Perl strips), resource links, attribute ordering, some structural differences in tcolorbox theorem boxes.
+  **Session 86 fixes:** `\NewCommandCopy`/`\DeclareCommandCopy`, `\@onefilewithoptions`, `\setcitestyle` brace-aware parsing. 72 errors → 0.
+
+  **Session 87 comparison (with --nobibtex):**
+  - **Structural parity:** same sections (5), math formulas (27), tables (10)
+  - **Bibliography:** 81 entries (Perl: 86) — 5 entries differ due to BBL parsing differences
+  - **Performance:** Rust 12s vs Perl 50s (4x faster)
+  - **Remaining HTML diffs:** ~1395 lines, mostly formatting/whitespace/attribute ordering
+  - **Added `--nobibtex` CLI option** to use pre-existing BBL files
 
 ### Kernel dump precompilation (E)
 
