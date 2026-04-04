@@ -963,11 +963,17 @@ pub fn require_resource(mut resource: Resource) {
 }
 
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
+  // Try loading the class: first look for a .cls.ltxml binding, then fall back
+  // to raw .cls file. Class files are essential for document structure, so we
+  // ALWAYS allow raw TeX fallback (notex: false) — unlike style files.
+  // This handles custom class files (deepseek.cls, nips_2017.cls, etc.)
+  // that don't have LaTeXML bindings. The raw .cls file may contain
+  // \LoadClass{article} which recursively loads the parent class.
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
     after: after.clone(),
-    notex: true,
+    notex: false,  // allow raw TeX fallback for class files
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
