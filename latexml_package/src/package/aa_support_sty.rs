@@ -25,20 +25,71 @@ LoadDefinitions!({
   DeclareOption!("letter", {});
   ProcessOptions!();
 
-  // Dependencies — Perl L47-61
+  // Dependencies — Perl L47-63
   RequirePackage!("inst_support");
+  RequirePackage!("calc");
+  RequirePackage!("etex");
+  RequirePackage!("fontenc");
+  RequirePackage!("geometry");
+  RequirePackage!("setspace");
+  RequirePackage!("fancyhdr");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
+  RequirePackage!("xcolor");
+  RequirePackage!("url");
+  RequirePackage!("enumerate");
+  RequirePackage!("longtable");
+  RequirePackage!("xspace");
+  RequirePackage!("babel");
+  RequirePackage!("rotating");
 
-  // Frontmatter — Perl L77-135
+  // Frontmatter — Perl L70-128
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  // Structured abstract — Perl L75-86, simplified
+  DefMacro!("\\abstract@old{}", "\\@add@frontmatter{ltx:abstract}{#1}");
+  DefMacro!("\\abstract@new{}{}{}{}{}", "\\@add@frontmatter{ltx:abstract}{#2\\par#3\\par#4}");
+
+  DefMacro!("\\keywordname", "\\sffamily\\bfseries Key Words.");
+  DefRegister!("\\titlerunning" => Tokens!());
+  DefRegister!("\\authorrunning" => Tokens!());
+  DefMacro!("\\authrun", "");
+  DefMacro!("\\titrun", "");
   DefMacro!("\\offprints{}", "\\@add@frontmatter{ltx:note}[role=offprints]{#1}");
-  DefMacro!("\\mail{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
+  DefMacro!("\\mail Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+  DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
   DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
   DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
-  DefMacro!("\\journalname{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\journalname{}", "");
   DefMacro!("\\DOI{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
+  DefMacro!("\\doi{}", "\\@add@frontmatter{ltx:classification}[scheme=doi]{#1}");
+  DefMacro!("\\rnotename", "(Research Note)");
+  DefMacro!("\\rnotname", "(RN)");
+  DefMacro!("\\headnote{}", "\\@add@frontmatter{ltx:note}{#1}");
+  DefMacro!("\\dedication{}", "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
+  DefMacro!("\\mailname", "\\it Correspondence to \\/");
+  DefMacro!("\\idline{}{}", "");
+  DefMacro!("\\msnr{}", "");
+  DefMacro!("\\institutename", "");
+  DefMacro!("\\hugehead", "");
+  DefMacro!("\\AALogo", "Astronomy and Astrophysics");
+
+  // Acknowledgements — Perl L132-141
+  DefConstructor!("\\acknowledgements", "<ltx:acknowledgements>");
+  DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
+  Let!("\\acknowledgement", "\\acknowledgements");
+  Let!("\\endacknowledgement", "\\endacknowledgements");
+  Tag!("ltx:acknowledgements", auto_close => true);
+  DefMacro!("\\acknowledgmentsname", "Acknowledgements");
+  DefMacro!("\\ackname", "Acknowledgements");
+
+  // Theorem environments — Perl L142-150
+  RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}[theorem]{Corollary}}{}");
+  RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}[theorem]{Definition}}{}");
+  RawTeX!("\\@ifundefined{example}{\\newtheorem{example}[theorem]{Example}}{}");
+  RawTeX!("\\@ifundefined{lemma}{\\newtheorem{lemma}[theorem]{Lemma}}{}");
+  RawTeX!("\\@ifundefined{note}{\\newtheorem{note}[theorem]{Note}}{}");
+  RawTeX!("\\@ifundefined{problem}{\\newtheorem{problem}[theorem]{Problem}}{}");
 
   // Keywords — Perl L137-160
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
