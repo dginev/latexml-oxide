@@ -52,7 +52,68 @@ LoadDefinitions!({
   DefMath!("\\Lrarr", None, "\u{21D4}", role => "ARROW", meaning => "left-right-double-arrow");
   DefMath!("\\Harr", None, "\u{21D4}", role => "ARROW", meaning => "left-right-double-arrow");
 
-  // Text-mode stubs (Perl L112-120)
+  // Uppercase Greek (not in standard TeX) — Perl L65-90
+  DefMath!("\\Alpha", None, "\u{0391}");
+  DefMath!("\\Beta", None, "\u{0392}");
+  DefMath!("\\Epsilon", None, "\u{0395}");
+  DefMath!("\\Zeta", None, "\u{0396}");
+  DefMath!("\\Eta", None, "\u{0397}");
+  DefMath!("\\Iota", None, "\u{0399}");
+  DefMath!("\\Kappa", None, "\u{039A}");
+  DefMath!("\\Mu", None, "\u{039C}");
+  DefMath!("\\Nu", None, "\u{039D}");
+  DefMath!("\\omicron", None, "\u{03BF}");
+  DefMath!("\\Omicron", None, "\u{039F}");
+  DefMath!("\\Rho", None, "\u{03A1}");
+  DefMath!("\\Tau", None, "\u{03A4}");
+  DefMath!("\\Chi", None, "\u{03A7}");
+
+  // Archaic Greek — Perl L93-108
+  DefMath!("\\Digamma", None, "\u{03DC}");
+  DefMath!("\\digamma", None, "\u{03DD}");
+  DefMath!("\\Coppa", None, "\u{03D8}");
+  DefMath!("\\coppa", None, "\u{03D9}");
+  DefMath!("\\Koppa", None, "\u{03DE}");
+  DefMath!("\\koppa", None, "\u{03DF}");
+  DefMath!("\\Stigma", None, "\u{03DA}");
+  DefMath!("\\stigma", None, "\u{03DB}");
+  DefMath!("\\Sampi", None, "\u{03E0}");
+  DefMath!("\\sampi", None, "\u{03E1}");
+
+  // Spanish sine — Perl L112
+  DefMath!("\\sen", None, "sen", role => "TRIGFUNCTION", meaning => "sine");
+
+  // Aliases — Perl L122-181
+  DefMacro!("\\dArr", "\\Downarrow");
+  DefMacro!("\\uArr", "\\Uparrow");
+  DefMacro!("\\rArr", "\\Rightarrow");
+  DefMacro!("\\lArr", "\\Leftarrow");
+  DefMacro!("\\hAar", "\\Leftrightarrow");
+  DefMacro!("\\lrArr", "\\Leftrightarrow");
+  DefMacro!("\\lang", "\\langle");
+  DefMacro!("\\rang", "\\rangle");
+  DefMacro!("\\alef", "\\aleph");
+  DefMacro!("\\alefsym", "\\aleph");
+  DefMacro!("\\clubs", "\\clubsuit");
+  DefMacro!("\\Dagger", "\\ddagger");
+  DefMacro!("\\diamonds", "\\diamondsuit");
+  DefMacro!("\\Doteq", "\\doteqdot");
+  DefMacro!("\\doublecap", "\\Cap");
+  DefMacro!("\\empty", "\\emptyset");
+  DefMacro!("\\exist", "\\exists");
+  DefMacro!("\\hearts", "\\heartsuit");
+  DefMacro!("\\image", "\\Im");
+  DefMacro!("\\isin", "\\in");
+  DefMacro!("\\ne", "\\neq");
+  DefMacro!("\\O", "\\emptyset");
+  DefMacro!("\\real", "\\Re");
+  DefMacro!("\\Reals", "\\mathbb{R}");
+  DefMacro!("\\sect", "\\S");
+  DefMacro!("\\spades", "\\spadesuit");
+  DefMacro!("\\thetasym", "\\vartheta");
+  DefMacro!("\\weierp", "\\wp");
+
+  // Text-mode stubs — Perl L112-120
   DefMacro!("\\part{}", "\\par\\textbf{#1}\\par");
   DefMacro!("\\bold{}", "\\mathbf{#1}");
 
