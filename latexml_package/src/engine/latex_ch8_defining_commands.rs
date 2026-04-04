@@ -33,13 +33,29 @@ LoadDefinitions!({
 
   // low-level implementation of both \newcommand and \renewcommand depends on \@argdef
   // and robustness upgrades are often realized via redefining \l@ngrel@x
-  //
-  // Experiment: use \l@ngrel@x to carry over \protected information from outside, etoolbox-style.
-  // DefMacro('\@argdef','\l@ngrel@x\renewcommand');
-  //
-  // The etoolbox binding now defines \newrobustcmd & friends directly, so \@argdef is not directly
-  // needed However, we would need to add support for other packages that may leverage that
-  // machinery.
+  // Perl latex_constructs.pool.ltxml L2591-2604
+  DefPrimitive!("\\@argdef DefToken [Number]{}", sub[(cs, nargs, body)] {
+    let macro_args = convert_latex_args(nargs.value_of() as usize, None)?;
+    DefMacro!(cs, macro_args, body);
+  });
+  DefPrimitive!("\\@xargdef DefToken [Number][]{}", sub[(cs, nargs, opt, body)] {
+    let macro_args = convert_latex_args(nargs.value_of() as usize, opt)?;
+    DefMacro!(cs, macro_args, body);
+  });
+  // Perl L2597-2602: \@yargdef checks if arg2 equals \tw@ (2) for optional arg type
+  DefPrimitive!("\\@yargdef DefToken DefToken {}{}", sub[(cs, type_tok, nargs_toks, body)] {
+    let nargs_str = nargs_toks.to_string();
+    let nargs: usize = nargs_str.trim().parse().unwrap_or(0);
+    let has_optional = type_tok.to_string().contains("2")
+      || state::x_equals(&type_tok, &T_CS!("\\tw@"));
+    let opt = if has_optional { Some(Tokens!()) } else { None };
+    let macro_args = convert_latex_args(nargs, opt)?;
+    DefMacro!(cs, macro_args, body);
+  });
+  DefPrimitive!("\\@reargdef DefToken [Number]{}", sub[(cs, nargs, body)] {
+    let macro_args = convert_latex_args(nargs.value_of() as usize, None)?;
+    DefMacro!(cs, macro_args, body);
+  });
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star, cs, nargs, opt, body)] {

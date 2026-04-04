@@ -57,8 +57,8 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 
 | File | Defs | Priority | Notes |
 |------|------|----------|-------|
-| `latex_constructs.pool.ltxml` | ~843 | Low | ~92% ported. Missing: picture env, `\@xargdef/yargdef/reargdef` |
-| `math_common.pool.ltxml` | 312 | Medium | ~95% ported. Missing: `DefMathLigature` rules |
+| `latex_constructs.pool.ltxml` | ~843 | Low | ~93% ported. Missing: picture env |
+| `math_common.pool.ltxml` | 312 | OK | Fully ported (DefMathLigature, all symbols) |
 | `Base_Deprecated.pool.ltxml` | 77 | Low | ~16% — deprecated compat shims |
 | `AmSTeX.pool.ltxml` | 112 | Low | ~30% |
 | `BibTeX.pool.ltxml` | 150 | Low | ~9% |
@@ -141,6 +141,17 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [ ] **L4. Default namespace handling in `rust-libxml`** — Creates `<ltx:ref>` instead of `<ref>` when default xmlns matches. Workaround in place.
 - [ ] **E1. Precompile kernel dumps on `cargo build`** — Design documented in `docs/DUMP_DESIGN.md`. build.rs updated with TeX Live version checking and text dump embedding. Manual generation still required.
 - [ ] **S1. siunitx unit tree builder** — `six_convert_units_from_tokens` handles simple unit chains. Missing: non-unit content passthrough (`\pi`, `\frac{}`), literal notation (`m^2.s`), complex number formatting (`I_dual`). Currently ~6900 normalized diffs vs Perl.
+
+### ar5iv conversion sandbox (47 papers)
+
+`arxiv-examples/` contains 47 arXiv papers for parity testing between latexml-oxide and latexmlc. Run `arxiv-examples/compare.sh [id]` to generate and compare HTML output.
+
+Papers span 2007–2026, covering diverse LaTeX packages (natbib, hyperref, amsmath, tikz, beamer, siunitx, physics, listings, etc.). Key test targets:
+- Citation resolution (natbib `\citep`/`\citet`)
+- Custom class files (nips, iclr, acl, aastex, IEEE)
+- Complex math (physics, quantum mechanics)
+- Tables and figures (booktabs, subfigure, graphicx)
+- Bibliographies (BibTeX, biblatex)
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
