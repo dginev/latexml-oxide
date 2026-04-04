@@ -158,7 +158,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 
 ### Open TODO items — Math Parser & Post-Processing
 
-- [ ] **S1. siunitx unit tree builder** — Mixed-content units (`\pi . \mm . \mrad`) lose unit tokens. Root cause: `six_convert_units_from_tokens` fails on non-unit content, falls to `six_parse_literalunits` which can't process `\lx@six@unitobject` tokens (defined as no-op DefPrimitive). Perl uses `protected` DefMacro override, but protected approach fails here due to timing: the macro fires after `six_enableUnitMacros` cleans up unit context. Fix requires `six_process_units` to handle mixed content by splitting into unit/non-unit segments. Investigated 5 times with 4 approaches.
+- [x] **S1. siunitx mixed-content unit passthrough** — Fixed: `six_resolve_unit_objects()` resolves `\lx@six@unitobject` tokens to presentation text within the active unit context, before falling to `six_parse_literalunits`. `\pi . \mm . \mrad` now produces `pi * mm * mrad`. 6th attempt succeeded after 5 failed approaches.
 - [ ] **M14. Reduce `\lxDeclare` rewrite diffs** — `declare.xml` has ~400 diffs. Key issues: subscript content not math-parsed inside `\hat{x}` patterns, `decl_id` not propagated to all matching tokens, wildcard pattern `\WildCard` matching incomplete. Requires deep rewrite system structural work.
 
 ### Open TODO items — Library & Infrastructure
