@@ -3446,7 +3446,12 @@ impl Document {
           self.after_close(&mut new)?;
         },
         Some(NodeType::TextNode) => node.append_text(&child.get_content())?,
-        other => panic!("append_clone_aux called on {other:?} Node type."),
+        Some(NodeType::CommentNode) => {
+          // Skip XML comments during cloning (Perl also skips them in most contexts)
+        },
+        other => {
+          log::warn!("append_clone_aux: skipping unsupported {other:?} node type");
+        },
       };
     }
     Ok(())
