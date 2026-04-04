@@ -110,9 +110,8 @@ Current: ~400 FULL/NEAR-COMPLETE, 5 MISSING (of ~406 total Perl bindings). Zero 
 |---|---|---|
 | beamer.cls | 88% | Overlay specs, themes — by far largest gap |
 | algorithm2e.sty | DOM prepend | `\lx@prepend@indentation` needs constructor body |
-| newfloat.sty | 70% | Dynamic float env creation partially ported |
 | authblk/inst_support | callbacks | `relocateInstitute`/`authblkRelocateAffil` DOM surgery |
-| listings.sty | 5% | literate `*` flag |
+| listings.sty | 5% | literate substitution feature |
 
 ---
 
