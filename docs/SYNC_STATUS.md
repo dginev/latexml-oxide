@@ -113,7 +113,6 @@ Current: ~380 FULL/NEAR-COMPLETE, 6 MISSING (of ~406 total Perl bindings).
 | algorithm2e.sty | DOM prepend | `\lx@prepend@indentation` needs constructor body |
 | newfloat.sty | 70% | Dynamic float env creation partially ported |
 | authblk/inst_support | callbacks | `relocateInstitute`/`authblkRelocateAffil` DOM surgery |
-| amsmath.sty | 5% | cfrac mathstyle |
 | listings.sty | 5% | literate `*` flag |
 
 ---
@@ -128,7 +127,7 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 2. **foreignObject width/height** — `fo_get_size` differs from Perl
 3. **Nested minipage/SVG sizing** — `appendNodeBox` vs Perl's `pushContent`
 4. **Arrow tip shape** — Different arrowhead path data
-5. **`<pagination role="newpage"/>`** — Missing `\newpage` handling
+5. ~~`<pagination role="newpage"/>`~~ — Resolved: stale Perl refs
 6. **SVG viewBox/width** — Total dimensions differ slightly
 7. **Listings escapechar + color** — `escapechar=@` with `\color{red}` inline
 8. **Missing `\vspace{2mm}` output** — `\vspace` in vertical mode
@@ -162,6 +161,7 @@ Follow this list in order. Work on the first unchecked `[ ]` item. Skip items ma
 - [x] **B3. Port pstricks.sty binding** — 55-line Rust stub (DVI-only, all commands no-op or passthrough).
 - [x] **B4. Expand 9 PARTIAL bindings** — revtex4_support, aas_support, braket (pipe-splitting), algorithm2e, subfig, inst_support, html, titling, authblk (+423 lines total).
 - [x] **B5. Expand 7 more bindings** — jheppub (full port), iopart_support (journal abbrevs, bibliography), JHEP.cls (journal refs, arXiv links), elsart_support (theorems, isotopes), elsart_support_core (keyword env), mn2e_support (bold Greek, math relations), texvc (Greek, aliases). +630 lines total.
+- [x] **B6. Expand IEEEtran, OmniBus, aa_support, cfrac** — IEEEtran (options, biography, eqnarray), OmniBus (requires, altaffilmark, references, metadata), aa_support (14 requires, abstract, theorems), amsmath cfrac mathstyle.
 
 ### Open TODO items — Engine Parity
 
