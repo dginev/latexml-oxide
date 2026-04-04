@@ -136,7 +136,7 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow this list in order. Work on the first unchecked `[ ]` item. Skip items marked BLOCKED.
 
-**Status (2026-04-04):** 407 pass, 0 fail, 0 ignored.
+**Status (2026-04-05):** 407 pass, 0 fail, 0 ignored. Zero `todo!()` panics, 3 engine `panic!()` hardened.
 
 ### Completed (summary — see git history for details)
 
