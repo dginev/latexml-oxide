@@ -4,7 +4,7 @@
 
 Updated 2026-04-04. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. Perl reference parity: 246/314 effective zero-diff (78%), ~18K meaningful diff lines across 68 non-zero tests. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K).
+**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. MakeBibliography post-processor wired into pipeline (Scan → MakeBibliography → CrossRef). Perl reference parity: 246/314 effective zero-diff (78%), ~18K meaningful diff lines across 68 non-zero tests. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K).
 
 **arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 48-paper test catalog with per-paper status, errors, and visual comparison results.
 
@@ -107,13 +107,21 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
-**Current status (2026-04-04):** 37/47 OK (79%), 22/37 at >=90% Perl parity (59%).
+**Current status (2026-04-04):** 37/47 OK (79%), 21/37 at >=90% Perl parity (57%).
+
+### Completed items
+- [x] **MakeBibliography pipeline wired** — inserted between Scan and CrossRef. Works for papers with `<ltx:bibliography>` elements. Papers with .bbl files already have bibliography from core engine.
+- [x] **\shortstack mode** — fixed to `restricted_horizontal` (matching Perl, was `text`).
+- [x] **Embedded XSLT** — `include_str!` + temp directory for portable binary.
 
 ### Remaining actionable items
-1. **MakeBibliography post-processor** — papers with `.bib` (no `.bbl`) lack references. Affects ~5 papers (1502, 2410.12896, 2511.11713, 2511.14458, 2508.18544). This is a post-processing gap.
-2. **pgf arrow tips** — Stealth, Circle, Hooks, Implies, Computer Modern Rightarrow not defined. Affects 4 papers.
-3. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode state. Affects 2603.15617 (3%).
-4. **expl3 loading timing** — `\ExplSyntaxOn` undefined during preamble. Affects 2507.23241.
+1. **BibTeX .bib-only papers** — papers with `.bib` (no `.bbl`) lack bibliography because `\lx@ifusebbl` returns empty with `bibconfig=bbl,bib`. MakeBibliography's `convertBibliography()` (raw .bib → XML) NOT ported. Affects 2511.11713, 2511.14458.
+2. **Bibliography richness** — MakeBibliography runs but outputs flat text; Perl generates structured `ltx_bib_*` spans, back-references, cross-ref links. Affects 2410.12896 (59%).
+3. **Listing per-word styling** — Perl wraps each listing token in styled `<span>` with font-size/color. Affects 2405.19425 (50%).
+4. **\shortstack/\vtop mode interaction** — cascading mode errors in alignment cells. Affects 2508.18544 (44%, loses appendix).
+5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies, Computer Modern Rightarrow not defined. Affects 4 EMPTY papers.
+6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode state. Affects 2603.15617 (3%).
+7. **smfart.cls errors** — raw TeX class triggers parameter/conditional errors. Affects 2507.23241.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

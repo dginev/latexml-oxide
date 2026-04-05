@@ -482,8 +482,22 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   };
 
-  // Phase 2: CrossRef
+  // Phase 1.5: MakeBibliography (Perl order: Scan → MakeBibliography → CrossRef)
   let db = scanner.db;
+  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(db, false);
+  let bib_nodes = bibmaker.to_process(&doc);
+  let doc = if !bib_nodes.is_empty() {
+    match bibmaker.process(doc, bib_nodes) {
+      Ok(mut docs) => docs.remove(0),
+      Err(e) => {
+        eprintln!("Post-processing: MakeBibliography failed: {}", e);
+        return xml.to_string();
+      }
+    }
+  } else { doc };
+
+  // Phase 2: CrossRef
+  let db = bibmaker.db;
   let mut crossref = latexml_post::crossref::CrossRef::new(
     db,
     latexml_post::crossref::UrlStyle::File,
