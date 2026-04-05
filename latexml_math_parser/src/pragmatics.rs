@@ -238,18 +238,15 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
 
 fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ..) = tree {
-    match &**op {
-      XM::Lexeme(ref _lexeme, ref atom_meta) => {
-        if let Some(ref fences) = atom_meta.fenced {
-          if fences.as_str() == "parens" {
-            return Err(
-              "pruning non-argument parenthetical atom, used as LHS of function application"
-                .into(),
-            );
-          }
+    if let XM::Lexeme(ref _lexeme, ref atom_meta) = &**op {
+      if let Some(ref fences) = atom_meta.fenced {
+        if fences.as_str() == "parens" {
+          return Err(
+            "pruning non-argument parenthetical atom, used as LHS of function application"
+              .into(),
+          );
         }
       }
-      _ => {}
     }
   }
   Ok(())
@@ -700,8 +697,8 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
       // FUNCTION is excluded — it only absorbs fenced (parenthesized) args,
       // so `f * x` (invisible_times) is correct for bare FUNCTION.
       if trees.len() >= 3 {
-        for i in 0..trees.len() - 1 {
-          let is_bare_absorbing_func = match trees[i] {
+        for tree in trees.iter().take(trees.len() - 1) {
+          let is_bare_absorbing_func = match tree {
             XM::Token(ref props, _) => matches!(
               props.role.as_deref(),
               Some("OPFUNCTION") | Some("TRIGFUNCTION")

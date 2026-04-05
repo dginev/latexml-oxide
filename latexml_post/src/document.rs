@@ -453,6 +453,7 @@ impl PostDocument {
     }
     // Fallback: use libxml's node_evaluate with a fresh context
     // We need to use the internal document. libxml2 nodes know their document.
+    #[allow(unused_imports)]
     use libxml::xpath::Context as XPathContext;
     // Create context from the document that owns this node
     // node._node_ptr -> xmlNodePtr -> doc field

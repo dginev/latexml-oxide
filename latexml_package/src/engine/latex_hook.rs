@@ -11,13 +11,13 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     return Ok(());
   }
   let pkg_name = package.to_string();
-  let cs_for_closure = cs_tok.clone();
+  let cs_for_closure = cs_tok;
   def_macro(
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
       require_package(&pkg_name, RequireOptions::default())?;
-      Ok(Tokens::new(vec![cs_for_closure.clone()]))
+      Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
   )?;

@@ -1175,7 +1175,7 @@ impl Processor for MakeBibliography {
       // Port of Perl's approach where bibitems are registered during Scan,
       // but here we must register them after MakeBibliography creates them.
       let lists_str = bib.get_attribute("lists").unwrap_or_else(|| "bibliography".to_string());
-      for (_lc_key, entry) in &entries {
+      for entry in entries.values() {
         let cited_key = entry.cited_key.as_deref().unwrap_or(&entry.bib_key);
         // Compute the same ID as format_bib_entry
         let bibitem_id = if let Some(ref bibentry) = entry.bibentry {
@@ -1554,7 +1554,7 @@ fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> 
 /// Format author name nodes.
 ///
 /// Port of `do_names` / `do_name`.
-fn format_author_nodes(doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData> {
+fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData> {
   let mut result: Vec<NodeData> = Vec::new();
   let mut names: Vec<Node> = name_nodes.to_vec();
 
@@ -1736,7 +1736,7 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
 /// Get sort-friendly name text from a bib-name node.
 ///
 /// Port of `getNameText`.
-fn get_name_text(doc: &PostDocument, namenode: &Node) -> String {
+fn get_name_text(_doc: &PostDocument, namenode: &Node) -> String {
   let surname = PostDocument::findnodes_foreign("ltx:surname", namenode)
     .into_iter().next().map(|n| n.get_content());
   let givenname = PostDocument::findnodes_foreign("ltx:givenname", namenode)

@@ -2792,7 +2792,7 @@ LoadDefinitions!({
     .map(|s| s.to_string())
     .collect();
   for file in &lang_files {
-    InputDefinitions!(file, noerror => true);
+    let _ = input_definitions(file, NewDefault!(InputDefinitionOptions, noerror => true));
   }
 
   // Internal macros used by sibling bindings (e.g. cleveref)

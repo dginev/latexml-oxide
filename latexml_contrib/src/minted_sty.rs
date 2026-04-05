@@ -39,8 +39,8 @@ LoadDefinitions!({
   DefMacro!("\\mintinline[]{}", "\\verb");
   // TODO: Perl has complex mintedEnvBody closure for {minted} environment
   // that collects body and delegates to lstlisting. Stubbed for now.
-  DefMacro!("\\begin{minted}[]{}", "\\begin{lstlisting}");
-  DefMacro!("\\end{minted}", "\\end{lstlisting}");
-  DefMacro!("\\begin{listing}", "\\begin{figure}");
-  DefMacro!("\\end{listing}", "\\end{figure}");
+  DefMacro!(T_CS!("\\begin{minted}"), "[]{}", "\\begin{lstlisting}");
+  DefMacro!(T_CS!("\\end{minted}"), None, "\\end{lstlisting}");
+  DefMacro!(T_CS!("\\begin{listing}"), None, "\\begin{figure}");
+  DefMacro!(T_CS!("\\end{listing}"), None, "\\end{figure}");
 });

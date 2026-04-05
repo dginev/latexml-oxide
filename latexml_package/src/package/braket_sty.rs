@@ -33,16 +33,16 @@ LoadDefinitions!({
         if *t == vbar {
           result.push(Tokens::new(std::mem::take(&mut current)));
         } else {
-          current.push(t.clone());
+          current.push(*t);
         }
       }
       result.push(Tokens::new(current));
       result
     };
     let expansion = match parts.len() {
-      2 => format!("\\lx@braket@V{{{}}}{{{}}}", parts[0].to_string(), parts[1].to_string()),
-      n if n >= 3 => format!("\\lx@braket@VV{{{}}}{{{}}}{{{}}}", parts[0].to_string(), parts[1].to_string(), parts[2].to_string()),
-      _ => format!("\\lx@braket@{{{}}}", parts[0].to_string()),
+      2 => format!("\\lx@braket@V{{{}}}{{{}}}", parts[0], parts[1]),
+      n if n >= 3 => format!("\\lx@braket@VV{{{}}}{{{}}}{{{}}}", parts[0], parts[1], parts[2]),
+      _ => format!("\\lx@braket@{{{}}}", parts[0]),
     };
     Ok(mouth::tokenize_internal(&expansion))
   });
@@ -56,16 +56,16 @@ LoadDefinitions!({
         if *t == vbar {
           result.push(Tokens::new(std::mem::take(&mut current)));
         } else {
-          current.push(t.clone());
+          current.push(*t);
         }
       }
       result.push(Tokens::new(current));
       result
     };
     let expansion = match parts.len() {
-      2 => format!("\\lx@Braket@V{{{}}}{{{}}}", parts[0].to_string(), parts[1].to_string()),
-      n if n >= 3 => format!("\\lx@Braket@VV{{{}}}{{{}}}{{{}}}", parts[0].to_string(), parts[1].to_string(), parts[2].to_string()),
-      _ => format!("\\lx@Braket@{{{}}}", parts[0].to_string()),
+      2 => format!("\\lx@Braket@V{{{}}}{{{}}}", parts[0], parts[1]),
+      n if n >= 3 => format!("\\lx@Braket@VV{{{}}}{{{}}}{{{}}}", parts[0], parts[1], parts[2]),
+      _ => format!("\\lx@Braket@{{{}}}", parts[0]),
     };
     Ok(mouth::tokenize_internal(&expansion))
   });
@@ -88,15 +88,15 @@ LoadDefinitions!({
         if *t == vbar {
           result.push(Tokens::new(std::mem::take(&mut current)));
         } else {
-          current.push(t.clone());
+          current.push(*t);
         }
       }
       result.push(Tokens::new(current));
       result
     };
     let expansion = match parts.len() {
-      n if n >= 2 => format!("\\lx@set@V{{{}}}{{{}}}", parts[0].to_string(), parts[1].to_string()),
-      _ => format!("\\lx@set@{{{}}}", parts[0].to_string()),
+      n if n >= 2 => format!("\\lx@set@V{{{}}}{{{}}}", parts[0], parts[1]),
+      _ => format!("\\lx@set@{{{}}}", parts[0]),
     };
     Ok(mouth::tokenize_internal(&expansion))
   });
@@ -110,15 +110,15 @@ LoadDefinitions!({
         if *t == vbar {
           result.push(Tokens::new(std::mem::take(&mut current)));
         } else {
-          current.push(t.clone());
+          current.push(*t);
         }
       }
       result.push(Tokens::new(current));
       result
     };
     let expansion = match parts.len() {
-      n if n >= 2 => format!("\\lx@Set@V{{{}}}{{{}}}", parts[0].to_string(), parts[1].to_string()),
-      _ => format!("\\lx@Set@{{{}}}", parts[0].to_string()),
+      n if n >= 2 => format!("\\lx@Set@V{{{}}}{{{}}}", parts[0], parts[1]),
+      _ => format!("\\lx@Set@{{{}}}", parts[0]),
     };
     Ok(mouth::tokenize_internal(&expansion))
   });

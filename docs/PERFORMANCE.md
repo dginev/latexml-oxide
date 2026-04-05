@@ -1,0 +1,103 @@
+# Performance Optimization Principles
+
+> **Repeatable checklist.** Review before release milestones, after major features, and during periodic optimization passes. Each principle includes rationale and examples.
+
+---
+
+## 1. Avoid String Allocation on Hot Paths
+
+**Principle:** Never use `.to_string()`, `String::from()`, or `format!()` when a string is already in the interner arena. Use the `arena::with*` family of methods for comparisons and reads, and `arena::pin` / `arena::pin_static` for storage.
+
+**Why:** String allocation is one of the most frequent hidden costs. The arena interner exists precisely to avoid repeated heap allocations for the same string. Every `.to_string()` on an interned symbol defeats this purpose.
+
+**Examples:**
+```rust
+// BAD: allocates a new String just to compare
+if arena::to_string(sym) == "foo" { ... }
+
+// GOOD: resolve in-place without allocation
+if arena::with(sym, |s| s == "foo") { ... }
+
+// BAD: allocate to store
+let name = sym.to_string();
+state::assign_value(&name, ...);
+
+// GOOD: use interned symbol directly
+let name = arena::pin("some_key");
+```
+
+**When to apply:** Any code that runs per-token, per-macro-expansion, per-digest, or per-node. State lookups, token comparisons, CS name checks.
+
+---
+
+## 2. Minimize `.clone()` — Borrow or Reorder Instead
+
+**Principle:** Avoid `.clone()` for data that can be borrowed or is only needed for a short instruction scope. Rearrange code so that short flag-like methods run first and assign to local variables, preventing Rust ownership conflicts without cloning. For more complex cases, consider borrowing from first principles, using the string interner, or a `Cow<>` copy-on-write approach.
+
+**Why:** Cloning complex structures (Tokens, Vec, HashMap) is expensive. Many clones exist only to satisfy the borrow checker, not because the data is truly needed in two places. Reordering operations or extracting small values first often eliminates the need entirely.
+
+**Examples:**
+```rust
+// BAD: clone to avoid borrow conflict
+let tokens = state.get_tokens().clone();
+let flag = state.is_active();  // borrows state again
+process(tokens, flag);
+
+// GOOD: extract flag first (short borrow), then get tokens
+let flag = state.is_active();
+let tokens = state.get_tokens();  // no conflict now
+process(tokens, flag);
+
+// BAD: clone a large structure for a single read
+let map = self.entries.clone();
+if map.contains_key("foo") { ... }
+
+// GOOD: borrow directly
+if self.entries.contains_key("foo") { ... }
+
+// ACCEPTABLE: Cow for conditional mutation
+fn process(input: Cow<str>) -> Cow<str> {
+    if needs_change(&input) { Cow::Owned(transform(&input)) }
+    else { input }
+}
+```
+
+**When to apply:** Every `.clone()` call is a candidate for review. Prioritize clones inside loops, hot paths, and clones of `Tokens`, `Vec<Token>`, `HashMap`, or `String`. Single-field scalar clones (bool, u32, Option<usize>) are fine.
+
+---
+
+## 3. Run Clippy and Study Lint Neighborhoods
+
+**Principle:** Run `cargo clippy` and apply all fixes. Then study code in the vicinity of each lint — performance issues often cluster in clumps of poorly designed code. A clippy lint is a signal to review the surrounding 20-50 lines.
+
+**Why:** Clippy catches redundant allocations, unnecessary conversions, suboptimal patterns (e.g., `map().flatten()` → `flat_map()`, `.iter().cloned().collect()` → `.to_vec()`). But more importantly, lint locations correlate with code that was written hastily. Fixing the lint often reveals adjacent inefficiencies that clippy doesn't flag.
+
+**How to run:**
+```bash
+cargo clippy --workspace -- -W clippy::perf -W clippy::redundant_clone
+```
+
+**When to apply:** Before every release milestone. After major feature work. As a periodic sweep (monthly or quarterly). Focus on `clippy::perf` and `clippy::redundant_clone` warning groups.
+
+---
+
+## 4. Minimize Math Parse Ambiguity
+
+**Principle:** Reduce the number of successful math parses while ensuring at least one survives. This is the highest-leverage optimization for documents with heavy math. Three complementary tools, ordered by effectiveness:
+
+**Tool 1 — Grammar restructuring (highest impact):**
+Restrict grammar category scopes, reduce the number of paths an expression can take toward the start category. Fewer ambiguous derivations = exponentially fewer parse trees.
+
+**Tool 2 — Semantic pruning (high impact):**
+Return `Err` from `semantics.rs` action functions for nonsensical constructions. This prunes during tree construction, before full parse completion. Examples: reject `f(x)(y)` as double-application when `f` isn't higher-order, reject mismatched fence pairs, reject empty operator sequences.
+
+**Tool 3 — Pragmatic rules (representation quality):**
+Add `Pragma` rules that check mathematical conventions (e.g., consistency of variable use, operator precedence expectations). Less useful for raw performance (all parses must complete first) but valuable for selecting the best parse from surviving candidates.
+
+**Why:** The Marpa parser produces all valid derivations. For ambiguous math like `a+b*c/d`, the number of parse trees can be combinatorial. Each surviving parse is a full tree that consumes memory and CPU. Reducing parses from 50 to 3 can be a 10-20x speedup on math-heavy documents.
+
+**When to apply:** When profiling shows math parsing as a bottleneck (common for documents with 100+ formulas). During grammar design reviews. When adding new math operators or constructs.
+
+---
+
+> **Adding new principles:** Number sequentially. Include: principle statement, **Why** (rationale), **Examples** (good vs bad code), **When to apply** (scope/triggers).

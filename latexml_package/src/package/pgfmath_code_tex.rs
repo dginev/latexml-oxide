@@ -1148,7 +1148,7 @@ LoadDefinitions!({
       .cloned()
       .collect();
 
-    if toks.first().map_or(false, |t| t.to_string() == "+") {
+    if toks.first().is_some_and(|t| t.to_string() == "+") {
       // Starts with '+' → treat as plain glue
       // Unread the tokens and read as glue
       gullet::unread(Tokens::new(toks));
@@ -1213,7 +1213,7 @@ LoadDefinitions!({
       vec![
         T_CS!("\\expandafter"), T_CS!("\\endgroup"),
         T_CS!("\\expandafter"), T_CS!("\\def"),
-        T_CS!("\\expandafter"), first_cs.clone(),
+        T_CS!("\\expandafter"), first_cs,
         T_CS!("\\expandafter"), T_BEGIN!(),
         first_cs,
         T_END!(),

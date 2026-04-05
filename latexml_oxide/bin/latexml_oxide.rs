@@ -618,7 +618,7 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       // Fix self-closing non-void HTML elements for HTML5 output.
       // libxml2's XML serializer produces <span/> for empty spans, but HTML5
       // parsers treat <span/> as an opening tag, causing unclosed elements.
-      if stylesheet.map_or(false, |s| s.contains("html")) {
+      if stylesheet.is_some_and(|s| s.contains("html")) {
         // Fix 1: Expand self-closing non-void elements: <span/> → <span></span>
         let re = regex::Regex::new(
           r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>"
@@ -770,11 +770,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Prefer file with \documentclass; if multiple, pick the largest
   let main = if !doc_class_files.is_empty() {
-    doc_class_files.sort_by(|a, b| b.1.cmp(&a.1));
+    doc_class_files.sort_by_key(|x| std::cmp::Reverse(x.1));
     doc_class_files[0].0.clone()
   } else {
     // No \documentclass found — pick the largest .tex file
-    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    candidates.sort_by_key(|x| std::cmp::Reverse(x.1));
     candidates[0].0.clone()
   };
 

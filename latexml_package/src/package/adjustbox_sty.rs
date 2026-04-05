@@ -24,11 +24,9 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@RE@BOXCONTENT", sub[_args] {
     if let Ok(Some(cbox_val)) = state::lookup_register("\\collectedbox", Vec::new()) {
       let box_name = s!("box{}", cbox_val.value_of());
-      if let Some(boxed) = state::lookup_value(&box_name) {
-        if let Stored::Digested(d) = boxed {
-          let reverted = d.revert()?;
-          return stomach::digest(reverted).map(|d| vec![d]);
-        }
+      if let Some(Stored::Digested(d)) = state::lookup_value(&box_name) {
+        let reverted = d.revert()?;
+        return stomach::digest(reverted).map(|d| vec![d]);
       }
     }
     Ok(Vec::new())

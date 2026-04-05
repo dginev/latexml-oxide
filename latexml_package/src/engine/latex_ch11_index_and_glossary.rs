@@ -42,13 +42,13 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   let mut i = 0;
 
   while i < toks.len() {
-    let tok = toks[i].clone();
+    let tok = toks[i];
     let s = tok.with_str(|s| s.to_string());
     i += 1;
 
     if s == "\"" && i < toks.len() {
       // Escaped character: take next token literally
-      phrase.push(toks[i].clone());
+      phrase.push(toks[i]);
       i += 1;
     } else if s == "@" {
       // Sort key: everything before @ is the sort key
@@ -66,11 +66,11 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
         expansion.push(T_CS!("\\@indexphrase"));
         if !sortas.is_empty() {
           expansion.push(T_OTHER!("["));
-          expansion.extend(sortas.drain(..));
+          expansion.append(&mut sortas);
           expansion.push(T_OTHER!("]"));
         }
         expansion.push(T_BEGIN!());
-        expansion.extend(phrase.drain(..));
+        expansion.append(&mut phrase);
         expansion.push(T_END!());
       }
       sortas.clear();

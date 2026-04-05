@@ -166,7 +166,7 @@ impl Graphics {
             .map(|dt| dt == &ext)
             .unwrap_or(false);
           let desirability = if is_same_type { 10 } else { d };
-          if best.as_ref().map_or(true, |(_, bd)| desirability > *bd) {
+          if best.as_ref().is_none_or(|(_, bd)| desirability > *bd) {
             best = Some((path.to_string(), desirability));
           }
         }
@@ -292,7 +292,7 @@ impl Graphics {
       &format!(r#"^\s*{}\s*=\s*[\"']?([\d.]+)[\"']?\s*$"#, regex::escape(param))
     ).ok()?;
     let options_re = regex::Regex::new(
-      &format!(r#"package\s*=\s*[\"']latexml[\"'].*options\s*=\s*[\"'](.*?)[\"']"#)
+      r#"package\s*=\s*[\"']latexml[\"'].*options\s*=\s*[\"'](.*?)[\"']"#
     ).ok()?;
     let param_in_options_re = regex::Regex::new(
       &format!(r#"\b{}\s*=\s*([\d.]+)"#, regex::escape(param))

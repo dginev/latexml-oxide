@@ -23,7 +23,7 @@ LoadDefinitions!({
     mode => "internal_vertical",
     before_digest => {
       use crate::engine::latex_ch9_figures_and_tables::before_float;
-      let _ = before_float("algorithm", None);
+      before_float("algorithm", None);
       Let!("\\par", "\\lx@algo@par");
       Let!("\\\\", "\\lx@algo@par");
       // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;

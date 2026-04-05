@@ -152,28 +152,24 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 
 Papers grouped by shared root cause, ordered by impact (most papers fixed per task):
 
-#### [ ] A1. PGF arrows.meta library (3 papers → OK)
+#### [x] A1. PGF arrows.meta library — PARTIALLY DONE (session 94)
 **Papers:** 2209.14198, 2402.10301, 2410.10068
-**Root cause:** `arrows.meta` library defines arrow tips (Stealth, Computer Modern Rightarrow, Hooks, Implies) via pgfkeys declarations. The `\pgfarrowsdeclarealias`, `\pgfarrowsdeclare`, and `\pgfkeys{/pgf/arrow keys/...}` machinery is not ported. First error: `Unknown arrow tip kind 'Computer Modern Rightarrow'`.
-**Approach:**
-1. Read Perl `tikzlibraryarrows.meta.code.tex.ltxml` (the LaTeXML binding, NOT raw TeX)
-2. Port arrow tip declaration infrastructure: `\pgfdeclarearrow`, `\pgfarrowsdeclarealias`
-3. Port the ~20 standard arrow tips: Stealth, Computer Modern Rightarrow, Hooks, Implies, Bar, Bracket, Parenthesis, Ellipsis, Kite, Latex, Triangle, Circle, Square, Diamond, Turned Square, Rays, Arc Barb, Tee Barb
-4. Each tip needs: `setup code` (dimensions), `drawing code` (SVG path), `defaults` (pgfkeys)
-5. Key file: `latexml_package/src/package/pgf/` — create `arrows_meta.rs`
-6. Test: 2209.14198 (simplest), then 2410.10068 (tikz-cd), then 2402.10301 (complex)
-**Estimate:** High complexity. This is the single highest-impact task (3 papers + unblocks tikz-cd for 2602.18719).
+**What was fixed:** `input_definitions()` returned `Ok(())` even when file not found with `noerror=true`, which broke tikz library fallback loading. The loader tried `tikzlibraryarrows.meta.code.tex` (nonexistent), got `Ok`, and never tried `pgflibraryarrows.meta.code.tex` (the real file). Fix: return `Err` on not-found when `noerror=true` (matches Perl `InputDefinitions` which returns undef). All arrow tip errors eliminated.
+**Remaining blockers (papers still EMPTY):**
+- **2209.14198**: Token limit (30M) hit during tikz decoration processing → empty output. Perl produces full HTML with commutative diagrams.
+- **2402.10301**: OOM (4GB+ allocation) during tikz processing → crash. Perl produces full output.
+- **2410.10068**: 1001 errors from tikz-cd matrix (\halign, \pgf@matrix@last@nextcell@options) → empty output.
 
-#### [ ] A2. PGF text node boxing (2 papers → OK)
+#### [ ] A2. PGF pgfscope nesting limit (2 papers → OK)
 **Papers:** 2005.13625, 2103.01205
-**Root cause:** `\pgfmath@` undefined during pgf text-in-picture processing. When pgf tries to compute text bounding boxes via `\pgf@text@options` → `\pgfmath@`, the expansion fails because the pgfmath text-width calculation path is not ported. This causes a cascade of group-mismatch errors (1000+) or timeout.
+**Root cause (revised session 94):** Both papers use matplotlib-generated `.pgf` files with many `\begin{pgfscope}` blocks. Each pgf graphics command (`\pgfsetrectcap`, `\pgfsetmiterjoin`, `\pgfsetlinewidth`, `\pgfsetdash`) calls `\lxSVG@begingroup` which opens a nested `<svg:g>`. With 25+ consecutive pgfscope blocks, the accumulated nesting causes a hang (infinite loop or exponential slowdown), then "not a register" warnings cascade.
+**Minimal repro:** 25 sequential pgfscope blocks (each with setrectcap + setmiterjoin + setlinewidth + setdash + stroke) → hang. 24 works fine.
 **Approach:**
-1. Trace the Perl execution path: `\pgfinterruptpicture` → `\pgftext` → `\pgf@text@options` → `\pgfmathparse` → what `\pgfmath@` is
-2. The issue is likely that `\pgfmath@` is an internal alias set during pgfmath initialization that our port misses
-3. Check if `pgfmathutil.code.tex` sets `\pgfmath@` — it may be a `\let\pgfmath@=\pgfmathparse` or similar
-4. Fix: ensure pgfmath initialization sets the required internal aliases
-5. The timeout (2103.01205) should resolve once errors stop cascading
-**Estimate:** Medium complexity. Likely a missing `\let` alias, not deep infrastructure.
+1. Investigate `\lxSVG@begingroup`/`\lxSVG@closescope` interaction — are svg:g groups properly closed between pgfscopes?
+2. Check if `\pgfsysprotocol@literal` accumulation contributes to the exponential blowup
+3. Perl handles these files fine — compare protocol buffering mechanism
+4. May need scope-level cleanup optimization in `\lxSVG@closescope`
+**Estimate:** Medium-high complexity. The protocol buffering / scope nesting interaction needs careful analysis.
 
 #### [ ] A3. PGF keys filter recursion (1 paper → OK)
 **Papers:** 2402.03300
@@ -217,14 +213,8 @@ Ordered by number of papers affected:
 #### [x] B2. authblkRelocateAffil — DONE (session 90)
 DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...)` + `authblk_relocate_affil()`. 2511.14458 affiliations now match Perl.
 
-#### [ ] B3. Listing per-word styling — 1 paper (2405.19425: 50% → ~80%)
-**Root cause:** Perl wraps each listing token in styled `<span>` elements with language-specific keyword coloring. Rust outputs plain text blocks.
-**Approach:**
-1. Review `listings.sty.ltxml` keyword styling pipeline in Perl
-2. Port `lstClassBegin`/`lstClassEnd` token wrapping: each identifier/keyword gets `<ltx:text class="ltx_lst_*">` wrapper
-3. Language keyword databases already loaded (C, Pascal, TeX, Perl) — need to emit `<span>` during tokenization
-4. Key: the `lst@token` accumulator and `\lst@saveDef` classification
-**Estimate:** Medium complexity.
+#### [x] B3. Listing per-token syntax highlighting — ALREADY DONE (session 93)
+**Result:** Per-token styling was already working. Session 93 fixed `lstdefinestyle` type mismatch, which activated listing styles. Rust output now matches Perl: 146 `--ltx-fg-color` occurrences, 28 styled tokens with `ltx_lst_string`/`ltx_lst_keyword`/`ltx_lst_comment` classes. Colors match: `#9400D1` (strings), `#FF00FF` (keywords), `#009900` (comments). Background `#F2F2EB` and line numbers also correct.
 
 #### [ ] B4. \shortstack/\vtop mode cascade — 1 paper (2508.18544: 43% → ~70%)
 **Root cause:** `\shortstack` inside certain contexts (DefConstructor bounded+mode interaction) produces cascading mode errors. Related to `\vtop` mode vs vertical mode.
@@ -251,6 +241,35 @@ DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...
 2. tikz-cd's `\tikzcdmatrixname` and `\halign` processing may need fixes
 3. tikz-cd creates matrix-style layouts with arrow decorations between cells
 **Estimate:** Medium complexity. Largely unblocked by A1.
+
+#### [x] B7. 1502.04955: missing sections 6–7 and bibliography — DONE (session 94)
+**Root cause:** Two bugs:
+1. `DefMacro!("\\begin{keyword}", ...)` wrongly parsed `{keyword}` as a parameter spec instead of as part of the compound CS name. Fix: use `DefMacro!(T_CS!("\\begin{keyword}"), None, ...)`.
+2. `\@keyword` used `Until:` (non-expanding) instead of `XUntil:` (expanding), so `\end{keyword}` → `\@keyword@cut` sentinel was never found.
+**Result:** All 7 sections + bibliography (95 references) now appear. Also fixed same bug pattern in `minted_sty`, `breqn_sty`, `siamltex_cls` (all `DefMacro!("\\begin{...}")` → `DefMacro!(T_CS!("\\begin{...}"), None, ...)`).
+
+#### [ ] B8. 2101.00726: images failing to render
+**Root cause:** Some images render in perl.html but fail in rust.html. Needs investigation to determine if this is a graphics post-processing issue (B9) or a specific `\includegraphics` handling bug.
+**Approach:**
+1. Compare rust.html and perl.html for 2101.00726 — identify which images fail
+2. Check if the images are present in the source directory vs generated by post-processing
+3. May be related to B9 (graphics post-processing pipeline)
+**Estimate:** Low-medium complexity.
+
+#### [ ] B9. 2310.18318: missing table of contents
+**Root cause:** Manual review of rust.html shows the table of contents is missing. Perl.html has it.
+**Approach:** Investigate `\tableofcontents` handling in the Rust post-processing pipeline.
+**Estimate:** Low-medium complexity.
+
+#### [ ] B10. Graphics post-processing: image dimensions and format conversion — multiple papers (2405.19425 + others)
+**Root cause:** Perl's `latexmlpost` graphics post-processor resolves `\includegraphics` references, converts formats (PDF/EPS→PNG), determines image dimensions (width/height), adds aspect-ratio classes (`ltx_img_landscape`/`ltx_img_square`/`ltx_img_portrait`), and renames output to sequential `x*.png` files. Rust's post-processing pipeline skips this entirely — images keep their original source filenames and lack width/height attributes.
+**Visible in 2405.19425:** Rust `<img src="Meta-agent.png">` (no dimensions, no aspect class) vs Perl `<img src="x11.png" width="598" height="318" class="ltx_img_landscape">`. The 6 subfigure PNGs (`1-math_svg-tex.png` etc.) do have dimensions but still lack the `ltx_img_*` class.
+**Approach:**
+1. Review Perl `LaTeXML::Post::Graphics` — understand `findGraphicsFile()`, format conversion, dimension detection
+2. In Rust post-processing, add a graphics pass that: (a) resolves graphic file paths via kpathsea/search paths, (b) reads image dimensions (PNG header, or imagemagick for PDF/EPS), (c) sets width/height attributes and aspect-ratio class on `<img>` elements
+3. Image renaming to `x*.png` is optional (cosmetic) — prioritize dimension detection
+4. May need `image` crate or `imagemagick` subprocess for dimension reading
+**Estimate:** Medium-high complexity. Affects visual correctness of all papers with figures.
 
 ---
 

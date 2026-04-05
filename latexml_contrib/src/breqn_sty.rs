@@ -6,8 +6,8 @@ LoadDefinitions!({
   // Forbid loading this package, even locally, until we can implement it natively
   DefMacro!("\\condition", "\\text");
   DefMacro!("\\hiderel{}", "#1");
-  DefMacro!("\\begin{dmath} OptionalUndigested", "\\begin{equation}");
-  DefMacro!("\\end{dmath}", "\\end{equation}");
-  DefMacro!("\\begin{dmath*} OptionalUndigested", "\\begin{equation*}");
-  DefMacro!("\\end{dmath*}", "\\end{equation*}");
+  DefMacro!(T_CS!("\\begin{dmath}"), "OptionalUndigested", "\\begin{equation}");
+  DefMacro!(T_CS!("\\end{dmath}"), None, "\\end{equation}");
+  DefMacro!(T_CS!("\\begin{dmath*}"), "OptionalUndigested", "\\begin{equation*}");
+  DefMacro!(T_CS!("\\end{dmath*}"), None, "\\end{equation*}");
 });

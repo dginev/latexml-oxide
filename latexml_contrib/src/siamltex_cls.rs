@@ -15,10 +15,10 @@ LoadDefinitions!({
   DefEnvironment!("{AMS}", "#body");
   DefEnvironment!("{AM}", "#body");
   DefEnvironment!("{PII}", "#body");
-  DefMacro!("\\begin{romannum}", "\\begin{enumerate}");
-  DefMacro!("\\end{romannum}", "\\end{enumerate}");
-  DefMacro!("\\begin{remunerate}", "\\begin{enumerate}");
-  DefMacro!("\\end{remunerate}", "\\end{enumerate}");
+  DefMacro!(T_CS!("\\begin{romannum}"), None, "\\begin{enumerate}");
+  DefMacro!(T_CS!("\\end{romannum}"), None, "\\end{enumerate}");
+  DefMacro!(T_CS!("\\begin{remunerate}"), None, "\\begin{enumerate}");
+  DefMacro!(T_CS!("\\end{remunerate}"), None, "\\end{enumerate}");
   DefMacro!("\\sixptsize", "\\@setfontsize\\sixptsize{6}{8}");
   DefMacro!("\\fiveptsize", "\\@setfontsize\\fiveptsize{5}{7}");
   DefMacro!("\\simac", "SIAM J{\\fiveptsize OURNAL} M{\\fiveptsize ACRO}");

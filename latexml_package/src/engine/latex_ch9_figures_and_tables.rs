@@ -388,7 +388,7 @@ LoadDefinitions!({
     #tags#body\
     </ltx:float>",
     properties => sub[args] {
-      let float_type = args.get(0).and_then(|a| a.as_ref())
+      let float_type = args.first().and_then(|a| a.as_ref())
         .map(|d| d.to_string()).unwrap_or_default();
       before_float(&float_type, None);
       Ok(stored_map!("layout" => "vertical"))
@@ -400,7 +400,7 @@ LoadDefinitions!({
     #tags#body\
     </ltx:float>",
     properties => sub[args] {
-      let float_type = args.get(0).and_then(|a| a.as_ref())
+      let float_type = args.first().and_then(|a| a.as_ref())
         .map(|d| d.to_string()).unwrap_or_default();
       before_float_ex(&float_type, None, true);
       Ok(stored_map!("layout" => "vertical"))

@@ -1506,18 +1506,18 @@ LoadDefinitions!({
       let ts = toks[i].to_string();
       if ts == "\\lx@six@unitobject" || ts == "\\lx@six@unitobject@arg" {
         let ngroups = if ts == "\\lx@six@unitobject@arg" { 2 } else { 1 };
-        result.push(toks[i].clone());
+        result.push(toks[i]);
         i += 1;
         // Collect the brace groups
         for _ in 0..ngroups {
           if i < toks.len() {
-            result.push(toks[i].clone()); // T_BEGIN
+            result.push(toks[i]); // T_BEGIN
             i += 1;
             let mut depth = 1;
             while i < toks.len() && depth > 0 {
               if toks[i].code == Catcode::BEGIN { depth += 1; }
               if toks[i].code == Catcode::END { depth -= 1; }
-              result.push(toks[i].clone());
+              result.push(toks[i]);
               i += 1;
             }
           }

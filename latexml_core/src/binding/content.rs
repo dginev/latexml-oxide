@@ -371,14 +371,19 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       is_found_raw = true;
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
     } else if !lookup_bool(&s!("{filename}_loaded")) {
+      if options.noerror {
+        // With noerror: don't mark as loaded and return Err so callers can
+        // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
+        // InputDefinitions which returns undef on not-found even with noerror=>1.
+        note_end(&s!("Loading {:?} definitions", filename));
+        return Err(s!("File not found: {}", filename).into());
+      }
       // Mark as loaded even on failure — prevents retrying a missing file
       // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
       assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-      if !options.noerror {
-        Warn!("missing_file", name,
-          s!("Can't find binding or file for '{filename}'. \
-            No dispatcher entry and no raw file found on disk."));
-      }
+      Warn!("missing_file", name,
+        s!("Can't find binding or file for '{filename}'. \
+          No dispatcher entry and no raw file found on disk."));
     }
   }
 
@@ -1046,8 +1051,8 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     ..InputDefinitionOptions::default()
   });
   // Perl: if class not found, fall back to OmniBus
-  if result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")) {
-    if name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
+  if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
+    && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
       Warn!("missing_file", name, format!("Can't find binding for class {name} (using OmniBus)"));
       note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
       return input_definitions("OmniBus", InputDefinitionOptions {
@@ -1060,7 +1065,6 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
         ..InputDefinitionOptions::default()
       });
     }
-  }
   result
 }
 
@@ -1601,11 +1605,11 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
   let failed_flag = lookup_bool(&fail_key);
   if !failed_flag {
     assign_value(&fail_key, true, None); // Stop recursion?
-    input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
+    let _ = input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
       extension: Some(Cow::Borrowed("fontmap")),
       noerror: true,
       ..InputDefinitionOptions::default()
-    })?;
+    });
     if has_value(&s!("{encoding}_fontmap")) {
       // Got map?
       assign_value(&fail_key, false, None);

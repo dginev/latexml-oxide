@@ -200,8 +200,8 @@ LoadDefinitions!({
   // Perl L5333-5339: \DeclareTextFontCommand — creates a text font command.
   // Simplified: \cmd{} → {\font #1} (group with font change).
   DefPrimitive!("\\DeclareTextFontCommand DefToken {}", sub[(cmd, font)] {
-    let cs = cmd.clone();
-    let font_rev: Tokens = font.into();
+    let cs = cmd;
+    let font_rev: Tokens = font;
     // Build expansion: {<font> #1}
     let mut expansion = vec![T_BEGIN!()];
     expansion.extend(font_rev.unlist());

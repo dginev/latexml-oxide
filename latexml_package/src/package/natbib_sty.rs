@@ -617,7 +617,7 @@ LoadDefinitions!({
         } else { v };
         (pair[..eq_pos].trim(), Some(v.to_string()))
       } else {
-        (pair.as_ref(), None)
+        (pair, None)
       };
       match key {
         "authoryear" => { assign_value("CITE_STYLE", arena::pin("authoryear"), None); },

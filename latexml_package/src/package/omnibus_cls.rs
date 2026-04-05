@@ -23,11 +23,11 @@ LoadDefinitions!({
   ] {
     let cs = T_CS!(trigger);
     if !IsDefined!(&cs) {
-      let cs_clone = cs.clone();
+      let cs_clone = cs;
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("natbib", RequireOptions::default())?;
-          Ok(Tokens::new(vec![cs_clone.clone()]))
+          Ok(Tokens::new(vec![cs_clone]))
         })), None)?;
     }
   }
