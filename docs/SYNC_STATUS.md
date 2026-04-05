@@ -108,17 +108,21 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 **Current status (2026-04-04):** 37/47 OK (79%), 21/37 at >=90% Perl parity (57%).
 
 ### Completed items
-- [x] **MakeBibliography pipeline wired** — inserted between Scan and CrossRef. Works for papers with `<ltx:bibliography>` elements. Papers with .bbl files already have bibliography from core engine.
+- [x] **MakeBibliography pipeline wired** — inserted between Scan and CrossRef.
 - [x] **\shortstack mode** — fixed to `restricted_horizontal` (matching Perl, was `text`).
 - [x] **Embedded XSLT** — `include_str!` + temp directory for portable binary.
+- [x] **Visual screenshots** — 74 PNGs (37 papers × 2). 14 visually identical, 5 minor differences, 2 Rust-better.
+- [x] **Shortstack root cause** — bounded+mode interaction: `begin_mode` pushes BOUND_MODE frame, explicit `bgroup()` in beforeDigest creates nested frame, `egroup()` finds BOUND_MODE in wrong context → cascade. Framework-level fix needed.
+- [x] **filecontents compound CS** — 2308.06254 (1%): `\begin{filecontents*}` group leak. Perl uses `DefConstructorI(T_CS("\\begin{filecontents*}"))` compound CS; our DefPrimitive goes through `\begin` mechanism leaving group open.
 
 ### Remaining actionable items
-1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported (Perl uses recursive LaTeXML instance). Affects 7 papers in 70-89% range (2306.06628, 2511.11713, 2511.15304, 2512.16911, 2603.19312, 2401.18036, 1502.04955). These papers have only .bib files (no .bbl); Perl MakeBibliography generates bibliography from .bib, Rust cannot.
-2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>` with font-size/color. Affects 2405.19425 (50%).
-3. **\shortstack/\vtop mode interaction** — cascading mode errors in alignment cells. Affects 2508.18544 (44%, loses appendix).
-4. **pgf arrow tips** — Stealth, Circle, Hooks, Implies, Computer Modern Rightarrow not defined. Affects 4 EMPTY papers.
-5. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode state. Affects 2603.15617 (3%).
-6. **smfart.cls errors** — raw TeX class triggers parameter/conditional errors. Affects 2507.23241.
+1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
+2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
+3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor framework. Affects 2508.18544 (44%).
+4. **filecontents compound CS** — `\begin{filecontents*}` group leak consuming preamble. Affects 2308.06254 (1%).
+5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
+6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
+7. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
