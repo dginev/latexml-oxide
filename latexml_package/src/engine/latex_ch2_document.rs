@@ -15,10 +15,11 @@ LoadDefinitions!({
   // the L3 hook system (\AddToHook{begindocument}{...}). Our definition here
   // serves as a fallback when expl3 isn't loaded. When expl3 IS loaded, it
   // overrides this with its own version that routes through \hook_gput_code:nnn.
-  DefMacro!("\\AtBeginDocument{}", sub[(rules)] {
+  // Perl 93f875a6: support optional [label] from modern LaTeX hooks system
+  DefMacro!("\\AtBeginDocument[]{}", sub[(_label, rules)] {
     state::push_value("@at@begin@document", rules)
   });
-  DefMacro!("\\AtEndDocument{}", sub[(rules)] {
+  DefMacro!("\\AtEndDocument[]{}", sub[(_label, rules)] {
     state::push_value("@at@end@document", rules)
   });
 

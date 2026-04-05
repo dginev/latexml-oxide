@@ -1893,7 +1893,20 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     properties => { stored_map!("isSpace" => true) },
+    // Perl 09fb2e6f: In text mode, wrap argument in restricted_horizontal
+    // to prevent display math from leaking through (e.g. quantikz2).
+    before_digest => {
+      if !LookupBool!("IN_MATH") {
+        begin_mode("restricted_horizontal")?;
+        AssignValue!("_hphantom_mode_override" => true);
+      } else {
+        AssignValue!("_hphantom_mode_override" => false);
+      }
+    },
     after_digest => sub[whatsit] {
+      if LookupBool!("_hphantom_mode_override") {
+        end_mode("restricted_horizontal")?;
+      }
       if let Some(arg) = whatsit.get_arg_mut(1) {
         let (w, h, d, _, _, _) = arg.get_size(None)?;
         whatsit.set_property("width", Stored::Dimension(w));

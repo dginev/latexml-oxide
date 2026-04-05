@@ -178,6 +178,11 @@ LoadDefinitions!({
 
   //========================
   // Low-level stuff; redefined from LaTeX stubs
+  // Perl 93f875a6: define DVI color macros with safe defaults
+  // for packages that read them (pgf/tikz).
+  DefMacro!("\\current@color", "0 0 0");
+  DefMacro!("\\default@color", "0 0 0");
+  DefMacro!("\\reset@color", None);
   DefMacro!("\\set@color", None);
   DefMacro!("\\color@begingroup", "\\begingroup");
   DefMacro!("\\color@endgroup", "\\endgroup");
