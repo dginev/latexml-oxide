@@ -21,6 +21,15 @@ LoadDefinitions!({
   // Perl: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
   Let!("\\label", "\\lx@cleverref@label");
 
+  // Override raw TeX \crefname/\Crefname/\crefalias with safe stubs.
+  // The raw cleveref.sty definitions use complex \expandafter chains and
+  // \toksdef that cause token consumption bugs with many calls + blank lines.
+  // These stubs store the names for reference formatting without the risky
+  // raw TeX expansion chains.
+  DefMacro!("\\crefname{}{}{}", "");
+  DefMacro!("\\Crefname{}{}{}", "");
+  DefMacro!("\\crefalias{}{}", "");
+
   // Helper: produces literal ~ (tilde) as catcode OTHER text.
   // Needed because {} parameter expands ACTIVE ~ to space.
   DefPrimitive!("\\lx@tilde", "~");
