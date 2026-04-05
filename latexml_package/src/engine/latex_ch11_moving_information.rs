@@ -124,6 +124,7 @@ LoadDefinitions!({
     let bbl_path = FindFile!(&jobname, type => "bbl");
     // BIB_CONFIG is a list of phases; default ['bib', 'bbl'] means try bib first, fall back to bbl.
     // 'nobibtex' option sets it to ['bbl'] to skip bibtex entirely.
+    // Iterate through config items as a fallback chain.
     let default_bib_config: Rc<[SymStr]> = Rc::new([arena::pin("bib"), arena::pin("bbl")]);
     let bib_config = match lookup_value("BIB_CONFIG") {
       Some(Stored::Strings(v)) => v,
@@ -133,31 +134,38 @@ LoadDefinitions!({
       Info!("missing", "bib_config", "BIB_CONFIG was empty, ignoring bibliography phase.");
       return Ok(Tokens!());
     }
-    if arena::with(bib_config[0], |s| s == "bbl") {
-      if bbl_path.is_none() {
-        Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
-        Ok(Tokens!())
+    // Iterate through config phases as a fallback chain
+    for phase in bib_config.iter() {
+      let is_bbl = arena::with(*phase, |s| s == "bbl");
+      if is_bbl {
+        if bbl_path.is_some() {
+          return Ok(bbl_clause);
+        }
+        // bbl not found — fall through to next phase
+        Info!("expected", "bbl", "Couldn't find bbl file, trying next bibliography phase.");
       } else {
-        Ok(bbl_clause)
-      }
-    } else {
-      let mut missing_bibs = String::new();
-      for bf in bib_files.split(',') {
-        let bib_path = FindFile!(bf, type => "bib");
-        if bib_path.is_none() {
-          if !missing_bibs.is_empty() {
-            missing_bibs.push(',');
+        // 'bib' phase — check if .bib files exist
+        let mut missing_bibs = String::new();
+        for bf in bib_files.split(',') {
+          let bib_path = FindFile!(bf, type => "bib");
+          if bib_path.is_none() {
+            if !missing_bibs.is_empty() {
+              missing_bibs.push(',');
+            }
+            missing_bibs.push_str(bf);
           }
-          missing_bibs.push_str(bf);
+        }
+        if missing_bibs.is_empty() || bbl_path.is_none() {
+          return Ok(bib_clause);
+        } else {
+          Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
+          return Ok(bbl_clause);
         }
       }
-      if missing_bibs.is_empty() || bbl_path.is_none() {
-        Ok(bib_clause)
-      } else {
-        Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
-        Ok(bbl_clause)
-      }
     }
+    // All phases exhausted — no bibliography found
+    Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
+    Ok(Tokens!())
   });
 
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");

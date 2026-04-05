@@ -4,9 +4,9 @@
 
 Updated 2026-04-05. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography wired (Scan→MakeBib→CrossRef). Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
+**Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography pipeline fully operational (Scan→MakeBib→CrossRef) with native Rust BibTeX parser. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results.
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 91: bibliography revolution — 20+ papers gain resolved bibliographies.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -105,8 +105,18 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
-**Current status (2026-04-05):** 37/47 OK (79%), 24/37 >=90% (65%), 29/37 >=80% (78%).
-**Visual comparison (2026-04-05):** 11/37 IDENTICAL on first page, 8 p1-OK, 7 cosmetic, 6 functional, 3 critical.
+**Current status (2026-04-05):** 37/47 OK (79%), 26/37 >=90% (70%), 29/37 >=80% (78%). Bibliography: 20+ papers gain resolved bibitems.
+**Visual comparison (2026-04-05):** 11/37 IDENTICAL on first page, 8 p1-OK, 7 cosmetic, 1 Rust-ahead, 3 critical, 7 structural gaps (bib/tikz/listing). No new regressions from session 91.
+
+**Session 91 fixes (2026-04-05) — Bibliography revolution:**
+1. Removed `--nobibtex` flag — bibliography processing now enabled for all papers.
+2. `\lx@ifusebbl` fallback chain — iterates `BIB_CONFIG` phases (bbl→bib) instead of only checking first.
+3. Pure Rust BibTeX parser — `parse_bibtex()` + `convert_bib_file_to_xml()` in `make_bibliography.rs`. Handles `@type{key, field={value}}` with nested braces, string concat, author parsing.
+4. MakeBibliography ObjectDB registration — after formatting bibitems, registers `BIBLABEL:*` and `ID:*` entries with `id`, `location`, `fragid`, `number` for CrossRef resolution.
+5. Fixed bibitem ID generation — empty `xml:id` on BibTeX-parsed entries now falls back to `bib.bibN`.
+6. Fixed libxml2 use-after-free — `bib_docs` kept alive during entry formatting via tuple return.
+7. 2511.14458: **Rust now ahead of Perl** — 57 bibitems resolved from raw `.bib`, Perl has 37 missing citations.
+8. 20+ papers gain resolved bibliographies from `.bbl` files (previously skipped with `--nobibtex`).
 
 **Session 90 fixes (2026-04-05):**
 1. `input_definitions()` search order — versioned package fallback before raw TeX. Banners eliminated in 2306.00809 + 2506.03074. 2405.19425 now uses neurips.sty binding.
@@ -164,14 +174,8 @@ Papers grouped by shared root cause, ordered by impact (most papers fixed per ta
 4. Alternative: create `smfart.cls.ltxml` binding that loads amsart as base (smfart is similar to amsart)
 **Estimate:** Low-medium complexity. A binding stub may suffice.
 
-#### [ ] A5. Stale Perl HTML regeneration
-**Root cause:** `generate_all.sh` caches Perl HTML. Existing Perl files were generated with different flags (no `--nodefaultresources`, no ar5iv CSS). This caused 3 false positives in visual comparison.
-**Approach:**
-1. Delete all cached `perl.html` files: `rm html/arxiv-examples/*/perl.html`
-2. Re-run `./arxiv-examples/generate_all.sh perl` with correct flags
-3. Retake Perl screenshots
-4. Re-run visual comparison — expect dark theme and \MakeUppercase diffs to disappear
-**Estimate:** Low complexity. Infrastructure fix.
+#### [x] A5. Stale Perl HTML regeneration — DONE (session 90)
+Perl HTML regenerated with correct `--nodefaultresources` + ar5iv CSS flags.
 
 #### Permanent ignores (4 papers — both Perl and Rust fail)
 - **2508.15260** (tcolorbox/minted): minted.sty "listing" parameter type not implemented. Perl: 101 errors + fatal. Only 1KB output.
@@ -185,26 +189,12 @@ Papers grouped by shared root cause, ordered by impact (most papers fixed per ta
 
 Ordered by number of papers affected:
 
-#### [ ] B1. convertBibliography() — 7 papers (59-83% → ~95%)
-**Papers:** 1502.04955, 2306.06628, 2401.18036, 2511.11713, 2511.15304, 2512.16911, 2603.19312
-**Root cause:** Rust's MakeBibliography is wired (Scan→MakeBib→CrossRef) but `convertBibliography()` — the function that parses raw `.bib` files into `<ltx:bibitem>` XML — is not ported. All citation references show as raw bibkeys (`[author2024]`) instead of resolved numbers (`[1]`).
-**Approach:**
-1. Port `convertBibliography()` from Perl `LaTeXML::Post::MakeBibliography` (~200 lines)
-2. BibTeX entry parsing: author, title, year, journal fields → `<ltx:bibblock>` elements
-3. Citation resolution: `\cite{key}` → `<ltx:ref>` with `href="#bib.bibN"` and numeric tag
-4. Key functions: `convertBibEntry`, `postProcessBib`, `formatBibEntry`
-5. Test with 1502.04955 (simplest — elsarticle with .bib) first
-**Estimate:** High complexity. Core bibliography pipeline. Single highest-impact parity improvement.
+#### [x] B1. convertBibliography() — DONE (session 91)
+**Result:** Pure Rust BibTeX parser implemented. Raw `.bib` → XML conversion, `\lx@ifusebbl` fallback chain, ObjectDB registration. 20+ papers gain resolved bibliographies. 2511.14458 is Rust-ahead (57 bibitems vs Perl's 37 missing).
+**Remaining:** 13 papers still have `missing_citation` — these use inline `\thebibliography` or have no `.bib`/`.bbl` files. Not a convertBibliography issue.
 
-#### [x] B2. authblkRelocateAffil DOM surgery — 1 paper (2511.14458 affiliations)
-**Root cause:** `authblk.sty` binding missing `afterClose` callback that relocates `<ltx:note role="affiliationtext">` into each author's `<ltx:contact>` element.
-**Approach:**
-1. Port `authblkRelocateAffil` from Perl `authblk.sty.ltxml` lines 71-91
-2. Use existing DOM surgery infrastructure (`findnodes`, `unlink`, `append_clone`, `set_attribute`) — same pattern as `relocate_footnote` in `latex_functions.rs:154-196`
-3. Add `Tag!("ltx:document", after_close => ...)` in `authblk_sty.rs`
-4. Also fix: `\lx@split@authormark` comma splitting for multi-affiliation authors
-5. Also fix: `\affil` afterDigest for auto-incrementing mark counter
-**Estimate:** Medium complexity. Infrastructure exists; just need to wire it.
+#### [x] B2. authblkRelocateAffil — DONE (session 90)
+DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...)` + `authblk_relocate_affil()`. 2511.14458 affiliations now match Perl.
 
 #### [ ] B3. Listing per-word styling — 1 paper (2405.19425: 50% → ~80%)
 **Root cause:** Perl wraps each listing token in styled `<span>` elements with language-specific keyword coloring. Rust outputs plain text blocks.

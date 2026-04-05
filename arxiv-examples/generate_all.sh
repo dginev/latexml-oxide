@@ -55,7 +55,7 @@ generate_paper() {
       return 0
     fi
     echo -n "RUST $id ($main)... "
-    timeout 120 bash -c "cd '$dir' && '$RUST_BIN' --format=html5 --nobibtex \
+    timeout 120 bash -c "cd '$dir' && '$RUST_BIN' --format=html5 \
       --nodefaultresources \
       --css=https://cdn.jsdelivr.net/gh/dginev/ar5iv-css@0.8.5/css/ar5iv.css \
       --css=https://cdn.jsdelivr.net/gh/dginev/ar5iv-css@0.8.5/css/ar5iv-fonts.css \
