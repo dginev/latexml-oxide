@@ -224,7 +224,8 @@ impl MakeBibliography {
 
     // Step 1: Scan bibliography source documents for ltx:bibentry elements.
     // Build a map: lc(bibkey) → { bibkey, bibentry, citations }
-    // NOTE: bib_docs must be kept alive as long as entries (bibentry Nodes reference them).
+    // Import bibentry nodes into the main document so that XPath queries
+    // (which use the main document's namespace context) work correctly.
     let mut entries: HashMap<String, BibEntryData> = HashMap::new();
     let bib_docs = self.get_bibliographies(doc);
     for bibdoc in &bib_docs {
@@ -238,13 +239,14 @@ impl MakeBibliography {
         let citations: Vec<String> = bibdoc.findnodes_at(".//@bibrefs", Some(&bibentry))
           .iter()
           .filter_map(|n| {
-            // Attribute nodes return their value via get_content()
             let val = n.get_content();
             if val.is_empty() { None } else { Some(val) }
           })
           .flat_map(|s| s.split(',').map(String::from).collect::<Vec<_>>())
           .filter(|s| !s.is_empty())
           .collect();
+
+        let imported = bibentry.clone();
 
         entries.insert(lc_key, BibEntryData {
           bib_key: bibkey,
@@ -263,7 +265,7 @@ impl MakeBibliography {
           referrers: HashSet::new(),
           bibreferrers: HashSet::new(),
           citations,
-          bibentry: Some(bibentry.clone()),
+          bibentry: Some(imported),
         });
       }
     }
@@ -364,9 +366,9 @@ impl MakeBibliography {
 
           let names_for_sort = if sort_names.is_empty() {
             // Try bib-key or bib-title as fallback
-            if let Some(key_node) = doc.findnode_at("ltx:bib-key", bibentry) {
+            if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry).into_iter().next() {
               key_node.get_content()
-            } else if let Some(title_node) = doc.findnode_at("ltx:bib-title", bibentry) {
+            } else if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next() {
               title_node.get_content()
             } else {
               bibkey.clone()
@@ -376,14 +378,14 @@ impl MakeBibliography {
           };
 
           // Year
-          let date_content = doc.findnode_at("ltx:bib-date[@role='publication']", bibentry)
+          let date_content = PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry).into_iter().next()
             .map(|n| n.get_content())
             .unwrap_or_default();
           let year = extract_four_digit_year(&date_content);
           entry.year = year.clone();
 
           // Title
-          let title = doc.findnode_at("ltx:bib-title", bibentry)
+          let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next()
             .map(|n| n.get_content())
             .unwrap_or_default();
           entry.title = title.clone();
@@ -514,7 +516,7 @@ impl MakeBibliography {
     // Step 6: Remove sort ERROR nodes from bibentries
     for entry in included.values() {
       if let Some(ref bibentry) = entry.bibentry {
-        let sort_errors = doc.findnodes_at(".//ltx:ERROR[@class='sort']", Some(bibentry));
+        let sort_errors = PostDocument::findnodes_foreign(".//ltx:ERROR[@class='sort']", bibentry);
         for mut sortnode in sort_errors {
           sortnode.unlink();
         }
@@ -844,7 +846,7 @@ impl MakeBibliography {
       }
 
       // Key tag
-      if let Some(key_node) = doc.findnode_at("ltx:bib-key", bibentry) {
+      if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry).into_iter().next() {
         has_key = true;
         tags.push(NodeData::Element {
           tag: "ltx:tag".to_string(),
@@ -857,7 +859,7 @@ impl MakeBibliography {
       }
 
       // Year tag
-      if let Some(date_node) = doc.findnode_at("ltx:bib-date[@role='publication']", bibentry) {
+      if let Some(date_node) = PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry).into_iter().next() {
         has_year = true;
         let year_text = extract_four_digit_year(&date_node.get_content());
         let suffix = entry.suffix.as_deref().unwrap_or("");
@@ -872,7 +874,7 @@ impl MakeBibliography {
       }
 
       // Type tag
-      if let Some(type_node) = doc.findnode_at("ltx:bib-type", bibentry) {
+      if let Some(type_node) = PostDocument::findnodes_foreign("ltx:bib-type", bibentry).into_iter().next() {
         has_typetag = true;
         tags.push(NodeData::Element {
           tag: "ltx:tag".to_string(),
@@ -885,7 +887,7 @@ impl MakeBibliography {
       }
 
       // Title tag
-      if let Some(title_node) = doc.findnode_at("ltx:bib-title", bibentry) {
+      if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next() {
         tags.push(NodeData::Element {
           tag: "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
@@ -1008,7 +1010,7 @@ impl MakeBibliography {
           if xpath == "true" {
             (true, false)
           } else {
-            let found = !doc.findnodes_at(xpath, Some(bibentry)).is_empty();
+            let found = !PostDocument::findnodes_foreign(xpath, bibentry).is_empty();
             (found, negated)
           }
         } else {
@@ -1041,7 +1043,7 @@ impl MakeBibliography {
             if xpath == "true" {
               Vec::new()
             } else {
-              let nodes = doc.findnodes_at(xpath, Some(bibentry));
+              let nodes = PostDocument::findnodes_foreign(xpath, bibentry);
               apply_formatter(doc, field_spec.formatter, &nodes)
             }
           } else {
@@ -1071,8 +1073,8 @@ impl MakeBibliography {
     // META_BLOCK: Note and External Links
     if let Some(ref bibentry) = entry.bibentry {
       // Note block
-      if !doc.findnodes_at("ltx:bib-note", Some(bibentry)).is_empty() {
-        let notes = doc.findnodes_at("ltx:bib-note", Some(bibentry));
+      if !PostDocument::findnodes_foreign("ltx:bib-note", bibentry).is_empty() {
+        let notes = PostDocument::findnodes_foreign("ltx:bib-note", bibentry);
         let content: Vec<NodeData> = notes.iter()
           .map(|n| NodeData::Text(n.get_content()))
           .collect();
@@ -1090,7 +1092,7 @@ impl MakeBibliography {
       }
       // External Links block
       let links_xpath = "ltx:bib-links | ltx:bib-review | ltx:bib-identifier | ltx:bib-url";
-      let link_nodes = doc.findnodes_at(links_xpath, Some(bibentry));
+      let link_nodes = PostDocument::findnodes_foreign(links_xpath, bibentry);
       if !link_nodes.is_empty() {
         let link_items = format_links(doc, &link_nodes);
         if !link_items.is_empty() {
@@ -1574,7 +1576,7 @@ fn format_author_nodes(doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData>
       }
     }
     // Format single name: initials + surname
-    if let Some(givenname) = doc.findnode_at("ltx:givenname", name) {
+    if let Some(givenname) = PostDocument::findnodes_foreign("ltx:givenname", name).into_iter().next() {
       let given_text = givenname.get_content();
       let initials: String = given_text.split_whitespace()
         .map(|word| {
@@ -1589,7 +1591,7 @@ fn format_author_nodes(doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData>
         .collect();
       result.push(NodeData::Text(initials));
     }
-    if let Some(surname) = doc.findnode_at("ltx:surname", name) {
+    if let Some(surname) = PostDocument::findnodes_foreign("ltx:surname", name).into_iter().next() {
       result.push(NodeData::Text(surname.get_content()));
     }
   }
@@ -1687,19 +1689,19 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
 /// Port of the name extraction logic in `getBibEntries`.
 /// Returns (sort_names, short_names, full_names).
 fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String) {
-  let mut name_nodes: Vec<Node> = doc.findnodes_at("ltx:bib-name[@role='author']", Some(bibentry));
+  let mut name_nodes: Vec<Node> = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
   if name_nodes.is_empty() {
-    name_nodes = doc.findnodes_at("ltx:bib-name[@role='editor']", Some(bibentry));
+    name_nodes = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
   }
 
   if name_nodes.is_empty() {
     // Try bib-key
-    if let Some(key_node) = doc.findnode_at("ltx:bib-key", bibentry) {
+    if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry).into_iter().next() {
       let text = key_node.get_content();
       return (text.clone(), text.clone(), text);
     }
     // Try bib-title
-    if let Some(title_node) = doc.findnode_at("ltx:bib-title", bibentry) {
+    if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next() {
       let text = title_node.get_content();
       return (text.clone(), text.clone(), text);
     }
@@ -1714,7 +1716,7 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
 
   // Short names: surnames only, with "et al" for >2
   let surnames: Vec<String> = name_nodes.iter()
-    .filter_map(|n| doc.findnode_at("ltx:surname", n).map(|s| s.get_content()))
+    .filter_map(|n| PostDocument::findnodes_foreign("ltx:surname", n).into_iter().next().map(|s| s.get_content()))
     .collect();
 
   let short_names = if surnames.len() > 2 {
@@ -1735,10 +1737,10 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
 ///
 /// Port of `getNameText`.
 fn get_name_text(doc: &PostDocument, namenode: &Node) -> String {
-  let surname = doc.findnode_at("ltx:surname", namenode)
-    .map(|n| n.get_content());
-  let givenname = doc.findnode_at("ltx:givenname", namenode)
-    .map(|n| n.get_content());
+  let surname = PostDocument::findnodes_foreign("ltx:surname", namenode)
+    .into_iter().next().map(|n| n.get_content());
+  let givenname = PostDocument::findnodes_foreign("ltx:givenname", namenode)
+    .into_iter().next().map(|n| n.get_content());
   match (surname, givenname) {
     (Some(s), Some(g)) => format!("{} {}", s, g),
     (Some(s), None) => s,

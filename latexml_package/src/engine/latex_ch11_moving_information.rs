@@ -122,9 +122,8 @@ LoadDefinitions!({
     }
     let jobname = Expand!(T_CS!("\\jobname")).to_string();
     let bbl_path = FindFile!(&jobname, type => "bbl");
-    // BIB_CONFIG is a list of phases; default ['bib', 'bbl'] means try bib first, fall back to bbl.
-    // 'nobibtex' option sets it to ['bbl'] to skip bibtex entirely.
-    // Iterate through config items as a fallback chain.
+    // BIB_CONFIG is a list of phases; with bibconfig=bbl,bib: try bbl first, fall back to bib.
+    // Default (bibtex option) is ['bib', 'bbl']; nobibtex sets ['bbl'].
     let default_bib_config: Rc<[SymStr]> = Rc::new([arena::pin("bib"), arena::pin("bbl")]);
     let bib_config = match lookup_value("BIB_CONFIG") {
       Some(Stored::Strings(v)) => v,

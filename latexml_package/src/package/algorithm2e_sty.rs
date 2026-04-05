@@ -26,6 +26,9 @@ LoadDefinitions!({
       let _ = before_float("algorithm", None);
       Let!("\\par", "\\lx@algo@par");
       Let!("\\\\", "\\lx@algo@par");
+      // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
+      // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
+      DefMacro!("\\BlankLine", "\\lx@algo@par");
       DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
     },
     after_digest => sub[whatsit] {
@@ -95,14 +98,28 @@ LoadDefinitions!({
   // Register for tracking indentation — Perl L156-163
   DefRegister!("\\lx@algo@indentation" => Tokens!());
   DefMacro!("\\lx@algo@push@indentation{}", "\\expandafter\\lx@algo@indentation\\expandafter{\\the\\lx@algo@indentation#1}");
+  // Pop last token from indentation register — Perl L159-163
+  DefMacro!("\\lx@algo@pop@indentation", sub[_args] {
+    let reg = LookupRegister!("\\lx@algo@indentation");
+    if let RegisterValue::Tokens(toks) = reg {
+      let mut toks_vec = toks.unlist();
+      toks_vec.pop();
+      state::assign_register("\\lx@algo@indentation",
+        RegisterValue::Tokens(Tokens::new(toks_vec)), None, vec![])?;
+    }
+    Ok(Tokens!())
+  }, locked => true);
 
   // Line start/end — Perl L170-178, L180-190
+  // Perl uses \lx@prepend@indentation at endline to prepend indentation via DOM manipulation.
+  // Rust emits indentation at startline instead (same visual effect, avoids DOM manipulation).
   DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>");
   DefConstructor!("\\lx@algo@@endline", "</ltx:listingline>");
-  DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline");
+  DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline\\the\\lx@algo@indentation");
   DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
 
   // Indentation prepending — Perl L197-198
+  // Perl absorbs + prepends via DOM manipulation; Rust emits at startline, so this is a no-op consumer.
   DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
   DefConstructor!("\\lx@prepend@indentation@{}", "");
 

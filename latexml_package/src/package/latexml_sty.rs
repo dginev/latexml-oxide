@@ -297,6 +297,20 @@ LoadDefinitions!({
 
   ProcessOptions!();
 
+  // Process bibconfig keyval from options passed to latexml.sty.
+  // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
+  // We specifically extract bibconfig=... since it controls bibliography source selection.
+  // Other keyvals (tokenlimit, iflimit, etc.) are handled via CLI flags or ar5iv defaults.
+  if let Some(opts) = state::lookup_vecdeque("opt@latexml.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      if let Some(val) = opt_str.strip_prefix("bibconfig=") {
+        state::assign_value("KV@LTXML@bibconfig",
+          Stored::String(arena::pin(val.trim())), Some(Scope::Global));
+      }
+    }
+  }
+
   // Apply bibconfig from keyvals (Perl L57-59: code closure)
   // bibconfig=bbl,bib means try bbl first, fall back to bib
   if let Some(v) = state::lookup_value("KV@LTXML@bibconfig") {
