@@ -250,16 +250,90 @@ impl Processor for XSLT {
 }
 
 // ======================================================================
+// Embedded XSLT stylesheets — bundled at compile time for portable binary.
+// When the resources/XSLT/ directory is not available on disk, these are
+// extracted to a temp directory so libxslt can resolve xsl:import chains.
+
+mod embedded_xslt {
+  pub const FILES: &[(&str, &str)] = &[
+    ("LaTeXML-html5.xsl", include_str!("../../resources/XSLT/LaTeXML-html5.xsl")),
+    ("LaTeXML-all-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-all-xhtml.xsl")),
+    ("LaTeXML-bib-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-bib-xhtml.xsl")),
+    ("LaTeXML-block-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-block-xhtml.xsl")),
+    ("LaTeXML-common.xsl", include_str!("../../resources/XSLT/LaTeXML-common.xsl")),
+    ("LaTeXML-epub3.xsl", include_str!("../../resources/XSLT/LaTeXML-epub3.xsl")),
+    ("LaTeXML-html4.xsl", include_str!("../../resources/XSLT/LaTeXML-html4.xsl")),
+    ("LaTeXML-inline-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-inline-xhtml.xsl")),
+    ("LaTeXML-jats.xsl", include_str!("../../resources/XSLT/LaTeXML-jats.xsl")),
+    ("LaTeXML-math-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-math-xhtml.xsl")),
+    ("LaTeXML-meta-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-meta-xhtml.xsl")),
+    ("LaTeXML-misc-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-misc-xhtml.xsl")),
+    ("LaTeXML-para-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-para-xhtml.xsl")),
+    ("LaTeXML-picture-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-picture-xhtml.xsl")),
+    ("LaTeXML-structure-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-structure-xhtml.xsl")),
+    ("LaTeXML-tabular-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-tabular-xhtml.xsl")),
+    ("LaTeXML-tei.xsl", include_str!("../../resources/XSLT/LaTeXML-tei.xsl")),
+    ("LaTeXML-webpage-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-webpage-xhtml.xsl")),
+    ("LaTeXML-xhtml5.xsl", include_str!("../../resources/XSLT/LaTeXML-xhtml5.xsl")),
+    ("LaTeXML-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-xhtml.xsl")),
+  ];
+
+  use std::path::PathBuf;
+  use std::sync::OnceLock;
+
+  static EXTRACTED_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+
+  /// Extract embedded XSLT files to a temp directory.
+  /// Returns the directory path, or None if extraction fails.
+  pub fn ensure_extracted() -> Option<PathBuf> {
+    EXTRACTED_DIR
+      .get_or_init(|| {
+        let dir = std::env::temp_dir().join("latexml_oxide_xslt");
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+          log::warn!("Failed to create XSLT temp dir: {e}");
+          return None;
+        }
+        for (name, content) in FILES {
+          if let Err(e) = std::fs::write(dir.join(name), content) {
+            log::warn!("Failed to write embedded XSLT {name}: {e}");
+            return None;
+          }
+        }
+        Some(dir)
+      })
+      .clone()
+  }
+}
+
+// ======================================================================
 // File search helpers
 
 fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, PostError> {
+  // 1. Check if the stylesheet exists as an absolute/relative path
   if Path::new(stylesheet).is_file() {
     return Ok(stylesheet.to_string());
   }
+  // 2. Check each search path
   for sp in searchpaths {
     let p = format!("{}/{}", sp, stylesheet);
     if Path::new(&p).is_file() {
       return Ok(p);
+    }
+  }
+  // 3. Fallback: extract embedded XSLT to temp dir and use that
+  if let Some(embedded_dir) = embedded_xslt::ensure_extracted() {
+    let filename = Path::new(stylesheet)
+      .file_name()
+      .and_then(|f| f.to_str())
+      .unwrap_or(stylesheet);
+    let embedded_path = embedded_dir.join(filename);
+    if embedded_path.is_file() {
+      return Ok(embedded_path.to_string_lossy().to_string());
+    }
+    // Also check the full relative path inside the embedded dir
+    let full_path = embedded_dir.join(stylesheet);
+    if full_path.is_file() {
+      return Ok(full_path.to_string_lossy().to_string());
     }
   }
   Err(PostError::Processing(format!(
