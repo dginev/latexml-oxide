@@ -108,15 +108,15 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 **Current status (2026-04-05):** 37/47 OK (79%), 22/37 at >=90% Perl parity (59%). 2308.06254: 1%→96% (cleveref fix).
 
 ### Sessions 88-89 completed (2026-04-04/05)
-MakeBibliography pipeline. `\shortstack` mode fix. Embedded XSLT. Visual screenshots. filecontents endgroup fix. **cleveref `\crefname` token consumption fix** (2308.06254: 1%→96%). `\dp` register panic fix.
+MakeBibliography pipeline. `\shortstack` mode. XSLT bundling. cleveref fix (2308: 1%→96%). `\dp/\ht/\wd` panic fixes. filecontents endgroup. Visual screenshots. Perl upstream sync confirmed.
 
-### Remaining actionable items
-1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
-2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
-3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor. Perl #2770 noframe fix is for DefEnvironment (already ported at lines 1058/1187). The shortstack issue is DefConstructor-specific: `bounded=true` + `mode` creates double stack frames. Need DefConstructor-specific noframe logic. Affects 2508.18544 (44%).
-4. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
-5. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
-6. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
+### Remaining infrastructure items
+1. **convertBibliography()** — raw .bib → XML conversion. Affects 7 papers (70-89%).
+2. **Listing per-word styling** — token-level `<span>` wrappers. Affects 2405.19425 (50%).
+3. **\shortstack/\vtop mode cascade** — DefConstructor bounded+mode interaction. Perl #2770 noframe for DefEnvironment already ported. Affects 2508.18544 (44%).
+4. **pgf arrow tips** — Stealth, Circle, Hooks, Implies. Affects 4 EMPTY papers.
+5. **tikzpicture mode corruption** — parser mode state. Affects 2603.15617 (3%).
+6. **smfart.cls/expl3** — raw TeX class + expl3 timing. Affects 2507.23241.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
