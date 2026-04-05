@@ -108,7 +108,11 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 **Current status (2026-04-05):** 37/47 OK (79%), 22/37 >=90% (59%), 29/37 >=80% (78%).
 
 ### Sessions 88-89 (2026-04-04/05)
-MakeBibliography pipeline. `\shortstack` mode. XSLT bundling. **cleveref fix** (2308: 1%→96%). `\dp/\ht/\wd` panic fixes. filecontents endgroup. Visual screenshots (75 PNGs). Perl upstream sync confirmed. Diff inventory: 214/298 zero-diff (71%).
+MakeBibliography pipeline. `\shortstack` mode. XSLT bundling. **cleveref fix** (2308: 1%→96%). `\dp/\ht/\wd` panic fixes. filecontents endgroup. Perl upstream sync confirmed.
+
+**Visual screenshots** (75 PNGs, 37 papers): 13 identical, 11 minor diffs, 13 seemingly significant — but TIER 3 "missing text" is a **CSS artifact** (headless Chrome without CDN fonts renders text invisible). Verified: content IS in HTML (e.g. 1706.03762 has 148 paragraphs in both Rust and Perl). True visual parity is much better than screenshots suggest.
+
+**Diff inventory**: 214/298 zero-diff (71%), ~28K total diff lines.
 
 ### Remaining infrastructure items
 1. **convertBibliography()** — raw .bib → XML conversion. Affects 7 papers (70-89%).
