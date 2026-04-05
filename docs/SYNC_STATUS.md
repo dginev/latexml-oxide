@@ -114,7 +114,7 @@ MakeBibliography pipeline (Scan→MakeBib→CrossRef). `\shortstack` mode fix. E
 1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
 2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
 3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor framework. Affects 2508.18544 (44%).
-4. **\setlist state corruption** — 2308.06254 (1%): blank-line `\par` tokens in preamble + heavy raw TeX packages (cleveref 4000+ lines, complexity 757 lines) corrupt `\setlist` definition after 2nd call. Removing blank lines from preamble fixes it. Perl handles same input correctly. Needs instrumented debugging.
+4. **Raw TeX argument over-read** — 2308.06254 (1%): complexity.sty's `\ifthenelse` commands read past the file boundary, consuming `\usepackage{enumitem}` from the main document. Blank lines trigger because `\par` tokens change mouth buffer positioning. Traced via install_definition trap: `\setlist` is defined AFTER its first use. Fix: guard raw TeX argument reading against mouth boundary.
 5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
 6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
 7. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
