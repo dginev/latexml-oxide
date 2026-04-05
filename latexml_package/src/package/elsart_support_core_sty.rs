@@ -12,9 +12,115 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}", "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#2}}");
   DefMacro!("\\address[]{}", "\\lx@contact{address}{#2}");
   // \affiliation[label]{key=val,...} — elsarticle uses this for institutions
-  // Not in Perl elsart_support_core, but needed for modern elsarticle papers
+  // Not in Perl elsart_support_core, but needed for modern elsarticle papers.
+  // The TeX elsarticle.cls uses LaTeX3 \keys_set:nn to parse key-value pairs
+  // (organization, addressline, city, postcode, state, country) and concatenate
+  // the values with comma separators. We parse the key-value body in Rust
+  // and produce clean affiliation text.
   DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affiliation[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}");
+  DefMacro!("\\affiliation[]{}", sub[(_opt_label, body)] {
+    // Parse key-value pairs from the body, respecting brace nesting.
+    // Keys: organization, addressline, city, postcode, state, country
+    // Values are typically brace-delimited: key={value with, commas}
+    let body_str = body.to_string();
+    let mut parts: Vec<String> = Vec::new();
+
+    // State machine to parse key=value pairs with brace nesting
+    let chars: Vec<char> = body_str.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+      // Skip whitespace and commas between key-value pairs
+      while i < len && (chars[i].is_whitespace() || chars[i] == ',') {
+        i += 1;
+      }
+      if i >= len { break; }
+
+      // Read key (until '=' or end)
+      let key_start = i;
+      while i < len && chars[i] != '=' {
+        i += 1;
+      }
+      if i >= len { break; }
+      let _key = body_str[key_start..i].trim().to_lowercase();
+      i += 1; // skip '='
+
+      // Skip whitespace after '='
+      while i < len && chars[i].is_whitespace() {
+        i += 1;
+      }
+      if i >= len { break; }
+
+      // Read value — may be brace-delimited or plain
+      let value;
+      if i < len && chars[i] == '{' {
+        // Brace-delimited value: read until matching '}'
+        i += 1; // skip opening '{'
+        let val_start = i;
+        let mut depth = 1;
+        while i < len && depth > 0 {
+          if chars[i] == '{' { depth += 1; }
+          else if chars[i] == '}' { depth -= 1; }
+          if depth > 0 { i += 1; }
+        }
+        value = body_str[val_start..i].trim().to_string();
+        if i < len { i += 1; } // skip closing '}'
+      } else {
+        // Plain value: read until next comma or end
+        let val_start = i;
+        while i < len && chars[i] != ',' {
+          i += 1;
+        }
+        value = body_str[val_start..i].trim().to_string();
+      }
+
+      // Only include known affiliation keys with non-empty values
+      let trimmed = value.trim();
+      if !trimmed.is_empty() {
+        match _key.as_str() {
+          "organization" | "organisation" | "o" | "or"
+          | "addressline" | "a" | "ad"
+          | "city" | "c" | "ci"
+          | "postcode" | "p" | "pc"
+          | "state" | "s" | "st"
+          | "country" | "cy" => {
+            parts.push(trimmed.to_string());
+          }
+          _ => {
+            // Unknown keys: include value as-is (matching elsarticle unknown handler)
+            if !trimmed.is_empty() {
+              parts.push(trimmed.to_string());
+            }
+          }
+        }
+      }
+    }
+
+    let affil_text = parts.join(", ");
+    let mut result = Vec::new();
+    result.push(T_CS!("\\@add@to@frontmatter"));
+    result.push(T_BEGIN!());
+    for ch in "ltx:creator".chars() {
+      result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+    }
+    result.push(T_END!());
+    result.push(T_BEGIN!());
+    result.push(T_CS!("\\@@@affiliation"));
+    result.push(T_BEGIN!());
+    for ch in affil_text.chars() {
+      if ch == ' ' {
+        result.push(T_SPACE!());
+      } else if ch.is_ascii_alphabetic() {
+        result.push(Token { text: arena::pin_char(ch), code: Catcode::LETTER });
+      } else {
+        result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+      }
+    }
+    result.push(T_END!());
+    result.push(T_END!());
+    result
+  });
   DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
   DefMacro!("\\thanksref{}", "");
   DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
