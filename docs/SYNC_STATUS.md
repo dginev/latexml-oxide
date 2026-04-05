@@ -32,11 +32,9 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | File | Status | Open Gaps |
 |------|--------|-----------|
 | base_parameter_types.rs | MINOR | `DirectoryList`, `CommaList`, `DigestUntil` stubbed; `Variable` reversion safe fallback |
-| base_xmath.rs | MINOR | Missing: `MathWhatsit()` |
 | tex_box.rs | MINOR | Minor box dimension edge cases |
 | tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics, `getFontDimen()` helper |
 | tex_tables.rs | MINOR | Minor: padding CSS classes |
-| latex_ch4_sectioning_and_toc.rs | MINOR | Missing: `LABEL_MAPPING_HOOK` |
 
 ---
 
@@ -115,13 +113,12 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 - [x] **Embedded XSLT** — `include_str!` + temp directory for portable binary.
 
 ### Remaining actionable items
-1. **BibTeX .bib-only papers** — papers with `.bib` (no `.bbl`) lack bibliography because `\lx@ifusebbl` returns empty with `bibconfig=bbl,bib`. MakeBibliography's `convertBibliography()` (raw .bib → XML) NOT ported. Affects 2511.11713, 2511.14458.
-2. **Bibliography richness** — MakeBibliography runs but outputs flat text; Perl generates structured `ltx_bib_*` spans, back-references, cross-ref links. Affects 2410.12896 (59%).
-3. **Listing per-word styling** — Perl wraps each listing token in styled `<span>` with font-size/color. Affects 2405.19425 (50%).
-4. **\shortstack/\vtop mode interaction** — cascading mode errors in alignment cells. Affects 2508.18544 (44%, loses appendix).
-5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies, Computer Modern Rightarrow not defined. Affects 4 EMPTY papers.
-6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode state. Affects 2603.15617 (3%).
-7. **smfart.cls errors** — raw TeX class triggers parameter/conditional errors. Affects 2507.23241.
+1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported (Perl uses recursive LaTeXML instance). Affects 7 papers in 70-89% range (2306.06628, 2511.11713, 2511.15304, 2512.16911, 2603.19312, 2401.18036, 1502.04955). These papers have only .bib files (no .bbl); Perl MakeBibliography generates bibliography from .bib, Rust cannot.
+2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>` with font-size/color. Affects 2405.19425 (50%).
+3. **\shortstack/\vtop mode interaction** — cascading mode errors in alignment cells. Affects 2508.18544 (44%, loses appendix).
+4. **pgf arrow tips** — Stealth, Circle, Hooks, Implies, Computer Modern Rightarrow not defined. Affects 4 EMPTY papers.
+5. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode state. Affects 2603.15617 (3%).
+6. **smfart.cls errors** — raw TeX class triggers parameter/conditional errors. Affects 2507.23241.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.

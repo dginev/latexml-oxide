@@ -81,10 +81,13 @@ LoadDefinitions!({
     state::assign_value(&s!("{filename}_contents"), Stored::from(content), Some(Scope::Global));
     Ok(())
   }
+  // Perl: DefConstructorI(T_CS("\\begin{filecontents}"), "Semiverbatim", '', afterDigest => ...)
+  // The \filecontents primitive reads filename + raw lines until \end{filecontents}.
+  // When called via \begin{filecontents}, \begin opens a group first.
+  // We manually close the group after caching, matching the \end that was consumed.
   DefPrimitive!("\\filecontents", {
     cache_filecontents("\\end{filecontents}", false)?;
   });
-  // Star variant: \filecontents* (the * is part of the CS name)
   DefPrimitive!("\\lx@filecontents@star", {
     cache_filecontents("\\end{filecontents*}", true)?;
   });
