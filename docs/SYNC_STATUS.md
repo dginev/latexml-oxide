@@ -6,7 +6,7 @@ Updated 2026-04-05. Only lists open gaps & TODOs; completed items live in git hi
 
 **Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography pipeline fully operational (Scan→MakeBib→CrossRef) with native Rust BibTeX parser. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 91: bibliography revolution — 20+ papers gain resolved bibliographies.
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 92: fresh visual comparison — 18/37 IDENTICAL (49%), 30/37 >=80% size parity (81%). Two actionable bugs found: affil0 placeholder (2603.15617), raw affiliation params (2508.18544).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -17,6 +17,8 @@ latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletim
 
 **High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
 (Engine Parity → Package Bindings → Post-Processing → Production).
+
+**Performance:** See [`PERFORMANCE.md`](PERFORMANCE.md) — repeatable optimization checklist for release milestones.
 
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
