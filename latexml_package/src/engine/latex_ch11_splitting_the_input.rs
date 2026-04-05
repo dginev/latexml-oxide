@@ -87,9 +87,14 @@ LoadDefinitions!({
   // We manually close the group after caching, matching the \end that was consumed.
   DefPrimitive!("\\filecontents", {
     cache_filecontents("\\end{filecontents}", false)?;
+    // \begin{filecontents} opens a \begingroup; since we consumed \end{filecontents}
+    // as raw text, we must close the group that \begin opened.
+    stomach::endgroup()?;
   });
   DefPrimitive!("\\lx@filecontents@star", {
     cache_filecontents("\\end{filecontents*}", true)?;
+    // Same: close the \begingroup from \begin{filecontents*}
+    stomach::endgroup()?;
   });
   state::assign_meaning(
     &T_CS!("\\filecontents*"),
