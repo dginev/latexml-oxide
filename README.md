@@ -4,11 +4,10 @@
 [![ported tests 100%](https://img.shields.io/badge/ported%20tests%20-%20100%25%20(391%2F391)-%20%2332a852?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
-This project is in an **alpha** stage. Please avoid using it in any real world setting before test parity is reached.
+This project is in an **early beta** stage. Please avoid using it in any real world setting before mainline LaTeXML parity is reached.
 
-**If the "ported tests" badge above isn't at `100%`, we aren't stable and we aren't ready**.
-
-**Current status (2026-04-02):** 391/391 tests passing (100%), 0 ignored. 414 core + 91 contrib package bindings. Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
+**Current status (2026-04-05):** All tests passing (100%), 0 ignored. 
+Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
 
 ### Why?
 
@@ -27,14 +26,15 @@ Design goals:
 
 ### Installation
 
-Requires Rust `nightly` v1.83, and newer.
+Requires a recent Rust `nightly` to compile.
 
 We still need the non-perl OS dependencies from [get LaTeXML](https://math.nist.gov/~BMiller/LaTeXML/get.html),
 but adapted for Rust bindings.
 
 Example for Ubuntu:
 ```
-$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick
+$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkpathsea-dev libkpathsea6 \
+                   texlive texlive-latex-extra texlive-science
 ```
 
 ### Sample use
@@ -51,7 +51,7 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick
 
 3. convert an example document:
     ```bash
-    $ cargo run --release --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
+    $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
     ```
 
 ### Development Tips
@@ -69,4 +69,5 @@ To generate the project documentation locally, run:
 $ cargo doc --workspace --no-deps --open
 ```
 
-**IMPORTANT:** There is a compile-time plugin that collects the files in the test suite. This means that when adding a new test `[name].tex` and `[name].xml` pair of files, you may need to manually execute `cargo clean` to rediscover the entry.
+**IMPORTANT:** There is a compile-time plugin that collects the files in the test suite. 
+This means that when adding a new test `[name].tex` and `[name].xml` pair of files, you may need to manually execute `cargo clean` to rediscover the entry.
