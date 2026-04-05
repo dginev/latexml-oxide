@@ -23,25 +23,33 @@ LoadDefinitions!({
   DefMacro!("\\quote@@name{} Match:\"", "#1\\quote@@name");
   DefMacro!("\\unquote@name{}", "\\quote@@name#1\\@gobble\"");
 
-  // # Note that even excluded files SHOULD have the effects of their inclusion
-  // # simulated by having read the corresponding aux file;
-  // # But we're not bothering with that.
-  // DefPrimitive('\include{}', sub {
-  //     my ($stomach, $path) = @_;
-  //     $path = ToString($path);
-  //     my $table = LookupValue('including@only');
-  //     if (!$table || $$table{$path}) {
-  //       Input($path); }
-  //     return; });
+  // Perl L4313-4315: \include — input a file, respecting \includeonly
+  DefPrimitive!("\\include{}", sub[(path)] {
+    let path_str = Expand!(path).to_string();
+    // Check if \includeonly restricts inclusion
+    let table = state::lookup_value("including@only");
+    let should_include = match table {
+      None => true, // no \includeonly — include everything
+      Some(Stored::HashString(map)) => map.contains_key(&path_str),
+      _ => true,
+    };
+    if should_include {
+      Input!(&path_str);
+    }
+  });
 
-  // # [note, this will load name.tex, if it exists, else name]
-  // DefPrimitive('\includeonly{}', sub {
-  //     my ($stomach, $paths) = @_;
-  //     $paths = ToString($paths);
-  //     my $table = LookupValue('including@only');
-  //     AssignValue('including@only', $table = {}, 'global') unless $table;
-  //     map { $$table{$_} = 1 } map { /^\s*(.*?)\s*$/ && $1; } split(/,/, $paths);
-  //     return; });
+  // Perl L4303-4311: \includeonly — restrict which files \include loads
+  DefPrimitive!("\\includeonly{}", sub[(paths)] {
+    let paths_str = Expand!(paths).to_string();
+    let mut map = rustc_hash::FxHashMap::default();
+    for part in paths_str.split(',') {
+      let trimmed = part.trim().to_string();
+      if !trimmed.is_empty() {
+        map.insert(trimmed, "1".to_string());
+      }
+    }
+    state::assign_value("including@only", Stored::HashString(map), Scope::Global);
+  });
 
   // Perl latex_constructs L4316-4353: {filecontents} and {filecontents*} environments
   // Read raw lines until \end{filecontents}, cache content for later \input.

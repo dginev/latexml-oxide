@@ -297,6 +297,18 @@ LoadDefinitions!({
 
   ProcessOptions!();
 
+  // Apply bibconfig from keyvals (Perl L57-59: code closure)
+  // bibconfig=bbl,bib means try bbl first, fall back to bib
+  if let Some(v) = state::lookup_value("KV@LTXML@bibconfig") {
+    let config_str = v.to_string();
+    let configs: Vec<_> = config_str.split(',')
+      .map(|s| arena::pin(s.trim()))
+      .collect();
+    if !configs.is_empty() {
+      state::assign_value("BIB_CONFIG", Stored::Strings(Rc::from(configs)), Some(Scope::Global));
+    }
+  }
+
   // Apply limit options from keyvals (Perl L87-98)
   if let Some(v) = state::lookup_value("KV@LTXML@tokenlimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);

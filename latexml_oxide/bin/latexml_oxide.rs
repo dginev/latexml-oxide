@@ -565,7 +565,15 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     ));
   }
   if let Some(xsl_path) = stylesheet {
-    let searchpaths = vec!["resources/XSLT".to_string(), ".".to_string()];
+    // Resolve XSLT searchpaths: stylesheet path is "resources/XSLT/LaTeXML-html5.xsl"
+    // so searchpaths should be directories where that relative path can be found.
+    // Binary is at target/release/latexml_oxide, project root is 3 levels up.
+    let mut searchpaths = vec![".".to_string()];
+    if let Ok(exe) = std::env::current_exe() {
+      if let Some(project_root) = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
+        searchpaths.insert(0, project_root.display().to_string());
+      }
+    }
     let mut xslt_params = std::collections::HashMap::new();
     if !css_files.is_empty() {
       xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_files.join("|")));

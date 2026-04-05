@@ -73,8 +73,9 @@ LoadDefinitions!({
 
   // Keywords — Perl L130-153
   // keyword environment and macros with XUntil pattern
-  DefMacro!("\\begin{keyword}", "\\begingroup\\@keyword");
-  DefMacro!("\\end{keyword}", "\\@keyword@cut\\endgroup");
+  // \begin{keyword}/\end{keyword} handled by DefEnvironment! which creates compound CS properly.
+  // The body is extracted as keywords using frontmatter classification.
+  DefEnvironment!("{keyword}", "<ltx:classification scheme='keywords'>#body</ltx:classification>");
   DefMacro!("\\keyword", "\\@keyword");
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
@@ -82,12 +83,15 @@ LoadDefinitions!({
   DefMacro!("\\JEL", "\\@keyword@cut\\@JEL");
   DefMacro!("\\UK", "\\@keyword@cut\\@UK");
 
-  DefMacro!("\\@keyword XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
-  DefMacro!("\\@PACS XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
-  DefMacro!("\\@MSC{} XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme={#1 MSC}]{#2}");
-  DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
-  DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=UK]{#1}");
+  // Perl L148-152: @keyword reads until @keyword@cut delimiter using XUntil.
+  // Use DefConstructor for the sentinel, then simple DefMacro for the reader.
+  // Since XUntil reads expanded tokens until delimiter, we approximate with Until.
   DefConstructor!("\\@keyword@cut", "");
+  DefMacro!("\\@keyword Until:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\@PACS Until:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
+  DefMacro!("\\@MSC{} Until:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme={#1 MSC}]{#2}");
+  DefMacro!("\\@JEL Until:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
+  DefMacro!("\\@UK Until:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=UK]{#1}");
 
   // Document structure — Perl L158-163
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
