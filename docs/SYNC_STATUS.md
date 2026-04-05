@@ -6,7 +6,7 @@ Updated 2026-04-05. Only lists open gaps & TODOs; completed items live in git hi
 
 **Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography pipeline fully operational (Scan→MakeBib→CrossRef) with native Rust BibTeX parser. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 92: fresh visual comparison — 18/37 IDENTICAL (49%), 30/37 >=80% size parity (81%). Two actionable bugs found: affil0 placeholder (2603.15617), raw affiliation params (2508.18544).
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 93: 18/37 IDENTICAL (49%), 30/37 >=80% size parity (81%). Session 93 fixes: algorithm2e BlankLine/indentation, bibconfig=bbl,bib parity, CSS injection. Six actionable bugs remain: empty abstracts (1907.08050, 2008.08932), body truncation (2602.18719, 2603.15617), raw affil params (2508.18544), listing style gap (2405.19425).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -107,8 +107,15 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
-**Current status (2026-04-05):** 37/47 OK (79%), 27/37 >=90% (73%), 30/37 >=80% (81%). Bibliography: 20+ papers gain resolved bibitems.
-**Visual comparison (session 92):** 18/37 IDENTICAL on first page (49%), 11 near-identical/cosmetic, 2 Rust-better, 2 bugs (fixed below), 2 critical (tikz body truncation).
+**Current status (2026-04-05):** 37/47 OK (79%), 27/37 >=90% (73%), 30/37 >=80% (81%). Bibliography: BBL preferred via bibconfig=bbl,bib.
+**Visual comparison (session 93 final):** 18/37 IDENTICAL (49%), 10 near-identical/cosmetic, 2 Rust-better, 4 bugs, 2 critical.
+
+**Session 93 fixes (2026-04-05) — Algorithm2e + bibconfig parity:**
+1. `algorithm2e_sty.rs`: `\BlankLine` (`\vskip 1ex`) leaked "1ex" as literal text in listing lines. Fixed: override to `\lx@algo@par` inside algorithm env.
+2. `algorithm2e_sty.rs`: `\lx@algo@pop@indentation` implemented (was missing, log showed undefined macro). Pops last token from indentation register matching Perl L159-163.
+3. `algorithm2e_sty.rs`: `\lx@algo@startline` now emits `\the\lx@algo@indentation` — produces `<ltx:rule>` vertical bar elements (18 rules generated for 2508.18544, was 0).
+4. `latexml_sty.rs`: `bibconfig=bbl,bib` keyval from ar5iv.sty now processed — was silently ignored, causing BBL files to be skipped. Bibliography ordering now matches Perl.
+5. 2508.18544: bibliography entries match Perl (56 entries, BBL ordering), algo indentation bars present, "1ex" text eliminated.
 
 **Session 92 fixes (2026-04-05) — Visual comparison bug fixes:**
 1. `authblk_sty.rs`: `\lx@authormark` constructor had mark text as content (should be empty element). Fixed: removed `#1` from content, matching Perl L56-58. Papers affected: 2603.15617 and any authblk user.
