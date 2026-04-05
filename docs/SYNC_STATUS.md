@@ -4,7 +4,7 @@
 
 Updated 2026-04-04. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (338 integration + 1 post + 39+7+6+15 latexml_post unit tests + 1 post integration). All integration tests zero-diff against Rust reference XMLs. MakeBibliography post-processor wired into pipeline (Scan → MakeBibliography → CrossRef). Perl reference parity: 246/314 effective zero-diff (78%), ~18K meaningful diff lines across 68 non-zero tests. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K).
+**Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography wired (Scan→MakeBib→CrossRef). Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
 
 **arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 48-paper test catalog with per-paper status, errors, and visual comparison results.
 
@@ -105,21 +105,16 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
-**Current status (2026-04-04):** 37/47 OK (79%), 21/37 at >=90% Perl parity (57%).
+**Current status (2026-04-05):** 37/47 OK (79%), 21/37 at >=90% Perl parity (57%).
 
-### Completed items
-- [x] **MakeBibliography pipeline wired** — inserted between Scan and CrossRef.
-- [x] **\shortstack mode** — fixed to `restricted_horizontal` (matching Perl, was `text`).
-- [x] **Embedded XSLT** — `include_str!` + temp directory for portable binary.
-- [x] **Visual screenshots** — 74 PNGs (37 papers × 2). 14 visually identical, 5 minor differences, 2 Rust-better.
-- [x] **Shortstack root cause** — bounded+mode interaction: `begin_mode` pushes BOUND_MODE frame, explicit `bgroup()` in beforeDigest creates nested frame, `egroup()` finds BOUND_MODE in wrong context → cascade. Framework-level fix needed.
-- [x] **filecontents group leak** — fixed: `stomach::endgroup()` after caching. 2308.06254 root cause is actually `\setlist Optional RequiredKeyVals` parsing bug (see #4).
+### Session 88 completed (2026-04-04/05)
+MakeBibliography pipeline (Scan→MakeBib→CrossRef). `\shortstack` mode fix. Embedded XSLT. Visual screenshots (74 PNGs). filecontents endgroup fix. Root cause analyses: bounded+mode cascade, `\setlist` state corruption.
 
 ### Remaining actionable items
 1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
 2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
 3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor framework. Affects 2508.18544 (44%).
-4. **\setlist state corruption** — 2308.06254 (1%): third consecutive `\setlist` call finds `\setlist` undefined. Only triggers with exact file bytes (specific package combo); manual reproduction with identical content works. Likely non-deterministic state corruption during raw TeX loading. Perl handles same input correctly.
+4. **\setlist state corruption** — 2308.06254 (1%): blank-line `\par` tokens in preamble + heavy raw TeX packages (cleveref 4000+ lines, complexity 757 lines) corrupt `\setlist` definition after 2nd call. Removing blank lines from preamble fixes it. Perl handles same input correctly. Needs instrumented debugging.
 5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
 6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
 7. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
