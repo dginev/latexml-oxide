@@ -107,17 +107,16 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 
 **Current status (2026-04-05):** 37/47 OK (79%), 22/37 at >=90% Perl parity (59%). 2308.06254: 1%→96% (cleveref fix).
 
-### Session 88 completed (2026-04-04/05)
-MakeBibliography pipeline (Scan→MakeBib→CrossRef). `\shortstack` mode fix. Embedded XSLT. Visual screenshots (74 PNGs). filecontents endgroup fix. Root cause analyses: bounded+mode cascade, `\setlist` state corruption.
+### Sessions 88-89 completed (2026-04-04/05)
+MakeBibliography pipeline. `\shortstack` mode fix. Embedded XSLT. Visual screenshots. filecontents endgroup fix. **cleveref `\crefname` token consumption fix** (2308.06254: 1%→96%). `\dp` register panic fix.
 
 ### Remaining actionable items
 1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
 2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
 3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor framework. Affects 2508.18544 (44%).
-4. ~~**\crefname token consumption**~~ — 2308.06254: **FIXED**. Overrode raw cleveref \crefname/\Crefname/\crefalias with safe stubs. Raw TeX's \@crefname macro (\expandafter chains + \toksdef) consumed tokens beyond arguments after 12+ calls with preamble blank lines. Enumitem now loads correctly; remaining errors are biblatex-specific.
-5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
-6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
-7. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
+4. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
+5. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
+6. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
 
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
