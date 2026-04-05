@@ -53,7 +53,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2506.03074 | OK | 1299KB | 1262KB | 102% | _main.tex | 177 bibitems | near-identical; citation style (numeric vs author-year) |
 | 2507.23241 | EMPTY | 0KB | 1020KB | 0% | main.tex | smfart.cls + expl3 timing | N/A |
 | 2508.15260 | EMPTY | 0KB | 360KB | 0% | main.tex | tcolorbox; Perl also fails | N/A |
-| 2508.18544 | OK | 373KB | 856KB | 43% | Main_Communi_submit.tex | 25 missing; shortstack errors | BUG: raw affil params leaked; missing keywords/PACS |
+| 2508.18544 | OK | 729KB | 856KB | 85% | Main_Communi_submit.tex | 56 bibitems; end_mode recovery | affil key-val text; Conclusion+Appendix+Bib now present |
 | 2509.18103 | OK | 197KB | 276KB | 71% | main.tex | 10 bibitems; Perl HTML larger | IDENTICAL (content parity) |
 | 2511.03798 | EMPTY | 0KB | 70KB | 0% | deSitter_resurgence_I.tex | eqnarray recursion; Perl fails too | N/A |
 | 2511.11713 | OK | 148KB | 107KB | 138% | IEEE-conference-template.tex | 76 missing; no .bib/.bbl | IDENTICAL |
