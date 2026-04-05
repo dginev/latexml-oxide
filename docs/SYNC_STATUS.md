@@ -113,7 +113,7 @@ MakeBibliography pipeline. `\shortstack` mode fix. Embedded XSLT. Visual screens
 ### Remaining actionable items
 1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
 2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
-3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch. Perl #2770 adds `noframe` to `beginMode`/`endMode` for environments. Partially ported but causes verbatim regression (our `\begin` doesn't always push `\begingroup`). Affects 2508.18544 (44%).
+3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor. Perl #2770 noframe fix is for DefEnvironment (already ported at lines 1058/1187). The shortstack issue is DefConstructor-specific: `bounded=true` + `mode` creates double stack frames. Need DefConstructor-specific noframe logic. Affects 2508.18544 (44%).
 4. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
 5. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
 6. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
