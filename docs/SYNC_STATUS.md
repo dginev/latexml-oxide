@@ -105,7 +105,7 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
-**Current status (2026-04-05):** 37/47 OK (79%), 21/37 at >=90% Perl parity (57%).
+**Current status (2026-04-05):** 37/47 OK (79%), 22/37 at >=90% Perl parity (59%). 2308.06254: 1%→96% (cleveref fix).
 
 ### Session 88 completed (2026-04-04/05)
 MakeBibliography pipeline (Scan→MakeBib→CrossRef). `\shortstack` mode fix. Embedded XSLT. Visual screenshots (74 PNGs). filecontents endgroup fix. Root cause analyses: bounded+mode cascade, `\setlist` state corruption.

@@ -9,7 +9,7 @@ Rust also uses `--nobibtex`. Perl uses MakeBibliography for .bib processing.
 - **37/47 OK** (79%) -- produce meaningful Rust HTML5 output
 - **8 EMPTY** -- produce minimal 39B output (cascading errors or TooManyErrors)
 - **2 FAIL** -- timeout (no output)
-- **21/37 >=90% size parity** with Perl (57% of OK)
+- **22/37 >=90% size parity** with Perl (59% of OK)
 
 ## Results
 
@@ -28,7 +28,7 @@ Rust also uses `--nobibtex`. Perl uses MakeBibliography for .bib processing.
 | 2209.14198 | EMPTY | 0KB | 720KB | 0% | gucycles.tex | pgf arrow 'Stealth' |
 | 2306.00809 | OK | 141KB | 140KB | 100% | backup.tex | |
 | 2306.06628 | OK | 200KB | 252KB | 79% | Contraction20.tex | Zero errors |
-| 2308.06254 | OK | 2KB | 280KB | 1% | main.tex | Missing: enumitem, complexity |
+| 2308.06254 | OK | 277KB | 287KB | 96% | main.tex | Fixed cleveref+enumitem; biblatex errors |
 | 2310.18318 | OK | 334KB | 371KB | 89% | Hyperon-Sep-2023.tex | |
 | 2401.08110 | OK | 1172KB | 1205KB | 97% | errorsInHybridQST_arXiv2.tex | Was timeout |
 | 2401.18036 | OK | 167KB | 228KB | 73% | manuscript.tex | |
@@ -80,11 +80,11 @@ Rust also uses `--nobibtex`. Perl uses MakeBibliography for .bib processing.
 - **2603.14602**: listing parameter parsing, TooManyErrors
 
 ### Size parity analysis (37 OK papers)
-- **>=90% parity**: 21 papers (57%)
+- **>=90% parity**: 22 papers (59%)
 - **80-89%**: 7 papers (19%)
 - **70-79%**: 2 papers (5%)
 - **50-69%**: 2 papers (5%)
-- **<50%**: 5 papers (14%) -- tikz/listing/mode errors
+- **<50%**: 4 papers (11%) -- tikz/listing/mode errors
 
 ### Root causes of remaining gaps
 1. **Perl MakeBibliography richness** -- Perl generates `ltx_bib_*` styled spans, back-references, and cross-ref links from .bib files; Rust --nobibtex uses .bbl flat text
