@@ -107,6 +107,14 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
+**Current status (2026-04-04):** 37/47 OK (79%), 22/37 at >=90% Perl parity (59%).
+
+### Remaining actionable items
+1. **MakeBibliography post-processor** — papers with `.bib` (no `.bbl`) lack references. Affects ~5 papers (1502, 2410.12896, 2511.11713, 2511.14458, 2508.18544). This is a post-processing gap.
+2. **pgf arrow tips** — Stealth, Circle, Hooks, Implies, Computer Modern Rightarrow not defined. Affects 4 papers.
+3. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode state. Affects 2603.15617 (3%).
+4. **expl3 loading timing** — `\ExplSyntaxOn` undefined during preamble. Affects 2507.23241.
+
 ### Permanent ignores (5)
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
 
