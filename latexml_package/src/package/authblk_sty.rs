@@ -25,26 +25,127 @@ LoadDefinitions!({
   DefMacro!("\\the@affil", "affil\\arabic{@affil}");
 
   // \author — Perl L40-46
-  // Perl splits on \and and comma; simplified to single author per call
+  // Splits on \and and comma, creates one \lx@ab@author per author
+  DefMacro!("\\author[]{}", sub[(opt_mark, authors)] {
+    let mark_toks = opt_mark.unwrap_or_default();
+    let parts = split_tokens(authors, vec![T_CS!("\\and"), T_OTHER!(",")]);
+    let mut result = Vec::new();
+    for part in parts {
+      // \lx@ab@author[mark]{name}
+      result.push(T_CS!("\\lx@ab@author"));
+      result.push(T_OTHER!("["));
+      result.extend(mark_toks.unlist_ref().iter().cloned());
+      result.push(T_OTHER!("]"));
+      result.push(T_BEGIN!());
+      result.extend(part.unlist());
+      result.push(T_END!());
+    }
+    result
+  });
+
   DefMacro!("\\lx@ab@author[]{}",
     "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#2}\\lx@split@authormark{#1}}");
-  DefMacro!("\\author[]{}", "\\lx@ab@author[#1]{#2}");
 
   // Mark splitting — Perl L50-54
-  // Simplified: passes mark through as single affiliationmark
-  DefMacro!("\\lx@split@authormark{}", "\\lx@authormark{#1}");
+  // Splits comma-separated marks into individual \lx@authormark calls
+  DefMacro!("\\lx@split@authormark{}", sub[(marks)] {
+    let mark_str = marks.to_string();
+    let mark_str = mark_str.trim();
+    if mark_str.is_empty() {
+      // No explicit mark — use auto-generated \the@affil
+      vec![T_CS!("\\lx@authormark"), T_BEGIN!(), T_CS!("\\the@affil"), T_END!()]
+    } else {
+      let mut result = Vec::new();
+      for mark in mark_str.split(',') {
+        let mark = mark.trim();
+        if !mark.is_empty() {
+          result.push(T_CS!("\\lx@authormark"));
+          result.extend(Explode!(mark));
+        }
+      }
+      result
+    }
+  });
+
   DefConstructor!("\\lx@authormark{}",
     "^ <ltx:contact role='affiliationmark' _mark='#1'>#1</ltx:contact>");
 
   // \affil — Perl L60-69
-  DefConstructor!("\\affil[]{}",
+  // Use a macro wrapper to handle the auto-mark counter logic,
+  // then call the constructor with the resolved mark.
+  DefMacro!("\\affil[]{}", sub[(opt_mark, body)] {
+    let mark_toks = opt_mark.unwrap_or_default();
+    let mark_str = mark_toks.to_string();
+    let mark_str = mark_str.trim().to_string();
+    let mut result = Vec::new();
+    if mark_str.is_empty() {
+      // No optional mark — use \the@affil and step counter
+      result.push(T_CS!("\\lx@ab@affil"));
+      result.push(T_OTHER!("["));
+      result.push(T_CS!("\\the@affil"));
+      result.push(T_OTHER!("]"));
+      result.push(T_BEGIN!());
+      result.extend(body.unlist_ref().iter().cloned());
+      result.push(T_END!());
+      result.push(T_CS!("\\stepcounter"));
+      result.push(T_BEGIN!());
+      result.extend(Explode!("@affil"));
+      result.push(T_END!());
+    } else {
+      result.push(T_CS!("\\lx@ab@affil"));
+      result.push(T_OTHER!("["));
+      result.extend(mark_toks.unlist_ref().iter().cloned());
+      result.push(T_OTHER!("]"));
+      result.push(T_BEGIN!());
+      result.extend(body.unlist_ref().iter().cloned());
+      result.push(T_END!());
+    }
+    result
+  });
+
+  DefConstructor!("\\lx@ab@affil[]{}",
     "^ <ltx:note role='affiliationtext' mark='#1'>#2</ltx:note>");
 
-  // Note: Perl has Tag('ltx:document', afterClose => \&authblkRelocateAffil)
-  // which does DOM surgery to move affiliationtext into matching creator.
-  // This requires deep DOM manipulation not yet available in Rust.
+  // DOM surgery: after ltx:document closes, relocate affiliation text
+  // into matching author contact elements.
+  // Perl L71-91: Tag('ltx:document', afterClose => \&authblkRelocateAffil)
+  Tag!("ltx:document", after_close => sub[document, _node] {
+    authblk_relocate_affil(document)?;
+  });
 
   // Note formatting — Perl L95-96
   DefMacro!("\\AB@authnote{}",  "\\textsuperscript{\\normalfont#1}");
   DefMacro!("\\AB@affilnote{}", "\\textsuperscript{\\normalfont#1}");
 });
+
+/// Perl L73-91: authblkRelocateAffil
+/// Moves affiliation text from ltx:note elements into matching ltx:contact elements.
+fn authblk_relocate_affil(document: &mut Document) -> Result<()> {
+  // Find all affiliationmark contacts and affiliationtext notes
+  let author_nodes =
+    document.findnodes(".//ltx:contact[@role='affiliationmark' and @_mark]", None);
+  let affil_nodes =
+    document.findnodes(".//ltx:note[@role='affiliationtext']", None);
+
+  // Build mark → affil_node mapping, unlinking affil nodes from DOM
+  let mut mark_to_affil: std::collections::HashMap<String, Node> =
+    std::collections::HashMap::new();
+  for mut affil_node in affil_nodes {
+    affil_node.unlink();
+    if let Some(mark) = affil_node.get_attribute("mark") {
+      mark_to_affil.insert(mark, affil_node);
+    }
+  }
+
+  // Process each affiliationmark: change role, clone affil children into it
+  for mut author_node in author_nodes {
+    document.set_attribute(&mut author_node, "role", "affiliation")?;
+    let mark = author_node.get_attribute("_mark").unwrap_or_default();
+    if let Some(affil_node) = mark_to_affil.get(&mark) {
+      let children = affil_node.get_child_nodes();
+      document.append_clone(&mut author_node, children)?;
+    }
+  }
+
+  Ok(())
+}

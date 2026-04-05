@@ -1131,4 +1131,97 @@ LoadDefinitions!({
   DefMacro!("\\pgfmathsincos{}",
     "\\pgfmathparse{sin(#1)}\\let\\pgfmathresulty\\pgfmathresult\\pgfmathparse{cos(#1)}\\let\\pgfmathresultx\\pgfmathresult");
 
+  // ==================== \pgfmathsetlength ====================
+  // Perl L405-423: DefPrimitive('\pgfmathsetlength DefToken {}', sub { ... })
+  //
+  // The raw TeX \pgfmathsetlength uses \pgfmath@onquick with \pgfmath@ as a
+  // delimiter token. Our engine can choke on this delimiter pattern, causing
+  // "undefined:\pgfmath@" errors that cascade into group mismatches. The Perl
+  // binding overrides this with a native implementation that:
+  //   1. Strips leading spaces from #2
+  //   2. If #2 starts with '+', treats it as plain glue (readGlue)
+  //   3. Otherwise, evaluates via pgfmathparse and converts to Dimension
+  //   4. Assigns the result to register #1
+  DefPrimitive!("\\pgfmathsetlength DefToken {}", sub[(register, tokens)] {
+    let toks: Vec<Token> = tokens.unlist_ref().iter()
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+      .cloned()
+      .collect();
+
+    if toks.first().map_or(false, |t| t.to_string() == "+") {
+      // Starts with '+' → treat as plain glue
+      // Unread the tokens and read as glue
+      gullet::unread(Tokens::new(toks));
+      let glue = gullet::read_glue()?;
+      let cs = register.to_string();
+      state::assign_register(&cs, glue.into(), None, vec![])?;
+    } else {
+      // Evaluate via pgfmathparse
+      let tok_str = Tokens::new(toks);
+      let expanded = gullet::do_expand(tok_str).unwrap_or_default();
+      let input = expanded.to_string();
+      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+      let value: f64 = result_str.parse().unwrap_or(0.0);
+
+      // Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
+      let cs = register.to_string();
+      let is_mu = if_condition(&T_CS!("\\ifpgfmathmathunitsdeclared"))
+        .unwrap_or(None) == Some(true);
+      if is_mu {
+        let mu_sp = state::convert_unit("mu");
+        let mu_dim = Dimension((value * mu_sp as f64).round() as i64);
+        state::assign_register(&cs, mu_dim.into(), None, vec![])?;
+      } else {
+        // Convert pgfmath result (in pt) to sp (× 65536), round to nearest
+        let dim = Dimension((value * 65536.0).round() as i64);
+        state::assign_register(&cs, dim.into(), None, vec![])?;
+      }
+    }
+  });
+
+  // Also override \pgfmathsetlengthmacro (Perl L426 area — uses same approach
+  // but assigns to a macro instead of a register; we approximate by just doing
+  // pgfmathparse and \def-ing the result)
+
+  // ==================== \pgfmath@smuggleone ====================
+  // Perl L285-299: DefMacro('\pgfmath@smuggleone Until:\endgroup', sub { ... })
+  //
+  // The raw TeX definition is: \def\pgfmath@smuggleone#1\endgroup{...}
+  // It "smuggles" a definition out of a group by expanding before \endgroup.
+  // Perl overrides: for expandables, emit the expansion chain; for primitives,
+  // just emit \endgroup (bindings are already global, no smuggling needed).
+  DefMacro!("\\pgfmath@smuggleone Until:\\endgroup", sub[(arg)] {
+    // The arg is everything up to \endgroup. Extract the first meaningful token.
+    let first_tok = arg.unlist_ref().iter()
+      .find(|t| {
+        let cc = t.get_catcode();
+        cc != Catcode::SPACE && cc != Catcode::COMMENT && cc != Catcode::MARKER
+      })
+      .cloned();
+    let mut smuggle = false;
+    let mut first_cs = T_CS!("\\relax"); // placeholder
+    if let Some(first) = first_tok {
+      if let Ok(Some(defn)) = state::lookup_definition(&first) {
+        if defn.is_expandable() {
+          smuggle = true;
+          first_cs = first;
+        }
+      }
+    }
+    if smuggle {
+      // Texlive 2020 definition: smuggle by expanding before endgroup
+      vec![
+        T_CS!("\\expandafter"), T_CS!("\\endgroup"),
+        T_CS!("\\expandafter"), T_CS!("\\def"),
+        T_CS!("\\expandafter"), first_cs.clone(),
+        T_CS!("\\expandafter"), T_BEGIN!(),
+        first_cs,
+        T_END!(),
+      ]
+    } else {
+      // For primitives/bindings: already global, just close the group
+      vec![T_CS!("\\endgroup")]
+    }
+  });
+
 });
