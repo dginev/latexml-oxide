@@ -107,8 +107,12 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
-**Current status (2026-04-05):** 37/47 OK (79%), 26/37 >=90% (70%), 29/37 >=80% (78%). Bibliography: 20+ papers gain resolved bibitems.
-**Visual comparison (2026-04-05):** 11/37 IDENTICAL on first page, 8 p1-OK, 7 cosmetic, 1 Rust-ahead, 3 critical, 7 structural gaps (bib/tikz/listing). No new regressions from session 91.
+**Current status (2026-04-05):** 37/47 OK (79%), 27/37 >=90% (73%), 30/37 >=80% (81%). Bibliography: 20+ papers gain resolved bibitems.
+**Visual comparison (session 92):** 18/37 IDENTICAL on first page (49%), 11 near-identical/cosmetic, 2 Rust-better, 2 bugs (fixed below), 2 critical (tikz body truncation).
+
+**Session 92 fixes (2026-04-05) — Visual comparison bug fixes:**
+1. `authblk_sty.rs`: `\lx@authormark` constructor had mark text as content (should be empty element). Fixed: removed `#1` from content, matching Perl L56-58. Papers affected: 2603.15617 and any authblk user.
+2. `elsart_support_core_sty.rs`: Added `\affiliation[]{}`→`\@@@affiliation` definition. elsarticle uses `\affiliation[inst]{organization={...}}` but this was undefined in both Perl and Rust. Papers affected: 2508.18544.
 
 **Session 91 fixes (2026-04-05) — Bibliography revolution:**
 1. Removed `--nobibtex` flag — bibliography processing now enabled for all papers.

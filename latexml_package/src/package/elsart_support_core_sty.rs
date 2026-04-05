@@ -11,6 +11,10 @@ LoadDefinitions!({
   // Author/affiliation — Perl L32-48
   DefMacro!("\\author[]{}", "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#2}}");
   DefMacro!("\\address[]{}", "\\lx@contact{address}{#2}");
+  // \affiliation[label]{key=val,...} — elsarticle uses this for institutions
+  // Not in Perl elsart_support_core, but needed for modern elsarticle papers
+  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
+  DefMacro!("\\affiliation[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}");
   DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
   DefMacro!("\\thanksref{}", "");
   DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
@@ -19,10 +23,35 @@ LoadDefinitions!({
   DefMacro!("\\cortext[]{}", "");
   DefMacro!("\\collab OptionalMatch:* {}", "\\author{#1}");
   Let!("\\collaboration", "\\collab");
-  DefMacro!("\\tnotetext[]{}", "");
-  DefMacro!("\\fntext[]{}", "");
-  DefMacro!("\\tnoteref{}", "");
-  DefMacro!("\\fnref{}", "");
+  // Perl L50-51: route through lx@notetext for proper footnote handling
+  DefMacro!("\\tnotetext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
+  DefMacro!("\\fntext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
+  // Perl L52-58: \lx@elsart@noteref splits comma-separated labels
+  // into individual \lx@notemark[label]{footnote} calls
+  DefMacro!("\\lx@elsart@noteref{}", sub[(labels)] {
+    let label_str = labels.to_string();
+    let mut result = Vec::new();
+    for label in label_str.split(',') {
+      let label = label.trim();
+      if !label.is_empty() {
+        result.push(T_CS!("\\lx@notemark"));
+        result.push(T_OTHER!("["));
+        for ch in label.chars() {
+          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+        }
+        result.push(T_OTHER!("]"));
+        result.push(T_BEGIN!());
+        // "footnote" as OTHER tokens
+        for ch in "footnote".chars() {
+          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+        }
+        result.push(T_END!());
+      }
+    }
+    result
+  });
+  DefMacro!("\\tnoteref{}", "\\lx@elsart@noteref{#1}");
+  DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
 
   // Title/metadata — Perl L60-106
   DefMacro!("\\runauthor{}", "");

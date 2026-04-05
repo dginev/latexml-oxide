@@ -67,8 +67,9 @@ LoadDefinitions!({
     }
   });
 
+  // Perl L56-58: empty element, mark text only as attribute (not content)
   DefConstructor!("\\lx@authormark{}",
-    "^ <ltx:contact role='affiliationmark' _mark='#1'>#1</ltx:contact>");
+    "^ <ltx:contact role='affiliationmark' _mark='#1'></ltx:contact>");
 
   // \affil — Perl L60-69
   // Use a macro wrapper to handle the auto-mark counter logic,
