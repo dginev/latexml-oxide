@@ -108,14 +108,22 @@ XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output
 Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
 
 **Current status (2026-04-05):** 37/47 OK (79%), 27/37 >=90% (73%), 30/37 >=80% (81%). Bibliography: BBL preferred via bibconfig=bbl,bib.
-**Visual comparison (session 93 final):** 18/37 IDENTICAL (49%), 10 near-identical/cosmetic, 2 Rust-better, 4 bugs, 2 critical.
+**Visual comparison (session 93 final):** 20/37 IDENTICAL (54%), 10 near-identical/cosmetic, 2 Rust-better, 2 critical (tikz truncation).
 
-**Session 93 fixes (2026-04-05) — Algorithm2e + bibconfig parity:**
+**Remaining actionable bugs (session 93):**
+- [ ] **2405.19425**: Missing images — Rust HTML has no `<img>` for figures, Perl has all images. Likely graphics post-processing path issue.
+- [ ] **2405.19425**: Listing color/background/line-numbers — Perl has `lstlisting` with syntax highlighting colors, background shading, and line numbers. Rust has plain text. Needs listings.sty binding for `backgroundcolor`, `numbers`, `keywordstyle` etc.
+- [ ] **2602.18719**: tikz-cd body truncation (34KB vs 557KB) — root cause: `\lxSVG@halign` constructor unimplemented (Perl L892-918). Needs SVG matrix layout with `tikzAlignmentBindings`.
+- [ ] **2603.15617**: tikzpicture body truncation (35KB vs 1189KB) — `\node`, `\draw`, `\endscope` undefined in tikz context. Needs basic tikz drawing command stubs.
+- [ ] **pgf arrow tips**: 'Computer Modern Rightarrow', 'Hooks', 'Implies', 'Circle' — arrow tip definitions missing from pgf arrows.meta library.
+
+**Session 93 fixes (2026-04-05) — Algorithm2e + bibconfig + elsart:**
 1. `algorithm2e_sty.rs`: `\BlankLine` (`\vskip 1ex`) leaked "1ex" as literal text in listing lines. Fixed: override to `\lx@algo@par` inside algorithm env.
 2. `algorithm2e_sty.rs`: `\lx@algo@pop@indentation` implemented (was missing, log showed undefined macro). Pops last token from indentation register matching Perl L159-163.
 3. `algorithm2e_sty.rs`: `\lx@algo@startline` now emits `\the\lx@algo@indentation` — produces `<ltx:rule>` vertical bar elements (18 rules generated for 2508.18544, was 0).
 4. `latexml_sty.rs`: `bibconfig=bbl,bib` keyval from ar5iv.sty now processed — was silently ignored, causing BBL files to be skipped. Bibliography ordering now matches Perl.
-5. 2508.18544: bibliography entries match Perl (56 entries, BBL ordering), algo indentation bars present, "1ex" text eliminated.
+5. `elsart_support_core_sty.rs`: `\affiliation[]{key=val,...}` parser — extracts organization, addressline, city, postcode, state, country and produces clean comma-separated affiliation text. 2508.18544 affiliations now match Perl.
+6. 2508.18544: bibliography entries match Perl (56 entries, BBL ordering), algo indentation bars present, "1ex" eliminated, affiliations clean.
 
 **Session 92 fixes (2026-04-05) — Visual comparison bug fixes:**
 1. `authblk_sty.rs`: `\lx@authormark` constructor had mark text as content (should be empty element). Fixed: removed `#1` from content, matching Perl L56-58. Papers affected: 2603.15617 and any authblk user.

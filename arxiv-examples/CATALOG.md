@@ -45,7 +45,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2403.07652 | OK | 104KB | 111KB | 93% | acl_latex.tex | 28 bibitems (bbl) | IDENTICAL |
 | 2403.15796 | OK | 4KB | 4KB | 95% | 0_main.tex | Perl has wrong main file | near-identical (logo size diff) |
 | 2405.17032 | OK | 301KB | 793KB | 38% | ms.tex | 15 missing; tikz figs missing | p1 near-identical; tikz missing deeper |
-| 2405.19425 | OK | 241KB | 478KB | 50% | main.tex | 80 bibitems; gap=listing style | p1 IDENTICAL |
+| 2405.19425 | OK | 241KB | 478KB | 50% | main.tex | 80 bibitems; missing images+listing style | p1 IDENTICAL; images missing, listing unstyled |
 | 2406.06608 | OK | 773KB | 739KB | 104% | main.tex | 373 bibitems | near-identical; author spacing |
 | 2408.11158 | OK | 64KB | 68KB | 93% | aipsamp.tex | 27 bibitems (bbl) | IDENTICAL |
 | 2408.13687 | OK | 105KB | 109KB | 97% | main.tex | 60 bibitems (bbl) | cosmetic: date, citation format |
@@ -56,7 +56,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2506.03074 | OK | 1242KB | 1261KB | 98% | _main.tex | 177 bibitems (bbl) | near-identical; citation style |
 | 2507.23241 | EMPTY | 0KB | 1020KB | 0% | main.tex | smfart.cls + expl3 timing | N/A |
 | 2508.15260 | EMPTY | 0KB | 360KB | 0% | main.tex | tcolorbox; Perl also fails | N/A |
-| 2508.18544 | OK | 714KB | 856KB | 83% | Main_Communi_submit.tex | 56 bibitems (bbl); algo2e fixed | affil key-val text; algo bars present |
+| 2508.18544 | OK | 714KB | 856KB | 83% | Main_Communi_submit.tex | 56 bibitems (bbl); algo2e+affil fixed | near-identical; algo bars+clean affils |
 | 2509.18103 | OK | 197KB | 275KB | 71% | main.tex | 10 bibitems; Perl HTML larger | IDENTICAL (content parity) |
 | 2511.03798 | EMPTY | 0KB | 70KB | 0% | deSitter_resurgence_I.tex | eqnarray recursion; Perl fails too | N/A |
 | 2511.11713 | OK | 193KB | 106KB | 181% | IEEE-conference-template-062824.tex | 59 bibitems via .bib | IDENTICAL |
@@ -104,21 +104,18 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 5. **tikzpicture mode corruption** -- failed tikz commands corrupt parser mode (2603.15617)
 6. **Raw affiliation parameters** -- `[inst]organization=...` leaked (2508.18544 elsart/cas)
 
-### Visual comparison summary (2026-04-05, session 93 final, CSS + BBL)
-- **18/37 IDENTICAL** on first-page screenshot (49%)
+### Visual comparison summary (2026-04-05, session 93 final, CSS + BBL + affil fix)
+- **20/37 IDENTICAL** on first-page screenshot (54%) -- 1907.08050 + 2008.08932 confirmed present (CDN false positives)
 - **10/37 near-identical / cosmetic** (27%) -- author layout, date, spacing, citation format
 - **2/37 Rust BETTER** (5%) -- 2308.06254 (cleaner), 2401.08110 (correct section headings)
-- **4/37 BUG** (11%) -- empty abstract or missing content
-- **2/37 CRITICAL** (5%) -- body content truncated (tikz corruption)
-- **1/37 AFFIL** (3%) -- raw affiliation parameters leaked
+- **3/37 BUG** (8%) -- missing images (2405.19425), listing styling gaps
+- **2/37 CRITICAL** (5%) -- body content truncated (tikz corruption: 2602.18719, 2603.15617)
 
-### Actionable bugs found (session 93 final)
-1. **1907.08050**: Empty abstract (18 lines, should have content)
-2. **2008.08932**: Empty abstract + missing author names (only emails visible)
-3. **2603.15617**: Body truncated (35KB vs 1189KB) -- tikzpicture mode corruption
-4. **2602.18719**: Body truncated (34KB vs 557KB) -- tikz-cd errors cascade
-5. **2508.18544**: Raw `[inst1]organization=...` affiliation parameters leak into header
-6. **2405.19425**: Size gap (241KB vs 478KB, 50%) -- listing style content missing
+### Actionable bugs (session 93)
+1. **2602.18719**: Body truncated (34KB vs 557KB) -- `\lxSVG@halign` unimplemented, tikz-cd matrix
+2. **2603.15617**: Body truncated (35KB vs 1189KB) -- tikzpicture `\node`/`\draw` undefined
+3. **2405.19425**: Missing images in Rust HTML; listing style (color/background/numbers) not applied
+4. **pgf arrow tips**: 'Computer Modern Rightarrow', 'Hooks', 'Implies', 'Circle' undefined
 
 ### Permanent ignores (5)
 - **ns1-ns5** (52_namespace) -- DTD not supported in Rust port.
