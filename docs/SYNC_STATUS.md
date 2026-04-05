@@ -114,7 +114,7 @@ MakeBibliography pipeline (Scan→MakeBib→CrossRef). `\shortstack` mode fix. E
 1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
 2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
 3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor framework. Affects 2508.18544 (44%).
-4. **Preamble `\usepackage` consumption** — 2308.06254 (1%): `\usepackage{enumitem}` tokens consumed during nested `digestNextBody` calls from raw TeX package loading. Boxing depth tracking across `\usepackage` → `require_package` → `load_tex_definitions` → `reading_from_mouth` nesting desyncs. Minimal repro: amsmath + cleveref(\Crefname x12) + any raw .sty + blank lines + enumitem. Needs call-stack-level tracing to fix.
+4. ~~**\crefname token consumption**~~ — 2308.06254: **FIXED**. Overrode raw cleveref \crefname/\Crefname/\crefalias with safe stubs. Raw TeX's \@crefname macro (\expandafter chains + \toksdef) consumed tokens beyond arguments after 12+ calls with preamble blank lines. Enumitem now loads correctly; remaining errors are biblatex-specific.
 5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
 6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
 7. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
