@@ -775,6 +775,7 @@ LoadDefinitions!({
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0),
   getter => sub[args] {
+    if args.is_empty() { return Some(RegisterValue::Dimension(Dimension::default())); }
     let n = args.remove(0).expect_number();
     with_value(&format!("box{}", n.value_of()), |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
@@ -792,6 +793,7 @@ LoadDefinitions!({
 
   DefRegister!("\\wd Number", Dimension::default(),
   getter => sub[args] {
+    if args.is_empty() { return Some(RegisterValue::Dimension(Dimension::default())); }
     let n = args.remove(0).expect_number();
     let boxid = format!("box{}", n.value_of());
     let mut stuff = checkout_value(&boxid);
