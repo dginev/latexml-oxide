@@ -119,7 +119,7 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 1. **MakeBibliography `convertBibliography()`** — raw .bib → XML conversion NOT ported. Affects 7 papers in 70-89% range.
 2. **Listing per-word styling** — Perl wraps each listing token in styled `<span>`. Affects 2405.19425 (50%).
 3. **\shortstack/\vtop mode cascade** — bounded+mode frame mismatch in DefConstructor framework. Affects 2508.18544 (44%).
-4. **\setlist Optional parameter bug** — `\setlist Optional RequiredKeyVals:enumitem` consumes `{nosep,...}` as the Optional arg, destroying `\setlist` for subsequent calls. Root cause of 2308.06254 (1%). Fix: change parameter spec to use `OptionalMatch:[` or bracket-delimited optional.
+4. **cleveref+enumitem interaction** — `\Crefname{stepsromani}` with undefined counter corrupts state, causing subsequent `\setlist{nosep,...}` to become undefined. Root cause of 2308.06254 (1%). Deep cleveref counter registration issue.
 5. **pgf arrow tips** — Stealth, Circle, Hooks, Implies not defined. Affects 4 EMPTY papers.
 6. **tikzpicture mode corruption** — failed tikz commands corrupt parser mode. Affects 2603.15617 (3%).
 7. **smfart.cls errors** — raw TeX class triggers parameter errors. Affects 2507.23241.
