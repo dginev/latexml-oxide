@@ -6,8 +6,10 @@ use crate::prelude::*;
 LoadDefinitions!({
   // used in tcbbreakable.code.tex assuming it was defined
   DefRegister!("\\doublecol@number" => Number::new(0));
-  // Ensure only unbreakable mode is possible
-  DefMacro!("\\tcb@init@breakable", "\\tcb@init@unbreakable");
+  // Ensure only unbreakable mode is possible.
+  // Perl: locked => 1 prevents raw TeX tcbbreakable.code.tex from overriding
+  // with the real breakable implementation (uses output routines → infinite loop).
+  DefMacro!("\\tcb@init@breakable", "\\tcb@init@unbreakable", locked => true);
 
   // Perl 93f875a6: pre-define \tcb@use@autoparskip before raw TeX loading,
   // as pgfkeys initialization may not complete and the \AtBeginDocument hook

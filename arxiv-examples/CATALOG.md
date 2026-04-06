@@ -66,8 +66,8 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2512.16911 | OK | 704KB | 635KB | 110% | main.tex | 36 missing cites | IDENTICAL |
 | 2602.18719 | OK | 677KB | 557KB | 119% | CDKU.tex | tikz-cd FIXED (S94); 17 xref errs | Rust >Perl size; full content |
 | 2602.23324 | OK | 672KB | 659KB | 102% | main.tex | 24 missing cites | IDENTICAL |
-| 2603.14602 | EMPTY | 0KB | 339KB | 0% | main.tex | listing/minted errors | N/A |
-| 2603.15617 | OK | 35KB | 1189KB | 3% | paper.tex | tikzpicture mode corruption | CRITICAL: body truncated |
+| 2603.14602 | OK | 337KB | 347KB | 97% | main.tex | tcolorbox breakable FIXED (S94) | NEW: was EMPTY |
+| 2603.15617 | OK | 1163KB | 1218KB | 95% | paper.tex | tcolorbox breakable FIXED (S94) | NEW: was 3% truncated |
 | 2603.19312 | OK | 337KB | 294KB | 114% | main.tex | 31 missing cites | IDENTICAL |
 
 ## Failure Analysis
