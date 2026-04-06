@@ -11,13 +11,13 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     return Ok(());
   }
   let pkg_name = package.to_string();
-  let cs_for_closure = cs_tok.clone();
+  let cs_for_closure = cs_tok;
   def_macro(
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
       require_package(&pkg_name, RequireOptions::default())?;
-      Ok(Tokens::new(vec![cs_for_closure.clone()]))
+      Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
   )?;
@@ -119,4 +119,23 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
   Let!("\\@currname", "\\lx@empty");
   Let!("\\@currext", "\\lx@empty");
+
+  // Early stubs needed by ProcessOptions/DeclareOption before LaTeX.pool loads.
+  // These are normally in latex_ch5_packages.rs but must exist when --preload
+  // directives invoke RequirePackage (e.g., ar5iv.sty → latexml.sty).
+  // LaTeX.pool will provide full definitions; these are just no-op placeholders.
+  if !IsDefined!(&T_CS!("\\@unknownoptionerror")) {
+    DefPrimitive!("\\@unknownoptionerror", {});
+  }
+  if !IsDefined!(&T_CS!("\\OptionNotUsed")) {
+    DefPrimitive!("\\OptionNotUsed", {});
+  }
+  if !IsDefined!(&T_CS!("\\AtBeginDocument")) {
+    // Stub: collect hooks to be executed later when \begin{document} runs.
+    // LaTeX.pool provides the real implementation.
+    DefMacro!("\\AtBeginDocument{}", "");
+  }
+  if !IsDefined!(&T_CS!("\\@addtofilelist")) {
+    DefMacro!("\\@addtofilelist{}", "");
+  }
 });

@@ -4,13 +4,46 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Option conditionals — use Let! to \iftrue/\iffalse (TeX! \newif causes OOM at compile time)
+  // DeclareOption stubs — Perl L18-108
+  DeclareOption!("9pt", {});
+  DeclareOption!("10pt", {});
+  DeclareOption!("11pt", {});
+  DeclareOption!("12pt", {});
+  DeclareOption!("letterpaper", {});
+  DeclareOption!("a4paper", {});
+  DeclareOption!("cspaper", {});
+  DeclareOption!("draft", {});
+  DeclareOption!("final", {});
+  DeclareOption!("journal", { Let!("\\ifCLASSOPTIONjournal", "\\iftrue"); Let!("\\ifCLASSOPTIONconference", "\\iffalse"); });
+  DeclareOption!("conference", { Let!("\\ifCLASSOPTIONjournal", "\\iffalse"); Let!("\\ifCLASSOPTIONconference", "\\iftrue"); });
+  DeclareOption!("technote", { Let!("\\ifCLASSOPTIONtechnote", "\\iftrue"); });
+  DeclareOption!("nofonttune", {});
+  DeclareOption!("captionsoff", {});
+  DeclareOption!("compsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
+  DeclareOption!("comsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
+  DeclareOption!("transmag", {});
+  DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
+  DeclareOption!("onecolumn", {});
+  DeclareOption!("twocolumn", {});
+  DeclareOption!("peerreview", {});
+  DeclareOption!("peerreviewca", {});
+  ProcessOptions!();
+
+  // Load article as base
+  load_class("article", Vec::new(), Tokens!())?;
+
+  // Option conditionals — Perl L18-108
   Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
   Let!("\\ifCLASSOPTIONjournal", "\\iftrue");
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
   Let!("\\ifCLASSOPTIONtechnote", "\\iffalse");
   Let!("\\ifCLASSOPTIONromanappendices", "\\iffalse");
   Let!("\\ifCLASSINFOpdf", "\\iftrue");
+  Let!("\\ifCLASSOPTIONonecolumn", "\\iffalse");
+  Let!("\\ifCLASSOPTIONtwocolumn", "\\iftrue");
+  Let!("\\ifCLASSOPTIONdraftcls", "\\iffalse");
+  Let!("\\ifCLASSOPTIONpeerreview", "\\iffalse");
+  Let!("\\ifCLASSOPTIONcaptionsoff", "\\iffalse");
 
   // Front matter macros (Perl L134-165)
   DefMacro!("\\IEEEtitleabstractindextext{}", "#1");
@@ -71,10 +104,21 @@ LoadDefinitions!({
   DefEnvironment!("{IEEEproof}[]",
     "<ltx:proof><ltx:title font='bold italic' _force_font='true' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>");
 
+  // IEEEbiography (Perl L238-247)
+  DefEnvironment!("{IEEEbiography}[]{}",
+    "<ltx:section class='ltx_biography'><ltx:title>#2</ltx:title>#body</ltx:section>");
+  DefEnvironment!("{IEEEbiographynophoto}{}",
+    "<ltx:section class='ltx_biography'><ltx:title>#1</ltx:title>#body</ltx:section>");
+
   // IEEEeqnarray (Perl L299-332) — map to eqnarray
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
   DefMacro!("\\IEEEeqnarraynumspace", "");
+  DefMacro!("\\IEEEeqnarraybox{}", "\\begin{array}{#1}");
+  DefMacro!("\\endIEEEeqnarraybox", "\\end{array}");
+  DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
+  DefMacro!("\\IEEEeqnarraydefcol{}{}{}", "");
+  DefMacro!("\\IEEEeqnarraydefcolsep{}{}", "");
 
   // IEEEnonumber/yesnumber stubs
   DefMacro!("\\IEEEnonumber OptionalMatch:*", "\\nonumber");

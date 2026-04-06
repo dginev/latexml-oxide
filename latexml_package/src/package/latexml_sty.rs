@@ -238,6 +238,13 @@ LoadDefinitions!({
   // Perl L57-59: bibconfig KeyVal — comma-separated bib config values.
   DefKeyVal!("LTXML", "bibconfig", "Semiverbatim");
 
+  // Perl L63-86: Image scaling options — saved as processing instructions
+  // via \lx@save@parameter at \begin{document} time.
+  DefKeyVal!("LTXML", "DPI", "Number");
+  DefKeyVal!("LTXML", "magnify", "Number");
+  DefKeyVal!("LTXML", "upsample", "Number");
+  DefKeyVal!("LTXML", "zoomout", "Number");
+
   // Perl L87-98: Limit options — set global limits for infinite-loop protection.
   // These are DefKeyVal with code closures; since our macro doesn't support code,
   // we define them as DeclareOption and handle in ProcessOptions.
@@ -290,6 +297,32 @@ LoadDefinitions!({
 
   ProcessOptions!();
 
+  // Process bibconfig keyval from options passed to latexml.sty.
+  // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
+  // We specifically extract bibconfig=... since it controls bibliography source selection.
+  // Other keyvals (tokenlimit, iflimit, etc.) are handled via CLI flags or ar5iv defaults.
+  if let Some(opts) = state::lookup_vecdeque("opt@latexml.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      if let Some(val) = opt_str.strip_prefix("bibconfig=") {
+        state::assign_value("KV@LTXML@bibconfig",
+          Stored::String(arena::pin(val.trim())), Some(Scope::Global));
+      }
+    }
+  }
+
+  // Apply bibconfig from keyvals (Perl L57-59: code closure)
+  // bibconfig=bbl,bib means try bbl first, fall back to bib
+  if let Some(v) = state::lookup_value("KV@LTXML@bibconfig") {
+    let config_str = v.to_string();
+    let configs: Vec<_> = config_str.split(',')
+      .map(|s| arena::pin(s.trim()))
+      .collect();
+    if !configs.is_empty() {
+      state::assign_value("BIB_CONFIG", Stored::Strings(Rc::from(configs)), Some(Scope::Global));
+    }
+  }
+
   // Apply limit options from keyvals (Perl L87-98)
   if let Some(v) = state::lookup_value("KV@LTXML@tokenlimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
@@ -307,6 +340,24 @@ LoadDefinitions!({
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
       gullet::set_pushback_limit(Some(limit));
+    }
+  }
+
+  // Save image scaling parameters as processing instructions
+  // Perl: DefKeyVal with code => AtBeginDocument(\lx@save@parameter{key}{value})
+  // These PIs are read by the Graphics post-processor.
+  for param_name in &["DPI", "magnify", "upsample", "zoomout"] {
+    let key = s!("KV@LTXML@{}", param_name);
+    if let Some(v) = state::lookup_value(&key) {
+      let val = v.to_string().trim().to_string();
+      if !val.is_empty() {
+        // Store for PI emission at document construction time
+        state::assign_value(
+          &s!("PI@latexml@{}", param_name),
+          Stored::String(arena::pin(&val)),
+          Some(Scope::Global),
+        );
+      }
     }
   }
 
@@ -400,7 +451,7 @@ LoadDefinitions!({
           },
           _ => Vec::new(),
         };
-        decls.push(format!("{}\t{}\t{}\t{}", body_text, role, name_val, meaning));
+        decls.push(format!("{}\t{}\t{}\t{}\t{}", body_text, role, name_val, meaning, decl_id));
         // Mathcode decoding for single-char bodies
         if body_text.chars().count() == 1 {
           let ch = body_text.chars().next().unwrap();

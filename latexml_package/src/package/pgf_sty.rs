@@ -33,6 +33,11 @@ LoadDefinitions!({
   RawTeX!("\\ifx\\XC@mcolor\\relax\\let\\XC@mcolor\\@empty\\fi");
   AddToMacro!("\\XC@mcolor", "\\pgfsetcolor{.}");
 
+  // Stub for tikz externalize library: \beginpgfgraphicnamed{name}...\endpgfgraphicnamed
+  // In LaTeX, this checks if the graphic should be externalized. We just process inline.
+  DefMacro!("\\beginpgfgraphicnamed{}", "");
+  DefMacro!("\\endpgfgraphicnamed", "");
+
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
   RawTeX!("\\AtBeginDocument{\\expandafter\\def\\expandafter\\pgfpicture\\expandafter{\\expandafter\\lxSVG@picture\\pgfpicture}\\expandafter\\def\\expandafter\\endpgfpicture\\expandafter{\\endpgfpicture\\endlxSVG@picture}}");
 });

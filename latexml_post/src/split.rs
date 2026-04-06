@@ -350,7 +350,7 @@ impl Split {
 
     if name.is_empty() {
       if attr == "labels" {
-        if let Some(id) = get_xml_id(&page) {
+        if let Some(id) = get_xml_id(page) {
           log::info!(
             "Using '{}' to create page pathname, instead of missing '{}'",
             id,

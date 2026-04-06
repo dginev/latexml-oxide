@@ -1266,12 +1266,19 @@ fn coerce_register(
   defn: &Register,
 ) -> Result<Option<RegisterValue>> {
   use crate::common::numeric_ops::NumericOps;
+  // Perl fix 50f0061d: include self-coercions (Number→Number, etc.)
+  // so \number \fam works when \fam is already a Number register
   let can_coerce = matches!(
     (target_type, source_type),
-    (RegisterType::Number, RegisterType::Dimension)
+    (RegisterType::Number, RegisterType::Number)
+      | (RegisterType::Number, RegisterType::Dimension)
       | (RegisterType::Number, RegisterType::Glue)
+      | (RegisterType::Dimension, RegisterType::Dimension)
       | (RegisterType::Dimension, RegisterType::Glue)
+      | (RegisterType::MuDimension, RegisterType::MuDimension)
       | (RegisterType::MuDimension, RegisterType::MuGlue)
+      | (RegisterType::Glue, RegisterType::Glue)
+      | (RegisterType::MuGlue, RegisterType::MuGlue)
   );
   if !can_coerce {
     return Ok(None);

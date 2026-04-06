@@ -602,6 +602,111 @@ LoadDefinitions!({
   );
 });
 
+/// Check if a token is "definable" — undefined or equivalent to `\relax`.
+///
+/// Port of Perl `isDefinable($token)` (Base_Utility.pool.ltxml L33-40).
+/// Returns true if the token can be (re)defined: either undefined, equivalent
+/// to `\relax`, or in 2.09 compatibility mode. Excludes `\relax` itself
+/// and tokens starting with `\end`.
+#[allow(dead_code)]
+pub fn is_definable(token: &Token) -> bool {
+  let meaning = state::lookup_meaning(token);
+  let relax_meaning = state::lookup_meaning(&T_CS!("\\relax"));
+  let has_no_meaning = meaning.is_none()
+    || meaning == relax_meaning
+    || state::lookup_bool("2.09_COMPATIBILITY");
+  if !has_no_meaning {
+    return false;
+  }
+  let mut name_ok = true;
+  token.with_cs_name(|name| {
+    if name == "relax" || name.starts_with("end") {
+      name_ok = false;
+    }
+    Ok::<(), latexml_core::common::error::Error>(())
+  }).ok();
+  name_ok
+}
+
+/// Split a token list by delimiter tokens, respecting brace nesting and math mode.
+///
+/// Port of Perl `SplitTokens($tokens, @delims)` (Base_Utility.pool.ltxml L106-132).
+/// Used for textual tokens — typically to split author lists. Does NOT split
+/// within braces `{...}` or math `$...$`.
+#[allow(dead_code)]
+pub fn split_tokens(tokens: &Tokens, delims: &[Token]) -> Vec<Tokens> {
+  let mut items: Vec<Vec<Token>> = Vec::new();
+  let mut current: Vec<Token> = Vec::new();
+  let token_list = tokens.clone().unlist();
+  let mut i = 0;
+  while i < token_list.len() {
+    let t = &token_list[i];
+    // Check if this token is a delimiter
+    if delims.iter().any(|d| t == d) {
+      items.push(current);
+      current = Vec::new();
+      i += 1;
+      continue;
+    }
+    // Brace group: collect everything inside, preserving nesting
+    if t.get_catcode() == Catcode::BEGIN {
+      current.push(*t);
+      let mut level = 1i32;
+      i += 1;
+      while i < token_list.len() && level > 0 {
+        let inner = &token_list[i];
+        if inner.get_catcode() == Catcode::BEGIN {
+          level += 1;
+        } else if inner.get_catcode() == Catcode::END {
+          level -= 1;
+        }
+        current.push(*inner);
+        i += 1;
+      }
+      continue;
+    }
+    // Math mode: collect until matching $
+    if t.get_catcode() == Catcode::MATH {
+      current.push(*t);
+      i += 1;
+      while i < token_list.len() {
+        let inner = &token_list[i];
+        current.push(*inner);
+        i += 1;
+        if inner.get_catcode() == Catcode::MATH {
+          break;
+        }
+      }
+      continue;
+    }
+    // Regular token
+    current.push(*t);
+    i += 1;
+  }
+  items.push(current);
+  items.into_iter().map(Tokens::new).collect()
+}
+
+/// Join token groups with a conjunction token between them.
+///
+/// Port of Perl `JoinTokens($conjunction, @things)` (Base_Utility.pool.ltxml L142-148).
+#[allow(dead_code)]
+pub fn join_tokens(conjunction: &Tokens, things: Vec<Tokens>) -> Tokens {
+  if things.is_empty() {
+    return Tokens::new(vec![]);
+  }
+  let mut result: Vec<Token> = Vec::new();
+  let mut first = true;
+  for thing in things {
+    if !first {
+      result.extend(conjunction.clone().unlist());
+    }
+    result.extend(thing.unlist());
+    first = false;
+  }
+  Tokens::new(result)
+}
+
 /// Insert FrontMatter into document, if not already added
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {

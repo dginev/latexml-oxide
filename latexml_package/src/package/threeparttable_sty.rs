@@ -15,8 +15,10 @@ LoadDefinitions!({
   DefMacro!("\\tnote{}", "\\TPToverlap{\\textsuperscript{\\TPTtagStyle{#1}}}");
   DefEnvironment!("{threeparttable}", "#body");
   // optional keyvals: para,flushleft, online, normal
-  DefMacro!("\\begin{tablenotes}[]",  "\\begin{itemize}");
-  DefMacro!("\\end{tablenotes}",      "\\end{itemize}");
+  // tablenotes env — maps to itemize list.
+  // Note: DefMacro!("\\begin{tablenotes}"...) wrongly parses {tablenotes} as param spec.
+  Let!("\\tablenotes", "\\itemize");
+  Let!("\\endtablenotes", "\\enditemize");
 
   DefEnvironment!("{measuredfigure}", "#body");
 });

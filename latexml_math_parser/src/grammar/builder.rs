@@ -10,6 +10,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(atom ~ "ATOM");
   token!(unknown ~ "UNKNOWN");
   token!(id ~ "ID");
+  // M4: Specialized tokens for "d" that could be differential operators.
+  // Lexer emits XDIFFUNK/XDIFFID instead of UNKNOWN/ID for "d" content.
+  // These are added as alternatives everywhere unknown/id appear, plus in the diffop rule.
+  token!(diffunk ~ "XDIFFUNK");
+  token!(diffid ~ "XDIFFID");
   token!(array ~ "ARRAY");
   token!(number ~ "NUMBER");
   token!(punct ~ "PUNCT");
@@ -82,7 +87,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // `2 \sin` is handled via dedicated tight_term rules below.
     // Perl MathGrammar L315: ATOM_OR_ID : ATOM | ID | ARRAY
     // XMArray elements (role="ARRAY") should parse as atoms/factors, like matrices in equations
-    factor_base = unknown | number | id | atom | array;
+    // M4: diffunk/diffid are added as factor_base alternatives so "d" tokens
+    // can appear anywhere unknown/id appear. The diffop rule only uses diffunk/diffid.
+    factor_base = unknown | number | id | atom | array | diffunk | diffid;
     // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
     // Also handle unmatched delimiters for cases-like patterns.
     fenced_array = open array close => fenced
@@ -332,7 +339,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            // Angle-bracket fencing with \langle/\rangle (distinct from parentheses)
            // Now that langle_open/rangle_close are NOT remapped to lparen/rparen,
            // we need explicit rules for angle-bracket fenced expressions.
-           | langle_open expression rangle_close => fenced
+           // M8: removed `langle_open expression rangle_close` — subsumed by formula
+           // (every expression is a formula; keeping both creates 2x ambiguity)
            | langle_open formula rangle_close => fenced
            | langle_open term_list rangle_close => fenced
            | langle_open formula_list rangle_close => fenced
@@ -419,6 +427,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     trig_arg = factor
       | fenced_factor
       | unknown fenced_factor => speculative_prefix_apply
+      | diffunk fenced_factor => speculative_prefix_apply
       | function fenced_factor => prefix_apply
       | opfunction fenced_factor => prefix_apply
       // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
@@ -436,7 +445,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | opfunction tight_term => prefix_apply
       // OPFUNCTION absorbs another OPFUNCTION even without trailing args:
       // FGH → F@(G@(H)) when F,G,H are all OPFUNCTION
-      | opfunction opfunction => prefix_apply;
+      | opfunction opfunction => prefix_apply
+      // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
+      // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
+      //        presentation=Apply(f, XMWrap(open, args, close))).
+      // These are in applied_func so delimited calls participate in chaining:
+      // f(a) g(b) → f@(a) * g@(b) via tight_term applied_func => apply_invisible_times
+      | function lparen formula rparen => apply_delimited
+      | function lbracket formula rbracket => apply_delimited
+      | opfunction lparen formula rparen => apply_delimited
+      | opfunction lbracket formula rbracket => apply_delimited
+      | trigfunction lparen formula rparen => apply_delimited
+      | trigfunction lbracket formula rbracket => apply_delimited;
     // Standalone applied functions are also tight_terms
     tight_term += applied_func;
     // Function application results can chain with invisible times (Perl moreFactors)
@@ -447,33 +467,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Without speculation, this parse is pruned and Marpa uses invisible-times instead.
     // NOTE: ID tokens are multiplicative atoms — NEVER prefix-apply. Only UNKNOWN
     // tokens get speculative function application. ID always uses invisible-times.
-    tight_term += unknown fenced_factor => speculative_prefix_apply;
-    // FUNCTION followed by fenced args => function application (Perl: addArgs/addEasyArgs)
-    // f(x) => f@(x) when f has role=FUNCTION (from DefMathRewrite or \lxDeclare).
-    // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
-    //        presentation=Apply(f, XMWrap(open, args, close))).
-    // Grammar: function lparen/lbracket + formula + rparen/rbracket → apply_delimited
-    tight_term += function lparen formula rparen => apply_delimited;
-    tight_term += function lbracket formula rbracket => apply_delimited;
-    // Also support fenced_factor for backwards compat (no XMDual wrapping)
+    tight_term += unknown fenced_factor => speculative_prefix_apply
+      | diffunk fenced_factor => speculative_prefix_apply;
+    // FUNCTION followed by fenced args (non-delimited form, for backwards compat)
     tight_term += function fenced_factor => prefix_apply;
-    // scripted_function rules moved below postsubarg/postsuperarg definitions
-    // OPFUNCTION followed by fenced args => function application with XMDual wrapping.
-    // Perl: ApplyDelimited for \operatorname{cov}(L), \log(x), etc.
-    tight_term += opfunction lparen formula rparen => apply_delimited;
-    tight_term += opfunction lbracket formula rbracket => apply_delimited;
-    // Also support fenced_factor for backwards compat (no XMDual wrapping)
-    tight_term += opfunction fenced_factor => prefix_apply;
-    // Perl: OPFUNCTION absorbs factor chain via addOpArgs (barearg + moreargs).
-    // \log 2x^2 => log@(2*x^2). Absorbs tight_term (factor chain with invisible times).
+    // OPFUNCTION bare arg absorption (Perl: addOpArgs barearg + moreargs)
+    // \log 2x^2 => log@(2*x^2). These tight_term rules serve as priority
+    // boosters that ensure cascading opfunction application (FGHa → F@(G@(H@(a))))
+    // is preferred over the shorter opfunction-opfunction rule.
     tight_term += opfunction tight_term => prefix_apply;
     tight_term += opfunction factor => prefix_apply;
+    tight_term += opfunction fenced_factor => prefix_apply;
     // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
-    // Note: trigfunction tight_term already in compound_operator, can't duplicate.
     tight_term += trigfunction factor => prefix_apply;
-    // TRIGFUNCTION followed by fenced args => function application with XMDual wrapping.
-    tight_term += trigfunction lparen formula rparen => apply_delimited;
-    tight_term += trigfunction lbracket formula rbracket => apply_delimited;
     tight_term += trigfunction fenced_factor => prefix_apply;
     // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
     // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
@@ -483,8 +489,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Semantic action checks text is literally "d" and INTOP context.
     // At factor level so it can appear as right operand of invisible_times.
     // Perl: diffd matches both /UNKNOWN:d/ and /ID:d/ (lxDeclare can set role=ID on d).
-    factor += unknown factor_base => diffop_apply
-      | id factor_base => diffop_apply;
+    // M4: Only "d" tokens can be diffops. diffunk/diffid are emitted by the
+    // lexer for tokens with content "d". This prevents Marpa from exploring
+    // the diffop path for every UNKNOWN token (was ~90% of pruned trees).
+    factor += diffunk factor_base => diffop_apply
+      | diffid factor_base => diffop_apply;
 
     // Perl MathGrammar L720-723: combine SUPOP tokens (\prime\prime → prime2)
     supops = supop
@@ -494,21 +503,22 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | bigop | sumop | intop | limitop | diffop | vertbar | supops
       | modifierop | operator;
     // Script content: expressions, statements (period/comma-separated), or bare operators
-    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap
-      | start_postsubscript statements end_postsubscript => faux_wrap
+    // Script content: `statements` is the primary catch-all (derives everything
+    // expression/formula derive). `formula_list` is kept separately because
+    // it uses formula_list_apply (different semantics from list_apply in statements).
+    // IMPORTANT: Do NOT add `expression` — it's a strict subset of `statements`,
+    // and having both creates 2^N ambiguity (2x per script argument).
+    postsubarg = start_postsubscript statements end_postsubscript => faux_wrap
       | start_postsubscript formula_list end_postsubscript => faux_wrap
       | start_postsubscript script_op end_postsubscript => faux_wrap;
-    postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap
-      | start_postsuperscript statements end_postsuperscript => faux_wrap
+    postsuperarg = start_postsuperscript statements end_postsuperscript => faux_wrap
       | start_postsuperscript formula_list end_postsuperscript => faux_wrap
       | start_postsuperscript script_op end_postsuperscript => faux_wrap;
     // Bigop-specific script args — separated tokens to reduce earley chart competition
-    bigopsubarg = start_bigopsub expression end_bigopsub => faux_wrap
-      | start_bigopsub statements end_bigopsub => faux_wrap
+    bigopsubarg = start_bigopsub statements end_bigopsub => faux_wrap
       | start_bigopsub formula_list end_bigopsub => faux_wrap
       | start_bigopsub script_op end_bigopsub => faux_wrap;
-    bigopsuparg = start_bigopsup expression end_bigopsup => faux_wrap
-      | start_bigopsup statements end_bigopsup => faux_wrap
+    bigopsuparg = start_bigopsup statements end_bigopsup => faux_wrap
       | start_bigopsup formula_list end_bigopsup => faux_wrap
       | start_bigopsup script_op end_bigopsup => faux_wrap;
     floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap
@@ -530,10 +540,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | function postsubarg => postfix_script
       | function postsubarg postsuperarg => postfix_script
       | function postsuperarg postsubarg => postfix_script;
-    tight_term += scripted_function fenced_factor => prefix_apply;
-    tight_term += scripted_function lparen formula rparen => apply_delimited;
-    // Also register as applied_func so they chain: f_a(c^a) g_b(c^b)
-    // uses tight_term applied_func => apply_invisible_times
+    // All scripted function application rules go through applied_func only
+    // (tight_term gets them via tight_term += applied_func — no duplicates)
     applied_func += scripted_function fenced_factor => prefix_apply;
     applied_func += scripted_function lparen formula rparen => apply_delimited;
 
@@ -542,9 +550,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | opfunction postsubarg => postfix_script
       | opfunction postsubarg postsuperarg => postfix_script
       | opfunction postsuperarg postsubarg => postfix_script;
-    tight_term += scripted_opfunction tight_term => prefix_apply;
-    tight_term += scripted_opfunction fenced_factor => prefix_apply;
-    tight_term += scripted_opfunction lparen formula rparen => apply_delimited;
+    applied_func += scripted_opfunction tight_term => prefix_apply;
     applied_func += scripted_opfunction fenced_factor => prefix_apply;
     applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
 
@@ -553,9 +559,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | trigfunction postsubarg => postfix_script
       | trigfunction postsubarg postsuperarg => postfix_script
       | trigfunction postsuperarg postsubarg => postfix_script;
-    tight_term += scripted_trigfunction tight_term => prefix_apply;
-    tight_term += scripted_trigfunction fenced_factor => prefix_apply;
-    tight_term += scripted_trigfunction lparen formula rparen => apply_delimited;
+    applied_func += scripted_trigfunction tight_term => prefix_apply;
     applied_func += scripted_trigfunction fenced_factor => prefix_apply;
     applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
 
@@ -627,13 +631,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl: preScripted['bigop'] addOpArgs — addOpArgs = Factor moreOpArgFactors
     // moreOpArgFactors chains factors with MulOp or invisible times.
     //
-    // bigop_application is a dedicated nonterminal that:
-    // - Acts as tight_term on the LEFT (2∫ works via invisible times)
-    // - Absorbs full factor chains on the RIGHT (∫ x² dx → ∫(x²*dx))
-    // - Does NOT recurse back into tight_term → bigop cycle (avoids ambiguity)
-    //
-    // Once inside bigop_application, invisible_times and mulop extend the
-    // argument chain without re-entering the bigop dispatch.
+    // bigop_application absorbs `term` (not just tight_term) because:
+    // - Nested bigops: ∑∑∑ a_{ij}b_{jk}c_{ki} needs each ∑ to absorb the next
+    // - bigop_application is lifted to term level, so inner bigops are terms
+    // M2 investigation: restricting to tight_term breaks nested bigops (calculus test).
+    // The semantic pruning already handles the ∑ a + b case correctly.
     bigop_application = any_bigop term => prefix_apply
       | scripted_bigop term => prefix_apply
       | composed_bigop term => prefix_apply;

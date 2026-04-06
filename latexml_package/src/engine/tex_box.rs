@@ -775,6 +775,7 @@ LoadDefinitions!({
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0),
   getter => sub[args] {
+    if args.is_empty() { return Some(RegisterValue::Dimension(Dimension::default())); }
     let n = args.remove(0).expect_number();
     with_value(&format!("box{}", n.value_of()), |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
@@ -792,6 +793,7 @@ LoadDefinitions!({
 
   DefRegister!("\\wd Number", Dimension::default(),
   getter => sub[args] {
+    if args.is_empty() { return Some(RegisterValue::Dimension(Dimension::default())); }
     let n = args.remove(0).expect_number();
     let boxid = format!("box{}", n.value_of());
     let mut stuff = checkout_value(&boxid);
@@ -822,6 +824,7 @@ LoadDefinitions!({
 
   DefRegister!("\\dp Number", Dimension::new(0),
   getter => sub[args] {
+    if args.is_empty() { return Some(RegisterValue::Dimension(Dimension::default())); }
     let n = args.remove(0).expect_number();
     with_value(&format!("box{}", n.value_of()),|val_opt|
       if let Some(Stored::Digested(thebox)) = val_opt {
@@ -1192,7 +1195,7 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
     Some(Stored::Tokens(tokens)) => gullet::unread(tokens),
     Some(Stored::Token(token)) => gullet::unread_one(token),
     None | Some(Stored::None) => {},
-    Some(other) => panic!("afterAssignment should be a token, got: {}", other),
+    Some(other) => log::warn!("afterAssignment should be a token, got: {}", other),
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {

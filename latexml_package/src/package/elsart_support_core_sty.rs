@@ -1,0 +1,255 @@
+//! elsart_support_core.sty — Elsevier journal article support (core)
+//! Perl: elsart_support_core.sty.ltxml — 191 lines
+//! Shared by elsart.cls and elsarticle.cls
+use crate::prelude::*;
+
+#[rustfmt::skip]
+LoadDefinitions!({
+  // Frontmatter environment
+  DefEnvironment!("{frontmatter}", "#body");
+
+  // Author/affiliation — Perl L32-48
+  DefMacro!("\\author[]{}", "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#2}}");
+  DefMacro!("\\address[]{}", "\\lx@contact{address}{#2}");
+  // \affiliation[label]{key=val,...} — elsarticle uses this for institutions
+  // Not in Perl elsart_support_core, but needed for modern elsarticle papers.
+  // The TeX elsarticle.cls uses LaTeX3 \keys_set:nn to parse key-value pairs
+  // (organization, addressline, city, postcode, state, country) and concatenate
+  // the values with comma separators. We parse the key-value body in Rust
+  // and produce clean affiliation text.
+  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
+  DefMacro!("\\affiliation[]{}", sub[(_opt_label, body)] {
+    // Parse key-value pairs from the body, respecting brace nesting.
+    // Keys: organization, addressline, city, postcode, state, country
+    // Values are typically brace-delimited: key={value with, commas}
+    let body_str = body.to_string();
+    let mut parts: Vec<String> = Vec::new();
+
+    // State machine to parse key=value pairs with brace nesting
+    let chars: Vec<char> = body_str.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+      // Skip whitespace and commas between key-value pairs
+      while i < len && (chars[i].is_whitespace() || chars[i] == ',') {
+        i += 1;
+      }
+      if i >= len { break; }
+
+      // Read key (until '=' or end)
+      let key_start = i;
+      while i < len && chars[i] != '=' {
+        i += 1;
+      }
+      if i >= len { break; }
+      let _key = body_str[key_start..i].trim().to_lowercase();
+      i += 1; // skip '='
+
+      // Skip whitespace after '='
+      while i < len && chars[i].is_whitespace() {
+        i += 1;
+      }
+      if i >= len { break; }
+
+      // Read value — may be brace-delimited or plain
+      let value;
+      if i < len && chars[i] == '{' {
+        // Brace-delimited value: read until matching '}'
+        i += 1; // skip opening '{'
+        let val_start = i;
+        let mut depth = 1;
+        while i < len && depth > 0 {
+          if chars[i] == '{' { depth += 1; }
+          else if chars[i] == '}' { depth -= 1; }
+          if depth > 0 { i += 1; }
+        }
+        value = body_str[val_start..i].trim().to_string();
+        if i < len { i += 1; } // skip closing '}'
+      } else {
+        // Plain value: read until next comma or end
+        let val_start = i;
+        while i < len && chars[i] != ',' {
+          i += 1;
+        }
+        value = body_str[val_start..i].trim().to_string();
+      }
+
+      // Only include known affiliation keys with non-empty values
+      let trimmed = value.trim();
+      if !trimmed.is_empty() {
+        match _key.as_str() {
+          "organization" | "organisation" | "o" | "or"
+          | "addressline" | "a" | "ad"
+          | "city" | "c" | "ci"
+          | "postcode" | "p" | "pc"
+          | "state" | "s" | "st"
+          | "country" | "cy" => {
+            parts.push(trimmed.to_string());
+          }
+          _ => {
+            // Unknown keys: include value as-is (matching elsarticle unknown handler)
+            if !trimmed.is_empty() {
+              parts.push(trimmed.to_string());
+            }
+          }
+        }
+      }
+    }
+
+    let affil_text = parts.join(", ");
+    let mut result = Vec::new();
+    result.push(T_CS!("\\@add@to@frontmatter"));
+    result.push(T_BEGIN!());
+    for ch in "ltx:creator".chars() {
+      result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+    }
+    result.push(T_END!());
+    result.push(T_BEGIN!());
+    result.push(T_CS!("\\@@@affiliation"));
+    result.push(T_BEGIN!());
+    for ch in affil_text.chars() {
+      if ch == ' ' {
+        result.push(T_SPACE!());
+      } else if ch.is_ascii_alphabetic() {
+        result.push(Token { text: arena::pin_char(ch), code: Catcode::LETTER });
+      } else {
+        result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+      }
+    }
+    result.push(T_END!());
+    result.push(T_END!());
+    result
+  });
+  DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
+  DefMacro!("\\thanksref{}", "");
+  DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
+  DefMacro!("\\corref{}", "");
+  DefMacro!("\\corauthref{}", "");
+  DefMacro!("\\cortext[]{}", "");
+  DefMacro!("\\collab OptionalMatch:* {}", "\\author{#1}");
+  Let!("\\collaboration", "\\collab");
+  // Perl L50-51: route through lx@notetext for proper footnote handling
+  DefMacro!("\\tnotetext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
+  DefMacro!("\\fntext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
+  // Perl L52-58: \lx@elsart@noteref splits comma-separated labels
+  // into individual \lx@notemark[label]{footnote} calls
+  DefMacro!("\\lx@elsart@noteref{}", sub[(labels)] {
+    let label_str = labels.to_string();
+    let mut result = Vec::new();
+    for label in label_str.split(',') {
+      let label = label.trim();
+      if !label.is_empty() {
+        result.push(T_CS!("\\lx@notemark"));
+        result.push(T_OTHER!("["));
+        for ch in label.chars() {
+          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+        }
+        result.push(T_OTHER!("]"));
+        result.push(T_BEGIN!());
+        // "footnote" as OTHER tokens
+        for ch in "footnote".chars() {
+          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+        }
+        result.push(T_END!());
+      }
+    }
+    result
+  });
+  DefMacro!("\\tnoteref{}", "\\lx@elsart@noteref{#1}");
+  DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
+
+  // Title/metadata — Perl L60-106
+  DefMacro!("\\runauthor{}", "");
+  DefMacro!("\\runtitle{}", "");
+  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  DefMacro!("\\ead Optional:email Semiverbatim",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
+  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
+  DefMacro!("\\sep", "\\unskip,\\space");
+  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
+  DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised]{#1}");
+  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
+  DefMacro!("\\communicated{}", "\\@add@frontmatter{ltx:date}[role=communicated]{#1}");
+  DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedicated]{#1}");
+  DefMacro!("\\presented{}", "\\@add@frontmatter{ltx:date}[role=presented]{#1}");
+  DefMacro!("\\articletype{}", "\\@add@frontmatter{ltx:note}[role=articletype]{#1}");
+  DefMacro!("\\issue{}", "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
+  DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:date}[role=publication]{#1}");
+  DefMacro!("\\FullCopyrightText", "");
+  DefMacro!("\\copyear{}", "\\@add@frontmatter{ltx:date}[role=copyright]{#1}");
+  DefMacro!("\\copyrightholder{}", "\\@add@frontmatter{ltx:note}[role=copyrightholder]{#1}");
+  Let!("\\copyrightyear", "\\copyear");
+  DefMacro!("\\RUNART", "");
+  DefMacro!("\\RUNDATE", "");
+  DefMacro!("\\RUNJNL", "");
+  DefMacro!("\\company{}", "");
+  DefMacro!("\\aid{}", "");
+  DefMacro!("\\ssdi{}{}", "");
+  DefMacro!("\\readRCS Until:$ Until:$", "");
+  DefMacro!("\\RCSdate", "");
+  DefMacro!("\\RCSfile", "");
+  DefMacro!("\\RCSversion", "");
+  DefMacro!("\\firstpage{}", "");
+  DefMacro!("\\lastpage{}", "");
+  DefMacro!("\\preface", "");
+  DefMacro!("\\theHaddress", "");
+  DefMacro!("\\theaddress", "");
+  Let!("\\ESpagenumber", "\\arabic");
+
+  // Acknowledgements — Perl L123-125
+  DefConstructor!("\\ack", "<ltx:acknowledgements>");
+  DefConstructor!("\\endack", "</ltx:acknowledgements>");
+
+  // Acknowledgements tag — Perl L125
+  Tag!("ltx:acknowledgements", auto_close => true);
+
+  // Keywords — Perl L130-153
+  // keyword environment and macros with XUntil pattern
+  // Perl L135-152: \begin{keyword}/\end{keyword} use DefMacroI with begingroup/endgroup,
+  // NOT DefEnvironment!, to properly scope the XUntil delimiter reading.
+  DefMacro!(T_CS!("\\begin{keyword}"), None, "\\begingroup\\@keyword");
+  DefMacro!(T_CS!("\\end{keyword}"), None, "\\@keyword@cut\\endgroup");
+  DefMacro!("\\keyword", "\\@keyword");
+  DefMacro!("\\endkeyword", "\\@keyword@cut");
+  DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
+  DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
+  DefMacro!("\\JEL", "\\@keyword@cut\\@JEL");
+  DefMacro!("\\UK", "\\@keyword@cut\\@UK");
+
+  // Perl L148-152: @keyword reads until @keyword@cut delimiter using XUntil.
+  // XUntil expands tokens while reading, so \end{keyword} → \@keyword@cut is found.
+  DefConstructor!("\\@keyword@cut", "");
+  DefMacro!("\\@keyword XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\@PACS XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
+  DefMacro!("\\@MSC{} XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme={#1 MSC}]{#2}");
+  DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
+  DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=UK]{#1}");
+
+  // Document structure — Perl L158-163
+  DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
+  DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
+
+  // Theorems — Perl L168-175
+  Let!("\\newdefinition", "\\newtheorem");
+  Let!("\\newproof", "\\newtheorem");
+
+  // Registers — Perl L180-183
+  DefRegister!("\\eqnarraycolsep" => Dimension!("1pt"));
+  DefRegister!("\\eqnbaselineskip" => Glue!("14pt"));
+  DefRegister!("\\eqnlineskip" => Glue!("2pt"));
+  DefRegister!("\\eqntopsep" => Glue!("12pt"));
+
+  // Figures — Perl L186-191
+  DefMacro!("\\printfigures{}", "");
+  DefMacro!("\\printtables{}", "");
+  DefMacro!("\\MARK{}", "");
+  DefMacro!("\\mpfootnotemark", "");
+
+  // Float environment
+  DefEnvironment!("{esmark}",  "#body");
+  DefMacro!("\\figmark{}{}", "");
+  DefMacro!("\\tabmark{}{}", "");
+});

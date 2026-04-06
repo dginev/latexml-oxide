@@ -10,8 +10,9 @@ LoadDefinitions!({
   InputDefinitions!("algorithm2e", extension => Some("sty".into()), noltxml => true);
 
   Let!("\\@mathsemicolon", "\\;");
-  // Counter setup
-  NewCounter!("algorithm", "");
+  // Counter setup — Perl L53-60
+  RawTeX!("\\expandafter\\ifx\\csname algocf@within\\endcsname\\relax\\newcounter{algorithm}\\else\\newcounter{algorithm}[\\algocf@within]\\fi");
+  RawTeX!("\\expandafter\\ifx\\csname algocf@within\\endcsname\\relax\\else\\def\\thealgorithm{\\csname the\\algocf@within\\endcsname.\\@arabic\\c@algorithm}\\fi");
   DefMacro!("\\fnum@algorithm", "\\algorithmcfname\\nobreakspace\\thealgorithm");
   DefMacro!("\\fnum@font@algorithm", "\\bf");
   DefMacro!("\\ext@algorithm", "loa");
@@ -22,9 +23,12 @@ LoadDefinitions!({
     mode => "internal_vertical",
     before_digest => {
       use crate::engine::latex_ch9_figures_and_tables::before_float;
-      let _ = before_float("algorithm", None);
+      before_float("algorithm", None);
       Let!("\\par", "\\lx@algo@par");
       Let!("\\\\", "\\lx@algo@par");
+      // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
+      // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
+      DefMacro!("\\BlankLine", "\\lx@algo@par");
       DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
     },
     after_digest => sub[whatsit] {
@@ -32,23 +36,31 @@ LoadDefinitions!({
       after_float(whatsit);
     }
   );
-  // {algorithm*} and {algorithm2e} — same as {algorithm}
+  // {algorithm*}, {algorithm2e}, {algorithm2e*} — same as {algorithm} — Perl L63
   Let!("\\algorithm*", "\\algorithm");
   Let!("\\endalgorithm*", "\\endalgorithm");
   Let!("\\algorithm2e", "\\algorithm");
   Let!("\\endalgorithm2e", "\\endalgorithm");
+  state::let_i(&T_CS!("\\algorithm2e*"), &T_CS!("\\algorithm"), None);
+  state::let_i(&T_CS!("\\endalgorithm2e*"), &T_CS!("\\endalgorithm"), None);
 
   DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
   DefMacro!("\\lx@algo@strut SkipMatch:\\par", "");
   DefMacro!("\\@marker{}", "");
 
-  // Par management — prevents double line breaks
+  // Par dedup — Perl L109-116
+  // Conditional that prevents double-\par from producing blank lines
+  DefConditional!("\\if@lx@algo@par SkipSpaces");
+  DefMacro!("\\lx@algo@setpar", "");
+  DefMacro!("\\lx@algo@newpar{}{}", "#2");
+
+  // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
-    "\\lx@algo@endline\\lx@algo@startline");
+    "\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parx",
-    "\\lx@algo@endline\\lx@algo@startline");
+    "\\lx@algo@newpar{PARx}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parb",
-    "\\lx@algo@endline\\lx@algo@startline");
+    "\\lx@algo@newpar{PARb}{\\lx@algo@endline\\lx@algo@startline}");
 
   // Block and group macros
   DefMacro!("\\algocf@group{}", "#1");
@@ -83,14 +95,37 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@indentline", "\\hskip\\skiprule\\lx@algo@rule\\hskip\\skiptext");
   DefConstructor!("\\lx@algo@rule", "<ltx:rule width='1px' height='100%'/>");
 
-  // Line start/end constructors
+  // Register for tracking indentation — Perl L156-163
+  DefRegister!("\\lx@algo@indentation" => Tokens!());
+  DefMacro!("\\lx@algo@push@indentation{}", "\\expandafter\\lx@algo@indentation\\expandafter{\\the\\lx@algo@indentation#1}");
+  // Pop last token from indentation register — Perl L159-163
+  DefMacro!("\\lx@algo@pop@indentation", sub[_args] {
+    let reg = LookupRegister!("\\lx@algo@indentation");
+    if let RegisterValue::Tokens(toks) = reg {
+      let mut toks_vec = toks.unlist();
+      toks_vec.pop();
+      state::assign_register("\\lx@algo@indentation",
+        RegisterValue::Tokens(Tokens::new(toks_vec)), None, vec![])?;
+    }
+    Ok(Tokens!())
+  }, locked => true);
+
+  // Line start/end — Perl L170-178, L180-190
+  // Perl uses \lx@prepend@indentation at endline to prepend indentation via DOM manipulation.
+  // Rust emits indentation at startline instead (same visual effect, avoids DOM manipulation).
   DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>");
   DefConstructor!("\\lx@algo@@endline", "</ltx:listingline>");
-  DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline");
-  DefMacro!("\\lx@algo@endline", "\\lx@algo@@endline");
+  DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline\\the\\lx@algo@indentation");
+  DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
 
-  // Indentation prepending
+  // Indentation prepending — Perl L197-198
+  // Perl absorbs + prepends via DOM manipulation; Rust emits at startline, so this is a no-op consumer.
+  DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
   DefConstructor!("\\lx@prepend@indentation@{}", "");
 
-  DefMacro!("\\lx@strippar{}", "#1");
+  // Line numbering — Perl L195, L210-221
+  DefConstructor!("\\algocf@printnl{}", "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
+
+  // Strip trailing pars — Perl L141-145
+  DefMacro!("\\lx@strippar{}", "#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx");
 });

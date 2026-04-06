@@ -242,7 +242,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
   // \@addtofilelist before reading the file, so \@filelist is available inside)
-  if options.handleoptions {
+  if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
     digest(Tokens!(
       T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
     ))?;
@@ -289,29 +289,101 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Now that we have ensured there is no compiled target of this name, we can start the file
     // system search dance, call to kpsewhich, etc.
     //
-    // Find the file to load
-    // TODO options.search_paths_only
-    if let Some(file) = find_file(
-      &filename,
-      Some(FindFileOptions {
-        forbid_ltxml:      options.noltxml,
-        notex:             options.notex,
-        ext_type:          options.extension.as_ref().cloned(),
-        search_paths_only: false,
-      }),
-    ) {
+    // Perl Package.pm FindFile search order (L2109-2139):
+    //   1. .ltxml binding (handled above by load_binding/load_external_binding)
+    //   2. Raw TeX in search paths, BUT only if INTERPRETING_DEFINITIONS is true
+    //      (i.e. we're inside recursive loading from another raw TeX file)
+    //   3. FindFile_fallback — strip version suffixes, find generic .ltxml binding
+    //      (e.g. icml2024.sty → icml.sty.ltxml)
+    //   4. Raw TeX in search paths (without INTERPRETING_DEFINITIONS gate)
+    //   5. kpsewhich
+    //
+    // This ordering ensures versioned-package fallback bindings take priority
+    // over raw .sty files that may contain layout checks (like ICML's \ifdim
+    // page-margin checks) that produce spurious warnings.
+    let interpreting = lookup_bool("INTERPRETING_DEFINITIONS");
+
+    // Step 2: If we're already interpreting raw TeX definitions, look for the file directly
+    let found_raw = if interpreting && !options.notex {
+      find_file(
+        &filename,
+        Some(FindFileOptions {
+          forbid_ltxml:      options.noltxml,
+          notex:             false,
+          ext_type:          options.extension.as_ref().cloned(),
+          search_paths_only: false,
+        }),
+      )
+    } else {
+      None
+    };
+
+    // Step 3: Try fallback (strip version suffixes) before raw TeX
+    // Perl Package.pm L2118-2121: FindFile_fallback
+    // e.g. natbib-arxiv_v2.sty → natbib.sty, icml2024.sty → icml.sty
+    let found_raw = if found_raw.is_some() {
+      found_raw
+    } else if !options.noltxml {
+      if let Some(fallback) = find_file_fallback(name, &as_type) {
+        Info!("fallback", name,
+          s!("Interpreted as versioned package, falling back to {fallback}"));
+        // Load the fallback binding — use reloadable since we already marked original as "loaded"
+        let fallback_name = fallback.trim_end_matches(&format!(".{as_type}")).to_string();
+        let fb_result = input_definitions(&fallback_name, InputDefinitionOptions {
+          extension: Some(Cow::Borrowed(if as_type == "sty" { "sty" } else { "cls" })),
+          options: Vec::new(),
+          after: Tokens::default(),
+          handleoptions: options.handleoptions,
+          noerror: true,
+          reloadable: true,
+          ..InputDefinitionOptions::default()
+        });
+        if fb_result.is_ok() {
+          assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+        }
+        None // fallback handled the loading; no raw file to load
+      } else {
+        None
+      }
+    } else {
+      None
+    };
+
+    // Step 4: Raw TeX in search paths (without INTERPRETING_DEFINITIONS gate)
+    // Perl Package.pm L2122-2125
+    let found_raw = if found_raw.is_some() {
+      found_raw
+    } else if !options.notex && !interpreting && !lookup_bool(&s!("{filename}_loaded")) {
+      find_file(
+        &filename,
+        Some(FindFileOptions {
+          forbid_ltxml:      options.noltxml,
+          notex:             false,
+          ext_type:          options.extension.as_ref().cloned(),
+          search_paths_only: false,
+        }),
+      )
+    } else {
+      None
+    };
+
+    if let Some(file) = found_raw {
       is_found_raw = true;
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
-    } else {
+    } else if !lookup_bool(&s!("{filename}_loaded")) {
+      if options.noerror {
+        // With noerror: don't mark as loaded and return Err so callers can
+        // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
+        // InputDefinitions which returns undef on not-found even with noerror=>1.
+        note_end(&s!("Loading {:?} definitions", filename));
+        return Err(s!("File not found: {}", filename).into());
+      }
       // Mark as loaded even on failure — prevents retrying a missing file
       // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
       assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-      if !options.noerror {
-        // Perl uses Warn (not Error) for missing files — matches L2646 of Package.pm
-        Warn!("missing_file", name,
-          s!("Can't find binding or file for '{filename}'. \
-            No dispatcher entry and no raw file found on disk."));
-      }
+      Warn!("missing_file", name,
+        s!("Can't find binding or file for '{filename}'. \
+          No dispatcher entry and no raw file found on disk."));
     }
   }
 
@@ -963,18 +1035,24 @@ pub fn require_resource(mut resource: Resource) {
 }
 
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
+  // Try loading the class: first look for a .cls.ltxml binding, then fall back
+  // to raw .cls file. Class files are essential for document structure, so we
+  // ALWAYS allow raw TeX fallback (notex: false) — unlike style files.
+  // This handles custom class files (deepseek.cls, nips_2017.cls, etc.)
+  // that don't have LaTeXML bindings. The raw .cls file may contain
+  // \LoadClass{article} which recursively loads the parent class.
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
     after: after.clone(),
-    notex: true,
+    notex: false,  // allow raw TeX fallback for class files
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
   });
   // Perl: if class not found, fall back to OmniBus
-  if result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")) {
-    if name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
+  if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
+    && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
       Warn!("missing_file", name, format!("Can't find binding for class {name} (using OmniBus)"));
       note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
       return input_definitions("OmniBus", InputDefinitionOptions {
@@ -987,7 +1065,6 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
         ..InputDefinitionOptions::default()
       });
     }
-  }
   result
 }
 
@@ -1034,6 +1111,58 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
       None => find_file_aux(file, &options),
       Some(f) => Some(f),
     }
+  }
+}
+
+/// Perl Package.pm L2141-2210: FindFile_fallback
+/// Strip version/arxiv suffixes from package names to find existing bindings.
+/// Returns the fallback filename (with extension) if found.
+fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
+  use regex::Regex;
+  // Suffixes with separator (Perl @find_fallback_suffixes)
+  let suffix_rx = Regex::new(
+    r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$"
+  ).ok()?;
+  // Glued suffixes without separator
+  let glued_rx = Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").ok()?;
+  // Prefixes
+  let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.])").ok()?;
+
+  let mut base = name.to_string();
+  let mut changed = false;
+  // Iteratively strip suffixes, then glued, then prefixes
+  loop {
+    if let Some(m) = suffix_rx.find(&base) {
+      base = base[..m.start()].to_string();
+      changed = true;
+      continue;
+    }
+    if let Some(m) = glued_rx.find(&base) {
+      base = base[..m.start()].to_string();
+      changed = true;
+      continue;
+    }
+    if let Some(m) = prefix_rx.find(&base) {
+      base = base[m.end()..].to_string();
+      changed = true;
+      continue;
+    }
+    break;
+  }
+
+  if !changed || base.is_empty() || base == name {
+    return None;
+  }
+
+  let fallback_filename = format!("{base}.{ext_type}");
+  // Check if fallback binding exists
+  if load_binding(&fallback_filename).unwrap_or(false) {
+    // Binding exists but was loaded by the check — it's OK, the caller will mark loaded
+    Some(fallback_filename)
+  } else if load_external_binding(&fallback_filename).unwrap_or(false) {
+    Some(fallback_filename)
+  } else {
+    None
   }
 }
 
@@ -1476,11 +1605,11 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
   let failed_flag = lookup_bool(&fail_key);
   if !failed_flag {
     assign_value(&fail_key, true, None); // Stop recursion?
-    input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
+    let _ = input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
       extension: Some(Cow::Borrowed("fontmap")),
       noerror: true,
       ..InputDefinitionOptions::default()
-    })?;
+    });
     if has_value(&s!("{encoding}_fontmap")) {
       // Got map?
       assign_value(&fail_key, false, None);

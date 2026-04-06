@@ -420,35 +420,121 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
   }
 
   // Perl L772-775: when invisibletimes is false, replace U+2062 with U+200B
-  if text == "\u{2062}" && !get_invisible_times() {
+  let is_replaced_invisible_times = text == "\u{2062}" && !get_invisible_times();
+  if is_replaced_invisible_times {
     text = "\u{200B}".to_string(); // ZERO WIDTH SPACE
   }
 
   let mut attrs = HashMap::new();
 
-  // Math variant from font
-  if let Some(ref f) = font {
-    if let Some(variant) = font_to_mathvariant(f) {
-      // Single char in mi with italic → omit (it's the default)
-      if tag == "m:mi" && text.chars().count() == 1 {
-        if variant != "italic" {
-          attrs.insert("mathvariant".to_string(), variant.to_string());
+  // Perl: zero-width space <mo> needs lspace/rspace="0em" to prevent browser
+  // default operator spacing that creates visible gaps between letters.
+  if is_replaced_invisible_times && tag == "m:mo" {
+    attrs.insert("lspace".to_string(), "0em".to_string());
+    attrs.insert("rspace".to_string(), "0em".to_string());
+  }
+
+  // Math variant from font — with Plane 1 Unicode conversion.
+  // Port of Perl stylizeContent lines 689-756.
+  {
+    use crate::unicode;
+    let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
+
+    // Single char mi: italic is default
+    if tag == "m:mi" && text.chars().count() == 1 {
+      if variant == Some("italic") {
+        variant = None;
+      } else if variant.is_none() && font.is_none() {
+        // Check if it's a named symbol (not a variable) → use "normal"
+        if node.get_attribute("name").is_some() {
+          variant = Some("normal");
         }
-        // else italic is default for single-char mi
-      } else if variant != "normal" {
-        attrs.insert("mathvariant".to_string(), variant.to_string());
+      } else if variant.is_none() {
+        variant = Some("normal");
+      }
+    } else if font.is_some() && variant == Some("normal") {
+      variant = None; // normal is default for non-single-char-mi tokens
+    } else if tag == "m:mi" && text.chars().count() > 1 && font.is_none() {
+      variant = Some("normal"); // multi-char mi without font → normal
+    }
+
+    // Plane 1 Unicode conversion
+    if let Some(v) = variant {
+      if tag != "m:mtext" {
+        if let Some(u_text) = unicode::unicode_convert(&text, v) {
+          if !u_text.is_empty() || text.is_empty() {
+            text = u_text;
+            variant = None; // character carries style
+          }
+        }
       }
     }
-  } else if tag == "m:mi" && text.chars().count() == 1 {
-    // Single char mi without font → check if it's a named symbol (not a variable).
-    // Named symbols (e.g., \Box → □) should use mathvariant="normal".
-    if node.get_attribute("name").is_some() {
-      attrs.insert("mathvariant".to_string(), "normal".to_string());
+
+    // Emit remaining variant attribute
+    if let Some(v) = variant {
+      if tag == "m:mi" && text.chars().count() == 1 {
+        if v != "italic" {
+          attrs.insert("mathvariant".to_string(), v.to_string());
+        }
+      } else if v != "normal" {
+        attrs.insert("mathvariant".to_string(), v.to_string());
+      }
     }
-    // Regular letters default to italic (MathML default for single-char mi)
-  } else if tag == "m:mi" && text.chars().count() > 1 {
-    // Multi-char mi without font → should be normal (function name)
-    attrs.insert("mathvariant".to_string(), "normal".to_string());
+
+    // Font-based CSS class fallbacks.
+    // Port of Perl L746-756: added regardless of plane1 conversion.
+    let is_format_only = text.chars().all(|c| {
+      matches!(c,
+        '\u{200B}'..='\u{200F}' | '\u{2028}'..='\u{202F}'
+        | '\u{2060}'..='\u{2064}' | '\u{FEFF}' | '\u{00AD}')
+    }) && !text.is_empty();
+    if let Some(ref f) = font {
+      if !is_format_only {
+        if f.contains("caligraphic") {
+          let prev = attrs.get("class").cloned().unwrap_or_default();
+          let new = if prev.is_empty() {
+            "ltx_font_mathcaligraphic".to_string()
+          } else {
+            format!("{} ltx_font_mathcaligraphic", prev)
+          };
+          attrs.insert("class".to_string(), new);
+        } else if f.contains("script") {
+          let prev = attrs.get("class").cloned().unwrap_or_default();
+          let new = if prev.is_empty() {
+            "ltx_font_mathscript".to_string()
+          } else {
+            format!("{} ltx_font_mathscript", prev)
+          };
+          attrs.insert("class".to_string(), new);
+        } else if f.contains("fraktur") && text.chars().all(|c| "+-0123456789.".contains(c)) {
+          let prev = attrs.get("class").cloned().unwrap_or_default();
+          let new = if prev.is_empty() {
+            "ltx_font_oldstyle".to_string()
+          } else {
+            format!("{} ltx_font_oldstyle", prev)
+          };
+          attrs.insert("class".to_string(), new);
+        } else if f.contains("smallcaps") {
+          let prev = attrs.get("class").cloned().unwrap_or_default();
+          let new = if prev.is_empty() {
+            "ltx_font_smallcaps".to_string()
+          } else {
+            format!("{} ltx_font_smallcaps", prev)
+          };
+          attrs.insert("class".to_string(), new);
+        } else if let Some(v) = variant {
+          if v != "normal" {
+            let prev = attrs.get("class").cloned().unwrap_or_default();
+            let new = if prev.is_empty() {
+              format!("ltx_mathvariant_{}", v)
+            } else {
+              format!("{} ltx_mathvariant_{}", prev, v)
+            };
+            attrs.insert("class".to_string(), new);
+          }
+        }
+      }
+    }
   }
 
   // Operator-specific attributes
@@ -946,37 +1032,13 @@ fn pmml_error(msg: &str) -> NodeData {
 
 /// Map a LaTeXML font name to a MathML mathvariant value.
 ///
-/// Port of `unicode_mathvariant` (partial — full table in LaTeXML::Util::Unicode).
+/// Wrapper around `unicode::unicode_mathvariant` (full Perl parity).
+/// Returns `Some(variant)` for recognized fonts, `None` only for empty input.
 pub fn font_to_mathvariant(font: &str) -> Option<&'static str> {
-  // Match Perl's %mathvariants mapping
-  match font {
-    "italic" | "math" | "CMR" => Some("italic"),
-    "bold" => Some("bold"),
-    "bold-italic" | "bold italic" => Some("bold-italic"),
-    "script" | "caligraphic" => Some("script"),
-    "bold-script" | "bold-caligraphic" => Some("bold-script"),
-    "fraktur" => Some("fraktur"),
-    "bold-fraktur" => Some("bold-fraktur"),
-    "double-struck" | "blackboard" => Some("double-struck"),
-    "sans-serif" => Some("sans-serif"),
-    "bold-sans-serif" => Some("bold-sans-serif"),
-    "sans-serif-italic" => Some("sans-serif-italic"),
-    "sans-serif-bold-italic" => Some("sans-serif-bold-italic"),
-    "monospace" | "typewriter" => Some("monospace"),
-    "upright" | "roman" | "normal" => Some("normal"),
-    _ => {
-      // Check compound font names
-      if font.contains("bold") && font.contains("italic") {
-        Some("bold-italic")
-      } else if font.contains("bold") {
-        Some("bold")
-      } else if font.contains("italic") {
-        Some("italic")
-      } else {
-        None
-      }
-    }
+  if font.is_empty() {
+    return None;
   }
+  Some(crate::unicode::unicode_mathvariant(font))
 }
 
 // ======================================================================

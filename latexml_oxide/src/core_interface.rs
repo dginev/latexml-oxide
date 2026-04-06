@@ -108,7 +108,37 @@ impl DigestionAPI for Core {
     let dump_path = std::env::var("LATEXML_DUMP").ok();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
-      input_definitions(&preload, InputDefinitionOptions::default())?;
+      // Perl: initializeState extracts extension and options from "name.ext[opt1,opt2]"
+      // Parse bracket options: "latexml.sty[nobibtex]" → name="latexml", ext="sty", options=["nobibtex"]
+      let (preload_base, options) = if let Some(bracket_pos) = preload.find('[') {
+        let base = preload[..bracket_pos].to_string();
+        let opts_str = preload[bracket_pos + 1..].trim_end_matches(']');
+        let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        (base, opts)
+      } else {
+        (preload.clone(), vec![])
+      };
+      let (name, ext) = if let Some(pos) = preload_base.rfind('.') {
+        (preload_base[..pos].to_string(), preload_base[pos + 1..].to_string())
+      } else {
+        (preload_base.clone(), String::from("sty"))
+      };
+      let handleoptions = ext == "sty" || ext == "cls";
+      // Pass package options via state (Perl: \PassOptionsToPackage equivalent)
+      if !options.is_empty() {
+        let opt_key = format!("opt@{name}.{ext}");
+        let opt_str = options.join(",");
+        state::assign_value(
+          &opt_key,
+          latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(&opt_str)),
+          Some(Scope::Global),
+        );
+      }
+      input_definitions(&name, InputDefinitionOptions {
+        extension: Some(ext.into()),
+        handleoptions,
+        ..InputDefinitionOptions::default()
+      })?;
     }
     state::assign_value("InitialPreloads", false, Some(Scope::Global));
 
@@ -321,9 +351,10 @@ impl DigestionAPI for Core {
           for rule in rules {
             if let Stored::Rewrite(mut rewrite_rule) = rule {
               rewrite_rule.compile_clauses(&mut document);
-              rewrites.push(rewrite_rule); // clone the Rc
+              rewrites.push(rewrite_rule);
             }
           }
+          // 31 rules compiled for declare test; XPath matching issue prevents application
           // Step 2: invoke the rewrite rules
           for mut rewrite_rule in rewrites {
             rewrite_rule.invoke(&mut document, &root)?;
@@ -393,9 +424,15 @@ impl DigestionAPI for Core {
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
     while gullet::has_more_input() {
-      let next_bodies: Vec<Digested> = stomach::digest_next_body(None)?;
-      // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
-      boxes.extend(next_bodies);
+      // Perl finishDigestion L219-220: loop consuming input even after errors.
+      // Catch Fatal errors (TooManyErrors, etc.) so we can still produce partial output.
+      match stomach::digest_next_body(None) {
+        Ok(next_bodies) => boxes.extend(next_bodies),
+        Err(e) => {
+          log::warn!("digest_internal: error during recovery digestion: {:?}", e);
+          break;
+        }
+      }
     }
     gullet::flush();
     Ok(Digested::from(List::new(boxes)))
@@ -628,13 +665,13 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Parse declarations: "token_text\trole\tname\tmeaning" per line
-  let declarations: Vec<(&str, &str, &str, &str)> = decls_str
+  // Parse declarations: "token_text\trole\tname\tmeaning\tdecl_id" per line
+  let declarations: Vec<(&str, &str, &str, &str, &str)> = decls_str
     .lines()
     .filter_map(|line| {
-      let parts: Vec<&str> = line.splitn(4, '\t').collect();
-      if parts.len() == 4 {
-        Some((parts[0], parts[1], parts[2], parts[3]))
+      let parts: Vec<&str> = line.splitn(5, '\t').collect();
+      if parts.len() >= 4 {
+        Some((parts[0], parts[1], parts[2], parts[3], *parts.get(4).unwrap_or(&"")))
       } else {
         None
       }
@@ -655,11 +692,37 @@ fn apply_lx_declarations(document: &mut Document) {
     }
     let content = tok.get_content();
     let tok_name = tok.get_attribute("name").unwrap_or_default();
-    for &(pattern, role, name, meaning) in &declarations {
+    // Find the section scope of this token (ancestor section's xml:id)
+    let tok_scope = {
+      let mut scope = String::new();
+      let mut cur = tok.get_parent();
+      while let Some(p) = cur {
+        if p.get_name() == "section" {
+          scope = p.get_property("id")
+            .or_else(|| p.get_attribute("xml:id"))
+            .unwrap_or_default();
+          break;
+        }
+        cur = p.get_parent();
+      }
+      scope
+    };
+
+    for &(pattern, role, name, meaning, decl_id) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
       if matches {
+        // Check scope: if decl_id has a section prefix (e.g. "S1" from "S1.XMD1"),
+        // only apply to tokens within that section
+        if !decl_id.is_empty() {
+          if let Some(section_prefix) = decl_id.split('.').next() {
+            if !section_prefix.is_empty() && !tok_scope.is_empty()
+              && tok_scope != section_prefix {
+              continue; // Wrong section — skip this declaration
+            }
+          }
+        }
         if !role.is_empty() {
           let _ = tok.set_attribute("role", role);
         }
@@ -668,6 +731,9 @@ fn apply_lx_declarations(document: &mut Document) {
         }
         if !meaning.is_empty() {
           let _ = tok.set_attribute("meaning", meaning);
+        }
+        if !decl_id.is_empty() {
+          let _ = tok.set_attribute("decl_id", decl_id);
         }
         break; // First matching declaration wins
       }

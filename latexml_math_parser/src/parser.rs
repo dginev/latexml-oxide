@@ -287,6 +287,30 @@ impl MathParser {
       // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
+      // Perl DecorateOperator: propagate operator role from base to scripted XMApp.
+      // When SCRIPTOP wraps an operator-like base (MULOP, ADDOP, etc.), the
+      // resulting XMApp should carry the base's role. Done as post-parse DOM
+      // walk to avoid affecting parse tree selection semantics.
+      for mut xmapp in document.findnodes("//ltx:XMApp", None) {
+        if xmapp.get_attribute("role").is_some() {
+          continue; // already has a role
+        }
+        let children: Vec<Node> = xmapp.get_child_elements();
+        if children.len() >= 2 {
+          let op_role = children[0].get_attribute("role");
+          if matches!(op_role.as_deref(), Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")) {
+            if let Some(base_role) = children[1].get_attribute("role") {
+              if matches!(base_role.as_str(),
+                "MULOP" | "ADDOP" | "BINOP" | "RELOP" | "ARROW" | "METARELOP"
+                | "MODIFIER" | "MODIFIEROP" | "OPERATOR" | "DIFFOP")
+              {
+                let _ = xmapp.set_attribute("role", &base_role);
+              }
+            }
+          }
+        }
+      }
+
       // Note: ltx_math_unparsed class is NOT applied here because any DOM
       // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
       // grammar precomputation for subsequent test runs. Applied in caller instead.
@@ -902,7 +926,11 @@ impl MathParser {
     // Convergence: if we've seen enough consecutive duplicates without
     // a new unique tree, the grammar ambiguity is purely structural
     // (script attachment ordering). Stop early.
-    let max_consecutive_dupes = 64;
+    let max_consecutive_dupes = 32;
+    // Time-budget convergence: once we have unique parses, stop after
+    // this budget. For formulas where all trees are pruned (no unique
+    // parse yet), use a longer budget before giving up.
+    let converge_budget = std::time::Duration::from_millis(200);
     for val in parse_result {
       // Truncate if too many trees or too much time
       if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
@@ -914,6 +942,14 @@ impl MathParser {
       if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
         break;
       }
+      // Time-budget convergence: if we have unique parses and have spent
+      // >200ms, stop — the remaining trees are overwhelmingly duplicates.
+      if !parses.is_empty() && start.elapsed() > converge_budget {
+        break;
+      }
+      // Note: we intentionally do NOT abort when no parse has been found
+      // even after extended time — valid parses can appear late in the
+      // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
       match self.actions.get_tree(
         self.builder.clone(),
         val,

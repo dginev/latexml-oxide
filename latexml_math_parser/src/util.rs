@@ -139,6 +139,12 @@ fn node_to_grammar_lexemes_ctx(
         format!("OPEN:langle:{idx}")
       } else if role == "CLOSE" && text == "⟩" {
         format!("CLOSE:rangle:{idx}")
+      } else if role == "UNKNOWN" && text == "d" {
+        // M4: Emit XDIFFUNK for possible differential-d tokens.
+        // Only "d" tokens can be diffops; other unknowns skip the diffop rule.
+        format!("XDIFFUNK:{text}:{idx}")
+      } else if role == "ID" && text == "d" {
+        format!("XDIFFID:{text}:{idx}")
       } else {
         format!("{role}:{text}:{idx}").replace(' ', "")
       };

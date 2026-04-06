@@ -893,7 +893,15 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
     let tokens = tokens.unlist();
     let mut tokens_iter = tokens.into_iter();
     while let Some(t) = tokens_iter.next() {
-      if delims.iter().any(|d| d == &t) {
+      // Perl: Equals($t, $delim) checks meaning via lookupMeaning.
+      // So \And (let to \and) matches \and as delimiter.
+      if delims.iter().any(|d| {
+        d == &t || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
+          let meaning_t = state::lookup_definition(&t).ok().flatten();
+          let meaning_d = state::lookup_definition(d).ok().flatten();
+          meaning_t.is_some() && meaning_t == meaning_d
+        })
+      }) {
         items.push(Tokens::new(std::mem::take(&mut toks)));
       } else if t == T_BEGIN!() {
         toks.push(t);
@@ -930,6 +938,11 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
 }
 
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
+  // Perl: SplitTokens($tokens, T_CS('\and'))
+  // Only split on \and. The meaning-based check in split_tokens also matches
+  // \AND (which is Let to \and). \And is NOT split here — amsmath overrides
+  // its definition with DefMath, so it stays as a text "&" separator inside
+  // <personname>, matching Perl's behavior.
   split_tokens(tokens, vec![T_CS!("\\and")])
     .into_iter()
     .flat_map(|t| {

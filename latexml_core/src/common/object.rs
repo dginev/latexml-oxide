@@ -12,9 +12,7 @@ use std::fmt::Debug;
 /// Defines basic default methods for comparison, printing
 pub trait Object {
   fn stringify(&self) -> String {
-    // TODO: remove this and make sure all structs implement
-    // something reasonable
-    todo!();
+    String::from("<unknown>")
   }
 
   fn isa_box(&self) -> bool { false }
@@ -35,6 +33,6 @@ pub trait Object {
 
   /// each concrete object needs to provide its own path back to tokens
   fn revert(&self) -> Result<Tokens> {
-    todo!();
+    Ok(Tokens::new(vec![]))
   }
 }

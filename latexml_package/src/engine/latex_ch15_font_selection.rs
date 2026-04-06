@@ -38,6 +38,9 @@ LoadDefinitions!({
   DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}");
 
   // For fonts not allowed in math!!!
+  // Perl L5226: \not@math@alphabet@@ checks if we're in math mode
+  // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
+  DefPrimitive!("\\not@math@alphabet{}{}", "");
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
     if lookup_bool("IN_MATH") {
       let c = c.to_string();
@@ -197,8 +200,8 @@ LoadDefinitions!({
   // Perl L5333-5339: \DeclareTextFontCommand — creates a text font command.
   // Simplified: \cmd{} → {\font #1} (group with font change).
   DefPrimitive!("\\DeclareTextFontCommand DefToken {}", sub[(cmd, font)] {
-    let cs = cmd.clone();
-    let font_rev: Tokens = font.into();
+    let cs = cmd;
+    let font_rev: Tokens = font;
     // Build expansion: {<font> #1}
     let mut expansion = vec![T_BEGIN!()];
     expansion.extend(font_rev.unlist());

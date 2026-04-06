@@ -193,7 +193,8 @@ LoadDefinitions!({
             if let Stored::Dimension(ref width_d) = *width_stored {
               return *width_d;
             } else {
-              panic!("Unexpected type of \"width\" value in State: {width_stored:?}");
+              log::warn!("Unexpected type of \"width\" value in State: {width_stored:?}");
+              break;
             }
           } else {
             break;

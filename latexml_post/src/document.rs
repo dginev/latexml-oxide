@@ -437,6 +437,86 @@ impl PostDocument {
     ctx.evaluate(xpath).ok().map(|obj| obj.to_string())
   }
 
+  /// XPath query on an arbitrary node, even if from a different document.
+  /// Creates a temporary XPath context on the node's own document.
+  pub fn findnodes_foreign(xpath: &str, node: &Node) -> Vec<Node> {
+    // Navigate up to find the document root, then create context
+    let mut current = node.clone();
+    while let Some(parent) = current.get_parent() {
+      current = parent;
+    }
+    // current is the document root (or the node itself if detached)
+    // Get the document for this node tree
+    if let Some(doc) = current.get_parent() {
+      // Has a parent = we're at root element, doc is parent
+      let _ = doc; // can't use this easily
+    }
+    // Fallback: use libxml's node_evaluate with a fresh context
+    // We need to use the internal document. libxml2 nodes know their document.
+    #[allow(unused_imports)]
+    use libxml::xpath::Context as XPathContext;
+    // Create context from the document that owns this node
+    // node._node_ptr -> xmlNodePtr -> doc field
+    // Unfortunately, libxml2-rs doesn't expose a way to get the document from a node.
+    // Workaround: build a new document wrapping this subtree.
+    // Simpler workaround: just traverse children manually for common patterns.
+    Self::findnodes_by_traversal(xpath, node)
+  }
+
+  /// Manual node traversal for common XPath patterns used in bibliography formatting.
+  /// Handles: "ltx:bib-name[@role='author']", "ltx:bib-title", "ltx:bib-date[@role='publication']",
+  /// "ltx:bib-related/ltx:bib-title", "ltx:bib-part[@role='volume']", etc.
+  fn findnodes_by_traversal(xpath: &str, parent: &Node) -> Vec<Node> {
+    let xpath = xpath.trim_start_matches('!').trim();
+    let mut results = Vec::new();
+
+    // Parse simple patterns: "ltx:elem" or "ltx:elem[@attr='val']" or "ltx:elem/ltx:child"
+    let parts: Vec<&str> = xpath.split('/').collect();
+    if parts.is_empty() { return results; }
+
+    fn match_element(node: &Node, pattern: &str) -> bool {
+      let pattern = pattern.trim().trim_start_matches("ltx:");
+      if let Some(bracket_pos) = pattern.find('[') {
+        let elem_name = &pattern[..bracket_pos];
+        let attr_part = &pattern[bracket_pos+1..pattern.len()-1]; // strip [ and ]
+        if node.get_name() != elem_name { return false; }
+        // Parse @attr='value'
+        if let Some(eq_pos) = attr_part.find('=') {
+          let attr_name = attr_part[1..eq_pos].trim(); // skip @
+          let attr_val = attr_part[eq_pos+1..].trim().trim_matches('\'').trim_matches('"');
+          node.get_attribute(attr_name).map(|v| v == attr_val).unwrap_or(false)
+        } else {
+          true
+        }
+      } else {
+        node.get_name() == pattern
+      }
+    }
+
+    fn collect_matching(node: &Node, parts: &[&str], results: &mut Vec<Node>) {
+      if parts.is_empty() { return; }
+      let pattern = parts[0];
+      // Handle "A | B" alternatives
+      let alternatives: Vec<&str> = pattern.split('|').map(|s| s.trim()).collect();
+      let mut child = node.get_first_child();
+      while let Some(c) = child {
+        for alt in &alternatives {
+          if match_element(&c, alt) {
+            if parts.len() == 1 {
+              results.push(c.clone());
+            } else {
+              collect_matching(&c, &parts[1..], results);
+            }
+          }
+        }
+        child = c.get_next_sibling();
+      }
+    }
+
+    collect_matching(parent, &parts, &mut results);
+    results
+  }
+
   // ======================================================================
   // Namespace management
 

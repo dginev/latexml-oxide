@@ -37,7 +37,7 @@
                   </XMApp>
                 </XMCell>
                 <XMCell align="center">
-                  <XMApp>
+                  <XMApp role="ARROW">
                     <XMTok role="SUPERSCRIPTOP" scriptpos="mid5"/>
                     <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
@@ -144,7 +144,7 @@
                 <XMCell align="center">
                   <XMApp role="ARROW">
                     <XMTok role="SUBSCRIPTOP" scriptpos="mid5"/>
-                    <XMApp>
+                    <XMApp role="ARROW">
                       <XMTok role="SUPERSCRIPTOP" scriptpos="mid5"/>
                       <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
@@ -169,7 +169,7 @@
                   </XMDual>
                 </XMCell>
                 <XMCell align="center">
-                  <XMApp>
+                  <XMApp role="ARROW">
                     <XMTok role="SUPERSCRIPTOP" scriptpos="mid5"/>
                     <XMTok class="ltx_horizontally_stretchy" meaning="rightarrow" role="ARROW" stretchy="true" width="30.0pt">→</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>

@@ -238,18 +238,15 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
 
 fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ..) = tree {
-    match &**op {
-      XM::Lexeme(ref _lexeme, ref atom_meta) => {
-        if let Some(ref fences) = atom_meta.fenced {
-          if fences.as_str() == "parens" {
-            return Err(
-              "pruning non-argument parenthetical atom, used as LHS of function application"
-                .into(),
-            );
-          }
+    if let XM::Lexeme(ref _lexeme, ref atom_meta) = &**op {
+      if let Some(ref fences) = atom_meta.fenced {
+        if fences.as_str() == "parens" {
+          return Err(
+            "pruning non-argument parenthetical atom, used as LHS of function application"
+              .into(),
+          );
         }
       }
-      _ => {}
     }
   }
   Ok(())
@@ -673,6 +670,50 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
                  prefer wider absorption.".into()
               );
             }
+          }
+        }
+      }
+    }
+  }
+  // Also check N-ary invisible_times chains for bare OPFUNCTION in non-terminal
+  // positions. E.g. Apply(×, [f@(x), d, x]) where d is bare OPFUNCTION at index 1
+  // (not the last). The competing parse Apply(×, [f@(x), d@(x)]) is preferred.
+  // This covers the pattern: ∫ f(x) \diffd x → f@(x) * diffd@(x), not f@(x)*d*x.
+  if let XM::Apply(Operator(op), ref args, ..) = tree {
+    let is_invisible_times = match **op {
+      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("times")
+          && props.role.as_deref() == Some("MULOP")
+      },
+      _ => false,
+    };
+    if is_invisible_times {
+      let trees = args.trees();
+      // Check non-terminal positions for bare OPFUNCTION/TRIGFUNCTION tokens.
+      // Both types absorb bare arguments via prefix_apply. If they appear as
+      // standalone factors in an invisible_times chain (not the last element),
+      // the competing parse with absorption is preferred.
+      // FUNCTION is excluded — it only absorbs fenced (parenthesized) args,
+      // so `f * x` (invisible_times) is correct for bare FUNCTION.
+      if trees.len() >= 3 {
+        for tree in trees.iter().take(trees.len() - 1) {
+          let is_bare_absorbing_func = match tree {
+            XM::Token(ref props, _) => matches!(
+              props.role.as_deref(),
+              Some("OPFUNCTION") | Some("TRIGFUNCTION")
+            ),
+            XM::Lexeme(ref lex, _) => {
+              lex.starts_with("OPFUNCTION:") || lex.starts_with("TRIGFUNCTION:")
+            },
+            _ => false,
+          };
+          if is_bare_absorbing_func {
+            return Err(
+              "Prune: bare OPFUNCTION/TRIGFUNCTION in N-ary invisible_times chain \
+               (non-terminal) — prefer absorption via prefix_apply."
+                .into(),
+            );
           }
         }
       }

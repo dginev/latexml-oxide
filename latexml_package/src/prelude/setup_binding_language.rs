@@ -428,8 +428,8 @@ macro_rules! DefPrimitive {
   }};
   // Case: a literal prototype mapped to nothing, will simply eat args and drop.
   ($proto:literal) => {{
-    let (cs, params_opt) : (Token,Option<Parameters>) = compile_prototype!($proto);
-    def_primitive(cs, params_opt, None, PrimitiveOptions::default())?;
+    let (cs, params) = parse_prototype!($proto);
+    def_primitive(cs, params, None, PrimitiveOptions::default())?;
   }};
 }
 
@@ -1477,15 +1477,18 @@ macro_rules! DefKeyVal {
       ..KeyvalConfig::default()
     })?;
   }};
-  ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {
-    // TODO: explicit $options with prefix logic
-    // TODO: extract the prefix
-    // my $prefix = $options{prefix} || 'KV';
-    // let prefix = "KV";
-    // delete $options{prefix};
-    // define($prefix, $keyset, $key, $vtype, $default, %options);
-    todo!();
-  };
+  ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {{
+    // TODO: explicit $options with prefix logic — for now ignore options and use default prefix
+    log::warn!("DefKeyVal with explicit options not fully ported, ignoring options for {}/{}", $keyset, $key);
+    ::latexml_core::keyval::define(KeyvalConfig {
+      prefix: "KV",
+      keyset: $keyset,
+      key: $key,
+      vtype: $vtype,
+      default: Some($default),
+      ..KeyvalConfig::default()
+    })?;
+  }};
 }
 
 #[macro_export]

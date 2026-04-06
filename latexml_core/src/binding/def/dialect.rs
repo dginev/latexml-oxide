@@ -609,6 +609,13 @@ pub fn def_math_primitive(
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |_args| {
         let locator = gullet::get_locator();
+        // Perl: DefMath with ?#isMath conditional produces text in text mode.
+        // The check happens at CONSTRUCTION time (not digestion time).
+        // At digestion time, IN_MATH is unreliable for this purpose because
+        // \text{} inside math sets IN_MATH=false but the document context is
+        // still math. We handle the text-mode fallback in the document builder
+        // (find_insertion_point) which converts XMTok to text when the parent
+        // element doesn't allow it.
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         let state_font = lookup_font().unwrap();

@@ -659,8 +659,10 @@ impl CrossRef {
           if let Some(url) = self.generate_url(doc, &id) {
             attrs.insert("href".to_string(), url);
           }
+          // Perl: use 'number' field for numeric citations (bare number without brackets).
+          // The 'refnum' field includes brackets like "[13]", causing double brackets [[13]].
           let refnum = self.db.lookup(&format!("ID:{}", id))
-            .and_then(|e| e.get_value("refnum"))
+            .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
             .map(|v| v.to_string())
             .unwrap_or_else(|| key.to_string());
           refs.push(NodeData::Element {

@@ -1170,10 +1170,11 @@ fn six_parse_literalunits(expr: &Tokens) -> Tokens {
   Tokens::new(result)
 }
 
-/// Perl: six_process_units — simplified top-level unit processing
-/// Full unit semantic processing requires the siunitx_macros mapping which
-/// is complex. For now, fall back to literal unit parsing for non-macro units,
-/// and let the macro expansion handle unit macros.
+/// Perl: six_process_units — top-level unit processing
+/// Tries structured unit parsing first, falls back to literal parsing.
+/// For mixed content (\pi . \mm . \mrad), resolves \lx@six@unitobject tokens
+/// to their \mathrm{presentation} BEFORE falling to literalunits, while the
+/// siunitx_macros mapping is still active.
 fn six_process_units(expr: &Tokens) -> Tokens {
   let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
   if let Some(defns) = six_convert_units_from_tokens(&expanded) {
@@ -1182,7 +1183,70 @@ fn six_process_units(expr: &Tokens) -> Tokens {
       return six_format_units(&units);
     }
   }
-  six_parse_literalunits(&expanded)
+  // Fallback: resolve any \lx@six@unitobject tokens to their presentation
+  // while the siunitx_macros mapping is still active, then parse as literal.
+  let resolved = six_resolve_unit_objects(&expanded);
+  six_parse_literalunits(&resolved)
+}
+
+/// Replace \lx@six@unitobject{name} tokens with \mathrm{presentation} tokens.
+/// Must be called while siunitx_macros mapping is active (inside \SI{}{} processing).
+fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
+  let toks = tokens.clone().unlist();
+  let mut result = Vec::new();
+  let mut iter = toks.into_iter().peekable();
+  let mut had_substitution = false;
+
+  while let Some(t) = iter.next() {
+    let ts = t.to_string();
+    if ts == "\\lx@six@unitobject" {
+      if let Some(name) = read_brace_group_str(&mut iter) {
+        if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+          let encoded_str = arena::with(encoded, |s| s.to_string());
+          if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+            let pres = defn.presentation;
+            if !pres.is_empty() {
+              // Emit raw presentation tokens — six_parse_literalunits will wrap
+              // LETTER tokens in \mathrm{} as needed
+              result.extend(pres.unlist());
+              had_substitution = true;
+              continue;
+            }
+          }
+        }
+        // Fallback: emit name as raw text
+        result.extend(ExplodeText!(&name));
+        had_substitution = true;
+      }
+    } else if ts == "\\lx@six@unitobject@arg" {
+      if let Some(name) = read_brace_group_str(&mut iter) {
+        if let Some(arg) = read_brace_group_str(&mut iter) {
+          if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+            let encoded_str = arena::with(encoded, |s| s.to_string());
+            if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+              let pres = defn.presentation;
+              if !pres.is_empty() {
+                result.extend(pres.unlist());
+                result.push(T_BEGIN!());
+                result.extend(ExplodeText!(&arg));
+                result.push(T_END!());
+                had_substitution = true;
+                continue;
+              }
+            }
+          }
+        }
+      }
+    } else {
+      result.push(t);
+    }
+  }
+
+  if had_substitution {
+    Tokens::new(result)
+  } else {
+    tokens.clone() // No changes — return original
+  }
 }
 
 /// Parse expanded tokens looking for \lx@six@unitobject{name} patterns
@@ -1224,9 +1288,14 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
         }
       }
     } else if t.get_catcode() == Catcode::SPACE || ts == "." {
-      iter.next(); // skip spaces and dots
+      iter.next(); // skip spaces and dots (unit product separators)
+    } else if !defns.is_empty() {
+      // Non-unit content after some units found — stop here, use what we have.
+      // Perl handles mixed content (e.g., \pi\per\milli\meter) by parsing units
+      // and passing non-unit content through. We stop at the first unrecognized token.
+      break;
     } else {
-      return None; // Unrecognized token — fall back to literal
+      return None; // No units found yet — fall back to literal
     }
   }
 
@@ -1345,6 +1414,20 @@ fn make_unitobject_expansion(name: &str) -> Tokens {
   Tokens::new(tks)
 }
 
+/// Build expansion tokens: \lx@six@unitobject@collapsible{name}{presentation}
+/// Perl L1227-1249: If presentation expands to more \lx@six@unitobject tokens,
+/// pass them through (alias collapsing, e.g. \metre → \meter).
+/// Otherwise fall back to \lx@six@unitobject{name}.
+fn make_collapsible_expansion(name: &str, presentation: &str) -> Tokens {
+  let mut tks = vec![T_CS!("\\lx@six@unitobject@collapsible"), T_BEGIN!()];
+  tks.extend(ExplodeText!(name));
+  tks.push(T_END!());
+  tks.push(T_BEGIN!());
+  tks.extend(ExplodeText!(presentation));
+  tks.push(T_END!());
+  Tokens::new(tks)
+}
+
 //======================================================================
 // LoadDefinitions! block
 //======================================================================
@@ -1406,6 +1489,54 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@six@unitobject{}", "");
   DefPrimitive!("\\lx@six@unitobject@arg{}{}", "");
 
+  // Collapsible unit object: if presentation expands to unit objects, pass them through.
+  // Otherwise fall back to \lx@six@unitobject{name}.
+  // Perl L1227-1249: Enables alias collapsing (e.g. \metre → \meter).
+  DefMacro!("\\lx@six@unitobject@collapsible{}{}", sub [args] {
+    let name = args[0].to_string();
+    let data_toks = args[1].clone().owned_tokens().unwrap_or_default();
+    // Fully expand the presentation data (not just partially)
+    // This resolves the chain: \meter → \lx@six@meter → collapsible{meter}{m} → unitobject{meter}
+    let expanded = gullet::do_expand(data_toks)?;
+    let toks = expanded.unlist();
+    let mut result: Vec<Token> = Vec::new();
+    let mut i = 0;
+    let mut all_units = true;
+    while i < toks.len() {
+      let ts = toks[i].to_string();
+      if ts == "\\lx@six@unitobject" || ts == "\\lx@six@unitobject@arg" {
+        let ngroups = if ts == "\\lx@six@unitobject@arg" { 2 } else { 1 };
+        result.push(toks[i]);
+        i += 1;
+        // Collect the brace groups
+        for _ in 0..ngroups {
+          if i < toks.len() {
+            result.push(toks[i]); // T_BEGIN
+            i += 1;
+            let mut depth = 1;
+            while i < toks.len() && depth > 0 {
+              if toks[i].code == Catcode::BEGIN { depth += 1; }
+              if toks[i].code == Catcode::END { depth -= 1; }
+              result.push(toks[i]);
+              i += 1;
+            }
+          }
+        }
+      } else if toks[i].code == Catcode::SPACE {
+        i += 1; // Skip spaces (Perl L1245-1246)
+      } else {
+        // Non-unit content found — fall back to simple unitobject
+        all_units = false;
+        break;
+      }
+    }
+    if all_units && !result.is_empty() {
+      Tokens::new(result)
+    } else {
+      make_unitobject_expansion(&name)
+    }
+  });
+
   //======================================================================
   // Unit declaration primitives
   //======================================================================
@@ -1420,12 +1551,14 @@ LoadDefinitions!({
     let newcs_name = format!("\\lx@six@{name}");
 
     // Store in mapping as a simple string encoding (raw presentation)
-    let encoded = format!("unit|{}", presentation);
+    let pres_str = presentation.to_string();
+    let encoded = format!("unit|{}", pres_str);
     state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
-    // Define \lx@six@<name> → expands to \lx@six@unitobject{name}
-    define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
+    // Define \lx@six@<name> → expands to \lx@six@unitobject@collapsible{name}{presentation}
+    // Perl L1350-1351: Uses collapsible form to enable alias resolution
+    define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
 
     // Let \cs = \relax if not yet defined
     if state::lookup_meaning(&cs).is_none() {
@@ -1443,11 +1576,13 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let encoded = format!("prefix|{}|{}|10", presentation, power);
+    let pres_str = presentation.to_string();
+    let encoded = format!("prefix|{}|{}|10", pres_str, power);
     state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
-    define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
+    // Perl L1264: Uses collapsible form for prefix declarations
+    define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
     if state::lookup_meaning(&cs).is_none() {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }

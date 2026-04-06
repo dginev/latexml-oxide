@@ -81,20 +81,43 @@ pub fn dump_format(
     snap_size
   );
 
-  // Step 4: Write the dump as native Rust source.
-  let default_dest = "latexml_package/src/engine/latex_dump.rs";
-  let dest = destination.unwrap_or(default_dest);
+  // Step 4: Write the dump.
+  // Default: write text dump to resources/dumps/ for build.rs embedding.
+  // With --dest: write to the specified path.
+  let (dest, is_text_dump) = match destination {
+    Some(d) if d.ends_with(".rs") => (d.to_string(), false),
+    Some(d) => (d.to_string(), true),
+    None => {
+      let dump_name = if name.contains("latex") {
+        "latex.dump.txt"
+      } else {
+        "plain.dump.txt"
+      };
+      let dump_dir = "resources/dumps";
+      std::fs::create_dir_all(dump_dir)
+        .map_err(|e| format!("Failed to create {}: {}", dump_dir, e))?;
+      (format!("{}/{}", dump_dir, dump_name), true)
+    }
+  };
 
-  // Write to temp intermediate format, then codegen to .rs
-  let tmp = format!("{}.tmp", dest);
-  let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
-  let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(dest))?;
-  let _ = std::fs::remove_file(&tmp);
-
-  eprintln!("[ini_tex] Generated {} Rust definitions to {}", rs_count, dest);
-  eprintln!("Format dump complete: {} entries written", rs_count);
-
-  Ok(rs_count)
+  if is_text_dump {
+    // Write text format (loaded at runtime via dump_reader::load_from_str)
+    let write_count = latexml_core::dump_writer::write_dump(Path::new(&dest), &diff)?;
+    // Save TeX Live version for staleness detection
+    save_texlive_version();
+    eprintln!("[ini_tex] Wrote {} text entries to {}", write_count, dest);
+    eprintln!("Format dump complete: {} entries written", write_count);
+    Ok(write_count)
+  } else {
+    // Write compiled Rust source (legacy format)
+    let tmp = format!("{}.tmp", dest);
+    let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
+    let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(&dest))?;
+    let _ = std::fs::remove_file(&tmp);
+    eprintln!("[ini_tex] Generated {} Rust definitions to {}", rs_count, dest);
+    eprintln!("Format dump complete: {} entries written", rs_count);
+    Ok(rs_count)
+  }
 }
 
 /// Generate a compiled Rust module from a dump file.
@@ -107,6 +130,23 @@ pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, St
   )?;
   eprintln!("[ini_tex] Generated {} entries to {}", count, output_path);
   Ok(count)
+}
+
+fn save_texlive_version() {
+  let version = std::process::Command::new("kpsewhich")
+    .arg("--version")
+    .output()
+    .ok()
+    .and_then(|o| {
+      if o.status.success() {
+        String::from_utf8(o.stdout).ok()
+      } else {
+        None
+      }
+    });
+  if let Some(v) = version {
+    let _ = std::fs::write("resources/dumps/texlive.version", v.trim());
+  }
 }
 
 fn split_path(path: &str) -> (String, String, String) {

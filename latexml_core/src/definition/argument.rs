@@ -137,7 +137,14 @@ impl ArgWrap {
   pub fn try_to_token(self) -> Result<Token> {
     match self {
       ArgWrap::Token(t) => Ok(t),
-      ArgWrap::Tokens(tks) => Ok(tks.unlist().remove(0)),
+      ArgWrap::Tokens(tks) => {
+        let mut list = tks.unlist();
+        if list.is_empty() {
+          Err("try_to_token: empty Tokens".into())
+        } else {
+          Ok(list.remove(0))
+        }
+      },
       _ => Err(
         s!(
           "Hard assumption for Token argument failed. Got instead: {:?}",

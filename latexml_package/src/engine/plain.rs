@@ -310,25 +310,36 @@ LoadDefinitions!({
 
   // "Initialized" alignment; presets spacing, but since we're ignoring it anyway...
   Let!("\\ialign", "\\halign");
-  // Overlapping alignments ???
+  // Overlapping alignments.
+  // Perl: plain_base.pool.ltxml L121-137
   DefMacro!(
     "\\oalign{}",
     r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}"
   );
-  // TODO: What are the full arguments to alignment_bindings ?
-  // DefConstructor!("\\@@oalign{}", "#1",
-  //   reversion    => "\\oalign{#1}", bounded => true, mode => "text",
-  //   before_digest => sub { alignment_bindings('l', ); });
+  DefConstructor!("\\@@oalign{}", "#1",
+    reversion => "\\oalign{#1}", bounded => true, mode => "text",
+    before_digest => sub {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::parse_alignment_template;
+      if let Ok(template) = parse_alignment_template("l") {
+        alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
+      }
+    });
 
-  // This is actually different; the lines should lie ontop of each other.
-  // How should this be represented?
-  // TODO: What are the full arguments to alignment_bindings ?
-  // DefMacro("\\ooalign{}",
-  //   r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}");
-  // DefConstructor!("\\@@ooalign{}",
-  //   "#1",
-  //   reversion    => "\\ooalign{#1}", bounded => true, mode => "text",
-  //   before_digest => sub { alignment_bindings('l'); });
+  // Lines lie on top of each other.
+  DefMacro!(
+    "\\ooalign{}",
+    r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}"
+  );
+  DefConstructor!("\\@@ooalign{}", "#1",
+    reversion => "\\ooalign{#1}", bounded => true, mode => "text",
+    before_digest => sub {
+      use crate::engine::tex_tables::alignment_bindings;
+      use latexml_core::alignment::parse_alignment_template;
+      if let Ok(template) = parse_alignment_template("l") {
+        alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
+      }
+    });
 
   DefConstructor!(
     "\\buildrel Until:\\over {}",
@@ -459,13 +470,10 @@ LoadDefinitions!({
     "\\newlanguage DefToken",
     r"\alloc@@{language}\global\chardef#1=\allocationnumber"
   );
-  DefMacro!(
-    "\\e@alloc{}{}{}{}{}{}",
-    r"\global\advance#3\@ne
-  \allocationnumber#3\relax
-  \global#2#6\allocationnumber"
-  );
-  DefMacro!("\\alloc@{}{}{}{}", r"\e@alloc#2#3{\count1#1}#4\float@count");
+  // Perl: latex_bootstrap.pool.ltxml L49 — 6 args, delegates to \lx@alloc@
+  DefMacro!("\\e@alloc{}{}{}{}{}{}", r"\lx@alloc@{#1}{#3}{#2}{#6}", locked => true);
+  // Perl: plain_bootstrap.pool.ltxml L32 — 5 args, delegates to \lx@alloc@
+  DefMacro!("\\alloc@{}{}{}{}{}", r"\lx@alloc@{#2}{\count1#1}{#3}{#5}", locked => true);
   DefMacro!(
     "\\newread",
     r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n"
@@ -740,6 +748,40 @@ LoadDefinitions!({
       None,
       Tokens!(T_CS!("\\negthinspace")),
       stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
+        "isSpace"=>true),
+    )
+  });
+
+  // Math spacing: medspace, thickspace, and negatives — Perl latex_constructs L2510-2525
+  DefPrimitive!("\\medspace", {
+    Tbox::new(
+      *EMPTY_SYM, None, None,
+      Tokens!(T_CS!("\\medspace")),
+      stored_map!("name" => "medspace", "width" => Dimension::from_str("0.22222em")?,
+        "isSpace"=>true),
+    )
+  });
+  DefPrimitive!("\\negmedspace", {
+    Tbox::new(
+      *EMPTY_SYM, None, None,
+      Tokens!(T_CS!("\\negmedspace")),
+      stored_map!("name" => "negmedspace", "width" => Dimension::from_str("-0.22222em")?,
+        "isSpace"=>true),
+    )
+  });
+  DefPrimitive!("\\thickspace", {
+    Tbox::new(
+      arena::pin_static("\u{2004}"), None, None,
+      Tokens!(T_CS!("\\thickspace")),
+      stored_map!("name" => "thickspace", "width" => Dimension::from_str("0.27778em")?,
+        "isSpace"=>true),
+    )
+  });
+  DefPrimitive!("\\negthickspace", {
+    Tbox::new(
+      arena::pin_static("\u{2004}"), None, None,
+      Tokens!(T_CS!("\\negthickspace")),
+      stored_map!("name" => "negthickspace", "width" => Dimension::from_str("-0.27778em")?,
         "isSpace"=>true),
     )
   });
@@ -1851,7 +1893,20 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     properties => { stored_map!("isSpace" => true) },
+    // Perl 09fb2e6f: In text mode, wrap argument in restricted_horizontal
+    // to prevent display math from leaking through (e.g. quantikz2).
+    before_digest => {
+      if !LookupBool!("IN_MATH") {
+        begin_mode("restricted_horizontal")?;
+        AssignValue!("_hphantom_mode_override" => true);
+      } else {
+        AssignValue!("_hphantom_mode_override" => false);
+      }
+    },
     after_digest => sub[whatsit] {
+      if LookupBool!("_hphantom_mode_override") {
+        end_mode("restricted_horizontal")?;
+      }
       if let Some(arg) = whatsit.get_arg_mut(1) {
         let (w, h, d, _, _, _) = arg.get_size(None)?;
         whatsit.set_property("width", Stored::Dimension(w));

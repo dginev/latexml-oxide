@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use crate::document::{NodeData, PostDocument};
 use crate::math_processor::{math_is_parsed, process_math, MathConversion, MathProcessor};
 use crate::processor::{ProcessResult, Processor};
+use crate::unicode;
 
 const MML_URI: &str = "http://www.w3.org/1998/Math/MathML";
 const MML_MIMETYPE: &str = "application/mathml-presentation+xml";
@@ -48,6 +49,9 @@ pub struct MathML {
   /// Whether to include TeX source annotation in parallel MathML.
   /// Perl: --mathtex adds <m:annotation encoding='application/x-tex'>
   mathtex: bool,
+  /// Whether to add intent=":literal" on all <math> elements.
+  /// ar5iv.sty.ltxml monkey-patches outerWrapper to add this.
+  intent_literal: bool,
 }
 
 impl MathML {
@@ -63,6 +67,7 @@ impl MathML {
       keep_xmath: false,
       invisible_times: true,
       mathtex: false,
+      intent_literal: false,
     }
   }
 
@@ -78,7 +83,15 @@ impl MathML {
       keep_xmath: false,
       invisible_times: true,
       mathtex: false,
+      intent_literal: false,
     }
+  }
+
+  /// Enable intent=":literal" on all <math> elements.
+  /// Perl: ar5iv.sty.ltxml monkey-patches outerWrapper for this.
+  pub fn with_intent_literal(mut self, enable: bool) -> Self {
+    self.intent_literal = enable;
+    self
   }
 
   /// Enable line-breaking with the given width.
@@ -256,6 +269,11 @@ impl MathProcessor for MathML {
       }
     }
 
+    // ar5iv.sty.ltxml: intent=":literal" for all math elements
+    if self.intent_literal {
+      attrs.insert("intent".to_string(), ":literal".to_string());
+    }
+
     NodeData::Element {
       tag: "m:math".to_string(),
       attributes: Some(attrs),
@@ -379,50 +397,119 @@ pub fn stylize_content(
     text = "\u{2212}".to_string();
   }
 
-  // Determine mathvariant from font
-  let variant = font.as_deref().and_then(presentation::font_to_mathvariant);
+  // Determine mathvariant from font.
+  // Port of Perl stylizeContent lines 689-756.
+  let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
   let mut attrs = HashMap::new();
 
-  // Apply variant rules
+  // Single char mi: italic is default, "normal" must be stated explicitly
+  // Perl L717-719
+  if target_tag == "m:mi" && text.chars().count() == 1 {
+    if variant == Some("italic") {
+      variant = None; // defaults to italic
+    } else if variant.is_none() && font.is_none() {
+      // no font at all — italic is MathML default for single-char mi
+    } else if variant.is_none() {
+      variant = Some("normal"); // font present but no recognized variant → say "normal"
+    }
+  } else if font.is_some() && variant == Some("normal") {
+    // "normal" is default for non-mi tokens; omit
+    variant = None;
+  }
+
+  // Plane 1 Unicode conversion.
+  // Port of Perl stylizeContent lines 729-741.
+  // When plane1=true (default), convert text to Mathematical Alphanumeric Symbols
+  // and clear the mathvariant (the character itself carries the style).
+  if let Some(v) = variant {
+    if target_tag != "m:mtext" {
+      if let Some(u_text) = unicode::unicode_convert(&text, v) {
+        if !u_text.is_empty() || text.is_empty() {
+          text = u_text;
+          variant = None; // Plane 1 char carries the style; no mathvariant needed
+        }
+      }
+    }
+  }
+
+  // Apply remaining variant (not cleared by plane1 conversion)
   if let Some(v) = variant {
     if target_tag == "m:mi" && text.chars().count() == 1 {
-      // Single char mi: italic is default, omit; "normal" must be stated
-      if v == "normal" {
-        attrs.insert("mathvariant".to_string(), "normal".to_string());
-      } else if v != "italic" {
+      if v != "italic" {
         attrs.insert("mathvariant".to_string(), v.to_string());
       }
     } else if v != "normal" {
       attrs.insert("mathvariant".to_string(), v.to_string());
     }
-  } else if target_tag == "m:mi" && text.chars().count() == 1 && font.is_none() {
-    // Single char mi without font: italic is default
-  } else if target_tag == "m:mi" && text.chars().count() > 1 {
+  } else if target_tag == "m:mi" && text.chars().count() > 1 && font.is_none() {
+    // Multi-char mi without font → normal
     attrs.insert("mathvariant".to_string(), "normal".to_string());
   }
 
-  // Font-based CSS class fallbacks
+  // Invisible/format-only text needs no styling attributes.
+  // Port of Perl L743-744: if ($text =~ /^\p{Format}*$/)
+  let is_format_only = text.chars().all(|c| {
+    use std::char;
+    matches!(char::from_u32(c as u32), Some(ch) if ch.is_control())
+      || matches!(c,
+        '\u{200B}'..='\u{200F}' | '\u{2028}'..='\u{202F}'
+        | '\u{2060}'..='\u{2064}' | '\u{FEFF}' | '\u{00AD}')
+  });
+  if is_format_only {
+    variant = None;
+    // Don't clear font/color etc from attrs — they weren't added yet
+  }
+
+  // Font-based CSS class fallbacks.
+  // Port of Perl L746-756: only when variant was NOT converted to plane1.
+  let mut class_val = class.clone();
   if let Some(ref f) = font {
-    if variant.is_none() || variant == Some("normal") {
+    if !is_format_only {
       if f.contains("caligraphic") {
-        let c = class.as_deref().unwrap_or("");
-        let new_class = if c.is_empty() {
+        let c = class_val.as_deref().unwrap_or("");
+        class_val = Some(if c.is_empty() {
           "ltx_font_mathcaligraphic".to_string()
         } else {
           format!("{} ltx_font_mathcaligraphic", c)
-        };
-        attrs.insert("class".to_string(), new_class);
+        });
       } else if f.contains("script") {
-        let c = class.as_deref().unwrap_or("");
-        attrs.insert("class".to_string(),
-          if c.is_empty() { "ltx_font_mathscript".to_string() }
-          else { format!("{} ltx_font_mathscript", c) });
+        let c = class_val.as_deref().unwrap_or("");
+        class_val = Some(if c.is_empty() {
+          "ltx_font_mathscript".to_string()
+        } else {
+          format!("{} ltx_font_mathscript", c)
+        });
+      } else if f.contains("fraktur") && text.chars().all(|c| "+-0123456789.".contains(c)) {
+        // Perl L751: fraktur number → oldstyle class
+        let c = class_val.as_deref().unwrap_or("");
+        class_val = Some(if c.is_empty() {
+          "ltx_font_oldstyle".to_string()
+        } else {
+          format!("{} ltx_font_oldstyle", c)
+        });
       } else if f.contains("smallcaps") {
-        let c = class.as_deref().unwrap_or("");
-        attrs.insert("class".to_string(),
-          if c.is_empty() { "ltx_font_smallcaps".to_string() }
-          else { format!("{} ltx_font_smallcaps", c) });
+        let c = class_val.as_deref().unwrap_or("");
+        class_val = Some(if c.is_empty() {
+          "ltx_font_smallcaps".to_string()
+        } else {
+          format!("{} ltx_font_smallcaps", c)
+        });
+      } else if let Some(v) = variant {
+        if v != "normal" {
+          // Perl L755-756: leftover mathvariant → CSS fallback
+          let c = class_val.as_deref().unwrap_or("");
+          class_val = Some(if c.is_empty() {
+            format!("ltx_mathvariant_{}", v)
+          } else {
+            format!("{} ltx_mathvariant_{}", c, v)
+          });
+        }
       }
+    }
+  }
+  if let Some(cv) = class_val {
+    if !cv.is_empty() {
+      attrs.insert("class".to_string(), cv);
     }
   }
 
@@ -487,11 +574,6 @@ pub fn stylize_content(
     if s != "100%" {
       attrs.insert("mathsize".to_string(), s);
     }
-  }
-
-  // Class (if not already set by font fallback)
-  if let Some(c) = class {
-    attrs.entry("class".to_string()).or_insert(c);
   }
 
   // Href and title (tokens only)

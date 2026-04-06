@@ -34,7 +34,7 @@ LoadDefinitions!({
   "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
   bounded      => true,
   sizer        => "#2",
-  before_digest => { reenter_text_mode(false);
+  before_digest => {
     // Rebind \\ and its aliases to shortstack line break
     Let!("\\\\", "\\@shortstack@cr");
     Let!("\\lx@hidden@cr", "\\@shortstack@cr");
@@ -53,7 +53,7 @@ LoadDefinitions!({
     }).unwrap_or("");
     Ok(stored_map!("align" => align, "vattach" => "bottom"))
   },
-  mode => "text");
+  mode => "restricted_horizontal");
 
   //======================================================================
   // C.14.1 The picture Environment

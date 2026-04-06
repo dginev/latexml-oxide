@@ -27,10 +27,10 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
-  // RequirePackage!("elsart_support_core"); // not ported yet
+  RequirePackage!("elsart_support_core");
   RequirePackage!("fleqn");
   RequirePackage!("graphicx");
-  // RequirePackage!("pifont"); // not ported yet
+  RequirePackage!("pifont");
   RequirePackage!("natbib");
   RequirePackage!("hyperref");
   DefMacro!("\\biboptions{}", "\\setcitestyle{#1}");

@@ -45,4 +45,114 @@ LoadDefinitions!({
   DefEnvironment!("{alertenv}", "#body");
   DefEnvironment!("{uncoverenv}", "#body");
   DefEnvironment!("{actionenv}", "#body");
+  DefEnvironment!("{visibleenv}", "#body");
+  DefEnvironment!("{invisibleenv}", "#body");
+  DefEnvironment!("{overlayarea}{}{}", "#body");
+  DefEnvironment!("{overprint}", "#body");
+
+  // Block environments — Perl L1189 beamerbaseblocks.sty
+  DefEnvironment!("{block} OptionalMatch:<> {}",
+    "<ltx:theorem class='ltx_theorem_block'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
+  DefEnvironment!("{alertblock} OptionalMatch:<> {}",
+    "<ltx:theorem class='ltx_theorem_alertblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
+  DefEnvironment!("{exampleblock} OptionalMatch:<> {}",
+    "<ltx:theorem class='ltx_theorem_exampleblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
+
+  // Columns environment — Perl L1230-1240 beamerbaseboxes.sty
+  DefEnvironment!("{columns} OptionalMatch:<> []", "#body");
+  DefEnvironment!("{column} OptionalMatch:<> {}", "#body");
+  DefMacro!("\\column OptionalMatch:<> {}", "");
+
+  // Title page macros — Perl L1010-1035
+  DefMacro!("\\institute OptionalMatch:<> []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
+  DefMacro!("\\logo{}", "");
+  DefMacro!("\\titlegraphic{}", "");
+  DefMacro!("\\titlepage", "\\maketitle");
+  DefMacro!("\\insertauthor", "");
+  DefMacro!("\\inserttitle", "");
+  DefMacro!("\\insertsubtitle", "");
+  DefMacro!("\\insertdate", "");
+  DefMacro!("\\insertinstitute", "");
+  DefMacro!("\\insertshortauthor[]", "");
+  DefMacro!("\\insertshortdate[]", "");
+  DefMacro!("\\insertshortinstitute[]", "");
+  DefMacro!("\\insertshorttitle[]", "");
+  DefMacro!("\\inserttotalframenumber", "");
+
+  // Theme commands — Perl L1246-1253
+  DefMacro!("\\usetheme[]{}", "");
+  DefMacro!("\\usecolortheme[]{}", "");
+  DefMacro!("\\usefonttheme[]{}", "");
+  DefMacro!("\\useinnertheme[]{}", "");
+  DefMacro!("\\useoutertheme[]{}", "");
+  DefMacro!("\\setbeamertemplate{}{}", "");
+  DefMacro!("\\setbeamercolor{}{}", "");
+  DefMacro!("\\setbeamerfont{}{}", "");
+  DefMacro!("\\setbeamersize{}", "");
+  DefMacro!("\\setbeamercovered{}", "");
+  DefMacro!("\\addtobeamertemplate{}{}{}", "");
+  DefMacro!("\\defbeamertemplate OptionalMatch:* {}{}{}", "");
+
+  // Navigation/footline/headline — no-ops
+  DefMacro!("\\beamertemplatenavigationsymbolsempty", "");
+  DefMacro!("\\setbeamercolor*{}{}", "");
+  DefMacro!("\\hypersetup{}", "");
+
+  // Beamer list environments — Perl L1160-1179
+  DefEnvironment!("{itemize} OptionalMatch:<>",
+    "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    mode => "internal_vertical", locked => true);
+  DefEnvironment!("{enumerate} OptionalMatch:<> []",
+    "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+    mode => "internal_vertical");
+  DefEnvironment!("{description} OptionalMatch:<>",
+    "<ltx:description xml:id='#id'>#body</ltx:description>",
+    mode => "internal_vertical", locked => true);
+
+  // Theorems — Perl L1193-1230
+  RequirePackage!("amsthm");
+  RequirePackage!("amsmath");
+  RequirePackage!("amssymb");
+  RawTeX!(r#"
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{definitions}[theorem]{Definitions}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{examples}[theorem]{Examples}
+"#);
+  DefMacro!("\\pushQED{}", "");
+  DefMacro!("\\popQED", "");
+  DefMacro!("\\qedhere", "");
+
+  // Mode commands — Perl L448-460
+  DefMacro!("\\mode OptionalMatch:* {}", "");
+  DefMacro!("\\mode<>{}", "");
+
+  // Misc commands
+  DefMacro!("\\alert OptionalMatch:<> {}", "\\textbf{#2}");
+  DefMacro!("\\structure OptionalMatch:<> {}", "#2");
+  DefMacro!("\\emph OptionalMatch:<> {}", "\\textit{#2}");
+  DefMacro!("\\AtBeginSection[]{}", "");
+  DefMacro!("\\AtBeginSubsection[]{}", "");
+  DefMacro!("\\AtBeginPart[]{}", "");
+  DefMacro!("\\lecture{}{}", "");
+  DefMacro!("\\againframe OptionalMatch:<> []{}", "");
+  DefMacro!("\\appendix", "");
+  DefMacro!("\\note OptionalMatch:<> []{}", "");
+  DefMacro!("\\beamerdefaultoverlayspecification{}", "");
+
+  // Translation stubs
+  DefMacro!("\\translate{}", "#1");
+
+  // Color-related
+  DefMacro!("\\usebeamercolor OptionalMatch:* {}", "");
+
+  // Hyperlink
+  DefMacro!("\\hyperlink{}{}", "#2");
+  DefMacro!("\\hypertarget{}{}", "#2");
 });

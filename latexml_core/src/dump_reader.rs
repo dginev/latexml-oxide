@@ -346,14 +346,10 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_load_native_dump() {
-    let path = std::path::Path::new("/tmp/latex_dump.oxide");
-    if !path.exists() {
-      println!("No dump file at /tmp/latex_dump.oxide, skipping");
-      return;
-    }
-    let count = load_native_dump(path).unwrap();
-    assert!(count > 0, "Expected entries loaded");
-    println!("Loaded {} entries from native dump", count);
+  fn test_load_native_dump_inline() {
+    // Test with inline tab-separated dump content (no external file dependency)
+    let content = "V\tcount@\tI\t42\nM\t\\mymacro\tE\t\\mymacro\t1\t\t6:1,6:2\n";
+    let count = load_from_str(content).unwrap();
+    assert!(count > 0, "Expected entries loaded from inline dump, got {}", count);
   }
 }

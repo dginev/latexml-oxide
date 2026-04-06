@@ -2,7 +2,12 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Perl: html.sty.ltxml — 111 lines
+  // LaTeX2HTML compatibility package
+
   RequirePackage!("hyperref");
+
+  // Link/navigation macros — Perl L31-44
   DefMacro!("\\latextohtml",                              "\\LaTeX2\\texttt{HTML}");
   DefMacro!("\\htmladdnormallinkfoot{}{}",                "\\href{#2}{#1}");
   DefMacro!("\\htmladdnormallink{}{}",                    "\\href{#2}{#1}");
@@ -16,10 +21,33 @@ LoadDefinitions!({
   DefConstructor!("\\htmlclear",                "<ltx:br/>");
   DefMacro!("\\bodytext{}", "");
   DefMacro!("\\htmlbody",   "");
+
+  // Hyperref variants — Perl L45-56
+  DefConstructor!("\\hyperrefdef{}{}{} Semiverbatim", "<ltx:ref>#1</ltx:ref>");
+  Let!("\\hyperrefhyper", "\\hyperrefdef");
+  Let!("\\hyperrefpagedef", "\\hyperrefdef");
+  Let!("\\hyperrefnoref", "\\hyperrefdef");
+  Let!("\\hyperrefhtml", "\\hyperrefdef");
+  DefMacro!("\\hypercite[]{}{}{} Semiverbatim", "");
   DefMacro!("\\htmlcite{}{}", "");
+
+  // Image/border — Perl L57-61
   DefMacro!("\\htmlimage{}", "");
   DefMacro!("\\htmlborder{}", "");
+  DefEnvironment!("{makeimage}", "#body");
+  DefEnvironment!("{tex2html_deferred}", "#body");
   DefMacro!("\\htmladdtonavigation{}", "");
+
+  // rawhtml/htmlonly — Perl L66-88
+  // These environments skip their content (raw HTML not useful for LaTeXML)
+  DefEnvironment!("{rawhtml}", "");
+  DefEnvironment!("{htmlonly}", "");
+
+  // latexonly — Perl L92-98
+  DefEnvironment!("{latexonly}", "#body");
+  DefMacro!("\\latexonly@onearg{}", "#1");
+
+  // Misc — Perl L100-107
   DefMacro!("\\html{}", "");
   DefMacro!("\\latex{}",          "#1");
   DefMacro!("\\latexhtml{}{}",    "#1");

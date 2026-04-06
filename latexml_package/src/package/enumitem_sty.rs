@@ -370,8 +370,21 @@ LoadDefinitions!({
   DefKeyVal!("enumitem", "endpenalty", "Number");
   DefKeyVal!("enumitem", "noitemsep", "", "true");
   DefKeyVal!("enumitem", "nolistsep", "", "true");
+  DefKeyVal!("enumitem", "nosep", "", "true");
   DefKeyVal!("enumitem", "before", "UndigestedKey");
+  DefKeyVal!("enumitem", "before*", "UndigestedKey");
   DefKeyVal!("enumitem", "after", "UndigestedKey");
+  DefKeyVal!("enumitem", "after*", "UndigestedKey");
+  // Spacing keyvals (Perl L160-175) — ignored for HTML but must be recognized
+  DefKeyVal!("enumitem", "topsep", "Dimension");
+  DefKeyVal!("enumitem", "partopsep", "Dimension");
+  DefKeyVal!("enumitem", "parsep", "Dimension");
+  DefKeyVal!("enumitem", "itemsep", "Dimension");
+  DefKeyVal!("enumitem", "listparindent", "Dimension");
+  DefKeyVal!("enumitem", "rightmargin", "Dimension");
+  DefKeyVal!("enumitem", "wide", "", "true");
+  DefKeyVal!("enumitem", "first", "UndigestedKey");
+  DefKeyVal!("enumitem", "first*", "UndigestedKey");
 
   if !has_value("enumitem@loadonly") {
     DefEnvironment!("{itemize} OptionalKeyVals:enumitem",

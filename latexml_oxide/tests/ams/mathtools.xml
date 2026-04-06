@@ -1828,7 +1828,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S4.p9">
       <equation xml:id="S4.Ex31">
-        <Math mode="display" tex="\begin{vmatrix}[l]a&amp;blblblbllbblblblblblblbl\\&#10;c&amp;d\end{vmatrix}" text="determinant@(matrix@(Array[[a, blblblbllbblblblblblblbl], [c, d]]))" xml:id="S4.Ex31.m1">
+        <Math mode="display" tex="\begin{vmatrix}[l]a&amp;blblblbllbblblblblblblbl\\&#10;c&amp;d\end{vmatrix}" text="determinant@(matrix@(Array[[a, b * l * b * l * b * l * b * l * l * b * b * l * b * l * b * l * b * l * b * l * b * l * b * l], [c, d]]))" xml:id="S4.Ex31.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1846,7 +1846,8 @@ Then a switch of tag forms.</p>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
                     </XMCell>
                     <XMCell align="left">
-                      <XMArg rule="Anything">
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
@@ -1871,7 +1872,7 @@ Then a switch of tag forms.</p>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">l</XMTok>
-                      </XMArg>
+                      </XMApp>
                     </XMCell>
                   </XMRow>
                   <XMRow>

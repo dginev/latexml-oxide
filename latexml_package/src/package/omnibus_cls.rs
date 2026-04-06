@@ -6,11 +6,14 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-  // Load article as base class
+  // Load article as base class — Perl L36
   LoadClass!("article");
 
-  // Common packages often used by unknown classes
+  // Common packages — Perl L39-49
+  RequirePackage!("inst_support");
+  RequirePackage!("epsf");
   RequirePackage!("graphicx");
+  RequirePackage!("aas_macros");
 
   // natbib autoloads: load natbib when citation commands are used
   for trigger in [
@@ -20,11 +23,11 @@ LoadDefinitions!({
   ] {
     let cs = T_CS!(trigger);
     if !IsDefined!(&cs) {
-      let cs_clone = cs.clone();
+      let cs_clone = cs;
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("natbib", RequireOptions::default())?;
-          Ok(Tokens::new(vec![cs_clone.clone()]))
+          Ok(Tokens::new(vec![cs_clone]))
         })), None)?;
     }
   }
@@ -126,13 +129,57 @@ LoadDefinitions!({
   // Author block environment
   DefEnvironment!("{aug}", "#body");
 
-  // Misc compatibility
+  // Affiliation marks — Perl L148-157
+  DefMacro!("\\altaffilmark{}", "\\@altaffilmark{#1}");
+  DefConstructor!("\\@altaffilmark{}", "<ltx:note role='affiliationmark' mark='#1'/>",
+    enter_horizontal => true);
+  Let!("\\affilnum", "\\@altaffilmark");
+  DefConstructor!("\\altaffiltext{}{}", "<ltx:note role='affiliationtext' mark='#1'>#2</ltx:note>");
+  DefRegister!("\\affilskip" => Dimension::new(0));
+
+  // More metadata — Perl L234-256
+  DefMacro!("\\communicated{}", "\\@add@frontmatter{ltx:date}[role=communicated]{#1}");
+  DefMacro!("\\presented{}", "\\@add@frontmatter{ltx:date}[role=presented]{#1}");
+  DefMacro!("\\issue{}", "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
+  DefMacro!("\\terms{}", "\\@add@frontmatter{ltx:note}[role=terms]{#1}");
+  DefMacro!("\\conferenceinfo{}{}", "\\@add@frontmatter{ltx:note}[role=conference]{#1 #2}");
+  DefMacro!("\\category{}{}{}[]", "\\@add@frontmatter{ltx:classification}[scheme=category]{#1 #2 #3}");
+  DefMacro!("\\resumen{}", "\\@add@frontmatter{ltx:abstract}{#1}");
+  Let!("\\CopyrightYear", "\\copyrightyear");
+  DefRegister!("\\confinfo" => Tokens!());
+  DefRegister!("\\acmcopyr" => Tokens!());
+  DefRegister!("\\copyrightetc" => Tokens!());
+  Let!("\\crdata", "\\acmcopyr");
+
+  // DOI — Perl L204
+  DefConstructor!("\\lx@doi{}", "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
+    enter_horizontal => true);
+
+  // References — Perl L274-284
+  DefConstructor!("\\references", "<ltx:bibliography xml:id='#id'><ltx:biblist>");
+  DefConstructor!("\\endreferences", "</ltx:biblist></ltx:bibliography>");
   Let!("\\reference", "\\bibitem");
-  DefMacro!("\\thanksref{}", None, None);
-  DefMacro!("\\numberofauthors{}", None, None);
-  DefMacro!("\\printead{}", None, None);
-  DefMacro!("\\firstpage{}", None, None);
-  DefMacro!("\\lastpage{}", None, None);
-  DefMacro!("\\corref{}", None, None);
+
+  // Misc compatibility
+  DefMacro!("\\thanksref{}", "");
+  DefMacro!("\\numberofauthors{}", "");
+  DefMacro!("\\printead{}", "");
+  DefMacro!("\\firstpage{}", "");
+  DefMacro!("\\lastpage{}", "");
+  DefMacro!("\\corref{}", "");
+  DefMacro!("\\listofauthors{}", "");
+  DefMacro!("\\indexauthor{}", "");
+  DefMacro!("\\preface", "");
+  DefMacro!("\\thankstext", "");
+  Let!("\\fulladdresses", "\\address");
+  Let!("\\smonth", "\\month");
+  Let!("\\syear", "\\year");
   DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}");
+  DefMacro!("\\kwd[]{}", "\\@add@frontmatter{ltx:keywords}{#2, }");
+
+  // Speaker macro — Perl L98
+  DefMacro!("\\speaker{}", "\\@add@frontmatter{ltx:creator}[role=speaker]{\\@personname{#1}}");
+
+  // EAD macro — Perl L95
+  DefMacro!("\\ead{}[]", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
 });

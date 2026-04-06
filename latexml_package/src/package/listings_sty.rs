@@ -2239,12 +2239,17 @@ LoadDefinitions!({
   // Region 7 continued: \lst@@ handler macros
   //======================================================================
 
-  // Style handler
+  // Style handler — Perl: lstActivate($values) from LST@STYLE@name
+  // \lstdefinestyle stores as Stored::KeyVals, so match both KeyVals and Tokens
   DefMacro!("\\lst@@style Until:\\end", sub [args] {
     let s = args[0].to_string().to_uppercase().replace(char::is_whitespace, "");
     let key = s!("LST@STYLE@{s}");
-    if let Some(Stored::Tokens(kv_tokens)) = state::lookup_value(&key) {
-      let _ = stomach::digest(kv_tokens);
+    if let Some(stored) = state::lookup_value(&key) {
+      match stored {
+        Stored::KeyVals(kv) => lst_activate(Some(&kv)),
+        Stored::Tokens(kv_tokens) => { let _ = stomach::digest(kv_tokens); },
+        _ => {},
+      }
     }
     Tokens!()
   });
@@ -2787,7 +2792,7 @@ LoadDefinitions!({
     .map(|s| s.to_string())
     .collect();
   for file in &lang_files {
-    InputDefinitions!(file, noerror => true);
+    let _ = input_definitions(file, NewDefault!(InputDefinitionOptions, noerror => true));
   }
 
   // Internal macros used by sibling bindings (e.g. cleveref)

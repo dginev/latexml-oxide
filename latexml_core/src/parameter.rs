@@ -273,7 +273,13 @@ impl Parameter {
     // Last but not least, initialize any "inner" parameters
     self.inner = self
       .inner
-      .map(|inner_ps| inner_ps.init().expect("inner param init shouldn't fail?"));
+      .map(|inner_ps| match inner_ps.clone().init() {
+        Ok(ps) => ps,
+        Err(e) => {
+          log::warn!("inner parameter init failed: {e}");
+          inner_ps
+        }
+      });
     Ok(self)
   }
 

@@ -389,6 +389,50 @@ pub fn extension(pathname: &str) -> String {
   .to_lowercase()
 }
 
+/// Compose a pathname from dir, name, type components.
+/// Port of Perl's pathname_make(%pieces).
+pub fn make(dir: Option<&str>, name: Option<&str>, ext: Option<&str>) -> String {
+  let mut result = String::new();
+  if let Some(d) = dir {
+    result.push_str(d);
+  }
+  if let Some(n) = name {
+    if !result.is_empty() && !result.ends_with('/') {
+      result.push('/');
+    }
+    result.push_str(n);
+  }
+  if let Some(t) = ext {
+    if !t.is_empty() {
+      result.push('.');
+      result.push_str(t);
+    }
+  }
+  canonical(&result)
+}
+
+/// Make a pathname relative to a base directory.
+/// Port of Perl's pathname_relative($pathname, $base).
+pub fn relative(pathname: &str, base: &str) -> String {
+  let canonical_pathname = canonical(pathname);
+  if base.is_empty() || !is_absolute(&canonical_pathname) {
+    return canonical_pathname;
+  }
+  let canonical_base = canonical(base);
+  let path = Path::new(&canonical_pathname);
+  let base_path = Path::new(&canonical_base);
+  match path.strip_prefix(base_path) {
+    Ok(rel) => rel.to_string_lossy().to_string(),
+    Err(_) => canonical_pathname,
+  }
+}
+
+/// Find all matching files (like pathname_findall).
+/// Port of Perl's pathname_findall($pathname, %options).
+pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
+  candidate_pathnames(pathname, options)
+}
+
 /// search for a list of candidate names via the external `kpsewhich` utility
 /// returning the first path that is found
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {

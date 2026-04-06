@@ -33,4 +33,10 @@ LoadDefinitions!({
   DefMacro!("\\answerNo[]",   "\\textcolor{orange}{[No] #1}");
   DefMacro!("\\answerNA[]",   "\\textcolor{gray}{[N/A] #1}");
   DefMacro!("\\answerTODO[]", "\\textcolor{red}{\\bf [TODO]}");
+
+  // {ack} environment — Perl L51-52
+  DefEnvironment!("{ack}", "#body");
+
+  // {hide} environment — Perl L59
+  DefEnvironment!("{hide}", "");
 });

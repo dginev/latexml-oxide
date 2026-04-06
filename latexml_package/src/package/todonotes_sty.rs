@@ -6,7 +6,7 @@ LoadDefinitions!({
   RequirePackage!("ifthen");
   RequirePackage!("xkeyval");
   RequirePackage!("xcolor");
-  // RequirePackage!("tikz"); // tikz not yet ported
+  RequirePackage!("tikz");
   RequirePackage!("calc");
 
   DefMacro!("\\ext@todo", "todo");
