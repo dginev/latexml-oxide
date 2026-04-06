@@ -41,12 +41,29 @@ LoadDefinitions!({
     r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // Most post-load l3file fixups removed — macros are now correctly defined
-  // by expl3-code.tex's natural processing (pre-definitions removed above).
-  // Only keep sequence creation that may still fail during loading:
+  // l3file fixups: the l3file section of expl3-code.tex has a subtle failure
+  // where some definitions (quarks, file name functions) don't survive loading.
+  // The expl3 core functions (\cs_new:Npn, \quark_new:N, etc.) ARE available
+  // at this point, so we use them directly (catcodes are LETTER for _ and :).
+  // Perl: all defined naturally by expl3-code.tex L12416-12430.
   raw_tex(concat!(
     r"\cs_if_exist:NF \g__file_record_seq { \seq_new:N \g__file_record_seq }",
     r"\cs_if_exist:NF \l_file_search_path_seq { \seq_new:N \l_file_search_path_seq }",
+    r"\cs_if_exist:NF \s__file_stop { \scan_new:N \s__file_stop }",
+    r"\cs_if_exist:NF \q__file_nil { \quark_new:N \q__file_nil }",
+    r"\cs_if_exist:NF \q__file_recursion_tail { \quark_new:N \q__file_recursion_tail }",
+    r"\cs_if_exist:NF \q__file_recursion_stop { \quark_new:N \q__file_recursion_stop }",
+  ))?;
+  // \__kernel_file_name_sanitize:n — passthrough stub if not defined by expl3
+  raw_tex(concat!(
+    r"\cs_if_exist:NF \__kernel_file_name_sanitize:n",
+    r"  { \cs_new:Npn \__kernel_file_name_sanitize:n #1 {#1} }",
+  ))?;
+  // \__file_quark_if_nil:nTF — conditional test for \q__file_nil
+  raw_tex(concat!(
+    r"\cs_if_exist:NF \__file_quark_if_nil:nTF {",
+      r"\__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF }",
+    r"}",
   ))?;
   // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run.
   if state::lookup_catcode(' ') != Some(Catcode::SPACE) {
