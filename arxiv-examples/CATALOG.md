@@ -6,13 +6,14 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 
 ## Summary
 
-- **40/47 OK** (85%) -- produce meaningful Rust HTML5 output
-- **6 EMPTY** -- produce minimal output (cascading errors or TooManyErrors)
-- **1 FAIL** -- timeout (no output)
+- **42/47 OK** (89%) -- produce meaningful Rust HTML5 output
+- **5 EMPTY** -- produce minimal output (cascading errors or TooManyErrors)
+- **0 FAIL** -- (previously 1 timeout, now fixed)
 - **32/40 >=90% size parity** with Perl (80% of OK)
 - **36/40 >=80% size parity** (90% of OK)
 - **12 papers Rust > Perl size** (30%) -- more resolved bibliography content
 - Perl HTML regenerated 2026-04-05 with correct flags (`--nodefaultresources` + ar5iv CSS)
+- **Session 95** (2026-04-06): `\pgfsetdash` native override bypasses `\pgf@strip` infinite loop caused by conditional/newline interaction. Recovered 2 papers (2005.13625: 0→987KB, 2103.01205: 0→471KB). 42/47 OK (89%), 0 FAIL.
 - **Session 94** (2026-04-06): graphics page=N, halign bgroup/egroup, lxSVG@halign, l3file quarks, tcolorbox breakable lock. Recovered 6 papers (2405.19425 images, 2402.10301, 2508.15260, 2602.18719, 2603.14602, 2603.15617).
 - **Session 93**: algorithm2e fixes (BlankLine 1ex, pop@indentation, vertical bars), bibconfig=bbl,bib parity, CSS injection. All Rust HTML regenerated.
 - **Session 92b**: Bibliography content fix — cross-document XPath bug in `make_bibliography.rs` caused all `.bib`-sourced entries to show only "Cited by" with no author/title/journal. Fixed with `findnodes_foreign` traversal.
@@ -28,10 +29,10 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 1706.03762 | OK | 128KB | 140KB | 91% | ms.tex | 40 bibitems, zero errors | IDENTICAL |
 | 1907.08050 | OK | 1218KB | 1269KB | 95% | paper.tex | 32 bibitems | BUG: empty abstract |
 | 1910.06709 | OK | 61KB | 62KB | 98% | paper.tex | 27 bibitems | IDENTICAL |
-| 2005.13625 | EMPTY | 0KB | 990KB | 0% | main.tex | pgf boxing group mismatch | N/A |
+| 2005.13625 | OK | 987KB | 990KB | 99% | main.tex | pgfsetdash override (S95); 39 errors | NEW: was EMPTY |
 | 2008.08932 | OK | 18KB | 19KB | 94% | main.tex | 10 bibitems | BUG: empty abstract, missing authors |
 | 2101.00726 | OK | 630KB | 650KB | 96% | wasserstein_arXiv_v2.tex | 49 bibitems | IDENTICAL |
-| 2103.01205 | FAIL | 0KB | 497KB | 0% | main.tex | Timeout (pgf/tikz) | N/A |
+| 2103.01205 | OK | 471KB | 497KB | 95% | main.tex | pgfsetdash override (S95); 0 errors | NEW: was FAIL/timeout |
 | 2209.14198 | EMPTY | 0KB | 721KB | 0% | gucycles.tex | pgf arrow 'Stealth' | N/A |
 | 2306.00809 | OK | 141KB | 140KB | 100% | backup.tex | 17 missing cites; no .bib/.bbl | IDENTICAL |
 | 2306.06628 | OK | 241KB | 223KB | 107% | Contraction20.tex | 33 missing cites | IDENTICAL |
@@ -72,12 +73,10 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 
 ## Failure Analysis
 
-### FAIL (2 papers)
-- **2103.01205**: pgf/tikz timeout (>120s)
-- **2402.10301**: pgf 'Computer Modern Rightarrow' arrow + cascading, timeout
+### FAIL (0 papers)
+(Previously: 2103.01205 timeout — fixed S95 via pgfsetdash override)
 
-### EMPTY (8 papers)
-- **2005.13625**: pgf `\pgf@x` number parsing, boxing group mismatch
+### EMPTY (5 papers)
 - **2209.14198**: pgf arrow 'Stealth' undefined, cascading to token limit
 - **2402.03300**: `\pgfkeys@mainstop` recursive self-expansion loop
 - **2410.10068**: tikz-cd matrix processing, pgf arrows

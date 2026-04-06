@@ -752,6 +752,94 @@ LoadDefinitions!({
     "\\lxSVG@beveljoin\\lxSVG@begingroup{stroke-linejoin=bevel}");
   DefMacro!("\\pgfsys@setdash{}{}",
     "\\lxSVG@setdash{#1}{#2}\\edef\\pgf@test@dashpattern{#1}\\lxSVG@begingroup{stroke-dasharray={\\ifx\\pgf@test@dashpattern\\pgfutil@empty none\\else#1\\fi}, stroke-dashoffset={#2}}");
+
+  // Override \pgfsetdash to bypass the raw TeX \pgf@strip loop.
+  // Raw TeX pgfcoregraphicstate.code.tex L96-115:
+  //   \def\pgfsetdash#1#2{%
+  //     \def\pgf@temp{}%
+  //     \pgf@strip#1{pgf@stop}%   ← iterates brace groups, converts to dimensions
+  //     \pgfmathsetlength\pgf@x{#2}%
+  //     \pgfsys@setdash{\pgf@temp}{\the\pgf@x}%
+  //     \ignorespaces}
+  // The \pgf@strip loop uses \ifx\pgf@@temp\pgf@stop as a sentinel test.
+  // This loop hangs in our engine when newlines between pgfscope commands
+  // create space tokens that corrupt the token stream during conditional
+  // evaluation. Perl doesn't override \pgfsetdash (raw TeX works there),
+  // but we override it following the same pattern as \pgfmathsetlength.
+  DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
+    use crate::package::pgfmath_code_tex::pgfmathparse_eval_with_units;
+    // Step 1: Parse the dash pattern.
+    // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid).
+    // Extract brace groups and convert each to a dimension via pgfmathparse.
+    let pattern_str = pattern_toks.to_string();
+    let pattern_str = pattern_str.trim();
+    let mut dash_parts: Vec<String> = Vec::new();
+
+    if !pattern_str.is_empty() {
+      // Extract brace-group contents: {3pt}{1.2pt} → ["3pt", "1.2pt"]
+      let mut depth = 0;
+      let mut current = String::new();
+      for ch in pattern_str.chars() {
+        match ch {
+          '{' => {
+            if depth > 0 { current.push(ch); }
+            depth += 1;
+          },
+          '}' => {
+            depth -= 1;
+            if depth == 0 && !current.is_empty() {
+              // Evaluate this dimension via pgfmathparse
+              let toks = Tokens::new(Explode!(&current));
+              let expanded = gullet::do_expand(toks).unwrap_or_default();
+              let input = expanded.to_string();
+              let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+              let value: f64 = result_str.parse().unwrap_or(0.0);
+              // Convert to sp then format as pt dimension (matching \the\pgf@x)
+              let dim = Dimension((value * 65536.0).round() as i64);
+              dash_parts.push(dim.to_string());
+              current.clear();
+            } else if depth > 0 {
+              current.push(ch);
+            }
+          },
+          _ => {
+            if depth > 0 { current.push(ch); }
+          },
+        }
+      }
+    }
+
+    // Step 2: Evaluate the offset #2 via pgfmathsetlength → \pgf@x
+    let offset_str = offset_toks.to_string();
+    let offset_str = offset_str.trim().to_string();
+    if !offset_str.is_empty() {
+      let toks = Tokens::new(Explode!(&offset_str));
+      let expanded = gullet::do_expand(toks).unwrap_or_default();
+      let input = expanded.to_string();
+      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+      let value: f64 = result_str.parse().unwrap_or(0.0);
+      let dim = Dimension((value * 65536.0).round() as i64);
+      state::assign_register("\\pgf@x", dim.into(), None, vec![])?;
+    } else {
+      state::assign_register("\\pgf@x", Dimension(0).into(), None, vec![])?;
+    }
+
+    // Step 3: Build the dash pattern string and call \pgfsys@setdash
+    let dash_csv = dash_parts.join(",");
+    let pgf_x_val = state::lookup_register("\\pgf@x", vec![])?
+      .map(|v| v.to_string()).unwrap_or_else(|| "0.0pt".to_string());
+
+    // Emit: \pgfsys@setdash{<dash_csv>}{<offset>}\ignorespaces
+    let mut result = vec![T_CS!("\\pgfsys@setdash")];
+    result.push(T_BEGIN!());
+    result.extend(Explode!(&dash_csv));
+    result.push(T_END!());
+    result.push(T_BEGIN!());
+    result.extend(Explode!(&pgf_x_val));
+    result.push(T_END!());
+    result.push(T_CS!("\\ignorespaces"));
+    gullet::unread(Tokens::new(result));
+  }, locked => true);
   DefMacro!("\\pgfsys@eoruletrue",
     "\\lxSVG@eoruletrue\\lxSVG@begingroup{fill-rule=evenodd}");
   DefMacro!("\\pgfsys@eorulefalse",
@@ -1573,8 +1661,34 @@ LoadDefinitions!({
 
   // Perl L792-796: \pgfsys@functionalshading — not implementable (PostScript functions)
   DefMacro!("\\pgfsys@functionalshading{}{}{}{}", sub[_args] {
-    
+
     mouth::tokenize_internal(
       "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist()
   });
+
+  //===================================================================
+  // PGF sentinel tokens — make non-expandable
+  //===================================================================
+  // PGF defines self-referential sentinel macros like:
+  //   \def\pgfkeys@mainstop{\pgfkeys@mainstop}
+  //   \def\pgfkeysnovalue{\pgfkeys@novalue}
+  //   \def\pgfkeysvaluerequired{\pgfkeysvaluerequired}
+  // These are used with \ifx for sentinel comparisons and as delimiters
+  // in parameter patterns. They should NEVER be expanded.
+  //
+  // In our engine, self-referential macros trigger recursion detection
+  // which replaces the expansion with empty tokens, breaking the
+  // sentinel pattern (the sentinel disappears, causing pgfkeys to read
+  // past it). This manifests as an infinite loop when babel + tikz
+  // are loaded together (babel's AtBeginDocument hooks trigger pgfkeys
+  // processing where the sentinel is expanded).
+  //
+  // Fix: override as locked non-expandable primitives. This preserves:
+  // - \ifx comparisons: \futurelet + \ifx compares meanings, and
+  //   \let-copied primitives have equal meaning.
+  // - Delimiter matching: TeX matches delimiters by token identity
+  //   (CS name), not meaning, so Primitives work as delimiters.
+  DefPrimitive!("\\pgfkeys@mainstop", {}, locked => true);
+  DefPrimitive!("\\pgfkeysvaluerequired", {}, locked => true);
+
 });

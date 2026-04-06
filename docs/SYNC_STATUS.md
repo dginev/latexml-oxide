@@ -6,7 +6,7 @@ Updated 2026-04-06. Only lists open gaps & TODOs; completed items live in git hi
 
 **Test inventory:** 331+ non-tikz tests pass; 7/10 tikz tests pass (3 pre-existing loops). MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 94: 39/47 OK (83%), 30/39 >=90% (77%), 34/39 >=80% (87%).** Session 94 fixes: graphics page=N extraction (2405.19425), \bgroup/\egroup halign (2602.18719: 34KB→677KB, 2402.10301: 0→1.8MB), \lxSVG@halign tikz-cd matrix, l3file quark fixups (2508.15260: 0→376KB). Remaining: 7 EMPTY + 1 FAIL (pgf loops, expl3 gaps).
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 95: 42/47 OK (89%), 0 FAIL.** Session 95 fix: native `\pgfsetdash` override bypasses `\pgf@strip` infinite loop (2005.13625: 0→987KB, 2103.01205: 0→471KB). Remaining: 5 EMPTY (pgf token limit, pgfkeys recursion, smfart.cls, eqnarray recursion).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
@@ -167,26 +167,18 @@ Papers grouped by shared root cause, ordered by impact (most papers fixed per ta
 - **2402.10301**: OOM (4GB+ allocation) during tikz processing → crash. Perl produces full output.
 - **2410.10068**: 1001 errors from tikz-cd matrix (\halign, \pgf@matrix@last@nextcell@options) → empty output.
 
-#### [ ] A2. PGF pgfscope nesting limit (2 papers → OK)
+#### [x] A2. PGF pgfscope nesting hang — FIXED (session 95)
 **Papers:** 2005.13625, 2103.01205
-**Root cause (revised session 94):** Both papers use matplotlib-generated `.pgf` files with many `\begin{pgfscope}` blocks. Each pgf graphics command (`\pgfsetrectcap`, `\pgfsetmiterjoin`, `\pgfsetlinewidth`, `\pgfsetdash`) calls `\lxSVG@begingroup` which opens a nested `<svg:g>`. With 25+ consecutive pgfscope blocks, the accumulated nesting causes a hang (infinite loop or exponential slowdown), then "not a register" warnings cascade.
-**Minimal repro:** 25 sequential pgfscope blocks (each with setrectcap + setmiterjoin + setlinewidth + setdash + stroke) → hang. 24 works fine.
-**Approach:**
-1. Investigate `\lxSVG@begingroup`/`\lxSVG@closescope` interaction — are svg:g groups properly closed between pgfscopes?
-2. Check if `\pgfsysprotocol@literal` accumulation contributes to the exponential blowup
-3. Perl handles these files fine — compare protocol buffering mechanism
-4. May need scope-level cleanup optimization in `\lxSVG@closescope`
-**Estimate:** Medium-high complexity. The protocol buffering / scope nesting interaction needs careful analysis.
+**Root cause:** The raw TeX `\pgfsetdash` uses `\pgf@strip` — a recursive macro loop with `\ifx\pgf@@temp\pgf@stop` as sentinel. When newlines between pgfscope commands create space tokens, these corrupt the `\pgf@strip` token stream during expansion, causing an infinite loop that consumes all subsequent tokens. The bug is in the interaction between `\pgfsysprotocol@literal`'s `\edef` expansion (which contains nested `\ifx` conditionals) and the line-ending token processing.
+**Fix:** Override `\pgfsetdash` with a native Rust `DefPrimitive` that parses dash pattern brace groups natively (extracting dimensions via `pgfmathparse_eval_with_units`), builds the comma-separated dash string, and calls `\pgfsys@setdash{result}{\the\pgf@x}`. This bypasses the `\pgf@strip` loop entirely, following the same pattern as our `\pgfmathsetlength` override. Locked to prevent raw TeX override.
+**Result:** 2005.13625: 0KB→987KB (39 errors). 2103.01205: 0KB→471KB (0 errors).
 
-#### [ ] A3. PGF keys filter recursion (1 paper → OK)
+#### [x] A3. PGF keys sentinel recursion — PARTIALLY FIXED (session 95)
 **Papers:** 2402.03300
-**Root cause:** `\pgfkeys@mainstop` expands into itself recursively (2650 errors → token limit 30M). The pgfkeys filter machinery from `pgfkeyslibraryfiltered.code.tex` uses `\pgfkeys@mainstop` as a sentinel token, but our expansion engine treats it as a regular expandable macro instead of stopping.
-**Approach:**
-1. Read `pgfkeyslibraryfiltered.code.tex` — understand the filter/handler pattern
-2. The sentinel `\pgfkeys@mainstop` should be a `\def\pgfkeys@mainstop{\pgfkeys@mainstop}` (self-referential, caught by `\ifx` comparison, never actually expanded)
-3. Check if our code is expanding past `\ifx` comparisons — the likely bug is in conditional evaluation where `\ifx\pgfkeys@mainstop\token` fails to short-circuit
-4. Also needs: `datetime.sty` stub (minor — just define `\newdateformat` as no-op)
-**Estimate:** Medium complexity. Likely a conditional evaluation edge case.
+**Root cause:** PGF defines self-referential sentinel macros (`\def\pgfkeys@mainstop{\pgfkeys@mainstop}`) for `\ifx` comparison and delimiter matching. Our expansion engine expands these, triggers recursion detection (returns empty), which breaks the sentinel pattern causing pgfkeys to read past the sentinel in an infinite loop.
+**Fix:** Override `\pgfkeys@mainstop` and `\pgfkeysvaluerequired` as locked non-expandable `DefPrimitive` in `pgfsys_latexml_def.rs`. Non-expandable primitives preserve `\ifx` semantics (`\let`-copies have equal meaning) and work as delimiters (matched by CS name, not meaning).
+**Result:** Recursion errors eliminated (1586→0). But paper remains EMPTY due to a SEPARATE issue: babel's `\AtBeginDocument` hook destroys PGF arrow definitions (1002 undefined errors → TooManyErrors). This babel+PGF interaction needs deeper investigation — babel's raw TeX hooks run before PGF's hooks and corrupt PGF state.
+**Remaining:** babel+PGF `\AtBeginDocument` interaction (also needs `datetime.sty` stub).
 
 #### [ ] A4. smfart.cls parameter consumption (1 paper → OK)
 **Papers:** 2507.23241
