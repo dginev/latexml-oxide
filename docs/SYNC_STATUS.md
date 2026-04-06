@@ -2,11 +2,11 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-05. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-06. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography pipeline fully operational (Scan→MakeBib→CrossRef) with native Rust BibTeX parser. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
+**Test inventory:** 331+ non-tikz tests pass; 7/10 tikz tests pass (3 pre-existing loops). MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 93: 18/37 IDENTICAL (49%), 30/37 >=80% size parity (81%). Session 93 fixes: algorithm2e BlankLine/indentation, bibconfig=bbl,bib parity, CSS injection. Six actionable bugs remain: empty abstracts (1907.08050, 2008.08932), body truncation (2602.18719, 2603.15617), raw affil params (2508.18544), listing style gap (2405.19425).
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 94: 39/47 OK (83%), 30/39 >=90% (77%), 34/39 >=80% (87%).** Session 94 fixes: graphics page=N extraction (2405.19425), \bgroup/\egroup halign (2602.18719: 34KB→677KB, 2402.10301: 0→1.8MB), \lxSVG@halign tikz-cd matrix, l3file quark fixups (2508.15260: 0→376KB). Remaining: 7 EMPTY + 1 FAIL (pgf loops, expl3 gaps).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
