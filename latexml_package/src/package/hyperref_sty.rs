@@ -313,20 +313,39 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\hyperref", "\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv");
-  // # 2 argument form
-  // DefConstructor('\hyperref@@ii OptionalSemiverbatim {}',
-  //   "<ltx:ref labelref='#label'>#2</ltx:ref>",
-  //   properties => sub { (label => CleanLabel($_[1])); });
-  // # 4 argument form
-  // DefConstructor('\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim',
-  //   "<ltx:ref href='#href'>#4</ltx:ref>",
-  //   properties => sub {
-  //     (href => ComposeURL(LookupValue('BASE_URL'), $_[1],
-  //         CleanID(ToString($_[2]) . '.' . ToString($_[3])))); });
+  // Perl L211-215: 2 argument form \hyperref[label]{text}
+  DefConstructor!("\\hyperref@@ii OptionalSemiverbatim {}",
+    "<ltx:ref labelref='#label'>#2</ltx:ref>",
+    bounded => true, enter_horizontal => true,
+    properties => sub[args] {
+      let label = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
+    });
+  // Perl L217-222: 4 argument form \hyperref{url}{category}{name}{text}
+  DefConstructor!("\\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim",
+    "<ltx:ref href='#href'>#4</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let base_url = state::lookup_string("BASE_URL");
+      let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let fragment = clean_id(&format!("{}.{}", cat, name));
+      let href = if base_url.is_empty() {
+        format!("#{}", fragment)
+      } else {
+        format!("{}#{}", base_url, fragment)
+      };
+      Ok(stored_map!("href" => href))
+    });
 
-  // DefConstructor('\htmlref Semiverbatim  Semiverbatim',
-  //   "<ltx:ref labelref='#label'>#1</ltx:ref>",
-  //   properties => sub { (label => CleanLabel($_[2])); });
+  // Perl L224-226: \htmlref{text}{label}
+  DefConstructor!("\\htmlref Semiverbatim Semiverbatim",
+    "<ltx:ref labelref='#label'>#1</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let label = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
+    });
 
   // # \hyperlink{name}{text}
   // DefConstructor('\hyperlink Semiverbatim {}',
