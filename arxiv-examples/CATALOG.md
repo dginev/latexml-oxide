@@ -55,7 +55,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2502.04134 | OK | 112KB | 124KB | 90% | iclr2025_conference.tex | 20 bibitems (bbl) | IDENTICAL |
 | 2503.08256 | OK | 166KB | 215KB | 77% | main.tex | 62 bibitems | cosmetic: param leaks at top |
 | 2506.03074 | OK | 1242KB | 1261KB | 98% | _main.tex | 177 bibitems (bbl) | near-identical; citation style |
-| 2507.23241 | EMPTY | 0KB | 1020KB | 0% | main.tex | smfart.cls + expl3 timing | N/A |
+| 2507.23241 | OK | 876KB | 1020KB | 86% | main.tex | smfart→amsart binding + expl3 autoload (S95) | NEW: was EMPTY |
 | 2508.15260 | OK | 376KB | 369KB | 102% | main.tex | tcolorbox FIXED (S94 quark fixups) | NEW: was EMPTY |
 | 2508.18544 | OK | 714KB | 856KB | 83% | Main_Communi_submit.tex | 56 bibitems (bbl); algo2e+affil fixed | IDENTICAL |
 | 2509.18103 | OK | 197KB | 275KB | 71% | main.tex | 10 bibitems; Perl HTML larger | IDENTICAL (content parity) |

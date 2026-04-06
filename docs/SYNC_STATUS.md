@@ -180,15 +180,11 @@ Papers grouped by shared root cause, ordered by impact (most papers fixed per ta
 **Result:** Recursion errors eliminated (1586→0). But paper remains EMPTY due to a SEPARATE issue: babel's `\AtBeginDocument` hook destroys PGF arrow definitions (1002 undefined errors → TooManyErrors). This babel+PGF interaction needs deeper investigation — babel's raw TeX hooks run before PGF's hooks and corrupt PGF state.
 **Remaining:** babel+PGF `\AtBeginDocument` interaction (also needs `datetime.sty` stub).
 
-#### [ ] A4. smfart.cls parameter consumption (1 paper → OK)
+#### [x] A4. smfart.cls + expl3 autoload — FIXED (session 95)
 **Papers:** 2507.23241
-**Root cause:** `smfart.cls` (French math journal class) uses `\mathfrak` in text mode during class initialization, then hits parameter consumption bugs (`<Token> found None`). The class is loaded as raw TeX.
-**Approach:**
-1. Check if smfart.cls has a LaTeXML binding in Perl — if yes, port it; if no, create stubs
-2. Perl handles this with 27 warnings but produces output — likely via error recovery
-3. The `<Token> found None` is a parameter-reading crash — may need safe fallback in `readArg`/`readOptional` (return None instead of panic)
-4. Alternative: create `smfart.cls.ltxml` binding that loads amsart as base (smfart is similar to amsart)
-**Estimate:** Low-medium complexity. A binding stub may suffice.
+**Root cause:** Two issues: (1) smfart.cls raw TeX loading fails at line 369 (`\ifx\relax\mathfrak` parameter consumption crash), cascading into expl3 failure. (2) `animate.sty` uses `\ExplSyntaxOn` without explicit `\usepackage{expl3}` (LaTeX 2022+ kernel feature).
+**Fix:** (1) Created `smfart_cls.rs` binding that loads amsart as base (smfart is an AMS-derived French math journal class). (2) Enabled expl3 autoload triggers in `latex_hook.rs` — `\ExplSyntaxOn`, `\ProvidesExplClass`, `\ProvidesExplPackage` auto-load expl3.sty on first use, matching Perl's `DefAutoload` in `TeX.pool.ltxml` L42-48. (3) Created `animate_sty.rs` (raw load with autoload) and `media9_sty.rs` (stub) bindings.
+**Result:** 2507.23241: 0KB→876KB (97 errors, mostly math parser warnings).
 
 #### [x] A5. Stale Perl HTML regeneration — DONE (session 90)
 Perl HTML regenerated with correct `--nodefaultresources` + ar5iv CSS flags.
