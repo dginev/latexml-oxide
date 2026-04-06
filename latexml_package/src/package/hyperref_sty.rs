@@ -347,43 +347,35 @@ LoadDefinitions!({
       Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
     });
 
-  // # \hyperlink{name}{text}
-  // DefConstructor('\hyperlink Semiverbatim {}',
-  //   "<ltx:ref idref='#1'>#2</ltx:ref>",
-  //   properties => sub { (id => CleanID($_[1])); });
-  // DefMacro('\hyper@@link{}{}{}', '\hyperlink{#2}{#3}');
+  // Perl L228-230: \hyperlink{name}{text}
+  DefConstructor!("\\hyperlink Semiverbatim {}",
+    "<ltx:ref idref='#id'>#2</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      Ok(stored_map!("id" => clean_id(&name)))
+    });
+  DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
 
-  // sub localized_anchor {
-  //   my ($document, $whatsit) = @_;
-  //   my $model      = $state->getModel;
-  //   my $node       = $document->getNode;
-  //   my @candidates = ($node);
-  //   my $candidate;
-  //   while ($candidate = pop(@candidates)) {
-  //     my $type = $candidate->nodeType;
-  //     if ($type == XML_ELEMENT_NODE) {
-  //       last if ($model->canContain('ltx:anchor', $model->getNodeQName($candidate)));
-  //       unshift(@candidates, $candidate->childNodes); }
-  //     elsif ($type = XML_TEXT_NODE) {
-  //       last; } }
-  //   my $id = $whatsit->getProperty('id');
-  //   if ($candidate) {
-  //     my $anchor = $document->wrapNodes('ltx:anchor', $candidate);
-  //     $anchor->setAttribute('xml:id', $id);
-  //     $document->closeNode($anchor) if $document->isOpen($anchor); }
-  //   else {
-  //     Error("No available insertion point for ltx:anchor, failing \\hypertarget to $id"); }
-  //   return; }
-
-  // # \hyperdef{category}{name}{text}
-  // DefConstructor('\hyperdef Semiverbatim Semiverbatim Semiverbatim',
-  //   "#3",
-  //   afterConstruct => \&localized_anchor,
-  //   properties     => sub { (id => CleanID(ToString($_[1]) . '.' . ToString($_[2]))); });
-  // # \hypertarget{name}{text}
-  // DefConstructor('\hypertarget Semiverbatim {}', '#2',
-  //   afterConstruct => \&localized_anchor,
-  //   properties     => sub { (id => CleanID(ToString($_[1]))); });
+  // Perl L252-254: \hyperdef{category}{name}{text}
+  // TODO: afterConstruct => \&localized_anchor (wraps content in ltx:anchor)
+  // For now, just output text with xml:id on a wrapper.
+  DefConstructor!("\\hyperdef Semiverbatim Semiverbatim Semiverbatim",
+    "<ltx:text xml:id='#id'>#3</ltx:text>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
+    });
+  // Perl L256-258: \hypertarget{name}{text}
+  DefConstructor!("\\hypertarget Semiverbatim {}",
+    "<ltx:text xml:id='#id'>#2</ltx:text>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      Ok(stored_map!("id" => clean_id(&name)))
+    });
 
   // # Should create an anchor with automatically chosen name;
   // # But it's to be used where LaTeXML already would have created an anchor & link...
