@@ -6,14 +6,14 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 
 ## Summary
 
-- **37/47 OK** (79%) -- produce meaningful Rust HTML5 output
-- **8 EMPTY** -- produce minimal output (cascading errors or TooManyErrors)
-- **2 FAIL** -- timeout (no output)
-- **27/37 >=90% size parity** with Perl (73% of OK)
-- **30/37 >=80% size parity** (81% of OK)
-- **10 papers Rust > Perl size** (27%) -- more resolved bibliography content
+- **40/47 OK** (85%) -- produce meaningful Rust HTML5 output
+- **6 EMPTY** -- produce minimal output (cascading errors or TooManyErrors)
+- **1 FAIL** -- timeout (no output)
+- **32/40 >=90% size parity** with Perl (80% of OK)
+- **36/40 >=80% size parity** (90% of OK)
+- **12 papers Rust > Perl size** (30%) -- more resolved bibliography content
 - Perl HTML regenerated 2026-04-05 with correct flags (`--nodefaultresources` + ar5iv CSS)
-- Rust HTML regenerated 2026-04-05 with `--css` ar5iv CDN links + `bibconfig=bbl,bib` fix
+- **Session 94** (2026-04-06): graphics page=N, halign bgroup/egroup, lxSVG@halign, l3file quarks, tcolorbox breakable lock. Recovered 6 papers (2405.19425 images, 2402.10301, 2508.15260, 2602.18719, 2603.14602, 2603.15617).
 - **Session 93**: algorithm2e fixes (BlankLine 1ex, pop@indentation, vertical bars), bibconfig=bbl,bib parity, CSS injection. All Rust HTML regenerated.
 - **Session 92b**: Bibliography content fix — cross-document XPath bug in `make_bibliography.rs` caused all `.bib`-sourced entries to show only "Cited by" with no author/title/journal. Fixed with `findnodes_foreign` traversal.
 - **Session 92**: Fresh visual comparison, authblk/elsart fixes, end_mode recovery (2508.18544: 43%→88%).
