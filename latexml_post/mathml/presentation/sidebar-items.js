@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MathStyle"],"fn":["adjust_spacing","clean_internal_attrs","convert_to_pmml","font_to_mathvariant","set_invisible_times"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["extract_flag","main"]};
+window.SIDEBAR_ITEMS = {"fn":["ensure_parent_dir","find_main_tex","main","make_splitpaths","pack_output_zip","run_post_processing","unpack_archive"],"struct":["Cli","PostOptions"]};

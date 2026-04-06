@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_page_name","make_sub_collection_documents"],"struct":["Collector"]};

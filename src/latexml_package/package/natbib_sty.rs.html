@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/natbib_sty.rs`."><title>natbib_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>natbib_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/natbib_sty.rs`."><title>natbib_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (9602bda1d 2026-04-05)" data-channel="nightly" data-search-js="search-1c5d44ff.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>natbib_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="comment">// Helper: set citation style values (Perl: setCitationStyle)
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">fn </span>set_citation_style(pairs: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)]) {
@@ -569,415 +569,478 @@
 <a href=#569 id=569 data-nosnippet>569</a>  <span class="comment">//======================================================================
 <a href=#570 id=570 data-nosnippet>570</a>  // 2.9 Selecting Citation Punctuation
 <a href=#571 id=571 data-nosnippet>571</a>
-<a href=#572 id=572 data-nosnippet>572</a>  // \bibpunct
-<a href=#573 id=573 data-nosnippet>573</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bibpunct[]{}{}{}{}{}{}"</span>, sub[args] {
-<a href=#574 id=574 data-nosnippet>574</a>    <span class="kw">let </span><span class="kw-2">mut </span>it = args.into_iter();
-<a href=#575 id=575 data-nosnippet>575</a>    <span class="kw">let </span>notesep: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#576 id=576 data-nosnippet>576</a>    <span class="kw">let </span>open_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#577 id=577 data-nosnippet>577</a>    <span class="kw">let </span>close_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">let </span>sep_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#579 id=579 data-nosnippet>579</a>    <span class="kw">let </span>style_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="kw">let </span>aysep_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#581 id=581 data-nosnippet>581</a>    <span class="kw">let </span>yysep_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#582 id=582 data-nosnippet>582</a>
-<a href=#583 id=583 data-nosnippet>583</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(o) = open_arg {
-<a href=#584 id=584 data-nosnippet>584</a>      assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(o), <span class="prelude-val">None</span>);
-<a href=#585 id=585 data-nosnippet>585</a>    }
-<a href=#586 id=586 data-nosnippet>586</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = close_arg {
-<a href=#587 id=587 data-nosnippet>587</a>      assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(c), <span class="prelude-val">None</span>);
-<a href=#588 id=588 data-nosnippet>588</a>    }
-<a href=#589 id=589 data-nosnippet>589</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = sep_arg {
-<a href=#590 id=590 data-nosnippet>590</a>      assign_value(<span class="string">"CITE_SEPARATOR"</span>, Stored::Tokens(s), <span class="prelude-val">None</span>);
-<a href=#591 id=591 data-nosnippet>591</a>    }
-<a href=#592 id=592 data-nosnippet>592</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(st) = style_arg {
-<a href=#593 id=593 data-nosnippet>593</a>      <span class="kw">let </span>style_str = <span class="macro">Digest!</span>(st)<span class="question-mark">?</span>.to_string();
-<a href=#594 id=594 data-nosnippet>594</a>      <span class="kw">let </span>cite_style = <span class="kw">if </span>style_str == <span class="string">"n" </span>{ <span class="string">"numbers" </span>}
-<a href=#595 id=595 data-nosnippet>595</a>        <span class="kw">else if </span>style_str == <span class="string">"s" </span>{ <span class="string">"super" </span>}
-<a href=#596 id=596 data-nosnippet>596</a>        <span class="kw">else </span>{ <span class="string">"authoryear" </span>};
-<a href=#597 id=597 data-nosnippet>597</a>      assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(cite_style), <span class="prelude-val">None</span>);
-<a href=#598 id=598 data-nosnippet>598</a>    }
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(ay) = aysep_arg {
-<a href=#600 id=600 data-nosnippet>600</a>      assign_value(<span class="string">"CITE_AY_SEPARATOR"</span>, Stored::Tokens(ay), <span class="prelude-val">None</span>);
-<a href=#601 id=601 data-nosnippet>601</a>    }
-<a href=#602 id=602 data-nosnippet>602</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(yy) = yysep_arg {
-<a href=#603 id=603 data-nosnippet>603</a>      assign_value(<span class="string">"CITE_YY_SEPARATOR"</span>, Stored::Tokens(yy), <span class="prelude-val">None</span>);
-<a href=#604 id=604 data-nosnippet>604</a>    }
-<a href=#605 id=605 data-nosnippet>605</a>    <span class="kw">if </span>is_some_and_nonempty(<span class="kw-2">&amp;</span>notesep) {
-<a href=#606 id=606 data-nosnippet>606</a>      assign_value(<span class="string">"CITE_NOTE_SEPARATOR"</span>, Stored::Tokens(notesep.unwrap()), <span class="prelude-val">None</span>);
-<a href=#607 id=607 data-nosnippet>607</a>    }
-<a href=#608 id=608 data-nosnippet>608</a>  });
-<a href=#609 id=609 data-nosnippet>609</a>
-<a href=#610 id=610 data-nosnippet>610</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citestyle{}"</span>, <span class="string">"\\@citestyle{#1}\\let\\bibstyle\\@gobble"</span>);
-<a href=#611 id=611 data-nosnippet>611</a>
-<a href=#612 id=612 data-nosnippet>612</a>  <span class="comment">// bibstyle@* macros for known styles
-<a href=#613 id=613 data-nosnippet>613</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@chicago"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
-<a href=#614 id=614 data-nosnippet>614</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@named"</span>, <span class="string">"\\bibpunct{[}{]}{;}{a}{,}{,}"</span>);
-<a href=#615 id=615 data-nosnippet>615</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@agu"</span>, <span class="string">"\\bibpunct{[}{]}{;}{a}{,}{,~}"</span>);
-<a href=#616 id=616 data-nosnippet>616</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@copernicus"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
-<a href=#617 id=617 data-nosnippet>617</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@egu"</span>, <span class="string">"\\bibstyle@copernicus"</span>);
-<a href=#618 id=618 data-nosnippet>618</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@egs"</span>, <span class="string">"\\bibstyle@copernicus"</span>);
-<a href=#619 id=619 data-nosnippet>619</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@agsm"</span>,
-<a href=#620 id=620 data-nosnippet>620</a>    <span class="string">"\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&amp;}"</span>);
-<a href=#621 id=621 data-nosnippet>621</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@kluwer"</span>,
-<a href=#622 id=622 data-nosnippet>622</a>    <span class="string">"\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&amp;}"</span>);
-<a href=#623 id=623 data-nosnippet>623</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@dcu"</span>,
-<a href=#624 id=624 data-nosnippet>624</a>    <span class="string">"\\bibpunct{(}{)}{;}{a}{;}{,}\\gdef\\harvardand{and}"</span>);
-<a href=#625 id=625 data-nosnippet>625</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@aa"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{}{,}"</span>);
-<a href=#626 id=626 data-nosnippet>626</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@pass"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
-<a href=#627 id=627 data-nosnippet>627</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@anngeo"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
-<a href=#628 id=628 data-nosnippet>628</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@nlinproc"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
-<a href=#629 id=629 data-nosnippet>629</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@cospar"</span>, <span class="string">"\\bibpunct{/}{/}{,}{n}{}{}"</span>);
-<a href=#630 id=630 data-nosnippet>630</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@esa"</span>, <span class="string">"\\bibpunct{(Ref.~}{)}{,}{n}{}{}"</span>);
-<a href=#631 id=631 data-nosnippet>631</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@nature"</span>,
-<a href=#632 id=632 data-nosnippet>632</a>    <span class="string">"\\bibpunct{}{}{,}{s}{}{\\textsuperscript{,}}"</span>);
-<a href=#633 id=633 data-nosnippet>633</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@plain"</span>, <span class="string">"\\bibpunct{[}{]}{,}{n}{}{,}"</span>);
-<a href=#634 id=634 data-nosnippet>634</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@alpha"</span>, <span class="string">"\\bibstyle@plain"</span>);
-<a href=#635 id=635 data-nosnippet>635</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@abbrv"</span>, <span class="string">"\\bibstyle@plain"</span>);
-<a href=#636 id=636 data-nosnippet>636</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@unsrt"</span>, <span class="string">"\\bibstyle@plain"</span>);
-<a href=#637 id=637 data-nosnippet>637</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@plainnat"</span>, <span class="string">"\\bibpunct{[}{]}{,}{a}{,}{,}"</span>);
-<a href=#638 id=638 data-nosnippet>638</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@abbrvnat"</span>, <span class="string">"\\bibstyle@plainnat"</span>);
-<a href=#639 id=639 data-nosnippet>639</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@unsrtnat"</span>, <span class="string">"\\bibstyle@plainnat"</span>);
-<a href=#640 id=640 data-nosnippet>640</a>  <span class="comment">//======================================================================
-<a href=#641 id=641 data-nosnippet>641</a>  // 2.12 Other Formatting Options
-<a href=#642 id=642 data-nosnippet>642</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bibname"</span>, <span class="string">"Bibliography"</span>);
-<a href=#643 id=643 data-nosnippet>643</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\refname"</span>, <span class="string">"References"</span>);
-<a href=#644 id=644 data-nosnippet>644</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibsection"</span>, <span class="string">""</span>);
-<a href=#645 id=645 data-nosnippet>645</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibpreamble"</span>, <span class="string">""</span>);
-<a href=#646 id=646 data-nosnippet>646</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibfont"</span>, <span class="string">""</span>);
-<a href=#647 id=647 data-nosnippet>647</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citenumfont"</span>, <span class="string">""</span>);
-<a href=#648 id=648 data-nosnippet>648</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibnumfmt{}"</span>, <span class="string">"#1"</span>);
-<a href=#649 id=649 data-nosnippet>649</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\bibhang"</span>, Dimension::new(<span class="number">0</span>));
-<a href=#650 id=650 data-nosnippet>650</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\bibsep"</span>, Glue::new(<span class="number">0</span>));
-<a href=#651 id=651 data-nosnippet>651</a>
-<a href=#652 id=652 data-nosnippet>652</a>  <span class="comment">//======================================================================
-<a href=#653 id=653 data-nosnippet>653</a>  // 2.13 Automatic Indexing of Citations
-<a href=#654 id=654 data-nosnippet>654</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifciteindex"</span>);
-<a href=#655 id=655 data-nosnippet>655</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeindextrue"</span>, <span class="string">""</span>);
-<a href=#656 id=656 data-nosnippet>656</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeindexfalse"</span>, <span class="string">""</span>);
-<a href=#657 id=657 data-nosnippet>657</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeindextype"</span>, <span class="string">""</span>);
-<a href=#658 id=658 data-nosnippet>658</a>
-<a href=#659 id=659 data-nosnippet>659</a>  <span class="comment">// 2.17 Long Author List on First Citation
-<a href=#660 id=660 data-nosnippet>660</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\shortcites Semiverbatim"</span>, <span class="string">""</span>);
-<a href=#661 id=661 data-nosnippet>661</a>
-<a href=#662 id=662 data-nosnippet>662</a>  <span class="comment">//======================================================================
-<a href=#663 id=663 data-nosnippet>663</a>  // Bibliography item handling
-<a href=#664 id=664 data-nosnippet>664</a>
-<a href=#665 id=665 data-nosnippet>665</a>  // NAT@wrout: format the refnum based on citation style
-<a href=#666 id=666 data-nosnippet>666</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\NAT@wrout{}{}{}{} Semiverbatim"</span>, sub[args] {
-<a href=#667 id=667 data-nosnippet>667</a>    <span class="kw">let </span><span class="kw-2">mut </span>it = args.into_iter();
-<a href=#668 id=668 data-nosnippet>668</a>    <span class="kw">let </span>number: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#669 id=669 data-nosnippet>669</a>    <span class="kw">let </span>year: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#670 id=670 data-nosnippet>670</a>    <span class="kw">let </span>authors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#671 id=671 data-nosnippet>671</a>    <span class="kw">let </span>fullauthors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#672 id=672 data-nosnippet>672</a>    <span class="kw">let </span>key: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
-<a href=#673 id=673 data-nosnippet>673</a>
-<a href=#674 id=674 data-nosnippet>674</a>    <span class="kw">let </span>style = cite_style();
-<a href=#675 id=675 data-nosnippet>675</a>    <span class="kw">let </span>open = cite_open();
-<a href=#676 id=676 data-nosnippet>676</a>    <span class="kw">let </span>close = cite_close();
+<a href=#572 id=572 data-nosnippet>572</a>  // Perl: natbib.sty.ltxml L360-408 — \setcitestyle with KeyVals
+<a href=#573 id=573 data-nosnippet>573</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"authoryear"</span>, <span class="string">""</span>);
+<a href=#574 id=574 data-nosnippet>574</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"numbers"</span>, <span class="string">""</span>);
+<a href=#575 id=575 data-nosnippet>575</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"super"</span>, <span class="string">""</span>);
+<a href=#576 id=576 data-nosnippet>576</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"round"</span>, <span class="string">""</span>);
+<a href=#577 id=577 data-nosnippet>577</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"square"</span>, <span class="string">""</span>);
+<a href=#578 id=578 data-nosnippet>578</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"curly"</span>, <span class="string">""</span>);
+<a href=#579 id=579 data-nosnippet>579</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"angle"</span>, <span class="string">""</span>);
+<a href=#580 id=580 data-nosnippet>580</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"open"</span>, <span class="string">""</span>);
+<a href=#581 id=581 data-nosnippet>581</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"close"</span>, <span class="string">""</span>);
+<a href=#582 id=582 data-nosnippet>582</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"semicolon"</span>, <span class="string">""</span>);
+<a href=#583 id=583 data-nosnippet>583</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"comma"</span>, <span class="string">""</span>);
+<a href=#584 id=584 data-nosnippet>584</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"citesep"</span>, <span class="string">""</span>);
+<a href=#585 id=585 data-nosnippet>585</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"aysep"</span>, <span class="string">""</span>);
+<a href=#586 id=586 data-nosnippet>586</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"yysep"</span>, <span class="string">""</span>);
+<a href=#587 id=587 data-nosnippet>587</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"natbib"</span>, <span class="string">"notesep"</span>, <span class="string">""</span>);
+<a href=#588 id=588 data-nosnippet>588</a>
+<a href=#589 id=589 data-nosnippet>589</a>  <span class="comment">// \setcitestyle — parse key=value pairs and set CITE_* values
+<a href=#590 id=590 data-nosnippet>590</a>  // Perl: setCitationStyle called with getPairs from RequiredKeyVals:natbib
+<a href=#591 id=591 data-nosnippet>591</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\setcitestyle{}"</span>, sub[(kv)] {
+<a href=#592 id=592 data-nosnippet>592</a>    <span class="comment">// Brace-aware comma splitting for key=value pairs like: authoryear,round,citesep={;},aysep={,}
+<a href=#593 id=593 data-nosnippet>593</a>    </span><span class="kw">let </span>kv_str = kv.to_string();
+<a href=#594 id=594 data-nosnippet>594</a>    <span class="kw">let </span><span class="kw-2">mut </span>pairs: Vec&lt;String&gt; = Vec::new();
+<a href=#595 id=595 data-nosnippet>595</a>    <span class="kw">let </span><span class="kw-2">mut </span>current = String::new();
+<a href=#596 id=596 data-nosnippet>596</a>    <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0i32</span>;
+<a href=#597 id=597 data-nosnippet>597</a>    <span class="kw">for </span>ch <span class="kw">in </span>kv_str.chars() {
+<a href=#598 id=598 data-nosnippet>598</a>      <span class="kw">if </span>ch == <span class="string">'{' </span>{ depth += <span class="number">1</span>; current.push(ch); }
+<a href=#599 id=599 data-nosnippet>599</a>      <span class="kw">else if </span>ch == <span class="string">'}' </span>{ depth -= <span class="number">1</span>; current.push(ch); }
+<a href=#600 id=600 data-nosnippet>600</a>      <span class="kw">else if </span>ch == <span class="string">',' </span>&amp;&amp; depth == <span class="number">0 </span>{
+<a href=#601 id=601 data-nosnippet>601</a>        pairs.push(current.trim().to_string());
+<a href=#602 id=602 data-nosnippet>602</a>        current = String::new();
+<a href=#603 id=603 data-nosnippet>603</a>      } <span class="kw">else </span>{
+<a href=#604 id=604 data-nosnippet>604</a>        current.push(ch);
+<a href=#605 id=605 data-nosnippet>605</a>      }
+<a href=#606 id=606 data-nosnippet>606</a>    }
+<a href=#607 id=607 data-nosnippet>607</a>    <span class="kw">if </span>!current.trim().is_empty() { pairs.push(current.trim().to_string()); }
+<a href=#608 id=608 data-nosnippet>608</a>
+<a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">for </span>pair <span class="kw">in </span><span class="kw-2">&amp;</span>pairs {
+<a href=#610 id=610 data-nosnippet>610</a>      <span class="kw">let </span>pair = pair.trim();
+<a href=#611 id=611 data-nosnippet>611</a>      <span class="kw">if </span>pair.is_empty() { <span class="kw">continue</span>; }
+<a href=#612 id=612 data-nosnippet>612</a>      <span class="kw">let </span>(key, value) = <span class="kw">if let </span><span class="prelude-val">Some</span>(eq_pos) = pair.find(<span class="string">'='</span>) {
+<a href=#613 id=613 data-nosnippet>613</a>        <span class="kw">let </span>v = pair[eq_pos+<span class="number">1</span>..].trim();
+<a href=#614 id=614 data-nosnippet>614</a>        <span class="comment">// Strip outer braces from value: {;} → ;
+<a href=#615 id=615 data-nosnippet>615</a>        </span><span class="kw">let </span>v = <span class="kw">if </span>v.starts_with(<span class="string">'{'</span>) &amp;&amp; v.ends_with(<span class="string">'}'</span>) {
+<a href=#616 id=616 data-nosnippet>616</a>          <span class="kw-2">&amp;</span>v[<span class="number">1</span>..v.len()-<span class="number">1</span>]
+<a href=#617 id=617 data-nosnippet>617</a>        } <span class="kw">else </span>{ v };
+<a href=#618 id=618 data-nosnippet>618</a>        (pair[..eq_pos].trim(), <span class="prelude-val">Some</span>(v.to_string()))
+<a href=#619 id=619 data-nosnippet>619</a>      } <span class="kw">else </span>{
+<a href=#620 id=620 data-nosnippet>620</a>        (pair, <span class="prelude-val">None</span>)
+<a href=#621 id=621 data-nosnippet>621</a>      };
+<a href=#622 id=622 data-nosnippet>622</a>      <span class="kw">match </span>key {
+<a href=#623 id=623 data-nosnippet>623</a>        <span class="string">"authoryear" </span>=&gt; { assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"authoryear"</span>), <span class="prelude-val">None</span>); },
+<a href=#624 id=624 data-nosnippet>624</a>        <span class="string">"numbers" </span>=&gt; { assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"numbers"</span>), <span class="prelude-val">None</span>); },
+<a href=#625 id=625 data-nosnippet>625</a>        <span class="string">"super" </span>=&gt; { assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"super"</span>), <span class="prelude-val">None</span>); },
+<a href=#626 id=626 data-nosnippet>626</a>        <span class="string">"round" </span>=&gt; {
+<a href=#627 id=627 data-nosnippet>627</a>          assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"("</span>))), <span class="prelude-val">None</span>);
+<a href=#628 id=628 data-nosnippet>628</a>          assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">")"</span>))), <span class="prelude-val">None</span>);
+<a href=#629 id=629 data-nosnippet>629</a>        },
+<a href=#630 id=630 data-nosnippet>630</a>        <span class="string">"square" </span>=&gt; {
+<a href=#631 id=631 data-nosnippet>631</a>          assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))), <span class="prelude-val">None</span>);
+<a href=#632 id=632 data-nosnippet>632</a>          assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>))), <span class="prelude-val">None</span>);
+<a href=#633 id=633 data-nosnippet>633</a>        },
+<a href=#634 id=634 data-nosnippet>634</a>        <span class="string">"curly" </span>=&gt; {
+<a href=#635 id=635 data-nosnippet>635</a>          assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>())), <span class="prelude-val">None</span>);
+<a href=#636 id=636 data-nosnippet>636</a>          assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_END!</span>())), <span class="prelude-val">None</span>);
+<a href=#637 id=637 data-nosnippet>637</a>        },
+<a href=#638 id=638 data-nosnippet>638</a>        <span class="string">"angle" </span>=&gt; {
+<a href=#639 id=639 data-nosnippet>639</a>          assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"&lt;"</span>))), <span class="prelude-val">None</span>);
+<a href=#640 id=640 data-nosnippet>640</a>          assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"&gt;"</span>))), <span class="prelude-val">None</span>);
+<a href=#641 id=641 data-nosnippet>641</a>        },
+<a href=#642 id=642 data-nosnippet>642</a>        <span class="string">"open" </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value {
+<a href=#643 id=643 data-nosnippet>643</a>          assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(mouth::tokenize_internal(<span class="kw-2">&amp;</span>v)), <span class="prelude-val">None</span>);
+<a href=#644 id=644 data-nosnippet>644</a>        },
+<a href=#645 id=645 data-nosnippet>645</a>        <span class="string">"close" </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value {
+<a href=#646 id=646 data-nosnippet>646</a>          assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(mouth::tokenize_internal(<span class="kw-2">&amp;</span>v)), <span class="prelude-val">None</span>);
+<a href=#647 id=647 data-nosnippet>647</a>        },
+<a href=#648 id=648 data-nosnippet>648</a>        <span class="string">"semicolon" </span>=&gt; {
+<a href=#649 id=649 data-nosnippet>649</a>          assign_value(<span class="string">"CITE_SEPARATOR"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">";"</span>))), <span class="prelude-val">None</span>);
+<a href=#650 id=650 data-nosnippet>650</a>        },
+<a href=#651 id=651 data-nosnippet>651</a>        <span class="string">"comma" </span>=&gt; {
+<a href=#652 id=652 data-nosnippet>652</a>          assign_value(<span class="string">"CITE_SEPARATOR"</span>, Stored::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">","</span>))), <span class="prelude-val">None</span>);
+<a href=#653 id=653 data-nosnippet>653</a>        },
+<a href=#654 id=654 data-nosnippet>654</a>        <span class="string">"citesep" </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value {
+<a href=#655 id=655 data-nosnippet>655</a>          <span class="kw">let </span>toks = Tokens::new(v.chars().map(|c| <span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">"{c}"</span>))).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+<a href=#656 id=656 data-nosnippet>656</a>          assign_value(<span class="string">"CITE_SEPARATOR"</span>, Stored::Tokens(toks), <span class="prelude-val">None</span>);
+<a href=#657 id=657 data-nosnippet>657</a>        },
+<a href=#658 id=658 data-nosnippet>658</a>        <span class="string">"aysep" </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value {
+<a href=#659 id=659 data-nosnippet>659</a>          <span class="kw">let </span>toks = Tokens::new(v.chars().map(|c| <span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">"{c}"</span>))).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+<a href=#660 id=660 data-nosnippet>660</a>          assign_value(<span class="string">"CITE_AY_SEPARATOR"</span>, Stored::Tokens(toks), <span class="prelude-val">None</span>);
+<a href=#661 id=661 data-nosnippet>661</a>        },
+<a href=#662 id=662 data-nosnippet>662</a>        <span class="string">"yysep" </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value {
+<a href=#663 id=663 data-nosnippet>663</a>          <span class="kw">let </span>toks = Tokens::new(v.chars().map(|c| <span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">"{c}"</span>))).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+<a href=#664 id=664 data-nosnippet>664</a>          assign_value(<span class="string">"CITE_YY_SEPARATOR"</span>, Stored::Tokens(toks), <span class="prelude-val">None</span>);
+<a href=#665 id=665 data-nosnippet>665</a>        },
+<a href=#666 id=666 data-nosnippet>666</a>        <span class="string">"notesep" </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value {
+<a href=#667 id=667 data-nosnippet>667</a>          <span class="kw">let </span>toks = Tokens::new(v.chars().map(|c| <span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">"{c}"</span>))).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+<a href=#668 id=668 data-nosnippet>668</a>          assign_value(<span class="string">"CITE_NOTE_SEPARATOR"</span>, Stored::Tokens(toks), <span class="prelude-val">None</span>);
+<a href=#669 id=669 data-nosnippet>669</a>        },
+<a href=#670 id=670 data-nosnippet>670</a>        <span class="kw">_ </span>=&gt; {
+<a href=#671 id=671 data-nosnippet>671</a>          assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"authoryear"</span>), <span class="prelude-val">None</span>);
+<a href=#672 id=672 data-nosnippet>672</a>          <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, key, <span class="macro">s!</span>(<span class="string">"Unexpected Citation Style keyword '{key}' using authoryear"</span>));
+<a href=#673 id=673 data-nosnippet>673</a>        }
+<a href=#674 id=674 data-nosnippet>674</a>      }
+<a href=#675 id=675 data-nosnippet>675</a>    }
+<a href=#676 id=676 data-nosnippet>676</a>  });
 <a href=#677 id=677 data-nosnippet>677</a>
-<a href=#678 id=678 data-nosnippet>678</a>    <span class="comment">// If authors or year empty, fall back to number style
-<a href=#679 id=679 data-nosnippet>679</a>    </span><span class="kw">let </span>use_number = !is_some_and_nonempty(<span class="kw-2">&amp;</span>authors) || !is_some_and_nonempty(<span class="kw-2">&amp;</span>year);
-<a href=#680 id=680 data-nosnippet>680</a>    <span class="kw">let </span>style = <span class="kw">if </span>use_number { <span class="string">"number" </span>} <span class="kw">else </span>{ <span class="kw-2">&amp;</span>style };
-<a href=#681 id=681 data-nosnippet>681</a>
-<a href=#682 id=682 data-nosnippet>682</a>    <span class="kw">let </span>refnum = <span class="kw">if </span>style == <span class="string">"number" </span>{
-<a href=#683 id=683 data-nosnippet>683</a>      <span class="kw">let </span><span class="kw-2">mut </span>toks = open.unlist();
-<a href=#684 id=684 data-nosnippet>684</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = number.clone() { toks.extend(n.unlist()); }
-<a href=#685 id=685 data-nosnippet>685</a>      toks.extend(close.unlist());
-<a href=#686 id=686 data-nosnippet>686</a>      <span class="prelude-val">Some</span>(Tokens::new(toks))
-<a href=#687 id=687 data-nosnippet>687</a>    } <span class="kw">else </span>{
-<a href=#688 id=688 data-nosnippet>688</a>      <span class="kw">let </span><span class="kw-2">mut </span>toks = Vec::new();
-<a href=#689 id=689 data-nosnippet>689</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = authors.clone() { toks.extend(a.unlist()); }
-<a href=#690 id=690 data-nosnippet>690</a>      toks.push(<span class="macro">T_SPACE!</span>());
-<a href=#691 id=691 data-nosnippet>691</a>      toks.extend(open.unlist());
-<a href=#692 id=692 data-nosnippet>692</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(y) = year.clone() { toks.extend(y.unlist()); }
-<a href=#693 id=693 data-nosnippet>693</a>      toks.extend(close.unlist());
-<a href=#694 id=694 data-nosnippet>694</a>      <span class="prelude-val">Some</span>(Tokens::new(toks))
-<a href=#695 id=695 data-nosnippet>695</a>    };
-<a href=#696 id=696 data-nosnippet>696</a>
-<a href=#697 id=697 data-nosnippet>697</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\NAT@@wrout"</span>),
-<a href=#698 id=698 data-nosnippet>698</a>      <span class="macro">vec!</span>[number, year, authors, fullauthors, refnum, key]))
-<a href=#699 id=699 data-nosnippet>699</a>  });
-<a href=#700 id=700 data-nosnippet>700</a>
-<a href=#701 id=701 data-nosnippet>701</a>  <span class="comment">// NAT@@wrout — constructor to produce the ltx:tags
-<a href=#702 id=702 data-nosnippet>702</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\NAT@@wrout{}{}{}{}{} Semiverbatim"</span>,
-<a href=#703 id=703 data-nosnippet>703</a>    <span class="string">"&lt;ltx:tags&gt;\
-<a href=#704 id=704 data-nosnippet>704</a>      ?#1(&lt;ltx:tag role='number'&gt;#1&lt;/ltx:tag&gt;)\
-<a href=#705 id=705 data-nosnippet>705</a>      ?#2(&lt;ltx:tag role='year'&gt;#2&lt;/ltx:tag&gt;)\
-<a href=#706 id=706 data-nosnippet>706</a>      ?#3(&lt;ltx:tag role='authors'&gt;#3&lt;/ltx:tag&gt;)\
-<a href=#707 id=707 data-nosnippet>707</a>      ?#4(&lt;ltx:tag role='fullauthors'&gt;#4&lt;/ltx:tag&gt;)\
-<a href=#708 id=708 data-nosnippet>708</a>      ?#5(&lt;ltx:tag role='refnum'&gt;#5&lt;/ltx:tag&gt;)\
-<a href=#709 id=709 data-nosnippet>709</a>      ?#6(&lt;ltx:tag role='key'&gt;#6&lt;/ltx:tag&gt;)\
-<a href=#710 id=710 data-nosnippet>710</a>    &lt;/ltx:tags&gt;"</span>,
-<a href=#711 id=711 data-nosnippet>711</a>    bounded =&gt; <span class="bool-val">true</span>,
-<a href=#712 id=712 data-nosnippet>712</a>    before_digest =&gt; { <span class="macro">Let!</span>(<span class="macro">T_ALIGN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\&amp;"</span>)); }
-<a href=#713 id=713 data-nosnippet>713</a>  );
-<a href=#714 id=714 data-nosnippet>714</a>
-<a href=#715 id=715 data-nosnippet>715</a>  <span class="comment">//======================================================================
-<a href=#716 id=716 data-nosnippet>716</a>  // \lx@NAT@parselabel — parse the bibitem label
-<a href=#717 id=717 data-nosnippet>717</a>  // This is complex in Perl; simplified version that handles the main patterns
-<a href=#718 id=718 data-nosnippet>718</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@NAT@parselabel{}{}"</span>, sub[args] {
-<a href=#719 id=719 data-nosnippet>719</a>    <span class="kw">let </span><span class="kw-2">mut </span>it = args.into_iter();
-<a href=#720 id=720 data-nosnippet>720</a>    <span class="kw">let </span>label: Tokens = it.next().unwrap().into();
-<a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">let </span>key: Tokens = it.next().unwrap().into();
-<a href=#722 id=722 data-nosnippet>722</a>
-<a href=#723 id=723 data-nosnippet>723</a>    <span class="kw">let </span><span class="kw-2">mut </span>tokens = label.clone().unlist();
-<a href=#724 id=724 data-nosnippet>724</a>    <span class="kw">let </span>number: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
-<a href=#725 id=725 data-nosnippet>725</a>    <span class="kw">let </span><span class="kw-2">mut </span>year: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
-<a href=#726 id=726 data-nosnippet>726</a>    <span class="kw">let </span><span class="kw-2">mut </span>authors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
-<a href=#727 id=727 data-nosnippet>727</a>    <span class="kw">let </span><span class="kw-2">mut </span>fullauthors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
-<a href=#728 id=728 data-nosnippet>728</a>    <span class="kw">let </span><span class="kw-2">mut </span>bare = <span class="bool-val">true</span>;
-<a href=#729 id=729 data-nosnippet>729</a>
-<a href=#730 id=730 data-nosnippet>730</a>    <span class="comment">// Skip \protect if present
-<a href=#731 id=731 data-nosnippet>731</a>    </span><span class="kw">if </span>!tokens.is_empty() &amp;&amp; tokens[<span class="number">0</span>] == <span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>) {
-<a href=#732 id=732 data-nosnippet>732</a>      tokens.remove(<span class="number">0</span>);
-<a href=#733 id=733 data-nosnippet>733</a>    }
-<a href=#734 id=734 data-nosnippet>734</a>
-<a href=#735 id=735 data-nosnippet>735</a>    <span class="comment">// Check if first token is a CS
-<a href=#736 id=736 data-nosnippet>736</a>    </span><span class="kw">if </span>!tokens.is_empty() &amp;&amp; tokens[<span class="number">0</span>].get_catcode() == Catcode::CS {
-<a href=#737 id=737 data-nosnippet>737</a>      <span class="kw">let </span>cs = tokens[<span class="number">0</span>];
-<a href=#738 id=738 data-nosnippet>738</a>      <span class="kw">if </span>cs == <span class="macro">T_CS!</span>(<span class="string">"\\citeauthoryear"</span>) {
-<a href=#739 id=739 data-nosnippet>739</a>        tokens.remove(<span class="number">0</span>);
-<a href=#740 id=740 data-nosnippet>740</a>        <span class="kw">let </span>(a1, rest) = nat_peel_arg(tokens);
-<a href=#741 id=741 data-nosnippet>741</a>        <span class="kw">let </span>(a2, rest) = nat_peel_arg(rest);
-<a href=#742 id=742 data-nosnippet>742</a>        <span class="kw">if </span>!rest.is_empty() {
-<a href=#743 id=743 data-nosnippet>743</a>          fullauthors = a1;
-<a href=#744 id=744 data-nosnippet>744</a>          authors = a2;
-<a href=#745 id=745 data-nosnippet>745</a>          year = <span class="prelude-val">Some</span>(Tokens::new(rest));
-<a href=#746 id=746 data-nosnippet>746</a>        } <span class="kw">else </span>{
-<a href=#747 id=747 data-nosnippet>747</a>          authors = a1;
-<a href=#748 id=748 data-nosnippet>748</a>          year = a2;
-<a href=#749 id=749 data-nosnippet>749</a>        }
-<a href=#750 id=750 data-nosnippet>750</a>        bare = <span class="bool-val">false</span>;
-<a href=#751 id=751 data-nosnippet>751</a>      } <span class="kw">else if </span>cs == <span class="macro">T_CS!</span>(<span class="string">"\\astroncite"</span>) {
-<a href=#752 id=752 data-nosnippet>752</a>        tokens.remove(<span class="number">0</span>);
-<a href=#753 id=753 data-nosnippet>753</a>        <span class="kw">let </span>(a1, rest) = nat_peel_arg(tokens);
-<a href=#754 id=754 data-nosnippet>754</a>        <span class="kw">let </span>(a2, _rest) = nat_peel_arg(rest);
-<a href=#755 id=755 data-nosnippet>755</a>        authors = a1;
-<a href=#756 id=756 data-nosnippet>756</a>        year = a2;
-<a href=#757 id=757 data-nosnippet>757</a>        bare = <span class="bool-val">false</span>;
-<a href=#758 id=758 data-nosnippet>758</a>      } <span class="kw">else if </span>cs == <span class="macro">T_CS!</span>(<span class="string">"\\citename"</span>) {
-<a href=#759 id=759 data-nosnippet>759</a>        tokens.remove(<span class="number">0</span>);
-<a href=#760 id=760 data-nosnippet>760</a>        <span class="kw">let </span>(a1, rest) = nat_peel_arg(tokens);
-<a href=#761 id=761 data-nosnippet>761</a>        authors = a1;
-<a href=#762 id=762 data-nosnippet>762</a>        year = <span class="prelude-val">Some</span>(Tokens::new(rest));
-<a href=#763 id=763 data-nosnippet>763</a>        bare = <span class="bool-val">false</span>;
-<a href=#764 id=764 data-nosnippet>764</a>      }
-<a href=#765 id=765 data-nosnippet>765</a>    }
-<a href=#766 id=766 data-nosnippet>766</a>
-<a href=#767 id=767 data-nosnippet>767</a>    <span class="kw">if </span>bare {
-<a href=#768 id=768 data-nosnippet>768</a>      <span class="comment">// Expand the label and parse: Authors(Year)FullAuthors
-<a href=#769 id=769 data-nosnippet>769</a>      </span><span class="kw">let </span>expanded = <span class="macro">Expand!</span>(label.clone());
-<a href=#770 id=770 data-nosnippet>770</a>      <span class="kw">let </span>exp_tokens = expanded.unlist();
-<a href=#771 id=771 data-nosnippet>771</a>      <span class="kw">let </span><span class="kw-2">mut </span>author_toks = Vec::new();
-<a href=#772 id=772 data-nosnippet>772</a>      <span class="kw">let </span><span class="kw-2">mut </span>year_toks = Vec::new();
-<a href=#773 id=773 data-nosnippet>773</a>      <span class="kw">let </span><span class="kw-2">mut </span>rest_idx = <span class="number">0</span>;
-<a href=#774 id=774 data-nosnippet>774</a>      <span class="kw">let </span><span class="kw-2">mut </span>found_paren = <span class="bool-val">false</span>;
-<a href=#775 id=775 data-nosnippet>775</a>
-<a href=#776 id=776 data-nosnippet>776</a>      <span class="comment">// Find the opening paren
-<a href=#777 id=777 data-nosnippet>777</a>      </span><span class="kw">for </span>(i, t) <span class="kw">in </span>exp_tokens.iter().enumerate() {
-<a href=#778 id=778 data-nosnippet>778</a>        <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"("</span>) {
-<a href=#779 id=779 data-nosnippet>779</a>          rest_idx = i + <span class="number">1</span>;
-<a href=#780 id=780 data-nosnippet>780</a>          found_paren = <span class="bool-val">true</span>;
-<a href=#781 id=781 data-nosnippet>781</a>          <span class="kw">break</span>;
-<a href=#782 id=782 data-nosnippet>782</a>        }
-<a href=#783 id=783 data-nosnippet>783</a>        author_toks.push(<span class="kw-2">*</span>t);
-<a href=#784 id=784 data-nosnippet>784</a>      }
-<a href=#785 id=785 data-nosnippet>785</a>
-<a href=#786 id=786 data-nosnippet>786</a>      <span class="kw">if </span>found_paren {
-<a href=#787 id=787 data-nosnippet>787</a>        <span class="comment">// Read until closing paren
-<a href=#788 id=788 data-nosnippet>788</a>        </span><span class="kw">for </span>(i, t) <span class="kw">in </span>exp_tokens[rest_idx..].iter().enumerate() {
-<a href=#789 id=789 data-nosnippet>789</a>          <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">")"</span>) {
-<a href=#790 id=790 data-nosnippet>790</a>            rest_idx = rest_idx + i + <span class="number">1</span>;
-<a href=#791 id=791 data-nosnippet>791</a>            <span class="kw">break</span>;
-<a href=#792 id=792 data-nosnippet>792</a>          }
-<a href=#793 id=793 data-nosnippet>793</a>          year_toks.push(<span class="kw-2">*</span>t);
-<a href=#794 id=794 data-nosnippet>794</a>        }
-<a href=#795 id=795 data-nosnippet>795</a>      } <span class="kw">else </span>{
-<a href=#796 id=796 data-nosnippet>796</a>        <span class="comment">// No paren — try splitting digits from end
-<a href=#797 id=797 data-nosnippet>797</a>        </span><span class="kw">while </span>!author_toks.is_empty() {
-<a href=#798 id=798 data-nosnippet>798</a>          <span class="kw">let </span>last = author_toks.last().unwrap();
-<a href=#799 id=799 data-nosnippet>799</a>          <span class="kw">if </span>last.get_catcode() == Catcode::OTHER {
-<a href=#800 id=800 data-nosnippet>800</a>            <span class="kw">let </span>ch = last.to_string();
-<a href=#801 id=801 data-nosnippet>801</a>            <span class="kw">if </span>ch.chars().all(|c| c.is_ascii_digit()) &amp;&amp; !ch.is_empty() {
-<a href=#802 id=802 data-nosnippet>802</a>              year_toks.insert(<span class="number">0</span>, author_toks.pop().unwrap());
-<a href=#803 id=803 data-nosnippet>803</a>              <span class="kw">continue</span>;
-<a href=#804 id=804 data-nosnippet>804</a>            }
-<a href=#805 id=805 data-nosnippet>805</a>          }
-<a href=#806 id=806 data-nosnippet>806</a>          <span class="kw">break</span>;
-<a href=#807 id=807 data-nosnippet>807</a>        }
-<a href=#808 id=808 data-nosnippet>808</a>      }
-<a href=#809 id=809 data-nosnippet>809</a>
-<a href=#810 id=810 data-nosnippet>810</a>      authors = <span class="kw">if </span>author_toks.is_empty() { <span class="prelude-val">None </span>}
-<a href=#811 id=811 data-nosnippet>811</a>        <span class="kw">else </span>{ <span class="prelude-val">Some</span>(Tokens::new(author_toks)) };
-<a href=#812 id=812 data-nosnippet>812</a>      year = <span class="kw">if </span>year_toks.is_empty() { <span class="prelude-val">None </span>}
-<a href=#813 id=813 data-nosnippet>813</a>        <span class="kw">else </span>{ <span class="prelude-val">Some</span>(Tokens::new(year_toks)) };
-<a href=#814 id=814 data-nosnippet>814</a>      <span class="comment">// Remaining tokens after ) are fullauthors
-<a href=#815 id=815 data-nosnippet>815</a>      </span><span class="kw">if </span>rest_idx &lt; exp_tokens.len() {
-<a href=#816 id=816 data-nosnippet>816</a>        <span class="kw">let </span>fa: Vec&lt;<span class="kw">_</span>&gt; = exp_tokens[rest_idx..].to_vec();
-<a href=#817 id=817 data-nosnippet>817</a>        <span class="kw">if </span>!fa.is_empty() { fullauthors = <span class="prelude-val">Some</span>(Tokens::new(fa)); }
-<a href=#818 id=818 data-nosnippet>818</a>      }
-<a href=#819 id=819 data-nosnippet>819</a>    }
+<a href=#678 id=678 data-nosnippet>678</a>  <span class="comment">// \bibpunct
+<a href=#679 id=679 data-nosnippet>679</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bibpunct[]{}{}{}{}{}{}"</span>, sub[args] {
+<a href=#680 id=680 data-nosnippet>680</a>    <span class="kw">let </span><span class="kw-2">mut </span>it = args.into_iter();
+<a href=#681 id=681 data-nosnippet>681</a>    <span class="kw">let </span>notesep: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#682 id=682 data-nosnippet>682</a>    <span class="kw">let </span>open_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#683 id=683 data-nosnippet>683</a>    <span class="kw">let </span>close_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#684 id=684 data-nosnippet>684</a>    <span class="kw">let </span>sep_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#685 id=685 data-nosnippet>685</a>    <span class="kw">let </span>style_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#686 id=686 data-nosnippet>686</a>    <span class="kw">let </span>aysep_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#687 id=687 data-nosnippet>687</a>    <span class="kw">let </span>yysep_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#688 id=688 data-nosnippet>688</a>
+<a href=#689 id=689 data-nosnippet>689</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(o) = open_arg {
+<a href=#690 id=690 data-nosnippet>690</a>      assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(o), <span class="prelude-val">None</span>);
+<a href=#691 id=691 data-nosnippet>691</a>    }
+<a href=#692 id=692 data-nosnippet>692</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = close_arg {
+<a href=#693 id=693 data-nosnippet>693</a>      assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(c), <span class="prelude-val">None</span>);
+<a href=#694 id=694 data-nosnippet>694</a>    }
+<a href=#695 id=695 data-nosnippet>695</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = sep_arg {
+<a href=#696 id=696 data-nosnippet>696</a>      assign_value(<span class="string">"CITE_SEPARATOR"</span>, Stored::Tokens(s), <span class="prelude-val">None</span>);
+<a href=#697 id=697 data-nosnippet>697</a>    }
+<a href=#698 id=698 data-nosnippet>698</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(st) = style_arg {
+<a href=#699 id=699 data-nosnippet>699</a>      <span class="kw">let </span>style_str = <span class="macro">Digest!</span>(st)<span class="question-mark">?</span>.to_string();
+<a href=#700 id=700 data-nosnippet>700</a>      <span class="kw">let </span>cite_style = <span class="kw">if </span>style_str == <span class="string">"n" </span>{ <span class="string">"numbers" </span>}
+<a href=#701 id=701 data-nosnippet>701</a>        <span class="kw">else if </span>style_str == <span class="string">"s" </span>{ <span class="string">"super" </span>}
+<a href=#702 id=702 data-nosnippet>702</a>        <span class="kw">else </span>{ <span class="string">"authoryear" </span>};
+<a href=#703 id=703 data-nosnippet>703</a>      assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(cite_style), <span class="prelude-val">None</span>);
+<a href=#704 id=704 data-nosnippet>704</a>    }
+<a href=#705 id=705 data-nosnippet>705</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(ay) = aysep_arg {
+<a href=#706 id=706 data-nosnippet>706</a>      assign_value(<span class="string">"CITE_AY_SEPARATOR"</span>, Stored::Tokens(ay), <span class="prelude-val">None</span>);
+<a href=#707 id=707 data-nosnippet>707</a>    }
+<a href=#708 id=708 data-nosnippet>708</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(yy) = yysep_arg {
+<a href=#709 id=709 data-nosnippet>709</a>      assign_value(<span class="string">"CITE_YY_SEPARATOR"</span>, Stored::Tokens(yy), <span class="prelude-val">None</span>);
+<a href=#710 id=710 data-nosnippet>710</a>    }
+<a href=#711 id=711 data-nosnippet>711</a>    <span class="kw">if </span>is_some_and_nonempty(<span class="kw-2">&amp;</span>notesep) {
+<a href=#712 id=712 data-nosnippet>712</a>      assign_value(<span class="string">"CITE_NOTE_SEPARATOR"</span>, Stored::Tokens(notesep.unwrap()), <span class="prelude-val">None</span>);
+<a href=#713 id=713 data-nosnippet>713</a>    }
+<a href=#714 id=714 data-nosnippet>714</a>  });
+<a href=#715 id=715 data-nosnippet>715</a>
+<a href=#716 id=716 data-nosnippet>716</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citestyle{}"</span>, <span class="string">"\\@citestyle{#1}\\let\\bibstyle\\@gobble"</span>);
+<a href=#717 id=717 data-nosnippet>717</a>
+<a href=#718 id=718 data-nosnippet>718</a>  <span class="comment">// bibstyle@* macros for known styles
+<a href=#719 id=719 data-nosnippet>719</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@chicago"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
+<a href=#720 id=720 data-nosnippet>720</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@named"</span>, <span class="string">"\\bibpunct{[}{]}{;}{a}{,}{,}"</span>);
+<a href=#721 id=721 data-nosnippet>721</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@agu"</span>, <span class="string">"\\bibpunct{[}{]}{;}{a}{,}{,~}"</span>);
+<a href=#722 id=722 data-nosnippet>722</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@copernicus"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
+<a href=#723 id=723 data-nosnippet>723</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@egu"</span>, <span class="string">"\\bibstyle@copernicus"</span>);
+<a href=#724 id=724 data-nosnippet>724</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@egs"</span>, <span class="string">"\\bibstyle@copernicus"</span>);
+<a href=#725 id=725 data-nosnippet>725</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@agsm"</span>,
+<a href=#726 id=726 data-nosnippet>726</a>    <span class="string">"\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&amp;}"</span>);
+<a href=#727 id=727 data-nosnippet>727</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@kluwer"</span>,
+<a href=#728 id=728 data-nosnippet>728</a>    <span class="string">"\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&amp;}"</span>);
+<a href=#729 id=729 data-nosnippet>729</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@dcu"</span>,
+<a href=#730 id=730 data-nosnippet>730</a>    <span class="string">"\\bibpunct{(}{)}{;}{a}{;}{,}\\gdef\\harvardand{and}"</span>);
+<a href=#731 id=731 data-nosnippet>731</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@aa"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{}{,}"</span>);
+<a href=#732 id=732 data-nosnippet>732</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@pass"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
+<a href=#733 id=733 data-nosnippet>733</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@anngeo"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
+<a href=#734 id=734 data-nosnippet>734</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@nlinproc"</span>, <span class="string">"\\bibpunct{(}{)}{;}{a}{,}{,}"</span>);
+<a href=#735 id=735 data-nosnippet>735</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@cospar"</span>, <span class="string">"\\bibpunct{/}{/}{,}{n}{}{}"</span>);
+<a href=#736 id=736 data-nosnippet>736</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@esa"</span>, <span class="string">"\\bibpunct{(Ref.~}{)}{,}{n}{}{}"</span>);
+<a href=#737 id=737 data-nosnippet>737</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@nature"</span>,
+<a href=#738 id=738 data-nosnippet>738</a>    <span class="string">"\\bibpunct{}{}{,}{s}{}{\\textsuperscript{,}}"</span>);
+<a href=#739 id=739 data-nosnippet>739</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@plain"</span>, <span class="string">"\\bibpunct{[}{]}{,}{n}{}{,}"</span>);
+<a href=#740 id=740 data-nosnippet>740</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@alpha"</span>, <span class="string">"\\bibstyle@plain"</span>);
+<a href=#741 id=741 data-nosnippet>741</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@abbrv"</span>, <span class="string">"\\bibstyle@plain"</span>);
+<a href=#742 id=742 data-nosnippet>742</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@unsrt"</span>, <span class="string">"\\bibstyle@plain"</span>);
+<a href=#743 id=743 data-nosnippet>743</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibstyle@plainnat"</span>, <span class="string">"\\bibpunct{[}{]}{,}{a}{,}{,}"</span>);
+<a href=#744 id=744 data-nosnippet>744</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@abbrvnat"</span>, <span class="string">"\\bibstyle@plainnat"</span>);
+<a href=#745 id=745 data-nosnippet>745</a>  <span class="macro">Let!</span>(<span class="string">"\\bibstyle@unsrtnat"</span>, <span class="string">"\\bibstyle@plainnat"</span>);
+<a href=#746 id=746 data-nosnippet>746</a>  <span class="comment">//======================================================================
+<a href=#747 id=747 data-nosnippet>747</a>  // 2.12 Other Formatting Options
+<a href=#748 id=748 data-nosnippet>748</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bibname"</span>, <span class="string">"Bibliography"</span>);
+<a href=#749 id=749 data-nosnippet>749</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\refname"</span>, <span class="string">"References"</span>);
+<a href=#750 id=750 data-nosnippet>750</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibsection"</span>, <span class="string">""</span>);
+<a href=#751 id=751 data-nosnippet>751</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibpreamble"</span>, <span class="string">""</span>);
+<a href=#752 id=752 data-nosnippet>752</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibfont"</span>, <span class="string">""</span>);
+<a href=#753 id=753 data-nosnippet>753</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citenumfont"</span>, <span class="string">""</span>);
+<a href=#754 id=754 data-nosnippet>754</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bibnumfmt{}"</span>, <span class="string">"#1"</span>);
+<a href=#755 id=755 data-nosnippet>755</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\bibhang"</span>, Dimension::new(<span class="number">0</span>));
+<a href=#756 id=756 data-nosnippet>756</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\bibsep"</span>, Glue::new(<span class="number">0</span>));
+<a href=#757 id=757 data-nosnippet>757</a>
+<a href=#758 id=758 data-nosnippet>758</a>  <span class="comment">//======================================================================
+<a href=#759 id=759 data-nosnippet>759</a>  // 2.13 Automatic Indexing of Citations
+<a href=#760 id=760 data-nosnippet>760</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifciteindex"</span>);
+<a href=#761 id=761 data-nosnippet>761</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeindextrue"</span>, <span class="string">""</span>);
+<a href=#762 id=762 data-nosnippet>762</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeindexfalse"</span>, <span class="string">""</span>);
+<a href=#763 id=763 data-nosnippet>763</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeindextype"</span>, <span class="string">""</span>);
+<a href=#764 id=764 data-nosnippet>764</a>
+<a href=#765 id=765 data-nosnippet>765</a>  <span class="comment">// 2.17 Long Author List on First Citation
+<a href=#766 id=766 data-nosnippet>766</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\shortcites Semiverbatim"</span>, <span class="string">""</span>);
+<a href=#767 id=767 data-nosnippet>767</a>
+<a href=#768 id=768 data-nosnippet>768</a>  <span class="comment">//======================================================================
+<a href=#769 id=769 data-nosnippet>769</a>  // Bibliography item handling
+<a href=#770 id=770 data-nosnippet>770</a>
+<a href=#771 id=771 data-nosnippet>771</a>  // NAT@wrout: format the refnum based on citation style
+<a href=#772 id=772 data-nosnippet>772</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\NAT@wrout{}{}{}{} Semiverbatim"</span>, sub[args] {
+<a href=#773 id=773 data-nosnippet>773</a>    <span class="kw">let </span><span class="kw-2">mut </span>it = args.into_iter();
+<a href=#774 id=774 data-nosnippet>774</a>    <span class="kw">let </span>number: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#775 id=775 data-nosnippet>775</a>    <span class="kw">let </span>year: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#776 id=776 data-nosnippet>776</a>    <span class="kw">let </span>authors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#777 id=777 data-nosnippet>777</a>    <span class="kw">let </span>fullauthors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#778 id=778 data-nosnippet>778</a>    <span class="kw">let </span>key: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = it.next().unwrap().into();
+<a href=#779 id=779 data-nosnippet>779</a>
+<a href=#780 id=780 data-nosnippet>780</a>    <span class="kw">let </span>style = cite_style();
+<a href=#781 id=781 data-nosnippet>781</a>    <span class="kw">let </span>open = cite_open();
+<a href=#782 id=782 data-nosnippet>782</a>    <span class="kw">let </span>close = cite_close();
+<a href=#783 id=783 data-nosnippet>783</a>
+<a href=#784 id=784 data-nosnippet>784</a>    <span class="comment">// If authors or year empty, fall back to number style
+<a href=#785 id=785 data-nosnippet>785</a>    </span><span class="kw">let </span>use_number = !is_some_and_nonempty(<span class="kw-2">&amp;</span>authors) || !is_some_and_nonempty(<span class="kw-2">&amp;</span>year);
+<a href=#786 id=786 data-nosnippet>786</a>    <span class="kw">let </span>style = <span class="kw">if </span>use_number { <span class="string">"number" </span>} <span class="kw">else </span>{ <span class="kw-2">&amp;</span>style };
+<a href=#787 id=787 data-nosnippet>787</a>
+<a href=#788 id=788 data-nosnippet>788</a>    <span class="kw">let </span>refnum = <span class="kw">if </span>style == <span class="string">"number" </span>{
+<a href=#789 id=789 data-nosnippet>789</a>      <span class="kw">let </span><span class="kw-2">mut </span>toks = open.unlist();
+<a href=#790 id=790 data-nosnippet>790</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = number.clone() { toks.extend(n.unlist()); }
+<a href=#791 id=791 data-nosnippet>791</a>      toks.extend(close.unlist());
+<a href=#792 id=792 data-nosnippet>792</a>      <span class="prelude-val">Some</span>(Tokens::new(toks))
+<a href=#793 id=793 data-nosnippet>793</a>    } <span class="kw">else </span>{
+<a href=#794 id=794 data-nosnippet>794</a>      <span class="kw">let </span><span class="kw-2">mut </span>toks = Vec::new();
+<a href=#795 id=795 data-nosnippet>795</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = authors.clone() { toks.extend(a.unlist()); }
+<a href=#796 id=796 data-nosnippet>796</a>      toks.push(<span class="macro">T_SPACE!</span>());
+<a href=#797 id=797 data-nosnippet>797</a>      toks.extend(open.unlist());
+<a href=#798 id=798 data-nosnippet>798</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(y) = year.clone() { toks.extend(y.unlist()); }
+<a href=#799 id=799 data-nosnippet>799</a>      toks.extend(close.unlist());
+<a href=#800 id=800 data-nosnippet>800</a>      <span class="prelude-val">Some</span>(Tokens::new(toks))
+<a href=#801 id=801 data-nosnippet>801</a>    };
+<a href=#802 id=802 data-nosnippet>802</a>
+<a href=#803 id=803 data-nosnippet>803</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\NAT@@wrout"</span>),
+<a href=#804 id=804 data-nosnippet>804</a>      <span class="macro">vec!</span>[number, year, authors, fullauthors, refnum, key]))
+<a href=#805 id=805 data-nosnippet>805</a>  });
+<a href=#806 id=806 data-nosnippet>806</a>
+<a href=#807 id=807 data-nosnippet>807</a>  <span class="comment">// NAT@@wrout — constructor to produce the ltx:tags
+<a href=#808 id=808 data-nosnippet>808</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\NAT@@wrout{}{}{}{}{} Semiverbatim"</span>,
+<a href=#809 id=809 data-nosnippet>809</a>    <span class="string">"&lt;ltx:tags&gt;\
+<a href=#810 id=810 data-nosnippet>810</a>      ?#1(&lt;ltx:tag role='number'&gt;#1&lt;/ltx:tag&gt;)\
+<a href=#811 id=811 data-nosnippet>811</a>      ?#2(&lt;ltx:tag role='year'&gt;#2&lt;/ltx:tag&gt;)\
+<a href=#812 id=812 data-nosnippet>812</a>      ?#3(&lt;ltx:tag role='authors'&gt;#3&lt;/ltx:tag&gt;)\
+<a href=#813 id=813 data-nosnippet>813</a>      ?#4(&lt;ltx:tag role='fullauthors'&gt;#4&lt;/ltx:tag&gt;)\
+<a href=#814 id=814 data-nosnippet>814</a>      ?#5(&lt;ltx:tag role='refnum'&gt;#5&lt;/ltx:tag&gt;)\
+<a href=#815 id=815 data-nosnippet>815</a>      ?#6(&lt;ltx:tag role='key'&gt;#6&lt;/ltx:tag&gt;)\
+<a href=#816 id=816 data-nosnippet>816</a>    &lt;/ltx:tags&gt;"</span>,
+<a href=#817 id=817 data-nosnippet>817</a>    bounded =&gt; <span class="bool-val">true</span>,
+<a href=#818 id=818 data-nosnippet>818</a>    before_digest =&gt; { <span class="macro">Let!</span>(<span class="macro">T_ALIGN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\&amp;"</span>)); }
+<a href=#819 id=819 data-nosnippet>819</a>  );
 <a href=#820 id=820 data-nosnippet>820</a>
-<a href=#821 id=821 data-nosnippet>821</a>    <span class="kw">let </span>number_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="kw">match </span>number {
-<a href=#822 id=822 data-nosnippet>822</a>      <span class="prelude-val">Some</span>(n) =&gt; <span class="prelude-val">Some</span>(n),
-<a href=#823 id=823 data-nosnippet>823</a>      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\the@bibitem"</span>)]))
-<a href=#824 id=824 data-nosnippet>824</a>    };
-<a href=#825 id=825 data-nosnippet>825</a>    <span class="comment">// All args for required {} params must be Some (even if empty) to ensure
-<a href=#826 id=826 data-nosnippet>826</a>    // revert produces {} braces. None would skip the arg entirely, causing arg-shifting.
-<a href=#827 id=827 data-nosnippet>827</a>    </span><span class="kw">let </span>empty = || <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>());
-<a href=#828 id=828 data-nosnippet>828</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\NAT@wrout"</span>),
-<a href=#829 id=829 data-nosnippet>829</a>      <span class="macro">vec!</span>[number_arg, year.or_else(empty), authors.or_else(empty),
-<a href=#830 id=830 data-nosnippet>830</a>           fullauthors.or_else(empty), <span class="prelude-val">Some</span>(key)]))
-<a href=#831 id=831 data-nosnippet>831</a>  });
-<a href=#832 id=832 data-nosnippet>832</a>
-<a href=#833 id=833 data-nosnippet>833</a>  <span class="comment">// \lx@nat@bibitem — natbib's version of \bibitem
-<a href=#834 id=834 data-nosnippet>834</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@nat@bibitem"</span>,
-<a href=#835 id=835 data-nosnippet>835</a>    <span class="string">"\\reset@natbib@cites\\refstepcounter{@bibitem}\\@ifnextchar[{\\@lbibitem}{\\@lbibitem[]}"</span>,
-<a href=#836 id=836 data-nosnippet>836</a>    locked =&gt; <span class="bool-val">true</span>);
-<a href=#837 id=837 data-nosnippet>837</a>  <span class="macro">Let!</span>(<span class="string">"\\bibitem"</span>, <span class="string">"\\lx@nat@bibitem"</span>);
-<a href=#838 id=838 data-nosnippet>838</a>
-<a href=#839 id=839 data-nosnippet>839</a>  <span class="comment">// RawTeX for citeauthoryear, astroncite, citename, harvarditem, NAT@ifcmd etc.
-<a href=#840 id=840 data-nosnippet>840</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\citeauthoryear#1#2#3(@)(@)\\@nil#4{%
-<a href=#841 id=841 data-nosnippet>841</a>\\if\\relax#3\\relax%
-<a href=#842 id=842 data-nosnippet>842</a>\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}\\else%
-<a href=#843 id=843 data-nosnippet>843</a>\\NAT@wrout{\\the@bibitem}{#3}{#2}{#1}{#4}\\fi}"</span>);
-<a href=#844 id=844 data-nosnippet>844</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\let\\natbib@citeauthoryear\\citeauthoryear"</span>);
-<a href=#845 id=845 data-nosnippet>845</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\astroncite#1#2(@)(@)\\@nil#3{%
-<a href=#846 id=846 data-nosnippet>846</a>\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#3}}"</span>);
-<a href=#847 id=847 data-nosnippet>847</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\let\\natbib@astroncite\\astroncite"</span>);
-<a href=#848 id=848 data-nosnippet>848</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\citename#1#2(@)(@)\\@nil#3{%
-<a href=#849 id=849 data-nosnippet>849</a>\\expandafter\\NAT@apalk#1#2, \\@nil{#3}}"</span>);
-<a href=#850 id=850 data-nosnippet>850</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\let\\natbib@citename\\citename"</span>);
-<a href=#851 id=851 data-nosnippet>851</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newcommand\\harvarditem[4][]{%
-<a href=#852 id=852 data-nosnippet>852</a>\\if\\relax#1\\relax\\bibitem[#2(#3)]{#4}\\else\\bibitem[#1(#3)#2]{#4}\\fi}"</span>);
-<a href=#853 id=853 data-nosnippet>853</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\NAT@apalk#1, #2, #3\\@nil#4{%
-<a href=#854 id=854 data-nosnippet>854</a>\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}}"</span>);
-<a href=#855 id=855 data-nosnippet>855</a>
-<a href=#856 id=856 data-nosnippet>856</a>  <span class="comment">// \reset@natbib@cites
-<a href=#857 id=857 data-nosnippet>857</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\reset@natbib@cites"</span>, <span class="prelude-val">None</span>,
-<a href=#858 id=858 data-nosnippet>858</a>    after_digest =&gt; {
-<a href=#859 id=859 data-nosnippet>859</a>      <span class="macro">Let!</span>(<span class="string">"\\citeauthoryear"</span>, <span class="string">"\\natbib@citeauthoryear"</span>);
-<a href=#860 id=860 data-nosnippet>860</a>      <span class="macro">Let!</span>(<span class="string">"\\astroncite"</span>, <span class="string">"\\natbib@astroncite"</span>);
-<a href=#861 id=861 data-nosnippet>861</a>      <span class="macro">Let!</span>(<span class="string">"\\citename"</span>, <span class="string">"\\natbib@citename"</span>);
-<a href=#862 id=862 data-nosnippet>862</a>    });
-<a href=#863 id=863 data-nosnippet>863</a>
-<a href=#864 id=864 data-nosnippet>864</a>  <span class="comment">// \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd
-<a href=#865 id=865 data-nosnippet>865</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@lbibitem[]{}"</span>,
-<a href=#866 id=866 data-nosnippet>866</a>    <span class="string">"\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock"</span>,
-<a href=#867 id=867 data-nosnippet>867</a>    locked =&gt; <span class="bool-val">true</span>);
-<a href=#868 id=868 data-nosnippet>868</a>
-<a href=#869 id=869 data-nosnippet>869</a>  <span class="comment">// \@@lbibitem — constructor opening the bibitem element
-<a href=#870 id=870 data-nosnippet>870</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@lbibitem Semiverbatim"</span>,
-<a href=#871 id=871 data-nosnippet>871</a>    <span class="string">"&lt;ltx:bibitem key='#key' xml:id='#id'&gt;"</span>,
-<a href=#872 id=872 data-nosnippet>872</a>    after_digest =&gt; sub[whatsit] {
-<a href=#873 id=873 data-nosnippet>873</a>      <span class="kw">let </span>key_str = whatsit.get_arg(<span class="number">1</span>).map(|a| {
-<a href=#874 id=874 data-nosnippet>874</a>        clean_bib_key(<span class="kw-2">&amp;</span>a.to_string())
-<a href=#875 id=875 data-nosnippet>875</a>      }).unwrap_or_default();
-<a href=#876 id=876 data-nosnippet>876</a>      <span class="kw">let </span>id = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\the@bibitem@ID"</span>))<span class="question-mark">?</span>.to_string();
-<a href=#877 id=877 data-nosnippet>877</a>      whatsit.set_property(<span class="string">"key"</span>, key_str);
-<a href=#878 id=878 data-nosnippet>878</a>      whatsit.set_property(<span class="string">"id"</span>, id);
-<a href=#879 id=879 data-nosnippet>879</a>    });
-<a href=#880 id=880 data-nosnippet>880</a>
-<a href=#881 id=881 data-nosnippet>881</a>  <span class="comment">//======================================================================
-<a href=#882 id=882 data-nosnippet>882</a>  // Misc macros
-<a href=#883 id=883 data-nosnippet>883</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\citestarts"</span>, { cite_open() });
-<a href=#884 id=884 data-nosnippet>884</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeends"</span>, { cite_close() });
-<a href=#885 id=885 data-nosnippet>885</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\betweenauthors"</span>, <span class="string">"and"</span>);
-<a href=#886 id=886 data-nosnippet>886</a>
-<a href=#887 id=887 data-nosnippet>887</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardleft"</span>, { cite_open() });
-<a href=#888 id=888 data-nosnippet>888</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardright"</span>, { cite_close() });
-<a href=#889 id=889 data-nosnippet>889</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardyearleft"</span>, { cite_open() });
-<a href=#890 id=890 data-nosnippet>890</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardyearright"</span>, { cite_close() });
-<a href=#891 id=891 data-nosnippet>891</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardand"</span>, <span class="string">"and"</span>);
-<a href=#892 id=892 data-nosnippet>892</a>
-<a href=#893 id=893 data-nosnippet>893</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\harvardurl Semiverbatim"</span>,
-<a href=#894 id=894 data-nosnippet>894</a>    <span class="string">"&lt;ltx:ref href='#href'&gt;#1&lt;/ltx:ref&gt;"</span>,
-<a href=#895 id=895 data-nosnippet>895</a>    mode =&gt; <span class="string">"text"</span>,
-<a href=#896 id=896 data-nosnippet>896</a>    properties =&gt; sub[args] {
-<a href=#897 id=897 data-nosnippet>897</a>      <span class="macro">unpack_opt_ref!</span>(args =&gt; url_opt);
-<a href=#898 id=898 data-nosnippet>898</a>      <span class="kw">let </span>href = url_opt.as_ref().map_or(String::new(), |u| u.to_string());
-<a href=#899 id=899 data-nosnippet>899</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"href" </span>=&gt; href))
-<a href=#900 id=900 data-nosnippet>900</a>    }
-<a href=#901 id=901 data-nosnippet>901</a>  );
-<a href=#902 id=902 data-nosnippet>902</a>
-<a href=#903 id=903 data-nosnippet>903</a>  <span class="macro">Let!</span>(<span class="string">"\\citeN"</span>, <span class="string">"\\cite"</span>);
-<a href=#904 id=904 data-nosnippet>904</a>  <span class="macro">Let!</span>(<span class="string">"\\shortcite"</span>, <span class="string">"\\cite"</span>);
-<a href=#905 id=905 data-nosnippet>905</a>  <span class="macro">Let!</span>(<span class="string">"\\citeasnoun"</span>, <span class="string">"\\cite"</span>);
-<a href=#906 id=906 data-nosnippet>906</a>
-<a href=#907 id=907 data-nosnippet>907</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\natexlab{}"</span>, <span class="string">"#1"</span>);
-<a href=#908 id=908 data-nosnippet>908</a>
-<a href=#909 id=909 data-nosnippet>909</a>  <span class="comment">// setcitestyle: KeyVal-based style setting (simplified: delegates to bibpunct-like logic)
-<a href=#910 id=910 data-nosnippet>910</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\setcitestyle{}"</span>, sub[(keyvals_arg)] {
-<a href=#911 id=911 data-nosnippet>911</a>    <span class="kw">let </span>kv_str = keyvals_arg.to_string();
-<a href=#912 id=912 data-nosnippet>912</a>    <span class="comment">// Parse simple key=value or bare-key pairs
-<a href=#913 id=913 data-nosnippet>913</a>    </span><span class="kw">for </span>item <span class="kw">in </span>kv_str.split(<span class="string">','</span>) {
-<a href=#914 id=914 data-nosnippet>914</a>      <span class="kw">let </span>item = item.trim();
-<a href=#915 id=915 data-nosnippet>915</a>      <span class="kw">if </span>item.is_empty() { <span class="kw">continue</span>; }
-<a href=#916 id=916 data-nosnippet>916</a>      <span class="kw">let </span>(k, v) = <span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = item.find(<span class="string">'='</span>) {
-<a href=#917 id=917 data-nosnippet>917</a>        (<span class="kw-2">&amp;</span>item[..pos], <span class="kw-2">&amp;</span>item[pos+<span class="number">1</span>..])
-<a href=#918 id=918 data-nosnippet>918</a>      } <span class="kw">else </span>{
-<a href=#919 id=919 data-nosnippet>919</a>        (item, <span class="string">"true"</span>)
-<a href=#920 id=920 data-nosnippet>920</a>      };
-<a href=#921 id=921 data-nosnippet>921</a>      <span class="kw">match </span>k {
-<a href=#922 id=922 data-nosnippet>922</a>        <span class="string">"authoryear" </span>=&gt; { assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"authoryear"</span>), <span class="prelude-val">None</span>); },
-<a href=#923 id=923 data-nosnippet>923</a>        <span class="string">"numbers" </span>=&gt; { assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"numbers"</span>), <span class="prelude-val">None</span>); },
-<a href=#924 id=924 data-nosnippet>924</a>        <span class="string">"super" </span>=&gt; { assign_value(<span class="string">"CITE_STYLE"</span>, arena::pin(<span class="string">"super"</span>), <span class="prelude-val">None</span>); },
-<a href=#925 id=925 data-nosnippet>925</a>        <span class="string">"round" </span>=&gt; { set_citation_style(<span class="kw-2">&amp;</span>[(<span class="string">"round"</span>, <span class="string">"1"</span>)]); },
-<a href=#926 id=926 data-nosnippet>926</a>        <span class="string">"square" </span>=&gt; { set_citation_style(<span class="kw-2">&amp;</span>[(<span class="string">"square"</span>, <span class="string">"1"</span>)]); },
-<a href=#927 id=927 data-nosnippet>927</a>        <span class="string">"open" </span>=&gt; {
-<a href=#928 id=928 data-nosnippet>928</a>          <span class="kw">let </span>tks = mouth::tokenize_internal(v);
-<a href=#929 id=929 data-nosnippet>929</a>          assign_value(<span class="string">"CITE_OPEN"</span>, Stored::Tokens(tks), <span class="prelude-val">None</span>);
-<a href=#930 id=930 data-nosnippet>930</a>        },
-<a href=#931 id=931 data-nosnippet>931</a>        <span class="string">"close" </span>=&gt; {
-<a href=#932 id=932 data-nosnippet>932</a>          <span class="kw">let </span>tks = mouth::tokenize_internal(v);
-<a href=#933 id=933 data-nosnippet>933</a>          assign_value(<span class="string">"CITE_CLOSE"</span>, Stored::Tokens(tks), <span class="prelude-val">None</span>);
-<a href=#934 id=934 data-nosnippet>934</a>        },
-<a href=#935 id=935 data-nosnippet>935</a>        <span class="string">"semicolon" </span>=&gt; { set_citation_style(<span class="kw-2">&amp;</span>[(<span class="string">"semicolon"</span>, <span class="string">"1"</span>)]); },
-<a href=#936 id=936 data-nosnippet>936</a>        <span class="string">"comma" </span>=&gt; { set_citation_style(<span class="kw-2">&amp;</span>[(<span class="string">"comma"</span>, <span class="string">"1"</span>)]); },
-<a href=#937 id=937 data-nosnippet>937</a>        <span class="string">"aysep" </span>=&gt; {
-<a href=#938 id=938 data-nosnippet>938</a>          <span class="kw">let </span>tks = mouth::tokenize_internal(v);
-<a href=#939 id=939 data-nosnippet>939</a>          assign_value(<span class="string">"CITE_AY_SEPARATOR"</span>, Stored::Tokens(tks), <span class="prelude-val">None</span>);
-<a href=#940 id=940 data-nosnippet>940</a>        },
-<a href=#941 id=941 data-nosnippet>941</a>        <span class="string">"yysep" </span>=&gt; {
-<a href=#942 id=942 data-nosnippet>942</a>          <span class="kw">let </span>tks = mouth::tokenize_internal(v);
-<a href=#943 id=943 data-nosnippet>943</a>          assign_value(<span class="string">"CITE_YY_SEPARATOR"</span>, Stored::Tokens(tks), <span class="prelude-val">None</span>);
-<a href=#944 id=944 data-nosnippet>944</a>        },
-<a href=#945 id=945 data-nosnippet>945</a>        <span class="string">"notesep" </span>=&gt; {
-<a href=#946 id=946 data-nosnippet>946</a>          <span class="kw">let </span>tks = mouth::tokenize_internal(v);
-<a href=#947 id=947 data-nosnippet>947</a>          assign_value(<span class="string">"CITE_NOTE_SEPARATOR"</span>, Stored::Tokens(tks), <span class="prelude-val">None</span>);
-<a href=#948 id=948 data-nosnippet>948</a>        },
-<a href=#949 id=949 data-nosnippet>949</a>        <span class="kw">_ </span>=&gt; {}
-<a href=#950 id=950 data-nosnippet>950</a>      }
-<a href=#951 id=951 data-nosnippet>951</a>    }
-<a href=#952 id=952 data-nosnippet>952</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-<a href=#953 id=953 data-nosnippet>953</a>  });
-<a href=#954 id=954 data-nosnippet>954</a>});
-<a href=#955 id=955 data-nosnippet>955</a>
-<a href=#956 id=956 data-nosnippet>956</a><span class="comment">// Helper: peel a brace-delimited argument from a token list
-<a href=#957 id=957 data-nosnippet>957</a></span><span class="kw">fn </span>nat_peel_arg(<span class="kw-2">mut </span>tokens: Vec&lt;Token&gt;) -&gt; (<span class="prelude-ty">Option</span>&lt;Tokens&gt;, Vec&lt;Token&gt;) {
-<a href=#958 id=958 data-nosnippet>958</a>  <span class="kw">if </span>tokens.is_empty() {
-<a href=#959 id=959 data-nosnippet>959</a>    <span class="kw">return </span>(<span class="prelude-val">None</span>, tokens);
-<a href=#960 id=960 data-nosnippet>960</a>  }
-<a href=#961 id=961 data-nosnippet>961</a>  <span class="kw">if </span>tokens[<span class="number">0</span>].get_catcode() != Catcode::BEGIN {
-<a href=#962 id=962 data-nosnippet>962</a>    <span class="comment">// Not braced — single token
-<a href=#963 id=963 data-nosnippet>963</a>    </span><span class="kw">let </span>t = tokens.remove(<span class="number">0</span>);
-<a href=#964 id=964 data-nosnippet>964</a>    <span class="kw">return </span>(<span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[t])), tokens);
-<a href=#965 id=965 data-nosnippet>965</a>  }
-<a href=#966 id=966 data-nosnippet>966</a>  <span class="comment">// Braced group
-<a href=#967 id=967 data-nosnippet>967</a>  </span>tokens.remove(<span class="number">0</span>); <span class="comment">// remove opening brace
-<a href=#968 id=968 data-nosnippet>968</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>arg = Vec::new();
-<a href=#969 id=969 data-nosnippet>969</a>  <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1i32</span>;
-<a href=#970 id=970 data-nosnippet>970</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = tokens.first().cloned() {
-<a href=#971 id=971 data-nosnippet>971</a>    tokens.remove(<span class="number">0</span>);
-<a href=#972 id=972 data-nosnippet>972</a>    <span class="kw">let </span>cc = t.get_catcode();
-<a href=#973 id=973 data-nosnippet>973</a>    <span class="kw">if </span>cc == Catcode::BEGIN { level += <span class="number">1</span>; }
-<a href=#974 id=974 data-nosnippet>974</a>    <span class="kw">if </span>cc == Catcode::END {
-<a href=#975 id=975 data-nosnippet>975</a>      level -= <span class="number">1</span>;
-<a href=#976 id=976 data-nosnippet>976</a>      <span class="kw">if </span>level == <span class="number">0 </span>{ <span class="kw">break</span>; }
-<a href=#977 id=977 data-nosnippet>977</a>    }
-<a href=#978 id=978 data-nosnippet>978</a>    arg.push(t);
-<a href=#979 id=979 data-nosnippet>979</a>  }
-<a href=#980 id=980 data-nosnippet>980</a>  <span class="kw">let </span>result = <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(Tokens::new(arg)) };
-<a href=#981 id=981 data-nosnippet>981</a>  (result, tokens)
-<a href=#982 id=982 data-nosnippet>982</a>}
+<a href=#821 id=821 data-nosnippet>821</a>  <span class="comment">//======================================================================
+<a href=#822 id=822 data-nosnippet>822</a>  // \lx@NAT@parselabel — parse the bibitem label
+<a href=#823 id=823 data-nosnippet>823</a>  // This is complex in Perl; simplified version that handles the main patterns
+<a href=#824 id=824 data-nosnippet>824</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@NAT@parselabel{}{}"</span>, sub[args] {
+<a href=#825 id=825 data-nosnippet>825</a>    <span class="kw">let </span><span class="kw-2">mut </span>it = args.into_iter();
+<a href=#826 id=826 data-nosnippet>826</a>    <span class="kw">let </span>label: Tokens = it.next().unwrap().into();
+<a href=#827 id=827 data-nosnippet>827</a>    <span class="kw">let </span>key: Tokens = it.next().unwrap().into();
+<a href=#828 id=828 data-nosnippet>828</a>
+<a href=#829 id=829 data-nosnippet>829</a>    <span class="kw">let </span><span class="kw-2">mut </span>tokens = label.clone().unlist();
+<a href=#830 id=830 data-nosnippet>830</a>    <span class="kw">let </span>number: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
+<a href=#831 id=831 data-nosnippet>831</a>    <span class="kw">let </span><span class="kw-2">mut </span>year: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
+<a href=#832 id=832 data-nosnippet>832</a>    <span class="kw">let </span><span class="kw-2">mut </span>authors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
+<a href=#833 id=833 data-nosnippet>833</a>    <span class="kw">let </span><span class="kw-2">mut </span>fullauthors: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="prelude-val">None</span>;
+<a href=#834 id=834 data-nosnippet>834</a>    <span class="kw">let </span><span class="kw-2">mut </span>bare = <span class="bool-val">true</span>;
+<a href=#835 id=835 data-nosnippet>835</a>
+<a href=#836 id=836 data-nosnippet>836</a>    <span class="comment">// Skip \protect if present
+<a href=#837 id=837 data-nosnippet>837</a>    </span><span class="kw">if </span>!tokens.is_empty() &amp;&amp; tokens[<span class="number">0</span>] == <span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>) {
+<a href=#838 id=838 data-nosnippet>838</a>      tokens.remove(<span class="number">0</span>);
+<a href=#839 id=839 data-nosnippet>839</a>    }
+<a href=#840 id=840 data-nosnippet>840</a>
+<a href=#841 id=841 data-nosnippet>841</a>    <span class="comment">// Check if first token is a CS
+<a href=#842 id=842 data-nosnippet>842</a>    </span><span class="kw">if </span>!tokens.is_empty() &amp;&amp; tokens[<span class="number">0</span>].get_catcode() == Catcode::CS {
+<a href=#843 id=843 data-nosnippet>843</a>      <span class="kw">let </span>cs = tokens[<span class="number">0</span>];
+<a href=#844 id=844 data-nosnippet>844</a>      <span class="kw">if </span>cs == <span class="macro">T_CS!</span>(<span class="string">"\\citeauthoryear"</span>) {
+<a href=#845 id=845 data-nosnippet>845</a>        tokens.remove(<span class="number">0</span>);
+<a href=#846 id=846 data-nosnippet>846</a>        <span class="kw">let </span>(a1, rest) = nat_peel_arg(tokens);
+<a href=#847 id=847 data-nosnippet>847</a>        <span class="kw">let </span>(a2, rest) = nat_peel_arg(rest);
+<a href=#848 id=848 data-nosnippet>848</a>        <span class="kw">if </span>!rest.is_empty() {
+<a href=#849 id=849 data-nosnippet>849</a>          fullauthors = a1;
+<a href=#850 id=850 data-nosnippet>850</a>          authors = a2;
+<a href=#851 id=851 data-nosnippet>851</a>          year = <span class="prelude-val">Some</span>(Tokens::new(rest));
+<a href=#852 id=852 data-nosnippet>852</a>        } <span class="kw">else </span>{
+<a href=#853 id=853 data-nosnippet>853</a>          authors = a1;
+<a href=#854 id=854 data-nosnippet>854</a>          year = a2;
+<a href=#855 id=855 data-nosnippet>855</a>        }
+<a href=#856 id=856 data-nosnippet>856</a>        bare = <span class="bool-val">false</span>;
+<a href=#857 id=857 data-nosnippet>857</a>      } <span class="kw">else if </span>cs == <span class="macro">T_CS!</span>(<span class="string">"\\astroncite"</span>) {
+<a href=#858 id=858 data-nosnippet>858</a>        tokens.remove(<span class="number">0</span>);
+<a href=#859 id=859 data-nosnippet>859</a>        <span class="kw">let </span>(a1, rest) = nat_peel_arg(tokens);
+<a href=#860 id=860 data-nosnippet>860</a>        <span class="kw">let </span>(a2, _rest) = nat_peel_arg(rest);
+<a href=#861 id=861 data-nosnippet>861</a>        authors = a1;
+<a href=#862 id=862 data-nosnippet>862</a>        year = a2;
+<a href=#863 id=863 data-nosnippet>863</a>        bare = <span class="bool-val">false</span>;
+<a href=#864 id=864 data-nosnippet>864</a>      } <span class="kw">else if </span>cs == <span class="macro">T_CS!</span>(<span class="string">"\\citename"</span>) {
+<a href=#865 id=865 data-nosnippet>865</a>        tokens.remove(<span class="number">0</span>);
+<a href=#866 id=866 data-nosnippet>866</a>        <span class="kw">let </span>(a1, rest) = nat_peel_arg(tokens);
+<a href=#867 id=867 data-nosnippet>867</a>        authors = a1;
+<a href=#868 id=868 data-nosnippet>868</a>        year = <span class="prelude-val">Some</span>(Tokens::new(rest));
+<a href=#869 id=869 data-nosnippet>869</a>        bare = <span class="bool-val">false</span>;
+<a href=#870 id=870 data-nosnippet>870</a>      }
+<a href=#871 id=871 data-nosnippet>871</a>    }
+<a href=#872 id=872 data-nosnippet>872</a>
+<a href=#873 id=873 data-nosnippet>873</a>    <span class="kw">if </span>bare {
+<a href=#874 id=874 data-nosnippet>874</a>      <span class="comment">// Expand the label and parse: Authors(Year)FullAuthors
+<a href=#875 id=875 data-nosnippet>875</a>      </span><span class="kw">let </span>expanded = <span class="macro">Expand!</span>(label.clone());
+<a href=#876 id=876 data-nosnippet>876</a>      <span class="kw">let </span>exp_tokens = expanded.unlist();
+<a href=#877 id=877 data-nosnippet>877</a>      <span class="kw">let </span><span class="kw-2">mut </span>author_toks = Vec::new();
+<a href=#878 id=878 data-nosnippet>878</a>      <span class="kw">let </span><span class="kw-2">mut </span>year_toks = Vec::new();
+<a href=#879 id=879 data-nosnippet>879</a>      <span class="kw">let </span><span class="kw-2">mut </span>rest_idx = <span class="number">0</span>;
+<a href=#880 id=880 data-nosnippet>880</a>      <span class="kw">let </span><span class="kw-2">mut </span>found_paren = <span class="bool-val">false</span>;
+<a href=#881 id=881 data-nosnippet>881</a>
+<a href=#882 id=882 data-nosnippet>882</a>      <span class="comment">// Find the opening paren
+<a href=#883 id=883 data-nosnippet>883</a>      </span><span class="kw">for </span>(i, t) <span class="kw">in </span>exp_tokens.iter().enumerate() {
+<a href=#884 id=884 data-nosnippet>884</a>        <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"("</span>) {
+<a href=#885 id=885 data-nosnippet>885</a>          rest_idx = i + <span class="number">1</span>;
+<a href=#886 id=886 data-nosnippet>886</a>          found_paren = <span class="bool-val">true</span>;
+<a href=#887 id=887 data-nosnippet>887</a>          <span class="kw">break</span>;
+<a href=#888 id=888 data-nosnippet>888</a>        }
+<a href=#889 id=889 data-nosnippet>889</a>        author_toks.push(<span class="kw-2">*</span>t);
+<a href=#890 id=890 data-nosnippet>890</a>      }
+<a href=#891 id=891 data-nosnippet>891</a>
+<a href=#892 id=892 data-nosnippet>892</a>      <span class="kw">if </span>found_paren {
+<a href=#893 id=893 data-nosnippet>893</a>        <span class="comment">// Read until closing paren
+<a href=#894 id=894 data-nosnippet>894</a>        </span><span class="kw">for </span>(i, t) <span class="kw">in </span>exp_tokens[rest_idx..].iter().enumerate() {
+<a href=#895 id=895 data-nosnippet>895</a>          <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">")"</span>) {
+<a href=#896 id=896 data-nosnippet>896</a>            rest_idx = rest_idx + i + <span class="number">1</span>;
+<a href=#897 id=897 data-nosnippet>897</a>            <span class="kw">break</span>;
+<a href=#898 id=898 data-nosnippet>898</a>          }
+<a href=#899 id=899 data-nosnippet>899</a>          year_toks.push(<span class="kw-2">*</span>t);
+<a href=#900 id=900 data-nosnippet>900</a>        }
+<a href=#901 id=901 data-nosnippet>901</a>      } <span class="kw">else </span>{
+<a href=#902 id=902 data-nosnippet>902</a>        <span class="comment">// No paren — try splitting digits from end
+<a href=#903 id=903 data-nosnippet>903</a>        </span><span class="kw">while </span>!author_toks.is_empty() {
+<a href=#904 id=904 data-nosnippet>904</a>          <span class="kw">let </span>last = author_toks.last().unwrap();
+<a href=#905 id=905 data-nosnippet>905</a>          <span class="kw">if </span>last.get_catcode() == Catcode::OTHER {
+<a href=#906 id=906 data-nosnippet>906</a>            <span class="kw">let </span>ch = last.to_string();
+<a href=#907 id=907 data-nosnippet>907</a>            <span class="kw">if </span>ch.chars().all(|c| c.is_ascii_digit()) &amp;&amp; !ch.is_empty() {
+<a href=#908 id=908 data-nosnippet>908</a>              year_toks.insert(<span class="number">0</span>, author_toks.pop().unwrap());
+<a href=#909 id=909 data-nosnippet>909</a>              <span class="kw">continue</span>;
+<a href=#910 id=910 data-nosnippet>910</a>            }
+<a href=#911 id=911 data-nosnippet>911</a>          }
+<a href=#912 id=912 data-nosnippet>912</a>          <span class="kw">break</span>;
+<a href=#913 id=913 data-nosnippet>913</a>        }
+<a href=#914 id=914 data-nosnippet>914</a>      }
+<a href=#915 id=915 data-nosnippet>915</a>
+<a href=#916 id=916 data-nosnippet>916</a>      authors = <span class="kw">if </span>author_toks.is_empty() { <span class="prelude-val">None </span>}
+<a href=#917 id=917 data-nosnippet>917</a>        <span class="kw">else </span>{ <span class="prelude-val">Some</span>(Tokens::new(author_toks)) };
+<a href=#918 id=918 data-nosnippet>918</a>      year = <span class="kw">if </span>year_toks.is_empty() { <span class="prelude-val">None </span>}
+<a href=#919 id=919 data-nosnippet>919</a>        <span class="kw">else </span>{ <span class="prelude-val">Some</span>(Tokens::new(year_toks)) };
+<a href=#920 id=920 data-nosnippet>920</a>      <span class="comment">// Remaining tokens after ) are fullauthors
+<a href=#921 id=921 data-nosnippet>921</a>      </span><span class="kw">if </span>rest_idx &lt; exp_tokens.len() {
+<a href=#922 id=922 data-nosnippet>922</a>        <span class="kw">let </span>fa: Vec&lt;<span class="kw">_</span>&gt; = exp_tokens[rest_idx..].to_vec();
+<a href=#923 id=923 data-nosnippet>923</a>        <span class="kw">if </span>!fa.is_empty() { fullauthors = <span class="prelude-val">Some</span>(Tokens::new(fa)); }
+<a href=#924 id=924 data-nosnippet>924</a>      }
+<a href=#925 id=925 data-nosnippet>925</a>    }
+<a href=#926 id=926 data-nosnippet>926</a>
+<a href=#927 id=927 data-nosnippet>927</a>    <span class="kw">let </span>number_arg: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = <span class="kw">match </span>number {
+<a href=#928 id=928 data-nosnippet>928</a>      <span class="prelude-val">Some</span>(n) =&gt; <span class="prelude-val">Some</span>(n),
+<a href=#929 id=929 data-nosnippet>929</a>      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\the@bibitem"</span>)]))
+<a href=#930 id=930 data-nosnippet>930</a>    };
+<a href=#931 id=931 data-nosnippet>931</a>    <span class="comment">// All args for required {} params must be Some (even if empty) to ensure
+<a href=#932 id=932 data-nosnippet>932</a>    // revert produces {} braces. None would skip the arg entirely, causing arg-shifting.
+<a href=#933 id=933 data-nosnippet>933</a>    </span><span class="kw">let </span>empty = || <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>());
+<a href=#934 id=934 data-nosnippet>934</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\NAT@wrout"</span>),
+<a href=#935 id=935 data-nosnippet>935</a>      <span class="macro">vec!</span>[number_arg, year.or_else(empty), authors.or_else(empty),
+<a href=#936 id=936 data-nosnippet>936</a>           fullauthors.or_else(empty), <span class="prelude-val">Some</span>(key)]))
+<a href=#937 id=937 data-nosnippet>937</a>  });
+<a href=#938 id=938 data-nosnippet>938</a>
+<a href=#939 id=939 data-nosnippet>939</a>  <span class="comment">// \lx@nat@bibitem — natbib's version of \bibitem
+<a href=#940 id=940 data-nosnippet>940</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@nat@bibitem"</span>,
+<a href=#941 id=941 data-nosnippet>941</a>    <span class="string">"\\reset@natbib@cites\\refstepcounter{@bibitem}\\@ifnextchar[{\\@lbibitem}{\\@lbibitem[]}"</span>,
+<a href=#942 id=942 data-nosnippet>942</a>    locked =&gt; <span class="bool-val">true</span>);
+<a href=#943 id=943 data-nosnippet>943</a>  <span class="macro">Let!</span>(<span class="string">"\\bibitem"</span>, <span class="string">"\\lx@nat@bibitem"</span>);
+<a href=#944 id=944 data-nosnippet>944</a>
+<a href=#945 id=945 data-nosnippet>945</a>  <span class="comment">// RawTeX for citeauthoryear, astroncite, citename, harvarditem, NAT@ifcmd etc.
+<a href=#946 id=946 data-nosnippet>946</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\citeauthoryear#1#2#3(@)(@)\\@nil#4{%
+<a href=#947 id=947 data-nosnippet>947</a>\\if\\relax#3\\relax%
+<a href=#948 id=948 data-nosnippet>948</a>\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}\\else%
+<a href=#949 id=949 data-nosnippet>949</a>\\NAT@wrout{\\the@bibitem}{#3}{#2}{#1}{#4}\\fi}"</span>);
+<a href=#950 id=950 data-nosnippet>950</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\let\\natbib@citeauthoryear\\citeauthoryear"</span>);
+<a href=#951 id=951 data-nosnippet>951</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\astroncite#1#2(@)(@)\\@nil#3{%
+<a href=#952 id=952 data-nosnippet>952</a>\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#3}}"</span>);
+<a href=#953 id=953 data-nosnippet>953</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\let\\natbib@astroncite\\astroncite"</span>);
+<a href=#954 id=954 data-nosnippet>954</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\citename#1#2(@)(@)\\@nil#3{%
+<a href=#955 id=955 data-nosnippet>955</a>\\expandafter\\NAT@apalk#1#2, \\@nil{#3}}"</span>);
+<a href=#956 id=956 data-nosnippet>956</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\let\\natbib@citename\\citename"</span>);
+<a href=#957 id=957 data-nosnippet>957</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newcommand\\harvarditem[4][]{%
+<a href=#958 id=958 data-nosnippet>958</a>\\if\\relax#1\\relax\\bibitem[#2(#3)]{#4}\\else\\bibitem[#1(#3)#2]{#4}\\fi}"</span>);
+<a href=#959 id=959 data-nosnippet>959</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\NAT@apalk#1, #2, #3\\@nil#4{%
+<a href=#960 id=960 data-nosnippet>960</a>\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}}"</span>);
+<a href=#961 id=961 data-nosnippet>961</a>
+<a href=#962 id=962 data-nosnippet>962</a>  <span class="comment">// \reset@natbib@cites
+<a href=#963 id=963 data-nosnippet>963</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\reset@natbib@cites"</span>, <span class="prelude-val">None</span>,
+<a href=#964 id=964 data-nosnippet>964</a>    after_digest =&gt; {
+<a href=#965 id=965 data-nosnippet>965</a>      <span class="macro">Let!</span>(<span class="string">"\\citeauthoryear"</span>, <span class="string">"\\natbib@citeauthoryear"</span>);
+<a href=#966 id=966 data-nosnippet>966</a>      <span class="macro">Let!</span>(<span class="string">"\\astroncite"</span>, <span class="string">"\\natbib@astroncite"</span>);
+<a href=#967 id=967 data-nosnippet>967</a>      <span class="macro">Let!</span>(<span class="string">"\\citename"</span>, <span class="string">"\\natbib@citename"</span>);
+<a href=#968 id=968 data-nosnippet>968</a>    });
+<a href=#969 id=969 data-nosnippet>969</a>
+<a href=#970 id=970 data-nosnippet>970</a>  <span class="comment">// \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd
+<a href=#971 id=971 data-nosnippet>971</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@lbibitem[]{}"</span>,
+<a href=#972 id=972 data-nosnippet>972</a>    <span class="string">"\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock"</span>,
+<a href=#973 id=973 data-nosnippet>973</a>    locked =&gt; <span class="bool-val">true</span>);
+<a href=#974 id=974 data-nosnippet>974</a>
+<a href=#975 id=975 data-nosnippet>975</a>  <span class="comment">// \@@lbibitem — constructor opening the bibitem element
+<a href=#976 id=976 data-nosnippet>976</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@lbibitem Semiverbatim"</span>,
+<a href=#977 id=977 data-nosnippet>977</a>    <span class="string">"&lt;ltx:bibitem key='#key' xml:id='#id'&gt;"</span>,
+<a href=#978 id=978 data-nosnippet>978</a>    after_digest =&gt; sub[whatsit] {
+<a href=#979 id=979 data-nosnippet>979</a>      <span class="kw">let </span>key_str = whatsit.get_arg(<span class="number">1</span>).map(|a| {
+<a href=#980 id=980 data-nosnippet>980</a>        clean_bib_key(<span class="kw-2">&amp;</span>a.to_string())
+<a href=#981 id=981 data-nosnippet>981</a>      }).unwrap_or_default();
+<a href=#982 id=982 data-nosnippet>982</a>      <span class="kw">let </span>id = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\the@bibitem@ID"</span>))<span class="question-mark">?</span>.to_string();
+<a href=#983 id=983 data-nosnippet>983</a>      whatsit.set_property(<span class="string">"key"</span>, key_str);
+<a href=#984 id=984 data-nosnippet>984</a>      whatsit.set_property(<span class="string">"id"</span>, id);
+<a href=#985 id=985 data-nosnippet>985</a>    });
+<a href=#986 id=986 data-nosnippet>986</a>
+<a href=#987 id=987 data-nosnippet>987</a>  <span class="comment">//======================================================================
+<a href=#988 id=988 data-nosnippet>988</a>  // Misc macros
+<a href=#989 id=989 data-nosnippet>989</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\citestarts"</span>, { cite_open() });
+<a href=#990 id=990 data-nosnippet>990</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\citeends"</span>, { cite_close() });
+<a href=#991 id=991 data-nosnippet>991</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\betweenauthors"</span>, <span class="string">"and"</span>);
+<a href=#992 id=992 data-nosnippet>992</a>
+<a href=#993 id=993 data-nosnippet>993</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardleft"</span>, { cite_open() });
+<a href=#994 id=994 data-nosnippet>994</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardright"</span>, { cite_close() });
+<a href=#995 id=995 data-nosnippet>995</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardyearleft"</span>, { cite_open() });
+<a href=#996 id=996 data-nosnippet>996</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardyearright"</span>, { cite_close() });
+<a href=#997 id=997 data-nosnippet>997</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvardand"</span>, <span class="string">"and"</span>);
+<a href=#998 id=998 data-nosnippet>998</a>
+<a href=#999 id=999 data-nosnippet>999</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\harvardurl Semiverbatim"</span>,
+<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="string">"&lt;ltx:ref href='#href'&gt;#1&lt;/ltx:ref&gt;"</span>,
+<a href=#1001 id=1001 data-nosnippet>1001</a>    mode =&gt; <span class="string">"text"</span>,
+<a href=#1002 id=1002 data-nosnippet>1002</a>    properties =&gt; sub[args] {
+<a href=#1003 id=1003 data-nosnippet>1003</a>      <span class="macro">unpack_opt_ref!</span>(args =&gt; url_opt);
+<a href=#1004 id=1004 data-nosnippet>1004</a>      <span class="kw">let </span>href = url_opt.as_ref().map_or(String::new(), |u| u.to_string());
+<a href=#1005 id=1005 data-nosnippet>1005</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"href" </span>=&gt; href))
+<a href=#1006 id=1006 data-nosnippet>1006</a>    }
+<a href=#1007 id=1007 data-nosnippet>1007</a>  );
+<a href=#1008 id=1008 data-nosnippet>1008</a>
+<a href=#1009 id=1009 data-nosnippet>1009</a>  <span class="macro">Let!</span>(<span class="string">"\\citeN"</span>, <span class="string">"\\cite"</span>);
+<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="macro">Let!</span>(<span class="string">"\\shortcite"</span>, <span class="string">"\\cite"</span>);
+<a href=#1011 id=1011 data-nosnippet>1011</a>  <span class="macro">Let!</span>(<span class="string">"\\citeasnoun"</span>, <span class="string">"\\cite"</span>);
+<a href=#1012 id=1012 data-nosnippet>1012</a>
+<a href=#1013 id=1013 data-nosnippet>1013</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\natexlab{}"</span>, <span class="string">"#1"</span>);
+<a href=#1014 id=1014 data-nosnippet>1014</a>
+<a href=#1015 id=1015 data-nosnippet>1015</a>  <span class="comment">// \setcitestyle — removed old naive implementation (no brace-aware parsing).
+<a href=#1016 id=1016 data-nosnippet>1016</a>  // The brace-aware version is defined earlier in the file (after DefKeyVal declarations).
+<a href=#1017 id=1017 data-nosnippet>1017</a></span>});
+<a href=#1018 id=1018 data-nosnippet>1018</a>
+<a href=#1019 id=1019 data-nosnippet>1019</a><span class="comment">// Helper: peel a brace-delimited argument from a token list
+<a href=#1020 id=1020 data-nosnippet>1020</a></span><span class="kw">fn </span>nat_peel_arg(<span class="kw-2">mut </span>tokens: Vec&lt;Token&gt;) -&gt; (<span class="prelude-ty">Option</span>&lt;Tokens&gt;, Vec&lt;Token&gt;) {
+<a href=#1021 id=1021 data-nosnippet>1021</a>  <span class="kw">if </span>tokens.is_empty() {
+<a href=#1022 id=1022 data-nosnippet>1022</a>    <span class="kw">return </span>(<span class="prelude-val">None</span>, tokens);
+<a href=#1023 id=1023 data-nosnippet>1023</a>  }
+<a href=#1024 id=1024 data-nosnippet>1024</a>  <span class="kw">if </span>tokens[<span class="number">0</span>].get_catcode() != Catcode::BEGIN {
+<a href=#1025 id=1025 data-nosnippet>1025</a>    <span class="comment">// Not braced — single token
+<a href=#1026 id=1026 data-nosnippet>1026</a>    </span><span class="kw">let </span>t = tokens.remove(<span class="number">0</span>);
+<a href=#1027 id=1027 data-nosnippet>1027</a>    <span class="kw">return </span>(<span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[t])), tokens);
+<a href=#1028 id=1028 data-nosnippet>1028</a>  }
+<a href=#1029 id=1029 data-nosnippet>1029</a>  <span class="comment">// Braced group
+<a href=#1030 id=1030 data-nosnippet>1030</a>  </span>tokens.remove(<span class="number">0</span>); <span class="comment">// remove opening brace
+<a href=#1031 id=1031 data-nosnippet>1031</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>arg = Vec::new();
+<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1i32</span>;
+<a href=#1033 id=1033 data-nosnippet>1033</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = tokens.first().cloned() {
+<a href=#1034 id=1034 data-nosnippet>1034</a>    tokens.remove(<span class="number">0</span>);
+<a href=#1035 id=1035 data-nosnippet>1035</a>    <span class="kw">let </span>cc = t.get_catcode();
+<a href=#1036 id=1036 data-nosnippet>1036</a>    <span class="kw">if </span>cc == Catcode::BEGIN { level += <span class="number">1</span>; }
+<a href=#1037 id=1037 data-nosnippet>1037</a>    <span class="kw">if </span>cc == Catcode::END {
+<a href=#1038 id=1038 data-nosnippet>1038</a>      level -= <span class="number">1</span>;
+<a href=#1039 id=1039 data-nosnippet>1039</a>      <span class="kw">if </span>level == <span class="number">0 </span>{ <span class="kw">break</span>; }
+<a href=#1040 id=1040 data-nosnippet>1040</a>    }
+<a href=#1041 id=1041 data-nosnippet>1041</a>    arg.push(t);
+<a href=#1042 id=1042 data-nosnippet>1042</a>  }
+<a href=#1043 id=1043 data-nosnippet>1043</a>  <span class="kw">let </span>result = <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(Tokens::new(arg)) };
+<a href=#1044 id=1044 data-nosnippet>1044</a>  (result, tokens)
+<a href=#1045 id=1045 data-nosnippet>1045</a>}
 </code></pre></div></section></main></body></html>

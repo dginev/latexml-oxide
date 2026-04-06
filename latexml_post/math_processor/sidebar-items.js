@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["find_top_level_math","math_is_parsed","process_math"],"struct":["MathConversion"],"trait":["MathProcessor"]};

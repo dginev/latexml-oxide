@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["PostError"],"fn":["copy_foreign_attributes","find_documentclass_and_packages","find_preambles"],"struct":["ClassInfo","PackageInfo","ProcessorOptions"],"trait":["Processor"],"type":["ProcessResult"]};

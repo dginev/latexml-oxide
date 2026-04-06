@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch9_figures_and_tables.rs`."><title>latex_ch9_figures_and_tables.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch9_figures_and_tables.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch9_figures_and_tables.rs`."><title>latex_ch9_figures_and_tables.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (9602bda1d 2026-04-05)" data-channel="nightly" data-search-js="search-1c5d44ff.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch9_figures_and_tables.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>latexml_core::document::Document;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="doccomment">/// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
@@ -379,48 +379,77 @@
 <a href=#379 id=379 data-nosnippet>379</a>    </span>after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#380 id=380 data-nosnippet>380</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
 <a href=#381 id=381 data-nosnippet>381</a>
-<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\flushbottom"</span>,      <span class="prelude-val">None</span>);
-<a href=#383 id=383 data-nosnippet>383</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\suppressfloats[]"</span>, <span class="prelude-val">None</span>);
-<a href=#384 id=384 data-nosnippet>384</a>
-<a href=#385 id=385 data-nosnippet>385</a>  <span class="macro">NewCounter!</span>(<span class="string">"topnumber"</span>);
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topfraction"</span>, <span class="string">"0.25"</span>);
-<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">NewCounter!</span>(<span class="string">"bottomnumber"</span>);
-<a href=#388 id=388 data-nosnippet>388</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomfraction"</span>, <span class="string">"0.25"</span>);
-<a href=#389 id=389 data-nosnippet>389</a>  <span class="macro">NewCounter!</span>(<span class="string">"totalnumber"</span>);
-<a href=#390 id=390 data-nosnippet>390</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\textfraction"</span>, <span class="string">"0.25"</span>);
-<a href=#391 id=391 data-nosnippet>391</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\floatpagefraction"</span>, <span class="string">"0.25"</span>);
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="macro">NewCounter!</span>(<span class="string">"dbltopnumber"</span>);
-<a href=#393 id=393 data-nosnippet>393</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dbltopfraction"</span>,       <span class="string">"0.7"</span>);
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dblfloatpagefraction"</span>, <span class="string">"0.25"</span>);
-<a href=#395 id=395 data-nosnippet>395</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\floatsep"         </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\textfloatsep"     </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
-<a href=#397 id=397 data-nosnippet>397</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\intextsep"        </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
-<a href=#398 id=398 data-nosnippet>398</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dblfloatsep"      </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
-<a href=#399 id=399 data-nosnippet>399</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dbltextfloatsep"  </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@maxsep"          </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#401 id=401 data-nosnippet>401</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblmaxsep"       </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#402 id=402 data-nosnippet>402</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fptop"           </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#403 id=403 data-nosnippet>403</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpsep"           </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#404 id=404 data-nosnippet>404</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpbot"           </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#405 id=405 data-nosnippet>405</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfptop"        </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#406 id=406 data-nosnippet>406</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpsep"        </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpbot"        </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\abovecaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#409 id=409 data-nosnippet>409</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\belowcaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#410 id=410 data-nosnippet>410</a>  <span class="macro">Let!</span>(<span class="string">"\\topfigrule"</span>, <span class="string">"\\relax"</span>);
-<a href=#411 id=411 data-nosnippet>411</a>  <span class="macro">Let!</span>(<span class="string">"\\botfigrule"</span>, <span class="string">"\\relax"</span>);
-<a href=#412 id=412 data-nosnippet>412</a>  <span class="macro">Let!</span>(<span class="string">"\\dblfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#382 id=382 data-nosnippet>382</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml L3199-3212 — internal @float/@dblfloat
+<a href=#383 id=383 data-nosnippet>383</a>  // Used by raw TeX packages (e.g., nips_2017.sty) via \@float{type}[placement]
+<a href=#384 id=384 data-nosnippet>384</a>  // Since the float type arg isn't known at compile time, we use a properties
+<a href=#385 id=385 data-nosnippet>385</a>  // closure to call beforeFloat dynamically.
+<a href=#386 id=386 data-nosnippet>386</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{@float}{}[]"</span>,
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="string">"&lt;ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'&gt;\
+<a href=#388 id=388 data-nosnippet>388</a>    #tags#body\
+<a href=#389 id=389 data-nosnippet>389</a>    &lt;/ltx:float&gt;"</span>,
+<a href=#390 id=390 data-nosnippet>390</a>    properties =&gt; sub[args] {
+<a href=#391 id=391 data-nosnippet>391</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
+<a href=#392 id=392 data-nosnippet>392</a>        .map(|d| d.to_string()).unwrap_or_default();
+<a href=#393 id=393 data-nosnippet>393</a>      before_float(<span class="kw-2">&amp;</span>float_type, <span class="prelude-val">None</span>);
+<a href=#394 id=394 data-nosnippet>394</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
+<a href=#395 id=395 data-nosnippet>395</a>    },
+<a href=#396 id=396 data-nosnippet>396</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#397 id=397 data-nosnippet>397</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#398 id=398 data-nosnippet>398</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@dblfloat}{}[]"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>    <span class="string">"&lt;ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'&gt;\
+<a href=#400 id=400 data-nosnippet>400</a>    #tags#body\
+<a href=#401 id=401 data-nosnippet>401</a>    &lt;/ltx:float&gt;"</span>,
+<a href=#402 id=402 data-nosnippet>402</a>    properties =&gt; sub[args] {
+<a href=#403 id=403 data-nosnippet>403</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
+<a href=#404 id=404 data-nosnippet>404</a>        .map(|d| d.to_string()).unwrap_or_default();
+<a href=#405 id=405 data-nosnippet>405</a>      before_float_ex(<span class="kw-2">&amp;</span>float_type, <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
+<a href=#407 id=407 data-nosnippet>407</a>    },
+<a href=#408 id=408 data-nosnippet>408</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#409 id=409 data-nosnippet>409</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#410 id=410 data-nosnippet>410</a>
+<a href=#411 id=411 data-nosnippet>411</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\flushbottom"</span>,      <span class="prelude-val">None</span>);
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\suppressfloats[]"</span>, <span class="prelude-val">None</span>);
 <a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figurename"</span>,  <span class="string">"Figure"</span>);
-<a href=#415 id=415 data-nosnippet>415</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figuresname"</span>, <span class="string">"Figures"</span>);    <span class="comment">// Never used?
-<a href=#416 id=416 data-nosnippet>416</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablename"</span>,   <span class="string">"Table"</span>);
-<a href=#417 id=417 data-nosnippet>417</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablesname"</span>,  <span class="string">"Tables"</span>);
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="macro">Let!</span>(<span class="string">"\\outer@nobreak"</span>, <span class="string">"\\@empty"</span>);
-<a href=#420 id=420 data-nosnippet>420</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dbflt{}"</span>,           <span class="string">"#1"</span>);
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblfloat{}[]"</span>,     <span class="string">"\\@xfloat{#1}[#2]"</span>);
-<a href=#422 id=422 data-nosnippet>422</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@floatplacement"</span>,    <span class="string">""</span>);
-<a href=#423 id=423 data-nosnippet>423</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dblfloatplacement"</span>, <span class="string">""</span>);
-<a href=#424 id=424 data-nosnippet>424</a>
-<a href=#425 id=425 data-nosnippet>425</a>});
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="macro">NewCounter!</span>(<span class="string">"topnumber"</span>);
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="macro">NewCounter!</span>(<span class="string">"bottomnumber"</span>);
+<a href=#417 id=417 data-nosnippet>417</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#418 id=418 data-nosnippet>418</a>  <span class="macro">NewCounter!</span>(<span class="string">"totalnumber"</span>);
+<a href=#419 id=419 data-nosnippet>419</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\textfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#420 id=420 data-nosnippet>420</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\floatpagefraction"</span>, <span class="string">"0.25"</span>);
+<a href=#421 id=421 data-nosnippet>421</a>  <span class="macro">NewCounter!</span>(<span class="string">"dbltopnumber"</span>);
+<a href=#422 id=422 data-nosnippet>422</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dbltopfraction"</span>,       <span class="string">"0.7"</span>);
+<a href=#423 id=423 data-nosnippet>423</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dblfloatpagefraction"</span>, <span class="string">"0.25"</span>);
+<a href=#424 id=424 data-nosnippet>424</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\floatsep"         </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#425 id=425 data-nosnippet>425</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\textfloatsep"     </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\intextsep"        </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#427 id=427 data-nosnippet>427</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dblfloatsep"      </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#428 id=428 data-nosnippet>428</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dbltextfloatsep"  </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@maxsep"          </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#430 id=430 data-nosnippet>430</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblmaxsep"       </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#431 id=431 data-nosnippet>431</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fptop"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#432 id=432 data-nosnippet>432</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpsep"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpbot"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#434 id=434 data-nosnippet>434</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfptop"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#435 id=435 data-nosnippet>435</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpsep"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpbot"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\abovecaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#438 id=438 data-nosnippet>438</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\belowcaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#439 id=439 data-nosnippet>439</a>  <span class="macro">Let!</span>(<span class="string">"\\topfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#440 id=440 data-nosnippet>440</a>  <span class="macro">Let!</span>(<span class="string">"\\botfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#441 id=441 data-nosnippet>441</a>  <span class="macro">Let!</span>(<span class="string">"\\dblfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#442 id=442 data-nosnippet>442</a>
+<a href=#443 id=443 data-nosnippet>443</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figurename"</span>,  <span class="string">"Figure"</span>);
+<a href=#444 id=444 data-nosnippet>444</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figuresname"</span>, <span class="string">"Figures"</span>);    <span class="comment">// Never used?
+<a href=#445 id=445 data-nosnippet>445</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablename"</span>,   <span class="string">"Table"</span>);
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablesname"</span>,  <span class="string">"Tables"</span>);
+<a href=#447 id=447 data-nosnippet>447</a>
+<a href=#448 id=448 data-nosnippet>448</a>  <span class="macro">Let!</span>(<span class="string">"\\outer@nobreak"</span>, <span class="string">"\\@empty"</span>);
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dbflt{}"</span>,           <span class="string">"#1"</span>);
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblfloat{}[]"</span>,     <span class="string">"\\@xfloat{#1}[#2]"</span>);
+<a href=#451 id=451 data-nosnippet>451</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@floatplacement"</span>,    <span class="string">""</span>);
+<a href=#452 id=452 data-nosnippet>452</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dblfloatplacement"</span>, <span class="string">""</span>);
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a>});
 </code></pre></div></section></main></body></html>

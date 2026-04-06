@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MED","THICK","THIN"],"fn":["opdict_lookup","role_to_form"],"struct":["OpDictProperties"]};

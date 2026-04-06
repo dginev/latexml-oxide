@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch5_title_page_and_abstract.rs`."><title>latex_ch5_title_page_and_abstract.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch5_title_page_and_abstract.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::engine::base_utilities::insert_frontmatter;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch5_title_page_and_abstract.rs`."><title>latex_ch5_title_page_and_abstract.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (9602bda1d 2026-04-05)" data-channel="nightly" data-search-js="search-1c5d44ff.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch5_title_page_and_abstract.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::engine::base_utilities::insert_frontmatter;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="attr">#[rustfmt::skip]
@@ -111,167 +111,177 @@
 <a href=#111 id=111 data-nosnippet>111</a>    <span class="string">"\\@add@frontmatter{ltx:date}[role=creation]{\\today}"
 <a href=#112 id=112 data-nosnippet>112</a>  </span>);
 <a href=#113 id=113 data-nosnippet>113</a>
-<a href=#114 id=114 data-nosnippet>114</a>  <span class="comment">// Doesn't produce anything (we're already inserting frontmatter),
-<a href=#115 id=115 data-nosnippet>115</a>  // But, it does make the various frontmatter macros into no-ops.
-<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#117 id=117 data-nosnippet>117</a>    <span class="string">"\\maketitle"</span>,
-<a href=#118 id=118 data-nosnippet>118</a>    <span class="string">r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
-<a href=#119 id=119 data-nosnippet>119</a>\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
-<a href=#120 id=120 data-nosnippet>120</a>\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
-<a href=#121 id=121 data-nosnippet>121</a>\global\let\author\relax\global\let\date\relax\global\let\and\relax"
-<a href=#122 id=122 data-nosnippet>122</a>  </span>);
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// In case \maketitle isn't used in the document, let's check for it.
-<a href=#124 id=124 data-nosnippet>124</a>  </span><span class="macro">AddToMacro!</span>(<span class="string">"\\@startsection@hook"</span>, <span class="string">"\\lx@frontmatter@fallback"</span>);
-<a href=#125 id=125 data-nosnippet>125</a>  <span class="comment">// in cases such as titlepage, the document end is the last fallback.
-<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="kw">let _ </span>= state::push_value(<span class="string">"@at@end@document"</span>,
-<a href=#127 id=127 data-nosnippet>127</a>    <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@frontmatter@fallback"</span>)));
-<a href=#128 id=128 data-nosnippet>128</a>
-<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@thanks"</span>, <span class="string">"\\@empty"</span>);
-<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thanks{}"</span>, <span class="string">r"\def\@thanks{#1}\lx@make@thanks{#1}"</span>);
-<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefConstructor!</span>(
-<a href=#132 id=132 data-nosnippet>132</a>    <span class="string">"\\lx@make@thanks{}"</span>,
-<a href=#133 id=133 data-nosnippet>133</a>    <span class="string">"&lt;ltx:note role='thanks'&gt;#1&lt;/ltx:note&gt;"
-<a href=#134 id=134 data-nosnippet>134</a>  </span>);
-<a href=#135 id=135 data-nosnippet>135</a>
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
-<a href=#137 id=137 data-nosnippet>137</a>  // For one thing, we'd like to just write
-<a href=#138 id=138 data-nosnippet>138</a>  //   DefEnvironment('{abstract}','&lt;ltx:abstract&gt;//body&lt;/ltx:abstract&gt;');
-<a href=#139 id=139 data-nosnippet>139</a>  // However, we don't want to place the &lt;ltx:abstract&gt; environment directly where
-<a href=#140 id=140 data-nosnippet>140</a>  // we found it, but we want to add it to frontmatter. This requires capturing the
-<a href=#141 id=141 data-nosnippet>141</a>  // recently digested list and storing it in the frontmatter structure.
-<a href=#142 id=142 data-nosnippet>142</a>
-<a href=#143 id=143 data-nosnippet>143</a>  // The really messy stuff comes from the way authors -- and style designers -- misuse it.
-<a href=#144 id=144 data-nosnippet>144</a>  // Basic LaTeX wants it to be an environment WITHIN the document environment,
-<a href=#145 id=145 data-nosnippet>145</a>  // and AFTER the \maketitle.
-<a href=#146 id=146 data-nosnippet>146</a>  // However, since all it really does is typeset "Abstract" in bold, it allows:
-<a href=#147 id=147 data-nosnippet>147</a>  //   \abstract stuff...
-<a href=#148 id=148 data-nosnippet>148</a>  // without even an \endabstract!  We MUST know when the abstract ends, so we've got
-<a href=#149 id=149 data-nosnippet>149</a>  // to recognize when we've moved on to other stuff... \sections at the VERY LEAST.
-<a href=#150 id=150 data-nosnippet>150</a>
-<a href=#151 id=151 data-nosnippet>151</a>  // Additional complications come from certain other classes and styles that
-<a href=#152 id=152 data-nosnippet>152</a>  // redefine abstract to take the text as an argument. And some treat it
-<a href=#153 id=153 data-nosnippet>153</a>  // like \title, \author, and such, that are expected to appear in the preamble!!
-<a href=#154 id=154 data-nosnippet>154</a>  // The treatment below allows an abstract environment in the preamble,
-<a href=#155 id=155 data-nosnippet>155</a>  // (even though straight latex doesn't) but does not cover the 1-arg case in preamble!
-<a href=#156 id=156 data-nosnippet>156</a>  //
-<a href=#157 id=157 data-nosnippet>157</a>  // Probably there are other places (eg in titlepage?) that should force the close??
-<a href=#158 id=158 data-nosnippet>158</a>
-<a href=#159 id=159 data-nosnippet>159</a>  // Perl: latex_constructs.pool.ltxml lines 1180-1194
-<a href=#160 id=160 data-nosnippet>160</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">""</span>,
-<a href=#161 id=161 data-nosnippet>161</a>    after_digest_begin =&gt; {
-<a href=#162 id=162 data-nosnippet>162</a>      <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>);
-<a href=#163 id=163 data-nosnippet>163</a>    },
-<a href=#164 id=164 data-nosnippet>164</a>    after_digest =&gt; {
-<a href=#165 id=165 data-nosnippet>165</a>      <span class="kw">let </span>abstract_title = stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\format@title@abstract"</span>),
-<a href=#166 id=166 data-nosnippet>166</a>        <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\abstractname"</span>), <span class="macro">T_END!</span>()))<span class="question-mark">?</span>;
-<a href=#167 id=167 data-nosnippet>167</a>      <span class="kw">let </span>regurgitated = List::new(clone_box_list());
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml L1128-1129
+<a href=#115 id=115 data-nosnippet>115</a>  // In case \@maketitle defines \And/\AND — we can't emulate that, so map them to \and
+<a href=#116 id=116 data-nosnippet>116</a>  // for and_split to properly separate authors.
+<a href=#117 id=117 data-nosnippet>117</a>  </span><span class="macro">Let!</span>(<span class="string">"\\And"</span>, <span class="string">"\\and"</span>);
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="macro">Let!</span>(<span class="string">"\\AND"</span>, <span class="string">"\\and"</span>);
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="comment">// Doesn't produce anything (we're already inserting frontmatter),
+<a href=#121 id=121 data-nosnippet>121</a>  // But, it does make the various frontmatter macros into no-ops.
+<a href=#122 id=122 data-nosnippet>122</a>  // Locked: raw TeX packages (e.g., nips_2017.sty) may \renewcommand{\maketitle}, but
+<a href=#123 id=123 data-nosnippet>123</a>  // LaTeXML's frontmatter handling must take precedence. Perl achieves this by having
+<a href=#124 id=124 data-nosnippet>124</a>  // the compiled binding override raw TeX; we use `locked` to prevent raw overwrite.
+<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#126 id=126 data-nosnippet>126</a>    <span class="string">"\\maketitle"</span>,
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="string">r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
+<a href=#128 id=128 data-nosnippet>128</a>\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
+<a href=#129 id=129 data-nosnippet>129</a>\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
+<a href=#130 id=130 data-nosnippet>130</a>\global\let\author\relax\global\let\date\relax\global\let\and\relax"</span>,
+<a href=#131 id=131 data-nosnippet>131</a>    locked =&gt; <span class="bool-val">true
+<a href=#132 id=132 data-nosnippet>132</a>  </span>);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="comment">// In case \maketitle isn't used in the document, let's check for it.
+<a href=#134 id=134 data-nosnippet>134</a>  </span><span class="macro">AddToMacro!</span>(<span class="string">"\\@startsection@hook"</span>, <span class="string">"\\lx@frontmatter@fallback"</span>);
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="comment">// in cases such as titlepage, the document end is the last fallback.
+<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="kw">let _ </span>= state::push_value(<span class="string">"@at@end@document"</span>,
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@frontmatter@fallback"</span>)));
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@thanks"</span>, <span class="string">"\\@empty"</span>);
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thanks{}"</span>, <span class="string">r"\def\@thanks{#1}\lx@make@thanks{#1}"</span>);
+<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">DefConstructor!</span>(
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="string">"\\lx@make@thanks{}"</span>,
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="string">"&lt;ltx:note role='thanks'&gt;#1&lt;/ltx:note&gt;"
+<a href=#144 id=144 data-nosnippet>144</a>  </span>);
+<a href=#145 id=145 data-nosnippet>145</a>
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
+<a href=#147 id=147 data-nosnippet>147</a>  // For one thing, we'd like to just write
+<a href=#148 id=148 data-nosnippet>148</a>  //   DefEnvironment('{abstract}','&lt;ltx:abstract&gt;//body&lt;/ltx:abstract&gt;');
+<a href=#149 id=149 data-nosnippet>149</a>  // However, we don't want to place the &lt;ltx:abstract&gt; environment directly where
+<a href=#150 id=150 data-nosnippet>150</a>  // we found it, but we want to add it to frontmatter. This requires capturing the
+<a href=#151 id=151 data-nosnippet>151</a>  // recently digested list and storing it in the frontmatter structure.
+<a href=#152 id=152 data-nosnippet>152</a>
+<a href=#153 id=153 data-nosnippet>153</a>  // The really messy stuff comes from the way authors -- and style designers -- misuse it.
+<a href=#154 id=154 data-nosnippet>154</a>  // Basic LaTeX wants it to be an environment WITHIN the document environment,
+<a href=#155 id=155 data-nosnippet>155</a>  // and AFTER the \maketitle.
+<a href=#156 id=156 data-nosnippet>156</a>  // However, since all it really does is typeset "Abstract" in bold, it allows:
+<a href=#157 id=157 data-nosnippet>157</a>  //   \abstract stuff...
+<a href=#158 id=158 data-nosnippet>158</a>  // without even an \endabstract!  We MUST know when the abstract ends, so we've got
+<a href=#159 id=159 data-nosnippet>159</a>  // to recognize when we've moved on to other stuff... \sections at the VERY LEAST.
+<a href=#160 id=160 data-nosnippet>160</a>
+<a href=#161 id=161 data-nosnippet>161</a>  // Additional complications come from certain other classes and styles that
+<a href=#162 id=162 data-nosnippet>162</a>  // redefine abstract to take the text as an argument. And some treat it
+<a href=#163 id=163 data-nosnippet>163</a>  // like \title, \author, and such, that are expected to appear in the preamble!!
+<a href=#164 id=164 data-nosnippet>164</a>  // The treatment below allows an abstract environment in the preamble,
+<a href=#165 id=165 data-nosnippet>165</a>  // (even though straight latex doesn't) but does not cover the 1-arg case in preamble!
+<a href=#166 id=166 data-nosnippet>166</a>  //
+<a href=#167 id=167 data-nosnippet>167</a>  // Probably there are other places (eg in titlepage?) that should force the close??
 <a href=#168 id=168 data-nosnippet>168</a>
-<a href=#169 id=169 data-nosnippet>169</a>      with_value_mut(<span class="string">"frontmatter"</span>,|frontmatter_opt| {
-<a href=#170 id=170 data-nosnippet>170</a>        <span class="kw">let </span>frontmatter = <span class="kw">match </span>frontmatter_opt {
-<a href=#171 id=171 data-nosnippet>171</a>          <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) =&gt; frnt,
-<a href=#172 id=172 data-nosnippet>172</a>          <span class="kw">_ </span>=&gt; <span class="macro">Fatal!</span>(TexPool, Expected,
-<a href=#173 id=173 data-nosnippet>173</a>              <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
-<a href=#174 id=174 data-nosnippet>174</a>        };
-<a href=#175 id=175 data-nosnippet>175</a>        <span class="kw">let </span>abstr = frontmatter.entry(<span class="string">"ltx:abstract"</span>.to_string()).or_insert_with(Vec::new);
-<a href=#176 id=176 data-nosnippet>176</a>        abstr.push((<span class="string">"ltx:abstract"</span>.to_string(),
-<a href=#177 id=177 data-nosnippet>177</a>          <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"name" </span>=&gt; abstract_title)), regurgitated.into()));
-<a href=#178 id=178 data-nosnippet>178</a>        <span class="prelude-val">Ok</span>(())
-<a href=#179 id=179 data-nosnippet>179</a>      })<span class="question-mark">?</span>;
-<a href=#180 id=180 data-nosnippet>180</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@abstract"</span>, <span class="string">""</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#181 id=181 data-nosnippet>181</a>    },
-<a href=#182 id=182 data-nosnippet>182</a>    after_construct =&gt; sub[doc, _whatsit] {
-<a href=#183 id=183 data-nosnippet>183</a>      insert_frontmatter(doc)<span class="question-mark">?</span>; <span class="comment">// HERE if not already done.
-<a href=#184 id=184 data-nosnippet>184</a>    </span>},
-<a href=#185 id=185 data-nosnippet>185</a>    locked =&gt; <span class="bool-val">true</span>,
-<a href=#186 id=186 data-nosnippet>186</a>    mode =&gt; <span class="string">"internal_vertical"
-<a href=#187 id=187 data-nosnippet>187</a>  </span>);
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
-<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"\\abstract:locked" </span>=&gt; <span class="bool-val">false</span>); <span class="comment">// REDEFINE the above locked definition!
-<a href=#190 id=190 data-nosnippet>190</a>  // Perl: latex_constructs.pool.ltxml lines 1197-1203
-<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\abstract"</span>, {
-<a href=#192 id=192 data-nosnippet>192</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
-<a href=#193 id=193 data-nosnippet>193</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\abstract@onearg"</span>))
-<a href=#194 id=194 data-nosnippet>194</a>    } <span class="kw">else </span>{
-<a href=#195 id=195 data-nosnippet>195</a>      <span class="comment">// When \abstract is used without braces (e.g. \abstract ... \section{...}),
-<a href=#196 id=196 data-nosnippet>196</a>      // add \maybe@end@abstract to \@startsection@hook so the abstract closes
-<a href=#197 id=197 data-nosnippet>197</a>      // when the next sectioning command starts.
-<a href=#198 id=198 data-nosnippet>198</a>      </span><span class="macro">Tokens!</span>(
-<a href=#199 id=199 data-nosnippet>199</a>        <span class="macro">T_CS!</span>(<span class="string">"\\g@addto@macro"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\@startsection@hook"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@abstract"</span>),
-<a href=#200 id=200 data-nosnippet>200</a>        <span class="macro">T_CS!</span>(<span class="string">"\\begin{abstract}"</span>))
-<a href=#201 id=201 data-nosnippet>201</a>    }
-<a href=#202 id=202 data-nosnippet>202</a>  },
-<a href=#203 id=203 data-nosnippet>203</a>  locked =&gt; <span class="bool-val">true</span>);
-<a href=#204 id=204 data-nosnippet>204</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract@onearg{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}\\let\\endabstract\\relax"</span>);
-<a href=#205 id=205 data-nosnippet>205</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@abstract"</span>, <span class="string">"\\endabstract"</span>);
-<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstractname"</span>, <span class="string">"Abstract"</span>);
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@abstract{}"</span>, <span class="string">"#1"</span>);
-<a href=#208 id=208 data-nosnippet>208</a>
-<a href=#209 id=209 data-nosnippet>209</a>  <span class="comment">// Hmm, titlepage is likely to be hairy, low-level markup,
-<a href=#210 id=210 data-nosnippet>210</a>  // without even title, author, etc, specified as such!
-<a href=#211 id=211 data-nosnippet>211</a>  // Hmm, should this even redefine author, title, etc so that they
-<a href=#212 id=212 data-nosnippet>212</a>  // are simply output?
-<a href=#213 id=213 data-nosnippet>213</a>  // This is horrible hackery; What we really need, I think, is the
-<a href=#214 id=214 data-nosnippet>214</a>  // ability to bind some sort of "Do &lt;this&gt; when we create a text box"...
-<a href=#215 id=215 data-nosnippet>215</a>  // ON Second Thought...
-<a href=#216 id=216 data-nosnippet>216</a>  // For the time being, ignore titlepage!
-<a href=#217 id=217 data-nosnippet>217</a>  // Maybe we could do some of this if there is no title/author
-<a href=#218 id=218 data-nosnippet>218</a>  // otherwise defined? Ugh!
-<a href=#219 id=219 data-nosnippet>219</a>
-<a href=#220 id=220 data-nosnippet>220</a>  //DefEnvironment('{titlepage}','');
-<a href=#221 id=221 data-nosnippet>221</a>  // Or perhaps it's better just to ignore the markers?
-<a href=#222 id=222 data-nosnippet>222</a>  //DefMacro('\titlepage','');
-<a href=#223 id=223 data-nosnippet>223</a>  //DefMacro('\endtitlepage','');
-<a href=#224 id=224 data-nosnippet>224</a>
-<a href=#225 id=225 data-nosnippet>225</a>  // Or perhaps not....
-<a href=#226 id=226 data-nosnippet>226</a>  // There's a title and other stuff in here, but how could we guess?
-<a href=#227 id=227 data-nosnippet>227</a>  // Well, there's likely to be a sequence of &lt;p&gt;&lt;text font="xx" fontsize="yy"&gt;...&lt;/text&gt;&lt;/p&gt;
-<a href=#228 id=228 data-nosnippet>228</a>  // Presumably the earlier, larger one is title, rest are authors/affiliations...
-<a href=#229 id=229 data-nosnippet>229</a>  // Particularly, if they start with a pseudo superscript or other "marker", they're probably
-<a href=#230 id=230 data-nosnippet>230</a>  // affil! For now, we just give an info message
-<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{titlepage}"</span>, <span class="string">"&lt;ltx:titlepage&gt;#body"</span>,
-<a href=#232 id=232 data-nosnippet>232</a>    before_digest =&gt; {
-<a href=#233 id=233 data-nosnippet>233</a>      <span class="macro">Let!</span>(<span class="string">"\\centering"</span>, <span class="string">"\\relax"</span>);
-<a href=#234 id=234 data-nosnippet>234</a>      state::assign_value(<span class="string">"frontmatter_deferred"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#235 id=235 data-nosnippet>235</a>      <span class="macro">AddToMacro!</span>(<span class="string">"\\maketitle"</span>, <span class="string">"\\unwind@titlepage"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>      <span class="comment">// In titlepage, abstract is simpler: direct body
-<a href=#237 id=237 data-nosnippet>237</a>      </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>      <span class="macro">Let!</span>(<span class="string">"\\abstract"</span>, <span class="string">"\\abstract@onearg"</span>);
-<a href=#239 id=239 data-nosnippet>239</a>    },
-<a href=#240 id=240 data-nosnippet>240</a>    before_digest_end =&gt; {
-<a href=#241 id=241 data-nosnippet>241</a>      stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@titlepage"</span>)))<span class="question-mark">?
-<a href=#242 id=242 data-nosnippet>242</a>    </span>},
-<a href=#243 id=243 data-nosnippet>243</a>    after_construct =&gt; sub[doc, _whatsit] {
-<a href=#244 id=244 data-nosnippet>244</a>      insert_frontmatter(doc)<span class="question-mark">?</span>;
-<a href=#245 id=245 data-nosnippet>245</a>    },
-<a href=#246 id=246 data-nosnippet>246</a>    locked =&gt; <span class="bool-val">true</span>,
-<a href=#247 id=247 data-nosnippet>247</a>    mode =&gt; <span class="string">"internal_vertical"
-<a href=#248 id=248 data-nosnippet>248</a>  </span>);
-<a href=#249 id=249 data-nosnippet>249</a>
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:titlepage"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<a href=#251 id=251 data-nosnippet>251</a>
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\maybe@end@title"</span>, sub[document,_args,_props] {
-<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">if </span>document.is_closeable(<span class="string">"ltx:titlepage"</span>).is_some() {
-<a href=#254 id=254 data-nosnippet>254</a>      document.close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">?</span>;
-<a href=#255 id=255 data-nosnippet>255</a>    }
-<a href=#256 id=256 data-nosnippet>256</a>  });
-<a href=#257 id=257 data-nosnippet>257</a>
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\maybe@end@titlepage"</span>, sub[document,_args,_props] {
-<a href=#259 id=259 data-nosnippet>259</a>    document.maybe_close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">?</span>;
-<a href=#260 id=260 data-nosnippet>260</a>  });
-<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\unwind@titlepage"</span>, sub[document,_args,_props] {
-<a href=#262 id=262 data-nosnippet>262</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(titlepage) = document.maybe_close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">? </span>{
-<a href=#263 id=263 data-nosnippet>263</a>      document.unwrap_nodes(titlepage)<span class="question-mark">?</span>;
-<a href=#264 id=264 data-nosnippet>264</a>    }
-<a href=#265 id=265 data-nosnippet>265</a>  });
-<a href=#266 id=266 data-nosnippet>266</a>
-<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sectionmark{}"</span>, <span class="string">""</span>);
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subsectionmark{}"</span>, <span class="string">""</span>);
-<a href=#269 id=269 data-nosnippet>269</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subsubsectionmark{}"</span>, <span class="string">""</span>);
-<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\paragraphmark{}"</span>, <span class="string">""</span>);
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subparagraphmark{}"</span>, <span class="string">""</span>);
-<a href=#272 id=272 data-nosnippet>272</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@oddfoot"</span>, <span class="string">""</span>);
-<a href=#273 id=273 data-nosnippet>273</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@oddhed"</span>, <span class="string">""</span>);
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@evenfoot"</span>, <span class="string">""</span>);
-<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@evenfoot"</span>, <span class="string">""</span>);
-<a href=#276 id=276 data-nosnippet>276</a>});
+<a href=#169 id=169 data-nosnippet>169</a>  // Perl: latex_constructs.pool.ltxml lines 1180-1194
+<a href=#170 id=170 data-nosnippet>170</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">""</span>,
+<a href=#171 id=171 data-nosnippet>171</a>    after_digest_begin =&gt; {
+<a href=#172 id=172 data-nosnippet>172</a>      <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>);
+<a href=#173 id=173 data-nosnippet>173</a>    },
+<a href=#174 id=174 data-nosnippet>174</a>    after_digest =&gt; {
+<a href=#175 id=175 data-nosnippet>175</a>      <span class="kw">let </span>abstract_title = stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\format@title@abstract"</span>),
+<a href=#176 id=176 data-nosnippet>176</a>        <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\abstractname"</span>), <span class="macro">T_END!</span>()))<span class="question-mark">?</span>;
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">let </span>regurgitated = List::new(clone_box_list());
+<a href=#178 id=178 data-nosnippet>178</a>
+<a href=#179 id=179 data-nosnippet>179</a>      with_value_mut(<span class="string">"frontmatter"</span>,|frontmatter_opt| {
+<a href=#180 id=180 data-nosnippet>180</a>        <span class="kw">let </span>frontmatter = <span class="kw">match </span>frontmatter_opt {
+<a href=#181 id=181 data-nosnippet>181</a>          <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) =&gt; frnt,
+<a href=#182 id=182 data-nosnippet>182</a>          <span class="kw">_ </span>=&gt; <span class="macro">Fatal!</span>(TexPool, Expected,
+<a href=#183 id=183 data-nosnippet>183</a>              <span class="string">"Global TeX Frontmatter hash was not available, should never happen"</span>),
+<a href=#184 id=184 data-nosnippet>184</a>        };
+<a href=#185 id=185 data-nosnippet>185</a>        <span class="kw">let </span>abstr = frontmatter.entry(<span class="string">"ltx:abstract"</span>.to_string()).or_insert_with(Vec::new);
+<a href=#186 id=186 data-nosnippet>186</a>        abstr.push((<span class="string">"ltx:abstract"</span>.to_string(),
+<a href=#187 id=187 data-nosnippet>187</a>          <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"name" </span>=&gt; abstract_title)), regurgitated.into()));
+<a href=#188 id=188 data-nosnippet>188</a>        <span class="prelude-val">Ok</span>(())
+<a href=#189 id=189 data-nosnippet>189</a>      })<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@abstract"</span>, <span class="string">""</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#191 id=191 data-nosnippet>191</a>    },
+<a href=#192 id=192 data-nosnippet>192</a>    after_construct =&gt; sub[doc, _whatsit] {
+<a href=#193 id=193 data-nosnippet>193</a>      insert_frontmatter(doc)<span class="question-mark">?</span>; <span class="comment">// HERE if not already done.
+<a href=#194 id=194 data-nosnippet>194</a>    </span>},
+<a href=#195 id=195 data-nosnippet>195</a>    locked =&gt; <span class="bool-val">true</span>,
+<a href=#196 id=196 data-nosnippet>196</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#197 id=197 data-nosnippet>197</a>  </span>);
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="comment">// If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
+<a href=#199 id=199 data-nosnippet>199</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"\\abstract:locked" </span>=&gt; <span class="bool-val">false</span>); <span class="comment">// REDEFINE the above locked definition!
+<a href=#200 id=200 data-nosnippet>200</a>  // Perl: latex_constructs.pool.ltxml lines 1197-1203
+<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\abstract"</span>, {
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_BEGIN!</span>())<span class="question-mark">? </span>{
+<a href=#203 id=203 data-nosnippet>203</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\abstract@onearg"</span>))
+<a href=#204 id=204 data-nosnippet>204</a>    } <span class="kw">else </span>{
+<a href=#205 id=205 data-nosnippet>205</a>      <span class="comment">// When \abstract is used without braces (e.g. \abstract ... \section{...}),
+<a href=#206 id=206 data-nosnippet>206</a>      // add \maybe@end@abstract to \@startsection@hook so the abstract closes
+<a href=#207 id=207 data-nosnippet>207</a>      // when the next sectioning command starts.
+<a href=#208 id=208 data-nosnippet>208</a>      </span><span class="macro">Tokens!</span>(
+<a href=#209 id=209 data-nosnippet>209</a>        <span class="macro">T_CS!</span>(<span class="string">"\\g@addto@macro"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\@startsection@hook"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@abstract"</span>),
+<a href=#210 id=210 data-nosnippet>210</a>        <span class="macro">T_CS!</span>(<span class="string">"\\begin{abstract}"</span>))
+<a href=#211 id=211 data-nosnippet>211</a>    }
+<a href=#212 id=212 data-nosnippet>212</a>  },
+<a href=#213 id=213 data-nosnippet>213</a>  locked =&gt; <span class="bool-val">true</span>);
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract@onearg{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}\\let\\endabstract\\relax"</span>);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\maybe@end@abstract"</span>, <span class="string">"\\endabstract"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstractname"</span>, <span class="string">"Abstract"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@abstract{}"</span>, <span class="string">"#1"</span>);
+<a href=#218 id=218 data-nosnippet>218</a>
+<a href=#219 id=219 data-nosnippet>219</a>  <span class="comment">// Hmm, titlepage is likely to be hairy, low-level markup,
+<a href=#220 id=220 data-nosnippet>220</a>  // without even title, author, etc, specified as such!
+<a href=#221 id=221 data-nosnippet>221</a>  // Hmm, should this even redefine author, title, etc so that they
+<a href=#222 id=222 data-nosnippet>222</a>  // are simply output?
+<a href=#223 id=223 data-nosnippet>223</a>  // This is horrible hackery; What we really need, I think, is the
+<a href=#224 id=224 data-nosnippet>224</a>  // ability to bind some sort of "Do &lt;this&gt; when we create a text box"...
+<a href=#225 id=225 data-nosnippet>225</a>  // ON Second Thought...
+<a href=#226 id=226 data-nosnippet>226</a>  // For the time being, ignore titlepage!
+<a href=#227 id=227 data-nosnippet>227</a>  // Maybe we could do some of this if there is no title/author
+<a href=#228 id=228 data-nosnippet>228</a>  // otherwise defined? Ugh!
+<a href=#229 id=229 data-nosnippet>229</a>
+<a href=#230 id=230 data-nosnippet>230</a>  //DefEnvironment('{titlepage}','');
+<a href=#231 id=231 data-nosnippet>231</a>  // Or perhaps it's better just to ignore the markers?
+<a href=#232 id=232 data-nosnippet>232</a>  //DefMacro('\titlepage','');
+<a href=#233 id=233 data-nosnippet>233</a>  //DefMacro('\endtitlepage','');
+<a href=#234 id=234 data-nosnippet>234</a>
+<a href=#235 id=235 data-nosnippet>235</a>  // Or perhaps not....
+<a href=#236 id=236 data-nosnippet>236</a>  // There's a title and other stuff in here, but how could we guess?
+<a href=#237 id=237 data-nosnippet>237</a>  // Well, there's likely to be a sequence of &lt;p&gt;&lt;text font="xx" fontsize="yy"&gt;...&lt;/text&gt;&lt;/p&gt;
+<a href=#238 id=238 data-nosnippet>238</a>  // Presumably the earlier, larger one is title, rest are authors/affiliations...
+<a href=#239 id=239 data-nosnippet>239</a>  // Particularly, if they start with a pseudo superscript or other "marker", they're probably
+<a href=#240 id=240 data-nosnippet>240</a>  // affil! For now, we just give an info message
+<a href=#241 id=241 data-nosnippet>241</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{titlepage}"</span>, <span class="string">"&lt;ltx:titlepage&gt;#body"</span>,
+<a href=#242 id=242 data-nosnippet>242</a>    before_digest =&gt; {
+<a href=#243 id=243 data-nosnippet>243</a>      <span class="macro">Let!</span>(<span class="string">"\\centering"</span>, <span class="string">"\\relax"</span>);
+<a href=#244 id=244 data-nosnippet>244</a>      state::assign_value(<span class="string">"frontmatter_deferred"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#245 id=245 data-nosnippet>245</a>      <span class="macro">AddToMacro!</span>(<span class="string">"\\maketitle"</span>, <span class="string">"\\unwind@titlepage"</span>);
+<a href=#246 id=246 data-nosnippet>246</a>      <span class="comment">// In titlepage, abstract is simpler: direct body
+<a href=#247 id=247 data-nosnippet>247</a>      </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>      <span class="macro">Let!</span>(<span class="string">"\\abstract"</span>, <span class="string">"\\abstract@onearg"</span>);
+<a href=#249 id=249 data-nosnippet>249</a>    },
+<a href=#250 id=250 data-nosnippet>250</a>    before_digest_end =&gt; {
+<a href=#251 id=251 data-nosnippet>251</a>      stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\maybe@end@titlepage"</span>)))<span class="question-mark">?
+<a href=#252 id=252 data-nosnippet>252</a>    </span>},
+<a href=#253 id=253 data-nosnippet>253</a>    after_construct =&gt; sub[doc, _whatsit] {
+<a href=#254 id=254 data-nosnippet>254</a>      insert_frontmatter(doc)<span class="question-mark">?</span>;
+<a href=#255 id=255 data-nosnippet>255</a>    },
+<a href=#256 id=256 data-nosnippet>256</a>    locked =&gt; <span class="bool-val">true</span>,
+<a href=#257 id=257 data-nosnippet>257</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#258 id=258 data-nosnippet>258</a>  </span>);
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:titlepage"</span>, auto_close =&gt; <span class="bool-val">true</span>);
+<a href=#261 id=261 data-nosnippet>261</a>
+<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\maybe@end@title"</span>, sub[document,_args,_props] {
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">if </span>document.is_closeable(<span class="string">"ltx:titlepage"</span>).is_some() {
+<a href=#264 id=264 data-nosnippet>264</a>      document.close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">?</span>;
+<a href=#265 id=265 data-nosnippet>265</a>    }
+<a href=#266 id=266 data-nosnippet>266</a>  });
+<a href=#267 id=267 data-nosnippet>267</a>
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\maybe@end@titlepage"</span>, sub[document,_args,_props] {
+<a href=#269 id=269 data-nosnippet>269</a>    document.maybe_close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">?</span>;
+<a href=#270 id=270 data-nosnippet>270</a>  });
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\unwind@titlepage"</span>, sub[document,_args,_props] {
+<a href=#272 id=272 data-nosnippet>272</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(titlepage) = document.maybe_close_element(<span class="string">"ltx:titlepage"</span>)<span class="question-mark">? </span>{
+<a href=#273 id=273 data-nosnippet>273</a>      document.unwrap_nodes(titlepage)<span class="question-mark">?</span>;
+<a href=#274 id=274 data-nosnippet>274</a>    }
+<a href=#275 id=275 data-nosnippet>275</a>  });
+<a href=#276 id=276 data-nosnippet>276</a>
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sectionmark{}"</span>, <span class="string">""</span>);
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subsectionmark{}"</span>, <span class="string">""</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subsubsectionmark{}"</span>, <span class="string">""</span>);
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\paragraphmark{}"</span>, <span class="string">""</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subparagraphmark{}"</span>, <span class="string">""</span>);
+<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@oddfoot"</span>, <span class="string">""</span>);
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@oddhed"</span>, <span class="string">""</span>);
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@evenfoot"</span>, <span class="string">""</span>);
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@evenfoot"</span>, <span class="string">""</span>);
+<a href=#286 id=286 data-nosnippet>286</a>});
 </code></pre></div></section></main></body></html>

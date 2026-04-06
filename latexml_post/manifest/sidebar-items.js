@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ManifestFormat"],"mod":["epub"],"struct":["Manifest"]};

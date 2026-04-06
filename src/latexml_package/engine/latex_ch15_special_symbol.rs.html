@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch15_special_symbol.rs`."><title>latex_ch15_special_symbol.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch15_special_symbol.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/latex_ch15_special_symbol.rs`."><title>latex_ch15_special_symbol.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (9602bda1d 2026-04-05)" data-channel="nightly" data-search-js="search-1c5d44ff.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>latex_ch15_special_symbol.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// Perl: %unicode_enclosed_alphanumerics table
 <a href=#4 id=4 data-nosnippet>4</a>/// Maps single chars (0-9, a-z, A-Z) and numbers 10-20 to their circled Unicode equivalents.
@@ -90,60 +90,63 @@
 <a href=#90 id=90 data-nosnippet>90</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textregistered"</span>, <span class="string">"\u{00AE}"</span>); <span class="comment">// REGISTERED SIGN
 <a href=#91 id=91 data-nosnippet>91</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\texttrademark"</span>, <span class="string">"\u{2122}"</span>); <span class="comment">// TRADE MARK SIGN
 <a href=#92 id=92 data-nosnippet>92</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\textsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsubscript{}"</span>, <span class="string">"&lt;ltx:sub&gt;#1&lt;/ltx:sub&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="comment">// This is something coming from xetex/xelatex ? Why define this way?
-<a href=#95 id=95 data-nosnippet>95</a>  //DefConstructor!("\\realsuperscript{}', "&lt;ltx:text yoffset='0.5em'
-<a href=#96 id=96 data-nosnippet>96</a>  // _noautoclose='1'&gt;#1&lt;/ltx:text&gt;");
-<a href=#97 id=97 data-nosnippet>97</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\realsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
-<a href=#98 id=98 data-nosnippet>98</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textordfeminine"</span>, <span class="string">"\u{00AA}"</span>); <span class="comment">// FEMININE ORDINAL INDICATOR
-<a href=#99 id=99 data-nosnippet>99</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textordmasculine"</span>, <span class="string">"\u{00BA}"</span>); <span class="comment">// MASCULINE ORDINAL INDICATOR
-<a href=#100 id=100 data-nosnippet>100</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\SS"</span>, <span class="string">"SS"</span>); <span class="comment">// ?
-<a href=#101 id=101 data-nosnippet>101</a>
-<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dag"</span>, <span class="string">"\\ifmmode{\\dagger}\\else\\textdagger\\fi"</span>);
-<a href=#103 id=103 data-nosnippet>103</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ddag"</span>, <span class="string">"\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi"</span>);
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// Perl L5424-5425: locked variant for \@makefnmark
+<a href=#94 id=94 data-nosnippet>94</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@textsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,
+<a href=#95 id=95 data-nosnippet>95</a>    mode =&gt; <span class="string">"text"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\textsubscript{}"</span>, <span class="string">"&lt;ltx:sub&gt;#1&lt;/ltx:sub&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="comment">// This is something coming from xetex/xelatex ? Why define this way?
+<a href=#98 id=98 data-nosnippet>98</a>  //DefConstructor!("\\realsuperscript{}', "&lt;ltx:text yoffset='0.5em'
+<a href=#99 id=99 data-nosnippet>99</a>  // _noautoclose='1'&gt;#1&lt;/ltx:text&gt;");
+<a href=#100 id=100 data-nosnippet>100</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\realsuperscript{}"</span>, <span class="string">"&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;"</span>,  mode =&gt; <span class="string">"text"</span>);
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\textordfeminine"</span>, <span class="string">"\u{00AA}"</span>); <span class="comment">// FEMININE ORDINAL INDICATOR
+<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\textordmasculine"</span>, <span class="string">"\u{00BA}"</span>); <span class="comment">// MASCULINE ORDINAL INDICATOR
+<a href=#103 id=103 data-nosnippet>103</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\SS"</span>, <span class="string">"SS"</span>); <span class="comment">// ?
 <a href=#104 id=104 data-nosnippet>104</a>
-<a href=#105 id=105 data-nosnippet>105</a>  <span class="macro">DefConstructor!</span>(
-<a href=#106 id=106 data-nosnippet>106</a>    <span class="string">"\\sqrtsign Digested"</span>,
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="string">"&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='square-root'/&gt;&lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;"
-<a href=#108 id=108 data-nosnippet>108</a>  </span>);
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathparagraph"</span>, <span class="string">"\u{00B6}"</span>);
-<a href=#111 id=111 data-nosnippet>111</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsection"</span>, <span class="string">"\u{00A7}"</span>);
-<a href=#112 id=112 data-nosnippet>112</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathdollar"</span>, <span class="string">"$"</span>);
-<a href=#113 id=113 data-nosnippet>113</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsterling"</span>, <span class="string">"\u{00A3}"</span>);
-<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathunderscore"</span>, <span class="string">"_"</span>);
-<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathellipsis"</span>, <span class="string">"\u{2026}"</span>);
-<a href=#116 id=116 data-nosnippet>116</a>
-<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml — glyph pieces that also work as delimiters
-<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2225}"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
-<a href=#120 id=120 data-nosnippet>120</a>
-<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">// The following are glyph "pieces"...
-<a href=#122 id=122 data-nosnippet>122</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceld"</span>, <span class="string">"\u{239D}"</span>); <span class="comment">//   left brace down part
-<a href=#123 id=123 data-nosnippet>123</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracelu"</span>, <span class="string">"\u{239B}"</span>); <span class="comment">//   left brace up part
-<a href=#124 id=124 data-nosnippet>124</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracerd"</span>, <span class="string">"\u{23A0}"</span>); <span class="comment">//   right brace down part
-<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceru"</span>, <span class="string">"\u{239E}"</span>); <span class="comment">//   right brace up part
-<a href=#126 id=126 data-nosnippet>126</a>
-<a href=#127 id=127 data-nosnippet>127</a>  // Perl: plain_constructs.pool.ltxml
-<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\cdotp"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22C5}"</span>, role =&gt; <span class="string">"MULOP"</span>);
-<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ldotp"</span>, <span class="prelude-val">None</span>, <span class="string">"."</span>, role =&gt; <span class="string">"MULOP"</span>);
-<a href=#130 id=130 data-nosnippet>130</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
-<a href=#131 id=131 data-nosnippet>131</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\intop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222B}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"integral"</span>,
-<a href=#132 id=132 data-nosnippet>132</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
-<a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ointop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222E}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"contour-integral"</span>,
-<a href=#134 id=134 data-nosnippet>134</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
-<a href=#135 id=135 data-nosnippet>135</a>
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// WHat are these? They look like superscripted parentheses, or combining accents!
-<a href=#137 id=137 data-nosnippet>137</a>  // \lhook
-<a href=#138 id=138 data-nosnippet>138</a>  // \rhook
-<a href=#139 id=139 data-nosnippet>139</a>  </span><span class="macro">Let!</span>(<span class="string">"\\gets"</span>, <span class="string">"\\leftarrow"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>
-<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lmoustache"</span>, <span class="string">"\u{23B0}"</span>);
-<a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\rmoustache"</span>, <span class="string">"\u{23B1}"</span>);
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml
-<a href=#144 id=144 data-nosnippet>144</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\mapstochar"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{21A6}"</span>, role =&gt; <span class="string">"ARROW"</span>, meaning =&gt; <span class="string">"maps-to"</span>);
-<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefMath!</span>(<span class="string">"\\owns"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{220B}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"contains"</span>);
-<a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="comment">// \symbol lookup symbol in font by index?
-<a href=#148 id=148 data-nosnippet>148</a></span>});
+<a href=#105 id=105 data-nosnippet>105</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dag"</span>, <span class="string">"\\ifmmode{\\dagger}\\else\\textdagger\\fi"</span>);
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ddag"</span>, <span class="string">"\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi"</span>);
+<a href=#107 id=107 data-nosnippet>107</a>
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="macro">DefConstructor!</span>(
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="string">"\\sqrtsign Digested"</span>,
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="string">"&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='square-root'/&gt;&lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;"
+<a href=#111 id=111 data-nosnippet>111</a>  </span>);
+<a href=#112 id=112 data-nosnippet>112</a>
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathparagraph"</span>, <span class="string">"\u{00B6}"</span>);
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsection"</span>, <span class="string">"\u{00A7}"</span>);
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathdollar"</span>, <span class="string">"$"</span>);
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathsterling"</span>, <span class="string">"\u{00A3}"</span>);
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathunderscore"</span>, <span class="string">"_"</span>);
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\mathellipsis"</span>, <span class="string">"\u{2026}"</span>);
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml — glyph pieces that also work as delimiters
+<a href=#121 id=121 data-nosnippet>121</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Arrowvert"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2225}"</span>, role =&gt; <span class="string">"VERTBAR"</span>);
+<a href=#123 id=123 data-nosnippet>123</a>
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="comment">// The following are glyph "pieces"...
+<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceld"</span>, <span class="string">"\u{239D}"</span>); <span class="comment">//   left brace down part
+<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracelu"</span>, <span class="string">"\u{239B}"</span>); <span class="comment">//   left brace up part
+<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracerd"</span>, <span class="string">"\u{23A0}"</span>); <span class="comment">//   right brace down part
+<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\braceru"</span>, <span class="string">"\u{239E}"</span>); <span class="comment">//   right brace up part
+<a href=#129 id=129 data-nosnippet>129</a>
+<a href=#130 id=130 data-nosnippet>130</a>  // Perl: plain_constructs.pool.ltxml
+<a href=#131 id=131 data-nosnippet>131</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\cdotp"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{22C5}"</span>, role =&gt; <span class="string">"MULOP"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ldotp"</span>, <span class="prelude-val">None</span>, <span class="string">"."</span>, role =&gt; <span class="string">"MULOP"</span>);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
+<a href=#134 id=134 data-nosnippet>134</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\intop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222B}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"integral"</span>,
+<a href=#135 id=135 data-nosnippet>135</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ointop"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{222E}"</span>, role =&gt; <span class="string">"INTOP"</span>, meaning =&gt; <span class="string">"contour-integral"</span>,
+<a href=#137 id=137 data-nosnippet>137</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>, dynamic_mathstyle =&gt; <span class="bool-val">true</span>);
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="comment">// WHat are these? They look like superscripted parentheses, or combining accents!
+<a href=#140 id=140 data-nosnippet>140</a>  // \lhook
+<a href=#141 id=141 data-nosnippet>141</a>  // \rhook
+<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="macro">Let!</span>(<span class="string">"\\gets"</span>, <span class="string">"\\leftarrow"</span>);
+<a href=#143 id=143 data-nosnippet>143</a>
+<a href=#144 id=144 data-nosnippet>144</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lmoustache"</span>, <span class="string">"\u{23B0}"</span>);
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\rmoustache"</span>, <span class="string">"\u{23B1}"</span>);
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml
+<a href=#147 id=147 data-nosnippet>147</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\mapstochar"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{21A6}"</span>, role =&gt; <span class="string">"ARROW"</span>, meaning =&gt; <span class="string">"maps-to"</span>);
+<a href=#148 id=148 data-nosnippet>148</a>  <span class="macro">DefMath!</span>(<span class="string">"\\owns"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{220B}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"contains"</span>);
+<a href=#149 id=149 data-nosnippet>149</a>
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="comment">// \symbol lookup symbol in font by index?
+<a href=#151 id=151 data-nosnippet>151</a></span>});
 </code></pre></div></section></main></body></html>

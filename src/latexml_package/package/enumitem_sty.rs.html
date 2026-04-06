@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/enumitem_sty.rs`."><title>enumitem_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (a25435bcf 2026-03-29)" data-channel="nightly" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>enumitem_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/enumitem_sty.rs`."><title>enumitem_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (9602bda1d 2026-04-05)" data-channel="nightly" data-search-js="search-1c5d44ff.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>enumitem_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>latexml_core::common::arena::SymHashMap;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::definition::argument::ArgWrap;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>latexml_core::definition::PropertiesClosure;
@@ -370,135 +370,148 @@
 <a href=#370 id=370 data-nosnippet>370</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"endpenalty"</span>, <span class="string">"Number"</span>);
 <a href=#371 id=371 data-nosnippet>371</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"noitemsep"</span>, <span class="string">""</span>, <span class="string">"true"</span>);
 <a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"nolistsep"</span>, <span class="string">""</span>, <span class="string">"true"</span>);
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"before"</span>, <span class="string">"UndigestedKey"</span>);
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"after"</span>, <span class="string">"UndigestedKey"</span>);
-<a href=#375 id=375 data-nosnippet>375</a>
-<a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">if </span>!has_value(<span class="string">"enumitem@loadonly"</span>) {
-<a href=#377 id=377 data-nosnippet>377</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{itemize} OptionalKeyVals:enumitem"</span>,
-<a href=#378 id=378 data-nosnippet>378</a>      <span class="string">"&lt;ltx:itemize xml:id='#id'&gt;#body&lt;/ltx:itemize&gt;"</span>,
-<a href=#379 id=379 data-nosnippet>379</a>      properties =&gt; sub[args] {
-<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">let </span>kv = extract_keyvals(args);
-<a href=#381 id=381 data-nosnippet>381</a>        begin_enum_itemize(<span class="string">"itemize"</span>, <span class="string">"@item"</span>, kv.as_ref())
-<a href=#382 id=382 data-nosnippet>382</a>      },
-<a href=#383 id=383 data-nosnippet>383</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
-<a href=#384 id=384 data-nosnippet>384</a>      before_digest_end =&gt; { stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)))<span class="question-mark">?</span>; },
-<a href=#385 id=385 data-nosnippet>385</a>      mode =&gt; <span class="string">"internal_vertical"</span>,
-<a href=#386 id=386 data-nosnippet>386</a>      locked =&gt; <span class="bool-val">true
-<a href=#387 id=387 data-nosnippet>387</a>    </span>);
-<a href=#388 id=388 data-nosnippet>388</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate} OptionalKeyVals:enumitem"</span>,
-<a href=#389 id=389 data-nosnippet>389</a>      <span class="string">"&lt;ltx:enumerate xml:id='#id'&gt;#body&lt;/ltx:enumerate&gt;"</span>,
-<a href=#390 id=390 data-nosnippet>390</a>      properties =&gt; sub[args] {
-<a href=#391 id=391 data-nosnippet>391</a>        <span class="kw">let </span>kv = extract_keyvals(args);
-<a href=#392 id=392 data-nosnippet>392</a>        begin_enum_itemize(<span class="string">"enumerate"</span>, <span class="string">"enum"</span>, kv.as_ref())
-<a href=#393 id=393 data-nosnippet>393</a>      },
-<a href=#394 id=394 data-nosnippet>394</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
-<a href=#395 id=395 data-nosnippet>395</a>      before_digest_end =&gt; { stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)))<span class="question-mark">?</span>; },
-<a href=#396 id=396 data-nosnippet>396</a>      mode =&gt; <span class="string">"internal_vertical"</span>,
-<a href=#397 id=397 data-nosnippet>397</a>      locked =&gt; <span class="bool-val">true
-<a href=#398 id=398 data-nosnippet>398</a>    </span>);
-<a href=#399 id=399 data-nosnippet>399</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{description} OptionalKeyVals:enumitem"</span>,
-<a href=#400 id=400 data-nosnippet>400</a>      <span class="string">"&lt;ltx:description xml:id='#id'&gt;#body&lt;/ltx:description&gt;"</span>,
-<a href=#401 id=401 data-nosnippet>401</a>      before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\makelabel"</span>, <span class="string">"\\descriptionlabel"</span>); },
-<a href=#402 id=402 data-nosnippet>402</a>      properties =&gt; sub[args] {
-<a href=#403 id=403 data-nosnippet>403</a>        <span class="kw">let </span>kv = extract_keyvals(args);
-<a href=#404 id=404 data-nosnippet>404</a>        begin_enum_itemize(<span class="string">"description"</span>, <span class="string">"@desc"</span>, kv.as_ref())
-<a href=#405 id=405 data-nosnippet>405</a>      },
-<a href=#406 id=406 data-nosnippet>406</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
-<a href=#407 id=407 data-nosnippet>407</a>      before_digest_end =&gt; { stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)))<span class="question-mark">?</span>; },
-<a href=#408 id=408 data-nosnippet>408</a>      mode =&gt; <span class="string">"internal_vertical"</span>,
-<a href=#409 id=409 data-nosnippet>409</a>      locked =&gt; <span class="bool-val">true
-<a href=#410 id=410 data-nosnippet>410</a>    </span>);
-<a href=#411 id=411 data-nosnippet>411</a>  }
-<a href=#412 id=412 data-nosnippet>412</a>
-<a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">if </span>has_value(<span class="string">"enumitem@inline"</span>) {
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{itemize*} OptionalKeyVals:enumitem"</span>,
-<a href=#415 id=415 data-nosnippet>415</a>      <span class="string">"&lt;ltx:inline-itemize xml:id='#id'&gt;#body&lt;/ltx:inline-itemize&gt;"</span>,
-<a href=#416 id=416 data-nosnippet>416</a>      properties =&gt; sub[args] {
-<a href=#417 id=417 data-nosnippet>417</a>        <span class="kw">let </span>kv = extract_keyvals(args);
-<a href=#418 id=418 data-nosnippet>418</a>        begin_enum_itemize(<span class="string">"inline@itemize"</span>, <span class="string">"@item"</span>, kv.as_ref())
-<a href=#419 id=419 data-nosnippet>419</a>      },
-<a href=#420 id=420 data-nosnippet>420</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
-<a href=#421 id=421 data-nosnippet>421</a>      mode =&gt; <span class="string">"internal_vertical"
-<a href=#422 id=422 data-nosnippet>422</a>    </span>);
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate*} OptionalKeyVals:enumitem"</span>,
-<a href=#424 id=424 data-nosnippet>424</a>      <span class="string">"&lt;ltx:inline-enumerate xml:id='#id'&gt;#body&lt;/ltx:inline-enumerate&gt;"</span>,
-<a href=#425 id=425 data-nosnippet>425</a>      properties =&gt; sub[args] {
-<a href=#426 id=426 data-nosnippet>426</a>        <span class="kw">let </span>kv = extract_keyvals(args);
-<a href=#427 id=427 data-nosnippet>427</a>        begin_enum_itemize(<span class="string">"inline@enumerate"</span>, <span class="string">"enum"</span>, kv.as_ref())
-<a href=#428 id=428 data-nosnippet>428</a>      },
-<a href=#429 id=429 data-nosnippet>429</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
-<a href=#430 id=430 data-nosnippet>430</a>      mode =&gt; <span class="string">"internal_vertical"
-<a href=#431 id=431 data-nosnippet>431</a>    </span>);
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{description*} OptionalKeyVals:enumitem"</span>,
-<a href=#433 id=433 data-nosnippet>433</a>      <span class="string">"&lt;ltx:inline-description xml:id='#id'&gt;#body&lt;/ltx:inline-description&gt;"</span>,
-<a href=#434 id=434 data-nosnippet>434</a>      properties =&gt; sub[args] {
-<a href=#435 id=435 data-nosnippet>435</a>        <span class="kw">let </span>kv = extract_keyvals(args);
-<a href=#436 id=436 data-nosnippet>436</a>        begin_enum_itemize(<span class="string">"inline@description"</span>, <span class="string">"@desc"</span>, kv.as_ref())
-<a href=#437 id=437 data-nosnippet>437</a>      },
-<a href=#438 id=438 data-nosnippet>438</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
-<a href=#439 id=439 data-nosnippet>439</a>      mode =&gt; <span class="string">"internal_vertical"
-<a href=#440 id=440 data-nosnippet>440</a>    </span>);
-<a href=#441 id=441 data-nosnippet>441</a>  }
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="comment">// \newlist{name}{type}{maxdepth} — Perl: enumitem.sty.ltxml L184-206
-<a href=#444 id=444 data-nosnippet>444</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newlist{}{}{}"</span>, sub[(listname, listtype, maxdepth)] {
-<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">let </span>listname = listname.to_string();
-<a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">let </span>listtype = listtype.to_string();
-<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>maxdepth: i32 = maxdepth.to_string().parse().unwrap_or(<span class="number">4</span>);
-<a href=#448 id=448 data-nosnippet>448</a>    newlist_impl(<span class="kw-2">&amp;</span>listname, <span class="kw-2">&amp;</span>listtype, maxdepth)<span class="question-mark">?</span>;
-<a href=#449 id=449 data-nosnippet>449</a>  });
-<a href=#450 id=450 data-nosnippet>450</a>  <span class="macro">Let!</span>(<span class="string">"\\renewlist"</span>, <span class="string">"\\newlist"</span>);
-<a href=#451 id=451 data-nosnippet>451</a>
-<a href=#452 id=452 data-nosnippet>452</a>  <span class="comment">// \setlist[names]{keyvals} — Perl: enumitem.sty.ltxml L210-221
-<a href=#453 id=453 data-nosnippet>453</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\setlist Optional RequiredKeyVals:enumitem"</span>, sub[(names, kv)] {
-<a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>names_toks) = names {
-<a href=#455 id=455 data-nosnippet>455</a>      <span class="kw">let </span>names_str = names_toks.to_string();
-<a href=#456 id=456 data-nosnippet>456</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = names_str.split(<span class="string">','</span>).map(|s| s.trim()).collect();
-<a href=#457 id=457 data-nosnippet>457</a>      <span class="kw">if </span>parts.len() == <span class="number">1 </span>&amp;&amp; !parts[<span class="number">0</span>].is_empty() {
-<a href=#458 id=458 data-nosnippet>458</a>        store_enumitem_defaults(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"enumitem_{}_defaults"</span>, parts[<span class="number">0</span>]), <span class="kw-2">&amp;</span>kv);
-<a href=#459 id=459 data-nosnippet>459</a>      } <span class="kw">else if </span>parts.len() &gt; <span class="number">1 </span>{
-<a href=#460 id=460 data-nosnippet>460</a>        <span class="kw">let </span>name = parts[<span class="number">0</span>];
-<a href=#461 id=461 data-nosnippet>461</a>        <span class="kw">for </span>level <span class="kw">in </span><span class="kw-2">&amp;</span>parts[<span class="number">1</span>..] {
-<a href=#462 id=462 data-nosnippet>462</a>          store_enumitem_defaults(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"enumitem_{name}{level}_defaults"</span>), <span class="kw-2">&amp;</span>kv);
-<a href=#463 id=463 data-nosnippet>463</a>        }
-<a href=#464 id=464 data-nosnippet>464</a>      } <span class="kw">else </span>{
-<a href=#465 id=465 data-nosnippet>465</a>        store_enumitem_defaults(<span class="string">"enumitem_defaults"</span>, <span class="kw-2">&amp;</span>kv);
-<a href=#466 id=466 data-nosnippet>466</a>      }
-<a href=#467 id=467 data-nosnippet>467</a>    } <span class="kw">else </span>{
-<a href=#468 id=468 data-nosnippet>468</a>      store_enumitem_defaults(<span class="string">"enumitem_defaults"</span>, <span class="kw-2">&amp;</span>kv);
-<a href=#469 id=469 data-nosnippet>469</a>    }
-<a href=#470 id=470 data-nosnippet>470</a>  });
-<a href=#471 id=471 data-nosnippet>471</a>
-<a href=#472 id=472 data-nosnippet>472</a>  <span class="comment">// Obsolete shorthands
-<a href=#473 id=473 data-nosnippet>473</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\setitemize Optional {}"</span>, <span class="string">"\\setlist[itemize,#1]{#2}"</span>);
-<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setenumerate Optional {}"</span>, <span class="string">"\\setlist[enumerate,#1]{#2}"</span>);
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setdescription Optional {}"</span>, <span class="string">"\\setlist[description,#1]{#2}"</span>);
-<a href=#476 id=476 data-nosnippet>476</a>
-<a href=#477 id=477 data-nosnippet>477</a>  <span class="comment">// \restartlist — Perl: enumitem.sty.ltxml L128-140
-<a href=#478 id=478 data-nosnippet>478</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\restartlist{}"</span>, sub[(listname)] {
-<a href=#479 id=479 data-nosnippet>479</a>    <span class="kw">let </span>listname = listname.to_string();
-<a href=#480 id=480 data-nosnippet>480</a>    <span class="kw">let </span>counter = <span class="kw">match </span>listname.as_str() {
-<a href=#481 id=481 data-nosnippet>481</a>      <span class="string">"enumerate" </span>=&gt; <span class="string">"enum"</span>,
-<a href=#482 id=482 data-nosnippet>482</a>      <span class="string">"itemize" </span>=&gt; <span class="string">"@item"</span>,
-<a href=#483 id=483 data-nosnippet>483</a>      <span class="string">"description" </span>=&gt; <span class="string">"@desc"</span>,
-<a href=#484 id=484 data-nosnippet>484</a>      <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span>listname,
-<a href=#485 id=485 data-nosnippet>485</a>    };
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="kw">for </span>i <span class="kw">in </span><span class="number">1_i64</span>..=<span class="number">6 </span>{
-<a href=#487 id=487 data-nosnippet>487</a>      <span class="kw">let </span>r = roman_aux(i);
-<a href=#488 id=488 data-nosnippet>488</a>      <span class="kw">let </span>ctr_name = <span class="macro">s!</span>(<span class="string">"{counter}{r}"</span>);
-<a href=#489 id=489 data-nosnippet>489</a>      <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{ctr_name}"</span>))).ok().flatten().is_some() {
-<a href=#490 id=490 data-nosnippet>490</a>        <span class="macro">SetCounter!</span>(ctr_name, Number(<span class="number">0</span>));
-<a href=#491 id=491 data-nosnippet>491</a>      }
-<a href=#492 id=492 data-nosnippet>492</a>    }
-<a href=#493 id=493 data-nosnippet>493</a>  });
-<a href=#494 id=494 data-nosnippet>494</a>
-<a href=#495 id=495 data-nosnippet>495</a>  <span class="comment">// Not-yet-handled bits
-<a href=#496 id=496 data-nosnippet>496</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\SetLabelAlign{}{}"</span>, <span class="string">""</span>);
-<a href=#497 id=497 data-nosnippet>497</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EnumitemId"</span>, <span class="string">""</span>);
-<a href=#498 id=498 data-nosnippet>498</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumitemKey{}{}"</span>, <span class="string">""</span>);
-<a href=#499 id=499 data-nosnippet>499</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumerateShortLabel{}{}"</span>, <span class="string">""</span>);
-<a href=#500 id=500 data-nosnippet>500</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumitemValue{}{}{}"</span>, <span class="string">""</span>);
-<a href=#501 id=501 data-nosnippet>501</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumitemSize{}{}"</span>, <span class="string">""</span>);
-<a href=#502 id=502 data-nosnippet>502</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AddEnumerateCounter{}{}{}"</span>, <span class="string">""</span>);
-<a href=#503 id=503 data-nosnippet>503</a>});
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"nosep"</span>, <span class="string">""</span>, <span class="string">"true"</span>);
+<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"before"</span>, <span class="string">"UndigestedKey"</span>);
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"before*"</span>, <span class="string">"UndigestedKey"</span>);
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"after"</span>, <span class="string">"UndigestedKey"</span>);
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"after*"</span>, <span class="string">"UndigestedKey"</span>);
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="comment">// Spacing keyvals (Perl L160-175) — ignored for HTML but must be recognized
+<a href=#379 id=379 data-nosnippet>379</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"topsep"</span>, <span class="string">"Dimension"</span>);
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"partopsep"</span>, <span class="string">"Dimension"</span>);
+<a href=#381 id=381 data-nosnippet>381</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"parsep"</span>, <span class="string">"Dimension"</span>);
+<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"itemsep"</span>, <span class="string">"Dimension"</span>);
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"listparindent"</span>, <span class="string">"Dimension"</span>);
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"rightmargin"</span>, <span class="string">"Dimension"</span>);
+<a href=#385 id=385 data-nosnippet>385</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"wide"</span>, <span class="string">""</span>, <span class="string">"true"</span>);
+<a href=#386 id=386 data-nosnippet>386</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"first"</span>, <span class="string">"UndigestedKey"</span>);
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"enumitem"</span>, <span class="string">"first*"</span>, <span class="string">"UndigestedKey"</span>);
+<a href=#388 id=388 data-nosnippet>388</a>
+<a href=#389 id=389 data-nosnippet>389</a>  <span class="kw">if </span>!has_value(<span class="string">"enumitem@loadonly"</span>) {
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{itemize} OptionalKeyVals:enumitem"</span>,
+<a href=#391 id=391 data-nosnippet>391</a>      <span class="string">"&lt;ltx:itemize xml:id='#id'&gt;#body&lt;/ltx:itemize&gt;"</span>,
+<a href=#392 id=392 data-nosnippet>392</a>      properties =&gt; sub[args] {
+<a href=#393 id=393 data-nosnippet>393</a>        <span class="kw">let </span>kv = extract_keyvals(args);
+<a href=#394 id=394 data-nosnippet>394</a>        begin_enum_itemize(<span class="string">"itemize"</span>, <span class="string">"@item"</span>, kv.as_ref())
+<a href=#395 id=395 data-nosnippet>395</a>      },
+<a href=#396 id=396 data-nosnippet>396</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
+<a href=#397 id=397 data-nosnippet>397</a>      before_digest_end =&gt; { stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)))<span class="question-mark">?</span>; },
+<a href=#398 id=398 data-nosnippet>398</a>      mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>      locked =&gt; <span class="bool-val">true
+<a href=#400 id=400 data-nosnippet>400</a>    </span>);
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate} OptionalKeyVals:enumitem"</span>,
+<a href=#402 id=402 data-nosnippet>402</a>      <span class="string">"&lt;ltx:enumerate xml:id='#id'&gt;#body&lt;/ltx:enumerate&gt;"</span>,
+<a href=#403 id=403 data-nosnippet>403</a>      properties =&gt; sub[args] {
+<a href=#404 id=404 data-nosnippet>404</a>        <span class="kw">let </span>kv = extract_keyvals(args);
+<a href=#405 id=405 data-nosnippet>405</a>        begin_enum_itemize(<span class="string">"enumerate"</span>, <span class="string">"enum"</span>, kv.as_ref())
+<a href=#406 id=406 data-nosnippet>406</a>      },
+<a href=#407 id=407 data-nosnippet>407</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
+<a href=#408 id=408 data-nosnippet>408</a>      before_digest_end =&gt; { stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)))<span class="question-mark">?</span>; },
+<a href=#409 id=409 data-nosnippet>409</a>      mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#410 id=410 data-nosnippet>410</a>      locked =&gt; <span class="bool-val">true
+<a href=#411 id=411 data-nosnippet>411</a>    </span>);
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{description} OptionalKeyVals:enumitem"</span>,
+<a href=#413 id=413 data-nosnippet>413</a>      <span class="string">"&lt;ltx:description xml:id='#id'&gt;#body&lt;/ltx:description&gt;"</span>,
+<a href=#414 id=414 data-nosnippet>414</a>      before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\makelabel"</span>, <span class="string">"\\descriptionlabel"</span>); },
+<a href=#415 id=415 data-nosnippet>415</a>      properties =&gt; sub[args] {
+<a href=#416 id=416 data-nosnippet>416</a>        <span class="kw">let </span>kv = extract_keyvals(args);
+<a href=#417 id=417 data-nosnippet>417</a>        begin_enum_itemize(<span class="string">"description"</span>, <span class="string">"@desc"</span>, kv.as_ref())
+<a href=#418 id=418 data-nosnippet>418</a>      },
+<a href=#419 id=419 data-nosnippet>419</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
+<a href=#420 id=420 data-nosnippet>420</a>      before_digest_end =&gt; { stomach::digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)))<span class="question-mark">?</span>; },
+<a href=#421 id=421 data-nosnippet>421</a>      mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#422 id=422 data-nosnippet>422</a>      locked =&gt; <span class="bool-val">true
+<a href=#423 id=423 data-nosnippet>423</a>    </span>);
+<a href=#424 id=424 data-nosnippet>424</a>  }
+<a href=#425 id=425 data-nosnippet>425</a>
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="kw">if </span>has_value(<span class="string">"enumitem@inline"</span>) {
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{itemize*} OptionalKeyVals:enumitem"</span>,
+<a href=#428 id=428 data-nosnippet>428</a>      <span class="string">"&lt;ltx:inline-itemize xml:id='#id'&gt;#body&lt;/ltx:inline-itemize&gt;"</span>,
+<a href=#429 id=429 data-nosnippet>429</a>      properties =&gt; sub[args] {
+<a href=#430 id=430 data-nosnippet>430</a>        <span class="kw">let </span>kv = extract_keyvals(args);
+<a href=#431 id=431 data-nosnippet>431</a>        begin_enum_itemize(<span class="string">"inline@itemize"</span>, <span class="string">"@item"</span>, kv.as_ref())
+<a href=#432 id=432 data-nosnippet>432</a>      },
+<a href=#433 id=433 data-nosnippet>433</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
+<a href=#434 id=434 data-nosnippet>434</a>      mode =&gt; <span class="string">"internal_vertical"
+<a href=#435 id=435 data-nosnippet>435</a>    </span>);
+<a href=#436 id=436 data-nosnippet>436</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate*} OptionalKeyVals:enumitem"</span>,
+<a href=#437 id=437 data-nosnippet>437</a>      <span class="string">"&lt;ltx:inline-enumerate xml:id='#id'&gt;#body&lt;/ltx:inline-enumerate&gt;"</span>,
+<a href=#438 id=438 data-nosnippet>438</a>      properties =&gt; sub[args] {
+<a href=#439 id=439 data-nosnippet>439</a>        <span class="kw">let </span>kv = extract_keyvals(args);
+<a href=#440 id=440 data-nosnippet>440</a>        begin_enum_itemize(<span class="string">"inline@enumerate"</span>, <span class="string">"enum"</span>, kv.as_ref())
+<a href=#441 id=441 data-nosnippet>441</a>      },
+<a href=#442 id=442 data-nosnippet>442</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
+<a href=#443 id=443 data-nosnippet>443</a>      mode =&gt; <span class="string">"internal_vertical"
+<a href=#444 id=444 data-nosnippet>444</a>    </span>);
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="macro">DefEnvironment!</span>(<span class="string">"{description*} OptionalKeyVals:enumitem"</span>,
+<a href=#446 id=446 data-nosnippet>446</a>      <span class="string">"&lt;ltx:inline-description xml:id='#id'&gt;#body&lt;/ltx:inline-description&gt;"</span>,
+<a href=#447 id=447 data-nosnippet>447</a>      properties =&gt; sub[args] {
+<a href=#448 id=448 data-nosnippet>448</a>        <span class="kw">let </span>kv = extract_keyvals(args);
+<a href=#449 id=449 data-nosnippet>449</a>        begin_enum_itemize(<span class="string">"inline@description"</span>, <span class="string">"@desc"</span>, kv.as_ref())
+<a href=#450 id=450 data-nosnippet>450</a>      },
+<a href=#451 id=451 data-nosnippet>451</a>      after_digest_body =&gt; sub[whatsit] { end_enum_itemize(whatsit) },
+<a href=#452 id=452 data-nosnippet>452</a>      mode =&gt; <span class="string">"internal_vertical"
+<a href=#453 id=453 data-nosnippet>453</a>    </span>);
+<a href=#454 id=454 data-nosnippet>454</a>  }
+<a href=#455 id=455 data-nosnippet>455</a>
+<a href=#456 id=456 data-nosnippet>456</a>  <span class="comment">// \newlist{name}{type}{maxdepth} — Perl: enumitem.sty.ltxml L184-206
+<a href=#457 id=457 data-nosnippet>457</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newlist{}{}{}"</span>, sub[(listname, listtype, maxdepth)] {
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">let </span>listname = listname.to_string();
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">let </span>listtype = listtype.to_string();
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">let </span>maxdepth: i32 = maxdepth.to_string().parse().unwrap_or(<span class="number">4</span>);
+<a href=#461 id=461 data-nosnippet>461</a>    newlist_impl(<span class="kw-2">&amp;</span>listname, <span class="kw-2">&amp;</span>listtype, maxdepth)<span class="question-mark">?</span>;
+<a href=#462 id=462 data-nosnippet>462</a>  });
+<a href=#463 id=463 data-nosnippet>463</a>  <span class="macro">Let!</span>(<span class="string">"\\renewlist"</span>, <span class="string">"\\newlist"</span>);
+<a href=#464 id=464 data-nosnippet>464</a>
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="comment">// \setlist[names]{keyvals} — Perl: enumitem.sty.ltxml L210-221
+<a href=#466 id=466 data-nosnippet>466</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\setlist Optional RequiredKeyVals:enumitem"</span>, sub[(names, kv)] {
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>names_toks) = names {
+<a href=#468 id=468 data-nosnippet>468</a>      <span class="kw">let </span>names_str = names_toks.to_string();
+<a href=#469 id=469 data-nosnippet>469</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = names_str.split(<span class="string">','</span>).map(|s| s.trim()).collect();
+<a href=#470 id=470 data-nosnippet>470</a>      <span class="kw">if </span>parts.len() == <span class="number">1 </span>&amp;&amp; !parts[<span class="number">0</span>].is_empty() {
+<a href=#471 id=471 data-nosnippet>471</a>        store_enumitem_defaults(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"enumitem_{}_defaults"</span>, parts[<span class="number">0</span>]), <span class="kw-2">&amp;</span>kv);
+<a href=#472 id=472 data-nosnippet>472</a>      } <span class="kw">else if </span>parts.len() &gt; <span class="number">1 </span>{
+<a href=#473 id=473 data-nosnippet>473</a>        <span class="kw">let </span>name = parts[<span class="number">0</span>];
+<a href=#474 id=474 data-nosnippet>474</a>        <span class="kw">for </span>level <span class="kw">in </span><span class="kw-2">&amp;</span>parts[<span class="number">1</span>..] {
+<a href=#475 id=475 data-nosnippet>475</a>          store_enumitem_defaults(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"enumitem_{name}{level}_defaults"</span>), <span class="kw-2">&amp;</span>kv);
+<a href=#476 id=476 data-nosnippet>476</a>        }
+<a href=#477 id=477 data-nosnippet>477</a>      } <span class="kw">else </span>{
+<a href=#478 id=478 data-nosnippet>478</a>        store_enumitem_defaults(<span class="string">"enumitem_defaults"</span>, <span class="kw-2">&amp;</span>kv);
+<a href=#479 id=479 data-nosnippet>479</a>      }
+<a href=#480 id=480 data-nosnippet>480</a>    } <span class="kw">else </span>{
+<a href=#481 id=481 data-nosnippet>481</a>      store_enumitem_defaults(<span class="string">"enumitem_defaults"</span>, <span class="kw-2">&amp;</span>kv);
+<a href=#482 id=482 data-nosnippet>482</a>    }
+<a href=#483 id=483 data-nosnippet>483</a>  });
+<a href=#484 id=484 data-nosnippet>484</a>
+<a href=#485 id=485 data-nosnippet>485</a>  <span class="comment">// Obsolete shorthands
+<a href=#486 id=486 data-nosnippet>486</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\setitemize Optional {}"</span>, <span class="string">"\\setlist[itemize,#1]{#2}"</span>);
+<a href=#487 id=487 data-nosnippet>487</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setenumerate Optional {}"</span>, <span class="string">"\\setlist[enumerate,#1]{#2}"</span>);
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setdescription Optional {}"</span>, <span class="string">"\\setlist[description,#1]{#2}"</span>);
+<a href=#489 id=489 data-nosnippet>489</a>
+<a href=#490 id=490 data-nosnippet>490</a>  <span class="comment">// \restartlist — Perl: enumitem.sty.ltxml L128-140
+<a href=#491 id=491 data-nosnippet>491</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\restartlist{}"</span>, sub[(listname)] {
+<a href=#492 id=492 data-nosnippet>492</a>    <span class="kw">let </span>listname = listname.to_string();
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">let </span>counter = <span class="kw">match </span>listname.as_str() {
+<a href=#494 id=494 data-nosnippet>494</a>      <span class="string">"enumerate" </span>=&gt; <span class="string">"enum"</span>,
+<a href=#495 id=495 data-nosnippet>495</a>      <span class="string">"itemize" </span>=&gt; <span class="string">"@item"</span>,
+<a href=#496 id=496 data-nosnippet>496</a>      <span class="string">"description" </span>=&gt; <span class="string">"@desc"</span>,
+<a href=#497 id=497 data-nosnippet>497</a>      <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span>listname,
+<a href=#498 id=498 data-nosnippet>498</a>    };
+<a href=#499 id=499 data-nosnippet>499</a>    <span class="kw">for </span>i <span class="kw">in </span><span class="number">1_i64</span>..=<span class="number">6 </span>{
+<a href=#500 id=500 data-nosnippet>500</a>      <span class="kw">let </span>r = roman_aux(i);
+<a href=#501 id=501 data-nosnippet>501</a>      <span class="kw">let </span>ctr_name = <span class="macro">s!</span>(<span class="string">"{counter}{r}"</span>);
+<a href=#502 id=502 data-nosnippet>502</a>      <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{ctr_name}"</span>))).ok().flatten().is_some() {
+<a href=#503 id=503 data-nosnippet>503</a>        <span class="macro">SetCounter!</span>(ctr_name, Number(<span class="number">0</span>));
+<a href=#504 id=504 data-nosnippet>504</a>      }
+<a href=#505 id=505 data-nosnippet>505</a>    }
+<a href=#506 id=506 data-nosnippet>506</a>  });
+<a href=#507 id=507 data-nosnippet>507</a>
+<a href=#508 id=508 data-nosnippet>508</a>  <span class="comment">// Not-yet-handled bits
+<a href=#509 id=509 data-nosnippet>509</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\SetLabelAlign{}{}"</span>, <span class="string">""</span>);
+<a href=#510 id=510 data-nosnippet>510</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EnumitemId"</span>, <span class="string">""</span>);
+<a href=#511 id=511 data-nosnippet>511</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumitemKey{}{}"</span>, <span class="string">""</span>);
+<a href=#512 id=512 data-nosnippet>512</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumerateShortLabel{}{}"</span>, <span class="string">""</span>);
+<a href=#513 id=513 data-nosnippet>513</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumitemValue{}{}{}"</span>, <span class="string">""</span>);
+<a href=#514 id=514 data-nosnippet>514</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SetEnumitemSize{}{}"</span>, <span class="string">""</span>);
+<a href=#515 id=515 data-nosnippet>515</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AddEnumerateCounter{}{}{}"</span>, <span class="string">""</span>);
+<a href=#516 id=516 data-nosnippet>516</a>});
 </code></pre></div></section></main></body></html>
