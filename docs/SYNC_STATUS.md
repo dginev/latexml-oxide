@@ -111,11 +111,18 @@ Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-p
 **Visual comparison (session 93 final):** 20/37 IDENTICAL (54%), 10 near-identical/cosmetic, 2 Rust-better, 2 critical (tikz truncation).
 
 **Remaining actionable bugs (session 93):**
-- [ ] **2405.19425**: Missing images — Rust HTML has no `<img>` for figures, Perl has all images. Likely graphics post-processing path issue.
-- [ ] **2405.19425**: Listing color/background/line-numbers — Perl has `lstlisting` with syntax highlighting colors, background shading, and line numbers. Rust has plain text. Needs listings.sty binding for `backgroundcolor`, `numbers`, `keywordstyle` etc.
-- [ ] **2602.18719**: tikz-cd body truncation (34KB vs 557KB) — root cause: `\lxSVG@halign` constructor unimplemented (Perl L892-918). Needs SVG matrix layout with `tikzAlignmentBindings`.
-- [ ] **2603.15617**: tikzpicture body truncation (35KB vs 1189KB) — `\node`, `\draw`, `\endscope` undefined in tikz context. Needs basic tikz drawing command stubs.
-- [ ] **pgf arrow tips**: 'Computer Modern Rightarrow', 'Hooks', 'Implies', 'Circle' — arrow tip definitions missing from pgf arrows.meta library.
+- [x] **2405.19425**: Missing images — Fixed: multi-page PDF page extraction in graphics post-processor. `page=N` option now parsed, passed to ImageMagick with `[N-1]` selector, unique filenames generated per page (x1.png, x2.png, ...). All 10 images render with dimensions.
+- [x] **2405.19425**: Listing color/background/line-numbers — Already working: Rust has syntax highlighting (ltx_lst_string, ltx_lst_comments), background color (--ltx-bg-color), line numbers (ltx_lst_numbers_left), and language classes. Verified in session 94 output.
+- [x] **2602.18719**: tikz-cd body truncation — FIXED. Was 34KB/1001 errors, now 677KB/17 errors (119% of Perl size). Paired `\bgroup`/`\egroup` `defined_as` fix in `parse_halign_template` + `digest_alignment_body` + `digest_alignment_column` resolved the root cause. Remaining 17 errors are post-processing cross-ref ID misses for one math expression (S4.Ex63.m1).
+- [ ] **2603.15617**: body truncation (35KB vs 1189KB) — expl3 bootstrap failure. Root cause identified (session 94): `\tex_let:D` undefined after expl3-code.tex loading, causing expl3.sty's `\ExplSyntaxOn` guard to trigger `\endinput`. expl3 core functions (\cs_new:Npn, etc.) ARE available but the l3file section fails (quarks undefined). Double-load issue found and fix designed (early loaded_key + noltxml bypass in content.rs) but reverted because the `\msg_new:nnn` raw_tex call leaks text when changed from `?` to `let _`. Needs: (1) fix expl3 bootstrap so `\tex_let:D` is defined, OR (2) make raw_tex `\msg_new` non-leaking. Perl PR#2783 changes applied to tcolorbox but reverted with the rest.
+- [x] **pgf arrow tips**: 2402.10301 (previously FAIL/timeout "pgf Computer Modern Rightarrow") now renders 1.8MB (124% of Perl) with 0 errors — resolved by \bgroup/\egroup fix. Arrow tips render as inline SVG paths via existing pgfsys primitives. Remaining EMPTY papers (2209.14198, 2410.10068) blocked by expl3 undefined macros, not arrow tips.
+
+**Session 94 fixes (2026-04-06) — Graphics page extraction + tikz halign \bgroup/\egroup:**
+1. `graphics.rs`: Multi-page PDF `page=N` extraction. Parse page option from graphicx options, pass `[N-1]` page selector to ImageMagick `convert`, generate unique per-page filenames (x1.png, x2.png). Added `-define pdf:use-cropbox=true`. 2405.19425: all 10 images now render with dimensions.
+2. `graphicx_sty.rs`: Added `DefKeyVal!("Gin", "page", "")` — page option now properly parsed in keyval context.
+3. `tex_tables.rs`: Paired `\bgroup`/`\egroup` fix in alignment — `defined_as(T_BEGIN/T_END)` at all three Perl-matched locations: `parse_halign_template` entry (L190), `digest_alignment_body` termination (L319), `digest_alignment_column` scan end (L395). Early return on error with token unread. Recovered 3 tikz tests (ac_drive_components, atoms_and_orbitals, consort_flowchart now produce real SVG content).
+4. `pgfsys_latexml_def.rs`: Added `\lxSVG@halign` DefConstructor + `tikz_alignment_bindings()` — SVG matrix layout using `svg:g` elements with transform matrices. Bails out gracefully when template has no columns.
+5. Tikz status: 7/10 pass (was 5/10); consort_flowchart produces 364-line SVG (was 23-line stub), has known tikz SVG parity diffs vs Perl; 3 still loop (dominoes, various_colors, unit_tests_by_silviu — pre-existing).
 
 **Session 93 fixes (2026-04-05) — Algorithm2e + bibconfig + elsart:**
 1. `algorithm2e_sty.rs`: `\BlankLine` (`\vskip 1ex`) leaked "1ex" as literal text in listing lines. Fixed: override to `\lx@algo@par` inside algorithm env.

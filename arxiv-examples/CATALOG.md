@@ -41,11 +41,11 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2401.18036 | OK | 167KB | 173KB | 96% | manuscript.tex | 64 bibitems (bbl) | cosmetic: author layout diff |
 | 2401.18052 | OK | 155KB | 164KB | 94% | ms_feII.tex | 77 bibitems (bbl) | Perl has blue author links |
 | 2402.03300 | EMPTY | 0KB | 393KB | 0% | main.tex | pgfkeys recursion | N/A |
-| 2402.10301 | FAIL | 0KB | 1421KB | 0% | paper.tex | Timeout (pgf arrows) | N/A |
+| 2402.10301 | OK | 1800KB | 1454KB | 124% | paper.tex | tikz-cd FIXED (S94); 0 errors | Rust >Perl; full content |
 | 2403.07652 | OK | 104KB | 111KB | 93% | acl_latex.tex | 28 bibitems (bbl) | IDENTICAL |
 | 2403.15796 | OK | 4KB | 4KB | 95% | 0_main.tex | Perl has wrong main file | near-identical (logo size diff) |
 | 2405.17032 | OK | 301KB | 793KB | 38% | ms.tex | 15 missing; tikz figs missing | p1 near-identical; tikz missing deeper |
-| 2405.19425 | OK | 422KB | 478KB | 88% | main.tex | 80 bibitems; lstdefinestyle fix | IDENTICAL; listing styled (colors+numbers) |
+| 2405.19425 | OK | 434KB | 490KB | 88% | main.tex | 80 bibitems; page=N PDF fix (S94) | IDENTICAL; all 10 images render |
 | 2406.06608 | OK | 773KB | 739KB | 104% | main.tex | 373 bibitems | near-identical; author spacing |
 | 2408.11158 | OK | 64KB | 68KB | 93% | aipsamp.tex | 27 bibitems (bbl) | IDENTICAL |
 | 2408.13687 | OK | 105KB | 109KB | 97% | main.tex | 60 bibitems (bbl) | cosmetic: date, citation format |
@@ -64,7 +64,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2511.15304 | OK | 141KB | 134KB | 105% | main.tex | 12 missing cites | IDENTICAL |
 | 2512.09456 | OK | 200KB | 97KB | 205% | Main.tex | 30 missing; inline bib | IDENTICAL |
 | 2512.16911 | OK | 704KB | 635KB | 110% | main.tex | 36 missing cites | IDENTICAL |
-| 2602.18719 | OK | 34KB | 557KB | 6% | CDKU.tex | tikz-cd errors (179) | CRITICAL: body truncated |
+| 2602.18719 | OK | 677KB | 557KB | 119% | CDKU.tex | tikz-cd FIXED (S94); 17 xref errs | Rust >Perl size; full content |
 | 2602.23324 | OK | 672KB | 659KB | 102% | main.tex | 24 missing cites | IDENTICAL |
 | 2603.14602 | EMPTY | 0KB | 339KB | 0% | main.tex | listing/minted errors | N/A |
 | 2603.15617 | OK | 35KB | 1189KB | 3% | paper.tex | tikzpicture mode corruption | CRITICAL: body truncated |

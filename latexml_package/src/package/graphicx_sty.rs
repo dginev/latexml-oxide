@@ -287,6 +287,7 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "alt", "");
   DefKeyVal!("Gin", "trim", "");
   DefKeyVal!("Gin", "viewport", "");
+  DefKeyVal!("Gin", "page", "");
 
   // LaTeXML extensions:
   DefKeyVal!("Gin", "vrml", "Semiverbatim");

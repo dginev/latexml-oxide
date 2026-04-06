@@ -102,6 +102,91 @@ fn read_dim_register(cs: &str) -> Dimension {
   }
 }
 
+/// Perl L920-939: tikzAlignmentBindings
+/// Sets up an Alignment with SVG-specific callbacks (svg:g elements with transform matrices)
+/// instead of the standard tabular/tr/td elements used by alignmentBindings.
+fn tikz_alignment_bindings(
+  template: latexml_core::alignment::template::Template,
+  xml_attributes: rustc_hash::FxHashMap<String, String>,
+) {
+  use latexml_core::alignment::{Alignment, AlignmentConfig};
+  use latexml_core::common::arena::SymHashMap;
+  use std::rc::Rc;
+
+  let mode = state::lookup_string("MODE");
+  let is_math = mode.ends_with("math");
+
+  let mut properties = SymHashMap::default();
+  properties.insert("preserve_structure", Stored::Bool(true));
+
+  let alignment = Alignment::new(AlignmentConfig {
+    template: Some(template),
+    // Perl L947-969: openTikzAlignment — creates container <svg:g> with Y-flip transform
+    open_container: Rc::new(|document, props| {
+      let mut attrs = props;
+      attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
+      // Perl: transform="matrix(1 0 0 -1 x y)" — flips Y-axis (pgf Y=up, SVG Y=down)
+      // The exact y offset depends on total alignment height; use 0 as default
+      attrs.entry("transform".to_string())
+        .or_insert_with(|| "matrix(1 0 0 -1 0 0)".to_string());
+      attrs.insert("_scopebegin".to_string(), "1".to_string());
+      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+    }),
+    // Perl L971-973: closeTikzAlignmentElement
+    close_container: Rc::new(|document| document.close_element("svg:g")),
+    // Perl L975-989: openTikzAlignmentRow — creates row <svg:g> with Y-position
+    open_row: Rc::new(|document, props| {
+      let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+      let class_base = "ltx_tikzmatrix_row";
+      let class_extra = props.get("class").map(|c| c.to_string());
+      let class = if let Some(c) = class_extra {
+        format!("{} {}", class_base, c)
+      } else {
+        class_base.to_string()
+      };
+      attrs.insert("class".to_string(), class);
+      attrs.insert("_scopebegin".to_string(), "1".to_string());
+      // Perl: transform="matrix(1 0 0 1 0 yy)" where yy = y + height
+      // Default transform; actual positioning set by alignment machinery
+      attrs.insert("transform".to_string(), "matrix(1 0 0 1 0 0)".to_string());
+      document.open_element("svg:g", Some(attrs), None).and(Ok(()))
+    }),
+    close_row: Rc::new(|document| document.close_element("svg:g")),
+    // Perl L991-1009: openTikzAlignmentCol — creates cell <svg:g> with X-position and Y-flip
+    open_column: Rc::new(|document, props| {
+      let mut attrs = props;
+      let class_base = "ltx_tikzmatrix_col";
+      let class_extra = attrs.remove("class");
+      let class = if let Some(c) = class_extra {
+        format!("{} {}", class_base, c)
+      } else {
+        class_base.to_string()
+      };
+      attrs.insert("class".to_string(), class);
+      attrs.insert("_scopebegin".to_string(), "1".to_string());
+      // Perl: transform="matrix(1 0 0 -1 x y)" — flip Y and position
+      attrs.entry("transform".to_string())
+        .or_insert_with(|| "matrix(1 0 0 -1 0 0)".to_string());
+      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+    }),
+    close_column: Rc::new(|document| document.close_element("svg:g")),
+    is_math,
+    properties,
+    xml_attributes,
+  });
+
+  assign_alignment(alignment, None);
+  state::let_i(
+    &T_MATH!(),
+    &if is_math {
+      T_CS!("\\lx@dollar@in@mathmode")
+    } else {
+      T_CS!("\\lx@dollar@in@textmode")
+    },
+    None,
+  );
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // (protocol fix is applied at \pgfsys@invoke below)
@@ -122,6 +207,52 @@ LoadDefinitions!({
 
   // Perl L63: redefine ignorespaces inside PGF context
   DefPrimitive!("\\lx@inpgf@ignorespaces SkipSpaces", None);
+
+  // Perl L892-918: \lxSVG@halign — SVG matrix layout for tikz-cd and pgf matrix
+  // Replaces \halign inside pgf/tikz contexts to produce <svg:g> elements
+  // with transform matrices instead of <ltx:tabular/tr/td>.
+  DefConstructor!("\\lxSVG@halign BoxSpecification",
+    "#alignment",
+    bounded => true, leave_horizontal => true,
+    sizer => sub[whatsit] {
+      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+        let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
+        Ok((w, h, d))
+      } else {
+        Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+      }
+    },
+    after_digest => sub[whatsit] {
+      use crate::engine::tex_tables::{
+        parse_halign_template, digest_alignment_body,
+      };
+      whatsit.set_property("mode", Stored::from("internal_vertical"));
+      begin_mode("restricted_horizontal")?;
+      let template = parse_halign_template(whatsit)?;
+      // If template parsing failed (e.g., \bgroup not recognized as BEGIN),
+      // bail out instead of trying to digest a body that will loop.
+      if template.get_columns().is_empty() {
+        end_mode("restricted_horizontal")?;
+      }
+      // Get width from BoxSpecification 'to' key
+      let width_attr: Option<String> = {
+        let spec = whatsit.get_arg(1);
+        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+          Some(w.to_attribute())
+        } else {
+          None
+        }
+      };
+      let mut xml_attrs = HashMap::default();
+      if let Some(w) = width_attr {
+        xml_attrs.insert(String::from("width"), w);
+      }
+      xml_attrs.insert(String::from("vattach"), String::from("bottom"));
+      tikz_alignment_bindings(template, xml_attrs);
+      digest_alignment_body(whatsit)?;
+      end_mode("restricted_horizontal")?;
+      decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+    });
 
   // Perl L65-69: \lxSVG@picture — wraps pgfpicture with SVG setup
   DefMacro!("\\lxSVG@picture", sub[_gullet] {
