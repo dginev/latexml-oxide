@@ -216,14 +216,8 @@ DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...
 **Fix:** Removed `Let!("\\lx@hidden@cr", "\\@shortstack@cr")` from `\shortstack`'s beforeDigest — matches Perl, which only rebinds `\\` (not `\lx@hidden@cr`). Kept `Let!("\\lx@newline", "\\@shortstack@cr")` because `\\` is Let to `\lx@newline` at the top level. Updated diagbox expected XML for minor dimensional changes.
 **Result:** 2508.18544 goes from 22 errors (11 shortstack + 11 vtop cascading) to 0 errors.
 
-#### [ ] B5. tikzpicture mode corruption — 1 paper (2603.15617: 3% → ~60%)
-**Root cause:** A failed tikz command corrupts the parser mode state, causing all subsequent content to be lost.
-**Approach:**
-1. Run 2603.15617 with verbose logging — find which tikz command fails
-2. Check mode stack before/after the failure point
-3. Likely fix: save/restore mode state around tikzpicture environments (guard pattern)
-4. Related to pgf text boxing (A2) — fixing A2 may partially fix this
-**Estimate:** Medium complexity. Depends on A2.
+#### [x] B5. tikzpicture mode corruption — RESOLVED (session 96, via A2)
+**Result:** The mode corruption was caused by pgfscope nesting issues fixed in A2 (session 95). After A2, 2603.15617 produces 1.2MB output with 22 sections (previously only 3% content). Only 3 remaining errors: `verbatim` inside `_CaptureBlock_` during building phase — a minor construction issue, not mode corruption.
 
 #### [ ] B6. tikz-cd for 2602.18719 (6% → ~80%)
 **Depends on:** A1 (arrows.meta). Once arrow tips work, tikz-cd diagrams should render.
