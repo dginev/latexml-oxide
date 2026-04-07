@@ -234,15 +234,9 @@ DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...
 #### [x] B9. 2310.18318: missing table of contents — RESOLVED (session 96)
 **Result:** TOC is present in output (2 `ltx:TOC` elements). Only 2 minor xy-pic errors (`\xyshape@thicker@`, `\xylinewidth@i` undefined).
 
-#### [ ] B10. Graphics post-processing: image dimensions and format conversion — multiple papers (2405.19425 + others)
-**Root cause:** Perl's `latexmlpost` graphics post-processor resolves `\includegraphics` references, converts formats (PDF/EPS→PNG), determines image dimensions (width/height), adds aspect-ratio classes (`ltx_img_landscape`/`ltx_img_square`/`ltx_img_portrait`), and renames output to sequential `x*.png` files. Rust's post-processing pipeline skips this entirely — images keep their original source filenames and lack width/height attributes.
-**Visible in 2405.19425:** Rust `<img src="Meta-agent.png">` (no dimensions, no aspect class) vs Perl `<img src="x11.png" width="598" height="318" class="ltx_img_landscape">`. The 6 subfigure PNGs (`1-math_svg-tex.png` etc.) do have dimensions but still lack the `ltx_img_*` class.
-**Approach:**
-1. Review Perl `LaTeXML::Post::Graphics` — understand `findGraphicsFile()`, format conversion, dimension detection
-2. In Rust post-processing, add a graphics pass that: (a) resolves graphic file paths via kpathsea/search paths, (b) reads image dimensions (PNG header, or imagemagick for PDF/EPS), (c) sets width/height attributes and aspect-ratio class on `<img>` elements
-3. Image renaming to `x*.png` is optional (cosmetic) — prioritize dimension detection
-4. May need `image` crate or `imagemagick` subprocess for dimension reading
-**Estimate:** Medium-high complexity. Affects visual correctness of all papers with figures.
+#### [x] B10. Graphics post-processing — ALREADY WORKING (session 96 verified)
+**Result:** The Rust graphics post-processor (`latexml_post::graphics::Graphics`) is fully functional when `--post` is enabled. It resolves graphic files via search paths, converts PDF/EPS→PNG via ImageMagick, detects image dimensions via `imagesize` crate, assigns aspect-ratio classes (`ltx_img_landscape`/`ltx_img_square`/`ltx_img_portrait`), and renames to `x1.png`/`x2.png` etc. Session 96 fixed `find_graphic_file` to resolve candidate paths relative to search paths (not just CWD).
+**Verified on 2405.19425:** `--post` produces `imagesrc="x1.png" imagewidth="601" imageheight="319" class="ltx_centering ltx_img_landscape"` — matching Perl's output structure.
 
 ---
 

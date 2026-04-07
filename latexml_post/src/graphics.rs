@@ -145,6 +145,7 @@ impl Graphics {
     let source = node.get_attribute("graphic")?;
 
     // Check candidates attribute first (comma-separated list of found files)
+    // Perl: findGraphicFile checks each candidate path, resolving relative to search paths.
     if let Some(candidates) = node.get_attribute("candidates") {
       // Pick the best candidate by desirability
       let mut best: Option<(String, i32)> = None;
@@ -153,8 +154,17 @@ impl Graphics {
         if path.is_empty() {
           continue;
         }
-        if Path::new(path).exists() {
-          let ext = Path::new(path)
+        // Try the path directly, then in each search directory
+        let resolved = if Path::new(path).exists() {
+          Some(path.to_string())
+        } else {
+          search_paths.iter().find_map(|sp| {
+            let candidate = format!("{}/{}", sp, path);
+            if Path::new(&candidate).exists() { Some(candidate) } else { None }
+          })
+        };
+        if let Some(resolved_path) = resolved {
+          let ext = Path::new(&resolved_path)
             .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("")
@@ -167,7 +177,7 @@ impl Graphics {
             .unwrap_or(false);
           let desirability = if is_same_type { 10 } else { d };
           if best.as_ref().is_none_or(|(_, bd)| desirability > *bd) {
-            best = Some((path.to_string(), desirability));
+            best = Some((resolved_path, desirability));
           }
         }
       }
