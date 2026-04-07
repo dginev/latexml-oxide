@@ -779,10 +779,42 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
-  // Prefer file with \documentclass; if multiple, pick the largest
+  // Check 00README.json for explicit main file (arXiv convention)
+  let readme_path = dir.join("00README.json");
+  if readme_path.exists() {
+    if let Ok(content) = std::fs::read_to_string(&readme_path) {
+      // Simple JSON extraction: find "filename" : "value"
+      if let Some(start) = content.find("\"filename\"") {
+        let rest = &content[start + 10..];
+        if let Some(colon) = rest.find(':') {
+          let after_colon = rest[colon + 1..].trim_start();
+          if after_colon.starts_with('"') {
+            if let Some(end_quote) = after_colon[1..].find('"') {
+              let filename = &after_colon[1..1 + end_quote];
+              let main_path = dir.join(filename);
+              if main_path.exists() {
+                return Ok(main_path.to_string_lossy().to_string());
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Prefer file with \documentclass; if multiple, prefer common names then largest.
+  // Common main file names get priority (main.tex, paper.tex, ms.tex).
   let main = if !doc_class_files.is_empty() {
-    doc_class_files.sort_by_key(|x| std::cmp::Reverse(x.1));
-    doc_class_files[0].0.clone()
+    let preferred_names = ["main.tex", "paper.tex", "ms.tex"];
+    let preferred = doc_class_files.iter().find(|(p, _)| {
+      p.file_name().is_some_and(|n| preferred_names.contains(&n.to_str().unwrap_or("")))
+    });
+    if let Some((path, _)) = preferred {
+      path.clone()
+    } else {
+      doc_class_files.sort_by_key(|x| std::cmp::Reverse(x.1));
+      doc_class_files[0].0.clone()
+    }
   } else {
     // No \documentclass found — pick the largest .tex file
     candidates.sort_by_key(|x| std::cmp::Reverse(x.1));
