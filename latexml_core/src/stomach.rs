@@ -432,12 +432,6 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       Error!("unexpected", category, &message);
 
       // Recovery: pop non-mode frames until we find our mode-switch frame (max 4 levels)
-      Warn!("unexpected", "mode",
-        s!("Mode recovery: trying to end '{}' but BOUND_MODE at frame 0 is '{}' (bound={}). \
-           Boxing depth: {}, current token: {:?}",
-          mode, lookup_string("BOUND_MODE"), is_value_bound("BOUND_MODE", Some(0)),
-          stomach!().boxing.len(),
-          get_current_token().map(|t| t.stringify())));
       for _ in 0..4 {
         if is_value_bound("BOUND_MODE", Some(0))
           && lookup_string("BOUND_MODE") == bound_mode
@@ -445,6 +439,14 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
           // Found the matching mode-switch frame — pop it
           if bound_mode.ends_with("vertical") {
             leave_horizontal_internal();
+          }
+          // Check if this is the base (locked) frame — don't pop it,
+          // just clear the mode state in-place
+          if crate::state::is_base_frame() {
+            // Base frame: clear mode bindings without popping
+            assign_value("BOUND_MODE", "", None);
+            assign_value("MODE", "vertical", None);
+            return Ok(());
           }
           pop_stack_frame(false)?;
           return Ok(());
