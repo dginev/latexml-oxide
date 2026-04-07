@@ -304,12 +304,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     let interpreting = lookup_bool("INTERPRETING_DEFINITIONS");
 
     // Step 2: If we're already interpreting raw TeX definitions, look for the file directly
-    // BUT skip if a binding already loaded this file (prevents double-loading raw TeX
-    // after a successful binding load — e.g., amsfonts.sty raw TeX causes errors
-    // when loaded after the Rust amsfonts binding already defined \mathfrak etc.)
-    let found_raw = if interpreting && !options.notex
-      && !lookup_bool(&s!("{filename}_loaded"))
-    {
+    let found_raw = if interpreting && !options.notex {
       find_file(
         &filename,
         Some(FindFileOptions {
