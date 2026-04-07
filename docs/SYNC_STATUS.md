@@ -93,7 +93,15 @@ Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity 
    - Add regression test if applicable
 2. Priority: papers with 0KB output → papers with <50% size parity → papers with >10 errors
 
-#### [ ] C3. Upstream Perl sync — continuous
+#### [ ] C3. Directory/archive input parity — `--whatsin=directory`, `--whatsin=archive`, `--whatsout=archive`
+**Why:** Large-scale arXiv conversion requires directory and ZIP archive input/output. Perl has mature support; Rust needs parity.
+**Approach:**
+1. Test `--whatsin=directory` against all 100 papers — compare output with Perl
+2. Verify `--whatsin=archive` (ZIP input) end-to-end
+3. Verify `--whatsout=archive` (ZIP output) end-to-end
+4. Fix any differences in file resolution, path handling, or output structure
+
+#### [ ] C4. Upstream Perl sync — continuous
 **Approach:**
 1. Check `LaTeXML/` git log for new commits
 2. Port relevant fixes to Rust (engine, bindings, test files)
