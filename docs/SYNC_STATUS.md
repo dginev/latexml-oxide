@@ -85,13 +85,17 @@ After XMApp fix: 89/97 OK. Failures triaged:
 - **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
 - **Wrong main file:** 2306.00809 (heuristic picks wrong `.tex` when multiple have `\documentclass`)
 
-#### [ ] C2. Fix high-impact Rust-specific failures
-**Approach:**
-1. For each paper where Perl succeeds but Rust fails or has significant gaps:
-   - Identify the root cause (missing binding, engine bug, parameter type)
-   - Port the fix faithfully from Perl
-   - Add regression test if applicable
-2. Priority: papers with 0KB output → papers with <50% size parity → papers with >10 errors
+#### [ ] C2. Fix high-impact Rust-specific failures — IN PROGRESS
+**Fixed so far (session 96):**
+- **smfart dispatch**: `smfart_cls.rs` was never in dispatch table → added, 7→1 errors
+- **XMApp panic**: `todo!()` in math parser → graceful recovery (2506.10218: crash→1.4MB)
+- **`_loaded` early return**: prevents double-loading of bindings
+- **`find_main_tex`**: 00README.json support + preferred name heuristic
+
+**Remaining:**
+- **2507.23241** (1 error): Extra non-mode stack frame at `\end{document}`. Diagnostic shows `BOUND_MODE='internal_vertical' but bound=false at frame 0, boxing depth=1`. An extra bgroup frame accumulates from content processing. Need to trace which construct pushes it.
+- **1801.02041** (1 error): Same pattern — extra stack frame, `end_mode` can't find its mode frame at document close. Cumulative from 620+ lines of equations/tables.
+- Both papers produce 0B output from a single `end_mode` error — the error recovery needs improvement to not lose all content.
 
 #### [x] C3. Directory/archive input parity — DONE (session 96)
 **Result:** All three modes work:
