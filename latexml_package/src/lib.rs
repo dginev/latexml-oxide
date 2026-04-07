@@ -50,6 +50,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "amsaddr.sty" => package::amsaddr_sty::load_definitions(),
     "amsart.cls" => package::amsart_cls::load_definitions(),
     "amsproc.cls" => package::amsproc_cls::load_definitions(),
+    "smfart.cls" => package::smfart_cls::load_definitions(),
     "acmart.cls" => package::acmart_cls::load_definitions(),
     "article.cls" => package::article_cls::load_definitions(),
     "OmniBus.cls" => package::omnibus_cls::load_definitions(),

@@ -248,6 +248,14 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     ))?;
   }
 
+  // Skip loading entirely if already loaded (unless reloadable)
+  // This prevents double-loading when e.g. smfart calls load_class("amsart")
+  // after the binding already set the _loaded flag.
+  if !options.reloadable && lookup_bool(&s!("{filename}_loaded")) {
+    note_end(&s!("Loading {:?} definitions", filename));
+    return Ok(());
+  }
+
   // Catch Fatal errors during binding loading (e.g., token limit exceeded during
   // expl3 kernel loading). Convert to non-fatal so document processing continues.
   let is_binding = if options.noltxml {
