@@ -77,13 +77,13 @@ All Phase A (EMPTY→OK) and Phase B (parity improvement) tasks completed. Key f
 
 Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity with Perl for all of them.
 
-#### [ ] C1. Benchmark all 100+ papers — generate Rust vs Perl HTML comparison
-**Approach:**
-1. Run all papers in `arxiv-examples/` through both Rust and Perl pipelines
-2. Record: output size, error count, visual comparison
-3. Identify papers with >10% size gap or structural differences
-4. Triage into fixable (binding/engine gaps) vs unfixable (deep pgf/tikz infrastructure)
-**Deliverable:** Updated CATALOG.md with full 100-paper status table.
+#### [x] C1. Benchmark all 97 papers — DONE (session 96)
+**Result:** 88/97 OK (91%), 6 EMPTY, 3 TIMEOUT.
+After XMApp fix: 89/97 OK. Failures triaged:
+- **Perl also fails:** 2402.03300 (pgfkeys), 2410.10068 (quantikz), 2511.03798 (eqnarray)
+- **Fixable regressions:** 2507.23241 (smfart/amsfonts `\@ifundefined` side effect), 1801.02041 (mode stack)
+- **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
+- **Wrong main file:** 2306.00809 (heuristic picks wrong `.tex` when multiple have `\documentclass`)
 
 #### [ ] C2. Fix high-impact Rust-specific failures
 **Approach:**
