@@ -92,10 +92,12 @@ After XMApp fix: 89/97 OK. Failures triaged:
 - **`_loaded` early return**: prevents double-loading of bindings
 - **`find_main_tex`**: 00README.json support + preferred name heuristic
 
-**Remaining:**
-- **2507.23241** (1 error): Extra non-mode stack frame at `\end{document}`. Diagnostic shows `BOUND_MODE='internal_vertical' but bound=false at frame 0, boxing depth=1`. An extra bgroup frame accumulates from content processing. Need to trace which construct pushes it.
-- **1801.02041** (1 error): Same pattern — extra stack frame, `end_mode` can't find its mode frame at document close. Cumulative from 620+ lines of equations/tables.
-- Both papers produce 0B output from a single `end_mode` error — the error recovery needs improvement to not lose all content.
+**Fixed (session 96, continued):**
+- **end_mode locked frame recovery**: When recovery popped down to the locked base frame, `pop_stack_frame` fataled. Now checks `is_base_frame()` and clears mode in-place.
+  - 1801.02041: 0B → 737KB
+  - 2507.23241: 0B → 4.2MB
+
+**Remaining:** Mode stack still has 1 extra frame at `\end{document}` in both papers (1 warning each). Root cause: cumulative bgroup imbalance from content processing. Papers produce full content despite the warning.
 
 #### [x] C3. Directory/archive input parity — DONE (session 96)
 **Result:** All three modes work:
