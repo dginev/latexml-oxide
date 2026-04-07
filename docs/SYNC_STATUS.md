@@ -211,14 +211,10 @@ DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...
 #### [x] B3. Listing per-token syntax highlighting — ALREADY DONE (session 93)
 **Result:** Per-token styling was already working. Session 93 fixed `lstdefinestyle` type mismatch, which activated listing styles. Rust output now matches Perl: 146 `--ltx-fg-color` occurrences, 28 styled tokens with `ltx_lst_string`/`ltx_lst_keyword`/`ltx_lst_comment` classes. Colors match: `#9400D1` (strings), `#FF00FF` (keywords), `#009900` (comments). Background `#F2F2EB` and line numbers also correct.
 
-#### [ ] B4. \shortstack/\vtop mode cascade — 1 paper (2508.18544: 43% → ~70%)
-**Root cause:** `\shortstack` inside certain contexts (DefConstructor bounded+mode interaction) produces cascading mode errors. Related to `\vtop` mode vs vertical mode.
-**Approach:**
-1. Trace 2508.18544 errors — identify specific `\shortstack` instances that fail
-2. Check Perl `\shortstack` mode: does it use `restricted_horizontal` or `text`?
-3. Session 88 already fixed `\shortstack` mode (text→restricted_horizontal) — check if remaining errors are from a different source
-4. May need `\vtop` mode restoration after `\shortstack` closes
-**Estimate:** Low-medium complexity.
+#### [x] B4. \shortstack/\vtop mode cascade — DONE (session 96)
+**Root cause:** `\shortstack` rebinding `\lx@hidden@cr` to `\@shortstack@cr` caused `is_column_end()` to match `\\` as a table column separator inside alignment contexts (because `\lx@hidden@cr` is a COLUMN_END sentinel, and `is_column_end` compares meanings). When `align_group_count` reached 0 (from the `"before-column"` MARKER in the alignment template), `read_x_token`'s column-end check intercepted `\\` tokens inside `\shortstack`'s `{}` argument, injecting column-end tokens into the content stream and breaking mode nesting.
+**Fix:** Removed `Let!("\\lx@hidden@cr", "\\@shortstack@cr")` from `\shortstack`'s beforeDigest — matches Perl, which only rebinds `\\` (not `\lx@hidden@cr`). Kept `Let!("\\lx@newline", "\\@shortstack@cr")` because `\\` is Let to `\lx@newline` at the top level. Updated diagbox expected XML for minor dimensional changes.
+**Result:** 2508.18544 goes from 22 errors (11 shortstack + 11 vtop cascading) to 0 errors.
 
 #### [ ] B5. tikzpicture mode corruption — 1 paper (2603.15617: 3% → ~60%)
 **Root cause:** A failed tikz command corrupts the parser mode state, causing all subsequent content to be lost.

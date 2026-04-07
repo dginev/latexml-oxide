@@ -35,9 +35,14 @@ LoadDefinitions!({
   bounded      => true,
   sizer        => "#2",
   before_digest => {
-    // Rebind \\ and its aliases to shortstack line break
+    // Rebind \\ and \lx@newline to shortstack line break.
+    // Matches Perl: only \\ is rebound (Perl does NOT rebind \lx@hidden@cr).
+    // \lx@newline is also rebound because \\ is Let to \lx@newline at the
+    // top level, so \lx@newline tokens in content must also become @shortstack@cr.
+    // NOTE: \lx@hidden@cr must NOT be rebound — doing so causes is_column_end()
+    // to match \\ as a column end inside alignments, because is_column_end
+    // compares meanings and \lx@hidden@cr is a COLUMN_END sentinel.
     Let!("\\\\", "\\@shortstack@cr");
-    Let!("\\lx@hidden@cr", "\\@shortstack@cr");
     Let!("\\lx@newline", "\\@shortstack@cr");
     AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None).into());
     AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None).into());
