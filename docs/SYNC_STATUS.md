@@ -6,7 +6,7 @@ Updated 2026-04-07. Only lists open gaps & TODOs; completed items live in git hi
 
 **Test inventory:** 313+ non-tikz tests pass (90 workspace + 223 integration); 7/10 tikz tests pass (3 pre-existing loops). MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 96: 42/47 OK (89%), 0 FAIL.** All Phase B improvement tasks completed. Session 96 fix: `\shortstack` mode cascade in m-column tables (2508.18544: 22 errors → 0). Remaining 5 EMPTY: 3 pgf arrow/pgfkeys (2209.14198, 2402.03300, 2410.10068) + 2 permanent ignores (2508.15260 tcolorbox/minted, 2511.03798 eqnarray).
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 96: 43/47 OK (91%), 0 FAIL.** All Phase B tasks completed. Token limit raised 30M→100M (recovers 2209.14198: 0→1.3MB, 0 errors). Remaining 3 EMPTY — Perl also fails on all 3 (2402.03300 pgfkeys, 2410.10068 quantikz, 2511.03798 eqnarray).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```

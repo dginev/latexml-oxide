@@ -6,8 +6,9 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 
 ## Summary
 
-- **42/47 OK** (89%) -- produce meaningful Rust HTML5 output
-- **5 EMPTY** -- produce minimal output (cascading errors or TooManyErrors)
+- **43/47 OK** (91%) -- produce meaningful Rust HTML5 output
+- **3 EMPTY** -- produce minimal output (Perl also fails on all 3)
+- **1 permanent ignore** (2511.03798: Perl fatal)
 - **0 FAIL** -- (previously 1 timeout, now fixed)
 - **32/40 >=90% size parity** with Perl (80% of OK)
 - **36/40 >=80% size parity** (90% of OK)
@@ -34,7 +35,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2008.08932 | OK | 18KB | 19KB | 94% | main.tex | 10 bibitems | IDENTICAL |
 | 2101.00726 | OK | 630KB | 650KB | 96% | wasserstein_arXiv_v2.tex | 49 bibitems | IDENTICAL |
 | 2103.01205 | OK | 471KB | 497KB | 95% | main.tex | pgfsetdash override (S95); 0 errors | NEW: was FAIL/timeout |
-| 2209.14198 | EMPTY | 0KB | 721KB | 0% | gucycles.tex | pgf arrow 'Stealth' | N/A |
+| 2209.14198 | OK | 1356KB | 721KB | 188% | gucycles.tex | token limit raised 30M→100M (S96); 0 errors | NEW: was EMPTY |
 | 2306.00809 | OK | 141KB | 140KB | 100% | backup.tex | 17 missing cites; no .bib/.bbl | IDENTICAL |
 | 2306.06628 | OK | 241KB | 223KB | 107% | Contraction20.tex | 33 missing cites | IDENTICAL |
 | 2308.06254 | OK | 270KB | 281KB | 96% | main.tex | cleveref+enumitem; biblatex | Rust CLEANER (Perl has red error) |
@@ -77,14 +78,10 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 ### FAIL (0 papers)
 (Previously: 2103.01205 timeout — fixed S95 via pgfsetdash override)
 
-### EMPTY (5 papers)
-- **2209.14198**: pgf arrow 'Stealth' undefined, cascading to token limit
-- **2402.03300**: `\pgfkeys@mainstop` recursive self-expansion loop
-- **2410.10068**: tikz-cd matrix processing, pgf arrows
-- **2507.23241**: smfart.cls raw TeX + expl3 timing
-- **2508.15260**: tcolorbox cascading errors (Perl also only 1KB)
-- **2511.03798**: `\@@eqnarray` recursion in jheppub (Perl also fails)
-- **2603.14602**: minted/listing parameter errors, TooManyErrors
+### EMPTY (3 papers — Perl also fails on all 3)
+- **2402.03300**: pgfkeys recursion — Perl also hangs/times out
+- **2410.10068**: quantikz coordinate parsing — Perl also hangs/times out
+- **2511.03798**: `\@@eqnarray` recursion in jheppub.sty — Perl: 101 errors + fatal
 
 ### Size parity analysis (37 OK papers, session 93 final)
 - **>=90% parity**: 27 papers (73%)
