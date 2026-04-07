@@ -411,54 +411,23 @@ pub fn end_mode(mode: &str) -> Result<()> {
 /// When `noframe` is true, executeBeforeAfterGroup is run but the stack frame is not popped.
 pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
-    // Perl checks BOUND_MODE, not MODE, for the frame check
+    // Perl Stomach.pm L527-531: check BOUND_MODE at frame 0
     if !is_value_bound("BOUND_MODE", Some(0))
       || (lookup_string("BOUND_MODE") != bound_mode)
     {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
-      // Log the error but attempt recovery: if the current MODE matches what we expect,
-      // pop intervening non-mode frames to find our mode-switch frame.
-      // This prevents cascading errors from eating the rest of the document.
-      let current_mode = lookup_string("MODE");
+      // Perl: Don't pop if there's an error; maybe we'll recover?
+      // Just log the error and return — faithful to Perl's endMode.
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
-        current_mode
+        lookup_string("MODE")
       );
       let category = match get_current_token() {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),
       };
       Error!("unexpected", category, &message);
-
-      // Recovery: pop non-mode frames until we find our mode-switch frame (max 4 levels)
-      for _ in 0..4 {
-        if is_value_bound("BOUND_MODE", Some(0))
-          && lookup_string("BOUND_MODE") == bound_mode
-        {
-          // Found the matching mode-switch frame — pop it
-          if bound_mode.ends_with("vertical") {
-            leave_horizontal_internal();
-          }
-          // Check if this is the base (locked) frame — don't pop it,
-          // just clear the mode state in-place
-          if crate::state::is_base_frame() {
-            // Base frame: clear mode bindings without popping
-            assign_value("BOUND_MODE", "", None);
-            assign_value("MODE", "vertical", None);
-            return Ok(());
-          }
-          pop_stack_frame(false)?;
-          return Ok(());
-        }
-        if is_value_bound("BOUND_MODE", Some(0)) {
-          // Different mode-switch frame — don't pop past it
-          break;
-        }
-        // Pop this non-mode frame to get closer to our mode-switch frame
-        pop_stack_frame(false)?;
-      }
-      // If we couldn't find the frame, at least the error was logged
     } else {
       // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
       if bound_mode.ends_with("vertical") {
