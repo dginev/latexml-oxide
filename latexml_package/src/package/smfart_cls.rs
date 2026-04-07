@@ -28,4 +28,9 @@ LoadDefinitions!({
   DefMacro!("\\smfbymark", " ");
   // \altmaketitle — alternate maketitle (no-op, \maketitle handles it)
   DefMacro!("\\altmaketitle", "");
+  // \smf@org@trivlist — smfart saves/restores the trivlist environment.
+  // In raw TeX smfart.cls, this is defined via \let\smf@org@trivlist\trivlist.
+  // The raw TeX loading sometimes fails before this let, leaving it undefined.
+  Let!("\\smf@org@trivlist", "\\trivlist");
+  Let!("\\smf@org@endtrivlist", "\\endtrivlist");
 });
