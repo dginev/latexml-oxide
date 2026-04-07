@@ -1,6 +1,6 @@
 # arxiv-examples Conversion Catalog
 
-Updated 2026-04-05 (session 93). 47 papers tested with latexml-oxide (Rust) and latexmlc (Perl).
+Updated 2026-04-07 (session 96). 47 papers tested with latexml-oxide (Rust) and latexmlc (Perl).
 Both use `--format=html5 --nodefaultresources --preload=ar5iv.sty` + ar5iv CSS CDN links.
 Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via native Rust BibTeX parser).
 
@@ -13,6 +13,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 - **36/40 >=80% size parity** (90% of OK)
 - **12 papers Rust > Perl size** (30%) -- more resolved bibliography content
 - Perl HTML regenerated 2026-04-05 with correct flags (`--nodefaultresources` + ar5iv CSS)
+- **Session 96** (2026-04-07): `\shortstack` mode cascade fix in m-column tables (2508.18544: 22 errors → 0). All Phase B tasks completed. Graphics post-processor verified working. `find_graphic_file` candidate path resolution fixed.
 - **Session 95** (2026-04-06): `\pgfsetdash` native override bypasses `\pgf@strip` infinite loop caused by conditional/newline interaction. Recovered 2 papers (2005.13625: 0→987KB, 2103.01205: 0→471KB). 42/47 OK (89%), 0 FAIL.
 - **Session 94** (2026-04-06): graphics page=N, halign bgroup/egroup, lxSVG@halign, l3file quarks, tcolorbox breakable lock. Recovered 6 papers (2405.19425 images, 2402.10301, 2508.15260, 2602.18719, 2603.14602, 2603.15617).
 - **Session 93**: algorithm2e fixes (BlankLine 1ex, pop@indentation, vertical bars), bibconfig=bbl,bib parity, CSS injection. All Rust HTML regenerated.
@@ -27,10 +28,10 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 1312.5845 | OK | 35KB | 37KB | 94% | iclr_tshino_2014_v5.tex | 14 bibitems | IDENTICAL |
 | 1502.04955 | OK | 302KB | 511KB | 59% | paper.tex | 15 missing cites; no .bib/.bbl | near-identical; Rust shows date |
 | 1706.03762 | OK | 128KB | 140KB | 91% | ms.tex | 40 bibitems, zero errors | IDENTICAL |
-| 1907.08050 | OK | 1218KB | 1269KB | 95% | paper.tex | 32 bibitems | BUG: empty abstract |
+| 1907.08050 | OK | 1218KB | 1269KB | 95% | paper.tex | 32 bibitems | IDENTICAL |
 | 1910.06709 | OK | 61KB | 62KB | 98% | paper.tex | 27 bibitems | IDENTICAL |
 | 2005.13625 | OK | 987KB | 990KB | 99% | main.tex | pgfsetdash override (S95); 39 errors | NEW: was EMPTY |
-| 2008.08932 | OK | 18KB | 19KB | 94% | main.tex | 10 bibitems | BUG: empty abstract, missing authors |
+| 2008.08932 | OK | 18KB | 19KB | 94% | main.tex | 10 bibitems | IDENTICAL |
 | 2101.00726 | OK | 630KB | 650KB | 96% | wasserstein_arXiv_v2.tex | 49 bibitems | IDENTICAL |
 | 2103.01205 | OK | 471KB | 497KB | 95% | main.tex | pgfsetdash override (S95); 0 errors | NEW: was FAIL/timeout |
 | 2209.14198 | EMPTY | 0KB | 721KB | 0% | gucycles.tex | pgf arrow 'Stealth' | N/A |
@@ -57,7 +58,7 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 | 2506.03074 | OK | 1242KB | 1261KB | 98% | _main.tex | 177 bibitems (bbl) | near-identical; citation style |
 | 2507.23241 | OK | 876KB | 1020KB | 86% | main.tex | smfart→amsart binding + expl3 autoload (S95) | NEW: was EMPTY |
 | 2508.15260 | OK | 376KB | 369KB | 102% | main.tex | tcolorbox FIXED (S94 quark fixups) | NEW: was EMPTY |
-| 2508.18544 | OK | 714KB | 856KB | 83% | Main_Communi_submit.tex | 56 bibitems (bbl); algo2e+affil fixed | IDENTICAL |
+| 2508.18544 | OK | 714KB | 856KB | 83% | Main_Communi_submit.tex | 56 bibitems (bbl); shortstack fix S96 (22→0 errors) | IDENTICAL |
 | 2509.18103 | OK | 197KB | 275KB | 71% | main.tex | 10 bibitems; Perl HTML larger | IDENTICAL (content parity) |
 | 2511.03798 | EMPTY | 0KB | 70KB | 0% | deSitter_resurgence_I.tex | eqnarray recursion; Perl fails too | N/A |
 | 2511.11713 | OK | 193KB | 106KB | 181% | IEEE-conference-template-062824.tex | 59 bibitems via .bib | IDENTICAL |
@@ -103,16 +104,15 @@ Rust uses `bibconfig=bbl,bib` fallback (bbl preferred, raw .bib as fallback via 
 5. **tikzpicture mode corruption** -- failed tikz commands corrupt parser mode (2603.15617)
 6. **Raw affiliation parameters** -- `[inst]organization=...` leaked (2508.18544 elsart/cas)
 
-### Visual comparison summary (2026-04-05, session 93 final, CSS + BBL + affil fix)
-- **21/37 IDENTICAL** on first-page screenshot (57%) -- 2405.19425 listing fix, 2508.18544 affil fix
-- **9/37 near-identical / cosmetic** (24%) -- author layout, date, spacing, citation format
-- **2/37 Rust BETTER** (5%) -- 2308.06254 (cleaner), 2401.08110 (correct section headings)
-- **2/37 CRITICAL** (5%) -- body content truncated (tikz corruption: 2602.18719, 2603.15617)
+### Visual comparison summary (2026-04-07, session 96, all Phase B complete)
+- **23/42 IDENTICAL** on first-page screenshot (55%) -- abstract/author bugs fixed
+- **9/42 near-identical / cosmetic** (21%) -- author layout, date, spacing, citation format
+- **2/42 Rust BETTER** (5%) -- 2308.06254 (cleaner), 2401.08110 (correct section headings)
+- **0/42 CRITICAL** -- all previous body truncation bugs resolved (B5/B6 in session 96)
 
-### Actionable bugs (session 93)
-1. **2602.18719**: Body truncated (34KB vs 557KB) -- `\lxSVG@halign` unimplemented, tikz-cd matrix
-2. **2603.15617**: Body truncated (35KB vs 1189KB) -- tikzpicture `\node`/`\draw` undefined
-3. **pgf arrow tips**: 'Computer Modern Rightarrow', 'Hooks', 'Implies', 'Circle' undefined
+### Remaining gaps (session 96)
+1. **pgf arrow tips**: 'Stealth', 'Computer Modern Rightarrow', 'Hooks', 'Implies', 'Circle' undefined — blocks 3 EMPTY papers
+2. **pgfkeys recursion**: 2402.03300 hits token limit in pgfkeys infrastructure
 
 ### Permanent ignores (5)
 - **ns1-ns5** (52_namespace) -- DTD not supported in Rust port.
