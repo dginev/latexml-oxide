@@ -1284,8 +1284,9 @@ fn textrec(
   if tag == arena::pin_static("ltx:XMApp") {
     let mut args = element_nodes(&node);
     if args.is_empty() {
-      // Error!("expected","arguments" ...);
-      todo!();
+      // Perl: Error('expected','arguments',...) then returns empty
+      log::warn!("XMApp element has no child arguments");
+      return String::new();
     }
     let arg_node = args.remove(0);
     let op = realize_xmnode(&arg_node, document);
