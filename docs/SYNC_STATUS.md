@@ -2,11 +2,11 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-06. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-07. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 331+ non-tikz tests pass; 7/10 tikz tests pass (3 pre-existing loops). MakeBibliography pipeline fully operational.
+**Test inventory:** 313+ non-tikz tests pass (90 workspace + 223 integration); 7/10 tikz tests pass (3 pre-existing loops). MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 95: 42/47 OK (89%), 0 FAIL.** Session 95 fix: native `\pgfsetdash` override bypasses `\pgf@strip` infinite loop (2005.13625: 0→987KB, 2103.01205: 0→471KB). Remaining: 5 EMPTY (pgf token limit, pgfkeys recursion, smfart.cls, eqnarray recursion).
+**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog. **Session 96: 42/47 OK (89%), 0 FAIL.** All Phase B improvement tasks completed. Session 96 fix: `\shortstack` mode cascade in m-column tables (2508.18544: 22 errors → 0). Remaining 5 EMPTY: 3 pgf arrow/pgfkeys (2209.14198, 2402.03300, 2410.10068) + 2 permanent ignores (2508.15260 tcolorbox/minted, 2511.03798 eqnarray).
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
 ```
