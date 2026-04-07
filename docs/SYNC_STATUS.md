@@ -93,13 +93,11 @@ Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity 
    - Add regression test if applicable
 2. Priority: papers with 0KB output → papers with <50% size parity → papers with >10 errors
 
-#### [ ] C3. Directory/archive input parity — `--whatsin=directory`, `--whatsin=archive`, `--whatsout=archive`
-**Why:** Large-scale arXiv conversion requires directory and ZIP archive input/output. Perl has mature support; Rust needs parity.
-**Approach:**
-1. Test `--whatsin=directory` against all 100 papers — compare output with Perl
-2. Verify `--whatsin=archive` (ZIP input) end-to-end
-3. Verify `--whatsout=archive` (ZIP output) end-to-end
-4. Fix any differences in file resolution, path handling, or output structure
+#### [x] C3. Directory/archive input parity — DONE (session 96)
+**Result:** All three modes work:
+- `--whatsin=directory`: Fixed auto-detection of main `.tex` file via `find_main_tex()` (was passing directory path to converter instead of `.tex` file). Now locates file with `\documentclass`, matching Perl.
+- `--whatsin=archive`: ZIP input works end-to-end (tested on 2210.09945).
+- `--whatsout=archive`: ZIP output with HTML + log + status (tested on 0710.2281, 167KB ZIP).
 
 #### [ ] C4. Upstream Perl sync — continuous
 **Approach:**
