@@ -246,16 +246,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     source
   };
 
-  // --whatsin=directory: auto-detect from trailing /
+  // --whatsin=directory: auto-detect from trailing / or explicit flag
   let is_directory_mode =
     cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
-  if is_directory_mode {
-    if let Ok(abs_source) = std::fs::canonicalize(&source) {
+  let source = if is_directory_mode {
+    let dir_path = std::path::Path::new(&source);
+    if let Ok(abs_source) = std::fs::canonicalize(dir_path) {
       path_flags.push(abs_source.to_string_lossy().to_string());
     } else {
       path_flags.push(source.clone());
     }
-  }
+    // Find the main .tex file in the directory, matching Perl's behavior
+    match find_main_tex(dir_path) {
+      Ok(main_tex) => main_tex,
+      Err(e) => {
+        eprintln!("Failed to find main .tex file in '{}': {}", source, e);
+        process::exit(1);
+      }
+    }
+  } else {
+    source
+  };
 
   // Prepare converter
   let preload = if cli.preload_files.is_empty() { None } else { Some(cli.preload_files.clone()) };
