@@ -33,7 +33,8 @@ LoadDefinitions!({
 
     let has_third = gullet::if_next(T_BEGIN!())?;
     let (a_content, m_content, b_content) = if has_third {
-      let third = gullet::read_arg(ExpansionLevel::Full)?;
+      // Perl: $gullet->readArg — reads without expansion
+      let third = gullet::read_arg(ExpansionLevel::Off)?;
       (a_arg, Some(b_arg), third)
     } else {
       (a_arg, None, b_arg)
