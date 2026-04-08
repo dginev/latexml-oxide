@@ -838,7 +838,9 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   for tex_file in &tex_files {
     if !tex_file.exists() { continue; }
-    let Ok(content) = std::fs::read_to_string(tex_file) else { continue };
+    // Use lossy read — TeX files may contain Latin-1 or other non-UTF8 bytes
+    let Ok(raw) = std::fs::read(tex_file) else { continue };
+    let content = String::from_utf8_lossy(&raw);
     let mut maybe_tex = false;
     let mut maybe_tex_priority = false;
     let mut maybe_tex_priority2 = false;
@@ -961,9 +963,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   if candidates.len() > 1 {
     let pdf_candidates: Vec<PathBuf> = candidates.iter()
       .filter(|f| {
-        std::fs::read_to_string(f).ok().is_some_and(|c|
+        std::fs::read(f).ok().is_some_and(|raw| {
+          let c = String::from_utf8_lossy(&raw);
           c.contains("\\includegraphics") &&
-          (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg")))
+          (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+        })
       })
       .cloned().collect();
     if !pdf_candidates.is_empty() {
