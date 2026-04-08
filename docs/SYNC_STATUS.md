@@ -78,12 +78,13 @@ All Phase A (EMPTY→OK) and Phase B (parity improvement) tasks completed. Key f
 Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity with Perl for all of them.
 
 #### [x] C1. Benchmark all 97 papers — DONE (session 96)
-**Result:** 88/97 OK (91%), 6 EMPTY, 3 TIMEOUT.
-After XMApp fix: 89/97 OK. Failures triaged:
+**Result:** 89/97 OK (92%) after session 97 fixes.
+Failures triaged:
 - **Perl also fails:** 2402.03300 (pgfkeys), 2410.10068 (quantikz), 2511.03798 (eqnarray)
-- **Fixable regressions:** 2507.23241 (smfart/amsfonts `\@ifundefined` side effect), 1801.02041 (mode stack)
+- **thm-restate hang:** 2007.05477, 2103.12243 (raw TeX thm-kv.sty loops)
+- **Conditional bug:** 2405.17032 (`\iffalse` handling — sections 5-8 lost), 2306.00809 (tcolorbox version)
+- **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined)
 - **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
-- **Wrong main file:** 2306.00809 (heuristic picks wrong `.tex` when multiple have `\documentclass`)
 
 #### [ ] C2. Fix high-impact Rust-specific failures — IN PROGRESS
 **Fixed so far (session 96):**
@@ -96,6 +97,11 @@ After XMApp fix: 89/97 OK. Failures triaged:
 - **end_mode faithful rewrite**: Removed speculative recovery loop; now matches Perl's `endMode` exactly (log error, don't pop on mismatch).
   - 1801.02041: 0B → 737KB
   - 2507.23241: 0B → 4.2MB
+
+**Fixed (session 97):**
+- **`find_main_tex` faithful port**: Ported Perl Pack.pm `detect_source` — line-by-line scoring, `\input` veto, 4 tiebreakers, 00README.json/XXX support
+- **Lossy UTF-8 read**: `find_main_tex` now handles Latin-1 encoded .tex files (was silently skipping non-UTF8 files)
+  - 1711.07162: EMPTY → 182KB (was selecting supplementary file due to Latin-1 `ä` in main file)
 
 **Remaining:** Mode stack still has 1 extra frame at `\end{document}` in both papers (1 warning each). Root cause: cumulative bgroup imbalance from content processing. Papers produce full content despite the warning.
 
