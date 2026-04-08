@@ -203,6 +203,10 @@ impl Alignment {
   pub fn get_cached_height(&self) -> Option<Dimension> { self.cached_height }
   pub fn get_cached_depth(&self) -> Option<Dimension> { self.cached_depth }
   pub fn get_row_heights(&self) -> &[Dimension] { &self.row_heights }
+  pub fn get_column_widths(&self) -> &[Dimension] { &self.column_widths }
+  /// Run normalization (cell sizes, spans, pruning, positioning).
+  /// Perl: $alignment->normalizeAlignment
+  pub fn normalize(&mut self) -> Result<()> { normalize_alignment(self) }
 
   pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
     if let Some(row_idx) = self.current_row {

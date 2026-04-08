@@ -849,16 +849,62 @@ LoadDefinitions!({
   );
 
   // \lx@xy@notealignment — record alignment for matrix measurement (Perl L1062-1066)
+  // Records the current Alignment object globally so \xymatrix@measureit can access
+  // it after the \halign is finished. Sets preserve_structure to prevent pruning.
   DefPrimitive!("\\lx@xy@notealignment", {
-    // Note: alignment object recording would need deeper integration.
-    // For now, this is a no-op that allows the RawTeX to compile.
+    if let Some(alignment_d) = state::lookup_alignment() {
+      if let Some(alignment) = alignment_d.alignment_cell() {
+        alignment.borrow_mut().set_property("preserve_structure", Stored::Bool(true));
+      }
+      // Save globally so we can access it in \xymatrix@measureit
+      state::assign_value("xymatrix_alignment", Stored::Digested(alignment_d.clone()), Some(Scope::Global));
+    }
   });
 
   // \xymatrix@measureit — matrix dimension measurement (Perl L1068-1090)
-  // This requires deep alignment integration. For now, a stub.
+  // xy-pic's own measurement uses \lastbox which doesn't work in LaTeXML.
+  // Instead, read the saved alignment's computed row heights and column widths,
+  // and define \Hrow@N, \Wcol@N, \H@max, \W@max macros for xy-pic.
   DefPrimitive!("\\xymatrix@measureit", {
-    // TODO: read alignment row heights and column widths
-    // For now, the TeX-level computation in xy.tex handles it.
+    let alignment_d = state::lookup_value("xymatrix_alignment")
+      .and_then(|v| if let Stored::Digested(d) = v { Some(d.clone()) } else { None });
+    if let Some(ref alignment_d) = alignment_d {
+      if let Some(alignment) = alignment_d.alignment_cell() {
+        // Normalize to compute row/column dimensions
+        alignment.borrow_mut().normalize()?;
+        let row_heights = alignment.borrow().get_row_heights().to_vec();
+        let col_widths = alignment.borrow().get_column_widths().to_vec();
+        // Define \Hrow@1, \Hrow@2, ... and find \H@max
+        // Must be global scope — Perl DefMacroI defaults to global
+        let global_opts = |_: &str| -> Option<ExpandableOptions> {
+          Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() })
+        };
+        let mut h_max = Dimension::default();
+        for (i, h) in row_heights.iter().enumerate() {
+          let name = s!("\\Hrow@{}", i + 1);
+          def_macro(T_CS!(&name), None, Tokenize!(&h.to_string()), global_opts(&name))?;
+          h_max = h_max.larger(*h);
+        }
+        // Add fake last row (Perl L1077-1078)
+        let last_idx = row_heights.len() + 1;
+        let name = s!("\\Hrow@{}", last_idx);
+        def_macro(T_CS!(&name), None, Tokenize!("0pt"), global_opts(&name))?;
+        def_macro(T_CS!("\\H@max"), None, Tokenize!(&h_max.to_string()), global_opts(""))?;
+        // Define \Wcol@1, \Wcol@2, ... and find \W@max
+        let mut w_max = Dimension::default();
+        for (j, w) in col_widths.iter().enumerate() {
+          let name = s!("\\Wcol@{}", j + 1);
+          def_macro(T_CS!(&name), None, Tokenize!(&w.to_string()), global_opts(&name))?;
+          w_max = w_max.larger(*w);
+        }
+        def_macro(T_CS!("\\W@max"), None, Tokenize!(&w_max.to_string()), global_opts(""))?;
+        def_macro(T_CS!("\\HW@max"), None, Tokenize!(&h_max.larger(w_max).to_string()), global_opts(""))?;
+        // Reset counters (Perl L1086-1088)
+        assign_register("\\Col", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;
+        assign_register("\\Row", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;
+        assign_register("\\count@@", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;
+      }
+    }
   });
 
   // Tips style management (Perl L934-943)
