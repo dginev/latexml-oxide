@@ -1213,12 +1213,10 @@ fn before_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut result = Vec::new();
   while let Some(t) = toks.pop_front() {
     if t == T_MATH!() {
-      if let Some(next) = toks.front() {
-        if *next == T_CS!("\\hfil") {
-          result.push(toks.pop_front().unwrap()); // push \hfil
-          toks.push_front(t); // put $ back
-          continue;
-        }
+      if let Some(hfil) = toks.pop_front_if(|next| *next == T_CS!("\\hfil")) {
+        result.push(hfil); // push \hfil
+        toks.push_front(t); // put $ back
+        continue;
       }
     }
     result.push(t);
@@ -1233,12 +1231,10 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut result: VecDeque<Token> = VecDeque::new();
   while let Some(t) = toks.pop_back() {
     if t == T_MATH!() {
-      if let Some(prev) = toks.back() {
-        if *prev == T_CS!("\\hfil") {
-          result.push_front(toks.pop_back().unwrap()); // push \hfil to front
-          toks.push_back(t); // put $ back
-          continue;
-        }
+      if let Some(hfil) = toks.pop_back_if(|prev| *prev == T_CS!("\\hfil")) {
+        result.push_front(hfil); // push \hfil to front
+        toks.push_back(t); // put $ back
+        continue;
       }
     }
     result.push_front(t);

@@ -773,12 +773,10 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     if let Ok(content) = std::fs::read_to_string(&readme_xxx) {
       for line in content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 2 {
-          if parts[1] == "toplevelfile" {
-            let main_path = dir.join(parts[0]);
-            if main_path.exists() {
-              return Ok(main_path.to_string_lossy().to_string());
-            }
+        if parts.len() >= 2 && parts[1] == "toplevelfile" {
+          let main_path = dir.join(parts[0]);
+          if main_path.exists() {
+            return Ok(main_path.to_string_lossy().to_string());
           }
         }
       }
