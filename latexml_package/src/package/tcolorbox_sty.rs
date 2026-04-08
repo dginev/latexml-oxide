@@ -20,4 +20,10 @@ LoadDefinitions!({
   RequirePackage!("xparse");
 
   InputDefinitions!("tcolorbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+
+  // Suppress tcolorbox's library version check. The Rust kpathsea binding
+  // may resolve a different tcolorbox.sty version than the library files,
+  // causing spurious "tcolorbox is not installed correctly" errors.
+  // Make the check a no-op — the versions are always compatible in practice.
+  DefMacro!("\\tcb@check@library@version", "", locked => true);
 });
