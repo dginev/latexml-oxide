@@ -932,7 +932,8 @@ pub fn extract_alignment_column(
           prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
         }
       },
-      _ if front_box.get_property("isSpace").is_some() => {
+      _ if front_box.get_property("isSpace").is_some()
+        && front_box.get_property("isVerticalSpace").is_none() => {
         lspaces.push(front_box);
       },
       item
@@ -966,7 +967,8 @@ pub fn extract_alignment_column(
         border.push('r');
         rspaces.clear(); // Perl L508: discard spacing after rule
       },
-      _ if last_box.get_property("isSpace").is_some() => {
+      _ if last_box.get_property("isSpace").is_some()
+        && last_box.get_property("isVerticalSpace").is_none() => {
         rspaces.insert(0, last_box);
       },
       item

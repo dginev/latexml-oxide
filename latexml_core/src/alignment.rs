@@ -488,26 +488,41 @@ impl BoxOps for Alignment {
     // but (ATM) we"ve only got sensible boxes for the cells.
     let mut attrs = HashMap::default();
     std::mem::swap(&mut attrs, &mut self.xml_attributes);
-    // TODO: where are these used? We currently have a typed restriction for options passed to
-    // construction closures to be a String value (for trivial insertion in attributes)
-    // the values here are Dimensions and collections of Dimensions - where are they used ?
-
-    // let mut open_attrs = attrs;
-    // open_attrs.insert(String::from("cached_width"), self.cached_width.into());
-    // open_attrs.insert(String::from("cached_height"), self.cached_height.into());
-    // open_attrs.insert(String::from("cached_depth"), self.cached_depth.into());
-    // open_attrs.insert(String::from("row_heights"), self.row_heights.into());
-    // open_attrs.insert(String::from("column_widths"), self.column_widths.into());
+    // Perl Alignment.pm L311-316: pass dimension data to openContainer callback
+    // Serialized as px-value strings for callbacks that need positioning (tikz matrices).
+    if let Some(w) = self.cached_width {
+      attrs.insert("cwidth".to_string(), format!("{}", w.px_value(None)));
+    }
+    if let Some(h) = self.cached_height {
+      attrs.insert("cheight".to_string(), format!("{}", h.px_value(None)));
+    }
+    if let Some(d) = self.cached_depth {
+      attrs.insert("cdepth".to_string(), format!("{}", d.px_value(None)));
+    }
     let open_container_fn = &self.open_container;
     open_container_fn(document, attrs)?;
 
     for row in rows {
       let vpad_opt = row.get_padding().copied();
-      //     # Which properties do we expose to the constructor?
-      // Perl: pass $$row{id}, $$row{tags} to openRow
+      // Perl Alignment.pm L319-324: pass position/size to openRow callback
       let mut open_row_attrs = HashMap::default();
       for (k, v) in &row.properties {
         open_row_attrs.insert(k.clone(), v.clone());
+      }
+      if let Some(x) = row.x {
+        open_row_attrs.insert("x".to_string(), Stored::Dimension(x));
+      }
+      if let Some(y) = row.y {
+        open_row_attrs.insert("y".to_string(), Stored::Dimension(y));
+      }
+      if let Some(w) = row.cached_width {
+        open_row_attrs.insert("cwidth".to_string(), Stored::Dimension(w));
+      }
+      if let Some(h) = row.cached_height {
+        open_row_attrs.insert("cheight".to_string(), Stored::Dimension(h));
+      }
+      if let Some(d) = row.cached_depth {
+        open_row_attrs.insert("cdepth".to_string(), Stored::Dimension(d));
       }
       let open_row_fn = &self.open_row;
       open_row_fn(document, open_row_attrs)?;
@@ -534,6 +549,22 @@ impl BoxOps for Alignment {
         }
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
+        // Perl Alignment.pm L358-359: pass position/size to openColumn callback
+        if let Some(x) = cell.x {
+          cell_attrs.insert("x".to_string(), format!("{}", x.px_value(None)));
+        }
+        if let Some(y) = cell.y {
+          cell_attrs.insert("y".to_string(), format!("{}", y.px_value(None)));
+        }
+        if let Some(w) = cell.cached_width {
+          cell_attrs.insert("cwidth".to_string(), format!("{}", w.px_value(None)));
+        }
+        if let Some(h) = cell.cached_height {
+          cell_attrs.insert("cheight".to_string(), format!("{}", h.px_value(None)));
+        }
+        if let Some(d) = cell.cached_depth {
+          cell_attrs.insert("cdepth".to_string(), format!("{}", d.px_value(None)));
+        }
         // Perl: always passes align attribute (Alignment.pm L350)
         if let Some(ref align) = cell.align {
           cell_attrs.insert(String::from("align"), align.name());

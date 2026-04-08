@@ -1529,6 +1529,13 @@ impl Font {
       let (w, h, d) = self.compute_boxes_size_box(bx)?;
       // Perl L716-721: Check for possible line-break points
       if bx.get_property_bool("isBreak") {
+        // Perl: vertical space (isBreak + isVerticalSpace) contributes height
+        // even though it acts as a line break. Include its h/d in the word
+        // so alignment row spacing accounts for \noalign{\vskip X}.
+        if bx.get_property_bool("isVerticalSpace") {
+          ht = max(ht, h);
+          dp = max(dp, d);
+        }
         if wd != 0.0 || ht != 0 || dp != 0 || prevspace > 0.0 {
           words.push([prevspace, wd, ht as f64, dp as f64]);
           wd = 0.0;
@@ -1601,7 +1608,7 @@ impl Font {
       let (space, w, h, d) = (item[0], item[1], item[2] as i64, item[3] as i64);
       // Perl L755-757: explicit line break (space == -1)
       if space == -1.0 {
-        if wd != 0.0 {
+        if wd != 0.0 || ht != 0 || dp != 0 {
           lines.push([kround(wd), ht, dp]);
         }
         wd = w;

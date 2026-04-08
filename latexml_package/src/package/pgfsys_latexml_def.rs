@@ -102,6 +102,21 @@ fn read_dim_register(cs: &str) -> Dimension {
   }
 }
 
+/// Format a px value: round to 2 decimal places, strip trailing zeros
+fn fmt_px(v: f64) -> String {
+  let r = (v * 100.0).round() / 100.0;
+  if r == 0.0 {
+    return "0".to_string();
+  }
+  if r == r.round() && r.abs() < 1e10 {
+    format!("{}", r as i64)
+  } else {
+    let s = format!("{:.2}", r);
+    let s = s.trim_end_matches('0');
+    s.trim_end_matches('.').to_string()
+  }
+}
+
 /// Perl L920-939: tikzAlignmentBindings
 /// Sets up an Alignment with SVG-specific callbacks (svg:g elements with transform matrices)
 /// instead of the standard tabular/tr/td elements used by alignmentBindings.
@@ -126,9 +141,13 @@ fn tikz_alignment_bindings(
       let mut attrs = props;
       attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
       // Perl: transform="matrix(1 0 0 -1 x y)" — flips Y-axis (pgf Y=up, SVG Y=down)
-      // The exact y offset depends on total alignment height; use 0 as default
+      // y = (h + d) - rowdepths[-1]  (baseline of last row)
+      let h: f64 = attrs.remove("cheight").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let d: f64 = attrs.remove("cdepth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let _w: f64 = attrs.remove("cwidth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let y = h + d;
       attrs.entry("transform".to_string())
-        .or_insert_with(|| "matrix(1 0 0 -1 0 0)".to_string());
+        .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
       attrs.insert("_scopebegin".to_string(), "1".to_string());
       document.open_element("svg:g", Some(attrs), None).map(Option::Some)
     }),
@@ -146,9 +165,11 @@ fn tikz_alignment_bindings(
       };
       attrs.insert("class".to_string(), class);
       attrs.insert("_scopebegin".to_string(), "1".to_string());
-      // Perl: transform="matrix(1 0 0 1 0 yy)" where yy = y + height
-      // Default transform; actual positioning set by alignment machinery
-      attrs.insert("transform".to_string(), "matrix(1 0 0 1 0 0)".to_string());
+      // Perl: transform="matrix(1 0 0 1 0 yy)" where yy = y + cheight
+      let y = props.get("y").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
+      let h = props.get("cheight").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
+      let yy = y + h;
+      attrs.insert("transform".to_string(), format!("matrix(1 0 0 1 0 {})", fmt_px(yy)));
       document.open_element("svg:g", Some(attrs), None).and(Ok(()))
     }),
     close_row: Rc::new(|document| document.close_element("svg:g")),
@@ -164,9 +185,13 @@ fn tikz_alignment_bindings(
       };
       attrs.insert("class".to_string(), class);
       attrs.insert("_scopebegin".to_string(), "1".to_string());
-      // Perl: transform="matrix(1 0 0 -1 x y)" — flip Y and position
+      // Perl: transform="matrix(1 0 0 -1 x 0)" — flip Y and position at column x
+      let x: f64 = attrs.remove("x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let _y: f64 = attrs.remove("y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      // Remove dimension props that shouldn't become XML attributes
+      attrs.remove("cwidth"); attrs.remove("cheight"); attrs.remove("cdepth");
       attrs.entry("transform".to_string())
-        .or_insert_with(|| "matrix(1 0 0 -1 0 0)".to_string());
+        .or_insert_with(|| format!("matrix(1 0 0 -1 {} 0)", fmt_px(x)));
       document.open_element("svg:g", Some(attrs), None).map(Option::Some)
     }),
     close_column: Rc::new(|document| document.close_element("svg:g")),
