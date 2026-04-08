@@ -2,11 +2,11 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-07. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-08. Only lists open gaps & TODOs; completed items live in git history.
 
 **Test inventory:** 407 tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** 100+ papers in `arxiv-examples/`. **43/47 OK (91%)** on original 47-paper catalog. Remaining 3 EMPTY all fail in Perl too. New 50-paper batch being benchmarked.
+**arxiv sandbox:** 100+ papers in `arxiv-examples/`. **90/97 OK (93%)** on full catalog. 7 remaining: 3 Perl-also-fails, 2 timeout, 1 version conflict, 1 state corruption.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational:
 ```
@@ -78,13 +78,12 @@ All Phase A (EMPTY→OK) and Phase B (parity improvement) tasks completed. Key f
 Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity with Perl for all of them.
 
 #### [x] C1. Benchmark all 97 papers — DONE (session 96)
-**Result:** 89/97 OK (92%) after session 97 fixes.
-Failures triaged:
+**Result:** 90/97 OK (93%) after session 97 fixes.
+Remaining failures:
 - **Perl also fails:** 2402.03300 (pgfkeys), 2410.10068 (quantikz), 2511.03798 (eqnarray)
-- **thm-restate hang:** 2007.05477, 2103.12243 (raw TeX thm-kv.sty loops)
-- **readBalanced state corruption:** 2405.17032 (cumulative state issue after ~1046 lines — sections 5-8 lost; binary search narrowed to line 1047 `\citep[\eg][]{}` but requires token-level tracing)
-- **tcolorbox version mismatch:** 2306.00809 (raw TeX version check `\ifx` fails)
-- **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined)
+- **readBalanced state corruption:** 2405.17032 (cumulative state issue — sections 5-8 lost; binary search narrowed to line 1047)
+- **tcolorbox version mismatch:** 2306.00809 (version check `\ifx` fails despite matching versions)
+- **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined — texlive environment issue)
 - **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
 
 #### [ ] C2. Fix high-impact Rust-specific failures — IN PROGRESS
@@ -102,7 +101,10 @@ Failures triaged:
 **Fixed (session 97):**
 - **`find_main_tex` faithful port**: Ported Perl Pack.pm `detect_source` — line-by-line scoring, `\input` veto, 4 tiebreakers, 00README.json/XXX support
 - **Lossy UTF-8 read**: `find_main_tex` now handles Latin-1 encoded .tex files (was silently skipping non-UTF8 files)
-  - 1711.07162: EMPTY → 182KB (was selecting supplementary file due to Latin-1 `ä` in main file)
+  - 1711.07162: wrong file → correct file (182KB with all sections)
+- **thm-restate dispatch fix**: dispatch key had underscore instead of hyphen → binding never loaded, raw TeX looped. Also added kvsetkeys/keyval RequirePackage.
+  - 2007.05477: 0B → 238KB
+  - 2103.12243: 0B → 531KB
 
 **Remaining:** Mode stack still has 1 extra frame at `\end{document}` in both papers (1 warning each). Root cause: cumulative bgroup imbalance from content processing. Papers produce full content despite the warning.
 
