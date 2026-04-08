@@ -278,11 +278,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // We found and loaded a binding successfully, mark it as such.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
-    assign_value(&s!("{filename}_binding_loaded"), true, Some(Scope::Global));
-    // Perl: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
-    // Set \ver@name.ext = \fmtversion so \RequirePackage with date checks works.
-    // Without this, LaTeX's package loading guard thinks the package isn't loaded.
-    // Perl: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
+    assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));
+    // Perl L2326: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
     // Without this, \RequirePackage date checks fail and packages get re-loaded.
     if options.handleoptions {
@@ -378,7 +375,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
     if let Some(file) = found_raw {
       is_found_raw = true;
-      assign_value(&s!("{filename}_binding_loaded"), true, Some(Scope::Global));
+      // Mark as successfully loaded — prevents maybeRequireDependencies from
+      // scanning for deps when the raw file was found and loaded.
+      // (Perl: InputDefinitions returns $file on success, which is truthy.)
+      assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
     } else if !lookup_bool(&s!("{filename}_loaded")) {
       if options.noerror {
@@ -460,13 +460,11 @@ pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file) }
 pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file) }
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(internal: bool, request: &str) -> Result<bool> {
-  // avoid double-loads, but be binding-specific
-  let loaded_key = s!("{request}_binding_loaded");
+  // Perl loadLTXML L2311-2313: skip if already loaded
+  let loaded_key = s!("{request}_found_loaded");
   if lookup_bool(&loaded_key) {
     return Ok(true);
   }
-  // TODO? || lookup_bool(&s!("{trequest}_loaded"))
-  //|| lookup_bool(&s!("{name}_loaded")) || lookup_bool(&s!("{ltxname}_loaded"));
 
   let taken_dispatcher = if internal {
     get_bindings_dispatch()
@@ -994,11 +992,9 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
-  // Save extension before moving options into InputDefinitionOptions
-  let ext_type = options.extension.as_ref()
-    .map(|e| e.to_string()).unwrap_or_else(|| "sty".to_string());
+  let ext_type = options.extension.as_deref().unwrap_or("sty").to_string();
   let result = input_definitions(name, InputDefinitionOptions {
-    extension: options.extension.clone(),
+    extension: options.extension,
     handleoptions: true,
     // Pass classes options if we have NONE!
     withoptions: if options.options.is_empty() {
@@ -1017,8 +1013,9 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // input_definitions returns Ok even when no binding/raw file was found
   // (it just sets _loaded and warns). Perl checks the return value of
   // InputDefinitions which returns undef on failure. We check the
-  // "_binding_loaded" flag which is only set when an actual binding ran.
-  if !lookup_bool(&s!("{name}.{ext_type}_binding_loaded")) {
+  // "_found_loaded" flag which is only set when an actual binding or
+  // raw TeX file was loaded (not set on error/not-found).
+  if !lookup_bool(&s!("{name}.{ext_type}_found_loaded")) {
     maybe_require_dependencies(name, &ext_type);
   }
   result
@@ -1030,7 +1027,28 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
 /// and load any dependencies that DO have bindings. This is a "best effort"
 /// fallback that gives us the dependency chain without interpreting raw TeX.
 fn maybe_require_dependencies(file: &str, ext_type: &str) {
+  use once_cell::sync::Lazy;
   use regex::Regex;
+
+  // Re-entrancy guard: require_package → input_definitions → maybe_require_dependencies
+  // can recurse if a scanned dependency itself has no binding.
+  thread_local! { static SCANNING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
+  if SCANNING.with(|s| s.get()) { return; }
+  SCANNING.with(|s| s.set(true));
+  struct ResetGuard;
+  impl Drop for ResetGuard {
+    fn drop(&mut self) { SCANNING.with(|s| s.set(false)); }
+  }
+  let _guard = ResetGuard;
+
+  static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
+  static PKG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(
+    r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
+  ).unwrap());
+  static CLS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(
+    r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
+  ).unwrap());
+
   // Find the raw file on disk by searching in search paths
   let filename = s!("{}.{}", file, ext_type);
   let paths = get_search_paths();
@@ -1050,45 +1068,39 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     Warn!("I/O", "read", s!("Couldn't open {} to scan dependencies", path));
     return;
   };
-  // Strip comments
-  let comment_re = Regex::new(r"%[^\n]*\n").unwrap();
-  let code = comment_re.replace_all(&code, "\n");
+  // Strip comments (Perl L2776)
+  let code = COMMENT_RE.replace_all(&code, "\n");
   // Scan for \RequirePackage[options]{packages} and \usepackage[options]{packages}
-  let pkg_re = Regex::new(
-    r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
-  ).unwrap();
   let mut packages: Vec<(String, Vec<String>)> = Vec::new();
   let mut seen = std::collections::HashSet::new();
-  for cap in pkg_re.captures_iter(&code) {
+  for cap in PKG_RE.captures_iter(&code) {
     let opts: Vec<String> = cap.get(1)
       .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
       .unwrap_or_default();
     for pkg in cap[2].split(',') {
       let pkg = pkg.trim().to_string();
+      // Perl L2773: skip if binding already loaded
       if !pkg.is_empty() && !seen.contains(&pkg)
-        && !lookup_bool(&s!("{pkg}.sty_loaded"))
+        && !lookup_bool(&s!("{pkg}.sty_found_loaded"))
       {
         seen.insert(pkg.clone());
         packages.push((pkg, opts.clone()));
       }
     }
   }
-  // For class files, also scan for \LoadClass
+  // For class files, also scan for \LoadClass (Perl L2781-2782)
   if ext_type == "cls" {
-    let cls_re = Regex::new(
-      r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
-    ).unwrap();
-    for cap in cls_re.captures_iter(&code) {
+    for cap in CLS_RE.captures_iter(&code) {
       let opts: Vec<String> = cap.get(1)
         .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default();
       let class = cap[2].trim().to_string();
       if !class.is_empty() {
-        // Only load if we have a binding for it
+        // Perl L2788: only load if we have a binding for it (notex => 1)
         if find_file(&s!("{class}.cls"), Some(FindFileOptions {
-          forbid_ltxml: false, notex: true,
+          notex: true,
           ext_type: Some(Cow::Borrowed("cls")),
-          search_paths_only: false,
+          ..FindFileOptions::default()
         })).is_some() || lookup_bool(&s!("{class}.cls_loaded"))
         {
           let _ = load_class(&class, opts, Tokens::default());

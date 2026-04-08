@@ -104,6 +104,11 @@ struct Cli {
   #[arg(long, value_name = "SECONDS")]
   timeout: Option<u64>,
 
+  /// Maximum number of tokens to process before aborting (default: 100M).
+  /// Protects against infinite loops in macro expansion.
+  #[arg(long, value_name = "N")]
+  token_limit: Option<usize>,
+
   /// Navigation TOC style (e.g. "context")
   #[arg(long, value_name = "STYLE")]
   navigationtoc: Option<String>,
@@ -329,6 +334,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Normal mode: convert document
     if let Some(secs) = cli.timeout {
       latexml_core::stomach::set_timeout(secs);
+    }
+    if let Some(limit) = cli.token_limit {
+      latexml_core::gullet::set_token_limit(Some(limit));
     }
 
     let source_for_post = source.clone();
@@ -779,26 +787,12 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
-  // Check 00README.json for explicit main file (arXiv convention)
-  let readme_path = dir.join("00README.json");
-  if readme_path.exists() {
-    if let Ok(content) = std::fs::read_to_string(&readme_path) {
-      // Simple JSON extraction: find "filename" : "value"
-      if let Some(start) = content.find("\"filename\"") {
-        let rest = &content[start + 10..];
-        if let Some(colon) = rest.find(':') {
-          let after_colon = rest[colon + 1..].trim_start();
-          if after_colon.starts_with('"') {
-            if let Some(end_quote) = after_colon[1..].find('"') {
-              let filename = &after_colon[1..1 + end_quote];
-              let main_path = dir.join(filename);
-              if main_path.exists() {
-                return Ok(main_path.to_string_lossy().to_string());
-              }
-            }
-          }
-        }
-      }
+  // Check 00README.json for explicit main file (arXiv convention).
+  // Format: {"filename": "main.tex", ...} — a flat JSON object.
+  if let Some(filename) = parse_readme_json(dir) {
+    let main_path = dir.join(&filename);
+    if main_path.exists() {
+      return Ok(main_path.to_string_lossy().to_string());
     }
   }
 
@@ -822,6 +816,33 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   };
 
   Ok(main.to_string_lossy().to_string())
+}
+
+/// Parse 00README.json in `dir` and return the "filename" value if present.
+/// arXiv deposits use this file to declare the main TeX source.
+/// Handles whitespace variations and escaped characters in JSON strings.
+fn parse_readme_json(dir: &Path) -> Option<String> {
+  let content = std::fs::read_to_string(dir.join("00README.json")).ok()?;
+  // Find "filename" key — scan for the key, then extract the string value after ':'
+  let key = "\"filename\"";
+  let key_pos = content.find(key)?;
+  let after_key = &content[key_pos + key.len()..];
+  // Skip whitespace and colon
+  let after_key = after_key.trim_start();
+  let after_key = after_key.strip_prefix(':')?;
+  let after_key = after_key.trim_start();
+  // Parse a JSON string value (handles \" escapes)
+  let after_key = after_key.strip_prefix('"')?;
+  let mut result = String::new();
+  let mut chars = after_key.chars();
+  loop {
+    match chars.next()? {
+      '"' => break,
+      '\\' => { result.push(chars.next()?); },
+      c => result.push(c),
+    }
+  }
+  if result.is_empty() { None } else { Some(result) }
 }
 
 /// Pack the conversion output into a ZIP archive (whatsout=archive).

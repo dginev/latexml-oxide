@@ -4,7 +4,7 @@
 
 Updated 2026-04-07. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 313+ non-tikz tests pass (90 workspace + 223 integration); 7/10 tikz tests pass (3 pre-existing loops). MakeBibliography pipeline fully operational.
+**Test inventory:** 407 tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
 **arxiv sandbox:** 100+ papers in `arxiv-examples/`. **43/47 OK (91%)** on original 47-paper catalog. Remaining 3 EMPTY all fail in Perl too. New 50-paper batch being benchmarked.
 
@@ -46,12 +46,12 @@ latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletim
 
 **100% coverage: all 406 Perl bindings ported to Rust.** Zero `todo!()` panics. Zero MISSING.
 
-## Tikz — Known Diffs
+## Tikz — Known Diffs (vs Perl output)
 
 1. foreignObject transform Y / width/height
 2. Arrow tip shape (different path data)
 3. SVG viewBox/width — total dimensions differ slightly
-4. 3 tikz tests loop (dominoes, various_colors, unit_tests_by_silviu — pre-existing)
+4. tikz matrix rendering uses `<svg:g class="ltx_tikzmatrix">` groups (Rust) vs inline-blocks (Perl)
 
 ---
 
@@ -93,7 +93,7 @@ After XMApp fix: 89/97 OK. Failures triaged:
 - **`find_main_tex`**: 00README.json support + preferred name heuristic
 
 **Fixed (session 96, continued):**
-- **end_mode locked frame recovery**: When recovery popped down to the locked base frame, `pop_stack_frame` fataled. Now checks `is_base_frame()` and clears mode in-place.
+- **end_mode faithful rewrite**: Removed speculative recovery loop; now matches Perl's `endMode` exactly (log error, don't pop on mismatch).
   - 1801.02041: 0B → 737KB
   - 2507.23241: 0B → 4.2MB
 
@@ -104,6 +104,16 @@ After XMApp fix: 89/97 OK. Failures triaged:
 - `--whatsin=directory`: Fixed auto-detection of main `.tex` file via `find_main_tex()` (was passing directory path to converter instead of `.tex` file). Now locates file with `\documentclass`, matching Perl.
 - `--whatsin=archive`: ZIP input works end-to-end (tested on 2210.09945).
 - `--whatsout=archive`: ZIP output with HTML + log + status (tested on 0710.2281, 167KB ZIP).
+
+#### [x] C5. Code quality improvements — DONE (session 97)
+- **Static regex compilation**: `maybe_require_dependencies` regexes moved to `once_cell::sync::Lazy` statics (was recompiling on every call)
+- **Re-entrancy guard**: thread-local `SCANNING` flag prevents infinite recursion in `maybe_require_dependencies` → `require_package` → `maybe_require_dependencies` cycle
+- **`_found_loaded` flag cleanup**: renamed from `_binding_loaded`, now set for both binding AND raw TeX successful loads (matches Perl's `InputDefinitions` return-value semantics). Not set on error/not-found paths.
+- **Dead code removal**: `is_base_frame()` in state.rs (unused after `end_mode_opt` rewrite)
+- **JSON parsing robustness**: `find_main_tex` 00README.json parsing extracted to `parse_readme_json()` with proper escape handling
+- **`--token-limit` CLI flag**: token limit now configurable (default 100M), via `gullet::set_token_limit()`
+- **Duplicate comment removed**: content.rs L282-287 had `\ver@` comment twice
+- **Avoid clone**: `options.extension` no longer cloned in `require_package`
 
 #### [ ] C4. Upstream Perl sync — continuous
 **Approach:**

@@ -1910,11 +1910,6 @@ pub fn get_frame_depth() -> usize {
     .filter(|frame| !frame.locked)
     .count()
 }
-/// Check if the current (front) frame is the locked base frame.
-/// Used by mode recovery to avoid popping the base frame (which would fatal).
-pub fn is_base_frame() -> bool {
-  state!().undo.front().map(|f| f.locked).unwrap_or(false)
-}
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?
