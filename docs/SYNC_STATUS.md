@@ -82,7 +82,8 @@ Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity 
 Failures triaged:
 - **Perl also fails:** 2402.03300 (pgfkeys), 2410.10068 (quantikz), 2511.03798 (eqnarray)
 - **thm-restate hang:** 2007.05477, 2103.12243 (raw TeX thm-kv.sty loops)
-- **Conditional bug:** 2405.17032 (`\iffalse` handling — sections 5-8 lost), 2306.00809 (tcolorbox version)
+- **readBalanced state corruption:** 2405.17032 (cumulative state issue after ~1046 lines — sections 5-8 lost; binary search narrowed to line 1047 `\citep[\eg][]{}` but requires token-level tracing)
+- **tcolorbox version mismatch:** 2306.00809 (raw TeX version check `\ifx` fails)
 - **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined)
 - **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
 
