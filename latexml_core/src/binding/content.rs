@@ -278,6 +278,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // We found and loaded a binding successfully, mark it as such.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
+    assign_value(&s!("{filename}_binding_loaded"), true, Some(Scope::Global));
     // Perl: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext = \fmtversion so \RequirePackage with date checks works.
     // Without this, LaTeX's package loading guard thinks the package isn't loaded.
@@ -377,6 +378,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
     if let Some(file) = found_raw {
       is_found_raw = true;
+      assign_value(&s!("{filename}_binding_loaded"), true, Some(Scope::Global));
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
     } else if !lookup_bool(&s!("{filename}_loaded")) {
       if options.noerror {
@@ -992,10 +994,11 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
-  // TODO: Ideally we want to use the same struct for the RequirePackage options as for the
-  // InputDefinitions options
-  input_definitions(name, InputDefinitionOptions {
-    extension: options.extension,
+  // Save extension before moving options into InputDefinitionOptions
+  let ext_type = options.extension.as_ref()
+    .map(|e| e.to_string()).unwrap_or_else(|| "sty".to_string());
+  let result = input_definitions(name, InputDefinitionOptions {
+    extension: options.extension.clone(),
     handleoptions: true,
     // Pass classes options if we have NONE!
     withoptions: if options.options.is_empty() {
@@ -1009,7 +1012,103 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     notex: options.notex.unwrap_or(false),
     after: options.after,
     ..InputDefinitionOptions::default()
-  })
+  });
+  // Perl Package.pm L2679: maybeRequireDependencies unless $success
+  // input_definitions returns Ok even when no binding/raw file was found
+  // (it just sets _loaded and warns). Perl checks the return value of
+  // InputDefinitions which returns undef on failure. We check the
+  // "_binding_loaded" flag which is only set when an actual binding ran.
+  if !lookup_bool(&s!("{name}.{ext_type}_binding_loaded")) {
+    maybe_require_dependencies(name, &ext_type);
+  }
+  result
+}
+
+/// Perl Package.pm L2759-2796: maybeRequireDependencies
+/// When a package/class file has no binding AND raw TeX loading is disabled,
+/// scan the raw file for \RequirePackage/\usepackage/\LoadClass declarations
+/// and load any dependencies that DO have bindings. This is a "best effort"
+/// fallback that gives us the dependency chain without interpreting raw TeX.
+fn maybe_require_dependencies(file: &str, ext_type: &str) {
+  use regex::Regex;
+  // Find the raw file on disk by searching in search paths
+  let filename = s!("{}.{}", file, ext_type);
+  let paths = get_search_paths();
+  let raw_path = paths.iter().find_map(|dir| {
+    let candidate = if dir.is_empty() {
+      filename.clone()
+    } else {
+      format!("{}/{}", dir, filename)
+    };
+    if std::path::Path::new(&candidate).exists() { Some(candidate) } else { None }
+  }).or_else(|| {
+    // Also try kpsewhich
+    crate::util::pathname::find(&filename, crate::util::pathname::PathnameFindOptions::default())
+  });
+  let Some(path) = raw_path else { return };
+  let Ok(code) = std::fs::read_to_string(&path) else {
+    Warn!("I/O", "read", s!("Couldn't open {} to scan dependencies", path));
+    return;
+  };
+  // Strip comments
+  let comment_re = Regex::new(r"%[^\n]*\n").unwrap();
+  let code = comment_re.replace_all(&code, "\n");
+  // Scan for \RequirePackage[options]{packages} and \usepackage[options]{packages}
+  let pkg_re = Regex::new(
+    r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
+  ).unwrap();
+  let mut packages: Vec<(String, Vec<String>)> = Vec::new();
+  let mut seen = std::collections::HashSet::new();
+  for cap in pkg_re.captures_iter(&code) {
+    let opts: Vec<String> = cap.get(1)
+      .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
+      .unwrap_or_default();
+    for pkg in cap[2].split(',') {
+      let pkg = pkg.trim().to_string();
+      if !pkg.is_empty() && !seen.contains(&pkg)
+        && !lookup_bool(&s!("{pkg}.sty_loaded"))
+      {
+        seen.insert(pkg.clone());
+        packages.push((pkg, opts.clone()));
+      }
+    }
+  }
+  // For class files, also scan for \LoadClass
+  if ext_type == "cls" {
+    let cls_re = Regex::new(
+      r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
+    ).unwrap();
+    for cap in cls_re.captures_iter(&code) {
+      let opts: Vec<String> = cap.get(1)
+        .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
+        .unwrap_or_default();
+      let class = cap[2].trim().to_string();
+      if !class.is_empty() {
+        // Only load if we have a binding for it
+        if find_file(&s!("{class}.cls"), Some(FindFileOptions {
+          forbid_ltxml: false, notex: true,
+          ext_type: Some(Cow::Borrowed("cls")),
+          search_paths_only: false,
+        })).is_some() || lookup_bool(&s!("{class}.cls_loaded"))
+        {
+          let _ = load_class(&class, opts, Tokens::default());
+        }
+      }
+    }
+  }
+  if !packages.is_empty() {
+    Info!("dependencies", "dependencies",
+      s!("Loading dependencies for {}: {}", path,
+        packages.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>().join(",")));
+  }
+  for (pkg, opts) in packages {
+    // Only load if we have a binding (notex: true)
+    let _ = require_package(&pkg, RequireOptions {
+      options: opts,
+      notex: Some(true),
+      ..RequireOptions::default()
+    });
+  }
 }
 
 pub fn require_resource(mut resource: Resource) {
