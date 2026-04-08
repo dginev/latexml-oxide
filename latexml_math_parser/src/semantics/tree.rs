@@ -59,17 +59,21 @@ pub struct XProps {
   pub lpadding:  Option<Cow<'static, str>>,
   pub rpadding:  Option<Cow<'static, str>>,
 }
-/// Custom PartialEq: ignores `xmkey`, `id`, and `idref` which are bookkeeping
-/// fields for XMDual/XMRef resolution. Structurally identical parse trees that
-/// differ only in these internal reference keys should be considered equal
-/// for deduplication purposes.
+/// Custom PartialEq: ignores `xmkey`, `id`, `idref`, and `scriptpos` which are
+/// bookkeeping/layout fields. Structurally identical parse trees that differ only
+/// in internal reference keys or script-position labels (pre1 vs pre2 vs post1)
+/// should be considered equal for deduplication purposes.
+/// `scriptpos` is excluded because different grammar paths produce different
+/// pre/post level assignments for the same mathematical expression. E.g.,
+/// `{}^4{}_{12}C^{5+}` can produce 27 structurally distinct trees that differ
+/// only in scriptpos values — all represent the same expression.
 impl PartialEq for XProps {
   fn eq(&self, other: &Self) -> bool {
     self.content == other.content
       && self.role == other.role
       && self.meaning == other.meaning
       && self.name == other.name
-      && self.scriptpos == other.scriptpos
+      // Skip: scriptpos — layout hint, not semantic distinction
       // Skip: id, idref, xmkey — bookkeeping for Dual/Ref resolution
       && self.font == other.font
       && self.fontref == other.fontref
