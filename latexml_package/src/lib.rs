@@ -308,7 +308,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "upgreek.sty" => package::upgreek_sty::load_definitions(),
     "xcolor.sty" => package::xcolor_sty::load_definitions(),
     "xparse.sty" => package::xparse_sty::load_definitions(),
-    "thm_restate.sty" => package::thm_restate_sty::load_definitions(),
+    "thm-restate.sty" => package::thm_restate_sty::load_definitions(),
     "subfloat.sty" => package::subfloat_sty::load_definitions(),
     "svg.sty" => package::svg_sty::load_definitions(),
     "subfig.sty" => package::subfig_sty::load_definitions(),
