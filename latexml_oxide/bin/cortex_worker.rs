@@ -187,12 +187,11 @@ impl LatexmlWorker {
     let log = response.log;
     let status_str = format!("Status:conversion:{}", response.status_code);
 
-    // 6. Pack into output ZIP
-    let output_zip = tempdir.path().join("output.zip");
-    pack_output_zip(&output_zip, &xml, &log, &status_str)?;
+    // 6. Pack into output ZIP in /tmp (outside tempdir so it survives cleanup)
+    let output_path = std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
+    pack_output_zip(&output_path, &xml, &log, &status_str)?;
 
-    // Return the path — caller must read before tempdir drops
-    Ok(output_zip)
+    Ok(output_path)
   }
 }
 
@@ -200,6 +199,8 @@ impl Worker for LatexmlWorker {
   fn convert(&self, path: &Path) -> Result<File, Box<dyn Error>> {
     let output_path = self.convert_archive(path)?;
     let file = File::open(&output_path)?;
+    // Clean up temp file after opening
+    let _ = fs::remove_file(&output_path);
     Ok(file)
   }
 
