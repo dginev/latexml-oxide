@@ -408,9 +408,8 @@ LoadDefinitions!({
       let (stroke, fill, dashes) = xy_capture_stroke_fill();
       stored_map!(
         "xy_path" => "M -2 -1 l 1 1",
-        "xy_stroke" => stroke,
-        "xy_fill" => fill,
-        "xy_dashes" => dashes
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)
       )
     }
   );
@@ -427,7 +426,8 @@ LoadDefinitions!({
         XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
         XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
       ]);
-      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0))
     }
   );
 
@@ -445,7 +445,8 @@ LoadDefinitions!({
         fmt2(-w_px), fmt2(-h_px),
         fmt2(r_px), fmt2(r_px), fmt2(w_px), fmt2(h_px),
         fmt2(r_px), fmt2(r_px), fmt2(w_px), fmt2(h_px));
-      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0))
     }
   );
 
@@ -462,7 +463,8 @@ LoadDefinitions!({
       let x = dim_to_px(l) * c;
       let y = dim_to_px(l) * s;
       let path = s!("M 0 0 L {} {}", fmt2(x), fmt2(y));
-      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0))
     }
   );
 
@@ -476,7 +478,8 @@ LoadDefinitions!({
         XyPathPart::Cmd("M"), XyPathPart::Dim(xy_reg_dim("\\X@p")), XyPathPart::Dim(xy_reg_dim("\\Y@p")),
         XyPathPart::Cmd("L"), XyPathPart::Dim(xy_reg_dim("\\X@c")), XyPathPart::Dim(xy_reg_dim("\\Y@c")),
       ]);
-      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0))
     }
   );
 
@@ -524,7 +527,8 @@ LoadDefinitions!({
       let trimmed_path = path_str.trim().to_string();
       stored_map!(
         "xy_path" => trimmed_path,
-        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)
       )
     }
   );
@@ -556,7 +560,8 @@ LoadDefinitions!({
       let sweep = if stretch < 0.0 { 1 } else { 0 };
       let path = s!("M 0 0 A {} {} 45 0 {} {} {}",
         fmt2(r_px), fmt2(r_px), sweep, fmt2(dx), fmt2(dy));
-      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)))
     }
   );
 
@@ -570,7 +575,8 @@ LoadDefinitions!({
       let dx = -l_px * s;
       let dy = l_px * c;
       let path = s!("M {} {} L {} {}", fmt2(dx), fmt2(dy), fmt2(-dx), fmt2(-dy));
-      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0))
     }
   );
 
@@ -592,7 +598,8 @@ LoadDefinitions!({
       let ey = x0 * s + y1_val * c;
       let path = s!("M {} {} A {} {} 180 0 1 {} {}",
         fmt2(mx), fmt2(my_val), fmt2(l_px), fmt2(l_px), fmt2(ex), fmt2(ey));
-      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)))
     }
   );
 
@@ -610,7 +617,8 @@ LoadDefinitions!({
       let ey = l_px * (offset * c - s);
       let path = s!("M 0 0 A {} {} 90 0 {} {} {}",
         fmt2(l_px), fmt2(l_px), sweep, fmt2(ex), fmt2(ey));
-      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)))
     }
   );
 
@@ -622,7 +630,8 @@ LoadDefinitions!({
       let r_px = dim_to_px(xy_reg_dim("\\xybsqll@")) * 0.5;
       stored_map!(
         "xy_cx" => "0", "xy_cy" => "0", "xy_r" => fmt2(r_px),
-        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+        "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)
       )
     }
   );
@@ -651,7 +660,8 @@ LoadDefinitions!({
         stored_map!(
           "xy_full" => true,
           "xy_cx" => fmt2(xc_px), "xy_cy" => "0", "xy_r" => fmt2(r_px),
-          "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+          "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+          "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)
         )
       } else {
         // Partial arc
@@ -677,7 +687,8 @@ LoadDefinitions!({
           fmt2(x1), fmt2(y1), fmt2(r_px), fmt2(r_px), a, large, fmt2(x0), fmt2(y0));
         stored_map!(
           "xy_full" => false,
-          "xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes
+          "xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+          "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)
         )
       }
     }
@@ -749,7 +760,8 @@ LoadDefinitions!({
           dp(rc, dx1b), dp(dc, dy1b),
           dp(x1, -dy2), dp(y1, dx2)));
       }
-      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes)
+      stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0))
     }
   );
 
@@ -912,7 +924,8 @@ LoadDefinitions!({
           fmt2(x1 - r_px), fmt2(y1), fmt2(r_px), fmt2(r_px), fmt2(x1), fmt2(y1 - r_px),
           fmt2(x1), fmt2(y0 + r_px), fmt2(r_px), fmt2(r_px), fmt2(x1 - r_px), fmt2(y0))
       };
-      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)))
     }
   );
 
@@ -986,7 +999,8 @@ LoadDefinitions!({
       let x1 = x0 + dim_to_px(Dimension::new(w_sp));
       let y1 = y0 + dim_to_px(Dimension::new(h_sp));
       let path = s!("M {} {} L {} {} L {} {}", fmt2(x0), fmt2(y0), fmt2(x1), fmt2(y0), fmt2(x1), fmt2(y1));
-      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes))
+      Ok(stored_map!("xy_path" => path, "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
+        "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)))
     }
   );
 

@@ -33,47 +33,48 @@
     </picture>
   </para>
   <para xml:id="p2">
-    <picture height="111.39" width="161.23" xml:id="p2.pic1">
-      <svg:svg height="111.39" overflow="visible" style="vertical-align:-97.78141134158365px" version="1.1" viewBox="9.63 97.78 161.23 111.39" width="161.23">
-        <svg:g transform="matrix(1 0 0 -1 9.629189003152241 111.38776665953196) translate(9.63,0)">
-          <svg:g transform="translate(-9.63,0) translate(4.15,0)">
+    <picture height="104.47" width="161.23" xml:id="p2.pic1">
+      <svg:svg height="104.47" overflow="visible" style="vertical-align:-94.32216130699115px" version="1.1" viewBox="9.63 94.32 161.23 104.47" width="161.23">
+        <svg:g transform="matrix(1 0 0 -1 9.629189003152241 104.46926659034696) translate(9.63,0)">
+          <svg:g transform="translate(-9.63,0) translate(4.15,0) translate(0,-3.46)">
             <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.79em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.96"><Math mode="inline" tex="\textstyle{U\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="U" xml:id="p2.pic1.m1">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">U</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(14.19,0) translate(0,-57.18) translate(4.15,0) translate(0,-1.14)">
+          <svg:g transform="translate(14.38,0) translate(0,-54.38) translate(4.15,0) translate(0,-1.14)">
             <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.43em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.96"><Math mode="inline" tex="\scriptstyle{y}" text="y" xml:id="p2.pic1.m2">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(51.26,0) translate(0,-85.81) translate(0,-4.46)">
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.47 6.59" fill="none" stroke="#000000"/>
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.06 2.38" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(60.49,0) translate(0,-79.64)">
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.8 6.41" fill="none" stroke="#000000"/>
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.17 2.02" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 0 0 C 14.541286047817646 -37.851910282999086 37.93830707951735 -69.06201404968996 70.19102086792583 -93.63031130007265" fill="none" stroke="#000000"/>
-          <svg:path d="M 6.218542444997924 -4.151100041511 L 6.278272781593763 -4.208486769990141" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(40.58,0) translate(0,-33.21) translate(0,-4.46)">
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.22 6.14" fill="none" stroke="#000000"/>
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.29 1.54" fill="none" stroke="#000000"/>
+          <svg:path d="M 0 0 C 14.793466726608983 -35.86919670268611 38.190487758308684 -64.77314785537308 70.19102086792583 -86.71181123088765" fill="none" stroke="#000000"/>
+          <svg:path d="M 9.629189003152241 -5.943010139386156 L 9.650830429455082 -5.97791089809698" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(53.77,0) translate(0,-33.21)">
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.43 5.99" fill="none" stroke="#000000"/>
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.34 1.28" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 6.218542444997924 -4.151100041511 L 43.12889233192369 -28.75020201479694" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(68.34,0) translate(0,-9.29) translate(4.15,0) translate(0,-2.09)">
+          <svg:path d="M 9.629189003152241 -5.943010139386156 L 53.77134347136822 -33.208800332088" fill="none" stroke="#000000"/>
+          <svg:path d="M 53.737287256122876 -33.18698999709207 L 53.77134347136822 -33.208800332088" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(67.97,0) translate(0,-7.5) translate(4.15,0) translate(0,-2.09)">
             <svg:foreignObject height="4.17" overflow="visible" style="--ltx-fo-width:0.45em;--ltx-fo-height:0.3em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 4.17)" width="6.27"><Math mode="inline" tex="\scriptstyle{x}" text="x" xml:id="p2.pic1.m3">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">x</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(121.53,0) translate(0,-40.81) translate(0,-4.46)">
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.72 5.77" fill="none" stroke="#000000"/>
-            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.39 0.92" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(130.75,0) translate(0,-37.63)">
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.82 5.68" fill="none" stroke="#000000"/>
+            <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.41 0.78" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 0 0 C 50.54767883647044 -5.099416785308133 97.60722425182908 -20.704468668653572 141.1786362460759 -46.815155650036324" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(42.84,0) translate(0,-46.82) translate(4.15,0)">
+          <svg:path d="M 0 0 C 50.30478813579935 -3.8688113881754185 97.36433355115798 -18.32076585093227 141.1786362460759 -43.355905615443824" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(42.84,0) translate(0,-43.36) translate(4.15,0) translate(0,-3.46)">
             <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:3.35em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="46.4"><Math mode="inline" tex="\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="(* _ Z)@(X, Y)" xml:id="p2.pic1.m5">
                 <XMath>
                   <XMApp>
@@ -89,34 +90,34 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:path d="M 69.91428508787575 -53.041805712302825 L 70.4677566479759 -53.041805712302825" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(70.19,0) translate(0,-70.22) translate(4.15,0) translate(0,-1.14)">
+          <svg:g transform="translate(70.19,0) translate(0,-65.03) translate(4.15,0) translate(0,-1.14)">
             <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.42"><Math mode="inline" tex="\scriptstyle{q}" text="q" xml:id="p2.pic1.m6">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">q</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(60.97,0) translate(0,-80.02) translate(0,-4.46)">
+          <svg:g transform="translate(70.19,0) translate(0,-76.57)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 2.77 6.92" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -2.77 6.92" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 69.91428508787575 -75.56535766483326 L 70.4677566479759 -53.041805712302825" fill="none" stroke="#000000"/>
-          <svg:path d="M 69.91428508787575 -80.02395598212432 L 70.4677566479759 -84.48253318582876" fill="none" stroke="#000000"/>
-          <svg:path d="M 97.54405240061142 -47.09189143008639 L 97.54405240061142 -46.53841986998625" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(98.68,0) translate(0,-53.99) translate(4.15,0) translate(0,-1.14)">
+          <svg:path d="M 69.91428508787575 -76.56470594753182 L 70.4677566479759 -53.041805712302825" fill="none" stroke="#000000"/>
+          <svg:path d="M 69.91428508787575 -76.56470594753182 L 70.4677566479759 -76.56470594753182" fill="none" stroke="#000000"/>
+          <svg:path d="M 97.54405240061142 -43.63264139549389 L 97.54405240061142 -43.07916983539375" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(98.68,0) translate(0,-50.53) translate(4.15,0) translate(0,-1.14)">
             <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.41em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.7"><Math mode="inline" tex="\scriptstyle{p}" text="p" xml:id="p2.pic1.m7">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(121.53,0) translate(0,-46.82) translate(0,-4.46)">
+          <svg:g transform="translate(130.75,0) translate(0,-43.36)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -6.92 2.77" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.92 -2.77" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 97.54405240061142 -47.09189143008639 L 121.52815782233725 -46.53841986998625" fill="none" stroke="#000000"/>
-          <svg:path d="M 139.97752652947497 -47.09189143008639 L 130.75285273269944 -46.53841986998625" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(130.75,0) translate(0,-46.82) translate(4.15,0)">
+          <svg:path d="M 97.54405240061142 -43.63264139549389 L 130.75285273269944 -43.07916983539375" fill="none" stroke="#000000"/>
+          <svg:path d="M 130.75285273269944 -43.63264139549389 L 130.75285273269944 -43.07916983539375" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(130.75,0) translate(0,-43.36) translate(4.15,0) translate(0,-3.46)">
             <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.91em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="12.55"><Math mode="inline" tex="\textstyle{X\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="X" xml:id="p2.pic1.m8">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">X</XMTok>
@@ -124,41 +125,41 @@
               </Math></svg:foreignObject>
           </svg:g>
           <svg:path d="M 140.90190046602584 -50.966255691547325 L 141.45537202612599 -50.966255691547325" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(126.4,0) translate(0,-70.22) translate(4.15,0) translate(0,-2.42)">
+          <svg:g transform="translate(126.4,0) translate(0,-65.03) translate(4.15,0) translate(0,-2.42)">
             <svg:foreignObject height="8.61" overflow="visible" style="--ltx-fo-width:0.47em;--ltx-fo-height:0.49em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 6.73)" width="6.48"><Math mode="inline" tex="\scriptstyle{f}" text="f" xml:id="p2.pic1.m9">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">f</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(131.96,0) translate(0,-80.02) translate(0,-4.46)">
+          <svg:g transform="translate(141.18,0) translate(0,-76.57)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 2.77 6.92" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -2.77 6.92" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 140.90190046602584 -75.56535766483326 L 141.45537202612599 -50.966255691547325" fill="none" stroke="#000000"/>
-          <svg:path d="M 140.90190046602584 -80.02395598212432 L 141.45537202612599 -84.48253318582876" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(60.49,0) translate(0,-93.63) translate(4.15,0)">
+          <svg:path d="M 140.90190046602584 -76.56470594753182 L 141.45537202612599 -50.966255691547325" fill="none" stroke="#000000"/>
+          <svg:path d="M 140.90190046602584 -76.56470594753182 L 141.45537202612599 -76.56470594753182" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(60.49,0) translate(0,-86.71) translate(4.15,0) translate(0,-3.46)">
             <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.8em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.11"><Math mode="inline" tex="\textstyle{Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="Y" xml:id="p2.pic1.m11">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">Y</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:path d="M 79.89615544221107 -93.90704708012272 L 79.89615544221107 -93.35357552002257" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(98.66,0) translate(0,-86.45) translate(4.15,0) translate(0,-1.14)">
+          <svg:path d="M 79.89615544221107 -86.98854701093772 L 79.89615544221107 -86.43507545083757" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(98.66,0) translate(0,-79.53) translate(4.15,0) translate(0,-1.14)">
             <svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:0.42em;--ltx-fo-height:0.3em;--ltx-fo-depth:0.14em;" transform="matrix(1 0 0 -1 0 4.17)" width="5.75"><Math mode="inline" tex="\scriptstyle{g}" text="g" xml:id="p2.pic1.m12">
                 <XMath>
                   <XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok>
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(122.59,0) translate(0,-93.63) translate(0,-4.46)">
+          <svg:g transform="translate(131.81,0) translate(0,-86.71)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -6.92 2.77" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.92 -2.77" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 79.89615544221107 -93.90704708012272 L 122.58514619655459 -93.35357552002257" fill="none" stroke="#000000"/>
-          <svg:path d="M 141.03451490369233 -93.90704708012272 L 131.80984110691676 -93.35357552002257" fill="none" stroke="#000000"/>
-          <svg:g transform="translate(131.81,0) translate(0,-93.63) translate(4.15,0)">
+          <svg:path d="M 79.89615544221107 -86.98854701093772 L 131.80984110691676 -86.43507545083757" fill="none" stroke="#000000"/>
+          <svg:path d="M 131.80984110691676 -86.98854701093772 L 131.80984110691676 -86.43507545083757" fill="none" stroke="#000000"/>
+          <svg:g transform="translate(131.81,0) translate(0,-86.71) translate(4.15,0) translate(0,-3.46)">
             <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.44"><Math mode="inline" tex="\textstyle{Z}" text="Z" xml:id="p2.pic1.m13">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">Z</XMTok>
@@ -172,15 +173,15 @@
   <para xml:id="p3">
     <p>Before equation</p>
     <equation xml:id="S0.Ex1">
-      <Math mode="display" tex="x=\lx@xy@svg{\hbox{\raise 0.0pt\hbox{\kern 6.93124pt\hbox{\ignorespaces\ignorespaces\ignorespaces\hbox{\vtop{\halign{\entry@#!@&amp;&amp;\entry@@#!@\cr&amp;\cr&amp;\crcr}}}\ignorespaces{\hbox{\kern-6.75pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 24.70792pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise-3.22221pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern-6.66669pt\raise-24.68333pt\hbox{\hbox{\kern 0.0pt\raise-3.22221pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 24.26456pt\raise-27.79758pt\hbox{\hbox{\kern 0.0pt\raise-3.22221pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{B}$}}}}}}}{\hbox{\kern-6.93124pt\raise-34.51665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{C}$}}}}}}}{\hbox{\kern 30.93124pt\raise-34.51665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise 0.0pt\hbox{$\textstyle{\hbox{\large D}}$}}}}}}}\ignorespaces}}}}\ignorespaces" text="x = [ABCD]" xml:id="S0.Ex1.m1">
+      <Math mode="display" tex="x=\lx@xy@svg{\hbox{\raise 2.5pt\hbox{\kern 6.93124pt\hbox{\ignorespaces\ignorespaces\ignorespaces\hbox{\vtop{\halign{\entry@#!@&amp;&amp;\entry@@#!@\cr&amp;\cr&amp;\crcr}}}\ignorespaces{\hbox{\kern-6.75pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}$}}}}}}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces\ignorespaces{}{\hbox{\lx@xy@droprule}}\ignorespaces{\hbox{\kern 0.0pt\raise-24.68333pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}{\hbox{\lx@xy@droprule}}{\hbox{\lx@xy@droprule}}\ignorespaces\ignorespaces\ignorespaces{}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\kern 30.93124pt\raise-25.78745pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\lx@xy@tip{1}\lx@xy@tip{-1}}}}}}\ignorespaces\ignorespaces{\hbox{\lx@xy@drawline@}}\ignorespaces{\hbox{\lx@xy@drawline@}}{\hbox{\kern 31.3746pt\raise 0.0pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{B}$}}}}}}}{\hbox{\kern-6.93124pt\raise-32.01665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{C}$}}}}}}}{\hbox{\kern 30.93124pt\raise-32.01665pt\hbox{\hbox{\kern 0.0pt\raise 0.0pt\hbox{\hbox{\kern 3.0pt\raise-2.5pt\hbox{$\textstyle{\hbox{\large D}}$}}}}}}}\ignorespaces}}}}\ignorespaces" text="x = [ABCD]" xml:id="S0.Ex1.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
             <XMTok font="italic" role="UNKNOWN">x</XMTok>
-            <XMText><picture height="65.52" width="73.11" xml:id="S0.Ex1.m1.1">
-                <svg:svg height="65.52" overflow="visible" style="vertical-align:-51.91178544190838px" version="1.1" viewBox="9.59 51.91 73.11 65.52" width="73.11">
-                  <svg:g transform="matrix(1 0 0 -1 9.590762275473052 65.51814075985669) translate(9.59,0)">
-                    <svg:g transform="translate(-9.34,0) translate(4.15,0)">
+            <XMText><picture height="62.06" width="73.11" xml:id="S0.Ex1.m1.1">
+                <svg:svg height="62.06" overflow="visible" style="vertical-align:-51.91178544190838px" version="1.1" viewBox="9.59 51.91 73.11 62.06" width="73.11">
+                  <svg:g transform="matrix(1 0 0 -1 9.590762275473052 62.0588907252642) translate(0,3.46) translate(9.59,0)">
+                    <svg:g transform="translate(-9.34,0) translate(4.15,0) translate(0,-3.46)">
                       <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38"><Math mode="inline" tex="\textstyle{A\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="A" xml:id="S0.Ex1.m1.pic1.m1">
                           <XMath>
                             <XMTok font="italic" role="UNKNOWN">A</XMTok>
@@ -188,40 +189,41 @@
                         </Math></svg:foreignObject>
                     </svg:g>
                     <svg:path d="M 9.339996206986388 -0.27673578005007266 L 9.339996206986388 0.27673578005007266" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(34.19,0) translate(0,-4.46)">
+                    <svg:g transform="translate(43.41,0)">
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -6.92 2.77" fill="none" stroke="#000000"/>
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -6.92 -2.77" fill="none" stroke="#000000"/>
                     </svg:g>
-                    <svg:path d="M 9.339996206986388 -0.27673578005007266 L 34.18834407052113 0.27673578005007266" fill="none" stroke="#000000"/>
-                    <svg:path d="M 52.63771277765887 -0.27673578005007266 L 43.41303898088332 0.27673578005007266" fill="none" stroke="#000000"/>
-                    <svg:path d="M -0.27673578005007266 -4.151100041511 L 0.27673578005007266 -4.151100041511" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(-9.22,0) translate(0,-34.15) translate(0,-4.46)">
+                    <svg:path d="M 9.339996206986388 -0.27673578005007266 L 43.41303898088332 0.27673578005007266" fill="none" stroke="#000000"/>
+                    <svg:path d="M 43.41303898088332 -0.27673578005007266 L 43.41303898088332 0.27673578005007266" fill="none" stroke="#000000"/>
+                    <svg:path d="M -0.27673578005007266 -7.610350076103501 L 0.27673578005007266 -7.610350076103501" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(0,-34.15)">
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 0 2.77 6.92" fill="none" stroke="#000000"/>
                       <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -2.77 6.92" fill="none" stroke="#000000"/>
                     </svg:g>
-                    <svg:path d="M -0.27673578005007266 -29.695731765158 L 0.27673578005007266 -4.151100041511" fill="none" stroke="#000000"/>
-                    <svg:path d="M -0.27673578005007266 -34.154330082449064 L 0.27673578005007266 -38.61290728615349" fill="none" stroke="#000000"/>
-                    <svg:path d="M 4.6172880344541305 -4.151100041511 L 4.651850975778764 -4.196409798433825" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(33.58,0) translate(0,-38.46) translate(0,-4.46)">
-                      <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.3 6.68" fill="none" stroke="#000000"/>
-                      <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7 2.57" fill="none" stroke="#000000"/>
+                    <svg:path d="M -0.27673578005007266 -34.154330082449064 L 0.27673578005007266 -7.610350076103501" fill="none" stroke="#000000"/>
+                    <svg:path d="M -0.27673578005007266 -34.154330082449064 L 0.27673578005007266 -34.154330082449064" fill="none" stroke="#000000"/>
+                    <svg:path d="M 9.126474505327245 -7.610350076103501 L 9.15835602114899 -7.6650131519064795" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(42.8,0) translate(0,-35.68)">
+                      <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.54 6.55" fill="none" stroke="#000000"/>
+                      <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.09 2.3" fill="none" stroke="#000000"/>
                     </svg:g>
-                    <svg:path d="M 4.6172880344541305 -4.151100041511 L 35.92113612581292 -32.26324946814031" fill="none" stroke="#000000"/>
-                    <svg:g transform="translate(43.41,0) translate(4.15,0)">
+                    <svg:path d="M 9.126474505327245 -7.610350076103501 L 42.79956260756106 -35.68208809790975" fill="none" stroke="#000000"/>
+                    <svg:path d="M 42.790610446827 -35.61055526638388 L 42.79956260756106 -35.68208809790975" fill="none" stroke="#000000"/>
+                    <svg:g transform="translate(43.41,0) translate(4.15,0) translate(0,-3.46)">
                       <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.81em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="11.19"><Math mode="inline" tex="\textstyle{B}" text="B" xml:id="S0.Ex1.m1.pic1.m2">
                           <XMath>
                             <XMTok font="italic" role="UNKNOWN">B</XMTok>
                           </XMath>
                         </Math></svg:foreignObject>
                     </svg:g>
-                    <svg:g transform="translate(-9.59,0) translate(0,-47.76) translate(4.15,0)">
+                    <svg:g transform="translate(-9.59,0) translate(0,-44.3) translate(4.15,0) translate(0,-3.46)">
                       <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.79em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.88"><Math mode="inline" tex="\textstyle{C}" text="C" xml:id="S0.Ex1.m1.pic1.m3">
                           <XMath>
                             <XMTok font="italic" role="UNKNOWN">C</XMTok>
                           </XMath>
                         </Math></svg:foreignObject>
                     </svg:g>
-                    <svg:g transform="translate(42.8,0) translate(0,-47.76) translate(4.15,0)">
+                    <svg:g transform="translate(42.8,0) translate(0,-44.3) translate(4.15,0) translate(0,-3.46)">
                       <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.9em;--ltx-fo-height:0.82em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.42"><text class="ltx_markedasmath" fontsize="120%">D</text></svg:foreignObject>
                     </svg:g>
                   </svg:g>

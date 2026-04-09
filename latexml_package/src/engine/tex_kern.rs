@@ -142,7 +142,18 @@ LoadDefinitions!({
       }
       document.maybe_close_node(&node)?;
     },
-    // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); },
+    // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); }
+    sizer => sub[whatsit] {
+      let y_val = -(whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0));
+      if let Some(content) = whatsit.get_arg(2) {
+        let (w, h, d) = content.compute_size(Default::default())?;
+        let new_h = Dimension::new((h.value_of() + y_val).max(0));
+        let new_d = Dimension::new((d.value_of() - y_val).max(0));
+        Ok((w, new_h, new_d))
+      } else {
+        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+      }
+    },
     enter_horizontal => true,
     after_digest => sub[whatsit] {
       let y         = Dimension(-whatsit.get_arg(1).unwrap().value_of());
@@ -180,7 +191,19 @@ LoadDefinitions!({
       }
       document.maybe_close_node(&node)?;
     },
-    // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
+    // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); }
+    // Adjusts reported height/depth by the raise amount so \ht/\dp reflect the shift.
+    sizer => sub[whatsit] {
+      let y_val = whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0);
+      if let Some(content) = whatsit.get_arg(2) {
+        let (w, h, d) = content.compute_size(Default::default())?;
+        let new_h = Dimension::new((h.value_of() + y_val).max(0));
+        let new_d = Dimension::new((d.value_of() - y_val).max(0));
+        Ok((w, new_h, new_d))
+      } else {
+        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+      }
+    },
     enter_horizontal => true,
     after_digest => sub[whatsit] {
       let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
