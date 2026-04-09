@@ -162,11 +162,11 @@ LoadDefinitions!({
   DefMacro!("\\isotope{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
 
   // Symbols — Perl L271-276
-  DefMacro!("\\sun", "\u{2609}");
-  DefMacro!("\\diameter", "\u{2300}");
-  DefMacro!("\\degr", "\u{00B0}");
-  DefMacro!("\\arcmin", "\u{2032}");
-  DefMacro!("\\arcsec", "\u{2033}");
+  DefPrimitive!("\\sun", "\u{2609}");
+  DefPrimitive!("\\diameter", "\u{2300}");
+  DefPrimitive!("\\degr", "\u{00B0}");
+  DefPrimitive!("\\arcmin", "\u{2032}");
+  DefPrimitive!("\\arcsec", "\u{2033}");
 
   // Relational operators — Perl L278-292
   DefMath!("\\la", "\u{2272}", role => "RELOP", meaning => "less-than-or-similar-to");
@@ -198,19 +198,19 @@ LoadDefinitions!({
   DefMacro!("\\uarcsec", "\\!^{\\prime\\prime}");
 
   // Blackboard bold — Perl L326-338
-  DefMacro!("\\bbbc", "\u{2102}");
-  DefMacro!("\\bbbf", "\u{1D53D}");
-  DefMacro!("\\bbbh", "\u{210D}");
-  DefMacro!("\\bbbk", "\u{1D542}");
-  DefMacro!("\\bbbm", "\u{1D544}");
-  DefMacro!("\\bbbn", "\u{2115}");
-  DefMacro!("\\bbbone", "\u{1D7D9}");
-  DefMacro!("\\bbbp", "\u{2119}");
-  DefMacro!("\\bbbq", "\u{211A}");
-  DefMacro!("\\bbbr", "\u{211D}");
-  DefMacro!("\\bbbs", "\u{1D54A}");
-  DefMacro!("\\bbbt", "\u{1D54B}");
-  DefMacro!("\\bbbz", "\u{2124}");
+  DefPrimitive!("\\bbbc", "\u{2102}");
+  DefPrimitive!("\\bbbf", "\u{1D53D}");
+  DefPrimitive!("\\bbbh", "\u{210D}");
+  DefPrimitive!("\\bbbk", "\u{1D542}");
+  DefPrimitive!("\\bbbm", "\u{1D544}");
+  DefPrimitive!("\\bbbn", "\u{2115}");
+  DefPrimitive!("\\bbbone", "\u{1D7D9}");
+  DefPrimitive!("\\bbbp", "\u{2119}");
+  DefPrimitive!("\\bbbq", "\u{211A}");
+  DefPrimitive!("\\bbbr", "\u{211D}");
+  DefPrimitive!("\\bbbs", "\u{1D54A}");
+  DefPrimitive!("\\bbbt", "\u{1D54B}");
+  DefPrimitive!("\\bbbz", "\u{2124}");
 
   DefMacro!("\\sq", "\u{25A1}");
   DefMacro!("\\qed", "\u{220E}");
