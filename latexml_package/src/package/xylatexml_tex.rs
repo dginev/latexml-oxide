@@ -1282,6 +1282,8 @@ LoadDefinitions!({
   // \object call sets up the entry position.
   // Actually: override \drop@ itself, reading the centered values AFTER \object:
 
+
+
   // \lx@xy@notealignment — record alignment for matrix measurement (Perl L1062-1066)
 
   // Records the current Alignment object globally so \xymatrix@measureit can access
