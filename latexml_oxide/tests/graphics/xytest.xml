@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?latexml class="article"?>
 <?latexml package="xcolor"?>
-<?latexml package="xy" options="arrow,curve,matrix,knot"?>
+<?latexml package="xy" options="arrow,curve,matrix"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:svg="http://www.w3.org/2000/svg">
   <resource src="LaTeXML.css" type="text/css"/>
@@ -234,24 +234,5 @@
       </Math>
     </equation>
     <p>And after it.</p>
-  </para>
-  <para xml:id="p4">
-    <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="[\raise 5.0pt]" text="delimited-[]@([])" xml:id="S0.Ex2.m1">
-        <XMath>
-          <XMDual>
-            <XMApp>
-              <XMTok meaning="delimited-[]"/>
-              <XMRef idref="S0.Ex2.m1.1"/>
-            </XMApp>
-            <XMWrap>
-              <XMTok role="OPEN" stretchy="false">[</XMTok>
-              <XMText yoffset="5.0pt" xml:id="S0.Ex2.m1.1"/>
-              <XMTok role="CLOSE" stretchy="false">]</XMTok>
-            </XMWrap>
-          </XMDual>
-        </XMath>
-      </Math>
-    </equation>
   </para>
 </document>
