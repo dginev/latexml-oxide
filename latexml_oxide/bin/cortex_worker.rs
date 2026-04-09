@@ -36,7 +36,7 @@ struct Cli {
   sink_address: String,
 
   /// Service name as registered in CorTeX
-  #[arg(long, default_value = "tex_to_html")]
+  #[arg(long, default_value = "oxidized_tex_to_html")]
   service: String,
 
   /// Number of parallel worker threads
