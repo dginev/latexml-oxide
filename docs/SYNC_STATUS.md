@@ -86,6 +86,15 @@ Remaining failures:
 - **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined — texlive environment issue)
 - **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
 
+#### [ ] C2a. babel.sty fix — IN PROGRESS (session 98)
+**Root causes found and fixed:**
+1. **`\@fontenc@load@list` cleared to empty** — babel's `\AtBeginDocument` code (L3931) does `\edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}`, which with empty list causes `\@gobbletwo` to eat subsequent tokens, corrupting `\bbl@trim` expansion → `\bbl@trim@a` undefined. **Fix:** removed `\def\@fontenc@load@list{}` from babel_sty.rs.
+2. **`\CurrentOption` leakage** — keyval.sty's `\ExecuteOptions{unknownkeyserror}` leaves `\CurrentOption` set. babel's `\bbl@load@language{nil}` at L4177 uses `\CurrentOption` (not #1) to set `\bbl@loaded`, producing `\bbl@loaded=unknownkeyserror`. **Fix:** `\let\CurrentOption\@empty` before loading babel.
+
+**Status:** Both fixes applied. `\usepackage{babel}`, `\usepackage{keyval}\usepackage{babel}`, and test.zip (aa.cls) all produce 0 errors/warnings. Need to verify babel-specific tests still pass.
+
+**TODO:** faithful keyval.sty.ltxml translation (Perl L19-36 → Rust already matches)
+
 #### [ ] C2. Fix high-impact Rust-specific failures — IN PROGRESS
 **Fixed so far (session 96):**
 - **smfart dispatch**: `smfart_cls.rs` was never in dispatch table → added, 7→1 errors

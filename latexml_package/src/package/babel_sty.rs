@@ -37,38 +37,17 @@ LoadDefinitions!({
   // (\babelprovide) which we skip. Without these, \ifcase\bbl@opt@hyphenmap fails.
   RawTeX!(r"\chardef\bbl@opt@hyphenmap\@ne");
 
+  // Clear \CurrentOption before loading babel to prevent leakage from
+  // previously loaded packages (e.g., keyval.sty's "unknownkeyserror" option
+  // leaks into babel's \bbl@load@language which uses \CurrentOption at L4177).
+  RawTeX!(r"\let\CurrentOption\@empty");
+
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // After babel loads, clear \@fontenc@load@list to prevent stray commas
-  // from babel's AtBeginDocument font encoding iteration.
-  RawTeX!(r"\def\@fontenc@load@list{}");
-
-  // Fix \bbl@main@language: babel's option processing sets it to "nil"
-  // because the ini-based loading path doesn't call \main@language.
-  // Read the last option from \@raw@classoptionslist or babel's internal
-  // state and call \main@language explicitly.
-  // Fix \bbl@main@language: use \bbl@loaded (set by babel option processing)
-  // to call \main@language with the correct language name.
-  DefPrimitive!("\\lx@babel@fix@mainlang", {
-    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
-      .map(|t| t.to_string()).unwrap_or_default();
-    if main == "nil" || main.is_empty() {
-      // \bbl@loaded contains the last loaded language
-      let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
-        .map(|t| t.to_string()).unwrap_or_default();
-      let last_lang = loaded.split(',').map(|s| s.trim())
-        .rfind(|s| !s.is_empty()).unwrap_or("").to_string();
-      if !last_lang.is_empty() {
-        gullet::unread(Tokens::new(vec![
-          T_CS!("\\main@language"),
-          T_BEGIN!(),
-          T_OTHER!(last_lang),
-          T_END!(),
-        ]));
-      }
-    }
-  });
-  RawTeX!(r"\lx@babel@fix@mainlang");
+  // NOTE: Do NOT clear \@fontenc@load@list here. Babel's \AtBeginDocument code
+  // (L3931-3933) does \edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}
+  // which expects at least one \@elt{enc} entry. If empty, \@gobbletwo eats
+  // subsequent tokens, corrupting \bbl@trim expansion → \bbl@trim@a undefined error.
 
   // Emulate Perl's precompiled kernel: pre-define \captions<lang> and \date<lang>
   // for common languages. In Perl, `make formats` precompiles the kernel so these
