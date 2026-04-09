@@ -1281,11 +1281,6 @@ LoadDefinitions!({
   // the caller. Instead, override \idfromc@ which is called right after \drop@'s
   // \object call sets up the entry position.
   // Actually: override \drop@ itself, reading the centered values AFTER \object:
-  // TODO: globalize centered edge values from OBJECT@x.
-  // Current approach: use \aftergroup to schedule globalization after the
-  // \halign cell group closes. The \aftergroup token is inserted during
-  // \OBJECT@@'s execution (after centering is computed).
-  // For now, disabled pending investigation of \drop@ override issues.
 
   // \lx@xy@notealignment — record alignment for matrix measurement (Perl L1062-1066)
 
