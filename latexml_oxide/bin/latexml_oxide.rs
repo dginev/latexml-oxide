@@ -343,9 +343,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     let response = converter.convert(source);
     let _ = &source_for_post; // keep alive for post-processing
     if let Some(xml) = response.result {
-      // Auto-select stylesheet from --format
+      // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
+      let inferred_format: Option<String> = cli.format.clone().or_else(|| {
+        target.as_ref().and_then(|dest| {
+          Path::new(dest).extension().and_then(|ext| ext.to_str()).map(|ext| {
+            match ext.to_lowercase().as_str() {
+              "html" | "htm" => "html5".to_string(),   // Perl L435: html → html5
+              "xhtml" => "xhtml".to_string(),
+              "xml" => "xml".to_string(),
+              "zip" => "html5".to_string(),             // Perl L431: zip → html5
+              "epub" | "mobi" => "epub".to_string(),
+              other => other.to_string(),
+            }
+          })
+        })
+      });
+
+      // Auto-select stylesheet from format (Perl Config.pm L543-551)
       let effective_stylesheet = cli.stylesheet.clone().or_else(|| {
-        match cli.format.as_deref() {
+        match inferred_format.as_deref() {
           Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl".to_string()),
           Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string()),
           Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
@@ -353,8 +369,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
       });
 
+      // Auto-enable post-processing when dest implies HTML (Perl Config.pm L448-455)
+      let is_html_format = matches!(inferred_format.as_deref(),
+        Some("html5") | Some("html") | Some("xhtml") | Some("epub") | Some("epub3"));
       let do_post = cli.post || cli.pmml || cli.cmml
-        || effective_stylesheet.is_some() || cli.format.is_some()
+        || effective_stylesheet.is_some() || is_html_format
         || cli.split || cli.splitat.is_some();
 
       // Build split XPath from --splitat
@@ -375,7 +394,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           .map(|p| p.to_string_lossy().to_string())
           .unwrap_or_else(|| ".".to_string());
         let output = run_post_processing(&xml, &PostOptions {
-          pmml: cli.pmml || cli.post || cli.format.is_some(),
+          pmml: cli.pmml || cli.post || is_html_format,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
