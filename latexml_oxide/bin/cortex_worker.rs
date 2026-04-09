@@ -214,9 +214,9 @@ impl LatexmlWorker {
       xslt_parameters: &[],
     });
 
-    // 6. Get log and status
-    let log = response.log;
+    // 6. Get log and status (Perl: status line is last line of log)
     let status_str = format!("Status:conversion:{}", response.status_code);
+    let log = format!("{}\n{}", response.log, status_str);
 
     // 7. Pack output ZIP: HTML (named after source) + images + log + status
     let output_path = std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
