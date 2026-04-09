@@ -7,9 +7,9 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <picture height="37.23" width="81.86" xml:id="p1.pic1">
-      <svg:svg height="37.23" overflow="visible" style="vertical-align:-4.727627638218659px" version="1.1" viewBox="-6.62 4.73 81.86 37.23" width="81.86">
-        <svg:g transform="matrix(1 0 0 -1 -6.6220864263893215 37.22827827450446) translate(-6.62,0)">
+    <picture height="38.10" width="81.86" xml:id="p1.pic1">
+      <svg:svg height="38.10" overflow="visible" style="vertical-align:-4.727627638218659px" version="1.1" viewBox="-6.62 4.73 81.86 38.10" width="81.86">
+        <svg:g transform="matrix(1 0 0 -1 -6.6220864263893215 38.09551884561583) translate(-6.62,0)">
           <svg:g transform="translate(6.62,0) translate(0,-4.73)">
             <svg:foreignObject height="9.46" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 9.46)" width="10.38"><Math mode="inline" tex="\textstyle{A}" text="A" xml:id="p1.pic1.m1">
                 <XMath>
@@ -24,10 +24,10 @@
                 </XMath>
               </Math></svg:foreignObject>
           </svg:g>
-          <svg:g transform="translate(78.74,0) translate(0,23.62)">
+          <svg:g transform="translate(68.99,0) translate(0,23.62)">
             <svg:circle cx="9.75" cy="0" fill="none" r="9.75" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 16.999857643753458 1.829281146222499 L 78.73974318852048 23.621922956556144" fill="none" stroke="#000000"/>
+          <svg:path d="M 16.999857643753458 1.829281146222499 L 69.54817549559162 20.38151524745529" fill="none" stroke="#000000"/>
         </svg:g>
       </svg:svg>
     </picture>

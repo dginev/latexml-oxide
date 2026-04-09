@@ -656,12 +656,13 @@ LoadDefinitions!({
       let xc_px = r_px;
       let cd = state::lookup_string("xy_circle_dir");
       if cd.is_empty() || cd == "0" {
-        // Full circle
+        // Full circle — Perl: width => 2*R@, height => R@, depth => R@
+        let d = Dimension::new(r.value_of() * 2);
         stored_map!(
           "xy_full" => true,
           "xy_cx" => fmt2(xc_px), "xy_cy" => "0", "xy_r" => fmt2(r_px),
           "xy_stroke" => stroke, "xy_fill" => fill, "xy_dashes" => dashes,
-          "width" => Dimension::new(0), "height" => Dimension::new(0), "depth" => Dimension::new(0)
+          "width" => d, "height" => r, "depth" => r
         )
       } else {
         // Partial arc
