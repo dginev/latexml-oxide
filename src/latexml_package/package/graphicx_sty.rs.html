@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/graphicx_sty.rs`."><title>graphicx_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (bcded3316 2026-04-06)" data-channel="nightly" data-search-js="search-1c5d44ff.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>graphicx_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/graphicx_sty.rs`."><title>graphicx_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (900485642 2026-04-08)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>graphicx_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// Perl: image_candidates($path) from LaTeXML::Util::Image
 <a href=#4 id=4 data-nosnippet>4</a>/// Searches for files matching `path` (possibly with extensions) in graphics/search paths.
@@ -287,65 +287,66 @@
 <a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"alt"</span>, <span class="string">""</span>);
 <a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"trim"</span>, <span class="string">""</span>);
 <a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"viewport"</span>, <span class="string">""</span>);
-<a href=#290 id=290 data-nosnippet>290</a>
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="comment">// LaTeXML extensions:
-<a href=#292 id=292 data-nosnippet>292</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"vrml"</span>, <span class="string">"Semiverbatim"</span>);
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"magnifiable"</span>, <span class="string">""</span>, <span class="string">"true"</span>);
-<a href=#294 id=294 data-nosnippet>294</a>
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="comment">// Redefine \includegraphics to dispatch based on bracket syntax:
-<a href=#296 id=296 data-nosnippet>296</a>  // If a second [] follows, use the old graphics.sty-style \@includegraphics,
-<a href=#297 id=297 data-nosnippet>297</a>  // otherwise use the graphicx keyval-style \@includegraphicx.
-<a href=#298 id=298 data-nosnippet>298</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#299 id=299 data-nosnippet>299</a>    <span class="string">"\\includegraphics OptionalMatch:* []"</span>,
-<a href=#300 id=300 data-nosnippet>300</a>    <span class="string">"\\@ifnextchar[{\\@includegraphics#1[#2]}{\\@includegraphicx#1[#2]}"
-<a href=#301 id=301 data-nosnippet>301</a>  </span>);
-<a href=#302 id=302 data-nosnippet>302</a>
-<a href=#303 id=303 data-nosnippet>303</a>  <span class="comment">// The graphicx-style \includegraphics with keyval options.
-<a href=#304 id=304 data-nosnippet>304</a>  // Perl: properties callback computes path, candidates, options from keyval args.
-<a href=#305 id=305 data-nosnippet>305</a>  // Perl also has: sizer =&gt; \&amp;image_graphicx_sizer — computes box dimensions from image file.
-<a href=#306 id=306 data-nosnippet>306</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="string">"\\@includegraphicx OptionalMatch:* OptionalKeyVals:Gin Semiverbatim"</span>,
-<a href=#308 id=308 data-nosnippet>308</a>    <span class="string">"&lt;ltx:graphics graphic='#path' candidates='#candidates' options='#options'/&gt;"</span>,
-<a href=#309 id=309 data-nosnippet>309</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#310 id=310 data-nosnippet>310</a>    properties =&gt; sub[args] {
-<a href=#311 id=311 data-nosnippet>311</a>      <span class="comment">// arg 0: starred, arg 1: keyvals, arg 2: graphic path
-<a href=#312 id=312 data-nosnippet>312</a>      </span><span class="kw">let </span>path = args[<span class="number">2</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
-<a href=#313 id=313 data-nosnippet>313</a>      <span class="kw">let </span>path = path.trim().to_string();
-<a href=#314 id=314 data-nosnippet>314</a>      <span class="comment">// Perl: image_candidates searches filesystem for files matching path with any extension
-<a href=#315 id=315 data-nosnippet>315</a>      </span><span class="kw">let </span>candidates = image_candidates(<span class="kw-2">&amp;</span>path);
-<a href=#316 id=316 data-nosnippet>316</a>      <span class="comment">// Build options string from keyval pairs, matching Perl's graphicX_options
-<a href=#317 id=317 data-nosnippet>317</a>      </span><span class="kw">let </span>starred = args[<span class="number">0</span>].is_some();
-<a href=#318 id=318 data-nosnippet>318</a>      <span class="kw">let </span><span class="kw-2">mut </span>options_vec: Vec&lt;String&gt; = Vec::new();
-<a href=#319 id=319 data-nosnippet>319</a>      <span class="kw">if </span>starred {
-<a href=#320 id=320 data-nosnippet>320</a>        options_vec.push(<span class="macro">s!</span>(<span class="string">"clip=true"</span>));
-<a href=#321 id=321 data-nosnippet>321</a>      }
-<a href=#322 id=322 data-nosnippet>322</a>      <span class="kw">let </span><span class="kw-2">mut </span>saw_w = <span class="bool-val">false</span>;
-<a href=#323 id=323 data-nosnippet>323</a>      <span class="kw">let </span><span class="kw-2">mut </span>saw_h = <span class="bool-val">false</span>;
-<a href=#324 id=324 data-nosnippet>324</a>      <span class="kw">let </span><span class="kw-2">mut </span>has_keepaspectratio = <span class="bool-val">false</span>;
-<a href=#325 id=325 data-nosnippet>325</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kv_digested) = args[<span class="number">1</span>] {
-<a href=#326 id=326 data-nosnippet>326</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_digested.data() {
-<a href=#327 id=327 data-nosnippet>327</a>          <span class="kw">for </span>(key, value) <span class="kw">in </span>kv.get_pairs() {
-<a href=#328 id=328 data-nosnippet>328</a>            <span class="kw">if </span>key.ends_with(<span class="string">"width"</span>) { saw_w = <span class="bool-val">true</span>; }
-<a href=#329 id=329 data-nosnippet>329</a>            <span class="kw">if </span>key.ends_with(<span class="string">"height"</span>) { saw_h = <span class="bool-val">true</span>; }
-<a href=#330 id=330 data-nosnippet>330</a>            <span class="kw">if </span>key == <span class="string">"keepaspectratio" </span>{ has_keepaspectratio = <span class="bool-val">true</span>; }
-<a href=#331 id=331 data-nosnippet>331</a>            <span class="kw">let </span>val_str = value.to_string();
-<a href=#332 id=332 data-nosnippet>332</a>            <span class="kw">let </span>val_str = val_str.replace(<span class="string">','</span>, <span class="string">"\\,"</span>);
-<a href=#333 id=333 data-nosnippet>333</a>            options_vec.push(<span class="macro">format!</span>(<span class="string">"{key}={val_str}"</span>));
-<a href=#334 id=334 data-nosnippet>334</a>          }
-<a href=#335 id=335 data-nosnippet>335</a>        }
-<a href=#336 id=336 data-nosnippet>336</a>      }
-<a href=#337 id=337 data-nosnippet>337</a>      <span class="comment">// Auto-add keepaspectratio if only width or height (not both) specified
-<a href=#338 id=338 data-nosnippet>338</a>      </span><span class="kw">if </span>(saw_w ^ saw_h) &amp;&amp; !has_keepaspectratio {
-<a href=#339 id=339 data-nosnippet>339</a>        options_vec.push(<span class="macro">s!</span>(<span class="string">"keepaspectratio=true"</span>));
-<a href=#340 id=340 data-nosnippet>340</a>      }
-<a href=#341 id=341 data-nosnippet>341</a>      <span class="kw">let </span>options = options_vec.join(<span class="string">","</span>);
-<a href=#342 id=342 data-nosnippet>342</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"path" </span>=&gt; path, <span class="string">"candidates" </span>=&gt; candidates, <span class="string">"options" </span>=&gt; options))
-<a href=#343 id=343 data-nosnippet>343</a>    },
-<a href=#344 id=344 data-nosnippet>344</a>    after_digest =&gt; sub[whatsit] {
-<a href=#345 id=345 data-nosnippet>345</a>      <span class="comment">// Perl: sizer =&gt; \&amp;image_graphicx_sizer
-<a href=#346 id=346 data-nosnippet>346</a>      // Compute box dimensions from image file + graphicx options
-<a href=#347 id=347 data-nosnippet>347</a>      </span>image_graphicx_sizer(whatsit);
-<a href=#348 id=348 data-nosnippet>348</a>    }
-<a href=#349 id=349 data-nosnippet>349</a>  );
-<a href=#350 id=350 data-nosnippet>350</a>});
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"page"</span>, <span class="string">""</span>);
+<a href=#291 id=291 data-nosnippet>291</a>
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="comment">// LaTeXML extensions:
+<a href=#293 id=293 data-nosnippet>293</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"vrml"</span>, <span class="string">"Semiverbatim"</span>);
+<a href=#294 id=294 data-nosnippet>294</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Gin"</span>, <span class="string">"magnifiable"</span>, <span class="string">""</span>, <span class="string">"true"</span>);
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="comment">// Redefine \includegraphics to dispatch based on bracket syntax:
+<a href=#297 id=297 data-nosnippet>297</a>  // If a second [] follows, use the old graphics.sty-style \@includegraphics,
+<a href=#298 id=298 data-nosnippet>298</a>  // otherwise use the graphicx keyval-style \@includegraphicx.
+<a href=#299 id=299 data-nosnippet>299</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#300 id=300 data-nosnippet>300</a>    <span class="string">"\\includegraphics OptionalMatch:* []"</span>,
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="string">"\\@ifnextchar[{\\@includegraphics#1[#2]}{\\@includegraphicx#1[#2]}"
+<a href=#302 id=302 data-nosnippet>302</a>  </span>);
+<a href=#303 id=303 data-nosnippet>303</a>
+<a href=#304 id=304 data-nosnippet>304</a>  <span class="comment">// The graphicx-style \includegraphics with keyval options.
+<a href=#305 id=305 data-nosnippet>305</a>  // Perl: properties callback computes path, candidates, options from keyval args.
+<a href=#306 id=306 data-nosnippet>306</a>  // Perl also has: sizer =&gt; \&amp;image_graphicx_sizer — computes box dimensions from image file.
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="string">"\\@includegraphicx OptionalMatch:* OptionalKeyVals:Gin Semiverbatim"</span>,
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="string">"&lt;ltx:graphics graphic='#path' candidates='#candidates' options='#options'/&gt;"</span>,
+<a href=#310 id=310 data-nosnippet>310</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#311 id=311 data-nosnippet>311</a>    properties =&gt; sub[args] {
+<a href=#312 id=312 data-nosnippet>312</a>      <span class="comment">// arg 0: starred, arg 1: keyvals, arg 2: graphic path
+<a href=#313 id=313 data-nosnippet>313</a>      </span><span class="kw">let </span>path = args[<span class="number">2</span>].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+<a href=#314 id=314 data-nosnippet>314</a>      <span class="kw">let </span>path = path.trim().to_string();
+<a href=#315 id=315 data-nosnippet>315</a>      <span class="comment">// Perl: image_candidates searches filesystem for files matching path with any extension
+<a href=#316 id=316 data-nosnippet>316</a>      </span><span class="kw">let </span>candidates = image_candidates(<span class="kw-2">&amp;</span>path);
+<a href=#317 id=317 data-nosnippet>317</a>      <span class="comment">// Build options string from keyval pairs, matching Perl's graphicX_options
+<a href=#318 id=318 data-nosnippet>318</a>      </span><span class="kw">let </span>starred = args[<span class="number">0</span>].is_some();
+<a href=#319 id=319 data-nosnippet>319</a>      <span class="kw">let </span><span class="kw-2">mut </span>options_vec: Vec&lt;String&gt; = Vec::new();
+<a href=#320 id=320 data-nosnippet>320</a>      <span class="kw">if </span>starred {
+<a href=#321 id=321 data-nosnippet>321</a>        options_vec.push(<span class="macro">s!</span>(<span class="string">"clip=true"</span>));
+<a href=#322 id=322 data-nosnippet>322</a>      }
+<a href=#323 id=323 data-nosnippet>323</a>      <span class="kw">let </span><span class="kw-2">mut </span>saw_w = <span class="bool-val">false</span>;
+<a href=#324 id=324 data-nosnippet>324</a>      <span class="kw">let </span><span class="kw-2">mut </span>saw_h = <span class="bool-val">false</span>;
+<a href=#325 id=325 data-nosnippet>325</a>      <span class="kw">let </span><span class="kw-2">mut </span>has_keepaspectratio = <span class="bool-val">false</span>;
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kv_digested) = args[<span class="number">1</span>] {
+<a href=#327 id=327 data-nosnippet>327</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_digested.data() {
+<a href=#328 id=328 data-nosnippet>328</a>          <span class="kw">for </span>(key, value) <span class="kw">in </span>kv.get_pairs() {
+<a href=#329 id=329 data-nosnippet>329</a>            <span class="kw">if </span>key.ends_with(<span class="string">"width"</span>) { saw_w = <span class="bool-val">true</span>; }
+<a href=#330 id=330 data-nosnippet>330</a>            <span class="kw">if </span>key.ends_with(<span class="string">"height"</span>) { saw_h = <span class="bool-val">true</span>; }
+<a href=#331 id=331 data-nosnippet>331</a>            <span class="kw">if </span>key == <span class="string">"keepaspectratio" </span>{ has_keepaspectratio = <span class="bool-val">true</span>; }
+<a href=#332 id=332 data-nosnippet>332</a>            <span class="kw">let </span>val_str = value.to_string();
+<a href=#333 id=333 data-nosnippet>333</a>            <span class="kw">let </span>val_str = val_str.replace(<span class="string">','</span>, <span class="string">"\\,"</span>);
+<a href=#334 id=334 data-nosnippet>334</a>            options_vec.push(<span class="macro">format!</span>(<span class="string">"{key}={val_str}"</span>));
+<a href=#335 id=335 data-nosnippet>335</a>          }
+<a href=#336 id=336 data-nosnippet>336</a>        }
+<a href=#337 id=337 data-nosnippet>337</a>      }
+<a href=#338 id=338 data-nosnippet>338</a>      <span class="comment">// Auto-add keepaspectratio if only width or height (not both) specified
+<a href=#339 id=339 data-nosnippet>339</a>      </span><span class="kw">if </span>(saw_w ^ saw_h) &amp;&amp; !has_keepaspectratio {
+<a href=#340 id=340 data-nosnippet>340</a>        options_vec.push(<span class="macro">s!</span>(<span class="string">"keepaspectratio=true"</span>));
+<a href=#341 id=341 data-nosnippet>341</a>      }
+<a href=#342 id=342 data-nosnippet>342</a>      <span class="kw">let </span>options = options_vec.join(<span class="string">","</span>);
+<a href=#343 id=343 data-nosnippet>343</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"path" </span>=&gt; path, <span class="string">"candidates" </span>=&gt; candidates, <span class="string">"options" </span>=&gt; options))
+<a href=#344 id=344 data-nosnippet>344</a>    },
+<a href=#345 id=345 data-nosnippet>345</a>    after_digest =&gt; sub[whatsit] {
+<a href=#346 id=346 data-nosnippet>346</a>      <span class="comment">// Perl: sizer =&gt; \&amp;image_graphicx_sizer
+<a href=#347 id=347 data-nosnippet>347</a>      // Compute box dimensions from image file + graphicx options
+<a href=#348 id=348 data-nosnippet>348</a>      </span>image_graphicx_sizer(whatsit);
+<a href=#349 id=349 data-nosnippet>349</a>    }
+<a href=#350 id=350 data-nosnippet>350</a>  );
+<a href=#351 id=351 data-nosnippet>351</a>});
 </code></pre></div></section></main></body></html>
