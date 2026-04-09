@@ -182,13 +182,19 @@ impl LatexmlWorker {
       .result
       .ok_or_else(|| format!("Conversion failed for {}", main_tex))?;
 
-    // 4. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
-    let xml = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
+    // 4. Create destination directory for images/resources
+    let dest_dir = TempDir::new()?;
+    let _dest_dir_str = dest_dir.path().to_string_lossy().to_string();
+    let dest_html = dest_dir.path().join("output.html");
+    let dest_html_str = dest_html.to_string_lossy().to_string();
+
+    // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
+    let html = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
       pmml: self.profile.pmml,
       cmml: true, // CorTeX produces both pmml and cmml
       keep_xmath: false,
       stylesheet: Some("resources/XSLT/LaTeXML-html5.xsl"),
-      destination: None,
+      destination: Some(&dest_html_str),
       source_directory: Some(&source_dir),
       nodefaultresources: self.profile.nodefaultresources,
       css_files: &[],
@@ -202,13 +208,13 @@ impl LatexmlWorker {
       xslt_parameters: &[],
     });
 
-    // 5. Get log and status
+    // 6. Get log and status
     let log = response.log;
     let status_str = format!("Status:conversion:{}", response.status_code);
 
-    // 6. Pack into output ZIP in /tmp (outside tempdir so it survives cleanup)
+    // 7. Pack output ZIP: HTML + images + log + status
     let output_path = std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
-    pack_output_zip(&output_path, &xml, &log, &status_str)?;
+    pack_output_zip_with_resources(&output_path, &html, &log, &status_str, dest_dir.path())?;
 
     Ok(output_path)
   }
@@ -317,11 +323,12 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   Ok(candidates[0].to_string_lossy().to_string())
 }
 
-fn pack_output_zip(
+fn pack_output_zip_with_resources(
   output_path: &Path,
   html: &str,
   log: &str,
   status: &str,
+  resource_dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
   let file = File::create(output_path)?;
   let mut zip = zip::ZipWriter::new(file);
@@ -331,6 +338,11 @@ fn pack_output_zip(
   zip.start_file("output.html", options)?;
   zip.write_all(html.as_bytes())?;
 
+  // Add all resource files (images, etc.) from the destination directory
+  if resource_dir.exists() {
+    add_dir_to_zip(&mut zip, resource_dir, resource_dir, &options)?;
+  }
+
   zip.start_file("cortex.log", options)?;
   zip.write_all(log.as_bytes())?;
 
@@ -338,6 +350,31 @@ fn pack_output_zip(
   zip.write_all(status.as_bytes())?;
 
   zip.finish()?;
+  Ok(())
+}
+
+/// Recursively add files from a directory to a ZIP archive.
+/// Skips the output.html (already added separately).
+fn add_dir_to_zip(
+  zip: &mut zip::ZipWriter<File>,
+  dir: &Path,
+  base: &Path,
+  options: &zip::write::SimpleFileOptions,
+) -> Result<(), Box<dyn Error>> {
+  for entry in fs::read_dir(dir)? {
+    let entry = entry?;
+    let path = entry.path();
+    let rel = path.strip_prefix(base).unwrap_or(&path);
+    let name = rel.to_string_lossy().to_string();
+
+    if path.is_dir() {
+      add_dir_to_zip(zip, &path, base, options)?;
+    } else if name != "output.html" {
+      zip.start_file(&name, *options)?;
+      let mut f = File::open(&path)?;
+      std::io::copy(&mut f, zip)?;
+    }
+  }
   Ok(())
 }
 
