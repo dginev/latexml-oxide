@@ -183,9 +183,15 @@ impl LatexmlWorker {
       .ok_or_else(|| format!("Conversion failed for {}", main_tex))?;
 
     // 4. Create destination directory for images/resources
+    //    Perl LaTeXML.pm L200-205: derive HTML name from source TeX name
+    //    e.g., 9256.tex → 9256.html (format "html5" → extension "html")
+    let source_name = Path::new(&main_tex)
+      .file_stem()
+      .and_then(|s| s.to_str())
+      .unwrap_or("document");
+    let html_filename = format!("{}.html", source_name);
     let dest_dir = TempDir::new()?;
-    let _dest_dir_str = dest_dir.path().to_string_lossy().to_string();
-    let dest_html = dest_dir.path().join("output.html");
+    let dest_html = dest_dir.path().join(&html_filename);
     let dest_html_str = dest_html.to_string_lossy().to_string();
 
     // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
@@ -212,9 +218,9 @@ impl LatexmlWorker {
     let log = response.log;
     let status_str = format!("Status:conversion:{}", response.status_code);
 
-    // 7. Pack output ZIP: HTML + images + log + status
+    // 7. Pack output ZIP: HTML (named after source) + images + log + status
     let output_path = std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
-    pack_output_zip_with_resources(&output_path, &html, &log, &status_str, dest_dir.path())?;
+    pack_output_zip_with_resources(&output_path, &html_filename, &html, &log, &status_str, dest_dir.path())?;
 
     Ok(output_path)
   }
@@ -325,6 +331,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
 fn pack_output_zip_with_resources(
   output_path: &Path,
+  html_filename: &str,
   html: &str,
   log: &str,
   status: &str,
@@ -335,7 +342,8 @@ fn pack_output_zip_with_resources(
   let options = zip::write::SimpleFileOptions::default()
     .compression_method(zip::CompressionMethod::Deflated);
 
-  zip.start_file("output.html", options)?;
+  // HTML file named after the source TeX (Perl LaTeXML.pm L200-205)
+  zip.start_file(html_filename, options)?;
   zip.write_all(html.as_bytes())?;
 
   // Add all resource files (images, etc.) from the destination directory
@@ -369,7 +377,8 @@ fn add_dir_to_zip(
 
     if path.is_dir() {
       add_dir_to_zip(zip, &path, base, options)?;
-    } else if name != "output.html" {
+    } else if !name.ends_with(".html") {
+      // Skip the HTML file — it's already added separately
       zip.start_file(&name, *options)?;
       let mut f = File::open(&path)?;
       std::io::copy(&mut f, zip)?;
