@@ -16,7 +16,7 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
-  // RequirePackage!("aa_support"); // not ported yet
+  RequirePackage!("aa_support");
   // Override \pmatrix to use plain TeX version (not amsmath)
   DefMacro!("\\pmatrix{}",
     "\\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}{#1}");
