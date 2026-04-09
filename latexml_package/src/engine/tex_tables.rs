@@ -637,8 +637,11 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       break;
     }
     lastwascr = false;
+    // Perl L319-320: $next->defined_as(T_END) — recognizes \egroup as alignment end
+    let next_is_end = next.as_ref().map(|t| t.defined_as(&T_END!())).unwrap_or(false)
+      || next == Some(T_CS!("\\lx@close@alignment"));
     if (vtype.is_none() || vtype.as_ref().unwrap().is_empty())
-      && (next.is_none() || next == Some(T_END!()) || next == Some(T_CS!("\\lx@close@alignment")))
+      && (next.is_none() || next_is_end)
     {
       // End of alignment
       alignment_cell.borrow_mut().end_row()?;
@@ -739,10 +742,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     }
     //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if
     // $LaTeXML::DEBUG{halign};
-    if last_token.is_none()
-      || last_token == Some(T_END!())
-      || last_token == Some(T_CS!("\\lx@close@alignment"))
-    {
+    // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end
+    let last_is_end = last_token.as_ref().map(|t| t.defined_as(&T_END!())).unwrap_or(false)
+      || last_token == Some(T_CS!("\\lx@close@alignment"));
+    if last_token.is_none() || last_is_end {
       expire_local_box_list();
       return Ok((None, last_token, None, false));
     }
@@ -929,7 +932,8 @@ pub fn extract_alignment_column(
           prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
         }
       },
-      _ if front_box.get_property("isSpace").is_some() => {
+      _ if front_box.get_property("isSpace").is_some()
+        && front_box.get_property("isVerticalSpace").is_none() => {
         lspaces.push(front_box);
       },
       item
@@ -963,7 +967,8 @@ pub fn extract_alignment_column(
         border.push('r');
         rspaces.clear(); // Perl L508: discard spacing after rule
       },
-      _ if last_box.get_property("isSpace").is_some() => {
+      _ if last_box.get_property("isSpace").is_some()
+        && last_box.get_property("isVerticalSpace").is_none() => {
         rspaces.insert(0, last_box);
       },
       item
@@ -1087,10 +1092,16 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
 }
 
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
-fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
+pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let t = gullet::read_non_space()?;
-  if t.as_ref().map(|t| t.get_catcode()) != Some(Catcode::BEGIN) {
+  // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup
+  if !t.as_ref().map(|t| t.defined_as(&T_BEGIN!())).unwrap_or(false) {
     Error!("expected", "\\bgroup", "Missing \\halign box");
+    // Put back the token we consumed so it can be handled elsewhere
+    if let Some(tok) = t {
+      gullet::unread(Tokens::from(tok));
+    }
+    return Ok(Template::default());
   }
   let mut before = true; // true if we're before a # in current column
   let mut pre: Vec<Token> = Vec::new();
@@ -1204,12 +1215,10 @@ fn before_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut result = Vec::new();
   while let Some(t) = toks.pop_front() {
     if t == T_MATH!() {
-      if let Some(next) = toks.front() {
-        if *next == T_CS!("\\hfil") {
-          result.push(toks.pop_front().unwrap()); // push \hfil
-          toks.push_front(t); // put $ back
-          continue;
-        }
+      if let Some(hfil) = toks.pop_front_if(|next| *next == T_CS!("\\hfil")) {
+        result.push(hfil); // push \hfil
+        toks.push_front(t); // put $ back
+        continue;
       }
     }
     result.push(t);
@@ -1224,12 +1233,10 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut result: VecDeque<Token> = VecDeque::new();
   while let Some(t) = toks.pop_back() {
     if t == T_MATH!() {
-      if let Some(prev) = toks.back() {
-        if *prev == T_CS!("\\hfil") {
-          result.push_front(toks.pop_back().unwrap()); // push \hfil to front
-          toks.push_back(t); // put $ back
-          continue;
-        }
+      if let Some(hfil) = toks.pop_back_if(|prev| *prev == T_CS!("\\hfil")) {
+        result.push_front(hfil); // push \hfil to front
+        toks.push_back(t); // put $ back
+        continue;
       }
     }
     result.push_front(t);

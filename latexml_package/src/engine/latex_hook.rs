@@ -58,17 +58,17 @@ LoadDefinitions!({
     })?;
   });
 
-  for _ltx3trigger in [
+  // Perl TeX.pool.ltxml L42-48: DefAutoload for expl3 triggers.
+  // When \ExplSyntaxOn (etc.) is encountered without expl3 loaded,
+  // auto-load expl3.sty, then re-emit the trigger command.
+  // Note: these auto-loads are not perfect — if triggered from a raw
+  // .sty file, the expl3 support may expire at end of current scope.
+  for ltx3trigger in [
     "\\ExplSyntaxOn",
     "\\ProvidesExplClass",
     "\\ProvidesExplPackage",
   ] {
-    // DG: note that these auto-loads are not perfect --
-    //     if they are triggered with a raw .sty file for example,
-    //     the expl3 support will "expire" at the end of the current scope,
-    //     and e.g. \ExplSyntaxOn will once again be undefined.
-    // TODO:
-    // DefAutoload!(ltx3trigger, "expl3.pool.ltxml");
+    def_autoload(ltx3trigger, "expl3")?;
   }
 
   // OmniBus autoloads: define commands that auto-load their packages on first use.

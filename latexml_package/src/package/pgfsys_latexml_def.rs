@@ -102,6 +102,116 @@ fn read_dim_register(cs: &str) -> Dimension {
   }
 }
 
+/// Format a px value: round to 2 decimal places, strip trailing zeros
+fn fmt_px(v: f64) -> String {
+  let r = (v * 100.0).round() / 100.0;
+  if r == 0.0 {
+    return "0".to_string();
+  }
+  if r == r.round() && r.abs() < 1e10 {
+    format!("{}", r as i64)
+  } else {
+    let s = format!("{:.2}", r);
+    let s = s.trim_end_matches('0');
+    s.trim_end_matches('.').to_string()
+  }
+}
+
+/// Perl L920-939: tikzAlignmentBindings
+/// Sets up an Alignment with SVG-specific callbacks (svg:g elements with transform matrices)
+/// instead of the standard tabular/tr/td elements used by alignmentBindings.
+fn tikz_alignment_bindings(
+  template: latexml_core::alignment::template::Template,
+  xml_attributes: rustc_hash::FxHashMap<String, String>,
+) {
+  use latexml_core::alignment::{Alignment, AlignmentConfig};
+  use latexml_core::common::arena::SymHashMap;
+  use std::rc::Rc;
+
+  let mode = state::lookup_string("MODE");
+  let is_math = mode.ends_with("math");
+
+  let mut properties = SymHashMap::default();
+  properties.insert("preserve_structure", Stored::Bool(true));
+
+  let alignment = Alignment::new(AlignmentConfig {
+    template: Some(template),
+    // Perl L947-969: openTikzAlignment — creates container <svg:g> with Y-flip transform
+    open_container: Rc::new(|document, props| {
+      let mut attrs = props;
+      attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
+      // Perl: transform="matrix(1 0 0 -1 x y)" — flips Y-axis (pgf Y=up, SVG Y=down)
+      // y = (h + d) - rowdepths[-1]  (baseline of last row)
+      let h: f64 = attrs.remove("cheight").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let d: f64 = attrs.remove("cdepth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let _w: f64 = attrs.remove("cwidth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let y = h + d;
+      attrs.entry("transform".to_string())
+        .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
+      attrs.insert("_scopebegin".to_string(), "1".to_string());
+      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+    }),
+    // Perl L971-973: closeTikzAlignmentElement
+    close_container: Rc::new(|document| document.close_element("svg:g")),
+    // Perl L975-989: openTikzAlignmentRow — creates row <svg:g> with Y-position
+    open_row: Rc::new(|document, props| {
+      let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+      let class_base = "ltx_tikzmatrix_row";
+      let class_extra = props.get("class").map(|c| c.to_string());
+      let class = if let Some(c) = class_extra {
+        format!("{} {}", class_base, c)
+      } else {
+        class_base.to_string()
+      };
+      attrs.insert("class".to_string(), class);
+      attrs.insert("_scopebegin".to_string(), "1".to_string());
+      // Perl: transform="matrix(1 0 0 1 0 yy)" where yy = y + cheight
+      let y = props.get("y").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
+      let h = props.get("cheight").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
+      let yy = y + h;
+      attrs.insert("transform".to_string(), format!("matrix(1 0 0 1 0 {})", fmt_px(yy)));
+      document.open_element("svg:g", Some(attrs), None).and(Ok(()))
+    }),
+    close_row: Rc::new(|document| document.close_element("svg:g")),
+    // Perl L991-1009: openTikzAlignmentCol — creates cell <svg:g> with X-position and Y-flip
+    open_column: Rc::new(|document, props| {
+      let mut attrs = props;
+      let class_base = "ltx_tikzmatrix_col";
+      let class_extra = attrs.remove("class");
+      let class = if let Some(c) = class_extra {
+        format!("{} {}", class_base, c)
+      } else {
+        class_base.to_string()
+      };
+      attrs.insert("class".to_string(), class);
+      attrs.insert("_scopebegin".to_string(), "1".to_string());
+      // Perl: transform="matrix(1 0 0 -1 x 0)" — flip Y and position at column x
+      let x: f64 = attrs.remove("x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let _y: f64 = attrs.remove("y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      // Remove dimension props that shouldn't become XML attributes
+      attrs.remove("cwidth"); attrs.remove("cheight"); attrs.remove("cdepth");
+      attrs.entry("transform".to_string())
+        .or_insert_with(|| format!("matrix(1 0 0 -1 {} 0)", fmt_px(x)));
+      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+    }),
+    close_column: Rc::new(|document| document.close_element("svg:g")),
+    is_math,
+    properties,
+    xml_attributes,
+  });
+
+  assign_alignment(alignment, None);
+  state::let_i(
+    &T_MATH!(),
+    &if is_math {
+      T_CS!("\\lx@dollar@in@mathmode")
+    } else {
+      T_CS!("\\lx@dollar@in@textmode")
+    },
+    None,
+  );
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // (protocol fix is applied at \pgfsys@invoke below)
@@ -122,6 +232,52 @@ LoadDefinitions!({
 
   // Perl L63: redefine ignorespaces inside PGF context
   DefPrimitive!("\\lx@inpgf@ignorespaces SkipSpaces", None);
+
+  // Perl L892-918: \lxSVG@halign — SVG matrix layout for tikz-cd and pgf matrix
+  // Replaces \halign inside pgf/tikz contexts to produce <svg:g> elements
+  // with transform matrices instead of <ltx:tabular/tr/td>.
+  DefConstructor!("\\lxSVG@halign BoxSpecification",
+    "#alignment",
+    bounded => true, leave_horizontal => true,
+    sizer => sub[whatsit] {
+      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+        let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
+        Ok((w, h, d))
+      } else {
+        Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+      }
+    },
+    after_digest => sub[whatsit] {
+      use crate::engine::tex_tables::{
+        parse_halign_template, digest_alignment_body,
+      };
+      whatsit.set_property("mode", Stored::from("internal_vertical"));
+      begin_mode("restricted_horizontal")?;
+      let template = parse_halign_template(whatsit)?;
+      // If template parsing failed (e.g., \bgroup not recognized as BEGIN),
+      // bail out instead of trying to digest a body that will loop.
+      if template.get_columns().is_empty() {
+        end_mode("restricted_horizontal")?;
+      }
+      // Get width from BoxSpecification 'to' key
+      let width_attr: Option<String> = {
+        let spec = whatsit.get_arg(1);
+        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+          Some(w.to_attribute())
+        } else {
+          None
+        }
+      };
+      let mut xml_attrs = HashMap::default();
+      if let Some(w) = width_attr {
+        xml_attrs.insert(String::from("width"), w);
+      }
+      xml_attrs.insert(String::from("vattach"), String::from("bottom"));
+      tikz_alignment_bindings(template, xml_attrs);
+      digest_alignment_body(whatsit)?;
+      end_mode("restricted_horizontal")?;
+      decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+    });
 
   // Perl L65-69: \lxSVG@picture — wraps pgfpicture with SVG setup
   DefMacro!("\\lxSVG@picture", sub[_gullet] {
@@ -621,6 +777,94 @@ LoadDefinitions!({
     "\\lxSVG@beveljoin\\lxSVG@begingroup{stroke-linejoin=bevel}");
   DefMacro!("\\pgfsys@setdash{}{}",
     "\\lxSVG@setdash{#1}{#2}\\edef\\pgf@test@dashpattern{#1}\\lxSVG@begingroup{stroke-dasharray={\\ifx\\pgf@test@dashpattern\\pgfutil@empty none\\else#1\\fi}, stroke-dashoffset={#2}}");
+
+  // Override \pgfsetdash to bypass the raw TeX \pgf@strip loop.
+  // Raw TeX pgfcoregraphicstate.code.tex L96-115:
+  //   \def\pgfsetdash#1#2{%
+  //     \def\pgf@temp{}%
+  //     \pgf@strip#1{pgf@stop}%   ← iterates brace groups, converts to dimensions
+  //     \pgfmathsetlength\pgf@x{#2}%
+  //     \pgfsys@setdash{\pgf@temp}{\the\pgf@x}%
+  //     \ignorespaces}
+  // The \pgf@strip loop uses \ifx\pgf@@temp\pgf@stop as a sentinel test.
+  // This loop hangs in our engine when newlines between pgfscope commands
+  // create space tokens that corrupt the token stream during conditional
+  // evaluation. Perl doesn't override \pgfsetdash (raw TeX works there),
+  // but we override it following the same pattern as \pgfmathsetlength.
+  DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
+    use crate::package::pgfmath_code_tex::pgfmathparse_eval_with_units;
+    // Step 1: Parse the dash pattern.
+    // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid).
+    // Extract brace groups and convert each to a dimension via pgfmathparse.
+    let pattern_str = pattern_toks.to_string();
+    let pattern_str = pattern_str.trim();
+    let mut dash_parts: Vec<String> = Vec::new();
+
+    if !pattern_str.is_empty() {
+      // Extract brace-group contents: {3pt}{1.2pt} → ["3pt", "1.2pt"]
+      let mut depth = 0;
+      let mut current = String::new();
+      for ch in pattern_str.chars() {
+        match ch {
+          '{' => {
+            if depth > 0 { current.push(ch); }
+            depth += 1;
+          },
+          '}' => {
+            depth -= 1;
+            if depth == 0 && !current.is_empty() {
+              // Evaluate this dimension via pgfmathparse
+              let toks = Tokens::new(Explode!(&current));
+              let expanded = gullet::do_expand(toks).unwrap_or_default();
+              let input = expanded.to_string();
+              let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+              let value: f64 = result_str.parse().unwrap_or(0.0);
+              // Convert to sp then format as pt dimension (matching \the\pgf@x)
+              let dim = Dimension((value * 65536.0).round() as i64);
+              dash_parts.push(dim.to_string());
+              current.clear();
+            } else if depth > 0 {
+              current.push(ch);
+            }
+          },
+          _ => {
+            if depth > 0 { current.push(ch); }
+          },
+        }
+      }
+    }
+
+    // Step 2: Evaluate the offset #2 via pgfmathsetlength → \pgf@x
+    let offset_str = offset_toks.to_string();
+    let offset_str = offset_str.trim().to_string();
+    if !offset_str.is_empty() {
+      let toks = Tokens::new(Explode!(&offset_str));
+      let expanded = gullet::do_expand(toks).unwrap_or_default();
+      let input = expanded.to_string();
+      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+      let value: f64 = result_str.parse().unwrap_or(0.0);
+      let dim = Dimension((value * 65536.0).round() as i64);
+      state::assign_register("\\pgf@x", dim.into(), None, vec![])?;
+    } else {
+      state::assign_register("\\pgf@x", Dimension(0).into(), None, vec![])?;
+    }
+
+    // Step 3: Build the dash pattern string and call \pgfsys@setdash
+    let dash_csv = dash_parts.join(",");
+    let pgf_x_val = state::lookup_register("\\pgf@x", vec![])?
+      .map(|v| v.to_string()).unwrap_or_else(|| "0.0pt".to_string());
+
+    // Emit: \pgfsys@setdash{<dash_csv>}{<offset>}\ignorespaces
+    let mut result = vec![T_CS!("\\pgfsys@setdash")];
+    result.push(T_BEGIN!());
+    result.extend(Explode!(&dash_csv));
+    result.push(T_END!());
+    result.push(T_BEGIN!());
+    result.extend(Explode!(&pgf_x_val));
+    result.push(T_END!());
+    result.push(T_CS!("\\ignorespaces"));
+    gullet::unread(Tokens::new(result));
+  }, locked => true);
   DefMacro!("\\pgfsys@eoruletrue",
     "\\lxSVG@eoruletrue\\lxSVG@begingroup{fill-rule=evenodd}");
   DefMacro!("\\pgfsys@eorulefalse",
@@ -1442,8 +1686,34 @@ LoadDefinitions!({
 
   // Perl L792-796: \pgfsys@functionalshading — not implementable (PostScript functions)
   DefMacro!("\\pgfsys@functionalshading{}{}{}{}", sub[_args] {
-    
+
     mouth::tokenize_internal(
       "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist()
   });
+
+  //===================================================================
+  // PGF sentinel tokens — make non-expandable
+  //===================================================================
+  // PGF defines self-referential sentinel macros like:
+  //   \def\pgfkeys@mainstop{\pgfkeys@mainstop}
+  //   \def\pgfkeysnovalue{\pgfkeys@novalue}
+  //   \def\pgfkeysvaluerequired{\pgfkeysvaluerequired}
+  // These are used with \ifx for sentinel comparisons and as delimiters
+  // in parameter patterns. They should NEVER be expanded.
+  //
+  // In our engine, self-referential macros trigger recursion detection
+  // which replaces the expansion with empty tokens, breaking the
+  // sentinel pattern (the sentinel disappears, causing pgfkeys to read
+  // past it). This manifests as an infinite loop when babel + tikz
+  // are loaded together (babel's AtBeginDocument hooks trigger pgfkeys
+  // processing where the sentinel is expanded).
+  //
+  // Fix: override as locked non-expandable primitives. This preserves:
+  // - \ifx comparisons: \futurelet + \ifx compares meanings, and
+  //   \let-copied primitives have equal meaning.
+  // - Delimiter matching: TeX matches delimiters by token identity
+  //   (CS name), not meaning, so Primitives work as delimiters.
+  DefPrimitive!("\\pgfkeys@mainstop", {}, locked => true);
+  DefPrimitive!("\\pgfkeysvaluerequired", {}, locked => true);
+
 });

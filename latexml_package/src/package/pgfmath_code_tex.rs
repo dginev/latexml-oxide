@@ -906,7 +906,7 @@ fn format_parse_result(result: f64, input: &str) -> String {
 /// Main pgfmathparse evaluation function
 /// Perl: sub pgfmathparse (L316-394)
 /// Returns (result_string, units_declared)
-fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
+pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   // Normalize whitespace
   let input: String = raw_input.split_whitespace().collect::<Vec<_>>().join(" ");
   let input = input.trim();

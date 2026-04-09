@@ -5,6 +5,19 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: thmtools.sty.ltxml
 
+  // Dependencies: raw TeX sub-packages (thm-kv.sty, thm-restate.sty) expect
+  // kvsetkeys and keyval to be loaded. The raw thmtools.sty loads these via
+  // thm-kv.sty, but our binding replaces raw thmtools.sty so the chain breaks.
+  RequirePackage!("keyval");
+  RequirePackage!("kvsetkeys");
+
+  // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
+  // which load as raw TeX and expect these from thmtools internals.
+  DefRegister!("\\thmt@toks" => RegisterValue::Tokens(Tokens!()));
+  DefMacro!("\\thmt@thmuse@families", "thm@track@keys");
+  DefMacro!("\\thmt@mkignoringkeyhandler{}", "");
+  DefMacro!("\\thmt@thmuse@iskvtrue", "");
+
   // Set savable theorem parameters
   set_savable_theorem_parameters(vec![
     "\\thm@bodyfont", "\\thm@headfont", "\\thm@notefont",

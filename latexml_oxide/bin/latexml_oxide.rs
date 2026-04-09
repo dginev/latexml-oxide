@@ -104,6 +104,11 @@ struct Cli {
   #[arg(long, value_name = "SECONDS")]
   timeout: Option<u64>,
 
+  /// Maximum number of tokens to process before aborting (default: 100M).
+  /// Protects against infinite loops in macro expansion.
+  #[arg(long, value_name = "N")]
+  token_limit: Option<usize>,
+
   /// Navigation TOC style (e.g. "context")
   #[arg(long, value_name = "STYLE")]
   navigationtoc: Option<String>,
@@ -246,16 +251,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     source
   };
 
-  // --whatsin=directory: auto-detect from trailing /
+  // --whatsin=directory: auto-detect from trailing / or explicit flag
   let is_directory_mode =
     cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
-  if is_directory_mode {
-    if let Ok(abs_source) = std::fs::canonicalize(&source) {
+  let source = if is_directory_mode {
+    let dir_path = std::path::Path::new(&source);
+    if let Ok(abs_source) = std::fs::canonicalize(dir_path) {
       path_flags.push(abs_source.to_string_lossy().to_string());
     } else {
       path_flags.push(source.clone());
     }
-  }
+    // Find the main .tex file in the directory, matching Perl's behavior
+    match find_main_tex(dir_path) {
+      Ok(main_tex) => main_tex,
+      Err(e) => {
+        eprintln!("Failed to find main .tex file in '{}': {}", source, e);
+        process::exit(1);
+      }
+    }
+  } else {
+    source
+  };
 
   // Prepare converter
   let preload = if cli.preload_files.is_empty() { None } else { Some(cli.preload_files.clone()) };
@@ -319,14 +335,33 @@ fn main() -> Result<(), Box<dyn Error>> {
     if let Some(secs) = cli.timeout {
       latexml_core::stomach::set_timeout(secs);
     }
+    if let Some(limit) = cli.token_limit {
+      latexml_core::gullet::set_token_limit(Some(limit));
+    }
 
     let source_for_post = source.clone();
     let response = converter.convert(source);
     let _ = &source_for_post; // keep alive for post-processing
     if let Some(xml) = response.result {
-      // Auto-select stylesheet from --format
+      // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
+      let inferred_format: Option<String> = cli.format.clone().or_else(|| {
+        target.as_ref().and_then(|dest| {
+          Path::new(dest).extension().and_then(|ext| ext.to_str()).map(|ext| {
+            match ext.to_lowercase().as_str() {
+              "html" | "htm" => "html5".to_string(),   // Perl L435: html → html5
+              "xhtml" => "xhtml".to_string(),
+              "xml" => "xml".to_string(),
+              "zip" => "html5".to_string(),             // Perl L431: zip → html5
+              "epub" | "mobi" => "epub".to_string(),
+              other => other.to_string(),
+            }
+          })
+        })
+      });
+
+      // Auto-select stylesheet from format (Perl Config.pm L543-551)
       let effective_stylesheet = cli.stylesheet.clone().or_else(|| {
-        match cli.format.as_deref() {
+        match inferred_format.as_deref() {
           Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl".to_string()),
           Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string()),
           Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
@@ -334,8 +369,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
       });
 
+      // Auto-enable post-processing when dest implies HTML (Perl Config.pm L448-455)
+      let is_html_format = matches!(inferred_format.as_deref(),
+        Some("html5") | Some("html") | Some("xhtml") | Some("epub") | Some("epub3"));
       let do_post = cli.post || cli.pmml || cli.cmml
-        || effective_stylesheet.is_some() || cli.format.is_some()
+        || effective_stylesheet.is_some() || is_html_format
         || cli.split || cli.splitat.is_some();
 
       // Build split XPath from --splitat
@@ -356,7 +394,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           .map(|p| p.to_string_lossy().to_string())
           .unwrap_or_else(|| ".".to_string());
         let output = run_post_processing(&xml, &PostOptions {
-          pmml: cli.pmml || cli.post || cli.format.is_some(),
+          pmml: cli.pmml || cli.post || is_html_format,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
@@ -734,51 +772,293 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 }
 
 /// Find the main .tex file in an unpacked directory.
-/// Strategy: look for files containing \documentclass, prefer the largest one.
+/// Faithful port of Perl's LaTeXML::Util::Pack::detect_source.
 fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
-  let mut candidates: Vec<(PathBuf, u64)> = Vec::new();
+  use once_cell::sync::Lazy;
+  use regex::Regex;
 
-  fn collect_tex_files(dir: &Path, candidates: &mut Vec<(PathBuf, u64)>) {
-    if let Ok(entries) = std::fs::read_dir(dir) {
-      for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-          collect_tex_files(&path, candidates);
-        } else if path.extension().is_some_and(|e| e == "tex") {
-          let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
-          candidates.push((path, size));
+  // Phase I.1: Check 00README.json (2025 arXiv format)
+  // Format: { "sources": [{"filename": "main.tex", "usage": "toplevel"}, ...] }
+  if let Some(filename) = parse_readme_json(dir) {
+    let main_path = dir.join(&filename);
+    if main_path.exists() {
+      return Ok(main_path.to_string_lossy().to_string());
+    }
+  }
+
+  // Phase I.1.2: Check 00README.XXX (legacy arXiv format)
+  let readme_xxx = dir.join("00README.XXX");
+  if readme_xxx.exists() {
+    if let Ok(content) = std::fs::read_to_string(&readme_xxx) {
+      for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 && parts[1] == "toplevelfile" {
+          let main_path = dir.join(parts[0]);
+          if main_path.exists() {
+            return Ok(main_path.to_string_lossy().to_string());
+          }
         }
       }
     }
   }
 
-  collect_tex_files(dir, &mut candidates);
-
-  if candidates.is_empty() {
-    return Err("No .tex files found in archive".into());
-  }
-
-  // First pass: find files with \documentclass
-  let mut doc_class_files: Vec<(PathBuf, u64)> = Vec::new();
-  for (path, size) in &candidates {
-    if let Ok(content) = std::fs::read_to_string(path) {
-      if content.contains("\\documentclass") || content.contains("\\documentstyle") {
-        doc_class_files.push((path.clone(), *size));
+  // Phase I.2: Heuristic detection (ported from arXiv::FileGuess via Pack.pm)
+  // Collect all .tex files recursively
+  fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+          collect_tex_files(&path, files);
+        } else if path.extension().is_some_and(|e| e == "tex" || e == "txt") {
+          files.push(path);
+        }
       }
     }
   }
 
-  // Prefer file with \documentclass; if multiple, pick the largest
-  let main = if !doc_class_files.is_empty() {
-    doc_class_files.sort_by_key(|x| std::cmp::Reverse(x.1));
-    doc_class_files[0].0.clone()
-  } else {
-    // No \documentclass found — pick the largest .tex file
-    candidates.sort_by_key(|x| std::cmp::Reverse(x.1));
-    candidates[0].0.clone()
-  };
+  let mut tex_files: Vec<PathBuf> = Vec::new();
+  collect_tex_files(dir, &mut tex_files);
+  if tex_files.is_empty() {
+    return Err("No .tex files found in directory".into());
+  }
 
-  Ok(main.to_string_lossy().to_string())
+  // Regexes for content-based detection (Perl Pack.pm L116-166)
+  static RE_AUTOIGNORE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-ignore").unwrap());
+  static RE_TEXINFO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\input texinfo").unwrap());
+  static RE_AUTOINCLUDE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-include").unwrap());
+  static RE_FORMAT_HINT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
+  static RE_DOCCLASS: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
+  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap());
+  static RE_INPUT_INCLUDE: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
+  static RE_END_BYE: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_END_BYE2: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_MAC_TEX: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
+  static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
+  static RE_BIBTEX: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
+  static RE_UUENCODE: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
+  static RE_WITHDRAWN: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"paper deliberately replaced by what little").unwrap());
+  static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+
+  // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
+  let mut likelihood: std::collections::HashMap<PathBuf, f32> = std::collections::HashMap::new();
+  let mut vetoed: Vec<PathBuf> = Vec::new();
+
+  for tex_file in &tex_files {
+    if !tex_file.exists() { continue; }
+    // Use lossy read — TeX files may contain Latin-1 or other non-UTF8 bytes
+    let Ok(raw) = std::fs::read(tex_file) else { continue };
+    let content = String::from_utf8_lossy(&raw);
+    let mut maybe_tex = false;
+    let mut maybe_tex_priority = false;
+    let mut maybe_tex_priority2 = false;
+    let mut determined = false;
+
+    for (lineno, raw_line) in content.lines().enumerate() {
+      let lineno1 = lineno + 1; // 1-based like Perl's $.
+      // Perl L117-120: early-line checks (first 10-12 lines)
+      if lineno1 <= 10 && (RE_AUTOIGNORE.is_match(raw_line)
+        || RE_TEXINFO.is_match(raw_line)
+        || RE_AUTOINCLUDE.is_match(raw_line))
+      {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+      if lineno1 <= 12 {
+        if let Some(cap) = RE_FORMAT_HINT.captures(raw_line) {
+          let fmt = &cap[1];
+          if fmt == "latex209" || fmt == "biglatex" || fmt == "latex" || fmt == "LaTeX" {
+            likelihood.insert(tex_file.clone(), 3.0);
+          } else {
+            likelihood.insert(tex_file.clone(), 1.0);
+          }
+          determined = true; break;
+        }
+      }
+      // Perl L128: strip comments for subsequent checks
+      let line = if let Some(pos) = raw_line.find('%') { &raw_line[..pos] } else { raw_line };
+
+      if RE_DOCCLASS.is_match(line) {
+        likelihood.insert(tex_file.clone(), 3.0);
+        determined = true; break;
+      }
+      if RE_MAYBE_TEX.is_match(line) {
+        maybe_tex = true;
+      }
+      // Perl L133-148: \input/\include → veto the included file
+      if let Some(cap) = RE_INPUT_INCLUDE.captures(line) {
+        maybe_tex = true;
+        let mut vetoed_name = cap[1].to_string();
+        if RE_AMSTEX.is_match(&vetoed_name) {
+          likelihood.insert(tex_file.clone(), 2.0);
+          determined = true; break;
+        }
+        if !vetoed_name.contains('.') {
+          vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
+        }
+        // Resolve relative to the file's directory
+        let base_dir = tex_file.parent().unwrap_or(dir);
+        vetoed.push(base_dir.join(&vetoed_name));
+      }
+      if RE_END_BYE.is_match(line) { maybe_tex_priority = true; }
+      if RE_END_BYE2.is_match(line) { maybe_tex_priority2 = true; }
+      if RE_MAC_TEX.is_match(line) {
+        likelihood.insert(tex_file.clone(), 1.0);
+        determined = true; break;
+      }
+      if RE_METAFONT.is_match(line) {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+      if RE_BIBTEX.is_match(raw_line) { // check raw_line (before comment stripping)
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+      if RE_UUENCODE.is_match(raw_line) {
+        if maybe_tex_priority {
+          likelihood.insert(tex_file.clone(), 2.0);
+        } else if maybe_tex {
+          likelihood.insert(tex_file.clone(), 1.0);
+        } else {
+          likelihood.insert(tex_file.clone(), 0.0);
+        }
+        determined = true; break;
+      }
+      if RE_WITHDRAWN.is_match(line) {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+    }
+    // Perl L169-177: if not determined by any pattern
+    if !determined {
+      let score = if maybe_tex_priority { 2.0 }
+        else if maybe_tex_priority2 { 1.5 }
+        else if maybe_tex { 1.0 }
+        else { 0.0 };
+      likelihood.insert(tex_file.clone(), score);
+    }
+  }
+
+  // Perl L181-182: remove vetoed files
+  for v in &vetoed {
+    likelihood.remove(v);
+  }
+
+  // Perl L184-185: filter to score > 0, sort by score descending
+  let mut candidates: Vec<PathBuf> = likelihood.keys()
+    .filter(|f| likelihood[*f] > 0.0)
+    .cloned()
+    .collect();
+  candidates.sort_by(|a, b| likelihood[b].partial_cmp(&likelihood[a]).unwrap());
+
+  if candidates.is_empty() {
+    return Err("No viable .tex files found in directory".into());
+  }
+
+  // Perl L187-188: keep only max-scoring candidates
+  let max_score = likelihood[&candidates[0]];
+  candidates.retain(|f| (likelihood[f] - max_score).abs() < f32::EPSILON);
+
+  // Perl L190-196: Heuristic 1 — prefer shallowest path (fewest '/' components)
+  if candidates.len() > 1 {
+    let min_depth = candidates.iter()
+      .map(|f| f.strip_prefix(dir).unwrap_or(f).components().count())
+      .min().unwrap_or(0);
+    candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
+  }
+
+  // Perl L198-200: Heuristic 2 — prefer files with PDF-like \includegraphics
+  if candidates.len() > 1 {
+    let pdf_candidates: Vec<PathBuf> = candidates.iter()
+      .filter(|f| {
+        std::fs::read(f).ok().is_some_and(|raw| {
+          let c = String::from_utf8_lossy(&raw);
+          c.contains("\\includegraphics") &&
+          (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+        })
+      })
+      .cloned().collect();
+    if !pdf_candidates.is_empty() {
+      candidates = pdf_candidates;
+    }
+  }
+
+  // Perl L202-204: Heuristic 3 — prefer files with a matching .bbl file
+  if candidates.len() > 1 {
+    let bbl_candidates: Vec<PathBuf> = candidates.iter()
+      .filter(|f| f.with_extension("bbl").exists())
+      .cloned().collect();
+    if !bbl_candidates.is_empty() {
+      candidates = bbl_candidates;
+    }
+  }
+
+  // Perl L208-210: Heuristic 4 — prefer common main file names
+  if candidates.len() > 1 {
+    let common: Vec<PathBuf> = candidates.iter()
+      .filter(|f| f.file_name().is_some_and(|n| {
+        let n = n.to_str().unwrap_or("");
+        n == "main.tex" || n == "ms.tex" || n == "paper.tex"
+      }))
+      .cloned().collect();
+    if !common.is_empty() {
+      candidates = common;
+    }
+  }
+
+  // Perl L212-213: Final tiebreaker — lexicographic order
+  candidates.sort();
+
+  Ok(candidates[0].to_string_lossy().to_string())
+}
+
+/// Parse 00README.json in `dir` and return the "filename" of the toplevel source.
+/// Perl Pack.pm L68-80: looks for sources[] with usage=="toplevel".
+/// Format: { "sources": [{"filename": "main.tex", "usage": "toplevel"}, ...] }
+fn parse_readme_json(dir: &Path) -> Option<String> {
+  let content = std::fs::read_to_string(dir.join("00README.json")).ok()?;
+  // Minimal JSON parser: find objects in "sources" array with "usage":"toplevel"
+  // and extract their "filename" value.
+  // Scan for "usage" : "toplevel" and nearby "filename" : "value" pairs.
+  let sources_start = content.find("\"sources\"")?;
+  let rest = &content[sources_start..];
+  let arr_start = rest.find('[')?;
+  let arr_end = rest.find(']')?;
+  let arr = &rest[arr_start + 1..arr_end];
+
+  // Split by '}' to get individual objects, look for toplevel ones
+  for obj_str in arr.split('}') {
+    if !obj_str.contains("\"toplevel\"") { continue; }
+    // Extract filename from this object
+    if let Some(fn_pos) = obj_str.find("\"filename\"") {
+      let after_key = &obj_str[fn_pos + 10..];
+      let after_key = after_key.trim_start();
+      let after_key = after_key.strip_prefix(':')?;
+      let after_key = after_key.trim_start();
+      let after_key = after_key.strip_prefix('"')?;
+      let mut result = String::new();
+      for ch in after_key.chars() {
+        match ch {
+          '"' => break,
+          '\\' => continue, // skip escapes (simplified)
+          c => result.push(c),
+        }
+      }
+      if !result.is_empty() {
+        return Some(result);
+      }
+    }
+  }
+  None
 }
 
 /// Pack the conversion output into a ZIP archive (whatsout=archive).

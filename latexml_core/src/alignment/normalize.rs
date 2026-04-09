@@ -60,6 +60,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
   for row in &mut alignment.rows {
     for cell in row.get_columns_mut() {
       if let Some(ref mut boxes) = &mut cell.boxes {
+
         let (w, mut h, mut d, cw, ch, cd) = boxes.get_size(Some(stored_map!(
             "align" => cell.align.as_ref().map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )))?;

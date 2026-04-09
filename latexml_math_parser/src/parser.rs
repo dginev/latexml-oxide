@@ -931,6 +931,13 @@ impl MathParser {
     // this budget. For formulas where all trees are pruned (no unique
     // parse yet), use a longer budget before giving up.
     let converge_budget = std::time::Duration::from_millis(200);
+    // Unique-tree cap: the pragmatics/selection step only needs a handful
+    // of distinct parses. Beyond this, additional unique trees are almost
+    // always script-attachment ordering variants that don't improve the
+    // final selected parse. Avoids enumerating 60+ trees for expressions
+    // like `{}^4{}_{12}C^{5+}` where the grammar produces 27+ unique
+    // trees from different pre/post script nesting orders.
+    let max_unique = 10;
     for val in parse_result {
       // Truncate if too many trees or too much time
       if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
@@ -940,6 +947,10 @@ impl MathParser {
       // The grammar produces 2^N duplicates from script attachment ordering.
       // Once we've found all unique parses, every new tree is a duplicate.
       if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
+        break;
+      }
+      // Unique-tree cap: stop once we have enough distinct parses.
+      if parses.len() >= max_unique {
         break;
       }
       // Time-budget convergence: if we have unique parses and have spent
@@ -988,6 +999,16 @@ impl MathParser {
         "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
         ok_trees + pruned_trees + deduped, ok_trees + deduped, pruned_trees, deduped, parses.len(), start.elapsed(),
         input.trim()
+      );
+    }
+    // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
+    // Useful for identifying grammar ambiguity hotspots across the test suite.
+    // Usage: LATEXML_PARSE_AUDIT=1 cargo test --test 56_ams -- mathtools_test --nocapture
+    if std::env::var("LATEXML_PARSE_AUDIT").is_ok() && (ok_trees + pruned_trees > 1 || start.elapsed().as_millis() > 50) {
+      eprintln!(
+        "PARSE_AUDIT: {} trees ({} ok, {} pruned, {} dedup→{} unique) in {:?} | {}",
+        ok_trees + pruned_trees + deduped, ok_trees + deduped, pruned_trees, deduped, parses.len(), start.elapsed(),
+        &input.trim().chars().take(200).collect::<String>()
       );
     }
 
@@ -1284,8 +1305,9 @@ fn textrec(
   if tag == arena::pin_static("ltx:XMApp") {
     let mut args = element_nodes(&node);
     if args.is_empty() {
-      // Error!("expected","arguments" ...);
-      todo!();
+      // Perl: Error('expected','arguments',...) then returns empty
+      log::warn!("XMApp element has no child arguments");
+      return String::new();
     }
     let arg_node = args.remove(0);
     let op = realize_xmnode(&arg_node, document);

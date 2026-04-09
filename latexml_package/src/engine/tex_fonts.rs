@@ -158,6 +158,12 @@ LoadDefinitions!({
         2 => Dimension::from_str("0.5em").ok()?,    // interword space
         5 => Dimension::from_str("1ex").ok()?,      // x-height
         6 => Dimension::from_str("1em").ok()?,      // quad width
+        8 => Dimension::from_str("0.677em").ok()?,  // num1: numerator shift (display)
+        9 => Dimension::from_str("0.394em").ok()?,  // num2: numerator shift (text)
+        10 => Dimension::from_str("0.444em").ok()?, // num3
+        11 => Dimension::from_str("0.686em").ok()?, // denom1: denominator shift (display)
+        12 => Dimension::from_str("0.345em").ok()?, // denom2: denominator shift (text)
+        22 => Dimension::from_str("0.25em").ok()?,  // math axis height (cmsy10: 2.5pt at 10pt)
         _ => Dimension::new(0)
       }
     }

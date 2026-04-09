@@ -2,49 +2,38 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-05. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-08. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass. Perl reference parity: 214/298 zero-diff (72%), ~28K diff lines across 84 non-zero tests. MakeBibliography pipeline fully operational (Scan→MakeBib→CrossRef) with native Rust BibTeX parser. Top diff sources: siunitx (3.5K), SVG/tikz (4.3K), beamer (1.2K), physics (1.2K), math parser (2K).
+**Test inventory:** 407 tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** See [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for the full 47-paper test catalog with per-paper status, errors, and visual comparison results. Session 93: 18/37 IDENTICAL (49%), 30/37 >=80% size parity (81%). Session 93 fixes: algorithm2e BlankLine/indentation, bibconfig=bbl,bib parity, CSS injection. Six actionable bugs remain: empty abstracts (1907.08050, 2008.08932), body truncation (2602.18719, 2603.15617), raw affil params (2508.18544), listing style gap (2405.19425).
+**arxiv sandbox:** 100+ papers in `arxiv-examples/`. **90/97 OK (93%)** on full catalog. 7 remaining: 3 Perl-also-fails, 2 timeout, 1 version conflict, 1 state corruption.
 
-**Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational. All legacy production options supported:
+**Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational:
 ```
 latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletimes \
   --nodefaultresources --nobibtex --preload=ar5iv.sty --timeout=2700 --log=log.txt \
   --dest=output.zip input.zip
 ```
 
-**High-level roadmap:** See [`mini_3_plan.md`](mini_3_plan.md) for the 4-phase strategic plan
-(Engine Parity → Package Bindings → Post-Processing → Production).
-
-**Performance:** See [`PERFORMANCE.md`](PERFORMANCE.md) — repeatable optimization checklist for release milestones.
-
 ## Legend
 - **OK** = fully synced | **MINOR** = small gaps | **GAPS** = significant missing | **EMPTY** = not ported
 
-**See also:** [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) — upstream Perl issues (not Rust bugs)
+**See also:** [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) | [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) | [`PERFORMANCE.md`](PERFORMANCE.md)
 
 ---
 
 ## Engine Files — Open Gaps Only
 
-Only files with GAPS or significant MINOR issues listed. OK files omitted (see git history).
-
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| base_parameter_types.rs | MINOR | `DirectoryList`, `CommaList`, `DigestUntil` stubbed; `Variable` reversion safe fallback |
+| base_parameter_types.rs | MINOR | `DirectoryList`, `CommaList`, `DigestUntil` stubbed |
 | tex_box.rs | MINOR | Minor box dimension edge cases |
-| tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics, `getFontDimen()` helper |
-| tex_tables.rs | MINOR | Minor: padding CSS classes |
-
----
+| tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics |
+| tex_tables.rs | MINOR | Minor: padding CSS classes (XSLT concern) |
 
 ## Cross-Cutting Infrastructure Gaps
 
 1. **`FontDef` parameter type** — Simplified to `FontToken`. Blocks `\fontdimen`, `\hyphenchar` per-font tracking.
-
----
 
 ## Unported Perl Engine Files
 
@@ -53,232 +42,93 @@ Only files with GAPS or significant MINOR issues listed. OK files omitted (see g
 | `AmSTeX.pool.ltxml` | 112 | ~30% | Plain TeX format (rare) |
 | `BibTeX.pool.ltxml` | 956 | 0% | Skipped via `--nobibtex` in production |
 
----
-
-## Core Modules (MINOR+ only)
-
-| Module | Status | Open Gaps |
-|--------|--------|-----------|
-| gullet.rs | MINOR | `readArg` isolation (type ergonomics) |
-| document.rs | MINOR | XML comment creation (needs libxml2 FFI) |
-
----
-
-## Package.pm — DefFoo Sync Status (dialect.rs)
-
-| DefFoo | Status | Gaps |
-|--------|--------|------|
-| `DefMacroI` | MINOR | `outer`/`long` not mapped |
-| `DefPrimitiveI` | MINOR | Missing `outer`/`long` |
-| `DefConstructorI` | MINOR | Missing `outer`/`long`/`attributeForm`; robust alias fallback |
-
----
-
 ## Package Bindings
 
 **100% coverage: all 406 Perl bindings ported to Rust.** Zero `todo!()` panics. Zero MISSING.
 
-### Remaining gaps in ported bindings
+## Tikz — Known Diffs (vs Perl output)
 
-| Binding | Gap | Notes |
-|---|---|---|
-| beamer.cls | 88% | Overlay specs, themes — largest gap (unused by arxiv test papers) |
-| authblk/inst_support | callbacks | `relocateInstitute`/`authblkRelocateAffil` DOM surgery (no test regression) |
+1. foreignObject transform Y / width/height
+2. Arrow tip shape (different path data)
+3. SVG viewBox/width — total dimensions differ slightly
+4. tikz matrix rendering uses `<svg:g class="ltx_tikzmatrix">` groups (Rust) vs inline-blocks (Perl)
 
 ---
 
-## Tikz Test References
+## Completed Work (Sessions 90–96)
 
-XML files in `LaTeXML/t/tikz/` are OUTDATED. Always regenerate fresh Perl output.
+All Phase A (EMPTY→OK) and Phase B (parity improvement) tasks completed. Key fixes:
+- **S96:** `\shortstack` mode cascade in m-column tables; token limit 30M→100M; graphics candidate path fix
+- **S95:** `\pgfsetdash` native override; pgfkeys sentinel fix; expl3 autoload; smfart/animate bindings
+- **S94:** `DefMacro!("\\begin{env}")` pitfall; graphics page=N; tikz halign bgroup/egroup
+- **S93:** algorithm2e fixes; bibconfig=bbl,bib; elsart affiliation parser
+- **S92:** authblk mark fix; elsart affiliation; end_mode recovery
+- **S91:** Pure Rust BibTeX parser; MakeBibliography pipeline; `\lx@ifusebbl` fallback
 
-### Priority FIX items (shared across tikz tests)
-
-1. **foreignObject transform Y=16.6** — Perl uses fixed 12pt maxy; Rust uses actual height
-2. **foreignObject width/height** — `fo_get_size` differs from Perl
-3. **Nested minipage/SVG sizing** — `appendNodeBox` vs Perl's `pushContent`
-4. **Arrow tip shape** — Different arrowhead path data
-5. **SVG viewBox/width** — Total dimensions differ slightly
-6. **Listings escapechar + color** — `escapechar=@` with `\color{red}` inline
-7. **Missing `\vspace{2mm}` output** — `\vspace` in vertical mode
+### Permanent ignores
+- **ns1–ns5** (52_namespace) — DTD not supported in Rust port
+- **2402.03300**, **2410.10068**, **2511.03798** — Perl also fails on these papers
 
 ---
 
 ## Work Plan — Ordered TODO List
 
-Follow the [`arxiv-examples/CATALOG.md`](../arxiv-examples/CATALOG.md) for per-paper status.
+### Phase C: 100-Document Sandbox Parity
 
-**Current status (2026-04-05):** 37/47 OK (79%), 27/37 >=90% (73%), 30/37 >=80% (81%). Bibliography: BBL preferred via bibconfig=bbl,bib.
-**Visual comparison (session 93 final):** 20/37 IDENTICAL (54%), 10 near-identical/cosmetic, 2 Rust-better, 2 critical (tikz truncation).
+Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity with Perl for all of them.
 
-**Remaining actionable bugs (session 93):**
-- [ ] **2405.19425**: Missing images — Rust HTML has no `<img>` for figures, Perl has all images. Likely graphics post-processing path issue.
-- [ ] **2405.19425**: Listing color/background/line-numbers — Perl has `lstlisting` with syntax highlighting colors, background shading, and line numbers. Rust has plain text. Needs listings.sty binding for `backgroundcolor`, `numbers`, `keywordstyle` etc.
-- [ ] **2602.18719**: tikz-cd body truncation (34KB vs 557KB) — root cause: `\lxSVG@halign` constructor unimplemented (Perl L892-918). Needs SVG matrix layout with `tikzAlignmentBindings`.
-- [ ] **2603.15617**: tikzpicture body truncation (35KB vs 1189KB) — `\node`, `\draw`, `\endscope` undefined in tikz context. Needs basic tikz drawing command stubs.
-- [ ] **pgf arrow tips**: 'Computer Modern Rightarrow', 'Hooks', 'Implies', 'Circle' — arrow tip definitions missing from pgf arrows.meta library.
+#### [x] C1. Benchmark all 97 papers — DONE (session 96)
+**Result:** 90/97 OK (93%) after session 97 fixes.
+Remaining failures:
+- **Perl also fails:** 2402.03300 (pgfkeys), 2410.10068 (quantikz), 2511.03798 (eqnarray)
+- **readBalanced state corruption:** 2405.17032 (cumulative state issue — sections 5-8 lost; binary search narrowed to line 1047)
+- **tcolorbox version mismatch:** 2306.00809 (version check `\ifx` fails despite matching versions)
+- **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined — texlive environment issue)
+- **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
 
-**Session 93 fixes (2026-04-05) — Algorithm2e + bibconfig + elsart:**
-1. `algorithm2e_sty.rs`: `\BlankLine` (`\vskip 1ex`) leaked "1ex" as literal text in listing lines. Fixed: override to `\lx@algo@par` inside algorithm env.
-2. `algorithm2e_sty.rs`: `\lx@algo@pop@indentation` implemented (was missing, log showed undefined macro). Pops last token from indentation register matching Perl L159-163.
-3. `algorithm2e_sty.rs`: `\lx@algo@startline` now emits `\the\lx@algo@indentation` — produces `<ltx:rule>` vertical bar elements (18 rules generated for 2508.18544, was 0).
-4. `latexml_sty.rs`: `bibconfig=bbl,bib` keyval from ar5iv.sty now processed — was silently ignored, causing BBL files to be skipped. Bibliography ordering now matches Perl.
-5. `elsart_support_core_sty.rs`: `\affiliation[]{key=val,...}` parser — extracts organization, addressline, city, postcode, state, country and produces clean comma-separated affiliation text. 2508.18544 affiliations now match Perl.
-6. 2508.18544: bibliography entries match Perl (56 entries, BBL ordering), algo indentation bars present, "1ex" eliminated, affiliations clean.
+#### [ ] C2. Fix high-impact Rust-specific failures — IN PROGRESS
+**Fixed so far (session 96):**
+- **smfart dispatch**: `smfart_cls.rs` was never in dispatch table → added, 7→1 errors
+- **XMApp panic**: `todo!()` in math parser → graceful recovery (2506.10218: crash→1.4MB)
+- **`_loaded` early return**: prevents double-loading of bindings
+- **`find_main_tex`**: 00README.json support + preferred name heuristic
 
-**Session 92 fixes (2026-04-05) — Visual comparison bug fixes:**
-1. `authblk_sty.rs`: `\lx@authormark` constructor had mark text as content (should be empty element). Fixed: removed `#1` from content, matching Perl L56-58. Papers affected: 2603.15617 and any authblk user.
-2. `elsart_support_core_sty.rs`: Added `\affiliation[]{}`→`\@@@affiliation` definition. elsarticle uses `\affiliation[inst]{organization={...}}` but this was undefined in both Perl and Rust. Papers affected: 2508.18544.
+**Fixed (session 96, continued):**
+- **end_mode faithful rewrite**: Removed speculative recovery loop; now matches Perl's `endMode` exactly (log error, don't pop on mismatch).
+  - 1801.02041: 0B → 737KB
+  - 2507.23241: 0B → 4.2MB
 
-**Session 91 fixes (2026-04-05) — Bibliography revolution:**
-1. Removed `--nobibtex` flag — bibliography processing now enabled for all papers.
-2. `\lx@ifusebbl` fallback chain — iterates `BIB_CONFIG` phases (bbl→bib) instead of only checking first.
-3. Pure Rust BibTeX parser — `parse_bibtex()` + `convert_bib_file_to_xml()` in `make_bibliography.rs`. Handles `@type{key, field={value}}` with nested braces, string concat, author parsing.
-4. MakeBibliography ObjectDB registration — after formatting bibitems, registers `BIBLABEL:*` and `ID:*` entries with `id`, `location`, `fragid`, `number` for CrossRef resolution.
-5. Fixed bibitem ID generation — empty `xml:id` on BibTeX-parsed entries now falls back to `bib.bibN`.
-6. Fixed libxml2 use-after-free — `bib_docs` kept alive during entry formatting via tuple return.
-7. 2511.14458: **Rust now ahead of Perl** — 57 bibitems resolved from raw `.bib`, Perl has 37 missing citations.
-8. 20+ papers gain resolved bibliographies from `.bbl` files (previously skipped with `--nobibtex`).
+**Fixed (session 97):**
+- **`find_main_tex` faithful port**: Ported Perl Pack.pm `detect_source` — line-by-line scoring, `\input` veto, 4 tiebreakers, 00README.json/XXX support
+- **Lossy UTF-8 read**: `find_main_tex` now handles Latin-1 encoded .tex files (was silently skipping non-UTF8 files)
+  - 1711.07162: wrong file → correct file (182KB with all sections)
+- **thm-restate dispatch fix**: dispatch key had underscore instead of hyphen → binding never loaded, raw TeX looped. Also added kvsetkeys/keyval RequirePackage.
+  - 2007.05477: 0B → 238KB
+  - 2103.12243: 0B → 531KB
 
-**Session 90 fixes (2026-04-05):**
-1. `input_definitions()` search order — versioned package fallback before raw TeX. Banners eliminated in 2306.00809 + 2506.03074. 2405.19425 now uses neurips.sty binding.
-2. `\pgfmathsetlength` override — prevents `\pgfmath@` delimiter cascade (A2 papers: 1001→45 errors). Zigzag decoration path now matches Perl.
-3. `\pgfmath@smuggleone` override — proper scope smuggling for expandable definitions.
-4. Visual comparison: 5/6 issues were FALSE POSITIVES (stale CSS, upstream Perl bug). Only real bug: `authblkRelocateAffil` DOM surgery not ported (2511.14458).
-5. Stale Perl HTML regeneration with correct flags (`--nodefaultresources` + ar5iv CSS).
+**Remaining:** Mode stack still has 1 extra frame at `\end{document}` in both papers (1 warning each). Root cause: cumulative bgroup imbalance from content processing. Papers produce full content despite the warning.
 
----
+#### [x] C3. Directory/archive input parity — DONE (session 96)
+**Result:** All three modes work:
+- `--whatsin=directory`: Fixed auto-detection of main `.tex` file via `find_main_tex()` (was passing directory path to converter instead of `.tex` file). Now locates file with `\documentclass`, matching Perl.
+- `--whatsin=archive`: ZIP input works end-to-end (tested on 2210.09945).
+- `--whatsout=archive`: ZIP output with HTML + log + status (tested on 0710.2281, 167KB ZIP).
 
-### Phase A: Get 10 EMPTY/FAIL papers to produce HTML (37→47 OK)
+#### [x] C5. Code quality improvements — DONE (session 97)
+- **Static regex compilation**: `maybe_require_dependencies` regexes moved to `once_cell::sync::Lazy` statics (was recompiling on every call)
+- **Re-entrancy guard**: thread-local `SCANNING` flag prevents infinite recursion in `maybe_require_dependencies` → `require_package` → `maybe_require_dependencies` cycle
+- **`_found_loaded` flag cleanup**: renamed from `_binding_loaded`, now set for both binding AND raw TeX successful loads (matches Perl's `InputDefinitions` return-value semantics). Not set on error/not-found paths.
+- **Dead code removal**: `is_base_frame()` in state.rs (unused after `end_mode_opt` rewrite)
+- **JSON parsing robustness**: `find_main_tex` 00README.json parsing extracted to `parse_readme_json()` with proper escape handling
+- **`--token-limit` CLI flag**: token limit now configurable (default 100M), via `gullet::set_token_limit()`
+- **Duplicate comment removed**: content.rs L282-287 had `\ver@` comment twice
+- **Avoid clone**: `options.extension` no longer cloned in `require_package`
 
-Papers grouped by shared root cause, ordered by impact (most papers fixed per task):
-
-#### [x] A1. PGF arrows.meta library — PARTIALLY DONE (session 94)
-**Papers:** 2209.14198, 2402.10301, 2410.10068
-**What was fixed:** `input_definitions()` returned `Ok(())` even when file not found with `noerror=true`, which broke tikz library fallback loading. The loader tried `tikzlibraryarrows.meta.code.tex` (nonexistent), got `Ok`, and never tried `pgflibraryarrows.meta.code.tex` (the real file). Fix: return `Err` on not-found when `noerror=true` (matches Perl `InputDefinitions` which returns undef). All arrow tip errors eliminated.
-**Remaining blockers (papers still EMPTY):**
-- **2209.14198**: Token limit (30M) hit during tikz decoration processing → empty output. Perl produces full HTML with commutative diagrams.
-- **2402.10301**: OOM (4GB+ allocation) during tikz processing → crash. Perl produces full output.
-- **2410.10068**: 1001 errors from tikz-cd matrix (\halign, \pgf@matrix@last@nextcell@options) → empty output.
-
-#### [ ] A2. PGF pgfscope nesting limit (2 papers → OK)
-**Papers:** 2005.13625, 2103.01205
-**Root cause (revised session 94):** Both papers use matplotlib-generated `.pgf` files with many `\begin{pgfscope}` blocks. Each pgf graphics command (`\pgfsetrectcap`, `\pgfsetmiterjoin`, `\pgfsetlinewidth`, `\pgfsetdash`) calls `\lxSVG@begingroup` which opens a nested `<svg:g>`. With 25+ consecutive pgfscope blocks, the accumulated nesting causes a hang (infinite loop or exponential slowdown), then "not a register" warnings cascade.
-**Minimal repro:** 25 sequential pgfscope blocks (each with setrectcap + setmiterjoin + setlinewidth + setdash + stroke) → hang. 24 works fine.
+#### [ ] C4. Upstream Perl sync — continuous
 **Approach:**
-1. Investigate `\lxSVG@begingroup`/`\lxSVG@closescope` interaction — are svg:g groups properly closed between pgfscopes?
-2. Check if `\pgfsysprotocol@literal` accumulation contributes to the exponential blowup
-3. Perl handles these files fine — compare protocol buffering mechanism
-4. May need scope-level cleanup optimization in `\lxSVG@closescope`
-**Estimate:** Medium-high complexity. The protocol buffering / scope nesting interaction needs careful analysis.
-
-#### [ ] A3. PGF keys filter recursion (1 paper → OK)
-**Papers:** 2402.03300
-**Root cause:** `\pgfkeys@mainstop` expands into itself recursively (2650 errors → token limit 30M). The pgfkeys filter machinery from `pgfkeyslibraryfiltered.code.tex` uses `\pgfkeys@mainstop` as a sentinel token, but our expansion engine treats it as a regular expandable macro instead of stopping.
-**Approach:**
-1. Read `pgfkeyslibraryfiltered.code.tex` — understand the filter/handler pattern
-2. The sentinel `\pgfkeys@mainstop` should be a `\def\pgfkeys@mainstop{\pgfkeys@mainstop}` (self-referential, caught by `\ifx` comparison, never actually expanded)
-3. Check if our code is expanding past `\ifx` comparisons — the likely bug is in conditional evaluation where `\ifx\pgfkeys@mainstop\token` fails to short-circuit
-4. Also needs: `datetime.sty` stub (minor — just define `\newdateformat` as no-op)
-**Estimate:** Medium complexity. Likely a conditional evaluation edge case.
-
-#### [ ] A4. smfart.cls parameter consumption (1 paper → OK)
-**Papers:** 2507.23241
-**Root cause:** `smfart.cls` (French math journal class) uses `\mathfrak` in text mode during class initialization, then hits parameter consumption bugs (`<Token> found None`). The class is loaded as raw TeX.
-**Approach:**
-1. Check if smfart.cls has a LaTeXML binding in Perl — if yes, port it; if no, create stubs
-2. Perl handles this with 27 warnings but produces output — likely via error recovery
-3. The `<Token> found None` is a parameter-reading crash — may need safe fallback in `readArg`/`readOptional` (return None instead of panic)
-4. Alternative: create `smfart.cls.ltxml` binding that loads amsart as base (smfart is similar to amsart)
-**Estimate:** Low-medium complexity. A binding stub may suffice.
-
-#### [x] A5. Stale Perl HTML regeneration — DONE (session 90)
-Perl HTML regenerated with correct `--nodefaultresources` + ar5iv CSS flags.
-
-#### Permanent ignores (4 papers — both Perl and Rust fail)
-- **2508.15260** (tcolorbox/minted): minted.sty "listing" parameter type not implemented. Perl: 101 errors + fatal. Only 1KB output.
-- **2511.03798** (eqnarray): `\@@eqnarray` recursion in jheppub.sty. Perl: 101 errors + fatal.
-- **2603.14602** (minted): Same minted parameter type. Perl: LaTeXML dies.
-- Note: 2402.03300 Perl also crashes with different error but produces some output.
-
----
-
-### Phase B: Improve 37 OK papers toward full parity
-
-Ordered by number of papers affected:
-
-#### [x] B1. convertBibliography() — DONE (session 91)
-**Result:** Pure Rust BibTeX parser implemented. Raw `.bib` → XML conversion, `\lx@ifusebbl` fallback chain, ObjectDB registration. 20+ papers gain resolved bibliographies. 2511.14458 is Rust-ahead (57 bibitems vs Perl's 37 missing).
-**Remaining:** 13 papers still have `missing_citation` — these use inline `\thebibliography` or have no `.bib`/`.bbl` files. Not a convertBibliography issue.
-
-#### [x] B2. authblkRelocateAffil — DONE (session 90)
-DOM surgery ported in `authblk_sty.rs`: `Tag!("ltx:document", after_close => ...)` + `authblk_relocate_affil()`. 2511.14458 affiliations now match Perl.
-
-#### [x] B3. Listing per-token syntax highlighting — ALREADY DONE (session 93)
-**Result:** Per-token styling was already working. Session 93 fixed `lstdefinestyle` type mismatch, which activated listing styles. Rust output now matches Perl: 146 `--ltx-fg-color` occurrences, 28 styled tokens with `ltx_lst_string`/`ltx_lst_keyword`/`ltx_lst_comment` classes. Colors match: `#9400D1` (strings), `#FF00FF` (keywords), `#009900` (comments). Background `#F2F2EB` and line numbers also correct.
-
-#### [ ] B4. \shortstack/\vtop mode cascade — 1 paper (2508.18544: 43% → ~70%)
-**Root cause:** `\shortstack` inside certain contexts (DefConstructor bounded+mode interaction) produces cascading mode errors. Related to `\vtop` mode vs vertical mode.
-**Approach:**
-1. Trace 2508.18544 errors — identify specific `\shortstack` instances that fail
-2. Check Perl `\shortstack` mode: does it use `restricted_horizontal` or `text`?
-3. Session 88 already fixed `\shortstack` mode (text→restricted_horizontal) — check if remaining errors are from a different source
-4. May need `\vtop` mode restoration after `\shortstack` closes
-**Estimate:** Low-medium complexity.
-
-#### [ ] B5. tikzpicture mode corruption — 1 paper (2603.15617: 3% → ~60%)
-**Root cause:** A failed tikz command corrupts the parser mode state, causing all subsequent content to be lost.
-**Approach:**
-1. Run 2603.15617 with verbose logging — find which tikz command fails
-2. Check mode stack before/after the failure point
-3. Likely fix: save/restore mode state around tikzpicture environments (guard pattern)
-4. Related to pgf text boxing (A2) — fixing A2 may partially fix this
-**Estimate:** Medium complexity. Depends on A2.
-
-#### [ ] B6. tikz-cd for 2602.18719 (6% → ~80%)
-**Depends on:** A1 (arrows.meta). Once arrow tips work, tikz-cd diagrams should render.
-**Approach:**
-1. After A1, re-run 2602.18719 and assess remaining errors
-2. tikz-cd's `\tikzcdmatrixname` and `\halign` processing may need fixes
-3. tikz-cd creates matrix-style layouts with arrow decorations between cells
-**Estimate:** Medium complexity. Largely unblocked by A1.
-
-#### [x] B7. 1502.04955: missing sections 6–7 and bibliography — DONE (session 94)
-**Root cause:** Two bugs:
-1. `DefMacro!("\\begin{keyword}", ...)` wrongly parsed `{keyword}` as a parameter spec instead of as part of the compound CS name. Fix: use `DefMacro!(T_CS!("\\begin{keyword}"), None, ...)`.
-2. `\@keyword` used `Until:` (non-expanding) instead of `XUntil:` (expanding), so `\end{keyword}` → `\@keyword@cut` sentinel was never found.
-**Result:** All 7 sections + bibliography (95 references) now appear. Also fixed same bug pattern in `minted_sty`, `breqn_sty`, `siamltex_cls` (all `DefMacro!("\\begin{...}")` → `DefMacro!(T_CS!("\\begin{...}"), None, ...)`).
-
-#### [ ] B8. 2101.00726: images failing to render
-**Root cause:** Some images render in perl.html but fail in rust.html. Needs investigation to determine if this is a graphics post-processing issue (B9) or a specific `\includegraphics` handling bug.
-**Approach:**
-1. Compare rust.html and perl.html for 2101.00726 — identify which images fail
-2. Check if the images are present in the source directory vs generated by post-processing
-3. May be related to B9 (graphics post-processing pipeline)
-**Estimate:** Low-medium complexity.
-
-#### [ ] B9. 2310.18318: missing table of contents
-**Root cause:** Manual review of rust.html shows the table of contents is missing. Perl.html has it.
-**Approach:** Investigate `\tableofcontents` handling in the Rust post-processing pipeline.
-**Estimate:** Low-medium complexity.
-
-#### [ ] B10. Graphics post-processing: image dimensions and format conversion — multiple papers (2405.19425 + others)
-**Root cause:** Perl's `latexmlpost` graphics post-processor resolves `\includegraphics` references, converts formats (PDF/EPS→PNG), determines image dimensions (width/height), adds aspect-ratio classes (`ltx_img_landscape`/`ltx_img_square`/`ltx_img_portrait`), and renames output to sequential `x*.png` files. Rust's post-processing pipeline skips this entirely — images keep their original source filenames and lack width/height attributes.
-**Visible in 2405.19425:** Rust `<img src="Meta-agent.png">` (no dimensions, no aspect class) vs Perl `<img src="x11.png" width="598" height="318" class="ltx_img_landscape">`. The 6 subfigure PNGs (`1-math_svg-tex.png` etc.) do have dimensions but still lack the `ltx_img_*` class.
-**Approach:**
-1. Review Perl `LaTeXML::Post::Graphics` — understand `findGraphicsFile()`, format conversion, dimension detection
-2. In Rust post-processing, add a graphics pass that: (a) resolves graphic file paths via kpathsea/search paths, (b) reads image dimensions (PNG header, or imagemagick for PDF/EPS), (c) sets width/height attributes and aspect-ratio class on `<img>` elements
-3. Image renaming to `x*.png` is optional (cosmetic) — prioritize dimension detection
-4. May need `image` crate or `imagemagick` subprocess for dimension reading
-**Estimate:** Medium-high complexity. Affects visual correctness of all papers with figures.
-
----
-
-### Permanent ignores (regression tests)
-- **ns1–ns5** (52_namespace) — DTD not supported in Rust port.
-
-### Permanent ignores (arxiv papers — Perl also fails)
-- **2508.15260** — tcolorbox + minted cascading. Perl output: 1KB.
-- **2511.03798** — jheppub eqnarray recursion. Perl: 101 errors + fatal.
+1. Check `LaTeXML/` git log for new commits
+2. Port relevant fixes to Rust (engine, bindings, test files)
+3. Update expected XMLs when Perl test output changes
 
 ---
 

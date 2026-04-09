@@ -145,6 +145,7 @@ impl Graphics {
     let source = node.get_attribute("graphic")?;
 
     // Check candidates attribute first (comma-separated list of found files)
+    // Perl: findGraphicFile checks each candidate path, resolving relative to search paths.
     if let Some(candidates) = node.get_attribute("candidates") {
       // Pick the best candidate by desirability
       let mut best: Option<(String, i32)> = None;
@@ -153,8 +154,17 @@ impl Graphics {
         if path.is_empty() {
           continue;
         }
-        if Path::new(path).exists() {
-          let ext = Path::new(path)
+        // Try the path directly, then in each search directory
+        let resolved = if Path::new(path).exists() {
+          Some(path.to_string())
+        } else {
+          search_paths.iter().find_map(|sp| {
+            let candidate = format!("{}/{}", sp, path);
+            if Path::new(&candidate).exists() { Some(candidate) } else { None }
+          })
+        };
+        if let Some(resolved_path) = resolved {
+          let ext = Path::new(&resolved_path)
             .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("")
@@ -167,7 +177,7 @@ impl Graphics {
             .unwrap_or(false);
           let desirability = if is_same_type { 10 } else { d };
           if best.as_ref().is_none_or(|(_, bd)| desirability > *bd) {
-            best = Some((path.to_string(), desirability));
+            best = Some((resolved_path, desirability));
           }
         }
       }
@@ -420,14 +430,46 @@ impl Graphics {
     Some(rel_path.to_string_lossy().to_string())
   }
 
+  /// Extract `page=N` from graphicx options string.
+  /// Returns 1-based page number (matching graphicx convention), or None.
+  fn parse_page_option(options: &str) -> Option<u32> {
+    for opt in options.split(',') {
+      let opt = opt.trim();
+      if let Some((key, val)) = opt.split_once('=') {
+        if key.trim() == "page" {
+          // Strip braces: page={2} → 2
+          let val = val.trim().trim_matches('{').trim_matches('}');
+          return val.parse::<u32>().ok();
+        }
+      }
+    }
+    None
+  }
+
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
-  fn convert_image(source: &str, dest: &str, _dpi: u32) -> bool {
+  /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
+  fn convert_image(source: &str, dest: &str, _dpi: u32, page: Option<u32>) -> bool {
+    // Build the source argument with optional page selector
+    // Perl: image_read reads "$source[$page]" where $page = ($page // 1) - 1
+    let source_arg = if let Some(p) = page {
+      format!("{}[{}]", source, p.saturating_sub(1))
+    } else {
+      // No page specified: use [0] for PDFs to avoid converting all pages
+      if source.to_lowercase().ends_with(".pdf") {
+        format!("{}[0]", source)
+      } else {
+        source.to_string()
+      }
+    };
     // Shell out to convert (matching Perl's approach)
+    // -define pdf:use-cropbox=true matches Perl's Image::Magick option (line 466)
     let result = std::process::Command::new("convert")
+      .arg("-define")
+      .arg("pdf:use-cropbox=true")
       .arg("-density")
       .arg("150")
-      .arg(source)
+      .arg(&source_arg)
       .arg(dest)
       .output();
     match result {
@@ -471,9 +513,13 @@ impl Processor for Graphics {
     let effective_dpi = ((dpi as f64) * magnify / _zoomout) as u32;
     let n_to_process = nodes.len();
 
+    // Counter for generating unique resource names (like Perl's generateResourcePathname)
+    let mut resource_counter: u32 = 0;
+
     for node in &nodes {
       let mut node_mut = node.clone();
       let options = node.get_attribute("options").unwrap_or_default();
+      let page = Self::parse_page_option(&options);
       if let Some(source) = self.find_graphic_file(&doc, node, &search_paths) {
         let src_ext = Path::new(&source)
           .extension()
@@ -487,6 +533,8 @@ impl Processor for Graphics {
           .cloned()
           .unwrap_or(src_ext.clone());
         let needs_conversion = dest_type != src_ext;
+        // Perl: page option makes the transform non-trivial (image_graphicx_is_trivial)
+        let has_page = page.is_some();
 
         // Helper: apply graphicx transforms to raw dimensions
         let apply_transforms = |raw_dims: Option<(u32, u32)>| -> (Option<u32>, Option<u32>) {
@@ -500,19 +548,28 @@ impl Processor for Graphics {
           }
         };
 
-        if needs_conversion {
-          // Need format conversion (e.g., PDF/EPS → PNG)
-          let dest_name = Path::new(&source)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("image");
+        if needs_conversion || has_page {
+          // Need format conversion (e.g., PDF/EPS → PNG) or page extraction.
+          // When a page is specified, Perl generates a unique resource name (x1.png, x2.png, ...)
+          // via generateResourcePathname. We mimic this with a counter.
+          let dest_name = if has_page {
+            // Generate unique name like Perl's "x1", "x2", etc.
+            resource_counter += 1;
+            format!("x{}", resource_counter)
+          } else {
+            Path::new(&source)
+              .file_stem()
+              .and_then(|s| s.to_str())
+              .unwrap_or("image")
+              .to_string()
+          };
           let rel_dest = format!("{}.{}", dest_name, dest_type);
           let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
           if let Some(parent) = abs_dest.parent() {
             std::fs::create_dir_all(parent).ok();
           }
           let abs_dest_str = abs_dest.to_string_lossy().to_string();
-          if Self::convert_image(&source, &abs_dest_str, dpi) {
+          if Self::convert_image(&source, &abs_dest_str, dpi, page) {
             let (w, h) = apply_transforms(Self::read_image_dimensions(&abs_dest_str));
             Self::set_graphic_src(&mut node_mut, &rel_dest, w, h);
           } else {

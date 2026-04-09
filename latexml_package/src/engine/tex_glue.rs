@@ -107,8 +107,26 @@ LoadDefinitions!({
     }},
     // Perl: leaveHorizontal => 1
     before_digest => { leave_horizontal()?; },
-    properties => {stored_map!("isSpace" => true, "isSkip"=>true,
-      "isVerticalSpace" => true, "isBreak" => true) }
+    // Perl: height => $_[1] — stores glue value as height property
+    // so getSize() returns it, making \noalign{\vskip X} contribute to row spacing
+    properties => sub[args] {
+      // The Glue argument arrives as a RegisterValue wrapping the glue.
+      // Extract its base dimension for the height property.
+      let height: Stored = match args[0].as_ref() {
+        Some(d) => {
+          if let Some(dim) = d.get_dimension() {
+            Stored::Dimension(dim)
+          } else {
+            // Fallback: try converting via Stored
+            Stored::from(d.clone())
+          }
+        },
+        None => Stored::None,
+      };
+      Ok(stored_map!("isSpace" => true, "isSkip" => true,
+        "isVerticalSpace" => true, "isBreak" => true,
+        "height" => height))
+    }
   );
   // Remove skip, if last on LIST
   DefPrimitive!("\\unskip", {

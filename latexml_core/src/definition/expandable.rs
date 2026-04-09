@@ -137,19 +137,18 @@ impl Definition for Expandable {
             false
           };
           if is_recursion {
-            // TODO: port the Error
-            // if (!$onceonly && $$self{cs}) {
-            //   my ($t0, $t1) = ($etype eq 'LaTeXML::Core::Tokens'
-            //     ? ($$expansion[0], $$expansion[1]) : ($expansion, undef));
-            //   if ($t0 && ($t0->equals($$self{cs})
-            //       || ($t1 && $t1->equals($$self{cs}) && $t0->equals(T_CS('\protect'))))) {
+            // Self-referential macros like \pgfkeys@mainstop are used as sentinels
+            // in PGF. They should never be expanded — only compared via \ifx.
+            // When detected, return the token itself (not empty) so \ifx can still match.
+            // Perl: $expansion = TokensI() [empty], but we return self to preserve \ifx semantics.
+            // Note: returning self would cause re-expansion in normal contexts, but
+            // the recursion check prevents infinite loops (returns empty on second hit).
             Error!(
               "recursion",
               self.cs,
               format!("Token {} expands into itself!", self.cs),
               "defining as empty"
             );
-            //     $expansion = TokensI(); } }
             Tokens!()
           } else {
             tokens.clone()

@@ -163,12 +163,17 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
     "ltx:XMHint" => pmml_hint(doc, node),
     "ltx:XMArray" => pmml_array(doc, node),
     "ltx:XMText" => {
-      let text = node.get_content();
-      NodeData::Element {
-        tag: "m:mtext".to_string(),
-        attributes: None,
-        children: vec![NodeData::Text(text)],
+      // Perl L494-501: iterate over child nodes, not just text content.
+      // This preserves ltx:picture (SVG) elements inside XMText.
+      let mut children = Vec::new();
+      if let Some(child) = node.get_first_child() {
+        let mut current = Some(child);
+        while let Some(ref c) = current {
+          children.extend(super::pmml_text_aux(doc, c));
+          current = c.get_next_sibling();
+        }
       }
+      pmml_row(children)
     }
     _ => {
       NodeData::Element {

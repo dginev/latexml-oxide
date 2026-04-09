@@ -1370,20 +1370,16 @@ Hello</p>
     </tags>
     <title><tag close=" ">9</tag>Matrices</title>
     <para xml:id="S9.p1">
-      <picture height="42.43" width="659.22" xml:id="S9.p1.pic1">
-        <svg:svg height="42.43" overflow="visible" version="1.1" viewBox="0 0 659.22 42.43" width="659.22">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,42.43) matrix(1 0 0 -1 0 0) translate(329.62,0) translate(0,21.22) matrix(1.0 0.0 0.0 1.0 -325 16.6)">
-            <svg:foreignObject height="33.21" overflow="visible" style="--ltx-fo-width:46.98em;--ltx-fo-height:0em;--ltx-fo-depth:2.4em;" transform="matrix(1 0 0 -1 0 0)" width="650.01"><inline-block vattach="bottom">
-                <ERROR class="undefined"/>
-                <p width="0.0pt"/>
-                <p width="0.0pt"/>
-                <p><text font="nullfont"><svg:svg>
-                      <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -3.46 -2.98)">
-                        <svg:foreignObject height="5.96" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 5.96)" width="6.92"><text font="serif">a</text></svg:foreignObject>
-                      </svg:g>
-                      <svg:g/>
-                    </svg:svg></text></p>
-              </inline-block></svg:foreignObject>
+      <picture height="24.41" width="25.37" xml:id="S9.p1.pic1">
+        <svg:svg height="24.41" overflow="visible" version="1.1" viewBox="0 0 25.37 24.41" width="25.37">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,24.41) matrix(1 0 0 -1 0 0) translate(12.68,0) translate(0,12.2) matrix(1.0 0.0 0.0 1.0 -8.07 0)">
+            <svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 15.18)">
+              <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 7.59)">
+                <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" fill="#000000" stroke="#000000" transform="matrix(1 0 0 -1 0 0) translate(8.07,0) matrix(1.0 0.0 0.0 1.0 -3.46 -2.98)">
+                  <svg:foreignObject height="5.96" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 5.96)" width="6.92">a</svg:foreignObject>
+                </svg:g>
+              </svg:g>
+            </svg:g>
           </svg:g>
         </svg:svg>
       </picture>
