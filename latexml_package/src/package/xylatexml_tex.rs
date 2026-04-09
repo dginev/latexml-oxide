@@ -1216,68 +1216,8 @@ LoadDefinitions!({
     r"\let\xylinewidth@@\xylinewidth@",
   ))?;
 
-  // DEBUG: trace OBJECT@x centering via Rust primitives
-  DefPrimitive!("\\lx@xy@trace@objectx@before", {
-    let uc = xy_reg_dim("\\U@c"); let dc = xy_reg_dim("\\D@c");
-    let up = xy_reg_dim("\\U@p");
-    eprintln!("[BEFORE-OBJECTx] Uc={uc} Dc={dc} Up={up}");
-  });
-  DefPrimitive!("\\lx@xy@trace@objectx@after", {
-    let uc = xy_reg_dim("\\U@c"); let dc = xy_reg_dim("\\D@c");
-    let up = xy_reg_dim("\\U@p");
-    eprintln!("[AFTER-OBJECTx] Uc={uc} Dc={dc} Up={up}");
-  });
-  // Override OBJECT@x to: trace before, run original (which does \egroup + assignments),
-  // then trace after. But also override OBJECT@@ to trace the centering step.
-  DefPrimitive!("\\lx@xy@trace@objectat@center", {
-    let uc = xy_reg_dim("\\U@c"); let dc = xy_reg_dim("\\D@c");
-    let up = xy_reg_dim("\\U@p");
-    let htz = match state::lookup_register("\\ht0", Vec::new()) {
-      Ok(Some(RegisterValue::Dimension(d))) => d, _ => Dimension::new(0),
-    };
-    let dpz = match state::lookup_register("\\dp0", Vec::new()) {
-      Ok(Some(RegisterValue::Dimension(d))) => d, _ => Dimension::new(0),
-    };
-    let wdz = match state::lookup_register("\\wd0", Vec::new()) {
-      Ok(Some(RegisterValue::Dimension(d))) => d, _ => Dimension::new(0),
-    };
-    eprintln!("[OBJECTat-CENTER] Uc={uc} Dc={dc} Up={up} ht0={htz} dp0={dpz} wd0={wdz}");
-  });
-  DefPrimitive!("\\lx@xy@trace@objectat", {
-    let uc = xy_reg_dim("\\U@c"); let dc = xy_reg_dim("\\D@c");
-    // Check ht/dp/wd of box0 (\z@)
-    let htz = xy_reg_dim("\\ht0");
-    let dpz = xy_reg_dim("\\dp0");
-    let wdz = xy_reg_dim("\\wd0");
-    eprintln!("[OBJECTat] after centering: Uc={uc} Dc={dc} htz={htz} dpz={dpz} wdz={wdz}");
-  });
-  ::latexml_core::stomach::raw_tex(concat!(
-    r"\let\lx@xy@orig@OBJECTat\OBJECT@@",
-    r"\xydef@\OBJECT@@#1#2{\lx@xy@orig@OBJECTat{#1}{#2}\lx@xy@trace@objectat}",
-    r"\let\lx@xy@orig@OBJECTx\OBJECT@x",
-    r"\xydef@\OBJECT@x{\lx@xy@trace@objectx@before\lx@xy@orig@OBJECTx\lx@xy@trace@objectx@after}",
-  ))?;
-
-
-  // Fix: globalize edge values from \OBJECT@x so they survive \halign cell groups.
-  // In Perl LaTeXML, \halign cells don't create real TeX groups, so register
-  // assignments from \OBJECT@x survive naturally. In Rust, \halign cells DO create
-  // groups, so centered D@c/U@c/L@c/R@c values are lost when the cell ends.
-  // Solution: append \lx@xy@globalize@edges to OBJECT@x's toks, so it runs right
-  // after the \egroup + register assignments, globalizing them.
-  // Fix xy-pic centering: override \drop@ to globalize centered edge values.
-  // xy.tex's \OBJECT@@/\OBJECT@x compute centered D@c/U@c/L@c/R@c values.
-  // In Perl LaTeXML, \halign cells don't create real TeX groups, so the local
-  // assignments survive. In Rust, \halign cells DO create groups, so we need
-  // to globalize the edge values after \drop@ calls \object (which runs OBJECT@@/OBJECT@x).
-  //
-  // \drop@ (xy.tex L628) structure:
-  //   \global\setbox\lastobjectbox@=\object#1{#2}%   ← OBJECT@@/OBJECT@x sets centered values
-  //   ... uses D@c, U@c for Y@min/Y@max ...
-  //   \setboxz@h{\kern\dimen@ \raise\Y@c\box\lastobjectbox@}%
-  //   \ht\z@=\z@ \dp\z@=\z@ \wd\z@=\z@ {\Drop@@}
-  //
-  // We override \drop@ to: run original, then globalize the centered edge values.
+  // Infrastructure: globalize edge values from \OBJECT@x so they survive
+  // \halign cell groups. Currently unused but retained for potential future hookup.
   DefPrimitive!("\\lx@xy@globalize@edges", {
     let dc = xy_reg_dim("\\D@c");
     let uc = xy_reg_dim("\\U@c");
