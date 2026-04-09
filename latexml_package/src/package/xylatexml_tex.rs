@@ -1245,6 +1245,48 @@ LoadDefinitions!({
   ))?;
 
 
+  // Fix: globalize edge values from \OBJECT@x so they survive \halign cell groups.
+  // In Perl LaTeXML, \halign cells don't create real TeX groups, so register
+  // assignments from \OBJECT@x survive naturally. In Rust, \halign cells DO create
+  // groups, so centered D@c/U@c/L@c/R@c values are lost when the cell ends.
+  // Solution: append \lx@xy@globalize@edges to OBJECT@x's toks, so it runs right
+  // after the \egroup + register assignments, globalizing them.
+  // Fix xy-pic centering: override \drop@ to globalize centered edge values.
+  // xy.tex's \OBJECT@@/\OBJECT@x compute centered D@c/U@c/L@c/R@c values.
+  // In Perl LaTeXML, \halign cells don't create real TeX groups, so the local
+  // assignments survive. In Rust, \halign cells DO create groups, so we need
+  // to globalize the edge values after \drop@ calls \object (which runs OBJECT@@/OBJECT@x).
+  //
+  // \drop@ (xy.tex L628) structure:
+  //   \global\setbox\lastobjectbox@=\object#1{#2}%   ← OBJECT@@/OBJECT@x sets centered values
+  //   ... uses D@c, U@c for Y@min/Y@max ...
+  //   \setboxz@h{\kern\dimen@ \raise\Y@c\box\lastobjectbox@}%
+  //   \ht\z@=\z@ \dp\z@=\z@ \wd\z@=\z@ {\Drop@@}
+  //
+  // We override \drop@ to: run original, then globalize the centered edge values.
+  DefPrimitive!("\\lx@xy@globalize@edges", {
+    let dc = xy_reg_dim("\\D@c");
+    let uc = xy_reg_dim("\\U@c");
+    let lc = xy_reg_dim("\\L@c");
+    let rc = xy_reg_dim("\\R@c");
+    assign_register("\\D@c", RegisterValue::Dimension(dc), Some(Scope::Global), Vec::new())?;
+    assign_register("\\U@c", RegisterValue::Dimension(uc), Some(Scope::Global), Vec::new())?;
+    assign_register("\\L@c", RegisterValue::Dimension(lc), Some(Scope::Global), Vec::new())?;
+    assign_register("\\R@c", RegisterValue::Dimension(rc), Some(Scope::Global), Vec::new())?;
+  });
+  // Hook into \object to globalize edge values right after OBJECT@x completes.
+  // \object (xy.tex L942) = \hbox\bgroup\resetStyle@\object@
+  // After OBJECT@x's \egroup closes the \bgroup, the remaining tokens from
+  // OBJECT@x's \toks@ execute. We can't easily intercept between OBJECT@x and
+  // the caller. Instead, override \idfromc@ which is called right after \drop@'s
+  // \object call sets up the entry position.
+  // Actually: override \drop@ itself, reading the centered values AFTER \object:
+  // TODO: globalize centered edge values from OBJECT@x.
+  // Current approach: use \aftergroup to schedule globalization after the
+  // \halign cell group closes. The \aftergroup token is inserted during
+  // \OBJECT@@'s execution (after centering is computed).
+  // For now, disabled pending investigation of \drop@ override issues.
+
   // \lx@xy@notealignment — record alignment for matrix measurement (Perl L1062-1066)
 
   // Records the current Alignment object globally so \xymatrix@measureit can access
