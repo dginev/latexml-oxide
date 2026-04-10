@@ -218,7 +218,7 @@ impl Processor for XSLT {
     // via regex post-processing in the binary's run_post_processing.
     let result_string = result_doc.to_string_with_options(libxml::tree::SaveOptions {
       format: false,
-      no_declaration: false,
+      no_declaration: true, // HTML5: no <?xml version...?> prolog
       no_empty_tags: false,
       no_xhtml: false,
       xhtml: false,

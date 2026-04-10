@@ -172,7 +172,23 @@ LoadDefinitions!({
     "\\includegraphics[width=#4pt,height=#5pt]{#1}");
 
   // 2.14.2 Figure Captions
+  // Perl: \figcaption checks if inside a figure environment.
+  // If yes → \caption; if no → \@figcaption (wraps in figure env).
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
+  DefMacro!("\\figcaption[]", sub[(opt_arg)] {
+    let env = state::lookup_string("current_environment");
+    if env.contains("figure") {
+      // Inside figure: act as \caption
+      if let Some(opt) = opt_arg {
+        Ok(Tokens!(T_CS!("\\caption"), T_OTHER!("["), opt, T_OTHER!("]")))
+      } else {
+        Ok(Tokens!(T_CS!("\\caption")))
+      }
+    } else {
+      // Outside figure: wrap in \@figcaption
+      Ok(Tokens!(T_CS!("\\@figcaption")))
+    }
+  });
 
   // 2.15 Tables
   RequirePackage!("deluxetable");

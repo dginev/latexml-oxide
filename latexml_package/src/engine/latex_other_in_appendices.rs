@@ -384,6 +384,14 @@ LoadDefinitions!({
            Package #1 Info: #2%
         }%
      }
+     \def\PackageNote#1#2{%
+       \GenericWarning{%
+           (#1) \@spaces\@spaces\@spaces
+        }{%
+           Package #1 Info: #2%
+        }%
+     }
+     \def\PackageNoteNoLine#1#2{\PackageNote{#1}{#2\@gobble}}
      \def\ClassError#1#2#3{%
        \GenericError{%
            (#1) \space\@spaces\@spaces\@spaces
