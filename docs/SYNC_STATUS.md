@@ -291,6 +291,18 @@ Track each ramp-up round here:
 - **Root cause:** Archive contained `rapid07.TEX` (uppercase). `find_main_tex` only matched `.tex`/`.txt`.
 - **Fix:** Case-insensitive extension check via `to_ascii_lowercase()` in both cortex_worker and latexml_oxide.
 
+#### [ ] D4. SVG processor pipeline integration (BLOCKED)
+The `latexml_post::svg::SVG` processor exists (522-line port of Perl `LaTeXML::Post::SVG`) but is **never invoked** in the post-processing pipeline. This means picture environments (`\put`, `\line`, `\bezier`, `\circle`, etc.) are processed into intermediate `<ltx:line>`, `<ltx:circle>` etc., but the XSLT picture template at `LaTeXML-picture-xhtml.xsl:35-47` requires `<svg:svg>` children to render as SVG. Without the SVG processor, the XSLT falls through to the "as-TeX" mode which emits an empty span.
+
+**Result:** All TeX picture-environment figures (Feynman diagrams, simple line drawings) render as empty boxes in HTML. The arxiv PDF renders these correctly because pdfTeX directly draws the picture commands.
+
+**Status:** Attempted to wire SVG processor in `latexml_oxide/src/post.rs` between Graphics and Split phases. **Result: XSLT segfault.** libxslt crashes on the document after the SVG processor adds `svg:` namespaced elements via `replace_node`. Needs investigation of namespace handling round-trip (serialize → re-parse for transform).
+
+**Next steps:**
+1. Debug why libxslt segfaults on documents with `svg:*` elements after SVG processor runs
+2. May need to manually preserve namespace declarations through the serialize/re-parse cycle
+3. Or investigate whether libxslt needs different namespace registration
+
 **Remaining errors at 128-paper scale (10 `conversion_error`):**
 - `Missing $` display math (0704.3480, 0707.0739) — document structure
 - `colordvi` `\ifglobalcolors` (0705.1190) — unsupported niche package

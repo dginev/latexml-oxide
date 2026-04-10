@@ -115,6 +115,24 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     doc
   };
 
+  // Phase 2.6: SVG (convert ltx:picture children to svg:svg + svg:* elements)
+  // Without this, the XSLT picture template falls back to "as-TeX" mode and
+  // emits an empty span — figures with picture-environment content are lost.
+  // TEMPORARILY DISABLED: causes XSLT segfault, needs investigation
+  // let mut svg_proc = latexml_post::svg::SVG::new();
+  // let svg_nodes = svg_proc.to_process(&doc);
+  // let doc = if !svg_nodes.is_empty() {
+  //   match svg_proc.process(doc, svg_nodes) {
+  //     Ok(mut docs) => docs.remove(0),
+  //     Err(e) => {
+  //       eprintln!("Post-processing: SVG failed: {}", e);
+  //       return xml.to_string();
+  //     }
+  //   }
+  // } else {
+  //   doc
+  // };
+
   // Phase 2.75: Split
   let doc = if split {
     if let Some(ref xpath) = split_xpath {

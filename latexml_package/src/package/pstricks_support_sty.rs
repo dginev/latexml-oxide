@@ -45,6 +45,8 @@ LoadDefinitions!({
   DefMacro!("\\pswedge[]", "");
   DefMacro!("\\psbezier[]", "");
   DefMacro!("\\pscurve[]", "");
+  DefMacro!("\\psecurve[]", "");
+  DefMacro!("\\psccurve[]", "");
   DefMacro!("\\parabola[]", "");
 
   // Placement — Perl L700-900
