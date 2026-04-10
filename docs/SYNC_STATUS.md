@@ -291,18 +291,6 @@ Track each ramp-up round here:
 - **Root cause:** Archive contained `rapid07.TEX` (uppercase). `find_main_tex` only matched `.tex`/`.txt`.
 - **Fix:** Case-insensitive extension check via `to_ascii_lowercase()` in both cortex_worker and latexml_oxide.
 
-#### [ ] D4. SVG processor pipeline integration (BLOCKED)
-The `latexml_post::svg::SVG` processor exists (522-line port of Perl `LaTeXML::Post::SVG`) but is **never invoked** in the post-processing pipeline. This means picture environments (`\put`, `\line`, `\bezier`, `\circle`, etc.) are processed into intermediate `<ltx:line>`, `<ltx:circle>` etc., but the XSLT picture template at `LaTeXML-picture-xhtml.xsl:35-47` requires `<svg:svg>` children to render as SVG. Without the SVG processor, the XSLT falls through to the "as-TeX" mode which emits an empty span.
-
-**Result:** All TeX picture-environment figures (Feynman diagrams, simple line drawings) render as empty boxes in HTML. The arxiv PDF renders these correctly because pdfTeX directly draws the picture commands.
-
-**Status:** Attempted to wire SVG processor in `latexml_oxide/src/post.rs` between Graphics and Split phases. **Result: XSLT segfault.** libxslt crashes on the document after the SVG processor adds `svg:` namespaced elements via `replace_node`. Needs investigation of namespace handling round-trip (serialize → re-parse for transform).
-
-**Next steps:**
-1. Debug why libxslt segfaults on documents with `svg:*` elements after SVG processor runs
-2. May need to manually preserve namespace declarations through the serialize/re-parse cycle
-3. Or investigate whether libxslt needs different namespace registration
-
 **Remaining errors at 128-paper scale (10 `conversion_error`):**
 - `Missing $` display math (0704.3480, 0707.0739) — document structure
 - `colordvi` `\ifglobalcolors` (0705.1190) — unsupported niche package
@@ -374,6 +362,60 @@ This requires solving the crate dependency ordering (latexml_oxide depends on la
 
 #### [ ] E6. Type-safe dump representation
 Ensure the text dump format is loaded into well-typed data tables where each row is one entry (current `dump_reader` approach). Verify that the representation uses proper Rust types (not stringly-typed) for registers, dimensions, glue, tokens, etc.
+
+---
+
+### Phase G: SVG Post-Processor Pipeline Integration (SECOND HIGHEST PRIORITY — after Phase E)
+
+**Test paper:** `0711.0221` (Brodsky/de Téramond holographic QCD paper with Feynman diagram in `\begin{picture}` environment using `\put`, `\line`, `\bezier`, `\circle`, `\vector`).
+
+**Problem:** All TeX `picture` environment figures (Feynman diagrams, simple line drawings, schematic illustrations) render as **empty `<span>` elements** in our HTML output. The arxiv PDF renders these correctly because pdfTeX directly draws the picture commands. Our pipeline loses them entirely.
+
+**Root cause traced through the full pipeline:**
+
+1. **Engine layer (correct):** `latexml_package` correctly processes `\put`, `\line`, `\bezier`, `\circle` into intermediate `<ltx:line>`, `<ltx:bezier>`, `<ltx:circle>`, `<ltx:g>` elements inside `<ltx:picture>`. Verified via `latexml_oxide --format=xml` — the intermediate XML has all the picture content with proper attributes.
+
+2. **Post-processing pipeline (gap):** The `latexml_post::svg::SVG` processor exists at `latexml_post/src/svg.rs` (522-line port of Perl `LaTeXML::Post::SVG`) and is fully implemented with `Processor` trait impl. **It is never invoked** in `latexml_oxide/src/post.rs`. The pipeline goes Scan → Bibliography → CrossRef → Graphics → Split → MathML → XSLT, **with no SVG step**.
+
+3. **XSLT layer (expects SVG):** `resources/XSLT/LaTeXML-picture-xhtml.xsl` lines 35-47 explicitly requires `<svg:svg>` children inside `<ltx:picture>` for SVG rendering:
+   ```xml
+   <xsl:template match="ltx:picture">
+     <xsl:choose>
+       <xsl:when test="svg:svg and $USE_SVG">  ← needs <svg:svg>
+         <xsl:apply-templates select="." mode="as-svg"/>
+       </xsl:when>
+       <xsl:when test="@imagesrc">  ← or @imagesrc attribute
+         <xsl:apply-templates select="." mode="as-image"/>
+       </xsl:when>
+       <xsl:otherwise>
+         <xsl:apply-templates select="." mode="as-TeX"/>  ← FALLBACK: empty span
+       </xsl:otherwise>
+     </xsl:choose>
+   </xsl:template>
+   ```
+   Without `<svg:svg>` wrapping, it falls through to `as-TeX` mode which emits an empty span.
+
+**Failed attempt (committed but disabled):** Wired the SVG processor into `post.rs` between Graphics and Split phases. **Result: libxslt segfault.** libxslt crashes when processing documents that have `svg:` namespaced elements added via `replace_node`. The current code is `// TEMPORARILY DISABLED` in `latexml_oxide/src/post.rs:117-130`.
+
+**Hypothesis:** The XSLT processor serializes the document via `to_xml_string()` then re-parses it. Namespace declarations may not survive this round-trip cleanly when added dynamically by `replace_node`. libxml2 may emit elements without proper namespace context, causing libxslt to dereference invalid pointers.
+
+#### [ ] G1. Investigate libxslt segfault
+1. Reproduce with minimal test case: `\begin{picture}(100,100)\put(50,50){test}\end{picture}` in a document
+2. Add diagnostic output to print serialized XML before XSLT
+3. Check if `svg:` namespace is properly declared on root element
+4. Compare with Perl LaTeXML's intermediate XML for the same input
+
+#### [ ] G2. Fix namespace round-trip
+Options to try:
+- **Add namespace pre-declaration**: ensure `xmlns:svg="..."` is on root element before SVG processor runs
+- **Skip serialize/re-parse**: pass libxml2 doc directly to libxslt without round-trip
+- **Use libxml2 namespace API correctly**: verify `Namespace::new()` properly registers on parent before children are added
+
+#### [ ] G3. Enable SVG processor
+Once libxslt no longer segfaults, uncomment the wiring in `latexml_oxide/src/post.rs` lines 117-130. Verify with `0711.0221` — the Feynman diagram in Figure 1 should render as visible SVG with arrows, lines, and bezier curves.
+
+#### [ ] G4. Add SVG test
+Create a test in `latexml_oxide/tests/picture/` with a simple `\begin{picture}` containing `\put`, `\line`, `\bezier`, `\circle`. Expected output should have `<svg:svg>` with the corresponding `<svg:line>`, `<svg:circle>`, `<svg:path>` elements.
 
 ---
 

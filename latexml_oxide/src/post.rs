@@ -230,6 +230,12 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(results) => {
       let output = results[0].to_xml_string();
       if stylesheet.is_some_and(|s| s.contains("html")) {
+        // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
+        // libxml2's to_string() includes it by default; we strip it here.
+        let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")
+          .unwrap()
+          .replace(&output, "")
+          .to_string();
         let re = regex::Regex::new(
           r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
         )
