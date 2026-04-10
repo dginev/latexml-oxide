@@ -111,6 +111,8 @@ LoadDefinitions!({
   // Pre-define theorem environments — Perl uses \spnewtheorem with capfont/bodyfont
   RawTeX!("\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}");
   RawTeX!("\\@ifundefined{claim}{\\newtheorem*{claim}{Claim}}{}");
+  RawTeX!("\\@ifundefined{proof}{\\newtheorem*{proof}{Proof}}{}");
+  RawTeX!("\\@ifundefined{case}{\\newtheorem*{case}{Case}}{}");
   RawTeX!("\\@ifundefined{conjecture}{\\newtheorem{conjecture}[theorem]{Conjecture}}{}");
   RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}[theorem]{Corollary}}{}");
   RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}[theorem]{Definition}}{}");

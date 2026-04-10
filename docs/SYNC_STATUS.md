@@ -338,11 +338,16 @@ Programmatically collect all CS names defined by our `LoadDefinitions!` macros. 
 #### [ ] E4. Enable dump loading
 Uncomment `latex_dump::load_definitions()` in `latex.rs` with the selective loader. Verify all 407 tests pass. Then verify the 10k sandbox improves.
 
-#### [ ] E5. Commit dump to repo
-Add `resources/dumps/latex.dump.txt` to git. Document regeneration in CLAUDE.md:
-```
-cargo run --release --bin latexml_oxide -- --init=latex.ltx
-```
+#### [ ] E5. Auto-generate dump during build
+The dump is TexLive-version-dependent — it MUST match the local TexLive installation (raw `.cls`/`.sty` files). Do NOT commit it to git. Instead, `build.rs` must generate it automatically:
+1. First pass: `cargo build` compiles `latexml_oxide` without dump (no-op stub)
+2. `build.rs` detects missing dump, invokes the freshly-built `latexml_oxide --init=latex.ltx`
+3. Embeds the generated dump via `include_str!`
+4. Triggers a recompile of `latexml_package` to use the new dump
+
+This requires solving the crate dependency ordering (latexml_oxide depends on latexml_package, but build.rs needs latexml_oxide). Options:
+- **Two-phase cargo build**: `build.rs` shells out to `cargo build --bin latexml_oxide` as a subprocess
+- **Separate bootstrap binary**: minimal `latexml_dump_gen` binary in a separate crate that generates dumps
 
 #### [ ] E6. Type-safe dump representation
 Ensure the text dump format is loaded into well-typed data tables where each row is one entry (current `dump_reader` approach). Verify that the representation uses proper Rust types (not stringly-typed) for registers, dimensions, glue, tokens, etc.

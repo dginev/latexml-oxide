@@ -28,3 +28,4 @@ latexml_package/src/engine/*_dump.rs
 
 # Post-processing test actual output
 *-post-actual.xml
+resources/dumps/

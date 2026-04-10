@@ -224,14 +224,19 @@ LoadDefinitions!({
     }
   });
 
-  // # adapted from graphicx.sty.ltxml
-  // DefKeyVal('SpecialPS', 'angle',   '');
-  // DefKeyVal('SpecialPS', 'voffset', '');
-  // DefKeyVal('SpecialPS', 'hoffset', '');
-  // DefKeyVal('SpecialPS', 'hsize',   '');
-  // DefKeyVal('SpecialPS', 'vsize',   '');
-  // DefKeyVal('SpecialPS', 'hscale',  '');
-  // DefKeyVal('SpecialPS', 'vscale',  '');
+  // Adapted from graphicx.sty.ltxml — handles \special{...} graphics
+  DefKeyVal!("SpecialPS", "angle", "");
+  DefKeyVal!("SpecialPS", "voffset", "");
+  DefKeyVal!("SpecialPS", "hoffset", "");
+  DefKeyVal!("SpecialPS", "hsize", "");
+  DefKeyVal!("SpecialPS", "vsize", "");
+  DefKeyVal!("SpecialPS", "hscale", "");
+  DefKeyVal!("SpecialPS", "vscale", "");
+  // Simplified: just include the graphic without complex sizer logic
+  DefConstructor!("\\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim",
+    "<ltx:graphics graphic='#2'/>"
+  );
+  // Original Perl (more complete):
   // DefConstructor('\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim',
   //   "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
   //   sizer      => \&image_graphicx_sizer,

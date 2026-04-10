@@ -76,6 +76,9 @@ LoadDefinitions!({
   DefMacro!("\\linethickness{}", "\\@wholewidth #1\\relax");
   DefMacro!("\\arrowlength{}", None);
   DefMacro!("\\qbeziermax", "500");
+  // Perl: \bezier — LaTeX 2.09 compat alias for \qbezier with different syntax
+  DefMacro!("\\bezier Until:(", "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi");
+  DefMacro!("\\lx@pic@bezier{} Pair Pair Pair", "\\qbezier[#1]#2#3#4");
   DefMacro!("\\@killglue", "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}");
 
   // Tag: ltx:picture — auto-generate ID with "pic" prefix
