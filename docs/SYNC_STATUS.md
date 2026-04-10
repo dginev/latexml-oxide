@@ -211,7 +211,18 @@ Track each ramp-up round here:
 | 3''   | 16    | 15 | 0       | 1      | 0704.3480: `Missing $` (document issue) |
 | 4''   | 32    | 26 | 4       | 2      | 0705.1277 (2.09 compat), 0705.2808 (mode) |
 |       |       |    |         |        | **Applied fixes 10-12, clean slate restart** |
-| 5     | 128   |111 | 7       | 10     | 87% OK. xypic (4), display math (2), misc (4) |
+| 5     | 128   |114 | 8       | 6      | 89.1% OK after fixes 13-15 |
+| 6     | 256   |219 | 13      | 23     | 85.5% OK. See error analysis below |
+
+**256-paper error analysis (session 99):**
+- **Mode mismatch** `\end{document}` (6 papers) — cumulative bgroup imbalance, extra `internal_vertical` frame at document end. Root cause: raw TeX classes (jpsj2, etc.) calling `\LoadClass{article}` but `article.cls` binding counter/mode setup not reached.
+- **`\the@equationgroup@ID`** (2 papers: jpsj2 class) — counter defined in article.cls binding but jpsj2 loads article via raw `\LoadClass` which doesn't trigger our binding. Root cause: raw TeX → binding interaction for `\LoadClass`.
+- **`\includegraphics`** (mn2e, adassconf) — package loading gaps in specific classes.
+- **Missing $** (2 papers) — display math delimiter mismatch in document.
+- **Document nesting** (3 papers) — equation in XMath, section in acknowledgements.
+- **Other single-paper issues** — colordvi, psecurve, Rset, Deff, toc.tex.
+
+**Key insight:** Many errors trace to raw TeX classes that call `\LoadClass{article}` — the base class binding definitions (counters, modes, etc.) are not reached because `\LoadClass` in raw TeX context doesn't always trigger our compiled `.cls.ltxml` bindings. This is the same issue Phase E (kernel dump) is designed to solve.
 
 #### [ ] D2. Coverage fixes
 
