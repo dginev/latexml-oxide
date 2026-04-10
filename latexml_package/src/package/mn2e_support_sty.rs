@@ -7,6 +7,11 @@ LoadDefinitions!({
   // Dependencies
   RequirePackage!("natbib");
 
+  // Perl: mn2e_support.sty.ltxml L19-20 — load graphicx if option was set
+  if state::lookup_int("@usegraphicx") != 0 {
+    RequirePackage!("graphicx");
+  }
+
   // Frontmatter — Perl L28-46
   DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
   DefMacro!("\\newauthor", "");
