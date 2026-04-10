@@ -9,7 +9,7 @@ use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
 use latexml_core::common::xml::*;
 use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
-use latexml_core::{Error, Fatal, fatal, map, s, static_map, sym_map};
+use latexml_core::{Error, Fatal, Warn, fatal, map, s, static_map, sym_map};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -1430,10 +1430,14 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document) ->
       (*bp, rec_form)
     }
   } else if role == "POSTFIX" {
-    (
-      10000,
-      textrec(&args[0], Some(10000), Some(name), document) + &textrec(op, None, None, document),
-    )
+    if args.is_empty() {
+      (10000, textrec(op, None, None, document))
+    } else {
+      (
+        10000,
+        textrec(&args[0], Some(10000), Some(name), document) + &textrec(op, None, None, document),
+      )
+    }
   } else if name == "multirelation" {
     let joined = args
       .iter()
@@ -1550,11 +1554,12 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
         // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .
         // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-        let err = || {
-          Error!("expected", "id", message);
+        // Perl Document.pm L1553: Warn, not Error (missing XMRef targets are common)
+        let warn_fn = || -> Result<()> {
+          Warn!("expected", "id", message);
           Ok(())
         };
-        err().ok();
+        warn_fn().ok();
         //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
       }
     }

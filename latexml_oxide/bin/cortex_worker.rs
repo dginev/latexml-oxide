@@ -293,40 +293,281 @@ fn unpack_archive(archive_path: &Path) -> Result<(TempDir, String), Box<dyn Erro
   Ok((tempdir, main_tex))
 }
 
+/// Faithful port of Perl Pack.pm detect_source / arXiv::FileGuess.
+/// Identical to the find_main_tex in latexml_oxide.rs.
 fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
-  // Simple heuristic: find the .tex file with \documentclass
-  let mut candidates: Vec<PathBuf> = Vec::new();
-  for entry in fs::read_dir(dir)? {
-    let entry = entry?;
-    let path = entry.path();
-    if path.extension().map_or(false, |e| e == "tex") {
-      candidates.push(path);
+  use once_cell::sync::Lazy;
+  use regex::Regex;
+
+  // Phase I.1: Check 00README.json (2025 arXiv format)
+  if let Some(filename) = parse_readme_json(dir) {
+    let main_path = dir.join(&filename);
+    if main_path.exists() {
+      return Ok(main_path.to_string_lossy().to_string());
     }
   }
 
-  if candidates.is_empty() {
-    return Err("No .tex files found in archive".into());
-  }
-  if candidates.len() == 1 {
-    return Ok(candidates[0].to_string_lossy().to_string());
-  }
-
-  // Check for \documentclass
-  for c in &candidates {
-    if let Ok(content) = fs::read_to_string(c) {
-      if content.contains("\\documentclass") {
-        return Ok(c.to_string_lossy().to_string());
+  // Phase I.1.2: Check 00README.XXX (legacy arXiv format)
+  let readme_xxx = dir.join("00README.XXX");
+  if readme_xxx.exists() {
+    if let Ok(content) = fs::read_to_string(&readme_xxx) {
+      for line in content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 && parts[1] == "toplevelfile" {
+          let main_path = dir.join(parts[0]);
+          if main_path.exists() {
+            return Ok(main_path.to_string_lossy().to_string());
+          }
+        }
       }
     }
   }
 
-  // Fallback: largest file
-  candidates.sort_by(|a, b| {
-    let sa = fs::metadata(a).map(|m| m.len()).unwrap_or(0);
-    let sb = fs::metadata(b).map(|m| m.len()).unwrap_or(0);
-    sb.cmp(&sa)
-  });
+  // Phase I.2: Heuristic detection (ported from arXiv::FileGuess via Pack.pm)
+  fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    if let Ok(entries) = fs::read_dir(dir) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+          collect_tex_files(&path, files);
+        } else if path.extension().is_some_and(|e| {
+          let e = e.to_ascii_lowercase();
+          e == "tex" || e == "txt"
+        }) {
+          files.push(path);
+        }
+      }
+    }
+  }
+
+  let mut tex_files: Vec<PathBuf> = Vec::new();
+  collect_tex_files(dir, &mut tex_files);
+  if tex_files.is_empty() {
+    return Err("No .tex files found in archive".into());
+  }
+
+  // Regexes for content-based detection (Perl Pack.pm L116-166)
+  static RE_AUTOIGNORE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-ignore").unwrap());
+  static RE_TEXINFO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\input texinfo").unwrap());
+  static RE_AUTOINCLUDE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-include").unwrap());
+  static RE_FORMAT_HINT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
+  static RE_DOCCLASS: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
+  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap());
+  static RE_INPUT_INCLUDE: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
+  static RE_END_BYE: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_END_BYE2: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_MAC_TEX: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
+  static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
+  static RE_BIBTEX: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
+  static RE_UUENCODE: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
+  static RE_WITHDRAWN: Lazy<Regex> = Lazy::new(||
+    Regex::new(r"paper deliberately replaced by what little").unwrap());
+  static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+
+  // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
+  let mut likelihood: std::collections::HashMap<PathBuf, f32> = std::collections::HashMap::new();
+  let mut vetoed: Vec<PathBuf> = Vec::new();
+
+  for tex_file in &tex_files {
+    if !tex_file.exists() { continue; }
+    let Ok(raw) = fs::read(tex_file) else { continue };
+    let content = String::from_utf8_lossy(&raw);
+    let mut maybe_tex = false;
+    let mut maybe_tex_priority = false;
+    let mut maybe_tex_priority2 = false;
+    let mut determined = false;
+
+    for (lineno, raw_line) in content.lines().enumerate() {
+      let lineno1 = lineno + 1;
+      if lineno1 <= 10 && (RE_AUTOIGNORE.is_match(raw_line)
+        || RE_TEXINFO.is_match(raw_line)
+        || RE_AUTOINCLUDE.is_match(raw_line))
+      {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+      if lineno1 <= 12 {
+        if let Some(cap) = RE_FORMAT_HINT.captures(raw_line) {
+          let fmt = &cap[1];
+          if fmt == "latex209" || fmt == "biglatex" || fmt == "latex" || fmt == "LaTeX" {
+            likelihood.insert(tex_file.clone(), 3.0);
+          } else {
+            likelihood.insert(tex_file.clone(), 1.0);
+          }
+          determined = true; break;
+        }
+      }
+      // Perl L128: strip comments for subsequent checks
+      let line = if let Some(pos) = raw_line.find('%') { &raw_line[..pos] } else { raw_line };
+
+      if RE_DOCCLASS.is_match(line) {
+        likelihood.insert(tex_file.clone(), 3.0);
+        determined = true; break;
+      }
+      if RE_MAYBE_TEX.is_match(line) {
+        maybe_tex = true;
+      }
+      if let Some(cap) = RE_INPUT_INCLUDE.captures(line) {
+        maybe_tex = true;
+        let mut vetoed_name = cap[1].to_string();
+        if RE_AMSTEX.is_match(&vetoed_name) {
+          likelihood.insert(tex_file.clone(), 2.0);
+          determined = true; break;
+        }
+        if !vetoed_name.contains('.') {
+          vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
+        }
+        let base_dir = tex_file.parent().unwrap_or(dir);
+        vetoed.push(base_dir.join(&vetoed_name));
+      }
+      if RE_END_BYE.is_match(line) { maybe_tex_priority = true; }
+      if RE_END_BYE2.is_match(line) { maybe_tex_priority2 = true; }
+      if RE_MAC_TEX.is_match(line) {
+        likelihood.insert(tex_file.clone(), 1.0);
+        determined = true; break;
+      }
+      if RE_METAFONT.is_match(line) {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+      if RE_BIBTEX.is_match(raw_line) {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+      if RE_UUENCODE.is_match(raw_line) {
+        if maybe_tex_priority {
+          likelihood.insert(tex_file.clone(), 2.0);
+        } else if maybe_tex {
+          likelihood.insert(tex_file.clone(), 1.0);
+        } else {
+          likelihood.insert(tex_file.clone(), 0.0);
+        }
+        determined = true; break;
+      }
+      if RE_WITHDRAWN.is_match(line) {
+        likelihood.insert(tex_file.clone(), 0.0);
+        determined = true; break;
+      }
+    }
+    if !determined {
+      let score = if maybe_tex_priority { 2.0 }
+        else if maybe_tex_priority2 { 1.5 }
+        else if maybe_tex { 1.0 }
+        else { 0.0 };
+      likelihood.insert(tex_file.clone(), score);
+    }
+  }
+
+  // Remove vetoed files
+  for v in &vetoed {
+    likelihood.remove(v);
+  }
+
+  // Filter to score > 0, sort by score descending
+  let mut candidates: Vec<PathBuf> = likelihood.keys()
+    .filter(|f| likelihood[*f] > 0.0)
+    .cloned()
+    .collect();
+  candidates.sort_by(|a, b| likelihood[b].partial_cmp(&likelihood[a]).unwrap());
+
+  if candidates.is_empty() {
+    return Err("No viable .tex files found in archive".into());
+  }
+
+  // Keep only max-scoring candidates
+  let max_score = likelihood[&candidates[0]];
+  candidates.retain(|f| (likelihood[f] - max_score).abs() < f32::EPSILON);
+
+  // Heuristic 1: prefer shallowest path
+  if candidates.len() > 1 {
+    let min_depth = candidates.iter()
+      .map(|f| f.strip_prefix(dir).unwrap_or(f).components().count())
+      .min().unwrap_or(0);
+    candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
+  }
+
+  // Heuristic 2: prefer files with PDF-like \includegraphics
+  if candidates.len() > 1 {
+    let pdf_candidates: Vec<PathBuf> = candidates.iter()
+      .filter(|f| {
+        fs::read(f).ok().is_some_and(|raw| {
+          let c = String::from_utf8_lossy(&raw);
+          c.contains("\\includegraphics") &&
+          (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+        })
+      })
+      .cloned().collect();
+    if !pdf_candidates.is_empty() {
+      candidates = pdf_candidates;
+    }
+  }
+
+  // Heuristic 3: prefer files with a matching .bbl file
+  if candidates.len() > 1 {
+    let bbl_candidates: Vec<PathBuf> = candidates.iter()
+      .filter(|f| f.with_extension("bbl").exists())
+      .cloned().collect();
+    if !bbl_candidates.is_empty() {
+      candidates = bbl_candidates;
+    }
+  }
+
+  // Heuristic 4: prefer common main file names
+  if candidates.len() > 1 {
+    let common: Vec<PathBuf> = candidates.iter()
+      .filter(|f| f.file_name().is_some_and(|n| {
+        let n = n.to_str().unwrap_or("");
+        n == "main.tex" || n == "ms.tex" || n == "paper.tex"
+      }))
+      .cloned().collect();
+    if !common.is_empty() {
+      candidates = common;
+    }
+  }
+
+  // Final tiebreaker: lexicographic order
+  candidates.sort();
   Ok(candidates[0].to_string_lossy().to_string())
+}
+
+/// Parse 00README.json for toplevel source filename.
+fn parse_readme_json(dir: &Path) -> Option<String> {
+  let content = fs::read_to_string(dir.join("00README.json")).ok()?;
+  let sources_start = content.find("\"sources\"")?;
+  let rest = &content[sources_start..];
+  let arr_start = rest.find('[')?;
+  let arr_end = rest.find(']')?;
+  let arr = &rest[arr_start + 1..arr_end];
+  for obj_str in arr.split('}') {
+    if !obj_str.contains("\"toplevel\"") { continue; }
+    if let Some(fn_pos) = obj_str.find("\"filename\"") {
+      let after_key = &obj_str[fn_pos + 10..];
+      let after_key = after_key.trim_start();
+      let after_key = after_key.strip_prefix(':')?;
+      let after_key = after_key.trim_start();
+      let after_key = after_key.strip_prefix('"')?;
+      let mut result = String::new();
+      for ch in after_key.chars() {
+        match ch {
+          '"' => break,
+          '\\' => continue,
+          c => result.push(c),
+        }
+      }
+      if !result.is_empty() {
+        return Some(result);
+      }
+    }
+  }
+  None
 }
 
 fn pack_output_zip_with_resources(

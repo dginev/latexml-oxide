@@ -84,6 +84,59 @@ LoadDefinitions!({
 
   // TODO: load_dump
   // TODO: load_latex
+
+  //======================================================================
+  // LaTeX 2.09 compatibility
+  //----------------------------------------------------------------------
+  // Perl: TeX.pool.ltxml L60-65
+  // \documentstyle[opts]{class} — LaTeX 2.09 command.
+  // Perl loads LaTeX.pool then re-queues \documentstyle token.
+  // Since our \documentclass already loads LaTeX.pool on first encounter,
+  // we can simply redirect \documentstyle → \documentclass.
+  // Perl: TeX.pool.ltxml L60-65
+  // Reads [options]{class}, loads LaTeX (or AmSTeX) pool, then re-emits
+  // \documentclass [options]{class} for the now-loaded LaTeX pool to handle.
+  DefMacro!("\\documentstyle[]{}", sub[(options_opt, class_tks)] {
+    let class = class_tks.to_string();
+    let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
+    input_definitions(pool, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("pool")),
+      ..InputDefinitionOptions::default()
+    })?;
+
+    state::assign_value("2.09_COMPATIBILITY", true, Some(Scope::Global));
+
+    // In LaTeX 2.09, options are both class options AND packages to load.
+    // First load the class, then try to load each option as a package.
+    let mut result = Tokens!(T_CS!("\\documentclass"));
+    if let Some(ref opts) = options_opt {
+      let opts: &Tokens = opts;
+      result = Tokens!(result, T_OTHER!("["), opts.clone(), T_OTHER!("]"));
+    }
+    result = Tokens!(result, T_BEGIN!(), class_tks, T_END!());
+
+    // After class loads, try each option as a package (Perl \compat@loadpackages)
+    if let Some(opts) = options_opt {
+      let opts_str = opts.to_string();
+      for opt in opts_str.split(',') {
+        let opt = opt.trim();
+        if opt.is_empty() { continue; }
+        // Skip numeric options (10pt, 11pt, 12pt) and known class options
+        if opt.ends_with("pt") || opt == "landscape" || opt == "twocolumn"
+          || opt == "onecolumn" || opt == "draft" || opt == "final"
+          || opt == "preprint" || opt == "tighten" || opt == "manuscript" {
+          continue;
+        }
+        result = Tokens!(result,
+          T_CS!("\\IfFileExists"),
+          T_BEGIN!(), Explode!(format!("{opt}.sty")), T_END!(),
+          T_BEGIN!(), T_CS!("\\RequirePackage"), T_BEGIN!(), Explode!(opt), T_END!(), T_END!(),
+          T_BEGIN!(), T_END!()
+        );
+      }
+    }
+    Ok(result)
+  });
 });
 
 // Perl: TeX_Job.pool.ltxml — \today macro

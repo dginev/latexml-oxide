@@ -42,12 +42,15 @@ LoadDefinitions!({
   // leaks into babel's \bbl@load@language which uses \CurrentOption at L4177).
   RawTeX!(r"\let\CurrentOption\@empty");
 
-  InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // Ensure \@fontenc@load@list has the proper \@elt{enc} format that babel expects.
+  // Babel's \AtBeginDocument code (L3931-3933) does:
+  //   \edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}
+  // \@gobbletwo eats two tokens: \@elt and {OT1}. With proper format, the result is
+  // empty (\bbl@tempa={}), which is correct. Without it: if empty → \@gobbletwo eats
+  // subsequent tokens; if plain text → content leaks into document.
+  RawTeX!(r"\def\@fontenc@load@list{\@elt{OT1}}");
 
-  // NOTE: Do NOT clear \@fontenc@load@list here. Babel's \AtBeginDocument code
-  // (L3931-3933) does \edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}
-  // which expects at least one \@elt{enc} entry. If empty, \@gobbletwo eats
-  // subsequent tokens, corrupting \bbl@trim expansion → \bbl@trim@a undefined error.
+  InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Emulate Perl's precompiled kernel: pre-define \captions<lang> and \date<lang>
   // for common languages. In Perl, `make formats` precompiles the kernel so these

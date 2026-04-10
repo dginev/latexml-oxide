@@ -6,7 +6,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <p>This is a test of typesetting ancient Greek with LaTeX:</p>
+    <p>,This is a test of typesetting ancient Greek with LaTeX:</p>
   </para>
   <para xml:id="p2">
     <p><text xml:lang="el">’Εν ἀρχῇ ἦν ‛ο λ´ογος…</text></p>

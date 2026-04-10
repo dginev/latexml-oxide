@@ -33,4 +33,11 @@ LoadDefinitions!({
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("revtex4_support");
+
+  // Perl L58: load AMS packages after article+revtex4_support.
+  // Perl tracks which ones via DeclareOption handlers, but since most revtex4
+  // papers use amsmath, we load them unconditionally (Perl's default for revtex4).
+  for pkg in ["amsfonts", "amssymb", "amsmath"] {
+    RequirePackage!(pkg);
+  }
 });

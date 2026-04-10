@@ -268,6 +268,17 @@ LoadDefinitions!({
   DefPrimitive!("\\arcsec", "\u{2033}");
   DefMacro!("\\nodata", " ~$\\cdots$~ ");
 
+  // Perl L491: \aas@@fstack constructor — formats astronomical unit superscripts
+  DefConstructor!("\\aas@@fstack Undigested {}",
+    "<ltx:XMApp role='POSTFIX'>\
+       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='mid1'/>\
+       <ltx:XMTok>.</ltx:XMTok>\
+       <ltx:XMWrap>#2</ltx:XMWrap>\
+     </ltx:XMApp>",
+    bounded => true,
+    reversion => "#1"
+  );
+
   DefMacro!("\\fd", "\\ensuremath{\\@fd}");
   DefMacro!("\\fh", "\\ensuremath{\\@fh}");
   DefMacro!("\\fm", "\\ensuremath{\\@fm}");
@@ -276,6 +287,16 @@ LoadDefinitions!({
   DefMacro!("\\farcm", "\\ensuremath{\\@farcm}");
   DefMacro!("\\farcs", "\\ensuremath{\\@farcs}");
   DefMacro!("\\fp", "\\ensuremath{\\@fp}");
+
+  // Perl L510-517: DefMath for internal \@f* macros — astronomical unit symbols
+  DefMath!("\\@fd", "\\aas@@fstack{\\fd}{d}", role => "ID", meaning => "day", alias => "\\fd");
+  DefMath!("\\@fh", "\\aas@@fstack{\\fh}{h}", role => "ID", meaning => "hour", alias => "\\fh");
+  DefMath!("\\@fm", "\\aas@@fstack{\\fm}{m}", role => "ID", meaning => "minute", alias => "\\fm");
+  DefMath!("\\@fs", "\\aas@@fstack{\\fs}{s}", role => "ID", meaning => "second", alias => "\\fs");
+  DefMath!("\\@fdg", "\\aas@@fstack{\\fdg}{\\circ}", role => "ID", meaning => "degree", alias => "\\fdg");
+  DefMath!("\\@farcm", "\\aas@@fstack{\\farcm}{\\prime}", role => "ID", meaning => "arcminute", alias => "\\farcm");
+  DefMath!("\\@farcs", "\\aas@@fstack{\\farcs}{\\prime\\prime}", role => "ID", meaning => "arcsecond", alias => "\\farcs");
+  DefMath!("\\@fp", "\\aas@@fstack{\\fp}{p}");
 
   DefMacro!("\\onehalf", "\\ifmmode\\case{1}{2}\\else\\text@onehalf\\fi");
   DefPrimitive!("\\text@onehalf", "\u{00BD}");

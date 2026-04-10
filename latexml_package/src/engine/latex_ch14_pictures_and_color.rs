@@ -550,6 +550,10 @@ LoadDefinitions!({
   Let!("\\color@endbox", "\\relax");
 
   // Perl: latex_constructs.pool.ltxml line 5802
+  // \stop — closes the current input mouth (Plain TeX command)
+  // Perl: DefMacroI('\stop', undef, sub { $_[0]->closeMouth(1); return; });
+  // In Rust, \stop is equivalent to \endinput for our purposes.
+  Let!("\\stop", "\\endinput");
   DefMacro!("\\ignorespacesafterend", None);
 
   // Perl: latex_constructs.pool.ltxml line 5027

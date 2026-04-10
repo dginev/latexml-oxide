@@ -594,7 +594,10 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         let path = entry.path();
         if path.is_dir() {
           collect_tex_files(&path, files);
-        } else if path.extension().is_some_and(|e| e == "tex" || e == "txt") {
+        } else if path.extension().is_some_and(|e| {
+          let e = e.to_ascii_lowercase();
+          e == "tex" || e == "txt"
+        }) {
           files.push(path);
         }
       }

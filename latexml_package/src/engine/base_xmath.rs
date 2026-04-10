@@ -785,6 +785,18 @@ LoadDefinitions!({
   //  right  : TeX code for right
   //  ncolumns : the number of columns (default is not limited)
   DefKeyVal!("lx@GEN", "style", "UndigestedKey");
+  // Perl uses these keys via getValue/constructor templates without formal DefKeyVal.
+  // Declare them to suppress spurious Info messages about unknown keys.
+  DefKeyVal!("lx@GEN", "name", "");
+  DefKeyVal!("lx@GEN", "meaning", "");
+  DefKeyVal!("lx@GEN", "datameaning", "");
+  DefKeyVal!("lx@GEN", "delimitermeaning", "");
+  DefKeyVal!("lx@GEN", "left", "");
+  DefKeyVal!("lx@GEN", "right", "");
+  DefKeyVal!("lx@GEN", "ncolumns", "");
+  DefKeyVal!("lx@GEN", "alignment", "");
+  DefKeyVal!("lx@GEN", "rowsep", "");
+  DefKeyVal!("lx@GEN", "conditionmode", "");
 
   // Perl: Base_XMath.pool.ltxml line 575
   DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
