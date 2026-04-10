@@ -298,7 +298,27 @@ After Stage 1 reaches all 7,898 with 0 non-timeout errors:
 
 ---
 
-### Phase E: Engine File Reorganization
+### Phase E: Kernel Dump Build Integration (HIGH PRIORITY)
+
+The `_dump.rs` files contain precompiled kernel definitions (TeX/LaTeX format data). Currently they require a two-pass build:
+1. First `cargo build` → produces `latexml_oxide` binary (with no-op dump stubs)
+2. Manual `latexml_oxide --init=latex.ltx` → generates `resources/dumps/latex.dump.txt`
+3. Second `cargo build` → `build.rs` embeds the dump via `include_str!`
+
+**Problem:** This chicken-and-egg means a fresh clone can never get a working dump in one `cargo build`. The babel tests, font encoding, and many LaTeX 2.09 features depend on the kernel dump.
+
+**Solution options:**
+1. **build.rs generates dump:** Have `build.rs` invoke `latexml_oxide --init` itself during compilation. Requires `latexml_oxide` binary to be built before `latexml_package` finishes — impossible with current crate dependency order.
+2. **Commit dump to repo:** Check in `resources/dumps/latex.dump.txt` as a versioned artifact. `build.rs` embeds it. Regenerate when TeX Live or engine changes. Simple but adds a large file to git.
+3. **Separate dump crate:** Create `latexml_dump` crate with no dependency on `latexml_package`. `latexml_oxide` depends on both. `build.rs` in `latexml_dump` generates the dump.
+4. **Runtime-only loading:** Drop compile-time embedding. Load dump from filesystem at runtime via `LATEXML_DUMP` env var or well-known path. Simpler but loses compile-time guarantees.
+
+#### [ ] E1. Implement single-build dump solution
+Pick and implement one of the above options so that `cargo build` on a fresh clone produces a fully functional binary.
+
+---
+
+### Phase F: Engine File Reorganization
 
 Restructure the Rust `engine/` directory to **exactly match** the Perl `Engine/` file organization. Move every current definition (without losing any, not even a line) to files matching the Perl names. Then separately rearrange definition order within each file to match Perl.
 

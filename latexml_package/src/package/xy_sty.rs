@@ -14,9 +14,11 @@ LoadDefinitions!({
 
   // Step 2: Load raw xy.tex (Perl: at_letter => 0)
   // Save \@currname/\@currext before raw loading (xy.tex changes these internally)
+  // NOTE: Do NOT set @ to OTHER here — xy.tex manages its own catcodes internally.
+  // Setting @ to OTHER globally breaks xyline.tex loading because \xydef@ etc.
+  // get split at the @ boundary.
   let saved_currname = gullet::do_expand(T_CS!("\\@currname")).ok().map(|t| t.to_string());
   let saved_currext = gullet::do_expand(T_CS!("\\@currext")).ok().map(|t| t.to_string());
-  assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
   InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")), at_letter => false);
   // Restore \@currname/\@currext so ProcessOptions uses the correct package name
   if let Some(ref name) = saved_currname {
@@ -69,8 +71,12 @@ LoadDefinitions!({
     Info!("xy", "error", msg.to_string());
   });
 
-  // Defer latexml driver to \AtBeginDocument (Perl L59)
+  // Perl L59: defers \xyoption{latexml} to \AtBeginDocument.
+  // We also do that, but ADDITIONALLY load the xylatexml overlay immediately
+  // to define stubs for macros that raw xyline.tex etc. will reference during
+  // option loading (before \AtBeginDocument fires).
   RawTeX!("\\AtBeginDocument{\\xyoption{latexml}}");
+  crate::package::xylatexml_tex::load_definitions()?;
 
   // xy font primitives → no-op (Perl L66-72)
   DefMacro!("\\xydashfont", "");
