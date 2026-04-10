@@ -47,7 +47,7 @@ fn main() {
       r#"pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   let content = include_str!("{}");
   let count = latexml_core::dump_reader::load_from_str(content)
-    .map_err(|e| latexml_core::common::error::Error::msg(e))?;
+    .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
   log::info!("Loaded {{}} latex kernel definitions from precompiled dump", count);
   Ok(())
 }}

@@ -298,23 +298,54 @@ After Stage 1 reaches all 7,898 with 0 non-timeout errors:
 
 ---
 
-### Phase E: Kernel Dump Build Integration (HIGH PRIORITY)
+### Phase E: Kernel Dump Integration (HIGHEST PRIORITY — blocks sandbox testing)
 
-The `_dump.rs` files contain precompiled kernel definitions (TeX/LaTeX format data). Currently they require a two-pass build:
-1. First `cargo build` → produces `latexml_oxide` binary (with no-op dump stubs)
-2. Manual `latexml_oxide --init=latex.ltx` → generates `resources/dumps/latex.dump.txt`
-3. Second `cargo build` → `build.rs` embeds the dump via `include_str!`
+The LaTeX kernel dump provides ~20K definitions from `latex.ltx` (expl3, fonts, captions, counters, etc.) that the Perl LaTeXML gets from its precompiled format. Without it, many features fail (babel captions, `\@fontenc@load@list`, etc.).
 
-**Problem:** This chicken-and-egg means a fresh clone can never get a working dump in one `cargo build`. The babel tests, font encoding, and many LaTeX 2.09 features depend on the kernel dump.
+**Current state:**
+- `latexml_oxide --init=latex.ltx` generates `resources/dumps/latex.dump.txt` (3.4 MB, 22.6K entries)
+- `build.rs` embeds the dump via `include_str!` when the file exists
+- `dump_reader::load_from_str` loads the text dump into typed state entries at runtime (~30ms)
+- **PROBLEM:** Loading the full dump (19.5K entries) breaks 407 existing tests — dump definitions conflict with compiled engine definitions.
 
-**Solution options:**
-1. **build.rs generates dump:** Have `build.rs` invoke `latexml_oxide --init` itself during compilation. Requires `latexml_oxide` binary to be built before `latexml_package` finishes — impossible with current crate dependency order.
-2. **Commit dump to repo:** Check in `resources/dumps/latex.dump.txt` as a versioned artifact. `build.rs` embeds it. Regenerate when TeX Live or engine changes. Simple but adds a large file to git.
-3. **Separate dump crate:** Create `latexml_dump` crate with no dependency on `latexml_package`. `latexml_oxide` depends on both. `build.rs` in `latexml_dump` generates the dump.
-4. **Runtime-only loading:** Drop compile-time embedding. Load dump from filesystem at runtime via `LATEXML_DUMP` env var or well-known path. Simpler but loses compile-time guarantees.
+**Root cause of conflicts:**
+The dump contains raw `latex.ltx` state (all `\let`, `\def`, `\chardef`, register assignments, etc.). Many of these redefine macros that our compiled engine (`latex_ch*.rs`) already defines with LaTeXML-specific semantics (constructors, custom behavior). When the dump loads AFTER the engine, it overwrites LaTeXML definitions with raw TeX ones.
 
-#### [ ] E1. Implement single-build dump solution
-Pick and implement one of the above options so that `cargo build` on a fresh clone produces a fully functional binary.
+**Solution: Selective dump loading with conflict resolution**
+
+The dump entries fall into categories that need different treatment:
+
+| Category | Count (est.) | Strategy |
+|----------|-------------|----------|
+| Registers (`\dimen`, `\skip`, `\count`, `\toks`) | ~3K | Load: these set numerical values, no semantic conflict |
+| `\chardef` / `\mathchardef` | ~2K | Load: assigns char/math codes |
+| `\let` aliases | ~5K | Load selectively: skip if target is a LaTeXML constructor |
+| `\def` / `\edef` expandables | ~8K | Load selectively: skip if name matches a compiled binding |
+| Font info (`fontinfo_*`, `font_shared_key_*`) | ~1K | Load: font metadata, no conflict |
+| Boolean/string values | ~500 | Load: state flags |
+
+**Implementation plan:**
+
+#### [ ] E1. Classify dump entries
+Parse `resources/dumps/latex.dump.txt` and categorize each entry. Build a blocklist of CS names that must NOT be overwritten (= names defined by our compiled engine with LaTeXML-specific behavior).
+
+#### [ ] E2. Selective loader
+Modify `dump_reader::load_from_str` (or create `dump_reader::load_selective`) to accept a filter function or blocklist. Skip entries whose CS name is in the blocklist.
+
+#### [ ] E3. Build blocklist from compiled engine
+Programmatically collect all CS names defined by our `LoadDefinitions!` macros. These are the "LaTeXML-semantic" definitions that the dump must not overwrite. Approach: after engine loading in `initialize_singletons`, snapshot the defined CS set, then use it as the blocklist for dump loading.
+
+#### [ ] E4. Enable dump loading
+Uncomment `latex_dump::load_definitions()` in `latex.rs` with the selective loader. Verify all 407 tests pass. Then verify the 10k sandbox improves.
+
+#### [ ] E5. Commit dump to repo
+Add `resources/dumps/latex.dump.txt` to git. Document regeneration in CLAUDE.md:
+```
+cargo run --release --bin latexml_oxide -- --init=latex.ltx
+```
+
+#### [ ] E6. Type-safe dump representation
+Ensure the text dump format is loaded into well-typed data tables where each row is one entry (current `dump_reader` approach). Verify that the representation uses proper Rust types (not stringly-typed) for registers, dimensions, glue, tokens, etc.
 
 ---
 
