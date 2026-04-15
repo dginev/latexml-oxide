@@ -2,9 +2,9 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-10. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-15. Only lists open gaps & TODOs; completed items live in git history.
 
-**Test inventory:** 407 tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
+**Test inventory:** 408 tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
 **arxiv sandbox:** 100+ papers in `arxiv-examples/`. **90/97 OK (93%)** on full catalog. 7 remaining: 3 Perl-also-fails, 2 timeout, 1 version conflict, 1 state corruption.
 
@@ -88,7 +88,7 @@ Remaining failures:
 - **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined — texlive environment issue)
 - **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
 
-#### [ ] C2a. babel.sty fix — IN PROGRESS (session 98)
+#### [x] C2a. babel.sty fix — DONE (session 98-99)
 **Root causes found and fixed:**
 1. **`\@fontenc@load@list` cleared to empty** — babel's `\AtBeginDocument` code (L3931) does `\edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}`, which with empty list causes `\@gobbletwo` to eat subsequent tokens, corrupting `\bbl@trim` expansion → `\bbl@trim@a` undefined. **Fix:** removed `\def\@fontenc@load@list{}` from babel_sty.rs.
 2. **`\CurrentOption` leakage** — keyval.sty's `\ExecuteOptions{unknownkeyserror}` leaves `\CurrentOption` set. babel's `\bbl@load@language{nil}` at L4177 uses `\CurrentOption` (not #1) to set `\bbl@loaded`, producing `\bbl@loaded=unknownkeyserror`. **Fix:** `\let\CurrentOption\@empty` before loading babel.
@@ -213,6 +213,7 @@ Track each ramp-up round here:
 |       |       |    |         |        | **Applied fixes 10-12, clean slate restart** |
 | 5     | 128   |114 | 8       | 6      | 89.1% OK after fixes 13-15 |
 | 6     | 256   |219 | 13      | 23     | 85.5% OK. See error analysis below |
+|       |       |    |         |        | **Applied Fix 13 (xy_sty), clean slate restart needed** |
 
 **256-paper error analysis (session 99):**
 - **Mode mismatch** `\end{document}` (6 papers) — cumulative bgroup imbalance, extra `internal_vertical` frame at document end. Root cause: raw TeX classes (jpsj2, etc.) calling `\LoadClass{article}` but `article.cls` binding counter/mode setup not reached.
@@ -295,11 +296,17 @@ Track each ramp-up round here:
 - `Missing $` display math (0704.3480, 0707.0739) — document structure
 - `colordvi` `\ifglobalcolors` (0705.1190) — unsupported niche package
 - `table*` mode mismatch (0705.2808, 0707.4170) — mode stack issue
-- xypic `\xylinewidth@i` (0707.1718, 0707.2392, 0708.3157, 0709.2286) — raw xyline.tex defines before latexml driver loads
+- ~~xypic `\xylinewidth@i` (0707.1718, 0707.2392, 0708.3157, 0709.2286)~~ — **FIXED (session 99, Fix 13)**
 - `utf8x` `\PackageNoteNoLine` (0707.3268) — ucs/utf8x internal
 - `\figcaption` undefined (0707.4283) — aipproc/aipproc-like class
 - `\psecurve` undefined (0708.2155) — pstricks curve command
 - `\Rset` undefined (0709.3641) — custom math command
+
+**Fix 13 — xy_sty: remove premature xylatexml_tex load (100M-token hang)**
+- **Failing papers:** 0707.1718, 0707.2392, 0708.3157, 0709.2286 + xytest regression
+- **Root cause:** `xylatexml_tex::load_definitions()` called early in xy_sty LoadDefinitions body triggered `\xyprovide{latexml}` + `\newdriver{...}` before xy.tex's driver mechanism was stable. Our `\xyoption{latexml}` override never sets `\csname xylatexml loaded\endcsname`, so `\xywithoption{latexml}{...}` perpetually deferred `\selectdriver@{latexml}`, causing exponential token growth during ProcessOptions → 100M-token limit → empty document.
+- **Fix:** Removed early load from `xy_sty.rs`. `\AtBeginDocument{\xyoption{latexml}}` correctly loads the driver after all xy options are processed.
+- **Verified:** xytest passes in 2.9s (was 383s+/empty). 4 sandbox papers fixed.
 
 #### [ ] D3. Performance catalog
 After Stage 1 reaches all 7,898 with 0 non-timeout errors:
