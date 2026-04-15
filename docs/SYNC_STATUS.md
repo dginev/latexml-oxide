@@ -8,7 +8,7 @@ Updated 2026-04-15. Only lists open gaps & TODOs; completed items live in git hi
 
 **arxiv sandbox:** 100+ papers in `arxiv-examples/`. **90/97 OK (93%)** on full catalog. 7 remaining: 3 Perl-also-fails, 2 timeout, 1 version conflict, 1 state corruption.
 
-**10k sandbox:** 7,898 arxiv ZIPs in `$HOME/data/10k_sandbox/`. Benchmark pending (Phase D).
+**10k sandbox:** 7,898 arxiv ZIPs in `$HOME/data/10k_sandbox/`. D1 ramp-up in progress (session 100); 60 processed, 55/60 OK. Remaining: 2 conversion_errors (colordvi, mode mismatch), 2 timeouts.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational:
 ```
@@ -214,6 +214,11 @@ Track each ramp-up round here:
 | 5     | 128   |114 | 8       | 6      | 89.1% OK after fixes 13-15 |
 | 6     | 256   |219 | 13      | 23     | 85.5% OK. See error analysis below |
 |       |       |    |         |        | **Applied Fix 13 (xy_sty), clean slate restart needed** |
+|       |       |    |         |        | **Applied Fixes 14-17 (amsmath, llncs, epsf, pstricks), clean slate restart** |
+| 1'''  | 4     | 4  | 0       | 0      | Pass → double |
+| 2'''  | 8     | 8  | 0       | 0      | Pass → double |
+| 3'''  | 16    | 15 | 0       | 1      | 0704.3480 `Missing $` (document bug) → continue |
+| 4'''  | 32    | 28 | 2       | 2      | 0705.1190 colordvi, 0705.2808 mode mismatch → continue |
 
 **256-paper error analysis (session 99):**
 - **Mode mismatch** `\end{document}` (6 papers) — cumulative bgroup imbalance, extra `internal_vertical` frame at document end. Root cause: raw TeX classes (jpsj2, etc.) calling `\LoadClass{article}` but `article.cls` binding counter/mode setup not reached.
@@ -299,8 +304,28 @@ Track each ramp-up round here:
 - ~~xypic `\xylinewidth@i` (0707.1718, 0707.2392, 0708.3157, 0709.2286)~~ — **FIXED (session 99, Fix 13)**
 - `utf8x` `\PackageNoteNoLine` (0707.3268) — ucs/utf8x internal
 - `\figcaption` undefined (0707.4283) — aipproc/aipproc-like class
-- `\psecurve` undefined (0708.2155) — pstricks curve command
+- ~~`\psecurve` undefined (0708.2155)~~ — **FIXED (session 100, Fix 17)**
 - `\Rset` undefined (0709.3641) — custom math command
+
+**Fix 14 — amsmath_sty: @equationgroup counter fallback for standalone classes**
+- **Failing papers:** 0710.1899 (jpsj2 class), any class that doesn't inherit from article
+- **Root cause:** `@equationgroup` counter (used for equation grouping IDs) is defined in `article_cls.rs` but jpsj2 is a standalone class — no `\LoadClass{article}`, so the binding never runs. Result: `\the@equationgroup@ID` undefined.
+- **Fix:** Added guard in `amsmath_sty.rs` after `RequirePackage!("amsopn")`: if `\the@equationgroup@ID` is not defined, call `NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section")`. `new_counter()` is safe to call if already defined.
+
+**Fix 15 — llncs_cls + sv_support_sty: implement \spnewtheorem properly**
+- **Failing papers:** 0712.0165 (llncs class with envcountsame option)
+- **Root cause:** `\spnewtheorem` was an empty stub — environments `{Deff}`, `{Lem}`, `{Rem}` etc. defined by it were lost.
+- **Fix:** Replaced empty `DefPrimitive!("\\spnewtheorem ...")` stub with proper `define_new_theorem()` call (same as Perl's implementation) in both `llncs_cls.rs` and `sv_support_sty.rs`.
+
+**Fix 16 — epsf_sty: \epsfbox creates ltx:graphics directly (not via \includegraphics)**
+- **Failing papers:** 0712.0249 (adassconf.sty, which includes epsf.sty but not graphicx.sty)
+- **Root cause:** Old stub `DefMacro!("\\epsfbox[]{}", "\\includegraphics{#2}")` required graphicx to be loaded. But epsf.sty predates graphicx and shouldn't require it.
+- **Fix:** `DefConstructor!("\\epsfbox [] Semiverbatim", "<ltx:graphics graphic='#graphic' .../>")` with image candidate generation. Matches Perl epsf.sty.ltxml.
+
+**Fix 17 — pstricks_sty: add \psecurve and \psccurve stubs**
+- **Failing papers:** 0708.2155 (amsart + pstricks, uses \psecurve)
+- **Root cause:** Missing no-op stubs for `\psecurve` and `\psccurve` curve-drawing commands.
+- **Fix:** Added `DefMacro!("\\psecurve OptionalMatch:* []{}", "")` and `DefMacro!("\\psccurve OptionalMatch:* []{}", "")` in `pstricks_sty.rs`.
 
 **Fix 13 — xy_sty: remove premature xylatexml_tex load (100M-token hang)**
 - **Failing papers:** 0707.1718, 0707.2392, 0708.3157, 0709.2286 + xytest regression
