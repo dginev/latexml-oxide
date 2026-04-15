@@ -112,10 +112,17 @@ LoadDefinitions!({
   DefMacro!("\\floatlegendstyle", "\\bfseries");
   DefMacro!("\\leftlegendglue", "");
 
-  // \spnewtheorem — simplified: map to \newtheorem (Perl L92-185)
-  // The full Perl version creates custom theorem environments with body/head font control.
-  // We map to standard \newtheorem which is simpler but functionally equivalent.
-  DefMacro!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", "");
+  // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
+  // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
+  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
+    crate::engine::latex_ch8_theoremlike_environments::define_new_theorem(
+      flag.filter(|f| !f.is_empty()),
+      thmset,
+      otherthmset.filter(|t| !t.is_empty()),
+      if typ.is_empty() { None } else { Some(typ) },
+      reset.filter(|t| !t.is_empty()),
+    )?;
+  });
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
 
   DefRegister!("\\spthmsep", Dimension!("5pt"));

@@ -19,6 +19,8 @@ LoadDefinitions!({
   DefMacro!("\\psarc OptionalMatch:* []{}{}{}{}", "");
   DefMacro!("\\psbezier OptionalMatch:* []{}", "");
   DefMacro!("\\pscurve OptionalMatch:* []{}", "");
+  DefMacro!("\\psecurve OptionalMatch:* []{}", "");
+  DefMacro!("\\psccurve OptionalMatch:* []{}", "");
   DefMacro!("\\parabola OptionalMatch:* []{}{}", "");
   DefMacro!("\\pspolygon OptionalMatch:* []{}", "");
   DefMacro!("\\psdots OptionalMatch:* []{}", "");

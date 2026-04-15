@@ -258,6 +258,15 @@ LoadDefinitions!({
   RequirePackage!("amstext");
   RequirePackage!("amsopn");
 
+  // Ensure @equationgroup counter exists. Normally defined by class file (e.g. article_cls.rs),
+  // but for classes without a binding (jpsj2, etc.) that don't inherit from article,
+  // amsmath must provide a fallback. new_counter() is safe to call even if already defined:
+  // it skips register creation but still installs \the@equationgroup@ID etc.
+  // Matches Perl article.cls.ltxml L85: NewCounter('@equationgroup','document',idprefix=>'EG',idwithin=>'section')
+  if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
+    NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
+  }
+
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
   // Matrix environments

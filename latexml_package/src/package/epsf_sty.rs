@@ -25,10 +25,17 @@ LoadDefinitions!({
   DefPrimitive!("\\epsfclipoff", {
     state::assign_value("epsf_clip", Stored::from(0), None);
   });
-  // Perl: DefConstructor('\epsfbox [] Semiverbatim', "<ltx:graphics graphic='#2' options=''/>")
-  // TODO: The CompileReplacement proc macro can't resolve #2 for [] {} parameter patterns.
-  // Using DefMacro delegation to \includegraphics as a faithful approximation.
-  DefMacro!("\\epsfbox[]{}", "\\includegraphics{#2}");
+  // Perl: DefConstructor('\epsfbox [] Semiverbatim', "<ltx:graphics graphic='#graphic' candidates='#candidates' options='#options'/>", ...)
+  // Creates ltx:graphics directly — does NOT require graphicx/\includegraphics to be loaded.
+  DefConstructor!("\\epsfbox [] Semiverbatim",
+    "<ltx:graphics graphic='#graphic' candidates='#candidates' options='#options'/>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let path = args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+      let path = path.trim().to_string();
+      let candidates = crate::package::graphicx_sty::image_candidates(&path);
+      Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
+    });
   Let!("\\epsfgetlitbb", "\\epsfbox");
   Let!("\\epsfnormal",   "\\epsfbox");
   Let!("\\epsffile",     "\\epsfbox");
