@@ -72,11 +72,16 @@ LoadDefinitions!({
   });
 
   // Perl L59: defers \xyoption{latexml} to \AtBeginDocument.
-  // We also do that, but ADDITIONALLY load the xylatexml overlay immediately
-  // to define stubs for macros that raw xyline.tex etc. will reference during
-  // option loading (before \AtBeginDocument fires).
+  // The @ catcode fix (removing assign_catcode('@', OTHER) before xy.tex) means
+  // xyline.tex's \xydef@ definitions now work correctly. The early
+  // xylatexml_tex::load_definitions() call was removed because it triggers
+  // \xyprovide{latexml} and \newdriver{...} from xylatexml_tex's raw_tex block,
+  // which sets up xy's driver mechanism incorrectly (our Rust override for
+  // \xyoption{latexml} never sets \csname xylatexml loaded\endcsname, so
+  // \xywithoption{latexml}{...} defers \selectdriver@{latexml} indefinitely,
+  // causing massive token expansion during ProcessOptions). Fix: keep only
+  // \AtBeginDocument for the full initialization, matching the Perl flow.
   RawTeX!("\\AtBeginDocument{\\xyoption{latexml}}");
-  crate::package::xylatexml_tex::load_definitions()?;
 
   // xy font primitives → no-op (Perl L66-72)
   DefMacro!("\\xydashfont", "");
