@@ -4156,8 +4156,22 @@ LoadDefinitions!({
   DefRegister!("\\labelwidthvi"       => Dimension::new(0));
 
   DefRegister!("\\@itemdepth" => Number::new(0));
+  DefRegister!("\\@maxlistdepth" => Number::new(6));
 
+  // List formatting macros from article.cls / report.cls / book.cls
+  // These set list parameters at various nesting levels.
+  // In raw TeX classes, \@listi etc. are defined by the class file.
+  // We stub them as no-ops since LaTeXML handles list formatting via CSS.
+  DefMacro!("\\@listi", "");
+  DefMacro!("\\@listii", "");
+  DefMacro!("\\@listiii", "");
+  DefMacro!("\\@listiv", "");
+  DefMacro!("\\@listv", "");
+  DefMacro!("\\@listvi", "");
 
+  //======================================================================
+  // C.6.4 Verbatim
+  //======================================================================
   // NOTE: how's the best way to get verbatim material through?
   // DefEnvironment!("{verbatim}", "<ltx:verbatim>#body</ltx:verbatim>");
   // DefEnvironment!("{verbatim*}", "<ltx:verbatim>#body</ltx:verbatim>");
