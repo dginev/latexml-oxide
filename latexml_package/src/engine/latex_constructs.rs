@@ -1893,6 +1893,32 @@ fn add_index_phrase_key(node: &mut Node) -> Result<()> {
   }
   Ok(())
 }
+/// Perl: doIndexItem — open/close index list levels.
+fn do_index_item(document: &mut Document, level: i64) -> Result<()> {
+  if document.is_closeable("ltx:indexrefs").is_some() {
+    document.close_element("ltx:indexrefs")?;
+  }
+  if document.is_closeable("ltx:indexphrase").is_some() {
+    document.close_element("ltx:indexphrase")?;
+  }
+  let current_level = state::lookup_int("INDEXLEVEL");
+  let mut l = current_level;
+  while l < level {
+    document.open_element("ltx:indexlist", None, None)?;
+    l += 1;
+  }
+  while l > level {
+    document.close_element("ltx:indexlist")?;
+    l -= 1;
+  }
+  state::assign_value("INDEXLEVEL", Stored::Int(l), Some(Scope::Local));
+  if level > 0 {
+    document.open_element("ltx:indexentry", None, None)?;
+    document.open_element("ltx:indexphrase", None, None)?;
+  }
+  Ok(())
+}
+
 /// Perl: CleanIndexKey — trim whitespace, remove trailing punctuation.
 fn clean_index_key(key: &str) -> String {
   let key = key.trim();
@@ -5103,6 +5129,13 @@ LoadDefinitions!({
   \DeclareSymbolFont{largesymbols}{OMX}{cmex}{m}{n}
   """#
   );
+  // Perl: latex_constructs.pool.ltxml L5759-5764 — picture font stubs
+  DefPrimitive!("\\OMX", None, font => { family => "cmex10" });
+  DefPrimitive!("\\tenln", None, font => { family => "line10" });
+  DefPrimitive!("\\tenlnw", None, font => { family => "linew10" });
+  DefPrimitive!("\\tencirc", None, font => { family => "lcircle10" });
+  DefPrimitive!("\\tencircw", None, font => { family => "lcirclew10" });
+
   // At least all things on uclclist need to be macros
   DefMacro!("\\lx@utf@OE", None, "\u{0152}", alias => "\\OE"); // LATIN CAPITAL LIGATURE OE
   DefMacro!("\\lx@utf@oe", None, "\u{0153}", alias => "\\oe"); // LATIN SMALL LIGATURE OE
@@ -6120,6 +6153,8 @@ LoadDefinitions!({
   // And likewise, mixed up in various other classes!
 
   DefMacro!("\\thebibliography@ID", "");
+  // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
+  DefMacro!("\\the@lx@bibliography@ID", "");
 
   // Do this before digesting the body of a bibliography
   fn before_digest_bibliography() -> Result<()> {
@@ -6693,7 +6728,33 @@ LoadDefinitions!({
   DefMacro!("\\seename", "see");
   DefMacro!("\\alsoname", "see also");
 
+  //======================================================================
+  // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
 
+  // Helper: close an open indexphrase element
+  DefConstructor!("\\index@dotfill", sub[document] {
+    if document.is_closeable("ltx:indexphrase").is_some() {
+      document.close_element("ltx:indexphrase")?;
+    }
+    document.open_element("ltx:indexrefs", None, None)?;
+  });
+
+  DefConstructor!("\\index@item", sub[document] {
+    do_index_item(document, 1)?;
+  });
+  DefConstructor!("\\index@subitem", sub[document] {
+    do_index_item(document, 2)?;
+  });
+  DefConstructor!("\\index@subsubitem", sub[document] {
+    do_index_item(document, 3)?;
+  });
+  DefConstructor!("\\index@done", sub[document] {
+    do_index_item(document, 0)?;
+  });
+
+  //======================================================================
+  // C.11.6 Terminal Input and Output
+  //======================================================================
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
     if state::current_verbosity() > -1 {
       let content = Expand!(stuff);
@@ -8040,6 +8101,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textasciicircum", "^");
   DefPrimitive!("\\textasciitilde", "~");
   DefPrimitive!("\\textcompwordmark", ""); // ???
+  DefPrimitive!("\\textcapitalcompwordmark", ""); // ???
+  DefPrimitive!("\\textascendercompwordmark", ""); // ???
   DefPrimitive!("\\textunderscore", "_");
   // SYMBOL FOR SPACE;  Not really the right symbol!
   DefPrimitive!("\\textvisiblespace", "\u{2423}");
