@@ -8346,9 +8346,12 @@ LoadDefinitions!({
   // Perl L5804-5806
   Let!("\\mathgroup", "\\fam");
 
-  // Perl L5808-5821: nocorr, text@command stubs
+  // Perl L5808-5821: nocorr, text@command, check@ic stubs
   DefMacro!("\\nocorrlist", None, ".,");
   Let!("\\nocorr", "\\relax");
+  Let!("\\check@icl", "\\@empty");
+  Let!("\\check@icr", "\\@empty");
+  Let!("\\curr@math@size", "\\@empty");
   DefMacro!("\\text@command{}", "");
   DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
   TeX!("\\newif\\ifmaybe@ic");
