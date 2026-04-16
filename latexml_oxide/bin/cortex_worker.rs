@@ -152,6 +152,18 @@ impl LatexmlWorker {
   /// Run the conversion pipeline on an input ZIP archive.
   /// Returns the path to the output ZIP file.
   fn convert_archive(&self, input_path: &Path) -> Result<PathBuf, Box<dyn Error>> {
+    // Per-document timeout: two-layer guard.
+    //   1. Watchdog thread forcibly aborts after profile.timeout seconds.
+    //      Catches tight native loops (Marpa, libxml2, libxslt) that never
+    //      return to the Rust digestion loop.
+    //   2. Cooperative stomach::set_timeout gives a graceful Err(Fatal) for
+    //      the common case where digestion polls check_timeout.
+    // Watchdog cancels automatically on drop at end of this function.
+    let _watchdog = latexml_core::watchdog::Watchdog::new(self.profile.timeout);
+    if self.profile.timeout > 0 {
+      latexml_core::stomach::set_timeout(self.profile.timeout);
+    }
+
     // 1. Unpack the input archive
     let (tempdir, main_tex) = unpack_archive(input_path)?;
     let source_dir = tempdir.path().to_string_lossy().to_string();

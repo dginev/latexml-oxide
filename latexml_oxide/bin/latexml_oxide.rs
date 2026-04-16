@@ -337,6 +337,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
   } else {
     // Normal mode: convert document
+    //
+    // Two-layer timeout: the cooperative stomach::check_timeout gives a graceful
+    // Err(Fatal) when the digestion loop can poll it, and the Watchdog forcibly
+    // aborts the process if the deadline is reached without cooperation (e.g. a
+    // tight native loop in Marpa / libxml2 / libxslt). The Watchdog cancels
+    // automatically on drop at end of main.
+    let _watchdog = latexml_core::watchdog::Watchdog::new(cli.timeout);
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
     }

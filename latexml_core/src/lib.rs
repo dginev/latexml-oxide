@@ -63,6 +63,10 @@ pub mod dump_codegen;
 /// Gullet into Boxes
 #[macro_use]
 pub mod stomach;
+/// Main-level wall-clock watchdog that forcibly aborts the process after a deadline.
+/// Complements the cooperative `stomach::check_timeout` polling for native-code hotspots
+/// (Marpa, libxml2, libxslt) that don't return to the digestion loop.
+pub mod watchdog;
 /// A TeX-like digested Box
 pub mod tbox;
 /// Auxilary utilities that do not participate in the main conversion abstraction
