@@ -499,7 +499,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // is preferred over the shorter opfunction-opfunction rule.
     tight_term += opfunction tight_term => prefix_apply;
     tight_term += opfunction factor => prefix_apply;
-    tight_term += opfunction fenced_factor => prefix_apply;
+    // Perf: removed `opfunction fenced_factor => prefix_apply` — `factor` already
+    // includes fenced_factor, so this rule was a duplicate that caused Marpa to
+    // enumerate the same tree twice for every `\sin(x)` (OPFUNCTION) form.
     // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi).
     // Note: `factor` is used here (not factor_base) to support scripted args
     // like \sin a^2 (scripted_factor_r1 is in factor but not factor_base).
