@@ -855,29 +855,40 @@ pub fn read_balanced(
 /// Match the input against a set of keywords; Similar to readMatch, but the keywords are strings,
 /// and Case and catcodes are ignored; additionally, leading spaces are skipped.
 /// AND, macros are expanded.
+///
+/// Perf: zero-allocation char-wise comparison against each keyword.
+/// The previous version allocated two Strings per char-match (via `to_uppercase()`
+/// and `char::to_string()`), which was expensive in hot parameter parsing loops.
 pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
   skip_spaces()?;
   for keyword in keywords.iter() {
-    let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
+    let mut chars = keyword.chars();
     let mut matched = Vec::new();
-    while !to_match.is_empty() {
-      if let Some(tok) = read_x_token(Some(false), false, None)? {
-        let cmp_tok = tok.with_str(|s| s.to_uppercase());
-        matched.push(tok);
-        if cmp_tok == to_match[0].to_string() {
-          to_match.pop_front();
-        } else {
-          break;
+    let mut ok = true;
+    loop {
+      let Some(expected) = chars.next() else { break };
+      let Some(tok) = read_x_token(Some(false), false, None)? else { ok = false; break };
+      // Compare char-by-char against the token's text, case-insensitively.
+      let eq = tok.with_str(|s| {
+        let mut it = s.chars();
+        match it.next() {
+          Some(c) if it.next().is_none() => {
+            // single-char token: case-insensitive compare
+            c.to_uppercase().eq(expected.to_uppercase())
+          },
+          _ => false,
         }
-      } else {
+      });
+      matched.push(tok);
+      if !eq {
+        ok = false;
         break;
       }
     }
-    if to_match.is_empty() {
-      // All matched!!!
+    if ok {
       return Ok(Some(keyword.to_string()));
     } else {
-      unread(matched.into()); // Put 'em back and try next!
+      unread(matched.into());
     }
   }
   Ok(None)

@@ -56,7 +56,7 @@ impl FoodType {
 static mut LASTID: usize = 0;
 
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
-static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
+// LOWERHEX_REGEX removed — replaced with direct matches!() check in tex_hex_caret path.
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
 
 #[derive(Debug, Default)]
@@ -497,9 +497,15 @@ impl Mouth {
         // ^^ followed by TWO LOWERCASE Hex digits???
         if let Some(c1) = c1_opt {
           if let Some(c2) = c2_opt {
+            // Perf: avoid per-char String alloc + regex match by using
+            // direct ASCII class check. LOWERHEX_REGEX = ^[0-9a-f]$, i.e.
+            // lowercase hex digits only.
+            let is_lowerhex = |c: char| -> bool {
+              matches!(c, '0'..='9' | 'a'..='f')
+            };
             if (self.colno + 2 < self.nchars)
-              && LOWERHEX_REGEX.is_match(&c1.to_string())
-              && LOWERHEX_REGEX.is_match(&c2.to_string())
+              && is_lowerhex(*c1)
+              && is_lowerhex(*c2)
             {
               // TODO: Maybe Result type warranted here?
               let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap();

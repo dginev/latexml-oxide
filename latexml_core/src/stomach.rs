@@ -504,16 +504,26 @@ pub fn repack_horizontal() {
 
   loop {
     let should_pop = if let Some(item) = stomach.box_list.last() {
-      let mode_str = item
-        .get_property("mode")
-        .map(|v| v.to_string())
-        .unwrap_or_else(|| "horizontal".to_string());
-      if mode_str == "horizontal"
-        || mode_str == "restricted_horizontal"
-        || mode_str == "math"
-      {
-        // if ONLY horizontal mode spaces, we can prune them; it just makes an empty ltx:p
-        if mode_str != "horizontal" || !item.get_property_bool("isSpace") {
+      // Perf: compare as &str via with() instead of allocating a String each iter.
+      // Default mode is "horizontal" (matches previous unwrap_or).
+      let mode_prop = item.get_property("mode");
+      let (is_horiz_family, is_plain_horizontal) = match mode_prop.as_deref() {
+        Some(Stored::String(sym)) => arena::with(*sym, |s| {
+          let plain = s == "horizontal";
+          let fam = plain || s == "restricted_horizontal" || s == "math";
+          (fam, plain)
+        }),
+        None => (true, true), // default "horizontal"
+        Some(other) => {
+          // Rare path — fall back to Display formatting.
+          let s = other.to_string();
+          let plain = s == "horizontal";
+          let fam = plain || s == "restricted_horizontal" || s == "math";
+          (fam, plain)
+        },
+      };
+      if is_horiz_family {
+        if !is_plain_horizontal || !item.get_property_bool("isSpace") {
           keep = true;
         }
         true

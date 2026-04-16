@@ -477,6 +477,58 @@ After Stage 1 reaches all 7,898 with 0 non-timeout errors:
 2. Profile top offenders (flamegraph, token count, loop detection)
 3. Targeted optimizations (per-task or systemic)
 
+#### [ ] D4. Performance — parallel scaling and allocations (session 105, ACTIVE)
+
+**Baseline measurements (session 105, paper 0707.1173):**
+
+| Workers | Total time | Per-worker efficiency |
+|---|---|---|
+| 1 | 22.6s | 100% |
+| 4 | 33.6s | 67% |
+| 8 | 47.8s | 47% |
+| 12 | 77.4s | 29% |
+| 16 | 76.8s | 29% |
+| 20 | 104.7s | 22% |
+
+On a 14-core/20-thread machine, we achieve only ~42% of the single-worker
+ceiling at 16 workers. Peak RSS per process: **570 MB**. 16 × 570MB = 9.1GB,
+far exceeding L3 cache (~24MB).
+
+**Completed:**
+- [x] mimalloc as global allocator — reduces glibc arena-mutex contention.
+  Single-process speedup ~6%, modest multi-process improvement.
+- [x] `--timeout` default lowered 600s → 60s for faster iteration + CI.
+
+**Active work — string allocations (per user request):**
+- [ ] Audit `.to_string()` calls in engine + packages (~1900 total)
+  - Replace `"literal".to_string()` with `&str` or interned symbols where
+    the value ends up in a HashMap<String, String>.
+- [ ] Audit `String::from("...")` for literal → interned conversions.
+- [ ] Audit `format!()` for transient string uses that can avoid alloc.
+- [ ] Replace `HashMap<String, String>` with `SymHashMap<SymStr>` where
+  keys/values are known or nearly always from interned sources
+  (e.g. xml_attributes in alignment.rs, pgfsys, amsmath).
+- [ ] Token.to_string() in hot paths — ensure we use `with_str` or `text`
+  field directly for comparisons/lookups (avoid String roundtrips).
+
+**Active work — cloning (per user request):**
+- [ ] Audit `.clone()` sites in hot files (document.rs 73, latex_constructs.rs 73,
+  font.rs 39, etc.). Prefer borrows where lifetimes allow. libxml Node is
+  Rc<RefCell> — clones are atomic ref-count but still add up; pass by ref.
+- [ ] Review `Tokens` cloning — each `Tokens` has a Vec<Token> that copies on
+  clone. For read-only iteration, pass `&Tokens` or use `Cow`.
+
+**Active work — memory footprint:**
+- [ ] Profile math parser RAM independently (user flagged as likely contributor).
+  Marpa grammar tables, parse forests, Earley chart are candidates.
+- [ ] Measure RSS per phase (load engine / convert document / post-process).
+- [ ] Quantify per-definition memory (number of definitions × avg size).
+
+**Active work — architectural:**
+- [ ] Investigate shared read-only engine state across processes (mmap of dump).
+- [ ] Long-running daemon / process pool to amortize 570MB startup cost.
+- [ ] Fork-based parallelism for CoW memory sharing across workers.
+
 ---
 
 ### Phase E: Kernel Dump Integration (HIGHEST PRIORITY — blocks sandbox testing)

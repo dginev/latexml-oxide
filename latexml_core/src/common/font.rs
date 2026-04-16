@@ -656,44 +656,6 @@ impl Font {
     format!("Font[{}]", parts.join(","))
   }
 
-  /// Return a hash-like struct of font properties.
-  /// Perl: asFontinfo
-  pub fn as_fontinfo(&self) -> HashMap<String, String> {
-    let mut info = HashMap::default();
-    if let Some(ref v) = self.family {
-      info.insert("family".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.series {
-      info.insert("series".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.shape {
-      info.insert("shape".to_string(), v.to_string());
-    }
-    if let Some(v) = self.size {
-      info.insert("size".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.color {
-      info.insert("color".to_string(), v.to_attribute());
-    }
-    if let Some(ref v) = self.bg {
-      info.insert("background".to_string(), v.to_attribute());
-    }
-    if let Some(ref v) = self.opacity {
-      info.insert("opacity".to_string(), v.to_string());
-    }
-    info.insert(
-      "encoding".to_string(),
-      self.encoding.as_deref().unwrap_or("OT1").to_string(),
-    );
-    if let Some(ref v) = self.language {
-      info.insert("language".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.mathstyle {
-      info.insert("mathstyle".to_string(), v.to_string());
-    }
-    info
-  }
-
   /// Wildcard font matching: if any components are defined in both fonts,
   /// they must be equal. Perl: match
   pub fn font_match(&self, other: &Font) -> bool {
