@@ -748,6 +748,15 @@ All 36 `latex_ch*.rs` files + `latex_tables_3.rs` merged into single `latex_cons
 Section comment headers match Perl's C.1-C.15 organization. All pub functions preserved.
 19 package files updated with new import paths. 413 tests pass. Commit da8b66358.
 
+**Post-consolidation cleanup (session 104, continued):**
+- `tex_scripts.rs` → merged into `tex_math.rs` (Perl: TeX_Math.pool.ltxml)
+- `latex_functions.rs` → merged into `latex_constructs.rs`
+- `base_functions.rs` → merged into `base_utilities.rs` (Perl: Base_Utility.pool.ltxml)
+- Restored definitions lost during consolidation: `\stop`, `\newfont`, `\normalcolor`,
+  `\math@version`, aux file stubs, 47 language declarations, `\@listi`-`\@listvi`,
+  `\@maxlistdepth`, `\ensuremathfollows`, `\mathhexbox`, `@equationgroup` counter guard
+- **All engine files now match Perl Engine/ filenames exactly.** No remaining Rust-only files.
+
 **Coverage audit (session 102, final) — ALL Perl Engine files:**
 
 **OVERALL: 2,457 definitions audited, 2 missing → 99.9% coverage**
