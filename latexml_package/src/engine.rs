@@ -1,7 +1,7 @@
 // TeX Pool
 mod base_parameter_types;
 mod base_schema;
-mod base_utilities;
+pub mod base_utilities;
 pub mod base_xmath;
 pub mod tex;
 mod tex_box;
@@ -24,7 +24,7 @@ mod tex_penalties;
 mod tex_registers;
 pub mod tex_tables;
 
-pub mod base_functions; // auxiliary functions
+// base_functions.rs removed — content moved to base_utilities.rs
 // tex_scripts.rs removed — content moved to tex_math.rs (Perl: TeX_Math.pool.ltxml)
 // Deprecated aliases
 mod base_deprecated;

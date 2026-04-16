@@ -427,7 +427,7 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
         continue;
       }
       if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-        crate::engine::base_functions::set_align_or_class(document, &mut child, align, class)?;
+        crate::engine::base_utilities::set_align_or_class(document, &mut child, align, class)?;
       }
     }
   }
