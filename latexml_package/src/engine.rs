@@ -83,7 +83,7 @@ pub mod latex_ch9_figures_and_tables;
 mod latex_ch9_marginal_notes;
 pub mod latex_functions; // auxiliary functions
 mod latex_hook;
-mod latex_other_in_appendices;
+// latex_other_in_appendices.rs removed — content moved to latex_base.rs and latex_constructs.rs
 mod latex_semi_undocumented;
 mod latex_tables_3;
 // Precompiled kernel dumps (auto-generated, loads definitions from format dumps)
