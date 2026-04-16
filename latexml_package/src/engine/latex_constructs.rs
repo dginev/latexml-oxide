@@ -522,6 +522,12 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
 // #   postset => boolean
 // #   deferretract=>boolean
 fn prepare_equation_counter(options: SymHashMap<Stored>) {
+  // Guard: ensure the equation counter exists — normally created by article.cls,
+  // but standalone classes (jpsj2, appolb, etc.) may not define it.
+  if lookup_definition(&T_CS!("\\theequation@ID")).ok().flatten().is_none() {
+    let _ = new_counter("equation", "section",
+      Some(NewDefault!(NewCounterOptions, idprefix => "E")));
+  }
   state::assign_value(
     "EQUATION_NUMBERING",
     Stored::HashStored(options),
