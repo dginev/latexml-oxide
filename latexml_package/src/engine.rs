@@ -82,7 +82,7 @@ pub mod latex_ch8_theoremlike_environments;
 pub mod latex_ch9_figures_and_tables;
 mod latex_ch9_marginal_notes;
 pub mod latex_functions; // auxiliary functions
-mod latex_hook;
+// latex_hook.rs removed — content moved to tex.rs (Perl: TeX.pool.ltxml L33-56)
 // latex_other_in_appendices.rs removed — content moved to latex_base.rs and latex_constructs.rs
 // latex_semi_undocumented.rs removed — content moved to latex_base.rs and latex_constructs.rs
 mod latex_tables_3;
