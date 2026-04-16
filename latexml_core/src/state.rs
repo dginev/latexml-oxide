@@ -260,9 +260,13 @@ pub struct State {
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
 }
+// SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
+// Send so callers can build it on one thread and then transition to another
+// thread before any use. After first use, State MUST NOT cross thread
+// boundaries (all `use_*_state()` helpers use a `#[thread_local]` switcher).
+// Violating this contract would race libxml2's reference counts → UAF/UB.
+// State is deliberately NOT Sync: no two threads may alias the same State.
 unsafe impl Send for State {}
-// State is NOT Sync!
-// each core conversion job must be localized in ONE thread.
 
 impl Default for State {
   fn default() -> Self {

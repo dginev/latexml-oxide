@@ -190,6 +190,9 @@ impl Processor for XSLT {
     }
 
     // Register EXSLT extension functions (str:tokenize, etc.)
+    // SAFETY: libxslt C function with no inputs; modifies global function
+    // registry. Safe to call multiple times (libxslt guards against this
+    // internally). Must be called before any xsltApplyStylesheet.
     // TODO: Move to rust-libxslt crate (L3)
     unsafe { exsltRegisterAll(); }
 

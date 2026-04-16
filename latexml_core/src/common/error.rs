@@ -392,6 +392,11 @@ pub struct Error {
   pub message:  String,
 }
 impl ErrorTrait for Error {}
+// SAFETY: `Error` contains a `Locator` which embeds a Rc<RefCell<Mouth>> — !Send/!Sync
+// by default. The invariant is the same as for `Stored`: errors propagate within a
+// single thread's conversion pipeline; they never cross thread boundaries at runtime.
+// These impls exist to satisfy `Box<dyn std::error::Error + Send + Sync>` bounds on
+// error return types, which transitively require Send/Sync on all error variants.
 unsafe impl Send for Error {}
 unsafe impl Sync for Error {}
 

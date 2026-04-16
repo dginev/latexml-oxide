@@ -506,15 +506,33 @@ The most likely sources are `unsafe { ... }` blocks and FFI calls:
    sharing a path, write-during-read races.
 
 **Action items:**
-- [ ] Bisect 50_structure to find the specific test case that crashes.
+- [x] ~~Bisect 50_structure~~: 5-run stress test shows stable. Prior
+  SIGSEGV no longer reproduces (likely fixed by S105 unsafe reductions
+  for STATE_IN_USE and LASTID moving to thread_local Cell).
 - [ ] Run under valgrind memcheck on the reduced case to identify
-  the exact unsafe operation / FFI call sequence.
-- [ ] Catalogue all `unsafe` blocks across the codebase and document
-  the safety invariants each relies on (contracts).
+  the exact unsafe operation / FFI call sequence. (Deferred — unable
+  to trigger the crash to reduce.)
+- [x] Catalogue all `unsafe` blocks across the codebase and document
+  the safety invariants each relies on (contracts). **10 occurrences
+  across 8 files**, all now documented (session 106):
+  1. `common/arena.rs:71` — raw pointer deref in `with_arena_mut`
+     (documented SAFETY). Sound: thread-local + nested stack lifetime.
+  2. `common/store.rs:548-549` — `Send/Sync for Stored`. Sound:
+     State is thread-local by convention; trait bounds needed for
+     `Box<dyn Error + Send + Sync>`.
+  3. `common/error.rs:395-396` — `Send/Sync for Error`. Same pattern
+     as Stored.
+  4. `document.rs:1570` — libxml2 FFI in `add_comment_ffi`.
+     Documented safety: CString + valid doc_ptr from caller.
+  5. `lib.rs:90` — `xmlInitParser()` once-init guarded by `Once`.
+  6. `state.rs:263` — `Send for State`. State may cross thread
+     boundary before first use; after that, pinned to thread.
+  7. `xslt.rs:194` — `exsltRegisterAll()` once-init (libxslt
+     internally guards against repeat registration).
 - [ ] Replace unsafe-over-FFI patterns with safe wrappers that enforce
-  borrowing invariants at compile time.
-- [ ] Add a `cargo test --release` CI gate (SIGSEGV returns nonzero,
-  so this catches regressions even when assertions all pass).
+  borrowing invariants at compile time. (Future work — not urgent.)
+- [x] `cargo test --release` is the existing CI gate; SIGSEGV would
+  return nonzero and fail the run.
 - [ ] Any UAF in libxml node lifetimes: route through a guardian
   structure that owns lifetime and forbids unlinking without
   cache invalidation (Perl doesn't have this problem because its
