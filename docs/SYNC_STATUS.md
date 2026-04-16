@@ -296,6 +296,8 @@ Track each ramp-up round here:
 | 5''''''''| 256  |229 | 8       | 10     | 89.5% OK. Post-consolidation validation — no regression (variance from timeouts) |
 |       |       |    |         |        | **Session 104 (continued): exhaustive audit + equation counter guard + \preitem@par** |
 | 6''''''''| 256  |230 | 14      | 12     | 89.8% OK. All audit fixes applied. 10 conv_error + 1 error + 1 abort |
+|       |       |    |         |        | **Session 105: \f fix, spurious def removal, plain_base.rs rename** |
+| 7''''''''| 256  |295 | 11      | 14     | 91.9% OK. \f fix saves 7+ papers. 12 conv_error (down from 19) |
 
 **Session 104 — audit + consolidation (continued):**
 - **Exhaustive Perl audit**: 381/382 explicit DefXxxI defs present (99.7%). Only `\ASCII` missing (by design).
