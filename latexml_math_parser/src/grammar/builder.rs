@@ -432,21 +432,27 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // `function fenced_factor` remains — distinct from `function factor`, which is
     // intentionally NOT a production (FUNCTION requires parens for application:
     // `f(x)` = f@(x), but `f x` = f*x, per Perl's FUNCTION vs OPFUNCTION distinction).
-    trig_arg = factor
+    // Perf (grammar pruning): trig_arg uses `factor_base` (bare factors only),
+    // NOT `factor` (which includes fenced_factor). This prevents the double-path
+    // ambiguity where `\sin(x)` matched BOTH:
+    //   - `applied_func = trigfunction trig_arg` (via `trig_arg = factor` → fenced_factor) → prefix_apply
+    //   - `applied_func = trigfunction lparen formula rparen` → apply_delimited
+    // giving 2 interpretations per trig+paren. Two trig+paren pairs in one formula
+    // produced 4× ambiguity multiplier. By excluding fenced_factor from trig_arg,
+    // parenthesized trig applications go through apply_delimited (the semantically
+    // preferred XMDual form) only.
+    // Function application paths (function fenced_factor) remain so \sin f(x)
+    // and \sin F(x) still parse correctly as sin(f(x)) / sin(F(x)).
+    trig_arg = factor_base
       | unknown fenced_factor => speculative_prefix_apply
       | diffunk fenced_factor => speculative_prefix_apply
       | function fenced_factor => prefix_apply
       // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
       // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
       | opfunction factor => prefix_apply
-      // Perf/disambiguation: trig_arg chains only through factor_base on the RHS
-      // (UNKNOWN / NUMBER / ID / ATOM / bare diffunk/diffid). Previously we chained
-      // through full `factor` which includes fenced_factor, so `\sin(x) + (y)`
-      // enumerated both `sin(x) + (y)` and `sin((x) + (y))`. Restricting chain
-      // extensions to bare factor_base prevents trig from swallowing parenthesized
-      // groups that appear on the right side of a binop / mulop — these are
-      // semantically NOT the trig's argument, they're peers at term level.
-      // This drops ambiguity from ~65 to ~1 parses for trig+paren+binop+trig+paren.
+      // trig_arg chains only through factor_base on the RHS. Previous approach
+      // chained through full `factor` causing \sin(x) + (y) to ambiguously
+      // parse as sin((x)+(y)).
       | trig_arg mulop factor_base => infix_apply_nary
       | trig_arg binop factor_base => infix_apply_nary
       | trig_arg factor_base => apply_invisible_times;
@@ -492,9 +498,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += opfunction tight_term => prefix_apply;
     tight_term += opfunction factor => prefix_apply;
     tight_term += opfunction fenced_factor => prefix_apply;
-    // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi)
+    // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi).
+    // Perf: only bare `factor` here (NOT fenced_factor). Fenced trig calls
+    // `\sin(x)` go through applied_func's apply_delimited (XMDual) path.
+    // Keeping `trigfunction fenced_factor` here caused duplicate prefix_apply
+    // trees competing with apply_delimited — pure ambiguity with no benefit.
     tight_term += trigfunction factor => prefix_apply;
-    tight_term += trigfunction fenced_factor => prefix_apply;
     // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
     // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
     // not an entire invisible-times chain. Covers fenced_factor too (since factor += fenced_factor).
