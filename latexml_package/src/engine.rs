@@ -17,7 +17,7 @@ mod tex_kern;
 mod tex_logic;
 mod tex_macro;
 mod tex_marks;
-mod tex_math;
+pub(crate) mod tex_math;
 mod tex_page;
 mod tex_paragraph;
 mod tex_penalties;
@@ -25,7 +25,7 @@ mod tex_registers;
 pub mod tex_tables;
 
 pub mod base_functions; // auxiliary functions
-pub(crate) mod tex_scripts;
+// tex_scripts.rs removed — content moved to tex_math.rs (Perl: TeX_Math.pool.ltxml)
 // Deprecated aliases
 mod base_deprecated;
 // eTeX Pool

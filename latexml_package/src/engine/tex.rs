@@ -47,7 +47,7 @@ LoadDefinitions!({
   InnerPool!(tex_macro);
   InnerPool!(tex_marks);
   InnerPool!(tex_math);
-  InnerPool!(tex_scripts);
+  // tex_scripts content now inlined in tex_math.rs (Perl: TeX_Math.pool.ltxml)
   InnerPool!(tex_page);
   InnerPool!(tex_paragraph);
   InnerPool!(tex_penalties);

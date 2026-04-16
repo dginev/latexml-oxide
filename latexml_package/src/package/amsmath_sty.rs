@@ -1751,7 +1751,7 @@ fn sideset_construct(
   args: &[Option<Digested>],
   props: &SymHashMap<Stored>,
 ) -> Result<()> {
-  use crate::engine::tex_scripts::is_script;
+  use crate::engine::tex_math::is_script;
   use latexml_core::token::Catcode;
 
   let pre = args.first().and_then(|a| a.as_ref());
