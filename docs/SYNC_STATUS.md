@@ -294,6 +294,15 @@ Track each ramp-up round here:
 |       |       |    |         |        | **Additional: mn2e useAMS, proof env, \citen, @equationgroup, aa natbib, NC@ stubs, autoload triggers** |
 |       |       |    |         |        | **Session 104: Phase F ch* consolidation (36 files → single latex_constructs.rs)** |
 | 5''''''''| 256  |229 | 8       | 10     | 89.5% OK. Post-consolidation validation — no regression (variance from timeouts) |
+|       |       |    |         |        | **Session 104 (continued): exhaustive audit + equation counter guard + \preitem@par** |
+| 6''''''''| 256  |230 | 14      | 12     | 89.8% OK. All audit fixes applied. 10 conv_error + 1 error + 1 abort |
+
+**Session 104 — audit + consolidation (continued):**
+- **Exhaustive Perl audit**: 381/382 explicit DefXxxI defs present (99.7%). Only `\ASCII` missing (by design).
+- **Equation counter guard**: `prepare_equation_counter()` now creates `equation` counter if missing. Fixes jpsj2/appolb standalone classes (~15 papers).
+- **Index constructors**: `\index@item`, `\index@dotfill`, `do_index_item()` restored.
+- **\preitem@par**: List items now use `\preitem@par` (close ltx:p/ltx:para) matching Perl.
+- **Remaining 12 errors**: 2 Missing$ (document), 1 colordvi, 1 mode mismatch, 2 undefined custom macros, 2 malformed nesting, 2 equation counter (to verify next run), 1 OOM abort (4GB alloc in \ifcase), 1 missing toc.tex.
 
 **Session 103 — mode mismatch fix + elsart dispatch (session 103):**
 - **Mode mismatch at `\end{document}` FIXED** — BOUND_MODE value check replaces undo-table-bound check in `end_mode_opt`. Root cause: `begin_mode_opt("internal_vertical", true)` at frame_depth=0 sets BOUND_MODE in the locked daemon frame, but `is_value_bound("BOUND_MODE", Some(0))` checks the topmost unlocked frame.
