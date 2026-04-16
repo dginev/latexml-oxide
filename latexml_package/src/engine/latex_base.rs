@@ -223,51 +223,51 @@ LoadDefinitions!({
   // Perl: latex_base.pool.ltxml lines 177-237
   //======================================================================
   // Protection infrastructure is loaded via RawTeX
-  // (Already in latex_ch1_fragile_commands.rs — not moved here to avoid disrupting
+  // (Already in latex_constructs.rs C.1 — not moved here to avoid disrupting
   //  the \protect chain which depends on loading order with other C.1 definitions)
 
   //======================================================================
   // C.3. Sentences and Paragraphs
   // Perl: latex_base.pool.ltxml lines 248-277
   //======================================================================
-  // \fmtname, \fmtversion — in latex_ch3_sentences_and_paragraphs.rs
-  // \@@par, \@par, \@restorepar — in latex_ch3_sentences_and_paragraphs.rs
-  // footnote counters — in latex_ch3_sentences_and_paragraphs.rs
+  // \fmtname, \fmtversion — in latex_constructs.rs (C.3)
+  // \@@par, \@par, \@restorepar — in latex_constructs.rs (C.3)
+  // footnote counters — in latex_constructs.rs (C.3)
 
   //======================================================================
   // C.4 Sectioning and Table of Contents
   // Perl: latex_base.pool.ltxml lines 279-300
   //======================================================================
-  // \appendixname, \appendixesname — in latex_ch4_sectioning_and_toc.rs
-  // \contentsname, \listfigurename, \listtablename — in latex_ch4_sectioning_and_toc.rs
-  // NewCounter('tocdepth') — in latex_ch4_sectioning_and_toc.rs
+  // \appendixname, \appendixesname — in latex_constructs.rs (C.4)
+  // \contentsname, \listfigurename, \listtablename — in latex_constructs.rs (C.4)
+  // NewCounter('tocdepth') — in latex_constructs.rs (C.4)
 
   //======================================================================
   // C.5 Classes, Packages and Page Styles
   // Perl: latex_base.pool.ltxml lines 302-347
   //======================================================================
-  // \columnsep, \columnseprule, \mathindent — in latex_ch5_page_styles.rs
-  // NewCounter('secnumdepth') — in latex_ch5_page_styles.rs
-  // \sectionmark{}, \subsectionmark{}, etc. — in latex_ch5_title_page_and_abstract.rs
+  // \columnsep, \columnseprule, \mathindent — in latex_constructs.rs (C.5)
+  // NewCounter('secnumdepth') — in latex_constructs.rs (C.5)
+  // \sectionmark{}, \subsectionmark{}, etc. — in latex_constructs.rs (C.5)
 
   //======================================================================
   // C.8.1 Defining Commands
   // Perl: latex_base.pool.ltxml lines 350-368
   //======================================================================
-  // \@tabacckludge, DeclareTextAccent, etc. — in latex_ch8_defining_commands.rs
+  // \@tabacckludge, DeclareTextAccent, etc. — in latex_constructs.rs (C.8)
 
   //======================================================================
   // C.9.1 Figures and Tables — float parameters
   // Perl: latex_base.pool.ltxml lines 384-417
   //======================================================================
-  // Float counters, fractions, registers — in latex_ch9_figures_and_tables.rs
-  // \flushbottom, \suppressfloats — in latex_ch9_figures_and_tables.rs
+  // Float counters, fractions, registers — in latex_constructs.rs (C.9)
+  // \flushbottom, \suppressfloats — in latex_constructs.rs (C.9)
 
   //======================================================================
   // C.11.4 Splitting the input / C.13 Boxes
   // Perl: latex_base.pool.ltxml lines 454-486
   //======================================================================
-  // \DeclareRobustCommand — in latex_ch13_boxes.rs
+  // \DeclareRobustCommand — in latex_constructs.rs (C.13)
 
   //======================================================================
   // Error/Warning/Info infrastructure
