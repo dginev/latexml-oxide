@@ -8307,6 +8307,99 @@ LoadDefinitions!({
   DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
   DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
 
+  //======================================================================
+  // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
+  //======================================================================
+  DefMacro!("\\bibdata{}", None);
+  DefMacro!("\\bibcite{}{}", None);
+  DefMacro!("\\citation{}", None);
+  DefMacro!("\\contentsline{}{}{}", None);
+  DefMacro!("\\newlabel{}{}", None);
+
+  // Perl L5804-5806
+  Let!("\\mathgroup", "\\fam");
+
+  // Perl L5808-5821: nocorr, text@command stubs
+  DefMacro!("\\nocorrlist", None, ".,");
+  Let!("\\nocorr", "\\relax");
+  DefMacro!("\\text@command{}", "");
+  DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
+  TeX!("\\newif\\ifmaybe@ic");
+  DefMacro!("\\maybe@ic", None, None);
+  DefMacro!("\\maybe@ic@", None, None);
+  DefMacro!("\\sw@slant", None, None);
+  DefMacro!("\\fix@penalty", None, None);
+
+  // Perl L5814: \mathhexbox
+  DefPrimitive!("\\mathhexbox {}{}{}", sub[(a, b, c)] {
+    let n = a.to_string().trim().parse::<i32>().unwrap_or(0) * 256
+      + b.to_string().trim().parse::<i32>().unwrap_or(0) * 16
+      + c.to_string().trim().parse::<i32>().unwrap_or(0);
+    let (glyph, _font) = font_decode(n, None, None);
+    if let Some(ch) = glyph {
+      vec![Tbox::new(arena::pin(&ch.to_string()), None, None, Tokens!(), SymHashMap::default()).into()]
+    } else {
+      Vec::new()
+    }
+  });
+
+  // Perl L5825: \extrafloats — modern LaTeX (2015+) for extra float slots (no-op)
+  DefPrimitive!("\\extrafloats{}", None);
+
+  //======================================================================
+  // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
+  // Pre-declare hyphenation languages for babel's \iflanguage checks
+  //======================================================================
+  TeX!(r"\newlanguage\l@english
+\newlanguage\l@usenglishmax
+\newlanguage\l@USenglish
+\newlanguage\l@dumylang
+\newlanguage\l@nohyphenation
+\newlanguage\l@arabic
+\newlanguage\l@basque
+\newlanguage\l@bulgarian
+\newlanguage\l@coptic
+\newlanguage\l@welsh
+\newlanguage\l@czech
+\newlanguage\l@slovak
+\newlanguage\l@german
+\newlanguage\l@ngerman
+\newlanguage\l@danish
+\newlanguage\l@esperanto
+\newlanguage\l@spanish
+\newlanguage\l@catalan
+\newlanguage\l@galician
+\newlanguage\l@estonian
+\newlanguage\l@farsi
+\newlanguage\l@finnish
+\newlanguage\l@french
+\newlanguage\l@greek
+\newlanguage\l@monogreek
+\newlanguage\l@ancientgreek
+\newlanguage\l@croatian
+\newlanguage\l@hungarian
+\newlanguage\l@interlingua
+\newlanguage\l@ibycus
+\newlanguage\l@indonesian
+\newlanguage\l@icelandic
+\newlanguage\l@italian
+\newlanguage\l@latin
+\newlanguage\l@mongolian
+\newlanguage\l@dutch
+\newlanguage\l@norsk
+\newlanguage\l@polish
+\newlanguage\l@portuguese
+\newlanguage\l@pinyin
+\newlanguage\l@romanian
+\newlanguage\l@russian
+\newlanguage\l@slovenian
+\newlanguage\l@uppersorbian
+\newlanguage\l@serbian
+\newlanguage\l@swedish
+\newlanguage\l@turkish
+\newlanguage\l@ukenglish
+\newlanguage\l@ukrainiane");
+
   // Perl latex_constructs: \protected@write
   DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {
     bgroup();
