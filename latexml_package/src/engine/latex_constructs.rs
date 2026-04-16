@@ -2194,11 +2194,12 @@ LoadDefinitions!({
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
   DefMacro!("\\@currenvir", "");
-  DefPrimitive!("\\f{}", sub[(env)] {
-    let env_string = env.to_string();
-    DefMacro!(T_CS!("\\@currenvir"), None, env);
-    AssignValue!("current_environment", env_string);
-  });
+  // Note: LaTeX kernel defines \def\f#1{\def\@currenvir{#1}} but this is just
+  // a kernel internal that gets overridden by user \newcommand{\f}{...}.
+  // We do NOT define \f here — use \lx@setcurrenvir instead (matching Perl).
+  // The old DefPrimitive!("\\f{}", ...) was a bug: primitives can't be overridden
+  // by \newcommand, so \newcommand{\f}{\mathcal{F}} would silently fail, and
+  // $\f$ would eat the closing $ as an argument, corrupting the mode stack.
 
   DefPrimitive!(
   "\\lx@setcurrenvir{}", sub[(env)] {
