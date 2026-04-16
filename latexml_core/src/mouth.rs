@@ -52,8 +52,10 @@ impl FoodType {
   }
 }
 
+// Perf/safety: `Cell<usize>` over `static mut` — thread_local guarantees
+// single-threaded access, and Cell gives us get/set without any `unsafe`.
 #[thread_local]
-static mut LASTID: usize = 0;
+static LASTID: std::cell::Cell<usize> = std::cell::Cell::new(0);
 
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 // LOWERHEX_REGEX removed — replaced with direct matches!() check in tex_hex_caret path.
@@ -889,12 +891,10 @@ impl Mouth {
   }
 
   fn gid() -> usize {
-    // assume all mouths are spawned by a single thread, in which case
-    // this expedient global counter is safe.
-    unsafe {
-      LASTID += 1;
-      LASTID
-    }
+    // Thread_local Cell: single-threaded access guaranteed by #[thread_local].
+    let next = LASTID.get() + 1;
+    LASTID.set(next);
+    next
   }
 
   /// Checks if Mouth read is at the end of a line.

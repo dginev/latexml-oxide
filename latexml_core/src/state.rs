@@ -847,47 +847,44 @@ enum RotateState {
   Std,
   Sty,
 }
+// Perf/safety: `Cell<RotateState>` instead of `static mut` — RotateState is
+// Copy, so Cell gives us Get/Set with no unsafe, preserving the thread_local
+// single-threaded access guarantee without requiring unsafe at each call site.
 #[thread_local]
-static mut STATE_IN_USE: RotateState = RotateState::Main;
+static STATE_IN_USE: std::cell::Cell<RotateState> = std::cell::Cell::new(RotateState::Main);
 
 pub fn use_sty_state() {
-  unsafe {
-    if STATE_IN_USE != RotateState::Sty {
-      let mut sty_state = sty_state_mut!();
-      let mut main_state = state_mut!();
-      std::mem::swap(&mut *sty_state, &mut *main_state);
-      STATE_IN_USE = RotateState::Sty;
-    }
+  if STATE_IN_USE.get() != RotateState::Sty {
+    let mut sty_state = sty_state_mut!();
+    let mut main_state = state_mut!();
+    std::mem::swap(&mut *sty_state, &mut *main_state);
+    STATE_IN_USE.set(RotateState::Sty);
   }
 }
 pub fn use_std_state() {
-  unsafe {
-    if STATE_IN_USE != RotateState::Std {
-      let mut std_state = std_state_mut!();
-      let mut main_state = state_mut!();
-      std::mem::swap(&mut *std_state, &mut *main_state);
-      STATE_IN_USE = RotateState::Std;
-    }
+  if STATE_IN_USE.get() != RotateState::Std {
+    let mut std_state = std_state_mut!();
+    let mut main_state = state_mut!();
+    std::mem::swap(&mut *std_state, &mut *main_state);
+    STATE_IN_USE.set(RotateState::Std);
   }
 }
 pub fn use_main_state() {
-  unsafe {
-    match STATE_IN_USE {
+  match STATE_IN_USE.get() {
       RotateState::Sty => {
         let mut sty_state = sty_state_mut!();
         let mut main_state = state_mut!();
         std::mem::swap(&mut *sty_state, &mut *main_state);
-        STATE_IN_USE = RotateState::Main;
+        STATE_IN_USE.set(RotateState::Main);
       },
       RotateState::Std => {
         let mut std_state = std_state_mut!();
         let mut main_state = state_mut!();
         std::mem::swap(&mut *std_state, &mut *main_state);
-        STATE_IN_USE = RotateState::Main;
+        STATE_IN_USE.set(RotateState::Main);
       },
       RotateState::Main => {},
-    };
-  }
+  };
 }
 
 /// A shorthand for installing definitions
@@ -2417,9 +2414,7 @@ where FnR: FnOnce(Vec<&Stored>) -> R {
 
 pub fn set_state(incoming_state: State) {
   // Reset state rotation to Main to prevent stale Sty/Std state from previous runs
-  unsafe {
-    STATE_IN_USE = RotateState::Main;
-  }
+  STATE_IN_USE.set(RotateState::Main);
   let mut global_state = state_mut!();
   *global_state = incoming_state;
 }

@@ -119,6 +119,13 @@ impl Object for Document {
       .unwrap_or_default()
   }
 }
+
+/// Attachment policy for `Document::add_comment_ffi`. Kept module-local.
+enum Placement_ {
+  AppendChild,
+  PrevSibling,
+}
+
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
@@ -1538,12 +1545,52 @@ impl Document {
     Ok(self.node.clone())
   }
 
+  /// Safety-contract'd FFI: create a libxml2 comment node and attach it to
+  /// `anchor` according to the supplied Placement. Called from
+  /// `insert_comment`. Isolated here so the unsafe block lives in exactly
+  /// one place with a reviewed contract.
+  ///
+  /// Safety:
+  /// - `doc_ptr` must be a valid, live libxml2 document pointer (we obtained
+  ///   it from a Rust-managed `XmlDocument` that has not been dropped).
+  /// - `anchor` must be a node in that document.
+  /// - The C string for the comment text is constructed with CString::new,
+  ///   which rejects embedded NULs; we pass the ptr while the CString is
+  ///   still alive.
+  /// - libxml2 takes ownership of `comment_ptr` after xmlAddChild /
+  ///   xmlAddPrevSibling, so we do not need to free it ourselves.
+  fn add_comment_ffi(
+    doc_ptr: *mut libxml::bindings::_xmlDoc,
+    anchor: &Node,
+    comment_text: &str,
+    placement: Placement_,
+  ) {
+    use std::ffi::CString;
+    let Ok(c_text) = CString::new(comment_text) else { return };
+    unsafe {
+      let comment_ptr = libxml::bindings::xmlNewDocComment(
+        doc_ptr,
+        c_text.as_ptr() as *const u8,
+      );
+      if comment_ptr.is_null() {
+        return;
+      }
+      match placement {
+        Placement_::AppendChild => {
+          libxml::bindings::xmlAddChild(anchor.node_ptr(), comment_ptr);
+        },
+        Placement_::PrevSibling => {
+          libxml::bindings::xmlAddPrevSibling(anchor.node_ptr(), comment_ptr);
+        },
+      }
+    }
+  }
+
   /// Insert a new comment, or append to previous comment.
   /// Does NOT move the current insertion point to the Comment,
   /// but may move up past a text node.
   /// Perl: Document.pm lines 678-698
   pub fn insert_comment(&mut self, text: &str) -> Result<Node> {
-    use std::ffi::CString;
     let trimmed = text.trim_end();
     let clean = DASHES_RE.replace_all(trimmed, "__");
     // Perl does NOT close the text node here — it uses getElement() to find
@@ -1554,20 +1601,12 @@ impl Document {
     let comment_text = s!(" {} ", clean);
 
     if self.node.get_type() == Some(NodeType::DocumentNode) {
-      // At document root: create comment node via raw FFI and add to pending.
-      unsafe {
-        let c_text = CString::new(comment_text.as_str()).unwrap();
-        let comment_ptr = libxml::bindings::xmlNewDocComment(
-          self.document.doc_ptr(),
-          c_text.as_ptr() as *const u8,
-        );
-        if !comment_ptr.is_null() {
-          libxml::bindings::xmlAddChild(
-            self.node.node_ptr(),
-            comment_ptr,
-          );
-        }
-      }
+      Self::add_comment_ffi(
+        self.document.doc_ptr(),
+        &self.node,
+        &comment_text,
+        Placement_::AppendChild,
+      );
     } else if let Some(node) = self.get_element() {
       // Get the nearest element node (Perl: getElement)
       let prev = node.get_last_child();
@@ -1588,34 +1627,28 @@ impl Document {
         let before_is_comment =
           before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
 
-        unsafe {
-          let c_text = CString::new(comment_text.as_str()).unwrap();
-          let comment_ptr = libxml::bindings::xmlNewDocComment(
+        if before_is_comment {
+          Self::add_comment_ffi(
             self.document.doc_ptr(),
-            c_text.as_ptr() as *const u8,
+            &node,
+            &comment_text,
+            Placement_::AppendChild,
           );
-          if !comment_ptr.is_null() {
-            if before_is_comment {
-              // Append new comment at end (don't merge across text)
-              libxml::bindings::xmlAddChild(node.node_ptr(), comment_ptr);
-            } else {
-              // Insert comment before the text node
-              libxml::bindings::xmlAddPrevSibling(prev_node.node_ptr(), comment_ptr);
-            }
-          }
+        } else {
+          Self::add_comment_ffi(
+            self.document.doc_ptr(),
+            &prev_node,
+            &comment_text,
+            Placement_::PrevSibling,
+          );
         }
       } else {
-        // Default: append as child
-        unsafe {
-          let c_text = CString::new(comment_text.as_str()).unwrap();
-          let comment_ptr = libxml::bindings::xmlNewDocComment(
-            self.document.doc_ptr(),
-            c_text.as_ptr() as *const u8,
-          );
-          if !comment_ptr.is_null() {
-            libxml::bindings::xmlAddChild(node.node_ptr(), comment_ptr);
-          }
-        }
+        Self::add_comment_ffi(
+          self.document.doc_ptr(),
+          &node,
+          &comment_text,
+          Placement_::AppendChild,
+        );
       }
     }
     Ok(self.node.clone())
