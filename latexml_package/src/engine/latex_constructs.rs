@@ -3846,10 +3846,19 @@ LoadDefinitions!({
   // Additional ones created by need.
   NewCounter!("@itemizei",   "section",      idprefix => "I");
 
+  // Perl: latex_constructs.pool.ltxml L1505-1510 — paragraph before list items
+  DefConstructor!("\\preitem@par", sub[document] {
+    let _ = document.maybe_close_element("ltx:p");
+    let _ = document.maybe_close_element("ltx:para");
+  }, alias => "\\par");
+
+  // Perl: latex_constructs.pool.ltxml L1560
+  DefMacro!("\\@mklab{}", "\\hfil #1");
+
   // id, but NO refnum (et.al) attributes on itemize \\item ...
   // unless the optional tag argument was given!
   // We"ll make the <ltx:tag> from either the optional arg, or from \\labelitemi..
-  DefMacro!("\\itemize@item", "\\par\\itemize@item@");
+  DefMacro!("\\itemize@item", "\\preitem@par\\itemize@item@");
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[args] {
@@ -3861,7 +3870,7 @@ LoadDefinitions!({
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested) });
 
-  DefMacro!("\\enumerate@item", "\\par\\enumerate@item@");
+  DefMacro!("\\enumerate@item", "\\preitem@par\\enumerate@item@");
   DefConstructor!("\\enumerate@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[args] {
@@ -3873,7 +3882,7 @@ LoadDefinitions!({
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested) });
 
-  DefMacro!("\\description@item", "\\par\\description@item@");
+  DefMacro!("\\description@item", "\\preitem@par\\description@item@");
   DefConstructor!("\\description@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[args] {
@@ -4110,7 +4119,7 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
 
-  DefMacro!("\\trivlist@item", "\\par\\trivlist@item@");
+  DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
     // At least an empty tag! ?
