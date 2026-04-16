@@ -597,9 +597,70 @@ LoadDefinitions!({
   DefMacro!("\\wlog{}", "");
 
   //======================================================================
-  // Perl L829-863: Expl3 / L3 hook stubs
-  // (Already defined in latex_semi_undocumented.rs — loaded via latex_constructs)
+  // Perl L829-863: Expl3 / L3 hook stubs + kernel conditionals
+  // (moved from latex_semi_undocumented.rs)
   //======================================================================
+
+  // \@ifnextchar — Perl latex_base (also used heavily in latex_constructs)
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
+    let next = gullet::read_non_space()?;
+    let next_test = match next {
+      Some(ref n) => XEquals!(&token, n),
+      None => XEquals!(&token, &*TOKEN_END)
+    };
+    let which = if next_test { t_if } else { t_else };
+    let mut result = which.substitute_parameters(&[]).unlist();
+    if let Some(t_next) = next {
+      result.push(t_next);
+    }
+    result
+  });
+  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
+  Let!("\\@ifnext", "\\@ifnextchar");
+
+  // \makeatletter / \makeatother
+  DefPrimitive!("\\makeatletter", {
+    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
+  });
+  DefPrimitive!("\\makeatother", {
+    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
+  });
+
+  // L3 hook stubs — Perl latex_base L829-855
+  DefMacro!("\\NewHook{}", None);
+  DefMacro!("\\NewReversedHook{}", None);
+  DefMacro!("\\NewMirroredHookPair{}{}", None);
+  DefMacro!("\\ActivateGenericHook{}", None);
+  DefMacro!("\\DisableGenericHook{}", None);
+  DefMacro!("\\AddToHook{}[]{}", None);
+  DefMacro!("\\AddToHookNext{}{}", None);
+  DefMacro!("\\ClearHookNext{}", None);
+  DefMacro!("\\RemoveFromHook{}[]", None);
+  DefMacro!("\\SetDefaultHookLabel{}", None);
+  DefMacro!("\\PushDefaultHookLabel{}", None);
+  DefMacro!("\\PopDefaultHookLabel", None);
+  DefMacro!("\\UseHook{}", None);
+  DefMacro!("\\UseOneTimeHook{}", None);
+  DefMacro!("\\ShowHook{}", None);
+  DefMacro!("\\LogHook{}", None);
+  DefMacro!("\\DebugHooksOn", None);
+  DefMacro!("\\DebugHooksOff", None);
+  DefMacro!("\\DeclareHookRule{}{}{}{}", None);
+  DefMacro!("\\DeclareDefaultHookRule{}{}{}", None);
+  DefMacro!("\\ClearHookRule{}{}{}", None);
+  DefMacro!("\\IfHookEmptyTF{}{}{}", "#3");
+  DefMacro!("\\IfHookExistsTF{}{}{}", "#3");
+  DefMacro!("\\MakeTextLowercase", "\\lowercase");
+  DefMacro!("\\MakeTextUppercase", "\\uppercase");
+
+  // Perl latex_base L856-862: kernel conditionals and Lets
+  DefConditional!("\\if@includeinrelease");
+  Let!("\\@kernel@after@enddocument", "\\@empty");
+  Let!("\\@kernel@after@enddocument@afterlastpage", "\\@empty");
+  Let!("\\@kernel@before@begindocument", "\\@empty");
+  Let!("\\@kernel@after@begindocument", "\\@empty");
+  Let!("\\conditionally@traceon", "\\@empty");
+  Let!("\\conditionally@traceoff", "\\@empty");
 
   //======================================================================
   // Additional base definitions not in Perl's latex_base but needed early

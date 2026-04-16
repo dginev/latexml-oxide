@@ -160,8 +160,7 @@ LoadDefinitions!({
   InnerPool!(latex_ch15_font_selection);
   InnerPool!(latex_ch15_special_symbol);
 
-  // Semi-documented commands (L3 hooks, expl3 stubs)
-  InnerPool!(latex_semi_undocumented);
+  // (latex_semi_undocumented.rs removed — content inlined below)
 
   // Perl latex_constructs.pool.ltxml L5937-5938:
   // LaTeX now includes textcomp by default.
@@ -254,4 +253,165 @@ LoadDefinitions!({
   // Perl L5913,5916: fixltx2e defaults
   DefMacro!("\\eminnershape", None, None);
   DefMacro!("\\TextOrMath{}{}", "\\ifmmode#2\\else#1\\fi");
+
+  //======================================================================
+  // Semi-undocumented commands (moved from latex_semi_undocumented.rs)
+  // Perl: latex_constructs.pool.ltxml various locations
+  //======================================================================
+
+  // Hacky version matches multiple chars! but does NOT expand
+  DefMacro!("\\@ifnext@n {}{}{}", sub[(tokens,if_toks,else_toks)] {
+    let mut toks = VecDeque::from(tokens.unlist());
+    let mut read = Vec::new();
+
+    while let Some(t) = gullet::read_token()? {
+      if t == toks[0] {
+        toks.pop_front();
+        read.push(t);
+      } else {
+        read.push(t);
+        break;
+      }
+    }
+    let mut result = if toks.is_empty() {
+      if_toks.unlist()
+    } else {
+      else_toks.unlist()
+    };
+    result.extend(read);
+    Ok(Tokens::new(result))
+  });
+
+  DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
+    let next_opt = gullet::read_non_space()?;
+    if next_opt == Some(T_OTHER!("*")) {
+      Ok(if_toks)
+    } else {
+      let mut result = else_toks.unlist();
+      if let Some(next) = next_opt {
+        result.push(next);
+      }
+      Ok(Tokens::new(result))
+    }
+  });
+
+  DefMacro!("\\@dblarg {}", r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
+  DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
+
+  DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
+    if gullet::if_next(T_OTHER!("["))? {
+      Ok(cmd)
+    } else {
+      Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))
+    }
+  });
+  TeX!(
+    r"
+  \def\@protected@testopt#1{%%
+    \ifx\protect\@typeset@protect
+      \expandafter\@testopt
+    \else
+      \@x@protect#1%
+    \fi}"
+  );
+
+  Let!("\\l@ngrel@x", "\\relax");
+  DefMacro!(
+    "\\@star@or@long{}",
+    r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}"
+  );
+
+  TeX!(
+    r"
+  \def\in@#1#2{%
+  \def\in@@##1#1##2##3\in@@{%
+    \ifx\in@##2\in@false\else\in@true\fi}%
+  \in@@#2#1\in@\in@@}
+  \newif\ifin@"
+  );
+
+  DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
+    let file_string = Expand!(file).to_string();
+    if find_file(&file_string, None).is_some() {
+      let found_str = s!("\"{file_string}\" ");
+      def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
+      if_tks
+    } else {
+      else_tks
+    }
+  });
+
+  DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
+    let file_tks = Expand!(file);
+    let file_string = file_tks.to_string();
+    if find_file(&file_string, None).is_some() {
+      let found_str = s!("\"{file_string}\" ");
+      def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
+      Tokens!(if_tks, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
+        T_CS!("\\ltx@input"), T_BEGIN!(), file_tks, T_END!())
+    } else {
+      else_tks
+    }
+  });
+
+  DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
+    if is_definable(&token) {
+      iftoken.unlist()
+    } else {
+      let token_str = token.to_string();
+      let mut s = ExplodeText!(token_str);
+      if token_str.starts_with('\\') {
+        s.remove(0);
+      }
+      DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
+      vec![T_CS!("\\@notdefinable")]
+    }
+  });
+
+  Let!("\\@@ifdefinable", "\\@ifdefinable");
+
+  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(_token, iftoken)] {
+    Let!("\\@ifdefinable", "\\@@ifdefinable");
+    iftoken.unlist()
+  });
+
+  DefMacro!(
+    "\\@notdefinable",
+    None,
+    r###"\@latex@error{%
+    Command \@backslashchar\reserved@a\space
+    already defined.
+    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}
+  "###
+  );
+
+  // Sundry
+  DefMacro!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
+  Let!("\\endgraf", "\\par");
+  Let!("\\endline", "\\cr");
+  DefMacro!("\\fileversion", "");
+  DefMacro!("\\filedate", "");
+  DefMacro!("\\chaptername", "Chapter");
+  DefMacro!("\\partname", "Part");
+  DefMacro!("\\appendixname", "Appendix");
+  DefMacro!("\\sectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\subsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
+  DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
+
+  // Perl latex_constructs: \protected@write
+  DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {
+    bgroup();
+    Let!("\\thepage", "\\relax");
+    let _digested = digest(prelude)?;
+    egroup()?;
+  });
+
+  // \@@end — saved TeX \end primitive
+  DefPrimitive!("\\@@end", {
+    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+      gullet::flush();
+    }
+  });
 });
