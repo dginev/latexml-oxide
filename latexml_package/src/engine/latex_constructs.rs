@@ -5703,8 +5703,8 @@ LoadDefinitions!({
   DefRegister!("\\@dblfptop"        => Glue::new(0));
   DefRegister!("\\@dblfpsep"        => Glue::new(0));
   DefRegister!("\\@dblfpbot"        => Glue::new(0));
-  DefRegister!("\\abovecaptionskip" => Glue::new(0));
-  DefRegister!("\\belowcaptionskip" => Glue::new(0));
+  // \abovecaptionskip, \belowcaptionskip — not in Perl engine
+  // (Perl: article.cls.ltxml; Rust: article_cls.rs already defines them)
   Let!("\\topfigrule", "\\relax");
   Let!("\\botfigrule", "\\relax");
   Let!("\\dblfigrule", "\\relax");
