@@ -49,7 +49,10 @@ tex.rs                     (≈ TeX.pool + Base.pool combined)
 
 latex.rs                   (≈ LaTeX.pool)
 ├── LoadPool!("TeX")       (loads tex.rs above)
-└── latex_ch1_* .. latex_ch15_*, latex_other_*, latex_semi_*  (Lamport chapters)
+├── latex_bootstrap.rs     (≈ latex_bootstrap.pool.ltxml)
+├── latex_base.rs          (≈ latex_base.pool.ltxml)
+├── latex_dump             (≈ LoadFormat('latex'))
+└── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, 7800 lines, sections C.1–C.15)
 ```
 
 ## File-by-file mapping
@@ -101,52 +104,33 @@ The `MATH_CHAR_NEGATIONS` static at the top is used by the `\not` DefRewrite.
 
 | Perl file | Rust file | Notes |
 |---|---|---|
-| `latex_bootstrap.pool.ltxml` | *(not ported)* | `LoadFormat` machinery not yet in Rust |
-| `latex_base.pool.ltxml` | *(not ported)* | `LoadFormat` machinery not yet in Rust |
-| `latex_constructs.pool.ltxml` | *(not ported)* | `LoadFormat` machinery not yet in Rust |
+| `latex_bootstrap.pool.ltxml` | `latex_bootstrap.rs` | Stubs for font/counter internals |
+| `latex_base.pool.ltxml` | `latex_base.rs` | Infrastructure: DefMacro, Let, DefRegister, RawTeX |
+| `latex_constructs.pool.ltxml` | `latex_constructs.rs` | All constructors/environments (7800 lines, sections C.1–C.15) |
 
-### LaTeX chapters (inline in LaTeX.pool in Perl, split in Rust)
+### LaTeX constructs — section mapping
 
-The Perl `LaTeX.pool.ltxml` is one large file (~5400 lines). In Rust it is
-split by Lamport chapter into individual files, loaded from `latex.rs`.
+`latex_constructs.rs` (7800 lines) is a single file matching Perl's
+`latex_constructs.pool.ltxml` (6014 lines). It contains all LaTeX semantic
+definitions organized by Lamport chapter with section comment headers.
 
-| Rust file | Lamport chapter | Perl lines (approx) |
+| Section | Lamport chapter | Perl lines (approx) |
 |---|---|---|
-| `latex_ch1_documentclass.rs` | C.1.1 Document Class | 31–110 |
-| `latex_ch1_environments.rs` | C.1.3 Environments | 110–180 |
-| `latex_ch1_fragile_commands.rs` | C.1.4 Fragile Commands | 180–250 |
-| `latex_ch1_break_command.rs` | C.1.5 \\ Command | 251–276 |
-| `latex_ch2_document.rs` | C.2 The Document | 276–372 |
-| `latex_ch3_sentences_and_paragraphs.rs` | C.3 Sentences and Paragraphs | 372–587 |
-| `latex_ch4_sectioning_and_toc.rs` | C.4 Sectioning / ToC | 588–833 |
-| `latex_ch5_packages.rs` | C.5.1 Packages | 833–1080 |
-| `latex_ch5_page_styles.rs` | C.5.2 Page Styles | 1080–1140 |
-| `latex_ch5_title_page_and_abstract.rs` | C.5.3 Title Page | 1102–1310 |
-| `latex_ch6_displayed_paragraphs.rs` | C.6 Displayed Paragraphs | 1311–1376 |
-| `latex_ch6_quotations_and_verse.rs` | C.6 Quotations and Verse | 1377–1395 |
-| `latex_ch6_list_making_environments.rs` | C.6 List Environments | — |
-| `latex_ch6_list_and_trivlist_environments.rs` | C.6 Lists and Trivlists | 1396–1550 |
-| `latex_ch6_verbatim.rs` | C.6 Verbatim | 1551–1646 |
-| `latex_ch7_math_mode_environments.rs` | C.7 Math Environments | 1646–2164 |
-| `latex_ch7_math_common_structures.rs` | C.7 Math Structures | 2164–2180 |
-| `latex_ch7_math_common_delimiters.rs` | C.7 Math Delimiters | 2180–2216 |
-| `latex_ch7_math_mode_changing_style.rs` | C.7 Math Style Changes | 2216–2246 |
-| `latex_ch8_defining_commands.rs` | C.8 Defining Commands | 2247–2511 |
-| `latex_ch8_defining_environments.rs` | C.8 Defining Environments | 2512–2536 |
-| `latex_ch8_theoremlike_environments.rs` | C.8 Theorem-like Envs | 2536–2712 |
-| `latex_ch8_numbering.rs` | C.8 Numbering | 2712–2785 |
-| `latex_ch9_figures_and_tables.rs` | C.9 Figures and Tables | 2786–2975 |
-| `latex_ch9_marginal_notes.rs` | C.9 Marginal Notes | 2975–2985 |
-| `latex_ch10_tabbing_environment.rs` | C.10 Tabbing | 2985–3086 |
-| `latex_ch10_array_and_tabular.rs` | C.10 Array and Tabular | 3086–3229 |
-| `latex_ch11_moving_information.rs` | C.11 Moving Information | 3230–3567 |
-| `latex_ch11_splitting_the_input.rs` | C.11 Splitting Input | 3568–3626 |
-| `latex_ch11_index_and_glossary.rs` | C.11 Index and Glossary | 3627–3821 |
-| `latex_ch11_terminal_io.rs` | C.11 Terminal I/O | 3821–3832 |
-| `latex_ch12_line_and_page_breaking.rs` | C.12 Line/Page Breaking | 3832–3866 |
-| `latex_ch13_boxes.rs` | C.13 Boxes | 3866–4123 |
-| `latex_ch14_pictures_and_color.rs` | C.14 Pictures and Color | 4124–4414 |
-| `latex_ch15_font_selection.rs` | C.15 Font Selection | 4414–4568 |
+| C.1 | Commands and Environments | 31–276 |
+| C.2 | The Structure of the Document | 276–372 |
+| C.3 | Sentences and Paragraphs | 372–587 |
+| C.4 | Sectioning and Table of Contents | 588–833 |
+| C.5 | Classes, Packages and Page Styles | 833–1310 |
+| C.6 | Displayed Paragraphs | 1311–1646 |
+| C.7 | Mathematical Formulas | 1646–2246 |
+| C.8 | Definitions, Numbering and Programming | 2247–2785 |
+| C.9 | Figures and Other Floating Bodies | 2786–2985 |
+| C.10 | Lining It Up in Columns | 2985–3229 |
+| C.11 | Moving Information Around | 3230–3832 |
+| C.12 | Line and Page Breaking | 3832–3866 |
+| C.13 | Lengths, Spaces and Boxes | 3866–4123 |
+| C.14 | Pictures and Color | 4124–4414 |
+| C.15 | Font Selection and Special Symbols | 4414–4568 |
 | `latex_ch15_special_symbol.rs` | C.15 Special Symbols | 4568–4665 |
 | `latex_other_in_appendices.rs` | Other / Appendices | 4666–5200 |
 | `latex_semi_undocumented.rs` | Semi-documented | 5200–5366 |
