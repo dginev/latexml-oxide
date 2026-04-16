@@ -524,6 +524,61 @@ far exceeding L3 cache (~24MB).
 - [ ] Measure RSS per phase (load engine / convert document / post-process).
 - [ ] Quantify per-definition memory (number of definitions × avg size).
 
+**Callgrind profile findings (session 105, paper 0704.0516):**
+
+valgrind --tool=callgrind with --simulate-cache=yes confirms the math
+parser (Marpa) is dominant:
+
+| Function | Instructions | Pct |
+|---|---|---|
+| `transitive_closure` (Marpa Earley chart closure) | 5.77B | **34.3%** |
+| `marpa_g_precompute` (grammar precompute) | 1.39B | 8.3% |
+| `bv_scan` (Marpa bitvector) | 1.20B | 7.1% |
+| `cil_cmp` (Marpa cmp) | 723M | 4.3% |
+| `_marpa_avl_find` | 572M | 3.4% |
+| `_marpa_avl_probe` | 566M | 3.4% |
+| `marpa_r_earleme_complete` (per-token) | 309M | 1.8% |
+| libxml2 (various) | ~250M | ~1.5% |
+| `_int_malloc`/`_int_free`/mimalloc | ~500M | ~3% |
+| libxml2 xpath + string | ~200M | ~1.2% |
+
+**Total Marpa-related: >60% of CPU time.**
+
+**Diagnosis (per first-principles analysis):**
+- `transitive_closure` at 34% suggests high grammar ambiguity: for every
+  token read, the Earley chart has many predicted states. The work to
+  compute transitive closure over chart items grows with ambiguity.
+- `marpa_g_precompute` at 8% means we're re-precomputing the grammar
+  many times. See `MathParser::reset_engine()` which clones the grammar
+  and runs a trivial parse after each formula — this triggers precompute
+  when the cloned grammar ref is "fresh". In the error path, we fully
+  rebuild via `init_grammar()`, which is **extremely expensive**.
+
+#### [ ] D5. Math parser optimizations (HIGHEST PRIORITY — per callgrind)
+
+**Architectural:**
+- [ ] Avoid per-formula `reset_engine`: after successful parse, state is T;
+  next call's `adv_marpa` can transition T → GReady → R naturally without
+  triggering precompute. Verify this works; only reset after a true error.
+- [ ] Avoid `init_grammar()` fallback: if reset's trivial parse fails,
+  reuse the existing grammar rather than rebuilding from scratch.
+
+**Grammar design (per user input — biggest performance lever):**
+- [ ] Audit the BNF ruleset to keep ambiguity only where mathematically
+  unavoidable. Each extra parse branch multiplies `transitive_closure`
+  work during Earley recognition.
+- [ ] Add early pruning semantics: fail parses as soon as inconsistency
+  is detected, rather than deferring to global pragmatic pass.
+  Pragmas at the end yield the smallest benefit because they run after
+  the full ambiguous parse tree is built.
+- [ ] Enumerate grammar rules by parse-tree count contribution. Rules
+  that produce the most trees are the largest performance drains.
+
+**Measurement:**
+- [ ] Instrument per-formula parse time + tree count. Papers with a few
+  very-ambiguous formulas may dominate while many are fast.
+- [ ] Document grammar ambiguity per category (SUPOP, fenced, arg, etc.)
+
 **Active work — architectural:**
 - [ ] Investigate shared read-only engine state across processes (mmap of dump).
 - [ ] Long-running daemon / process pool to amortize 570MB startup cost.

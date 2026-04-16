@@ -1044,7 +1044,10 @@ impl MathParser {
 
     match self.parse_marpa(&input_string, nodes, document) {
       Ok(mut parse_tree) => {
-        self.reset_engine(); // Reset for next parse (engine is in completed state)
+        // Perf: after successful parse, Marpa engine is in state T. The next
+        // run_recognizer call will naturally advance T → GReady → R (fresh
+        // Recognizer) without triggering precompute. Avoiding reset_engine
+        // here saves the ~8% CPU time that precompute consumed per formula.
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         crate::semantics::restructure_formulae_right(&mut parse_tree)?;
