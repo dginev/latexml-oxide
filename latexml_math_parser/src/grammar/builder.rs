@@ -54,8 +54,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(applyop ~ "APPLYOP");
   token!(composeop ~ "COMPOSEOP");
   token!(supop ~ "SUPOP");
-  token!(open ~ "OPEN");
-  token!(close ~ "CLOSE");
+  // `open`/`close` match GENERIC delimiters (\lfloor, \lceil, \llbracket, etc.)
+  // Specific delimiters (paren, bracket, brace, langle) have their own tokens.
+  // The lexer (util.rs) emits OTHER_OPEN:/OTHER_CLOSE: for generic delimiters
+  // so Marpa doesn't ambiguously match both `open` AND `lparen` for `OPEN:(:N`.
+  token!(open ~ "OTHER_OPEN");
+  token!(close ~ "OTHER_CLOSE");
   token!(middle ~ "MIDDLE");
   token!(bigop ~ "BIGOP");
   token!(sumop ~ "SUMOP");
@@ -92,9 +96,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor_base = unknown | number | id | atom | array | diffunk | diffid;
     // Perl MathGrammar L277: OPEN ARRAY CLOSE -> Fence (e.g. \{ array \} or ( array ))
     // Also handle unmatched delimiters for cases-like patterns.
+    // Perf: `open` is now narrowed to OTHER_OPEN (non-paren/bracket/brace), so
+    // we add specific rules for each standard delimiter.
     fenced_array = open array close => fenced
       | open array => open_fenced
-      | array close => close_fenced;
+      | array close => close_fenced
+      | lparen array rparen => fenced
+      | lparen array => open_fenced
+      | array rparen => close_fenced
+      | lbracket array rbracket => fenced
+      | lbracket array => open_fenced
+      | array rbracket => close_fenced
+      | lbrace array rbrace => fenced
+      | lbrace array => open_fenced
+      | array rbrace => close_fenced;
     // FUNCTION and OPFUNCTION are both factors (participate in implicit multiplication).
     // The distinction is in argument absorption: OPFUNCTION absorbs bare args,
     // FUNCTION only absorbs fenced (parenthesized) args.
@@ -400,9 +415,15 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lparen formula singlevertbar formula_list rparen => fence
            // \middle separator: \left(a\middle|b\right) → fenced with separator
            // MIDDLE tokens are author-explicit (unlike bare |), so unambiguous.
+           // `open`/`close` now only match generic delimiters (OTHER_OPEN/OTHER_CLOSE),
+           // so we also add specific rules for paren/bracket. Not for langle/brace —
+           // those match specific QM/set rules, not this generic fence path.
            | open formula middle_bar formula close => fence
            | open formula middle formula close => fence
            | lparen formula middle_bar formula rparen => fence
+           | lparen formula middle formula rparen => fence
+           | lbracket formula middle_bar formula rbracket => fence
+           | lbracket formula middle formula rbracket => fence
            // Generic OPEN/CLOSE delimiters: \lfloor...\rfloor, \lceil...\rceil, etc.
            // Perl MathGrammar: OPEN Expression CLOSE → Fence
            | open expression close => fenced
@@ -414,10 +435,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lparen compound_operator rparen => fenced
            | open any_bigop close => fenced
            | open operator close => fenced
-           // Empty fenced expressions: () [] {} ⌊⌋ etc.
+           // Empty fenced expressions: () [] {} ⌊⌋ ⟨⟩ etc.
            | lparen rparen => empty_fenced
            | lbracket rbracket => empty_fenced
            | lbrace rbrace => empty_fenced
+           | langle_open rangle_close => empty_fenced
            | open close => empty_fenced;
     factor += fenced_factor;
 

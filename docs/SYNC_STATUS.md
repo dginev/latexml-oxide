@@ -661,6 +661,94 @@ parser (Marpa) is dominant:
 - [ ] Long-running daemon / process pool to amortize 570MB startup cost.
 - [ ] Fork-based parallelism for CoW memory sharing across workers.
 
+#### [ ] D6. Grammar First-Principles Plan (session 106, ACTIVE)
+
+Grounded in `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md` (top-down taxonomy +
+bottom-up composition). Live audit data from `LATEXML_PARSE_AUDIT=1`:
+
+| Formula | Before | After today | Target |
+|---|---|---|---|
+| `[A]` | 3 enumerated | 3 | 1 |
+| `[A],[B],[C],[D]` | 64 | 64 | 4 (4 items × 1 root path) |
+| `(P^+,P^-,P_\perp)` | 31 | 3 | 1 |
+| `a(b)(c)(d)` | 23 | 23 | 4 (1 non-speculative + 3 cache) |
+| `FGHa` (cascading OPFUNCTION) | 87 | 87 | 9 (genuine semantic) |
+
+Fixed this session (commit 18ded6a4e):
+- [x] **Narrowed `script_op`** to `metarelop | vertbar | supops | modifierop`.
+  Was duplicating `statements`-reachable operator tokens (addop, mulop,
+  binop, relop, arrow, any_bigop, operator). Removed 2x per scripted atom.
+
+##### Fix 1 — open/close token overlap (HIGHEST IMPACT, NEXT)
+**Problem:** `token!(open ~ "OPEN")` is a PREFIX match. Every `OPEN:[`,
+`OPEN:(`, `OPEN:{`, `OPEN:langle` matches BOTH the specific token
+(`lparen`, `lbracket`, etc.) AND the generic `open` token. Marpa
+enumerates BOTH as valid tokenizations.
+
+This means every `(x)`, `[x]`, `{x}` has 2× grammar derivations (one via
+`lbracket expression rbracket => fenced` at line 325, one via
+`open expression close => fenced` at line 408).
+
+Cascades: `[A]` = 3 enumerations. `[A],[B]` = 19. `[A],[B],[C],[D]` = 64.
+
+**Fix approach (safest):** Introduce `other_open`/`other_close` tokens
+that enumerate only generic delimiters NOT covered by lparen/lbracket/
+lbrace/langle_open. Replace all uses of `open`/`close` in the fenced
+rules with these narrower tokens. Keep specific rules (lparen formula
+rparen, lbracket expression rbracket, lbrace expression rbrace) as the
+canonical paths.
+
+**Lexer-layer alternative:** Emit distinct role "OTHER_OPEN" / "OTHER_CLOSE"
+for generic delimiters in `util.rs::node_to_grammar_lexemes_ctx`.
+Grammar token becomes `token!(other_open ~ "OTHER_OPEN")`.
+
+**Expected impact:** ~40-60% reduction in enumerated trees for all
+documents containing brackets/braces/parens. Biggest wins for comma-
+separated lists of fenced items.
+
+##### Fix 2 — remove `anything = formula_list` top-level alternative
+**Problem:** `anything = formulae | formula_list | statements | ...`
+produces 3 matching roots for `[A],[B],[C],[D]`:
+- `statements punct statement => list_apply` → `list(...)` 
+- `formulae punct statement => formulae_apply` → `formulae(...)` (different)
+- `formula_list punct expression => formula_list_apply` → `list(...)` (DUP)
+
+The formulae path is genuinely different. The formula_list path at the
+root is a category violation — formula_list is L3-internal (a fenced
+body), not L0.
+
+**Fix:** Remove `formula_list` from `anything` alternatives. Bare
+comma-separated tuples at top level go through `statements`.
+
+##### Fix 3 — collapse term_list vs formula_list in fenced contexts
+**Problem:** Inside `fenced_factor`:
+- `lparen term_list rparen => fenced` (line 331)
+- `lparen formula_list rparen => fenced` (line 333)
+
+For `(a, b, c)` with non-relational atoms, BOTH match and produce
+identical trees (formula_list_apply delegates to list_apply for non-
+relational input).
+
+**Fix:** Keep only one. Preferred: keep `formula_list` version (strictly
+more permissive since every term is also an expression). But preserve
+`term_list` if `limit_from_term` is the unique element.
+
+##### Fix 4 — dual grammar for MATHPARSER_SPECULATE (larger refactor)
+**Problem:** `tight_term += unknown fenced_factor => speculative_prefix_apply`
+creates 2^N enumerations for `a(b)(c)(d)` even when MATHPARSER_SPECULATE
+is OFF. `speculative_prefix_apply` returns Err in that case, so 8 of 23
+enumerations are pure waste.
+
+**Fix:** Build two Marpa grammars at init — default without speculative
+rules, speculative with them. Select at parse time based on state.
+
+##### Execution order
+1. Fix 1 first — simplest, no semantic change, highest impact.
+2. Fix 3 — small, targeted audit of term_list vs formula_list uses.
+3. Fix 2 — promote if Fix 1+3 still leave tuple ambiguity.
+4. Fix 4 — only if scale testing demands it (bigger refactor).
+5. After each fix: `cargo test --release -p latexml` + audit sample.
+
 ---
 
 ### Phase E: Kernel Dump Integration (HIGHEST PRIORITY — blocks sandbox testing)
