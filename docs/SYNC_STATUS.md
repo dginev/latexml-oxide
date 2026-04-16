@@ -721,29 +721,30 @@ Extracted from `latex.rs`, `latex_ch3_sentences_and_paragraphs.rs`, `latex_ch11_
 - Calls `InnerPool!(plain_bootstrap)` first (matching Perl L18)
 Loading: `latex.rs` → `InnerPool!(latex_bootstrap)` → ... InnerPool chain
 
-#### [x] F4. Create `latex_constructs.rs` + `latex_base.rs` + match Perl loading order — DONE (session 103)
-Created both files. Updated `latex.rs` to match Perl's `LoadFormat('latex')`:
+#### [x] F4. Match Perl loading order + eliminate non-Perl files — DONE (session 103)
+
+Loading order matches Perl's `LoadFormat('latex')`:
 ```
-LoadPool!("TeX");
+LoadPool!("TeX");                   // Perl: LoadPool('TeX')
 InnerPool!(latex_bootstrap);        // Perl: LoadPool('latex_bootstrap')
 InnerPool!(latex_base);             // Perl: LoadPool('latex_base')
 latex_dump::load_definitions();     // Perl: LoadPool('latex_dump')
 InnerPool!(latex_constructs);       // Perl: LoadPool('latex_constructs')
 ```
 
-`latex_base.rs` contains all 138 definitions from Perl's `latex_base.pool.ltxml`, currently DUPLICATED
-with their original locations in `latex_other_in_appendices.rs` and ch* files.
-`latex_constructs.rs` wraps all `latex_ch*.rs` files.
+**Non-Perl files eliminated (session 103):**
+- `latex_other_in_appendices.rs` → split to `latex_base.rs` + `latex_constructs.rs`
+- `latex_semi_undocumented.rs` → split to `latex_base.rs` + `latex_constructs.rs`
+- `latex_hook.rs` → inlined into `tex.rs` (Perl: TeX.pool.ltxml L33-56)
 
-**Dedup status**: Definitions are duplicated (harmless — second load overwrites first).
-To complete the split, remove each definition from its ch* / other_in_appendices source
-file one by one. Key dependency: `\@for` (in `latex_base`) depends on `\@empty` (in
-`latex_ch1_documentclass`). `\@empty` must also move to `latex_base`.
+**Created files matching Perl:**
+- `latex_base.rs` ↔ `latex_base.pool.ltxml` (138/138 definitions)
+- `latex_constructs.rs` ↔ `latex_constructs.pool.ltxml` (wraps ch* files + case-changing)
 
-#### [ ] F5-F7. Remove duplicate base definitions from ch* files — IN PROGRESS
-30 `latex_ch*.rs` files contain both base and constructs content.
-To fully match Perl: move base-only definitions (DefMacro, Let, DefRegister — no DefConstructor)
-to `latex_base.rs` and remove from ch* files. Must track dependencies (e.g. `\@empty`, `\@nil`).
+#### [x] F5-F7. Consolidate ch* files into latex_constructs.rs — DONE (session 104)
+All 36 `latex_ch*.rs` files + `latex_tables_3.rs` merged into single `latex_constructs.rs` (7800 lines).
+Section comment headers match Perl's C.1-C.15 organization. All pub functions preserved.
+19 package files updated with new import paths. 413 tests pass. Commit da8b66358.
 
 **Coverage audit (session 102, final) — ALL Perl Engine files:**
 
