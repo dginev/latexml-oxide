@@ -489,8 +489,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // tokens get speculative function application. ID always uses invisible-times.
     tight_term += unknown fenced_factor => speculative_prefix_apply
       | diffunk fenced_factor => speculative_prefix_apply;
-    // FUNCTION followed by fenced args (non-delimited form, for backwards compat)
-    tight_term += function fenced_factor => prefix_apply;
+    // Perf: `tight_term += function fenced_factor => prefix_apply` removed.
+    // It duplicated the applied_func path (function fenced_factor => prefix_apply)
+    // and competed with apply_delimited (function lparen formula rparen =>
+    // apply_delimited) for `f(x)` cases, adding ambiguity with no benefit.
     // OPFUNCTION bare arg absorption (Perl: addOpArgs barearg + moreargs)
     // \log 2x^2 => log@(2*x^2). These tight_term rules serve as priority
     // boosters that ensure cascading opfunction application (FGHa → F@(G@(H@(a))))

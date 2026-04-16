@@ -557,16 +557,36 @@ parser (Marpa) is dominant:
 #### [ ] D5. Math parser optimizations (HIGHEST PRIORITY — per callgrind)
 
 **Architectural:**
-- [ ] Avoid per-formula `reset_engine`: after successful parse, state is T;
-  next call's `adv_marpa` can transition T → GReady → R naturally without
-  triggering precompute. Verify this works; only reset after a true error.
+- [x] Avoid per-formula `reset_engine` (session 105): after successful parse,
+  state is T; next call's `adv_marpa` advances T → GReady → R naturally
+  without triggering precompute. Saves ~8% CPU on every formula.
+  Paper 0707.1173: 22s → 15s single-process.
 - [ ] Avoid `init_grammar()` fallback: if reset's trivial parse fails,
   reuse the existing grammar rather than rebuilding from scratch.
 
 **Grammar design (per user input — biggest performance lever):**
-- [ ] Audit the BNF ruleset to keep ambiguity only where mathematically
-  unavoidable. Each extra parse branch multiplies `transitive_closure`
-  work during Earley recognition.
+- [x] Audit `trig_arg` ambiguity (session 105): eliminated duplicate paths
+  where `\sin(x)` matched both `trigfunction trig_arg` (prefix_apply) and
+  `trigfunction lparen formula rparen` (apply_delimited). Fix:
+   1. `trig_arg` initial form uses `factor_base` (bare), not `factor`
+      (which includes fenced_factor). Fenced trig args go through
+      apply_delimited only.
+   2. Removed redundant `tight_term += trigfunction fenced_factor`
+      (duplicate of apply_delimited path with weaker semantics).
+   3. Chain extensions `trig_arg (mulop|binop|) factor_base` prevent
+      absorbing parenthesized groups on operator RHS.
+
+  Impact (note: "no ambiguity" = 1 parse; 0 parses would be a parse failure):
+  - `\sin(x)+\sin(y)` ambiguity: 65 parses → 1 parse (no ambiguity)
+  - `\cos(\delta)-\sin(\delta)` ambiguity: 65 parses → 1 parse
+  - `\sin(x)+(y)` ambiguity: 27 parses → 1 parse
+  - Paper 0704.0516: 6 occurrences of 65-enumerated → 1 remaining
+    (a quantum-ket formula with VERTBAR, different ambiguity source).
+- [ ] Audit other 2^N ambiguity patterns: quantum kets, multiple adjacent
+  parenthesized groups after UNKNOWN (e.g. `a(b)(c)(d)` = 23 parses from
+  speculative function application combinations).
+- [ ] Audit script attachment ambiguity (prescripts/postscripts with
+  multiple levels: `{}^4{}_{12}C^{5+}` — 27 unique grammar-ambiguity trees).
 - [ ] Add early pruning semantics: fail parses as soon as inconsistency
   is detected, rather than deferring to global pragmatic pass.
   Pragmas at the end yield the smallest benefit because they run after
