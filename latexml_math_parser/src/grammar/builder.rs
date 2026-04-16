@@ -775,7 +775,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Excluded: addop (prefix ±x), relop (prefix =x), arrow, bigop/sumop/intop.
     // These already have valid prefix interpretations inside expressions.
     orphan_op = mulop | binop | diffop | supop | modifierop;
-    anything = formulae | formula_list | statements | anyop | anyscript |
+    // Perf (Fix 2): `formula_list` removed from `anything` alternatives.
+    // formula_list is L3-internal (a fenced body), not L0. `statements`
+    // covers bare top-level comma-separated items via `list_apply` with
+    // equivalent semantics (formula_list_apply delegates to list_apply
+    // for non-relational items).
+    anything = formulae | statements | anyop | anyscript |
       anyop anyop => compound_operator_2 |
       // Perl MathGrammar L81: leading orphan operator (tabular fragment).
       // Only at the start rule (anything) — not recursive, not inside subexpressions.
