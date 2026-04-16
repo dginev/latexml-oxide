@@ -673,13 +673,12 @@ LoadDefinitions!({
 
   // Class internals used by raw TeX classes
   DefRegister!("\\@bls" => Dimension!("12pt"));
-  DefRegister!("\\@maxlistdepth" => Number::new(6));
+  // \@maxlistdepth already in latex_constructs.rs (with list stubs)
 
   // LaTeX kernel: \nofiles
   DefMacro!("\\nofiles", "\\@fileswfalse");
 
-  // Modern LaTeX: \extrafloats
-  DefMacro!("\\extrafloats{}", "");
+  // \extrafloats already in latex_constructs.rs (Perl L5825)
 
   // Aux file stubs (Perl latex_constructs L5796-5800)
   DefMacro!("\\bibdata{}", "");
