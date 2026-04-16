@@ -65,15 +65,12 @@ LoadDefinitions!({
   InnerPool!(plain_constructs);      // Perl: plain_constructs.pool.ltxml → math_common
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  // Orphans?
+  // Perl: TeX.pool.ltxml — remaining definitions
   //======================================================================
 
-  // This is LaTeX, but used a little in the Primitives?
-  // define it here (only approxmiately), since it's already useful.
-
   Let!("\\protect", "\\relax");
-  DefRegister!("\\everyhelp", Tokens!());
-  DefMacro!("\\hiderel{}", "#1"); // Just ignore, for now...
+  // \everyhelp removed — not in Perl (register from plain.tex kernel, comes from dump)
+  // \hiderel removed — not in Perl LaTeXML at all
 
   // Perl TeX.pool.ltxml L33-56: autoload triggers for LaTeX, expl3, AmSTeX
   // (moved from latex_hook.rs which has no Perl equivalent)

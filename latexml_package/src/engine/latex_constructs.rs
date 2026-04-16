@@ -6705,13 +6705,7 @@ LoadDefinitions!({
   DefPrimitive!("\\indexspace", None);
   DefPrimitive!("\\makeindex", None);
   DefPrimitive!("\\makeglossary", None);
-  // Perl: DefMacro('\printindex', '\@printindex');
-  // \printindex and \@printindex produce a stub index TOC
-  DefConstructor!("\\printindex", "<ltx:index xml:id='#id' lists='idx'><ltx:title>#name</ltx:title></ltx:index>",
-    properties => {
-      Ok(stored_map!("name" => stomach::digest(T_CS!("\\indexname"))?))
-    }
-  );
+  // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
   // Perl: \glossary{} — simplified glossary entry
   DefConstructor!("\\glossary{}", "<ltx:glossaryphrase role='glossary' key='#key'>#1</ltx:glossaryphrase>",
@@ -6724,16 +6718,10 @@ LoadDefinitions!({
     sizer => 0
   );
 
-  DefMacro!("\\glossaryname", "Glossary");
-  DefConstructor!("\\printglossary",
-    "<ltx:glossary xml:id='#id'><ltx:title>#name</ltx:title></ltx:glossary>",
-    properties => {
-      Ok(stored_map!("name" => stomach::digest(T_CS!("\\glossaryname"))?))
-    }
-  );
-
-  DefMacro!("\\seename", "see");
-  DefMacro!("\\alsoname", "see also");
+  // \glossaryname, \printglossary removed — not in Perl engine
+  // (Perl: glossaries.sty.ltxml defines \printglossary)
+  // \seename, \alsoname removed — not in Perl engine
+  // (Perl: makeidx.sty.ltxml defines these; also babel captions)
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
