@@ -424,18 +424,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs
     // Trig functions absorb chains of mulop+factor (but NOT other trig functions).
     // aTrigBarearg includes: FUNCTION+args, OPFUNCTION+args, ATOM_OR_ID, UNKNOWN, NUMBER
+    //
+    // Perf: removed `| fenced_factor` and `| opfunction fenced_factor` alternatives.
+    // `factor += fenced_factor` makes fenced_factor reachable through `factor`, so:
+    //   - `factor` alone already covers fenced_factor (was duplicate)
+    //   - `opfunction factor` already covers `opfunction fenced_factor` (was duplicate)
+    // `function fenced_factor` remains — distinct from `function factor`, which is
+    // intentionally NOT a production (FUNCTION requires parens for application:
+    // `f(x)` = f@(x), but `f x` = f*x, per Perl's FUNCTION vs OPFUNCTION distinction).
     trig_arg = factor
-      | fenced_factor
       | unknown fenced_factor => speculative_prefix_apply
       | diffunk fenced_factor => speculative_prefix_apply
       | function fenced_factor => prefix_apply
-      | opfunction fenced_factor => prefix_apply
       // Perl: trigBarearg includes OPFUNCTION+args (chained function application)
       // Allows: \sin\det A → sin(det(A)). FUNCTION doesn't absorb bare args.
       | opfunction factor => prefix_apply
-      | trig_arg mulop factor => infix_apply_nary
-      | trig_arg binop factor => infix_apply_nary
-      | trig_arg factor => apply_invisible_times;
+      // Perf/disambiguation: trig_arg chains only through factor_base on the RHS
+      // (UNKNOWN / NUMBER / ID / ATOM / bare diffunk/diffid). Previously we chained
+      // through full `factor` which includes fenced_factor, so `\sin(x) + (y)`
+      // enumerated both `sin(x) + (y)` and `sin((x) + (y))`. Restricting chain
+      // extensions to bare factor_base prevents trig from swallowing parenthesized
+      // groups that appear on the right side of a binop / mulop — these are
+      // semantically NOT the trig's argument, they're peers at term level.
+      // This drops ambiguity from ~65 to ~1 parses for trig+paren+binop+trig+paren.
+      | trig_arg mulop factor_base => infix_apply_nary
+      | trig_arg binop factor_base => infix_apply_nary
+      | trig_arg factor_base => apply_invisible_times;
 
     // applied_func: FUNCTION only absorbs fenced args (parens), not bare args.
     // OPFUNCTION and TRIGFUNCTION absorb bare args (Perl distinction).
