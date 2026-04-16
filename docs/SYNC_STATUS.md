@@ -292,6 +292,8 @@ Track each ramp-up round here:
 | 3''''''''| 2048 |1849| 87      | 112    | 94.2% OK (233 ok, 1616 warn, 112 error, 87 timeout) |
 | 4''''''''| 4096 |3639| 199     | 258    | 93.3% OK (425 ok, 3214 warn, 258 error, 199 timeout) |
 |       |       |    |         |        | **Additional: mn2e useAMS, proof env, \citen, @equationgroup, aa natbib, NC@ stubs, autoload triggers** |
+|       |       |    |         |        | **Session 104: Phase F ch* consolidation (36 files → single latex_constructs.rs)** |
+| 5''''''''| 256  |229 | 8       | 10     | 89.5% OK. Post-consolidation validation — no regression (variance from timeouts) |
 
 **Session 103 — mode mismatch fix + elsart dispatch (session 103):**
 - **Mode mismatch at `\end{document}` FIXED** — BOUND_MODE value check replaces undo-table-bound check in `end_mode_opt`. Root cause: `begin_mode_opt("internal_vertical", true)` at frame_depth=0 sets BOUND_MODE in the locked daemon frame, but `is_value_bound("BOUND_MODE", Some(0))` checks the topmost unlocked frame.
