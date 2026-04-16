@@ -749,6 +749,49 @@ rules, speculative with them. Select at parse time based on state.
 4. Fix 4 — only if scale testing demands it (bigger refactor).
 5. After each fix: `cargo test --release -p latexml` + audit sample.
 
+##### Session 106 Results (2026-04-16)
+
+Commits:
+- `18ded6a4e` — Narrow script_op (31→3 for P^+ tuple)
+- `fd90d94cc` — Fix 1: OTHER_OPEN/OTHER_CLOSE split
+- `967e5ac74` — Fix 3: collapse term_list/formula_list in fenced
+- `aeb944263` — Fix 2: remove formula_list from anything
+
+Final ambiguity measurements (formulas vs prior session 105):
+
+| Formula | Before S106 | After S106 | Reduction |
+|---|---|---|---|
+| `[A]` | 3 | 1 (below audit) | 3x |
+| `[A],[B]` | 19 | 2 | 9.5x |
+| `[A],[B],[C]` | 39 | 2 | 19.5x |
+| `[A],[B],[C],[D]` | 64 | 2 | 32x |
+| `(P^+,P^-,P_⟂)` | 31 | 1 (below audit) | 31x |
+| `\log(x)` | 8 | 4 | 2x |
+| `\sin(x)` | 3 | 1 | 3x |
+
+All 317 integration tests pass. FGHa cascading OPFUNCTION kept at 87
+trees / 9 unique — this is genuine semantic ambiguity requiring the
+priority-booster rules `tight_term += opfunction tight_term` and
+`tight_term += trigfunction factor`. Attempting to remove these breaks
+`\sin x` and `FGHa` disambiguation.
+
+##### Remaining Hotspots (after S106)
+
+Top ambiguity sources per full-suite audit (518 ambiguous formulas,
+3767 total enumerated trees):
+
+1. `\sin[XY]\qquad\sin[x][XY]\qquad...` — 1022 trees / 10 unique.
+   Real semantic ambiguity in sin-with-bracket interpretation chain.
+2. `tr ρ \qquad tr(XY) \qquad Tr ρ \qquad rank M \qquad ...` — 164 / 8
+   unique. Real OPFUNCTION + identifier ambiguity.
+3. `FGHa` OPFUNCTION cascade — 87 / 9 unique. Genuine math ambiguity.
+4. `a|a|+b|b|+c|c|` VERTBAR absolute values — 52 / 10 unique.
+5. `{}^4_{12}C^{5+}` prescripts — 37 / 10 unique.
+
+Items 1-4 are primarily **semantic** (category 3 per doc — inherent
+to math practice). Fix 4 (dual grammar for MATHPARSER_SPECULATE) is
+the next architectural lever for further reduction.
+
 ---
 
 ### Phase E: Kernel Dump Integration (HIGHEST PRIORITY — blocks sandbox testing)
