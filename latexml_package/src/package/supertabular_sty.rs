@@ -5,7 +5,7 @@ LoadDefinitions!({
   // Perl: supertabular.sty.ltxml
 
   DefPrimitive!("\\@supertabular@bindings [Dimension] AlignmentTemplate", sub[(width, template)] {
-    use crate::engine::latex_functions::tabular_bindings;
+    // tabular_bindings is now in latex_constructs, re-exported via prelude
     let mut props = SymHashMap::default();
     props.insert("guess_headers", Stored::Bool(false));
     let mut xml_attrs = HashMap::default();

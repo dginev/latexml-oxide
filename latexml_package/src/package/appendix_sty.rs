@@ -1,4 +1,3 @@
-use crate::engine::latex_functions::{begin_appendices, end_appendices};
 use crate::prelude::*;
 
 #[rustfmt::skip]

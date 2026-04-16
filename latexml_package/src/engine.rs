@@ -45,7 +45,7 @@ mod latex_base;        // Perl: latex_base.pool.ltxml (infrastructure, no constr
 mod latex_bootstrap;   // Perl: latex_bootstrap.pool.ltxml
 pub mod latex_constructs;  // Perl: latex_constructs.pool.ltxml (all C.1-C.15 definitions)
 pub mod latex;
-pub mod latex_functions; // auxiliary functions
+// latex_functions.rs removed — content moved to latex_constructs.rs
 // latex_hook.rs removed — content moved to tex.rs (Perl: TeX.pool.ltxml L33-56)
 // latex_other_in_appendices.rs removed — content moved to latex_base.rs and latex_constructs.rs
 // latex_semi_undocumented.rs removed — content moved to latex_base.rs and latex_constructs.rs
