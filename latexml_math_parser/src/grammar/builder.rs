@@ -341,11 +341,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lparen formula rparen              => fenced
            // METARELOP inside parens: f(a:b), f(a↔b) — colon/arrow as relation in fenced
            | lparen formula metarelop expression rparen => fence
-           // Parenthesized comma-separated lists: (a,b,c), (1+,0+,1-,0-)
-           // Uses term_list which requires 2+ items (avoids single-formula ambiguity).
-           | lparen term_list rparen            => fenced
-           // Comma-separated statements: (→,←), (a,b|Θ)
+           // Parenthesized comma-separated lists: (a,b,c), (a+b, c+d), (1+, 0+, 1-, 0-)
+           // Perf (Fix 3): `lparen term_list rparen` was duplicate with
+           // `lparen formula_list rparen` for non-relational content (both produce
+           // identical `list@(...)` trees). Dropped; formula_list covers
+           // (a,b,c), (a+b,c+d), and (0+,1-) via `factor addop => postfix_apply`
+           // which produces limit-from XM matching limit_from_apply semantics.
            | lparen formula_list rparen        => fenced
+           // Bracketed and braced comma-separated lists: [a,b,c], {a,b,c}
+           | lbracket formula_list rbracket    => fenced
+           | lbrace formula_list rbrace        => fenced
            // Angle brackets as delimiters: <x,y> for inner products, etc.
            // Old typesetting conventions used < > instead of \langle \rangle.
            // Uses term_list (comma-separated terms) to avoid matching complex
