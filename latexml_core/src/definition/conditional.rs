@@ -344,14 +344,11 @@ impl Conditional {
       }
     });
     let local_token = get_current_token().unwrap();
-    if local_token.with_str(|s| s == "\\else") {
-      let has_frame = stack_frame_opt.is_some();
+    if local_token.with_str(|s| s == "\\else") && stack_frame_opt.is_none() {
       let stack_len = state::with_value("if_stack", |v| {
         match v { Some(Stored::VecDequeStored(s)) => s.len(), _ => 0 }
       });
-      if !has_frame {
-        eprintln!("DEBUG invoke_else: NO FRAME! stack_len={}", stack_len);
-      }
+      log::warn!("\\else encountered with no active if-frame (stack_len={stack_len})");
     }
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {

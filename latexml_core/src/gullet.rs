@@ -1508,10 +1508,8 @@ fn read_internal_glue() -> Result<Option<Glue>> {
 pub fn read_dimension() -> Result<Dimension> {
   let is_negative = read_optional_signs()?;
   if let Some(d) = read_internal_dimension()? {
-    eprintln!("DEBUG read_dimension: got internal_dimension={}", d.value_of());
     Ok(if is_negative { d.negate() } else { d })
   } else if let Some(d) = read_internal_glue()? {
-    eprintln!("DEBUG read_dimension: got internal_glue");
     Ok(Dimension::new(if is_negative {
       d.negate().value_of()
     } else {
