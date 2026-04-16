@@ -720,6 +720,12 @@ fn retract_equation() {
 /// Perl: latex_constructs.pool.ltxml lines 2287-2325
 /// eqnarrayBindings — creates alignment with equationgroup/equation/_Capture_ hooks
 pub fn eqnarray_bindings() -> Result<()> {
+  // Ensure @equationgroup counter exists — it's normally created by article.cls,
+  // but standalone classes (appolb, jpsj2, etc.) may not define it.
+  if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
+    NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
+  }
+
   // Perl: 3-column template: col1=right, col2=center, col3=left
   let col1 = Cell {
     before: Some(Tokens::new(vec![
@@ -4636,6 +4642,13 @@ LoadDefinitions!({
       }
     });
 
+  // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
+  // Simplified: \ensuremathfollows checks if next content is already math,
+  // if not wraps with \( ... \). Used by equation labels / alt text.
+  DefMacro!("\\ensuremathfollows", "");  // stub — automath needs gullet lookahead
+  DefMacro!("\\ensuremathpreceeds", ""); // stub — pairs with ensuremathfollows
+
+  // Perl: latex_constructs.pool.ltxml L2166
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node] {
     document.generate_id(node, "m")?;
