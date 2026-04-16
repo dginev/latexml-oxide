@@ -1,4 +1,4 @@
-use crate::engine::latex_ch8_theoremlike_environments::*;
+use crate::engine::latex_constructs::*;
 use crate::prelude::*;
 
 #[rustfmt::skip]

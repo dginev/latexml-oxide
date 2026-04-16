@@ -115,7 +115,7 @@ LoadDefinitions!({
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
   // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
-    crate::engine::latex_ch8_theoremlike_environments::define_new_theorem(
+    crate::engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset.filter(|t| !t.is_empty()),
@@ -229,7 +229,7 @@ LoadDefinitions!({
   DefMacro!("\\proofname", "Proof");
   // \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
   // starred (*) = unnumbered = flag=Some
-  crate::engine::latex_ch8_theoremlike_environments::define_new_theorem(
+  crate::engine::latex_constructs::define_new_theorem(
     Some(Tokens!(T_OTHER!("*"))), // starred
     Tokenize!("proof"),  // environment name
     None,                // no shared counter

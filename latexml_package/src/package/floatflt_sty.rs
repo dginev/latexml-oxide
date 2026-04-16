@@ -10,18 +10,18 @@ LoadDefinitions!({
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
     before_digest => {
-      crate::engine::latex_ch9_figures_and_tables::before_float("figure", None);
+      crate::engine::latex_constructs::before_float("figure", None);
     },
     after_digest_body => sub[whatsit] {
-      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+      crate::engine::latex_constructs::after_float(whatsit);
     });
   DefEnvironment!("{floatingtable}[]{Dimension}",
     "<ltx:table xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:table>",
     before_digest => {
-      crate::engine::latex_ch9_figures_and_tables::before_float("table", None);
+      crate::engine::latex_constructs::before_float("table", None);
     },
     after_digest_body => sub[whatsit] {
-      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+      crate::engine::latex_constructs::after_float(whatsit);
     });
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}",  "\\item[#2] {#3}");

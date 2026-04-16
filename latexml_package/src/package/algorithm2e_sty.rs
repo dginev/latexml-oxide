@@ -22,7 +22,7 @@ LoadDefinitions!({
     "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
     mode => "internal_vertical",
     before_digest => {
-      use crate::engine::latex_ch9_figures_and_tables::before_float;
+      use crate::engine::latex_constructs::before_float;
       before_float("algorithm", None);
       Let!("\\par", "\\lx@algo@par");
       Let!("\\\\", "\\lx@algo@par");
@@ -32,7 +32,7 @@ LoadDefinitions!({
       DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
     },
     after_digest => sub[whatsit] {
-      use crate::engine::latex_ch9_figures_and_tables::after_float;
+      use crate::engine::latex_constructs::after_float;
       after_float(whatsit);
     }
   );

@@ -99,7 +99,7 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
 }
 
 fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
-  use crate::engine::latex_ch9_figures_and_tables::{after_float, before_float};
+  use crate::engine::latex_constructs::{after_float, before_float};
 
   let class_val = class.to_string();
   // Extract the base type for before_float (remove trailing *)

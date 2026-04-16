@@ -131,7 +131,7 @@ LoadDefinitions!({
   // Perl llncs.cls.ltxml L101-157: Like \newtheorem + capfont/bodyfont (visual styling ignored).
   // capfont/bodyfont are TeX font commands (e.g. \bfseries, \itshape) — ignored in LaTeXML.
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
-    crate::engine::latex_ch8_theoremlike_environments::define_new_theorem(
+    crate::engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset.filter(|t| !t.is_empty()),
