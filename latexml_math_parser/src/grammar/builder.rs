@@ -501,10 +501,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += opfunction factor => prefix_apply;
     tight_term += opfunction fenced_factor => prefix_apply;
     // TRIGFUNCTION absorbs bare args: \sin x => sin@(x), \cos\pi => cos@(pi).
-    // Perf: only bare `factor` here (NOT fenced_factor). Fenced trig calls
-    // `\sin(x)` go through applied_func's apply_delimited (XMDual) path.
-    // Keeping `trigfunction fenced_factor` here caused duplicate prefix_apply
-    // trees competing with apply_delimited — pure ambiguity with no benefit.
+    // Note: `factor` is used here (not factor_base) to support scripted args
+    // like \sin a^2 (scripted_factor_r1 is in factor but not factor_base).
+    // Narrowing to factor_base breaks \sin a^2 = sin(a^2) parses.
     tight_term += trigfunction factor => prefix_apply;
     // compound_operator (e.g. D∇, D sin) followed by a single factor: ∇ log x => (∇@log)@(x)
     // More targeted than the previous `compound_operator tight_term` — absorbs only one factor,
