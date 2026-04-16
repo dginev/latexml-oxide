@@ -7708,6 +7708,8 @@ LoadDefinitions!({
   Let!("\\color@endbox", "\\relax");
 
   // Perl: latex_constructs.pool.ltxml line 5802
+  // \stop — closes the current input mouth (Plain TeX command)
+  Let!("\\stop", "\\endinput");
   DefMacro!("\\ignorespacesafterend", None);
 
   // Perl: latex_constructs.pool.ltxml line 5027
@@ -7928,6 +7930,15 @@ LoadDefinitions!({
   });
 
   // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
+  // Perl L5373: \newfont{cmd}{fontname} — legacy LaTeX font command
+  DefMacro!("\\newfont{}{}", "\\font#1=#2\\relax");
+  // Perl L5375: \normalcolor — default no-op (overridden by color.sty)
+  Let!("\\normalcolor", "\\relax");
+
+  // Perl L5364: \math@version default
+  DefMacro!("\\math@version", "normal");
+
+  // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
   DefPrimitive!("\\mathversion{}", sub[(version)] {
     let v = version.to_string();
     match v.trim() {
@@ -7936,7 +7947,6 @@ LoadDefinitions!({
       _ => {},
     }
   });
-
 
   //======================================================================
   // C.15.3 Special Symbol
