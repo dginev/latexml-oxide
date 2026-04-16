@@ -43,3 +43,7 @@ latexml_math_parser = {path = "../latexml_math_parser"}
 latexml_post = {path = "../latexml_post"}
 pericortex = { git = "https://github.com/dginev/cortex-peripherals.git" }
 hostname = "0.4"
+# Replaces glibc malloc. glibc's per-arena mutex is a hard scaling bottleneck
+# for multi-process workloads like cortex_worker (arena contention via futex).
+# mimalloc gives each thread a private heap with lock-free fast paths.
+mimalloc = { version = "0.1", default-features = false }

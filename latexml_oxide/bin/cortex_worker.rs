@@ -13,6 +13,11 @@ use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+
+/// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
+/// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use std::process;
 use std::rc::Rc;
 
@@ -72,7 +77,7 @@ struct Cli {
   preload: Vec<String>,
 
   /// Per-document timeout in seconds
-  #[arg(long, default_value = "600")]
+  #[arg(long, default_value = "60")]
   timeout: u64,
 
   /// Disable Presentation MathML

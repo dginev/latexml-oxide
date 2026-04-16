@@ -4,6 +4,10 @@ use libxml::tree::SaveOptions;
 use std::env;
 use std::process;
 
+/// Use mimalloc to avoid glibc arena contention in multi-process workloads.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use latexml::util::test::{lex_single_tex_formula, new_test_engine};
 use latexml_core::common::error::Result;
 use latexml_core::state;

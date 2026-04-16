@@ -8,6 +8,11 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 
+/// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
+/// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
 #[command(name = "latexml_oxide", version, about)]
@@ -100,9 +105,9 @@ struct Cli {
   search_paths: Vec<String>,
 
   // === Value flags ===
-  /// Conversion timeout in seconds
-  #[arg(long, value_name = "SECONDS")]
-  timeout: Option<u64>,
+  /// Conversion timeout in seconds (default: 60). Use 0 to disable.
+  #[arg(long, value_name = "SECONDS", default_value = "60")]
+  timeout: u64,
 
   /// Maximum number of tokens to process before aborting (default: 100M).
   /// Protects against infinite loops in macro expansion.
@@ -332,8 +337,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
   } else {
     // Normal mode: convert document
-    if let Some(secs) = cli.timeout {
-      latexml_core::stomach::set_timeout(secs);
+    if cli.timeout > 0 {
+      latexml_core::stomach::set_timeout(cli.timeout);
     }
     if let Some(limit) = cli.token_limit {
       latexml_core::gullet::set_token_limit(Some(limit));
