@@ -1,55 +1,55 @@
-// TeX Pool
-mod base_parameter_types;
-mod base_schema;
-pub mod base_utilities;
-pub mod base_xmath;
-pub mod tex;
-mod tex_box;
-mod tex_character;
-mod tex_debugging;
-mod tex_file_io;
-mod tex_fonts;
-mod tex_glue;
-mod tex_hyphenation;
-mod tex_inserts;
-mod tex_job;
-mod tex_kern;
-mod tex_logic;
-mod tex_macro;
-mod tex_marks;
-pub(crate) mod tex_math;
-mod tex_page;
-mod tex_paragraph;
-mod tex_penalties;
-mod tex_registers;
-pub mod tex_tables;
+// Engine files — 1:1 match with Perl LaTeXML/Engine/*.pool.ltxml
+//
+// Loading hierarchy (mirrors Perl):
+//   LaTeX.pool  →  TeX.pool  →  Base.pool  →  Base_*, TeX_*, eTeX, pdfTeX, Base_Deprecated
+//                              LoadFormat('plain')  →  plain_bootstrap → plain_base → plain_dump → plain_constructs → math_common
+//                  LoadFormat('latex')  →  latex_bootstrap → latex_base → latex_dump → latex_constructs
 
-// base_functions.rs removed — content moved to base_utilities.rs
-// tex_scripts.rs removed — content moved to tex_math.rs (Perl: TeX_Math.pool.ltxml)
-// Deprecated aliases
-mod base_deprecated;
-// eTeX Pool
-pub mod etex;
-// pdfTeX Pool
-pub mod pdftex;
-// plain TeX Pool — matches Perl Engine/ structure:
-//   plain (→ plain_bootstrap → plain_dump → plain_constructs → math_common)
-mod math_common;       // Perl: math_common.pool.ltxml
-mod plain_bootstrap;   // Perl: plain_bootstrap.pool.ltxml
-mod plain_constructs;  // Perl: plain_constructs.pool.ltxml
-mod plain;             // Perl: plain_base.pool.ltxml (content matches, file name kept for compatibility)
+// Base.pool.ltxml — loaded via TeX.pool (Base.pool is a pure loader, no definitions)
+mod base_schema;           // Perl: Base_Schema.pool.ltxml
+mod base_parameter_types;  // Perl: Base_ParameterTypes.pool.ltxml
+pub mod base_utilities;    // Perl: Base_Utility.pool.ltxml
+pub mod base_xmath;        // Perl: Base_XMath.pool.ltxml
+mod base_deprecated;       // Perl: Base_Deprecated.pool.ltxml
 
-// LaTeX Pool — matches Perl Engine/ structure:
-//   latex (→ latex_bootstrap → latex_dump → latex_constructs)
-mod latex_base;        // Perl: latex_base.pool.ltxml (infrastructure, no constructors)
-mod latex_bootstrap;   // Perl: latex_bootstrap.pool.ltxml
-pub mod latex_constructs;  // Perl: latex_constructs.pool.ltxml (all C.1-C.15 definitions)
-pub mod latex;
-// latex_functions.rs removed — content moved to latex_constructs.rs
-// latex_hook.rs removed — content moved to tex.rs (Perl: TeX.pool.ltxml L33-56)
-// latex_other_in_appendices.rs removed — content moved to latex_base.rs and latex_constructs.rs
-// latex_semi_undocumented.rs removed — content moved to latex_base.rs and latex_constructs.rs
-// Precompiled kernel dumps (auto-generated, loads definitions from format dumps)
-// Perl equivalent: LoadFormat('plain') / LoadFormat('latex')
-pub mod plain_dump;
-pub mod latex_dump;
+// TeX_*.pool.ltxml
+mod tex_box;               // Perl: TeX_Box.pool.ltxml
+mod tex_character;         // Perl: TeX_Character.pool.ltxml
+mod tex_debugging;         // Perl: TeX_Debugging.pool.ltxml
+mod tex_file_io;           // Perl: TeX_FileIO.pool.ltxml
+mod tex_fonts;             // Perl: TeX_Fonts.pool.ltxml
+mod tex_glue;              // Perl: TeX_Glue.pool.ltxml
+mod tex_hyphenation;       // Perl: TeX_Hyphenation.pool.ltxml
+mod tex_inserts;           // Perl: TeX_Inserts.pool.ltxml
+mod tex_job;               // Perl: TeX_Job.pool.ltxml
+mod tex_kern;              // Perl: TeX_Kern.pool.ltxml
+mod tex_logic;             // Perl: TeX_Logic.pool.ltxml
+mod tex_macro;             // Perl: TeX_Macro.pool.ltxml
+mod tex_marks;             // Perl: TeX_Marks.pool.ltxml
+pub(crate) mod tex_math;  // Perl: TeX_Math.pool.ltxml (includes tex_scripts content)
+mod tex_page;              // Perl: TeX_Page.pool.ltxml
+mod tex_paragraph;         // Perl: TeX_Paragraph.pool.ltxml
+mod tex_penalties;         // Perl: TeX_Penalties.pool.ltxml
+mod tex_registers;         // Perl: TeX_Registers.pool.ltxml
+pub mod tex_tables;        // Perl: TeX_Tables.pool.ltxml
+
+// eTeX + pdfTeX extensions
+pub mod etex;              // Perl: eTeX.pool.ltxml
+pub mod pdftex;            // Perl: pdfTeX.pool.ltxml
+
+// plain TeX format — LoadFormat('plain') chain called by tex.rs
+mod plain_bootstrap;       // Perl: plain_bootstrap.pool.ltxml
+mod plain_base;            // Perl: plain_base.pool.ltxml
+pub mod plain_dump;        // Rust: precompiled plain.ltx state (auto-generated)
+mod plain_constructs;      // Perl: plain_constructs.pool.ltxml
+mod math_common;           // Perl: math_common.pool.ltxml
+
+// LaTeX format — LoadFormat('latex') chain called by latex.rs
+mod latex_bootstrap;       // Perl: latex_bootstrap.pool.ltxml
+mod latex_base;            // Perl: latex_base.pool.ltxml
+pub mod latex_dump;        // Rust: precompiled latex.ltx state (auto-generated)
+pub mod latex_constructs;  // Perl: latex_constructs.pool.ltxml (C.1-C.15)
+
+// Top-level entry points
+pub mod tex;               // Perl: TeX.pool.ltxml (loads Base + LoadFormat('plain'))
+pub mod latex;             // Perl: LaTeX.pool.ltxml (loads TeX + LoadFormat('latex'))

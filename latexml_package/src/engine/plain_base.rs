@@ -1,14 +1,14 @@
-//! plain TeX
+//! plain_base — Perl: plain_base.pool.ltxml
 //!
-//! Core TeX Implementation for LaTeXML
+//! Core plain TeX definitions (Appendix B of The TeXbook)
 use crate::prelude::*;
 
 LoadDefinitions!({
-  // Perl: LoadFormat('plain') → bootstrap → dump → constructs
-  InnerPool!(plain_bootstrap);
+  // Perl: plain_base.pool.ltxml — definitions only (no LoadPool calls)
+  // bootstrap/dump/constructs are loaded by tex.rs (= LoadFormat('plain'))
 
   //**********************************************************************
-  // Plain;  Extracted from Appendix B. (effectively plain_base)
+  // Plain;  Extracted from Appendix B.
   //**********************************************************************
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
@@ -29,7 +29,7 @@ LoadDefinitions!({
     }
   }
   DefRegister!("\\magnification", Number!(1000));
-  Let!("\\bye", "\\lx@end@document");
+  // \bye moved to plain_constructs.rs (Perl: plain_constructs.pool.ltxml L285)
 
   // Most of these are ignored, but...
   DefMacro!(
@@ -100,53 +100,7 @@ LoadDefinitions!({
     document.get_node_mut().add_child(&mut replacement)?;
   });
 
-  // TeX's ligatures handled by rewrite regexps.
-  // Note: applied in reverse order of definition (latest defined applied first!)
-  // Note also, these area only applied in text content, not in attributes!
-  DefPrimitive!("\\@@endash", {
-    Tbox::new(
-      arena::pin_static("\u{2013}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\@@endash")),
-      SymHashMap::default(),
-    );
-  });
-  DefPrimitive!("\\@@emdash", {
-    Tbox::new(
-      arena::pin_static("\u{2014}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\@@emdash")),
-      SymHashMap::default(),
-    );
-  });
-
-  // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
-  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { non_typewriter(arg) });
-  // EM DASH
-  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {non_typewriter(arg) });
-
-  // Ligatures for doubled single left & right quotes to convert to double quotes
-  // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  DefLigature!("\u{2018}\u{2018}", "\u{201C}", 
-    fontTest => sub[arg] {non_typewriter_t1(arg)}); // double left quote
-  DefLigature!("\u{2019}\u{2019}", "\u{201D}", 
-    fontTest => sub[arg] {non_typewriter_t1(arg)}); // double right quote
-  DefLigature!("[?]\u{2018}",       "\u{00BF}",  
-    fontTest => sub[arg] {non_typewriter_t1(arg)}); // ? backquote
-  DefLigature!("!\u{2018}",       "\u{00A1}",  
-    fontTest => sub[arg] {non_typewriter_t1(arg)}); // ! backquote
-  // These ligatures are also handled by TeX.
-  // However, it appears that decent modern fonts in modern browsers handle these at that level.
-  // So it's likely not worth doing it at the conversion level, possibly adversely affecting search.
-  // DefLigature(qr{ff},               "\x{FB00}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{fi},               "\x{FB01}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{fl},               "\x{FB02}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{ffi},              "\x{FB03}", fontTest => \&nonTypewriterT1);
-  // DefLigature(qr{ffl},              "\x{FB04}", fontTest => \&nonTypewriterT1);
-
-  // \TeX moved to plain_bootstrap.rs (Perl plain_bootstrap.pool.ltxml L19-27)
+  // Ligatures moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L335-365)
   DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
   DefPrimitive!("\\j", "\u{0237}");
 
@@ -668,11 +622,8 @@ LoadDefinitions!({
     "\\mathhexbox{}{}{}",
     r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##
   );
-  // math_common: Greek letters, symbols, operators, relations, arrows,
-  // delimiters, accents, log-like functions, phantoms, roots.
-  // Perl: plain_constructs.pool.ltxml → math_common.pool.ltxml
-  // Perl: LoadFormat('plain') → plain_constructs → math_common
-  InnerPool!(plain_constructs);
+  // math_common + plain_constructs loaded after plain_base by tex.rs
+  // (Perl: LoadFormat('plain') → plain_constructs → math_common)
 
   //----------------------------------------------------------------------
   DefPrimitive!("\\openup Dimension", None);
@@ -765,19 +716,5 @@ LoadDefinitions!({
     },
     forbid_math => true);
 });
-
-fn non_typewriter(font: &Font) -> bool {
-  font.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter"
-}
-
-fn non_typewriter_t1(font: &Font) -> bool {
-  non_typewriter(font)
-    && matches!(
-      font
-        .get_encoding()
-        .unwrap_or(&Cow::Borrowed("OT1"))
-        .as_ref(),
-      "OT1" | "T1"
-    )
-}
+// non_typewriter/non_typewriter_t1 moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L338-344)
 
