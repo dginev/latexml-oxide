@@ -7,7 +7,7 @@ use regex::Regex;
 
 // use crate::common::error::*;
 use crate::{BoxOps, Digested};
-use crate::binding::content::merge_font;
+use crate::binding::content::{merge_font, merge_font_ref};
 use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::IntoDigestedResult;
 use crate::common::arena;
@@ -368,8 +368,10 @@ pub fn def_primitive(
   }
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
+      // Perf: capture Rc<Font> directly; closure borrows through it.
+      // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
       let merge_font_closure = before_digest_simple!({
-        merge_font((*chosen_font).clone());
+        merge_font_ref(&chosen_font);
       });
       before_digest_env.push(merge_font_closure);
     },
@@ -639,7 +641,7 @@ pub fn def_math_primitive(
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
           state_font
-            .merge((*this_reqfont).clone())
+            .merge_ref(&this_reqfont)
             .specialize(&presentation)
         } else {
           state_font.specialize(&presentation)
@@ -1080,8 +1082,10 @@ pub fn def_environment(
 
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
+      // Perf: capture Rc<Font> directly; closure borrows through it.
+      // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
       let merge_font_closure = before_digest_simple!({
-        merge_font((*chosen_font).clone());
+        merge_font_ref(&chosen_font);
       });
       before_digest_env.push(merge_font_closure);
     },

@@ -355,13 +355,13 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
       let preserved_size = f.size;
       state::with_font_info(ftok, |fontinfo| {
         if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
-          f = f.merge((**info).clone());
+          f = f.merge_ref(info);
         } else {
           // Perl: fallback to \lx@default@font if not found
           if let Some(Stored::Token(d_tok)) = state::lookup_value("\\lx@default@font") {
              state::with_font_info(&d_tok, |d_info| {
                if let Some(Stored::Font(ref d_f)) = d_info.unwrap_or(None) {
-                 f = f.merge((**d_f).clone());
+                 f = f.merge_ref(d_f);
                }
              });
           }

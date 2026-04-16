@@ -396,7 +396,7 @@ impl Document {
                   let key_sym = arena::pin(key);
                   attrs_to_set.push((key_sym, arena::pin(value)));
                   // Merge to set the font currently in effect
-                  declared_font = Cow::Owned(declared_font.merge(properties.clone()));
+                  declared_font = Cow::Owned(declared_font.merge_ref(&properties));
                   keys_to_remove.push(key_sym);
                 }
               }
@@ -2978,7 +2978,7 @@ impl Document {
     nodes.push_front(node.clone());
     while let Some(mut n) = nodes.pop_front() {
       if n.get_type() == Some(NodeType::ElementNode) {
-        let font = &self.get_node_font(&n).merge(props.clone());
+        let font = &self.get_node_font(&n).merge_ref(&props);
         self.set_node_font(&mut n, font)?;
         for child in n.get_child_nodes() {
           nodes.push_back(child);

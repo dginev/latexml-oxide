@@ -1392,7 +1392,14 @@ pub fn select_relaxng_schema(schema: &str, namespaces: Option<HashMap<String, St
 }
 
 pub fn merge_font(font: Font) {
-  let new_font = lookup_font().unwrap().merge(font);
+  let new_font = lookup_font().unwrap().merge_ref(&font);
+  assign_font(Rc::new(new_font), Some(Scope::Local));
+}
+
+/// Like `merge_font` but borrows the font. Saves a clone when the caller
+/// has a shared reference (e.g. via Rc) to the font being merged.
+pub fn merge_font_ref(font: &Font) {
+  let new_font = lookup_font().unwrap().merge_ref(font);
   assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
