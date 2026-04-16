@@ -1400,12 +1400,16 @@ pub fn merge_font(font: Font) {
 /// Stores as color_{name} and also defines \\color@{name} macro.
 pub fn def_color(name: &str, color: &crate::common::color::Color, scope: Option<Scope>) -> Result<()> {
   use crate::common::color;
-  // Check ifglobalcolors
-  let effective_scope = if if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true) {
-    Some(Scope::Global)
-  } else {
-    scope
-  };
+  // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) && IfCondition(\ifglobalcolors)
+  // Guard with lookup first: xcolor may not be loaded (e.g. colordvi-only documents)
+  let effective_scope =
+    if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
+      && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
+    {
+      Some(Scope::Global)
+    } else {
+      scope
+    };
   // Store in state as "model c1 c2 ..."
   let stored = color.to_stored();
   assign_value(

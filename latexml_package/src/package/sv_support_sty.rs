@@ -224,4 +224,16 @@ LoadDefinitions!({
     properties => sub[_args] {
       begin_itemize("description", None, BeginItemizeOptions::default())
     });
+
+  // Perl sv_support.sty.ltxml L194-195: proof environment
+  DefMacro!("\\proofname", "Proof");
+  // \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
+  // starred (*) = unnumbered = flag=Some
+  crate::engine::latex_ch8_theoremlike_environments::define_new_theorem(
+    Some(Tokens!(T_OTHER!("*"))), // starred
+    Tokenize!("proof"),  // environment name
+    None,                // no shared counter
+    Some(Tokenize!("Proof")), // display title
+    None,                // no 'within' counter
+  )?;
 });

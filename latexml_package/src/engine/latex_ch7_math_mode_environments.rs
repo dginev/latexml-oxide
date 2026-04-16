@@ -221,6 +221,12 @@ pub fn eqnarray_bindings() -> Result<()> {
   use latexml_core::alignment::cell::Cell;
   use latexml_core::alignment::template::TemplateConfig;
 
+  // Ensure @equationgroup counter exists — it's normally created by article.cls,
+  // but standalone classes (appolb, jpsj2, etc.) may not define it.
+  if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
+    NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
+  }
+
   // Perl: 3-column template: col1=right, col2=center, col3=left
   let col1 = Cell {
     before: Some(Tokens::new(vec![
@@ -501,6 +507,17 @@ LoadDefinitions!({
       result
     }
   }, protected => true);
+
+  // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
+  // Simplified: \ensuremathfollows checks if next content is already math,
+  // if not wraps with \( ... \). Used by equation labels / alt text.
+  DefMacro!("\\ensuremathfollows", "");  // stub — automath needs gullet lookahead
+  DefMacro!("\\ensuremathpreceeds", ""); // stub — pairs with ensuremathfollows
+
+  // Perl: latex_constructs.pool.ltxml L2166
+  Tag!("ltx:Math", after_open => sub[document, node] {
+    document.generate_id(&mut node.clone(), "m")?;
+  });
 
   // Perl: latex_constructs.pool.ltxml lines 2237-2239
   // \@equationgroup@numbering{numbered=1,postset=1,...}

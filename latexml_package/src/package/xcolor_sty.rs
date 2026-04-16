@@ -518,12 +518,30 @@ LoadDefinitions!({
   DefMacro!("\\substitutecolormodel{}{}", None);
 
   // \xglobal@list and \xglobal mechanism
+  // Perl: DefMacroI('\xglobal@list', undef, '\definecolor\definecolors\definecolorset\colorlet...')
   DefMacro!("\\colornameprefix", "XC@");
+  DefMacro!("\\xglobal@list",
+    "\\definecolor\\definecolors\\definecolorset\\colorlet\\providecolor\
+     \\providecolors\\providecolorset\\blendcolors\\maskcolors");
 
+  // Perl: DefMacro('\xglobal Token', sub { check if token in xglobal@list; if yes set xglobal@;
+  //   else emit \global token })
   DefPrimitive!("\\xglobal Token", sub[(token)] {
-    assign_value("xglobal@", true, Some(Scope::Local));
-    // Return the token for re-processing
-    gullet::unread_one(token);
+    // Check if token is one of the color-defining commands
+    const COLOR_CMDS: &[&str] = &[
+      "\\definecolor", "\\definecolors", "\\definecolorset", "\\colorlet",
+      "\\providecolor", "\\providecolors", "\\providecolorset",
+      "\\blendcolors", "\\maskcolors",
+    ];
+    let is_color_cmd = token.with_str(|s| COLOR_CMDS.contains(&s));
+    if is_color_cmd {
+      assign_value("xglobal@", true, Some(Scope::Local));
+      gullet::unread_one(token);
+    } else {
+      // Fallback: emit \global <token> (Perl: (T_CS('\global'), $token))
+      gullet::unread_one(token);
+      gullet::unread_one(T_CS!("\\global"));
+    }
     Ok(())
   });
 
@@ -567,10 +585,12 @@ LoadDefinitions!({
   DefMacro!("\\DefineNamedColor{}{}{}{}", "\\definecolor[#1]{#2}{#3}{#4}");
 
   // \colorlet[type]{name}[tomodel]{color_expr}
-  DefPrimitive!("\\colorlet[]{}{}", sub[(_type_opt, name, colordesc)] {
+  // Perl: DefPrimitive('\colorlet[]{}[]{}', sub { ... ParseXColor(undef, $colordesc, $tomodel) ... })
+  DefPrimitive!("\\colorlet[]{}[]{}", sub[(_type_opt, name, tomodel_opt, colordesc)] {
     let name_str = do_expand(name)?.to_string();
     let colordesc_str = do_expand(colordesc)?.to_string();
-    let color = parse_xcolor(None, &colordesc_str, None);
+    let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+    let color = parse_xcolor(None, &colordesc_str, tomodel_str.as_deref());
     let scope = if lookup_bool("xglobal@") { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
     assign_value("xglobal@", false, Some(Scope::Local));

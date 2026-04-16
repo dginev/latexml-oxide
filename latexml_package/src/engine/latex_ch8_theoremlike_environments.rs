@@ -35,6 +35,9 @@ LoadDefinitions!({
   DefMacro!("\\lx@makeoutdent", "\\@ADDCLASS{ltx_outdent}");
 
   DefMacro!("\\@thmcountersep", ".");
+  // Perl dump: \@thmcounter{#1} => \noexpand\arabic{#1}
+  // Used in \@xnthm and \@ynthm for theorem counter formatting
+  DefMacro!("\\@thmcounter{}", "\\noexpand\\arabic{#1}");
   DefMacro!("\\thm@doendmark",  "");
 
   init_savable_theorem_parameters(vec![

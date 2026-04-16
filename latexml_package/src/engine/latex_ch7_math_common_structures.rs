@@ -17,6 +17,8 @@ LoadDefinitions!({
     properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())) }
   );
 
+  // \le, \ge, \ne are now in math_common.rs (Perl math_common.pool.ltxml L298-301)
+
   DefConstructor!(
     "\\frac InFractionStyle InFractionStyle",
     "<ltx:XMApp>\

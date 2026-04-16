@@ -100,4 +100,15 @@ LoadDefinitions!({
   DefRegister!("\\labelwidthvi"       => Dimension::new(0));
 
   DefRegister!("\\@itemdepth" => Number::new(0));
+
+  // List formatting macros from article.cls / report.cls / book.cls
+  // These set list parameters at various nesting levels.
+  // In raw TeX classes, \@listi etc. are defined by the class file.
+  // We stub them as no-ops since LaTeXML handles list formatting via CSS.
+  DefMacro!("\\@listi", "");
+  DefMacro!("\\@listii", "");
+  DefMacro!("\\@listiii", "");
+  DefMacro!("\\@listiv", "");
+  DefMacro!("\\@listv", "");
+  DefMacro!("\\@listvi", "");
 });

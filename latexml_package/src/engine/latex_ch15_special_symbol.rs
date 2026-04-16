@@ -83,6 +83,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textasciicircum", "^");
   DefPrimitive!("\\textasciitilde", "~");
   DefPrimitive!("\\textcompwordmark", ""); // ???
+  DefPrimitive!("\\textcapitalcompwordmark", ""); // ???
+  DefPrimitive!("\\textascendercompwordmark", ""); // ???
   DefPrimitive!("\\textunderscore", "_");
   // SYMBOL FOR SPACE;  Not really the right symbol!
   DefPrimitive!("\\textvisiblespace", "\u{2423}");
@@ -148,4 +150,7 @@ LoadDefinitions!({
   DefMath!("\\owns", None, "\u{220B}", role => "RELOP", meaning => "contains");
 
   // \symbol lookup symbol in font by index?
+
+  // Perl: latex_constructs.pool.ltxml L5805
+  Let!("\\mathalpha", "\\relax");
 });

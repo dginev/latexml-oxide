@@ -117,12 +117,23 @@ LoadDefinitions!({
     }
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works
+    // Respect \global prefix: if \global\font was used, install globally.
+    let is_global = state::get_prefix("global");
+    let _scope = if is_global { Some(Scope::Global) } else { None };
     let cs_for_fontdef = cs;
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
         AssignValue!("current_FontDef", cs_for_fontdef, None);
       }
     );
+    // If \global prefix was active, re-install with global scope.
+    // The DefPrimitive! above installs locally; we need to promote to global
+    // for \global\font\xydashfont=... (used by xy.tex's \xyfont@).
+    if is_global {
+      if let Some(meaning) = state::lookup_meaning(&cs) {
+        state::assign_meaning(&cs, meaning, Some(Scope::Global));
+      }
+    }
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}

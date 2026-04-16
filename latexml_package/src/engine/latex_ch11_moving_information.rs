@@ -97,6 +97,8 @@ LoadDefinitions!({
   // And likewise, mixed up in various other classes!
 
   DefMacro!("\\thebibliography@ID", "");
+  // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
+  DefMacro!("\\the@lx@bibliography@ID", "");
 
   // Do this before digesting the body of a bibliography
   fn before_digest_bibliography() -> Result<()> {

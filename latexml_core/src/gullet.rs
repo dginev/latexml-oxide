@@ -1227,6 +1227,7 @@ pub fn read_register_value_coerce(
   match read_x_token(None, false, None)? {
     None => Ok(None),
     Some(token) => {
+      let _is_fontdimen = token.with_str(|s| s == "\\fontdimen");
       if let Some(defn) = lookup_register_definition(&token) {
         if let Some(mut register_type) = defn.register_type() {
           if register_type == RegisterType::CharDef {
@@ -1496,8 +1497,10 @@ fn read_internal_glue() -> Result<Option<Glue>> {
 pub fn read_dimension() -> Result<Dimension> {
   let is_negative = read_optional_signs()?;
   if let Some(d) = read_internal_dimension()? {
+    eprintln!("DEBUG read_dimension: got internal_dimension={}", d.value_of());
     Ok(if is_negative { d.negate() } else { d })
   } else if let Some(d) = read_internal_glue()? {
+    eprintln!("DEBUG read_dimension: got internal_glue");
     Ok(Dimension::new(if is_negative {
       d.negate().value_of()
     } else {

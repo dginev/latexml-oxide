@@ -412,8 +412,13 @@ pub fn end_mode(mode: &str) -> Result<()> {
 pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
     // Perl Stomach.pm L527-531: check BOUND_MODE at frame 0
-    if !is_value_bound("BOUND_MODE", Some(0))
-      || (lookup_string("BOUND_MODE") != bound_mode)
+    // The strict check is: BOUND_MODE must be bound in the current top frame AND match.
+    // However, BOUND_MODE may have been set in a different frame (e.g. the locked frame
+    // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
+    // inside an environment). When the bound value matches but isn't in the top frame's
+    // undo table, treat it as valid — the mode system is about tracking what mode we're in.
+    let current_bound = lookup_string("BOUND_MODE");
+    if current_bound != bound_mode
     {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?

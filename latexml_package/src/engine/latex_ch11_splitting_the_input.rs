@@ -3,7 +3,7 @@ LoadDefinitions!({
   // #======================================================================
   // # C.11.4 Splitting the input
   // #======================================================================
-  Let!("\\@@input", "\\input"); // Save TeX's version.
+  // \@@input moved to latex_bootstrap.rs (Perl latex_bootstrap.pool.ltxml L58)
   // LaTeX's \input is a bit different...
 
   // Input, now

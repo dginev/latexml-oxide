@@ -6,10 +6,18 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Dependencies
   RequirePackage!("natbib");
+  // mn2e.cls internal: base line skip (used in raw TeX class)
+  DefRegister!("\\@bls" => Dimension!("12pt"));
 
   // Perl: mn2e_support.sty.ltxml L19-20 — load graphicx if option was set
   if state::lookup_int("@usegraphicx") != 0 {
     RequirePackage!("graphicx");
+  }
+  // mn2e.cls raw TeX: \if@useAMS\RequirePackage{amsmath,amssymb}\fi
+  // Since we don't load the raw class, check the flag and load AMS packages
+  if state::lookup_int("@useAMS") != 0 {
+    RequirePackage!("amsmath");
+    RequirePackage!("amssymb");
   }
 
   // Frontmatter — Perl L28-46
@@ -62,6 +70,10 @@ LoadDefinitions!({
   DefMacro!("\\fm", ".\\!^{\\mathrm{m}}");
   DefMacro!("\\fs", ".\\!^{\\mathrm{s}}");
   DefMacro!("\\fp", ".\\!^{\\mathrm{p}}");
+  // Perl: mn2e_support.sty.ltxml — degree/arcmin/arcsec using \aas@fstack
+  DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
+  DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
+  DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
   DefMacro!("\\ion{}{}", "#1\\,{\\sc #2}");
 
   // Journal abbreviations — Perl L180-252

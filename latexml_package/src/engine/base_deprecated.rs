@@ -96,4 +96,12 @@ LoadDefinitions!({
 
   // Input
   DefMacro!("\\ltx@input", "\\lx@latex@input");
+
+  // Math operators (deprecated @-prefixed names)
+  DefMacro!("\\@dollar@in@mathmode", "\\lx@dollar@in@mathmode");
+  DefMacro!("\\@CSYMBOL{}", "\\lx@symbol[meaning={#1}]{}");
+  DefMacro!("\\@MAYBEAPPLY{}{}", "\\ifx.#2.#1\\else\\lx@apply{#1}{#2}\\fi");
+  DefMacro!("\\@TOKEN{}", "\\lx@symbol[name={#1}]{}");
+  DefMacro!("\\@SUPERSCRIPT{}{}", "\\ifx.#2.#1\\else\\lx@superscript[]{#1}{#2}\\fi");
+  DefMacro!("\\@SUBSCRIPT{}{}", "\\ifx.#2.#1\\else\\lx@subscript[]{#1}{#2}\\fi");
 });

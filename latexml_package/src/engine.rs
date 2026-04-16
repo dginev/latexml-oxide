@@ -32,10 +32,18 @@ mod base_deprecated;
 pub mod etex;
 // pdfTeX Pool
 pub mod pdftex;
-// plain TeX Pool
-mod plain;
+// plain TeX Pool �� matches Perl Engine/ structure:
+//   plain (→ plain_bootstrap → plain_dump → plain_constructs → math_common)
+mod math_common;       // Perl: math_common.pool.ltxml
+mod plain_bootstrap;   // Perl: plain_bootstrap.pool.ltxml
+mod plain_constructs;  // Perl: plain_constructs.pool.ltxml
+mod plain;             // Perl: plain_base.pool.ltxml (content matches, file name kept for compatibility)
 
-// LaTeX Pool
+// LaTeX Pool — matches Perl Engine/ structure:
+//   latex (→ latex_bootstrap → latex_dump → latex_constructs)
+mod latex_base;        // Perl: latex_base.pool.ltxml (infrastructure, no constructors)
+mod latex_bootstrap;   // Perl: latex_bootstrap.pool.ltxml
+mod latex_constructs;  // Perl: latex_constructs.pool.ltxml (wraps all latex_ch*.rs files)
 pub mod latex;
 mod latex_ch10_array_and_tabular;
 mod latex_ch10_tabbing_environment;

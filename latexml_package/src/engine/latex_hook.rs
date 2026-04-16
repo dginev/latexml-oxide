@@ -43,6 +43,9 @@ LoadDefinitions!({
     "\\makeatother",
     "\\begin",
     "\\listfiles",
+    "\\nofiles",
+    "\\typeout",
+    "\\PassOptionsToPackage",
   ]
   .iter()
   {

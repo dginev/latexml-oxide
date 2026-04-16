@@ -41,6 +41,26 @@ fn main() {
   // Generate latex_dump_loader.rs from text dump (or stub)
   let latex_dump_txt = dumps_dir.join("latex.dump.txt");
   let loader_path = Path::new(&out_dir).join("latex_dump_loader.rs");
+
+  // Auto-generate dump if missing and latexml_oxide binary exists
+  if !latex_dump_txt.exists() {
+    let bin_path = Path::new(&manifest_dir).join("../target/release/latexml_oxide");
+    if bin_path.exists() {
+      eprintln!("[build.rs] Auto-generating LaTeX kernel dump...");
+      let status = Command::new(&bin_path)
+        .arg("--init=latex.ltx")
+        .status();
+      match status {
+        Ok(s) if s.success() => {
+          eprintln!("[build.rs] Dump generated successfully");
+        }
+        _ => {
+          eprintln!("[build.rs] Dump generation failed (will use no-op stub)");
+        }
+      }
+    }
+  }
+
   if latex_dump_txt.exists() {
     let abs_path = latex_dump_txt.canonicalize().unwrap();
     let loader = format!(

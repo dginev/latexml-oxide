@@ -15,6 +15,7 @@ use std::io::Write;
 use std::path::Path;
 
 use crate::common::arena;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::Definition; // trait for get_expansion(), get_cs(), etc.
 use crate::state::TableName;
@@ -108,6 +109,47 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         Option::None // Closure-based, can't serialize
       }
     }
+    Stored::Register(reg) => {
+      // Register: serialize as R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
+      // Only serialize simple registers without getter/setter closures
+      if reg.getter.is_some() || reg.setter.is_some() {
+        return Option::None; // Has closures, can't serialize
+      }
+      let cs_name = reg.cs.with_str(url_encode);
+      let rtype = match reg.register_type {
+        crate::definition::register::RegisterType::Number => "N",
+        crate::definition::register::RegisterType::Dimension => "D",
+        crate::definition::register::RegisterType::Glue => "G",
+        crate::definition::register::RegisterType::MuGlue => "MG",
+        crate::definition::register::RegisterType::Tokens => "TK",
+        crate::definition::register::RegisterType::CharDef => "CD",
+        _ => return Option::None,
+      };
+      let value_str = match &reg.value {
+        Some(crate::definition::register::RegisterValue::Number(n)) => n.value_of().to_string(),
+        Some(crate::definition::register::RegisterValue::Dimension(d)) => d.value_of().to_string(),
+        Some(crate::definition::register::RegisterValue::Glue(g)) => {
+          let mut s = g.skip.to_string();
+          if let Some(p) = g.plus { s.push_str(&format!(",p{}", p)); }
+          if let Some(ref pf) = g.pfill { s.push_str(&format!(",pf{}", fillcode_index(pf))); }
+          if let Some(m) = g.minus { s.push_str(&format!(",m{}", m)); }
+          if let Some(ref mf) = g.mfill { s.push_str(&format!(",mf{}", fillcode_index(mf))); }
+          s
+        }
+        Some(crate::definition::register::RegisterValue::Tokens(tks)) => {
+          let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
+          tok_strs.join(",")
+        }
+        _ => "0".to_string(),
+      };
+      let mut s = format!("R\t{}\t{}\t{}", cs_name, rtype, value_str);
+      if let Some(glyph) = reg.mathglyph {
+        s.push_str(&format!("\t{}", glyph as u32));
+      }
+      Some(s)
+    }
+    Stored::Number(n) => Some(format!("I\t{}", n.value_of())),
+    Stored::Float(f) => Some(format!("F\t{}", f.0)),
     Stored::Dimension(d) => Some(format!("D\t{}", d.0)),
     Stored::Glue(g) => {
       let mut s = format!("G\t{}", g.skip);

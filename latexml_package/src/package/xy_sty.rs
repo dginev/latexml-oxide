@@ -83,12 +83,11 @@ LoadDefinitions!({
   // \AtBeginDocument for the full initialization, matching the Perl flow.
   RawTeX!("\\AtBeginDocument{\\xyoption{latexml}}");
 
-  // xy font primitives → no-op (Perl L66-72)
-  DefMacro!("\\xydashfont", "");
-  DefMacro!("\\xyatipfont", "");
-  DefMacro!("\\xybtipfont", "");
-  DefMacro!("\\xybsqlfont", "");
-  DefMacro!("\\xycircfont", "");
+  // xy font primitives: do NOT pre-define these as empty macros!
+  // xy.tex's \xyfont@ mechanism checks \ifx#1\undefined and only loads the font
+  // if it's undefined. Pre-defining them as empty macros makes the check fail,
+  // leaving them as expandable macros (not font tokens). This breaks \fontdimen
+  // usage because the number scanner expands them to empty and reads past.
 
   // \lx@xy@capturerange — capture coordinate range (Perl L143-146)
   DefPrimitive!("\\lx@xy@capturerange", {

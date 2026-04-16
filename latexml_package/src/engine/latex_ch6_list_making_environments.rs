@@ -38,10 +38,19 @@ LoadDefinitions!({
   // Additional ones created by need.
   NewCounter!("@itemizei",   "section",      idprefix => "I");
 
+  // Perl: latex_constructs.pool.ltxml L1505-1510 — paragraph before list items
+  DefConstructor!("\\preitem@par", sub[document] {
+    let _ = document.maybe_close_element("ltx:p");
+    let _ = document.maybe_close_element("ltx:para");
+  }, alias => "\\par");
+
+  // Perl: latex_constructs.pool.ltxml L1560
+  DefMacro!("\\@mklab{}", "\\hfil #1");
+
   // id, but NO refnum (et.al) attributes on itemize \\item ...
   // unless the optional tag argument was given!
   // We"ll make the <ltx:tag> from either the optional arg, or from \\labelitemi..
-  DefMacro!("\\itemize@item", "\\par\\itemize@item@");
+  DefMacro!("\\itemize@item", "\\preitem@par\\itemize@item@");
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[args] {

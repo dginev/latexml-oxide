@@ -100,6 +100,21 @@ LoadDefinitions!({
   );
 
   Let!("\\reset@font", "\\normalfont");
+  // Perl latex_constructs.pool.ltxml L5251
+  DefMacro!("\\@fontswitch{}{}", "\\ifmmode #2\\relax\\else #1 \\fi");
+
+  // Perl: latex_constructs.pool.ltxml L5759-5764 — picture font stubs
+  DefPrimitive!("\\OMX", None, font => { family => "cmex10" });
+  DefPrimitive!("\\tenln", None, font => { family => "line10" });
+  DefPrimitive!("\\tenlnw", None, font => { family => "linew10" });
+  DefPrimitive!("\\tencirc", None, font => { family => "lcircle10" });
+  DefPrimitive!("\\tencircw", None, font => { family => "lcirclew10" });
+
+  // Perl: latex_constructs.pool.ltxml L5777-5779
+  Let!("\\nocorr", "\\relax");
+  Let!("\\check@icl", "\\@empty");
+  Let!("\\check@icr", "\\@empty");
+  Let!("\\curr@math@size", "\\@empty");
 
   DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
@@ -212,6 +227,14 @@ LoadDefinitions!({
     def_macro(cs, params,
       Some(ExpansionBody::Tokens(Tokens::new(expansion))), None)?;
   });
+
+  // Perl L5373: \newfont{cmd}{fontname} — legacy LaTeX font command
+  DefMacro!("\\newfont{}{}", "\\font#1=#2\\relax");
+  // Perl L5375: \normalcolor — default no-op (overridden by color.sty)
+  Let!("\\normalcolor", "\\relax");
+
+  // Perl L5364: \math@version default
+  DefMacro!("\\math@version", "normal");
 
   // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
   DefPrimitive!("\\mathversion{}", sub[(version)] {

@@ -1195,6 +1195,9 @@ LoadDefinitions!({
   DefMacro!("\\primfrac{}", None);
   DefMacro!("\\shoveleft{}", "#1");
   DefMacro!("\\shoveright{}", "#1");
+  // Perl: amsmath.sty.ltxml L1313-1314
+  DefRegister!("\\multlinegap" => Glue::new(Dimension!("10pt").0));
+  DefRegister!("\\multlinetaggap" => Glue::new(Dimension!("10pt").0));
 
   //======================================================================
   // Additions from Perl amsmath audit (session 38)

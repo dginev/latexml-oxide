@@ -61,8 +61,12 @@ LoadDefinitions!({
   raw_tex(r"\cs_gset:Npn \__kernel_file_name_sanitize:n #1 {#1}")?;
   // \__file_quark_if_nil:nTF — conditional test for \q__file_nil
   raw_tex(r"\__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF }")?;
-  // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run.
-  if state::lookup_catcode(' ') != Some(Catcode::SPACE) {
+  // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run properly.
+  // Check both space and underscore catcodes — packages using \ProvidesExplPackage
+  // may restore space but leave underscore as LETTER if the restoration is group-local.
+  if state::lookup_catcode(' ') != Some(Catcode::SPACE)
+    || state::lookup_catcode('_') != Some(Catcode::SUB)
+  {
     state::assign_catcode(' ', Catcode::SPACE, Some(Scope::Global));
     state::assign_catcode('\t', Catcode::SPACE, Some(Scope::Global));
     state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));

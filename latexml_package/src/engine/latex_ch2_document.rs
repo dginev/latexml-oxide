@@ -76,6 +76,14 @@ LoadDefinitions!({
     if let Some(ops) = state::lookup_tokens("@document@preamble@afterend") {
       boxes.push(stomach::digest(ops)?);
     }
+    // Safety net: ensure _ has standard catcode at document start.
+    // Packages using expl3 internally (mhchem, siunitx, etc.) may leave _ as LETTER
+    // if their \ExplSyntaxOff was group-local. Restore _ to SUB globally.
+    // Note: we do NOT restore ':' here because French babel makes it ACTIVE for
+    // proper spacing before French punctuation (;:!?).
+    if state::lookup_catcode('_') != Some(Catcode::SUB) {
+      state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+    }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     leave_horizontal_internal();
     boxes
@@ -97,34 +105,17 @@ LoadDefinitions!({
       // Now we check whether we're down to the last stack frame.
       // It is common for unclosed { or even environments
       // and we want to at least compress & avoid unnecessary errors & warnings.
-      let _nframes = get_frame_depth();
-      //     my $ifstack;
-      //     if ($state->isValueBound('current_environment', 0)
-      //       && ($state->valueInFrame('current_environment', 0) eq 'document')
-      //       && (!($ifstack = $state->lookupValue('if_stack')) || !$$ifstack[0])) { }    # OK!
-      //     else {
-      //       my @lines = ();
-      //       while ((!$state->isValueBound('current_environment', 0)
-      //           || ($state->valueInFrame('current_environment', 0) ne 'document'))
-      //         && ($state->getFrameDepth > 0)) {
-      //         # my $nonbox = $state->valueInFrame('groupNonBoxing',0) || 0;
-      //         my $tok = $state->valueInFrame('groupInitiator',        0) || '<unknown>';
-      //         my $loc = $state->valueInFrame('groupInitiatorLocator', 0);
-      //         $loc = defined $loc ? ToString($loc) : '<unknown>';
-      //         my $env = $state->isValueBound('current_environment', 0)
-      //           && $state->valueInFrame('current_environment', 0);
-      //         if ($env) {
-      //           push(@lines, "Environment $env opened by " . ToString($tok) . ' ' . $loc); }
-      //         else {    # but unclosed { is so common and latex itself doesn't Error!
-  //           push(@lines, "Group opened by " . ToString($tok) . ' ' . $loc); }
-  //         $state->popFrame; }
-  //       while (($ifstack = $state->lookupValue('if_stack')) && $$ifstack[0]) {
-  //         my $frame = $state->shiftValue('if_stack');
-  //         push(@lines, "Conditional " . ToString($$frame{token})
-  //             . "started " . ToString($$frame{start})); }
-  //       Warn('unexpected', '\end{document}', $stomach,
-  //         "Attempt to end document with open groups, environments or conditionals", @lines);
-  //     }
+      // Perl: pop extra frames until we reach the document frame.
+      // Common for unclosed { or environments — compress & avoid cascading errors.
+      {
+        let mut safety = 200;
+        while safety > 0 && get_frame_depth() > 1 {
+          let env = state::lookup_string("current_environment");
+          if env == "document" { break; }
+          let _ = state::pop_frame();
+          safety -= 1;
+        }
+      }
       // Perl: endMode('internal_vertical', 1) — noframe=1
       // End mode without popping stack frame (executes beforeAfterGroup)
       end_mode_opt("internal_vertical", true)?;

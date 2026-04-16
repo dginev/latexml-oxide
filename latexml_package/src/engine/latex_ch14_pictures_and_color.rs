@@ -562,4 +562,13 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml line 5027
   // Pre-define \Gin@driver so graphics.sty doesn't error when loaded from disk
   DefMacro!("\\Gin@driver", "");
+
+  // Perl: latex_constructs.pool.ltxml L5130-5133 — picture savebox
+  DefMacro!("\\pic@savebox DefToken Pair []{}", "\\pic@@savebox{#1}{\\pic@makebox #2[#3]{#4}}");
+  DefPrimitive!("\\pic@@savebox DefToken {}", sub[(tok, content)] {
+    let key = s!("box{}", tok.to_string());
+    let digested = stomach::digest(content)?;
+    state::assign_value(&key, digested, None);
+  });
+  DefMacro!("\\@savepicbox", "\\pic@savebox");
 });

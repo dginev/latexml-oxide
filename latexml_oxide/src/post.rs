@@ -118,20 +118,17 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // Phase 2.6: SVG (convert ltx:picture children to svg:svg + svg:* elements)
   // Without this, the XSLT picture template falls back to "as-TeX" mode and
   // emits an empty span — figures with picture-environment content are lost.
-  // TEMPORARILY DISABLED: causes XSLT segfault, needs investigation
-  // let mut svg_proc = latexml_post::svg::SVG::new();
-  // let svg_nodes = svg_proc.to_process(&doc);
-  // let doc = if !svg_nodes.is_empty() {
-  //   match svg_proc.process(doc, svg_nodes) {
-  //     Ok(mut docs) => docs.remove(0),
-  //     Err(e) => {
-  //       eprintln!("Post-processing: SVG failed: {}", e);
-  //       return xml.to_string();
-  //     }
-  //   }
-  // } else {
-  //   doc
-  // };
+  // Phase 2.6: SVG
+  // Convert ltx:picture elements to inline SVG for HTML output.
+  //
+  // The latexml_post::svg::SVG processor works correctly but causes a
+  // use-after-free crash in libxml2 during PostDocument cleanup (nodes
+  // unlinked by replace_node are freed but still referenced in the idcache).
+  //
+  // Workaround: extract SVG fragments from the INTERMEDIATE XML using
+  // string processing (no libxml2 involvement), then inject them into
+  // the final HTML AFTER XSLT completes.
+  let svg_fragments = extract_svg_fragments(xml);
 
   // Phase 2.75: Split
   let doc = if split {
@@ -250,9 +247,29 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
           r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
         )
         .unwrap();
-        void_selfclose_re
+        let mut output = void_selfclose_re
           .replace_all(&output, "<$1$2>")
-          .to_string()
+          .to_string();
+        // Phase G: inject SVG fragments into empty ltx_picture spans
+        if !svg_fragments.is_empty() {
+          for (pic_id, svg_html) in &svg_fragments {
+            // Replace <span id="ID" class="ltx_picture" style="..."></span>
+            // with <span id="ID" class="ltx_picture" style="...">SVG_CONTENT</span>
+            let pattern = format!(
+              r#"<span id="{}" class="ltx_picture"([^>]*)></span>"#,
+              regex::escape(pic_id)
+            );
+            if let Ok(re) = regex::Regex::new(&pattern) {
+              output = re.replace(&output, |caps: &regex::Captures| {
+                format!(
+                  r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
+                  pic_id, &caps[1], svg_html
+                )
+              }).to_string();
+            }
+          }
+        }
+        output
       } else {
         output
       }
@@ -261,5 +278,189 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       eprintln!("Post-processing failed: {}", e);
       xml.to_string()
     }
+  }
+}
+
+/// Extract SVG fragments from intermediate LaTeXML XML.
+///
+/// Finds `<picture>` elements, converts their children to inline SVG HTML.
+/// Uses a lightweight regex+string approach (no libxml2) to avoid the
+/// use-after-free crash in PostDocument cleanup.
+///
+/// Returns (picture_id, svg_html) pairs for post-XSLT injection.
+fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
+  let mut fragments = Vec::new();
+  // Match <picture ... xml:id="ID" ... width="W" height="H" ...>CONTENT</picture>
+  let picture_re = regex::Regex::new(
+    r#"(?s)<picture([^>]*)>(.*?)</picture>"#
+  ).unwrap();
+  let id_re = regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap();
+  let width_re = regex::Regex::new(r#"width="([^"]+)""#).unwrap();
+  let height_re = regex::Regex::new(r#"height="([^"]+)""#).unwrap();
+
+  for pic_caps in picture_re.captures_iter(xml) {
+    let attrs = &pic_caps[1];
+    let content = &pic_caps[2];
+    let id = id_re.captures(attrs).map(|c| c[1].to_string()).unwrap_or_default();
+    let width = width_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
+    let height = height_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
+
+    if id.is_empty() || content.trim().is_empty() {
+      continue;
+    }
+
+    let w = width.unwrap_or(100.0);
+    let h = height.unwrap_or(100.0);
+
+    // Build inline SVG: coordinate system has y-flip (TeX origin bottom-left, SVG top-left)
+    let mut svg_content = format!(
+      r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{w:.2}" height="{h:.2}" overflow="visible">"#,
+    );
+    svg_content.push_str(&format!(
+      r#"<g transform="translate(0,{h:.2}) scale(1,-1)">"#,
+    ));
+
+    // Convert ltx picture children to SVG elements
+    svg_content.push_str(&convert_picture_children_to_svg(content));
+
+    svg_content.push_str("</g></svg>");
+    fragments.push((id, svg_content));
+  }
+  fragments
+}
+
+/// Convert LaTeXML picture children (g, line, text, circle, etc.) to SVG elements.
+fn convert_picture_children_to_svg(content: &str) -> String {
+  let mut svg = String::new();
+
+  // Match <g ...>...</g> groups (which contain transformed content)
+  let g_re = regex::Regex::new(r#"(?s)<g([^>]*)>(.*?)</g>"#).unwrap();
+  for g_caps in g_re.captures_iter(content) {
+    let g_attrs = &g_caps[1];
+    let g_content = &g_caps[2];
+
+    // Extract transform
+    let transform_re = regex::Regex::new(r#"transform="([^"]+)""#).unwrap();
+    let transform = transform_re.captures(g_attrs).map(|c| c[1].to_string());
+
+    if let Some(t) = &transform {
+      svg.push_str(&format!(r#"<g transform="{t}">"#));
+    } else {
+      svg.push_str("<g>");
+    }
+
+    // Convert inner elements
+    // <line points="x1,y1 x2,y2" stroke="..." stroke-width="..."/>
+    let line_re = regex::Regex::new(
+      r#"<line\s+points="([^"]+)"([^/]*)/?>"#
+    ).unwrap();
+    for line_caps in line_re.captures_iter(g_content) {
+      let points = &line_caps[1];
+      let rest_attrs = &line_caps[2];
+      let coords: Vec<&str> = points.split_whitespace().collect();
+      if coords.len() >= 2 {
+        let p1: Vec<&str> = coords[0].split(',').collect();
+        let p2: Vec<&str> = coords[1].split(',').collect();
+        if p1.len() == 2 && p2.len() == 2 {
+          svg.push_str(&format!(
+            r#"<line x1="{}" y1="{}" x2="{}" y2="{}"{}/>"#,
+            p1[0], p1[1], p2[0], p2[1], rest_attrs
+          ));
+        }
+      }
+    }
+
+    // <circle cx="..." cy="..." r="..." .../>
+    let circle_re = regex::Regex::new(r#"<circle([^/]*)/?>"#).unwrap();
+    for circle_caps in circle_re.captures_iter(g_content) {
+      svg.push_str(&format!("<circle{}/>", &circle_caps[1]));
+    }
+
+    // <ellipse cx="..." cy="..." rx="..." ry="..." .../>
+    let ellipse_re = regex::Regex::new(r#"<ellipse([^/]*)/?>"#).unwrap();
+    for ellipse_caps in ellipse_re.captures_iter(g_content) {
+      svg.push_str(&format!("<ellipse{}/>", &ellipse_caps[1]));
+    }
+
+    // <rect x="..." y="..." width="..." height="..." .../>
+    let rect_re = regex::Regex::new(r#"<rect([^/]*)/?>"#).unwrap();
+    for rect_caps in rect_re.captures_iter(g_content) {
+      svg.push_str(&format!("<rect{}/>", &rect_caps[1]));
+    }
+
+    // <polygon points="..." .../>
+    let polygon_re = regex::Regex::new(r#"<polygon([^/]*)/?>"#).unwrap();
+    for polygon_caps in polygon_re.captures_iter(g_content) {
+      svg.push_str(&format!("<polygon{}/>", &polygon_caps[1]));
+    }
+
+    // <path d="..." .../>
+    let path_re = regex::Regex::new(r#"<path([^/]*)/?>"#).unwrap();
+    for path_caps in path_re.captures_iter(g_content) {
+      svg.push_str(&format!("<path{}/>", &path_caps[1]));
+    }
+
+    // <bezier points="x1,y1 x2,y2 x3,y3 x4,y4" .../>
+    // Convert to SVG cubic bezier path
+    let bezier_re = regex::Regex::new(r#"<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
+    for bez_caps in bezier_re.captures_iter(g_content) {
+      let points = &bez_caps[1];
+      let rest = &bez_caps[2];
+      let coords: Vec<&str> = points.split_whitespace().collect();
+      if coords.len() >= 4 {
+        // SVG cubic bezier: M x0,y0 C x1,y1 x2,y2 x3,y3
+        let d = format!("M {} C {} {} {}", coords[0], coords[1], coords[2], coords[3]);
+        svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
+      } else if coords.len() >= 3 {
+        // Quadratic bezier: M x0,y0 Q x1,y1 x2,y2
+        let d = format!("M {} Q {} {}", coords[0], coords[1], coords[2]);
+        svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
+      }
+    }
+
+    // <arc .../> — arc segments (rarely used, stub for now)
+    // <wedge .../> — filled wedges (rarely used, stub for now)
+
+    // <text>...</text> — wrap in SVG text with y-flip correction
+    let text_re = regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap();
+    for text_caps in text_re.captures_iter(g_content) {
+      let text_attrs = &text_caps[1];
+      let text_content = &text_caps[2];
+      svg.push_str(&format!(
+        r#"<g transform="scale(1,-1)"><text{text_attrs}>{text_content}</text></g>"#,
+      ));
+    }
+
+    svg.push_str("</g>");
+  }
+
+  // Also handle direct children not inside <g> (e.g. top-level <bezier>, <line>)
+  // These appear directly inside <picture> without a <g> wrapper
+  let direct_bezier_re = regex::Regex::new(r#"(?m)^\s*<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
+  for bez_caps in direct_bezier_re.captures_iter(content) {
+    let points = &bez_caps[1];
+    let rest = &bez_caps[2];
+    let coords: Vec<&str> = points.split_whitespace().collect();
+    if coords.len() >= 4 {
+      let d = format!("M {} C {} {} {}", coords[0], coords[1], coords[2], coords[3]);
+      svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
+    } else if coords.len() >= 3 {
+      let d = format!("M {} Q {} {}", coords[0], coords[1], coords[2]);
+      svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
+    }
+  }
+
+  svg
+}
+
+/// Parse a TeX dimension string (e.g. "100.0pt") to pixels.
+fn parse_tex_dim(s: &str) -> Option<f64> {
+  let s = s.trim();
+  if s.ends_with("pt") {
+    s[..s.len()-2].parse::<f64>().ok().map(|v| v * 96.0 / 72.27)
+  } else if s.ends_with("px") {
+    s[..s.len()-2].parse::<f64>().ok()
+  } else {
+    s.parse::<f64>().ok()
   }
 }
