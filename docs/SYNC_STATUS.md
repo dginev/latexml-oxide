@@ -766,6 +766,15 @@ Section comment headers match Perl's C.1-C.15 organization. All pub functions pr
   `\@maxlistdepth`, `\ensuremathfollows`, `\mathhexbox`, `@equationgroup` counter guard
 - **All engine files now match Perl Engine/ filenames exactly.** No remaining Rust-only files.
 
+**Session 105: Final structural alignment:**
+- `plain.rs` → renamed to `plain_base.rs` (matches Perl `plain_base.pool.ltxml`)
+- LoadFormat('plain') chain in `tex.rs` now matches Perl's Package.pm exactly:
+  `InnerPool!(plain_bootstrap)` → `InnerPool!(plain_base)` → `InnerPool!(plain_constructs)`
+- Ligature definitions moved from `plain_base.rs` to `tex_fonts.rs` (Perl: `TeX_Fonts.pool.ltxml` L335-365)
+- `engine.rs` rewritten with clear hierarchy comments matching Perl loading order
+- `ORGANIZATION.md` updated to reflect complete 1:1 file matching
+- D1: 1024 papers tested, 1303/1441 OK (90.4%), no regression from reorganization
+
 **Coverage audit (session 102, final) — ALL Perl Engine files:**
 
 **OVERALL: 2,457 definitions audited, 2 missing → 99.9% coverage**
