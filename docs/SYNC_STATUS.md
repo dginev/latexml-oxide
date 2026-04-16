@@ -625,6 +625,20 @@ parser (Marpa) is dominant:
   - `\sin(x)+(y)` ambiguity: 27 parses → 1 parse
   - Paper 0704.0516: 6 occurrences of 65-enumerated → 1 remaining
     (a quantum-ket formula with VERTBAR, different ambiguity source).
+- [x] Remove duplicate `<fn> fenced_factor` tight_term alternatives for
+  function / opfunction / trigfunction / scripted_{function,opfunction,trigfunction}
+  — all duplicated the `apply_delimited` (XMDual) path with weaker
+  `prefix_apply` (XMApp) semantics. Paths that had 2-3× ambiguity per
+  fenced call now have exactly one.
+  Test suite impact:
+  - physics.tex: 40 ambiguous formulas → 8 (5× reduction)
+  - Full test suite: 99 → 59 ambiguous out of 3,556 formulas (40% reduction)
+
+**Two-layer timeout (session 105):**
+- [x] Watchdog thread in `latexml_core::watchdog` that forcibly
+  `std::process::abort()`s after deadline, for cases where the
+  cooperative `stomach::check_timeout` polling never gets scheduled
+  (tight Marpa/libxml2/libxslt native loops).
 - [ ] Audit other 2^N ambiguity patterns: quantum kets, multiple adjacent
   parenthesized groups after UNKNOWN (e.g. `a(b)(c)(d)` = 23 parses from
   speculative function application combinations).
