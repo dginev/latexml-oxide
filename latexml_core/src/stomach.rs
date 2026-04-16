@@ -744,15 +744,13 @@ pub fn raw_tex(text: &str) -> Result<()> {
 /// possibly arguments will be parsed from the Gullet.
 /// Otherwise, the token is simply digested: turned into an appropriate box.
 /// Returns a list of boxes/whatsits.
-pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
-  let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
-  // Overly complex, but want to avoid recursion/stack
+pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
+  // Perf: Token is Copy (SymStr + Catcode, ~5 bytes), so we pass by value
+  // directly instead of wrapping in Cow<Token>.
+  let mut maybe_token: Option<Token> = Some(*input_token);
   let mut result: Vec<Digested> = Vec::new();
   // INVOKE:
-  while maybe_token.is_some() {
-    // TODO: This is silly, switch to an owned input_token (it is Copy as of recently).
-    let token = maybe_token.take().unwrap().into_owned();
-    // info!(target:"invoke_token", "{:?}", token);
+  while let Some(token) = maybe_token.take() {
     // RAII guard: auto-pops current_token on scope exit (even on early return/panic)
     let _token_guard = local_current_token_guard(token);
     {
@@ -818,7 +816,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
           }
         }
         // replace the token by it's expansion!!!
-        maybe_token = gullet::read_x_token(None, false, None)?.map(Cow::Owned);
+        maybe_token = gullet::read_x_token(None, false, None)?;
         {
           stomach_mut!().token_stack.pop();
         }
@@ -829,7 +827,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
         // Conditionals are "expandable", use the regular invoke.
         let invoked_meaning = meaning.invoke(false)?;
         gullet::unread(invoked_meaning);
-        maybe_token = gullet::read_x_token(None, false, None)?.map(Cow::Owned);
+        maybe_token = gullet::read_x_token(None, false, None)?;
         {
           stomach_mut!().token_stack.pop();
         }

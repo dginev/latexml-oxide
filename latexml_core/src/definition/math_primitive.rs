@@ -191,6 +191,28 @@ impl MathPrimitiveOptions {
     h
   }
 
+  /// Like `to_hash_stored` but applies per-invocation overrides without
+  /// cloning the whole options. Used in DefMath closures (hot path —
+  /// one call per math token invocation).
+  pub fn to_hash_stored_with_overrides(
+    &self,
+    mode_override: Option<&'static str>,
+    mathstyle_override: Option<&'static str>,
+    scriptpos_override: Option<&'static str>,
+  ) -> HashMap<Stored> {
+    let mut h = self.to_hash_stored();
+    if let Some(m) = mode_override {
+      h.insert("mode", Stored::String(crate::common::arena::pin_static(m)));
+    }
+    if let Some(ms) = mathstyle_override {
+      h.insert("mathstyle", Stored::String(crate::common::arena::pin_static(ms)));
+    }
+    if let Some(sp) = scriptpos_override {
+      h.insert("scriptpos", Stored::String(crate::common::arena::pin_static(sp)));
+    }
+    h
+  }
+
   // Attempt at emulating the `%simpletoken_options` check in Perl
   /// Checks if complex options are present,
   /// suggestive of using a `Constructor` instead of a `Primitive`

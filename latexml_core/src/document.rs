@@ -701,19 +701,30 @@ impl Document {
       None => false,
     };
     if !ismath {
-      let font: Font = match props.get("font") {
-        Some(Stored::Font(fnt)) => (**fnt).clone(),
-        Some(Stored::FontDirective(FontDirective::Asset(fnt))) => (**fnt).clone(),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None)?,
-        _ => self
-          .box_to_absorb
-          .as_ref()
-          .unwrap()
-          .get_font()?
-          .unwrap()
-          .into_owned(),
+      // Perf: avoid cloning Rc<Font> into owned Font in the common case.
+      // We pull out the Rc (shared reference is fine since open_text only
+      // borrows the Font, not self) and go through Cow<Font>.
+      let font_opt: Option<Rc<Font>> = match props.get("font") {
+        Some(Stored::Font(fnt)) => Some(Rc::clone(fnt)),
+        Some(Stored::FontDirective(FontDirective::Asset(fnt))) => Some(Rc::clone(fnt)),
+        _ => None,
       };
-      self.open_text(object, &font)
+      if let Some(fnt) = font_opt {
+        return self.open_text(object, &fnt);
+      }
+      if let Some(Stored::FontDirective(FontDirective::Closure(code))) = props.get("font") {
+        let fnt = code(None)?;
+        return self.open_text(object, &fnt);
+      }
+      // Fallback to box_to_absorb font.
+      let fnt = self
+        .box_to_absorb
+        .as_ref()
+        .unwrap()
+        .get_font()?
+        .unwrap()
+        .into_owned();
+      self.open_text(object, &fnt)
     } else if get_node_qname(&self.node) == arena::pin_static(MATH_TOKEN_NAME) {
       // Or plain string in math mode.
       // Note text nodes can ONLY appear in <XMTok> or <text>!!!
@@ -1467,9 +1478,12 @@ impl Document {
     mut attributes: HashMap<String, String>,
     font_opt: Option<&Font>,
   ) -> Result<Node> {
-    attributes
-      .entry(s!("role"))
-      .or_insert_with(|| s!("UNKNOWN"));
+    // Perf: avoid allocating the "role" String key unless the entry is missing.
+    // HashMap::entry() takes an owned K, which forces allocation even on the
+    // common path where "role" is already present.
+    if !attributes.contains_key("role") {
+      attributes.insert(String::from("role"), String::from("UNKNOWN"));
+    }
     // Remove internal-only properties that should not become XML attributes.
     // In Perl, these are filtered by canHaveAttribute (model validation),
     // but we filter them explicitly here.
