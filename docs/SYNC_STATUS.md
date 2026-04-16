@@ -477,6 +477,49 @@ After Stage 1 reaches all 7,898 with 0 non-timeout errors:
 2. Profile top offenders (flamegraph, token count, loop detection)
 3. Targeted optimizations (per-task or systemic)
 
+#### [ ] D3b. Stability — eliminate SIGSEGV in test suite (HIGHEST PRIORITY)
+
+A test run surfaced:
+```
+error: test failed, to rerun pass `-p latexml --test 50_structure`
+Caused by:
+  process didn't exit successfully:
+  /home/deyan/git/latexml-oxide/target/release/deps/50_structure-*
+  (signal: 11, SIGSEGV: invalid memory reference)
+```
+
+A Rust safe-by-construction implementation should NEVER segfault. Any
+SIGSEGV in our code is a design defect, not an acceptable "edge case".
+The most likely sources are `unsafe { ... }` blocks and FFI calls:
+
+1. **libxml2 FFI** — most likely culprit. The `libxml::tree::Node` uses
+   `Rc<RefCell<_Node>>` that wraps raw C pointers. If a node is unlinked
+   then its parent/child list is cached elsewhere, double-free or
+   use-after-free is easy to trigger. See also past incident:
+   `xmlFreeNodeList` UAF during PostDocument Drop when SVG replacement
+   kept idcache references alive (docs/SYNC_STATUS §G2).
+2. **libxslt C stylesheet processing** — past crashes observed when
+   svg: namespaced nodes added by Rust pass through libxslt.
+3. **Rust unsafe in arena** — `with_arena_mut` uses a cached raw pointer
+   from RefCell; a bug in the guard lifetime would create UB.
+4. **Parallel benchmark files written by peer workers** — output files
+   sharing a path, write-during-read races.
+
+**Action items:**
+- [ ] Bisect 50_structure to find the specific test case that crashes.
+- [ ] Run under valgrind memcheck on the reduced case to identify
+  the exact unsafe operation / FFI call sequence.
+- [ ] Catalogue all `unsafe` blocks across the codebase and document
+  the safety invariants each relies on (contracts).
+- [ ] Replace unsafe-over-FFI patterns with safe wrappers that enforce
+  borrowing invariants at compile time.
+- [ ] Add a `cargo test --release` CI gate (SIGSEGV returns nonzero,
+  so this catches regressions even when assertions all pass).
+- [ ] Any UAF in libxml node lifetimes: route through a guardian
+  structure that owns lifetime and forbids unlinking without
+  cache invalidation (Perl doesn't have this problem because its
+  reference-counted GC sweeps UAFs silently).
+
 #### [ ] D4. Performance — parallel scaling and allocations (session 105, ACTIVE)
 
 **Baseline measurements (session 105, paper 0707.1173):**

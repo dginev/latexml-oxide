@@ -565,9 +565,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | function postsubarg => postfix_script
       | function postsubarg postsuperarg => postfix_script
       | function postsuperarg postsubarg => postfix_script;
-    // All scripted function application rules go through applied_func only
-    // (tight_term gets them via tight_term += applied_func — no duplicates)
-    applied_func += scripted_function fenced_factor => prefix_apply;
+    // All scripted function application rules go through applied_func only.
+    // Perf: removed `scripted_function fenced_factor => prefix_apply` duplicate.
+    // `f^2(x)` goes through apply_delimited (XMDual) only. Two such scripted
+    // function calls in one formula no longer multiply ambiguity.
     applied_func += scripted_function lparen formula rparen => apply_delimited;
 
     // Scripted OPFUNCTION with bare/fenced args: \log_e a, \det_S x
@@ -576,7 +577,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | opfunction postsubarg postsuperarg => postfix_script
       | opfunction postsuperarg postsubarg => postfix_script;
     applied_func += scripted_opfunction tight_term => prefix_apply;
-    applied_func += scripted_opfunction fenced_factor => prefix_apply;
+    // Perf: removed duplicate `scripted_opfunction fenced_factor => prefix_apply`.
+    // `scripted_opfunction tight_term` already covers fenced_factor via factor += fenced_factor
+    // (and tight_term includes factor via multiple paths). The fenced case ALSO has
+    // `scripted_opfunction lparen formula rparen => apply_delimited` below (preferred XMDual).
     applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
 
     // Scripted TRIGFUNCTION: \sin^2 x, \cos_n x
@@ -585,7 +589,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | trigfunction postsubarg postsuperarg => postfix_script
       | trigfunction postsuperarg postsubarg => postfix_script;
     applied_func += scripted_trigfunction tight_term => prefix_apply;
-    applied_func += scripted_trigfunction fenced_factor => prefix_apply;
+    // Perf (grammar disambiguation): removed duplicate
+    //   `scripted_trigfunction fenced_factor => prefix_apply`
+    // Fenced scripted-trig calls (\sin^{2}(x)) go through apply_delimited
+    // (the XMDual form). Previously BOTH paths produced trees, giving
+    // 4× multiplier when two such calls appeared in a formula
+    // (e.g. \sin^2(x) + \cos^2(x) was 46 parses).
     applied_func += scripted_trigfunction lparen formula rparen => apply_delimited;
 
     // standalone top-level variants of floating scripts:
