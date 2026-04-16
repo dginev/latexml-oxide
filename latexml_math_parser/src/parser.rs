@@ -9,7 +9,7 @@ use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
 use latexml_core::common::xml::*;
 use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
-use latexml_core::{Error, Fatal, Warn, fatal, map, s, static_map, sym_map};
+use latexml_core::{Warn, fatal, map, s, static_map, sym_map};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;

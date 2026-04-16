@@ -524,10 +524,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // Perl MathGrammar L720-723: combine SUPOP tokens (\prime\prime → prime2)
     supops = supop
       | supops supop => combine_supops;
-    // Bare operators valid as script content (e.g., Na^+ has ADDOP as superscript)
-    script_op = addop | mulop | binop | relop | arrow | metarelop
-      | bigop | sumop | intop | limitop | diffop | vertbar | supops
-      | modifierop | operator;
+    // Bare operators valid as script content that `statements` CAN'T derive.
+    // Perf: statement covers addop|mulop|binop|relop|arrow|any_bigop|operator,
+    // so listing them here was pure duplication (2x per script arg with an
+    // operator, e.g. P^+ had 3 parses → 1 unique). Narrowed to unique items:
+    //   - metarelop: statement only has `metarelop formula`, not bare
+    //   - vertbar, supops: statement has no derivation
+    //   - modifierop: statement only has `modifierop formula`, not bare
+    script_op = metarelop | vertbar | supops | modifierop;
     // Script content: expressions, statements (period/comma-separated), or bare operators
     // Script content: `statements` is the primary catch-all (derives everything
     // expression/formula derive). `formula_list` is kept separately because
