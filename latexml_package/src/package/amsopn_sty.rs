@@ -1,44 +1,27 @@
 use crate::prelude::*;
-use latexml_core::token::Catcode;
-
-/// Stringify a Tokens arg for `def_math`, preserving space after control words
-/// when followed by letters. Plain `Tokens::to_string()` concatenates token
-/// texts without separators, so `{\rm Aut}` — whose space after `\rm` was
-/// already swallowed by the control-word tokenization — becomes literally
-/// `{\rmAut}`, which tokenizes back as the single CS `\rmAut` (undefined).
-///
-/// Perl avoids this by passing Tokens directly to DefMathI (via
-/// `Invocation(T_CS('\operatorname'), $star, $text)`) — no stringify round-
-/// trip. Rust's `def_math` takes String, so we insert the missing space at
-/// CS→letter boundaries here to preserve tokenizability.
-fn tokens_to_tex_safe_string(tokens: &latexml_core::tokens::Tokens) -> String {
-  let toks = tokens.unlist_ref();
-  let mut out = String::new();
-  let mut prev_was_cs_word = false;
-  for t in toks {
-    if t.code == Catcode::COMMENT { continue; }
-    let needs_space = prev_was_cs_word
-      && matches!(t.code, Catcode::LETTER | Catcode::OTHER | Catcode::CS);
-    if needs_space {
-      out.push(' ');
-    }
-    if t.code == Catcode::ARG { out.push('#'); }
-    t.with_str(|s| out.push_str(s));
-    // A control word ends in a letter (i.e. the CS name is all letters).
-    prev_was_cs_word = t.code == Catcode::CS
-      && t.with_str(|s| s.len() > 1
-        && s.starts_with('\\')
-        && s.chars().skip(1).all(|c| c.is_ascii_alphabetic()));
-  }
-  out
-}
-
 LoadDefinitions!({
   RequirePackage!("amsgen");
 
   // \DeclareMathOperator*{cs}{text}
+  //
+  // Use `.untex()` instead of `.to_string()` — the latter concatenates
+  // token texts with no separator, so `{\rm Aut}` (where the space after
+  // `\rm` was swallowed by control-word tokenization) becomes `{\rmAut}`,
+  // which tokenizes back as the single undefined CS `\rmAut`. `untex()`
+  // inserts a space at CS→letter boundaries (tokens.rs L392-405), so the
+  // round-trip through `def_math`'s internal `mouth::tokenize_internal`
+  // preserves the correct token structure.
+  //
+  // Perl avoids this entirely by passing Tokens directly to DefMathI via
+  // `Invocation(T_CS('\operatorname'), $star, $text)` — no stringify
+  // round-trip. Rust's `def_math` takes String, so we use the TeX-safe
+  // stringifier.
+  //
+  // Fixes sandbox papers 0806.2705 (`\rmTr`) and 0808.0535 (`\rmAut`/
+  // `\rmSpan`) whose `\DeclareMathOperator{\X}{{\rm X}}` patterns would
+  // otherwise produce undefined `\rmX` errors.
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
-    let text_str = tokens_to_tex_safe_string(&text);
+    let text_str = text.untex();
     let has_star = star.is_some();
     let opts = MathPrimitiveOptions {
       role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),
