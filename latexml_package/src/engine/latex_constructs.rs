@@ -3420,7 +3420,9 @@ LoadDefinitions!({
   // C.5.3 Page Styles
   //======================================================================
   // Ignored
+  // Perl 74181415 (#2442): page counter starts at 1, not 0.
   NewCounter!("page");
+  SetCounter!("page" => Number::new(1));
   DefMacro!("\\@mkboth", "\\@gobbletwo");
   DefMacro!("\\ps@empty",
     "\\let\\@mkboth\\@gobbletwo\\let\\@oddhead\\@empty\\let\\@oddfoot\\@empty\
