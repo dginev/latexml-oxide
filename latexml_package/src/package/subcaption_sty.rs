@@ -38,9 +38,33 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // \subcaption — Perl uses a closure to manipulate \@captype (prepending "sub" if not
-  // already sub-prefixed), then delegates to \caption.
-  DefMacro!("\\subcaption OptionalMatch:* []{}", "\\caption[#2]{#3}");
+  // \subcaption — Perl L47-56: if \@captype is defined, prepend "sub" (unless already
+  // sub-prefixed) locally, then delegate to \caption.
+  DefMacro!("\\subcaption OptionalMatch:* []{}", sub[(_star, opt, caption)] {
+    let mut tokens = Vec::new();
+    if state::has_meaning(&T_CS!("\\@captype")) {
+      let ctype = gullet::do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
+      let ctype = ctype.trim().to_string();
+      if !ctype.is_empty() && !ctype.starts_with("sub") {
+        // Local redefinition via \def\@captype{sub<ctype>} tokens.
+        tokens.push(T_CS!("\\def"));
+        tokens.push(T_CS!("\\@captype"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(Explode!(s!("sub{}", ctype)));
+        tokens.push(T_END!());
+      }
+    }
+    tokens.push(T_CS!("\\caption"));
+    if let Some(o) = opt {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(o.unlist());
+      tokens.push(T_OTHER!("]"));
+    }
+    tokens.push(T_BEGIN!());
+    tokens.extend(caption.unlist());
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  });
 
   //======================================================================
   // Subfigure environments
