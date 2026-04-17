@@ -632,7 +632,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           <tag>(12)</tag>
           <tag role="refnum">12</tag>
         </tags>
-        <Math mode="display" tex="\genfrac{(}{)}{}{}{a}{b},\qquad\genfrac{(}{)}{}{}{a^2}{b^2},\qquad\genfrac{(}{)}{}{}{\int_a^b f(x)dx}{\int_a^b g(x)dx}" text="list@(a / b, a ^ 2 / b ^ 2, ((integral _ a) ^ b)@(f * x * differential-d@(x)) / ((integral _ a) ^ b)@(g * x * differential-d@(x)))" xml:id="S2.E12.m1">
+        <Math mode="display" tex="\genfrac{(}{)}{}{}{a}{b},\qquad\genfrac{(}{)}{}{}{a^2}{b^2},\qquad\genfrac{(}{)}{}{}{\int_a^b f(x)dx}{\int_a^b g(x)dx}" text="list@(a / b, a ^ 2 / b ^ 2, ((integral _ a) ^ b)@(f@(x) * differential-d@(x)) / ((integral _ a) ^ b)@(g@(x) * differential-d@(x)))" xml:id="S2.E12.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -706,15 +706,17 @@ and <text font="typewriter">m:mstyle</text>:</p>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                          <XMDual>
-                            <XMRef idref="S2.E12.m1.15"/>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.15">x</XMTok>
-                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                            </XMWrap>
-                          </XMDual>
+                          <XMApp>
+                            <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                            <XMDual>
+                              <XMRef idref="S2.E12.m1.15"/>
+                              <XMWrap>
+                                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.15">x</XMTok>
+                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
                           <XMApp>
                             <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                             <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -733,15 +735,17 @@ and <text font="typewriter">m:mstyle</text>:</p>
                         </XMApp>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">g</XMTok>
-                          <XMDual>
-                            <XMRef idref="S2.E12.m1.17"/>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.17">x</XMTok>
-                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                            </XMWrap>
-                          </XMDual>
+                          <XMApp>
+                            <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                            <XMDual>
+                              <XMRef idref="S2.E12.m1.17"/>
+                              <XMWrap>
+                                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S2.E12.m1.17">x</XMTok>
+                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
                           <XMApp>
                             <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                             <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -866,7 +870,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
             <tag role="refnum">15</tag>
           </tags>
           <MathFork>
-            <Math tex="\displaystyle X=f(x)+g(x)+h(x)" text="X = f * x + g * x + h * x" xml:id="S2.E15.m4">
+            <Math tex="\displaystyle X=f(x)+g(x)+h(x)" text="X = f@(x) + g@(x) + h@(x)" xml:id="S2.E15.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -874,7 +878,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN">f</XMTok>
                       <XMDual>
                         <XMRef idref="S2.E15.m4.1"/>
@@ -886,7 +889,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                       </XMDual>
                     </XMApp>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN">g</XMTok>
                       <XMDual>
                         <XMRef idref="S2.E15.m4.2"/>
@@ -898,7 +900,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                       </XMDual>
                     </XMApp>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN">h</XMTok>
                       <XMDual>
                         <XMRef idref="S2.E15.m4.3"/>
@@ -925,12 +926,11 @@ and <text font="typewriter">m:mstyle</text>:</p>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                     </XMath>
                   </Math></td>
-                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+g(x)+h(x)" text="f * x + g * x + h * x" xml:id="S2.E15.m3">
+                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+g(x)+h(x)" text="f@(x) + g@(x) + h@(x)" xml:id="S2.E15.m3">
                     <XMath>
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">f</XMTok>
                           <XMDual>
                             <XMRef idref="S2.E15.m3.1"/>
@@ -942,7 +942,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           </XMDual>
                         </XMApp>
                         <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">g</XMTok>
                           <XMDual>
                             <XMRef idref="S2.E15.m3.2"/>
@@ -954,7 +953,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           </XMDual>
                         </XMApp>
                         <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">h</XMTok>
                           <XMDual>
                             <XMRef idref="S2.E15.m3.3"/>
@@ -1005,7 +1003,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                     </XMath>
                   </Math></td>
-                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+\phantom{g(x)}+h(x)" text="list@(limit-from@(f * x, +), + h * x)" xml:id="S2.E16.m2">
+                <td align="left"><Math mode="inline" tex="\displaystyle f(x)+\phantom{g(x)}+h(x)" text="list@(limit-from@(f@(x), +), + h@(x))" xml:id="S2.E16.m2">
                     <XMath>
                       <XMDual>
                         <XMApp>
@@ -1017,7 +1015,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           <XMApp xml:id="S2.E16.m2.1">
                             <XMTok meaning="limit-from"/>
                             <XMApp>
-                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
                               <XMTok font="italic" role="UNKNOWN">f</XMTok>
                               <XMDual>
                                 <XMRef idref="S2.E16.m2.2"/>
@@ -1034,7 +1031,6 @@ and <text font="typewriter">m:mstyle</text>:</p>
                           <XMApp xml:id="S2.E16.m2.3">
                             <XMTok meaning="plus" role="ADDOP">+</XMTok>
                             <XMApp>
-                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
                               <XMTok font="italic" role="UNKNOWN">h</XMTok>
                               <XMDual>
                                 <XMRef idref="S2.E16.m2.4"/>

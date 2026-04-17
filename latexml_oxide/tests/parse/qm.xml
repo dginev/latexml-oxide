@@ -132,7 +132,7 @@
         </Math></p>
     </para>
     <para xml:id="S2.p7">
-      <p>Also <Math mode="inline" tex="&lt;a|f|b&gt;" text="absent &lt; a * absolute-value@(f) * b &gt; absent" xml:id="S2.p7.m1">
+      <p>Also <Math mode="inline" tex="&lt;a|f|b&gt;" text="absent &lt; a@(absolute-value@(f)) * b &gt; absent" xml:id="S2.p7.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="multirelation"/>
@@ -140,18 +140,20 @@
               <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMDual>
-                  <XMApp>
-                    <XMTok meaning="absolute-value"/>
-                    <XMRef idref="S2.p7.m1.1"/>
-                  </XMApp>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S2.p7.m1.1">f</XMTok>
-                    <XMTok role="CLOSE" stretchy="false">|</XMTok>
-                  </XMWrap>
-                </XMDual>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="absolute-value"/>
+                      <XMRef idref="S2.p7.m1.1"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.p7.m1.1">f</XMTok>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
@@ -275,7 +277,7 @@
         </Math></p>
     </para>
     <para xml:id="S3.p5">
-      <p>non-nested <Math mode="inline" tex="a|a|+b|b|+c|c|" text="conditional@(a, conditional@(a, + b * absolute-value@(b * absolute-value@(+ c) * c)))" xml:id="S3.p5.m1">
+      <p>non-nested <Math mode="inline" tex="a|a|+b|b|+c|c|" text="conditional@(a, conditional@(a, + b@(absolute-value@(b@(absolute-value@(+ c)) * c))))" xml:id="S3.p5.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="conditional" role="MODIFIEROP" stretchy="false">|</XMTok>
@@ -286,7 +288,6 @@
                 <XMApp>
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                     <XMDual>
                       <XMApp>
@@ -297,21 +298,23 @@
                         <XMTok role="OPEN" stretchy="false">|</XMTok>
                         <XMApp xml:id="S3.p5.m1.1">
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          <XMDual>
-                            <XMApp>
-                              <XMTok meaning="absolute-value"/>
-                              <XMRef idref="S3.p5.m1.2"/>
-                            </XMApp>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="false">|</XMTok>
-                              <XMApp xml:id="S3.p5.m1.2">
-                                <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                          <XMApp>
+                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                            <XMDual>
+                              <XMApp>
+                                <XMTok meaning="absolute-value"/>
+                                <XMRef idref="S3.p5.m1.2"/>
                               </XMApp>
-                              <XMTok role="CLOSE" stretchy="false">|</XMTok>
-                            </XMWrap>
-                          </XMDual>
+                              <XMWrap>
+                                <XMTok role="OPEN" stretchy="false">|</XMTok>
+                                <XMApp xml:id="S3.p5.m1.2">
+                                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                                  <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                                </XMApp>
+                                <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
                           <XMTok font="italic" role="UNKNOWN">c</XMTok>
                         </XMApp>
                         <XMTok role="CLOSE" stretchy="false">|</XMTok>
@@ -333,13 +336,12 @@
     </tags>
     <title><tag close=" ">4</tag>Mixtures that look like QM</title>
     <para xml:id="S4.p1">
-      <p>abs and rel: <Math mode="inline" tex="a&lt;c|c|" text="a &lt; c * absolute-value@(c)" xml:id="S4.p1.m1">
+      <p>abs and rel: <Math mode="inline" tex="a&lt;c|c|" text="a &lt; c@(absolute-value@(c))" xml:id="S4.p1.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
               <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok font="italic" role="UNKNOWN">c</XMTok>
                 <XMDual>
                   <XMApp>

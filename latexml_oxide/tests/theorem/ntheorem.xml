@@ -62,7 +62,7 @@ displaymath, a single equation and both types of eqnarrays.
         <para xml:id="ThmExample2.p1">
           <p>Look, the endmark is really at the bottom of the line:</p>
           <equation xml:id="S1.Ex1">
-            <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex1.m1">
+            <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@((f@(zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -118,7 +118,6 @@ displaymath, a single equation and both types of eqnarrays.
                         <XMApp>
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMApp>
-                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
                             <XMTok font="italic" role="UNKNOWN">f</XMTok>
                             <XMDual>
                               <XMRef idref="S1.Ex1.m1.3"/>
@@ -258,7 +257,7 @@ math material) … If anyone knows, please inform us.</text></p>
               <tag>(1)</tag>
               <tag role="refnum">1</tag>
             </tags>
-            <Math mode="display" tex="\int_{\gamma}f(z)\,dz:=\int_{a}^{b}f(\gamma(t))\gamma^{\prime}(t)\,dt" text="(integral _ gamma)@(f * z * differential-d@(z)) assign ((integral _ a) ^ b)@(f * gamma * t * gamma ^ prime * t * differential-d@(t))" xml:id="S1.E1.m1">
+            <Math mode="display" tex="\int_{\gamma}f(z)\,dz:=\int_{a}^{b}f(\gamma(t))\gamma^{\prime}(t)\,dt" text="(integral _ gamma)@(f@(z) * differential-d@(z)) assign ((integral _ a) ^ b)@(f@(gamma@(t)) * gamma ^ prime * t * differential-d@(t))" xml:id="S1.E1.m1">
               <XMath>
                 <XMApp>
                   <XMTok meaning="assign" role="RELOP">:=</XMTok>
@@ -270,15 +269,17 @@ math material) … If anyone knows, please inform us.</text></p>
                     </XMApp>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                      <XMDual>
-                        <XMRef idref="S1.E1.m1.1"/>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="false">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.E1.m1.1">z</XMTok>
-                          <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
-                        </XMWrap>
-                      </XMDual>
+                      <XMApp>
+                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                        <XMDual>
+                          <XMRef idref="S1.E1.m1.1"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="false">(</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S1.E1.m1.1">z</XMTok>
+                            <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
                       <XMApp>
                         <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMTok font="italic" role="UNKNOWN">z</XMTok>
@@ -297,26 +298,27 @@ math material) … If anyone knows, please inform us.</text></p>
                     </XMApp>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                      <XMDual>
-                        <XMRef idref="S1.E1.m1.2"/>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="false">(</XMTok>
-                          <XMApp xml:id="S1.E1.m1.2">
-                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
-                            <XMDual>
-                              <XMRef idref="S1.E1.m1.3"/>
-                              <XMWrap>
-                                <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                <XMTok font="italic" role="UNKNOWN" xml:id="S1.E1.m1.3">t</XMTok>
-                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                              </XMWrap>
-                            </XMDual>
-                          </XMApp>
-                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                        </XMWrap>
-                      </XMDual>
+                      <XMApp>
+                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                        <XMDual>
+                          <XMRef idref="S1.E1.m1.2"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="false">(</XMTok>
+                            <XMApp xml:id="S1.E1.m1.2">
+                              <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
+                              <XMDual>
+                                <XMRef idref="S1.E1.m1.3"/>
+                                <XMWrap>
+                                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                  <XMTok font="italic" role="UNKNOWN" xml:id="S1.E1.m1.3">t</XMTok>
+                                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                                </XMWrap>
+                              </XMDual>
+                            </XMApp>
+                            <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
@@ -371,12 +373,11 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                 <tag role="refnum">2</tag>
               </tags>
               <MathFork>
-                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.E2.m4">
+                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="f@(z) = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@((f@(zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.E2.m4">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                       <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" role="UNKNOWN">f</XMTok>
                         <XMDual>
                           <XMRef idref="S1.E2.m4.1"/>
@@ -413,7 +414,6 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                             <XMApp>
                               <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                               <XMApp>
-                                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                                 <XMTok font="italic" role="UNKNOWN">f</XMTok>
                                 <XMDual>
                                   <XMRef idref="S1.E2.m4.2"/>
@@ -442,10 +442,9 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                 </Math>
                 <MathBranch>
                   <tr>
-                    <td align="right"><Math mode="inline" tex="\displaystyle f(z)" text="f * z" xml:id="S1.E2.m1">
+                    <td align="right"><Math mode="inline" tex="\displaystyle f(z)" text="f@(z)" xml:id="S1.E2.m1">
                         <XMath>
                           <XMApp>
-                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
                             <XMTok font="italic" role="UNKNOWN">f</XMTok>
                             <XMDual>
                               <XMRef idref="S1.E2.m1.1"/>
@@ -463,7 +462,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                           <XMTok meaning="equals" role="RELOP">=</XMTok>
                         </XMath>
                       </Math></td>
-                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="(1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.E2.m3">
+                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="(1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@((f@(zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.E2.m3">
                         <XMath>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -491,7 +490,6 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                                 <XMApp>
                                   <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                                   <XMApp>
-                                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                                     <XMTok font="italic" role="UNKNOWN">f</XMTok>
                                     <XMDual>
                                       <XMRef idref="S1.E2.m3.1"/>
@@ -527,7 +525,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                 <tag role="refnum">3</tag>
               </tags>
               <MathFork>
-                <Math tex="\displaystyle=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="absent = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.E3.m4">
+                <Math tex="\displaystyle=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="absent = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f@(z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.E3.m4">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -559,35 +557,37 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                           </XMApp>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                            <XMDual>
-                              <XMRef idref="S1.E3.m4.1"/>
-                              <XMWrap>
-                                <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                <XMApp xml:id="S1.E3.m4.1">
-                                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                  <XMApp>
-                                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                                  </XMApp>
-                                  <XMApp>
-                                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                            <XMApp>
+                              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                              <XMDual>
+                                <XMRef idref="S1.E3.m4.1"/>
+                                <XMWrap>
+                                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                  <XMApp xml:id="S1.E3.m4.1">
+                                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
                                     <XMApp>
-                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                                      <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                                      <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                                    </XMApp>
+                                    <XMApp>
+                                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                      <XMTok font="italic" role="UNKNOWN">r</XMTok>
                                       <XMApp>
-                                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                                        <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                        <XMApp>
+                                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                        </XMApp>
                                       </XMApp>
                                     </XMApp>
                                   </XMApp>
-                                </XMApp>
-                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                              </XMWrap>
-                            </XMDual>
+                                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                                </XMWrap>
+                              </XMDual>
+                            </XMApp>
                             <XMApp>
                               <XMTok font="slanted" meaning="differential-d" role="DIFFOP">d</XMTok>
                               <XMTok font="italic" role="UNKNOWN">t</XMTok>
@@ -606,7 +606,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                           <XMTok meaning="equals" role="RELOP">=</XMTok>
                         </XMath>
                       </Math></td>
-                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="(1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.E3.m2">
+                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="(1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f@(z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.E3.m2">
                         <XMath>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -635,35 +635,37 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                               </XMApp>
                               <XMApp>
                                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                                <XMDual>
-                                  <XMRef idref="S1.E3.m2.1"/>
-                                  <XMWrap>
-                                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                    <XMApp xml:id="S1.E3.m2.1">
-                                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                      <XMApp>
-                                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                        <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                                      </XMApp>
-                                      <XMApp>
-                                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                        <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                                <XMApp>
+                                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                                  <XMDual>
+                                    <XMRef idref="S1.E3.m2.1"/>
+                                    <XMWrap>
+                                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                      <XMApp xml:id="S1.E3.m2.1">
+                                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
                                         <XMApp>
-                                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                                          <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                                          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                                          <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                                        </XMApp>
+                                        <XMApp>
+                                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                          <XMTok font="italic" role="UNKNOWN">r</XMTok>
                                           <XMApp>
-                                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                                            <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                            <XMApp>
+                                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                            </XMApp>
                                           </XMApp>
                                         </XMApp>
                                       </XMApp>
-                                    </XMApp>
-                                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                                  </XMWrap>
-                                </XMDual>
+                                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                                    </XMWrap>
+                                  </XMDual>
+                                </XMApp>
                                 <XMApp>
                                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                                   <XMTok font="italic" role="UNKNOWN">t</XMTok>
@@ -695,12 +697,11 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
           <equationgroup class="ltx_eqn_eqnarray" xml:id="S1.EGx2">
             <equation xml:id="S1.Ex4">
               <MathFork>
-                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="f * z = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta)) = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.Ex4.m3">
+                <Math tex="\displaystyle f(z)=\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta=\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="f@(z) = (1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@((f@(zeta) / (zeta - z)) * differential-d@(zeta)) = (1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f@(z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.Ex4.m3">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="multirelation"/>
                       <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" role="UNKNOWN">f</XMTok>
                         <XMDual>
                           <XMRef idref="S1.Ex4.m3.1"/>
@@ -738,7 +739,6 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                             <XMApp>
                               <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                               <XMApp>
-                                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                                 <XMTok font="italic" role="UNKNOWN">f</XMTok>
                                 <XMDual>
                                   <XMRef idref="S1.Ex4.m3.2"/>
@@ -790,35 +790,37 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                           </XMApp>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                            <XMDual>
-                              <XMRef idref="S1.Ex4.m3.3"/>
-                              <XMWrap>
-                                <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                <XMApp xml:id="S1.Ex4.m3.3">
-                                  <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                  <XMApp>
-                                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                    <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                                    <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                                  </XMApp>
-                                  <XMApp>
-                                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                            <XMApp>
+                              <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                              <XMDual>
+                                <XMRef idref="S1.Ex4.m3.3"/>
+                                <XMWrap>
+                                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                  <XMApp xml:id="S1.Ex4.m3.3">
+                                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
                                     <XMApp>
-                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                                      <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                                      <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                                      <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                                    </XMApp>
+                                    <XMApp>
+                                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                      <XMTok font="italic" role="UNKNOWN">r</XMTok>
                                       <XMApp>
-                                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                        <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                                        <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                        <XMApp>
+                                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                        </XMApp>
                                       </XMApp>
                                     </XMApp>
                                   </XMApp>
-                                </XMApp>
-                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                              </XMWrap>
-                            </XMDual>
+                                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                                </XMWrap>
+                              </XMDual>
+                            </XMApp>
                             <XMApp>
                               <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                               <XMTok font="italic" role="UNKNOWN">t</XMTok>
@@ -831,10 +833,9 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                 </Math>
                 <MathBranch>
                   <tr>
-                    <td align="right"><Math mode="inline" tex="\displaystyle f(z)" text="f * z" xml:id="S1.Ex3.m1">
+                    <td align="right"><Math mode="inline" tex="\displaystyle f(z)" text="f@(z)" xml:id="S1.Ex3.m1">
                         <XMath>
                           <XMApp>
-                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
                             <XMTok font="italic" role="UNKNOWN">f</XMTok>
                             <XMDual>
                               <XMRef idref="S1.Ex3.m1.1"/>
@@ -852,7 +853,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                           <XMTok meaning="equals" role="RELOP">=</XMTok>
                         </XMath>
                       </Math></td>
-                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="(1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.Ex3.m3">
+                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{\zeta-z}d\zeta" text="(1 / (2 * pi * i)) * (integral _ (partial-differential@(D)))@((f@(zeta) / (zeta - z)) * differential-d@(zeta))" xml:id="S1.Ex3.m3">
                         <XMath>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -880,7 +881,6 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                                 <XMApp>
                                   <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                                   <XMApp>
-                                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                                     <XMTok font="italic" role="UNKNOWN">f</XMTok>
                                     <XMDual>
                                       <XMRef idref="S1.Ex3.m3.1"/>
@@ -914,7 +914,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                           <XMTok meaning="equals" role="RELOP">=</XMTok>
                         </XMath>
                       </Math></td>
-                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="(1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f * (z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.Ex4.m2">
+                    <td align="left"><Math mode="inline" tex="\displaystyle\frac{1}{2\pi}\int\limits_{0}^{2\pi}f(z_{0}+re^{it})dt" text="(1 / (2 * pi)) * ((integral _ 0) ^ (2 * pi))@(f@(z _ 0 + r * e ^ (i * t)) * differential-d@(t))" xml:id="S1.Ex4.m2">
                         <XMath>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -943,35 +943,37 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
                               </XMApp>
                               <XMApp>
                                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                                <XMDual>
-                                  <XMRef idref="S1.Ex4.m2.1"/>
-                                  <XMWrap>
-                                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                                    <XMApp xml:id="S1.Ex4.m2.1">
-                                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                      <XMApp>
-                                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                        <XMTok font="italic" role="UNKNOWN">z</XMTok>
-                                        <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
-                                      </XMApp>
-                                      <XMApp>
-                                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                        <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                                <XMApp>
+                                  <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                                  <XMDual>
+                                    <XMRef idref="S1.Ex4.m2.1"/>
+                                    <XMWrap>
+                                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                      <XMApp xml:id="S1.Ex4.m2.1">
+                                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
                                         <XMApp>
-                                          <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-                                          <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                                          <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                                          <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
+                                        </XMApp>
+                                        <XMApp>
+                                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                          <XMTok font="italic" role="UNKNOWN">r</XMTok>
                                           <XMApp>
-                                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                                            <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                                            <XMApp>
+                                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
+                                            </XMApp>
                                           </XMApp>
                                         </XMApp>
                                       </XMApp>
-                                    </XMApp>
-                                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                                  </XMWrap>
-                                </XMDual>
+                                      <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                                    </XMWrap>
+                                  </XMDual>
+                                </XMApp>
                                 <XMApp>
                                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                                   <XMTok font="italic" role="UNKNOWN">t</XMTok>
@@ -1016,7 +1018,7 @@ the last one gets the endmark:</p>
             <tag>(4)</tag>
             <tag role="refnum">4</tag>
           </tags>
-          <Math mode="display" tex="\int_{\gamma}f(z)\,dz:=\int_{a}^{b}f(\gamma(t))\gamma^{\prime}(t)\,dt" text="(integral _ gamma)@(f * z * differential-d@(z)) assign ((integral _ a) ^ b)@(f * gamma * t * gamma ^ prime * t * differential-d@(t))" xml:id="S1.E4.m1">
+          <Math mode="display" tex="\int_{\gamma}f(z)\,dz:=\int_{a}^{b}f(\gamma(t))\gamma^{\prime}(t)\,dt" text="(integral _ gamma)@(f@(z) * differential-d@(z)) assign ((integral _ a) ^ b)@(f@(gamma@(t)) * gamma ^ prime * t * differential-d@(t))" xml:id="S1.E4.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="assign" role="RELOP">:=</XMTok>
@@ -1028,15 +1030,17 @@ the last one gets the endmark:</p>
                   </XMApp>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                    <XMDual>
-                      <XMRef idref="S1.E4.m1.1"/>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.E4.m1.1">z</XMTok>
-                        <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMApp>
+                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                      <XMDual>
+                        <XMRef idref="S1.E4.m1.1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.E4.m1.1">z</XMTok>
+                          <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
                     <XMApp>
                       <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                       <XMTok font="italic" role="UNKNOWN">z</XMTok>
@@ -1055,26 +1059,27 @@ the last one gets the endmark:</p>
                   </XMApp>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                    <XMDual>
-                      <XMRef idref="S1.E4.m1.2"/>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMApp xml:id="S1.E4.m1.2">
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
-                          <XMDual>
-                            <XMRef idref="S1.E4.m1.3"/>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.E4.m1.3">t</XMTok>
-                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                            </XMWrap>
-                          </XMDual>
-                        </XMApp>
-                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMApp>
+                      <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                      <XMDual>
+                        <XMRef idref="S1.E4.m1.2"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMApp xml:id="S1.E4.m1.2">
+                            <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
+                            <XMDual>
+                              <XMRef idref="S1.E4.m1.3"/>
+                              <XMWrap>
+                                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S1.E4.m1.3">t</XMTok>
+                                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
+                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" name="gamma" role="UNKNOWN">γ</XMTok>
@@ -1160,7 +1165,7 @@ the last one gets the endmark:</p>
       <title class="ltx_runin"><tag><text font="bold">3 Example</text></tag></title>
       <para xml:id="ThmExample3.p1">
         <equation xml:id="S1.Ex5">
-          <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@(((f * zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex5.m1">
+          <Math mode="display" tex="f^{(n)}(z)=\frac{n!}{2\pi i}\int\limits_{\partial D}\frac{f(\zeta)}{(\zeta-z)^{n+1}}d\zeta" text="f ^ n * z = (nfactorial / (2 * pi * i)) * (integral _ (partial-differential@(D)))@((f@(zeta) / (zeta - z) ^ (n + 1)) * differential-d@(zeta))" xml:id="S1.Ex5.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -1216,7 +1221,6 @@ the last one gets the endmark:</p>
                       <XMApp>
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                         <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">f</XMTok>
                           <XMDual>
                             <XMRef idref="S1.Ex5.m1.3"/>

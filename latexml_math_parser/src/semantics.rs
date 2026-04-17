@@ -1200,9 +1200,13 @@ pub fn annotated_punct_fenced_modifier(
   annotated_fenced_modifier(rule_id, args, p, ctxt)
 }
 
-/// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
-/// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
-/// parsed as function application when speculation is active.
+/// Speculative prefix application for `unknown fenced_factor`.
+/// Produces an XMApp tree tagged with `meta.speculative = true`. The tag
+/// is what the pragmatic layer uses to decide whether to KEEP this parse
+/// or the competing invisible-times parse. The semantic action ALWAYS
+/// succeeds — MATHPARSER_SPECULATE is a pragmatic concern, not a grammar
+/// filter (Marpa gives us the ambiguity natively; we decide which tree
+/// wins in the pragmatic layer, not here).
 ///
 /// **Intentional Rust divergence from Perl**: In Perl (Parse::RecDescent), speculation
 /// only marks tokens with `possibleFunction='yes'` and falls back to invisible-times
@@ -1210,28 +1214,20 @@ pub fn annotated_punct_fenced_modifier(
 /// parse `f@(x)`, which is the semantically superior interpretation — it avoids an
 /// artificial invisible MULOP token that was a crutch for Parse::RecDescent's
 /// backtracking parser. See docs/OXIDIZED_DESIGN.md.
-///
-/// MATHPARSER_SPECULATE is enabled by:
-/// - \usepackage[mathparserspeculate]{latexml}
-/// - .latexml files that declare FUNCTION roles (auto-enabled by loader)
 pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if !matches!(
-    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
-    Some(latexml_core::state::Stored::Bool(true))
-  ) {
-    return Err("speculative_prefix_apply: MATHPARSER_SPECULATE not set, pruning parse".into());
-  }
   unp!(args => prefixop, arg1);
+  let mut meta = Meta::default();
+  meta.set_speculative();
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
     XProps::default(),
-    Meta::default(),
+    meta,
   )))
 }
 /// Perl: limit-from@(number, sign) — directional limits like 0+, 1-

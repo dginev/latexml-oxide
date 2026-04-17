@@ -261,7 +261,7 @@
       </Math> has <text class="ltx_count_parses">2</text> parses.</p>
   </para>
   <para xml:id="p8">
-    <p><Math mode="inline" tex="\langle B|\sum_{k}f_{k}|C\rangle" text="delimited-⟨⟩@(B * absolute-value@((sum _ k)@(f _ k)) * C)" xml:id="p8.m1">
+    <p><Math mode="inline" tex="\langle B|\sum_{k}f_{k}|C\rangle" text="delimited-⟨⟩@(B@(absolute-value@((sum _ k)@(f _ k))) * C)" xml:id="p8.m1">
         <XMath>
           <XMDual>
             <XMApp>
@@ -272,44 +272,45 @@
               <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
               <XMApp xml:id="p8.m1.1">
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">B</XMTok>
-                <XMDual>
-                  <XMApp>
-                    <XMTok meaning="absolute-value"/>
-                    <XMRef idref="p8.m1.2"/>
-                  </XMApp>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">|</XMTok>
-                    <XMApp xml:id="p8.m1.2">
-                      <XMApp>
-                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                      </XMApp>
-                      <XMApp>
-                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                      </XMApp>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">B</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="absolute-value"/>
+                      <XMRef idref="p8.m1.2"/>
                     </XMApp>
-                    <XMTok role="CLOSE" stretchy="false">|</XMTok>
-                  </XMWrap>
-                </XMDual>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">|</XMTok>
+                      <XMApp xml:id="p8.m1.2">
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                          <XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post">∑</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
                 <XMTok font="italic" role="UNKNOWN">C</XMTok>
               </XMApp>
               <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
             </XMWrap>
           </XMDual>
         </XMath>
-      </Math> has <text class="ltx_count_parses">3</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">4</text> parses.</p>
   </para>
   <para xml:id="p9">
-    <p><Math mode="inline" tex="f(x)=\int h(x)\,dx" text="f * x = integral@(h * x * differential-d@(x))" xml:id="p9.m1">
+    <p><Math mode="inline" tex="f(x)=\int h(x)\,dx" text="f@(x) = integral@(h@(x) * differential-d@(x))" xml:id="p9.m1">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok font="italic" role="UNKNOWN">f</XMTok>
               <XMDual>
                 <XMRef idref="p9.m1.1"/>
@@ -324,15 +325,17 @@
               <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                <XMDual>
-                  <XMRef idref="p9.m1.2"/>
-                  <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">(</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="p9.m1.2">x</XMTok>
-                    <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
-                  </XMWrap>
-                </XMDual>
+                <XMApp>
+                  <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                  <XMDual>
+                    <XMRef idref="p9.m1.2"/>
+                    <XMWrap>
+                      <XMTok role="OPEN" stretchy="false">(</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="p9.m1.2">x</XMTok>
+                      <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
                 <XMApp>
                   <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -341,7 +344,7 @@
             </XMApp>
           </XMApp>
         </XMath>
-      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">8</text> parses.</p>
   </para>
   <para xml:id="p10">
     <p><Math mode="inline" tex="x+y" text="x + y" xml:id="p10.m1">

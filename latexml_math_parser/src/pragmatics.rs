@@ -255,6 +255,11 @@ fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>
 
 
 fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn Error>> {
+  // Mathematical convention: `f(x)` reads as function application, not
+  // multiplication, when x is a letter. Marpa produces both parses in the
+  // ambiguous forest; this pragma chooses the mathematically-consistent one
+  // unconditionally. MATHPARSER_SPECULATE has no role here — the decision is
+  // a pragmatic preference, not a grammar switch.
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {

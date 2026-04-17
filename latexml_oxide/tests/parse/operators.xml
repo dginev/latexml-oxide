@@ -520,7 +520,7 @@
     <title><tag close=" ">4</tag>Logic operators</title>
     <para xml:id="S4.p1">
       <equation xml:id="S4.Ex15">
-        <Math mode="display" tex="\exists x.P(x)" text="formulae@(exists@(x), P * x)" xml:id="S4.Ex15.m1">
+        <Math mode="display" tex="\exists x.P(x)" text="formulae@(exists@(x), P@(x))" xml:id="S4.Ex15.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -535,7 +535,6 @@
                 </XMApp>
                 <XMTok role="PERIOD">.</XMTok>
                 <XMApp xml:id="S4.Ex15.m1.2">
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" role="UNKNOWN">P</XMTok>
                   <XMDual>
                     <XMRef idref="S4.Ex15.m1.3"/>
