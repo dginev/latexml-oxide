@@ -338,6 +338,9 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pspicture.sty" => package::pspicture_sty::load_definitions(),
     "psfrag.sty" => package::psfrag_sty::load_definitions(),
     "psfig.sty" => package::psfig_sty::load_definitions(),
+    // Perl: psfig.tex.ltxml just does `RequirePackage('epsfig')`.
+    // Paper 0803.3406 does `\input{psfig}` (.tex form), hitting this dispatch.
+    "psfig.tex" => package::epsfig_sty::load_definitions(),
     "newlfont.sty" => package::newlfont_sty::load_definitions(),
     "ltxcmds.sty" => package::ltxcmds_sty::load_definitions(),
     "kvsetkeys.sty" => package::kvsetkeys_sty::load_definitions(),
