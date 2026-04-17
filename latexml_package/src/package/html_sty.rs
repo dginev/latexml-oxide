@@ -46,6 +46,21 @@ LoadDefinitions!({
   // latexonly — Perl L92-98
   DefEnvironment!("{latexonly}", "#body");
   DefMacro!("\\latexonly@onearg{}", "#1");
+  // Plain \latexonly — dispatch on next token. Perl uses ifNext T_BEGIN:
+  //   if `{` → \latexonly@onearg{...} ; else → \begin{latexonly}...\end{latexonly}
+  DefMacro!("\\latexonly", sub[_args] {
+    let tok = gullet::read_token()?;
+    if let Some(t) = tok {
+      gullet::unread(Tokens!(t));
+      if t.get_catcode() == Catcode::BEGIN {
+        Ok(Tokens!(T_CS!("\\latexonly@onearg")))
+      } else {
+        Ok(Tokenize!(r"\begin{latexonly}"))
+      }
+    } else {
+      Ok(Tokens!())
+    }
+  });
 
   // Misc — Perl L100-107
   DefMacro!("\\html{}", "");
