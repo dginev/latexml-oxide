@@ -2,23 +2,41 @@ on: [push, pull_request]
 
 name: CI
 
+# Cancel in-progress runs on the same branch when a new push arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # Keep peak RAM below the runner's ~16 GB limit (previously OOM'd).
+      CARGO_BUILD_JOBS: 2
+      CARGO_INCREMENTAL: 0
+      # Codegen units split large crates into more, smaller translation
+      # units; a LOT less peak memory during the rustc link/codegen stage.
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 32
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_DEV_CODEGEN_UNITS: 256
+      RUST_BACKTRACE: 1
+      # Fetch via CLI git rather than libgit2 (smaller memory footprint).
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
     steps:
       - name: install dependencies
-        uses: ryankurte/action-apt@v0.2.0
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
+            texlive texlive-latex-extra texlive-science
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
         with:
-          packages: "libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 texlive texlive-latex-extra texlive-science"
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+          cache-on-failure: true
+      - name: build tests (release, reduced parallelism)
+        run: cargo build --release --tests --workspace
       - name: run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release
+        run: cargo test --release --tests --workspace -- --test-threads=2
