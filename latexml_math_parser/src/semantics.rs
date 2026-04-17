@@ -1201,12 +1201,9 @@ pub fn annotated_punct_fenced_modifier(
 }
 
 /// Speculative prefix application for `unknown fenced_factor`.
-/// Produces an XMApp tree tagged with `meta.speculative = true`. The tag
-/// is what the pragmatic layer uses to decide whether to KEEP this parse
-/// or the competing invisible-times parse. The semantic action ALWAYS
-/// succeeds — MATHPARSER_SPECULATE is a pragmatic concern, not a grammar
-/// filter (Marpa gives us the ambiguity natively; we decide which tree
-/// wins in the pragmatic layer, not here).
+/// Produces an XMApp tree competing with the invisible-times interpretation
+/// in Marpa's ambiguous forest. The pragmatic layer selects the
+/// mathematically-consistent winner (see `FencedLettersAreFunctionArguments`).
 ///
 /// **Intentional Rust divergence from Perl**: In Perl (Parse::RecDescent), speculation
 /// only marks tokens with `possibleFunction='yes'` and falls back to invisible-times
@@ -1221,13 +1218,11 @@ pub fn speculative_prefix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
-  let mut meta = Meta::default();
-  meta.set_speculative();
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
     XProps::default(),
-    meta,
+    Meta::default(),
   )))
 }
 /// Perl: limit-from@(number, sign) — directional limits like 0+, 1-

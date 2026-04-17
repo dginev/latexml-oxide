@@ -23,11 +23,6 @@ pub struct Meta {
   bumplevel:             u32,
   /// Perl: _wasfloat — marks XMApp as result of a float (prescript) script
   wasfloat:              bool,
-  /// Marks an XMApp that was produced by the speculative `unknown fenced_factor`
-  /// grammar rule (as opposed to an explicit FUNCTION application). The
-  /// pragmatic layer filters or prefers these based on MATHPARSER_SPECULATE,
-  /// so the grammar itself doesn't need a SPECULATE-specific branch.
-  speculative:           bool,
 }
 
 impl PartialEq for Meta {
@@ -49,8 +44,6 @@ impl Meta {
   pub fn bumplevel(&self) -> u32 { self.bumplevel }
   pub fn wasfloat(&self) -> bool { self.wasfloat }
   pub fn set_wasfloat(&mut self) { self.wasfloat = true; }
-  pub fn speculative(&self) -> bool { self.speculative }
-  pub fn set_speculative(&mut self) { self.speculative = true; }
 
   /// Instatiate a default Meta object for a given rule name
   pub fn from_rule(rule_name: &str) -> Self {
@@ -164,7 +157,6 @@ impl Meta {
       curry_level,
       curry_constraints,
       // Preserve sticky flags from either side
-      speculative: self.speculative || other.speculative,
       bumplevel: self.bumplevel.max(other.bumplevel),
       wasfloat: self.wasfloat || other.wasfloat,
     })
