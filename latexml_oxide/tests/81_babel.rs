@@ -28,14 +28,23 @@ fn numprints_test() {
 }
 
 #[test]
-// TeX Live version sensitive: the expected XML was recorded against a
-// german.ldf that emits a language-tagged leading comma (`<text xml:lang="de">,</text>`)
-// when \documentclass[german]{article} activates German at \begin{document}.
-// The CI runner's texlive (Ubuntu-packaged) loads a slightly different german.ldf
-// that doesn't produce that leading character, so the first line diffs.
-// Both outputs are valid for their respective texlive versions.
-// TODO: make the test runner tolerant of benign texlive-origin differences
-// (e.g. strip language-tagged zero-width-ish leading elements), then re-enable.
+// Pinned to a pre-existing Rust bug, not ground truth.
+//
+// Perl latexml produces `<p>The expansion…` (no stray leading element).
+// Rust currently emits a spurious comma, presumably from leaked option-list
+// tokens in `\documentclass[german]` / `\usepackage[french,english]{babel}`.
+//
+// Local Rust wraps that comma in `<text xml:lang="de">,</text>` (which is
+// what the committed expected XML captures); CI Rust leaves it bare. Both
+// are wrong relative to Perl — the apparent "texlive" sensitivity is just
+// different runtime state exposing the same parsing bug differently.
+//
+// Ignoring for now so CI can green. To fix properly: track down the stray
+// comma emission in class/package option handling, re-record expected XML
+// against the corrected output (ideally matching Perl's), then re-enable.
+// Related: the texlive-pinned kernel dump in resources/dumps/ is checked
+// into VCS (TL 2023-era); the design intent is to regenerate it at build
+// time so runtime-texlive and dump-texlive agree.
 #[ignore]
 fn page545_test() {
   latexml_test_single("tests/babel/page545.tex", "page545", DIR, None, None);
