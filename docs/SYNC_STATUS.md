@@ -188,6 +188,64 @@ exact engine gaps:
   loading, etc.) lands, because `_base` will no longer cover those
   things alone.
 
+- [ ] **Harvest expl3 short-circuit (Perl's actual "massive speedup").**
+  First-principles derivation of what Perl's dump saves that ours
+  doesn't, with measurements:
+
+  | Path | Wall | RSS |
+  |---|---|---|
+  | Rust `--init=latex.ltx` raw-load (no dump) | 15.5 s | ~1 GB |
+  | Rust conversion of expl3 doc (with dump) | 1.37 s | 164 MB |
+  | Rust conversion of expl3 doc (`LATEXML_NODUMP=1`) | 1.36 s | 155 MB |
+  | Rust bootstrap+_base+constructs (compiled) | <10 ms | ~40 MB |
+
+  **Why our dump currently doesn't speed anything up:**
+  1. `_base.rs` is already pre-compiled Rust containing LaTeX-kernel
+     bindings. The dump's add-only policy sees most of its 6045 entries
+     as "already defined" and skips them — the state they'd add is
+     already set by compiled code. This is the *opposite* of Perl, where
+     the dump REPLACES work that would otherwise be done by interpreter-
+     bound `.pool.ltxml` loading.
+  2. `\usepackage{expl3}` in a user doc calls `expl3_sty.rs::load_definitions`
+     which unconditionally `input_definitions("expl3", sty, noltxml=true)`,
+     re-processing all 36k lines of `expl3-code.tex`. This costs ~1.3 s.
+     The dump contains the post-load expl3 state (`expl3-code.tex_loaded=1`
+     plus ~17k expl3 definitions) but cannot short-circuit the raw load
+     because `dump_reader`'s `SKIP_VALUE_CONTAINS = ["_loaded", ...]`
+     strips every `_loaded` flag. Perl's dump preserves these flags, so
+     `\usepackage{expl3}` sees "already loaded" and skips the 36k-line
+     reprocess.
+
+  **What breaks when we naively lift the skip** (tried and reverted):
+  unblocking `_loaded`/`_found_loaded` for all keys sets 1000+
+  hyphenation-pattern flags. Downstream babel language.def loading
+  then skips files the engine depends on to register `\l@<lang>`,
+  triggering error recovery that balloons to **61 s / 4.5 GB RSS** on
+  the simple expl3 test doc. Short-circuiting expl3 alone
+  (`ALLOW_LOADED_EXCEPTIONS` carve-out + an expl3_sty guard) fires
+  correctly but the rest of the doc hits an interaction the dump
+  doesn't fully cover and still blows up.
+
+  **What's actually needed** to harvest the Perl speedup safely:
+
+  - (a) A curated subset of `_loaded` keys worth short-circuiting (at
+    minimum `expl3.sty_loaded` + `expl3-code.tex_loaded`, later babel
+    language flags once their bindings are Perl-strict).
+  - (b) For each key in that subset, a companion guarantee that the
+    corresponding `*_sty.rs` binding is idempotent when its raw-load
+    is skipped — the post-load catcode/message/fixup steps in
+    `expl3_sty.rs` need to be either captured by the dump or run
+    unconditionally so a partial dump doesn't leave the engine in a
+    half-initialized state.
+  - (c) Ideally, regenerate the dump against the exact binding that
+    will consume it (so the post-load side-effects of the Rust
+    wrapper ARE part of the snapshot), not from `--init=latex.ltx`
+    alone. That is: `--init` should include a tiny `\usepackage{expl3}`
+    stanza at the end so the .sty-level loaded flag is also captured.
+
+  Once (a)/(b)/(c) are in place we should see the Perl-sized win:
+  ~1.3 s → ~50 ms per expl3 conversion.
+
 - [ ] **Page545 verification.** After each D0 milestone, re-run
   `cargo test --release -p latexml --test 81_babel -- --ignored
   page545` and check whether the `<p>The expansion…` line matches

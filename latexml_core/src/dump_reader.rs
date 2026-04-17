@@ -165,8 +165,26 @@ const SKIP_VALUE_PREFIXES: &[&str] = &[
 ];
 
 /// V entry key substrings to skip.
+///
+/// Note: `_loaded` / `_found_loaded` flags are present in the dump (correctly,
+/// since `--init=latex.ltx` sees expl3-code.tex, hyphenation patterns, and
+/// hundreds of other raw-loaded files). But carrying them through into state
+/// at dump-load time blows up in practice:
+///
+///  - Hyphenation `loadhyph-*.tex_loaded` flags make subsequent raw-loading of
+///    babel's language.def skip files that set `\l@<lang>` registers our
+///    engine then discovers aren't present, triggering a flood of error
+///    recovery that can consume gigabytes of RAM.
+///  - `expl3.ltx_loaded=1` plus `expl3.sty_loaded=` NOT being set means
+///    `\usepackage{expl3}` doesn't short-circuit AT the .sty layer, but the
+///    raw .ltx re-load now enters a stranger code path with partial flags.
+///
+/// The proper fix, tracked as the "dump/_base mutual-exclusivity" item in
+/// SYNC_STATUS D0, is to have exactly ONE loading path (dump-cache or raw-load)
+/// active at a time, mirroring Perl's `LoadFormat` branching. Until that lands,
+/// keep the skip list conservative so mixed paths don't trigger recovery loops.
 const SKIP_VALUE_CONTAINS: &[&str] = &[
-  "_loaded",       // Package loading flags — must be set by actual loading
+  "_loaded",       // Package loading flags — see doc comment above
   "_found_loaded", // Package found+loaded flags
 ];
 
@@ -187,7 +205,7 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       return Ok(false);
     }
   }
-  // Skip by substring
+  // Skip by substring.
   for substr in SKIP_VALUE_CONTAINS {
     if key.contains(substr) {
       return Ok(false);
