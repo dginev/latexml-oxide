@@ -29,11 +29,24 @@ pub fn dump_format(
 ) -> Result<usize, String> {
   eprintln!("[ini_tex] Dumping format from {}", init_file);
 
-  // Step 1: Take a snapshot of the state BEFORE processing.
-  // Perl: DumpFile takes snapshot, then loads file, then diffs.
-  let snap = state::take_snapshot();
+  // Step 1: snapshot the state BEFORE processing.
+  //
+  // SYNC_STATUS D0 (d.1): we prefer the `bootstrap`-staged snapshot
+  // (captured by `latex.rs` right after `latex_bootstrap` loads).
+  // That matches Perl's `DumpFile` semantics — the diff then covers
+  // "bootstrap → full kernel + raw latex.ltx extras", not the
+  // narrower "full kernel → full kernel + raw extras" we used to get
+  // by snapshotting after everything had already loaded. Without the
+  // staged snapshot (e.g., if someone calls dump_format from a
+  // pre-`latex_bootstrap` context) we fall back to `take_snapshot()`
+  // so the tool still works.
+  let snap = state::get_staged_snapshot("bootstrap")
+    .unwrap_or_else(|| {
+      eprintln!("[ini_tex] no bootstrap snapshot staged; falling back to current state");
+      state::take_snapshot()
+    });
   let snap_size = snap.len();
-  eprintln!("[ini_tex] Pre-dump snapshot: {} entries", snap_size);
+  eprintln!("[ini_tex] Pre-dump snapshot: {} entries (from bootstrap stage)", snap_size);
 
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)

@@ -2479,3 +2479,33 @@ pub fn diff_snapshot(
 ) -> Vec<(TableName, SymStr, Stored)> {
   state!().diff_from_snapshot(snap)
 }
+
+// Thread-local holder for the snapshot taken at a named init phase.
+// Currently only "bootstrap" is used: when `latex.rs` finishes loading
+// `latex_bootstrap`, it stashes the state snapshot here. `ini_tex::dump_format`
+// reads it so its diff matches Perl's `DumpFile` semantics — "what did raw
+// latex.ltx + the rest of the engine init add on top of pure bootstrap".
+// Without this hook the snapshot is taken after `_base.rs` + `_constructs.rs`
+// have also run, making the diff far narrower than Perl's dump. See
+// SYNC_STATUS D0 (d.1).
+thread_local! {
+  static STAGED_SNAPSHOTS: std::cell::RefCell<
+    rustc_hash::FxHashMap<&'static str,
+      std::collections::HashMap<(TableName, SymStr), Stored>>
+  > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Take a snapshot now and store it under a named key for later retrieval.
+/// Intended for phased engine init (e.g. `stage_snapshot("bootstrap")` called
+/// right after `latex_bootstrap` has loaded).
+pub fn stage_snapshot(name: &'static str) {
+  let snap = take_snapshot();
+  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+}
+
+/// Retrieve a previously staged snapshot, if present.
+pub fn get_staged_snapshot(
+  name: &str,
+) -> Option<std::collections::HashMap<(TableName, SymStr), Stored>> {
+  STAGED_SNAPSHOTS.with(|m| m.borrow().get(name).cloned())
+}

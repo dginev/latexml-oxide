@@ -30,6 +30,14 @@ LoadDefinitions!({
   //   LoadPool('latex_dump') → LoadPool('latex_constructs')
   // Match this order exactly:
   InnerPool!(latex_bootstrap);
+
+  // SYNC_STATUS D0 (d.1): stage a snapshot right after bootstrap.
+  // ini_tex::dump_format reads it so its diff captures "bootstrap →
+  // fully-initialized kernel", matching Perl's DumpFile semantics.
+  // Has no effect at normal runtime (the snapshot is just stored in a
+  // thread-local; `_base` loading proceeds unchanged below).
+  latexml_core::state::stage_snapshot("bootstrap");
+
   InnerPool!(latex_base);
 
   // Perl: LoadPool('latex_dump') — precompiled latex.ltx state (expl3, fonts, captions).
