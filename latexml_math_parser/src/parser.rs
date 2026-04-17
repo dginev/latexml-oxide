@@ -926,7 +926,7 @@ impl MathParser {
     // Convergence: if we've seen enough consecutive duplicates without
     // a new unique tree, the grammar ambiguity is purely structural
     // (script attachment ordering). Stop early.
-    let max_consecutive_dupes = 32;
+    let max_consecutive_dupes = 16;
     // Time-budget convergence: once we have unique parses, stop after
     // this budget. For formulas where all trees are pruned (no unique
     // parse yet), use a longer budget before giving up.
