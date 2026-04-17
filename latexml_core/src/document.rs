@@ -104,6 +104,12 @@ pub struct Document {
   // the following are internal "local"-based declarations in Perl
   localized_constructed_nodes: Vec<Vec<Node>>,
   constructed_nodes:           Vec<Node>,
+  /// Free-list of emptied `Vec<Node>` buffers, reused across `init_constructed_nodes`
+  /// / `close_constructed_nodes` cycles. The per-body constructed-nodes frame pushes
+  /// here after its elements are drained so the next `init_constructed_nodes` can pop
+  /// a buffer with pre-existing capacity instead of heap-allocating a fresh one.
+  /// Cuts the `Vec<Node>::from_iter` hotspot that dominated absorb profiles.
+  reusable_node_buffers:       Vec<Vec<Node>>,
   localized_boxes:             Vec<Option<Digested>>,
   box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
   localized_fonts:             Vec<Rc<Font>>,
@@ -145,6 +151,7 @@ impl Document {
       pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
       constructed_nodes:           Vec::new(),
+      reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
       context:                     None,
       localized_boxes:             Vec::new(),
@@ -602,39 +609,22 @@ impl Document {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
-          // record these for OUTER caller!
-          // but return only the most recent set
-          {
-            for n in self.drain_constructed_nodes() {
-              self.record_constructed_node(&n);
-            }
-          }
+          // record these for OUTER caller, but return only the most recent set
+          self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
         Whatsit(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
-          // record these for OUTER caller!
-          // but return only the most recent set
-          {
-            for n in self.drain_constructed_nodes() {
-              self.record_constructed_node(&n);
-            }
-          }
+          self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
         Alignment(ref alignment) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           alignment.borrow_mut().be_absorbed_mut(self)?;
-          // record these for OUTER caller!
-          // but return only the most recent set
-          {
-            for n in self.drain_constructed_nodes() {
-              self.record_constructed_node(&n);
-            }
-          }
+          self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
         Comment(ref comment) => {
@@ -682,16 +672,29 @@ impl Document {
   }
 
   fn init_constructed_nodes(&mut self) {
-    self
-      .localized_constructed_nodes
-      .push(self.constructed_nodes.drain(..).collect());
+    // Pop a buffer from the free-list (retaining its previously-grown capacity);
+    // fall back to a fresh empty Vec if the pool is dry. Swap it in as the new
+    // inner frame; the outgoing outer frame goes onto the save stack.
+    let fresh = self.reusable_node_buffers.pop().unwrap_or_default();
+    let prev = std::mem::replace(&mut self.constructed_nodes, fresh);
+    self.localized_constructed_nodes.push(prev);
   }
-  fn drain_constructed_nodes(&mut self) -> Vec<Node> {
-    let drained = self.constructed_nodes.drain(..).collect();
-    if let Some(saved) = self.localized_constructed_nodes.pop() {
-      self.constructed_nodes = saved;
+
+  /// Close the current constructed-nodes frame, restoring the outer frame and
+  /// re-recording the inner frame's nodes into it. The drained inner buffer
+  /// is returned to `reusable_node_buffers` (empty but with capacity intact)
+  /// so the next `init_constructed_nodes` can reuse it without allocating.
+  fn close_constructed_nodes(&mut self) {
+    let outer = self
+      .localized_constructed_nodes
+      .pop()
+      .unwrap_or_default();
+    let mut inner = std::mem::replace(&mut self.constructed_nodes, outer);
+    for n in inner.drain(..) {
+      self.record_constructed_node(&n);
     }
-    drained
+    // `inner` is now empty; its capacity is preserved. Return it to the pool.
+    self.reusable_node_buffers.push(inner);
   }
   pub fn get_constructed_nodes(&self) -> &[Node] { &self.constructed_nodes }
 
