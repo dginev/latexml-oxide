@@ -89,10 +89,39 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
       return Ok(());
     }}
   }};
+  // Staleness check: compare the dump's texlive.version stamp against
+  // ambient kpsewhich --version. Mismatch means the dump was generated
+  // against a different TeXLive; engine may see unfamiliar macro state.
+  // Opt out with LATEXML_SKIP_DUMP_STAMP_CHECK=1 (for e.g. cross-env CI).
+  if std::env::var_os("LATEXML_SKIP_DUMP_STAMP_CHECK").is_none() {{
+    check_dump_staleness(&path);
+  }}
   let count = latexml_core::dump_reader::load_from_str(&content)
     .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
   log::info!("[latex_dump] loaded {{}} entries from {{}}", count, path.display());
   Ok(())
+}}
+
+fn check_dump_staleness(dump_path: &std::path::Path) {{
+  let stamp_path = dump_path.with_file_name("texlive.version");
+  let stamp_first_line = std::fs::read_to_string(&stamp_path).ok()
+    .and_then(|s| s.lines().next().map(|l| l.to_string()));
+  let Some(stamp) = stamp_first_line else {{ return; }};
+  let ambient = std::process::Command::new("kpsewhich")
+    .arg("--version").output().ok()
+    .and_then(|o| if o.status.success() {{
+      String::from_utf8(o.stdout).ok()
+        .and_then(|s| s.lines().next().map(|l| l.to_string()))
+    }} else {{ None }});
+  let Some(ambient) = ambient else {{ return; }};
+  if stamp.trim() != ambient.trim() {{
+    log::warn!("[latex_dump] TeXLive MISMATCH — dump stamped `{{}}`, ambient \
+                kpsewhich `{{}}`. The dump may reference macros unknown to the \
+                current TeXLive (or vice versa). Run `tools/make_formats.sh` \
+                to regenerate against ambient texlive. Silence with \
+                LATEXML_SKIP_DUMP_STAMP_CHECK=1.",
+               stamp.trim(), ambient.trim());
+  }}
 }}
 
 fn resolve_dump_path() -> Option<std::path::PathBuf> {{
