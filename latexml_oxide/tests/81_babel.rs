@@ -57,14 +57,33 @@ fn numprints_test() {
 //          \let\@elt\relax
 //          ...\bbl@foreach\bbl@tempa{...}
 //          \ifx\bbl@tempb\@empty\else ... \fi
-//      - The comma always appears BEFORE any user-registered
-//        AtBeginDocument content, confirming it comes from one of
-//        babel's preamble-registered ABD hooks (not from my test's
-//        user hook). A stand-alone reproduction of hook 5's body
-//        (without babel loaded, with fake \bbl@foreach etc.) does
-//        NOT leak, so the bug is in the interaction between our
-//        engine and the REAL babel definitions (\bbl@foreach /
-//        \bbl@xin@ / \bbl@ifunset / etc.).
+//      - Bisection (via an \AtBeginDocument wrapper that inserts
+//        <B#>/<A#> markers around each numbered hook body, then
+//        overrides \bbl@foreach to emit [FS]/[FE] markers):
+//        exact position of the leak is
+//          ¡B5¿[FS][FE][FS],[FE]¡A5¿X
+//        i.e. INSIDE the SECOND \bbl@foreach call in hook 5,
+//        which iterates over \bbl@tempa (empty in our case because
+//        \@fontenc@load@list is \@elt{OT1} → \bbl@tempa=empty
+//        after \@gobbletwo). The body of that iteration is
+//          \bbl@xin@{,#1,}{,\BabelNonASCII,}
+//          \ifin@ \def\bbl@tempb{#1}
+//          \else \bbl@xin@{,#1,}{,\BabelNonText,}
+//          ...
+//        — a body rich in literal `,` chars.
+//      - Isolated repro in document body (same babel, same
+//        definitions, same empty list) does NOT leak:
+//          \bbl@foreach\tempa{\bbl@xin@{,#1,}{,\BabelNonASCII,}}
+//        Emits `BEFORE AFTER X` cleanly. So the bug is specific
+//        to executing this inside the @at@begin@document digest
+//        (stomach::digest of the concatenated hook token list),
+//        not to \bbl@foreach's semantics in isolation.
+//      - Hypothesis: our stomach::digest over a large token
+//        stream has a subtly different treatment of `\def\bbl@forcmd##1{...}`
+//        followed by `\bbl@fornext,\@nil,` when the parameter body
+//        contains raw `,` that match against the `,` delimiter
+//        pattern. Worth comparing the token-consumption step of
+//        `\bbl@fornext#1,{...}` in single-digest vs. batched digest.
 //      - Mitigation options tested:
 //          * `\let\@fontenc@load@list\@empty` — removes the comma
 //            BUT breaks csquotes/french/german/greek tests because
