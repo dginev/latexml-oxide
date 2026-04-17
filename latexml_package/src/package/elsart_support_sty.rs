@@ -34,6 +34,20 @@ LoadDefinitions!({
   // Perl L58: \pol (rightwards arrow overaccent)
   DefMath!("\\pol Digested", "\u{2192}", operator_role => "OVERACCENT");
 
+  // Perl L51-53: \operatorname already defined in amsopn (ported — role='OPERATOR' here).
+  // Perl's elsart variant uses font family=serif only (amsopn adds upright+medium); we
+  // keep amsopn's version (loaded via amsmath) since both produce OPERATOR markup.
+
+  // Perl L55-56: \astsymbol{n}, \fnstar{n} — n-repeated Unicode char
+  DefMacro!("\\astsymbol{}", sub[(n)] {
+    let count = n.to_string().trim().parse::<usize>().unwrap_or(1);
+    Ok(Tokens!(T_OTHER!("\u{2217}".repeat(count))))
+  });
+  DefMacro!("\\fnstar{}", sub[(n)] {
+    let count = n.to_string().trim().parse::<usize>().unwrap_or(1);
+    Ok(Tokens!(T_OTHER!("\u{22C6}".repeat(count))))
+  });
+
   // Proof environment — Perl L38-60
   DefEnvironment!("{proof}[]",
     "<ltx:proof><ltx:title font='italic' _force_font='true' class='ltx_runin'>#title</ltx:title>#body</ltx:proof>",
@@ -125,12 +139,47 @@ LoadDefinitions!({
   // Misc — Perl L143-175
   Let!("\\realpageref", "\\pageref");
   DefMacro!("\\snm", "");
+
+  // Perl L146-156: \xalph / \xarabic / \xfnsymbol — emit * for negative counter, else
+  // delegate to \alph / \arabic / \fnsymbol.
+  DefMacro!("\\xalph{}", sub[(ctr)] {
+    let n = counter_value(&ctr.to_string()).map(|c| c.value_of()).unwrap_or(0);
+    if n < 0 {
+      Ok(Tokens!(T_OTHER!("*")))
+    } else {
+      Ok(Tokens!(T_CS!("\\alph"), T_BEGIN!(), ctr, T_END!()))
+    }
+  });
+  DefMacro!("\\xarabic{}", sub[(ctr)] {
+    let n = counter_value(&ctr.to_string()).map(|c| c.value_of()).unwrap_or(0);
+    if n < 0 {
+      Ok(Tokens!(T_OTHER!("*")))
+    } else {
+      Ok(Tokens!(T_CS!("\\arabic"), T_BEGIN!(), ctr, T_END!()))
+    }
+  });
+  DefMacro!("\\xfnsymbol{}", sub[(ctr)] {
+    let n = counter_value(&ctr.to_string()).map(|c| c.value_of()).unwrap_or(0);
+    if n < 0 {
+      Ok(Tokens!(T_OTHER!("*")))
+    } else {
+      Ok(Tokens!(T_CS!("\\fnsymbol"), T_BEGIN!(), ctr, T_END!()))
+    }
+  });
+
   DefEnvironment!("{NoHyper}", "#body");
   DefMacro!("\\mpfootnotemark", "");
+  // Perl L162-167: \FMSlash/\FMslash overstrike / through content
   DefMacro!("\\FMSlash", "\\protect\\pFMSlash");
-  DefMacro!("\\pFMSlash{}", "#1/");
-  DefMacro!("\\pFMslash{}", "#1/");
+  DefMacro!("\\FMslash", "\\protect\\pFMslash");
+  DefMacro!("\\pFMSlash{}", "#1\\Slashbox");
+  DefMacro!("\\pFMslash{}", "#1\\slashbox");
   DefMacro!("\\Slashbox", "/");
   DefMacro!("\\slashbox", "/");
+
+  // Perl L172: \note{...} wraps text in ltx:note (note: Perl also defines \note as a
+  // theorem env above via \newtheorem{note}{Note}, but the DefMacro shadows it — we
+  // match Perl's final binding).
+  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
   DefMacro!("\\query{}", "");
 });
