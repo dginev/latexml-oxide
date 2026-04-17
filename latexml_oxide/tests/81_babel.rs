@@ -56,16 +56,25 @@ fn numprints_test() {
 //        AtBeginDocument registrations produces `<p>Hi.</p>` (no
 //        comma). So the `,` is injected by one of babel's
 //        \AtBeginDocument hooks at `\begin{document}` time.
-//      - Prime candidate: babel.sty L3887-3914's hook which does
-//        `\def\@elt#1{,#1,}` then `\edef\bbl@tempa{\expandafter
-//        \@gobbletwo\@fontenc@load@list}`. Our preload in
-//        babel_sty.rs sets `\@fontenc@load@list = \@elt{OT1}`, so
-//        \@gobbletwo eats both tokens → empty `\bbl@tempa`. The
-//        `\bbl@foreach\bbl@tempa{...}` iteration should be
-//        well-behaved but maybe isn't. Next iteration will bisect
-//        the ~10 babel AtBeginDocument hooks (lines 1149, 1164,
-//        1230, 1574, 2137, 3175, 3258, 3658, 3664, 3681, 3816,
-//        3837, 3853, 3887, 3916, 4108) to find which one leaks.
+//      - **Confirmed**: the 5th registered \AtBeginDocument hook
+//        (babel.sty L3887-3914) is the culprit. Verified by
+//        selectively disabling only hook 5 (`\ifnum\myABDcount=5
+//        \else \origAtBeginDocument{#1} \fi`) → `<p>Hi.</p>` (no
+//        comma). \detokenize of hook 5 body matches babel.sty
+//        L3887-3914 exactly.
+//      - **Subtle**: when the same hook 5 body is run MANUALLY in
+//        the preamble (between \usepackage{babel} and \begin{document}
+//        where babel's macros are defined), it does NOT leak — step
+//        typeouts after each statement all fire cleanly. So the
+//        leak is specific to hook 5 running inside our engine's
+//        \AtBeginDocument firing path, not to the body itself.
+//      - **Patching `\@fontenc@load@list`** after babel load but
+//        before \begin{document} (tested with `\relax\relax`,
+//        `\@empty\@empty`, various values) does NOT remove the
+//        comma — the leak survives changes to that variable.
+//      - Next cycle: instrument our Rust `@at@begin@document`
+//        execution path to log each token as it's digested, see
+//        which one triggers the `,` emission.
 //
 //   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
 //      exclamation/question now emits a thin space before itself

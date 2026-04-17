@@ -213,8 +213,25 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     return Ok(());
   }
 
-  // Mark as loaded, then process the definitions
-  note_begin(&s!("Loading {:?} definitions", filename));
+  // Mark as loaded, then process the definitions.
+  //
+  // Suppress the "Loading X definitions" banner when we're inside a
+  // nested input_definitions call for the SAME file — that's the
+  // pattern where an .ltxml binding (e.g. babel_sty.rs) immediately
+  // calls `input_definitions(name, noltxml=true)` to raw-load the
+  // texlive .sty. Both frames used to print, producing the confusing
+  // duplicate `(Loading "babel.sty" definitions... (Loading
+  // "babel.sty" definitions...` trace. Now only the outermost frame
+  // announces — tracked per-filename via a state-value marker.
+  let banner_key = s!("__loading_banner__{filename}");
+  let this_frame_announces =
+    crate::state::lookup_value(&banner_key).is_none();
+  if this_frame_announces {
+    note_begin(&s!("Loading {:?} definitions", filename));
+    crate::state::assign_value(
+      &banner_key, true, Some(crate::state::Scope::Global),
+    );
+  }
   def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
 
@@ -252,7 +269,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // This prevents double-loading when e.g. smfart calls load_class("amsart")
   // after the binding already set the _loaded flag.
   if !options.reloadable && lookup_bool(&s!("{filename}_loaded")) {
-    note_end(&s!("Loading {:?} definitions", filename));
+    if this_frame_announces {
+      note_end(&s!("Loading {:?} definitions", filename));
+      crate::state::assign_value(
+        &banner_key, crate::common::store::Stored::None,
+        Some(crate::state::Scope::Global),
+      );
+    }
     return Ok(());
   }
 
@@ -385,7 +408,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
         // InputDefinitions which returns undef on not-found even with noerror=>1.
-        note_end(&s!("Loading {:?} definitions", filename));
+        if this_frame_announces {
+          note_end(&s!("Loading {:?} definitions", filename));
+          crate::state::assign_value(
+            &banner_key, crate::common::store::Stored::None,
+            Some(crate::state::Scope::Global),
+          );
+        }
         return Err(s!("File not found: {}", filename).into());
       }
       // Mark as loaded even on failure — prevents retrying a missing file
@@ -450,7 +479,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     }
     reset_options()?;
   }
-  note_end(&s!("Loading {:?} definitions", filename));
+  if this_frame_announces {
+    note_end(&s!("Loading {:?} definitions", filename));
+    crate::state::assign_value(
+      &banner_key, crate::common::store::Stored::None,
+      Some(crate::state::Scope::Global),
+    );
+  }
   Ok(())
 }
 
