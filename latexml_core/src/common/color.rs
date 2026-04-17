@@ -333,8 +333,14 @@ fn phi(x: f64, y: f64, z: f64, u: f64, v: f64) -> Color {
 
 /// Parse color components from a spec string (comma or space separated)
 fn parse_components(spec: &str) -> Vec<f64> {
+  // Perl commit a8b75dbb (#2551): support mixed-delimiter input. When the spec
+  // contains a comma, split on comma first, then allow whitespace splits inside
+  // each component so e.g. `153 153, 192` for {RGB}{153 153, 192} yields 3 values.
   if spec.contains(',') {
-    spec.split(',').filter_map(|s| s.trim().parse::<f64>().ok()).collect()
+    spec.split(',')
+      .flat_map(|s| s.split_whitespace())
+      .filter_map(|s| s.trim().parse::<f64>().ok())
+      .collect()
   } else {
     spec.split_whitespace().filter_map(|s| s.parse::<f64>().ok()).collect()
   }
