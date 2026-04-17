@@ -82,6 +82,9 @@ LoadDefinitions!({
 
   // Spanish sine — Perl L112
   DefMath!("\\sen", None, "sen", role => "TRIGFUNCTION", meaning => "sine");
+  // Perl L99,105: variant archaic letters
+  DefMath!("\\varcoppa", None, "\u{03D9}");
+  DefMath!("\\varstigma", None, "\u{03DB}");
 
   // Aliases — Perl L122-181
   DefMacro!("\\dArr", "\\Downarrow");
@@ -112,6 +115,24 @@ LoadDefinitions!({
   DefMacro!("\\spades", "\\spadesuit");
   DefMacro!("\\thetasym", "\\vartheta");
   DefMacro!("\\weierp", "\\wp");
+  DefMacro!("\\le", "\\leq");
+  DefMacro!("\\ge", "\\geq");
+  // Perl L41-42: \part → \partial, \and → \land
+  Let!("\\and", "\\land");
+  // Perl L47: texvc turns off equation group numbers
+  Let!("\\@equationgroup@number", "\\nonumber");
+  // Perl L53-61: \unicode{x00C5} for arbitrary unicode char insertion
+  DefPrimitive!("\\unicode[][]{}", sub[(_opt1, _opt2, code)] {
+    let code_str = code.to_string();
+    let code_val = if let Some(rest) = code_str.strip_prefix('x') {
+      u32::from_str_radix(rest, 16).unwrap_or(0)
+    } else {
+      code_str.parse::<u32>().unwrap_or(0)
+    };
+    if let Some(ch) = char::from_u32(code_val) {
+      gullet::unread(Tokens!(T_OTHER!(ch.to_string())));
+    }
+  });
 
   // Text-mode stubs — Perl L112-120
   DefMacro!("\\part{}", "\\par\\textbf{#1}\\par");
