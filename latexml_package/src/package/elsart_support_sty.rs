@@ -54,20 +54,40 @@ LoadDefinitions!({
   DefMacro!("\\PAC{}",  "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
 
   // Theorem environments — Perl L69-91
+  // Perl L69-91: the full list of elsart theorem environments
   RawTeX!("\\theoremstyle{plain}");
   RawTeX!("\\@ifundefined{cor}{\\newtheorem{cor}[thm]{Corollary}}{}");
   RawTeX!("\\@ifundefined{lem}{\\newtheorem{lem}[thm]{Lemma}}{}");
   RawTeX!("\\@ifundefined{claim}{\\newtheorem{claim}[thm]{Claim}}{}");
+  RawTeX!("\\@ifundefined{axiom}{\\newtheorem{axiom}[thm]{Axiom}}{}");
   RawTeX!("\\@ifundefined{conj}{\\newtheorem{conj}[thm]{Conjecture}}{}");
+  RawTeX!("\\@ifundefined{fact}{\\newtheorem{fact}[thm]{Fact}}{}");
+  RawTeX!("\\@ifundefined{hypo}{\\newtheorem{hypo}[thm]{Hypothesis}}{}");
+  RawTeX!("\\@ifundefined{assum}{\\newtheorem{assum}[thm]{Assumption}}{}");
   RawTeX!("\\@ifundefined{prop}{\\newtheorem{prop}[thm]{Proposition}}{}");
+  RawTeX!("\\@ifundefined{crit}{\\newtheorem{crit}[thm]{Criterion}}{}");
+  RawTeX!("\\theoremstyle{definition}");
   RawTeX!("\\@ifundefined{defn}{\\newtheorem{defn}[thm]{Definition}}{}");
   RawTeX!("\\@ifundefined{exmp}{\\newtheorem{exmp}[thm]{Example}}{}");
   RawTeX!("\\@ifundefined{rem}{\\newtheorem{rem}[thm]{Remark}}{}");
+  RawTeX!("\\@ifundefined{prob}{\\newtheorem{prob}[thm]{Problem}}{}");
+  RawTeX!("\\@ifundefined{prin}{\\newtheorem{prin}[thm]{Principle}}{}");
+  RawTeX!("\\@ifundefined{alg}{\\newtheorem{alg}{Algorithm}}{}");
   RawTeX!("\\@ifundefined{note}{\\newtheorem{note}{Note}}{}");
+  RawTeX!("\\@ifundefined{summ}{\\newtheorem{summ}{Summary}}{}");
+  RawTeX!("\\@ifundefined{case}{\\newtheorem{case}{Case}}{}");
 
   // Nuclear isotopes — Perl L60-65
   DefMacro!("\\nuc{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
   DefMacro!("\\itnuc{}{}", "\\ensuremath{{}^{#2}\\textit{#1}}");
+
+  // Perl L92-102: algorithm counter + environment
+  NewCounter!("algorithm");
+  DefMacro!("\\thealgorithm", "\\arabic{algorithm}");
+  DefMacro!("\\algorithmname", "Algorithm");
+
+  // Perl L104: \pf proof environment
+  RawTeX!("\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}[\\proofname]}{\\end{@proof}}}{}");
 
   // Caption continuations — Perl L108-110
   DefMacro!("\\contcaption", "\\caption{continued}");
