@@ -4,24 +4,11 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Pre-define language registers (\l@german, \l@french, etc.) so babel's
-  // \bbl@iflanguage check passes. Without these, \selectlanguage skips the
-  // \captionsgerman/\bbl@switch call because the language isn't "recognized".
-  // In Perl's precompiled kernel, these come from language.def hyphenation loading.
-  RawTeX!(r"\expandafter\ifx\csname l@english\endcsname\relax\chardef\l@english=0\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@german\endcsname\relax\newlanguage\l@german\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@ngerman\endcsname\relax\newlanguage\l@ngerman\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@french\endcsname\relax\newlanguage\l@french\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@spanish\endcsname\relax\newlanguage\l@spanish\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@italian\endcsname\relax\newlanguage\l@italian\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@portuguese\endcsname\relax\newlanguage\l@portuguese\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@russian\endcsname\relax\newlanguage\l@russian\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@greek\endcsname\relax\newlanguage\l@greek\fi");
+  // Language registers (\l@english, \l@german, etc.) now come from the
+  // kernel dump (108 \l@<lang> CharDefs). For the two that aren't in the
+  // dump (\l@polutonikogreek, \l@nil), allocate them defensively so
+  // babel's \bbl@iflanguage and nil.ldf's \l@nil check both pass.
   RawTeX!(r"\expandafter\ifx\csname l@polutonikogreek\endcsname\relax\newlanguage\l@polutonikogreek\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@dutch\endcsname\relax\newlanguage\l@dutch\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@polish\endcsname\relax\newlanguage\l@polish\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@turkish\endcsname\relax\newlanguage\l@turkish\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@czech\endcsname\relax\newlanguage\l@czech\fi");
   // Pre-define \l@nil so nil.ldf skips its \edef\bbl@languages block (which would
   // fail because \bbl@languages is undefined at that point). With \l@nil defined,
   // nil.ldf's \ifx\l@nil\@undefined check fails and the block is skipped.
