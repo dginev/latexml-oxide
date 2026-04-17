@@ -38,42 +38,6 @@ LoadDefinitions!({
   // engine because the two-phase \ProcessOptions* pipeline doesn't fire
   // \bbl@load@language cleanly; see SYNC_STATUS D0).
 
-  // French active-punctuation dispatch primitives for :;!? (frenchb.ldf's
-  // \extrasfrench insets a thin space before these chars). Dispatch CSes
-  // are defined unconditionally; `\ltx@bbl@select@language` (babel_support)
-  // flips the catcodes and attaches meanings when French is entered. The
-  // primitives check current font language and fall back to bare
-  // punctuation in non-French groups (needed because `\foreignlanguage
-  // {english}{…!}` re-uses already-tokenized ACTIVE tokens).
-  //
-  //   ':'  → " :" (regular space, espace insécable visual)
-  //   ';!?' → "\u{2006}X" (thin space, SIX-PER-EM SPACE)
-  fn in_french() -> bool {
-    lookup_font()
-      .and_then(|f| f.get_language().map(|l| l.as_ref() == "fr" || l.as_ref() == "fr-CA"))
-      .unwrap_or(false)
-  }
-  DefPrimitive!("\\lx@french@punct@colon", {
-    enter_horizontal();
-    let s = if in_french() { " :" } else { ":" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
-  });
-  DefPrimitive!("\\lx@french@punct@semi", {
-    enter_horizontal();
-    let s = if in_french() { "\u{2006};" } else { ";" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
-  });
-  DefPrimitive!("\\lx@french@punct@exclam", {
-    enter_horizontal();
-    let s = if in_french() { "\u{2006}!" } else { "!" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
-  });
-  DefPrimitive!("\\lx@french@punct@question", {
-    enter_horizontal();
-    let s = if in_french() { "\u{2006}?" } else { "?" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
-  });
-
   // Main-language activation: sets DOCUMENT_LANGUAGE, calls \captions<lang>,
   // wires French :;!? and German " active-char dispatch. Bypasses babel's
   // own \selectlanguage{\bbl@main@language} (which is "nil" in our engine
@@ -184,37 +148,5 @@ LoadDefinitions!({
   // re-run via AtBeginDocument so any late state is refreshed.
   RawTeX!(r"\lx@babel@activate@mainlang");
   RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
-
-  // German " shorthand dispatch (from germanb.ldf). babel's
-  // \initiate@active@char mechanism doesn't survive our raw load; we
-  // read the next char after " and emit the umlaut/ß/guillemet directly.
-  DefPrimitive!("\\lx@german@dq@dispatch", {
-    let tok = gullet::read_token()?;
-    let ch = tok.as_ref().map(|t| t.with_str(|s| s.to_string())).unwrap_or_default();
-    let expansion: &str = match ch.as_str() {
-      "a" => "\u{00E4}", "o" => "\u{00F6}", "u" => "\u{00FC}",
-      "e" => "\u{00EB}", "i" => "\u{00EF}",
-      "A" => "\u{00C4}", "O" => "\u{00D6}", "U" => "\u{00DC}",
-      "E" => "\u{00CB}", "I" => "\u{00CF}",
-      "s" | "z" => "\u{00DF}",
-      "S" => "SS", "Z" => "SZ",
-      "`" => "\u{201E}", "'" => "\u{201C}",
-      "<" => "\u{00AB}", ">" => "\u{00BB}",
-      "~" => "-", "=" => "-",
-      // consonants/unknowns: pass-through (below)
-      _ => "",
-    };
-    if !expansion.is_empty() {
-      gullet::unread(Tokenize!(expansion));
-    } else if !ch.is_empty() {
-      if let Some(t) = tok { gullet::unread(Tokens!(t)); }
-    }
-  });
-  DefPrimitive!("\\mdqon", { state::assign_catcode('"', Catcode::ACTIVE, None); });
-  DefPrimitive!("\\mdqoff", { state::assign_catcode('"', Catcode::OTHER, None); });
-  // germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
-  RawTeX!(r"\providecommand\bbl@allowhyphens{}");
-  RawTeX!(r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}");
-  RawTeX!(r"\providecommand\bbl@sz{\ss}\providecommand\bbl@SZ{SZ}");
 
 });

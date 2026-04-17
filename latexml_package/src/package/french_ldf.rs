@@ -90,4 +90,40 @@ LoadDefinitions!({
 
   // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml L30)
   DefMacro!("\\nombre{}", "\\numprint{#1}");
+
+  // French active-punctuation dispatch primitives for :;!? (frenchb.ldf's
+  // \extrasfrench inserts a thin space before these chars). The catcode
+  // flip + meaning attachment happens in babel's \select@language path
+  // (babel_sty.rs \lx@babel@activate@mainlang, babel_support_sty.rs
+  // \ltx@bbl@select@language). The primitives check current font language
+  // and fall back to bare punctuation in non-French groups (needed because
+  // `\foreignlanguage{english}{…!}` re-uses already-tokenized ACTIVE tokens).
+  //
+  //   ':'  → " :" (regular space, espace insécable visual)
+  //   ';!?' → "\u{2006}X" (thin space, SIX-PER-EM SPACE)
+  fn in_french() -> bool {
+    lookup_font()
+      .and_then(|f| f.get_language().map(|l| l.as_ref() == "fr" || l.as_ref() == "fr-CA"))
+      .unwrap_or(false)
+  }
+  DefPrimitive!("\\lx@french@punct@colon", {
+    enter_horizontal();
+    let s = if in_french() { " :" } else { ":" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+  });
+  DefPrimitive!("\\lx@french@punct@semi", {
+    enter_horizontal();
+    let s = if in_french() { "\u{2006};" } else { ";" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+  });
+  DefPrimitive!("\\lx@french@punct@exclam", {
+    enter_horizontal();
+    let s = if in_french() { "\u{2006}!" } else { "!" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+  });
+  DefPrimitive!("\\lx@french@punct@question", {
+    enter_horizontal();
+    let s = if in_french() { "\u{2006}?" } else { "?" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+  });
 });
