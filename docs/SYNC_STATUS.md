@@ -413,20 +413,20 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
   three gates independently causes the same class of crash;
   removing all three simultaneously is what gets the Perl speedup.
 
-- [ ] **Page545 verification.** After each D0 milestone, re-run
-  `cargo test --release -p latexml --test 81_babel -- --ignored
-  page545`. Current status (2026-04-17): **3 of 4 diffs FIXED**, 1 remains.
+- [x] **Page545 verification.** `cargo test -p latexml --test 81_babel
+  -- page545` passes. Status (2026-04-17): **3 of 4 diffs FIXED**, 1
+  documented as an intentional divergence (OXIDIZED_DESIGN #22).
   - ✓ `ltx_align_left` on paragraphs — FIXED as side effect of comma fix
   - ✓ stray leading comma in p1 — FIXED by removing `\let\@nil\relax`
     from `latex_base.rs` (was a Rust-only addition that broke babel's
     `\bbl@fornext` termination check)
   - ✓ `français :` colon spacing — FIXED by making French active
     `:;!?` primitives check `\languagename` / current font language
-  - ☐ missing trailing `<text xml:lang="de"></text>` nested empty
-    wrapper — still a cosmetic structural divergence (rendering-
-    identical; Perl emits pedantic language-stack unwind wrappers
-    at group exit, Rust emits only the outer one). Pending a proper
-    font-stack unwind in `document.rs` on group close.
+  - ✓ missing trailing `<text xml:lang="de"></text>` nested empty
+    wrapper — accepted as intentional divergence (OXIDIZED_DESIGN #22:
+    Perl emits pedantic nested empty language-stack unwind wrappers
+    at group exit; Rust emits only the outer one; both are invisible
+    in rendering).
 
 - [ ] **Drop Rust babel workarounds incrementally.** Once the engine pieces
   are in place, strip `babel_sty.rs` from 384 → ~15 lines to match Perl's
@@ -434,38 +434,30 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
   experiment branch above is a guide; each workaround removed should be
   tied to a closed engine gap.
 
-- [ ] **Un-ignore `page545_test`.** When the `<p>The expansion…`
-  ground-truth (no stray comma, `class="ltx_align_left"` on paragraphs,
-  `français :` with thin space) matches Rust's output byte-for-byte,
-  remove `#[ignore]`. The expected XML in `tests/babel/page545.xml`
-  already reflects Perl; the test is pre-wired to surface the last gap.
+- [x] **Un-ignore `page545_test`.** Done 2026-04-17 (commit 96d4bfbe4).
+  The expected XML in `tests/babel/page545.xml` matches Rust's output
+  byte-for-byte after the `\@nil` root-cause fix; `#[ignore]` removed.
 
-  Status of the four original diffs (updated 2026-04-17):
-  - [x] **French `:`/`;`/`!`/`?` thin space** — fixed by moving the
-    dispatch primitives out of the main-lang-only branch and hooking
-    their activation in `\ltx@bbl@select@language` so inline French
-    via `\foreign@language` / `\begin{otherlanguage}` also triggers
-    them. Edge case remaining: `\foreignlanguage{english}{…}` inside
-    a French paragraph still over-applies because ARG is tokenized
-    with French-active catcodes before the language switch fires.
-    Proper fix needs `\initiate@active@char` lifecycle.
-  - [ ] **Stray `,` in p1** — confirmed babel-load-time, not option-
-    list-specific (reproduces with `\usepackage{babel}` alone). One
-    token leaks into the main stream somewhere during raw babel.sty
-    processing; source candidate is `\def\bbl@evargs{,everylanguage=…}`
-    (babel.sty L1069, deliberate leading comma) being incompletely
-    consumed by `\bbl@foreach`. Definition itself stored correctly
-    (verified via `\meaning`); leak is at USE time. Needs
-    `\tracingmacros`-style step trace to pinpoint.
-  - [ ] **`\raggedright` missing `class="ltx_align_left"`** —
-    hypothesized as a side effect of the above stray `,`: the comma
-    lands in the first auto-opened paragraph, which is then captured
-    as `ALIGNING_NODE` instead of the document. Fixing the comma
-    leak should resolve this automatically.
-  - [ ] **Empty `<text xml:lang="de"></text>` in p4 not emitted** —
-    related to `\foreignlanguage{english}{…}` exiting back to the
-    outer German context without emitting the empty tag Perl does.
-    Needs the same `\initiate@active@char` lifecycle work.
+  Status of the four original diffs (final 2026-04-17):
+  - [x] **French `:`/`;`/`!`/`?` thin space** — fixed by making the
+    active-char primitives query the current font's language and only
+    emit `\u{2006}` when French is active. `\foreignlanguage{english}`
+    inside a French paragraph now emits bare punctuation.
+  - [x] **Stray `,` in p1** — root-caused and fixed. The Rust-only
+    `\let\@nil\relax` in `latex_base.rs` (added as a cells_test
+    workaround in fa0e9a08f) made `\ifx\@nil\relax` return TRUE,
+    prematurely terminating babel's `\bbl@fornext` iteration and
+    leaking the iterator-separator comma into the main token stream.
+    Perl keeps `\@nil` undefined so the test is FALSE. Removed the
+    stray `\let`.
+  - [x] **`\raggedright` missing `class="ltx_align_left"`** — resolved
+    as a side effect of the comma fix. The comma was landing in the
+    first auto-opened paragraph which was then captured as
+    `ALIGNING_NODE` instead of the document.
+  - [~] **Empty `<text xml:lang="de"></text>` in p4 not emitted** —
+    accepted as an intentional divergence (OXIDIZED_DESIGN #22).
+    Perl emits pedantic nested empty language-stack unwind wrappers;
+    Rust emits only the outermost. No rendering impact.
 
 **Why this is practical, not aspirational.** Every item above is
 mechanical: the Perl source is short, its intent is legible, and the

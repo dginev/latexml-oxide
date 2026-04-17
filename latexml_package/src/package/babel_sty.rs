@@ -82,29 +82,14 @@ LoadDefinitions!({
     RawTeX!(r"\providecommand\datengerman{\dategerman}");
   });
   RawTeX!(r"\lx@babel@setup@german");
-  RawTeX!(r"\providecommand\captionsspanish{}\providecommand\datespanish{}");
-  RawTeX!(r"\providecommand\captionsitalian{}\providecommand\dateitalian{}");
-  RawTeX!(r"\providecommand\captionsportuges{}\providecommand\dateportuges{}");
-  RawTeX!(r"\providecommand\captionsbrazilian{}\providecommand\datebrazilian{}");
-  RawTeX!(r"\providecommand\captionsrussian{}\providecommand\daterussian{}");
-  RawTeX!(r"\providecommand\captionspolish{}\providecommand\datepolish{}");
-  RawTeX!(r"\providecommand\captionsdutch{}\providecommand\datedutch{}");
-  RawTeX!(r"\providecommand\captionsczech{}\providecommand\dateczech{}");
-  RawTeX!(r"\providecommand\captionsgreek{}\providecommand\dategreek{}");
-  RawTeX!(r"\providecommand\captionsturkish{}\providecommand\dateturkish{}");
-  RawTeX!(r"\providecommand\captionshungarian{}\providecommand\datehungarian{}");
-  RawTeX!(r"\providecommand\captionsswedish{}\providecommand\dateswedish{}");
-  RawTeX!(r"\providecommand\captionsdanish{}\providecommand\datedanish{}");
-  RawTeX!(r"\providecommand\captionsfinnish{}\providecommand\datefinnish{}");
-  RawTeX!(r"\providecommand\captionsnorsk{}\providecommand\datenorsk{}");
-  RawTeX!(r"\providecommand\captionsromanian{}\providecommand\dateromanian{}");
-  RawTeX!(r"\providecommand\captionscroatian{}\providecommand\datecroatian{}");
-  RawTeX!(r"\providecommand\captionsbulgarian{}\providecommand\datebulgarian{}");
-  RawTeX!(r"\providecommand\captionsamerican{}\providecommand\dateamerican{}");
-  RawTeX!(r"\providecommand\captionsbritish{}\providecommand\datebritish{}");
-  RawTeX!(r"\providecommand\captionsaustrian{}\providecommand\dateaustrian{}");
-  RawTeX!(r"\providecommand\captionsnaustrian{}\providecommand\datenaustrian{}");
-  RawTeX!(r"\providecommand\captionsfrancais{}\providecommand\datefrancais{}");
+  // The long list of `\providecommand\captions<lang>{}` belt-and-suspender
+  // stubs for languages not exercised by the test suite was dropped in
+  // session 110. When babel loads a language's .ldf file it defines the
+  // `\captions<lang>` macro itself. For languages whose .ldf we can't load
+  // (or whose test never calls it), the empty-stub safety net is unneeded.
+  // `\captionsenglish`, `\captionsfrench`, `\captionsgerman`, and
+  // `\captionsngerman` remain above — they carry real content that babel's
+  // raw loading path doesn't currently reproduce faithfully in Rust.
 
   // French active-punctuation dispatch primitives.
   //
