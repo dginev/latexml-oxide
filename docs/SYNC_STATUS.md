@@ -657,9 +657,12 @@ parser (Marpa) is dominant:
   `std::process::abort()`s after deadline, for cases where the
   cooperative `stomach::check_timeout` polling never gets scheduled
   (tight Marpa/libxml2/libxslt native loops).
-- [ ] Audit other 2^N ambiguity patterns: quantum kets, multiple adjacent
-  parenthesized groups after UNKNOWN (e.g. `a(b)(c)(d)` = 23 parses from
-  speculative function application combinations).
+- [x] Audit `a(b)(c)(d)` speculative-apply ambiguity (session 107):
+  The Perl-era `MATHPARSER_SPECULATE` flag was redesigned as a pragmatic
+  preference. Marpa's ambiguous forest holds both `f@(x)` and `f*x` trees;
+  `FencedLettersAreFunctionArguments` picks the mathematically-consistent
+  one. `a(b)(c)(d)` went from 23 → 2 trees (91% reduction) as a side
+  effect of the dedup no longer fighting `speculative_prefix_apply` Errs.
 - [ ] Audit script attachment ambiguity (prescripts/postscripts with
   multiple levels: `{}^4{}_{12}C^{5+}` — 27 unique grammar-ambiguity trees).
 - [ ] Add early pruning semantics: fail parses as soon as inconsistency
@@ -670,8 +673,10 @@ parser (Marpa) is dominant:
   that produce the most trees are the largest performance drains.
 
 **Measurement:**
-- [ ] Instrument per-formula parse time + tree count. Papers with a few
-  very-ambiguous formulas may dominate while many are fast.
+- [x] `LATEXML_PARSE_AUDIT=1` env var: per-formula parse time + tree
+  count output (since session 105). Used throughout sessions 106-107
+  to identify hotspots. 518 ambiguous formulas / 3544 total enumerated
+  trees across the full test suite (post-Fix-4).
 - [ ] Document grammar ambiguity per category (SUPOP, fenced, arg, etc.)
 
 **Active work — architectural:**
