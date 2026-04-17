@@ -2767,6 +2767,13 @@ LoadDefinitions!({
   Tag!("ltx:acknowledgements", auto_close => true);
   Tag!("ltx:appendix", auto_close => true);
   Tag!("ltx:index", auto_close => true);
+  // NOTE: tried Tag!("ltx:itemize"/"ltx:enumerate"/"ltx:description",
+  // auto_close=>true) to address schema errors like "ltx:bibitem in
+  // <ltx:itemize>" from malformed user input (e.g. 0801.4271). That
+  // BROKE the 10_expansion/partial test because itemize would close
+  // immediately before items are added. Perl's L1337 only marks
+  // `ltx:item` as autoClose/autoOpen — container remains
+  // explicit-close-only. Leaving these alone for now.
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", sub[(token1, token2, star)] {
     if star.is_some() {
