@@ -851,13 +851,34 @@ Commits:
 - `fde9f6b81` — Update OXIDIZED_DESIGN #18 for Marpa design
 - `47c4a3e53` — Check off D5 items completed across sessions 105-107
 - `888f2eb93` — Remove unused meta.speculative field (smaller Meta)
+- `f03d19c87` — Treat interval as a term, not a fenced_factor
 
 State after session 107:
 - 317 integration tests pass
-- `0707.1173` conversion: 12.6s (22.6s before session 105)
+- `0707.1173` conversion: 12.4s (22.6s before session 105)
 - Total enumerated trees across suite: 3544 (was 3767 pre-session-106)
 - No warnings in release build
 - 10 unsafe blocks, all SAFETY-documented
+
+##### Fix 5 — Interval category hierarchy correction
+
+Per user guidance: an interval is a math object, not a grouping
+construct. Moved `lparen term punct term rparen => interval` (and
+siblings) from `fenced_factor` into a new `interval_term` at the
+`tight_term` level.
+
+Early pruning for free: `f(x,y)` requires a fenced_factor argument.
+Intervals are no longer fenced_factors, so the interval interpretation
+cannot feed into function application. Only the list interpretation
+via `lparen formula_list rparen` reaches `apply_delimited` /
+`speculative_prefix_apply`. No ad-hoc rebranding or pragmatic rule
+needed — the grammar's category hierarchy expresses the constraint.
+
+Standalone `(x,y)` still parses as interval (interval_term is a term).
+`2(x,y)` = `2 * interval_term` via invisible-times.
+
+Before: `f(x,y)` → `f@(open-interval(x,y))` (semantically odd).
+After:  `f(x,y)` → `f@(vector(x,y))`  (function applied to arg list).
 
 ---
 
