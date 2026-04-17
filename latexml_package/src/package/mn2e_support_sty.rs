@@ -65,11 +65,13 @@ LoadDefinitions!({
   DefMacro!("\\degr", "\u{00B0}");
   DefMacro!("\\arcmin", "\u{2032}");
   DefMacro!("\\arcsec", "\u{2033}");
-  DefMacro!("\\fd", ".\\!^{\\mathrm{d}}");
-  DefMacro!("\\fh", ".\\!^{\\mathrm{h}}");
-  DefMacro!("\\fm", ".\\!^{\\mathrm{m}}");
-  DefMacro!("\\fs", ".\\!^{\\mathrm{s}}");
-  DefMacro!("\\fp", ".\\!^{\\mathrm{p}}");
+  // Perl mn2e_support.sty.ltxml L106-109,113: \fd/\fh/\fm/\fs/\fp use \aas@fstack.
+  // \aas@fstack wraps in \ensuremath so it works in both text and math contexts.
+  DefMacro!("\\fd", "\\aas@fstack{d}");
+  DefMacro!("\\fh", "\\aas@fstack{h}");
+  DefMacro!("\\fm", "\\aas@fstack{m}");
+  DefMacro!("\\fs", "\\aas@fstack{s}");
+  DefMacro!("\\fp", "\\aas@fstack{p}");
   // Perl: mn2e_support.sty.ltxml — degree/arcmin/arcsec using \aas@fstack
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");

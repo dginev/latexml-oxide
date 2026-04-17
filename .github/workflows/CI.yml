@@ -36,6 +36,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+      # NOTE: CI intentionally does NOT enable the `cortex` feature.
+      # That feature pulls in pericortex → zmq → zeromq-src (C library build),
+      # plus rand, chrono, tempdir, walkdir, zip v0.6 — ~15 min of extra
+      # compile time we don't need to validate the core conversion pipeline.
+      # Cortex worker is a production deployment artifact, built separately.
       - name: build tests (release, reduced parallelism)
         run: cargo build --release --tests --workspace
       - name: run tests

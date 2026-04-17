@@ -21,12 +21,24 @@ path = "bin/latexmlmath_oxide.rs"
 [[bin]]
 name = "cortex_worker"
 path = "bin/cortex_worker.rs"
+required-features = ["cortex"]
+
+[features]
+default = []
+# Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
+# Off by default because pericortex pulls in zmq + zeromq-src (C library build),
+# rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
+# for the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide binaries.
+cortex = ["dep:pericortex", "dep:hostname"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 flate2 = "1"
 tar = "0.4"
-zip = "8"
+# Only deflate is actually used (CompressionMethod::Deflated). Disabling the
+# default features drops aes, bzip2, zstd, lzma-rust2, ppmd-rust, pbkdf2,
+# sha1, sha2, hmac, cipher, password-hash — a big CI compile-time win.
+zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
 tempfile = "3"
 log = "0.4"
 libxml = "0.3.3"
@@ -41,8 +53,8 @@ latexml_package = {path = "../latexml_package"}
 latexml_contrib = {path = "../latexml_contrib"}
 latexml_math_parser = {path = "../latexml_math_parser"}
 latexml_post = {path = "../latexml_post"}
-pericortex = { git = "https://github.com/dginev/cortex-peripherals.git" }
-hostname = "0.4"
+pericortex = { git = "https://github.com/dginev/cortex-peripherals.git", optional = true }
+hostname = { version = "0.4", optional = true }
 # Replaces glibc malloc. glibc's per-arena mutex is a hard scaling bottleneck
 # for multi-process workloads like cortex_worker (arena contention via futex).
 # mimalloc gives each thread a private heap with lock-free fast paths.
