@@ -976,7 +976,13 @@ impl MathParser {
               consecutive_dupes += 1;
             } else {
               parses.push(tree);
-              consecutive_dupes = 0;
+              // Half-decay (not full reset) on new unique. This lets us bail
+              // on cases where uniques are sparse among a sea of dupes/prunes —
+              // e.g. sin[XY] produces 10 unique parses among 1022 grammar
+              // derivations; without decay the unique trees keep resetting the
+              // dupe counter and we never converge. Half-decay means each new
+              // unique halves the accumulated dupe budget instead of clearing it.
+              consecutive_dupes /= 2;
             }
           }
         },
