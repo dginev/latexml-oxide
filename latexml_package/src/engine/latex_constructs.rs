@@ -6472,11 +6472,15 @@ LoadDefinitions!({
     tokens.push(T_CS!("\\thebibliography"));
     Ok(Tokens::new(tokens))
   });
+  // Perl: maybeCloseElement($tag) if tag =~ /^ltx:(?:itemize|enumerate|description)$/
   DefConstructor!("\\lx@mung@bibliography@pre", sub[document] {
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
-    arena::with(tag_sym, |tag| if tag == "enumerate" || tag == "itemize" || tag == "description" {
-      document.maybe_close_element(tag) } else { Ok(None) })?; // Or even remove (if empty)?
+    arena::with(tag_sym, |tag|
+      if tag == "ltx:itemize" || tag == "ltx:enumerate" || tag == "ltx:description" {
+        document.maybe_close_element(tag)
+      } else { Ok(None) }
+    )?;
   });
 
   DefConstructor!("\\lx@bibnewblock", sub[document] {
