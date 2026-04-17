@@ -163,17 +163,16 @@ LoadDefinitions!({
           state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
         }
       }
-      // Note: leaving French does NOT automatically deactivate :;!?.
-      // Proper deactivation requires either a group-scope pop (which
-      // babel's \foreignlanguage uses) or re-tokenizing already-read
-      // tokens. Reverting the active-char meaning to Stored::None in
-      // this non-group hook produces <ltx:ERROR> on every `!` in
-      // \foreignlanguage{english}{...ARG...} because ARG was tokenized
-      // with active catcode before our hook fired. See SYNC_STATUS
-      // D0: needs proper \initiate@active@char lifecycle.
-      // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init
-      // in \lx@babel@activate@lang@post. Setting it here would override the main
-      // language whenever \selectlanguage is called in the document body.
+      // Note: leaving French/German does not automatically deactivate the
+      // active-char meanings. Proper deactivation needs \initiate@active@char
+      // lifecycle work (group-scope meaning-stack push/pop). See SYNC_STATUS
+      // D0 — for now the dispatch primitives check \languagename themselves
+      // and fall back to bare punctuation in non-French groups.
+      //
+      // DOCUMENT_LANGUAGE is NOT set here — that's a one-shot set done at
+      // babel-init time by `\lx@babel@activate@mainlang` (babel_sty.rs).
+      // Setting it on every \selectlanguage call would clobber the root
+      // xml:lang when the document body switches languages.
     }
   });
 
