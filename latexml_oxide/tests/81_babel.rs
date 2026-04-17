@@ -28,23 +28,23 @@ fn numprints_test() {
 }
 
 #[test]
-// Pinned to a pre-existing Rust bug, not ground truth.
+// Expected XML is Perl latexml's ground-truth output for this document.
+// Rust currently diverges on several babel-related points:
+//   1. `\raggedright` inside `\begin{document}` does NOT apply
+//      `class="ltx_align_left"` to the paragraphs — Rust's aligning-context
+//      hook seems to be disarmed by babel's state churn.
+//   2. A stray leading comma appears in p1 ("<p>,The expansion…") —
+//      almost certainly an option-list token leaking out of babel's
+//      `\usepackage[french,english]{babel}` processing.
+//   3. French babel's active colon (French typography: space before ':')
+//      isn't applied — Rust emits "français:" where Perl has "français :".
+//   4. The empty <text xml:lang="de"></text> in p4 isn't emitted.
 //
-// Perl latexml produces `<p>The expansion…` (no stray leading element).
-// Rust currently emits a spurious comma, presumably from leaked option-list
-// tokens in `\documentclass[german]` / `\usepackage[french,english]{babel}`.
-//
-// Local Rust wraps that comma in `<text xml:lang="de">,</text>` (which is
-// what the committed expected XML captures); CI Rust leaves it bare. Both
-// are wrong relative to Perl — the apparent "texlive" sensitivity is just
-// different runtime state exposing the same parsing bug differently.
-//
-// Ignoring for now so CI can green. To fix properly: track down the stray
-// comma emission in class/package option handling, re-record expected XML
-// against the corrected output (ideally matching Perl's), then re-enable.
-// Related: the texlive-pinned kernel dump in resources/dumps/ is checked
-// into VCS (TL 2023-era); the design intent is to regenerate it at build
-// time so runtime-texlive and dump-texlive agree.
+// Rust's babel binding is a 384-line hand-rolled implementation, whereas
+// Perl's babel.sty.ltxml is a 30-line stub that loads babel.sty raw.
+// Fixing these divergences is a substantial follow-up, not a one-line
+// patch. #[ignore] keeps CI green; the expected XML reflects Perl so the
+// test, once un-ignored, will fail with a diff that pinpoints what to fix.
 #[ignore]
 fn page545_test() {
   latexml_test_single("tests/babel/page545.tex", "page545", DIR, None, None);
