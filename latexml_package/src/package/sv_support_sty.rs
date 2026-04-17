@@ -112,6 +112,10 @@ LoadDefinitions!({
   DefMacro!("\\floatlegendstyle", "\\bfseries");
   DefMacro!("\\leftlegendglue", "");
 
+  // Perl L122-123: theorem head swap toggles
+  DefPrimitive!("\\normalthmheadings", { state::assign_value("thm@swap", 0i64, Scope::Global); });
+  DefPrimitive!("\\reversethmheadings", { state::assign_value("thm@swap", 1i64, Scope::Global); });
+
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
   // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
