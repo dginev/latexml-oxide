@@ -118,11 +118,7 @@ LoadDefinitions!({
     }
   });
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
-  // \begin{document} opens (and base_schema's after_open reads it). Also
-  // re-run via AtBeginDocument so any late state is refreshed.
-  // Per-language port loading is handled by \ltx@bbl@select@language in
-  // babel_support_sty.rs on each language entry.
+  // \begin{document} opens (and base_schema's after_open reads it).
   RawTeX!(r"\lx@babel@activate@mainlang");
-  RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
 
 });
