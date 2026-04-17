@@ -577,7 +577,7 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
   s.split(',').map(parse_token).collect()
 }
 
-fn url_decode(s: &str) -> String {
+pub(crate) fn url_decode(s: &str) -> String {
   let mut result = String::with_capacity(s.len());
   let mut chars = s.chars();
   while let Some(ch) = chars.next() {

@@ -2503,6 +2503,16 @@ pub fn stage_snapshot(name: &'static str) {
   STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
 }
 
+/// Stage an already-taken snapshot under a named key. Used by callers
+/// (like `ini_tex`) that want to snapshot at a specific point without
+/// waiting for a pool hook.
+pub fn stage_snapshot_value(
+  name: &'static str,
+  snap: std::collections::HashMap<(TableName, SymStr), Stored>,
+) {
+  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+}
+
 /// Retrieve a previously staged snapshot, if present.
 pub fn get_staged_snapshot(
   name: &str,
