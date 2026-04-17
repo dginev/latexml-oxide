@@ -540,11 +540,13 @@ macro_rules! CharToken {
 }
 
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).
-/// Perl sync (commit 101ad92d, #2646): newlines convert to CC_SPACE, not CC_OTHER.
+/// Note: newlines are converted to OTHER, NOT SPACE (Perl #2700 reverted #2646).
+/// ^^J in TeX decodes to CC_OTHER by default; let the tokenizer handle catcode
+/// reassignment if needed.
 #[macro_export]
 macro_rules! Explode(($text:expr) => (
   $text.to_string().chars().map(|c|
-    if c==' ' || c=='\n' { T_SPACE!() }
+    if c==' ' { T_SPACE!() }
     else {
       CharToken!(c)
     }
@@ -554,7 +556,7 @@ macro_rules! Explode(($text:expr) => (
 #[macro_export]
 macro_rules! ExplodeChars(($text:expr) => (
   $text.as_str().chars().map(|c|
-    if c==' ' || c=='\n' { T_SPACE!() }
+    if c==' ' { T_SPACE!() }
     else {
       CharToken!(c)
     }
@@ -563,13 +565,13 @@ macro_rules! ExplodeChars(($text:expr) => (
 
 /// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 /// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
-/// Perl sync (commit 101ad92d, #2646): newlines convert to CC_SPACE, not CC_OTHER.
+/// Perl sync: newlines are OTHER, not SPACE (matches Perl #2700 revert of #2646).
 #[macro_export]
 macro_rules! ExplodeText(
   ($text:expr) => ({
   use $crate::token::{Catcode,Token};
   $text.to_string().chars().map(|c|
-    if c==' ' || c=='\n' { T_SPACE!() }
+    if c==' ' { T_SPACE!() }
     else {
       let mut tmp = [0u8; 4];
       let s = c.encode_utf8(&mut tmp);
@@ -585,7 +587,7 @@ macro_rules! SymExplodeText(
   use $crate::token::{Catcode,Token};
   let chars : Vec<char> = arena::with($sym, |text| text.chars().collect());
   chars.into_iter().map(|c|
-    if c==' ' || c=='\n' { T_SPACE!() }
+    if c==' ' { T_SPACE!() }
     else {
       let mut tmp = [0u8; 4];
       let s = c.encode_utf8(&mut tmp);
