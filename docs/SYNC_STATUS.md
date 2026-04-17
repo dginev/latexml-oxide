@@ -119,12 +119,19 @@ exact engine gaps:
 
 **Tasks, roughly in dependency order:**
 
-- [ ] **Precompile-phase language registers.** Perl's `make formats` puts
+- [x] **Precompile-phase language registers.** Perl's `make formats` puts
   `\l@english`, `\l@german`, `\l@french`, … in the precompiled kernel so
-  babel's `\bbl@iflanguage` check passes. The Rust kernel dump
-  (`resources/dumps/latex.dump.txt`, 6k entries) doesn't carry them.
-  Build path: run `language.def` / `hyphen.cfg` ingestion when generating
-  the dump so `\newlanguage` assignments are persisted.
+  babel's `\bbl@iflanguage` check passes. Status: the Rust kernel dump
+  (`resources/dumps/latex.dump.txt`, 24k entries) now carries **108**
+  `\l@<lang>` `CharDef` registers — confirmed via
+  `awk -F'\t' '$1=="M" && $2 ~ /^\\l@/' resources/dumps/latex.dump.txt |
+  wc -l` → 108. Includes `\l@english`, `\l@french`, `\l@german`,
+  `\l@ngerman`, `\l@greek`, `\l@russian`, and all mainline babel
+  languages. The runtime `language.def` / `hyphen.cfg` ingestion that
+  runs when `tools/make_formats.sh` regenerates the dump (via
+  `--init` path in `ini_tex.rs`) persists these into the emitted dump.
+  `babel_support_sty.rs`'s `\iflanguage` still auto-creates missing
+  entries via `\newlanguage` as a belt-and-suspenders fallback.
 
 - [ ] **`\openin`-based `.ini` loading.** Babel's `\bbl@provide@locale`
   calls `\babelprovide` which reads `.ini` files from the babel tree. Rust
