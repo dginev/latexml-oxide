@@ -146,8 +146,9 @@ LoadDefinitions!({
   DefMacro!("\\mathletters", "\\lx@equationgroup@subnumbering@begin");
   DefMacro!("\\endmathletters", "\\lx@equationgroup@subnumbering@end");
 
-  // 2.12 Equations — Perl L261
-  DefMacro!("\\eqnum{}", "");
+  // 2.12 Equations — Perl L261 (proper tag setter, not empty stub)
+  DefMacro!("\\eqnum{}",
+    "\\lx@equation@settag{\\edef\\theequation{#1}\\lx@make@tags{equation}}");
 
   // 2.13 Citations — Perl L264-293
   DefMacro!("\\markcite{}", "");
