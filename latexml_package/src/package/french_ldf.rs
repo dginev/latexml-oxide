@@ -11,54 +11,78 @@ LoadDefinitions!({
   // We skip raw loading (it fails on babel 3.x \SetString commands)
   // and provide the essential definitions directly.
 
+  // \captionsfrench — the French caption strings, equivalent to what
+  // babel's frenchb.ldf defines. Use \providecommand so the raw load
+  // (if it reaches this point) doesn't clobber our strings.
+  RawTeX!(r"\providecommand\captionsfrench{%
+    \def\prefacename{Pr\'eface}\def\refname{R\'ef\'erences}%
+    \def\abstractname{R\'esum\'e}\def\bibname{Bibliographie}%
+    \def\chaptername{Chapitre}\def\appendixname{Annexe}%
+    \def\contentsname{Table des mati\`eres}%
+    \def\listfigurename{Table des figures}%
+    \def\listtablename{Liste des tableaux}%
+    \def\indexname{Index}\def\figurename{Figure}%
+    \def\tablename{Table}\def\partname{partie}%
+    \def\pagename{page}\def\seename{voir}%
+    \def\alsoname{voir aussi}\def\proofname{D\'emonstration}}");
+  RawTeX!(r"\providecommand\datefrench{}");
+
   // French superscript (Perl french.ldf.ltxml L24-26)
   DefConstructor!("\\up{}", "<ltx:sup>#1</ltx:sup>", enter_horizontal => true);
   DefConstructor!("\\fup{}", "<ltx:sup>#1</ltx:sup>", enter_horizontal => true);
   DefConstructor!("\\FB@up@fake{}", "<ltx:sup>#1</ltx:sup>", enter_horizontal => true);
 
-  // Ordinal suffixes (from raw frenchb.ldf)
-  DefMacro!("\\ier", "\\up{er}");
-  DefMacro!("\\iers", "\\up{ers}");
-  DefMacro!("\\iere", "\\up{re}");
-  DefMacro!("\\ieres", "\\up{res}");
-  DefMacro!("\\ieme", "\\up{e}");
-  DefMacro!("\\iemes", "\\up{es}");
+  // \FBthickkern — frenchb.ldf thick kern between ordinal and next token.
+  // Rendered as \thinspace in our port.
+  DefMacro!("\\FBthickkern", "\\thinspace");
 
-  // French enumeration (from raw frenchb.ldf)
-  DefMacro!("\\FrenchEnumerate{}", "#1\\up{o}");
-  DefMacro!("\\FrenchPopularEnumerate{}", "#1\\up{o})");
-  DefMacro!("\\primo", "1\\up{o}");
-  DefMacro!("\\secundo", "2\\up{o}");
-  DefMacro!("\\tertio", "3\\up{o}");
-  DefMacro!("\\quarto", "4\\up{o}");
-  DefMacro!("\\fprimo)", "1\\up{o})");
-  DefMacro!("\\fsecundo)", "2\\up{o})");
-  DefMacro!("\\ftertio)", "3\\up{o})");
-  DefMacro!("\\fquarto)", "4\\up{o})");
+  // Ordinal suffixes (from raw frenchb.ldf) — trail with \xspace so a
+  // following punctuation/word gets proper spacing, matching babel's
+  // frenchb behavior.
+  DefMacro!("\\ier", "\\up{er}\\xspace");
+  DefMacro!("\\iers", "\\up{ers}\\xspace");
+  DefMacro!("\\iere", "\\up{re}\\xspace");
+  DefMacro!("\\ieres", "\\up{res}\\xspace");
+  DefMacro!("\\ieme", "\\up{e}\\xspace");
+  DefMacro!("\\iemes", "\\up{es}\\xspace");
 
-  // \No, \no, \Nos, \nos — French abbreviations for "Numéro"
-  DefMacro!("\\No", "N\\up{o}");
-  DefMacro!("\\no", "n\\up{o}");
-  DefMacro!("\\Nos", "N\\up{os}");
-  DefMacro!("\\nos", "n\\up{os}");
+  // French enumeration (from raw frenchb.ldf) — use \FBthickkern between
+  // number and following content.
+  DefMacro!("\\FrenchEnumerate{}", "#1\\up{o}\\FBthickkern");
+  DefMacro!("\\FrenchPopularEnumerate{}", "#1\\up{o})\\FBthickkern");
+  DefMacro!("\\primo", "\\FrenchEnumerate1");
+  DefMacro!("\\secundo", "\\FrenchEnumerate2");
+  DefMacro!("\\tertio", "\\FrenchEnumerate3");
+  DefMacro!("\\quarto", "\\FrenchEnumerate4");
+  DefMacro!("\\fprimo)", "\\FrenchPopularEnumerate1");
+  DefMacro!("\\fsecundo)", "\\FrenchPopularEnumerate2");
+  DefMacro!("\\ftertio)", "\\FrenchPopularEnumerate3");
+  DefMacro!("\\fquarto)", "\\FrenchPopularEnumerate4");
+
+  // \No, \no, \Nos, \nos — French abbreviations for "Numéro".
+  // frenchb.ldf trails these with \xspace for consistency with a following
+  // number / punctuation.
+  DefMacro!("\\No", "N\\up{o}\\xspace");
+  DefMacro!("\\no", "n\\up{o}\\xspace");
+  DefMacro!("\\Nos", "N\\up{os}\\xspace");
+  DefMacro!("\\nos", "n\\up{os}\\xspace");
 
   // \bsc — small caps (from raw frenchb.ldf)
   DefMacro!("\\bsc{}", "{\\scshape #1}");
 
-  // French quotes: \og and \fg (guillemets)
-  DefMacro!("\\og", "\u{00AB}\u{00A0}");
-  DefMacro!("\\fg", "\u{00A0}\u{00BB}");
+  // French quotes: \og and \fg (guillemets).
+  // frenchb.ldf's \og ends with \nobreakspace; \fg starts with one.
+  DefMacro!("\\og", "\\guillemotleft\\nobreakspace");
+  DefMacro!("\\fg", "\\nobreakspace\\guillemotright\\xspace");
 
   // Symbols (Perl french.ldf.ltxml L32-35, AtBeginDocument)
-  DefMacro!("\\degre", "\\textdegree ");
+  DefMacro!("\\degre", "\\textdegree");
   DefMacro!("\\degres", "\\hbox to 0.3em{\\degre}");
-  DefMacro!("\\tild", "\\textasciitilde ");
-  DefMacro!("\\circonflexe", "\\textasciicircum ");
+  Let!("\\tild", "\\textasciitilde");
+  Let!("\\circonflexe", "\\textasciicircum");
   DefMacro!("\\at", "@");
-  DefMacro!("\\boi", "\\textbackslash ");
+  DefMacro!("\\boi", "\\textbackslash");
 
   // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml L30)
   DefMacro!("\\nombre{}", "\\numprint{#1}");
-
-  Let!("\\xspace", "\\relax");
 });

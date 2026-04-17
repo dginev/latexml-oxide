@@ -153,6 +153,23 @@ LoadDefinitions!({
             state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
           }
         }
+        // Ensure our Rust french.ldf port (frenchb ordinals, \up, guillemets,
+        // etc.) is loaded on first entry to French. Idempotent — guard on \up.
+        if lookup_definition(&T_CS!("\\up"))?.is_none() {
+          let _ = crate::package::french_ldf::load_definitions();
+          if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
+            let _ = crate::package::xspace_sty::load_definitions();
+          }
+        }
+      }
+      // German: activate " as the shorthand dispatch for umlauts + opens
+      // the \mdqon / \mdqoff toggle. Babel's germanb.ldf normally does this
+      // via \initiate@active@char; we reproduce it with a direct meaning.
+      if code == "de" || code == "de-AT" {
+        if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+          state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
+          state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+        }
       }
       // Note: leaving French does NOT automatically deactivate :;!?.
       // Proper deactivation requires either a group-scope pop (which

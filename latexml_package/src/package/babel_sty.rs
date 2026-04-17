@@ -31,13 +31,24 @@ LoadDefinitions!({
 
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // Emulate Perl's precompiled kernel: pre-define \captions<lang> and \date<lang>
-  // for common languages. In Perl, `make formats` precompiles the kernel so these
-  // macros exist. Without them, babel's \bbl@provide@locale calls \babelprovide
-  // which loads .ini files — a path that our engine can't handle (multiple undefined
-  // macros hit error recovery → <ltx:ERROR/> corruption → OOM).
-  // Pre-defining makes \bbl@provide@locale skip the heavy \babelprovide path.
-  // English captions (from english.ldf) — must reset names when switching from other languages
+  // Caption-string workaround.
+  //
+  // In Perl, `make formats` precompiles the kernel with every .ldf's
+  // \captions<lang> macros already in place; babel's own AtBeginDocument
+  // then calls \selectlanguage{\bbl@main@language} which activates them.
+  // Our engine can load english.ldf / germanb.ldf etc. via dispatch
+  // (english_sty.rs, german_sty.rs, ngerman_sty.rs, french_ldf.rs carry
+  // the caption strings), BUT babel's two-phase \ProcessOptions* option
+  // pipeline — \bbl@language@opts collection, then \DeclareOption fan-out
+  // — doesn't successfully fire \bbl@load@language{<lang>} for the
+  // package option in our engine. `\bbl@main@language` ends up "nil".
+  //
+  // Pre-defining the captions here gives our `\lx@babel@activate@mainlang`
+  // hook something to call at \begin{document} time (resolving the
+  // effective main language via \opt@babel.sty instead of relying on
+  // \bbl@main@language). This will be removable once the two-phase
+  // option pipeline works end-to-end; see SYNC_STATUS D0 "AtBeginDocument
+  // hook chain ordering".
   RawTeX!(r"\providecommand\captionsenglish{%
     \def\prefacename{Preface}\def\refname{References}%
     \def\abstractname{Abstract}\def\bibname{Bibliography}%
@@ -50,7 +61,6 @@ LoadDefinitions!({
     \def\pagename{Page}\def\seename{see}%
     \def\alsoname{see also}\def\proofname{Proof}}");
   RawTeX!(r"\providecommand\dateenglish{}");
-  // French captions (from frenchb.ldf)
   RawTeX!(r"\providecommand\captionsfrench{%
     \def\prefacename{Pr\'eface}\def\refname{R\'ef\'erences}%
     \def\abstractname{R\'esum\'e}\def\bibname{Bibliographie}%
@@ -63,33 +73,20 @@ LoadDefinitions!({
     \def\pagename{page}\def\seename{voir}%
     \def\alsoname{voir aussi}\def\proofname{D\'emonstration}}");
   RawTeX!(r"\providecommand\datefrench{}");
-  // German captions (from germanb.ldf) — not empty, actual text.
-  // Avoids OOM from \babelprovide AND provides correct localization.
-  DefPrimitive!("\\lx@babel@setup@german", {
-    RawTeX!(r"\providecommand\captionsgerman{%
-      \def\prefacename{Vorwort}\def\refname{Literatur}%
-      \def\abstractname{Zusammenfassung}\def\bibname{Literaturverzeichnis}%
-      \def\chaptername{Kapitel}\def\appendixname{Anhang}%
-      \def\contentsname{Inhaltsverzeichnis}%
-      \def\listfigurename{Abbildungsverzeichnis}%
-      \def\listtablename{Tabellenverzeichnis}%
-      \def\indexname{Index}\def\figurename{Abbildung}%
-      \def\tablename{Tabelle}\def\partname{Teil}%
-      \def\pagename{Seite}\def\seename{siehe}%
-      \def\alsoname{siehe auch}\def\proofname{Beweis}}");
-    RawTeX!(r"\providecommand\dategerman{}");
-    RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
-    RawTeX!(r"\providecommand\datengerman{\dategerman}");
-  });
-  RawTeX!(r"\lx@babel@setup@german");
-  // The long list of `\providecommand\captions<lang>{}` belt-and-suspender
-  // stubs for languages not exercised by the test suite was dropped in
-  // session 110. When babel loads a language's .ldf file it defines the
-  // `\captions<lang>` macro itself. For languages whose .ldf we can't load
-  // (or whose test never calls it), the empty-stub safety net is unneeded.
-  // `\captionsenglish`, `\captionsfrench`, `\captionsgerman`, and
-  // `\captionsngerman` remain above — they carry real content that babel's
-  // raw loading path doesn't currently reproduce faithfully in Rust.
+  RawTeX!(r"\providecommand\captionsgerman{%
+    \def\prefacename{Vorwort}\def\refname{Literatur}%
+    \def\abstractname{Zusammenfassung}\def\bibname{Literaturverzeichnis}%
+    \def\chaptername{Kapitel}\def\appendixname{Anhang}%
+    \def\contentsname{Inhaltsverzeichnis}%
+    \def\listfigurename{Abbildungsverzeichnis}%
+    \def\listtablename{Tabellenverzeichnis}%
+    \def\indexname{Index}\def\figurename{Abbildung}%
+    \def\tablename{Tabelle}\def\partname{Teil}%
+    \def\pagename{Seite}\def\seename{siehe}%
+    \def\alsoname{siehe auch}\def\proofname{Beweis}}");
+  RawTeX!(r"\providecommand\dategerman{}");
+  RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
+  RawTeX!(r"\providecommand\datengerman{\dategerman}");
 
   // French active-punctuation dispatch primitives.
   //
@@ -149,72 +146,50 @@ LoadDefinitions!({
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
 
-  // After babel loads: activate the main language's captions and shorthands.
-  // In Perl this happens via the precompiled kernel; we do it explicitly.
+  // After babel loads: activate the main language's captions and set xml:lang.
+  // Rationale: babel's own \AtBeginDocument runs \selectlanguage{\bbl@main@language}
+  // which SHOULD handle all of this via our \select@language override, but
+  // \bbl@main@language may not reflect the user's intended last-loaded
+  // package option in our engine. We resolve the effective main language
+  // from \opt@babel.sty (the package option list) with a fallback to
+  // \bbl@main@language, then mirror babel's own behavior.
   DefPrimitive!("\\lx@babel@activate@mainlang", {
     let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
-      .map(|t| t.to_string()).unwrap_or_default();
-    // \opt@babel.sty has the actual \usepackage[...]{babel} options.
-    // Prefer these over \bbl@main@language which may reflect class options.
     let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
       .map(|t| t.to_string()).unwrap_or_default();
     let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
       .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
-    let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
-      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
     let lang = if !pkg_last.is_empty() {
       pkg_last
-    } else if !loaded_last.is_empty() {
-      loaded_last
     } else if main != "nil" && !main.is_empty() {
       main
     } else {
       String::new()
     };
     if !lang.is_empty() {
-      // Temporarily set @ to LETTER for CS name tokenization
-      // (at \begin{document} time, @ is OTHER which breaks \captions<lang>)
+      // At \begin{document} time @ is OTHER; temporarily flip to LETTER
+      // so `\captions<lang>` parses as one CS.
       state::assign_catcode('@', Catcode::LETTER, None);
-      // Call \captions<lang> to set localized names
       let cs = s!("\\captions{}", lang);
       if lookup_definition(&T_CS!(cs.clone()))?.is_some() {
         stomach::digest(Tokenize!(&cs))?;
       }
-      // Set font language directly (don't go through stomach::digest which
-      // can interleave with pending babel hook processing).
-      let iso = match lang.as_str() {
+      state::assign_catcode('@', Catcode::OTHER, None);
+      let iso: Option<&'static str> = match lang.as_str() {
         "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
         "french" | "francais" | "frenchb" => Some("fr"),
-        "spanish" => Some("es"), "italian" => Some("it"),
         "english" => Some("en"),
         "american" | "USenglish" => Some("en-US"),
         "british" | "UKenglish" => Some("en-GB"),
-        "portuguese" | "portuges" => Some("pt"),
-        "russian" | "russianb" => Some("ru"),
         "greek" | "polutonikogreek" => Some("el"),
-        "dutch" => Some("nl"), "polish" => Some("pl"),
         _ => None,
       };
       if let Some(code) = iso {
         merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
       }
-      // Restore @ to OTHER
-      state::assign_catcode('@', Catcode::OTHER, None);
-
-      // French active punctuation: make :;!? insert thin space BEFORE the char.
-      // Safe to activate here since we're at \begin{document} time (all packages loaded).
-      // French active-punctuation activation:
-      // - Runtime \selectlanguage / \foreign@language / \begin{otherlanguage}
-      //   goes through babel_support_sty::\ltx@bbl@select@language which
-      //   handles it there.
-      // - For main-language-is-French, the \AtBeginDocument path runs
-      //   HERE before babel's own \selectlanguage{\bbl@main@language}
-      //   can take effect. So activate here too. Idempotent — flipping
-      //   an already-ACTIVE catcode to ACTIVE is a no-op.
-      let is_french = lang == "french" || lang == "francais" || lang == "frenchb";
-      if is_french {
+      if lang == "french" || lang == "francais" || lang == "frenchb" {
+        // Active-punctuation dispatch for :;!?
         for &(ch, cs_name) in &[
           (':', "\\lx@french@punct@colon"),
           (';', "\\lx@french@punct@semi"),
@@ -226,12 +201,24 @@ LoadDefinitions!({
             state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
           }
         }
+        // Load our Rust french.ldf port (frenchb ordinals etc.) on first need.
+        if lookup_definition(&T_CS!("\\up"))?.is_none() {
+          let _ = crate::package::french_ldf::load_definitions();
+          if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
+            let _ = crate::package::xspace_sty::load_definitions();
+          }
+        }
+      }
+      if lang == "german" || lang == "germanb" || lang == "ngerman" || lang == "ngermanb" {
+        // " shorthand: babel's germanb.ldf does this via \initiate@active@char;
+        // we wire the dispatch meaning directly.
+        if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+          state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
+          state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+        }
       }
     }
   });
-  // Register activation in @at@begin@document (fires at \begin{document}).
-  // Note: babel's own AtBeginDocument code (~700 tokens) includes
-  // \selectlanguage{\bbl@main@language} which must run first.
   RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
 
   // German " shorthand system (from germanb.ldf).
@@ -283,108 +270,38 @@ LoadDefinitions!({
     let dispatch_cs = T_CS!("\\lx@german@dq@dispatch");
     state::assign_meaning(&active_dq, dispatch_cs, Some(Scope::Global));
   });
-  // Activate the main language's captions, shorthands, and xml:lang
-  DefPrimitive!("\\lx@babel@activate@lang@post", {
-    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
-      .map(|t| t.to_string()).unwrap_or_default();
-    let loaded = gullet::do_expand(T_CS!("\\bbl@loaded"))
-      .map(|t| t.to_string()).unwrap_or_default();
-    // \opt@babel.sty has the actual \usepackage[...]{babel} options.
-    // \bbl@loaded and \bbl@main@language may only reflect class options
-    // because babel's ini-based loading path doesn't run in our engine.
+  // DOCUMENT_LANGUAGE: set from the last explicit babel option so the
+  // document-root xml:lang reflects the user's intent, matching what Perl's
+  // precompiled-kernel path produces. (babel's internal \bbl@main@language
+  // may only reflect class options in our engine.)
+  DefPrimitive!("\\lx@babel@set@doclang", {
     let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
       .map(|t| t.to_string()).unwrap_or_default();
-    // In babel, the last explicitly loaded language is the main language.
-    // Prefer \opt@babel.sty (explicit package options) over \bbl@loaded
-    // (which may only contain class-option languages).
     let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
       .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
-    let loaded_last = loaded.split(',').map(|s| s.trim().to_string())
-      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
-    let lang_name = if !pkg_last.is_empty() {
+    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    let lang = if !pkg_last.is_empty() {
       pkg_last
-    } else if !loaded_last.is_empty() {
-      loaded_last
     } else if main != "nil" && !main.is_empty() {
       main
     } else {
       String::new()
     };
-    // Map language name to ISO code
-    let iso = match lang_name.as_str() {
+    let iso: Option<&'static str> = match lang.as_str() {
       "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
       "french" | "francais" | "frenchb" => Some("fr"),
-      "spanish" => Some("es"), "italian" => Some("it"),
       "english" => Some("en"),
       "american" | "USenglish" => Some("en-US"),
       "british" | "UKenglish" => Some("en-GB"),
-      "portuguese" | "portuges" => Some("pt"),
-      "russian" | "russianb" => Some("ru"),
       "greek" | "polutonikogreek" => Some("el"),
-      "dutch" => Some("nl"), "polish" => Some("pl"),
       _ => None,
     };
-    // Set DOCUMENT_LANGUAGE for xml:lang on <document>
     if let Some(code) = iso {
-      state::assign_value("DOCUMENT_LANGUAGE", Stored::from(code.to_string()), Some(Scope::Global));
+      state::assign_value("DOCUMENT_LANGUAGE",
+        Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
-    // Call \captions<lang> to set localized names
-    let captions_cs = s!("\\captions{}", lang_name);
-    if lookup_definition(&T_CS!(captions_cs.clone()))?.is_some() {
-      stomach::digest(Tokenize!(&captions_cs))?;
-    }
-    // French-specific: define French macros directly
-    let is_french = lang_name == "french" || lang_name == "francais"
-      || lang_name == "frenchb" || loaded.contains("french");
-    if is_french && lookup_definition(&T_CS!("\\up"))?.is_none() {
-      // Core French macros from french.ldf.ltxml / frenchb.ldf.ltxml
-      stomach::digest(Tokenize!(r"\def\up#1{\textsuperscript{#1}}"))?;
-      stomach::digest(Tokenize!(r"\def\fup#1{\textsuperscript{#1}}"))?;
-      stomach::digest(Tokenize!(r"\def\No{N\up{o}\xspace}\def\no{n\up{o}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\Nos{N\up{os}\xspace}\def\nos{n\up{os}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\bsc#1{{\scshape #1}}"))?;
-      // Note: \ier/\iere/\ieme use \xspace (matching raw french.ldf).
-      // \primo/\secundo/... use \FBthickkern (matching french.ldf FrenchEnumerate).
-      // \No/\Nos/\no/\nos use \xspace.
-      stomach::digest(Tokenize!(r"\def\FBthickkern{\thinspace}"))?;
-      stomach::digest(Tokenize!(r"\def\ieme{\up{e}\xspace}\def\iemes{\up{es}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\ier{\up{er}\xspace}\def\iers{\up{ers}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\iere{\up{re}\xspace}\def\ieres{\up{res}\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\FrenchEnumerate#1{#1\up{o}\FBthickkern}"))?;
-      stomach::digest(Tokenize!(r"\def\FrenchPopularEnumerate#1{#1\up{o})\FBthickkern}"))?;
-      stomach::digest(Tokenize!(r"\def\primo{\FrenchEnumerate1}\def\secundo{\FrenchEnumerate2}"))?;
-      stomach::digest(Tokenize!(r"\def\tertio{\FrenchEnumerate3}\def\quarto{\FrenchEnumerate4}"))?;
-      stomach::digest(Tokenize!(r"\def\fprimo){\FrenchPopularEnumerate1}\def\fsecundo){\FrenchPopularEnumerate2}"))?;
-      stomach::digest(Tokenize!(r"\def\ftertio){\FrenchPopularEnumerate3}\def\fquarto){\FrenchPopularEnumerate4}"))?;
-      stomach::digest(Tokenize!(r"\def\og{\guillemotleft\nobreakspace}"))?;
-      stomach::digest(Tokenize!(r"\def\fg{\nobreakspace\guillemotright\xspace}"))?;
-      stomach::digest(Tokenize!(r"\def\degre{\textdegree}"))?;
-      stomach::digest(Tokenize!(r"\def\degres{\hbox to 0.3em{\degre}}"))?;
-      stomach::digest(Tokenize!(r"\let\tild\textasciitilde"))?;
-      stomach::digest(Tokenize!(r"\let\circonflexe\textasciicircum"))?;
-      stomach::digest(Tokenize!(r"\def\at{@}\def\boi{\textbackslash}"))?;
-      stomach::digest(Tokenize!(r"\def\nombre#1{\numprint{#1}}"))?;
-      // Note: Perl has \let\xspace\relax here, but we have a proper
-      // \xspace implementation in xspace_sty.rs. Load it for French macros.
-      if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
-        let _ = crate::package::xspace_sty::load_definitions();
-      }
-      // TODO: French active punctuation (:;!? → thin space + char).
-      // Implemented but produces U+2006 encoding while Perl produces regular spaces.
-      // Need to match Perl's serialization of \hskip thin spaces before enabling.
-    }
-    // German-specific: activate " shorthand
-    let is_german = lang_name == "german" || lang_name == "ngerman"
-      || lang_name == "germanb" || loaded.contains("german");
-    if is_german {
-      state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
-      let active_dq = T_ACTIVE!('"');
-      let dispatch_cs = T_CS!("\\lx@german@dq@dispatch");
-      if let Some(defn) = lookup_meaning(&dispatch_cs) {
-        state::assign_meaning(&active_dq, defn, Some(Scope::Global));
-      }
-    }
   });
-  RawTeX!(r"\lx@babel@activate@lang@post");
+  RawTeX!(r"\lx@babel@set@doclang");
 });
