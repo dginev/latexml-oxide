@@ -331,17 +331,36 @@ fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
 
 /// Convert LaTeXML picture children (g, line, text, circle, etc.) to SVG elements.
 fn convert_picture_children_to_svg(content: &str) -> String {
+  use std::sync::LazyLock;
+  static G_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"(?s)<g([^>]*)>(.*?)</g>"#).unwrap());
+  static TRANSFORM_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"transform="([^"]+)""#).unwrap());
+  static LINE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<line\s+points="([^"]+)"([^/]*)/?>"#).unwrap());
+  static CIRCLE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<circle([^/]*)/?>"#).unwrap());
+  static ELLIPSE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<ellipse([^/]*)/?>"#).unwrap());
+  static RECT_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<rect([^/]*)/?>"#).unwrap());
+  static POLYGON_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<polygon([^/]*)/?>"#).unwrap());
+  static PATH_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<path([^/]*)/?>"#).unwrap());
+  static BEZIER_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap());
+  static TEXT_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap());
+
   let mut svg = String::new();
 
-  // Match <g ...>...</g> groups (which contain transformed content)
-  let g_re = regex::Regex::new(r#"(?s)<g([^>]*)>(.*?)</g>"#).unwrap();
-  for g_caps in g_re.captures_iter(content) {
+  for g_caps in G_RE.captures_iter(content) {
     let g_attrs = &g_caps[1];
     let g_content = &g_caps[2];
 
     // Extract transform
-    let transform_re = regex::Regex::new(r#"transform="([^"]+)""#).unwrap();
-    let transform = transform_re.captures(g_attrs).map(|c| c[1].to_string());
+    let transform = TRANSFORM_RE.captures(g_attrs).map(|c| c[1].to_string());
 
     if let Some(t) = &transform {
       svg.push_str(&format!(r#"<g transform="{t}">"#));
@@ -349,12 +368,8 @@ fn convert_picture_children_to_svg(content: &str) -> String {
       svg.push_str("<g>");
     }
 
-    // Convert inner elements
     // <line points="x1,y1 x2,y2" stroke="..." stroke-width="..."/>
-    let line_re = regex::Regex::new(
-      r#"<line\s+points="([^"]+)"([^/]*)/?>"#
-    ).unwrap();
-    for line_caps in line_re.captures_iter(g_content) {
+    for line_caps in LINE_RE.captures_iter(g_content) {
       let points = &line_caps[1];
       let rest_attrs = &line_caps[2];
       let coords: Vec<&str> = points.split_whitespace().collect();
@@ -371,39 +386,33 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     }
 
     // <circle cx="..." cy="..." r="..." .../>
-    let circle_re = regex::Regex::new(r#"<circle([^/]*)/?>"#).unwrap();
-    for circle_caps in circle_re.captures_iter(g_content) {
+    for circle_caps in CIRCLE_RE.captures_iter(g_content) {
       svg.push_str(&format!("<circle{}/>", &circle_caps[1]));
     }
 
     // <ellipse cx="..." cy="..." rx="..." ry="..." .../>
-    let ellipse_re = regex::Regex::new(r#"<ellipse([^/]*)/?>"#).unwrap();
-    for ellipse_caps in ellipse_re.captures_iter(g_content) {
+    for ellipse_caps in ELLIPSE_RE.captures_iter(g_content) {
       svg.push_str(&format!("<ellipse{}/>", &ellipse_caps[1]));
     }
 
     // <rect x="..." y="..." width="..." height="..." .../>
-    let rect_re = regex::Regex::new(r#"<rect([^/]*)/?>"#).unwrap();
-    for rect_caps in rect_re.captures_iter(g_content) {
+    for rect_caps in RECT_RE.captures_iter(g_content) {
       svg.push_str(&format!("<rect{}/>", &rect_caps[1]));
     }
 
     // <polygon points="..." .../>
-    let polygon_re = regex::Regex::new(r#"<polygon([^/]*)/?>"#).unwrap();
-    for polygon_caps in polygon_re.captures_iter(g_content) {
+    for polygon_caps in POLYGON_RE.captures_iter(g_content) {
       svg.push_str(&format!("<polygon{}/>", &polygon_caps[1]));
     }
 
     // <path d="..." .../>
-    let path_re = regex::Regex::new(r#"<path([^/]*)/?>"#).unwrap();
-    for path_caps in path_re.captures_iter(g_content) {
+    for path_caps in PATH_RE.captures_iter(g_content) {
       svg.push_str(&format!("<path{}/>", &path_caps[1]));
     }
 
     // <bezier points="x1,y1 x2,y2 x3,y3 x4,y4" .../>
     // Convert to SVG cubic bezier path
-    let bezier_re = regex::Regex::new(r#"<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
-    for bez_caps in bezier_re.captures_iter(g_content) {
+    for bez_caps in BEZIER_RE.captures_iter(g_content) {
       let points = &bez_caps[1];
       let rest = &bez_caps[2];
       let coords: Vec<&str> = points.split_whitespace().collect();
@@ -422,8 +431,7 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     // <wedge .../> — filled wedges (rarely used, stub for now)
 
     // <text>...</text> — wrap in SVG text with y-flip correction
-    let text_re = regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap();
-    for text_caps in text_re.captures_iter(g_content) {
+    for text_caps in TEXT_RE.captures_iter(g_content) {
       let text_attrs = &text_caps[1];
       let text_content = &text_caps[2];
       svg.push_str(&format!(
@@ -456,10 +464,10 @@ fn convert_picture_children_to_svg(content: &str) -> String {
 /// Parse a TeX dimension string (e.g. "100.0pt") to pixels.
 fn parse_tex_dim(s: &str) -> Option<f64> {
   let s = s.trim();
-  if s.ends_with("pt") {
-    s[..s.len()-2].parse::<f64>().ok().map(|v| v * 96.0 / 72.27)
-  } else if s.ends_with("px") {
-    s[..s.len()-2].parse::<f64>().ok()
+  if let Some(rest) = s.strip_suffix("pt") {
+    rest.parse::<f64>().ok().map(|v| v * 96.0 / 72.27)
+  } else if let Some(rest) = s.strip_suffix("px") {
+    rest.parse::<f64>().ok()
   } else {
     s.parse::<f64>().ok()
   }

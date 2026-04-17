@@ -129,7 +129,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // the engine; loading from dump would conflict.
     "C" => {
       let ch = decode_char_key(&key);
-      if ch.map_or(false, |c| c as u32 > 127) {
+      if ch.is_some_and(|c| c as u32 > 127) {
         load_catcode(&key, data)
       } else {
         Ok(false)

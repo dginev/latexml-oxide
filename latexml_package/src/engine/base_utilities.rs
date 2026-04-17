@@ -606,16 +606,13 @@ LoadDefinitions!({
   );
 });
 
-/// Check if a token is "definable" — undefined or equivalent to `\relax`.
-///
-/// Port of Perl `isDefinable($token)` (Base_Utility.pool.ltxml L33-40).
-/// Returns true if the token can be (re)defined: either undefined, equivalent
-// is_definable — defined in latexml_core::binding::def::dialect, re-exported via prelude
+// is_definable — defined in latexml_core::binding::def::dialect, re-exported via prelude.
+// Check if a token is "definable" — undefined or equivalent to `\relax`.
+// Port of Perl `isDefinable($token)` (Base_Utility.pool.ltxml L33-40).
 
-/// Split a token list by delimiter tokens, respecting brace nesting and math mode.
-///
-/// Port of Perl `SplitTokens($tokens, @delims)` (Base_Utility.pool.ltxml L106-132).
-// split_tokens is defined below (moved from base_functions.rs) — includes meaning-based matching
+// split_tokens is defined below (moved from base_functions.rs) — includes meaning-based matching.
+// Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml L106-132.
+// Splits a token list by delimiter tokens, respecting brace nesting and math mode.
 
 /// Join token groups with a conjunction token between them.
 ///

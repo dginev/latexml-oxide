@@ -296,13 +296,13 @@ pub fn lookup_tex_font(
 ) -> Font {
   let mut props = Font::default();
   if let Some(ffam) = lookup_font_family(fontname) {
-    props = props.merge_ref(&ffam);
+    props = props.merge_ref(ffam);
   }
   if let Some(fser) = lookup_font_series(seriescode) {
-    props = props.merge_ref(&fser);
+    props = props.merge_ref(fser);
   }
   if let Some(fsh) = lookup_font_shape(shapecode) {
-    props = props.merge_ref(&fsh);
+    props = props.merge_ref(fsh);
   }
   props
 }
@@ -346,13 +346,13 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
     let shp = cap.get(3).map_or("", |m| m.as_str());
     let size_str = cap.get(4).map_or("", |m| m.as_str());
     if let Some(ffam) = lookup_font_family(fam) {
-      props = props.merge_ref(&ffam);
+      props = props.merge_ref(ffam);
     }
     if let Some(fser) = lookup_font_series(ser) {
-      props = props.merge_ref(&fser);
+      props = props.merge_ref(fser);
     }
     if let Some(fsh) = lookup_font_shape(shp) {
-      props = props.merge_ref(&fsh);
+      props = props.merge_ref(fsh);
     }
     let mut size = if let Some(at) = at_opt {
       at

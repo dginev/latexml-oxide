@@ -410,7 +410,7 @@ impl Document {
                   let key_sym = arena::pin(key);
                   attrs_to_set.push((key_sym, arena::pin(value)));
                   // Merge to set the font currently in effect
-                  declared_font = Cow::Owned(declared_font.merge_ref(&properties));
+                  declared_font = Cow::Owned(declared_font.merge_ref(properties));
                   keys_to_remove.push(key_sym);
                 }
               }

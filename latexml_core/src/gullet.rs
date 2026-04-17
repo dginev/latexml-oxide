@@ -862,11 +862,9 @@ pub fn read_balanced(
 pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
   skip_spaces()?;
   for keyword in keywords.iter() {
-    let mut chars = keyword.chars();
     let mut matched = Vec::new();
     let mut ok = true;
-    loop {
-      let Some(expected) = chars.next() else { break };
+    for expected in keyword.chars() {
       let Some(tok) = read_x_token(Some(false), false, None)? else { ok = false; break };
       // Compare char-by-char against the token's text, case-insensitively.
       let eq = tok.with_str(|s| {

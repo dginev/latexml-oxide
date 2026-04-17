@@ -10,7 +10,6 @@
 ///**********************************************************************
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
-
 use crate::engine::base_utilities::insert_frontmatter;
 use crate::engine::tex_tables::alignment_bindings;
 use crate::prelude::*;
@@ -8508,7 +8507,7 @@ LoadDefinitions!({
       + c.to_string().trim().parse::<i32>().unwrap_or(0);
     let (glyph, _font) = font_decode(n, None, None);
     if let Some(ch) = glyph {
-      vec![Tbox::new(arena::pin(&ch.to_string()), None, None, Tokens!(), SymHashMap::default()).into()]
+      vec![Tbox::new(arena::pin(ch.to_string()), None, None, Tokens!(), SymHashMap::default()).into()]
     } else {
       Vec::new()
     }

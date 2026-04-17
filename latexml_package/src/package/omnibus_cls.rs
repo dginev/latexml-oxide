@@ -239,7 +239,7 @@ LoadDefinitions!({
     let cs = T_CS!(&beginenv);
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
-    def_macro(cs.clone(), None,
+    def_macro(cs, None,
       latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
         require_package("amsthm", RequireOptions::default())?;
         let mut expanded = preload.clone();
