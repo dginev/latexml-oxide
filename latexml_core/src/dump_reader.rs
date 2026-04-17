@@ -109,16 +109,14 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // M: Meaning entries (expandable definitions + primitive aliases).
     //
     // Currently conservative: only load `@`-internal Expandables whose
-    // expansion body doesn't reference the expl3 hook system. These are
-    // LaTeX kernel internals (`\@fontswitch`, `\@thmcounter`, …) that
-    // raw `.cls`/`.sty` files need.
+    // expansion body doesn't reference the expl3 hook system.
     //
-    // PA/MPA primitive-alias entries are written by dump_writer but NOT
-    // consumed here yet. Turning them on without the Perl-parity snapshot
-    // redesign (see SYNC_STATUS D0 "Dump/_base mutual exclusivity") blows
-    // up expl3 conversion — the aliases fire the `expl3.sty` guard and
-    // the post-guard code then runs against a mix of dump-loaded state
-    // and `_base.rs` state that disagrees.
+    // PA/MPA primitive-alias entries are written by dump_writer and
+    // classified into early/late sections (see SYNC_STATUS D0 d.2).
+    // Consumption STILL gated off — attempting to load the `:`-style
+    // expl3 macros together with PA aliases causes an infinite-loop
+    // style blow-up (60 s timeout, memory climbing). Known-remaining
+    // investigation; see SYNC_STATUS D0 (d.5).
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
