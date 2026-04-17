@@ -796,19 +796,45 @@ priority-booster rules `tight_term += opfunction tight_term` and
 ##### Remaining Hotspots (after S106)
 
 Top ambiguity sources per full-suite audit (518 ambiguous formulas,
-3767 total enumerated trees):
+3544 total enumerated trees — down from 3767 in prior session):
 
 1. `\sin[XY]\qquad\sin[x][XY]\qquad...` — 1022 trees / 10 unique.
    Real semantic ambiguity in sin-with-bracket interpretation chain.
-2. `tr ρ \qquad tr(XY) \qquad Tr ρ \qquad rank M \qquad ...` — 164 / 8
+2. `tr ρ \qquad tr(XY) \qquad Tr ρ \qquad rank M \qquad ...` — 100 / 8
    unique. Real OPFUNCTION + identifier ambiguity.
 3. `FGHa` OPFUNCTION cascade — 87 / 9 unique. Genuine math ambiguity.
-4. `a|a|+b|b|+c|c|` VERTBAR absolute values — 52 / 10 unique.
-5. `{}^4_{12}C^{5+}` prescripts — 37 / 10 unique.
+4. `a|a|+b|b|+c|c|` VERTBAR absolute values — 53 / 10 unique.
 
 Items 1-4 are primarily **semantic** (category 3 per doc — inherent
-to math practice). Fix 4 (dual grammar for MATHPARSER_SPECULATE) is
-the next architectural lever for further reduction.
+to math practice).
+
+##### Fix 4 — MATHPARSER_SPECULATE redesign (DONE session 107)
+
+First-principles analysis concluded that `MATHPARSER_SPECULATE` is
+redundant in the Marpa setting. The flag existed in Perl because
+Parse::RecDescent produces ONE parse and needed a runtime switch
+between function-application vs. invisible-times interpretations.
+Marpa produces BOTH as natural ambiguity.
+
+Redesign:
+- `speculative_prefix_apply` semantic action ALWAYS succeeds, marking
+  the XMApp with `meta.speculative = true`.
+- `FencedLettersAreFunctionArguments` pragma unconditionally prefers
+  the function-application interpretation for fenced letter args —
+  this matches mathematical convention: `f(x)` reads as `f@(x)`.
+- The SPECULATE flag is now a no-op kept for backwards compatibility
+  of `\usepackage[mathparserspeculate]{latexml}` syntax.
+- Per-identifier role declarations (`\lxDeclare[role=FUNCTION]{...}`)
+  remain the primary tool for author-specified function roles.
+
+Test XML updates affected 13 files where the old SPECULATE-off
+behavior was recorded; all now expect mathematically-conventional
+`f@(x)` parses. 317 integration tests pass.
+
+Wins persist on compositional fenced lists:
+- `a(b)(c)(d)`: 23 → 2 trees (91% reduction)
+- `f(x)(y)`:   11 → 2 trees (82%)
+- `[A],[B],[C],[D]`: 64 → 2 trees, 1 unique (32x)
 
 ---
 
