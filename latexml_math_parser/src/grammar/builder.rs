@@ -541,7 +541,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     // OPFUNCTION bare arg absorption (Perl: addOpArgs barearg + moreargs)
     // \log 2x^2 => log@(2*x^2). These tight_term rules serve as priority
     // boosters that ensure cascading opfunction application (FGHa → F@(G@(H@(a))))
-    // is preferred over the shorter opfunction-opfunction rule.
+    // wins over `F@(G) * H@(a)`. Removing the direct `tight_term += opfunction
+    // tight_term` rule (even after removing `applied_func = opfunction opfunction`
+    // in commit ffcafc33e) still breaks FGHa — the `applied_func = opfunction
+    // tight_term` + `tight_term += applied_func` lifting path does NOT preserve
+    // Marpa's cascade-over-invisible-times preference. The direct self-recursive
+    // rule is required.
     tight_term += opfunction tight_term => prefix_apply;
     tight_term += opfunction factor => prefix_apply;
     // Perf: removed `opfunction fenced_factor => prefix_apply` — `factor` already
