@@ -450,9 +450,9 @@ Track each ramp-up round here:
 - **Fix:** Case-insensitive extension check via `to_ascii_lowercase()` in both cortex_worker and latexml_oxide.
 
 **Remaining errors at 128-paper scale (10 `conversion_error`):**
-- `Missing $` display math (0704.3480, 0707.0739) — document structure
+- `Missing $` display math (0704.3480, 0707.0739) — document structure (user LaTeX bugs)
 - ~~`colordvi` (0705.1190)~~ — **FIXED (session 108, commit d5f0dbb52)**: `\text<name>` now uses internal `\lx@colordvi@setcolor` primitive via MergeFont, so colordvi is self-contained without requiring color.sty/xcolor (matching Perl's DefPrimitive+MergeFont pattern).
-- `table*` mode mismatch (0705.2808, 0707.4170) — mode stack issue
+- ~~`table*` mode mismatch (0705.2808, 0707.4170)~~ — **FIXED (session 108, commit ab6dc2219)**: bare `\flushleft` / `\flushright` commands were falling through to the `{flushleft}` / `{flushright}` environments' bare-CS constructor, which opens a group + enters `restricted_horizontal` that never unwinds when used as a declaration inside a float. Ported Perl L1317-1318 `Let('\flushleft', '\raggedright')` and `Let('\flushright', '\raggedleft')` so the bare commands now act as declarations via beforeAfterGroup — no restricted_horizontal leak. `\begin{flushleft}` / `\end{flushleft}` are unaffected.
 - ~~xypic `\xylinewidth@i` (0707.1718, 0707.2392, 0708.3157, 0709.2286)~~ — **FIXED (session 99, Fix 13)**
 - `utf8x` `\PackageNoteNoLine` (0707.3268) — ucs/utf8x internal
 - `\figcaption` undefined (0707.4283) — aipproc/aipproc-like class
