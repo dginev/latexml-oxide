@@ -275,7 +275,14 @@ LoadDefinitions!({
 
   DefMacro!("\\URLhref{}", "");
   // \URL — complex catcode manipulation, stubbed as simple macro
-  DefMacro!("\\URL{}", "#1");
+  // that delegates to \@ams@url to get the href attribute set (Perl L282-294).
+  DefMacro!("\\URL{}", "\\@ams@url{#1}");
+  DefConstructor!("\\@ams@url {}",
+    "<ltx:ref href='#href'>#1</ltx:ref>",
+    properties => sub[args] {
+      let url_str = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
+      Ok(stored_map!("href" => common::cleaners::clean_url(&url_str)))
+    });
 
   DefMacro!("\\MR{}", "MR #1");
   DefMacro!("\\MRhref{}", "");
