@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["base_functions","base_xmath","etex","latex","latex_ch8_theoremlike_environments","latex_ch9_figures_and_tables","latex_dump","latex_functions","pdftex","plain_dump","tex","tex_tables"]};
+window.SIDEBAR_ITEMS = {"mod":["base_utilities","base_xmath","etex","latex","latex_constructs","latex_dump","pdftex","plain_dump","tex","tex_tables"]};

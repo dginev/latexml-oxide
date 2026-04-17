@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/stomach.rs`."><title>stomach.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (900485642 2026-04-08)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>stomach.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>once_cell::sync::Lazy;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/stomach.rs`."><title>stomach.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>stomach.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>std::cell::{Cell, RefCell};
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::collections::VecDeque;
@@ -412,606 +412,625 @@
 <a href=#412 id=412 data-nosnippet>412</a></span><span class="kw">pub fn </span>end_mode_opt(mode: <span class="kw-2">&amp;</span>str, noframe: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 <a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(bound_mode) = bindable_mode(mode) {
 <a href=#414 id=414 data-nosnippet>414</a>    <span class="comment">// Perl Stomach.pm L527-531: check BOUND_MODE at frame 0
-<a href=#415 id=415 data-nosnippet>415</a>    </span><span class="kw">if </span>!is_value_bound(<span class="string">"BOUND_MODE"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>))
-<a href=#416 id=416 data-nosnippet>416</a>      || (lookup_string(<span class="string">"BOUND_MODE"</span>) != bound_mode)
-<a href=#417 id=417 data-nosnippet>417</a>    {
-<a href=#418 id=418 data-nosnippet>418</a>      <span class="comment">// Last stack frame was NOT a mode switch, or was a switch to a different mode.
-<a href=#419 id=419 data-nosnippet>419</a>      // Perl: Don't pop if there's an error; maybe we'll recover?
-<a href=#420 id=420 data-nosnippet>420</a>      // Just log the error and return — faithful to Perl's endMode.
-<a href=#421 id=421 data-nosnippet>421</a>      </span><span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#422 id=422 data-nosnippet>422</a>        <span class="string">"Attempt to end mode `{}` in `{}`"</span>,
-<a href=#423 id=423 data-nosnippet>423</a>        mode,
-<a href=#424 id=424 data-nosnippet>424</a>        lookup_string(<span class="string">"MODE"</span>)
-<a href=#425 id=425 data-nosnippet>425</a>      );
-<a href=#426 id=426 data-nosnippet>426</a>      <span class="kw">let </span>category = <span class="kw">match </span>get_current_token() {
-<a href=#427 id=427 data-nosnippet>427</a>        <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>token) =&gt; token.to_string(),
-<a href=#428 id=428 data-nosnippet>428</a>        <span class="prelude-val">None </span>=&gt; String::from(<span class="string">"mode"</span>),
-<a href=#429 id=429 data-nosnippet>429</a>      };
-<a href=#430 id=430 data-nosnippet>430</a>      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, category, <span class="kw-2">&amp;</span>message);
-<a href=#431 id=431 data-nosnippet>431</a>    } <span class="kw">else </span>{
-<a href=#432 id=432 data-nosnippet>432</a>      <span class="comment">// Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
-<a href=#433 id=433 data-nosnippet>433</a>      </span><span class="kw">if </span>bound_mode.ends_with(<span class="string">"vertical"</span>) {
-<a href=#434 id=434 data-nosnippet>434</a>        leave_horizontal_internal();
-<a href=#435 id=435 data-nosnippet>435</a>      }
-<a href=#436 id=436 data-nosnippet>436</a>      <span class="kw">if </span>noframe {
-<a href=#437 id=437 data-nosnippet>437</a>        <span class="comment">// No pop, but at least do beforeAfterGroup
-<a href=#438 id=438 data-nosnippet>438</a>        </span>execute_before_after_group()<span class="question-mark">?</span>;
-<a href=#439 id=439 data-nosnippet>439</a>      } <span class="kw">else </span>{
-<a href=#440 id=440 data-nosnippet>440</a>        pop_stack_frame(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#441 id=441 data-nosnippet>441</a>      }
-<a href=#442 id=442 data-nosnippet>442</a>    }
-<a href=#443 id=443 data-nosnippet>443</a>  } <span class="kw">else </span>{
-<a href=#444 id=444 data-nosnippet>444</a>    <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, mode, <span class="macro">s!</span>(<span class="string">"Cannot end {mode} mode"</span>));
-<a href=#445 id=445 data-nosnippet>445</a>  }
-<a href=#446 id=446 data-nosnippet>446</a>  <span class="prelude-val">Ok</span>(())
-<a href=#447 id=447 data-nosnippet>447</a>}
-<a href=#448 id=448 data-nosnippet>448</a>
-<a href=#449 id=449 data-nosnippet>449</a><span class="doccomment">/// Switch to horizontal mode without stacking the mode.
-<a href=#450 id=450 data-nosnippet>450</a>/// Can only switch from vertical|internal_vertical to horizontal.
-<a href=#451 id=451 data-nosnippet>451</a>/// Perl: sub enterHorizontal
-<a href=#452 id=452 data-nosnippet>452</a></span><span class="kw">pub fn </span>enter_horizontal() {
-<a href=#453 id=453 data-nosnippet>453</a>  <span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
-<a href=#454 id=454 data-nosnippet>454</a>  <span class="kw">if </span>mode.ends_with(<span class="string">"vertical"</span>) {
-<a href=#455 id=455 data-nosnippet>455</a>    assign_value_inplace(<span class="string">"MODE"</span>, arena::pin(<span class="string">"horizontal"</span>));
-<a href=#456 id=456 data-nosnippet>456</a>  } <span class="kw">else if </span>!mode.ends_with(<span class="string">"horizontal"</span>) &amp;&amp; !mode.ends_with(<span class="string">"math"</span>) {
-<a href=#457 id=457 data-nosnippet>457</a>    <span class="comment">// Perl L420-422: warn on unexpected mode
-<a href=#458 id=458 data-nosnippet>458</a>    </span><span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"enterHorizontal"</span>,
-<a href=#459 id=459 data-nosnippet>459</a>      <span class="macro">s!</span>(<span class="string">"Unexpected mode '{}' for enterHorizontal"</span>, mode));
-<a href=#460 id=460 data-nosnippet>460</a>  }
-<a href=#461 id=461 data-nosnippet>461</a>  <span class="comment">// else: already horizontal or math — fine
-<a href=#462 id=462 data-nosnippet>462</a></span>}
-<a href=#463 id=463 data-nosnippet>463</a>
-<a href=#464 id=464 data-nosnippet>464</a><span class="doccomment">/// Resume vertical mode by executing \par, in TeX-like fashion.
-<a href=#465 id=465 data-nosnippet>465</a>/// Perl: sub leaveHorizontal
-<a href=#466 id=466 data-nosnippet>466</a></span><span class="kw">pub fn </span>leave_horizontal() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#467 id=467 data-nosnippet>467</a>  <span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
-<a href=#468 id=468 data-nosnippet>468</a>  <span class="kw">let </span>bound = lookup_string(<span class="string">"BOUND_MODE"</span>);
-<a href=#469 id=469 data-nosnippet>469</a>  <span class="kw">if </span>mode == <span class="string">"horizontal" </span>&amp;&amp; bound.ends_with(<span class="string">"vertical"</span>) {
-<a href=#470 id=470 data-nosnippet>470</a>    <span class="comment">// This needs to be an invisible, and slightly gentler, \par
-<a href=#471 id=471 data-nosnippet>471</a>    </span>assign_value(<span class="string">"INTERNAL_PAR"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="kw">let </span>par_result = invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\par"</span>))<span class="question-mark">?</span>;
-<a href=#473 id=473 data-nosnippet>473</a>    push_box_list_vec(par_result);
-<a href=#474 id=474 data-nosnippet>474</a>    assign_value(<span class="string">"INTERNAL_PAR"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#475 id=475 data-nosnippet>475</a>  }
-<a href=#476 id=476 data-nosnippet>476</a>  <span class="prelude-val">Ok</span>(())
-<a href=#477 id=477 data-nosnippet>477</a>}
-<a href=#478 id=478 data-nosnippet>478</a>
-<a href=#479 id=479 data-nosnippet>479</a><span class="doccomment">/// Resume vertical mode internally: reset mode without firing \par.
-<a href=#480 id=480 data-nosnippet>480</a>/// Used within argument digestion, e.g. endMode for vertical modes.
-<a href=#481 id=481 data-nosnippet>481</a>/// Perl: sub leaveHorizontal_internal
-<a href=#482 id=482 data-nosnippet>482</a></span><span class="kw">pub fn </span>leave_horizontal_internal() {
-<a href=#483 id=483 data-nosnippet>483</a>  <span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
-<a href=#484 id=484 data-nosnippet>484</a>  <span class="kw">let </span>bound = lookup_string(<span class="string">"BOUND_MODE"</span>);
-<a href=#485 id=485 data-nosnippet>485</a>  <span class="kw">if </span>mode == <span class="string">"horizontal" </span>&amp;&amp; bound.ends_with(<span class="string">"vertical"</span>) {
-<a href=#486 id=486 data-nosnippet>486</a>    repack_horizontal();
-<a href=#487 id=487 data-nosnippet>487</a>    assign_value_inplace(<span class="string">"MODE"</span>, arena::pin(<span class="kw-2">&amp;</span>bound));
-<a href=#488 id=488 data-nosnippet>488</a>  }
-<a href=#489 id=489 data-nosnippet>489</a>}
-<a href=#490 id=490 data-nosnippet>490</a>
-<a href=#491 id=491 data-nosnippet>491</a><span class="doccomment">/// Repack recently digested horizontal items into single horizontal List.
-<a href=#492 id=492 data-nosnippet>492</a>/// Note that TeX would have done paragraph line-breaking, resulting in essentially
-<a href=#493 id=493 data-nosnippet>493</a>/// a vertical list.
-<a href=#494 id=494 data-nosnippet>494</a>/// Perl: sub repackHorizontal (Stomach.pm lines 440-454)
-<a href=#495 id=495 data-nosnippet>495</a></span><span class="kw">pub fn </span>repack_horizontal() {
-<a href=#496 id=496 data-nosnippet>496</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
-<a href=#497 id=497 data-nosnippet>497</a>  <span class="kw">let </span><span class="kw-2">mut </span>para: Vec&lt;Digested&gt; = Vec::new();
-<a href=#498 id=498 data-nosnippet>498</a>  <span class="kw">let </span><span class="kw-2">mut </span>keep = <span class="bool-val">false</span>;
-<a href=#499 id=499 data-nosnippet>499</a>
-<a href=#500 id=500 data-nosnippet>500</a>  <span class="kw">loop </span>{
-<a href=#501 id=501 data-nosnippet>501</a>    <span class="kw">let </span>should_pop = <span class="kw">if let </span><span class="prelude-val">Some</span>(item) = stomach.box_list.last() {
-<a href=#502 id=502 data-nosnippet>502</a>      <span class="kw">let </span>mode_str = item
-<a href=#503 id=503 data-nosnippet>503</a>        .get_property(<span class="string">"mode"</span>)
-<a href=#504 id=504 data-nosnippet>504</a>        .map(|v| v.to_string())
-<a href=#505 id=505 data-nosnippet>505</a>        .unwrap_or_else(|| <span class="string">"horizontal"</span>.to_string());
-<a href=#506 id=506 data-nosnippet>506</a>      <span class="kw">if </span>mode_str == <span class="string">"horizontal"
-<a href=#507 id=507 data-nosnippet>507</a>        </span>|| mode_str == <span class="string">"restricted_horizontal"
-<a href=#508 id=508 data-nosnippet>508</a>        </span>|| mode_str == <span class="string">"math"
-<a href=#509 id=509 data-nosnippet>509</a>      </span>{
-<a href=#510 id=510 data-nosnippet>510</a>        <span class="comment">// if ONLY horizontal mode spaces, we can prune them; it just makes an empty ltx:p
-<a href=#511 id=511 data-nosnippet>511</a>        </span><span class="kw">if </span>mode_str != <span class="string">"horizontal" </span>|| !item.get_property_bool(<span class="string">"isSpace"</span>) {
-<a href=#512 id=512 data-nosnippet>512</a>          keep = <span class="bool-val">true</span>;
-<a href=#513 id=513 data-nosnippet>513</a>        }
-<a href=#514 id=514 data-nosnippet>514</a>        <span class="bool-val">true
-<a href=#515 id=515 data-nosnippet>515</a>      </span>} <span class="kw">else </span>{
-<a href=#516 id=516 data-nosnippet>516</a>        <span class="bool-val">false
-<a href=#517 id=517 data-nosnippet>517</a>      </span>}
-<a href=#518 id=518 data-nosnippet>518</a>    } <span class="kw">else </span>{
-<a href=#519 id=519 data-nosnippet>519</a>      <span class="bool-val">false
-<a href=#520 id=520 data-nosnippet>520</a>    </span>};
-<a href=#521 id=521 data-nosnippet>521</a>
-<a href=#522 id=522 data-nosnippet>522</a>    <span class="kw">if </span>should_pop {
-<a href=#523 id=523 data-nosnippet>523</a>      para.push(stomach.box_list.pop().unwrap());
-<a href=#524 id=524 data-nosnippet>524</a>    } <span class="kw">else </span>{
-<a href=#525 id=525 data-nosnippet>525</a>      <span class="kw">break</span>;
-<a href=#526 id=526 data-nosnippet>526</a>    }
-<a href=#527 id=527 data-nosnippet>527</a>  }
-<a href=#528 id=528 data-nosnippet>528</a>
-<a href=#529 id=529 data-nosnippet>529</a>  <span class="comment">// Items were popped in reverse order, so reverse them back
-<a href=#530 id=530 data-nosnippet>530</a>  </span>para.reverse();
-<a href=#531 id=531 data-nosnippet>531</a>
-<a href=#532 id=532 data-nosnippet>532</a>  <span class="kw">if </span>keep {
-<a href=#533 id=533 data-nosnippet>533</a>    <span class="kw">let </span><span class="kw-2">mut </span>list = List::new(para);
-<a href=#534 id=534 data-nosnippet>534</a>    list.mode = <span class="prelude-val">Some</span>(TexMode::Text); <span class="comment">// "horizontal" in Perl
-<a href=#535 id=535 data-nosnippet>535</a>    // Perl: List(@para, mode =&gt; 'horizontal') — set mode property string
-<a href=#536 id=536 data-nosnippet>536</a>    // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
-<a href=#537 id=537 data-nosnippet>537</a>    </span>list.set_property(<span class="string">"mode"</span>, Stored::String(arena::pin_static(<span class="string">"horizontal"</span>)));
-<a href=#538 id=538 data-nosnippet>538</a>    <span class="comment">// Perl: $list-&gt;setProperty(width =&gt; LookupRegister('\hsize')) if $mode eq 'horizontal';
-<a href=#539 id=539 data-nosnippet>539</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(hsize) = lookup_dimension(<span class="string">"\\hsize"</span>) {
-<a href=#540 id=540 data-nosnippet>540</a>      list.set_property(<span class="string">"width"</span>, hsize);
+<a href=#415 id=415 data-nosnippet>415</a>    // The strict check is: BOUND_MODE must be bound in the current top frame AND match.
+<a href=#416 id=416 data-nosnippet>416</a>    // However, BOUND_MODE may have been set in a different frame (e.g. the locked frame
+<a href=#417 id=417 data-nosnippet>417</a>    // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
+<a href=#418 id=418 data-nosnippet>418</a>    // inside an environment). When the bound value matches but isn't in the top frame's
+<a href=#419 id=419 data-nosnippet>419</a>    // undo table, treat it as valid — the mode system is about tracking what mode we're in.
+<a href=#420 id=420 data-nosnippet>420</a>    </span><span class="kw">let </span>current_bound = lookup_string(<span class="string">"BOUND_MODE"</span>);
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">if </span>current_bound != bound_mode
+<a href=#422 id=422 data-nosnippet>422</a>    {
+<a href=#423 id=423 data-nosnippet>423</a>      <span class="comment">// Last stack frame was NOT a mode switch, or was a switch to a different mode.
+<a href=#424 id=424 data-nosnippet>424</a>      // Perl: Don't pop if there's an error; maybe we'll recover?
+<a href=#425 id=425 data-nosnippet>425</a>      // Just log the error and return — faithful to Perl's endMode.
+<a href=#426 id=426 data-nosnippet>426</a>      </span><span class="kw">let </span>message = <span class="macro">s!</span>(
+<a href=#427 id=427 data-nosnippet>427</a>        <span class="string">"Attempt to end mode `{}` in `{}`"</span>,
+<a href=#428 id=428 data-nosnippet>428</a>        mode,
+<a href=#429 id=429 data-nosnippet>429</a>        lookup_string(<span class="string">"MODE"</span>)
+<a href=#430 id=430 data-nosnippet>430</a>      );
+<a href=#431 id=431 data-nosnippet>431</a>      <span class="kw">let </span>category = <span class="kw">match </span>get_current_token() {
+<a href=#432 id=432 data-nosnippet>432</a>        <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>token) =&gt; token.to_string(),
+<a href=#433 id=433 data-nosnippet>433</a>        <span class="prelude-val">None </span>=&gt; String::from(<span class="string">"mode"</span>),
+<a href=#434 id=434 data-nosnippet>434</a>      };
+<a href=#435 id=435 data-nosnippet>435</a>      <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, category, <span class="kw-2">&amp;</span>message);
+<a href=#436 id=436 data-nosnippet>436</a>    } <span class="kw">else </span>{
+<a href=#437 id=437 data-nosnippet>437</a>      <span class="comment">// Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
+<a href=#438 id=438 data-nosnippet>438</a>      </span><span class="kw">if </span>bound_mode.ends_with(<span class="string">"vertical"</span>) {
+<a href=#439 id=439 data-nosnippet>439</a>        leave_horizontal_internal();
+<a href=#440 id=440 data-nosnippet>440</a>      }
+<a href=#441 id=441 data-nosnippet>441</a>      <span class="kw">if </span>noframe {
+<a href=#442 id=442 data-nosnippet>442</a>        <span class="comment">// No pop, but at least do beforeAfterGroup
+<a href=#443 id=443 data-nosnippet>443</a>        </span>execute_before_after_group()<span class="question-mark">?</span>;
+<a href=#444 id=444 data-nosnippet>444</a>      } <span class="kw">else </span>{
+<a href=#445 id=445 data-nosnippet>445</a>        pop_stack_frame(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#446 id=446 data-nosnippet>446</a>      }
+<a href=#447 id=447 data-nosnippet>447</a>    }
+<a href=#448 id=448 data-nosnippet>448</a>  } <span class="kw">else </span>{
+<a href=#449 id=449 data-nosnippet>449</a>    <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, mode, <span class="macro">s!</span>(<span class="string">"Cannot end {mode} mode"</span>));
+<a href=#450 id=450 data-nosnippet>450</a>  }
+<a href=#451 id=451 data-nosnippet>451</a>  <span class="prelude-val">Ok</span>(())
+<a href=#452 id=452 data-nosnippet>452</a>}
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a><span class="doccomment">/// Switch to horizontal mode without stacking the mode.
+<a href=#455 id=455 data-nosnippet>455</a>/// Can only switch from vertical|internal_vertical to horizontal.
+<a href=#456 id=456 data-nosnippet>456</a>/// Perl: sub enterHorizontal
+<a href=#457 id=457 data-nosnippet>457</a></span><span class="kw">pub fn </span>enter_horizontal() {
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
+<a href=#459 id=459 data-nosnippet>459</a>  <span class="kw">if </span>mode.ends_with(<span class="string">"vertical"</span>) {
+<a href=#460 id=460 data-nosnippet>460</a>    assign_value_inplace(<span class="string">"MODE"</span>, arena::pin(<span class="string">"horizontal"</span>));
+<a href=#461 id=461 data-nosnippet>461</a>  } <span class="kw">else if </span>!mode.ends_with(<span class="string">"horizontal"</span>) &amp;&amp; !mode.ends_with(<span class="string">"math"</span>) {
+<a href=#462 id=462 data-nosnippet>462</a>    <span class="comment">// Perl L420-422: warn on unexpected mode
+<a href=#463 id=463 data-nosnippet>463</a>    </span><span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"enterHorizontal"</span>,
+<a href=#464 id=464 data-nosnippet>464</a>      <span class="macro">s!</span>(<span class="string">"Unexpected mode '{}' for enterHorizontal"</span>, mode));
+<a href=#465 id=465 data-nosnippet>465</a>  }
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="comment">// else: already horizontal or math — fine
+<a href=#467 id=467 data-nosnippet>467</a></span>}
+<a href=#468 id=468 data-nosnippet>468</a>
+<a href=#469 id=469 data-nosnippet>469</a><span class="doccomment">/// Resume vertical mode by executing \par, in TeX-like fashion.
+<a href=#470 id=470 data-nosnippet>470</a>/// Perl: sub leaveHorizontal
+<a href=#471 id=471 data-nosnippet>471</a></span><span class="kw">pub fn </span>leave_horizontal() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
+<a href=#473 id=473 data-nosnippet>473</a>  <span class="kw">let </span>bound = lookup_string(<span class="string">"BOUND_MODE"</span>);
+<a href=#474 id=474 data-nosnippet>474</a>  <span class="kw">if </span>mode == <span class="string">"horizontal" </span>&amp;&amp; bound.ends_with(<span class="string">"vertical"</span>) {
+<a href=#475 id=475 data-nosnippet>475</a>    <span class="comment">// This needs to be an invisible, and slightly gentler, \par
+<a href=#476 id=476 data-nosnippet>476</a>    </span>assign_value(<span class="string">"INTERNAL_PAR"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#477 id=477 data-nosnippet>477</a>    <span class="kw">let </span>par_result = invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\par"</span>))<span class="question-mark">?</span>;
+<a href=#478 id=478 data-nosnippet>478</a>    push_box_list_vec(par_result);
+<a href=#479 id=479 data-nosnippet>479</a>    assign_value(<span class="string">"INTERNAL_PAR"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#480 id=480 data-nosnippet>480</a>  }
+<a href=#481 id=481 data-nosnippet>481</a>  <span class="prelude-val">Ok</span>(())
+<a href=#482 id=482 data-nosnippet>482</a>}
+<a href=#483 id=483 data-nosnippet>483</a>
+<a href=#484 id=484 data-nosnippet>484</a><span class="doccomment">/// Resume vertical mode internally: reset mode without firing \par.
+<a href=#485 id=485 data-nosnippet>485</a>/// Used within argument digestion, e.g. endMode for vertical modes.
+<a href=#486 id=486 data-nosnippet>486</a>/// Perl: sub leaveHorizontal_internal
+<a href=#487 id=487 data-nosnippet>487</a></span><span class="kw">pub fn </span>leave_horizontal_internal() {
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
+<a href=#489 id=489 data-nosnippet>489</a>  <span class="kw">let </span>bound = lookup_string(<span class="string">"BOUND_MODE"</span>);
+<a href=#490 id=490 data-nosnippet>490</a>  <span class="kw">if </span>mode == <span class="string">"horizontal" </span>&amp;&amp; bound.ends_with(<span class="string">"vertical"</span>) {
+<a href=#491 id=491 data-nosnippet>491</a>    repack_horizontal();
+<a href=#492 id=492 data-nosnippet>492</a>    assign_value_inplace(<span class="string">"MODE"</span>, arena::pin(<span class="kw-2">&amp;</span>bound));
+<a href=#493 id=493 data-nosnippet>493</a>  }
+<a href=#494 id=494 data-nosnippet>494</a>}
+<a href=#495 id=495 data-nosnippet>495</a>
+<a href=#496 id=496 data-nosnippet>496</a><span class="doccomment">/// Repack recently digested horizontal items into single horizontal List.
+<a href=#497 id=497 data-nosnippet>497</a>/// Note that TeX would have done paragraph line-breaking, resulting in essentially
+<a href=#498 id=498 data-nosnippet>498</a>/// a vertical list.
+<a href=#499 id=499 data-nosnippet>499</a>/// Perl: sub repackHorizontal (Stomach.pm lines 440-454)
+<a href=#500 id=500 data-nosnippet>500</a></span><span class="kw">pub fn </span>repack_horizontal() {
+<a href=#501 id=501 data-nosnippet>501</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
+<a href=#502 id=502 data-nosnippet>502</a>  <span class="kw">let </span><span class="kw-2">mut </span>para: Vec&lt;Digested&gt; = Vec::new();
+<a href=#503 id=503 data-nosnippet>503</a>  <span class="kw">let </span><span class="kw-2">mut </span>keep = <span class="bool-val">false</span>;
+<a href=#504 id=504 data-nosnippet>504</a>
+<a href=#505 id=505 data-nosnippet>505</a>  <span class="kw">loop </span>{
+<a href=#506 id=506 data-nosnippet>506</a>    <span class="kw">let </span>should_pop = <span class="kw">if let </span><span class="prelude-val">Some</span>(item) = stomach.box_list.last() {
+<a href=#507 id=507 data-nosnippet>507</a>      <span class="comment">// Perf: compare as &amp;str via with() instead of allocating a String each iter.
+<a href=#508 id=508 data-nosnippet>508</a>      // Default mode is "horizontal" (matches previous unwrap_or).
+<a href=#509 id=509 data-nosnippet>509</a>      </span><span class="kw">let </span>mode_prop = item.get_property(<span class="string">"mode"</span>);
+<a href=#510 id=510 data-nosnippet>510</a>      <span class="kw">let </span>(is_horiz_family, is_plain_horizontal) = <span class="kw">match </span>mode_prop.as_deref() {
+<a href=#511 id=511 data-nosnippet>511</a>        <span class="prelude-val">Some</span>(Stored::String(sym)) =&gt; arena::with(<span class="kw-2">*</span>sym, |s| {
+<a href=#512 id=512 data-nosnippet>512</a>          <span class="kw">let </span>plain = s == <span class="string">"horizontal"</span>;
+<a href=#513 id=513 data-nosnippet>513</a>          <span class="kw">let </span>fam = plain || s == <span class="string">"restricted_horizontal" </span>|| s == <span class="string">"math"</span>;
+<a href=#514 id=514 data-nosnippet>514</a>          (fam, plain)
+<a href=#515 id=515 data-nosnippet>515</a>        }),
+<a href=#516 id=516 data-nosnippet>516</a>        <span class="prelude-val">None </span>=&gt; (<span class="bool-val">true</span>, <span class="bool-val">true</span>), <span class="comment">// default "horizontal"
+<a href=#517 id=517 data-nosnippet>517</a>        </span><span class="prelude-val">Some</span>(other) =&gt; {
+<a href=#518 id=518 data-nosnippet>518</a>          <span class="comment">// Rare path — fall back to Display formatting.
+<a href=#519 id=519 data-nosnippet>519</a>          </span><span class="kw">let </span>s = other.to_string();
+<a href=#520 id=520 data-nosnippet>520</a>          <span class="kw">let </span>plain = s == <span class="string">"horizontal"</span>;
+<a href=#521 id=521 data-nosnippet>521</a>          <span class="kw">let </span>fam = plain || s == <span class="string">"restricted_horizontal" </span>|| s == <span class="string">"math"</span>;
+<a href=#522 id=522 data-nosnippet>522</a>          (fam, plain)
+<a href=#523 id=523 data-nosnippet>523</a>        },
+<a href=#524 id=524 data-nosnippet>524</a>      };
+<a href=#525 id=525 data-nosnippet>525</a>      <span class="kw">if </span>is_horiz_family {
+<a href=#526 id=526 data-nosnippet>526</a>        <span class="kw">if </span>!is_plain_horizontal || !item.get_property_bool(<span class="string">"isSpace"</span>) {
+<a href=#527 id=527 data-nosnippet>527</a>          keep = <span class="bool-val">true</span>;
+<a href=#528 id=528 data-nosnippet>528</a>        }
+<a href=#529 id=529 data-nosnippet>529</a>        <span class="bool-val">true
+<a href=#530 id=530 data-nosnippet>530</a>      </span>} <span class="kw">else </span>{
+<a href=#531 id=531 data-nosnippet>531</a>        <span class="bool-val">false
+<a href=#532 id=532 data-nosnippet>532</a>      </span>}
+<a href=#533 id=533 data-nosnippet>533</a>    } <span class="kw">else </span>{
+<a href=#534 id=534 data-nosnippet>534</a>      <span class="bool-val">false
+<a href=#535 id=535 data-nosnippet>535</a>    </span>};
+<a href=#536 id=536 data-nosnippet>536</a>
+<a href=#537 id=537 data-nosnippet>537</a>    <span class="kw">if </span>should_pop {
+<a href=#538 id=538 data-nosnippet>538</a>      para.push(stomach.box_list.pop().unwrap());
+<a href=#539 id=539 data-nosnippet>539</a>    } <span class="kw">else </span>{
+<a href=#540 id=540 data-nosnippet>540</a>      <span class="kw">break</span>;
 <a href=#541 id=541 data-nosnippet>541</a>    }
-<a href=#542 id=542 data-nosnippet>542</a>    stomach.box_list.push(Digested::from(list));
-<a href=#543 id=543 data-nosnippet>543</a>  }
-<a href=#544 id=544 data-nosnippet>544</a>}
-<a href=#545 id=545 data-nosnippet>545</a>
-<a href=#546 id=546 data-nosnippet>546</a><span class="kw">pub fn </span>new_local_box_list() {
-<a href=#547 id=547 data-nosnippet>547</a>  <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
-<a href=#548 id=548 data-nosnippet>548</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
-<a href=#549 id=549 data-nosnippet>549</a>  std::mem::swap(<span class="kw-2">&amp;mut </span>stomach.box_list, <span class="kw-2">&amp;mut </span>buffer);
-<a href=#550 id=550 data-nosnippet>550</a>  stomach.localized_box_list.push(buffer);
-<a href=#551 id=551 data-nosnippet>551</a>}
-<a href=#552 id=552 data-nosnippet>552</a><span class="kw">pub fn </span>expire_local_box_list() -&gt; Vec&lt;Digested&gt; {
-<a href=#553 id=553 data-nosnippet>553</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
-<a href=#554 id=554 data-nosnippet>554</a>  <span class="kw">let </span><span class="kw-2">mut </span>buffer = stomach.localized_box_list.pop().unwrap_or_default();
-<a href=#555 id=555 data-nosnippet>555</a>  std::mem::swap(<span class="kw-2">&amp;mut </span>stomach.box_list, <span class="kw-2">&amp;mut </span>buffer);
-<a href=#556 id=556 data-nosnippet>556</a>  buffer
-<a href=#557 id=557 data-nosnippet>557</a>}
-<a href=#558 id=558 data-nosnippet>558</a>
-<a href=#559 id=559 data-nosnippet>559</a><span class="kw">pub fn </span>extend_box_list&lt;I&gt;(arg: I)
-<a href=#560 id=560 data-nosnippet>560</a><span class="kw">where </span>I: IntoIterator&lt;Item = Digested&gt; {
-<a href=#561 id=561 data-nosnippet>561</a>  <span class="macro">stomach_mut!</span>().box_list.extend(arg)
-<a href=#562 id=562 data-nosnippet>562</a>}
-<a href=#563 id=563 data-nosnippet>563</a><span class="kw">pub fn </span>push_box_list(arg: Digested) { <span class="macro">stomach_mut!</span>().box_list.push(arg) }
-<a href=#564 id=564 data-nosnippet>564</a><span class="kw">fn </span>push_box_list_vec(args: Vec&lt;Digested&gt;) { <span class="macro">stomach_mut!</span>().box_list.extend(args) }
-<a href=#565 id=565 data-nosnippet>565</a><span class="kw">pub fn </span>pop_box_list() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; { <span class="macro">stomach_mut!</span>().box_list.pop() }
-<a href=#566 id=566 data-nosnippet>566</a><span class="kw">pub fn </span>with_box_list&lt;R, FnR&gt;(caller: FnR) -&gt; R
-<a href=#567 id=567 data-nosnippet>567</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>[Digested]) -&gt; R {
-<a href=#568 id=568 data-nosnippet>568</a>  <span class="kw">let </span>stomach = <span class="macro">stomach!</span>();
-<a href=#569 id=569 data-nosnippet>569</a>  <span class="kw">let </span>list = <span class="kw-2">&amp;</span>stomach.box_list;
-<a href=#570 id=570 data-nosnippet>570</a>  caller(list)
-<a href=#571 id=571 data-nosnippet>571</a>}
-<a href=#572 id=572 data-nosnippet>572</a><span class="kw">pub fn </span>with_box_list_mut&lt;R, FnR&gt;(caller: FnR) -&gt; R
-<a href=#573 id=573 data-nosnippet>573</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>[Digested]) -&gt; R {
-<a href=#574 id=574 data-nosnippet>574</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
-<a href=#575 id=575 data-nosnippet>575</a>  <span class="kw">let </span>list = <span class="kw-2">&amp;mut </span>stomach.box_list;
-<a href=#576 id=576 data-nosnippet>576</a>  caller(list)
+<a href=#542 id=542 data-nosnippet>542</a>  }
+<a href=#543 id=543 data-nosnippet>543</a>
+<a href=#544 id=544 data-nosnippet>544</a>  <span class="comment">// Items were popped in reverse order, so reverse them back
+<a href=#545 id=545 data-nosnippet>545</a>  </span>para.reverse();
+<a href=#546 id=546 data-nosnippet>546</a>
+<a href=#547 id=547 data-nosnippet>547</a>  <span class="kw">if </span>keep {
+<a href=#548 id=548 data-nosnippet>548</a>    <span class="kw">let </span><span class="kw-2">mut </span>list = List::new(para);
+<a href=#549 id=549 data-nosnippet>549</a>    list.mode = <span class="prelude-val">Some</span>(TexMode::Text); <span class="comment">// "horizontal" in Perl
+<a href=#550 id=550 data-nosnippet>550</a>    // Perl: List(@para, mode =&gt; 'horizontal') — set mode property string
+<a href=#551 id=551 data-nosnippet>551</a>    // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
+<a href=#552 id=552 data-nosnippet>552</a>    </span>list.set_property(<span class="string">"mode"</span>, Stored::String(arena::pin_static(<span class="string">"horizontal"</span>)));
+<a href=#553 id=553 data-nosnippet>553</a>    <span class="comment">// Perl: $list-&gt;setProperty(width =&gt; LookupRegister('\hsize')) if $mode eq 'horizontal';
+<a href=#554 id=554 data-nosnippet>554</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(hsize) = lookup_dimension(<span class="string">"\\hsize"</span>) {
+<a href=#555 id=555 data-nosnippet>555</a>      list.set_property(<span class="string">"width"</span>, hsize);
+<a href=#556 id=556 data-nosnippet>556</a>    }
+<a href=#557 id=557 data-nosnippet>557</a>    stomach.box_list.push(Digested::from(list));
+<a href=#558 id=558 data-nosnippet>558</a>  }
+<a href=#559 id=559 data-nosnippet>559</a>}
+<a href=#560 id=560 data-nosnippet>560</a>
+<a href=#561 id=561 data-nosnippet>561</a><span class="kw">pub fn </span>new_local_box_list() {
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
+<a href=#563 id=563 data-nosnippet>563</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
+<a href=#564 id=564 data-nosnippet>564</a>  std::mem::swap(<span class="kw-2">&amp;mut </span>stomach.box_list, <span class="kw-2">&amp;mut </span>buffer);
+<a href=#565 id=565 data-nosnippet>565</a>  stomach.localized_box_list.push(buffer);
+<a href=#566 id=566 data-nosnippet>566</a>}
+<a href=#567 id=567 data-nosnippet>567</a><span class="kw">pub fn </span>expire_local_box_list() -&gt; Vec&lt;Digested&gt; {
+<a href=#568 id=568 data-nosnippet>568</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
+<a href=#569 id=569 data-nosnippet>569</a>  <span class="kw">let </span><span class="kw-2">mut </span>buffer = stomach.localized_box_list.pop().unwrap_or_default();
+<a href=#570 id=570 data-nosnippet>570</a>  std::mem::swap(<span class="kw-2">&amp;mut </span>stomach.box_list, <span class="kw-2">&amp;mut </span>buffer);
+<a href=#571 id=571 data-nosnippet>571</a>  buffer
+<a href=#572 id=572 data-nosnippet>572</a>}
+<a href=#573 id=573 data-nosnippet>573</a>
+<a href=#574 id=574 data-nosnippet>574</a><span class="kw">pub fn </span>extend_box_list&lt;I&gt;(arg: I)
+<a href=#575 id=575 data-nosnippet>575</a><span class="kw">where </span>I: IntoIterator&lt;Item = Digested&gt; {
+<a href=#576 id=576 data-nosnippet>576</a>  <span class="macro">stomach_mut!</span>().box_list.extend(arg)
 <a href=#577 id=577 data-nosnippet>577</a>}
-<a href=#578 id=578 data-nosnippet>578</a>
-<a href=#579 id=579 data-nosnippet>579</a><span class="comment">// **********************************************************************
-<a href=#580 id=580 data-nosnippet>580</a>// Digestion
-<a href=#581 id=581 data-nosnippet>581</a>// **********************************************************************
-<a href=#582 id=582 data-nosnippet>582</a>
-<a href=#583 id=583 data-nosnippet>583</a></span><span class="doccomment">/// Digest a list of tokens independent from any current Gullet.
-<a href=#584 id=584 data-nosnippet>584</a>/// Typically used to digest arguments to primitives or constructors.
-<a href=#585 id=585 data-nosnippet>585</a>/// Returns a List containing the digested material.
-<a href=#586 id=586 data-nosnippet>586</a></span><span class="kw">pub fn </span>digest&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#587 id=587 data-nosnippet>587</a>  <span class="kw">let </span>tokens: Tokens = tokens.into();
-<a href=#588 id=588 data-nosnippet>588</a>  <span class="kw">if </span>tokens.is_empty() {
-<a href=#589 id=589 data-nosnippet>589</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Digested::default());
-<a href=#590 id=590 data-nosnippet>590</a>  }
-<a href=#591 id=591 data-nosnippet>591</a>  gullet::reading_from_mouth(Mouth::default(), || {
-<a href=#592 id=592 data-nosnippet>592</a>    gullet::unread(tokens);
-<a href=#593 id=593 data-nosnippet>593</a>    clear_prefixes(); <span class="comment">// prefixes shouldn't apply here.
-<a href=#594 id=594 data-nosnippet>594</a>    </span><span class="kw">let </span>mode = <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
-<a href=#595 id=595 data-nosnippet>595</a>      TexMode::Math
-<a href=#596 id=596 data-nosnippet>596</a>    } <span class="kw">else </span>{
-<a href=#597 id=597 data-nosnippet>597</a>      TexMode::Text
-<a href=#598 id=598 data-nosnippet>598</a>    };
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">let </span>initdepth = <span class="macro">stomach!</span>().boxing.len();
-<a href=#600 id=600 data-nosnippet>600</a>    <span class="kw">let </span>depth = initdepth;
-<a href=#601 id=601 data-nosnippet>601</a>    new_local_box_list();
-<a href=#602 id=602 data-nosnippet>602</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="kw">match </span>gullet::get_pending_comment() {
-<a href=#603 id=603 data-nosnippet>603</a>      <span class="prelude-val">Some</span>(comment) =&gt; <span class="prelude-val">Some</span>(comment),
-<a href=#604 id=604 data-nosnippet>604</a>      <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
-<a href=#605 id=605 data-nosnippet>605</a>    } {
-<a href=#606 id=606 data-nosnippet>606</a>      <span class="comment">// Done if we run out of tokens
-<a href=#607 id=607 data-nosnippet>607</a>      </span><span class="kw">let </span>invoked = invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#608 id=608 data-nosnippet>608</a>      extend_box_list(invoked);
-<a href=#609 id=609 data-nosnippet>609</a>
-<a href=#610 id=610 data-nosnippet>610</a>      <span class="kw">if </span>initdepth &gt; <span class="macro">stomach!</span>().boxing.len() {
-<a href=#611 id=611 data-nosnippet>611</a>        <span class="comment">// if we've closed the initial mode.
-<a href=#612 id=612 data-nosnippet>612</a>        </span><span class="kw">break</span>;
-<a href=#613 id=613 data-nosnippet>613</a>      }
-<a href=#614 id=614 data-nosnippet>614</a>      <span class="kw">if </span>initdepth &lt; depth {
-<a href=#615 id=615 data-nosnippet>615</a>        <span class="comment">// TODO
-<a href=#616 id=616 data-nosnippet>616</a>        </span><span class="macro">fatal!</span>(Internal, EoF, <span class="string">"We've fallen off the end, somehow !?!?!?"</span>);
-<a href=#617 id=617 data-nosnippet>617</a>        <span class="comment">//     Fatal('internal', '&lt;EOF&gt;', self,
-<a href=#618 id=618 data-nosnippet>618</a>        //       "We've fallen off the end, somehow!?!?!",
-<a href=#619 id=619 data-nosnippet>619</a>        //       "Last token " . ToString($LaTeXML::CURRENT_TOKEN)
-<a href=#620 id=620 data-nosnippet>620</a>        //         . " (Boxing depth was $initdepth, now $depth: Boxing generated by "
-<a href=#621 id=621 data-nosnippet>621</a>        //         . join(', ', map { ToString($_) } @{ $self{boxing} }))
-<a href=#622 id=622 data-nosnippet>622</a>        //       if $initdepth &lt; $depth;
-<a href=#623 id=623 data-nosnippet>623</a>      </span>}
-<a href=#624 id=624 data-nosnippet>624</a>    }
-<a href=#625 id=625 data-nosnippet>625</a>
-<a href=#626 id=626 data-nosnippet>626</a>    <span class="kw">let </span><span class="kw-2">mut </span>digested_list = List::new(expire_local_box_list());
-<a href=#627 id=627 data-nosnippet>627</a>    digested_list.mode = <span class="prelude-val">Some</span>(mode);
-<a href=#628 id=628 data-nosnippet>628</a>    digested_list.into()
-<a href=#629 id=629 data-nosnippet>629</a>  })
-<a href=#630 id=630 data-nosnippet>630</a>}
-<a href=#631 id=631 data-nosnippet>631</a>
-<a href=#632 id=632 data-nosnippet>632</a><span class="doccomment">/// Return the digested `List` after reading and digesting a body from the its Gullet.
-<a href=#633 id=633 data-nosnippet>633</a>/// The body extends until the current level of boxing or environment is closed.
-<a href=#634 id=634 data-nosnippet>634</a></span><span class="kw">pub fn </span>digest_next_body(terminal_opt: <span class="prelude-ty">Option</span>&lt;Token&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#635 id=635 data-nosnippet>635</a>  <span class="kw">let </span>start_location = { gullet::get_locator() };
-<a href=#636 id=636 data-nosnippet>636</a>
-<a href=#637 id=637 data-nosnippet>637</a>  <span class="kw">let </span>init_depth = { <span class="macro">stomach!</span>().boxing.len() };
-<a href=#638 id=638 data-nosnippet>638</a>  <span class="kw">let </span><span class="kw-2">mut </span>found_token = <span class="bool-val">false</span>;
-<a href=#639 id=639 data-nosnippet>639</a>  <span class="kw">let </span><span class="kw-2">mut </span>found_terminal = <span class="bool-val">false</span>;
-<a href=#640 id=640 data-nosnippet>640</a>  new_local_box_list();
-<a href=#641 id=641 data-nosnippet>641</a>  <span class="kw">let </span>alignment_opt = lookup_alignment();
-<a href=#642 id=642 data-nosnippet>642</a>  <span class="comment">// TODO: bookkeep for "expected" warning
-<a href=#643 id=643 data-nosnippet>643</a>  //let mut aug = Vec::new();
-<a href=#644 id=644 data-nosnippet>644</a>
-<a href=#645 id=645 data-nosnippet>645</a>  // try reading a executable token
-<a href=#646 id=646 data-nosnippet>646</a>  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="kw">match </span>gullet::get_pending_comment() {
-<a href=#647 id=647 data-nosnippet>647</a>    <span class="prelude-val">Some</span>(comment) =&gt; <span class="prelude-val">Some</span>(comment),
-<a href=#648 id=648 data-nosnippet>648</a>    <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
-<a href=#649 id=649 data-nosnippet>649</a>  } {
-<a href=#650 id=650 data-nosnippet>650</a>    <span class="comment">// Check conversion timeout
-<a href=#651 id=651 data-nosnippet>651</a>    </span>check_timeout()<span class="question-mark">?</span>;
-<a href=#652 id=652 data-nosnippet>652</a>    <span class="comment">// done if we run out of tokens
-<a href=#653 id=653 data-nosnippet>653</a>    </span>found_token = <span class="bool-val">true</span>;
-<a href=#654 id=654 data-nosnippet>654</a>    <span class="comment">// first, check for alignment case
-<a href=#655 id=655 data-nosnippet>655</a>    // Perl #2775: only fire at the original alignment nesting level,
-<a href=#656 id=656 data-nosnippet>656</a>    // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
-<a href=#657 id=657 data-nosnippet>657</a>    </span><span class="kw">if </span>alignment_opt.is_some()
-<a href=#658 id=658 data-nosnippet>658</a>      &amp;&amp; !<span class="macro">stomach!</span>().box_list.is_empty()
-<a href=#659 id=659 data-nosnippet>659</a>      &amp;&amp; (<span class="macro">stomach!</span>().boxing.len() &lt;= init_depth)
-<a href=#660 id=660 data-nosnippet>660</a>      &amp;&amp; (token == <span class="macro">T_ALIGN!</span>()
-<a href=#661 id=661 data-nosnippet>661</a>        || token == <span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>)
-<a href=#662 id=662 data-nosnippet>662</a>        || token == <span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@cr"</span>)
-<a href=#663 id=663 data-nosnippet>663</a>        || token == <span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@crcr"</span>))
-<a href=#664 id=664 data-nosnippet>664</a>    {
-<a href=#665 id=665 data-nosnippet>665</a>      gullet::unread_one(token);
-<a href=#666 id=666 data-nosnippet>666</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(expire_local_box_list());
-<a href=#667 id=667 data-nosnippet>667</a>    }
-<a href=#668 id=668 data-nosnippet>668</a>    <span class="comment">// normal case
-<a href=#669 id=669 data-nosnippet>669</a>    </span><span class="kw">let </span>invoked = invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#670 id=670 data-nosnippet>670</a>    extend_box_list(invoked);
-<a href=#671 id=671 data-nosnippet>671</a>
-<a href=#672 id=672 data-nosnippet>672</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
-<a href=#673 id=673 data-nosnippet>673</a>      <span class="kw">if </span><span class="kw-2">&amp;</span>token == terminal {
-<a href=#674 id=674 data-nosnippet>674</a>        found_terminal = <span class="bool-val">true</span>;
-<a href=#675 id=675 data-nosnippet>675</a>        <span class="kw">break</span>;
-<a href=#676 id=676 data-nosnippet>676</a>      }
-<a href=#677 id=677 data-nosnippet>677</a>    }
-<a href=#678 id=678 data-nosnippet>678</a>    <span class="kw">if </span>init_depth &gt; <span class="macro">stomach!</span>().boxing.len() {
-<a href=#679 id=679 data-nosnippet>679</a>      <span class="kw">break</span>;
-<a href=#680 id=680 data-nosnippet>680</a>    }
-<a href=#681 id=681 data-nosnippet>681</a>  }
-<a href=#682 id=682 data-nosnippet>682</a>
-<a href=#683 id=683 data-nosnippet>683</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
-<a href=#684 id=684 data-nosnippet>684</a>    <span class="kw">if </span>!found_terminal {
-<a href=#685 id=685 data-nosnippet>685</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#686 id=686 data-nosnippet>686</a>        <span class="string">"body should have ended with {:?}. current body started at {:?}"</span>,
-<a href=#687 id=687 data-nosnippet>687</a>        terminal,
-<a href=#688 id=688 data-nosnippet>688</a>        start_location
-<a href=#689 id=689 data-nosnippet>689</a>      );
-<a href=#690 id=690 data-nosnippet>690</a>      <span class="macro">Warn!</span>(<span class="string">"expected"</span>, terminal, message);
-<a href=#691 id=691 data-nosnippet>691</a>    }
-<a href=#692 id=692 data-nosnippet>692</a>  }
-<a href=#693 id=693 data-nosnippet>693</a>  <span class="comment">// and add a Dummy `trailer' if none explicit.
-<a href=#694 id=694 data-nosnippet>694</a>  </span><span class="kw">if </span>!found_token {
-<a href=#695 id=695 data-nosnippet>695</a>    push_box_list(Digested::from(Tbox::default()));
-<a href=#696 id=696 data-nosnippet>696</a>    <span class="comment">// info!(target:"digest_next_body","no_token");
-<a href=#697 id=697 data-nosnippet>697</a>  </span>}
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="prelude-val">Ok</span>(expire_local_box_list())
-<a href=#699 id=699 data-nosnippet>699</a>}
-<a href=#700 id=700 data-nosnippet>700</a>
-<a href=#701 id=701 data-nosnippet>701</a><span class="doccomment">/// a convenience function for including chunks of raw TeX (or LaTeX) code
-<a href=#702 id=702 data-nosnippet>702</a>/// It is useful for copying portions of the normal
-<a href=#703 id=703 data-nosnippet>703</a>/// implementation that can be handled simply using macros and primitives.
-<a href=#704 id=704 data-nosnippet>704</a></span><span class="kw">pub fn </span>raw_tex(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#705 id=705 data-nosnippet>705</a>  <span class="comment">// It could be as simple as this, except if catcodes get changed, it's too late!!!
-<a href=#706 id=706 data-nosnippet>706</a>  //  Digest(TokenizeInternal($text));
-<a href=#707 id=707 data-nosnippet>707</a>  </span><span class="kw">let </span>raw_tex_mouth = Mouth::new(
-<a href=#708 id=708 data-nosnippet>708</a>    text,
-<a href=#709 id=709 data-nosnippet>709</a>    <span class="prelude-val">Some</span>(MouthOptions {
-<a href=#710 id=710 data-nosnippet>710</a>      fordefinitions: <span class="bool-val">true</span>,
-<a href=#711 id=711 data-nosnippet>711</a>      at_letter: <span class="bool-val">true</span>,
-<a href=#712 id=712 data-nosnippet>712</a>      ..MouthOptions::default()
-<a href=#713 id=713 data-nosnippet>713</a>    }),
-<a href=#714 id=714 data-nosnippet>714</a>  )<span class="question-mark">?</span>;
-<a href=#715 id=715 data-nosnippet>715</a>  gullet::reading_from_mouth(raw_tex_mouth, || -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#716 id=716 data-nosnippet>716</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
-<a href=#717 id=717 data-nosnippet>717</a>      <span class="kw">if </span>token.get_catcode() != Catcode::SPACE {
-<a href=#718 id=718 data-nosnippet>718</a>        invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#719 id=719 data-nosnippet>719</a>      }
-<a href=#720 id=720 data-nosnippet>720</a>    }
-<a href=#721 id=721 data-nosnippet>721</a>    <span class="prelude-val">Ok</span>(())
-<a href=#722 id=722 data-nosnippet>722</a>  })<span class="question-mark">?</span>;
-<a href=#723 id=723 data-nosnippet>723</a>  <span class="prelude-val">Ok</span>(())
-<a href=#724 id=724 data-nosnippet>724</a>}
-<a href=#725 id=725 data-nosnippet>725</a>
-<a href=#726 id=726 data-nosnippet>726</a><span class="doccomment">/// Invoke a token
-<a href=#727 id=727 data-nosnippet>727</a>///
-<a href=#728 id=728 data-nosnippet>728</a>/// If it is a primitive or constructor, the definition will be invoked,
-<a href=#729 id=729 data-nosnippet>729</a>/// possibly arguments will be parsed from the Gullet.
-<a href=#730 id=730 data-nosnippet>730</a>/// Otherwise, the token is simply digested: turned into an appropriate box.
-<a href=#731 id=731 data-nosnippet>731</a>/// Returns a list of boxes/whatsits.
-<a href=#732 id=732 data-nosnippet>732</a></span><span class="kw">pub fn </span>invoke_token&lt;<span class="lifetime">'a</span>&gt;(input_token: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#733 id=733 data-nosnippet>733</a>  <span class="kw">let </span><span class="kw-2">mut </span>maybe_token: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'a</span>, Token&gt;&gt; = <span class="prelude-val">Some</span>(Cow::Borrowed(input_token));
-<a href=#734 id=734 data-nosnippet>734</a>  <span class="comment">// Overly complex, but want to avoid recursion/stack
-<a href=#735 id=735 data-nosnippet>735</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Digested&gt; = Vec::new();
-<a href=#736 id=736 data-nosnippet>736</a>  <span class="comment">// INVOKE:
-<a href=#737 id=737 data-nosnippet>737</a>  </span><span class="kw">while </span>maybe_token.is_some() {
-<a href=#738 id=738 data-nosnippet>738</a>    <span class="comment">// TODO: This is silly, switch to an owned input_token (it is Copy as of recently).
-<a href=#739 id=739 data-nosnippet>739</a>    </span><span class="kw">let </span>token = maybe_token.take().unwrap().into_owned();
-<a href=#740 id=740 data-nosnippet>740</a>    <span class="comment">// info!(target:"invoke_token", "{:?}", token);
-<a href=#741 id=741 data-nosnippet>741</a>    // RAII guard: auto-pops current_token on scope exit (even on early return/panic)
-<a href=#742 id=742 data-nosnippet>742</a>    </span><span class="kw">let </span>_token_guard = local_current_token_guard(token);
-<a href=#743 id=743 data-nosnippet>743</a>    {
-<a href=#744 id=744 data-nosnippet>744</a>      <span class="macro">stomach_mut!</span>().token_stack.push(token);
-<a href=#745 id=745 data-nosnippet>745</a>    }
-<a href=#746 id=746 data-nosnippet>746</a>    <span class="kw">if </span>{ <span class="macro">stomach!</span>().token_stack.len() } &gt; MAXSTACK {
-<a href=#747 id=747 data-nosnippet>747</a>      <span class="macro">fatal!</span>(
-<a href=#748 id=748 data-nosnippet>748</a>        Stomach,
-<a href=#749 id=749 data-nosnippet>749</a>        Recursion,
-<a href=#750 id=750 data-nosnippet>750</a>        <span class="macro">s!</span>(
-<a href=#751 id=751 data-nosnippet>751</a>          <span class="string">"Excessive recursion(?): Tokens on stack: {:?}"</span>,
-<a href=#752 id=752 data-nosnippet>752</a>          <span class="macro">stomach!</span>().token_stack
-<a href=#753 id=753 data-nosnippet>753</a>        )
-<a href=#754 id=754 data-nosnippet>754</a>      );
-<a href=#755 id=755 data-nosnippet>755</a>    }
-<a href=#756 id=756 data-nosnippet>756</a>    result = Vec::new();
-<a href=#757 id=757 data-nosnippet>757</a>
-<a href=#758 id=758 data-nosnippet>758</a>    <span class="comment">// Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
-<a href=#759 id=759 data-nosnippet>759</a>    // MathPrimitive), as well as (Expandable, Conditional) since the
-<a href=#760 id=760 data-nosnippet>760</a>    // API is identical. However, as the types are different, Rust
-<a href=#761 id=761 data-nosnippet>761</a>    // constrains us here, we need separate match arms for each
-<a href=#762 id=762 data-nosnippet>762</a>    // distinctly typed enum case.
-<a href=#763 id=763 data-nosnippet>763</a>    </span><span class="kw">let </span>digestable_def = lookup_digestable_definition(<span class="kw-2">&amp;</span>token);
-<a href=#764 id=764 data-nosnippet>764</a>    <span class="kw">match </span>digestable_def {
-<a href=#765 id=765 data-nosnippet>765</a>      <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; {
-<a href=#766 id=766 data-nosnippet>766</a>        result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#767 id=767 data-nosnippet>767</a>      },
-<a href=#768 id=768 data-nosnippet>768</a>      <span class="prelude-val">Some</span>(Stored::Token(meaning)) =&gt; {
-<a href=#769 id=769 data-nosnippet>769</a>        <span class="comment">// Common case
-<a href=#770 id=770 data-nosnippet>770</a>        </span><span class="kw">let </span>cc = meaning.get_catcode();
-<a href=#771 id=771 data-nosnippet>771</a>        <span class="kw">if </span>cc == Catcode::CS {
-<a href=#772 id=772 data-nosnippet>772</a>          result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#773 id=773 data-nosnippet>773</a>        } <span class="kw">else if </span>cc.is_absorbable() {
-<a href=#774 id=774 data-nosnippet>774</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
-<a href=#775 id=775 data-nosnippet>775</a>            result.push(digested);
-<a href=#776 id=776 data-nosnippet>776</a>          }
-<a href=#777 id=777 data-nosnippet>777</a>        } <span class="kw">else </span>{
-<a href=#778 id=778 data-nosnippet>778</a>          <span class="comment">// Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
-<a href=#779 id=779 data-nosnippet>779</a>          </span><span class="kw">if </span>token.get_catcode() == Catcode::ALIGN {
-<a href=#780 id=780 data-nosnippet>780</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(relax_meaning) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)) {
-<a href=#781 id=781 data-nosnippet>781</a>              assign_meaning(<span class="kw-2">&amp;</span>token, relax_meaning, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#782 id=782 data-nosnippet>782</a>            }
-<a href=#783 id=783 data-nosnippet>783</a>          }
-<a href=#784 id=784 data-nosnippet>784</a>          <span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#785 id=785 data-nosnippet>785</a>            <span class="string">"The token {:?} (catcode {:?}) should never reach Stomach!"</span>,
-<a href=#786 id=786 data-nosnippet>786</a>            token,
-<a href=#787 id=787 data-nosnippet>787</a>            cc
-<a href=#788 id=788 data-nosnippet>788</a>          );
-<a href=#789 id=789 data-nosnippet>789</a>          <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, token, <span class="kw-2">&amp;</span>message);
-<a href=#790 id=790 data-nosnippet>790</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
-<a href=#791 id=791 data-nosnippet>791</a>            result.push(digested);
-<a href=#792 id=792 data-nosnippet>792</a>          }
-<a href=#793 id=793 data-nosnippet>793</a>        }
-<a href=#794 id=794 data-nosnippet>794</a>      },
-<a href=#795 id=795 data-nosnippet>795</a>      <span class="prelude-val">Some</span>(Stored::Expandable(meaning)) =&gt; {
-<a href=#796 id=796 data-nosnippet>796</a>        <span class="comment">// A math-active character will (typically) be a macro,
-<a href=#797 id=797 data-nosnippet>797</a>        // but it isn't expanded in the gullet, but later when digesting, in math mode
-<a href=#798 id=798 data-nosnippet>798</a>        // (? I think)
-<a href=#799 id=799 data-nosnippet>799</a>        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#800 id=800 data-nosnippet>800</a>        <span class="kw">if </span>!invoked_meaning.is_empty() {
-<a href=#801 id=801 data-nosnippet>801</a>          {
-<a href=#802 id=802 data-nosnippet>802</a>            gullet::unread(invoked_meaning);
-<a href=#803 id=803 data-nosnippet>803</a>          }
-<a href=#804 id=804 data-nosnippet>804</a>        }
-<a href=#805 id=805 data-nosnippet>805</a>        <span class="comment">// replace the token by it's expansion!!!
-<a href=#806 id=806 data-nosnippet>806</a>        </span>maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>.map(Cow::Owned);
-<a href=#807 id=807 data-nosnippet>807</a>        {
-<a href=#808 id=808 data-nosnippet>808</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
-<a href=#809 id=809 data-nosnippet>809</a>        }
-<a href=#810 id=810 data-nosnippet>810</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
-<a href=#811 id=811 data-nosnippet>811</a>        </span><span class="kw">continue</span>;
-<a href=#812 id=812 data-nosnippet>812</a>      },
-<a href=#813 id=813 data-nosnippet>813</a>      <span class="prelude-val">Some</span>(Stored::Conditional(meaning)) =&gt; {
-<a href=#814 id=814 data-nosnippet>814</a>        <span class="comment">// Conditionals are "expandable", use the regular invoke.
-<a href=#815 id=815 data-nosnippet>815</a>        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#816 id=816 data-nosnippet>816</a>        gullet::unread(invoked_meaning);
-<a href=#817 id=817 data-nosnippet>817</a>        maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>.map(Cow::Owned);
-<a href=#818 id=818 data-nosnippet>818</a>        {
-<a href=#819 id=819 data-nosnippet>819</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
-<a href=#820 id=820 data-nosnippet>820</a>        }
-<a href=#821 id=821 data-nosnippet>821</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
-<a href=#822 id=822 data-nosnippet>822</a>        </span><span class="kw">continue</span>;
-<a href=#823 id=823 data-nosnippet>823</a>      },
-<a href=#824 id=824 data-nosnippet>824</a>      <span class="prelude-val">Some</span>(Stored::Constructor(meaning)) =&gt; {
-<a href=#825 id=825 data-nosnippet>825</a>        <span class="comment">// Otherwise, a normal primitive or constructor
-<a href=#826 id=826 data-nosnippet>826</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#827 id=827 data-nosnippet>827</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#828 id=828 data-nosnippet>828</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#829 id=829 data-nosnippet>829</a>        </span>}
-<a href=#830 id=830 data-nosnippet>830</a>      },
-<a href=#831 id=831 data-nosnippet>831</a>      <span class="prelude-val">Some</span>(Stored::Primitive(meaning)) =&gt; {
-<a href=#832 id=832 data-nosnippet>832</a>        <span class="comment">// Otherwise, a normal primitive or constructor
-<a href=#833 id=833 data-nosnippet>833</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#834 id=834 data-nosnippet>834</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#835 id=835 data-nosnippet>835</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#836 id=836 data-nosnippet>836</a>        </span>}
-<a href=#837 id=837 data-nosnippet>837</a>      },
-<a href=#838 id=838 data-nosnippet>838</a>      <span class="prelude-val">Some</span>(Stored::MathPrimitive(meaning)) =&gt; {
-<a href=#839 id=839 data-nosnippet>839</a>        <span class="comment">// Copy of regular Primitive
-<a href=#840 id=840 data-nosnippet>840</a>        // Otherwise, a normal primitive or constructor
-<a href=#841 id=841 data-nosnippet>841</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#842 id=842 data-nosnippet>842</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#843 id=843 data-nosnippet>843</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#844 id=844 data-nosnippet>844</a>        </span>}
-<a href=#845 id=845 data-nosnippet>845</a>      },
-<a href=#846 id=846 data-nosnippet>846</a>      <span class="prelude-val">Some</span>(Stored::Register(meaning)) =&gt; {
-<a href=#847 id=847 data-nosnippet>847</a>        <span class="comment">// Registers are special primitives
-<a href=#848 id=848 data-nosnippet>848</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#849 id=849 data-nosnippet>849</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#850 id=850 data-nosnippet>850</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#851 id=851 data-nosnippet>851</a>        </span>}
-<a href=#852 id=852 data-nosnippet>852</a>      },
-<a href=#853 id=853 data-nosnippet>853</a>      meaning =&gt; {
-<a href=#854 id=854 data-nosnippet>854</a>        <span class="comment">// Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
-<a href=#855 id=855 data-nosnippet>855</a>        </span><span class="macro">Error!</span>(<span class="string">"misdefined"</span>, token,
-<a href=#856 id=856 data-nosnippet>856</a>          <span class="macro">s!</span>(<span class="string">"Unexpected object in Stomach: {:?}"</span>, meaning));
-<a href=#857 id=857 data-nosnippet>857</a>      },
-<a href=#858 id=858 data-nosnippet>858</a>    }
-<a href=#859 id=859 data-nosnippet>859</a>    <span class="comment">// _token_guard drops here, auto-expiring current token
-<a href=#860 id=860 data-nosnippet>860</a>    </span><span class="kw">break</span>;
-<a href=#861 id=861 data-nosnippet>861</a>  }
-<a href=#862 id=862 data-nosnippet>862</a>  <span class="macro">stomach_mut!</span>().token_stack.pop();
-<a href=#863 id=863 data-nosnippet>863</a>  <span class="prelude-val">Ok</span>(result)
-<a href=#864 id=864 data-nosnippet>864</a>}
-<a href=#865 id=865 data-nosnippet>865</a>
-<a href=#866 id=866 data-nosnippet>866</a><span class="kw">fn </span>invoke_token_undefined(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#867 id=867 data-nosnippet>867</a>  <span class="kw">let </span>cs = token.with_cs_name(|cs| String::from(cs));
-<a href=#868 id=868 data-nosnippet>868</a>  note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cs));
-<a href=#869 id=869 data-nosnippet>869</a>
-<a href=#870 id=870 data-nosnippet>870</a>  <span class="comment">// To minimize chatter, go ahead and define it...
-<a href=#871 id=871 data-nosnippet>871</a>  </span><span class="kw">if </span>cs.starts_with(<span class="string">"\\if"</span>) {
-<a href=#872 id=872 data-nosnippet>872</a>    <span class="comment">// Apparently an \ifsomething ???
-<a href=#873 id=873 data-nosnippet>873</a>    </span><span class="kw">let </span>name = cs.replace(<span class="string">"\\if"</span>, <span class="string">""</span>);
-<a href=#874 id=874 data-nosnippet>874</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
-<a href=#875 id=875 data-nosnippet>875</a>    <span class="macro">Error!</span>(
-<a href=#876 id=876 data-nosnippet>876</a>      <span class="string">"undefined"</span>,
-<a href=#877 id=877 data-nosnippet>877</a>      token,
-<a href=#878 id=878 data-nosnippet>878</a>      <span class="kw-2">&amp;</span>message,
-<a href=#879 id=879 data-nosnippet>879</a>      <span class="string">"Defining it now as with \\newif"
-<a href=#880 id=880 data-nosnippet>880</a>    </span>);
-<a href=#881 id=881 data-nosnippet>881</a>    <span class="comment">// install stub definitions for new conditional
-<a href=#882 id=882 data-nosnippet>882</a>    </span>install_definition(
-<a href=#883 id=883 data-nosnippet>883</a>      Expandable::new(
-<a href=#884 id=884 data-nosnippet>884</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
-<a href=#885 id=885 data-nosnippet>885</a>        <span class="prelude-val">None</span>,
-<a href=#886 id=886 data-nosnippet>886</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs), <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)).into(),
-<a href=#887 id=887 data-nosnippet>887</a>        <span class="prelude-val">None</span>,
-<a href=#888 id=888 data-nosnippet>888</a>      )<span class="question-mark">?</span>,
-<a href=#889 id=889 data-nosnippet>889</a>      <span class="prelude-val">None</span>,
-<a href=#890 id=890 data-nosnippet>890</a>    );
-<a href=#891 id=891 data-nosnippet>891</a>    install_definition(
-<a href=#892 id=892 data-nosnippet>892</a>      Expandable::new(
-<a href=#893 id=893 data-nosnippet>893</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
-<a href=#894 id=894 data-nosnippet>894</a>        <span class="prelude-val">None</span>,
-<a href=#895 id=895 data-nosnippet>895</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(cs), <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)).into(),
-<a href=#896 id=896 data-nosnippet>896</a>        <span class="prelude-val">None</span>,
-<a href=#897 id=897 data-nosnippet>897</a>      )<span class="question-mark">?</span>,
-<a href=#898 id=898 data-nosnippet>898</a>      <span class="prelude-val">None</span>,
-<a href=#899 id=899 data-nosnippet>899</a>    );
-<a href=#900 id=900 data-nosnippet>900</a>
-<a href=#901 id=901 data-nosnippet>901</a>    let_i(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">None</span>);
-<a href=#902 id=902 data-nosnippet>902</a>    gullet::unread_one(<span class="kw-2">*</span>token); <span class="comment">// Retry
-<a href=#903 id=903 data-nosnippet>903</a>    </span><span class="prelude-val">Ok</span>(Vec::new())
-<a href=#904 id=904 data-nosnippet>904</a>  } <span class="kw">else </span>{
-<a href=#905 id=905 data-nosnippet>905</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
-<a href=#906 id=906 data-nosnippet>906</a>    <span class="macro">Error!</span>(
-<a href=#907 id=907 data-nosnippet>907</a>      <span class="string">"undefined"</span>,
-<a href=#908 id=908 data-nosnippet>908</a>      token,
-<a href=#909 id=909 data-nosnippet>909</a>      <span class="kw-2">&amp;</span>message,
-<a href=#910 id=910 data-nosnippet>910</a>      <span class="string">"Defining it now as &lt;ltx:ERROR/&gt;"
-<a href=#911 id=911 data-nosnippet>911</a>    </span>);
-<a href=#912 id=912 data-nosnippet>912</a>    install_definition(
-<a href=#913 id=913 data-nosnippet>913</a>      Constructor {
-<a href=#914 id=914 data-nosnippet>914</a>        cs: <span class="kw-2">*</span>token,
-<a href=#915 id=915 data-nosnippet>915</a>        paramlist: <span class="prelude-val">None</span>,
-<a href=#916 id=916 data-nosnippet>916</a>        replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|document, _args, _props| {
-<a href=#917 id=917 data-nosnippet>917</a>          document.make_error(<span class="string">"undefined"</span>, <span class="kw-2">&amp;</span>cs)
-<a href=#918 id=918 data-nosnippet>918</a>        })),
-<a href=#919 id=919 data-nosnippet>919</a>        ..Constructor::default()
-<a href=#920 id=920 data-nosnippet>920</a>      },
-<a href=#921 id=921 data-nosnippet>921</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#922 id=922 data-nosnippet>922</a>    );
-<a href=#923 id=923 data-nosnippet>923</a>    <span class="comment">// Perl: unread the token and return empty, so the outer loop re-reads
-<a href=#924 id=924 data-nosnippet>924</a>    // and dispatches through the normal path (with the newly installed stub).
-<a href=#925 id=925 data-nosnippet>925</a>    // This ensures gullet-level side effects (filtering, expansion) are applied.
-<a href=#926 id=926 data-nosnippet>926</a>    </span>gullet::unread_one(<span class="kw-2">*</span>token);
-<a href=#927 id=927 data-nosnippet>927</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#928 id=928 data-nosnippet>928</a>  }
-<a href=#929 id=929 data-nosnippet>929</a>}
-<a href=#930 id=930 data-nosnippet>930</a>
-<a href=#931 id=931 data-nosnippet>931</a><span class="kw">fn </span>invoke_token_simple(meaning: Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#932 id=932 data-nosnippet>932</a>  <span class="kw">let </span>cc = meaning.get_catcode();
-<a href=#933 id=933 data-nosnippet>933</a>  <span class="kw">let </span>font = lookup_font();
-<a href=#934 id=934 data-nosnippet>934</a>  <span class="kw">match </span>cc {
-<a href=#935 id=935 data-nosnippet>935</a>    Catcode::SPACE =&gt; {
-<a href=#936 id=936 data-nosnippet>936</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 234: prefixes shouldn't apply here.
-<a href=#937 id=937 data-nosnippet>937</a>      // Perl: if($STATE-&gt;lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
-<a href=#938 id=938 data-nosnippet>938</a>      </span><span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
-<a href=#939 id=939 data-nosnippet>939</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"math"</span>) || mode.ends_with(<span class="string">"vertical"</span>) {
-<a href=#940 id=940 data-nosnippet>940</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#941 id=941 data-nosnippet>941</a>      } <span class="kw">else </span>{
-<a href=#942 id=942 data-nosnippet>942</a>        enter_horizontal();
-<a href=#943 id=943 data-nosnippet>943</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
-<a href=#944 id=944 data-nosnippet>944</a>          meaning.get_sym(),
-<a href=#945 id=945 data-nosnippet>945</a>          font,
-<a href=#946 id=946 data-nosnippet>946</a>          <span class="prelude-val">None</span>,
-<a href=#947 id=947 data-nosnippet>947</a>          <span class="macro">Tokens!</span>(meaning),
-<a href=#948 id=948 data-nosnippet>948</a>          HashMap::default(),
-<a href=#949 id=949 data-nosnippet>949</a>        ))))
-<a href=#950 id=950 data-nosnippet>950</a>      }
-<a href=#951 id=951 data-nosnippet>951</a>    },
-<a href=#952 id=952 data-nosnippet>952</a>    Catcode::COMMENT =&gt; {
-<a href=#953 id=953 data-nosnippet>953</a>      <span class="comment">// Perl Stomach.pm lines 241-244: decode comment via font encoding
-<a href=#954 id=954 data-nosnippet>954</a>      </span><span class="kw">let </span>decoded = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
-<a href=#955 id=955 data-nosnippet>955</a>      <span class="kw">let </span>comment = arena::with(decoded, |s| {
-<a href=#956 id=956 data-nosnippet>956</a>        <span class="comment">// However, spaces normally would have be digested away as positioning...
-<a href=#957 id=957 data-nosnippet>957</a>        // Replace NBSP + combining strikethrough (OT1 space position) with actual space
-<a href=#958 id=958 data-nosnippet>958</a>        </span>s.replace(<span class="string">"\u{00A0}\u{0335}"</span>, <span class="string">" "</span>)
-<a href=#959 id=959 data-nosnippet>959</a>      });
-<a href=#960 id=960 data-nosnippet>960</a>      <span class="comment">// Perl: returns LaTeXML::Core::Comment-&gt;new($comment)
-<a href=#961 id=961 data-nosnippet>961</a>      // which gets absorbed as an XML comment node via Document::insertComment
-<a href=#962 id=962 data-nosnippet>962</a>      </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Comment(comment))))
-<a href=#963 id=963 data-nosnippet>963</a>    },
-<a href=#964 id=964 data-nosnippet>964</a>    <span class="kw">_ </span>=&gt; {
-<a href=#965 id=965 data-nosnippet>965</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 247: prefixes shouldn't apply here.
-<a href=#966 id=966 data-nosnippet>966</a>      // Perl: check mathcode for IN_MATH characters (Stomach.pm lines 248-251)
-<a href=#967 id=967 data-nosnippet>967</a>      // In Perl, all math chars go through decodeMathChar which decodes via
-<a href=#968 id=968 data-nosnippet>968</a>      // the font encoding. In Rust, Tbox::new already handles IN_MATH:
-<a href=#969 id=969 data-nosnippet>969</a>      // it sets mode="math", looks up math_token_attributes for role/meaning/name,
-<a href=#970 id=970 data-nosnippet>970</a>      // and specializes the font. This produces the correct LaTeXML-level properties.
-<a href=#971 id=971 data-nosnippet>971</a>      // The mathchar parsing handles non-ASCII chars needing font map lookup.
-<a href=#972 id=972 data-nosnippet>972</a>      // TODO: Use for chars where font-encoding glyph differs from input.
-<a href=#973 id=973 data-nosnippet>973</a>      // Perl L248-257: if IN_MATH &amp;&amp; mathcode → decodeMathChar (math box)
-<a href=#974 id=974 data-nosnippet>974</a>      // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
-<a href=#975 id=975 data-nosnippet>975</a>      </span><span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
-<a href=#976 id=976 data-nosnippet>976</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(mathcode) = lookup_mathcode_sym(<span class="kw-2">&amp;</span>meaning.get_sym()) {
-<a href=#977 id=977 data-nosnippet>977</a>          <span class="kw">return </span><span class="kw">crate</span>::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
-<a href=#978 id=978 data-nosnippet>978</a>        }
-<a href=#979 id=979 data-nosnippet>979</a>      }
-<a href=#980 id=980 data-nosnippet>980</a>      <span class="comment">// Fallthrough: either not in math, or in math but no mathcode
-<a href=#981 id=981 data-nosnippet>981</a>      </span>enter_horizontal();
-<a href=#982 id=982 data-nosnippet>982</a>      <span class="kw">let </span>text = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
-<a href=#983 id=983 data-nosnippet>983</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
-<a href=#984 id=984 data-nosnippet>984</a>        text,
-<a href=#985 id=985 data-nosnippet>985</a>        <span class="prelude-val">None</span>,
-<a href=#986 id=986 data-nosnippet>986</a>        <span class="prelude-val">None</span>,
-<a href=#987 id=987 data-nosnippet>987</a>        <span class="macro">Tokens!</span>(meaning),   <span class="comment">// tokens
-<a href=#988 id=988 data-nosnippet>988</a>        </span>HashMap::default(), <span class="comment">// properties
-<a href=#989 id=989 data-nosnippet>989</a>      </span>))))
-<a href=#990 id=990 data-nosnippet>990</a>    },
-<a href=#991 id=991 data-nosnippet>991</a>  }
-<a href=#992 id=992 data-nosnippet>992</a>}
-<a href=#993 id=993 data-nosnippet>993</a>
-<a href=#994 id=994 data-nosnippet>994</a><span class="kw">pub fn </span>set_stomach(new_stomach: Stomach) {
-<a href=#995 id=995 data-nosnippet>995</a>  <span class="kw">let </span><span class="kw-2">mut </span>singleton = <span class="macro">stomach_mut!</span>();
-<a href=#996 id=996 data-nosnippet>996</a>  <span class="kw-2">*</span>singleton = new_stomach;
-<a href=#997 id=997 data-nosnippet>997</a>}
-<a href=#998 id=998 data-nosnippet>998</a><span class="kw">pub fn </span>clone_box_list() -&gt; Vec&lt;Digested&gt; { <span class="macro">stomach!</span>().box_list.clone() }
-<a href=#999 id=999 data-nosnippet>999</a>
-<a href=#1000 id=1000 data-nosnippet>1000</a><span class="doccomment">/// get the current boxing level
-<a href=#1001 id=1001 data-nosnippet>1001</a></span><span class="kw">pub fn </span>get_boxing_level() -&gt; usize { <span class="macro">stomach!</span>().boxing.len() }
-<a href=#1002 id=1002 data-nosnippet>1002</a>
-<a href=#1003 id=1003 data-nosnippet>1003</a><span class="doccomment">/// ScriptLevel is similar to boxing level, but relative to current Math mode's level
-<a href=#1004 id=1004 data-nosnippet>1004</a>///
-<a href=#1005 id=1005 data-nosnippet>1005</a>/// This is used for the scriptpos attribute to recognize overlapping sccripts.
-<a href=#1006 id=1006 data-nosnippet>1006</a>/// Making it relative to the math's level avoids unnecessary changes
-<a href=#1007 id=1007 data-nosnippet>1007</a></span><span class="kw">pub fn </span>get_script_level() -&gt; usize {
-<a href=#1008 id=1008 data-nosnippet>1008</a>  <span class="kw">let </span>boxlevel = get_boxing_level();
-<a href=#1009 id=1009 data-nosnippet>1009</a>  with_value(<span class="string">"script_base_level"</span>, |val_opt| {
-<a href=#1010 id=1010 data-nosnippet>1010</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Int(prevlevel)) = val_opt {
-<a href=#1011 id=1011 data-nosnippet>1011</a>      boxlevel - (<span class="kw-2">*</span>prevlevel <span class="kw">as </span>usize) + <span class="number">1
-<a href=#1012 id=1012 data-nosnippet>1012</a>    </span>} <span class="kw">else </span>{
-<a href=#1013 id=1013 data-nosnippet>1013</a>      boxlevel
-<a href=#1014 id=1014 data-nosnippet>1014</a>    }
-<a href=#1015 id=1015 data-nosnippet>1015</a>  })
+<a href=#578 id=578 data-nosnippet>578</a><span class="kw">pub fn </span>push_box_list(arg: Digested) { <span class="macro">stomach_mut!</span>().box_list.push(arg) }
+<a href=#579 id=579 data-nosnippet>579</a><span class="kw">fn </span>push_box_list_vec(args: Vec&lt;Digested&gt;) { <span class="macro">stomach_mut!</span>().box_list.extend(args) }
+<a href=#580 id=580 data-nosnippet>580</a><span class="kw">pub fn </span>pop_box_list() -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; { <span class="macro">stomach_mut!</span>().box_list.pop() }
+<a href=#581 id=581 data-nosnippet>581</a><span class="kw">pub fn </span>with_box_list&lt;R, FnR&gt;(caller: FnR) -&gt; R
+<a href=#582 id=582 data-nosnippet>582</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>[Digested]) -&gt; R {
+<a href=#583 id=583 data-nosnippet>583</a>  <span class="kw">let </span>stomach = <span class="macro">stomach!</span>();
+<a href=#584 id=584 data-nosnippet>584</a>  <span class="kw">let </span>list = <span class="kw-2">&amp;</span>stomach.box_list;
+<a href=#585 id=585 data-nosnippet>585</a>  caller(list)
+<a href=#586 id=586 data-nosnippet>586</a>}
+<a href=#587 id=587 data-nosnippet>587</a><span class="kw">pub fn </span>with_box_list_mut&lt;R, FnR&gt;(caller: FnR) -&gt; R
+<a href=#588 id=588 data-nosnippet>588</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>[Digested]) -&gt; R {
+<a href=#589 id=589 data-nosnippet>589</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
+<a href=#590 id=590 data-nosnippet>590</a>  <span class="kw">let </span>list = <span class="kw-2">&amp;mut </span>stomach.box_list;
+<a href=#591 id=591 data-nosnippet>591</a>  caller(list)
+<a href=#592 id=592 data-nosnippet>592</a>}
+<a href=#593 id=593 data-nosnippet>593</a><span class="doccomment">/// Access to the current box_list as a `&amp;mut Vec` — allows push/pop operations.
+<a href=#594 id=594 data-nosnippet>594</a></span><span class="kw">pub fn </span>with_box_list_mut_vec&lt;R, FnR&gt;(caller: FnR) -&gt; R
+<a href=#595 id=595 data-nosnippet>595</a><span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Vec&lt;Digested&gt;) -&gt; R {
+<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="macro">stomach_mut!</span>();
+<a href=#597 id=597 data-nosnippet>597</a>  caller(<span class="kw-2">&amp;mut </span>stomach.box_list)
+<a href=#598 id=598 data-nosnippet>598</a>}
+<a href=#599 id=599 data-nosnippet>599</a>
+<a href=#600 id=600 data-nosnippet>600</a><span class="comment">// **********************************************************************
+<a href=#601 id=601 data-nosnippet>601</a>// Digestion
+<a href=#602 id=602 data-nosnippet>602</a>// **********************************************************************
+<a href=#603 id=603 data-nosnippet>603</a>
+<a href=#604 id=604 data-nosnippet>604</a></span><span class="doccomment">/// Digest a list of tokens independent from any current Gullet.
+<a href=#605 id=605 data-nosnippet>605</a>/// Typically used to digest arguments to primitives or constructors.
+<a href=#606 id=606 data-nosnippet>606</a>/// Returns a List containing the digested material.
+<a href=#607 id=607 data-nosnippet>607</a></span><span class="kw">pub fn </span>digest&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+<a href=#608 id=608 data-nosnippet>608</a>  <span class="kw">let </span>tokens: Tokens = tokens.into();
+<a href=#609 id=609 data-nosnippet>609</a>  <span class="kw">if </span>tokens.is_empty() {
+<a href=#610 id=610 data-nosnippet>610</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Digested::default());
+<a href=#611 id=611 data-nosnippet>611</a>  }
+<a href=#612 id=612 data-nosnippet>612</a>  gullet::reading_from_mouth(Mouth::default(), || {
+<a href=#613 id=613 data-nosnippet>613</a>    gullet::unread(tokens);
+<a href=#614 id=614 data-nosnippet>614</a>    clear_prefixes(); <span class="comment">// prefixes shouldn't apply here.
+<a href=#615 id=615 data-nosnippet>615</a>    </span><span class="kw">let </span>mode = <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+<a href=#616 id=616 data-nosnippet>616</a>      TexMode::Math
+<a href=#617 id=617 data-nosnippet>617</a>    } <span class="kw">else </span>{
+<a href=#618 id=618 data-nosnippet>618</a>      TexMode::Text
+<a href=#619 id=619 data-nosnippet>619</a>    };
+<a href=#620 id=620 data-nosnippet>620</a>    <span class="kw">let </span>initdepth = <span class="macro">stomach!</span>().boxing.len();
+<a href=#621 id=621 data-nosnippet>621</a>    <span class="kw">let </span>depth = initdepth;
+<a href=#622 id=622 data-nosnippet>622</a>    new_local_box_list();
+<a href=#623 id=623 data-nosnippet>623</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="kw">match </span>gullet::get_pending_comment() {
+<a href=#624 id=624 data-nosnippet>624</a>      <span class="prelude-val">Some</span>(comment) =&gt; <span class="prelude-val">Some</span>(comment),
+<a href=#625 id=625 data-nosnippet>625</a>      <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
+<a href=#626 id=626 data-nosnippet>626</a>    } {
+<a href=#627 id=627 data-nosnippet>627</a>      <span class="comment">// Done if we run out of tokens
+<a href=#628 id=628 data-nosnippet>628</a>      </span><span class="kw">let </span>invoked = invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#629 id=629 data-nosnippet>629</a>      extend_box_list(invoked);
+<a href=#630 id=630 data-nosnippet>630</a>
+<a href=#631 id=631 data-nosnippet>631</a>      <span class="kw">if </span>initdepth &gt; <span class="macro">stomach!</span>().boxing.len() {
+<a href=#632 id=632 data-nosnippet>632</a>        <span class="comment">// if we've closed the initial mode.
+<a href=#633 id=633 data-nosnippet>633</a>        </span><span class="kw">break</span>;
+<a href=#634 id=634 data-nosnippet>634</a>      }
+<a href=#635 id=635 data-nosnippet>635</a>      <span class="kw">if </span>initdepth &lt; depth {
+<a href=#636 id=636 data-nosnippet>636</a>        <span class="comment">// TODO
+<a href=#637 id=637 data-nosnippet>637</a>        </span><span class="macro">fatal!</span>(Internal, EoF, <span class="string">"We've fallen off the end, somehow !?!?!?"</span>);
+<a href=#638 id=638 data-nosnippet>638</a>        <span class="comment">//     Fatal('internal', '&lt;EOF&gt;', self,
+<a href=#639 id=639 data-nosnippet>639</a>        //       "We've fallen off the end, somehow!?!?!",
+<a href=#640 id=640 data-nosnippet>640</a>        //       "Last token " . ToString($LaTeXML::CURRENT_TOKEN)
+<a href=#641 id=641 data-nosnippet>641</a>        //         . " (Boxing depth was $initdepth, now $depth: Boxing generated by "
+<a href=#642 id=642 data-nosnippet>642</a>        //         . join(', ', map { ToString($_) } @{ $self{boxing} }))
+<a href=#643 id=643 data-nosnippet>643</a>        //       if $initdepth &lt; $depth;
+<a href=#644 id=644 data-nosnippet>644</a>      </span>}
+<a href=#645 id=645 data-nosnippet>645</a>    }
+<a href=#646 id=646 data-nosnippet>646</a>
+<a href=#647 id=647 data-nosnippet>647</a>    <span class="kw">let </span><span class="kw-2">mut </span>digested_list = List::new(expire_local_box_list());
+<a href=#648 id=648 data-nosnippet>648</a>    digested_list.mode = <span class="prelude-val">Some</span>(mode);
+<a href=#649 id=649 data-nosnippet>649</a>    digested_list.into()
+<a href=#650 id=650 data-nosnippet>650</a>  })
+<a href=#651 id=651 data-nosnippet>651</a>}
+<a href=#652 id=652 data-nosnippet>652</a>
+<a href=#653 id=653 data-nosnippet>653</a><span class="doccomment">/// Return the digested `List` after reading and digesting a body from the its Gullet.
+<a href=#654 id=654 data-nosnippet>654</a>/// The body extends until the current level of boxing or environment is closed.
+<a href=#655 id=655 data-nosnippet>655</a></span><span class="kw">pub fn </span>digest_next_body(terminal_opt: <span class="prelude-ty">Option</span>&lt;Token&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#656 id=656 data-nosnippet>656</a>  <span class="kw">let </span>start_location = { gullet::get_locator() };
+<a href=#657 id=657 data-nosnippet>657</a>
+<a href=#658 id=658 data-nosnippet>658</a>  <span class="kw">let </span>init_depth = { <span class="macro">stomach!</span>().boxing.len() };
+<a href=#659 id=659 data-nosnippet>659</a>  <span class="kw">let </span><span class="kw-2">mut </span>found_token = <span class="bool-val">false</span>;
+<a href=#660 id=660 data-nosnippet>660</a>  <span class="kw">let </span><span class="kw-2">mut </span>found_terminal = <span class="bool-val">false</span>;
+<a href=#661 id=661 data-nosnippet>661</a>  new_local_box_list();
+<a href=#662 id=662 data-nosnippet>662</a>  <span class="kw">let </span>alignment_opt = lookup_alignment();
+<a href=#663 id=663 data-nosnippet>663</a>  <span class="comment">// TODO: bookkeep for "expected" warning
+<a href=#664 id=664 data-nosnippet>664</a>  //let mut aug = Vec::new();
+<a href=#665 id=665 data-nosnippet>665</a>
+<a href=#666 id=666 data-nosnippet>666</a>  // try reading a executable token
+<a href=#667 id=667 data-nosnippet>667</a>  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="kw">match </span>gullet::get_pending_comment() {
+<a href=#668 id=668 data-nosnippet>668</a>    <span class="prelude-val">Some</span>(comment) =&gt; <span class="prelude-val">Some</span>(comment),
+<a href=#669 id=669 data-nosnippet>669</a>    <span class="prelude-val">None </span>=&gt; gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
+<a href=#670 id=670 data-nosnippet>670</a>  } {
+<a href=#671 id=671 data-nosnippet>671</a>    <span class="comment">// Check conversion timeout
+<a href=#672 id=672 data-nosnippet>672</a>    </span>check_timeout()<span class="question-mark">?</span>;
+<a href=#673 id=673 data-nosnippet>673</a>    <span class="comment">// done if we run out of tokens
+<a href=#674 id=674 data-nosnippet>674</a>    </span>found_token = <span class="bool-val">true</span>;
+<a href=#675 id=675 data-nosnippet>675</a>    <span class="comment">// first, check for alignment case
+<a href=#676 id=676 data-nosnippet>676</a>    // Perl #2775: only fire at the original alignment nesting level,
+<a href=#677 id=677 data-nosnippet>677</a>    // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
+<a href=#678 id=678 data-nosnippet>678</a>    </span><span class="kw">if </span>alignment_opt.is_some()
+<a href=#679 id=679 data-nosnippet>679</a>      &amp;&amp; !<span class="macro">stomach!</span>().box_list.is_empty()
+<a href=#680 id=680 data-nosnippet>680</a>      &amp;&amp; (<span class="macro">stomach!</span>().boxing.len() &lt;= init_depth)
+<a href=#681 id=681 data-nosnippet>681</a>      &amp;&amp; (token == <span class="macro">T_ALIGN!</span>()
+<a href=#682 id=682 data-nosnippet>682</a>        || token == <span class="macro">T_CS!</span>(<span class="string">"\\cr"</span>)
+<a href=#683 id=683 data-nosnippet>683</a>        || token == <span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@cr"</span>)
+<a href=#684 id=684 data-nosnippet>684</a>        || token == <span class="macro">T_CS!</span>(<span class="string">"\\lx@hidden@crcr"</span>))
+<a href=#685 id=685 data-nosnippet>685</a>    {
+<a href=#686 id=686 data-nosnippet>686</a>      gullet::unread_one(token);
+<a href=#687 id=687 data-nosnippet>687</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(expire_local_box_list());
+<a href=#688 id=688 data-nosnippet>688</a>    }
+<a href=#689 id=689 data-nosnippet>689</a>    <span class="comment">// normal case
+<a href=#690 id=690 data-nosnippet>690</a>    </span><span class="kw">let </span>invoked = invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#691 id=691 data-nosnippet>691</a>    extend_box_list(invoked);
+<a href=#692 id=692 data-nosnippet>692</a>
+<a href=#693 id=693 data-nosnippet>693</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
+<a href=#694 id=694 data-nosnippet>694</a>      <span class="kw">if </span><span class="kw-2">&amp;</span>token == terminal {
+<a href=#695 id=695 data-nosnippet>695</a>        found_terminal = <span class="bool-val">true</span>;
+<a href=#696 id=696 data-nosnippet>696</a>        <span class="kw">break</span>;
+<a href=#697 id=697 data-nosnippet>697</a>      }
+<a href=#698 id=698 data-nosnippet>698</a>    }
+<a href=#699 id=699 data-nosnippet>699</a>    <span class="kw">if </span>init_depth &gt; <span class="macro">stomach!</span>().boxing.len() {
+<a href=#700 id=700 data-nosnippet>700</a>      <span class="kw">break</span>;
+<a href=#701 id=701 data-nosnippet>701</a>    }
+<a href=#702 id=702 data-nosnippet>702</a>  }
+<a href=#703 id=703 data-nosnippet>703</a>
+<a href=#704 id=704 data-nosnippet>704</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
+<a href=#705 id=705 data-nosnippet>705</a>    <span class="kw">if </span>!found_terminal {
+<a href=#706 id=706 data-nosnippet>706</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(
+<a href=#707 id=707 data-nosnippet>707</a>        <span class="string">"body should have ended with {:?}. current body started at {:?}"</span>,
+<a href=#708 id=708 data-nosnippet>708</a>        terminal,
+<a href=#709 id=709 data-nosnippet>709</a>        start_location
+<a href=#710 id=710 data-nosnippet>710</a>      );
+<a href=#711 id=711 data-nosnippet>711</a>      <span class="macro">Warn!</span>(<span class="string">"expected"</span>, terminal, message);
+<a href=#712 id=712 data-nosnippet>712</a>    }
+<a href=#713 id=713 data-nosnippet>713</a>  }
+<a href=#714 id=714 data-nosnippet>714</a>  <span class="comment">// and add a Dummy `trailer' if none explicit.
+<a href=#715 id=715 data-nosnippet>715</a>  </span><span class="kw">if </span>!found_token {
+<a href=#716 id=716 data-nosnippet>716</a>    push_box_list(Digested::from(Tbox::default()));
+<a href=#717 id=717 data-nosnippet>717</a>    <span class="comment">// info!(target:"digest_next_body","no_token");
+<a href=#718 id=718 data-nosnippet>718</a>  </span>}
+<a href=#719 id=719 data-nosnippet>719</a>  <span class="prelude-val">Ok</span>(expire_local_box_list())
+<a href=#720 id=720 data-nosnippet>720</a>}
+<a href=#721 id=721 data-nosnippet>721</a>
+<a href=#722 id=722 data-nosnippet>722</a><span class="doccomment">/// a convenience function for including chunks of raw TeX (or LaTeX) code
+<a href=#723 id=723 data-nosnippet>723</a>/// It is useful for copying portions of the normal
+<a href=#724 id=724 data-nosnippet>724</a>/// implementation that can be handled simply using macros and primitives.
+<a href=#725 id=725 data-nosnippet>725</a></span><span class="kw">pub fn </span>raw_tex(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#726 id=726 data-nosnippet>726</a>  <span class="comment">// It could be as simple as this, except if catcodes get changed, it's too late!!!
+<a href=#727 id=727 data-nosnippet>727</a>  //  Digest(TokenizeInternal($text));
+<a href=#728 id=728 data-nosnippet>728</a>  </span><span class="kw">let </span>raw_tex_mouth = Mouth::new(
+<a href=#729 id=729 data-nosnippet>729</a>    text,
+<a href=#730 id=730 data-nosnippet>730</a>    <span class="prelude-val">Some</span>(MouthOptions {
+<a href=#731 id=731 data-nosnippet>731</a>      fordefinitions: <span class="bool-val">true</span>,
+<a href=#732 id=732 data-nosnippet>732</a>      at_letter: <span class="bool-val">true</span>,
+<a href=#733 id=733 data-nosnippet>733</a>      ..MouthOptions::default()
+<a href=#734 id=734 data-nosnippet>734</a>    }),
+<a href=#735 id=735 data-nosnippet>735</a>  )<span class="question-mark">?</span>;
+<a href=#736 id=736 data-nosnippet>736</a>  gullet::reading_from_mouth(raw_tex_mouth, || -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#737 id=737 data-nosnippet>737</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+<a href=#738 id=738 data-nosnippet>738</a>      <span class="kw">if </span>token.get_catcode() != Catcode::SPACE {
+<a href=#739 id=739 data-nosnippet>739</a>        invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#740 id=740 data-nosnippet>740</a>      }
+<a href=#741 id=741 data-nosnippet>741</a>    }
+<a href=#742 id=742 data-nosnippet>742</a>    <span class="prelude-val">Ok</span>(())
+<a href=#743 id=743 data-nosnippet>743</a>  })<span class="question-mark">?</span>;
+<a href=#744 id=744 data-nosnippet>744</a>  <span class="prelude-val">Ok</span>(())
+<a href=#745 id=745 data-nosnippet>745</a>}
+<a href=#746 id=746 data-nosnippet>746</a>
+<a href=#747 id=747 data-nosnippet>747</a><span class="doccomment">/// Invoke a token
+<a href=#748 id=748 data-nosnippet>748</a>///
+<a href=#749 id=749 data-nosnippet>749</a>/// If it is a primitive or constructor, the definition will be invoked,
+<a href=#750 id=750 data-nosnippet>750</a>/// possibly arguments will be parsed from the Gullet.
+<a href=#751 id=751 data-nosnippet>751</a>/// Otherwise, the token is simply digested: turned into an appropriate box.
+<a href=#752 id=752 data-nosnippet>752</a>/// Returns a list of boxes/whatsits.
+<a href=#753 id=753 data-nosnippet>753</a></span><span class="kw">pub fn </span>invoke_token(input_token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#754 id=754 data-nosnippet>754</a>  <span class="comment">// Perf: Token is Copy (SymStr + Catcode, ~5 bytes), so we pass by value
+<a href=#755 id=755 data-nosnippet>755</a>  // directly instead of wrapping in Cow&lt;Token&gt;.
+<a href=#756 id=756 data-nosnippet>756</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>maybe_token: <span class="prelude-ty">Option</span>&lt;Token&gt; = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>input_token);
+<a href=#757 id=757 data-nosnippet>757</a>  <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Digested&gt; = Vec::new();
+<a href=#758 id=758 data-nosnippet>758</a>  <span class="comment">// INVOKE:
+<a href=#759 id=759 data-nosnippet>759</a>  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = maybe_token.take() {
+<a href=#760 id=760 data-nosnippet>760</a>    <span class="comment">// RAII guard: auto-pops current_token on scope exit (even on early return/panic)
+<a href=#761 id=761 data-nosnippet>761</a>    </span><span class="kw">let </span>_token_guard = local_current_token_guard(token);
+<a href=#762 id=762 data-nosnippet>762</a>    {
+<a href=#763 id=763 data-nosnippet>763</a>      <span class="macro">stomach_mut!</span>().token_stack.push(token);
+<a href=#764 id=764 data-nosnippet>764</a>    }
+<a href=#765 id=765 data-nosnippet>765</a>    <span class="kw">if </span>{ <span class="macro">stomach!</span>().token_stack.len() } &gt; MAXSTACK {
+<a href=#766 id=766 data-nosnippet>766</a>      <span class="macro">fatal!</span>(
+<a href=#767 id=767 data-nosnippet>767</a>        Stomach,
+<a href=#768 id=768 data-nosnippet>768</a>        Recursion,
+<a href=#769 id=769 data-nosnippet>769</a>        <span class="macro">s!</span>(
+<a href=#770 id=770 data-nosnippet>770</a>          <span class="string">"Excessive recursion(?): Tokens on stack: {:?}"</span>,
+<a href=#771 id=771 data-nosnippet>771</a>          <span class="macro">stomach!</span>().token_stack
+<a href=#772 id=772 data-nosnippet>772</a>        )
+<a href=#773 id=773 data-nosnippet>773</a>      );
+<a href=#774 id=774 data-nosnippet>774</a>    }
+<a href=#775 id=775 data-nosnippet>775</a>    result = Vec::new();
+<a href=#776 id=776 data-nosnippet>776</a>
+<a href=#777 id=777 data-nosnippet>777</a>    <span class="comment">// Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
+<a href=#778 id=778 data-nosnippet>778</a>    // MathPrimitive), as well as (Expandable, Conditional) since the
+<a href=#779 id=779 data-nosnippet>779</a>    // API is identical. However, as the types are different, Rust
+<a href=#780 id=780 data-nosnippet>780</a>    // constrains us here, we need separate match arms for each
+<a href=#781 id=781 data-nosnippet>781</a>    // distinctly typed enum case.
+<a href=#782 id=782 data-nosnippet>782</a>    </span><span class="kw">let </span>digestable_def = lookup_digestable_definition(<span class="kw-2">&amp;</span>token);
+<a href=#783 id=783 data-nosnippet>783</a>    <span class="kw">match </span>digestable_def {
+<a href=#784 id=784 data-nosnippet>784</a>      <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; {
+<a href=#785 id=785 data-nosnippet>785</a>        result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#786 id=786 data-nosnippet>786</a>      },
+<a href=#787 id=787 data-nosnippet>787</a>      <span class="prelude-val">Some</span>(Stored::Token(meaning)) =&gt; {
+<a href=#788 id=788 data-nosnippet>788</a>        <span class="comment">// Common case
+<a href=#789 id=789 data-nosnippet>789</a>        </span><span class="kw">let </span>cc = meaning.get_catcode();
+<a href=#790 id=790 data-nosnippet>790</a>        <span class="kw">if </span>cc == Catcode::CS {
+<a href=#791 id=791 data-nosnippet>791</a>          result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#792 id=792 data-nosnippet>792</a>        } <span class="kw">else if </span>cc.is_absorbable() {
+<a href=#793 id=793 data-nosnippet>793</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
+<a href=#794 id=794 data-nosnippet>794</a>            result.push(digested);
+<a href=#795 id=795 data-nosnippet>795</a>          }
+<a href=#796 id=796 data-nosnippet>796</a>        } <span class="kw">else </span>{
+<a href=#797 id=797 data-nosnippet>797</a>          <span class="comment">// Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
+<a href=#798 id=798 data-nosnippet>798</a>          </span><span class="kw">if </span>token.get_catcode() == Catcode::ALIGN {
+<a href=#799 id=799 data-nosnippet>799</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(relax_meaning) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)) {
+<a href=#800 id=800 data-nosnippet>800</a>              assign_meaning(<span class="kw-2">&amp;</span>token, relax_meaning, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#801 id=801 data-nosnippet>801</a>            }
+<a href=#802 id=802 data-nosnippet>802</a>          }
+<a href=#803 id=803 data-nosnippet>803</a>          <span class="kw">let </span>message = <span class="macro">s!</span>(
+<a href=#804 id=804 data-nosnippet>804</a>            <span class="string">"The token {:?} (catcode {:?}) should never reach Stomach!"</span>,
+<a href=#805 id=805 data-nosnippet>805</a>            token,
+<a href=#806 id=806 data-nosnippet>806</a>            cc
+<a href=#807 id=807 data-nosnippet>807</a>          );
+<a href=#808 id=808 data-nosnippet>808</a>          <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, token, <span class="kw-2">&amp;</span>message);
+<a href=#809 id=809 data-nosnippet>809</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
+<a href=#810 id=810 data-nosnippet>810</a>            result.push(digested);
+<a href=#811 id=811 data-nosnippet>811</a>          }
+<a href=#812 id=812 data-nosnippet>812</a>        }
+<a href=#813 id=813 data-nosnippet>813</a>      },
+<a href=#814 id=814 data-nosnippet>814</a>      <span class="prelude-val">Some</span>(Stored::Expandable(meaning)) =&gt; {
+<a href=#815 id=815 data-nosnippet>815</a>        <span class="comment">// A math-active character will (typically) be a macro,
+<a href=#816 id=816 data-nosnippet>816</a>        // but it isn't expanded in the gullet, but later when digesting, in math mode
+<a href=#817 id=817 data-nosnippet>817</a>        // (? I think)
+<a href=#818 id=818 data-nosnippet>818</a>        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#819 id=819 data-nosnippet>819</a>        <span class="kw">if </span>!invoked_meaning.is_empty() {
+<a href=#820 id=820 data-nosnippet>820</a>          {
+<a href=#821 id=821 data-nosnippet>821</a>            gullet::unread(invoked_meaning);
+<a href=#822 id=822 data-nosnippet>822</a>          }
+<a href=#823 id=823 data-nosnippet>823</a>        }
+<a href=#824 id=824 data-nosnippet>824</a>        <span class="comment">// replace the token by it's expansion!!!
+<a href=#825 id=825 data-nosnippet>825</a>        </span>maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#826 id=826 data-nosnippet>826</a>        {
+<a href=#827 id=827 data-nosnippet>827</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
+<a href=#828 id=828 data-nosnippet>828</a>        }
+<a href=#829 id=829 data-nosnippet>829</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
+<a href=#830 id=830 data-nosnippet>830</a>        </span><span class="kw">continue</span>;
+<a href=#831 id=831 data-nosnippet>831</a>      },
+<a href=#832 id=832 data-nosnippet>832</a>      <span class="prelude-val">Some</span>(Stored::Conditional(meaning)) =&gt; {
+<a href=#833 id=833 data-nosnippet>833</a>        <span class="comment">// Conditionals are "expandable", use the regular invoke.
+<a href=#834 id=834 data-nosnippet>834</a>        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#835 id=835 data-nosnippet>835</a>        gullet::unread(invoked_meaning);
+<a href=#836 id=836 data-nosnippet>836</a>        maybe_token = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#837 id=837 data-nosnippet>837</a>        {
+<a href=#838 id=838 data-nosnippet>838</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
+<a href=#839 id=839 data-nosnippet>839</a>        }
+<a href=#840 id=840 data-nosnippet>840</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
+<a href=#841 id=841 data-nosnippet>841</a>        </span><span class="kw">continue</span>;
+<a href=#842 id=842 data-nosnippet>842</a>      },
+<a href=#843 id=843 data-nosnippet>843</a>      <span class="prelude-val">Some</span>(Stored::Constructor(meaning)) =&gt; {
+<a href=#844 id=844 data-nosnippet>844</a>        <span class="comment">// Otherwise, a normal primitive or constructor
+<a href=#845 id=845 data-nosnippet>845</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#846 id=846 data-nosnippet>846</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#847 id=847 data-nosnippet>847</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#848 id=848 data-nosnippet>848</a>        </span>}
+<a href=#849 id=849 data-nosnippet>849</a>      },
+<a href=#850 id=850 data-nosnippet>850</a>      <span class="prelude-val">Some</span>(Stored::Primitive(meaning)) =&gt; {
+<a href=#851 id=851 data-nosnippet>851</a>        <span class="comment">// Otherwise, a normal primitive or constructor
+<a href=#852 id=852 data-nosnippet>852</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#853 id=853 data-nosnippet>853</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#854 id=854 data-nosnippet>854</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#855 id=855 data-nosnippet>855</a>        </span>}
+<a href=#856 id=856 data-nosnippet>856</a>      },
+<a href=#857 id=857 data-nosnippet>857</a>      <span class="prelude-val">Some</span>(Stored::MathPrimitive(meaning)) =&gt; {
+<a href=#858 id=858 data-nosnippet>858</a>        <span class="comment">// Copy of regular Primitive
+<a href=#859 id=859 data-nosnippet>859</a>        // Otherwise, a normal primitive or constructor
+<a href=#860 id=860 data-nosnippet>860</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#861 id=861 data-nosnippet>861</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#862 id=862 data-nosnippet>862</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#863 id=863 data-nosnippet>863</a>        </span>}
+<a href=#864 id=864 data-nosnippet>864</a>      },
+<a href=#865 id=865 data-nosnippet>865</a>      <span class="prelude-val">Some</span>(Stored::Register(meaning)) =&gt; {
+<a href=#866 id=866 data-nosnippet>866</a>        <span class="comment">// Registers are special primitives
+<a href=#867 id=867 data-nosnippet>867</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#868 id=868 data-nosnippet>868</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#869 id=869 data-nosnippet>869</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#870 id=870 data-nosnippet>870</a>        </span>}
+<a href=#871 id=871 data-nosnippet>871</a>      },
+<a href=#872 id=872 data-nosnippet>872</a>      meaning =&gt; {
+<a href=#873 id=873 data-nosnippet>873</a>        <span class="comment">// Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
+<a href=#874 id=874 data-nosnippet>874</a>        </span><span class="macro">Error!</span>(<span class="string">"misdefined"</span>, token,
+<a href=#875 id=875 data-nosnippet>875</a>          <span class="macro">s!</span>(<span class="string">"Unexpected object in Stomach: {:?}"</span>, meaning));
+<a href=#876 id=876 data-nosnippet>876</a>      },
+<a href=#877 id=877 data-nosnippet>877</a>    }
+<a href=#878 id=878 data-nosnippet>878</a>    <span class="comment">// _token_guard drops here, auto-expiring current token
+<a href=#879 id=879 data-nosnippet>879</a>    </span><span class="kw">break</span>;
+<a href=#880 id=880 data-nosnippet>880</a>  }
+<a href=#881 id=881 data-nosnippet>881</a>  <span class="macro">stomach_mut!</span>().token_stack.pop();
+<a href=#882 id=882 data-nosnippet>882</a>  <span class="prelude-val">Ok</span>(result)
+<a href=#883 id=883 data-nosnippet>883</a>}
+<a href=#884 id=884 data-nosnippet>884</a>
+<a href=#885 id=885 data-nosnippet>885</a><span class="kw">fn </span>invoke_token_undefined(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#886 id=886 data-nosnippet>886</a>  <span class="kw">let </span>cs = token.with_cs_name(|cs| String::from(cs));
+<a href=#887 id=887 data-nosnippet>887</a>  note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cs));
+<a href=#888 id=888 data-nosnippet>888</a>
+<a href=#889 id=889 data-nosnippet>889</a>  <span class="comment">// To minimize chatter, go ahead and define it...
+<a href=#890 id=890 data-nosnippet>890</a>  </span><span class="kw">if </span>cs.starts_with(<span class="string">"\\if"</span>) {
+<a href=#891 id=891 data-nosnippet>891</a>    <span class="comment">// Apparently an \ifsomething ???
+<a href=#892 id=892 data-nosnippet>892</a>    </span><span class="kw">let </span>name = cs.replace(<span class="string">"\\if"</span>, <span class="string">""</span>);
+<a href=#893 id=893 data-nosnippet>893</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
+<a href=#894 id=894 data-nosnippet>894</a>    <span class="macro">Error!</span>(
+<a href=#895 id=895 data-nosnippet>895</a>      <span class="string">"undefined"</span>,
+<a href=#896 id=896 data-nosnippet>896</a>      token,
+<a href=#897 id=897 data-nosnippet>897</a>      <span class="kw-2">&amp;</span>message,
+<a href=#898 id=898 data-nosnippet>898</a>      <span class="string">"Defining it now as with \\newif"
+<a href=#899 id=899 data-nosnippet>899</a>    </span>);
+<a href=#900 id=900 data-nosnippet>900</a>    <span class="comment">// install stub definitions for new conditional
+<a href=#901 id=901 data-nosnippet>901</a>    </span>install_definition(
+<a href=#902 id=902 data-nosnippet>902</a>      Expandable::new(
+<a href=#903 id=903 data-nosnippet>903</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
+<a href=#904 id=904 data-nosnippet>904</a>        <span class="prelude-val">None</span>,
+<a href=#905 id=905 data-nosnippet>905</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs), <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)).into(),
+<a href=#906 id=906 data-nosnippet>906</a>        <span class="prelude-val">None</span>,
+<a href=#907 id=907 data-nosnippet>907</a>      )<span class="question-mark">?</span>,
+<a href=#908 id=908 data-nosnippet>908</a>      <span class="prelude-val">None</span>,
+<a href=#909 id=909 data-nosnippet>909</a>    );
+<a href=#910 id=910 data-nosnippet>910</a>    install_definition(
+<a href=#911 id=911 data-nosnippet>911</a>      Expandable::new(
+<a href=#912 id=912 data-nosnippet>912</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
+<a href=#913 id=913 data-nosnippet>913</a>        <span class="prelude-val">None</span>,
+<a href=#914 id=914 data-nosnippet>914</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(cs), <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)).into(),
+<a href=#915 id=915 data-nosnippet>915</a>        <span class="prelude-val">None</span>,
+<a href=#916 id=916 data-nosnippet>916</a>      )<span class="question-mark">?</span>,
+<a href=#917 id=917 data-nosnippet>917</a>      <span class="prelude-val">None</span>,
+<a href=#918 id=918 data-nosnippet>918</a>    );
+<a href=#919 id=919 data-nosnippet>919</a>
+<a href=#920 id=920 data-nosnippet>920</a>    let_i(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">None</span>);
+<a href=#921 id=921 data-nosnippet>921</a>    gullet::unread_one(<span class="kw-2">*</span>token); <span class="comment">// Retry
+<a href=#922 id=922 data-nosnippet>922</a>    </span><span class="prelude-val">Ok</span>(Vec::new())
+<a href=#923 id=923 data-nosnippet>923</a>  } <span class="kw">else </span>{
+<a href=#924 id=924 data-nosnippet>924</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
+<a href=#925 id=925 data-nosnippet>925</a>    <span class="macro">Error!</span>(
+<a href=#926 id=926 data-nosnippet>926</a>      <span class="string">"undefined"</span>,
+<a href=#927 id=927 data-nosnippet>927</a>      token,
+<a href=#928 id=928 data-nosnippet>928</a>      <span class="kw-2">&amp;</span>message,
+<a href=#929 id=929 data-nosnippet>929</a>      <span class="string">"Defining it now as &lt;ltx:ERROR/&gt;"
+<a href=#930 id=930 data-nosnippet>930</a>    </span>);
+<a href=#931 id=931 data-nosnippet>931</a>    install_definition(
+<a href=#932 id=932 data-nosnippet>932</a>      Constructor {
+<a href=#933 id=933 data-nosnippet>933</a>        cs: <span class="kw-2">*</span>token,
+<a href=#934 id=934 data-nosnippet>934</a>        paramlist: <span class="prelude-val">None</span>,
+<a href=#935 id=935 data-nosnippet>935</a>        replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|document, _args, _props| {
+<a href=#936 id=936 data-nosnippet>936</a>          document.make_error(<span class="string">"undefined"</span>, <span class="kw-2">&amp;</span>cs)
+<a href=#937 id=937 data-nosnippet>937</a>        })),
+<a href=#938 id=938 data-nosnippet>938</a>        ..Constructor::default()
+<a href=#939 id=939 data-nosnippet>939</a>      },
+<a href=#940 id=940 data-nosnippet>940</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#941 id=941 data-nosnippet>941</a>    );
+<a href=#942 id=942 data-nosnippet>942</a>    <span class="comment">// Perl: unread the token and return empty, so the outer loop re-reads
+<a href=#943 id=943 data-nosnippet>943</a>    // and dispatches through the normal path (with the newly installed stub).
+<a href=#944 id=944 data-nosnippet>944</a>    // This ensures gullet-level side effects (filtering, expansion) are applied.
+<a href=#945 id=945 data-nosnippet>945</a>    </span>gullet::unread_one(<span class="kw-2">*</span>token);
+<a href=#946 id=946 data-nosnippet>946</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#947 id=947 data-nosnippet>947</a>  }
+<a href=#948 id=948 data-nosnippet>948</a>}
+<a href=#949 id=949 data-nosnippet>949</a>
+<a href=#950 id=950 data-nosnippet>950</a><span class="kw">fn </span>invoke_token_simple(meaning: Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#951 id=951 data-nosnippet>951</a>  <span class="kw">let </span>cc = meaning.get_catcode();
+<a href=#952 id=952 data-nosnippet>952</a>  <span class="kw">let </span>font = lookup_font();
+<a href=#953 id=953 data-nosnippet>953</a>  <span class="kw">match </span>cc {
+<a href=#954 id=954 data-nosnippet>954</a>    Catcode::SPACE =&gt; {
+<a href=#955 id=955 data-nosnippet>955</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 234: prefixes shouldn't apply here.
+<a href=#956 id=956 data-nosnippet>956</a>      // Perl: if($STATE-&gt;lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
+<a href=#957 id=957 data-nosnippet>957</a>      </span><span class="kw">let </span>mode = lookup_string(<span class="string">"MODE"</span>);
+<a href=#958 id=958 data-nosnippet>958</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"math"</span>) || mode.ends_with(<span class="string">"vertical"</span>) {
+<a href=#959 id=959 data-nosnippet>959</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#960 id=960 data-nosnippet>960</a>      } <span class="kw">else </span>{
+<a href=#961 id=961 data-nosnippet>961</a>        enter_horizontal();
+<a href=#962 id=962 data-nosnippet>962</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
+<a href=#963 id=963 data-nosnippet>963</a>          meaning.get_sym(),
+<a href=#964 id=964 data-nosnippet>964</a>          font,
+<a href=#965 id=965 data-nosnippet>965</a>          <span class="prelude-val">None</span>,
+<a href=#966 id=966 data-nosnippet>966</a>          <span class="macro">Tokens!</span>(meaning),
+<a href=#967 id=967 data-nosnippet>967</a>          HashMap::default(),
+<a href=#968 id=968 data-nosnippet>968</a>        ))))
+<a href=#969 id=969 data-nosnippet>969</a>      }
+<a href=#970 id=970 data-nosnippet>970</a>    },
+<a href=#971 id=971 data-nosnippet>971</a>    Catcode::COMMENT =&gt; {
+<a href=#972 id=972 data-nosnippet>972</a>      <span class="comment">// Perl Stomach.pm lines 241-244: decode comment via font encoding
+<a href=#973 id=973 data-nosnippet>973</a>      </span><span class="kw">let </span>decoded = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
+<a href=#974 id=974 data-nosnippet>974</a>      <span class="kw">let </span>comment = arena::with(decoded, |s| {
+<a href=#975 id=975 data-nosnippet>975</a>        <span class="comment">// However, spaces normally would have be digested away as positioning...
+<a href=#976 id=976 data-nosnippet>976</a>        // Replace NBSP + combining strikethrough (OT1 space position) with actual space
+<a href=#977 id=977 data-nosnippet>977</a>        </span>s.replace(<span class="string">"\u{00A0}\u{0335}"</span>, <span class="string">" "</span>)
+<a href=#978 id=978 data-nosnippet>978</a>      });
+<a href=#979 id=979 data-nosnippet>979</a>      <span class="comment">// Perl: returns LaTeXML::Core::Comment-&gt;new($comment)
+<a href=#980 id=980 data-nosnippet>980</a>      // which gets absorbed as an XML comment node via Document::insertComment
+<a href=#981 id=981 data-nosnippet>981</a>      </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Comment(comment))))
+<a href=#982 id=982 data-nosnippet>982</a>    },
+<a href=#983 id=983 data-nosnippet>983</a>    <span class="kw">_ </span>=&gt; {
+<a href=#984 id=984 data-nosnippet>984</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 247: prefixes shouldn't apply here.
+<a href=#985 id=985 data-nosnippet>985</a>      // Perl: check mathcode for IN_MATH characters (Stomach.pm lines 248-251)
+<a href=#986 id=986 data-nosnippet>986</a>      // In Perl, all math chars go through decodeMathChar which decodes via
+<a href=#987 id=987 data-nosnippet>987</a>      // the font encoding. In Rust, Tbox::new already handles IN_MATH:
+<a href=#988 id=988 data-nosnippet>988</a>      // it sets mode="math", looks up math_token_attributes for role/meaning/name,
+<a href=#989 id=989 data-nosnippet>989</a>      // and specializes the font. This produces the correct LaTeXML-level properties.
+<a href=#990 id=990 data-nosnippet>990</a>      // The mathchar parsing handles non-ASCII chars needing font map lookup.
+<a href=#991 id=991 data-nosnippet>991</a>      // TODO: Use for chars where font-encoding glyph differs from input.
+<a href=#992 id=992 data-nosnippet>992</a>      // Perl L248-257: if IN_MATH &amp;&amp; mathcode → decodeMathChar (math box)
+<a href=#993 id=993 data-nosnippet>993</a>      // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
+<a href=#994 id=994 data-nosnippet>994</a>      </span><span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+<a href=#995 id=995 data-nosnippet>995</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(mathcode) = lookup_mathcode_sym(<span class="kw-2">&amp;</span>meaning.get_sym()) {
+<a href=#996 id=996 data-nosnippet>996</a>          <span class="kw">return </span><span class="kw">crate</span>::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
+<a href=#997 id=997 data-nosnippet>997</a>        }
+<a href=#998 id=998 data-nosnippet>998</a>      }
+<a href=#999 id=999 data-nosnippet>999</a>      <span class="comment">// Fallthrough: either not in math, or in math but no mathcode
+<a href=#1000 id=1000 data-nosnippet>1000</a>      </span>enter_horizontal();
+<a href=#1001 id=1001 data-nosnippet>1001</a>      <span class="kw">let </span>text = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
+<a href=#1002 id=1002 data-nosnippet>1002</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
+<a href=#1003 id=1003 data-nosnippet>1003</a>        text,
+<a href=#1004 id=1004 data-nosnippet>1004</a>        <span class="prelude-val">None</span>,
+<a href=#1005 id=1005 data-nosnippet>1005</a>        <span class="prelude-val">None</span>,
+<a href=#1006 id=1006 data-nosnippet>1006</a>        <span class="macro">Tokens!</span>(meaning),   <span class="comment">// tokens
+<a href=#1007 id=1007 data-nosnippet>1007</a>        </span>HashMap::default(), <span class="comment">// properties
+<a href=#1008 id=1008 data-nosnippet>1008</a>      </span>))))
+<a href=#1009 id=1009 data-nosnippet>1009</a>    },
+<a href=#1010 id=1010 data-nosnippet>1010</a>  }
+<a href=#1011 id=1011 data-nosnippet>1011</a>}
+<a href=#1012 id=1012 data-nosnippet>1012</a>
+<a href=#1013 id=1013 data-nosnippet>1013</a><span class="kw">pub fn </span>set_stomach(new_stomach: Stomach) {
+<a href=#1014 id=1014 data-nosnippet>1014</a>  <span class="kw">let </span><span class="kw-2">mut </span>singleton = <span class="macro">stomach_mut!</span>();
+<a href=#1015 id=1015 data-nosnippet>1015</a>  <span class="kw-2">*</span>singleton = new_stomach;
 <a href=#1016 id=1016 data-nosnippet>1016</a>}
+<a href=#1017 id=1017 data-nosnippet>1017</a><span class="kw">pub fn </span>clone_box_list() -&gt; Vec&lt;Digested&gt; { <span class="macro">stomach!</span>().box_list.clone() }
+<a href=#1018 id=1018 data-nosnippet>1018</a>
+<a href=#1019 id=1019 data-nosnippet>1019</a><span class="doccomment">/// get the current boxing level
+<a href=#1020 id=1020 data-nosnippet>1020</a></span><span class="kw">pub fn </span>get_boxing_level() -&gt; usize { <span class="macro">stomach!</span>().boxing.len() }
+<a href=#1021 id=1021 data-nosnippet>1021</a>
+<a href=#1022 id=1022 data-nosnippet>1022</a><span class="doccomment">/// ScriptLevel is similar to boxing level, but relative to current Math mode's level
+<a href=#1023 id=1023 data-nosnippet>1023</a>///
+<a href=#1024 id=1024 data-nosnippet>1024</a>/// This is used for the scriptpos attribute to recognize overlapping sccripts.
+<a href=#1025 id=1025 data-nosnippet>1025</a>/// Making it relative to the math's level avoids unnecessary changes
+<a href=#1026 id=1026 data-nosnippet>1026</a></span><span class="kw">pub fn </span>get_script_level() -&gt; usize {
+<a href=#1027 id=1027 data-nosnippet>1027</a>  <span class="kw">let </span>boxlevel = get_boxing_level();
+<a href=#1028 id=1028 data-nosnippet>1028</a>  with_value(<span class="string">"script_base_level"</span>, |val_opt| {
+<a href=#1029 id=1029 data-nosnippet>1029</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Int(prevlevel)) = val_opt {
+<a href=#1030 id=1030 data-nosnippet>1030</a>      boxlevel - (<span class="kw-2">*</span>prevlevel <span class="kw">as </span>usize) + <span class="number">1
+<a href=#1031 id=1031 data-nosnippet>1031</a>    </span>} <span class="kw">else </span>{
+<a href=#1032 id=1032 data-nosnippet>1032</a>      boxlevel
+<a href=#1033 id=1033 data-nosnippet>1033</a>    }
+<a href=#1034 id=1034 data-nosnippet>1034</a>  })
+<a href=#1035 id=1035 data-nosnippet>1035</a>}
 </code></pre></div></section></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["after_float","before_float","before_float_ex","begin_appendices","define_new_theorem","end_appendices","eqnarray_bindings","get_savable_keys","load_definitions","make_note_tags","only_preamble","relocate_footnote","save_theorem_style","set_savable_theorem_parameters","start_appendices","tabular_bindings","use_theorem_style"]};

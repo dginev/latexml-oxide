@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["ensure_parent_dir","find_main_tex","main","make_splitpaths","pack_output_zip","parse_readme_json","run_post_processing","unpack_archive"],"struct":["Cli","PostOptions"]};
+window.SIDEBAR_ITEMS = {"fn":["ensure_parent_dir","find_main_tex","main","make_splitpaths","pack_output_zip","parse_readme_json","run_post_processing","unpack_archive"],"static":["GLOBAL"],"struct":["Cli"]};

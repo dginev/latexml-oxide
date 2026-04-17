@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/mathchar.rs`."><title>mathchar.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (900485642 2026-04-08)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>mathchar.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::collections::HashMap;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/mathchar.rs`."><title>mathchar.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>mathchar.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::collections::HashMap;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::rc::Rc;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymHashMap};
@@ -355,13 +355,13 @@
 <a href=#355 id=355 data-nosnippet>355</a>      </span><span class="kw">let </span>preserved_size = f.size;
 <a href=#356 id=356 data-nosnippet>356</a>      state::with_font_info(ftok, |fontinfo| {
 <a href=#357 id=357 data-nosnippet>357</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo.unwrap_or(<span class="prelude-val">None</span>) {
-<a href=#358 id=358 data-nosnippet>358</a>          f = f.merge((<span class="kw-2">**</span>info).clone());
+<a href=#358 id=358 data-nosnippet>358</a>          f = f.merge_ref(info);
 <a href=#359 id=359 data-nosnippet>359</a>        } <span class="kw">else </span>{
 <a href=#360 id=360 data-nosnippet>360</a>          <span class="comment">// Perl: fallback to \lx@default@font if not found
 <a href=#361 id=361 data-nosnippet>361</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Token(d_tok)) = state::lookup_value(<span class="string">"\\lx@default@font"</span>) {
 <a href=#362 id=362 data-nosnippet>362</a>             state::with_font_info(<span class="kw-2">&amp;</span>d_tok, |d_info| {
 <a href=#363 id=363 data-nosnippet>363</a>               <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>d_f)) = d_info.unwrap_or(<span class="prelude-val">None</span>) {
-<a href=#364 id=364 data-nosnippet>364</a>                 f = f.merge((<span class="kw-2">**</span>d_f).clone());
+<a href=#364 id=364 data-nosnippet>364</a>                 f = f.merge_ref(d_f);
 <a href=#365 id=365 data-nosnippet>365</a>               }
 <a href=#366 id=366 data-nosnippet>366</a>             });
 <a href=#367 id=367 data-nosnippet>367</a>          }
@@ -387,105 +387,111 @@
 <a href=#387 id=387 data-nosnippet>387</a>      <span class="prelude-val">Some</span>(c)
 <a href=#388 id=388 data-nosnippet>388</a>    }
 <a href=#389 id=389 data-nosnippet>389</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(ftok) = <span class="kw-2">&amp;</span>fontdef_tok {
-<a href=#390 id=390 data-nosnippet>390</a>    state::with_font_info(ftok, |fontinfo| {
-<a href=#391 id=391 data-nosnippet>391</a>      <span class="kw">let </span>cinfo = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo<span class="question-mark">? </span>{
-<a href=#392 id=392 data-nosnippet>392</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = info.encoding {
-<a href=#393 id=393 data-nosnippet>393</a>          <span class="kw">crate</span>::common::font::decode(n <span class="kw">as </span>u8, <span class="prelude-val">Some</span>(data.to_string()), <span class="bool-val">false</span>)
-<a href=#394 id=394 data-nosnippet>394</a>        } <span class="kw">else </span>{
-<a href=#395 id=395 data-nosnippet>395</a>          <span class="prelude-val">Some</span>(c)
-<a href=#396 id=396 data-nosnippet>396</a>        }
-<a href=#397 id=397 data-nosnippet>397</a>      } <span class="kw">else </span>{
-<a href=#398 id=398 data-nosnippet>398</a>        <span class="prelude-val">Some</span>(c)
-<a href=#399 id=399 data-nosnippet>399</a>      };
-<a href=#400 id=400 data-nosnippet>400</a>      Ok::&lt;<span class="prelude-ty">Option</span>&lt;char&gt;, <span class="kw">crate</span>::common::error::Error&gt;(cinfo)
-<a href=#401 id=401 data-nosnippet>401</a>    })<span class="question-mark">?
-<a href=#402 id=402 data-nosnippet>402</a>  </span>} <span class="kw">else </span>{
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="prelude-val">Some</span>(c)
-<a href=#404 id=404 data-nosnippet>404</a>  };
-<a href=#405 id=405 data-nosnippet>405</a>
-<a href=#406 id=406 data-nosnippet>406</a>  <span class="kw">let </span>glyph_char = glyph.unwrap_or(c);
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="kw">let </span>charinfo = unicode_math_properties(glyph_char);
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="kw">let </span><span class="kw-2">mut </span>props = charinfo.clone().unwrap_or_default();
-<a href=#409 id=409 data-nosnippet>409</a>  props.glyph = glyph;
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a>  <span class="kw">let </span><span class="kw-2">mut </span>role = charinfo.as_ref().and_then(|info| info.role.clone());
-<a href=#412 id=412 data-nosnippet>412</a>  <span class="kw">if </span>role.is_none() &amp;&amp; !class_role.is_empty() {
-<a href=#413 id=413 data-nosnippet>413</a>    role = <span class="prelude-val">Some</span>(class_role.to_string());
-<a href=#414 id=414 data-nosnippet>414</a>  }
-<a href=#415 id=415 data-nosnippet>415</a>  <span class="kw">if </span>role.is_some() &amp;&amp; props.role.is_none() {
-<a href=#416 id=416 data-nosnippet>416</a>    props.role = role;
-<a href=#417 id=417 data-nosnippet>417</a>  }
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a>  props.resolve_style_props();
-<a href=#420 id=420 data-nosnippet>420</a>
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="kw">let </span><span class="kw-2">mut </span>final_reversion = reversion;
-<a href=#422 id=422 data-nosnippet>422</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(rev) = final_reversion.clone() {
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="kw">let </span><span class="kw-2">mut </span>wrap = maybe_rev &amp;&amp; !d.is_empty();
-<a href=#424 id=424 data-nosnippet>424</a>    <span class="kw">if </span>state::lookup_value(<span class="string">"LaTeX.pool.ltxml_loaded"</span>).is_some() {
-<a href=#425 id=425 data-nosnippet>425</a>      wrap = <span class="bool-val">false</span>;
-<a href=#426 id=426 data-nosnippet>426</a>    }
-<a href=#427 id=427 data-nosnippet>427</a>    <span class="kw">if </span>wrap {
-<a href=#428 id=428 data-nosnippet>428</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ftok) = fontdef_tok {
-<a href=#429 id=429 data-nosnippet>429</a>        <span class="kw">let </span><span class="kw-2">mut </span>new_rev = <span class="macro">vec!</span>[<span class="macro">crate::T_BEGIN!</span>(), ftok];
-<a href=#430 id=430 data-nosnippet>430</a>        new_rev.extend(rev.unlist());
-<a href=#431 id=431 data-nosnippet>431</a>        new_rev.push(<span class="macro">crate::T_END!</span>());
-<a href=#432 id=432 data-nosnippet>432</a>        final_reversion = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::tokens::Tokens::new(new_rev));
-<a href=#433 id=433 data-nosnippet>433</a>      }
-<a href=#434 id=434 data-nosnippet>434</a>    }
-<a href=#435 id=435 data-nosnippet>435</a>    props.reversion = final_reversion;
-<a href=#436 id=436 data-nosnippet>436</a>  }
-<a href=#437 id=437 data-nosnippet>437</a>
-<a href=#438 id=438 data-nosnippet>438</a>  props.font = <span class="prelude-val">Some</span>(f);
-<a href=#439 id=439 data-nosnippet>439</a>
-<a href=#440 id=440 data-nosnippet>440</a>  <span class="prelude-val">Ok</span>(props)
-<a href=#441 id=441 data-nosnippet>441</a>}
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a><span class="doccomment">/// Stomach-level hook for decoding math characters.
-<a href=#444 id=444 data-nosnippet>444</a>/// Called from stomach::invoke_token_simple when IN_MATH and mathcode is set.
-<a href=#445 id=445 data-nosnippet>445</a>/// Perl: decodeMathChar($mathcode, $meaning) in Stomach::invokeToken_simple
-<a href=#446 id=446 data-nosnippet>446</a></span><span class="kw">pub fn </span>decode_math_char_for_stomach(
-<a href=#447 id=447 data-nosnippet>447</a>  mathcode: u16,
-<a href=#448 id=448 data-nosnippet>448</a>  meaning: Token,
-<a href=#449 id=449 data-nosnippet>449</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#450 id=450 data-nosnippet>450</a>  <span class="kw">let </span>props = decode_math_char(mathcode, <span class="prelude-val">Some</span>(<span class="macro">crate::Tokens!</span>(meaning)))<span class="question-mark">?</span>;
-<a href=#451 id=451 data-nosnippet>451</a>
-<a href=#452 id=452 data-nosnippet>452</a>  <span class="kw">let </span>glyph = <span class="kw">match </span>props.glyph {
-<a href=#453 id=453 data-nosnippet>453</a>    <span class="prelude-val">Some</span>(g) =&gt; g,
-<a href=#454 id=454 data-nosnippet>454</a>    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-<a href=#455 id=455 data-nosnippet>455</a>  };
-<a href=#456 id=456 data-nosnippet>456</a>
-<a href=#457 id=457 data-nosnippet>457</a>  <span class="kw">let </span><span class="kw-2">mut </span>properties = SymHashMap::default();
-<a href=#458 id=458 data-nosnippet>458</a>  properties.insert(<span class="string">"mode"</span>, Stored::String(<span class="kw-2">*</span>arena::MATH_SYM));
-<a href=#459 id=459 data-nosnippet>459</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = props.role {
-<a href=#460 id=460 data-nosnippet>460</a>    properties.insert(<span class="string">"role"</span>, Stored::String(arena::pin(role)));
-<a href=#461 id=461 data-nosnippet>461</a>  }
-<a href=#462 id=462 data-nosnippet>462</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = props.meaning {
-<a href=#463 id=463 data-nosnippet>463</a>    properties.insert(<span class="string">"meaning"</span>, Stored::String(arena::pin(m)));
-<a href=#464 id=464 data-nosnippet>464</a>  }
-<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>name) = props.name {
-<a href=#466 id=466 data-nosnippet>466</a>    properties.insert(<span class="string">"name"</span>, Stored::String(arena::pin(name)));
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="comment">// Extract the encoding BEFORE calling font::decode. font::decode may
+<a href=#391 id=391 data-nosnippet>391</a>    // call preload_font_map which mutates state, and with_font_info holds
+<a href=#392 id=392 data-nosnippet>392</a>    // a State borrow while its closure runs — the reentrant mutation
+<a href=#393 id=393 data-nosnippet>393</a>    // panics with "RefCell already borrowed" (sandbox paper 0711.4787).
+<a href=#394 id=394 data-nosnippet>394</a>    </span><span class="kw">let </span>encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt; = state::with_font_info(ftok, |fontinfo| {
+<a href=#395 id=395 data-nosnippet>395</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo<span class="question-mark">? </span>{
+<a href=#396 id=396 data-nosnippet>396</a>        Ok::&lt;<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="kw">crate</span>::common::error::Error&gt;(
+<a href=#397 id=397 data-nosnippet>397</a>          info.encoding.as_ref().map(|s| s.to_string())
+<a href=#398 id=398 data-nosnippet>398</a>        )
+<a href=#399 id=399 data-nosnippet>399</a>      } <span class="kw">else </span>{
+<a href=#400 id=400 data-nosnippet>400</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#401 id=401 data-nosnippet>401</a>      }
+<a href=#402 id=402 data-nosnippet>402</a>    })<span class="question-mark">?</span>;
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = encoding_opt {
+<a href=#404 id=404 data-nosnippet>404</a>      <span class="kw">crate</span>::common::font::decode(n <span class="kw">as </span>u8, <span class="prelude-val">Some</span>(data), <span class="bool-val">false</span>)
+<a href=#405 id=405 data-nosnippet>405</a>    } <span class="kw">else </span>{
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="prelude-val">Some</span>(c)
+<a href=#407 id=407 data-nosnippet>407</a>    }
+<a href=#408 id=408 data-nosnippet>408</a>  } <span class="kw">else </span>{
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="prelude-val">Some</span>(c)
+<a href=#410 id=410 data-nosnippet>410</a>  };
+<a href=#411 id=411 data-nosnippet>411</a>
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="kw">let </span>glyph_char = glyph.unwrap_or(c);
+<a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">let </span>charinfo = unicode_math_properties(glyph_char);
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">let </span><span class="kw-2">mut </span>props = charinfo.clone().unwrap_or_default();
+<a href=#415 id=415 data-nosnippet>415</a>  props.glyph = glyph;
+<a href=#416 id=416 data-nosnippet>416</a>
+<a href=#417 id=417 data-nosnippet>417</a>  <span class="kw">let </span><span class="kw-2">mut </span>role = charinfo.as_ref().and_then(|info| info.role.clone());
+<a href=#418 id=418 data-nosnippet>418</a>  <span class="kw">if </span>role.is_none() &amp;&amp; !class_role.is_empty() {
+<a href=#419 id=419 data-nosnippet>419</a>    role = <span class="prelude-val">Some</span>(class_role.to_string());
+<a href=#420 id=420 data-nosnippet>420</a>  }
+<a href=#421 id=421 data-nosnippet>421</a>  <span class="kw">if </span>role.is_some() &amp;&amp; props.role.is_none() {
+<a href=#422 id=422 data-nosnippet>422</a>    props.role = role;
+<a href=#423 id=423 data-nosnippet>423</a>  }
+<a href=#424 id=424 data-nosnippet>424</a>
+<a href=#425 id=425 data-nosnippet>425</a>  props.resolve_style_props();
+<a href=#426 id=426 data-nosnippet>426</a>
+<a href=#427 id=427 data-nosnippet>427</a>  <span class="kw">let </span><span class="kw-2">mut </span>final_reversion = reversion;
+<a href=#428 id=428 data-nosnippet>428</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(rev) = final_reversion.clone() {
+<a href=#429 id=429 data-nosnippet>429</a>    <span class="kw">let </span><span class="kw-2">mut </span>wrap = maybe_rev &amp;&amp; !d.is_empty();
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">if </span>state::lookup_value(<span class="string">"LaTeX.pool.ltxml_loaded"</span>).is_some() {
+<a href=#431 id=431 data-nosnippet>431</a>      wrap = <span class="bool-val">false</span>;
+<a href=#432 id=432 data-nosnippet>432</a>    }
+<a href=#433 id=433 data-nosnippet>433</a>    <span class="kw">if </span>wrap {
+<a href=#434 id=434 data-nosnippet>434</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ftok) = fontdef_tok {
+<a href=#435 id=435 data-nosnippet>435</a>        <span class="kw">let </span><span class="kw-2">mut </span>new_rev = <span class="macro">vec!</span>[<span class="macro">crate::T_BEGIN!</span>(), ftok];
+<a href=#436 id=436 data-nosnippet>436</a>        new_rev.extend(rev.unlist());
+<a href=#437 id=437 data-nosnippet>437</a>        new_rev.push(<span class="macro">crate::T_END!</span>());
+<a href=#438 id=438 data-nosnippet>438</a>        final_reversion = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::tokens::Tokens::new(new_rev));
+<a href=#439 id=439 data-nosnippet>439</a>      }
+<a href=#440 id=440 data-nosnippet>440</a>    }
+<a href=#441 id=441 data-nosnippet>441</a>    props.reversion = final_reversion;
+<a href=#442 id=442 data-nosnippet>442</a>  }
+<a href=#443 id=443 data-nosnippet>443</a>
+<a href=#444 id=444 data-nosnippet>444</a>  props.font = <span class="prelude-val">Some</span>(f);
+<a href=#445 id=445 data-nosnippet>445</a>
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="prelude-val">Ok</span>(props)
+<a href=#447 id=447 data-nosnippet>447</a>}
+<a href=#448 id=448 data-nosnippet>448</a>
+<a href=#449 id=449 data-nosnippet>449</a><span class="doccomment">/// Stomach-level hook for decoding math characters.
+<a href=#450 id=450 data-nosnippet>450</a>/// Called from stomach::invoke_token_simple when IN_MATH and mathcode is set.
+<a href=#451 id=451 data-nosnippet>451</a>/// Perl: decodeMathChar($mathcode, $meaning) in Stomach::invokeToken_simple
+<a href=#452 id=452 data-nosnippet>452</a></span><span class="kw">pub fn </span>decode_math_char_for_stomach(
+<a href=#453 id=453 data-nosnippet>453</a>  mathcode: u16,
+<a href=#454 id=454 data-nosnippet>454</a>  meaning: Token,
+<a href=#455 id=455 data-nosnippet>455</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#456 id=456 data-nosnippet>456</a>  <span class="kw">let </span>props = decode_math_char(mathcode, <span class="prelude-val">Some</span>(<span class="macro">crate::Tokens!</span>(meaning)))<span class="question-mark">?</span>;
+<a href=#457 id=457 data-nosnippet>457</a>
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="kw">let </span>glyph = <span class="kw">match </span>props.glyph {
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="prelude-val">Some</span>(g) =&gt; g,
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+<a href=#461 id=461 data-nosnippet>461</a>  };
+<a href=#462 id=462 data-nosnippet>462</a>
+<a href=#463 id=463 data-nosnippet>463</a>  <span class="kw">let </span><span class="kw-2">mut </span>properties = SymHashMap::default();
+<a href=#464 id=464 data-nosnippet>464</a>  properties.insert(<span class="string">"mode"</span>, Stored::String(<span class="kw-2">*</span>arena::MATH_SYM));
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = props.role {
+<a href=#466 id=466 data-nosnippet>466</a>    properties.insert(<span class="string">"role"</span>, Stored::String(arena::pin(role)));
 <a href=#467 id=467 data-nosnippet>467</a>  }
-<a href=#468 id=468 data-nosnippet>468</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>stretchy) = props.stretchy {
-<a href=#469 id=469 data-nosnippet>469</a>    properties.insert(<span class="string">"stretchy"</span>, Stored::String(arena::pin(stretchy)));
+<a href=#468 id=468 data-nosnippet>468</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = props.meaning {
+<a href=#469 id=469 data-nosnippet>469</a>    properties.insert(<span class="string">"meaning"</span>, Stored::String(arena::pin(m)));
 <a href=#470 id=470 data-nosnippet>470</a>  }
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>scriptpos) = props.scriptpos {
-<a href=#472 id=472 data-nosnippet>472</a>    properties.insert(<span class="string">"scriptpos"</span>, Stored::String(arena::pin(scriptpos)));
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>name) = props.name {
+<a href=#472 id=472 data-nosnippet>472</a>    properties.insert(<span class="string">"name"</span>, Stored::String(arena::pin(name)));
 <a href=#473 id=473 data-nosnippet>473</a>  }
-<a href=#474 id=474 data-nosnippet>474</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mathstyle) = props.mathstyle {
-<a href=#475 id=475 data-nosnippet>475</a>    properties.insert(<span class="string">"mathstyle"</span>, Stored::String(arena::pin(mathstyle)));
+<a href=#474 id=474 data-nosnippet>474</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>stretchy) = props.stretchy {
+<a href=#475 id=475 data-nosnippet>475</a>    properties.insert(<span class="string">"stretchy"</span>, Stored::String(arena::pin(stretchy)));
 <a href=#476 id=476 data-nosnippet>476</a>  }
-<a href=#477 id=477 data-nosnippet>477</a>
-<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span>glyph_sym = arena::pin(glyph.to_string());
-<a href=#479 id=479 data-nosnippet>479</a>
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="kw">let </span>font = props.font.map(|f| {
-<a href=#481 id=481 data-nosnippet>481</a>    Rc::new(arena::with(glyph_sym, |s| f.specialize(s)))
-<a href=#482 id=482 data-nosnippet>482</a>  });
-<a href=#483 id=483 data-nosnippet>483</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
-<a href=#484 id=484 data-nosnippet>484</a>    glyph_sym,
-<a href=#485 id=485 data-nosnippet>485</a>    font,
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="prelude-val">None</span>,
-<a href=#487 id=487 data-nosnippet>487</a>    props.reversion.unwrap_or(<span class="macro">crate::Tokens!</span>(meaning)),
-<a href=#488 id=488 data-nosnippet>488</a>    properties,
-<a href=#489 id=489 data-nosnippet>489</a>  ))))
-<a href=#490 id=490 data-nosnippet>490</a>}
+<a href=#477 id=477 data-nosnippet>477</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>scriptpos) = props.scriptpos {
+<a href=#478 id=478 data-nosnippet>478</a>    properties.insert(<span class="string">"scriptpos"</span>, Stored::String(arena::pin(scriptpos)));
+<a href=#479 id=479 data-nosnippet>479</a>  }
+<a href=#480 id=480 data-nosnippet>480</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mathstyle) = props.mathstyle {
+<a href=#481 id=481 data-nosnippet>481</a>    properties.insert(<span class="string">"mathstyle"</span>, Stored::String(arena::pin(mathstyle)));
+<a href=#482 id=482 data-nosnippet>482</a>  }
+<a href=#483 id=483 data-nosnippet>483</a>
+<a href=#484 id=484 data-nosnippet>484</a>  <span class="kw">let </span>glyph_sym = arena::pin(glyph.to_string());
+<a href=#485 id=485 data-nosnippet>485</a>
+<a href=#486 id=486 data-nosnippet>486</a>  <span class="kw">let </span>font = props.font.map(|f| {
+<a href=#487 id=487 data-nosnippet>487</a>    Rc::new(arena::with(glyph_sym, |s| f.specialize(s)))
+<a href=#488 id=488 data-nosnippet>488</a>  });
+<a href=#489 id=489 data-nosnippet>489</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
+<a href=#490 id=490 data-nosnippet>490</a>    glyph_sym,
+<a href=#491 id=491 data-nosnippet>491</a>    font,
+<a href=#492 id=492 data-nosnippet>492</a>    <span class="prelude-val">None</span>,
+<a href=#493 id=493 data-nosnippet>493</a>    props.reversion.unwrap_or(<span class="macro">crate::Tokens!</span>(meaning)),
+<a href=#494 id=494 data-nosnippet>494</a>    properties,
+<a href=#495 id=495 data-nosnippet>495</a>  ))))
+<a href=#496 id=496 data-nosnippet>496</a>}
 </code></pre></div></section></main></body></html>

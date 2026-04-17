@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.96.0-nightly (900485642 2026-04-08)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/counter/</div>dialect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! # Counters
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/counter/</div>dialect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! # Counters
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! This is modelled on LaTeX's counter mechanisms, but since it also
 <a href=#4 id=4 data-nosnippet>4</a>//! provides support for ID's, even where there is no visible reference number,
@@ -788,177 +788,190 @@
 <a href=#788 id=788 data-nosnippet>788</a>      <span class="prelude-val">Some</span>(Scope::Global),
 <a href=#789 id=789 data-nosnippet>789</a>    );
 <a href=#790 id=790 data-nosnippet>790</a>  }
-<a href=#791 id=791 data-nosnippet>791</a>  <span class="comment">// format the id of \item's relative to the id of this list
-<a href=#792 id=792 data-nosnippet>792</a>  </span><span class="kw">let </span>useexp = mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\the{listcounter}@ID.i\\@{usecounter}@ID"</span>));
-<a href=#793 id=793 data-nosnippet>793</a>  def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{usecounter}@ID"</span>)), <span class="prelude-val">None</span>, useexp, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#794 id=794 data-nosnippet>794</a>
-<a href=#795 id=795 data-nosnippet>795</a>  <span class="kw">let </span><span class="kw-2">mut </span>series = <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = options.series {
-<a href=#796 id=796 data-nosnippet>796</a>    s.to_string()
-<a href=#797 id=797 data-nosnippet>797</a>  } <span class="kw">else </span>{
-<a href=#798 id=798 data-nosnippet>798</a>    String::new()
-<a href=#799 id=799 data-nosnippet>799</a>  };
-<a href=#800 id=800 data-nosnippet>800</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(start) = options.start {
-<a href=#801 id=801 data-nosnippet>801</a>    <span class="macro">SetCounter!</span>(usecounter, start);
-<a href=#802 id=802 data-nosnippet>802</a>    add_to_counter(<span class="kw-2">&amp;</span>usecounter, Number(-<span class="number">1</span>))<span class="question-mark">?</span>;
-<a href=#803 id=803 data-nosnippet>803</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(s) = <span class="kw">match </span>options.resume {
-<a href=#804 id=804 data-nosnippet>804</a>    <span class="prelude-val">Some</span>(s) =&gt; <span class="prelude-val">Some</span>(s),
-<a href=#805 id=805 data-nosnippet>805</a>    <span class="prelude-val">None </span>=&gt; options.resume_star,
-<a href=#806 id=806 data-nosnippet>806</a>  } {
-<a href=#807 id=807 data-nosnippet>807</a>    <span class="kw">if </span>s != <span class="string">"noseries" </span>{
-<a href=#808 id=808 data-nosnippet>808</a>      series = s.clone();
-<a href=#809 id=809 data-nosnippet>809</a>      <span class="kw">let </span>last_val = lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"enumitem_series_{s}_last"</span>));
-<a href=#810 id=810 data-nosnippet>810</a>      <span class="kw">if </span>last_val != <span class="number">0 </span>{
-<a href=#811 id=811 data-nosnippet>811</a>        <span class="macro">SetCounter!</span>(usecounter, Number(last_val));
-<a href=#812 id=812 data-nosnippet>812</a>      }
-<a href=#813 id=813 data-nosnippet>813</a>    }
-<a href=#814 id=814 data-nosnippet>814</a>  } <span class="kw">else </span>{
-<a href=#815 id=815 data-nosnippet>815</a>    reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;</span>usecounter))<span class="question-mark">?</span>;
-<a href=#816 id=816 data-nosnippet>816</a>  }
-<a href=#817 id=817 data-nosnippet>817</a>
-<a href=#818 id=818 data-nosnippet>818</a>  <span class="kw">let </span><span class="kw-2">mut </span>rsc = ref_step_counter(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"@itemize{listpostfix}"</span>), <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#819 id=819 data-nosnippet>819</a>  rsc.insert(<span class="string">"counter"</span>, usecounter.into());
-<a href=#820 id=820 data-nosnippet>820</a>  rsc.insert(<span class="string">"series"</span>, series.into());
-<a href=#821 id=821 data-nosnippet>821</a>  <span class="prelude-val">Ok</span>(rsc)
-<a href=#822 id=822 data-nosnippet>822</a>}
-<a href=#823 id=823 data-nosnippet>823</a>
-<a href=#824 id=824 data-nosnippet>824</a><span class="doccomment">/// Set the itemization style for a given level.
-<a href=#825 id=825 data-nosnippet>825</a>/// Perl: setItemizationStyle($stuff, $level)
-<a href=#826 id=826 data-nosnippet>826</a>/// If $level is not given, uses the current @itemlevel.
-<a href=#827 id=827 data-nosnippet>827</a>/// Defines \labelitem$level to $stuff.
-<a href=#828 id=828 data-nosnippet>828</a></span><span class="kw">pub fn </span>set_itemization_style(stuff: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;, level: <span class="prelude-ty">Option</span>&lt;i32&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#829 id=829 data-nosnippet>829</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(stuff) = stuff {
-<a href=#830 id=830 data-nosnippet>830</a>    <span class="kw">if </span>stuff.is_empty() {
-<a href=#831 id=831 data-nosnippet>831</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#832 id=832 data-nosnippet>832</a>    }
-<a href=#833 id=833 data-nosnippet>833</a>    <span class="kw">let </span>level = level.unwrap_or_else(|| lookup_int(<span class="string">"@itemlevel"</span>).max(<span class="number">0</span>) <span class="kw">as </span>i32);
-<a href=#834 id=834 data-nosnippet>834</a>    <span class="kw">let </span>level_str = roman_aux(level);
-<a href=#835 id=835 data-nosnippet>835</a>    <span class="kw">let </span>cs_name = <span class="macro">s!</span>(<span class="string">"\\labelitem{level_str}"</span>);
-<a href=#836 id=836 data-nosnippet>836</a>    def_macro(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs_name), <span class="prelude-val">None</span>, stuff.clone(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#837 id=837 data-nosnippet>837</a>  }
-<a href=#838 id=838 data-nosnippet>838</a>  <span class="prelude-val">Ok</span>(())
-<a href=#839 id=839 data-nosnippet>839</a>}
-<a href=#840 id=840 data-nosnippet>840</a>
-<a href=#841 id=841 data-nosnippet>841</a><span class="doccomment">/// Set the enumeration style for a given level.
-<a href=#842 id=842 data-nosnippet>842</a>/// Perl: setEnumerationStyle($stuff, $level)
-<a href=#843 id=843 data-nosnippet>843</a>/// Parses the style tokens to detect A/a/I/i/1 patterns
-<a href=#844 id=844 data-nosnippet>844</a>/// and defines \theenum$level and \labelenum$level accordingly.
-<a href=#845 id=845 data-nosnippet>845</a></span><span class="kw">pub fn </span>set_enumeration_style(stuff: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;, level: <span class="prelude-ty">Option</span>&lt;i32&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#846 id=846 data-nosnippet>846</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(stuff) = stuff {
-<a href=#847 id=847 data-nosnippet>847</a>    <span class="kw">if </span>stuff.is_empty() {
-<a href=#848 id=848 data-nosnippet>848</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#849 id=849 data-nosnippet>849</a>    }
-<a href=#850 id=850 data-nosnippet>850</a>    <span class="kw">let </span>level = level.unwrap_or_else(|| lookup_int(<span class="string">"enumlevel"</span>).max(<span class="number">0</span>) <span class="kw">as </span>i32);
-<a href=#851 id=851 data-nosnippet>851</a>    <span class="kw">let </span>level_str = roman_aux(level);
-<a href=#852 id=852 data-nosnippet>852</a>    <span class="kw">let </span>tokens = stuff.clone().unlist();
-<a href=#853 id=853 data-nosnippet>853</a>    <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
-<a href=#854 id=854 data-nosnippet>854</a>    <span class="kw">let </span>ctr = <span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">"enum{level_str}"</span>));
-<a href=#855 id=855 data-nosnippet>855</a>    <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
-<a href=#856 id=856 data-nosnippet>856</a>    <span class="kw">while </span>i &lt; tokens.len() {
-<a href=#857 id=857 data-nosnippet>857</a>      <span class="kw">let </span>t = tokens[i];
-<a href=#858 id=858 data-nosnippet>858</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
-<a href=#859 id=859 data-nosnippet>859</a>        <span class="comment">// Copy braced groups verbatim
-<a href=#860 id=860 data-nosnippet>860</a>        </span>out.push(t);
-<a href=#861 id=861 data-nosnippet>861</a>        <span class="kw">let </span><span class="kw-2">mut </span>brlevel = <span class="number">1i32</span>;
-<a href=#862 id=862 data-nosnippet>862</a>        i += <span class="number">1</span>;
-<a href=#863 id=863 data-nosnippet>863</a>        <span class="kw">while </span>brlevel &gt; <span class="number">0 </span>&amp;&amp; i &lt; tokens.len() {
-<a href=#864 id=864 data-nosnippet>864</a>          <span class="kw">let </span>tt = tokens[i];
-<a href=#865 id=865 data-nosnippet>865</a>          <span class="kw">if </span>tt.get_catcode() == Catcode::BEGIN {
-<a href=#866 id=866 data-nosnippet>866</a>            brlevel += <span class="number">1</span>;
-<a href=#867 id=867 data-nosnippet>867</a>          } <span class="kw">else if </span>tt.get_catcode() == Catcode::END {
-<a href=#868 id=868 data-nosnippet>868</a>            brlevel -= <span class="number">1</span>;
-<a href=#869 id=869 data-nosnippet>869</a>          }
-<a href=#870 id=870 data-nosnippet>870</a>          out.push(tt);
-<a href=#871 id=871 data-nosnippet>871</a>          i += <span class="number">1</span>;
-<a href=#872 id=872 data-nosnippet>872</a>        }
-<a href=#873 id=873 data-nosnippet>873</a>      } <span class="kw">else </span>{
-<a href=#874 id=874 data-nosnippet>874</a>        <span class="kw">let </span>ch = char::from_u32(t.get_charcode()).unwrap_or(<span class="string">'\0'</span>);
-<a href=#875 id=875 data-nosnippet>875</a>        <span class="kw">let </span>cat = t.get_catcode();
-<a href=#876 id=876 data-nosnippet>876</a>        <span class="kw">match </span>(ch, cat) {
-<a href=#877 id=877 data-nosnippet>877</a>          (<span class="string">'A'</span>, Catcode::LETTER) =&gt; {
-<a href=#878 id=878 data-nosnippet>878</a>            <span class="comment">// \Alph{enum$level}
-<a href=#879 id=879 data-nosnippet>879</a>            </span>def_macro(
-<a href=#880 id=880 data-nosnippet>880</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
-<a href=#881 id=881 data-nosnippet>881</a>              <span class="prelude-val">None</span>,
-<a href=#882 id=882 data-nosnippet>882</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\Alph"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
-<a href=#883 id=883 data-nosnippet>883</a>              <span class="prelude-val">None</span>,
-<a href=#884 id=884 data-nosnippet>884</a>            )<span class="question-mark">?</span>;
-<a href=#885 id=885 data-nosnippet>885</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
-<a href=#886 id=886 data-nosnippet>886</a>          }
-<a href=#887 id=887 data-nosnippet>887</a>          (<span class="string">'a'</span>, Catcode::LETTER) =&gt; {
-<a href=#888 id=888 data-nosnippet>888</a>            <span class="comment">// \alph{enum$level}
-<a href=#889 id=889 data-nosnippet>889</a>            </span>def_macro(
-<a href=#890 id=890 data-nosnippet>890</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
-<a href=#891 id=891 data-nosnippet>891</a>              <span class="prelude-val">None</span>,
-<a href=#892 id=892 data-nosnippet>892</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\alph"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
-<a href=#893 id=893 data-nosnippet>893</a>              <span class="prelude-val">None</span>,
-<a href=#894 id=894 data-nosnippet>894</a>            )<span class="question-mark">?</span>;
-<a href=#895 id=895 data-nosnippet>895</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
-<a href=#896 id=896 data-nosnippet>896</a>          }
-<a href=#897 id=897 data-nosnippet>897</a>          (<span class="string">'I'</span>, Catcode::LETTER) =&gt; {
-<a href=#898 id=898 data-nosnippet>898</a>            <span class="comment">// \Roman{enum$level}
-<a href=#899 id=899 data-nosnippet>899</a>            </span>def_macro(
-<a href=#900 id=900 data-nosnippet>900</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
-<a href=#901 id=901 data-nosnippet>901</a>              <span class="prelude-val">None</span>,
-<a href=#902 id=902 data-nosnippet>902</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\Roman"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
-<a href=#903 id=903 data-nosnippet>903</a>              <span class="prelude-val">None</span>,
-<a href=#904 id=904 data-nosnippet>904</a>            )<span class="question-mark">?</span>;
-<a href=#905 id=905 data-nosnippet>905</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
-<a href=#906 id=906 data-nosnippet>906</a>          }
-<a href=#907 id=907 data-nosnippet>907</a>          (<span class="string">'i'</span>, Catcode::LETTER) =&gt; {
-<a href=#908 id=908 data-nosnippet>908</a>            <span class="comment">// \roman{enum$level}
-<a href=#909 id=909 data-nosnippet>909</a>            </span>def_macro(
-<a href=#910 id=910 data-nosnippet>910</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
-<a href=#911 id=911 data-nosnippet>911</a>              <span class="prelude-val">None</span>,
-<a href=#912 id=912 data-nosnippet>912</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\roman"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
-<a href=#913 id=913 data-nosnippet>913</a>              <span class="prelude-val">None</span>,
-<a href=#914 id=914 data-nosnippet>914</a>            )<span class="question-mark">?</span>;
-<a href=#915 id=915 data-nosnippet>915</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
-<a href=#916 id=916 data-nosnippet>916</a>          }
-<a href=#917 id=917 data-nosnippet>917</a>          (<span class="string">'1'</span>, Catcode::OTHER) =&gt; {
-<a href=#918 id=918 data-nosnippet>918</a>            <span class="comment">// \arabic{enum$level}
-<a href=#919 id=919 data-nosnippet>919</a>            </span>def_macro(
-<a href=#920 id=920 data-nosnippet>920</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
-<a href=#921 id=921 data-nosnippet>921</a>              <span class="prelude-val">None</span>,
-<a href=#922 id=922 data-nosnippet>922</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\arabic"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
-<a href=#923 id=923 data-nosnippet>923</a>              <span class="prelude-val">None</span>,
-<a href=#924 id=924 data-nosnippet>924</a>            )<span class="question-mark">?</span>;
-<a href=#925 id=925 data-nosnippet>925</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
-<a href=#926 id=926 data-nosnippet>926</a>          }
-<a href=#927 id=927 data-nosnippet>927</a>          <span class="kw">_ </span>=&gt; {
-<a href=#928 id=928 data-nosnippet>928</a>            out.push(t);
+<a href=#791 id=791 data-nosnippet>791</a>  <span class="comment">// format the id of \item's relative to the id of this list.
+<a href=#792 id=792 data-nosnippet>792</a>  // Perl: Tokens(T_CS('\the' . $listcounter . '@ID'), T_OTHER('.i'),
+<a href=#793 id=793 data-nosnippet>793</a>  //              T_CS('\@' . $usecounter . '@ID'))
+<a href=#794 id=794 data-nosnippet>794</a>  // — build the Tokens array directly from 3 explicit tokens rather than
+<a href=#795 id=795 data-nosnippet>795</a>  // round-tripping through a string tokenizer. This matters when `usecounter`
+<a href=#796 id=796 data-nosnippet>796</a>  // contains digits (e.g. "count1" from \usecounter{count1}): `tokenize_internal`
+<a href=#797 id=797 data-nosnippet>797</a>  // on a literal string "\@count1@ID" would split into \@count + "1" + "@" + "ID"
+<a href=#798 id=798 data-nosnippet>798</a>  // because TeX's CS reader stops at digits (digits are catcode OTHER even in
+<a href=#799 id=799 data-nosnippet>799</a>  // the style table). Perl uses T_CS($name) to build a single CS token directly
+<a href=#800 id=800 data-nosnippet>800</a>  // by name, bypassing tokenization.
+<a href=#801 id=801 data-nosnippet>801</a>  </span><span class="kw">let </span>useexp = Tokens::new(<span class="macro">vec!</span>[
+<a href=#802 id=802 data-nosnippet>802</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{listcounter}@ID"</span>)),
+<a href=#803 id=803 data-nosnippet>803</a>    <span class="macro">T_OTHER!</span>(<span class="string">".i"</span>),
+<a href=#804 id=804 data-nosnippet>804</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{usecounter}@ID"</span>)),
+<a href=#805 id=805 data-nosnippet>805</a>  ]);
+<a href=#806 id=806 data-nosnippet>806</a>  def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{usecounter}@ID"</span>)), <span class="prelude-val">None</span>, useexp, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#807 id=807 data-nosnippet>807</a>
+<a href=#808 id=808 data-nosnippet>808</a>  <span class="kw">let </span><span class="kw-2">mut </span>series = <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = options.series {
+<a href=#809 id=809 data-nosnippet>809</a>    s.to_string()
+<a href=#810 id=810 data-nosnippet>810</a>  } <span class="kw">else </span>{
+<a href=#811 id=811 data-nosnippet>811</a>    String::new()
+<a href=#812 id=812 data-nosnippet>812</a>  };
+<a href=#813 id=813 data-nosnippet>813</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(start) = options.start {
+<a href=#814 id=814 data-nosnippet>814</a>    <span class="macro">SetCounter!</span>(usecounter, start);
+<a href=#815 id=815 data-nosnippet>815</a>    add_to_counter(<span class="kw-2">&amp;</span>usecounter, Number(-<span class="number">1</span>))<span class="question-mark">?</span>;
+<a href=#816 id=816 data-nosnippet>816</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(s) = <span class="kw">match </span>options.resume {
+<a href=#817 id=817 data-nosnippet>817</a>    <span class="prelude-val">Some</span>(s) =&gt; <span class="prelude-val">Some</span>(s),
+<a href=#818 id=818 data-nosnippet>818</a>    <span class="prelude-val">None </span>=&gt; options.resume_star,
+<a href=#819 id=819 data-nosnippet>819</a>  } {
+<a href=#820 id=820 data-nosnippet>820</a>    <span class="kw">if </span>s != <span class="string">"noseries" </span>{
+<a href=#821 id=821 data-nosnippet>821</a>      series = s.clone();
+<a href=#822 id=822 data-nosnippet>822</a>      <span class="kw">let </span>last_val = lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"enumitem_series_{s}_last"</span>));
+<a href=#823 id=823 data-nosnippet>823</a>      <span class="kw">if </span>last_val != <span class="number">0 </span>{
+<a href=#824 id=824 data-nosnippet>824</a>        <span class="macro">SetCounter!</span>(usecounter, Number(last_val));
+<a href=#825 id=825 data-nosnippet>825</a>      }
+<a href=#826 id=826 data-nosnippet>826</a>    }
+<a href=#827 id=827 data-nosnippet>827</a>  } <span class="kw">else </span>{
+<a href=#828 id=828 data-nosnippet>828</a>    reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;</span>usecounter))<span class="question-mark">?</span>;
+<a href=#829 id=829 data-nosnippet>829</a>  }
+<a href=#830 id=830 data-nosnippet>830</a>
+<a href=#831 id=831 data-nosnippet>831</a>  <span class="kw">let </span><span class="kw-2">mut </span>rsc = ref_step_counter(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"@itemize{listpostfix}"</span>), <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#832 id=832 data-nosnippet>832</a>  rsc.insert(<span class="string">"counter"</span>, usecounter.into());
+<a href=#833 id=833 data-nosnippet>833</a>  rsc.insert(<span class="string">"series"</span>, series.into());
+<a href=#834 id=834 data-nosnippet>834</a>  <span class="prelude-val">Ok</span>(rsc)
+<a href=#835 id=835 data-nosnippet>835</a>}
+<a href=#836 id=836 data-nosnippet>836</a>
+<a href=#837 id=837 data-nosnippet>837</a><span class="doccomment">/// Set the itemization style for a given level.
+<a href=#838 id=838 data-nosnippet>838</a>/// Perl: setItemizationStyle($stuff, $level)
+<a href=#839 id=839 data-nosnippet>839</a>/// If $level is not given, uses the current @itemlevel.
+<a href=#840 id=840 data-nosnippet>840</a>/// Defines \labelitem$level to $stuff.
+<a href=#841 id=841 data-nosnippet>841</a></span><span class="kw">pub fn </span>set_itemization_style(stuff: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;, level: <span class="prelude-ty">Option</span>&lt;i32&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#842 id=842 data-nosnippet>842</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(stuff) = stuff {
+<a href=#843 id=843 data-nosnippet>843</a>    <span class="kw">if </span>stuff.is_empty() {
+<a href=#844 id=844 data-nosnippet>844</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#845 id=845 data-nosnippet>845</a>    }
+<a href=#846 id=846 data-nosnippet>846</a>    <span class="kw">let </span>level = level.unwrap_or_else(|| lookup_int(<span class="string">"@itemlevel"</span>).max(<span class="number">0</span>) <span class="kw">as </span>i32);
+<a href=#847 id=847 data-nosnippet>847</a>    <span class="kw">let </span>level_str = roman_aux(level);
+<a href=#848 id=848 data-nosnippet>848</a>    <span class="kw">let </span>cs_name = <span class="macro">s!</span>(<span class="string">"\\labelitem{level_str}"</span>);
+<a href=#849 id=849 data-nosnippet>849</a>    def_macro(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs_name), <span class="prelude-val">None</span>, stuff.clone(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#850 id=850 data-nosnippet>850</a>  }
+<a href=#851 id=851 data-nosnippet>851</a>  <span class="prelude-val">Ok</span>(())
+<a href=#852 id=852 data-nosnippet>852</a>}
+<a href=#853 id=853 data-nosnippet>853</a>
+<a href=#854 id=854 data-nosnippet>854</a><span class="doccomment">/// Set the enumeration style for a given level.
+<a href=#855 id=855 data-nosnippet>855</a>/// Perl: setEnumerationStyle($stuff, $level)
+<a href=#856 id=856 data-nosnippet>856</a>/// Parses the style tokens to detect A/a/I/i/1 patterns
+<a href=#857 id=857 data-nosnippet>857</a>/// and defines \theenum$level and \labelenum$level accordingly.
+<a href=#858 id=858 data-nosnippet>858</a></span><span class="kw">pub fn </span>set_enumeration_style(stuff: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;, level: <span class="prelude-ty">Option</span>&lt;i32&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#859 id=859 data-nosnippet>859</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(stuff) = stuff {
+<a href=#860 id=860 data-nosnippet>860</a>    <span class="kw">if </span>stuff.is_empty() {
+<a href=#861 id=861 data-nosnippet>861</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#862 id=862 data-nosnippet>862</a>    }
+<a href=#863 id=863 data-nosnippet>863</a>    <span class="kw">let </span>level = level.unwrap_or_else(|| lookup_int(<span class="string">"enumlevel"</span>).max(<span class="number">0</span>) <span class="kw">as </span>i32);
+<a href=#864 id=864 data-nosnippet>864</a>    <span class="kw">let </span>level_str = roman_aux(level);
+<a href=#865 id=865 data-nosnippet>865</a>    <span class="kw">let </span>tokens = stuff.clone().unlist();
+<a href=#866 id=866 data-nosnippet>866</a>    <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
+<a href=#867 id=867 data-nosnippet>867</a>    <span class="kw">let </span>ctr = <span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">"enum{level_str}"</span>));
+<a href=#868 id=868 data-nosnippet>868</a>    <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#869 id=869 data-nosnippet>869</a>    <span class="kw">while </span>i &lt; tokens.len() {
+<a href=#870 id=870 data-nosnippet>870</a>      <span class="kw">let </span>t = tokens[i];
+<a href=#871 id=871 data-nosnippet>871</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
+<a href=#872 id=872 data-nosnippet>872</a>        <span class="comment">// Copy braced groups verbatim
+<a href=#873 id=873 data-nosnippet>873</a>        </span>out.push(t);
+<a href=#874 id=874 data-nosnippet>874</a>        <span class="kw">let </span><span class="kw-2">mut </span>brlevel = <span class="number">1i32</span>;
+<a href=#875 id=875 data-nosnippet>875</a>        i += <span class="number">1</span>;
+<a href=#876 id=876 data-nosnippet>876</a>        <span class="kw">while </span>brlevel &gt; <span class="number">0 </span>&amp;&amp; i &lt; tokens.len() {
+<a href=#877 id=877 data-nosnippet>877</a>          <span class="kw">let </span>tt = tokens[i];
+<a href=#878 id=878 data-nosnippet>878</a>          <span class="kw">if </span>tt.get_catcode() == Catcode::BEGIN {
+<a href=#879 id=879 data-nosnippet>879</a>            brlevel += <span class="number">1</span>;
+<a href=#880 id=880 data-nosnippet>880</a>          } <span class="kw">else if </span>tt.get_catcode() == Catcode::END {
+<a href=#881 id=881 data-nosnippet>881</a>            brlevel -= <span class="number">1</span>;
+<a href=#882 id=882 data-nosnippet>882</a>          }
+<a href=#883 id=883 data-nosnippet>883</a>          out.push(tt);
+<a href=#884 id=884 data-nosnippet>884</a>          i += <span class="number">1</span>;
+<a href=#885 id=885 data-nosnippet>885</a>        }
+<a href=#886 id=886 data-nosnippet>886</a>      } <span class="kw">else </span>{
+<a href=#887 id=887 data-nosnippet>887</a>        <span class="kw">let </span>ch = char::from_u32(t.get_charcode()).unwrap_or(<span class="string">'\0'</span>);
+<a href=#888 id=888 data-nosnippet>888</a>        <span class="kw">let </span>cat = t.get_catcode();
+<a href=#889 id=889 data-nosnippet>889</a>        <span class="kw">match </span>(ch, cat) {
+<a href=#890 id=890 data-nosnippet>890</a>          (<span class="string">'A'</span>, Catcode::LETTER) =&gt; {
+<a href=#891 id=891 data-nosnippet>891</a>            <span class="comment">// \Alph{enum$level}
+<a href=#892 id=892 data-nosnippet>892</a>            </span>def_macro(
+<a href=#893 id=893 data-nosnippet>893</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
+<a href=#894 id=894 data-nosnippet>894</a>              <span class="prelude-val">None</span>,
+<a href=#895 id=895 data-nosnippet>895</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\Alph"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
+<a href=#896 id=896 data-nosnippet>896</a>              <span class="prelude-val">None</span>,
+<a href=#897 id=897 data-nosnippet>897</a>            )<span class="question-mark">?</span>;
+<a href=#898 id=898 data-nosnippet>898</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
+<a href=#899 id=899 data-nosnippet>899</a>          }
+<a href=#900 id=900 data-nosnippet>900</a>          (<span class="string">'a'</span>, Catcode::LETTER) =&gt; {
+<a href=#901 id=901 data-nosnippet>901</a>            <span class="comment">// \alph{enum$level}
+<a href=#902 id=902 data-nosnippet>902</a>            </span>def_macro(
+<a href=#903 id=903 data-nosnippet>903</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
+<a href=#904 id=904 data-nosnippet>904</a>              <span class="prelude-val">None</span>,
+<a href=#905 id=905 data-nosnippet>905</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\alph"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
+<a href=#906 id=906 data-nosnippet>906</a>              <span class="prelude-val">None</span>,
+<a href=#907 id=907 data-nosnippet>907</a>            )<span class="question-mark">?</span>;
+<a href=#908 id=908 data-nosnippet>908</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
+<a href=#909 id=909 data-nosnippet>909</a>          }
+<a href=#910 id=910 data-nosnippet>910</a>          (<span class="string">'I'</span>, Catcode::LETTER) =&gt; {
+<a href=#911 id=911 data-nosnippet>911</a>            <span class="comment">// \Roman{enum$level}
+<a href=#912 id=912 data-nosnippet>912</a>            </span>def_macro(
+<a href=#913 id=913 data-nosnippet>913</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
+<a href=#914 id=914 data-nosnippet>914</a>              <span class="prelude-val">None</span>,
+<a href=#915 id=915 data-nosnippet>915</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\Roman"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
+<a href=#916 id=916 data-nosnippet>916</a>              <span class="prelude-val">None</span>,
+<a href=#917 id=917 data-nosnippet>917</a>            )<span class="question-mark">?</span>;
+<a href=#918 id=918 data-nosnippet>918</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
+<a href=#919 id=919 data-nosnippet>919</a>          }
+<a href=#920 id=920 data-nosnippet>920</a>          (<span class="string">'i'</span>, Catcode::LETTER) =&gt; {
+<a href=#921 id=921 data-nosnippet>921</a>            <span class="comment">// \roman{enum$level}
+<a href=#922 id=922 data-nosnippet>922</a>            </span>def_macro(
+<a href=#923 id=923 data-nosnippet>923</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
+<a href=#924 id=924 data-nosnippet>924</a>              <span class="prelude-val">None</span>,
+<a href=#925 id=925 data-nosnippet>925</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\roman"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
+<a href=#926 id=926 data-nosnippet>926</a>              <span class="prelude-val">None</span>,
+<a href=#927 id=927 data-nosnippet>927</a>            )<span class="question-mark">?</span>;
+<a href=#928 id=928 data-nosnippet>928</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
 <a href=#929 id=929 data-nosnippet>929</a>          }
-<a href=#930 id=930 data-nosnippet>930</a>        }
-<a href=#931 id=931 data-nosnippet>931</a>        i += <span class="number">1</span>;
-<a href=#932 id=932 data-nosnippet>932</a>      }
-<a href=#933 id=933 data-nosnippet>933</a>    }
-<a href=#934 id=934 data-nosnippet>934</a>    <span class="comment">// Define \labelenum$level = { out }
-<a href=#935 id=935 data-nosnippet>935</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>label_tokens = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
-<a href=#936 id=936 data-nosnippet>936</a>    label_tokens.extend(out);
-<a href=#937 id=937 data-nosnippet>937</a>    label_tokens.push(<span class="macro">T_END!</span>());
-<a href=#938 id=938 data-nosnippet>938</a>    def_macro(
-<a href=#939 id=939 data-nosnippet>939</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\labelenum{level_str}"</span>)),
-<a href=#940 id=940 data-nosnippet>940</a>      <span class="prelude-val">None</span>,
-<a href=#941 id=941 data-nosnippet>941</a>      Tokens::new(label_tokens),
-<a href=#942 id=942 data-nosnippet>942</a>      <span class="prelude-val">None</span>,
-<a href=#943 id=943 data-nosnippet>943</a>    )<span class="question-mark">?</span>;
-<a href=#944 id=944 data-nosnippet>944</a>  }
-<a href=#945 id=945 data-nosnippet>945</a>  <span class="prelude-val">Ok</span>(())
-<a href=#946 id=946 data-nosnippet>946</a>}
-<a href=#947 id=947 data-nosnippet>947</a>
-<a href=#948 id=948 data-nosnippet>948</a><span class="doccomment">/// Copies the current id, tags, and inlist counter values into whatsit properties
-<a href=#949 id=949 data-nosnippet>949</a>/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
-<a href=#950 id=950 data-nosnippet>950</a></span><span class="kw">pub fn </span>rescue_caption_counters(captype: <span class="kw-2">&amp;</span>str, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) {
-<a href=#951 id=951 data-nosnippet>951</a>  <span class="kw">let </span>tagskey = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{captype}_tags"</span>);
-<a href=#952 id=952 data-nosnippet>952</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tags) = state::remove_value(tagskey) {
-<a href=#953 id=953 data-nosnippet>953</a>    whatsit.set_property(<span class="string">"tags"</span>, tags);
-<a href=#954 id=954 data-nosnippet>954</a>  }
-<a href=#955 id=955 data-nosnippet>955</a>  <span class="kw">let </span>idkey = <span class="macro">s!</span>(<span class="string">"{captype}_id"</span>);
-<a href=#956 id=956 data-nosnippet>956</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = state::remove_value(<span class="kw-2">&amp;</span>idkey) {
-<a href=#957 id=957 data-nosnippet>957</a>    whatsit.set_property(<span class="string">"id"</span>, id);
-<a href=#958 id=958 data-nosnippet>958</a>  }
-<a href=#959 id=959 data-nosnippet>959</a>  <span class="kw">let </span>inlistkey = <span class="macro">s!</span>(<span class="string">"{captype}_inlist"</span>);
-<a href=#960 id=960 data-nosnippet>960</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(inlist) = state::remove_value(<span class="kw-2">&amp;</span>inlistkey) {
-<a href=#961 id=961 data-nosnippet>961</a>    whatsit.set_property(<span class="string">"inlist"</span>, inlist);
-<a href=#962 id=962 data-nosnippet>962</a>  }
-<a href=#963 id=963 data-nosnippet>963</a>}
+<a href=#930 id=930 data-nosnippet>930</a>          (<span class="string">'1'</span>, Catcode::OTHER) =&gt; {
+<a href=#931 id=931 data-nosnippet>931</a>            <span class="comment">// \arabic{enum$level}
+<a href=#932 id=932 data-nosnippet>932</a>            </span>def_macro(
+<a href=#933 id=933 data-nosnippet>933</a>              <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)),
+<a href=#934 id=934 data-nosnippet>934</a>              <span class="prelude-val">None</span>,
+<a href=#935 id=935 data-nosnippet>935</a>              Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\arabic"</span>), <span class="macro">T_BEGIN!</span>(), ctr, <span class="macro">T_END!</span>()]),
+<a href=#936 id=936 data-nosnippet>936</a>              <span class="prelude-val">None</span>,
+<a href=#937 id=937 data-nosnippet>937</a>            )<span class="question-mark">?</span>;
+<a href=#938 id=938 data-nosnippet>938</a>            out.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\theenum{level_str}"</span>)));
+<a href=#939 id=939 data-nosnippet>939</a>          }
+<a href=#940 id=940 data-nosnippet>940</a>          <span class="kw">_ </span>=&gt; {
+<a href=#941 id=941 data-nosnippet>941</a>            out.push(t);
+<a href=#942 id=942 data-nosnippet>942</a>          }
+<a href=#943 id=943 data-nosnippet>943</a>        }
+<a href=#944 id=944 data-nosnippet>944</a>        i += <span class="number">1</span>;
+<a href=#945 id=945 data-nosnippet>945</a>      }
+<a href=#946 id=946 data-nosnippet>946</a>    }
+<a href=#947 id=947 data-nosnippet>947</a>    <span class="comment">// Define \labelenum$level = { out }
+<a href=#948 id=948 data-nosnippet>948</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>label_tokens = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
+<a href=#949 id=949 data-nosnippet>949</a>    label_tokens.extend(out);
+<a href=#950 id=950 data-nosnippet>950</a>    label_tokens.push(<span class="macro">T_END!</span>());
+<a href=#951 id=951 data-nosnippet>951</a>    def_macro(
+<a href=#952 id=952 data-nosnippet>952</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\labelenum{level_str}"</span>)),
+<a href=#953 id=953 data-nosnippet>953</a>      <span class="prelude-val">None</span>,
+<a href=#954 id=954 data-nosnippet>954</a>      Tokens::new(label_tokens),
+<a href=#955 id=955 data-nosnippet>955</a>      <span class="prelude-val">None</span>,
+<a href=#956 id=956 data-nosnippet>956</a>    )<span class="question-mark">?</span>;
+<a href=#957 id=957 data-nosnippet>957</a>  }
+<a href=#958 id=958 data-nosnippet>958</a>  <span class="prelude-val">Ok</span>(())
+<a href=#959 id=959 data-nosnippet>959</a>}
+<a href=#960 id=960 data-nosnippet>960</a>
+<a href=#961 id=961 data-nosnippet>961</a><span class="doccomment">/// Copies the current id, tags, and inlist counter values into whatsit properties
+<a href=#962 id=962 data-nosnippet>962</a>/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
+<a href=#963 id=963 data-nosnippet>963</a></span><span class="kw">pub fn </span>rescue_caption_counters(captype: <span class="kw-2">&amp;</span>str, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) {
+<a href=#964 id=964 data-nosnippet>964</a>  <span class="kw">let </span>tagskey = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{captype}_tags"</span>);
+<a href=#965 id=965 data-nosnippet>965</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tags) = state::remove_value(tagskey) {
+<a href=#966 id=966 data-nosnippet>966</a>    whatsit.set_property(<span class="string">"tags"</span>, tags);
+<a href=#967 id=967 data-nosnippet>967</a>  }
+<a href=#968 id=968 data-nosnippet>968</a>  <span class="kw">let </span>idkey = <span class="macro">s!</span>(<span class="string">"{captype}_id"</span>);
+<a href=#969 id=969 data-nosnippet>969</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = state::remove_value(<span class="kw-2">&amp;</span>idkey) {
+<a href=#970 id=970 data-nosnippet>970</a>    whatsit.set_property(<span class="string">"id"</span>, id);
+<a href=#971 id=971 data-nosnippet>971</a>  }
+<a href=#972 id=972 data-nosnippet>972</a>  <span class="kw">let </span>inlistkey = <span class="macro">s!</span>(<span class="string">"{captype}_inlist"</span>);
+<a href=#973 id=973 data-nosnippet>973</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(inlist) = state::remove_value(<span class="kw-2">&amp;</span>inlistkey) {
+<a href=#974 id=974 data-nosnippet>974</a>    whatsit.set_property(<span class="string">"inlist"</span>, inlist);
+<a href=#975 id=975 data-nosnippet>975</a>  }
+<a href=#976 id=976 data-nosnippet>976</a>}
 </code></pre></div></section></main></body></html>

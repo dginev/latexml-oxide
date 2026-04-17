@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["tex_tests"],"mod":["converter","core_interface","ini_tex","util"]};
+window.SIDEBAR_ITEMS = {"macro":["tex_tests"],"mod":["converter","core_interface","ini_tex","post","util"]};
