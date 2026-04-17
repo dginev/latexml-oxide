@@ -822,15 +822,16 @@ between function-application vs. invisible-times interpretations.
 Marpa produces BOTH as natural ambiguity.
 
 Redesign:
-- `speculative_prefix_apply` semantic action ALWAYS succeeds, marking
-  the XMApp with `meta.speculative = true`.
+- `speculative_prefix_apply` semantic action ALWAYS succeeds
+  (previously returned Err when SPECULATE was off — a grammar-layer
+  filter, wrong layer for the decision).
 - `FencedLettersAreFunctionArguments` pragma unconditionally prefers
   the function-application interpretation for fenced letter args —
   this matches mathematical convention: `f(x)` reads as `f@(x)`.
-- The SPECULATE flag is now a no-op kept for backwards compatibility
-  of `\usepackage[mathparserspeculate]{latexml}` syntax.
+- The SPECULATE flag is now only useful for the diagnostic
+  `possibleFunction="yes"` attribute marking (via `maybe_mark_possible_function`).
 - Per-identifier role declarations (`\lxDeclare[role=FUNCTION]{...}`)
-  remain the primary tool for author-specified function roles.
+  and `[role=ID]` remain the primary tool for author-specified roles.
 
 Test XML updates affected 13 files where the old SPECULATE-off
 behavior was recorded; all now expect mathematically-conventional
@@ -840,6 +841,23 @@ Wins persist on compositional fenced lists:
 - `a(b)(c)(d)`: 23 → 2 trees (91% reduction)
 - `f(x)(y)`:   11 → 2 trees (82%)
 - `[A],[B],[C],[D]`: 64 → 2 trees, 1 unique (32x)
+
+##### Session 107 Summary (2026-04-16 cont'd)
+
+Commits:
+- `a020488f7` — Fix 4 speculative redesign (13 test XMLs updated)
+- `59d99e828` — D3b: document safety contracts on all 10 unsafe blocks
+- `b61e0cfa1` — Remove stray DEBUG eprintln! statements
+- `fde9f6b81` — Update OXIDIZED_DESIGN #18 for Marpa design
+- `47c4a3e53` — Check off D5 items completed across sessions 105-107
+- `888f2eb93` — Remove unused meta.speculative field (smaller Meta)
+
+State after session 107:
+- 317 integration tests pass
+- `0707.1173` conversion: 12.6s (22.6s before session 105)
+- Total enumerated trees across suite: 3544 (was 3767 pre-session-106)
+- No warnings in release build
+- 10 unsafe blocks, all SAFETY-documented
 
 ---
 
