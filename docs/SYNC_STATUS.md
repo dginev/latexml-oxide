@@ -81,11 +81,14 @@ Detailed fix history for phases above lives in git log. See the corresponding se
 
 ## Work Plan — Active TODO List
 
-### D0. Raw-binding fidelity — HIGHEST PRIORITY
+### D0. Raw-binding fidelity — LARGELY COMPLETE (was HIGHEST PRIORITY)
 
-Make `tests/babel/page545` (currently `#[ignore]`d) pass via the **exact same
-raw-loading path** that Perl uses. Re-enabling this single test is a
-practical, fully-solvable project that will close deep engine gaps.
+**Status (2026-04-17):** `tests/babel/page545` **passes** and is no
+longer `#[ignore]`d. The remaining engine gaps are non-blocking.
+
+Make `tests/babel/page545` pass via the **exact same raw-loading path**
+that Perl uses. Re-enabling this single test was a practical,
+fully-solvable project that closed deep engine gaps.
 
 **Background.** Perl's babel support is three tiny files:
 - `babel.sty.ltxml` (30 lines) — `InputDefinitions('babel', noltxml=>1, type=>sty)`
