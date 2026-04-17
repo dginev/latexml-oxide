@@ -7,6 +7,20 @@ LoadDefinitions!({
   // Authors go in single \author separated by \and; institutes in \institute separated by \and.
   // \inst{n} links author to n-th institute.
 
+  // Perl L43-44: \author[]{} — optional arg for OmniBus use, splits by \and or comma.
+  // Redefines the generic \author to accept an optional prefix.
+  DefMacro!("\\author[]{}", sub[(_opt, authors)] {
+    let parts = split_tokens(authors, vec![T_CS!("\\and"), T_OTHER!(",")]);
+    let mut out = Vec::new();
+    for part in parts {
+      out.push(T_CS!("\\lx@author"));
+      out.push(T_BEGIN!());
+      out.extend(part.unlist());
+      out.push(T_END!());
+    }
+    out
+  });
+
   // \inst{number} — generates institutemark + emailmark contacts — Perl L49-54
   DefConstructor!("\\@@@inst{}",
     "^<ltx:contact role='institutemark' _mark='#1'>#1</ltx:contact><ltx:contact role='emailmark' _mark='#1'>#1</ltx:contact>");
