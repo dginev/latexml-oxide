@@ -428,11 +428,30 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
     at group exit; Rust emits only the outer one; both are invisible
     in rendering).
 
-- [ ] **Drop Rust babel workarounds incrementally.** Once the engine pieces
-  are in place, strip `babel_sty.rs` from 384 → ~15 lines to match Perl's
-  stub, and `babel_support_sty.rs` to its 131-line pure translation. The
-  experiment branch above is a guide; each workaround removed should be
-  tied to a closed engine gap.
+- [~] **Drop Rust babel workarounds incrementally.** In progress.
+  Session 110 (2026-04-17): **babel_sty.rs cut 405 → 128 lines (68%)** via
+  relocation + consolidation — not yet engine-closed, but the remaining
+  code is a clean orchestration layer. Breakdown of moves:
+  - French captions/ordinals/guillemets/active-puncts (~100 lines):
+    `babel_sty.rs` → `french_ldf.rs` (where frenchb.ldf content belongs).
+    Includes frenchb's trailing `\xspace`/`\FBthickkern` kerning.
+  - German caption + `"` shorthand dispatch (~45 lines):
+    `babel_sty.rs` → `german_sty.rs` (where germanb.ldf content belongs).
+  - English/NGerman captions: moved to `english_sty.rs`/`ngerman_sty.rs`.
+  - `\lx@babel@activate@lang@post` + `\lx@babel@set@doclang` consolidated
+    into `\lx@babel@activate@mainlang` (run twice — at load-time for
+    DOCUMENT_LANGUAGE, at AtBeginDocument for late state refresh).
+  - Iterates over ALL options in `\opt@babel.sty` to load each language's
+    port up-front. Needed because babel's own `\select@language` calls
+    `\captions<lang>` before our `\ltx@bbl@select@language` hook can load
+    the port.
+  - `.ldf` dispatch entries added: english/german/germanb/ngerman/ngermanb.
+
+  Remaining gap to Perl's 30-line stub: ~100 lines of rationalized
+  workarounds for engine gaps (precompiled kernel, `\initiate@active@char`
+  lifecycle, `.ini` openin). Eliminating them requires the dump-capture-
+  language-layer step in the staged plan (memory:
+  `wisdom_babel_fidelity_plan.md`).
 
 - [x] **Un-ignore `page545_test`.** Done 2026-04-17 (commit 96d4bfbe4).
   The expected XML in `tests/babel/page545.xml` matches Rust's output
