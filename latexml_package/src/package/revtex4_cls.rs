@@ -25,6 +25,11 @@ LoadDefinitions!({
     DeclareOption!(*option, None);
   }
 
+  // Perl L47-49: osajnl defines \ocis -> \pacs
+  DeclareOption!("osajnl", {
+    DefMacro!("\\ocis", "\\pacs");
+  });
+
   // Anything else is for article
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;

@@ -34,4 +34,8 @@ LoadDefinitions!({
   DefMacro!("\\@listiv", "\\leftmargin\\leftmarginiv\\labelwidth\\leftmarginiv\\advance\\labelwidth-\\labelsep");
   DefMacro!("\\@listv", "\\leftmargin\\leftmarginv\\labelwidth\\leftmarginv\\advance\\labelwidth-\\labelsep");
   DefMacro!("\\@listvi", "\\leftmargin\\leftmarginvi\\labelwidth\\leftmarginvi\\advance\\labelwidth-\\labelsep");
+
+  // Perl L64-66: description end alias and \upn = \textup
+  Let!("\\enddescription", "\\endlist");
+  Let!("\\upn", "\\textup");
 });

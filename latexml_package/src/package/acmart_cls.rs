@@ -195,8 +195,10 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // Sidebar
+  // Sidebar — Perl L200-202
   DefMacro!("\\sidebarname", "Sidebar");
+  DefMacro!("\\fnum@sidebar", "\\sidebarname\\nobreakspace\\thesidebar");
+  DefMacro!("\\format@title@sidebar{}", "\\lx@tag{\\fnum@sidebar: }#1");
 
   //======================================================================
   // Theorem styles via RawTeX
