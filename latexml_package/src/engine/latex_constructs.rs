@@ -1761,6 +1761,19 @@ pub(crate) fn adjust_backmatter_element(document: &mut Document, whatsit: &Whats
   Ok(())
 }
 
+// Do this before digesting the body of a bibliography
+// Perl: beforeDigestBibliography in latex_constructs.pool.ltxml L3900
+pub(crate) fn before_digest_bibliography() -> Result<()> {
+  AssignValue!("inPreamble" => false);
+  Digest!("\\@lx@inbibliographytrue")?;
+  DefMacro!("\\bibliographystyle{}", "");
+  DefMacro!("\\bibliography {}", "");
+  // avoid \let-based redefinitions of the ending.
+  Let!("\\endthebibliography", "\\saved@endthebibliography");
+  ResetCounter!("@bibitem");
+  Ok(())
+}
+
 // Since SOME people seem to write bibliographies w/o \bibitem,
 // just blank lines between apparent entries,
 // Making \par do a \bibitem{} works, but screws up valid
@@ -1789,7 +1802,7 @@ fn setup_pseudo_bibitem() -> Result<()> {
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
+pub(crate) fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
   begin_bibliography_clean(whatsit)?;
   // Fix for missing \bibitems!
   setup_pseudo_bibitem()
@@ -6205,18 +6218,6 @@ LoadDefinitions!({
   DefMacro!("\\thebibliography@ID", "");
   // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
   DefMacro!("\\the@lx@bibliography@ID", "");
-
-  // Do this before digesting the body of a bibliography
-  fn before_digest_bibliography() -> Result<()> {
-    AssignValue!("inPreamble" => false);
-    Digest!("\\@lx@inbibliographytrue")?;
-    DefMacro!("\\bibliographystyle{}", "");
-    DefMacro!("\\bibliography {}", "");
-    // avoid \let-based redefinitions of the ending.
-    Let!("\\endthebibliography", "\\saved@endthebibliography");
-    ResetCounter!("@bibitem");
-    Ok(())
-  }
 
   DefMacro!(
     "\\bibliography Semiverbatim",
