@@ -142,12 +142,15 @@ impl Object for Mouth {
     } else {
       (to_line, to_column)
     };
+    // Perl Mouth.pm L199 (#2671): columns in Locator are 1-indexed; the Mouth's
+    // internal colno counter is 0-indexed (character array index), so we add 1
+    // when producing the Locator for error-message display.
     Locator::new(
       &self.source,
       from_line as u32,
-      from_column as u32,
+      (from_column + 1) as u32,
       to_line as u32,
-      to_column as u32,
+      (to_column + 1) as u32,
     )
   }
 }
