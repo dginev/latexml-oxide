@@ -789,12 +789,20 @@ pub fn begin_itemize(
     );
   }
   // format the id of \item's relative to the id of this list.
-  // Note: if usecounter contains a digit (e.g. "count1" from \usecounter{count1}),
-  // the Perl-style CS name \@count1@ID cannot be tokenized as a single CS (TeX CS
-  // reading stops at non-letter), so `tokenize_internal` would split it into
-  // \@count + "1" + "@" + "ID". Build it via \csname...\endcsname instead.
-  let useexp = mouth::tokenize_internal(&s!(
-    "\\the{listcounter}@ID.i\\csname @{usecounter}@ID\\endcsname"));
+  // Perl: Tokens(T_CS('\the' . $listcounter . '@ID'), T_OTHER('.i'),
+  //              T_CS('\@' . $usecounter . '@ID'))
+  // — build the Tokens array directly from 3 explicit tokens rather than
+  // round-tripping through a string tokenizer. This matters when `usecounter`
+  // contains digits (e.g. "count1" from \usecounter{count1}): `tokenize_internal`
+  // on a literal string "\@count1@ID" would split into \@count + "1" + "@" + "ID"
+  // because TeX's CS reader stops at digits (digits are catcode OTHER even in
+  // the style table). Perl uses T_CS($name) to build a single CS token directly
+  // by name, bypassing tokenization.
+  let useexp = Tokens::new(vec![
+    T_CS!(s!("\\the{listcounter}@ID")),
+    T_OTHER!(".i"),
+    T_CS!(s!("\\@{usecounter}@ID")),
+  ]);
   def_macro(T_CS!(s!("\\the{usecounter}@ID")), None, useexp, None)?;
 
   let mut series = if let Some(s) = options.series {
