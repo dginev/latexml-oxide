@@ -23,6 +23,13 @@ LoadDefinitions!({
     after_digest_body => sub[whatsit] {
       crate::engine::latex_constructs::after_float(whatsit);
     });
+  // NOTE: tried adding `mode => "internal_vertical"` to match the engine's
+  // `{figure}` / `{table}` envs, hoping to fix sandbox paper 0810.1610
+  // ("\@captype not defined" on \caption inside floatingfigure). Didn't
+  // help — the scope where `\@captype` is assigned via before_float is
+  // still outside the scope where \caption looks up. Leave for future
+  // investigation; the issue is likely in the DefEnvironment frame
+  // ordering between before_digest and the body's digest frame.
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}",  "\\item[#2] {#3}");
   DefMacro!("\\initfloatingfigs", "");
