@@ -127,6 +127,47 @@ LoadDefinitions!({
   RawTeX!(r"\providecommand\captionsnaustrian{}\providecommand\datenaustrian{}");
   RawTeX!(r"\providecommand\captionsfrancais{}\providecommand\datefrancais{}");
 
+  // French active-punctuation dispatch primitives.
+  //
+  // Perl frenchb.ldf's `\extrasfrench` hook activates `:`, `;`, `!`, `?`
+  // so they insert a thin space before them in French text. Our port
+  // splits the work:
+  //
+  //   1. Here: define the dispatch CSes unconditionally (cheap, inert
+  //      until a character's catcode is ACTIVE and its meaning points
+  //      at one of them).
+  //   2. In `babel_support_sty.rs::\ltx@bbl@select@language`: when the
+  //      selected language is French, flip the four character catcodes
+  //      to ACTIVE and attach these dispatch primitives as their
+  //      meanings. Fires for both `\selectlanguage{french}` and
+  //      `\foreign@language{french}` / `\begin{otherlanguage}{french}`.
+  //
+  // Previously the dispatch primitives were defined INSIDE
+  // `\lx@babel@activate@mainlang`'s main-language-is-french branch,
+  // which meant \begin{otherlanguage}{french} inside a
+  // german/english document couldn't find them → no French spacing.
+  // Unifying the definitions here fixes page545's French paragraph.
+  //
+  // Spacing rules (matching Perl frenchb.ldf):
+  //   before ':'  → regular space (espace insécable, rendered " :")
+  //   before ';!?' → thin space (U+2006, SIX-PER-EM SPACE)
+  DefPrimitive!("\\lx@french@punct@colon", {
+    enter_horizontal();
+    Tbox::new(arena::pin_static(" :"), None, None, Tokens!(), stored_map!())
+  });
+  DefPrimitive!("\\lx@french@punct@semi", {
+    enter_horizontal();
+    Tbox::new(arena::pin_static("\u{2006};"), None, None, Tokens!(), stored_map!())
+  });
+  DefPrimitive!("\\lx@french@punct@exclam", {
+    enter_horizontal();
+    Tbox::new(arena::pin_static("\u{2006}!"), None, None, Tokens!(), stored_map!())
+  });
+  DefPrimitive!("\\lx@french@punct@question", {
+    enter_horizontal();
+    Tbox::new(arena::pin_static("\u{2006}?"), None, None, Tokens!(), stored_map!())
+  });
+
   // After babel loads: activate the main language's captions and shorthands.
   // In Perl this happens via the precompiled kernel; we do it explicitly.
   DefPrimitive!("\\lx@babel@activate@mainlang", {
@@ -183,41 +224,25 @@ LoadDefinitions!({
 
       // French active punctuation: make :;!? insert thin space BEFORE the char.
       // Safe to activate here since we're at \begin{document} time (all packages loaded).
+      // French active-punctuation activation:
+      // - Runtime \selectlanguage / \foreign@language / \begin{otherlanguage}
+      //   goes through babel_support_sty::\ltx@bbl@select@language which
+      //   handles it there.
+      // - For main-language-is-French, the \AtBeginDocument path runs
+      //   HERE before babel's own \selectlanguage{\bbl@main@language}
+      //   can take effect. So activate here too. Idempotent — flipping
+      //   an already-ACTIVE catcode to ACTIVE is a no-op.
       let is_french = lang == "french" || lang == "francais" || lang == "frenchb";
       if is_french {
-        // Define dispatch primitives for French punctuation (if not already defined)
-        if lookup_definition(&T_CS!("\\lx@french@punct@colon"))?.is_none() {
-          // French punctuation spacing:
-          // Before ':' → regular non-breaking space (U+00A0, espace insécable)
-          // Before ';!?' → thin space (U+2006 SIX-PER-EM SPACE, espace fine)
-          DefPrimitive!("\\lx@french@punct@colon", {
-            enter_horizontal();
-            Tbox::new(arena::pin_static(" :"), None, None, Tokens!(), stored_map!())
-          });
-          DefPrimitive!("\\lx@french@punct@semi", {
-            enter_horizontal();
-            Tbox::new(arena::pin_static("\u{2006};"), None, None, Tokens!(), stored_map!())
-          });
-          DefPrimitive!("\\lx@french@punct@exclam", {
-            enter_horizontal();
-            Tbox::new(arena::pin_static("\u{2006}!"), None, None, Tokens!(), stored_map!())
-          });
-          DefPrimitive!("\\lx@french@punct@question", {
-            enter_horizontal();
-            Tbox::new(arena::pin_static("\u{2006}?"), None, None, Tokens!(), stored_map!())
-          });
-        }
         for &(ch, cs_name) in &[
           (':', "\\lx@french@punct@colon"),
           (';', "\\lx@french@punct@semi"),
           ('!', "\\lx@french@punct@exclam"),
           ('?', "\\lx@french@punct@question"),
         ] {
-          state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
-          let active_tok = T_ACTIVE!(ch);
-          let dispatch_cs = T_CS!(cs_name);
-          if let Some(defn) = lookup_meaning(&dispatch_cs) {
-            state::assign_meaning(&active_tok, defn, Some(Scope::Global));
+          if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
+            state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
+            state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
           }
         }
       }

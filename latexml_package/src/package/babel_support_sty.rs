@@ -135,6 +135,33 @@ LoadDefinitions!({
           state::let_i(&T_ACTIVE!('~'), &T_CS!("\\ltx@save@greek@tilde"), None);
         }
       }
+      // French active punctuation: Perl's frenchb.ldf `\extrasfrench`
+      // hook activates `:`, `;`, `!`, `?` to emit a thin space before them;
+      // `\noextrasfrench` deactivates on language exit. We mirror that.
+      //
+      // Dispatch primitives are defined in babel_sty.rs unconditionally.
+      if code == "fr" {
+        // Entering French: flip catcodes to ACTIVE, attach dispatch meanings.
+        for &(ch, cs_name) in &[
+          (':', "\\lx@french@punct@colon"),
+          (';', "\\lx@french@punct@semi"),
+          ('!', "\\lx@french@punct@exclam"),
+          ('?', "\\lx@french@punct@question"),
+        ] {
+          if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
+            state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
+            state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
+          }
+        }
+      }
+      // Note: leaving French does NOT automatically deactivate :;!?.
+      // Proper deactivation requires either a group-scope pop (which
+      // babel's \foreignlanguage uses) or re-tokenizing already-read
+      // tokens. Reverting the active-char meaning to Stored::None in
+      // this non-group hook produces <ltx:ERROR> on every `!` in
+      // \foreignlanguage{english}{...ARG...} because ARG was tokenized
+      // with active catcode before our hook fired. See SYNC_STATUS
+      // D0: needs proper \initiate@active@char lifecycle.
       // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init
       // in \lx@babel@activate@lang@post. Setting it here would override the main
       // language whenever \selectlanguage is called in the document body.
