@@ -13,14 +13,18 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
-  // Options that load packages or set values
-  DeclareOption!("times", None);
-  DeclareOption!("seceqn", None);
-  DeclareOption!("secthm", None);
-  DeclareOption!("amsthm", None);
-  DeclareOption!("authoryear", None);
-  DeclareOption!("number", None);
-  DeclareOption!("numbers", None);
+  // Perl L28: times option pulls in txfonts
+  DeclareOption!("times", {
+    RequirePackage!("txfonts");
+  });
+  // Perl L30-32: flags for later conditional behaviour
+  DeclareOption!("seceqn", { state::assign_value("@seceqn", 1i64, Scope::Global); });
+  DeclareOption!("secthm", { state::assign_value("@secthm", 1i64, Scope::Global); });
+  DeclareOption!("amsthm", { state::assign_value("@amsthm", 1i64, Scope::Global); });
+  // Perl L33-35: natbib defaults
+  DeclareOption!("authoryear", { state::assign_value("@biboptions", Stored::from("round,authoryear"), Scope::Global); });
+  DeclareOption!("number", { state::assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
+  DeclareOption!("numbers", { state::assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
   // Pass other options to article
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
@@ -31,7 +35,26 @@ LoadDefinitions!({
   RequirePackage!("fleqn");
   RequirePackage!("graphicx");
   RequirePackage!("pifont");
-  RequirePackage!("natbib");
+  // natbib with biboptions
+  let natbib_opts_stored = state::lookup_value("@biboptions");
+  let natbib_opts = match &natbib_opts_stored {
+    Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
+    _ => "numbers".to_string(),
+  };
+  let natbib_opt_vec: Vec<String> = natbib_opts.split(',').map(|s| s.trim().to_string()).collect();
+  RequirePackage!("natbib", options => natbib_opt_vec);
   RequirePackage!("hyperref");
   DefMacro!("\\biboptions{}", "\\setcitestyle{#1}");
+
+  // Perl L58-67: override {enumerate}/{itemize} to accept optional arg
+  DefEnvironment!("{enumerate}[]",
+    "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+    mode => "internal_vertical", locked => true,
+    properties => { begin_itemize("enumerate", Some("enum"), BeginItemizeOptions::default())? },
+    before_digest_end => { Digest!("\\par")?; });
+  DefEnvironment!("{itemize}[]",
+    "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    mode => "internal_vertical", locked => true,
+    properties => { begin_itemize("itemize", Some("enum"), BeginItemizeOptions::default())? },
+    before_digest_end => { Digest!("\\par")?; });
 });
