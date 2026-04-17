@@ -3775,6 +3775,19 @@ LoadDefinitions!({
     aligning_environment("center", "ltx_align_right", document, props)?;
     Ok(())
   });
+  // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
+  // both as environments, and as single commands". The bare `\flushleft` /
+  // `\flushright` commands (without matching `\end...`) are used as
+  // declarations — they should NOT push a group frame + enter
+  // restricted_horizontal, since that would leak mode when the enclosing
+  // group (e.g. `table*`) closes.
+  //
+  // `\begin{flushleft}` / `\end{flushleft}` go through a separate environment
+  // constructor and are unaffected by these Let aliases.
+  //
+  // Fixes sandbox papers 0705.2808 and 0707.4170 (mode mismatch at
+  // `\end{table*}` when document uses `\flushleft` as a command inside the
+  // float body).
 
   // # These add an operation to be carried out on the current node & following siblings, when the
   // current group ends. # These operators will add alignment (class) attributes to each "line" in
@@ -3832,6 +3845,15 @@ LoadDefinitions!({
     }
   });
 
+  // Perl latex_constructs.pool.ltxml L1317-1318: Redefine so `\flushleft` /
+  // `\flushright` work both as environments AND as single commands.
+  // As a command (no matching `\end...`), the bare CS acts like
+  // `\raggedright` / `\raggedleft` — a declaration that applies via
+  // beforeAfterGroup rather than opening a restricted_horizontal group
+  // frame. `\begin{flushleft}` / `\end{flushleft}` still go through the
+  // environment constructors and are unaffected.
+  Let!("\\flushright", "\\raggedleft");
+  Let!("\\flushleft",  "\\raggedright");
 
   // Perl: Let('\@block@cr', '\lx@newline');  # Obsolete, but in case still used
   Let!("\\@block@cr", "\\lx@newline");
