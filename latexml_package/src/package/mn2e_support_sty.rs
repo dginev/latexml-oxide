@@ -125,6 +125,13 @@ LoadDefinitions!({
   DefMacro!("\\bchi", "\\mn@boldsymbol{\\chi}");
   DefMacro!("\\bpsi", "\\mn@boldsymbol{\\psi}");
   DefMacro!("\\bomega", "\\mn@boldsymbol{\\omega}");
+  // Perl L90-95: bold variant-Greek
+  DefMacro!("\\bvarepsilon", "\\mn@boldsymbol{\\varepsilon}");
+  DefMacro!("\\bvartheta", "\\mn@boldsymbol{\\vartheta}");
+  DefMacro!("\\bvarrho", "\\mn@boldsymbol{\\varrho}");
+  DefMacro!("\\bvarsigma", "\\mn@boldsymbol{\\varsigma}");
+  DefMacro!("\\bvarphi", "\\mn@boldsymbol{\\varphi}");
+  DefMacro!("\\bvarpi", "\\mn@boldsymbol{\\varpi}");
 
   // Degree fractions — Perl L109-117
   DefMacro!("\\aas@fstack{}", "\\ensuremath{.\\!^{\\mathrm{#1}}}");
@@ -142,7 +149,24 @@ LoadDefinitions!({
   DefMath!("\\gid", "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
   DefMath!("\\leqslant", "\u{2A7D}", role => "RELOP", meaning => "less-than-or-equals");
   DefMath!("\\geqslant", "\u{2A7E}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefMath!("\\cor", "\u{2258}", role => "RELOP", meaning => "corresonds-to");
   DefPrimitive!("\\micron", "\u{00B5}m");
+
+  // Perl L122-125: quod erat demonstrandum marker
+  DefConstructor!("\\squareforqed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+  Let!("\\sq", "\\squareforqed");
+  Let!("\\proofbox", "\\squareforqed");
+
+  // Perl L128-129: astronomical symbols
+  DefPrimitive!("\\diameter", "\u{2300}");
+  DefPrimitive!("\\earth", "\u{2295}");
+
+  // Perl L162-165: pre-AMS aliases
+  Let!("\\oldle", "\\le");
+  Let!("\\oldleq", "\\leq");
+  Let!("\\oldge", "\\ge");
+  Let!("\\oldgeq", "\\geq");
 
   // Font macros — Perl L153-161
   DefMacro!("\\rmn{}", "\\mathrm{#1}");
@@ -151,6 +175,8 @@ LoadDefinitions!({
   DefMacro!("\\bld{}", "\\mathbf{#1}");
   DefMacro!("\\textbfit{}", "\\textbf{\\textit{#1}}");
   DefMacro!("\\textbfss{}", "\\textbf{\\textsf{#1}}");
+  DefMacro!("\\mathbfit{}", "\\textbf{\\textit{#1}}");
+  DefMacro!("\\mathbfss{}", "\\textbf{\\textsf{#1}}");
   DefMacro!("\\bmath{}", "\\mn@boldsymbol{#1}");
 
   Let!("\\upi", "\\pi");
@@ -165,7 +191,9 @@ LoadDefinitions!({
   DefMacro!("\\loadboldmathitalic", "");
   DefMacro!("\\loadboldgreek", "");
   DefMacro!("\\fixfootnotes", "");
+  DefMacro!("\\nokeywords", "");
   DefMacro!("\\bibtitle", "References");
+  DefMacro!("\\bibheadtitle", "REFERENCES");
   DefMacro!("\\makeRLlabel{}", "#1");
   DefMacro!("\\makeRRlabel{}", "#1");
   DefMacro!("\\makenewlabel{}", "#1");
