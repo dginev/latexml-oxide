@@ -8,9 +8,6 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="en">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <para xml:id="p1">
-    <p>,</p>
-  </para>
   <section inlist="toc" xml:id="S1">
     <tags>
       <tag>1</tag>

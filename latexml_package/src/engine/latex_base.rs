@@ -27,8 +27,6 @@ LoadDefinitions!({
     \def\@namedef#1{\expandafter\def\csname #1\endcsname}
     \def\@nameuse#1{\csname #1\endcsname}
     \def\@cons#1#2{\begingroup\let\@elt\relax\xdef#1{#1\@elt #2}\endgroup}
-    \let\@nil\relax
-    \let\@nnil\relax
     \let\@arrayparboxrestore\relax
     \def\@car#1#2\@nil{#1}
     \def\@cdr#1#2\@nil{#2}
