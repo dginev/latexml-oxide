@@ -412,12 +412,18 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
 
 - [ ] **Page545 verification.** After each D0 milestone, re-run
   `cargo test --release -p latexml --test 81_babel -- --ignored
-  page545` and check whether the `<p>The expansion…` line matches
-  Perl byte-for-byte. Current status (as of runtime-dump landing):
-  **still 4 diffs** (no `ltx_align_left`, stray leading `<text xml:lang="de">,</text>`,
-  `français:` vs `français :`, missing trailing `<text xml:lang="de"></text>`).
-  The dump infrastructure alone did **not** close any of them — they
-  all require the subsequent engine-level items.
+  page545`. Current status (2026-04-17): **3 of 4 diffs FIXED**, 1 remains.
+  - ✓ `ltx_align_left` on paragraphs — FIXED as side effect of comma fix
+  - ✓ stray leading comma in p1 — FIXED by removing `\let\@nil\relax`
+    from `latex_base.rs` (was a Rust-only addition that broke babel's
+    `\bbl@fornext` termination check)
+  - ✓ `français :` colon spacing — FIXED by making French active
+    `:;!?` primitives check `\languagename` / current font language
+  - ☐ missing trailing `<text xml:lang="de"></text>` nested empty
+    wrapper — still a cosmetic structural divergence (rendering-
+    identical; Perl emits pedantic language-stack unwind wrappers
+    at group exit, Rust emits only the outer one). Pending a proper
+    font-stack unwind in `document.rs` on group close.
 
 - [ ] **Drop Rust babel workarounds incrementally.** Once the engine pieces
   are in place, strip `babel_sty.rs` from 384 → ~15 lines to match Perl's
