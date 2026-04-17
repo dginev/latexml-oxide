@@ -42,12 +42,21 @@ LoadDefinitions!({
   // leaks into babel's \bbl@load@language which uses \CurrentOption at L4177).
   RawTeX!(r"\let\CurrentOption\@empty");
 
-  // Ensure \@fontenc@load@list has the proper \@elt{enc} format that babel expects.
-  // Babel's \AtBeginDocument code (L3931-3933) does:
+  // \@fontenc@load@list: babel's \AtBeginDocument hook at
+  // babel.sty L3887 runs:
+  //   \def\@elt#1{,#1,}
   //   \edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}
-  // \@gobbletwo eats two tokens: \@elt and {OT1}. With proper format, the result is
-  // empty (\bbl@tempa={}), which is correct. Without it: if empty → \@gobbletwo eats
-  // subsequent tokens; if plain text → content leaks into document.
+  //   \let\@elt\relax
+  //   ...
+  //   \bbl@foreach\bbl@tempa{\bbl@xin@{,#1,}{,\BabelNonASCII,}...}
+  //
+  // With just ONE \@elt wrapper (\@elt{OT1}), \@gobbletwo eats both
+  // tokens and \bbl@tempa ends up empty — safest. (latex_base.rs'
+  // default `\@elt{T1}\@elt{OT1}` produced \bbl@tempa=",OT1," which
+  // the subsequent \bbl@foreach / \bbl@xin@ chain has been
+  // observed to leak a bare `,` from in our engine, ending up in
+  // document p1 as a stray leading character — see SYNC_STATUS D0
+  // and 81_babel.rs page545_test comments.)
   RawTeX!(r"\def\@fontenc@load@list{\@elt{OT1}}");
 
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
