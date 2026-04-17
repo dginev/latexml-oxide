@@ -10,21 +10,9 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // --- Pre-raw-load workarounds -------------------------------------------
-  // \l@<lang> registers: 108 are in the kernel dump; pre-allocate the two
-  // that aren't, so babel's \bbl@iflanguage and nil.ldf's \l@nil check pass.
+  // \l@polutonikogreek: allocate if not present in kernel dump (newer TeXLive
+  // includes it, older may not).
   RawTeX!(r"\expandafter\ifx\csname l@polutonikogreek\endcsname\relax\newlanguage\l@polutonikogreek\fi");
-  RawTeX!(r"\expandafter\ifx\csname l@nil\endcsname\relax\newlanguage\l@nil\fi");
-  // \bbl@languages empty: babel's language.def loading uses \openin on
-  // hyphenation-pattern files we can't find. Without this, \bbl@languages
-  // stays undefined → error recovery emits <ltx:ERROR/> → list corruption → OOM.
-  RawTeX!(r"\def\bbl@languages{}");
-  // \bbl@opt@hyphenmap: normally set by the `.ini` loading path we skip.
-  RawTeX!(r"\chardef\bbl@opt@hyphenmap\@ne");
-  // Clear \CurrentOption before raw load so prior-package leakage (e.g.
-  // keyval.sty's "unknownkeyserror") doesn't get mis-interpreted as a
-  // babel language option at L4177.
-  RawTeX!(r"\let\CurrentOption\@empty");
 
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 

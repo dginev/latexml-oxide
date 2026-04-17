@@ -151,12 +151,17 @@ exact engine gaps:
   nor the restore on `\selectlanguage` fires. Needs a focused port of
   how `\@sanitize` and active-char meaning stacking work.
 
-- [ ] **`AtBeginDocument` hook chain ordering.** Perl runs babel's
-  `\AtBeginDocument{…\selectlanguage{\bbl@main@language}…}` in the right
-  place so the main language's `\captions<lang>` fires. Rust runs hooks,
-  but between options processing and the first user token the state
-  differs (see the stray-comma leak in p1), suggesting hook-order or
-  option-token-cleanup differences.
+- [~] **`AtBeginDocument` hook chain ordering.** Stray-comma symptom
+  resolved session 109 (removed Rust-only `\let\@nil\relax` that broke
+  `\bbl@fornext`). babel's AtBeginDocument fires in a workable order now
+  for our tests. The deeper structural issue — babel's two-phase
+  `\ProcessOptions*` pipeline doesn't dispatch `\bbl@load@language{<lang>}`
+  for package options, leaving `\bbl@main@language` = "nil" — is now
+  papered over by our `\lx@babel@activate@mainlang` hook that resolves
+  the effective main language from `\opt@babel.sty` directly. A true fix
+  requires making babel's `\DeclareOption*{}` + `\ProcessOptions*` option
+  collection + fan-out cycle work end-to-end in our engine, which is a
+  substantive option-pipeline audit and not in the page545 critical path.
 
 - [x] **Kernel dump regeneration at build time.** Per design intent,
   `resources/dumps/latex.dump.txt` should **not** be checked into VCS;
