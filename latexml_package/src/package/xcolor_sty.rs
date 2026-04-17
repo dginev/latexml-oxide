@@ -26,9 +26,11 @@ fn range_reduction(value: f64) -> f64 {
 /// Convert from extended model to core model.
 /// Perl: RGB→rgb, HTML→rgb, Hsb→hsb, HSB→hsb, Gray→gray
 fn convert_extended_to_core(model: &str, spec: &str) -> Color {
-  let model_lc = model.to_lowercase();
-  match model_lc.as_str() {
-    "rgb" | "cmy" | "cmyk" | "hsb" | "gray" => color_from_model_spec(&model_lc, spec),
+  // NOTE: lowercase core models (rgb/cmy/cmyk/hsb/gray) use 0..1 components, while
+  // uppercase extended models (RGB, HTML, HSB, Gray, ...) use 0..255 / 0..240 etc.
+  // Match CASE-SENSITIVELY: do NOT lowercase `model` before dispatching.
+  match model {
+    "rgb" | "cmy" | "cmyk" | "hsb" | "gray" => color_from_model_spec(model, spec),
     _ => convert_ext_model(model, spec),
   }
 }
