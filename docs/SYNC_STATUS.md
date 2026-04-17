@@ -911,6 +911,49 @@ State after session 107:
 - No warnings in release build
 - 10 unsafe blocks, all SAFETY-documented
 
+##### Session 108 Summary (2026-04-17)
+
+Comprehensive cycle of sandbox coverage and Perl-fidelity work. **29 commits, 409/409 tests pass throughout.**
+
+**Sandbox transitions this session (broken → OK, 9 papers):**
+- `0705.1190` — `\color` undefined in colordvi-only docs (d5f0dbb52)
+- `0705.2808`, `0707.4170` — `\flushleft`/`\flushright` mode-mismatch (ab6dc2219)
+- `0710.2880` — `ltx:section` in `<ltx:acknowledgements>` auto-close (609beeaf1)
+- `0711.4787` — RefCell panic in `decode_math_char` (d237669d6)
+- `0802.1100` — `\begin{pf}` undefined in 2.09 docs (c6f8c748d)
+- `0810.1610` — `\@captype` undefined in `floatflt` (2b57844c4)
+- `0704.2400`, `0705.1050`, `0705.2208` — formerly-timeout papers now complete in budget
+
+**Perl-fidelity ports (new):**
+- `d5f0dbb52` — colordvi self-contained via `\lx@colordvi@setcolor` (Perl L28 pattern)
+- `ab6dc2219` — `\flushleft`/`\flushright` Let to `\raggedright`/`\raggedleft` (Perl L1317-1318)
+- `8012eeb6d` — Locator columns 1-indexed (Perl #2671)
+- `735e3e984` — `\thanks[]{}` signature (Perl L1154)
+- `609beeaf1` — auto-close for backmatter `ltx:acknowledgements`/`appendix`/`index` (matches Perl's `ltx:bibliography` L4078)
+- `c6f8c748d` — `2.09_COMPATIBILITY` `pf`/`pf*` aliases (Perl L194-200)
+- `2b57844c4`, `a560a0537` — floatflt/floatfig: `after_digest` vs `after_digest_body` (matches engine's `{figure}` timing)
+
+**Safety fixes:**
+- `d237669d6`, `b481670fe` — RefCell re-entry in `with_font_info`+`font::decode` path (2 files)
+
+**Perf / grammar (faithful-translation-adjacent):**
+- `70c67bf44` — Pool `Vec<Node>` buffers in `Document::absorb` (kills 5.9% `from_iter` hotspot)
+- `ffcafc33e` — Remove redundant `opfunction opfunction` rule (grammar cleanup)
+- `8deff296f` — Math parser convergence 32→16 consecutive dupes (32% tree reduction on `tr ρ`)
+- `0465f21ba` — Half-decay `consecutive_dupes` on new unique
+
+**Upstream Perl sync verified (already ported to Rust, March 2026 commits):**
+- `#2775` alignment init_depth + `\\→\lx@newline`, `#2770` Grouplevel (0-based + noframe), `#2778` Relation parameter type, `#2771` iflimit/if_count deny-list, `#2762` lgroup codepoints, `#2759` TL2025 kernel (`\right` constructor, special_relax), `#2736` hyperref etoolbox, `#2751` siunitx expl spacing.
+
+**Scope lifecycle insight** (new WISDOM): in Rust's `DefEnvironment`, `before_digest` sets state local to the env frame; body digestion sees it. But `after_digest_body` runs **after** the frame pops, so local state assignments (like `\@captype` via `before_float`) are gone — use `after_digest` instead for actions that need to read such state. The engine's `{figure}`/`{table}` envs already use `after_digest`; floatflt/floatfig were using `after_digest_body` and hit the `\@captype not defined` error.
+
+**State after session 108:**
+- 409 integration tests pass
+- 128-paper sandbox: **0 Rust-attributable conversion errors**
+- 256-paper sandbox: 93.75% clean, **0 panics**, 6 errors all paper-specific (2 user bugs, 1 exotic Unicode in CS name, 1 custom macro, 1 math-mode thanks edge case, 1 partial with external file missing)
+- 512-paper sandbox: 92.6% clean with content-model/edge-case residuals
+- Rust port is well-synced with Perl upstream through March 2026 commits
+
 ##### Investigation — opfunction-tight_term duplicate rule (session 108)
 
 Attempted removal of the redundant `tight_term += opfunction tight_term =>
