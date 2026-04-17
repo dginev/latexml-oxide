@@ -239,8 +239,10 @@ LoadDefinitions!({
   DefPrimitive!("\\dbond", "=");
   DefPrimitive!("\\tbond", "\u{2261}");
 
-  // 2.17.3 Fractions
-  DefMacro!("\\case{}{}", "\\ensuremath{\\frac{#1}{#2}}");
+  // 2.17.3 Fractions — Perl L435-442: \case uses a semantic text@frac constructor
+  DefMacro!("\\case{}{}", "\\ensuremath{\\text@frac{#1}{#2}}");
+  DefConstructor!("\\text@frac ScriptStyle ScriptStyle",
+    "<ltx:XMApp><ltx:XMTok meaning='divide' role='FRACOP' mathstyle='text'/><ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>");
   Let!("\\slantfrac", "\\case");
 
   // 2.17.4 Astronomical Symbols
