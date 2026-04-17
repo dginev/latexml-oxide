@@ -2445,8 +2445,22 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Register(_) => true,
     // Font: serializable (data only)
     Font(_) => true,
+    // Primitives/MathPrimitives: the CLOSURE can't be serialized, but the
+    // Primitive carries its own canonical CS name. If the entry's key
+    // differs from that canonical CS, this is a `\let`-alias we CAN
+    // capture (as a "PA" pointer) so the dump reader replays the `\let`
+    // at load time. dump_writer returns the PA/MPA tag; dump_reader
+    // re-applies via state::let_i. This is how \tex_let:D, \tex_def:D,
+    // and the hundreds of other expl3-renamed primitives survive the
+    // dump without needing to re-run 36k lines of expl3-code.tex.
+    //
+    // Returning true here only means "pass to dump_writer"; the writer's
+    // serialize_stored will emit Option::None for entries that ARE the
+    // primary (canonical) binding (key == primitive.cs), and those get
+    // filtered by the writer's `filter_map(serialize_stored)`.
+    Primitive(_) | MathPrimitive(_) => true,
     // These contain closures — NOT serializable
-    Primitive(_) | Constructor(_) | Conditional(_) | MathPrimitive(_) => false,
+    Constructor(_) | Conditional(_) => false,
     // Collections: serializable if contents are
     VecDequeStored(_) | HashStored(_) | HashString(_) => true,
     // Everything else: skip for safety

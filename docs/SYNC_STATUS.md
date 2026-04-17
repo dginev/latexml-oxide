@@ -188,6 +188,23 @@ exact engine gaps:
   loading, etc.) lands, because `_base` will no longer cover those
   things alone.
 
+- [x] **Dump captures primitive aliases (`PA`/`MPA` entries).** The
+  short-circuit guard in texlive's `expl3.sty` is
+  `\ifx\csname tex_let:D\endcsname\relax` — it skips the 36k-line
+  `\input expl3-code.tex` if `\tex_let:D` is defined. `\tex_let:D` is
+  established by `\let \tex_let:D \let` in expl3-code.tex L276, i.e.
+  it's a `Rc<Primitive>` alias-share with `\let`. Closures can't be
+  serialized, so the dump previously lost all ~370 of these alias
+  relationships. (Status: `is_serializable` now returns true for
+  `Stored::Primitive`/`MathPrimitive`; `serialize_stored` emits
+  `PA\t<target_cs>`/`MPA\t<target_cs>`; the primary (canonical) entry
+  is filtered when `key == target_cs`. Current dump includes 373
+  PA entries: `\tex_let:D → \let`, `\tex_def:D → \def`,
+  `\tex_global:D → \global`, and hundreds more. `dump_reader` has
+  the PA handler wired (replays `\let <key> <target>` via
+  `state::let_i`) but **consumption is gated off** until the
+  mutual-exclusivity work below lands — see next item.)
+
 - [ ] **Harvest expl3 short-circuit (Perl's actual "massive speedup").**
   First-principles derivation of what Perl's dump saves that ours
   doesn't, with measurements:
@@ -242,8 +259,21 @@ exact engine gaps:
     wrapper ARE part of the snapshot), not from `--init=latex.ltx`
     alone. That is: `--init` should include a tiny `\usepackage{expl3}`
     stanza at the end so the .sty-level loaded flag is also captured.
+  - (d) Enable consumption of `PA`/`MPA` entries in `dump_reader`'s
+    M-table dispatcher (currently gated off). With the 373 aliases
+    re-applied, `\tex_let:D` is defined → `expl3.sty` guard fires →
+    raw `\input expl3-code.tex` skipped. **Verified mechanism**: I
+    confirmed this works end-to-end by temporarily enabling PA
+    consumption — `\ifx\csname tex_let:D\endcsname\relax` goes from
+    "IS_RELAX_FULL_LOAD" to "IS_NOT_RELAX_SHORT_CIRCUIT". The guard
+    fires correctly. BUT the code in `expl3.sty` after the guard
+    (`\__kernel_dependency_version_check:Nn`, `ProcessOptions \relax`,
+    `\keys_define:nn { sys }`, …) exercises expl3 machinery whose
+    state disagrees with what `_base.rs` has — a simple expl3 doc
+    balloons to 60 s / 4.5 GB RSS. Unblocking (d) requires (a)–(c)
+    first.
 
-  Once (a)/(b)/(c) are in place we should see the Perl-sized win:
+  Once (a)–(d) are in place we should see the Perl-sized win:
   ~1.3 s → ~50 ms per expl3 conversion.
 
 - [ ] **Page545 verification.** After each D0 milestone, re-run

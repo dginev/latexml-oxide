@@ -106,11 +106,21 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // V: Value entries (registers, fontdimen, font metadata).
     // Add-only policy: only loads if key has no existing value.
     "V" => load_value(&key, data),
-    // M: Meaning entries (expandable definitions).
-    // Load @-internal entries (with '@' in name) whose expansions don't
-    // reference the expl3 hook system. These are LaTeX kernel internals
-    // like \@fontswitch, \@thmcounter, etc. that raw TeX classes need.
-    // Skip public macros and expl3 entries (with ':') — too risky.
+    // M: Meaning entries (expandable definitions + primitive aliases).
+    //
+    // Currently conservative: only load `@`-internal Expandables whose
+    // expansion doesn't reference the expl3 hook system. These are
+    // LaTeX kernel internals (`\@fontswitch`, `\@thmcounter`, …) that
+    // raw `.cls`/`.sty` files need. Expl3 `:`-style entries and
+    // primitive-alias entries (`PA`/`MPA`) are NOT consumed — but `PA`
+    // IS written by dump_writer so the alias info is persisted. See
+    // SYNC_STATUS D0 "Harvest expl3 short-circuit": once dump/_base
+    // become mutually exclusive, we can start consuming PA entries to
+    // make `\ifx\csname tex_let:D\endcsname\relax` in `expl3.sty`
+    // short-circuit. Until then, consuming them leaves the engine with
+    // a partially-initialized expl3 state (expl3.sty's post-guard code
+    // runs against a mix of dumped and binding-provided definitions
+    // that don't agree) and a simple expl3 doc balloons to 60 s / 4.5 GB.
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
@@ -378,6 +388,33 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // Token meaning (let-assignment)
       let tok = parse_token(parts.get(1).unwrap_or(&""))?;
       state::assign_meaning(&cs_tok, tok, Some(Scope::Global));
+      Ok(true)
+    }
+    "PA" | "MPA" => {
+      // Primitive alias: PA\t<target_cs> — the entry's meaning is an
+      // Rc<Primitive> whose own cs is <target_cs>. If <target_cs> == key
+      // this is the "primary" entry (already provided by compiled bindings
+      // in _base.rs etc.); skip. Otherwise, replay `\let <key> <target>`
+      // so the Rc<Primitive> is shared just as it was when the dump was
+      // generated. This is how \tex_let:D, \tex_def:D, etc. survive the
+      // dump — without this the expl3.sty short-circuit guard
+      // `\ifx\csname tex_let:D\endcsname\relax` never fires and the 36k
+      // lines of expl3-code.tex get reprocessed on every run.
+      let target_cs_raw = url_decode(parts.get(1).unwrap_or(&""));
+      if target_cs_raw == key {
+        return Ok(false);
+      }
+      let target_tok = Token {
+        text: arena::pin(&target_cs_raw),
+        code: Catcode::CS,
+      };
+      // Skip silently if the target isn't in bindings — rare and means
+      // the alias points at a CS only defined during raw-load that we
+      // also lost. The engine's undefined-CS handler will cope at runtime.
+      if !state::has_meaning(&target_tok) {
+        return Ok(false);
+      }
+      state::let_i(&cs_tok, &target_tok, Some(Scope::Global));
       Ok(true)
     }
     "R" => {

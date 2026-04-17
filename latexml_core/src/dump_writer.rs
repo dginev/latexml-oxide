@@ -109,6 +109,27 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         Option::None // Closure-based, can't serialize
       }
     }
+    // Closure-based primitives can't be serialized directly — but if the entry's
+    // CS differs from the primitive's own CS, it's a `\let`-alias, and we CAN
+    // capture the alias so the dump reader can replay `\let <key> <target>` at
+    // load time. This is how `\tex_let:D`, `\tex_def:D`, and hundreds of other
+    // expl3-renamed primitives stay reachable across dump boundaries (the
+    // defining assignment `\let \tex_let:D \let` in expl3-code.tex needs to
+    // survive the dump for `\usepackage{expl3}`'s guard `\ifx\csname
+    // tex_let:D\endcsname\relax` to short-circuit).
+    //
+    // NOTE: the KEY we're saving IS the dump entry's first column; the VALUE
+    // we write is the primitive's OWN CS name. Dump reader compares these:
+    // if equal, it's the "primary" primitive (already in bindings) and skipped;
+    // if different, it's an alias — replay `\let` at load time.
+    Stored::Primitive(p) => {
+      let target_cs = p.cs.with_str(url_encode);
+      Some(format!("PA\t{}", target_cs))
+    }
+    Stored::MathPrimitive(p) => {
+      let target_cs = p.cs.with_str(url_encode);
+      Some(format!("MPA\t{}", target_cs))
+    }
     Stored::Register(reg) => {
       // Register: serialize as R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
       // Only serialize simple registers without getter/setter closures
