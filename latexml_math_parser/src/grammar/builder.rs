@@ -493,9 +493,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     applied_func = function fenced_factor => prefix_apply
       | trigfunction trig_arg => prefix_apply
       | opfunction tight_term => prefix_apply
-      // OPFUNCTION absorbs another OPFUNCTION even without trailing args:
-      // FGH → F@(G@(H)) when F,G,H are all OPFUNCTION
-      | opfunction opfunction => prefix_apply
+      // Perf: removed `| opfunction opfunction => prefix_apply`. Adjacent
+      // opfunctions (FG) already match via `opfunction tight_term` since
+      // opfunction is a term (`term += opfunction`, line 217). The short
+      // rule competed with cascade-via-tight_term in FGHa and doubled
+      // enumeration for every OPFUNCTION+OPFUNCTION pair.
       // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
       // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
       //        presentation=Apply(f, XMWrap(open, args, close))).
