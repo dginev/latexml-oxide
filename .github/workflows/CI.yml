@@ -13,17 +13,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # Keep peak RAM below the runner's ~16 GB limit (previously OOM'd).
-      CARGO_BUILD_JOBS: 2
-      CARGO_INCREMENTAL: 0
-      # Codegen units split large crates into more, smaller translation
-      # units; a LOT less peak memory during the rustc link/codegen stage.
-      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 32
+      # The runner has ~16 GB RAM but the GitHub-hosted OS eats ~3-4 GB, and
+      # linker peaks can easily exceed 10 GB for the `latexml` aggregate crate
+      # (4 bin targets + lib + test executables). Previous CI runs OOM'd during
+      # the final codegen step. Every knob here is aimed at peak-RAM reduction,
+      # at the cost of some compile speed.
+      #
+      # 1. Serialize rustc — only one compile at a time.
+      CARGO_BUILD_JOBS: 1
+      # 2. No debug info in release profile (workspace Cargo.toml sets debug=true
+      #    for production debugging; CI doesn't need it and it's a massive
+      #    contributor to peak RAM during linking).
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+      # 3. Lower optimization level — opt-level=1 is still fast enough for tests
+      #    and uses much less memory per codegen unit than the default opt-level=3.
+      CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
+      # 4. Many small codegen units (vs. the default 16) — smaller, cheaper
+      #    per-unit peaks during parallel codegen.
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
+      # 5. Split debuginfo / strip — harmless if debug=0 but defensive.
+      CARGO_PROFILE_RELEASE_STRIP: "debuginfo"
+      # 6. No LTO (default is already off for "release", but be explicit).
       CARGO_PROFILE_RELEASE_LTO: "false"
-      CARGO_PROFILE_DEV_CODEGEN_UNITS: 256
-      RUST_BACKTRACE: 1
-      # Fetch via CLI git rather than libgit2 (smaller memory footprint).
+      # 7. Incremental caches are worthless on CI and cost RAM+disk.
+      CARGO_INCREMENTAL: "0"
+      # 8. Fetch via CLI git rather than libgit2 (smaller memory footprint).
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
     steps:
       - name: install dependencies
         run: |
@@ -31,7 +47,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             texlive texlive-latex-extra texlive-science
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
@@ -41,7 +57,10 @@ jobs:
       # plus rand, chrono, tempdir, walkdir, zip v0.6 — ~15 min of extra
       # compile time we don't need to validate the core conversion pipeline.
       # Cortex worker is a production deployment artifact, built separately.
-      - name: build tests (release, reduced parallelism)
-        run: cargo build --release --tests --workspace
       - name: run tests
-        run: cargo test --release --tests --workspace -- --test-threads=2
+        # One shot: cargo test builds and runs. We use --release because the
+        # test suite runs many full-document conversions and dev-profile runs
+        # are too slow even when compilation is faster. The env knobs above
+        # keep peak RAM manageable; --test-threads=1 serializes execution so
+        # at most one conversion's working set is live at a time.
+        run: cargo test --release --tests --workspace -- --test-threads=1
