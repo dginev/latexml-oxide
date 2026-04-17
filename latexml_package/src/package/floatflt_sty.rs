@@ -7,12 +7,18 @@ LoadDefinitions!({
   DeclareOption!("lflt", { state::assign_value("floatfltpos", Stored::from("l"), None); });
   DeclareOption!("pflt", { state::assign_value("floatfltpos", Stored::from("p"), None); });
   DeclareOption!("vflt", { state::assign_value("floatfltpos", Stored::from("v"), None); });
+  // Use `after_digest` (runs while env frame is still active), NOT
+  // `after_digest_body` which runs after the frame pops — `\@captype` set
+  // by `before_float` via local-scope def_macro is gone by that point,
+  // causing `after_float`'s `digest(\@captype)` to error with "T_CS[\@captype]
+  // is not defined" (sandbox paper 0810.1610). The engine's `{figure}` /
+  // `{table}` envs use `after_digest` for this reason; match them.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
     before_digest => {
       crate::engine::latex_constructs::before_float("figure", None);
     },
-    after_digest_body => sub[whatsit] {
+    after_digest => sub[whatsit] {
       crate::engine::latex_constructs::after_float(whatsit);
     });
   DefEnvironment!("{floatingtable}[]{Dimension}",
@@ -20,16 +26,9 @@ LoadDefinitions!({
     before_digest => {
       crate::engine::latex_constructs::before_float("table", None);
     },
-    after_digest_body => sub[whatsit] {
+    after_digest => sub[whatsit] {
       crate::engine::latex_constructs::after_float(whatsit);
     });
-  // NOTE: tried adding `mode => "internal_vertical"` to match the engine's
-  // `{figure}` / `{table}` envs, hoping to fix sandbox paper 0810.1610
-  // ("\@captype not defined" on \caption inside floatingfigure). Didn't
-  // help — the scope where `\@captype` is assigned via before_float is
-  // still outside the scope where \caption looks up. Leave for future
-  // investigation; the issue is likely in the DefEnvironment frame
-  // ordering between before_digest and the body's digest frame.
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}",  "\\item[#2] {#3}");
   DefMacro!("\\initfloatingfigs", "");
