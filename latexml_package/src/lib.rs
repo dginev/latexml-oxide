@@ -344,6 +344,16 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     // Perl: aipcheck.tex.ltxml — "Do nothing" stub. Paper 0809.2681 does
     // `\input{aipcheck}`.
     "aipcheck.tex" => package::aipcheck_tex::load_definitions(),
+    // Perl: epsf.tex.ltxml just does `RequirePackage('epsf')`.
+    "epsf.tex" => package::epsf_sty::load_definitions(),
+    // Perl: pstricks.tex.ltxml just does `RequirePackage('pstricks_support')`.
+    "pstricks.tex" => package::pstricks_support_sty::load_definitions(),
+    // Perl: xypic.tex.ltxml does InputDefinitions('xy', type=>'tex') + RawTeX('\xyoption{v2}').
+    // Rust xypic_sty does `RequirePackage!("xy", options=["v2"])`, which is equivalent.
+    "xypic.tex" => package::xypic_sty::load_definitions(),
+    // Perl: xy.tex.ltxml does InputDefinitions('xy', type=>'tex', noltxml=>1, at_letter=>0)
+    // plus \xyoption driver filtering. Rust xy_sty matches this structure.
+    "xy.tex" => package::xy_sty::load_definitions(),
     "newlfont.sty" => package::newlfont_sty::load_definitions(),
     "ltxcmds.sty" => package::ltxcmds_sty::load_definitions(),
     "kvsetkeys.sty" => package::kvsetkeys_sty::load_definitions(),
