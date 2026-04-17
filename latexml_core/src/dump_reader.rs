@@ -111,12 +111,23 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // Currently conservative: only load `@`-internal Expandables whose
     // expansion body doesn't reference the expl3 hook system.
     //
-    // PA/MPA primitive-alias entries are written by dump_writer and
-    // classified into early/late sections (see SYNC_STATUS D0 d.2).
-    // Consumption STILL gated off — attempting to load the `:`-style
-    // expl3 macros together with PA aliases causes an infinite-loop
-    // style blow-up (60 s timeout, memory climbing). Known-remaining
-    // investigation; see SYNC_STATUS D0 (d.5).
+    // PA/MPA + `:`-style expl3 Expandables are BOTH gated off. Two
+    // experiments showed they each cause a blow-up on expl3 conversion:
+    //
+    //   - PA alone: `\tex_let:D → \let` gets re-aliased → expl3.sty's
+    //     guard `\ifx\csname tex_let:D\endcsname\relax` fires → raw
+    //     `\input expl3-code.tex` is skipped → expl3.sty's post-guard
+    //     code hits `\__kernel_dependency_version_check:Nn`,
+    //     `\ProcessOptions`, `\keys_define:nn { sys }`, … which are
+    //     `:`-style macros we don't load → undefined CS recovery →
+    //     infinite-looking loop (60 s timeout, memory climbing).
+    //
+    //   - PA + `:`-style M: the `:`-style macro bodies themselves
+    //     trigger the same pattern via cross-references.
+    //
+    // Both need to be unblocked TOGETHER, in coordination with
+    // expl3_sty.rs short-circuiting its whole load_definitions when
+    // the dump already has expl3 state. See SYNC_STATUS D0 (d.5).
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');

@@ -378,6 +378,31 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
   Once (a)–(d) are in place we should see the Perl-sized win:
   ~1.3 s → ~50 ms per expl3 conversion.
 
+  **2026-04-17 update — failure-mode catalog from isolated experiments.**
+  With the (d.2) early/late split in place I re-tested narrower PA
+  consumption variants. Both failed with the same run-time shape
+  (~60 s timeout, RSS climbing, exit 143 SIGTERM-by-watchdog) but
+  for different reasons:
+
+  - **PA alone, no `:`-style Expandables**: `\tex_let:D` becomes
+    let-aliased to `\let` via the dump → `expl3.sty`'s own guard
+    `\ifx\csname tex_let:D\endcsname\relax` fires → raw
+    `\input expl3-code.tex` is skipped → `expl3.sty`'s post-guard
+    code (`\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
+    `\keys_define:nn { sys }`, …) references `:`-style macros we
+    still filter out → undefined-CS recovery → loop.
+  - **PA + `:`-style Expandables loaded**: the `:`-style macro
+    bodies reference each other through `\__kernel_…` and expl3
+    hooks. Loading them en-masse triggers a similar recovery
+    cascade.
+
+  Neither partial unblock works. The two have to be removed
+  **together AND** `expl3_sty.rs` needs to short-circuit its whole
+  `load_definitions` when the dump already has expl3 state so
+  `expl3.sty`'s post-guard code doesn't run at all. Each of the
+  three gates independently causes the same class of crash;
+  removing all three simultaneously is what gets the Perl speedup.
+
 - [ ] **Page545 verification.** After each D0 milestone, re-run
   `cargo test --release -p latexml --test 81_babel -- --ignored
   page545` and check whether the `<p>The expansion…` line matches
