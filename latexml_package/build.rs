@@ -4,6 +4,8 @@
 //! the dump at compile time (old behavior). Instead, at runtime it reads the
 //! dump from disk, searching several locations in order:
 //!
+//!   0. `$LATEXML_NODUMP` — if set, skip entirely (matches Perl `Package.pm`
+//!      `LoadFormat` behavior: `if (!$ENV{LATEXML_NODUMP} && FindFile(...))`).
 //!   1. `$LATEXML_DUMP_PATH` (explicit override, full path to latex.dump.txt)
 //!   2. `$LATEXML_DUMP_DIR/latex.dump.txt` (directory override)
 //!   3. `<exe_dir>/../resources/dumps/latex.dump.txt` (installed layout)
@@ -65,6 +67,15 @@ fn main() {
 // at info and returns Ok(()) — the engine will fall back to in-code defaults.
 
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
+  // Perl parity: Package.pm `LoadFormat` skips the dump when LATEXML_NODUMP
+  // is set, falling back to re-processing the _base pool. We don't have a
+  // fully separate _base path yet (see SYNC_STATUS D0) but we still respect
+  // the opt-out so tooling can force the slower path deterministically.
+  if std::env::var_os("LATEXML_NODUMP").is_some() {{
+    log::info!("[latex_dump] LATEXML_NODUMP set — skipping dump, engine will \
+                reconstruct kernel state from _base pool (slower, Perl-parity)");
+    return Ok(());
+  }}
   let path_opt = resolve_dump_path();
   let Some(path) = path_opt else {{
     log::info!("[latex_dump] no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
@@ -127,6 +138,7 @@ fn resolve_dump_path() -> Option<std::path::PathBuf> {{
   // Also rerun if the environment override changes.
   println!("cargo:rerun-if-env-changed=LATEXML_DUMP_PATH");
   println!("cargo:rerun-if-env-changed=LATEXML_DUMP_DIR");
+  println!("cargo:rerun-if-env-changed=LATEXML_NODUMP");
 
   println!("cargo:rerun-if-changed=build.rs");
 }

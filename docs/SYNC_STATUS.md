@@ -160,6 +160,43 @@ exact engine gaps:
   regenerates it in one step. CI runs `make_formats.sh` before tests, so
   the dump the test suite consumes always matches the test-runtime texlive.)
 
+- [x] **Perl-parity `LATEXML_NODUMP` opt-out.** `Package.pm` `LoadFormat`:
+  `if (!$ENV{LATEXML_NODUMP} && FindFile($format . '_dump', ...))`. The
+  Rust runtime loader now honors the same env var — if set, the dump is
+  skipped unconditionally and the engine proceeds on the in-code bootstrap
+  path. Verified: `LATEXML_NODUMP=1` emits an info-level log, skips the
+  file search, returns `Ok(())`.
+
+- [ ] **Dump / `_base` mutual exclusivity (Perl-parity `LoadFormat`
+  branching).** Perl's `LoadFormat` takes **one** of two paths:
+  `bootstrap + dump + constructs` (when the dump exists) **or**
+  `bootstrap + _base + constructs` (when it does not). The two are
+  mutually exclusive — `_base` is the verbose source form of what the
+  dump serializes. Our `latex.rs` currently loads both: `bootstrap` →
+  `_base` (our `latex_base.rs` Rust bindings) → `dump` (add-only) →
+  `constructs`. Measured impact: the dump does **~6045 add-only inserts
+  on startup** (most pre-loaded entries are already defined by
+  `_base.rs`), costing ~5 MB RSS and ~10 ms, delivering **no measurable
+  speed-up** on minimal or medium docs. Full test suite passes
+  identically with or without the dump. Fix: make the `_base` pool vs
+  `_dump` load mutually exclusive so the dump's raison d'être
+  (bypassing base reprocessing) actually kicks in.
+
+  This is the cleanest lever that will make the kernel dump *do* what
+  it claims in the Perl design — and it becomes necessary once the
+  D0 precompile-phase work (language registers, `\openin` / `.ini`
+  loading, etc.) lands, because `_base` will no longer cover those
+  things alone.
+
+- [ ] **Page545 verification.** After each D0 milestone, re-run
+  `cargo test --release -p latexml --test 81_babel -- --ignored
+  page545` and check whether the `<p>The expansion…` line matches
+  Perl byte-for-byte. Current status (as of runtime-dump landing):
+  **still 4 diffs** (no `ltx_align_left`, stray leading `<text xml:lang="de">,</text>`,
+  `français:` vs `français :`, missing trailing `<text xml:lang="de"></text>`).
+  The dump infrastructure alone did **not** close any of them — they
+  all require the subsequent engine-level items.
+
 - [ ] **Drop Rust babel workarounds incrementally.** Once the engine pieces
   are in place, strip `babel_sty.rs` from 384 → ~15 lines to match Perl's
   stub, and `babel_support_sty.rs` to its 131-line pure translation. The
