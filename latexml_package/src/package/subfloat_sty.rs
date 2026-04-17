@@ -13,6 +13,10 @@ LoadDefinitions!({
   // Counters — Perl L30-32
   NewCounter!("subfloatfigure", "figure", idprefix => "sf", idwithin => "figure");
   NewCounter!("subfloattable",  "table",  idprefix => "st", idwithin => "table");
+  // Perl sets \themainfigure/\themaintable in {subfigures}/{subtables} beforeDigest;
+  // we provide global Let aliases so they resolve outside that scope too.
+  Let!("\\themainfigure", "\\thefigure");
+  Let!("\\themaintable",  "\\thetable");
   DefMacro!("\\thesubfloatfigure", "\\themainfigure\\alph{subfloatfigure}");
   DefMacro!("\\thesubfloattable",  "\\themaintable\\alph{subfloattable}");
   DefMacro!("\\subfloatfigurename", "Figure");
