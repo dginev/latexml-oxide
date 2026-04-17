@@ -387,18 +387,24 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
       Some(c)
     }
   } else if let Some(ftok) = &fontdef_tok {
-    state::with_font_info(ftok, |fontinfo| {
-      let cinfo = if let Some(Stored::Font(ref info)) = fontinfo? {
-        if let Some(ref data) = info.encoding {
-          crate::common::font::decode(n as u8, Some(data.to_string()), false)
-        } else {
-          Some(c)
-        }
+    // Extract the encoding BEFORE calling font::decode. font::decode may
+    // call preload_font_map which mutates state, and with_font_info holds
+    // a State borrow while its closure runs — the reentrant mutation
+    // panics with "RefCell already borrowed" (sandbox paper 0711.4787).
+    let encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
+      if let Some(Stored::Font(ref info)) = fontinfo? {
+        Ok::<Option<String>, crate::common::error::Error>(
+          info.encoding.as_ref().map(|s| s.to_string())
+        )
       } else {
-        Some(c)
-      };
-      Ok::<Option<char>, crate::common::error::Error>(cinfo)
-    })?
+        Ok(None)
+      }
+    })?;
+    if let Some(data) = encoding_opt {
+      crate::common::font::decode(n as u8, Some(data), false)
+    } else {
+      Some(c)
+    }
   } else {
     Some(c)
   };
