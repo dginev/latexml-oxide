@@ -205,6 +205,108 @@ exact engine gaps:
   `state::let_i`) but **consumption is gated off** until the
   mutual-exclusivity work below lands — see next item.)
 
+### Critical review: Perl dumper vs. Rust dumper
+
+A line-by-line comparison of `LaTeXML::Core::Dumper`, `Engine/TeX_Job.pool.ltxml::DumpFile`,
+and `Package.pm::LoadFormat` against our `dump_writer.rs` /
+`dump_reader.rs` / `ini_tex.rs` surfaces five significant structural
+differences. Each corresponds to an entry in the work plan below.
+
+1. **Snapshot taken at the wrong point.** Perl's `DumpFile` runs
+   `LoadPool($name . '_bootstrap')` *before* snapshotting, and only
+   the bootstrap. The subsequent raw-load's diff is therefore
+   "bootstrap → fully-initialized kernel". Our `ini_tex.rs` starts
+   from a state where `plain_bootstrap.rs` **+ `_base.rs` +
+   `_constructs.rs`** have already all run (whatever the engine
+   normally loads at `Core::new` time), so our diff captures only
+   "full kernel → full kernel + raw latex.ltx extras". The dump is
+   ~24k entries vs. what Perl's `latex_dump.pool.ltxml` captures:
+   the 8741-line block of the LaTeX kernel itself.
+
+   This is the biggest structural gap. It also explains why flipping
+   PA consumption on causes explosion: our dump only has the extra
+   expl3 definitions, not the LaTeX kernel — when `expl3.sty`'s guard
+   short-circuits, post-guard code executes against a hybrid state
+   (`_base.rs` primitives mixed with dump PAs mixed with dump
+   `@`-internal macros) that wasn't the state any single code path was
+   designed for.
+
+2. **Missing early/late let-assignment split.** Perl's `DumpFile`
+   categorizes `\let` assignments into three buckets:
+   - `@cmds_early` — `Lt(cs, target)` where the target existed
+     *before* the raw load (bootstrap primitive). Emitted **first**.
+   - `@cmds` — normal `I(dump)` / `Im(key, dump)` assignments.
+   - `@cmds_late` — `Lt(cs, target)` where the target was defined
+     *during* the raw load. Emitted **last** so its target is already
+     installed by the time the let fires.
+
+   Our PA/MPA entries are written in arbitrary (hash-iteration) order
+   and loaded in file order. If an alias points at a CS that the dump
+   also defines *later in the file*, the alias resolves against
+   either an undefined target (silent skip via our `has_meaning`
+   guard) or a stale binding. Perl's `@augtables = (…'prelet'…
+   'postlet'…)` encodes this split explicitly.
+
+3. **`I(dump)` vs `Im(key, dump)` distinction.** Perl emits `I(dump)`
+   when the definition's own CS matches the table key (the standard
+   case, where the value carries its own identity) — the CS is
+   embedded in the dump string itself. `Im(key, dump)` is for cases
+   where the value doesn't have a self-CS (a meaning assigned to a
+   token that doesn't identify itself). Our `M` entries always use
+   the external key; we don't distinguish the self-identifying case.
+
+4. **`IGNORED_SYMBOLS` is a specific blacklist, not substring
+   patterns.** Perl hard-codes `value:DOCUMENT_REWRITE_RULES`,
+   `value:PARAMETER_TYPES`, `value:TAG_PROPERTIES`,
+   `value:MATH_LIGATURES`, `value:TEXT_LIGATURES`, plus
+   `meaning:\lnot` and `meaning:\to` (both of which used to cause
+   test breakage via pre-2017 TeXLive `\let\lnot\neg`). Our
+   `SKIP_VALUE_KEYS` + `SKIP_VALUE_PREFIXES` + `SKIP_VALUE_CONTAINS`
+   mirror the *spirit* but miss the targeted specificity — e.g., our
+   `_loaded` substring blocks all of them, whereas Perl keeps
+   `expl3-code.tex_loaded` by *not* having it on the list.
+
+5. **Perl's dump is executable Perl code.** `latex_dump.pool.ltxml`
+   opens with `package LaTeXML::Internal::Dump; use LaTeXML::Core::Dumper
+   qw(:load);` and contains ~8k lines of the form `I(E(C('\foo'),…))`.
+   Load-time is `require FILE` — `perl` parses the compact
+   Huffman-named constructors (`C`, `L`, `T`, `E`, `I`, `Lt`, …) and
+   runs them. Very fast. Our format is tab-separated text parsed by
+   `parse_and_load` at runtime. Functionally equivalent, but we pay
+   more per entry than Perl does.
+
+Nothing critical is missing from our data model — `PA`/`MPA` plus
+`E`/`T`/`R`/`V` cover the same variants — but **the snapshot timing
+(#1) and the let ordering (#2) are the two gaps that block the
+Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
+
+- [ ] **(d.1) Move the snapshot earlier.** `ini_tex.rs` should
+  explicitly load `plain_bootstrap + latex_bootstrap` only, snapshot,
+  then raw-load `latex.ltx`. Result: dump includes the full LaTeX
+  kernel, so a dump-only load path can replace `_base.rs` entirely
+  (matching Perl's `LoadFormat` branching).
+
+- [ ] **(d.2) Split PA/MPA into early / late buckets** based on
+  whether the target CS existed in the snapshot. `dump_writer.rs`
+  needs the same `%prev` / `%curr` comparison Perl does in
+  `DumpFile`; `dump_reader.rs` / the dump file layout need a way to
+  load-in-order that respects the bucket.
+
+- [ ] **(d.3) Implement `\let`-alias ordering guarantees for PA
+  entries.** Once (d.2) is in place, consuming PA becomes safe: the
+  target is always defined before the alias fires.
+
+- [ ] **(d.4) Switch to Perl-style executable-constructor dump
+  format** (optional, perf-only). Compact constructors like `I(E(C,
+  Ps, T))` would let us skip string parsing. Not blocking for
+  correctness; measure first whether the tab-separated-text parse
+  is a real hotspot.
+
+- [ ] **(d.5) Harvest expl3 short-circuit.** With (d.1)–(d.3) in
+  place, enabling PA consumption + `expl3.sty_loaded` allow-list
+  should cleanly cut `\usepackage{expl3}` from 1.3 s to <100 ms
+  without any state-mix explosion.
+
 - [ ] **Harvest expl3 short-circuit (Perl's actual "massive speedup").**
   First-principles derivation of what Perl's dump saves that ours
   doesn't, with measurements:

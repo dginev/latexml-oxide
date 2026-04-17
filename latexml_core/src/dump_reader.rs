@@ -109,18 +109,16 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // M: Meaning entries (expandable definitions + primitive aliases).
     //
     // Currently conservative: only load `@`-internal Expandables whose
-    // expansion doesn't reference the expl3 hook system. These are
+    // expansion body doesn't reference the expl3 hook system. These are
     // LaTeX kernel internals (`\@fontswitch`, `\@thmcounter`, …) that
-    // raw `.cls`/`.sty` files need. Expl3 `:`-style entries and
-    // primitive-alias entries (`PA`/`MPA`) are NOT consumed — but `PA`
-    // IS written by dump_writer so the alias info is persisted. See
-    // SYNC_STATUS D0 "Harvest expl3 short-circuit": once dump/_base
-    // become mutually exclusive, we can start consuming PA entries to
-    // make `\ifx\csname tex_let:D\endcsname\relax` in `expl3.sty`
-    // short-circuit. Until then, consuming them leaves the engine with
-    // a partially-initialized expl3 state (expl3.sty's post-guard code
-    // runs against a mix of dumped and binding-provided definitions
-    // that don't agree) and a simple expl3 doc balloons to 60 s / 4.5 GB.
+    // raw `.cls`/`.sty` files need.
+    //
+    // PA/MPA primitive-alias entries are written by dump_writer but NOT
+    // consumed here yet. Turning them on without the Perl-parity snapshot
+    // redesign (see SYNC_STATUS D0 "Dump/_base mutual exclusivity") blows
+    // up expl3 conversion — the aliases fire the `expl3.sty` guard and
+    // the post-guard code then runs against a mix of dump-loaded state
+    // and `_base.rs` state that disagrees.
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
