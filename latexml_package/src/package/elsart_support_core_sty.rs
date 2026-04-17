@@ -122,6 +122,11 @@ LoadDefinitions!({
     result
   });
   DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
+  // Perl L38-39: \person@thanks — inline (restricted_horizontal) variant used for
+  // author-embedded thanks marks. Aliased to \thanks in reversion.
+  DefConstructor!("\\person@thanks[]{}",
+    "^ <ltx:contact role='thanks'>#2</ltx:contact>",
+    alias => "\\thanks", mode => "restricted_horizontal");
   DefMacro!("\\thanksref{}", "");
   DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
   DefMacro!("\\corref{}", "");
