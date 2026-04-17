@@ -788,8 +788,13 @@ pub fn begin_itemize(
       Some(Scope::Global),
     );
   }
-  // format the id of \item's relative to the id of this list
-  let useexp = mouth::tokenize_internal(&s!("\\the{listcounter}@ID.i\\@{usecounter}@ID"));
+  // format the id of \item's relative to the id of this list.
+  // Note: if usecounter contains a digit (e.g. "count1" from \usecounter{count1}),
+  // the Perl-style CS name \@count1@ID cannot be tokenized as a single CS (TeX CS
+  // reading stops at non-letter), so `tokenize_internal` would split it into
+  // \@count + "1" + "@" + "ID". Build it via \csname...\endcsname instead.
+  let useexp = mouth::tokenize_internal(&s!(
+    "\\the{listcounter}@ID.i\\csname @{usecounter}@ID\\endcsname"));
   def_macro(T_CS!(s!("\\the{usecounter}@ID")), None, useexp, None)?;
 
   let mut series = if let Some(s) = options.series {
