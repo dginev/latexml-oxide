@@ -911,9 +911,26 @@ State after session 107:
 - No warnings in release build
 - 10 unsafe blocks, all SAFETY-documented
 
-##### Session 108 Summary (2026-04-17)
+##### Session 108 Summary (2026-04-17, cont'd in /loop 5m)
 
-Comprehensive cycle of sandbox coverage and Perl-fidelity work. **29 commits, 409/409 tests pass throughout.**
+Comprehensive cycle of sandbox coverage and Perl-fidelity work. **49+ commits, 409/409 tests pass throughout.**
+
+**Late-session package parity pass (after initial 29 commits):**
+- Dispatch: `epsf.tex`, `pstricks.tex`, `xypic.tex`, `xy.tex`, `aipcheck.tex`, `psfig.tex` forwarders (were hitting missing-file path).
+- `elsart_support`: `\Rset`/`\Cset`/`\Zset`/`\Nset`/`\Qset`/`\Hset`, `\half`/`\threehalf`/`\quart`, `\d`/`\e`, `\pol` overaccent; 9 more theorem envs (axiom, fact, hypo, assum, crit, prob, prin, alg, summ, case), algorithm counter, `\pf` env.
+- `mn2e_support`: 6 bold-variant Greek, `\cor` RELOP, `\squareforqed`+`\sq`/`\proofbox`, `\diameter`, `\earth`, `\oldle`/`leq`/`\oldge`/`geq` pre-AMS, `\mathbfit`/`\mathbfss`, `\nokeywords`, `\bibheadtitle`.
+- `aa_support`: `\aas@@fstack` DefConstructor (semantic POSTFIX), `\mathsc`, `\squareforqed`+`\sq`/`\qed`, `\figgap`/`\headerboxheight`/`\headlineindent`/`\logodepth` registers.
+- `aas_support`: `\eqnum` proper tag setter (was empty stub).
+- `revtex4_support`: `\footbox` box register (`\newbox`).
+- `iopart_support`: `\bcal` calligraphic bold, `\tdot` overaccent, `\lshad`/`\rshad` OPEN/CLOSE.
+- `texvc`: `\unicode{xNNNN}` primitive, `\varcoppa`, `\varstigma`, `\le`/`\ge`, `\and`=`\land`, `\@equationgroup@number`=`\nonumber`.
+- `proofwiki`: 92 missing macro definitions for full parity (capitalized hyperbolic funcs + inverse variants; probability distributions; set/algebra operators; `\intlimits`/`\valueat`/`\bigvalueat`/`\ideal`/`\eqclass`/`\multiset`/`\nint`/etc.; `\Add`/`\Mult`/`\Succ`/`\Zero` logic; `\inj`/`\rem`/`\pr`/`\proj`/`\len`/`\dr`/`\cl`/`\cov`/`\conjclass`/`\On`/`\Card`/`\Frob`; distribution constructors; `\PV`/`\leadstoandfrom`/`\cels`/`\fahr`).
+- `sv_support`: `\normalthmheadings`/`\reversethmheadings` (thm@swap toggle).
+- `ams_support`: `\@ams@url` constructor (Perl L292-294) — `\URL` no longer no-op.
+- `actuarialangle`: `\overanglebracket` + `\group` (Perl L26-30) gated by `\ifacta@bracket`.
+- `inst_support`: `\author[]{}` OmniBus form (Perl L43-44), splits by `\and` and `,`.
+- `amssymb`: `\backsimeq` → U+22CD (Perl commit #2633 sync).
+- `token.rs`: `Explode`/`ExplodeText`/`ExplodeChars`/`SymExplodeText` macros now convert newlines to `CC_SPACE` (Perl commit #2646 sync).
 
 **Sandbox transitions this session (broken → OK, 9 papers):**
 - `0705.1190` — `\color` undefined in colordvi-only docs (d5f0dbb52)
