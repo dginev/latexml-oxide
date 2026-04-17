@@ -43,11 +43,26 @@ fn numprints_test() {
 //      Fixing (2) below is expected to fix this as a side effect.
 //
 //   2. [STILL OPEN] A stray leading comma appears in p1 ("<p>,The
-//      expansion…"). Traced to babel.sty or txtbabel.def raw loading
-//      — reproduces even with `\usepackage[french]{babel}` (single
-//      option). One single comma regardless of option count; the
-//      count-invariance rules out a naive option-list split bug. The
-//      exact source is still under investigation.
+//      expansion…"). Investigations so far:
+//
+//      - Reproduces with `\usepackage{babel}` (no options) and with
+//        `\RequirePackage{babel}`. Rules out user-option-list leak.
+//      - Comma is one single character regardless of option count.
+//        Rules out naive list-split off-by-one.
+//      - Isolated: with `\par FIRST` as the body, output is
+//        `<p>,</p><p>FIRST</p>` — the comma is a standalone leftover
+//        token already queued when `\begin{document}` starts.
+//      - `\def\bbl@evargs{,everylanguage=1,...}` (babel.sty L1069)
+//        has a deliberate leading comma and the comment
+//        "<- don't delete this comma"; verified via `\meaning` that
+//        our `\def` stores it correctly and doesn't leak the body.
+//      - Current hypothesis: some babel macro expansion (possibly
+//        the `\AtBeginDocument{\bbl@usehooks@lang{/}{begindocument}
+//        {{}}}` chain from babel.sty L4305 or a `\bbl@foreach`
+//        consuming `\bbl@evargs` incompletely) leaves a stray `,`
+//        in the main token stream. Exact source TBD; needs
+//        `\tracingmacros` or equivalent step-by-step execution
+//        trace to pinpoint.
 //
 //   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
 //      exclamation/question now emits a thin space before itself
