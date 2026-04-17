@@ -133,8 +133,15 @@ LoadDefinitions!({
   DefMacro!("\\bvarphi", "\\mn@boldsymbol{\\varphi}");
   DefMacro!("\\bvarpi", "\\mn@boldsymbol{\\varpi}");
 
-  // Degree fractions — Perl L109-117
-  DefMacro!("\\aas@fstack{}", "\\ensuremath{.\\!^{\\mathrm{#1}}}");
+  // Degree fractions — Perl L101-117: constructor + macro form (semantic POSTFIX XMApp)
+  DefConstructor!("\\aas@@fstack{}",
+    "<ltx:XMApp role='POSTFIX'><ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/><ltx:XMTok>.</ltx:XMTok><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMApp>",
+    mode => "math", bounded => true,
+    properties => sub[_args] {
+      let script_level = state::lookup_int("script_level");
+      Ok(stored_map!("scriptpos" => s!("mid{}", script_level)))
+    });
+  DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");
 
   // Math relations — Perl L131-149
   DefMath!("\\sol", "\u{2A9D}", role => "RELOP", meaning => "similar-to-or-less-than");
@@ -202,6 +209,19 @@ LoadDefinitions!({
   Let!("\\fullhline", "\\hline");
   DefMacro!("\\sevensize", "\\small");
   DefMacro!("\\plate", "");
+
+  // Perl L57-62: equation numbering schemes
+  DefMacro!("\\eqsecnum",
+    "\\@addtoreset{equation}{section}\\def\\theequation{\\arabic{section}.\\arabic{equation}}");
+  DefMacro!("\\eqsubsecnum",
+    "\\@addtoreset{equation}{subsection}\\def\\theequation{\\arabic{subsection}.\\arabic{equation}}");
+
+  // Perl L204-205: utility macros
+  DefMacro!("\\hexnumber{}", sub[(n)] {
+    let n = n.to_string().trim().parse::<i64>().unwrap_or(0);
+    Ok(Tokens!(T_OTHER!(format!("{:x}", n))))
+  });
+  DefMacro!("\\mathch{}{}", "\\ensuremath{#2}");
 
   Let!("\\@internalcite", "\\cite");
   DefMacro!("\\shortcite", "\\cite");
