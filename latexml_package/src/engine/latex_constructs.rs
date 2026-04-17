@@ -2757,6 +2757,16 @@ LoadDefinitions!({
   Tag!("ltx:subsubsection", auto_close=>true);
   Tag!("ltx:paragraph", auto_close=>true);
   Tag!("ltx:subparagraph", auto_close=>true);
+  // Also auto-close structural/backmatter containers so papers that open
+  // `\acknowledgments` / `\appendix` / `\index` without a matching `\end...`
+  // (common in mn/jheppub/pos classes) don't leave the element open until
+  // `\end{document}` and produce schema-violation errors when a following
+  // bibliography or section is emitted.
+  // Perl: ltx:bibliography already has autoClose=1 (latex_constructs L4078);
+  // these siblings match its container-with-trailing-content semantics.
+  Tag!("ltx:acknowledgements", auto_close => true);
+  Tag!("ltx:appendix", auto_close => true);
+  Tag!("ltx:index", auto_close => true);
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", sub[(token1, token2, star)] {
     if star.is_some() {
