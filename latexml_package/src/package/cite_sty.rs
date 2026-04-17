@@ -58,6 +58,8 @@ LoadDefinitions!({
   //         Tokens(($post ? ($ns, T_SPACE, $post) : ()), $close)))); }
   // });
 
-  Let!("\\citenum", "\\citen");
-  Let!("\\citeonline", "\\citen");
+  // Perl: \citen is a complex closure (natbib-style). For now, delegate to \cite.
+  Let!("\\citen", "\\cite");
+  Let!("\\citenum", "\\cite");
+  Let!("\\citeonline", "\\cite");
 });

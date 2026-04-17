@@ -125,12 +125,11 @@
   </para>
   <para>
     <equation>
-      <Math mode="display" tex="s(x)=\cases{+1&amp;whatever\cr-1&amp;$x&lt;0$\cr 0}" text="s * x = cases@(+ 1, [whatever], - 1, x &lt; 0, 0, [otherwise])">
+      <Math mode="display" tex="s(x)=\cases{+1&amp;whatever\cr-1&amp;$x&lt;0$\cr 0}" text="s@(x) = cases@(+ 1, [whatever], - 1, x &lt; 0, 0, [otherwise])">
         <XMath>
           <XMApp>
             <XMTok meaning="equals" role="RELOP">=</XMTok>
             <XMApp>
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
               <XMTok font="italic" role="UNKNOWN">s</XMTok>
               <XMDual>
                 <XMRef idref="id8"/>

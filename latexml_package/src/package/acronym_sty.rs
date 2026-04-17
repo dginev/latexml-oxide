@@ -1,4 +1,4 @@
-use crate::engine::latex_ch11_moving_information::{
+use crate::engine::latex_constructs::{
   adjust_backmatter_element, note_backmatter_element,
 };
 use crate::prelude::*;

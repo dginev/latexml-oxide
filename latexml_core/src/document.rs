@@ -104,6 +104,12 @@ pub struct Document {
   // the following are internal "local"-based declarations in Perl
   localized_constructed_nodes: Vec<Vec<Node>>,
   constructed_nodes:           Vec<Node>,
+  /// Free-list of emptied `Vec<Node>` buffers, reused across `init_constructed_nodes`
+  /// / `close_constructed_nodes` cycles. The per-body constructed-nodes frame pushes
+  /// here after its elements are drained so the next `init_constructed_nodes` can pop
+  /// a buffer with pre-existing capacity instead of heap-allocating a fresh one.
+  /// Cuts the `Vec<Node>::from_iter` hotspot that dominated absorb profiles.
+  reusable_node_buffers:       Vec<Vec<Node>>,
   localized_boxes:             Vec<Option<Digested>>,
   box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
   localized_fonts:             Vec<Rc<Font>>,
@@ -119,6 +125,13 @@ impl Object for Document {
       .unwrap_or_default()
   }
 }
+
+/// Attachment policy for `Document::add_comment_ffi`. Kept module-local.
+enum Placement_ {
+  AppendChild,
+  PrevSibling,
+}
+
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
@@ -138,6 +151,7 @@ impl Document {
       pending:                     Vec::new(),
       localized_constructed_nodes: Vec::new(),
       constructed_nodes:           Vec::new(),
+      reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
       context:                     None,
       localized_boxes:             Vec::new(),
@@ -396,7 +410,7 @@ impl Document {
                   let key_sym = arena::pin(key);
                   attrs_to_set.push((key_sym, arena::pin(value)));
                   // Merge to set the font currently in effect
-                  declared_font = Cow::Owned(declared_font.merge(properties.clone()));
+                  declared_font = Cow::Owned(declared_font.merge_ref(properties));
                   keys_to_remove.push(key_sym);
                 }
               }
@@ -595,39 +609,22 @@ impl Document {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
-          // record these for OUTER caller!
-          // but return only the most recent set
-          {
-            for n in self.drain_constructed_nodes() {
-              self.record_constructed_node(&n);
-            }
-          }
+          // record these for OUTER caller, but return only the most recent set
+          self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
         Whatsit(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
-          // record these for OUTER caller!
-          // but return only the most recent set
-          {
-            for n in self.drain_constructed_nodes() {
-              self.record_constructed_node(&n);
-            }
-          }
+          self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
         Alignment(ref alignment) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           alignment.borrow_mut().be_absorbed_mut(self)?;
-          // record these for OUTER caller!
-          // but return only the most recent set
-          {
-            for n in self.drain_constructed_nodes() {
-              self.record_constructed_node(&n);
-            }
-          }
+          self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
         Comment(ref comment) => {
@@ -675,16 +672,29 @@ impl Document {
   }
 
   fn init_constructed_nodes(&mut self) {
-    self
-      .localized_constructed_nodes
-      .push(self.constructed_nodes.drain(..).collect());
+    // Pop a buffer from the free-list (retaining its previously-grown capacity);
+    // fall back to a fresh empty Vec if the pool is dry. Swap it in as the new
+    // inner frame; the outgoing outer frame goes onto the save stack.
+    let fresh = self.reusable_node_buffers.pop().unwrap_or_default();
+    let prev = std::mem::replace(&mut self.constructed_nodes, fresh);
+    self.localized_constructed_nodes.push(prev);
   }
-  fn drain_constructed_nodes(&mut self) -> Vec<Node> {
-    let drained = self.constructed_nodes.drain(..).collect();
-    if let Some(saved) = self.localized_constructed_nodes.pop() {
-      self.constructed_nodes = saved;
+
+  /// Close the current constructed-nodes frame, restoring the outer frame and
+  /// re-recording the inner frame's nodes into it. The drained inner buffer
+  /// is returned to `reusable_node_buffers` (empty but with capacity intact)
+  /// so the next `init_constructed_nodes` can reuse it without allocating.
+  fn close_constructed_nodes(&mut self) {
+    let outer = self
+      .localized_constructed_nodes
+      .pop()
+      .unwrap_or_default();
+    let mut inner = std::mem::replace(&mut self.constructed_nodes, outer);
+    for n in inner.drain(..) {
+      self.record_constructed_node(&n);
     }
-    drained
+    // `inner` is now empty; its capacity is preserved. Return it to the pool.
+    self.reusable_node_buffers.push(inner);
   }
   pub fn get_constructed_nodes(&self) -> &[Node] { &self.constructed_nodes }
 
@@ -701,19 +711,30 @@ impl Document {
       None => false,
     };
     if !ismath {
-      let font: Font = match props.get("font") {
-        Some(Stored::Font(fnt)) => (**fnt).clone(),
-        Some(Stored::FontDirective(FontDirective::Asset(fnt))) => (**fnt).clone(),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None)?,
-        _ => self
-          .box_to_absorb
-          .as_ref()
-          .unwrap()
-          .get_font()?
-          .unwrap()
-          .into_owned(),
+      // Perf: avoid cloning Rc<Font> into owned Font in the common case.
+      // We pull out the Rc (shared reference is fine since open_text only
+      // borrows the Font, not self) and go through Cow<Font>.
+      let font_opt: Option<Rc<Font>> = match props.get("font") {
+        Some(Stored::Font(fnt)) => Some(Rc::clone(fnt)),
+        Some(Stored::FontDirective(FontDirective::Asset(fnt))) => Some(Rc::clone(fnt)),
+        _ => None,
       };
-      self.open_text(object, &font)
+      if let Some(fnt) = font_opt {
+        return self.open_text(object, &fnt);
+      }
+      if let Some(Stored::FontDirective(FontDirective::Closure(code))) = props.get("font") {
+        let fnt = code(None)?;
+        return self.open_text(object, &fnt);
+      }
+      // Fallback to box_to_absorb font.
+      let fnt = self
+        .box_to_absorb
+        .as_ref()
+        .unwrap()
+        .get_font()?
+        .unwrap()
+        .into_owned();
+      self.open_text(object, &fnt)
     } else if get_node_qname(&self.node) == arena::pin_static(MATH_TOKEN_NAME) {
       // Or plain string in math mode.
       // Note text nodes can ONLY appear in <XMTok> or <text>!!!
@@ -1467,9 +1488,12 @@ impl Document {
     mut attributes: HashMap<String, String>,
     font_opt: Option<&Font>,
   ) -> Result<Node> {
-    attributes
-      .entry(s!("role"))
-      .or_insert_with(|| s!("UNKNOWN"));
+    // Perf: avoid allocating the "role" String key unless the entry is missing.
+    // HashMap::entry() takes an owned K, which forces allocation even on the
+    // common path where "role" is already present.
+    if !attributes.contains_key("role") {
+      attributes.insert(String::from("role"), String::from("UNKNOWN"));
+    }
     // Remove internal-only properties that should not become XML attributes.
     // In Perl, these are filtered by canHaveAttribute (model validation),
     // but we filter them explicitly here.
@@ -1524,12 +1548,52 @@ impl Document {
     Ok(self.node.clone())
   }
 
+  /// Safety-contract'd FFI: create a libxml2 comment node and attach it to
+  /// `anchor` according to the supplied Placement. Called from
+  /// `insert_comment`. Isolated here so the unsafe block lives in exactly
+  /// one place with a reviewed contract.
+  ///
+  /// Safety:
+  /// - `doc_ptr` must be a valid, live libxml2 document pointer (we obtained
+  ///   it from a Rust-managed `XmlDocument` that has not been dropped).
+  /// - `anchor` must be a node in that document.
+  /// - The C string for the comment text is constructed with CString::new,
+  ///   which rejects embedded NULs; we pass the ptr while the CString is
+  ///   still alive.
+  /// - libxml2 takes ownership of `comment_ptr` after xmlAddChild /
+  ///   xmlAddPrevSibling, so we do not need to free it ourselves.
+  fn add_comment_ffi(
+    doc_ptr: *mut libxml::bindings::_xmlDoc,
+    anchor: &Node,
+    comment_text: &str,
+    placement: Placement_,
+  ) {
+    use std::ffi::CString;
+    let Ok(c_text) = CString::new(comment_text) else { return };
+    unsafe {
+      let comment_ptr = libxml::bindings::xmlNewDocComment(
+        doc_ptr,
+        c_text.as_ptr() as *const u8,
+      );
+      if comment_ptr.is_null() {
+        return;
+      }
+      match placement {
+        Placement_::AppendChild => {
+          libxml::bindings::xmlAddChild(anchor.node_ptr(), comment_ptr);
+        },
+        Placement_::PrevSibling => {
+          libxml::bindings::xmlAddPrevSibling(anchor.node_ptr(), comment_ptr);
+        },
+      }
+    }
+  }
+
   /// Insert a new comment, or append to previous comment.
   /// Does NOT move the current insertion point to the Comment,
   /// but may move up past a text node.
   /// Perl: Document.pm lines 678-698
   pub fn insert_comment(&mut self, text: &str) -> Result<Node> {
-    use std::ffi::CString;
     let trimmed = text.trim_end();
     let clean = DASHES_RE.replace_all(trimmed, "__");
     // Perl does NOT close the text node here — it uses getElement() to find
@@ -1540,20 +1604,12 @@ impl Document {
     let comment_text = s!(" {} ", clean);
 
     if self.node.get_type() == Some(NodeType::DocumentNode) {
-      // At document root: create comment node via raw FFI and add to pending.
-      unsafe {
-        let c_text = CString::new(comment_text.as_str()).unwrap();
-        let comment_ptr = libxml::bindings::xmlNewDocComment(
-          self.document.doc_ptr(),
-          c_text.as_ptr() as *const u8,
-        );
-        if !comment_ptr.is_null() {
-          libxml::bindings::xmlAddChild(
-            self.node.node_ptr(),
-            comment_ptr,
-          );
-        }
-      }
+      Self::add_comment_ffi(
+        self.document.doc_ptr(),
+        &self.node,
+        &comment_text,
+        Placement_::AppendChild,
+      );
     } else if let Some(node) = self.get_element() {
       // Get the nearest element node (Perl: getElement)
       let prev = node.get_last_child();
@@ -1574,34 +1630,28 @@ impl Document {
         let before_is_comment =
           before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
 
-        unsafe {
-          let c_text = CString::new(comment_text.as_str()).unwrap();
-          let comment_ptr = libxml::bindings::xmlNewDocComment(
+        if before_is_comment {
+          Self::add_comment_ffi(
             self.document.doc_ptr(),
-            c_text.as_ptr() as *const u8,
+            &node,
+            &comment_text,
+            Placement_::AppendChild,
           );
-          if !comment_ptr.is_null() {
-            if before_is_comment {
-              // Append new comment at end (don't merge across text)
-              libxml::bindings::xmlAddChild(node.node_ptr(), comment_ptr);
-            } else {
-              // Insert comment before the text node
-              libxml::bindings::xmlAddPrevSibling(prev_node.node_ptr(), comment_ptr);
-            }
-          }
+        } else {
+          Self::add_comment_ffi(
+            self.document.doc_ptr(),
+            &prev_node,
+            &comment_text,
+            Placement_::PrevSibling,
+          );
         }
       } else {
-        // Default: append as child
-        unsafe {
-          let c_text = CString::new(comment_text.as_str()).unwrap();
-          let comment_ptr = libxml::bindings::xmlNewDocComment(
-            self.document.doc_ptr(),
-            c_text.as_ptr() as *const u8,
-          );
-          if !comment_ptr.is_null() {
-            libxml::bindings::xmlAddChild(node.node_ptr(), comment_ptr);
-          }
-        }
+        Self::add_comment_ffi(
+          self.document.doc_ptr(),
+          &node,
+          &comment_text,
+          Placement_::AppendChild,
+        );
       }
     }
     Ok(self.node.clone())
@@ -2964,7 +3014,7 @@ impl Document {
     nodes.push_front(node.clone());
     while let Some(mut n) = nodes.pop_front() {
       if n.get_type() == Some(NodeType::ElementNode) {
-        let font = &self.get_node_font(&n).merge(props.clone());
+        let font = &self.get_node_font(&n).merge_ref(&props);
         self.set_node_font(&mut n, font)?;
         for child in n.get_child_nodes() {
           nodes.push_back(child);

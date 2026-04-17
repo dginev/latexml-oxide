@@ -296,13 +296,13 @@ pub fn lookup_tex_font(
 ) -> Font {
   let mut props = Font::default();
   if let Some(ffam) = lookup_font_family(fontname) {
-    props = props.merge(ffam.clone());
+    props = props.merge_ref(ffam);
   }
   if let Some(fser) = lookup_font_series(seriescode) {
-    props = props.merge(fser.clone());
+    props = props.merge_ref(fser);
   }
   if let Some(fsh) = lookup_font_shape(shapecode) {
-    props = props.merge(fsh.clone());
+    props = props.merge_ref(fsh);
   }
   props
 }
@@ -346,13 +346,13 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
     let shp = cap.get(3).map_or("", |m| m.as_str());
     let size_str = cap.get(4).map_or("", |m| m.as_str());
     if let Some(ffam) = lookup_font_family(fam) {
-      props = props.merge(ffam.clone());
+      props = props.merge_ref(ffam);
     }
     if let Some(fser) = lookup_font_series(ser) {
-      props = props.merge(fser.clone());
+      props = props.merge_ref(fser);
     }
     if let Some(fsh) = lookup_font_shape(shp) {
-      props = props.merge(fsh.clone());
+      props = props.merge_ref(fsh);
     }
     let mut size = if let Some(at) = at_opt {
       at
@@ -656,44 +656,6 @@ impl Font {
     format!("Font[{}]", parts.join(","))
   }
 
-  /// Return a hash-like struct of font properties.
-  /// Perl: asFontinfo
-  pub fn as_fontinfo(&self) -> HashMap<String, String> {
-    let mut info = HashMap::default();
-    if let Some(ref v) = self.family {
-      info.insert("family".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.series {
-      info.insert("series".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.shape {
-      info.insert("shape".to_string(), v.to_string());
-    }
-    if let Some(v) = self.size {
-      info.insert("size".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.color {
-      info.insert("color".to_string(), v.to_attribute());
-    }
-    if let Some(ref v) = self.bg {
-      info.insert("background".to_string(), v.to_attribute());
-    }
-    if let Some(ref v) = self.opacity {
-      info.insert("opacity".to_string(), v.to_string());
-    }
-    info.insert(
-      "encoding".to_string(),
-      self.encoding.as_deref().unwrap_or("OT1").to_string(),
-    );
-    if let Some(ref v) = self.language {
-      info.insert("language".to_string(), v.to_string());
-    }
-    if let Some(ref v) = self.mathstyle {
-      info.insert("mathstyle".to_string(), v.to_string());
-    }
-    info
-  }
-
   /// Wildcard font matching: if any components are defined in both fonts,
   /// they must be equal. Perl: match
   pub fn font_match(&self, other: &Font) -> bool {
@@ -845,9 +807,15 @@ impl Font {
   //    family, series or shape
   // will, usually, automatically reset the others to thier defaults!
   // You must arrange this in the calls....
-  pub fn merge(&self, other: Font) -> Self {
+  pub fn merge(&self, other: Font) -> Self { self.merge_ref(&other) }
+
+  /// Like `merge` but borrows `other` to avoid requiring callers to own or
+  /// clone a Font just to pass into merge. Clones only the retained fields
+  /// from `other` (cheap — Option<Cow<'static,str>> clones are free for
+  /// Borrowed variants, and most Font fields are None in typical uses).
+  pub fn merge_ref(&self, other: &Font) -> Self {
     // Handle forcebold for compatibility (Perl lines 873-874)
-    let mut series = other.series;
+    let mut series = other.series.clone();
     let mut force_series = other.forceseries;
     if other.forcebold == Some(true) {
       series = Some(Cow::Borrowed("bold"));
@@ -871,7 +839,7 @@ impl Font {
     let family = if other.family.is_none() || (oflags & FLAG_FORCE_FAMILY != 0) {
       self.family.clone()
     } else {
-      other.family
+      other.family.clone()
     };
     let series = if series.is_none() || (oflags & FLAG_FORCE_SERIES != 0) {
       self.series.clone()
@@ -881,16 +849,16 @@ impl Font {
     let mut shape = if other.shape.is_none() || (oflags & FLAG_FORCE_SHAPE != 0) {
       self.shape.clone()
     } else {
-      other.shape
+      other.shape.clone()
     };
     let mut size = other.size.or(self.size);
     let color = other.color.or(self.color);
     // Perl: $bg = $$self[5] if (!exists $options{background});
     // Only override bg if `other` actually specifies one
     let bg = if other.bg.is_some() { other.bg } else { self.bg };
-    let opacity = other.opacity.or_else(|| self.opacity.clone());
-    let encoding = other.encoding.or_else(|| self.encoding.clone());
-    let language = other.language.or_else(|| self.language.clone());
+    let opacity = other.opacity.clone().or_else(|| self.opacity.clone());
+    let encoding = other.encoding.clone().or_else(|| self.encoding.clone());
+    let language = other.language.clone().or_else(|| self.language.clone());
     let mut mathstyle = other.mathstyle.clone().or_else(|| self.mathstyle.clone());
     flags |= self.flags.unwrap_or(0) ;
 
@@ -957,7 +925,7 @@ impl Font {
       flags: Some(flags),
       // Carry over fields that aren't part of Perl's merge:
       mathstylestep: other.mathstylestep.or(self.mathstylestep),
-      name: other.name.or_else(|| self.name.clone()),
+      name: other.name.clone().or_else(|| self.name.clone()),
       emph: None,
       scripted: None,
       fraction: None,

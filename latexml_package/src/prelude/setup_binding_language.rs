@@ -781,6 +781,15 @@ macro_rules! RefStepID {
     ref_step_id($ctr)
   };
 }
+/// convenience macro for `api::counter_dialect::ref_current_id`
+/// Recycles the last ID without incrementing — useful when a previous
+/// ID-ed item got pruned and we want to reuse its identifier.
+#[macro_export]
+macro_rules! RefCurrentID {
+  ($ctr:expr) => {
+    ref_current_id($ctr)
+  };
+}
 #[macro_export]
 macro_rules! ResetCounter {
   ($ctr:literal) => {{ reset_counter(&T_OTHER!($ctr))? }};

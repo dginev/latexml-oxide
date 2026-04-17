@@ -1403,6 +1403,22 @@ LoadDefinitions!({
   DefMacro!("\\lx@xy@frameon", "");
   DefMacro!("\\lx@xy@tipson", "");
   DefMacro!("\\lx@xy@lineon", "");
+
+  // Perl L950-957: line styles extension stubs
+  // Use our definitions, NOT the raw TeX stubs
+  Let!("\\xy@polystyle@@", "\\xy@polystyle@");
+  // Perl L952: Use our definitions, NOT the raw TeX stubs
+  // These contain @ in CS names — use DefMacro!/Let! which bypass catcode issues
+  DefMacro!("\\xylinewidth@{}", "");
+  DefMacro!("\\xylinewidth@i{}", "");
+  DefMacro!("\\xyshape@thicker@", "");
+  DefMacro!("\\xyshape@thinner@", "");
+  Let!("\\xylinewidth@@", "\\xylinewidth@");
+  DefMacro!("\\xypolyline@Special", "\\lx@xy@stroke@on\\lx@xy@fill@off\\lx@xy@poly");
+  DefMacro!("\\xypolyfill@Special", "\\lx@xy@stroke@off\\lx@xy@fill@on\\lx@xy@poly");
+  DefMacro!("\\xypolyeofill@Special", "\\lx@xy@stroke@off\\lx@xy@fill@on\\lx@xy@poly");
+  DefMacro!("\\xypolydot@Special", "\\lx@xy@stroke@on\\lx@xy@dotpat\\lx@xy@fill@off\\lx@xy@poly");
+  DefMacro!("\\xypolydash@Special", "\\lx@xy@stroke@on\\lx@xy@dashpat\\lx@xy@fill@off\\lx@xy@poly");
   DefMacro!("\\lx@xy@rotateon", "");
   DefMacro!("\\lx@xy@coloron", "\\xystandardcolors@");
   DefMacro!("\\lx@xy@crayonon", "\\installCrayolaColors@");

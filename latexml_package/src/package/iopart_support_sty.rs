@@ -53,10 +53,54 @@ LoadDefinitions!({
   DefMacro!("\\pacs{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}");
   DefMacro!("\\ams{}", "\\@add@frontmatter{ltx:classification}[scheme=ams]{#1}");
 
-  // Journal — Perl L99-104
+  // Journal — Perl L65-104
+  static IOP_JOURNALS: &[&str] = &[
+    "Institute of Physics Publishing",
+    "J. Phys.\\ A: Math.\\ Gen.\\ ",
+    "J. Phys.\\ B: At.\\ Mol.\\ Opt.\\ Phys.\\ ",
+    "J. Phys.:\\ Condens. Matter\\ ",
+    "J. Phys.\\ G: Nucl.\\ Part.\\ Phys.\\ ",
+    "Inverse Problems\\ ",
+    "Class. Quantum Grav.\\ ",
+    "Network: Comput.\\ Neural Syst.\\ ",
+    "Nonlinearity\\ ",
+    "J. Opt. B: Quantum Semiclass. Opt.\\ ",
+    "Waves Random Media\\ ",
+    "J. Opt. A: Pure Appl. Opt.\\ ",
+    "Phys. Med. Biol.\\ ",
+    "Modelling Simul.\\ Mater.\\ Sci.\\ Eng.\\ ",
+    "Plasma Phys. Control. Fusion\\ ",
+    "Physiol. Meas.\\ ",
+    "Combust. Theory Modelling\\ ",
+    "High Perform.\\ Polym.\\ ",
+    "Public Understand. Sci.\\ ",
+    "Rep.\\ Prog.\\ Phys.\\ ",
+    "J.\\ Phys.\\ D: Appl.\\ Phys.\\ ",
+    "Supercond.\\ Sci.\\ Technol.\\ ",
+    "Semicond.\\ Sci.\\ Technol.\\ ",
+    "Nanotechnology\\ ",
+    "Measur.\\ Sci.\\ Technol.\\ ",
+    "Plasma.\\ Sources\\ Sci.\\ Technol.\\ ",
+    "Smart\\ Mater.\\ Struct.\\ ",
+    "J.\\ Micromech.\\ Microeng.\\ ",
+    "Distrib.\\ Syst.\\ Engng\\ ",
+    "Bioimaging\\ ",
+    "J.\\ Radiol. Prot.\\ ",
+    "Europ. J. Phys.\\ ",
+    "J. Opt. A: Pure Appl. Opt.\\ ",
+    "New. J. Phys.\\ ",
+  ];
   DefMacro!("\\journal", "Institute of Physics Publishing");
   DefMacro!("\\submitted", "\\submitto{\\journal}");
   DefMacro!("\\submitto{}", "\\def\\journal{#1}\\@add@to@frontmatter{ltx:note}[role=submitted]{#1}");
+
+  // Perl L102-104: \jl{n} — sets \journal to journals[n]
+  DefPrimitive!("\\jl{}", sub[(n)] {
+    let idx: usize = n.to_string().trim().parse().unwrap_or(0);
+    if let Some(journal) = IOP_JOURNALS.get(idx) {
+      def_macro(T_CS!("\\journal"), None, Tokenize!(journal), None)?;
+    }
+  });
 
   // Abstract/Keywords — Perl L95-120
   DefMacro!("\\nosections", "");
@@ -125,6 +169,13 @@ LoadDefinitions!({
   DefMath!("\\Tr", "\\mathrm{Tr}", role => "OPFUNCTION", meaning => "trace");
   DefMath!("\\tr", "\\mathrm{tr}", role => "OPFUNCTION", meaning => "trace");
   DefMath!("\\Or", "\\mathrm{O}", role => "OPFUNCTION", meaning => "Big-O");
+  // Perl L127-129: triple-dot overaccent + shade delimiters
+  DefMath!("\\tdot {}", "\u{2026}", operator_role => "OVERACCENT");
+  DefMath!("\\lshad", "\u{27E6}", role => "OPEN");
+  DefMath!("\\rshad", "\u{27E7}", role => "CLOSE");
+  // Perl L114-116: \bcal calligraphic bold primitive
+  DefPrimitive!("\\bcal", "",
+    font => { family => "caligraphic", series => "bold", shape => "upright", forcebold => true });
   DefMacro!("\\dsty", "\\displaystyle");
   DefMacro!("\\tsty", "\\textstyle");
   DefMacro!("\\ssty", "\\scriptstyle");

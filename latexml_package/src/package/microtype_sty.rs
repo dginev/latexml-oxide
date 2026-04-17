@@ -20,4 +20,14 @@ LoadDefinitions!({
   DefMacro!("\\textls OptionalMatch:* []{}", "#3");
   DefMacro!("\\lsstyle", None);
   DefMacro!("\\lslig{}", "#1");
+
+  // Perl L32-46 — additional no-op microtype commands
+  DefMacro!("\\UseMicrotypeSet[]{}", None);
+  DefMacro!("\\DeclareCharacterInheritance[]{}{}", None);
+  DefMacro!("\\DeclareMicrotypeVariants OptionalMatch:* {}", None);
+  DefMacro!("\\LoadMicrotypeFile{}", None);
+  DefMacro!("\\microtypecontext{}", None);
+  DefEnvironment!("{microtypecontext}", "#body");
+  DefMacro!("\\textmicrotypecontext{}{}", "#2");
+  DefMacro!("\\DeclareMicrotypeBabelHook{}{}", None);
 });

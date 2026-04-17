@@ -1154,22 +1154,23 @@ pub fn require_resource(mut resource: Resource) {
 }
 
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
-  // Try loading the class: first look for a .cls.ltxml binding, then fall back
-  // to raw .cls file. Class files are essential for document structure, so we
-  // ALWAYS allow raw TeX fallback (notex: false) — unlike style files.
-  // This handles custom class files (deepseek.cls, nips_2017.cls, etc.)
-  // that don't have LaTeXML bindings. The raw .cls file may contain
-  // \LoadClass{article} which recursively loads the parent class.
+  // Perl Package.pm LoadClass: $options{notex}=1 unless LookupValue('INCLUDE_CLASSES').
+  // Defaults to NOT loading raw .cls. Only .cls.ltxml bindings are considered;
+  // if the binding is missing, fall through to OmniBus (below). Allowing raw
+  // .cls to "succeed" the load prevents the OmniBus fallback that provides
+  // generic frontmatter / counter / theorem bindings.
+  let notex_default = !lookup_bool("INCLUDE_CLASSES");
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
     after: after.clone(),
-    notex: false,  // allow raw TeX fallback for class files
+    notex: notex_default,
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
   });
-  // Perl: if class not found, fall back to OmniBus
+  // Perl: if class not found, fall back to OmniBus (with raw cls loading allowed
+  // there so that the cmslatex.cls / etc. raw definitions still get executed).
   if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
     && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
       Warn!("missing_file", name, format!("Can't find binding for class {name} (using OmniBus)"));
@@ -1392,7 +1393,14 @@ pub fn select_relaxng_schema(schema: &str, namespaces: Option<HashMap<String, St
 }
 
 pub fn merge_font(font: Font) {
-  let new_font = lookup_font().unwrap().merge(font);
+  let new_font = lookup_font().unwrap().merge_ref(&font);
+  assign_font(Rc::new(new_font), Some(Scope::Local));
+}
+
+/// Like `merge_font` but borrows the font. Saves a clone when the caller
+/// has a shared reference (e.g. via Rc) to the font being merged.
+pub fn merge_font_ref(font: &Font) {
+  let new_font = lookup_font().unwrap().merge_ref(font);
   assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
@@ -1400,12 +1408,16 @@ pub fn merge_font(font: Font) {
 /// Stores as color_{name} and also defines \\color@{name} macro.
 pub fn def_color(name: &str, color: &crate::common::color::Color, scope: Option<Scope>) -> Result<()> {
   use crate::common::color;
-  // Check ifglobalcolors
-  let effective_scope = if if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true) {
-    Some(Scope::Global)
-  } else {
-    scope
-  };
+  // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) && IfCondition(\ifglobalcolors)
+  // Guard with lookup first: xcolor may not be loaded (e.g. colordvi-only documents)
+  let effective_scope =
+    if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
+      && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
+    {
+      Some(Scope::Global)
+    } else {
+      scope
+    };
   // Store in state as "model c1 c2 ..."
   let stored = color.to_stored();
   assign_value(

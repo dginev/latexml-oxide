@@ -461,18 +461,25 @@ LoadDefinitions!({
               let decoded_fam = (mathcode / 256) % 16;
               let font_key = format!("textfont_{decoded_fam}");
               if let Some(Stored::Token(ref ftok)) = state::lookup_value(&font_key) {
-                state::with_font_info(ftok, |fontinfo| {
+                // Extract encoding before calling font::decode — decode may
+                // trigger preload_font_map → assign_value, and with_font_info
+                // holds a State borrow while its closure runs (see
+                // mathchar.rs fix for 0711.4787 RefCell panic pattern).
+                let encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
                   if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
-                    if let Some(ref encoding) = info.encoding {
-                      if let Some(dc) = latexml_core::common::font::decode(decoded_pos, Some(encoding.to_string()), false) {
-                        let ds = dc.to_string();
-                        if ds != body_text {
-                          decls.push(format!("{}\t{}\t{}\t{}", ds, role, name_val, meaning));
-                        }
-                      }
-                    }
+                    info.encoding.as_ref().map(|s| s.to_string())
+                  } else {
+                    None
                   }
                 });
+                if let Some(encoding) = encoding_opt {
+                  if let Some(dc) = latexml_core::common::font::decode(decoded_pos, Some(encoding), false) {
+                    let ds = dc.to_string();
+                    if ds != body_text {
+                      decls.push(format!("{}\t{}\t{}\t{}", ds, role, name_val, meaning));
+                    }
+                  }
+                }
               }
             }
           }

@@ -4,13 +4,14 @@
 
 use crate::prelude::*;
 use crate::engine::tex_character;
+use latexml_core::common::font::standard_metrics::STDMETRICS;
 use latexml_core::common::mathchar::decode_math_char;
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
 /// `scriptpos` value, and sets `scriptpos` to `pos` + level.
 fn merge_limits(pos: &str) {
-  use crate::engine::tex_scripts::is_script;
+  // is_script is now defined in this file (moved from tex_scripts.rs)
   // Compute script level before borrowing the box list mutably,
   // since get_script_level() also borrows the stomach.
   let default_level = get_script_level().to_string();
@@ -29,6 +30,320 @@ fn merge_limits(pos: &str) {
       }
     }
   });
+}
+
+//======================================================================
+// Sub/superscript handling (Perl: TeX_Math.pool.ltxml L353-570)
+// Moved from tex_scripts.rs to match Perl's single-file organization.
+//======================================================================
+static SCRIPT_NAME_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
+
+/// Remember a "safe" way to test a script Whatsit.
+/// Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
+pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
+  let box_opt = match object.data() {
+    DigestedData::List(obj) => obj.borrow().boxes.last().map(|v| Cow::Owned(v.clone())),
+    _ => Some(Cow::Borrowed(object)),
+  };
+  if let Some(boxobj) = box_opt {
+    if let DigestedData::Whatsit(ref obj) = boxobj.data() {
+      obj.borrow().get_definition().get_cs().with_cs_name(|name| {
+        SCRIPT_NAME_RE.captures(name).map(|cap| {
+          (
+            cap.get(1).map_or("", |m| m.as_str()).to_uppercase(),
+            if cap.get(2).map_or("", |m| m.as_str()) == "subscript" {
+              Catcode::SUB
+            } else {
+              Catcode::SUPER
+            },
+          )
+        })
+      })
+    } else {
+      None
+    }
+  } else {
+    None
+  }
+}
+
+fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
+  let font = lookup_font().unwrap();
+  if font.get_mathstyle().is_some() {
+    let mut putback = VecDeque::new();
+    let mut nscripts = 0;
+
+    let mut cs = if cc == Catcode::SUPER {
+      "\\lx@floating@superscript"
+    } else {
+      "\\lx@floating@subscript"
+    };
+    let mut prevscript = None;
+    let mut prevspace = false;
+    let mut base = None;
+    while let Some(prev) = { pop_box_list() } {
+      if prev.get_property_bool("isSpace") || prev.get_property_bool("isEmpty") {
+        prevspace = true;
+        putback.push_front(prev);
+        continue;
+      } else if prev.is_empty()? {
+        break;
+      } else if let Some(prevop) = is_script(&prev) {
+        if prevop.1 == cc {
+          putback.push_front(prev);
+          let lcode = if prevop.1 == Catcode::SUPER {
+            "superscript"
+          } else {
+            "subscript"
+          };
+          if !prevspace {
+            Error!("unexpected", s!("double-{lcode}"), s!("Double {lcode}"));
+          }
+          cs = if cc == Catcode::SUPER {
+            "\\lx@floating@superscript"
+          } else {
+            "\\lx@floating@subscript"
+          };
+          break;
+        } else {
+          prevscript = Some(prev.clone());
+          putback.push_front(prev);
+          cs = if cc == Catcode::SUPER {
+            "\\lx@post@superscript"
+          } else {
+            "\\lx@post@subscript"
+          };
+        }
+        if prevop.0 == "FLOATING" {
+          break;
+        }
+        nscripts += 1;
+        if nscripts > 1 {
+          break;
+        }
+      } else {
+        base = Some(prev.clone());
+        putback.push_front(prev);
+        cs = if cc == Catcode::SUPER {
+          "\\lx@post@superscript"
+        } else {
+          "\\lx@post@subscript"
+        };
+        break;
+      }
+    }
+    extend_box_list(putback);
+    MergeFont!(scripted => true);
+    let mut stuff = Vec::new();
+    while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
+      stuff = stomach::invoke_token(&tok)?;
+      if !stuff.is_empty() {
+        break;
+      }
+    }
+    if stuff.is_empty() {
+      Error!("expected", "{", "Missing sub/superscript argument");
+      stuff.push(Digested::default());
+    }
+    let script = stuff.remove(0);
+
+    if !script.is_empty()? {
+      let mut properties = {
+        stored_map!(
+          "isMath" => true,
+          "base"        => if let Some(b) = base { Stored::Digested(b) }
+            else { Stored::None },
+          "scriptlevel" => get_script_level(),
+          "level"       => get_boxing_level()
+        )
+      };
+      if let Some(pvs) = prevscript {
+        properties.insert("prevscript", pvs.into());
+      }
+      if let Some(Stored::Digested(ref b)) = properties.get("base") {
+        if let Some(bsp) = b.get_property("scriptpos") {
+          let bsp_str = bsp.to_string();
+          if !bsp_str.is_empty() {
+            let base_prefix: String = bsp_str.chars().take_while(|c| !c.is_ascii_digit()).collect();
+            let sl = get_script_level();
+            properties.insert("scriptpos", Stored::from(format!("{base_prefix}{sl}")));
+          }
+        }
+      }
+      if let Some(font) = script.get_font()? {
+        properties.insert("font", font.into());
+      }
+      let mut with_script = vec![Digested::from(Whatsit {
+        definition: lookup_definition(&T_CS!(cs))?.unwrap(),
+        args: vec![Some(script)],
+        properties,
+        ..Whatsit::default()
+      })];
+      with_script.extend(stuff);
+      stuff = with_script;
+    }
+    assign_font(font, Some(Scope::Local)); // revert
+    Ok(stuff)
+  } else {
+    let c = if cc == Catcode::SUPER { '^' } else { '_' };
+    Error!(
+      "Unexpected",
+      c,
+      format!("Script {c} can only appear in math mode")
+    );
+    let placeholder = if cc == Catcode::SUPER {
+      T_SUPER!()
+    } else {
+      T_SUB!()
+    };
+    Ok(vec![Digested::from(Tbox::new(
+      arena::pin_char(c),
+      None,
+      None,
+      Tokens!(placeholder),
+      SymHashMap::default(),
+    ))])
+  }
+}
+
+pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
+  let tokens = script.revert()?;
+  let mut ts = tokens.unlist();
+  if ts.len() > 1
+    && ts.first().unwrap().code == Catcode::BEGIN
+    && ts.last().unwrap().code == Catcode::END
+  {
+    Ok(ts)
+  } else {
+    let mut wrapped = vec![T_BEGIN!()];
+    wrapped.append(&mut ts);
+    wrapped.push(T_END!());
+    Ok(wrapped)
+  }
+}
+
+fn script_sizer(
+  script: &Digested,
+  base_opt: Option<&Stored>,
+  prev_opt: Option<&Stored>,
+  op: &str,
+  _pos: &str,
+) -> Result<(Dimension, Dimension, Dimension)> {
+  let script_size = script.clone().get_size(None)?;
+  let (mut ws, hs, ds) = (
+    script_size.0.value_of() as f64,
+    script_size.1.value_of() as f64,
+    script_size.2.value_of() as f64,
+  );
+  let (base_font_size, mathstyle) = if let Some(Stored::Digested(ref base)) = base_opt {
+    let bfont = base.get_font()?.map(|f| f.into_owned());
+    let fs = bfont.as_ref().and_then(|f| f.get_size()).unwrap_or(10.0);
+    let ms = bfont
+      .as_ref()
+      .and_then(|f| f.mathstyle.as_deref().map(|s| s.to_string()))
+      .unwrap_or_else(|| "text".to_string());
+    (fs, ms)
+  } else {
+    let f = lookup_font().unwrap();
+    let fs = f.get_size().unwrap_or(10.0);
+    let ms = f
+      .mathstyle
+      .as_deref()
+      .map(|s| s.to_string())
+      .unwrap_or_else(|| "text".to_string());
+    (fs, ms)
+  };
+  let (_wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
+    let base_size = base.clone().get_size(None)?;
+    (
+      base_size.0.value_of() as f64,
+      base_size.1.value_of() as f64,
+      base_size.2.value_of() as f64,
+    )
+  } else {
+    let nominal_size = lookup_font().unwrap().get_nominal_size();
+    (
+      nominal_size.0.value_of() as f64,
+      nominal_size.1.value_of() as f64,
+      nominal_size.2.value_of() as f64,
+    )
+  };
+  let w;
+  let (mut h, mut d) = (0.0, 0.0);
+  let cmsy_size = base_font_size as i64;
+  let cmsy_name = format!("cmsy{}", cmsy_size);
+  let get_font_dimen = |param: usize| -> f64 {
+    let lookup = |name: &str| -> Option<f64> {
+      STDMETRICS.get(name).and_then(|m| {
+        if param > 0 && param <= m.parameters.len() {
+          Some(m.parameters[param - 1])
+        } else {
+          None
+        }
+      })
+    };
+    lookup(&cmsy_name)
+      .or_else(|| lookup("cmsy"))
+      .unwrap_or(0.0)
+      * base_font_size
+  };
+  let xheight = get_font_dimen(5);
+  let inferred_pos = if let Some(Stored::Digested(ref base)) = base_opt {
+    let base_pos = base
+      .get_property("scriptpos")
+      .map(|s| s.to_string())
+      .unwrap_or_default();
+    if base_pos.is_empty() {
+      Cow::Borrowed("post")
+    } else {
+      let stripped: String = base_pos.chars().take_while(|c| !c.is_ascii_digit()).collect();
+      Cow::Owned(if stripped.is_empty() { base_pos } else { stripped })
+    }
+  } else {
+    Cow::Borrowed("post")
+  };
+  if inferred_pos == "mid" {
+    w = (ws - _wb).max(0.0);
+    if op == "SUPERSCRIPT" {
+      h = hb + ds + hs;
+    } else {
+      d = db + hs + ds;
+    }
+  } else {
+    let wp = if let Some(Stored::Digested(ref prev)) = prev_opt {
+      prev.get_width(None)?.unwrap_or_default().value_of() as f64
+    } else {
+      0.0
+    };
+    let scriptspace = state::lookup_register("\\scriptspace", Vec::new())
+      .ok()
+      .flatten()
+      .map(|rv| match rv {
+        RegisterValue::Dimension(d) => d.value_of() as f64,
+        _ => 32768.0,
+      })
+      .unwrap_or(32768.0);
+    ws += scriptspace;
+    w = (ws - wp).max(0.0);
+    if op == "SUPERSCRIPT" {
+      let supshift = get_font_dimen(
+        match mathstyle.as_str() {
+          "display" => 13,
+          "scriptscript" => 15,
+          _ => 14,
+        });
+      h = hb.max(hs + (ds + xheight / 4.0).max(supshift));
+    } else {
+      let subshift = get_font_dimen(16);
+      d = db.max(ds + (hs - xheight * 0.8).max(subshift));
+    }
+  }
+  Ok((
+    Dimension::new_f64(w),
+    Dimension::new_f64(h),
+    Dimension::new_f64(d),
+  ))
 }
 
 LoadDefinitions!({
@@ -1160,6 +1475,141 @@ LoadDefinitions!({
   DefConstructor!("\\lx@eqno{}",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
     reversion => "");
+
+  //======================================================================
+  // Sub/superscript primitives and constructors
+  // Perl: TeX_Math.pool.ltxml L428-570
+  // (moved from tex_scripts.rs)
+  //======================================================================
+  def_primitive(
+    T_SUPER!(),
+    None,
+    Some(PrimitiveBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      script_handler(Catcode::SUPER)
+    }))),
+    PrimitiveOptions::default(),
+  )?;
+  def_primitive(
+    T_SUB!(),
+    None,
+    Some(PrimitiveBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
+      script_handler(Catcode::SUB)
+    }))),
+    PrimitiveOptions::default(),
+  )?;
+
+  DefConstructor!("\\lx@post@superscript InScriptStyle",
+    "<ltx:XMApp role='POSTSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
+    reversion => sub[_whatsit,args] {
+      unref!(args=>arg);
+      Ok(Tokens!(T_SUPER!(), revert_script(arg)?)) },
+    sizer => sub[w] {
+      script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
+        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "") }
+  );
+
+  DefConstructor!("\\lx@post@subscript InScriptStyle",
+    "<ltx:XMApp role='POSTSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
+    reversion => sub[_whatsit,args] {
+      unref!(args=>arg);
+      Ok(Tokens!(T_SUB!(), revert_script(arg)?)) },
+    sizer => sub[w] {
+      script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
+        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "") }
+  );
+
+  DefConstructor!("\\lx@floating@superscript InScriptStyle",
+    "<ltx:XMApp role='FLOATSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
+    reversion => sub[_whatsit,args] {
+      unref!(args=>arg);
+      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg)?)) }
+    sizer => sub[w] {
+      script_sizer(w.get_arg(1).unwrap(), None, None, "SUPERSCRIPT", "post") }
+  );
+  DefConstructor!("\\lx@floating@subscript InScriptStyle",
+    "<ltx:XMApp role='FLOATSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>\
+    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>\
+    </ltx:XMApp>",
+    reversion => sub[_whatsit,args] {
+      unref!(args=>arg);
+      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg)?)) }
+      sizer => sub[w] {
+        script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
+  );
+
+  // Rewrite: floating superscript in frontmatter → plain text sup/sub
+  DefRewrite!(xpath =>
+    concat!(
+      "descendant::ltx:Math[child::ltx:XMath[child::ltx:XMApp[",
+      "(@role='FLOATSUPERSCRIPT' or @role='FLOATSUBSCRIPT') and ",
+      "not(preceding-sibling::*) and not(following-sibling::*) ",
+      "and not(./*/*[not(self::ltx:XMTok)]) ]]]"
+    ),
+    replace => sub[document, nodes] {
+      let math = nodes.pop().unwrap();
+      let mut replaced = false;
+      let xmath_children: Vec<Node> = math.get_child_nodes().into_iter()
+        .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+      if let Some(xmath) = xmath_children.first() {
+        let xmapp_children: Vec<Node> = xmath.get_child_nodes().into_iter()
+          .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+        if let Some(xmapp) = xmapp_children.first() {
+          let role = xmapp.get_attribute("role").unwrap_or_default();
+          let xmarg_children: Vec<Node> = xmapp.get_child_nodes().into_iter()
+            .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+          if let Some(xmarg) = xmarg_children.first() {
+            let text = xmarg.get_content();
+            let qname = if role == "FLOATSUPERSCRIPT" { "ltx:sup" } else { "ltx:sub" };
+            let font_attr = {
+              let from_attr = xmarg.get_child_nodes().into_iter()
+                .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+                .find_map(|n| {
+                  let attr = n.get_attribute("font");
+                  if attr.is_some() { return attr; }
+                  let node_font = document.get_node_font(&n);
+                  node_font.get_shape().and_then(|s|
+                    if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
+                  )
+                });
+              if from_attr.is_some() {
+                from_attr
+              } else {
+                document.get_node_box(xmarg).and_then(|tbox| {
+                  tbox.get_font().ok().flatten().and_then(|font| {
+                    if font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false) {
+                      Some("italic".to_string())
+                    } else {
+                      None
+                    }
+                  })
+                })
+              }
+            };
+            document.open_element(qname, None, None)?;
+            if let Some(ref font) = font_attr {
+              let mut text_node = document.open_element("ltx:text", None, None)?;
+              document.set_attribute(&mut text_node, "font", font)?;
+              document.get_node_mut().append_text(&text)?;
+              document.close_element("ltx:text")?;
+            } else {
+              document.get_node_mut().append_text(&text)?;
+            }
+            document.close_element(qname)?;
+            replaced = true;
+          }
+        }
+      }
+      if !replaced {
+        document.get_node_mut().add_child(math)?;
+      }
+    }
+  );
 });
 
 /// A shorthand data structure for delimiter metadata

@@ -146,8 +146,9 @@ LoadDefinitions!({
   DefMacro!("\\mathletters", "\\lx@equationgroup@subnumbering@begin");
   DefMacro!("\\endmathletters", "\\lx@equationgroup@subnumbering@end");
 
-  // 2.12 Equations — Perl L261
-  DefMacro!("\\eqnum{}", "");
+  // 2.12 Equations — Perl L261 (proper tag setter, not empty stub)
+  DefMacro!("\\eqnum{}",
+    "\\lx@equation@settag{\\edef\\theequation{#1}\\lx@make@tags{equation}}");
 
   // 2.13 Citations — Perl L264-293
   DefMacro!("\\markcite{}", "");
@@ -172,7 +173,23 @@ LoadDefinitions!({
     "\\includegraphics[width=#4pt,height=#5pt]{#1}");
 
   // 2.14.2 Figure Captions
+  // Perl: \figcaption checks if inside a figure environment.
+  // If yes → \caption; if no → \@figcaption (wraps in figure env).
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
+  DefMacro!("\\figcaption[]", sub[(opt_arg)] {
+    let env = state::lookup_string("current_environment");
+    if env.contains("figure") {
+      // Inside figure: act as \caption
+      if let Some(opt) = opt_arg {
+        Ok(Tokens!(T_CS!("\\caption"), T_OTHER!("["), opt, T_OTHER!("]")))
+      } else {
+        Ok(Tokens!(T_CS!("\\caption")))
+      }
+    } else {
+      // Outside figure: wrap in \@figcaption
+      Ok(Tokens!(T_CS!("\\@figcaption")))
+    }
+  });
 
   // 2.15 Tables
   RequirePackage!("deluxetable");
@@ -222,8 +239,10 @@ LoadDefinitions!({
   DefPrimitive!("\\dbond", "=");
   DefPrimitive!("\\tbond", "\u{2261}");
 
-  // 2.17.3 Fractions
-  DefMacro!("\\case{}{}", "\\ensuremath{\\frac{#1}{#2}}");
+  // 2.17.3 Fractions — Perl L435-442: \case uses a semantic text@frac constructor
+  DefMacro!("\\case{}{}", "\\ensuremath{\\text@frac{#1}{#2}}");
+  DefConstructor!("\\text@frac ScriptStyle ScriptStyle",
+    "<ltx:XMApp><ltx:XMTok meaning='divide' role='FRACOP' mathstyle='text'/><ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>");
   Let!("\\slantfrac", "\\case");
 
   // 2.17.4 Astronomical Symbols
@@ -268,6 +287,17 @@ LoadDefinitions!({
   DefPrimitive!("\\arcsec", "\u{2033}");
   DefMacro!("\\nodata", " ~$\\cdots$~ ");
 
+  // Perl L491: \aas@@fstack constructor — formats astronomical unit superscripts
+  DefConstructor!("\\aas@@fstack Undigested {}",
+    "<ltx:XMApp role='POSTFIX'>\
+       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='mid1'/>\
+       <ltx:XMTok>.</ltx:XMTok>\
+       <ltx:XMWrap>#2</ltx:XMWrap>\
+     </ltx:XMApp>",
+    bounded => true,
+    reversion => "#1"
+  );
+
   DefMacro!("\\fd", "\\ensuremath{\\@fd}");
   DefMacro!("\\fh", "\\ensuremath{\\@fh}");
   DefMacro!("\\fm", "\\ensuremath{\\@fm}");
@@ -276,6 +306,16 @@ LoadDefinitions!({
   DefMacro!("\\farcm", "\\ensuremath{\\@farcm}");
   DefMacro!("\\farcs", "\\ensuremath{\\@farcs}");
   DefMacro!("\\fp", "\\ensuremath{\\@fp}");
+
+  // Perl L510-517: DefMath for internal \@f* macros — astronomical unit symbols
+  DefMath!("\\@fd", "\\aas@@fstack{\\fd}{d}", role => "ID", meaning => "day", alias => "\\fd");
+  DefMath!("\\@fh", "\\aas@@fstack{\\fh}{h}", role => "ID", meaning => "hour", alias => "\\fh");
+  DefMath!("\\@fm", "\\aas@@fstack{\\fm}{m}", role => "ID", meaning => "minute", alias => "\\fm");
+  DefMath!("\\@fs", "\\aas@@fstack{\\fs}{s}", role => "ID", meaning => "second", alias => "\\fs");
+  DefMath!("\\@fdg", "\\aas@@fstack{\\fdg}{\\circ}", role => "ID", meaning => "degree", alias => "\\fdg");
+  DefMath!("\\@farcm", "\\aas@@fstack{\\farcm}{\\prime}", role => "ID", meaning => "arcminute", alias => "\\farcm");
+  DefMath!("\\@farcs", "\\aas@@fstack{\\farcs}{\\prime\\prime}", role => "ID", meaning => "arcsecond", alias => "\\farcs");
+  DefMath!("\\@fp", "\\aas@@fstack{\\fp}{p}");
 
   DefMacro!("\\onehalf", "\\ifmmode\\case{1}{2}\\else\\text@onehalf\\fi");
   DefPrimitive!("\\text@onehalf", "\u{00BD}");

@@ -47,6 +47,13 @@ LoadDefinitions!({
   AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
+  DefMacro!("\\@pnumwidth", "1.55em");
+  DefMacro!("\\@tocrmarg", "2.55em");
+  DefMacro!("\\@dotsep", "4.5");
+  DefRegister!("\\abovecaptionskip" => Glue::new(0));
+  DefRegister!("\\belowcaptionskip" => Glue::new(0));
+  DefRegister!("\\bibindent" => Dimension::new(0));
+
   TeX!(
     r"
 \newif\if@restonecol

@@ -52,11 +52,13 @@ impl FoodType {
   }
 }
 
+// Perf/safety: `Cell<usize>` over `static mut` — thread_local guarantees
+// single-threaded access, and Cell gives us get/set without any `unsafe`.
 #[thread_local]
-static mut LASTID: usize = 0;
+static LASTID: std::cell::Cell<usize> = std::cell::Cell::new(0);
 
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
-static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
+// LOWERHEX_REGEX removed — replaced with direct matches!() check in tex_hex_caret path.
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
 
 #[derive(Debug, Default)]
@@ -140,12 +142,15 @@ impl Object for Mouth {
     } else {
       (to_line, to_column)
     };
+    // Perl Mouth.pm L199 (#2671): columns in Locator are 1-indexed; the Mouth's
+    // internal colno counter is 0-indexed (character array index), so we add 1
+    // when producing the Locator for error-message display.
     Locator::new(
       &self.source,
       from_line as u32,
-      from_column as u32,
+      (from_column + 1) as u32,
       to_line as u32,
-      to_column as u32,
+      (to_column + 1) as u32,
     )
   }
 }
@@ -497,9 +502,15 @@ impl Mouth {
         // ^^ followed by TWO LOWERCASE Hex digits???
         if let Some(c1) = c1_opt {
           if let Some(c2) = c2_opt {
+            // Perf: avoid per-char String alloc + regex match by using
+            // direct ASCII class check. LOWERHEX_REGEX = ^[0-9a-f]$, i.e.
+            // lowercase hex digits only.
+            let is_lowerhex = |c: char| -> bool {
+              matches!(c, '0'..='9' | 'a'..='f')
+            };
             if (self.colno + 2 < self.nchars)
-              && LOWERHEX_REGEX.is_match(&c1.to_string())
-              && LOWERHEX_REGEX.is_match(&c2.to_string())
+              && is_lowerhex(*c1)
+              && is_lowerhex(*c2)
             {
               // TODO: Maybe Result type warranted here?
               let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap();
@@ -883,12 +894,10 @@ impl Mouth {
   }
 
   fn gid() -> usize {
-    // assume all mouths are spawned by a single thread, in which case
-    // this expedient global counter is safe.
-    unsafe {
-      LASTID += 1;
-      LASTID
-    }
+    // Thread_local Cell: single-threaded access guaranteed by #[thread_local].
+    let next = LASTID.get() + 1;
+    LASTID.set(next);
+    next
   }
 
   /// Checks if Mouth read is at the end of a line.

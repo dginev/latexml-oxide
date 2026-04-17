@@ -191,8 +191,18 @@ LoadDefinitions!({
   // Sec 6. Floating objects: Figures and tables
   // Normal LaTeX
 
-  // For compatibility
-  // Note: 2.09_COMPATIBILITY support skipped (rarely used)
+  // For compatibility — Perl ams_support.sty.ltxml L194-200.
+  // When 2.09_COMPATIBILITY is set (via \documentstyle), define the
+  // LaTeX-2.09-era `pf` / `pf*` environment aliases for `proof`.
+  // Sandbox paper 0802.1100 (and similar 2.09-style submissions) uses
+  // `\begin{pf}` which isn't in modern amsart; this restores the alias.
+  if lookup_bool("2.09_COMPATIBILITY") {
+    DefMacro!("\\defaultfont", "\\normalfont");
+    DefMacro!("\\rom", "\\textup");
+    // `\newenvironment` is a primitive — needs digestion, not just expansion.
+    stomach::raw_tex("\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}")?;
+    stomach::raw_tex("\\newenvironment{pf*}[1]{\\begin{@proof}[#1]}{\\end{@proof}}")?;
+  }
 
   DefMacro!("\\format@title@figure{}", "\\lx@tag[][. ]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}", "\\lx@tag[][. ]{\\lx@fnum@@{table}}#1");
@@ -265,7 +275,14 @@ LoadDefinitions!({
 
   DefMacro!("\\URLhref{}", "");
   // \URL — complex catcode manipulation, stubbed as simple macro
-  DefMacro!("\\URL{}", "#1");
+  // that delegates to \@ams@url to get the href attribute set (Perl L282-294).
+  DefMacro!("\\URL{}", "\\@ams@url{#1}");
+  DefConstructor!("\\@ams@url {}",
+    "<ltx:ref href='#href'>#1</ltx:ref>",
+    properties => sub[args] {
+      let url_str = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
+      Ok(stored_map!("href" => common::cleaners::clean_url(&url_str)))
+    });
 
   DefMacro!("\\MR{}", "MR #1");
   DefMacro!("\\MRhref{}", "");

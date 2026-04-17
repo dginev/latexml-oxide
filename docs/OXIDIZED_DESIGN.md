@@ -663,23 +663,34 @@ the raw tokens `(`, `n`, `)` — not the parsed `fenced@(n)` XMDual.
 
 ### 18. Speculative function application produces Apply, not invisible times
 
-**Decision:** When `MATHPARSER_SPECULATE` is set and an UNKNOWN token `f` is
-followed by a fenced expression `(x)`, Rust produces `f@(x)` (function application)
-rather than Perl's `f * x` (invisible-times multiplication).
+**Decision:** For any UNKNOWN token `f` followed by a fenced expression `(x)`,
+Rust produces `f@(x)` (function application) rather than Perl's default
+`f * x` (invisible-times multiplication). This is the *always-on* default,
+not gated on any flag.
 
-In Perl (Parse::RecDescent), the `MaybeFunctions` notation detects the `f(x)` pattern
-but only marks the token with `possibleFunction="yes"` and then deliberately fails the
-production, falling back to invisible-times. This was a limitation of Parse::RecDescent's
-backtracking parser — the grammar couldn't simultaneously produce function application
-and record the speculation.
+**Rationale.** Parse::RecDescent (Perl) can only commit to one parse. Its
+`MaybeFunctions` mechanism was a workaround: mark the UNKNOWN token with
+`possibleFunction="yes"` and then fail the production, yielding invisible-times
+with an advisory attribute. Marpa (Rust) is an ambiguous CFG engine — the
+grammar produces *both* interpretations in the forest, and the pragmatic layer
+picks one. `FencedLettersAreFunctionArguments` is the authoritative selector:
+when mathematical practice reads `f(x)` as function application (which it
+always does for a letter `f` and any non-NUMBER content in the parens), that
+is the tree we keep.
 
-In Rust (Marpa), the grammar directly produces the semantically correct
-`Apply(f, args)` parse. The invisible MULOP token was a workaround for
-Parse::RecDescent, not a semantically meaningful choice. `f@(x)` is the better
-interpretation from first principles: when a user writes `f(x)` with speculation
-enabled, they likely mean function application.
+**Role of `MATHPARSER_SPECULATE`.** The flag no longer influences parse
+structure. Its only remaining effect is to enable the `possibleFunction="yes"`
+diagnostic attribute on UNKNOWN tokens that participate in such speculation.
+`\usepackage[mathparserspeculate]{latexml}` is kept for backwards compatibility
+but does not change which tree wins.
 
-**Affected tests:** `parser_speculate`, `spacing` (integral expressions).
+**Author override.** Authors who want `f(x) = f * x` can declare `f` as ID:
+`\lxDeclare[role=ID]{f}`. With the ID role, the speculative grammar rule
+`unknown fenced_factor` does not apply (it's gated on role UNKNOWN), so only
+the invisible-times parse is produced.
+
+**Affected tests:** 13 test XMLs updated session 107 (previously recorded
+Perl's SPECULATE-off behavior; now record mathematically-consistent parses).
 
 ---
 

@@ -14,6 +14,40 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     enter_horizontal => true);
 
+  // Math symbols — Perl L37-42 (double-struck set notation)
+  DefMath!("\\Cset", "\u{2102}", role => "ID", meaning => "complexes");
+  DefMath!("\\Hset", "\u{210D}", role => "ID", meaning => "upper-complexes");
+  DefMath!("\\Nset", "\u{2115}", role => "ID", meaning => "numbers");
+  DefMath!("\\Qset", "\u{211A}", role => "ID", meaning => "rationals");
+  DefMath!("\\Rset", "\u{211D}", role => "ID", meaning => "reals");
+  DefMath!("\\Zset", "\u{2124}", role => "ID", meaning => "integers");
+
+  // Fraction shortcuts — Perl L44-46
+  DefMacro!("\\half", "{\\textstyle\\frac{1}{2}}");
+  DefMacro!("\\threehalf", "{\\textstyle\\frac{3}{2}}");
+  DefMacro!("\\quart", "{\\textstyle\\frac{1}{4}}");
+
+  // Perl L48-49: differential and exponential unicode forms
+  DefMath!("\\d", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
+  DefMath!("\\e", "\u{2147}", role => "ID", meaning => "exponential-e");
+
+  // Perl L58: \pol (rightwards arrow overaccent)
+  DefMath!("\\pol Digested", "\u{2192}", operator_role => "OVERACCENT");
+
+  // Perl L51-53: \operatorname already defined in amsopn (ported — role='OPERATOR' here).
+  // Perl's elsart variant uses font family=serif only (amsopn adds upright+medium); we
+  // keep amsopn's version (loaded via amsmath) since both produce OPERATOR markup.
+
+  // Perl L55-56: \astsymbol{n}, \fnstar{n} — n-repeated Unicode char
+  DefMacro!("\\astsymbol{}", sub[(n)] {
+    let count = n.to_string().trim().parse::<usize>().unwrap_or(1);
+    Ok(Tokens!(T_OTHER!("\u{2217}".repeat(count))))
+  });
+  DefMacro!("\\fnstar{}", sub[(n)] {
+    let count = n.to_string().trim().parse::<usize>().unwrap_or(1);
+    Ok(Tokens!(T_OTHER!("\u{22C6}".repeat(count))))
+  });
+
   // Proof environment — Perl L38-60
   DefEnvironment!("{proof}[]",
     "<ltx:proof><ltx:title font='italic' _force_font='true' class='ltx_runin'>#title</ltx:title>#body</ltx:proof>",
@@ -34,20 +68,40 @@ LoadDefinitions!({
   DefMacro!("\\PAC{}",  "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
 
   // Theorem environments — Perl L69-91
+  // Perl L69-91: the full list of elsart theorem environments
   RawTeX!("\\theoremstyle{plain}");
   RawTeX!("\\@ifundefined{cor}{\\newtheorem{cor}[thm]{Corollary}}{}");
   RawTeX!("\\@ifundefined{lem}{\\newtheorem{lem}[thm]{Lemma}}{}");
   RawTeX!("\\@ifundefined{claim}{\\newtheorem{claim}[thm]{Claim}}{}");
+  RawTeX!("\\@ifundefined{axiom}{\\newtheorem{axiom}[thm]{Axiom}}{}");
   RawTeX!("\\@ifundefined{conj}{\\newtheorem{conj}[thm]{Conjecture}}{}");
+  RawTeX!("\\@ifundefined{fact}{\\newtheorem{fact}[thm]{Fact}}{}");
+  RawTeX!("\\@ifundefined{hypo}{\\newtheorem{hypo}[thm]{Hypothesis}}{}");
+  RawTeX!("\\@ifundefined{assum}{\\newtheorem{assum}[thm]{Assumption}}{}");
   RawTeX!("\\@ifundefined{prop}{\\newtheorem{prop}[thm]{Proposition}}{}");
+  RawTeX!("\\@ifundefined{crit}{\\newtheorem{crit}[thm]{Criterion}}{}");
+  RawTeX!("\\theoremstyle{definition}");
   RawTeX!("\\@ifundefined{defn}{\\newtheorem{defn}[thm]{Definition}}{}");
   RawTeX!("\\@ifundefined{exmp}{\\newtheorem{exmp}[thm]{Example}}{}");
   RawTeX!("\\@ifundefined{rem}{\\newtheorem{rem}[thm]{Remark}}{}");
+  RawTeX!("\\@ifundefined{prob}{\\newtheorem{prob}[thm]{Problem}}{}");
+  RawTeX!("\\@ifundefined{prin}{\\newtheorem{prin}[thm]{Principle}}{}");
+  RawTeX!("\\@ifundefined{alg}{\\newtheorem{alg}{Algorithm}}{}");
   RawTeX!("\\@ifundefined{note}{\\newtheorem{note}{Note}}{}");
+  RawTeX!("\\@ifundefined{summ}{\\newtheorem{summ}{Summary}}{}");
+  RawTeX!("\\@ifundefined{case}{\\newtheorem{case}{Case}}{}");
 
   // Nuclear isotopes — Perl L60-65
   DefMacro!("\\nuc{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
   DefMacro!("\\itnuc{}{}", "\\ensuremath{{}^{#2}\\textit{#1}}");
+
+  // Perl L92-102: algorithm counter + environment
+  NewCounter!("algorithm");
+  DefMacro!("\\thealgorithm", "\\arabic{algorithm}");
+  DefMacro!("\\algorithmname", "Algorithm");
+
+  // Perl L104: \pf proof environment
+  RawTeX!("\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}[\\proofname]}{\\end{@proof}}}{}");
 
   // Caption continuations — Perl L108-110
   DefMacro!("\\contcaption", "\\caption{continued}");
@@ -85,12 +139,47 @@ LoadDefinitions!({
   // Misc — Perl L143-175
   Let!("\\realpageref", "\\pageref");
   DefMacro!("\\snm", "");
+
+  // Perl L146-156: \xalph / \xarabic / \xfnsymbol — emit * for negative counter, else
+  // delegate to \alph / \arabic / \fnsymbol.
+  DefMacro!("\\xalph{}", sub[(ctr)] {
+    let n = counter_value(&ctr.to_string()).map(|c| c.value_of()).unwrap_or(0);
+    if n < 0 {
+      Ok(Tokens!(T_OTHER!("*")))
+    } else {
+      Ok(Tokens!(T_CS!("\\alph"), T_BEGIN!(), ctr, T_END!()))
+    }
+  });
+  DefMacro!("\\xarabic{}", sub[(ctr)] {
+    let n = counter_value(&ctr.to_string()).map(|c| c.value_of()).unwrap_or(0);
+    if n < 0 {
+      Ok(Tokens!(T_OTHER!("*")))
+    } else {
+      Ok(Tokens!(T_CS!("\\arabic"), T_BEGIN!(), ctr, T_END!()))
+    }
+  });
+  DefMacro!("\\xfnsymbol{}", sub[(ctr)] {
+    let n = counter_value(&ctr.to_string()).map(|c| c.value_of()).unwrap_or(0);
+    if n < 0 {
+      Ok(Tokens!(T_OTHER!("*")))
+    } else {
+      Ok(Tokens!(T_CS!("\\fnsymbol"), T_BEGIN!(), ctr, T_END!()))
+    }
+  });
+
   DefEnvironment!("{NoHyper}", "#body");
   DefMacro!("\\mpfootnotemark", "");
+  // Perl L162-167: \FMSlash/\FMslash overstrike / through content
   DefMacro!("\\FMSlash", "\\protect\\pFMSlash");
-  DefMacro!("\\pFMSlash{}", "#1/");
-  DefMacro!("\\pFMslash{}", "#1/");
+  DefMacro!("\\FMslash", "\\protect\\pFMslash");
+  DefMacro!("\\pFMSlash{}", "#1\\Slashbox");
+  DefMacro!("\\pFMslash{}", "#1\\slashbox");
   DefMacro!("\\Slashbox", "/");
   DefMacro!("\\slashbox", "/");
+
+  // Perl L172: \note{...} wraps text in ltx:note (note: Perl also defines \note as a
+  // theorem env above via \newtheorem{note}{Note}, but the DefMacro shadows it — we
+  // match Perl's final binding).
+  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
   DefMacro!("\\query{}", "");
 });

@@ -196,10 +196,9 @@
       </Math></p>
   </para>
   <para xml:id="p12">
-    <p><Math mode="inline" tex="P(x=0)" text="P * (x = 0)" xml:id="p12.m1">
+    <p><Math mode="inline" tex="P(x=0)" text="P@(x = 0)" xml:id="p12.m1">
         <XMath>
           <XMApp>
-            <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMTok font="italic" role="UNKNOWN">P</XMTok>
             <XMDual>
               <XMRef idref="p12.m1.1"/>
@@ -218,10 +217,9 @@
       </Math></p>
   </para>
   <para xml:id="p13">
-    <p><Math mode="inline" tex="P(a&lt;b&lt;c)" text="P * (a &lt; b &lt; c)" xml:id="p13.m1">
+    <p><Math mode="inline" tex="P(a&lt;b&lt;c)" text="P@(a &lt; b &lt; c)" xml:id="p13.m1">
         <XMath>
           <XMApp>
-            <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMTok font="italic" role="UNKNOWN">P</XMTok>
             <XMDual>
               <XMRef idref="p13.m1.1"/>

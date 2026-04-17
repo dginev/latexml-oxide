@@ -14,9 +14,11 @@ LoadDefinitions!({
 
   // Step 2: Load raw xy.tex (Perl: at_letter => 0)
   // Save \@currname/\@currext before raw loading (xy.tex changes these internally)
+  // NOTE: Do NOT set @ to OTHER here — xy.tex manages its own catcodes internally.
+  // Setting @ to OTHER globally breaks xyline.tex loading because \xydef@ etc.
+  // get split at the @ boundary.
   let saved_currname = gullet::do_expand(T_CS!("\\@currname")).ok().map(|t| t.to_string());
   let saved_currext = gullet::do_expand(T_CS!("\\@currext")).ok().map(|t| t.to_string());
-  assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
   InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")), at_letter => false);
   // Restore \@currname/\@currext so ProcessOptions uses the correct package name
   if let Some(ref name) = saved_currname {
@@ -69,15 +71,23 @@ LoadDefinitions!({
     Info!("xy", "error", msg.to_string());
   });
 
-  // Defer latexml driver to \AtBeginDocument (Perl L59)
+  // Perl L59: defers \xyoption{latexml} to \AtBeginDocument.
+  // The @ catcode fix (removing assign_catcode('@', OTHER) before xy.tex) means
+  // xyline.tex's \xydef@ definitions now work correctly. The early
+  // xylatexml_tex::load_definitions() call was removed because it triggers
+  // \xyprovide{latexml} and \newdriver{...} from xylatexml_tex's raw_tex block,
+  // which sets up xy's driver mechanism incorrectly (our Rust override for
+  // \xyoption{latexml} never sets \csname xylatexml loaded\endcsname, so
+  // \xywithoption{latexml}{...} defers \selectdriver@{latexml} indefinitely,
+  // causing massive token expansion during ProcessOptions). Fix: keep only
+  // \AtBeginDocument for the full initialization, matching the Perl flow.
   RawTeX!("\\AtBeginDocument{\\xyoption{latexml}}");
 
-  // xy font primitives → no-op (Perl L66-72)
-  DefMacro!("\\xydashfont", "");
-  DefMacro!("\\xyatipfont", "");
-  DefMacro!("\\xybtipfont", "");
-  DefMacro!("\\xybsqlfont", "");
-  DefMacro!("\\xycircfont", "");
+  // xy font primitives: do NOT pre-define these as empty macros!
+  // xy.tex's \xyfont@ mechanism checks \ifx#1\undefined and only loads the font
+  // if it's undefined. Pre-defining them as empty macros makes the check fail,
+  // leaving them as expandable macros (not font tokens). This breaks \fontdimen
+  // usage because the number scanner expands them to empty and reads past.
 
   // \lx@xy@capturerange — capture coordinate range (Perl L143-146)
   DefPrimitive!("\\lx@xy@capturerange", {

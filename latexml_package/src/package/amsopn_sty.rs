@@ -3,8 +3,25 @@ LoadDefinitions!({
   RequirePackage!("amsgen");
 
   // \DeclareMathOperator*{cs}{text}
+  //
+  // Use `.untex()` instead of `.to_string()` — the latter concatenates
+  // token texts with no separator, so `{\rm Aut}` (where the space after
+  // `\rm` was swallowed by control-word tokenization) becomes `{\rmAut}`,
+  // which tokenizes back as the single undefined CS `\rmAut`. `untex()`
+  // inserts a space at CS→letter boundaries (tokens.rs L392-405), so the
+  // round-trip through `def_math`'s internal `mouth::tokenize_internal`
+  // preserves the correct token structure.
+  //
+  // Perl avoids this entirely by passing Tokens directly to DefMathI via
+  // `Invocation(T_CS('\operatorname'), $star, $text)` — no stringify
+  // round-trip. Rust's `def_math` takes String, so we use the TeX-safe
+  // stringifier.
+  //
+  // Fixes sandbox papers 0806.2705 (`\rmTr`) and 0808.0535 (`\rmAut`/
+  // `\rmSpan`) whose `\DeclareMathOperator{\X}{{\rm X}}` patterns would
+  // otherwise produce undefined `\rmX` errors.
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
-    let text_str = text.to_string();
+    let text_str = text.untex();
     let has_star = star.is_some();
     let opts = MathPrimitiveOptions {
       role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),

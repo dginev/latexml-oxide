@@ -8,6 +8,11 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 
+/// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
+/// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
 #[command(name = "latexml_oxide", version, about)]
@@ -100,9 +105,9 @@ struct Cli {
   search_paths: Vec<String>,
 
   // === Value flags ===
-  /// Conversion timeout in seconds
-  #[arg(long, value_name = "SECONDS")]
-  timeout: Option<u64>,
+  /// Conversion timeout in seconds (default: 60). Use 0 to disable.
+  #[arg(long, value_name = "SECONDS", default_value = "60")]
+  timeout: u64,
 
   /// Maximum number of tokens to process before aborting (default: 100M).
   /// Protects against infinite loops in macro expansion.
@@ -332,8 +337,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
   } else {
     // Normal mode: convert document
-    if let Some(secs) = cli.timeout {
-      latexml_core::stomach::set_timeout(secs);
+    //
+    // Two-layer timeout: the cooperative stomach::check_timeout gives a graceful
+    // Err(Fatal) when the digestion loop can poll it, and the Watchdog forcibly
+    // aborts the process if the deadline is reached without cooperation (e.g. a
+    // tight native loop in Marpa / libxml2 / libxslt). The Watchdog cancels
+    // automatically on drop at end of main.
+    let _watchdog = latexml_core::watchdog::Watchdog::new(cli.timeout);
+    if cli.timeout > 0 {
+      latexml_core::stomach::set_timeout(cli.timeout);
     }
     if let Some(limit) = cli.token_limit {
       latexml_core::gullet::set_token_limit(Some(limit));
@@ -461,227 +473,11 @@ fn main() -> Result<(), Box<dyn Error>> {
   process::exit(0);
 }
 
-struct PostOptions<'a> {
-  pmml: bool,
-  cmml: bool,
-  keep_xmath: bool,
-  stylesheet: Option<&'a str>,
-  destination: Option<&'a str>,
-  source_directory: Option<&'a str>,
-  nodefaultresources: bool,
-  css_files: &'a [String],
-  js_files: &'a [String],
-  noinvisibletimes: bool,
-  mathtex: bool,
-  navigationtoc: Option<&'a str>,
-  split: bool,
-  split_xpath: Option<String>,
-  split_naming: Option<&'a str>,
-  xslt_parameters: &'a [String],
-}
+use latexml::post::PostOptions;
 
-/// Run the post-processing pipeline on XML output.
+/// Delegate post-processing to the library API.
 fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
-  let PostOptions { pmml, cmml, keep_xmath, stylesheet, destination,
-    source_directory, nodefaultresources, css_files, js_files, noinvisibletimes,
-    mathtex, navigationtoc, split, ref split_xpath, split_naming, xslt_parameters } = *opts;
-  use latexml_post::document::{PostDocument, PostDocumentOptions};
-  use latexml_post::object_db::ObjectDB;
-  use latexml_post::processor::Processor;
-
-  let mut opts = PostDocumentOptions::default();
-  if let Some(dest) = destination {
-    opts.destination = Some(dest.to_string());
-  }
-  if let Some(src_dir) = source_directory {
-    opts.source_directory = Some(src_dir.to_string());
-    // Also add source dir to search paths for file resolution
-    let mut sp = opts.searchpaths.take().unwrap_or_default();
-    sp.push(src_dir.to_string());
-    opts.searchpaths = Some(sp);
-  }
-  let doc = match PostDocument::new_from_string(xml, opts) {
-    Ok(d) => d,
-    Err(e) => {
-      eprintln!("Post-processing: failed to parse XML: {}", e);
-      return xml.to_string();
-    }
-  };
-
-  // Phase 1: Scan
-  let db = ObjectDB::new();
-  let mut scanner = latexml_post::scan::Scan::new(db);
-  let scan_nodes = scanner.to_process(&doc);
-  let doc = match scanner.process(doc, scan_nodes) {
-    Ok(mut docs) => docs.remove(0),
-    Err(e) => {
-      eprintln!("Post-processing: Scan failed: {}", e);
-      return xml.to_string();
-    }
-  };
-
-  // Phase 1.5: MakeBibliography (Perl order: Scan → MakeBibliography → CrossRef)
-  let db = scanner.db;
-  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(db, false);
-  let bib_nodes = bibmaker.to_process(&doc);
-  let doc = if !bib_nodes.is_empty() {
-    match bibmaker.process(doc, bib_nodes) {
-      Ok(mut docs) => docs.remove(0),
-      Err(e) => {
-        eprintln!("Post-processing: MakeBibliography failed: {}", e);
-        return xml.to_string();
-      }
-    }
-  } else { doc };
-
-  // Phase 2: CrossRef
-  let db = bibmaker.db;
-  let mut crossref = latexml_post::crossref::CrossRef::new(
-    db,
-    latexml_post::crossref::UrlStyle::File,
-    true,
-  );
-  let xref_nodes = crossref.to_process(&doc);
-  let doc = match crossref.process(doc, xref_nodes) {
-    Ok(mut docs) => docs.remove(0),
-    Err(e) => {
-      eprintln!("Post-processing: CrossRef failed: {}", e);
-      return xml.to_string();
-    }
-  };
-
-  // Phase 2.5: Graphics
-  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true);
-  let graphics_nodes = graphics_proc.to_process(&doc);
-  let doc = if !graphics_nodes.is_empty() {
-    match graphics_proc.process(doc, graphics_nodes) {
-      Ok(mut docs) => docs.remove(0),
-      Err(e) => {
-        eprintln!("Post-processing: Graphics failed: {}", e);
-        return xml.to_string();
-      }
-    }
-  } else { doc };
-
-  // Phase 2.75: Split
-  let doc = if split {
-    if let Some(ref xpath) = split_xpath {
-      let naming = match split_naming {
-        Some("id") | None => latexml_post::split::SplitNaming::Id,
-        Some("idrelative") => latexml_post::split::SplitNaming::IdRelative,
-        Some("label") => latexml_post::split::SplitNaming::Label,
-        Some("labelrelative") => latexml_post::split::SplitNaming::LabelRelative,
-        Some(other) => {
-          eprintln!("Unknown splitnaming '{}', using 'id'", other);
-          latexml_post::split::SplitNaming::Id
-        }
-      };
-      let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
-      let split_nodes = splitter.to_process(&doc);
-      match splitter.process(doc, split_nodes) {
-        Ok(mut docs) => {
-          if docs.len() > 1 {
-            eprintln!("Split into {} documents", docs.len());
-          }
-          docs.remove(0)
-        }
-        Err(e) => {
-          eprintln!("Post-processing: Split failed: {}", e);
-          return xml.to_string();
-        }
-      }
-    } else { doc }
-  } else { doc };
-
-  // Phase 3: MathML + XSLT
-  let mut post = latexml_post::Post::new();
-  let mut processors: Vec<Box<dyn Processor>> = Vec::new();
-
-  // ar5iv.sty.ltxml: adds intent=":literal" on all <math> elements
-  let intent_literal = xml.contains("package=\"ar5iv");
-
-  if pmml {
-    processors.push(Box::new(
-      latexml_post::mathml::MathML::new_presentation()
-        .with_keep_xmath(keep_xmath)
-        .with_invisible_times(!noinvisibletimes)
-        .with_mathtex(mathtex)
-        .with_intent_literal(intent_literal),
-    ));
-  }
-  if cmml {
-    processors.push(Box::new(
-      latexml_post::mathml::MathML::new_content()
-        .with_keep_xmath(keep_xmath)
-        .with_invisible_times(!noinvisibletimes),
-    ));
-  }
-  if let Some(xsl_path) = stylesheet {
-    // Resolve XSLT searchpaths: stylesheet path is "resources/XSLT/LaTeXML-html5.xsl"
-    // so searchpaths should be directories where that relative path can be found.
-    // Binary is at target/release/latexml_oxide, project root is 3 levels up.
-    let mut searchpaths = vec![".".to_string()];
-    if let Ok(exe) = std::env::current_exe() {
-      if let Some(project_root) = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
-        searchpaths.insert(0, project_root.display().to_string());
-      }
-    }
-    let mut xslt_params = std::collections::HashMap::new();
-    if !css_files.is_empty() {
-      xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_files.join("|")));
-    }
-    if !js_files.is_empty() {
-      xslt_params.insert("JAVASCRIPT".to_string(), format!("\"{}\"", js_files.join("|")));
-    }
-    if let Some(navtoc) = navigationtoc {
-      xslt_params.insert("NAVIGATIONTOC".to_string(), format!("\"{}\"", navtoc));
-    }
-    // --xsltparameter key=value pairs
-    for param in xslt_parameters {
-      if let Some((key, value)) = param.split_once('=') {
-        xslt_params.insert(key.to_string(), format!("\"{}\"", value));
-      }
-    }
-    match latexml_post::xslt::XSLT::new(
-      xsl_path, xslt_params, nodefaultresources, None, searchpaths,
-    ) {
-      Ok(xslt) => processors.push(Box::new(xslt)),
-      Err(e) => eprintln!("Post-processing: XSLT error: {}", e),
-    }
-  }
-
-  match post.process_chain(doc, &mut processors) {
-    Ok(results) => {
-      let output = results[0].to_xml_string();
-      // Fix self-closing non-void HTML elements for HTML5 output.
-      // libxml2's XML serializer produces <span/> for empty spans, but HTML5
-      // parsers treat <span/> as an opening tag, causing unclosed elements.
-      if stylesheet.is_some_and(|s| s.contains("html")) {
-        // Fix 1: Expand self-closing non-void elements: <span/> → <span></span>
-        let re = regex::Regex::new(
-          r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>"
-        ).unwrap();
-        let output = re.replace_all(&output, "<$1$2></$1>").to_string();
-        // Fix 2: Remove closing tags for void elements: </br>, </img>, </hr> etc.
-        // These are invalid in HTML5 and break nesting when present.
-        let void_close_re = regex::Regex::new(
-          r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>"
-        ).unwrap();
-        let output = void_close_re.replace_all(&output, "").to_string();
-        // Fix 3: Normalize self-closing void elements: <br ... /> → <br ...>
-        let void_selfclose_re = regex::Regex::new(
-          r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>"
-        ).unwrap();
-        void_selfclose_re.replace_all(&output, "<$1$2>").to_string()
-      } else {
-        output
-      }
-    },
-    Err(e) => {
-      eprintln!("Post-processing failed: {}", e);
-      xml.to_string()
-    }
-  }
+  latexml::post::run_post_processing(xml, opts)
 }
 
 /// Build the XPath expression for splitting at a given level.
@@ -810,7 +606,10 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         let path = entry.path();
         if path.is_dir() {
           collect_tex_files(&path, files);
-        } else if path.extension().is_some_and(|e| e == "tex" || e == "txt") {
+        } else if path.extension().is_some_and(|e| {
+          let e = e.to_ascii_lowercase();
+          e == "tex" || e == "txt"
+        }) {
           files.push(path);
         }
       }

@@ -5,9 +5,8 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("hyperref");
-  // Perl: RequirePackage('tikz');
-  // tikz is not needed here since the SVG is hardcoded in the constructors.
-  // RequirePackage('etoolbox');
+  // Perl #2681: orcidlink.sty depends on tikz (even though we hardcode the SVG logo)
+  RequirePackage!("tikz");
 
   DefConstructor!("\\lx@orcidlink{}{}",
     "<ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'>#2</ltx:ref>");

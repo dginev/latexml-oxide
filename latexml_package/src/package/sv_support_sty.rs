@@ -112,10 +112,21 @@ LoadDefinitions!({
   DefMacro!("\\floatlegendstyle", "\\bfseries");
   DefMacro!("\\leftlegendglue", "");
 
-  // \spnewtheorem — simplified: map to \newtheorem (Perl L92-185)
-  // The full Perl version creates custom theorem environments with body/head font control.
-  // We map to standard \newtheorem which is simpler but functionally equivalent.
-  DefMacro!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", "");
+  // Perl L122-123: theorem head swap toggles
+  DefPrimitive!("\\normalthmheadings", { state::assign_value("thm@swap", 0i64, Scope::Global); });
+  DefPrimitive!("\\reversethmheadings", { state::assign_value("thm@swap", 1i64, Scope::Global); });
+
+  // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
+  // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
+  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
+    crate::engine::latex_constructs::define_new_theorem(
+      flag.filter(|f| !f.is_empty()),
+      thmset,
+      otherthmset.filter(|t| !t.is_empty()),
+      if typ.is_empty() { None } else { Some(typ) },
+      reset.filter(|t| !t.is_empty()),
+    )?;
+  });
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
 
   DefRegister!("\\spthmsep", Dimension!("5pt"));
@@ -217,4 +228,16 @@ LoadDefinitions!({
     properties => sub[_args] {
       begin_itemize("description", None, BeginItemizeOptions::default())
     });
+
+  // Perl sv_support.sty.ltxml L194-195: proof environment
+  DefMacro!("\\proofname", "Proof");
+  // \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
+  // starred (*) = unnumbered = flag=Some
+  crate::engine::latex_constructs::define_new_theorem(
+    Some(Tokens!(T_OTHER!("*"))), // starred
+    Tokenize!("proof"),  // environment name
+    None,                // no shared counter
+    Some(Tokenize!("Proof")), // display title
+    None,                // no 'within' counter
+  )?;
 });

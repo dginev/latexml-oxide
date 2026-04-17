@@ -88,8 +88,11 @@ pub use latexml_core::binding::def::traits::*;
 pub mod setup_binding_language;
 
 // Export the package-level API
-pub use crate::engine::base_functions::*;
-pub use crate::engine::latex_functions::*;
+pub use crate::engine::base_utilities::*;
+pub use crate::engine::latex_constructs::{
+  begin_appendices, end_appendices, make_note_tags, only_preamble,
+  relocate_footnote, start_appendices, tabular_bindings,
+};
 pub use crate::package::*;
 
 // Functions callable from constructor templates via &GetKeyVal(#1,key) syntax.

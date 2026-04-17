@@ -20,7 +20,10 @@ LoadDefinitions!({
   DefMacro!("\\Kappa", "\\unicode{x39a}");
   DefMacro!("\\Mu", "\\unicode{x39c}");
   DefMacro!("\\Nu", "\\unicode{x39d}");
+  // Perl L34-38: also override \Pi/\Sigma/\Rho/\Tau/\Chi to explicit unicode
+  DefMacro!("\\Pi", "\\unicode{x3a0}");
   DefMacro!("\\Rho", "\\unicode{x3a1}");
+  DefMacro!("\\Sigma", "\\unicode{x3a3}");
   DefMacro!("\\Tau", "\\unicode{x3a4}");
   DefMacro!("\\Chi", "\\unicode{x3a7}");
 
@@ -124,6 +127,23 @@ LoadDefinitions!({
   DefMacro!("\\arsinh", "\\operatorname{arsinh}");
   DefMacro!("\\arcosh", "\\operatorname{arcosh}");
   DefMacro!("\\artanh", "\\operatorname{artanh}");
+  DefMacro!("\\arcoth", "\\operatorname{arcoth}");
+  DefMacro!("\\arsech", "\\operatorname{arsech}");
+  DefMacro!("\\arcsch", "\\operatorname{arcsch}");
+  // Perl L164-169: capitalized hyperbolic functions
+  DefMacro!("\\Sinh", "\\operatorname{Sinh}");
+  DefMacro!("\\Cosh", "\\operatorname{Cosh}");
+  DefMacro!("\\Sech", "\\operatorname{Sech}");
+  DefMacro!("\\Csch", "\\operatorname{Csch}");
+  DefMacro!("\\Tanh", "\\operatorname{Tanh}");
+  DefMacro!("\\Coth", "\\operatorname{Coth}");
+  // Perl L176-181: capitalized inverse hyperbolic
+  DefMacro!("\\Arsinh", "\\operatorname{Arsinh}");
+  DefMacro!("\\Arcosh", "\\operatorname{Arcosh}");
+  DefMacro!("\\Artanh", "\\operatorname{Artanh}");
+  DefMacro!("\\Arcoth", "\\operatorname{Arcoth}");
+  DefMacro!("\\Arsech", "\\operatorname{Arsech}");
+  DefMacro!("\\Arcsch", "\\operatorname{Arcsch}");
   DefMacro!("\\erf", "\\operatorname{erf}");
   DefMacro!("\\erfc", "\\operatorname{erfc}");
 
@@ -149,6 +169,37 @@ LoadDefinitions!({
   DefMacro!("\\card{}", "\\left\\lvert #1 \\right\\rvert");
   DefMacro!("\\map{}{}", "#1 \\left( #2 \\right)");
   DefMacro!("\\braket{}{}", "{\\left\\langle #1 \\, \\middle \\vert \\, #2 \\right\\rangle{}}");
+  // Perl L188-208: one-sided bracketing + extended interval + multiset
+  DefMacro!("\\leftparen{}", "\\left( #1 \\right.");
+  DefMacro!("\\rightparen{}", "\\left. #1 \\right)");
+  DefMacro!("\\leftset{}", "\\left\\lbrace #1 \\right.");
+  DefMacro!("\\rightset{}", "\\left. #1 \\right\\rbrace");
+  DefMacro!("\\nint{}", "\\left\\lfloor #1 \\right\\rceil");
+  DefMacro!("\\hointl{}{}", "\\left( #1 \\,.\\,.\\, #2 \\right]");
+  DefMacro!("\\hointr{}{}", "\\left[ #1 \\,.\\,.\\, #2 \\right)");
+  DefMacro!("\\horectl{}{}", "\\left(\\left( #1 \\,.\\,.\\, #2 \\right]\\right]");
+  DefMacro!("\\horectr{}{}", "\\left[\\left[ #1 \\,.\\,.\\, #2 \\right)\\right)");
+  DefMacro!("\\multiset{}", "\\left\\lbrace\\!\\left\\lbrace #1 \\right\\rbrace\\!\\right\\rbrace");
+  DefMacro!("\\ideal{}", "\\left( #1 \\right)");
+  DefMacro!("\\eqclass{}{}", "\\left[\\!\\left[ #1 \\right]\\!\\right]_{#2}");
+  DefMacro!("\\bigsize{}", "\\bigl\\lvert #1 \\bigr\\rvert");
+  DefMacro!("\\fractpart{}", "\\left\\lbrace #1 \\right\\rbrace");
+
+  // Perl L227-235: set/algebra constructors
+  DefMacro!("\\Syl{}{}", "\\mathrm{Syl}_{#1} \\left( #2 \\right)");
+  DefMacro!("\\relcomp{}{}", "\\complement_{#1} \\left( #2 \\right)");
+  DefMacro!("\\laptrans{}", "\\LL \\left\\lbrace #1 \\right\\rbrace");
+  DefMacro!("\\invlaptrans{}", "\\LL^{-1} \\left\\lbrace #1 \\right\\rbrace");
+  DefMacro!("\\intlimits{}{}{}", "\\left[ #1 \\right]_{#2}^{#3}");
+  DefMacro!("\\bigintlimits{}{}{}", "\\Bigl[ #1 \\Bigr]_{#2}^{#3}");
+  DefMacro!("\\valueat{}{}", "\\left. #1 \\right\\rvert_{#2}");
+  DefMacro!("\\bigvalueat{}{}", "\\Bigl. #1 \\Bigr\\rvert_{#2}");
+
+  // Perl L237-242: mathematical logic
+  DefMacro!("\\Add", "\\operatorname{Add}");
+  DefMacro!("\\Mult", "\\operatorname{Mult}");
+  DefMacro!("\\Succ", "\\operatorname{Succ}");
+  DefMacro!("\\Zero", "\\operatorname{Zero}");
 
   // Group/algebra notation — Perl L227-308
   DefMacro!("\\powerset{}", "\\PP \\left( #1 \\right)");
@@ -166,22 +217,70 @@ LoadDefinitions!({
 
   // Miscellaneous — Perl L244-325
   DefMacro!("\\hcf", "\\operatorname{hcf}");
+  DefMacro!("\\inj", "\\operatorname{inj}");
+  DefMacro!("\\rem", "\\operatorname{rem}");
+  DefMacro!("\\pr", "\\operatorname{pr}");
+  DefMacro!("\\proj", "\\operatorname{proj}");
   DefMacro!("\\sgn", "\\operatorname{sgn}");
+  DefMacro!("\\len", "\\operatorname{len}");
   DefMacro!("\\grad", "\\operatorname{grad}");
   DefMacro!("\\curl", "\\operatorname{curl}");
   DefMacro!("\\tr", "\\operatorname{tr}");
+  DefMacro!("\\dr{}", "\\mathrm{dr} \\left( #1 \\right)");
+  DefMacro!("\\cl", "\\mathrm{cl}");
   DefMacro!("\\var{}", "\\mathsf{var} \\left( #1 \\right)");
+  DefMacro!("\\cov{}", "\\mathsf{cov} \\left( #1 \\right)");
   DefMacro!("\\expect{}", "\\mathsf E \\left( #1 \\right)");
+  DefMacro!("\\conjclass{}", "\\mathrm C_{#1}");
   DefMacro!("\\Log", "\\operatorname{Log}");
   DefMacro!("\\Ln", "\\operatorname{Ln}");
+  DefMacro!("\\On", "\\operatorname{On}");
   DefMacro!("\\Area", "\\operatorname{Area}");
+  DefMacro!("\\Card", "\\operatorname{Card}");
+  DefMacro!("\\Frob", "\\operatorname{Frob}");
   DefMacro!("\\Bernoulli{}", "\\mathrm{Bern} \\left( #1 \\right)");
+  DefMacro!("\\BetaDist{}{}", "\\mathrm{Beta} \\left( #1, #2 \\right)");
+  DefMacro!("\\Binomial{}{}", "\\mathrm B \\left( #1, #2 \\right)");
+  DefMacro!("\\Cauchy{}{}", "\\mathrm{Cauchy} \\left( #1, #2 \\right)");
+  DefMacro!("\\NegativeBinomial{}{}", "\\mathrm{NB} \\left( #1, #2 \\right)");
   DefMacro!("\\Exponential{}", "\\mathrm{Exp} \\left( #1 \\right)");
-  DefMacro!("\\Poisson{}", "\\mathrm{Poisson} \\left( #1 \\right)");
   DefMacro!("\\Gaussian{}{}", "N \\left( #1, #2 \\right)");
+  DefMacro!("\\Geometric{}", "\\mathrm G_0 \\left( #1 \\right)");
+  DefMacro!("\\ShiftedGeometric{}", "\\mathrm G_1 \\left( #1 \\right)");
+  DefMacro!("\\Poisson{}", "\\mathrm{Poisson} \\left( #1 \\right)");
+  DefMacro!("\\StudentT{}", "t_{#1}");
+  DefMacro!("\\ContinuousUniform{}{}", "\\mathrm U \\left[ #1 \\,.\\,.\\, #2 \\right]");
+  DefMacro!("\\DiscreteUniform{}", "\\mathrm U \\left( #1 \\right)");
+  DefMacro!("\\condprob{}{}", "\\Pr \\left( #1 \\, \\middle \\vert \\, #2 \\right)");
+  DefMacro!("\\Arg{}", "\\mathrm{Arg} \\left( #1 \\right)");
+  DefMacro!("\\domain{}", "\\mathrm{Dom} \\left( #1 \\right)");
+  DefMacro!("\\cont{}", "\\mathrm{cont} \\left( #1 \\right)");
+  DefMacro!("\\Cdm{}", "\\mathrm{Cdm} \\left( #1 \\right)");
+  DefMacro!("\\adj{}", "\\mathrm{adj} \\left( #1 \\right)");
+  DefMacro!("\\Preimg{}", "\\mathrm{Img}^{-1} \\left( #1 \\right)");
+  DefMacro!("\\image{}", "\\Img #1 ");
+  DefMacro!("\\Dic{}", "\\operatorname{Dic}_{#1}");
+  DefMacro!("\\SU{}", "\\operatorname{SU_{#1} }");
+  DefMacro!("\\Out{}", "\\mathrm{Out} \\left( #1 \\right)");
+  DefMacro!("\\Inn{}", "\\mathrm{Inn} \\left( #1 \\right)");
+  DefMacro!("\\Fix{}", "\\mathrm{Fix} \\left( #1 \\right)");
+  DefMacro!("\\Nil{}", "\\mathrm{Nil} \\left( #1 \\right)");
+  DefMacro!("\\Ord{}", "\\map{\\mathrm{Ord} } #1");
+  DefMacro!("\\Res{}{}", "\\mathrm{Res} \\left( #1, #2 \\right)");
+  DefMacro!("\\Int{}", "\\mathrm{Int} \\left( #1 \\right)");
+  DefMacro!("\\Ext{}", "\\mathrm{Ext} \\left( #1 \\right)");
+  DefMacro!("\\Ber", "\\mathrm{Ber}");
+  DefMacro!("\\Bei", "\\mathrm{Bei}");
+  DefMacro!("\\Rad", "\\mathrm{Rad}");
+  DefMacro!("\\diam", "\\mathrm{diam}");
+  DefMacro!("\\stratgame{}{}{}", "\\left\\langle #1, \\sequence #2, \\sequence #3 \\right\\rangle");
   DefMacro!("\\divides", "\\mathrel \\backslash");
+  DefMacro!("\\PV", "\\mathrm{PV} \\displaystyle \\int");
+  DefMacro!("\\leadstoandfrom", "\\mathrel \\leftrightsquigarrow");
   DefMacro!("\\degrees", "^\\circ");
   DefMacro!("\\radians", "\\, \\mathrm{rad}");
+  DefMacro!("\\cels", "\\, \\degrees \\mathrm C");
+  DefMacro!("\\fahr", "\\, \\degrees \\mathrm F");
   DefMacro!("\\Re", "\\mathfrak{Re}");
   DefMacro!("\\Im", "\\mathfrak{Im}");
   DefMacro!("\\ds", "\\displaystyle");

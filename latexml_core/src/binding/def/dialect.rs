@@ -7,7 +7,7 @@ use regex::Regex;
 
 // use crate::common::error::*;
 use crate::{BoxOps, Digested};
-use crate::binding::content::merge_font;
+use crate::binding::content::{merge_font, merge_font_ref};
 use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::IntoDigestedResult;
 use crate::common::arena;
@@ -368,8 +368,10 @@ pub fn def_primitive(
   }
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
+      // Perf: capture Rc<Font> directly; closure borrows through it.
+      // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
       let merge_font_closure = before_digest_simple!({
-        merge_font((*chosen_font).clone());
+        merge_font_ref(&chosen_font);
       });
       before_digest_env.push(merge_font_closure);
     },
@@ -601,7 +603,13 @@ pub fn def_math_primitive(
 ) {
   let scope = options.scope;
   let reqfont_opt = options.font.clone();
-  let moved_options = options.clone();
+  // Perf: wrap options in Rc to avoid per-invocation clone of a 30+ field struct.
+  // Previously cloned `MathPrimitiveOptions` (20+ Option<String>, 4 Vecs) on every
+  // DefMath invocation (e.g. 1000 math tokens = 1000 full clones). Now the closure
+  // reads fields through the Rc and applies overrides via a dedicated method.
+  let shared_options = Rc::new(options.clone());
+  let dynamic_mathstyle = shared_options.dynamic_mathstyle;
+  let dynamic_scriptpos = shared_options.dynamic_scriptpos;
 
   install_definition(
     MathPrimitive {
@@ -611,34 +619,29 @@ pub fn def_math_primitive(
         let locator = gullet::get_locator();
         // Perl: DefMath with ?#isMath conditional produces text in text mode.
         // The check happens at CONSTRUCTION time (not digestion time).
-        // At digestion time, IN_MATH is unreliable for this purpose because
-        // \text{} inside math sets IN_MATH=false but the document context is
-        // still math. We handle the text-mode fallback in the document builder
-        // (find_insertion_point) which converts XMTok to text when the parent
-        // element doesn't allow it.
-        let mut properties = moved_options.clone();
-        properties.mode = Some(String::from("math"));
         let state_font = lookup_font().unwrap();
         // Dynamic mathstyle: doVariablesizeOp — "display" in display, "text" otherwise
-        if properties.dynamic_mathstyle {
+        let mathstyle_override: Option<&'static str> = if dynamic_mathstyle {
           let is_display = state_font
             .get_mathstyle()
             .is_some_and(|s| s.as_ref() == "display");
-          properties.mathstyle =
-            Some(if is_display { "display" } else { "text" }.to_string());
-        }
+          Some(if is_display { "display" } else { "text" })
+        } else {
+          None
+        };
         // Dynamic scriptpos: doScriptpos — "mid" in display, "post" otherwise
-        if properties.dynamic_scriptpos {
+        let scriptpos_override: Option<&'static str> = if dynamic_scriptpos {
           let is_display = state_font
             .get_mathstyle()
             .is_some_and(|s| s.as_ref() == "display");
-          properties.scriptpos =
-            Some(if is_display { "mid" } else { "post" }.to_string());
-        }
+          Some(if is_display { "mid" } else { "post" })
+        } else {
+          None
+        };
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
           state_font
-            .merge((*this_reqfont).clone())
+            .merge_ref(&this_reqfont)
             .specialize(&presentation)
         } else {
           state_font.specialize(&presentation)
@@ -648,7 +651,11 @@ pub fn def_math_primitive(
           text: arena::pin(&presentation),
           tokens: Tokens!(cs),
           font,
-          properties: properties.to_hash_stored(),
+          properties: shared_options.to_hash_stored_with_overrides(
+            Some("math"),
+            mathstyle_override,
+            scriptpos_override,
+          ),
           locator,
         })])
       })),
@@ -1075,8 +1082,10 @@ pub fn def_environment(
 
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
+      // Perf: capture Rc<Font> directly; closure borrows through it.
+      // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
       let merge_font_closure = before_digest_simple!({
-        merge_font((*chosen_font).clone());
+        merge_font_ref(&chosen_font);
       });
       before_digest_env.push(merge_font_closure);
     },

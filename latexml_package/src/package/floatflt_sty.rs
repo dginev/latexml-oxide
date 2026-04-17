@@ -7,21 +7,27 @@ LoadDefinitions!({
   DeclareOption!("lflt", { state::assign_value("floatfltpos", Stored::from("l"), None); });
   DeclareOption!("pflt", { state::assign_value("floatfltpos", Stored::from("p"), None); });
   DeclareOption!("vflt", { state::assign_value("floatfltpos", Stored::from("v"), None); });
+  // Use `after_digest` (runs while env frame is still active), NOT
+  // `after_digest_body` which runs after the frame pops — `\@captype` set
+  // by `before_float` via local-scope def_macro is gone by that point,
+  // causing `after_float`'s `digest(\@captype)` to error with "T_CS[\@captype]
+  // is not defined" (sandbox paper 0810.1610). The engine's `{figure}` /
+  // `{table}` envs use `after_digest` for this reason; match them.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
     before_digest => {
-      crate::engine::latex_ch9_figures_and_tables::before_float("figure", None);
+      crate::engine::latex_constructs::before_float("figure", None);
     },
-    after_digest_body => sub[whatsit] {
-      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+    after_digest => sub[whatsit] {
+      crate::engine::latex_constructs::after_float(whatsit);
     });
   DefEnvironment!("{floatingtable}[]{Dimension}",
     "<ltx:table xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:table>",
     before_digest => {
-      crate::engine::latex_ch9_figures_and_tables::before_float("table", None);
+      crate::engine::latex_constructs::before_float("table", None);
     },
-    after_digest_body => sub[whatsit] {
-      crate::engine::latex_ch9_figures_and_tables::after_float(whatsit);
+    after_digest => sub[whatsit] {
+      crate::engine::latex_constructs::after_float(whatsit);
     });
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}",  "\\item[#2] {#3}");
@@ -48,6 +54,11 @@ LoadDefinitions!({
   DefRegister!("\\tabbredd" =>      Dimension::new(0));
   DefRegister!("\\floatfltwidth" => Dimension::new(0));
   DefRegister!("\\fltitemwidth" =>  Dimension::new(0));
+  // Perl L73-75,95: box registers and output test hook
+  RawTeX!("\\newbox\\figbox");
+  RawTeX!("\\newbox\\tabbox");
+  RawTeX!("\\newbox\\pagebox");
+  DefRegister!("\\outputpretest" => Tokens::new(vec![]));
   RawTeX!("\\newif\\iftryingfig     \\tryingfigfalse");
   RawTeX!("\\newif\\iftryingtab     \\tryingtabfalse");
   RawTeX!("\\newif\\ifdoingfig      \\doingfigfalse");

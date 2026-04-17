@@ -6,6 +6,19 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Dependencies
   RequirePackage!("natbib");
+  // mn2e.cls internal: base line skip (used in raw TeX class)
+  DefRegister!("\\@bls" => Dimension!("12pt"));
+
+  // Perl: mn2e_support.sty.ltxml L19-20 — load graphicx if option was set
+  if state::lookup_int("@usegraphicx") != 0 {
+    RequirePackage!("graphicx");
+  }
+  // mn2e.cls raw TeX: \if@useAMS\RequirePackage{amsmath,amssymb}\fi
+  // Since we don't load the raw class, check the flag and load AMS packages
+  if state::lookup_int("@useAMS") != 0 {
+    RequirePackage!("amsmath");
+    RequirePackage!("amssymb");
+  }
 
   // Frontmatter — Perl L28-46
   DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
@@ -52,11 +65,17 @@ LoadDefinitions!({
   DefMacro!("\\degr", "\u{00B0}");
   DefMacro!("\\arcmin", "\u{2032}");
   DefMacro!("\\arcsec", "\u{2033}");
-  DefMacro!("\\fd", ".\\!^{\\mathrm{d}}");
-  DefMacro!("\\fh", ".\\!^{\\mathrm{h}}");
-  DefMacro!("\\fm", ".\\!^{\\mathrm{m}}");
-  DefMacro!("\\fs", ".\\!^{\\mathrm{s}}");
-  DefMacro!("\\fp", ".\\!^{\\mathrm{p}}");
+  // Perl mn2e_support.sty.ltxml L106-109,113: \fd/\fh/\fm/\fs/\fp use \aas@fstack.
+  // \aas@fstack wraps in \ensuremath so it works in both text and math contexts.
+  DefMacro!("\\fd", "\\aas@fstack{d}");
+  DefMacro!("\\fh", "\\aas@fstack{h}");
+  DefMacro!("\\fm", "\\aas@fstack{m}");
+  DefMacro!("\\fs", "\\aas@fstack{s}");
+  DefMacro!("\\fp", "\\aas@fstack{p}");
+  // Perl: mn2e_support.sty.ltxml — degree/arcmin/arcsec using \aas@fstack
+  DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
+  DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
+  DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
   DefMacro!("\\ion{}{}", "#1\\,{\\sc #2}");
 
   // Journal abbreviations — Perl L180-252
@@ -108,9 +127,23 @@ LoadDefinitions!({
   DefMacro!("\\bchi", "\\mn@boldsymbol{\\chi}");
   DefMacro!("\\bpsi", "\\mn@boldsymbol{\\psi}");
   DefMacro!("\\bomega", "\\mn@boldsymbol{\\omega}");
+  // Perl L90-95: bold variant-Greek
+  DefMacro!("\\bvarepsilon", "\\mn@boldsymbol{\\varepsilon}");
+  DefMacro!("\\bvartheta", "\\mn@boldsymbol{\\vartheta}");
+  DefMacro!("\\bvarrho", "\\mn@boldsymbol{\\varrho}");
+  DefMacro!("\\bvarsigma", "\\mn@boldsymbol{\\varsigma}");
+  DefMacro!("\\bvarphi", "\\mn@boldsymbol{\\varphi}");
+  DefMacro!("\\bvarpi", "\\mn@boldsymbol{\\varpi}");
 
-  // Degree fractions — Perl L109-117
-  DefMacro!("\\aas@fstack{}", "\\ensuremath{.\\!^{\\mathrm{#1}}}");
+  // Degree fractions — Perl L101-117: constructor + macro form (semantic POSTFIX XMApp)
+  DefConstructor!("\\aas@@fstack{}",
+    "<ltx:XMApp role='POSTFIX'><ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/><ltx:XMTok>.</ltx:XMTok><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMApp>",
+    mode => "math", bounded => true,
+    properties => sub[_args] {
+      let script_level = state::lookup_int("script_level");
+      Ok(stored_map!("scriptpos" => s!("mid{}", script_level)))
+    });
+  DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");
 
   // Math relations — Perl L131-149
   DefMath!("\\sol", "\u{2A9D}", role => "RELOP", meaning => "similar-to-or-less-than");
@@ -125,7 +158,24 @@ LoadDefinitions!({
   DefMath!("\\gid", "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
   DefMath!("\\leqslant", "\u{2A7D}", role => "RELOP", meaning => "less-than-or-equals");
   DefMath!("\\geqslant", "\u{2A7E}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefMath!("\\cor", "\u{2258}", role => "RELOP", meaning => "corresonds-to");
   DefPrimitive!("\\micron", "\u{00B5}m");
+
+  // Perl L122-125: quod erat demonstrandum marker
+  DefConstructor!("\\squareforqed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+  Let!("\\sq", "\\squareforqed");
+  Let!("\\proofbox", "\\squareforqed");
+
+  // Perl L128-129: astronomical symbols
+  DefPrimitive!("\\diameter", "\u{2300}");
+  DefPrimitive!("\\earth", "\u{2295}");
+
+  // Perl L162-165: pre-AMS aliases
+  Let!("\\oldle", "\\le");
+  Let!("\\oldleq", "\\leq");
+  Let!("\\oldge", "\\ge");
+  Let!("\\oldgeq", "\\geq");
 
   // Font macros — Perl L153-161
   DefMacro!("\\rmn{}", "\\mathrm{#1}");
@@ -134,6 +184,8 @@ LoadDefinitions!({
   DefMacro!("\\bld{}", "\\mathbf{#1}");
   DefMacro!("\\textbfit{}", "\\textbf{\\textit{#1}}");
   DefMacro!("\\textbfss{}", "\\textbf{\\textsf{#1}}");
+  DefMacro!("\\mathbfit{}", "\\textbf{\\textit{#1}}");
+  DefMacro!("\\mathbfss{}", "\\textbf{\\textsf{#1}}");
   DefMacro!("\\bmath{}", "\\mn@boldsymbol{#1}");
 
   Let!("\\upi", "\\pi");
@@ -148,7 +200,9 @@ LoadDefinitions!({
   DefMacro!("\\loadboldmathitalic", "");
   DefMacro!("\\loadboldgreek", "");
   DefMacro!("\\fixfootnotes", "");
+  DefMacro!("\\nokeywords", "");
   DefMacro!("\\bibtitle", "References");
+  DefMacro!("\\bibheadtitle", "REFERENCES");
   DefMacro!("\\makeRLlabel{}", "#1");
   DefMacro!("\\makeRRlabel{}", "#1");
   DefMacro!("\\makenewlabel{}", "#1");
@@ -157,6 +211,19 @@ LoadDefinitions!({
   Let!("\\fullhline", "\\hline");
   DefMacro!("\\sevensize", "\\small");
   DefMacro!("\\plate", "");
+
+  // Perl L57-62: equation numbering schemes
+  DefMacro!("\\eqsecnum",
+    "\\@addtoreset{equation}{section}\\def\\theequation{\\arabic{section}.\\arabic{equation}}");
+  DefMacro!("\\eqsubsecnum",
+    "\\@addtoreset{equation}{subsection}\\def\\theequation{\\arabic{subsection}.\\arabic{equation}}");
+
+  // Perl L204-205: utility macros
+  DefMacro!("\\hexnumber{}", sub[(n)] {
+    let n = n.to_string().trim().parse::<i64>().unwrap_or(0);
+    Ok(Tokens!(T_OTHER!(format!("{:x}", n))))
+  });
+  DefMacro!("\\mathch{}{}", "\\ensuremath{#2}");
 
   Let!("\\@internalcite", "\\cite");
   DefMacro!("\\shortcite", "\\cite");

@@ -49,6 +49,12 @@ LoadDefinitions!({
   // Dollar mode
   DefMacro!("\\@dollar@in@normalmode", "\\lx@dollar@default");
   DefMacro!("\\@dollar@in@textmode", "\\lx@dollar@default");
+  // Perl L115-118: \lx@-prefixed deprecation aliases for the old \@-names
+  DefMacro!("\\lx@dollar@in@normalmode", "\\lx@dollar@default");
+  DefMacro!("\\lx@dollar@in@textmode", "\\lx@dollar@default");
+  // Perl L29: \lx@DEPRECATE was the warn-once helper. In Rust we just no-op
+  // since all deprecation chains have already been rewritten in-place above.
+  DefMacro!("\\lx@DEPRECATE{}{}", None);
 
   // Math decorations
   DefMacro!("\\math@underline", "\\lx@math@underline");
@@ -96,4 +102,14 @@ LoadDefinitions!({
 
   // Input
   DefMacro!("\\ltx@input", "\\lx@latex@input");
+
+  // Math operators (deprecated @-prefixed names)
+  DefMacro!("\\@dollar@in@mathmode", "\\lx@dollar@in@mathmode");
+  DefMacro!("\\@CSYMBOL{}", "\\lx@symbol[meaning={#1}]{}");
+  DefMacro!("\\@MAYBEAPPLY{}{}", "\\ifx.#2.#1\\else\\lx@apply{#1}{#2}\\fi");
+  DefMacro!("\\@TOKEN{}", "\\lx@symbol[name={#1}]{}");
+  DefMacro!("\\@SUPERSCRIPT{}{}", "\\ifx.#2.#1\\else\\lx@superscript[]{#1}{#2}\\fi");
+  DefMacro!("\\@SUBSCRIPT{}{}", "\\ifx.#2.#1\\else\\lx@subscript[]{#1}{#2}\\fi");
+  // Perl L169: \@APPLY is deprecated application wrapper
+  DefMacro!("\\@APPLY{}", "\\lx@apply[]{#1}{}");
 });

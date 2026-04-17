@@ -21,8 +21,17 @@ LoadDefinitions!({
   {
     DeclareOption!(*substyle, None);
   }
-  for pkg in ["amsfonts", "amssymb", "amsmath", "noamsfonts", "noamssymb", "noamsmath"].iter() {
-    DeclareOption!(*pkg, None);
+  // Perl: amsmath/amssymb/amsfonts options → add to toload list
+  // noamsmath/noamssymb/noamsfonts → remove from list
+  // After ProcessOptions, RequirePackage each one
+  for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
+    DeclareOption!(*pkg, {
+      state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
+    });
+    let nopkg = s!("no{}", pkg);
+    DeclareOption!(&nopkg, {
+      state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
+    });
   }
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
@@ -30,4 +39,10 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("revtex4_support");
+  // Load AMS packages that were requested via options
+  for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
+    if state::lookup_bool(&s!("revtex_load_{}", pkg)) {
+      RequirePackage!(*pkg);
+    }
+  }
 });

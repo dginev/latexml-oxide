@@ -258,6 +258,15 @@ LoadDefinitions!({
   RequirePackage!("amstext");
   RequirePackage!("amsopn");
 
+  // Ensure @equationgroup counter exists. Normally defined by class file (e.g. article_cls.rs),
+  // but for classes without a binding (jpsj2, etc.) that don't inherit from article,
+  // amsmath must provide a fallback. new_counter() is safe to call even if already defined:
+  // it skips register creation but still installs \the@equationgroup@ID etc.
+  // Matches Perl article.cls.ltxml L85: NewCounter('@equationgroup','document',idprefix=>'EG',idwithin=>'section')
+  if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
+    NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
+  }
+
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
   // Matrix environments
@@ -1186,6 +1195,9 @@ LoadDefinitions!({
   DefMacro!("\\primfrac{}", None);
   DefMacro!("\\shoveleft{}", "#1");
   DefMacro!("\\shoveright{}", "#1");
+  // Perl: amsmath.sty.ltxml L1313-1314
+  DefRegister!("\\multlinegap" => Glue::new(Dimension!("10pt").0));
+  DefRegister!("\\multlinetaggap" => Glue::new(Dimension!("10pt").0));
 
   //======================================================================
   // Additions from Perl amsmath audit (session 38)
@@ -1739,7 +1751,7 @@ fn sideset_construct(
   args: &[Option<Digested>],
   props: &SymHashMap<Stored>,
 ) -> Result<()> {
-  use crate::engine::tex_scripts::is_script;
+  use crate::engine::tex_math::is_script;
   use latexml_core::token::Catcode;
 
   let pre = args.first().and_then(|a| a.as_ref());

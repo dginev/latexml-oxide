@@ -3193,12 +3193,11 @@ Then a switch of tag forms.</p>
       <equationgroup class="ltx_eqn_align" xml:id="S12.EGx3">
         <equation xml:id="S6.Ex49">
           <MathFork>
-            <Math tex="\displaystyle f(x)=\int h(x)\,dx" text="f * x = integral@(h * x * differential-d@(x))" xml:id="S6.Ex49.m3">
+            <Math tex="\displaystyle f(x)=\int h(x)\,dx" text="f@(x) = integral@(h@(x) * differential-d@(x))" xml:id="S6.Ex49.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" role="UNKNOWN">f</XMTok>
                     <XMDual>
                       <XMRef idref="S6.Ex49.m3.1"/>
@@ -3213,15 +3212,17 @@ Then a switch of tag forms.</p>
                     <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                      <XMDual>
-                        <XMRef idref="S6.Ex49.m3.2"/>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="false">(</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S6.Ex49.m3.2">x</XMTok>
-                          <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
-                        </XMWrap>
-                      </XMDual>
+                      <XMApp>
+                        <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                        <XMDual>
+                          <XMRef idref="S6.Ex49.m3.2"/>
+                          <XMWrap>
+                            <XMTok role="OPEN" stretchy="false">(</XMTok>
+                            <XMTok font="italic" role="UNKNOWN" xml:id="S6.Ex49.m3.2">x</XMTok>
+                            <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
                       <XMApp>
                         <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
                         <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -3232,10 +3233,9 @@ Then a switch of tag forms.</p>
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle f(x)" text="f * x" xml:id="S6.Ex49.m1">
+              <td align="right"><Math mode="inline" tex="\displaystyle f(x)" text="f@(x)" xml:id="S6.Ex49.m1">
                   <XMath>
                     <XMApp>
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN">f</XMTok>
                       <XMDual>
                         <XMRef idref="S6.Ex49.m1.1"/>
@@ -3248,7 +3248,7 @@ Then a switch of tag forms.</p>
                     </XMApp>
                   </XMath>
                 </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle=\int h(x)\,dx" text="absent = integral@(h * x * differential-d@(x))" xml:id="S6.Ex49.m2">
+              <td align="left"><Math mode="inline" tex="\displaystyle=\int h(x)\,dx" text="absent = integral@(h@(x) * differential-d@(x))" xml:id="S6.Ex49.m2">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -3257,15 +3257,17 @@ Then a switch of tag forms.</p>
                         <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
                         <XMApp>
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">h</XMTok>
-                          <XMDual>
-                            <XMRef idref="S6.Ex49.m2.1"/>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S6.Ex49.m2.1">x</XMTok>
-                              <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
-                            </XMWrap>
-                          </XMDual>
+                          <XMApp>
+                            <XMTok font="italic" role="UNKNOWN">h</XMTok>
+                            <XMDual>
+                              <XMRef idref="S6.Ex49.m2.1"/>
+                              <XMWrap>
+                                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                                <XMTok font="italic" role="UNKNOWN" xml:id="S6.Ex49.m2.1">x</XMTok>
+                                <XMTok role="CLOSE" rpadding="1.7pt" stretchy="false">)</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                          </XMApp>
                           <XMApp>
                             <XMTok font="italic" meaning="differential-d" role="DIFFOP">d</XMTok>
                             <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -3280,13 +3282,12 @@ Then a switch of tag forms.</p>
         </equation>
         <equation xml:id="S6.Ex50">
           <MathFork>
-            <Math tex="\displaystyle=g(x)" text="absent = g * x" xml:id="S6.Ex50.m2">
+            <Math tex="\displaystyle=g(x)" text="absent = g@(x)" xml:id="S6.Ex50.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok meaning="absent"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" role="UNKNOWN">g</XMTok>
                     <XMDual>
                       <XMRef idref="S6.Ex50.m2.1"/>
@@ -3302,13 +3303,12 @@ Then a switch of tag forms.</p>
             </Math>
             <MathBranch>
               <td/>
-              <td align="left"><Math mode="inline" tex="\displaystyle=g(x)" text="absent = g * x" xml:id="S6.Ex50.m1">
+              <td align="left"><Math mode="inline" tex="\displaystyle=g(x)" text="absent = g@(x)" xml:id="S6.Ex50.m1">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                       <XMTok meaning="absent"/>
                       <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" role="UNKNOWN">g</XMTok>
                         <XMDual>
                           <XMRef idref="S6.Ex50.m1.1"/>
@@ -3637,7 +3637,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p3">
       <equation xml:id="S7.Ex54">
-        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="list@(delimited-⟨⟩@(list@(A, 1 / 2)), delimited-⟨⟩@(B * absolute-value@((sum _ k)@(f _ k)) * C))" xml:id="S7.Ex54.m1">
+        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="list@(delimited-⟨⟩@(list@(A, 1 / 2)), delimited-⟨⟩@(B@(absolute-value@((sum _ k)@(f _ k))) * C))" xml:id="S7.Ex54.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3682,29 +3682,31 @@ Then a switch of tag forms.</p>
                     <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
                     <XMApp xml:id="S7.Ex54.m1.6">
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">B</XMTok>
-                      <XMDual>
-                        <XMApp>
-                          <XMTok meaning="absolute-value"/>
-                          <XMRef idref="S7.Ex54.m1.7"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok fontsize="160%" role="OPEN" rpadding="1.7pt" stretchy="false">|</XMTok>
-                          <XMApp xml:id="S7.Ex54.m1.7">
-                            <XMApp>
-                              <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                              <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                            </XMApp>
-                            <XMApp>
-                              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                              <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                            </XMApp>
+                      <XMApp>
+                        <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">B</XMTok>
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="absolute-value"/>
+                            <XMRef idref="S7.Ex54.m1.7"/>
                           </XMApp>
-                          <XMTok fontsize="160%" role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok>
-                        </XMWrap>
-                      </XMDual>
+                          <XMWrap>
+                            <XMTok fontsize="160%" role="OPEN" rpadding="1.7pt" stretchy="false">|</XMTok>
+                            <XMApp xml:id="S7.Ex54.m1.7">
+                              <XMApp>
+                                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                              </XMApp>
+                              <XMApp>
+                                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                                <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                              </XMApp>
+                            </XMApp>
+                            <XMTok fontsize="160%" role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                      </XMApp>
                       <XMTok font="italic" role="UNKNOWN">C</XMTok>
                     </XMApp>
                     <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
@@ -4560,7 +4562,6 @@ Then a switch of tag forms.</p>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP" xml:id="S9.p1.m1.1">=</XMTok>
                       <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" role="UNKNOWN" xml:id="S9.p1.m1.2">p</XMTok>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="false" xml:id="S9.p1.m1.3">(</XMTok>
@@ -6386,22 +6387,24 @@ Then a switch of tag forms.</p>
             <tag role="refnum">24</tag>
           </tags>
           <MathFork>
-            <Math tex="\displaystyle=y(0)y^{\prime}" text="absent = y * 0 * y ^ prime" xml:id="S10.E24.m3">
+            <Math tex="\displaystyle=y(0)y^{\prime}" text="absent = y@(0) * y ^ prime" xml:id="S10.E24.m3">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMTok meaning="absent"/>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                    <XMDual>
-                      <XMRef idref="S10.E24.m3.1"/>
-                      <XMWrap>
-                        <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok meaning="0" role="NUMBER" xml:id="S10.E24.m3.1">0</XMTok>
-                        <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                      </XMWrap>
-                    </XMDual>
+                    <XMApp>
+                      <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                      <XMDual>
+                        <XMRef idref="S10.E24.m3.1"/>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="false">(</XMTok>
+                          <XMTok meaning="0" role="NUMBER" xml:id="S10.E24.m3.1">0</XMTok>
+                          <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                    </XMApp>
                     <XMApp>
                       <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                       <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -6413,22 +6416,24 @@ Then a switch of tag forms.</p>
             </Math>
             <MathBranch>
               <td/>
-              <td align="left"><Math mode="inline" tex="\displaystyle=y(0)y^{\prime}" text="absent = y * 0 * y ^ prime" xml:id="S10.E24.m1">
+              <td align="left"><Math mode="inline" tex="\displaystyle=y(0)y^{\prime}" text="absent = y@(0) * y ^ prime" xml:id="S10.E24.m1">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="equals" role="RELOP">=</XMTok>
                       <XMTok meaning="absent"/>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">y</XMTok>
-                        <XMDual>
-                          <XMRef idref="S10.E24.m1.1"/>
-                          <XMWrap>
-                            <XMTok role="OPEN" stretchy="false">(</XMTok>
-                            <XMTok meaning="0" role="NUMBER" xml:id="S10.E24.m1.1">0</XMTok>
-                            <XMTok role="CLOSE" stretchy="false">)</XMTok>
-                          </XMWrap>
-                        </XMDual>
+                        <XMApp>
+                          <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                          <XMDual>
+                            <XMRef idref="S10.E24.m1.1"/>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="false">(</XMTok>
+                              <XMTok meaning="0" role="NUMBER" xml:id="S10.E24.m1.1">0</XMTok>
+                              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                        </XMApp>
                         <XMApp>
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                           <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -6577,7 +6582,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S10.p14">
       <equation xml:id="S10.Ex79">
-        <Math mode="display" tex="\sum_{\begin{subarray}{l}i\in\Lambda\\&#10;0&lt;j&lt;n\end{subarray}}P(i,j)" text="(sum _ (list@(Array[[i element-of Lambda], [0 &lt; j &lt; n]])))@(P * open-interval@(i, j))" xml:id="S10.Ex79.m1">
+        <Math mode="display" tex="\sum_{\begin{subarray}{l}i\in\Lambda\\&#10;0&lt;j&lt;n\end{subarray}}P(i,j)" text="(sum _ (list@(Array[[i element-of Lambda], [0 &lt; j &lt; n]])))@(P@(vector@(i, j)))" xml:id="S10.Ex79.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -6614,11 +6619,10 @@ Then a switch of tag forms.</p>
                 </XMDual>
               </XMApp>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok font="italic" role="UNKNOWN">P</XMTok>
                 <XMDual>
                   <XMApp>
-                    <XMTok meaning="open-interval"/>
+                    <XMTok meaning="vector"/>
                     <XMRef idref="S10.Ex79.m1.2"/>
                     <XMRef idref="S10.Ex79.m1.3"/>
                   </XMApp>
@@ -6714,12 +6718,11 @@ Then a switch of tag forms.</p>
             <tag role="refnum">26</tag>
           </tags>
           <MathFork>
-            <Math tex="\displaystyle f(x)=x^{2}+2xy+y^{2}" text="f * x = x ^ 2 + 2 * x * y + y ^ 2" xml:id="S10.E26.m4">
+            <Math tex="\displaystyle f(x)=x^{2}+2xy+y^{2}" text="f@(x) = x ^ 2 + 2 * x * y + y ^ 2" xml:id="S10.E26.m4">
               <XMath>
                 <XMApp>
                   <XMTok meaning="equals" role="RELOP">=</XMTok>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" role="UNKNOWN">f</XMTok>
                     <XMDual>
                       <XMRef idref="S10.E26.m4.1"/>
@@ -6754,10 +6757,9 @@ Then a switch of tag forms.</p>
             </Math>
             <MathBranch>
               <tr>
-                <td align="right"><Math mode="inline" tex="\displaystyle f(x)" text="f * x" xml:id="S10.E26.m1">
+                <td align="right"><Math mode="inline" tex="\displaystyle f(x)" text="f@(x)" xml:id="S10.E26.m1">
                     <XMath>
                       <XMApp>
-                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" role="UNKNOWN">f</XMTok>
                         <XMDual>
                           <XMRef idref="S10.E26.m1.1"/>

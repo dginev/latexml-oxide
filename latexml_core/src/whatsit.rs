@@ -221,8 +221,15 @@ impl Whatsit {
       } else {
         let arg_opt = token.with_str(|s| {
           let n = s.parse::<usize>().unwrap() - 1;
-          if n < 10 {
+          if n < args.len() {
             args[n].clone()
+          } else if n < 10 {
+            // `#N` where N ≤ 10 but fewer args were passed.
+            // Perl returns undef; we return None so the arg is simply omitted
+            // from the reversion stream. Fixes out-of-bounds panic when a
+            // reversion template references more params than the call-site
+            // supplied (sandbox paper 0803.4485).
+            None
           } else {
             match props.get(s) {
               Some(Stored::Digested(v)) => Some((*v).clone()),

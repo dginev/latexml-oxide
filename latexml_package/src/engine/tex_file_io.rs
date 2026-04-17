@@ -218,20 +218,27 @@ LoadDefinitions!({
 
       gullet::unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
       gullet::unread_vec(kv);
-      gullet::unread_one(T_CS!("\\ltx@special@graphics"));
+      gullet::unread_one(T_CS!("\\lx@special@graphics"));
     } else {
       Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
     }
   });
 
-  // # adapted from graphicx.sty.ltxml
-  // DefKeyVal('SpecialPS', 'angle',   '');
-  // DefKeyVal('SpecialPS', 'voffset', '');
-  // DefKeyVal('SpecialPS', 'hoffset', '');
-  // DefKeyVal('SpecialPS', 'hsize',   '');
-  // DefKeyVal('SpecialPS', 'vsize',   '');
-  // DefKeyVal('SpecialPS', 'hscale',  '');
-  // DefKeyVal('SpecialPS', 'vscale',  '');
+  // Adapted from graphicx.sty.ltxml — handles \special{...} graphics
+  DefKeyVal!("SpecialPS", "angle", "");
+  DefKeyVal!("SpecialPS", "voffset", "");
+  DefKeyVal!("SpecialPS", "hoffset", "");
+  DefKeyVal!("SpecialPS", "hsize", "");
+  DefKeyVal!("SpecialPS", "vsize", "");
+  DefKeyVal!("SpecialPS", "hscale", "");
+  DefKeyVal!("SpecialPS", "vscale", "");
+  // Simplified: just include the graphic without complex sizer logic
+  // Perl uses \lx@special@graphics; we also support the \ltx@ deprecated form
+  DefConstructor!("\\lx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim",
+    "<ltx:graphics graphic='#2'/>"
+  );
+  Let!("\\ltx@special@graphics", "\\lx@special@graphics");
+  // Original Perl (more complete):
   // DefConstructor('\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim',
   //   "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
   //   sizer      => \&image_graphicx_sizer,

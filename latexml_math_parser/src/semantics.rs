@@ -1200,9 +1200,10 @@ pub fn annotated_punct_fenced_modifier(
   annotated_fenced_modifier(rule_id, args, p, ctxt)
 }
 
-/// Speculative prefix application: only succeeds when MATHPARSER_SPECULATE is set.
-/// Used for `unknown fenced_factor => speculative_prefix_apply` so that `f(x)` is
-/// parsed as function application when speculation is active.
+/// Speculative prefix application for `unknown fenced_factor`.
+/// Produces an XMApp tree competing with the invisible-times interpretation
+/// in Marpa's ambiguous forest. The pragmatic layer selects the
+/// mathematically-consistent winner (see `FencedLettersAreFunctionArguments`).
 ///
 /// **Intentional Rust divergence from Perl**: In Perl (Parse::RecDescent), speculation
 /// only marks tokens with `possibleFunction='yes'` and falls back to invisible-times
@@ -1210,22 +1211,12 @@ pub fn annotated_punct_fenced_modifier(
 /// parse `f@(x)`, which is the semantically superior interpretation — it avoids an
 /// artificial invisible MULOP token that was a crutch for Parse::RecDescent's
 /// backtracking parser. See docs/OXIDIZED_DESIGN.md.
-///
-/// MATHPARSER_SPECULATE is enabled by:
-/// - \usepackage[mathparserspeculate]{latexml}
-/// - .latexml files that declare FUNCTION roles (auto-enabled by loader)
 pub fn speculative_prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  if !matches!(
-    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
-    Some(latexml_core::state::Stored::Bool(true))
-  ) {
-    return Err("speculative_prefix_apply: MATHPARSER_SPECULATE not set, pruning parse".into());
-  }
   unp!(args => prefixop, arg1);
   Ok(Some(XM::Apply(
     prefixop.into(),
@@ -1590,10 +1581,16 @@ pub fn fenced(
         },
         _ => unreachable!(),
       };
-      // Determine meaning from delimiter + item count (matching Perl's fence lookup)
+      // Determine meaning from delimiter + item count (matching Perl's fence lookup).
+      // Note: 2-item parens are NOT auto-labeled as "open-interval" here —
+      // the dedicated `interval` semantic handles intervals via the
+      // `lparen term punct term rparen => interval` grammar rule at term
+      // level. `fenced` is the general "list-in-parens" path and produces
+      // list-like meaning; the forest retains both interpretations and
+      // pragmatics picks based on context (fenced=list wins in function
+      // argument context, interval wins standalone).
       let n = items.len();
       let fence_meaning: Cow<'static, str> = match (o.as_ref(), n) {
-        ("(", 2) => Cow::Borrowed("open-interval"),
         ("(", _) => Cow::Borrowed("vector"),
         ("{", _) => Cow::Borrowed("set"),
         _ => Cow::Owned(meaning_str),

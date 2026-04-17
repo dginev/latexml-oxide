@@ -545,6 +545,15 @@ impl PartialEq for Stored {
   }
 }
 
+// SAFETY: `Stored` contains `Rc`/`RefCell` (which are !Send/!Sync by default)
+// because it embeds libxml::tree::Node and other reference-counted values.
+// This crate's convention is that `State` (and therefore all `Stored`
+// values held inside it) is thread-local — each conversion job is pinned
+// to exactly one OS thread via `use_{main,std,sty}_state()` in state.rs.
+// No `Stored` instance is ever moved across threads at runtime.
+// These impls exist to satisfy trait bounds on error paths (e.g. Box<dyn
+// Error + Send + Sync>) that transitively require Send/Sync on all inner
+// types. The invariant is maintained by construction, not the type system.
 unsafe impl Send for Stored {}
 unsafe impl Sync for Stored {}
 impl Stored {

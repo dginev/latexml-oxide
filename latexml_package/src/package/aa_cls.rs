@@ -16,7 +16,10 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
-  // RequirePackage!("aa_support"); // not ported yet
+  RequirePackage!("aa_support");
+  // Raw aa.cls unconditionally loads natbib (not just for bibnumber/bibauthoryear options).
+  // Many aa papers use \citep/\citet without explicit \usepackage{natbib}.
+  RequirePackage!("natbib");
   // Override \pmatrix to use plain TeX version (not amsmath)
   DefMacro!("\\pmatrix{}",
     "\\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}{#1}");

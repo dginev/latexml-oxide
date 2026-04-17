@@ -117,12 +117,23 @@ LoadDefinitions!({
     }
     // Perl: installDefinition(FontDef->new($cs, $key))
     // When the font switch CS is invoked, set current_FontDef so \fontname\font works
+    // Respect \global prefix: if \global\font was used, install globally.
+    let is_global = state::get_prefix("global");
+    let _scope = if is_global { Some(Scope::Global) } else { None };
     let cs_for_fontdef = cs;
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
         AssignValue!("current_FontDef", cs_for_fontdef, None);
       }
     );
+    // If \global prefix was active, re-install with global scope.
+    // The DefPrimitive! above installs locally; we need to promote to global
+    // for \global\font\xydashfont=... (used by xy.tex's \xyfont@).
+    if is_global {
+      if let Some(meaning) = state::lookup_meaning(&cs) {
+        state::assign_meaning(&cs, meaning, Some(Scope::Global));
+      }
+    }
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
@@ -386,4 +397,63 @@ LoadDefinitions!({
 
   // Perl: Digest('\font\lx@default@font=cmr10');
   Digest!("\\font\\lx@default@font=cmr10")?;
+
+  //======================================================================
+  // Perl: TeX_Fonts.pool.ltxml L335-365 — TeX ligatures
+  // Note: applied in reverse order of definition (latest defined applied first!)
+  // Note also, these are only applied in text content, not in attributes!
+
+  DefPrimitive!("\\@@endash", {
+    Tbox::new(
+      arena::pin_static("\u{2013}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\@@endash")),
+      SymHashMap::default(),
+    );
+  });
+  DefPrimitive!("\\@@emdash", {
+    Tbox::new(
+      arena::pin_static("\u{2014}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\@@emdash")),
+      SymHashMap::default(),
+    );
+  });
+
+  // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
+  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { non_typewriter(arg) });
+  // EM DASH
+  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] { non_typewriter(arg) });
+
+  // Ligatures for doubled single left & right quotes to convert to double quotes
+  DefLigature!("\u{2018}\u{2018}", "\u{201C}",
+    fontTest => sub[arg] { non_typewriter_t1(arg) }); // double left quote
+  DefLigature!("\u{2019}\u{2019}", "\u{201D}",
+    fontTest => sub[arg] { non_typewriter_t1(arg) }); // double right quote
+  DefLigature!("[?]\u{2018}", "\u{00BF}",
+    fontTest => sub[arg] { non_typewriter_t1(arg) }); // ? backquote
+  DefLigature!("!\u{2018}", "\u{00A1}",
+    fontTest => sub[arg] { non_typewriter_t1(arg) }); // ! backquote
+
+  // Perl: DefLigature(qr{\.\.\.}, "\x{2026}", fontTest => \&nonTypewriter);
+  DefLigature!(r"[.][.][.]", "\u{2026}",
+    fontTest => sub[arg] { non_typewriter(arg) }); // ldots
 });
+
+// Perl: TeX_Fonts.pool.ltxml L338-344
+fn non_typewriter(font: &Font) -> bool {
+  font.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter"
+}
+
+fn non_typewriter_t1(font: &Font) -> bool {
+  non_typewriter(font)
+    && matches!(
+      font
+        .get_encoding()
+        .unwrap_or(&Cow::Borrowed("OT1"))
+        .as_ref(),
+      "OT1" | "T1"
+    )
+}

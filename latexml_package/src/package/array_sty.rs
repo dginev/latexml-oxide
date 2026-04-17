@@ -127,4 +127,11 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\arraybackslash", r"\let\\\tabularnewline");
+
+  // Internal macros from raw array.sty used by \newcolumntype mechanism.
+  // \NC@list accumulates column type definitions, \NC@do processes them.
+  // We define empty stubs since our column type system handles this differently.
+  DefRegister!("\\NC@list" => Tokens!());
+  DefMacro!("\\NC@do DefToken", "");
+  DefMacro!("\\NC@find DefToken", "");
 });

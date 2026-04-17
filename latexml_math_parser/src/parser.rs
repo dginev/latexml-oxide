@@ -9,7 +9,7 @@ use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
 use latexml_core::common::xml::*;
 use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
-use latexml_core::{Error, Fatal, fatal, map, s, static_map, sym_map};
+use latexml_core::{Warn, fatal, map, s, static_map, sym_map};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -926,7 +926,7 @@ impl MathParser {
     // Convergence: if we've seen enough consecutive duplicates without
     // a new unique tree, the grammar ambiguity is purely structural
     // (script attachment ordering). Stop early.
-    let max_consecutive_dupes = 32;
+    let max_consecutive_dupes = 16;
     // Time-budget convergence: once we have unique parses, stop after
     // this budget. For formulas where all trees are pruned (no unique
     // parse yet), use a longer budget before giving up.
@@ -976,7 +976,13 @@ impl MathParser {
               consecutive_dupes += 1;
             } else {
               parses.push(tree);
-              consecutive_dupes = 0;
+              // Half-decay (not full reset) on new unique. This lets us bail
+              // on cases where uniques are sparse among a sea of dupes/prunes —
+              // e.g. sin[XY] produces 10 unique parses among 1022 grammar
+              // derivations; without decay the unique trees keep resetting the
+              // dupe counter and we never converge. Half-decay means each new
+              // unique halves the accumulated dupe budget instead of clearing it.
+              consecutive_dupes /= 2;
             }
           }
         },
@@ -1044,7 +1050,10 @@ impl MathParser {
 
     match self.parse_marpa(&input_string, nodes, document) {
       Ok(mut parse_tree) => {
-        self.reset_engine(); // Reset for next parse (engine is in completed state)
+        // Perf: after successful parse, Marpa engine is in state T. The next
+        // run_recognizer call will naturally advance T → GReady → R (fresh
+        // Recognizer) without triggering precompute. Avoiding reset_engine
+        // here saves the ~8% CPU time that precompute consumed per formula.
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         crate::semantics::restructure_formulae_right(&mut parse_tree)?;
@@ -1430,10 +1439,14 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document) ->
       (*bp, rec_form)
     }
   } else if role == "POSTFIX" {
-    (
-      10000,
-      textrec(&args[0], Some(10000), Some(name), document) + &textrec(op, None, None, document),
-    )
+    if args.is_empty() {
+      (10000, textrec(op, None, None, document))
+    } else {
+      (
+        10000,
+        textrec(&args[0], Some(10000), Some(name), document) + &textrec(op, None, None, document),
+      )
+    }
   } else if name == "multirelation" {
     let joined = args
       .iter()
@@ -1550,11 +1563,12 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
         // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .
         // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-        let err = || {
-          Error!("expected", "id", message);
+        // Perl Document.pm L1553: Warn, not Error (missing XMRef targets are common)
+        let warn_fn = || -> Result<()> {
+          Warn!("expected", "id", message);
           Ok(())
         };
-        err().ok();
+        warn_fn().ok();
         //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
       }
     }

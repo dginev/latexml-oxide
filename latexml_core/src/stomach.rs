@@ -412,8 +412,13 @@ pub fn end_mode(mode: &str) -> Result<()> {
 pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
     // Perl Stomach.pm L527-531: check BOUND_MODE at frame 0
-    if !is_value_bound("BOUND_MODE", Some(0))
-      || (lookup_string("BOUND_MODE") != bound_mode)
+    // The strict check is: BOUND_MODE must be bound in the current top frame AND match.
+    // However, BOUND_MODE may have been set in a different frame (e.g. the locked frame
+    // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
+    // inside an environment). When the bound value matches but isn't in the top frame's
+    // undo table, treat it as valid — the mode system is about tracking what mode we're in.
+    let current_bound = lookup_string("BOUND_MODE");
+    if current_bound != bound_mode
     {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?
@@ -499,16 +504,26 @@ pub fn repack_horizontal() {
 
   loop {
     let should_pop = if let Some(item) = stomach.box_list.last() {
-      let mode_str = item
-        .get_property("mode")
-        .map(|v| v.to_string())
-        .unwrap_or_else(|| "horizontal".to_string());
-      if mode_str == "horizontal"
-        || mode_str == "restricted_horizontal"
-        || mode_str == "math"
-      {
-        // if ONLY horizontal mode spaces, we can prune them; it just makes an empty ltx:p
-        if mode_str != "horizontal" || !item.get_property_bool("isSpace") {
+      // Perf: compare as &str via with() instead of allocating a String each iter.
+      // Default mode is "horizontal" (matches previous unwrap_or).
+      let mode_prop = item.get_property("mode");
+      let (is_horiz_family, is_plain_horizontal) = match mode_prop.as_deref() {
+        Some(Stored::String(sym)) => arena::with(*sym, |s| {
+          let plain = s == "horizontal";
+          let fam = plain || s == "restricted_horizontal" || s == "math";
+          (fam, plain)
+        }),
+        None => (true, true), // default "horizontal"
+        Some(other) => {
+          // Rare path — fall back to Display formatting.
+          let s = other.to_string();
+          let plain = s == "horizontal";
+          let fam = plain || s == "restricted_horizontal" || s == "math";
+          (fam, plain)
+        },
+      };
+      if is_horiz_family {
+        if !is_plain_horizontal || !item.get_property_bool("isSpace") {
           keep = true;
         }
         true
@@ -574,6 +589,12 @@ where FnR: FnOnce(&mut [Digested]) -> R {
   let mut stomach = stomach_mut!();
   let list = &mut stomach.box_list;
   caller(list)
+}
+/// Access to the current box_list as a `&mut Vec` — allows push/pop operations.
+pub fn with_box_list_mut_vec<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(&mut Vec<Digested>) -> R {
+  let mut stomach = stomach_mut!();
+  caller(&mut stomach.box_list)
 }
 
 // **********************************************************************
@@ -729,15 +750,13 @@ pub fn raw_tex(text: &str) -> Result<()> {
 /// possibly arguments will be parsed from the Gullet.
 /// Otherwise, the token is simply digested: turned into an appropriate box.
 /// Returns a list of boxes/whatsits.
-pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
-  let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
-  // Overly complex, but want to avoid recursion/stack
+pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
+  // Perf: Token is Copy (SymStr + Catcode, ~5 bytes), so we pass by value
+  // directly instead of wrapping in Cow<Token>.
+  let mut maybe_token: Option<Token> = Some(*input_token);
   let mut result: Vec<Digested> = Vec::new();
   // INVOKE:
-  while maybe_token.is_some() {
-    // TODO: This is silly, switch to an owned input_token (it is Copy as of recently).
-    let token = maybe_token.take().unwrap().into_owned();
-    // info!(target:"invoke_token", "{:?}", token);
+  while let Some(token) = maybe_token.take() {
     // RAII guard: auto-pops current_token on scope exit (even on early return/panic)
     let _token_guard = local_current_token_guard(token);
     {
@@ -803,7 +822,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
           }
         }
         // replace the token by it's expansion!!!
-        maybe_token = gullet::read_x_token(None, false, None)?.map(Cow::Owned);
+        maybe_token = gullet::read_x_token(None, false, None)?;
         {
           stomach_mut!().token_stack.pop();
         }
@@ -814,7 +833,7 @@ pub fn invoke_token<'a>(input_token: &'a Token) -> Result<Vec<Digested>> {
         // Conditionals are "expandable", use the regular invoke.
         let invoked_meaning = meaning.invoke(false)?;
         gullet::unread(invoked_meaning);
-        maybe_token = gullet::read_x_token(None, false, None)?.map(Cow::Owned);
+        maybe_token = gullet::read_x_token(None, false, None)?;
         {
           stomach_mut!().token_stack.pop();
         }

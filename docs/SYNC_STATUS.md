@@ -2,11 +2,17 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-08. Only lists open gaps & TODOs; completed items live in git history.
+Updated 2026-04-17. Open gaps & active TODOs only; completed items live in git history.
 
-**Test inventory:** 407 tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
+**Test inventory:** 413 integration tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
-**arxiv sandbox:** 100+ papers in `arxiv-examples/`. **90/97 OK (93%)** on full catalog. 7 remaining: 3 Perl-also-fails, 2 timeout, 1 version conflict, 1 state corruption.
+**arxiv sandbox:** 100+ papers in `arxiv-examples/`. **93+%** on full catalog.
+
+**10k sandbox:** 7,898 arxiv ZIPs in `$HOME/data/10k_sandbox/`. Last 512-paper ramp: **93.2% OK** (477 ok / 21 conv_error / 14 timeout / **0 panics**).
+
+**Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
+
+**Dump loading:** 5,834 entries from latex.ltx kernel (V + codes + @-internal M + Register). Add-only policy preserves engine semantics.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational:
 ```
@@ -44,7 +50,7 @@ latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletim
 
 ## Package Bindings
 
-**100% coverage: all 406 Perl bindings ported to Rust.** Zero `todo!()` panics. Zero MISSING.
+**100% coverage: all 406+ Perl bindings ported to Rust.** Zero `todo!()` panics. Zero MISSING.
 
 ## Tikz — Known Diffs (vs Perl output)
 
@@ -53,82 +59,193 @@ latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletim
 3. SVG viewBox/width — total dimensions differ slightly
 4. tikz matrix rendering uses `<svg:g class="ltx_tikzmatrix">` groups (Rust) vs inline-blocks (Perl)
 
----
+### Permanent sandbox ignores
 
-## Completed Work (Sessions 90–96)
-
-All Phase A (EMPTY→OK) and Phase B (parity improvement) tasks completed. Key fixes:
-- **S96:** `\shortstack` mode cascade in m-column tables; token limit 30M→100M; graphics candidate path fix
-- **S95:** `\pgfsetdash` native override; pgfkeys sentinel fix; expl3 autoload; smfart/animate bindings
-- **S94:** `DefMacro!("\\begin{env}")` pitfall; graphics page=N; tikz halign bgroup/egroup
-- **S93:** algorithm2e fixes; bibconfig=bbl,bib; elsart affiliation parser
-- **S92:** authblk mark fix; elsart affiliation; end_mode recovery
-- **S91:** Pure Rust BibTeX parser; MakeBibliography pipeline; `\lx@ifusebbl` fallback
-
-### Permanent ignores
 - **ns1–ns5** (52_namespace) — DTD not supported in Rust port
 - **2402.03300**, **2410.10068**, **2511.03798** — Perl also fails on these papers
 
 ---
 
-## Work Plan — Ordered TODO List
+## Completed Phases (historical summary)
 
-### Phase C: 100-Document Sandbox Parity
+- **Phase A (EMPTY→OK binding coverage)** — all Perl `.sty.ltxml` / `.cls.ltxml` files ported or stubbed.
+- **Phase B (parity improvement)** — per-package semantic alignment, rewrites.
+- **Phase C1–C3 / C5** — 97-paper sandbox baseline (93%+ OK), babel fix, directory/archive input parity, code quality sweep.
+- **Phase E (kernel dump integration)** — 5,834 dump entries loaded (V + @-internal M + Register + codes). Add-only policy with has_meaning/has_value safety, non-ASCII catcodes only, MC/DC skipped (expl3 init corrupts them). Auto-generated at build time via `build.rs`.
+- **Phase F (engine file reorganization)** — 1:1 match with Perl's `Engine/` directory. `math_common.rs`, `plain_bootstrap.rs`, `plain_base.rs`, `plain_constructs.rs`, `latex_bootstrap.rs`, `latex_base.rs`, `latex_constructs.rs` (7800 lines, merged from 36 `latex_ch*.rs`). All Rust engine files now match Perl file names exactly.
+- **Phase G (SVG post-processor)** — inline SVG injection for `\begin{picture}` via post-XSLT regex replacement (avoids libxml2 UAF); covers lines, vectors, circles, ovals, framebox, qbezier, multiput.
 
-Expand the test sandbox to 100+ arxiv papers and achieve HTML conversion parity with Perl for all of them.
+Detailed fix history for phases above lives in git log. See the corresponding session commits on `claude-round-15` (e.g., `da8b66358` ch* consolidation, dump-loading commits via Session 102, SVG commits in Session 102, etc.).
 
-#### [x] C1. Benchmark all 97 papers — DONE (session 96)
-**Result:** 90/97 OK (93%) after session 97 fixes.
-Remaining failures:
-- **Perl also fails:** 2402.03300 (pgfkeys), 2410.10068 (quantikz), 2511.03798 (eqnarray)
-- **readBalanced state corruption:** 2405.17032 (cumulative state issue — sections 5-8 lost; binary search narrowed to line 1047)
-- **tcolorbox version mismatch:** 2306.00809 (version check `\ifx` fails despite matching versions)
-- **Package conflict:** 2308.13697 (chemmacros `\Chemalpha` already defined — texlive environment issue)
-- **Timeout (heavy pgf):** 1204.4501 (sigma class), 2509.12083 (pgfplots)
+---
 
-#### [ ] C2. Fix high-impact Rust-specific failures — IN PROGRESS
-**Fixed so far (session 96):**
-- **smfart dispatch**: `smfart_cls.rs` was never in dispatch table → added, 7→1 errors
-- **XMApp panic**: `todo!()` in math parser → graceful recovery (2506.10218: crash→1.4MB)
-- **`_loaded` early return**: prevents double-loading of bindings
-- **`find_main_tex`**: 00README.json support + preferred name heuristic
+## Work Plan — Active TODO List
 
-**Fixed (session 96, continued):**
-- **end_mode faithful rewrite**: Removed speculative recovery loop; now matches Perl's `endMode` exactly (log error, don't pop on mismatch).
-  - 1801.02041: 0B → 737KB
-  - 2507.23241: 0B → 4.2MB
+### Phase D: 10k-Document Sandbox — Coverage & Performance
 
-**Fixed (session 97):**
-- **`find_main_tex` faithful port**: Ported Perl Pack.pm `detect_source` — line-by-line scoring, `\input` veto, 4 tiebreakers, 00README.json/XXX support
-- **Lossy UTF-8 read**: `find_main_tex` now handles Latin-1 encoded .tex files (was silently skipping non-UTF8 files)
-  - 1711.07162: wrong file → correct file (182KB with all sections)
-- **thm-restate dispatch fix**: dispatch key had underscore instead of hyphen → binding never loaded, raw TeX looped. Also added kvsetkeys/keyval RequirePackage.
-  - 2007.05477: 0B → 238KB
-  - 2103.12243: 0B → 531KB
+Scale testing to ~8,000 arxiv papers (`$HOME/data/10k_sandbox/`). All known to convert under Perl LaTeXML. **Tool:** `cortex_worker --standalone --input <zip> --output <zip>`.
 
-**Remaining:** Mode stack still has 1 extra frame at `\end{document}` in both papers (1 warning each). Root cause: cumulative bgroup imbalance from content processing. Papers produce full content despite the warning.
+**Process guards:** timeout 60s, RAM 6GB, core dumps disabled, output 200MB cap. Parallelism via GNU parallel (default 16). Categories: `ok`, `timeout`, `oom_or_kill`, `segfault`, `abort`, `error`, `empty_output`, `oversized`. Runner: `tools/benchmark_10k.sh`.
 
-#### [x] C3. Directory/archive input parity — DONE (session 96)
-**Result:** All three modes work:
-- `--whatsin=directory`: Fixed auto-detection of main `.tex` file via `find_main_tex()` (was passing directory path to converter instead of `.tex` file). Now locates file with `\documentclass`, matching Perl.
-- `--whatsin=archive`: ZIP input works end-to-end (tested on 2210.09945).
-- `--whatsout=archive`: ZIP output with HTML + log + status (tested on 0710.2281, 167KB ZIP).
+**Ramp-up protocol:** exponential doubling (4→8→16→…→7898) with 0-error gate. On failure: diagnose root cause, fix in Rust, re-run failing files, restart ramp.
 
-#### [x] C5. Code quality improvements — DONE (session 97)
-- **Static regex compilation**: `maybe_require_dependencies` regexes moved to `once_cell::sync::Lazy` statics (was recompiling on every call)
-- **Re-entrancy guard**: thread-local `SCANNING` flag prevents infinite recursion in `maybe_require_dependencies` → `require_package` → `maybe_require_dependencies` cycle
-- **`_found_loaded` flag cleanup**: renamed from `_binding_loaded`, now set for both binding AND raw TeX successful loads (matches Perl's `InputDefinitions` return-value semantics). Not set on error/not-found paths.
-- **Dead code removal**: `is_base_frame()` in state.rs (unused after `end_mode_opt` rewrite)
-- **JSON parsing robustness**: `find_main_tex` 00README.json parsing extracted to `parse_readme_json()` with proper escape handling
-- **`--token-limit` CLI flag**: token limit now configurable (default 100M), via `gullet::set_token_limit()`
-- **Duplicate comment removed**: content.rs L282-287 had `\ver@` comment twice
-- **Avoid clone**: `options.extension` no longer cloned in `require_package`
+**Two stages:**
+1. **Stage 1 — Coverage:** zero non-timeout failures at full scale.
+2. **Stage 2 — Performance:** eliminate timeouts at 120s cap.
 
-#### [ ] C4. Upstream Perl sync — continuous
-**Approach:**
-1. Check `LaTeXML/` git log for new commits
-2. Port relevant fixes to Rust (engine, bindings, test files)
-3. Update expected XMLs when Perl test output changes
+#### [ ] D1. Ramp-up runs — ONGOING
+
+Latest (session 108): **512 papers: 93.2% OK** (477 / 21 conv_error / 14 abort / **0 panics**). No Rust-attributable conversion errors at 128-paper scale. Remaining 512-scale errors are paper-specific (user LaTeX bugs, exotic Unicode in CS names, custom macros, content-model violations).
+
+Known blockers by category (512-scale residuals):
+- `Missing $` display math (document bugs)
+- Content-model `malformed` (`ltx:line` in `ltx:para`, `ltx:g` in `ltx:figure`, etc.)
+- Raw-class undefined internals (e.g. `\@count`, `\theequation@ID` in standalone non-article classes)
+- Rc<RefCell> "shared Node" error in 0805.2376 (libxml2 node sharing during tree mutation — tracked in D3b)
+
+#### [ ] D2. Coverage fixes — ONGOING
+
+Each cycle adds small targeted fixes for specific undefined/misbehaving commands per log analysis. Detailed fix history in git log; current focus is filling package-parity gaps against Perl upstream.
+
+**Most recent wave (session 108 /loop):** xcolor `RGB` case-sensitivity bug (all `{RGB}{r g b}` defs → white), page counter starts at 1 (#2442), `\braket` user-facing reversions (#2340), bibitem prune empty auto-opened (#2409), `\text@frac` constructor, `\person@thanks` inline, elsart/mn2e/aa/iopart/texvc/proofwiki/sv_support/ams_support/acmart/amsbook/revtex4/inst_support/microtype/html/subcaption/attachfile/floatflt/floatfig/subfloat/iopams/actuarialangle parity patches.
+
+#### [ ] D3. Performance catalog — after Stage 1
+
+After Stage 1 reaches 7,898 with 0 non-timeout errors:
+1. List all tasks >60s with wall-clock time
+2. Profile top offenders (flamegraph, token count, loop detection)
+3. Targeted optimizations (per-task or systemic)
+
+#### [ ] D3b. Stability — eliminate SIGSEGV in test suite
+
+A Rust safe-by-construction implementation should NEVER segfault. Sources investigated:
+1. **libxml2 FFI** — `libxml::tree::Node` is `Rc<RefCell<_Node>>` wrapping raw C pointers; unlinking while referenced elsewhere causes UAF. Past incident: `xmlFreeNodeList` UAF during PostDocument Drop when SVG replacement kept idcache alive (fixed in G2 via string-based SVG injection).
+2. **libxslt C stylesheet processing** — past crashes with `svg:` namespaced elements.
+3. **Rust unsafe in arena** — `with_arena_mut` cached raw pointer from RefCell.
+4. **Parallel benchmark writes** — output files sharing paths.
+
+**Status:**
+- 50_structure SIGSEGV no longer reproduces (5-run stress stable after S105 `STATE_IN_USE` / `LASTID` moves to thread_local Cell).
+- Catalogued 10 `unsafe` blocks across 8 files; all SAFETY-documented (session 106).
+- 0805.2376 "shared Node" error still open (Rc mutation during tree traversal).
+
+**TODO:**
+- [ ] Route libxml node lifetimes through guardian structure that forbids unlinking without cache invalidation.
+- [ ] Replace unsafe-over-FFI patterns with safe wrappers where practical.
+
+#### [ ] D4. Performance — parallel scaling and allocations
+
+**Baseline (session 105, paper 0707.1173):**
+
+| Workers | Total time | Per-worker efficiency |
+|---|---|---|
+| 1 | 22.6s | 100% |
+| 4 | 33.6s | 67% |
+| 16 | 76.8s | 29% |
+| 20 | 104.7s | 22% |
+
+14-core/20-thread machine, ~42% ceiling at 16 workers. Peak RSS 570 MB/process.
+
+**Completed:**
+- [x] mimalloc as global allocator — reduces glibc arena-mutex contention (~6% single-process).
+- [x] `--timeout` default 600s → 60s.
+
+**Callgrind (session 105):** Math parser Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute` 8.3%, `bv_scan` 7.1%, AVL ops 6.8%. Total Marpa-related >60% CPU.
+
+**Active work:**
+- [ ] Audit `.to_string()` (~1900 sites) — replace with `&str` / interned symbols where value goes into `HashMap<String,String>`.
+- [ ] Audit `String::from("...")` literals for interned conversions.
+- [ ] Replace `HashMap<String,String>` with `SymHashMap<SymStr>` in hot paths.
+- [ ] Audit `.clone()` in `document.rs` (73), `latex_constructs.rs` (73), `font.rs` (39).
+- [ ] Review `Tokens` cloning — pass `&Tokens` or `Cow` for read-only iteration.
+- [ ] Profile math parser RAM independently (Marpa chart, forest).
+- [ ] Investigate shared read-only engine state across processes (mmap dump).
+- [ ] Long-running daemon / process pool to amortize 570 MB startup.
+- [ ] Fork-based parallelism for CoW memory sharing.
+
+#### [ ] D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
+
+**Completed:**
+- [x] Avoid per-formula `reset_engine` (S105): paper 0707.1173 22s→15s.
+- [x] Audit `trig_arg` ambiguity (S105): `\sin(x)+\sin(y)` 65→1 parses; paper 0704.0516 6×65-enumerated→1.
+- [x] Remove duplicate `<fn> fenced_factor` alternatives: physics.tex 40→8, full suite 99→59 ambiguous formulas.
+- [x] `MATHPARSER_SPECULATE` redesign (S107): removed grammar-layer filter, `FencedLettersAreFunctionArguments` pragma picks consistent interpretation. `a(b)(c)(d)` 23→2 (91% reduction).
+- [x] Watchdog thread for cooperative-timeout escape (aborts native Marpa/libxml2 loops).
+- [x] `LATEXML_PARSE_AUDIT=1` env var for per-formula diagnostics.
+
+**Remaining:**
+- [ ] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
+- [ ] Audit script attachment ambiguity (`{}^4{}_{12}C^{5+}` — 27 unique trees).
+- [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
+- [ ] Enumerate grammar rules by parse-tree count contribution.
+- [ ] Document grammar ambiguity per category.
+
+#### [ ] D6. Grammar First-Principles Plan
+
+Grounded in `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`. Live audit: `LATEXML_PARSE_AUDIT=1`.
+
+**Completed (S106-108):**
+- [x] Narrow `script_op` to `metarelop | vertbar | supops | modifierop` (P^+ tuple 31→3).
+- [x] Fix 1: OTHER_OPEN/OTHER_CLOSE split — eliminates PREFIX-match duplication. `[A],[B],[C],[D]` 64→2 (32×).
+- [x] Fix 2: Remove `formula_list` from `anything` alternatives.
+- [x] Fix 3: Collapse `term_list` vs `formula_list` in fenced contexts.
+- [x] Fix 4: `MATHPARSER_SPECULATE` redesign (see D5 above).
+- [x] Fix 5: Interval moved from `fenced_factor` to `tight_term` — `f(x,y)` now correctly parses as `f@(vector(x,y))` via category hierarchy, no ad-hoc pragmas.
+- [x] Removed redundant `opfunction opfunction` rule.
+- [x] Math parser convergence 32→16 consecutive dupes (32% reduction on `tr ρ`).
+- [x] Half-decay `consecutive_dupes` on new unique.
+
+**Remaining hotspots (post-S108):**
+1. `\sin[XY]` chain — 1022 trees / 10 unique (real semantic ambiguity)
+2. `tr ρ / tr(XY) / rank M / …` — 100 / 8 unique
+3. `FGHa` OPFUNCTION cascade — 87 / 9 unique (genuine math ambiguity)
+4. `a|a|+b|b|+c|c|` VERTBAR — 53 / 10 unique
+
+Items 1–4 are primarily **semantic** (inherent to math practice); further grammar refactoring has limits.
+
+---
+
+## Recent Session Highlights
+
+### Session 108 (2026-04-17, /loop cycles)
+
+**Packages parity**: 50+ commits filling gaps against Perl: elsart, mn2e, aa, aas, revtex4, iopart, texvc (92 proofwiki macros), sv_support, ams_support, acmart, amsbook, revtex4, inst_support, microtype, html, subcaption, attachfile, floatflt/floatfig, subfloat, iopams, actuarialangle.
+
+**Real bug fixes**:
+- **xcolor case-sensitivity**: `\definecolor{x}{RGB}{153 153 192}` was producing `#FFFFFF` due to lowercased model dispatch. Fixed to case-sensitive match — lowercase rgb/cmy/gray take 0..1 components; uppercase RGB/HSB/Gray take 0..255.
+- **Page counter**: now starts at 1 per Perl #2442.
+- **Bibitem auto-open**: prune empty whatsit, reuse ID per Perl #2409.
+- **\text@frac semantic FRACOP**: `\case` in aas_support now produces semantic fraction markup.
+- **\person@thanks inline**: elsart_support_core.
+- **\backsimeq U+22CD** (Perl #2633); **mixed-delimiter definecolor** (Perl #2551); **Explode newline** reverted to CC_OTHER per Perl #2700.
+- **RefCell panics** fixed in `with_font_info` + `font::decode` re-entry (common/mathchar.rs, latexml_sty.rs).
+- **DefEnvironment scope lifecycle wisdom**: `after_digest` vs `after_digest_body` matters — body runs post-frame-pop, so local state assigns in before_digest are gone. Documented in `WISDOM.md`.
+
+**Sandbox transitions (broken → OK)**: 9 papers (0705.1190, 0705.2808, 0707.4170, 0710.2880, 0711.4787, 0802.1100, 0810.1610, 0704.2400, 0705.1050, 0705.2208).
+
+**Post-session 512 verification**:
+
+| Category | Count |
+|----------|-------|
+| ok | **477 (93.2%)** |
+| conversion_error | 21 (paper-specific) |
+| abort (timeout ~61s) | 14 |
+| **panics** | **0** |
+
+### Session 107 (2026-04-16)
+
+- Fix 4 speculative redesign (13 test XMLs updated)
+- Documented safety contracts on all 10 unsafe blocks
+- OXIDIZED_DESIGN #18 updated for Marpa design
+- Paper 0707.1173 conversion: 12.4s (from 22.6s baseline)
+
+### Session 106 (2026-04-16)
+
+- Grammar Fixes 1/2/3 (OTHER_OPEN split, formula_list removal, term_list collapse)
+- Narrowed `script_op`
+- 317 integration tests pass; total enumerated trees 3767→3544
+
+Earlier sessions (42–105) archived in git log and `memory/project_session_history.md`.
 
 ---
 

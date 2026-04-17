@@ -100,6 +100,9 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "doublespace.sty" => package::doublespace_sty::load_definitions(),
     "ed.sty" => package::ed_sty::load_definitions(),
     "elsart.cls" => package::elsart_cls::load_definitions(),
+    "elsart1p.cls" => package::elsart_cls::load_definitions(),
+    "elsart3p.cls" => package::elsart_cls::load_definitions(),
+    "elsart5p.cls" => package::elsart_cls::load_definitions(),
     "elsart.sty" => package::elsart_sty::load_definitions(),
     "elsart_support_core.sty" => package::elsart_support_core_sty::load_definitions(),
     "mn2e_support.sty" => package::mn2e_support_sty::load_definitions(),
@@ -335,6 +338,22 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     "pspicture.sty" => package::pspicture_sty::load_definitions(),
     "psfrag.sty" => package::psfrag_sty::load_definitions(),
     "psfig.sty" => package::psfig_sty::load_definitions(),
+    // Perl: psfig.tex.ltxml just does `RequirePackage('epsfig')`.
+    // Paper 0803.3406 does `\input{psfig}` (.tex form), hitting this dispatch.
+    "psfig.tex" => package::epsfig_sty::load_definitions(),
+    // Perl: aipcheck.tex.ltxml — "Do nothing" stub. Paper 0809.2681 does
+    // `\input{aipcheck}`.
+    "aipcheck.tex" => package::aipcheck_tex::load_definitions(),
+    // Perl: epsf.tex.ltxml just does `RequirePackage('epsf')`.
+    "epsf.tex" => package::epsf_sty::load_definitions(),
+    // Perl: pstricks.tex.ltxml just does `RequirePackage('pstricks_support')`.
+    "pstricks.tex" => package::pstricks_support_sty::load_definitions(),
+    // Perl: xypic.tex.ltxml does InputDefinitions('xy', type=>'tex') + RawTeX('\xyoption{v2}').
+    // Rust xypic_sty does `RequirePackage!("xy", options=["v2"])`, which is equivalent.
+    "xypic.tex" => package::xypic_sty::load_definitions(),
+    // Perl: xy.tex.ltxml does InputDefinitions('xy', type=>'tex', noltxml=>1, at_letter=>0)
+    // plus \xyoption driver filtering. Rust xy_sty matches this structure.
+    "xy.tex" => package::xy_sty::load_definitions(),
     "newlfont.sty" => package::newlfont_sty::load_definitions(),
     "ltxcmds.sty" => package::ltxcmds_sty::load_definitions(),
     "kvsetkeys.sty" => package::kvsetkeys_sty::load_definitions(),

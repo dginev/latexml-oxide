@@ -156,7 +156,9 @@ impl Meta {
       specialize,
       curry_level,
       curry_constraints,
-      ..Meta::default()
+      // Preserve sticky flags from either side
+      bumplevel: self.bumplevel.max(other.bumplevel),
+      wasfloat: self.wasfloat || other.wasfloat,
     })
   }
 

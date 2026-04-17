@@ -135,10 +135,20 @@ fn node_to_grammar_lexemes_ctx(
       // Normalize langle/rangle meaning for consistent grammar matching.
       // Do NOT remap to parentheses — langle_open/rangle_close tokens need
       // distinct identity for QM bra-ket rules vs conditional probability.
-      let lexeme = if role == "OPEN" && text == "⟨" {
+      //
+      // Perf: Split generic OPEN/CLOSE into OTHER_OPEN/OTHER_CLOSE for delimiters
+      // OTHER than parens/brackets/braces/langle. This prevents the grammar's
+      // generic `open ~ "OPEN"` prefix match from ALSO matching the specific
+      // `lparen = "OPEN:("`, etc. — which was producing 2× duplicate grammar
+      // derivations for every `(x)`, `[x]`, `{x}` expression.
+      let lexeme = if role == "OPEN" && (text == "⟨" || text == "langle") {
         format!("OPEN:langle:{idx}")
-      } else if role == "CLOSE" && text == "⟩" {
+      } else if role == "CLOSE" && (text == "⟩" || text == "rangle") {
         format!("CLOSE:rangle:{idx}")
+      } else if role == "OPEN" && !matches!(text.as_str(), "(" | "[" | "{") {
+        format!("OTHER_OPEN:{text}:{idx}").replace(' ', "")
+      } else if role == "CLOSE" && !matches!(text.as_str(), ")" | "]" | "}") {
+        format!("OTHER_CLOSE:{text}:{idx}").replace(' ', "")
       } else if role == "UNKNOWN" && text == "d" {
         // M4: Emit XDIFFUNK for possible differential-d tokens.
         // Only "d" tokens can be diffops; other unknowns skip the diffop rule.

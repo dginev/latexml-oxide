@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::engine::latex_ch9_figures_and_tables::{before_float, after_float};
+use crate::engine::latex_constructs::{before_float, after_float};
 
 #[rustfmt::skip]
 LoadDefinitions!({

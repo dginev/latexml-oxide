@@ -109,11 +109,28 @@ LoadDefinitions!({
   DefMacro!("\\onlinecite", "\\citealp");
   Let!("\\textcite", "\\citet");
 
-  // 8. Citations — Perl L185-203
+  // 8. Citations and References — Perl revtex4_support.sty.ltxml L190-204
+  // RevTeX3; obsolete for RevTeX4 (but semi-implemented there). Should be a
+  // simple environment, but tends to be misused, so define separately.
   DefConstructor!("\\references",
-    "<ltx:bibliography xml:id='#id'><ltx:biblist>");
+    "<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+       <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>\
+       <ltx:biblist>",
+    before_digest => {
+      crate::engine::latex_constructs::before_digest_bibliography()
+    },
+    after_digest => sub[whatsit] {
+      crate::engine::latex_constructs::begin_bibliography(whatsit)?;
+    },
+    locked => true
+  );
   DefConstructor!("\\endreferences",
-    "</ltx:biblist></ltx:bibliography>");
+    sub[document, _whatsit, _props] {
+      document.maybe_close_element("ltx:biblist")?;
+      document.maybe_close_element("ltx:bibliography")?;
+    },
+    locked => true
+  );
 
   // 10. Tables — Perl L215-245
   DefEnvironment!("{ruledtabular}", "#body");
@@ -189,6 +206,8 @@ LoadDefinitions!({
   DefMacro!("\\flushing", "");
   DefMacro!("\\triggerpar", "\\par");
   DefMacro!("\\fullinterlineskip", "");
+  // Perl L322: \footbox as box register (used by revtex footnote handling)
+  RawTeX!("\\newbox\\footbox");
   DefRegister!("\\intertabularlinepenalty", Number(100));
 
   DefMacro!("\\FL", "");

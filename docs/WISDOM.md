@@ -707,3 +707,42 @@ section prefix (S1.XMD1, S2.XMD1, etc.). But the `scope` (derived from
 in afterConstruct reflects end-of-document state. Store needed values in
 afterDigest as whatsit properties, then use them in afterConstruct.
 
+---
+
+## 22. DefEnvironment scope: after_digest vs after_digest_body timing
+
+**Discovery (Session 108):** `\caption` inside `\begin{floatingfigure}` emitted
+`Error:undefined:\@captype` even though `before_float` had set `\@captype` via
+local-scope `def_macro` and the body could read it (`\@ifundefined{@captype}`
+inside the env body reported "DEF:figure").
+
+**Analysis:** Three hooks in DefEnvironment run at different frame-lifecycle
+points:
+
+1. `before_digest` — runs at digest time, in the env's frame. State assigned
+   here is visible to the body.
+2. `after_digest` — runs at digest time, **while the env frame is still
+   active**. State from `before_digest` is still visible.
+3. `after_digest_body` — runs at digest time, **after the env frame has
+   popped**. State assigned with local scope in `before_digest` is GONE.
+
+The engine's `{figure}` / `{table}` envs use `after_digest` for `after_float`
+because `after_float` does `digest(\@captype)` — which needs the local binding
+from `before_float`. `floatflt` / `floatfig` were using `after_digest_body` and
+hit this exact bug on sandbox paper 0810.1610.
+
+**Fix:** Use `after_digest` for hooks that read frame-local state. Use
+`after_digest_body` only for hooks that operate on the whatsit's body
+structure (e.g. `rotating_sty`'s `rotated_properties` scan, which inspects
+the body DOM without looking up TeX state).
+
+**Key insight:** Match the hook to the data you're reading:
+- Reading TeX state (counters, registers, macros, \@captype) → `after_digest`
+- Operating on the whatsit's body nodes in isolation → `after_digest_body`
+
+Rust-specific: Perl's `afterDigest` in `DefEnvironment` is effectively Rust's
+`after_digest`; Perl's `afterDigestBody` (rarely used) matches Rust's
+`after_digest_body`. When porting Perl code that uses `afterDigest`, keep
+`after_digest` in Rust unless there's a specific reason (body-structure
+modification) to defer until after frame pop.
+

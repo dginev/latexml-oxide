@@ -540,6 +540,9 @@ macro_rules! CharToken {
 }
 
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).
+/// Note: newlines are converted to OTHER, NOT SPACE (Perl #2700 reverted #2646).
+/// ^^J in TeX decodes to CC_OTHER by default; let the tokenizer handle catcode
+/// reassignment if needed.
 #[macro_export]
 macro_rules! Explode(($text:expr) => (
   $text.to_string().chars().map(|c|
@@ -562,6 +565,7 @@ macro_rules! ExplodeChars(($text:expr) => (
 
 /// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 /// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
+/// Perl sync: newlines are OTHER, not SPACE (matches Perl #2700 revert of #2646).
 #[macro_export]
 macro_rules! ExplodeText(
   ($text:expr) => ({
