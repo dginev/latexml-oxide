@@ -189,6 +189,8 @@ LoadDefinitions!({
   DefMacro!("\\flushing", "");
   DefMacro!("\\triggerpar", "\\par");
   DefMacro!("\\fullinterlineskip", "");
+  // Perl L322: \footbox as box register (used by revtex footnote handling)
+  RawTeX!("\\newbox\\footbox");
   DefRegister!("\\intertabularlinepenalty", Number(100));
 
   DefMacro!("\\FL", "");
