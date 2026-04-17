@@ -71,20 +71,24 @@ LoadDefinitions!({
         Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
-    // Load the matching per-language Rust port so \captions<lang> (and
-    // language-specific macros) are defined. Idempotent — load_definitions
-    // is guarded against re-entry.
-    match lang.as_str() {
-      "english" | "american" | "USenglish" | "british" | "UKenglish" =>
-        { let _ = crate::package::english_sty::load_definitions(); },
-      "french" | "francais" | "frenchb" =>
-        { let _ = crate::package::french_ldf::load_definitions(); },
-      "german" | "germanb" =>
-        { let _ = crate::package::german_sty::load_definitions(); },
-      "ngerman" | "ngermanb" =>
-        { let _ = crate::package::ngerman_sty::load_definitions(); },
-      _ => {}
+    // Load per-language Rust ports for EVERY babel option, not just main.
+    // Needed so \begin{otherlanguage}{other} / \foreignlanguage{other}
+    // finds \captions<other> defined — babel's internal \bbl@switch
+    // calls it before our \ltx@bbl@select@language hook can load the port.
+    fn load_port_for(opt: &str) {
+      match opt {
+        "english" | "american" | "USenglish" | "british" | "UKenglish" =>
+          { let _ = crate::package::english_sty::load_definitions(); },
+        "french" | "francais" | "frenchb" =>
+          { let _ = crate::package::french_ldf::load_definitions(); },
+        "german" | "germanb" =>
+          { let _ = crate::package::german_sty::load_definitions(); },
+        "ngerman" | "ngermanb" =>
+          { let _ = crate::package::ngerman_sty::load_definitions(); },
+        _ => {}
+      }
     }
+    for raw in opt_babel.split(',') { load_port_for(raw.trim()); }
     // Activate captions. @ may be OTHER (at \begin{document}) so flip it
     // temporarily to LETTER to tokenize `\captions<lang>` as one CS.
     state::assign_catcode('@', Catcode::LETTER, None);
@@ -105,12 +109,6 @@ LoadDefinitions!({
           state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
         }
       }
-      if lookup_definition(&T_CS!("\\up"))?.is_none() {
-        let _ = crate::package::french_ldf::load_definitions();
-        if lookup_definition(&T_CS!("\\xspace"))?.is_none() {
-          let _ = crate::package::xspace_sty::load_definitions();
-        }
-      }
     }
     if lang == "german" || lang == "germanb" || lang == "ngerman" || lang == "ngermanb" {
       if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
@@ -119,33 +117,11 @@ LoadDefinitions!({
       }
     }
   });
-  // Load all per-language Rust ports mentioned in \opt@babel.sty so any
-  // language can be entered via \begin{otherlanguage}{<lang>} or
-  // \selectlanguage{<lang>} without waiting for the runtime dispatch.
-  // Needed because babel's own \select@language calls \captions<lang>
-  // before our \ltx@bbl@select@language hook can load the port.
-  DefPrimitive!("\\lx@babel@load@ports", {
-    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
-      .map(|t| t.to_string()).unwrap_or_default();
-    for raw in opt_babel.split(',') {
-      match raw.trim() {
-        "english" | "american" | "USenglish" | "british" | "UKenglish" =>
-          { let _ = crate::package::english_sty::load_definitions(); },
-        "french" | "francais" | "frenchb" =>
-          { let _ = crate::package::french_ldf::load_definitions(); },
-        "german" | "germanb" =>
-          { let _ = crate::package::german_sty::load_definitions(); },
-        "ngerman" | "ngermanb" =>
-          { let _ = crate::package::ngerman_sty::load_definitions(); },
-        _ => {}
-      }
-    }
-  });
-  RawTeX!(r"\lx@babel@load@ports");
-
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
   // \begin{document} opens (and base_schema's after_open reads it). Also
   // re-run via AtBeginDocument so any late state is refreshed.
+  // Per-language port loading is handled by \ltx@bbl@select@language in
+  // babel_support_sty.rs on each language entry.
   RawTeX!(r"\lx@babel@activate@mainlang");
   RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
 
