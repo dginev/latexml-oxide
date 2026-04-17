@@ -125,6 +125,13 @@ LoadDefinitions!({
   DefMath!("\\Tr", "\\mathrm{Tr}", role => "OPFUNCTION", meaning => "trace");
   DefMath!("\\tr", "\\mathrm{tr}", role => "OPFUNCTION", meaning => "trace");
   DefMath!("\\Or", "\\mathrm{O}", role => "OPFUNCTION", meaning => "Big-O");
+  // Perl L127-129: triple-dot overaccent + shade delimiters
+  DefMath!("\\tdot {}", "\u{2026}", operator_role => "OVERACCENT");
+  DefMath!("\\lshad", "\u{27E6}", role => "OPEN");
+  DefMath!("\\rshad", "\u{27E7}", role => "CLOSE");
+  // Perl L114-116: \bcal calligraphic bold primitive
+  DefPrimitive!("\\bcal", "",
+    font => { family => "caligraphic", series => "bold", shape => "upright", forcebold => true });
   DefMacro!("\\dsty", "\\displaystyle");
   DefMacro!("\\tsty", "\\textstyle");
   DefMacro!("\\ssty", "\\scriptstyle");
