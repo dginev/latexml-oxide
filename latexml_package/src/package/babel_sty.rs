@@ -57,6 +57,14 @@ LoadDefinitions!({
   // observed to leak a bare `,` from in our engine, ending up in
   // document p1 as a stray leading character — see SYNC_STATUS D0
   // and 81_babel.rs page545_test comments.)
+  //
+  // NOTE: even with \@elt{OT1}, one stray `,` still leaks into p1
+  // (\bbl@foreach over \@empty still enters hook body somewhere).
+  // Tested \let\@fontenc@load@list\@empty (fully empty): it
+  // removes the comma BUT breaks csquotes/french/german/greek
+  // tests by cascading through \asciiencoding/\ensureascii
+  // left un-initialized. Keep the \@elt{OT1} form pending a
+  // proper fix in the gullet/expander.
   RawTeX!(r"\def\@fontenc@load@list{\@elt{OT1}}");
 
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));

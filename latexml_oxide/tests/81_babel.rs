@@ -57,35 +57,34 @@ fn numprints_test() {
 //          \let\@elt\relax
 //          ...\bbl@foreach\bbl@tempa{...}
 //          \ifx\bbl@tempb\@empty\else ... \fi
-//      - **Decisive test (2026-04-17)**: inside the document body,
-//        with babel already loaded, running
-//          \def\mylist{\@elt{OT1}}
-//          \def\@elt#1{,#1,}
-//          \edef\result{\expandafter\@gobbletwo\mylist}
-//        EMITS a stray `,` into the paragraph — even though
-//        `\result` ends up empty (the edef captured the full
-//        expansion, as \typeout confirms). Without babel loaded,
-//        the same pattern does NOT leak: `<p>A B X</p>` clean.
-//        So the leak is an engine-level `\edef`/expandafter
-//        interaction that babel's preamble somehow arms.
-//      - The bug is not specific to AtBeginDocument firing — it
-//        triggers in the main digest stream too, once babel's
-//        preamble has loaded. Candidates to investigate:
-//          * our `\edef` handling of `\expandafter` after a
-//            gobbled control-sequence token (maybe expansion state
-//            leaks past the `\@gobbletwo` body into the main stream)
-//          * whether babel's preamble changes catcodes/scanning mode
-//            such that a subsequent `\edef` emits the pre-gobble
-//            tokens to the input instead of into the edef buffer
-//      - Patching `\@fontenc@load@list` to `\@empty` (single) DOES
-//        remove the comma. Patching to `\@elt{OT1}` (single) still
-//        leaks one `,`. Patching to `\@elt{OT1}\@elt{T1}` leaks
-//        `T1,,,`. The count of leaked commas correlates with the
-//        number of `\@elt` wrappers not consumed by `\@gobbletwo`.
-//      - Next cycle: reduce the bug to the smallest \edef /
-//        \expandafter / \@gobbletwo pattern that reproduces it
-//        without requiring a babel preamble, so the fix can go into
-//        latexml_core without touching babel.
+//      - The comma always appears BEFORE any user-registered
+//        AtBeginDocument content, confirming it comes from one of
+//        babel's preamble-registered ABD hooks (not from my test's
+//        user hook). A stand-alone reproduction of hook 5's body
+//        (without babel loaded, with fake \bbl@foreach etc.) does
+//        NOT leak, so the bug is in the interaction between our
+//        engine and the REAL babel definitions (\bbl@foreach /
+//        \bbl@xin@ / \bbl@ifunset / etc.).
+//      - Mitigation options tested:
+//          * `\let\@fontenc@load@list\@empty` — removes the comma
+//            BUT breaks csquotes/french/german/greek tests because
+//            the hook's `\ifx\bbl@tempb\@empty\else ... \fi` then
+//            skips the \asciiencoding / \ensureascii setup, and
+//            downstream code (e.g. \foreignlanguage quote markup)
+//            relies on the resulting \DeclareTextCommandDefault.
+//          * `\def\@fontenc@load@list{\@elt{OT1}}` (current
+//            babel_sty.rs) — sets \bbl@tempa empty but still emits
+//            one stray `,`. The leak's mechanism is not in the
+//            edef+gobbletwo itself (my \typeout confirms
+//            \bbl@tempa is empty) but in a later token in hook 5's
+//            body, likely inside \bbl@foreach\BabelNonASCII{...}
+//            or \bbl@usehooks@lang{/}{begindocument}{{}} invoked
+//            at the end of hook 5.
+//      - Next cycle: instrument each sub-expression of hook 5 with
+//        step-markers (\typeout TICK1, TICK2, ... wrapped around
+//        each statement) to find which single statement is the
+//        token-leak source, then audit that statement's dependency
+//        chain against the Perl reference semantics.
 //
 //   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
 //      exclamation/question now emits a thin space before itself
