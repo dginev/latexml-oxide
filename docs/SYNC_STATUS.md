@@ -199,6 +199,24 @@ Remaining failures:
   - Rust `latex_constructs.rs:2457,2542` uses `noframe=true` at `\begin{document}`/`\end{document}` ✓
 - `48ad18db` (#2778) Relation parameter type for ifnum/ifdim:
   - Rust `tex_logic.rs:56,68` uses `\\ifnum Number Relation Number` ✓
+- `4eb681c0` (#2671) index columns starting by 1 in Locator:
+  - Rust `mouth.rs:145-151` adds `+ 1` to columns in `get_locator` ✓ (session 108)
+- `50f0061d` (#2772) avoid Fatal on `\number \fam`:
+  - Rust `gullet.rs:1282` includes self-coercions in `coerce_register` ✓
+  - Rust `tex_math.rs:695` wraps `\fam` getter value in `Number` ✓
+- `285bb02b` (#2771) iflimit: deny `if_count`/`absorb_count` in dump:
+  - Rust `dump_reader.rs:149-150` has both in ignored list ✓
+- `3a89a24d` (#2762) Lrgroup better codepoints:
+  - Rust `math_common.rs:862-875` uses U+27EE/U+27EF for `\lgroup`/`\rgroup` ✓
+- `5082b034` (#2759) kernel upgrades for TL2025:
+  - Rust `tex_math.rs:821` has `\right` as `DefConstructor` with gullet unread ✓
+  - Rust `gullet.rs:57-60` has `special_relax_matches` for noexpand smuggling ✓
+- `8a5cd306` (#2736) hyperref depends on etoolbox:
+  - Rust `hyperref_sty.rs:6-7` has `iftex` + `etoolbox` RequirePackage ✓
+- `3b027351` (#2751) expl syntax in siunitx:
+  - Rust `siunitx_sty.rs:1946-1950` uses expl-style spacing (no tildes) ✓
+- `8960af9a` natbib: Tone down unknown cite style to Info:
+  - Rust `natbib_sty.rs:672` uses `Info!` with authoryear fallback ✓
 - `fdc8bf91` (#2777) pstricks raw TeX `--includestyles` — not ported (pstricks raw-load
   path is materially different in Rust; not a blocker since Rust uses bindings, not raw).
 - `7119a535` (#2753) dump parameter double-escape — not applicable to Rust dump_writer
