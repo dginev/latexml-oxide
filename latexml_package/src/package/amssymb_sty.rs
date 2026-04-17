@@ -103,7 +103,9 @@ LoadDefinitions!({
   DefMath!("\\fallingdotseq", "\u{2252}", role => "RELOP",
   meaning => "approximately-equals-or-image-of");
   DefMath!("\\backsim", "\u{223D}", role => "RELOP"); // REVERSED TILDE
-  DefMath!("\\backsimeq", "\u{224C}", role => "RELOP"); // ALL EQUAL TO; Note: this has double rather than single bar!!!
+  // Perl commit 93347f6c (#2633): \backsimeq -> U+22CD (REVERSED TILDE EQUALS),
+  // not U+224C (ALL EQUAL TO); the former has a single bar matching LaTeX output.
+  DefMath!("\\backsimeq", "\u{22CD}", role => "RELOP");
   DefMath!("\\subseteqq", "\u{2AC5}", role => "RELOP",
   meaning => "subset-of-or-equals");
   DefMath!("\\Subset", "\u{22D0}", role => "RELOP",
