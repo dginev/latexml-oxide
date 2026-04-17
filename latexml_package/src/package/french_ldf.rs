@@ -11,6 +11,11 @@ LoadDefinitions!({
   // We skip raw loading (it fails on babel 3.x \SetString commands)
   // and provide the essential definitions directly.
 
+  // frenchb's ordinal/abbreviation macros trail with \xspace — load
+  // xspace_sty up front so those expansions resolve, matching what
+  // the raw french.ldf implicitly assumes.
+  RequirePackage!("xspace");
+
   // \captionsfrench — the French caption strings, equivalent to what
   // babel's frenchb.ldf defines. Use \providecommand so the raw load
   // (if it reaches this point) doesn't clobber our strings.

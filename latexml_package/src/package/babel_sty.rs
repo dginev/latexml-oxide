@@ -29,51 +29,14 @@ LoadDefinitions!({
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // --- Post-raw-load workarounds ------------------------------------------
-  // Caption strings pre-defined here because babel's two-phase
-  // \ProcessOptions* pipeline doesn't dispatch \bbl@load@language{<lang>}
-  // cleanly in our engine — \bbl@main@language ends up "nil". Our
-  // `\lx@babel@activate@mainlang` hook below resolves the effective main
-  // language from \opt@babel.sty instead and calls \captions<lang>.
-  // Removable once the option pipeline fires end-to-end; see SYNC_STATUS
-  // D0 "AtBeginDocument hook chain ordering".
-  RawTeX!(r"\providecommand\captionsenglish{%
-    \def\prefacename{Preface}\def\refname{References}%
-    \def\abstractname{Abstract}\def\bibname{Bibliography}%
-    \def\chaptername{Chapter}\def\appendixname{Appendix}%
-    \def\contentsname{Contents}%
-    \def\listfigurename{List of Figures}%
-    \def\listtablename{List of Tables}%
-    \def\indexname{Index}\def\figurename{Figure}%
-    \def\tablename{Table}\def\partname{Part}%
-    \def\pagename{Page}\def\seename{see}%
-    \def\alsoname{see also}\def\proofname{Proof}}");
-  RawTeX!(r"\providecommand\dateenglish{}");
-  RawTeX!(r"\providecommand\captionsfrench{%
-    \def\prefacename{Pr\'eface}\def\refname{R\'ef\'erences}%
-    \def\abstractname{R\'esum\'e}\def\bibname{Bibliographie}%
-    \def\chaptername{Chapitre}\def\appendixname{Annexe}%
-    \def\contentsname{Table des mati\`eres}%
-    \def\listfigurename{Table des figures}%
-    \def\listtablename{Liste des tableaux}%
-    \def\indexname{Index}\def\figurename{Figure}%
-    \def\tablename{Table}\def\partname{partie}%
-    \def\pagename{page}\def\seename{voir}%
-    \def\alsoname{voir aussi}\def\proofname{D\'emonstration}}");
-  RawTeX!(r"\providecommand\datefrench{}");
-  RawTeX!(r"\providecommand\captionsgerman{%
-    \def\prefacename{Vorwort}\def\refname{Literatur}%
-    \def\abstractname{Zusammenfassung}\def\bibname{Literaturverzeichnis}%
-    \def\chaptername{Kapitel}\def\appendixname{Anhang}%
-    \def\contentsname{Inhaltsverzeichnis}%
-    \def\listfigurename{Abbildungsverzeichnis}%
-    \def\listtablename{Tabellenverzeichnis}%
-    \def\indexname{Index}\def\figurename{Abbildung}%
-    \def\tablename{Tabelle}\def\partname{Teil}%
-    \def\pagename{Seite}\def\seename{siehe}%
-    \def\alsoname{siehe auch}\def\proofname{Beweis}}");
-  RawTeX!(r"\providecommand\dategerman{}");
-  RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
-  RawTeX!(r"\providecommand\datengerman{\dategerman}");
+  // Caption strings come from the per-language Rust ports
+  // (english_sty.rs, french_ldf.rs, german_sty.rs, ngerman_sty.rs). Our
+  // `\lx@babel@activate@mainlang` below loads the matching port on demand
+  // and then calls `\captions<lang>`. This mirrors what Perl's precompiled
+  // kernel + babel's own \selectlanguage{\bbl@main@language} do end-to-end
+  // (which we can't rely on yet — \bbl@main@language is "nil" in our
+  // engine because the two-phase \ProcessOptions* pipeline doesn't fire
+  // \bbl@load@language cleanly; see SYNC_STATUS D0).
 
   // French active-punctuation dispatch primitives for :;!? (frenchb.ldf's
   // \extrasfrench insets a thin space before these chars). Dispatch CSes
@@ -144,6 +107,20 @@ LoadDefinitions!({
         Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
+    // Load the matching per-language Rust port so \captions<lang> (and
+    // language-specific macros) are defined. Idempotent — load_definitions
+    // is guarded against re-entry.
+    match lang.as_str() {
+      "english" | "american" | "USenglish" | "british" | "UKenglish" =>
+        { let _ = crate::package::english_sty::load_definitions(); },
+      "french" | "francais" | "frenchb" =>
+        { let _ = crate::package::french_ldf::load_definitions(); },
+      "german" | "germanb" =>
+        { let _ = crate::package::german_sty::load_definitions(); },
+      "ngerman" | "ngermanb" =>
+        { let _ = crate::package::ngerman_sty::load_definitions(); },
+      _ => {}
+    }
     // Activate captions. @ may be OTHER (at \begin{document}) so flip it
     // temporarily to LETTER to tokenize `\captions<lang>` as one CS.
     state::assign_catcode('@', Catcode::LETTER, None);
@@ -178,9 +155,33 @@ LoadDefinitions!({
       }
     }
   });
-  // Run at load time so DOCUMENT_LANGUAGE is set before \begin{document}
-  // opens and base_schema's after_open reads it. Also re-run via
-  // AtBeginDocument so any late state is refreshed.
+  // Load all per-language Rust ports mentioned in \opt@babel.sty so any
+  // language can be entered via \begin{otherlanguage}{<lang>} or
+  // \selectlanguage{<lang>} without waiting for the runtime dispatch.
+  // Needed because babel's own \select@language calls \captions<lang>
+  // before our \ltx@bbl@select@language hook can load the port.
+  DefPrimitive!("\\lx@babel@load@ports", {
+    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
+      .map(|t| t.to_string()).unwrap_or_default();
+    for raw in opt_babel.split(',') {
+      match raw.trim() {
+        "english" | "american" | "USenglish" | "british" | "UKenglish" =>
+          { let _ = crate::package::english_sty::load_definitions(); },
+        "french" | "francais" | "frenchb" =>
+          { let _ = crate::package::french_ldf::load_definitions(); },
+        "german" | "germanb" =>
+          { let _ = crate::package::german_sty::load_definitions(); },
+        "ngerman" | "ngermanb" =>
+          { let _ = crate::package::ngerman_sty::load_definitions(); },
+        _ => {}
+      }
+    }
+  });
+  RawTeX!(r"\lx@babel@load@ports");
+
+  // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
+  // \begin{document} opens (and base_schema's after_open reads it). Also
+  // re-run via AtBeginDocument so any late state is refreshed.
   RawTeX!(r"\lx@babel@activate@mainlang");
   RawTeX!(r"\AtBeginDocument{\lx@babel@activate@mainlang}");
 
