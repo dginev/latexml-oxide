@@ -42,31 +42,6 @@ LoadDefinitions!({
   // leaks into babel's \bbl@load@language which uses \CurrentOption at L4177).
   RawTeX!(r"\let\CurrentOption\@empty");
 
-  // \@fontenc@load@list: babel's \AtBeginDocument hook at
-  // babel.sty L3887 runs:
-  //   \def\@elt#1{,#1,}
-  //   \edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}
-  //   \let\@elt\relax
-  //   ...
-  //   \bbl@foreach\bbl@tempa{\bbl@xin@{,#1,}{,\BabelNonASCII,}...}
-  //
-  // With just ONE \@elt wrapper (\@elt{OT1}), \@gobbletwo eats both
-  // tokens and \bbl@tempa ends up empty — safest. (latex_base.rs'
-  // default `\@elt{T1}\@elt{OT1}` produced \bbl@tempa=",OT1," which
-  // the subsequent \bbl@foreach / \bbl@xin@ chain has been
-  // observed to leak a bare `,` from in our engine, ending up in
-  // document p1 as a stray leading character — see SYNC_STATUS D0
-  // and 81_babel.rs page545_test comments.)
-  //
-  // NOTE: even with \@elt{OT1}, one stray `,` still leaks into p1
-  // (\bbl@foreach over \@empty still enters hook body somewhere).
-  // Tested \let\@fontenc@load@list\@empty (fully empty): it
-  // removes the comma BUT breaks csquotes/french/german/greek
-  // tests by cascading through \asciiencoding/\ensureascii
-  // left un-initialized. Keep the \@elt{OT1} form pending a
-  // proper fix in the gullet/expander.
-  RawTeX!(r"\def\@fontenc@load@list{\@elt{OT1}}");
-
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Emulate Perl's precompiled kernel: pre-define \captions<lang> and \date<lang>
