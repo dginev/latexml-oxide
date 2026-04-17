@@ -3613,7 +3613,9 @@ LoadDefinitions!({
     Tokens!(T_CS!("\\lx@frontmatter@fallback")));
 
   DefMacro!("\\@thanks", "\\@empty");
-  DefMacro!("\\thanks{}", r"\def\@thanks{#1}\lx@make@thanks{#1}");
+  // Perl latex_constructs.pool.ltxml L1154: `\thanks[]{}` — optional arg for
+  // OmniBus use (thrown away). #2 is the required body.
+  DefMacro!("\\thanks[]{}", r"\def\@thanks{#2}\lx@make@thanks{#2}");
   DefConstructor!(
     "\\lx@make@thanks{}",
     "<ltx:note role='thanks'>#1</ltx:note>"
