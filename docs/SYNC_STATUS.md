@@ -860,6 +860,34 @@ State after session 107:
 - No warnings in release build
 - 10 unsafe blocks, all SAFETY-documented
 
+##### Investigation — opfunction-tight_term duplicate rule (session 108)
+
+Attempted removal of the redundant `tight_term += opfunction tight_term =>
+prefix_apply` rule (line 543 of `grammar/builder.rs`). The rule appears to
+duplicate `applied_func = opfunction tight_term => prefix_apply` (line
+495) since `tight_term += applied_func` (line 511) already lifts it.
+
+Results on removal:
+- `\sin[XY]\qquad\sin[x][XY]\qquad...`: 1022 → 324 trees (68% reduction),
+  52ms → 18ms parse time.
+- `tr ρ \qquad tr(XY) \qquad Tr ρ \qquad rank M \qquad ...`: 100 → 48
+  trees (52% reduction), 5ms → 3ms parse time.
+- **Regression: `FGHa` parses as `F@(G) * H@(a)` instead of the correct
+  `F@(G@(H@(a)))` cascade.**
+
+Root cause of the regression: the two grammar paths produce semantically
+equivalent trees but enter Marpa's bocage as distinct rule IDs. The
+direct `tight_term += opfunction tight_term` rule happens to rank above
+`applied_func = opfunction opfunction => prefix_apply` (line 498) in
+Marpa's enumeration, so it wins for the cascade. Without the direct
+rule, the shorter `opfunction opfunction` path wins FG → F@(G), leaving
+Ha as a separate invisible-times chunk.
+
+Reverted. Proper fix would require either (a) explicit rule ranking in
+Marpa, (b) removing the `opfunction opfunction` alternative and letting
+recursion via `tight_term` handle cascades, or (c) tagging the cascade
+via semantic action pruning. Left for a future focused session.
+
 ##### Fix 5 — Interval category hierarchy correction
 
 Per user guidance: an interval is a math object, not a grouping
