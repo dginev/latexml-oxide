@@ -29,22 +29,46 @@ fn numprints_test() {
 
 #[test]
 // Expected XML is Perl latexml's ground-truth output for this document.
-// Rust currently diverges on several babel-related points:
-//   1. `\raggedright` inside `\begin{document}` does NOT apply
-//      `class="ltx_align_left"` to the paragraphs — Rust's aligning-context
-//      hook seems to be disarmed by babel's state churn.
-//   2. A stray leading comma appears in p1 ("<p>,The expansion…") —
-//      almost certainly an option-list token leaking out of babel's
-//      `\usepackage[french,english]{babel}` processing.
-//   3. French babel's active colon (French typography: space before ':')
-//      isn't applied — Rust emits "français:" where Perl has "français :".
-//   4. The empty <text xml:lang="de"></text> in p4 isn't emitted.
+// Rust currently diverges on several babel-related points. Listed in
+// the order the test's DIFF output surfaces them:
 //
-// Rust's babel binding is a 384-line hand-rolled implementation, whereas
-// Perl's babel.sty.ltxml is a 30-line stub that loads babel.sty raw.
-// Fixing these divergences is a substantial follow-up, not a one-line
-// patch. #[ignore] keeps CI green; the expected XML reflects Perl so the
-// test, once un-ignored, will fail with a diff that pinpoints what to fix.
+//   1. [STILL OPEN] `\raggedright` inside `\begin{document}` does NOT
+//      apply `class="ltx_align_left"` to the paragraphs — Rust's
+//      aligning-context hook is disarmed when babel loading emits a
+//      stray comma at document start (next item), which ends up inside
+//      the first auto-opened paragraph. The raggedright setup then
+//      captures a paragraph node as ALIGNING_NODE instead of the
+//      document, and its end-of-group hook iterates inline children
+//      (not sibling paragraphs), so the class is never applied.
+//      Fixing (2) below is expected to fix this as a side effect.
+//
+//   2. [STILL OPEN] A stray leading comma appears in p1 ("<p>,The
+//      expansion…"). Traced to babel.sty or txtbabel.def raw loading
+//      — reproduces even with `\usepackage[french]{babel}` (single
+//      option). One single comma regardless of option count; the
+//      count-invariance rules out a naive option-list split bug. The
+//      exact source is still under investigation.
+//
+//   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
+//      exclamation/question now emits a thin space before itself
+//      when french is active, whether as main language or inline via
+//      `\foreign@language{french}` / `\begin{otherlanguage}{french}`.
+//      Test: "français :" instead of "français:". See commit that
+//      moves the dispatch primitives out of the main-lang-only branch
+//      and hooks them in `\ltx@bbl@select@language`.
+//
+//   4. [STILL OPEN] The empty `<text xml:lang="de"></text>` in p4
+//      isn't emitted. Likely related to how
+//      `\foreignlanguage{english}{…}` inside a German context exits
+//      back to the outer German — needs the `\initiate@active@char`
+//      lifecycle (SYNC_STATUS D0).
+//
+// Rust's babel binding is a ~400-line hand-rolled implementation,
+// whereas Perl's babel.sty.ltxml is a 30-line stub that loads babel.sty
+// raw. Fixing the remaining three divergences is substantial follow-up,
+// not a one-line patch. #[ignore] keeps CI green; the expected XML
+// reflects Perl so the test, once un-ignored, will fail with a diff
+// that pinpoints what to fix.
 #[ignore]
 fn page545_test() {
   latexml_test_single("tests/babel/page545.tex", "page545", DIR, None, None);
