@@ -603,6 +603,50 @@ Items 1–4 are primarily **semantic** (inherent to math practice); further gram
 
 ## Recent Session Highlights
 
+### Session 109 (2026-04-17, /loop cycles) — page545 / D0 raw-binding milestone
+
+**D0 HIGHEST PRIORITY task COMPLETE**: `tests/babel/page545` passes
+unignored. 6/6 babel tests green, 409/409 overall, 0 ignored.
+
+**Root-cause engine fix** — the stray leading comma that had
+plagued page545's `<p>` output was caused by a single Rust-only
+line in `latex_base.rs:30`:
+
+```
+\let\@nil\relax     % ← Rust-only workaround, NOT in Perl kernel
+```
+
+Perl leaves `\@nil` undefined so `\ifx\@nil\relax` is FALSE when
+both tokens are compared (undefined meaning ≠ `\relax` meaning).
+Our workaround made `\ifx\@nil\relax` TRUE, which prematurely
+terminated babel's `\bbl@fornext` termination check on the
+first empty-parameter iteration:
+
+```
+\def\bbl@fornext#1,{%
+  \ifx\@nil#1\relax\else ... \expandafter\bbl@fornext \fi}
+```
+
+With `#1 = empty`, the `\ifx\@nil\relax` evaluation was the
+termination signal instead of the intended recursion, leaving
+`\@nil,` unconsumed → trailing `,` emitted as stray text.
+
+**Side-effect fixes** (all driven by root-cause alignment):
+- `ltx_align_left` on paragraphs — FIXED
+- French active `:;!?` in non-French contexts — FIXED (now
+  language-aware via `lookup_font().language`)
+
+**Cleanups enabled**:
+- Dropped `\def\@fontenc@load@list{\@elt{OT1}}` workaround
+- Dropped 14 redundant `\l@<lang>` pre-definitions (kernel dump
+  now carries 108 language registers)
+- babel_sty.rs: 418 → 404 lines
+
+**Intentional divergence documented**: OXIDIZED_DESIGN #22 —
+single-level vs. per-frame language-stack unwind on group exit
+(Perl emits extra empty nested `<text xml:lang>` wrappers;
+Rust emits only the outer one; no rendering impact).
+
 ### Session 108 (2026-04-17, /loop cycles)
 
 **Packages parity**: 50+ commits filling gaps against Perl: elsart, mn2e, aa, aas, revtex4, iopart, texvc (92 proofwiki macros), sv_support, ams_support, acmart, amsbook, revtex4, inst_support, microtype, html, subcaption, attachfile, floatflt/floatfig, subfloat, iopams, actuarialangle.
