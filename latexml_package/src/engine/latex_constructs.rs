@@ -7033,7 +7033,9 @@ LoadDefinitions!({
     alias => "\\framebox",
     sizer => "#3",
     before_digest => {
-      let wasmath = state::lookup_value("IN_MATH").is_some();
+      // Perl: $wasmath = LookupValue('IN_MATH') — uses boolean value, not key existence.
+      // IN_MATH is initialized to false at startup, so is_some() would always be true.
+      let wasmath = state::lookup_bool("IN_MATH");
       stomach::begin_mode("restricted_horizontal")?;
       state::assign_value("FRAME_IN_MATH", wasmath, None); },
     properties => sub[args] {
@@ -7070,7 +7072,7 @@ LoadDefinitions!({
       Ok(props)
     },
     after_digest => sub[whatsit] {
-      let wasmath = state::lookup_value("FRAME_IN_MATH").is_some_and(|v| matches!(v, Stored::Bool(true)));
+      let wasmath = state::lookup_bool("FRAME_IN_MATH");
       let arg = whatsit.get_arg(3).cloned();
       stomach::end_mode("restricted_horizontal")?;
       if wasmath {
