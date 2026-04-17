@@ -81,6 +81,103 @@ Detailed fix history for phases above lives in git log. See the corresponding se
 
 ## Work Plan — Active TODO List
 
+### D0. Raw-binding fidelity — HIGHEST PRIORITY
+
+Make `tests/babel/page545` (currently `#[ignore]`d) pass via the **exact same
+raw-loading path** that Perl uses. Re-enabling this single test is a
+practical, fully-solvable project that will close deep engine gaps.
+
+**Background.** Perl's babel support is three tiny files:
+- `babel.sty.ltxml` (30 lines) — `InputDefinitions('babel', noltxml=>1, type=>sty)`
+- `babel.def.ltxml` (34 lines) — `Let('\bbl@opt@safe','\@empty')`, load raw
+  `babel.def`, require `babel_support`
+- `babel_support.sty.ltxml` (169 lines) — Unicode glyphs, language→ISO map,
+  `\select@language` hook that calls `MergeFont(language=>iso)`.
+
+All language-specific behavior (captions, shorthands, active punctuation,
+encoding switches, …) comes from the vanilla `.ldf` files that `babel.sty`
+pulls in via `\openin` + `\input` as options are processed.
+
+**Our Rust bindings**, by contrast, are **384+153 lines of workarounds**
+(`babel_sty.rs`, `babel_support_sty.rs`) that pre-declare things the raw
+path would otherwise build, hard-code caption strings that would otherwise
+come from `.ldf` files, and hand-roll active-char mechanisms. These were
+added in sessions 42–80 to keep the test suite running, but they mean
+Rust's babel is a different implementation from Perl's — and the diff shows:
+
+```
+                           Perl          Local Rust                    CI Rust
+  p1 first chars:          <p>The ...    <p><text xml:lang="de">,</   <p>,The ...
+  para class:              ltx_align_left  (missing)                    (missing)
+  French colon spacing:    "français :"  "français:"                   "français:"
+```
+
+An experiment (`/loop`, 2026-04-17) replaced all three Rust babel files
+with line-for-line Perl ports. Four tests broke (`csquotes_test`,
+`french_test`, `german_test`, `greek_test`) and the failures revealed the
+exact engine gaps:
+
+**Tasks, roughly in dependency order:**
+
+- [ ] **Precompile-phase language registers.** Perl's `make formats` puts
+  `\l@english`, `\l@german`, `\l@french`, … in the precompiled kernel so
+  babel's `\bbl@iflanguage` check passes. The Rust kernel dump
+  (`resources/dumps/latex.dump.txt`, 6k entries) doesn't carry them.
+  Build path: run `language.def` / `hyphen.cfg` ingestion when generating
+  the dump so `\newlanguage` assignments are persisted.
+
+- [ ] **`\openin`-based `.ini` loading.** Babel's `\bbl@provide@locale`
+  calls `\babelprovide` which reads `.ini` files from the babel tree. Rust
+  can't currently follow that path — unreadable files + error-recovery
+  define the missing macros as `<ltx:ERROR/>`, corrupting list
+  accumulation. Either plumb `\openin` / `\input` through kpathsea for
+  `babel/locale/*.ini`, or teach error-recovery that missing-file tokens
+  expand to `\@empty`.
+
+- [ ] **`\initiate@active@char` / active-char lifecycle.** babel uses this
+  for German `"a→ä`, French `:!?;`, Greek `~` → perispomeni, etc. The
+  expansion-order and catcode-flip dance that it depends on doesn't
+  survive the raw-loading path in Rust — neither the shorthand itself
+  nor the restore on `\selectlanguage` fires. Needs a focused port of
+  how `\@sanitize` and active-char meaning stacking work.
+
+- [ ] **`AtBeginDocument` hook chain ordering.** Perl runs babel's
+  `\AtBeginDocument{…\selectlanguage{\bbl@main@language}…}` in the right
+  place so the main language's `\captions<lang>` fires. Rust runs hooks,
+  but between options processing and the first user token the state
+  differs (see the stray-comma leak in p1), suggesting hook-order or
+  option-token-cleanup differences.
+
+- [ ] **Kernel dump regeneration at build time.** Per design intent,
+  `resources/dumps/latex.dump.txt` should **not** be checked into VCS;
+  it should be rebuilt on each compile from the ambient texlive. Current
+  TL-2023-era dump diverges from runtime texlive (TL 2025 locally, TL
+  2023 on CI) and papers over the gaps above by freezing a moment in time.
+  After the items above are done, add `latex.dump.txt` to `.gitignore`
+  and have `build.rs` drive regeneration.
+
+- [ ] **Drop Rust babel workarounds incrementally.** Once the engine pieces
+  are in place, strip `babel_sty.rs` from 384 → ~15 lines to match Perl's
+  stub, and `babel_support_sty.rs` to its 131-line pure translation. The
+  experiment branch above is a guide; each workaround removed should be
+  tied to a closed engine gap.
+
+- [ ] **Un-ignore `page545_test`.** When the `<p>The expansion…`
+  ground-truth (no stray comma, `class="ltx_align_left"` on paragraphs,
+  `français :` with thin space) matches Rust's output byte-for-byte,
+  remove `#[ignore]`. The expected XML in `tests/babel/page545.xml`
+  already reflects Perl; the test is pre-wired to surface the last gap.
+
+**Why this is practical, not aspirational.** Every item above is
+mechanical: the Perl source is short, its intent is legible, and the
+divergences show up as specific XML diffs we can pin. No novel design is
+required — just closing each engine primitive to the point where the
+raw-loading path runs clean. When it does, one of the most complex
+packages in the LaTeX ecosystem becomes a ~50-line Rust stub, and every
+future babel upgrade from upstream flows in automatically.
+
+---
+
 ### Phase D: 10k-Document Sandbox — Coverage & Performance
 
 Scale testing to ~8,000 arxiv papers (`$HOME/data/10k_sandbox/`). All known to convert under Perl LaTeXML. **Tool:** `cortex_worker --standalone --input <zip> --output <zip>`.
