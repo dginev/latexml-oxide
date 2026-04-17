@@ -189,6 +189,21 @@ Remaining failures:
 2. Port relevant fixes to Rust (engine, bindings, test files)
 3. Update expected XMLs when Perl test output changes
 
+**Session 108 verification — recent Perl commits already ported:**
+- `70508320` (#2775) alignment-token early return inside nested boxing groups:
+  - Rust `stomach.rs:674` has `stomach!().boxing.len() <= init_depth` init_depth guard ✓
+  - Rust `latex_constructs.rs:1483` has `Let!("\\\\", "\\lx@newline")` in `before_float_ex` ✓
+- `acaab773` (#2770) Correct Grouplevel (0-based + noframe for document):
+  - Rust `state.rs:1907` `get_frame_depth()` returns count (no `- 1`) ✓
+  - Rust `stomach.rs:378,410` has `begin_mode_opt`/`end_mode_opt` with `noframe` param ✓
+  - Rust `latex_constructs.rs:2457,2542` uses `noframe=true` at `\begin{document}`/`\end{document}` ✓
+- `48ad18db` (#2778) Relation parameter type for ifnum/ifdim:
+  - Rust `tex_logic.rs:56,68` uses `\\ifnum Number Relation Number` ✓
+- `fdc8bf91` (#2777) pstricks raw TeX `--includestyles` — not ported (pstricks raw-load
+  path is materially different in Rust; not a blocker since Rust uses bindings, not raw).
+- `7119a535` (#2753) dump parameter double-escape — not applicable to Rust dump_writer
+  (Rust dumper structure differs from Perl Dumper.pm; no double-escape bug).
+
 ---
 
 ### Phase D: 10k-Document Sandbox — Coverage & Performance
