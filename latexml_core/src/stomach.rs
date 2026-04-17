@@ -590,6 +590,12 @@ where FnR: FnOnce(&mut [Digested]) -> R {
   let list = &mut stomach.box_list;
   caller(list)
 }
+/// Access to the current box_list as a `&mut Vec` — allows push/pop operations.
+pub fn with_box_list_mut_vec<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(&mut Vec<Digested>) -> R {
+  let mut stomach = stomach_mut!();
+  caller(&mut stomach.box_list)
+}
 
 // **********************************************************************
 // Digestion

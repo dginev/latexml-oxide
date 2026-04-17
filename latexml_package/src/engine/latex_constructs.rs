@@ -6397,12 +6397,39 @@ LoadDefinitions!({
   DefConstructor!("\\lx@bibitem[] Semiverbatim",
     "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
     after_digest => sub[whatsit] {
+      // Perl #2409: prune previous \lx@bibitem whatsit if it was auto-opened
+      // with no tag/key body, and reuse its ID (avoids empty bibitem elements).
+      let pruned_prev = stomach::with_box_list(|list| {
+        if let Some(prev) = list.last() {
+          if let DigestedData::Whatsit(prev_ws_cell) = prev.data() {
+            let prev_ws = prev_ws_cell.borrow();
+            let defn = prev_ws.get_definition();
+            let cs_str = defn.get_cs().to_string();
+            if cs_str == "\\lx@bibitem"
+              && prev_ws.get_arg(1).is_none()
+              && prev_ws.get_arg(2).is_none_or(|a| a.is_empty().unwrap_or(true))
+            {
+              return true;
+            }
+          }
+        }
+        false
+      });
+      if pruned_prev {
+        stomach::with_box_list_mut_vec(|list| { list.pop(); });
+        Info!("empty", "bibitem",
+          "Encountered an empty \\bibitem, likely auto-opened without need. Pruning and reusing its id.");
+      }
       let tag_opt = whatsit.get_arg(1);
       let key = if let Some(key) = whatsit.get_arg(2) {
         clean_bib_key(&key.to_string())
       } else { String::default() };
       if let Some(tag) = tag_opt {
-        let mut properties = RefStepID!("@bibitem")?;
+        let mut properties = if pruned_prev {
+          RefCurrentID!("@bibitem")?
+        } else {
+          RefStepID!("@bibitem")?
+        };
         properties.insert("key", key.into());
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
