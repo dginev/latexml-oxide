@@ -46,6 +46,10 @@ LoadDefinitions!({
   DefRegister!("\\startpageht", Dimension(0));
   DefRegister!("\\floatfltwidth", Dimension(0));
   DefRegister!("\\fltitemwidth",  Dimension(0));
+  // Box registers + output hook (matches floatflt)
+  RawTeX!("\\newbox\\figbox");
+  RawTeX!("\\newbox\\pagebox");
+  DefRegister!("\\outputpretest", Tokens::new(vec![]));
 
   RawTeX!("\\newif\\iftryingfig     \\tryingfigfalse");
   RawTeX!("\\newif\\ifdoingfig      \\doingfigfalse");

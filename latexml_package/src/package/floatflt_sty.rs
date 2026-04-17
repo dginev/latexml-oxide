@@ -54,6 +54,11 @@ LoadDefinitions!({
   DefRegister!("\\tabbredd" =>      Dimension::new(0));
   DefRegister!("\\floatfltwidth" => Dimension::new(0));
   DefRegister!("\\fltitemwidth" =>  Dimension::new(0));
+  // Perl L73-75,95: box registers and output test hook
+  RawTeX!("\\newbox\\figbox");
+  RawTeX!("\\newbox\\tabbox");
+  RawTeX!("\\newbox\\pagebox");
+  DefRegister!("\\outputpretest" => Tokens::new(vec![]));
   RawTeX!("\\newif\\iftryingfig     \\tryingfigfalse");
   RawTeX!("\\newif\\iftryingtab     \\tryingtabfalse");
   RawTeX!("\\newif\\ifdoingfig      \\doingfigfalse");
