@@ -951,7 +951,23 @@ Comprehensive cycle of sandbox coverage and Perl-fidelity work. **29 commits, 40
 - 409 integration tests pass
 - 128-paper sandbox: **0 Rust-attributable conversion errors**
 - 256-paper sandbox: 93.75% clean, **0 panics**, 6 errors all paper-specific (2 user bugs, 1 exotic Unicode in CS name, 1 custom macro, 1 math-mode thanks edge case, 1 partial with external file missing)
-- 512-paper sandbox: 92.6% clean with content-model/edge-case residuals
+- 512-paper sandbox: 92.8% clean (475/512 ok, 22 conversion_error, 14 abort, 1 graceful-error; 0 panics) with content-model/edge-case residuals
+
+**Post-session 512 verification (after all 32 commits including `d11ea9545` panic fix):**
+
+| Category | Count |
+|----------|-------|
+| ok | 475 (92.8%) |
+| conversion_error | 22 |
+| abort (timeout ~61s) | 14 |
+| error (previously panic, now graceful) | 1 |
+| **panics** | **0** |
+
+The whatsit `substitute_parameters` panic (`args[n]` out-of-bounds when
+reversion spec references more params than call-site supplied) was
+fixed in `d11ea9545`. 0803.4485 no longer crashes (still has 30 secondary
+`#2 reaches Stomach` errors from paper-level malformed newcommand
+invocations, but process completes gracefully).
 - Rust port is well-synced with Perl upstream through March 2026 commits
 
 ##### Investigation — opfunction-tight_term duplicate rule (session 108)
