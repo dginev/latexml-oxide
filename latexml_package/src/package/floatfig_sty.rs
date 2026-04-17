@@ -11,13 +11,18 @@ LoadDefinitions!({
   DeclareOption!("vflt", { state::assign_value("floatfltpos", Stored::from("v"), None); });
 
   // Perl: DefEnvironment('{floatingfigure}[]{Dimension}', ...)
-  // Simplified: just wrap in ltx:figure
+  // Simplified: just wrap in ltx:figure.
+  // NOTE: uses `after_digest` (not `after_digest_body`) to match engine's
+  // {figure} / {table} — after_digest_body runs after frame pop, by which
+  // time `\@captype` (set locally by before_float) is gone, and
+  // after_float's `digest(\@captype)` would error. See floatflt_sty.rs
+  // commit 2b57844c4 for details.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
     before_digest => {
       crate::engine::latex_constructs::before_float("figure", None);
     },
-    after_digest_body => sub[whatsit] {
+    after_digest => sub[whatsit] {
       crate::engine::latex_constructs::after_float(whatsit);
     });
 
