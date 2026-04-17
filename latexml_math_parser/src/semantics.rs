@@ -1581,10 +1581,16 @@ pub fn fenced(
         },
         _ => unreachable!(),
       };
-      // Determine meaning from delimiter + item count (matching Perl's fence lookup)
+      // Determine meaning from delimiter + item count (matching Perl's fence lookup).
+      // Note: 2-item parens are NOT auto-labeled as "open-interval" here —
+      // the dedicated `interval` semantic handles intervals via the
+      // `lparen term punct term rparen => interval` grammar rule at term
+      // level. `fenced` is the general "list-in-parens" path and produces
+      // list-like meaning; the forest retains both interpretations and
+      // pragmatics picks based on context (fenced=list wins in function
+      // argument context, interval wins standalone).
       let n = items.len();
       let fence_meaning: Cow<'static, str> = match (o.as_ref(), n) {
-        ("(", 2) => Cow::Borrowed("open-interval"),
         ("(", _) => Cow::Borrowed("vector"),
         ("{", _) => Cow::Borrowed("set"),
         _ => Cow::Owned(meaning_str),

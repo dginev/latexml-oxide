@@ -243,7 +243,7 @@
   </para>
   <para xml:id="p8">
     <equation xml:id="S0.Ex6">
-      <Math mode="display" tex="\sum_{\scriptstyle 0\leq i\leq m\atop\scriptstyle 0&lt;j&lt;n}P(i,j)" text="(sum _ ((0 &lt;= i &lt;= m) FRACOP (0 &lt; j &lt; n)))@(P@(open-interval@(i, j)))" xml:id="S0.Ex6.m1">
+      <Math mode="display" tex="\sum_{\scriptstyle 0\leq i\leq m\atop\scriptstyle 0&lt;j&lt;n}P(i,j)" text="(sum _ ((0 &lt;= i &lt;= m) FRACOP (0 &lt; j &lt; n)))@(P@(vector@(i, j)))" xml:id="S0.Ex6.m1">
         <XMath>
           <XMApp>
             <XMApp>
@@ -273,7 +273,7 @@
               <XMTok font="italic" role="UNKNOWN">P</XMTok>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="open-interval"/>
+                  <XMTok meaning="vector"/>
                   <XMRef idref="S0.Ex6.m1.1"/>
                   <XMRef idref="S0.Ex6.m1.2"/>
                 </XMApp>

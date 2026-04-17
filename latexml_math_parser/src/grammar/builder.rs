@@ -365,11 +365,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | langle_open term_list rangle_close => fenced
            | langle_open formula_list rangle_close => fenced
            | langle_open formula metarelop expression rangle_close => fence
-           | lparen term punct term rparen      => interval
-           | lparen term punct term rbracket    => interval
-           | lbracket term punct term rbracket  => interval
-           | lbracket term punct term rparen  => interval
-           | rbracket term punct term lbracket => interval
+           // Perf/design: interval rules moved out of fenced_factor into
+           // term (see `tight_term += interval_term` below). Math convention:
+           // an interval `(a,b)` is a named mathematical object — a set of
+           // numbers — not a grouping mechanism like `(a+b)`. Treating it as
+           // a term instead of fenced_factor has a clean consequence:
+           // function application `f(x,y)` takes a fenced_factor, so the
+           // interval interpretation of `(x,y)` is pruned naturally; the
+           // list interpretation (from `lparen formula_list rparen`) wins.
            // QM bra-ket uses langle_open/rangle_close (specific ⟨⟩ tokens),
            // avoiding ambiguity with relational < > (langle_rel/rangle_rel).
            // Conditional probability uses lparen/rparen (specific () tokens),
@@ -508,6 +511,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     tight_term += applied_func;
     // Function application results can chain with invisible times (Perl moreFactors)
     tight_term += tight_term applied_func => apply_invisible_times;
+
+    // Intervals are math objects (`(0,1)`, `[a,b]`, etc.), not grouping
+    // constructs. Moved out of fenced_factor so function application
+    // (`f(x,y)`) naturally prunes the interval interpretation in favor
+    // of the list interpretation via `lparen formula_list rparen`.
+    // Placed at tight_term level so intervals participate in invisible
+    // multiplication (`2(a,b)` = `2 * (a,b)`) but not in `f(...)` apply.
+    interval_term = lparen term punct term rparen      => interval
+      | lparen term punct term rbracket    => interval
+      | lbracket term punct term rbracket  => interval
+      | lbracket term punct term rparen  => interval
+      | rbracket term punct term lbracket => interval;
+    tight_term += interval_term;
 
     // UNKNOWN followed by fenced args => function application (Perl: doubtArgs/maybeArgs)
     // f(x) => f@(x), g(a+b) => g@(a+b). Only active when MATHPARSER_SPECULATE is set.

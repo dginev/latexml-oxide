@@ -707,13 +707,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       <picture class="ltx_centering" fill="none" height="65.0pt" stroke="none" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
         <g innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(16.6,78.87)">
           <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.01854pt" transform="translate(0,0)">
-            <Math mode="inline" tex="F(x,y)" text="F@(open-interval@(x, y))" xml:id="S3.F1.pic1.m1">
+            <Math mode="inline" tex="F(x,y)" text="F@(vector@(x, y))" xml:id="S3.F1.pic1.m1">
               <XMath>
                 <XMApp>
                   <XMTok font="italic" role="UNKNOWN">F</XMTok>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S3.F1.pic1.m1.1"/>
                       <XMRef idref="S3.F1.pic1.m1.2"/>
                     </XMApp>
@@ -1341,11 +1341,11 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="open-interval@(plus-or-minus h, 0)" xml:id="S4.T1.m7">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="vector@(plus-or-minus h, 0)" xml:id="S4.T1.m7">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m7.1"/>
                       <XMRef idref="S4.T1.m7.2"/>
                     </XMApp>
@@ -1374,11 +1374,11 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,\pm h)" text="open-interval@(0, plus-or-minus h)" xml:id="S4.T1.m9">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(0,\pm h)" text="vector@(0, plus-or-minus h)" xml:id="S4.T1.m9">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m9.1"/>
                       <XMRef idref="S4.T1.m9.2"/>
                     </XMApp>
@@ -1553,11 +1553,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" text="open-interval@(plus-or-minus (1 / 2) * h, plus-or-minus (1 / 2) * h)" xml:id="S4.T1.m11">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" text="vector@(plus-or-minus (1 / 2) * h, plus-or-minus (1 / 2) * h)" xml:id="S4.T1.m11">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m11.1"/>
                       <XMRef idref="S4.T1.m11.2"/>
                     </XMApp>
@@ -1832,11 +1832,11 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="open-interval@(plus-or-minus h, 0)" xml:id="S4.T1.m17">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="vector@(plus-or-minus h, 0)" xml:id="S4.T1.m17">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m17.1"/>
                       <XMRef idref="S4.T1.m17.2"/>
                     </XMApp>
@@ -1852,11 +1852,11 @@ square.</caption>
                     </XMWrap>
                   </XMDual>
                 </XMath>
-              </Math>, <Math mode="inline" tex="(0,\pm h)" text="open-interval@(0, plus-or-minus h)" xml:id="S4.T1.m18">
+              </Math>, <Math mode="inline" tex="(0,\pm h)" text="vector@(0, plus-or-minus h)" xml:id="S4.T1.m18">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m18.1"/>
                       <XMRef idref="S4.T1.m18.2"/>
                     </XMApp>
@@ -1885,11 +1885,11 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" text="open-interval@(plus-or-minus (1 / 2) * h, plus-or-minus (1 / 2) * h)" xml:id="S4.T1.m20">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{2}h,\pm\tfrac{1}{2}h)" text="vector@(plus-or-minus (1 / 2) * h, plus-or-minus (1 / 2) * h)" xml:id="S4.T1.m20">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m20.1"/>
                       <XMRef idref="S4.T1.m20.2"/>
                     </XMApp>
@@ -2140,11 +2140,11 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{6}h,0)" text="open-interval@(plus-or-minus (1 / 3) * square-root@(6) * h, 0)" xml:id="S4.T1.m25">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{6}h,0)" text="vector@(plus-or-minus (1 / 3) * square-root@(6) * h, 0)" xml:id="S4.T1.m25">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m25.1"/>
                       <XMRef idref="S4.T1.m25.2"/>
                     </XMApp>
@@ -2185,11 +2185,11 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{6}\sqrt{6}h,\pm\tfrac{1}{2}\sqrt{2}h)" text="open-interval@(plus-or-minus (1 / 6) * square-root@(6) * h, plus-or-minus (1 / 2) * square-root@(2) * h)" xml:id="S4.T1.m27">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{6}\sqrt{6}h,\pm\tfrac{1}{2}\sqrt{2}h)" text="vector@(plus-or-minus (1 / 6) * square-root@(6) * h, plus-or-minus (1 / 2) * square-root@(2) * h)" xml:id="S4.T1.m27">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m27.1"/>
                       <XMRef idref="S4.T1.m27.2"/>
                     </XMApp>
@@ -2463,11 +2463,11 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="open-interval@(plus-or-minus h, 0)" xml:id="S4.T1.m32">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,0)" text="vector@(plus-or-minus h, 0)" xml:id="S4.T1.m32">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m32.1"/>
                       <XMRef idref="S4.T1.m32.2"/>
                     </XMApp>
@@ -2483,11 +2483,11 @@ square.</caption>
                     </XMWrap>
                   </XMDual>
                 </XMath>
-              </Math>, <Math mode="inline" tex="(0,\pm h)" text="open-interval@(0, plus-or-minus h)" xml:id="S4.T1.m33">
+              </Math>, <Math mode="inline" tex="(0,\pm h)" text="vector@(0, plus-or-minus h)" xml:id="S4.T1.m33">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m33.1"/>
                       <XMRef idref="S4.T1.m33.2"/>
                     </XMApp>
@@ -2516,11 +2516,11 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,\pm h)" text="open-interval@(plus-or-minus h, plus-or-minus h)" xml:id="S4.T1.m35">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm h,\pm h)" text="vector@(plus-or-minus h, plus-or-minus h)" xml:id="S4.T1.m35">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m35.1"/>
                       <XMRef idref="S4.T1.m35.2"/>
                     </XMApp>
@@ -2707,11 +2707,11 @@ square.</caption>
             <td border="t"/>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{3}h,\pm\tfrac{1}{3}\sqrt{3}h)" text="open-interval@(plus-or-minus (1 / 3) * square-root@(3) * h, plus-or-minus (1 / 3) * square-root@(3) * h)" xml:id="S4.T1.m37">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\tfrac{1}{3}\sqrt{3}h,\pm\tfrac{1}{3}\sqrt{3}h)" text="vector@(plus-or-minus (1 / 3) * square-root@(3) * h, plus-or-minus (1 / 3) * square-root@(3) * h)" xml:id="S4.T1.m37">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m37.1"/>
                       <XMRef idref="S4.T1.m37.2"/>
                     </XMApp>
@@ -3003,11 +3003,11 @@ square.</caption>
               </Math></td>
           </tr>
           <tr>
-            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,0)" text="open-interval@(plus-or-minus square-root@(3 / 5) * h, 0)" xml:id="S4.T1.m43">
+            <td align="left" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,0)" text="vector@(plus-or-minus square-root@(3 / 5) * h, 0)" xml:id="S4.T1.m43">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m43.1"/>
                       <XMRef idref="S4.T1.m43.2"/>
                     </XMApp>
@@ -3034,11 +3034,11 @@ square.</caption>
                     </XMWrap>
                   </XMDual>
                 </XMath>
-              </Math>, <Math mode="inline" tex="(0,\pm\sqrt{\tfrac{3}{5}}h)" text="open-interval@(0, plus-or-minus square-root@(3 / 5) * h)" xml:id="S4.T1.m44">
+              </Math>, <Math mode="inline" tex="(0,\pm\sqrt{\tfrac{3}{5}}h)" text="vector@(0, plus-or-minus square-root@(3 / 5) * h)" xml:id="S4.T1.m44">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m44.1"/>
                       <XMRef idref="S4.T1.m44.2"/>
                     </XMApp>
@@ -3078,11 +3078,11 @@ square.</caption>
             <td/>
           </tr>
           <tr>
-            <td align="left" border="b" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,\pm\sqrt{\tfrac{3}{5}}h)" text="open-interval@(plus-or-minus square-root@(3 / 5) * h, plus-or-minus square-root@(3 / 5) * h)" xml:id="S4.T1.m46">
+            <td align="left" border="b" class="ltx_nopad_l" thead="row"><Math mode="inline" tex="(\pm\sqrt{\tfrac{3}{5}}h,\pm\sqrt{\tfrac{3}{5}}h)" text="vector@(plus-or-minus square-root@(3 / 5) * h, plus-or-minus square-root@(3 / 5) * h)" xml:id="S4.T1.m46">
                 <XMath>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S4.T1.m46.1"/>
                       <XMRef idref="S4.T1.m46.2"/>
                     </XMApp>

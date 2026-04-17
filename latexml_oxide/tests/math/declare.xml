@@ -281,7 +281,7 @@
         </Math>
       </equation>
       <equation xml:id="S2.Ex4">
-        <Math mode="display" tex="f,f(a),f(q),f(a,b),\mbox{ but }f(a+b)" text="list@(f, f * a, f * q, f * open-interval@(a, b), [ but ] * f * (a + b))" xml:id="S2.Ex4.m1">
+        <Math mode="display" tex="f,f(a),f(q),f(a,b),\mbox{ but }f(a+b)" text="list@(f, f * a, f * q, f * vector@(a, b), [ but ] * f * (a + b))" xml:id="S2.Ex4.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -326,7 +326,7 @@
                   <XMTok decl_id="S2.XMD4" font="italic" role="ID">f</XMTok>
                   <XMDual>
                     <XMApp>
-                      <XMTok meaning="open-interval"/>
+                      <XMTok meaning="vector"/>
                       <XMRef idref="S2.Ex4.m1.7"/>
                       <XMRef idref="S2.Ex4.m1.8"/>
                     </XMApp>

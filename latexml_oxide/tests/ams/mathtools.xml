@@ -6582,7 +6582,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S10.p14">
       <equation xml:id="S10.Ex79">
-        <Math mode="display" tex="\sum_{\begin{subarray}{l}i\in\Lambda\\&#10;0&lt;j&lt;n\end{subarray}}P(i,j)" text="(sum _ (list@(Array[[i element-of Lambda], [0 &lt; j &lt; n]])))@(P@(open-interval@(i, j)))" xml:id="S10.Ex79.m1">
+        <Math mode="display" tex="\sum_{\begin{subarray}{l}i\in\Lambda\\&#10;0&lt;j&lt;n\end{subarray}}P(i,j)" text="(sum _ (list@(Array[[i element-of Lambda], [0 &lt; j &lt; n]])))@(P@(vector@(i, j)))" xml:id="S10.Ex79.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -6622,7 +6622,7 @@ Then a switch of tag forms.</p>
                 <XMTok font="italic" role="UNKNOWN">P</XMTok>
                 <XMDual>
                   <XMApp>
-                    <XMTok meaning="open-interval"/>
+                    <XMTok meaning="vector"/>
                     <XMRef idref="S10.Ex79.m1.2"/>
                     <XMRef idref="S10.Ex79.m1.3"/>
                   </XMApp>
