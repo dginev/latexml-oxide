@@ -168,21 +168,38 @@ LoadDefinitions!({
   // Spacing rules (matching Perl frenchb.ldf):
   //   before ':'  → regular space (espace insécable, rendered " :")
   //   before ';!?' → thin space (U+2006, SIX-PER-EM SPACE)
+  //
+  // Active on ACTIVE-catcode :;!? only when current language is French.
+  // Tokens tokenized inside a French group keep their ACTIVE catcode
+  // when consumed in a non-French context (e.g. \foreignlanguage{english}{…!}),
+  // but the dispatch primitive must respect the *current* language —
+  // Perl frenchb.ldf checks \languagename via \@ensuredmath etc.
+  // If current language is not French, fall back to emitting just the
+  // bare punctuation (no thin space).
+  fn in_french() -> bool {
+    lookup_font()
+      .and_then(|f| f.get_language().map(|l| l.as_ref() == "fr" || l.as_ref() == "fr-CA"))
+      .unwrap_or(false)
+  }
   DefPrimitive!("\\lx@french@punct@colon", {
     enter_horizontal();
-    Tbox::new(arena::pin_static(" :"), None, None, Tokens!(), stored_map!())
+    let s = if in_french() { " :" } else { ":" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@semi", {
     enter_horizontal();
-    Tbox::new(arena::pin_static("\u{2006};"), None, None, Tokens!(), stored_map!())
+    let s = if in_french() { "\u{2006};" } else { ";" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@exclam", {
     enter_horizontal();
-    Tbox::new(arena::pin_static("\u{2006}!"), None, None, Tokens!(), stored_map!())
+    let s = if in_french() { "\u{2006}!" } else { "!" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@question", {
     enter_horizontal();
-    Tbox::new(arena::pin_static("\u{2006}?"), None, None, Tokens!(), stored_map!())
+    let s = if in_french() { "\u{2006}?" } else { "?" };
+    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
 
   // After babel loads: activate the main language's captions and shorthands.
