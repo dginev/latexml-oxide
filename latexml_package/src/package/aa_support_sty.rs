@@ -184,18 +184,35 @@ LoadDefinitions!({
   DefMath!("\\gid", "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
   DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
 
-  // Fractional degrees/hours — Perl L296-312
-  DefMacro!("\\fd", ".\\!^{\\mathrm{d}}");
-  DefMacro!("\\fh", ".\\!^{\\mathrm{h}}");
-  DefMacro!("\\fm", ".\\!^{\\mathrm{m}}");
-  DefMacro!("\\fs", ".\\!^{\\mathrm{s}}");
-  DefMacro!("\\fp", ".\\!^{\\mathrm{p}}");
-  DefMacro!("\\fdg", ".\\!^{\\circ}");
-  DefMacro!("\\farcm", ".\\!^{\\prime}");
-  DefMacro!("\\farcs", ".\\!^{\\prime\\prime}");
+  // Fractional degrees/hours via aas@@fstack constructor — Perl L296-312
+  // Ports aas_support.sty.ltxml's \aas@@fstack (semantic XMApp POSTFIX form)
+  DefConstructor!("\\aas@@fstack{}",
+    "<ltx:XMApp role='POSTFIX'><ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/><ltx:XMTok>.</ltx:XMTok><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMApp>",
+    mode => "math", bounded => true,
+    properties => sub[_args] {
+      let script_level = state::lookup_int("script_level");
+      Ok(stored_map!("scriptpos" => s!("mid{}", script_level)))
+    });
+  DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");
+  DefMacro!("\\fd", "\\aas@fstack{d}");
+  DefMacro!("\\fh", "\\aas@fstack{h}");
+  DefMacro!("\\fm", "\\aas@fstack{m}");
+  DefMacro!("\\fs", "\\aas@fstack{s}");
+  DefMacro!("\\fp", "\\aas@fstack{p}");
+  DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
+  DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
+  DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
   DefMacro!("\\udeg", "\\!^{\\circ}");
   DefMacro!("\\uarcmin", "\\!^{\\prime}");
   DefMacro!("\\uarcsec", "\\!^{\\prime\\prime}");
+
+  // Perl L314-324: math small caps, QED square
+  DefConstructor!("\\mathsc{}", "#1", bounded => true, require_math => true,
+    font => { family => "smallcaps", series => "medium", shape => "upright" });
+  DefConstructor!("\\squareforqed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+  Let!("\\sq", "\\squareforqed");
+  Let!("\\qed", "\\squareforqed");
 
   // Blackboard bold — Perl L326-338
   DefPrimitive!("\\bbbc", "\u{2102}");
@@ -239,6 +256,11 @@ LoadDefinitions!({
   DefRegister!("\\figcapgap" => Dimension::new(5 * 65536));
   DefRegister!("\\tabcapgap" => Dimension::new(10 * 65536));
   DefRegister!("\\instindent" => Dimension::new(0));
+  // Perl L379-384: aa cls dimension registers
+  DefRegister!("\\figgap" => Dimension!("1cc"));
+  DefRegister!("\\headerboxheight" => Dimension!("143pt"));
+  DefRegister!("\\headlineindent" => Dimension!("1.166cm"));
+  DefRegister!("\\logodepth" => Dimension!("1.3cm"));
 
   DefMacro!("\\leftlegendglue", "");
   DefMacro!("\\capstrut", "");
