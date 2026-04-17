@@ -81,17 +81,6 @@ Detailed fix history for phases above lives in git log. See the corresponding se
 
 ## Work Plan — Active TODO List
 
-### Phase C4: Upstream Perl sync — continuous
-
-**Approach:**
-1. Check `LaTeXML/` git log for new commits
-2. Port relevant fixes to Rust (engine, bindings, test files)
-3. Update expected XMLs when Perl test output changes
-
-**Recent Perl commits verified already ported:** #2775 alignment init_depth + `\\→\lx@newline`, #2770 Grouplevel (0-based + noframe), #2778 Relation parameter type, #2771 iflimit/if_count deny-list, #2762 lgroup codepoints, #2759 TL2025 kernel, #2736 hyperref etoolbox, #2751 siunitx expl spacing, #2700 Explode newlines (revert of #2646), #2633 `\backsimeq` U+22CD, #2551 mixed-delimiter definecolor, #2552 todonotes opt arg, #2442 page counter + overline scriptpos + triangleleft U+22B2, #2450 overline no scriptpos=mid, #2458 Dot-over-i, #2651 multirow guard, #2488 `\phantom`, #2436 Rearrange2 (`\lx@end@document`, tiny..Huge in classes), #2442 Rearrange3 (`\lx@endash/\lx@emdash/\lx@NBSP`), #2448 Leaders (stretchy math accents), #2449 Amscd (CD arrows), #2411 Plain fonts (FontDef), #2404 Accents (combining char data), #2340 `\braket` | reversions, #2319 `*` as U+2217, #2322 ifthen in packages, #2409 bibitem prune.
-
-**Not ported (materially different in Rust):** #2777 pstricks raw TeX `--includestyles` (Rust uses bindings not raw), #2753 dump parameter double-escape (Rust dumper structure differs), #2555 Sizing (post-processor work), #2605 deep recursion limits (Perl-specific), #2425 Unicode math properties redesign.
-
 ### Phase D: 10k-Document Sandbox — Coverage & Performance
 
 Scale testing to ~8,000 arxiv papers (`$HOME/data/10k_sandbox/`). All known to convert under Perl LaTeXML. **Tool:** `cortex_worker --standalone --input <zip> --output <zip>`.
