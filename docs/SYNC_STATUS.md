@@ -148,13 +148,17 @@ exact engine gaps:
   differs (see the stray-comma leak in p1), suggesting hook-order or
   option-token-cleanup differences.
 
-- [ ] **Kernel dump regeneration at build time.** Per design intent,
+- [x] **Kernel dump regeneration at build time.** Per design intent,
   `resources/dumps/latex.dump.txt` should **not** be checked into VCS;
-  it should be rebuilt on each compile from the ambient texlive. Current
-  TL-2023-era dump diverges from runtime texlive (TL 2025 locally, TL
-  2023 on CI) and papers over the gaps above by freezing a moment in time.
-  After the items above are done, add `latex.dump.txt` to `.gitignore`
-  and have `build.rs` drive regeneration.
+  it should be rebuilt on each compile from the ambient texlive. (Status:
+  `resources/dumps/` is `.gitignore`d. `latexml_package/build.rs` used to
+  `include_str!` the dump at compile time, which locked it into whatever
+  texlive was present when someone last ran `--init` locally. As of
+  "Make the kernel dump a runtime artifact, not a compile-time one" — the
+  dump is resolved at runtime via `$LATEXML_DUMP_PATH`, `$LATEXML_DUMP_DIR`,
+  exe-relative paths, or the dev-tree path. `tools/make_formats.sh`
+  regenerates it in one step. CI runs `make_formats.sh` before tests, so
+  the dump the test suite consumes always matches the test-runtime texlive.)
 
 - [ ] **Drop Rust babel workarounds incrementally.** Once the engine pieces
   are in place, strip `babel_sty.rs` from 384 → ~15 lines to match Perl's
