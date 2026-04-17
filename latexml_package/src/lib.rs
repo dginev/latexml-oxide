@@ -341,6 +341,9 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     // Perl: psfig.tex.ltxml just does `RequirePackage('epsfig')`.
     // Paper 0803.3406 does `\input{psfig}` (.tex form), hitting this dispatch.
     "psfig.tex" => package::epsfig_sty::load_definitions(),
+    // Perl: aipcheck.tex.ltxml — "Do nothing" stub. Paper 0809.2681 does
+    // `\input{aipcheck}`.
+    "aipcheck.tex" => package::aipcheck_tex::load_definitions(),
     "newlfont.sty" => package::newlfont_sty::load_definitions(),
     "ltxcmds.sty" => package::ltxcmds_sty::load_definitions(),
     "kvsetkeys.sty" => package::kvsetkeys_sty::load_definitions(),

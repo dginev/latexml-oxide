@@ -316,6 +316,7 @@ pub mod turing_sty;
 pub mod amsppt_sty;
 pub mod proof_sty;
 pub mod psfig_sty;
+pub mod aipcheck_tex;
 pub mod psfrag_sty;
 pub mod pslatex_sty;
 pub mod pspicture_sty;
