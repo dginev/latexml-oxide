@@ -47,34 +47,45 @@ fn numprints_test() {
 //
 //      - Reproduces with `\usepackage{babel}` (no options) and
 //        `\RequirePackage{babel}`. Rules out user-option-list leak.
-//      - Count-invariant in option count.
 //      - Isolated: with `\par FIRST` as the body, output is
 //        `<p>,</p><p>FIRST</p>` — the comma is a standalone leftover
 //        token already queued when `\begin{document}` starts.
-//      - **Decisive test (2026-04-17)**: wrapping `\usepackage{babel}`
-//        with `\let\AtBeginDocument\@gobble` to neutralize all babel
-//        AtBeginDocument registrations produces `<p>Hi.</p>` (no
-//        comma). So the `,` is injected by one of babel's
-//        \AtBeginDocument hooks at `\begin{document}` time.
-//      - **Confirmed**: the 5th registered \AtBeginDocument hook
-//        (babel.sty L3887-3914) is the culprit. Verified by
-//        selectively disabling only hook 5 (`\ifnum\myABDcount=5
-//        \else \origAtBeginDocument{#1} \fi`) → `<p>Hi.</p>` (no
-//        comma). \detokenize of hook 5 body matches babel.sty
-//        L3887-3914 exactly.
-//      - **Subtle**: when the same hook 5 body is run MANUALLY in
-//        the preamble (between \usepackage{babel} and \begin{document}
-//        where babel's macros are defined), it does NOT leak — step
-//        typeouts after each statement all fire cleanly. So the
-//        leak is specific to hook 5 running inside our engine's
-//        \AtBeginDocument firing path, not to the body itself.
-//      - **Patching `\@fontenc@load@list`** after babel load but
-//        before \begin{document} (tested with `\relax\relax`,
-//        `\@empty\@empty`, various values) does NOT remove the
-//        comma — the leak survives changes to that variable.
-//      - Next cycle: instrument our Rust `@at@begin@document`
-//        execution path to log each token as it's digested, see
-//        which one triggers the `,` emission.
+//      - Confirmed the 5th registered \AtBeginDocument hook
+//        (babel.sty L3887-3914) is the culprit. Hook body:
+//          \def\@elt#1{,#1,}
+//          \edef\bbl@tempa{\expandafter\@gobbletwo\@fontenc@load@list}
+//          \let\@elt\relax
+//          ...\bbl@foreach\bbl@tempa{...}
+//          \ifx\bbl@tempb\@empty\else ... \fi
+//      - **Decisive test (2026-04-17)**: inside the document body,
+//        with babel already loaded, running
+//          \def\mylist{\@elt{OT1}}
+//          \def\@elt#1{,#1,}
+//          \edef\result{\expandafter\@gobbletwo\mylist}
+//        EMITS a stray `,` into the paragraph — even though
+//        `\result` ends up empty (the edef captured the full
+//        expansion, as \typeout confirms). Without babel loaded,
+//        the same pattern does NOT leak: `<p>A B X</p>` clean.
+//        So the leak is an engine-level `\edef`/expandafter
+//        interaction that babel's preamble somehow arms.
+//      - The bug is not specific to AtBeginDocument firing — it
+//        triggers in the main digest stream too, once babel's
+//        preamble has loaded. Candidates to investigate:
+//          * our `\edef` handling of `\expandafter` after a
+//            gobbled control-sequence token (maybe expansion state
+//            leaks past the `\@gobbletwo` body into the main stream)
+//          * whether babel's preamble changes catcodes/scanning mode
+//            such that a subsequent `\edef` emits the pre-gobble
+//            tokens to the input instead of into the edef buffer
+//      - Patching `\@fontenc@load@list` to `\@empty` (single) DOES
+//        remove the comma. Patching to `\@elt{OT1}` (single) still
+//        leaks one `,`. Patching to `\@elt{OT1}\@elt{T1}` leaks
+//        `T1,,,`. The count of leaked commas correlates with the
+//        number of `\@elt` wrappers not consumed by `\@gobbletwo`.
+//      - Next cycle: reduce the bug to the smallest \edef /
+//        \expandafter / \@gobbletwo pattern that reproduces it
+//        without requiring a babel preamble, so the fix can go into
+//        latexml_core without touching babel.
 //
 //   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
 //      exclamation/question now emits a thin space before itself
