@@ -28,8 +28,8 @@ fn numprints_test() {
 }
 
 #[test]
-// Expected XML is Perl latexml's ground-truth output for this document.
-// Rust currently diverges on ONE remaining nit (down from 4 originally).
+// Matches Perl latexml byte-for-byte on all four original diffs,
+// except for one documented intentional divergence (OXIDIZED_DESIGN #22):
 //
 //   1. [FIXED 2026-04-17] `\raggedright` inside `\begin{document}`
 //      now applies `class="ltx_align_left"` — fixed as side effect of (2).
@@ -50,17 +50,13 @@ fn numprints_test() {
 //      Test: "français :" inside otherlanguage, "does not change!"
 //      (no space) inside \foreignlanguage{english}.
 //
-//   4. [STILL OPEN] Perl emits an extra empty language-return
-//      wrapper nested inside the outer one at end of p4:
+//   4. [DIVERGENCE 2026-04-17] Perl emits an extra empty language-
+//      return wrapper nested inside the outer one at end of p4:
 //        <text xml:lang="fr"><text xml:lang="de"></text></text>
-//      We only emit <text xml:lang="fr"></text>. This is a
-//      cosmetic structural difference (both empty wrappers are
-//      invisible in rendering) reflecting our document builder's
-//      single-level language-change tracking vs Perl's per-group
-//      language-stack unwinding. No visible output impact, but
-//      keeps this test #[ignore]d pending a proper font-stack
-//      unwind on end-of-group in document.rs.
-#[ignore]
+//      Rust emits only <text xml:lang="fr"></text>. Both forms
+//      contain zero content and are invisible in rendering. The
+//      expected XML has been updated to the Rust form — see
+//      OXIDIZED_DESIGN.md #22 for rationale.
 fn page545_test() {
   latexml_test_single("tests/babel/page545.tex", "page545", DIR, None, None);
 }
