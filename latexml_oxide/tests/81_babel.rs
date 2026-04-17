@@ -42,27 +42,30 @@ fn numprints_test() {
 //      (not sibling paragraphs), so the class is never applied.
 //      Fixing (2) below is expected to fix this as a side effect.
 //
-//   2. [STILL OPEN] A stray leading comma appears in p1 ("<p>,The
-//      expansion…"). Investigations so far:
+//   2. [ROOT CAUSE LOCALIZED] A stray leading comma appears in p1
+//      ("<p>,The expansion…"). Investigation progress:
 //
-//      - Reproduces with `\usepackage{babel}` (no options) and with
+//      - Reproduces with `\usepackage{babel}` (no options) and
 //        `\RequirePackage{babel}`. Rules out user-option-list leak.
-//      - Comma is one single character regardless of option count.
-//        Rules out naive list-split off-by-one.
+//      - Count-invariant in option count.
 //      - Isolated: with `\par FIRST` as the body, output is
 //        `<p>,</p><p>FIRST</p>` — the comma is a standalone leftover
 //        token already queued when `\begin{document}` starts.
-//      - `\def\bbl@evargs{,everylanguage=1,...}` (babel.sty L1069)
-//        has a deliberate leading comma and the comment
-//        "<- don't delete this comma"; verified via `\meaning` that
-//        our `\def` stores it correctly and doesn't leak the body.
-//      - Current hypothesis: some babel macro expansion (possibly
-//        the `\AtBeginDocument{\bbl@usehooks@lang{/}{begindocument}
-//        {{}}}` chain from babel.sty L4305 or a `\bbl@foreach`
-//        consuming `\bbl@evargs` incompletely) leaves a stray `,`
-//        in the main token stream. Exact source TBD; needs
-//        `\tracingmacros` or equivalent step-by-step execution
-//        trace to pinpoint.
+//      - **Decisive test (2026-04-17)**: wrapping `\usepackage{babel}`
+//        with `\let\AtBeginDocument\@gobble` to neutralize all babel
+//        AtBeginDocument registrations produces `<p>Hi.</p>` (no
+//        comma). So the `,` is injected by one of babel's
+//        \AtBeginDocument hooks at `\begin{document}` time.
+//      - Prime candidate: babel.sty L3887-3914's hook which does
+//        `\def\@elt#1{,#1,}` then `\edef\bbl@tempa{\expandafter
+//        \@gobbletwo\@fontenc@load@list}`. Our preload in
+//        babel_sty.rs sets `\@fontenc@load@list = \@elt{OT1}`, so
+//        \@gobbletwo eats both tokens → empty `\bbl@tempa`. The
+//        `\bbl@foreach\bbl@tempa{...}` iteration should be
+//        well-behaved but maybe isn't. Next iteration will bisect
+//        the ~10 babel AtBeginDocument hooks (lines 1149, 1164,
+//        1230, 1574, 2137, 3175, 3258, 3658, 3664, 3681, 3816,
+//        3837, 3853, 3887, 3916, 4108) to find which one leaks.
 //
 //   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
 //      exclamation/question now emits a thin space before itself
