@@ -449,6 +449,24 @@ Track each ramp-up round here:
 - **Root cause:** Archive contained `rapid07.TEX` (uppercase). `find_main_tex` only matched `.tex`/`.txt`.
 - **Fix:** Case-insensitive extension check via `to_ascii_lowercase()` in both cortex_worker and latexml_oxide.
 
+**Fresh 128-paper sandbox rerun (session 108, after flushleft + colordvi fixes):**
+
+| Category | Count | Note |
+|----------|-------|------|
+| ok       | 121   | 94.5% (unique, before duplicate counting) |
+| conversion_error | 2 | 0704.3480, 0707.0739 (unclosed `$...$` — user document bugs) |
+| abort (≈timeout) | 5 | 0704.2334, 0705.0790, 0705.1522, 0706.0243, 0706.1988 (all ~61s, marginally over 60s budget) |
+
+Zero Rust-attributable conversion errors. Zero remaining `\color undefined`, `table*` mode mismatch, or `\lx*` issues. All papers that clear the 60s budget convert cleanly.
+
+Six papers converted from broken → OK this session:
+- **0705.1190** (colordvi) — was conversion_error → OK (commit d5f0dbb52)
+- **0705.2808** (table* mode) — was conversion_error → OK (commit ab6dc2219)
+- **0707.4170** (table* mode) — was conversion_error → OK (commit ab6dc2219)
+- **0704.2400** (timeout) — now 16s → OK
+- **0705.1050** (timeout) — now 48s → OK
+- **0705.2208** (timeout) — now 59s → OK
+
 **Remaining errors at 128-paper scale (10 `conversion_error`):**
 - `Missing $` display math (0704.3480, 0707.0739) — document structure (user LaTeX bugs)
 - ~~`colordvi` (0705.1190)~~ — **FIXED (session 108, commit d5f0dbb52)**: `\text<name>` now uses internal `\lx@colordvi@setcolor` primitive via MergeFont, so colordvi is self-contained without requiring color.sty/xcolor (matching Perl's DefPrimitive+MergeFont pattern).
