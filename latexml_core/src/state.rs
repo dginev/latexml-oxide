@@ -2488,11 +2488,12 @@ pub fn diff_snapshot(
 // Without this hook the snapshot is taken after `_base.rs` + `_constructs.rs`
 // have also run, making the diff far narrower than Perl's dump. See
 // SYNC_STATUS D0 (d.1).
+type StateSnapshot = std::collections::HashMap<(TableName, SymStr), Stored>;
+type StagedSnapshotMap = rustc_hash::FxHashMap<&'static str, StateSnapshot>;
+
 thread_local! {
-  static STAGED_SNAPSHOTS: std::cell::RefCell<
-    rustc_hash::FxHashMap<&'static str,
-      std::collections::HashMap<(TableName, SymStr), Stored>>
-  > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+  static STAGED_SNAPSHOTS: std::cell::RefCell<StagedSnapshotMap> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
 }
 
 /// Take a snapshot now and store it under a named key for later retrieval.

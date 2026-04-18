@@ -620,38 +620,6 @@ fn token_to_string(tok: &Token) -> String {
   arena::with(tok.text, |s| s.to_string())
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_parse_perl_string() {
-    let (s, rest) = parse_perl_string("'hello')").unwrap();
-    assert_eq!(s, "hello");
-    assert_eq!(rest.trim(), ")");
-
-    let (s, _) = parse_perl_string("'\\\\foo'").unwrap();
-    assert_eq!(s, "\\foo");
-
-    let (s, _) = parse_perl_string("UTF(13)").unwrap();
-    assert_eq!(s, "\r");
-  }
-
-  #[test]
-  fn test_load_dump_file() {
-    let path = std::path::Path::new(
-      "/home/deyan/perl5/lib/perl5/LaTeXML/Engine/latex_dump.pool.ltxml",
-    );
-    if !path.exists() {
-      eprintln!("Dump file not found, skipping test");
-      return;
-    }
-    let count = load_dump(path).unwrap();
-    assert!(count > 1000, "Expected >1000 entries, got {}", count);
-    eprintln!("Loaded {} entries from dump", count);
-  }
-}
-
 /// Create and install an Expandable definition.
 /// Only installs if the CS doesn't already have a non-Expandable definition
 /// (Primitive, Constructor, etc.) from our Rust engine bindings.
@@ -706,5 +674,37 @@ fn install_expandable(
       Ok(())
     }
     Err(e) => Err(format!("Failed to create Expandable for {}: {}", cs_name, e)),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_parse_perl_string() {
+    let (s, rest) = parse_perl_string("'hello')").unwrap();
+    assert_eq!(s, "hello");
+    assert_eq!(rest.trim(), ")");
+
+    let (s, _) = parse_perl_string("'\\\\foo'").unwrap();
+    assert_eq!(s, "\\foo");
+
+    let (s, _) = parse_perl_string("UTF(13)").unwrap();
+    assert_eq!(s, "\r");
+  }
+
+  #[test]
+  fn test_load_dump_file() {
+    let path = std::path::Path::new(
+      "/home/deyan/perl5/lib/perl5/LaTeXML/Engine/latex_dump.pool.ltxml",
+    );
+    if !path.exists() {
+      eprintln!("Dump file not found, skipping test");
+      return;
+    }
+    let count = load_dump(path).unwrap();
+    assert!(count > 1000, "Expected >1000 entries, got {}", count);
+    eprintln!("Loaded {} entries from dump", count);
   }
 }
