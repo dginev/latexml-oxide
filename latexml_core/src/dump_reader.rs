@@ -394,14 +394,18 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       Ok(false)
     }
     "E" => {
-      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO]
-      // PROTO is the 5th field (optional for forward compat with older
-      // dumps). When present, it's the full url-decoded prototype string
-      // e.g. "DefToken {}{}"; the reader feeds it to parse_parameters
-      // so param types (DefToken, Optional, Semiverbatim, …) round-trip
-      // correctly. When absent/empty, we fall back to nargs-based
-      // "{}".repeat(nargs), which flattens everything to Plain.
-      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(5, '\t').collect();
+      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO[\tV3_PARAMS]]
+      //
+      // Three historical shapes, read in fallback order:
+      //   v3 — 6th field present: structured Parameter records; bypasses
+      //        parse_parameters entirely. Only format that round-trips
+      //        Until:/Match: with catcoded delimiter tokens intact.
+      //   v2 — 5th field present: url-decoded prototype string fed to
+      //        parse_parameters. Good for {} / [] / DefToken / simple
+      //        typed params; loses brace-in-delimiter forms.
+      //   v1 — nargs only: "{}".repeat(nargs), all params flattened to
+      //        Plain. Kept as last resort so ancient dumps still load.
+      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(6, '\t').collect();
       if eparts.len() < 4 {
         return Err("Incomplete Expandable entry".into());
       }
@@ -415,41 +419,55 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let flags = eparts[2];
       let tok_data = eparts[3];
       let proto_opt = eparts.get(4).map(|s| url_decode(s)).filter(|s| !s.is_empty());
+      let v3_opt = eparts.get(5).filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
       let is_protected = flags.contains('P');
 
       let expansion = parse_token_list(tok_data)?;
 
-      // Build parameter spec. Prefer the serialized prototype (preserves
-      // DefToken / Optional / Semiverbatim / etc.); fall back to the
-      // nargs-flattened form for older dumps without the proto field.
-      // init_flag=true: state is up at runtime so Parameter::init() can
-      // resolve readers via PARAMETER_TYPES.
-      //
-      // If the serialized proto fails to parse (e.g. `Until:\end{verbatim}`
-      // which stringify emits but parse_parameters can't inverse — see
-      // SYNC_STATUS D0 mutual-exclusivity note), silently degrade to the
-      // nargs-flattened form rather than dropping the entire entry. This
-      // preserves `@`-internal gate behavior (entry still installs, just
-      // with Plain params) and keeps the test-suite output quiet while the
-      // round-trip gap remains open.
-      let paramlist = match proto_opt {
-        Some(proto) => match crate::common::def_parser::parse_parameters(&proto, &cs_tok, true) {
+      // Build parameter spec, preferring v3 structured → v2 proto →
+      // v1 nargs-repeat fallback. init_flag=true for both fallbacks:
+      // state is live at runtime so Parameter::init() can resolve
+      // readers via PARAMETER_TYPES.
+      let paramlist = if let Some(v3) = v3_opt {
+        match parse_parameters_v3(v3) {
           Ok(pl) => pl,
-          Err(_) if nargs > 0 => {
-            let fallback = "{}".repeat(nargs);
-            crate::common::def_parser::parse_parameters(&fallback, &cs_tok, true)
-              .map_err(|e| format!("Param parse fallback: {}", e))?
-          }
-          Err(_) => None,
-        },
-        None if nargs > 0 => {
-          let proto = "{}".repeat(nargs);
-          crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
-            .map_err(|e| format!("Param parse: {}", e))?
+          Err(_) => proto_opt
+            .as_ref()
+            .and_then(|p| crate::common::def_parser::parse_parameters(p, &cs_tok, true).ok())
+            .flatten()
+            .or_else(|| {
+              if nargs > 0 {
+                let fallback = "{}".repeat(nargs);
+                crate::common::def_parser::parse_parameters(&fallback, &cs_tok, true)
+                  .ok()
+                  .flatten()
+              } else {
+                None
+              }
+            }),
         }
-        None => None,
+      } else {
+        // v2 path: no v3 field, fall back to proto-parsing (with the
+        // original silent-degrade-to-nargs behavior).
+        match proto_opt {
+          Some(proto) => match crate::common::def_parser::parse_parameters(&proto, &cs_tok, true) {
+            Ok(pl) => pl,
+            Err(_) if nargs > 0 => {
+              let fallback = "{}".repeat(nargs);
+              crate::common::def_parser::parse_parameters(&fallback, &cs_tok, true)
+                .map_err(|e| format!("Param parse fallback: {}", e))?
+            }
+            Err(_) => None,
+          },
+          None if nargs > 0 => {
+            let proto = "{}".repeat(nargs);
+            crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
+              .map_err(|e| format!("Param parse: {}", e))?
+          }
+          None => None,
+        }
       };
 
       let options = Some(ExpandableOptions {
@@ -658,6 +676,69 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
     return Ok(Vec::new());
   }
   s.split(',').map(parse_token).collect()
+}
+
+/// Decode the v3 structured Parameters encoding emitted by
+/// `dump_writer::serialize_parameters_v3` (see that function's docstring
+/// and `docs/DUMP_FORMAT_PERL_ANALYSIS.md` for the layout).
+///
+/// Returns `Ok(None)` for an empty record (no parameters); `Ok(Some(ps))`
+/// on success; `Err` if any record is malformed. Each Parameter is
+/// constructed via `Parameter::new(name, spec, Some(extras))`, which
+/// calls `init()` — the reader function is resolved against the live
+/// PARAMETER_TYPES table, mirroring the runtime path.
+fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::Parameters>, String> {
+  if v3.is_empty() {
+    return Ok(None);
+  }
+  let mut params = Vec::new();
+  for record in v3.split('\x1e') {
+    // <name>\x1f<spec>\x1f<flags>\x1f<extras>
+    let fields: Vec<&str> = record.splitn(4, '\x1f').collect();
+    if fields.len() != 4 {
+      return Err(format!("v3 Parameter record has {} fields, expected 4", fields.len()));
+    }
+    let name = url_decode(fields[0]);
+    let spec = url_decode(fields[1]);
+    let flags = fields[2];
+    let extras_str = fields[3];
+
+    let extras = if extras_str.is_empty() {
+      Vec::new()
+    } else {
+      extras_str
+        .split('\x1d')
+        .map(|tok_list| {
+          parse_token_list(tok_list)
+            .map(|toks| crate::tokens::Tokens::new(toks))
+        })
+        .collect::<Result<Vec<_>, _>>()?
+    };
+
+    let mut param = crate::parameter::Parameter::new(name, spec, Some(extras))
+      .map_err(|e| format!("Parameter::new failed: {}", e))?;
+
+    // Apply flags after construction — Parameter::new + init() handle
+    // the reader side, but novalue/optional are struct-level booleans
+    // that the spec-driven init() may or may not have set (e.g. "Optional"
+    // prefix auto-sets optional, but we want explicit round-trip).
+    for flag in flags.split(';').filter(|s| !s.is_empty()) {
+      match flag {
+        "n=1" => param.novalue = true,
+        "o=1" => param.optional = true,
+        _ => {
+          // Unknown flag — ignore for forward compat; future flags
+          // added to the writer shouldn't break older readers.
+        }
+      }
+    }
+    params.push(param);
+  }
+  if params.is_empty() {
+    Ok(None)
+  } else {
+    Ok(Some(crate::parameter::Parameters::new(params)))
+  }
 }
 
 pub(crate) fn url_decode(s: &str) -> String {

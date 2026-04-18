@@ -266,6 +266,23 @@ exact engine gaps:
   **still livelocks** 00_tokenize — so the param-type mismatch was
   ONE of the blockers, not the only one.
 
+  **Perl dumper analysis (2026-04-18):** detailed comparison in
+  [`docs/DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md).
+  Key finding: Perl dumps **structured Parameters**, not prototype
+  strings. Each Parameter is emitted as
+  `P(type, spec, extra=>[T(...catcoded-tokens...)])` and the load-time
+  `sub P = sub { Parameter->new(@_) }` bypasses `parse_parameters`
+  entirely. Delimiter tokens for `Until:\end{verbatim}` are preserved
+  catcode-by-catcode in the `extra` list, so the load side never needs
+  to re-parse the spec. Our v3 path is to add Parameter sub-lines
+  indented under each E-entry (e.g. `\tP\t<name>\t<spec>\t<token-count>\t<tok>…`),
+  feed them straight to `Parameter::new(name, spec, Some(extras))`
+  (already exists at `parameter.rs` L127), and drop the proto-parse
+  fallback for v3 dumps. The analysis doc also catalogues three gated
+  co-requirements (closure-backed Registers filtering, PA-consumption
+  for `:`-style M bodies, `@currname` leakage through dump load) that
+  must land *with* the flip, not after.
+
   Next suspected blocker: the `Until:<delimiter>` form used by
   `\@xverbatim` and similar doesn't round-trip cleanly. Our
   `Parameters::stringify` produces `"Until:\\end{verbatim}"`, and
