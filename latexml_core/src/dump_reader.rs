@@ -176,23 +176,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
-      // Under `LATEXML_DUMP_ONLY=1`, the dump must additionally
-      // supply public-CS macros that `_base.rs` normally owns — the
-      // `\Package*` / `\Class*` / `\GenericError` / `\GenericInfo`
-      // diagnostic family, which `\usepackage{...}` machinery invokes
-      // from user-facing style files. Relaxing to ALL public CSes
-      // pulls in `\document` + co. whose bodies reference the `\hook`
-      // system we don't fully support, so we enumerate the specific
-      // safe families instead.
-      let is_safe_public_family = matches!(name,
-        n if n.starts_with("Package")
-          || n.starts_with("Class")
-          || n.starts_with("Generic"));
-      let dump_only_mode = std::env::var("LATEXML_DUMP_ONLY")
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
-      let pass_gate = is_at_internal || (dump_only_mode && is_safe_public_family);
-      if pass_gate && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
+      if is_at_internal && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(&key, data)
       } else {
         Ok(false)
@@ -389,26 +373,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // our engine doesn't fully support, causing cascading errors.
   //
   // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`)
-  // Unsafe: public macros without `:` or `@` (e.g., \document, \hook)
-  //
-  // The gate is disabled under `LATEXML_DUMP_ONLY=1` because in
-  // dump-only mode the dump is the SOLE source of kernel definitions — the
-  // Rust-native `_base.rs` bindings that would normally install
-  // `\PackageInfo`, `\PackageError`, `\@latex@info` etc. are skipped.
-  // Keeping the gate would leave those CSes undefined and fire
-  // cascading `undefined:` errors from `\usepackage{...}` callers.
-  let dump_only_mode = std::env::var("LATEXML_DUMP_ONLY")
-    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-    .unwrap_or(false);
-  if !dump_only_mode {
-    let name = key.trim_start_matches('\\');
-    let is_internal = name.contains(':') || name.contains('@');
-    if !is_internal {
-      // This is a "public" macro. Skip it — our engine either already defines
-      // it (caught by has_meaning above) or it's a raw TeX definition that
-      // would interfere with our LaTeXML-specific processing.
-      return Ok(false);
-    }
+  // Unsafe: public macros without `:` or `@` (e.g., \document, \hook) —
+  //         their bodies reference the hook system we don't fully support.
+  //         `_base.rs` + `_constructs.rs` already define the public CSes
+  //         the engine cares about; public-CS dump entries are redundant.
+  let name = key.trim_start_matches('\\');
+  let is_internal = name.contains(':') || name.contains('@');
+  if !is_internal {
+    return Ok(false);
   }
 
   let parts: Vec<&str> = data.splitn(2, '\t').collect();

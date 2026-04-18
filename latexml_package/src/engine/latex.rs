@@ -25,58 +25,36 @@ LoadDefinitions!({
   // Perl: LaTeX.pool.ltxml — LoadPool('TeX'); LoadFormat('latex');
   LoadPool!("TeX");
 
-  // Perl: LoadFormat('latex') does:
-  //   LoadPool('latex_bootstrap') → LoadPool('latex_base') →
-  //   LoadPool('latex_dump') → LoadPool('latex_constructs')
-  // Match this order exactly:
+  // Load order — always the same, whether the dump is present or not:
+  //   bootstrap → _base → dump → _constructs
+  //
+  // `_base` always runs BEFORE the dump so its closure-backed defs
+  // (which can't be serialized) are installed. The dump then adds
+  // serializable state (~25k entries of post-raw-load kernel state)
+  // via add-only policy — CSes already defined by `_base` are not
+  // overwritten. `_constructs` runs last and defines closure-backed
+  // CSes that must be available regardless of dump state.
+  //
+  // This differs from Perl's strictly-mutually-exclusive `LoadFormat`
+  // (bootstrap+dump+constructs XOR bootstrap+base+constructs) because
+  // in our Rust port `_base` runs in ~3-5 ms of compiled code; there
+  // is no meaningful speed win from skipping it, and keeping it loaded
+  // means closure-backed defs don't vanish.
   InnerPool!(latex_bootstrap);
 
   // SYNC_STATUS D0 (d.1): stage a snapshot right after bootstrap.
   // ini_tex::dump_format reads it so its diff captures "bootstrap →
   // fully-initialized kernel", matching Perl's DumpFile semantics.
-  // Has no effect at normal runtime (the snapshot is just stored in a
-  // thread-local; `_base` loading proceeds unchanged below).
+  // Has no effect at normal runtime (just stored in a thread-local).
   latexml_core::state::stage_snapshot("bootstrap");
 
-  // SYNC_STATUS D0: Perl's LoadFormat is mutually exclusive —
-  // `bootstrap + dump + constructs` when the dump exists, else
-  // `bootstrap + _base + constructs`. Our default still loads both
-  // (the add-only policy makes it safe but wastes ~10 ms / ~5 MB).
-  //
-  // `LATEXML_DUMP_ONLY=1` opts into the Perl-style split for
-  // experiments (v3.e bisection). When set, `latex_base` is skipped
-  // whenever the dump load succeeds. See docs/DUMP_FORMAT_PERL_ANALYSIS.md
-  // for the prerequisites (v3.a-v3.d) this gate relies on.
-  let dump_only_mode = std::env::var("LATEXML_DUMP_ONLY")
-    .ok()
-    .filter(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-    .is_some();
+  InnerPool!(latex_base);
 
-  let dump_loaded_ok = if dump_only_mode {
-    match crate::engine::latex_dump::load_definitions() {
-      Ok(()) => true,
-      Err(e) => {
-        log::warn!("latex_dump (dump-only mode): {}", e);
-        false
-      },
-    }
-  } else {
-    false
-  };
-
-  if !dump_loaded_ok {
-    InnerPool!(latex_base);
+  // Dump load — add-only: CSes already defined by _base skipped.
+  // Honours `LATEXML_NODUMP=1` (Perl-parity) to disable the dump path.
+  if let Err(e) = crate::engine::latex_dump::load_definitions() {
+    log::warn!("latex_dump: {}", e);
   }
 
-  // Perl: LoadPool('latex_dump') — precompiled latex.ltx state (expl3, fonts, captions).
-  // Uses add-only policy: definitions already set by bootstrap+base are not overwritten.
-  // Skipped when dump-only mode already ran it above.
-  if !dump_only_mode {
-    if let Err(e) = crate::engine::latex_dump::load_definitions() {
-      log::warn!("latex_dump: {}", e);
-    }
-  }
-
-  // Perl: LoadPool('latex_constructs') — semantic definitions (constructors, environments).
   InnerPool!(latex_constructs);
 });
