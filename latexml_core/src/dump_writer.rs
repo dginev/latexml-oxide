@@ -358,7 +358,7 @@ fn serialize_token(t: &crate::token::Token) -> String {
 /// `(name, spec, Some(extras))` triple directly to `Parameter::new`,
 /// bypassing `parse_parameters` entirely — so `Until:\end{verbatim}`
 /// and `Match:…` round-trip with their catcoded delimiter tokens intact.
-fn serialize_parameters_v3(params: &crate::parameter::Parameters) -> String {
+pub(crate) fn serialize_parameters_v3(params: &crate::parameter::Parameters) -> String {
   let mut out = String::new();
   for (i, p) in params.get_parameters().iter().enumerate() {
     if i > 0 {
@@ -416,4 +416,100 @@ fn url_encode(s: &str) -> String {
     }
   }
   result
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::parameter::{Parameter, Parameters};
+  use crate::token::{Catcode, Token};
+  use crate::tokens::Tokens;
+
+  /// Construct a Parameter without calling `init()` — `init()` needs live
+  /// state (PARAMETER_TYPES table), which we don't set up in unit tests.
+  /// The full test suite exercises the `init()` path via dump load.
+  fn raw_param(name: &str, spec: &str, extra: Vec<Tokens>) -> Parameter {
+    Parameter {
+      name: arena::pin(name),
+      spec: arena::pin(spec),
+      extra,
+      ..Parameter::default()
+    }
+  }
+
+  /// A Parameters list with two `Plain {}` args encodes as two records
+  /// separated by RS, each `Plain<US>{}<US><US>`. Verifies baseline layout.
+  #[test]
+  fn v3_encoding_plain() {
+    let ps = Parameters::new(vec![
+      raw_param("Plain", "{}", vec![]),
+      raw_param("Plain", "{}", vec![]),
+    ]);
+    let s = serialize_parameters_v3(&ps);
+    assert_eq!(s, "Plain\x1f{}\x1f\x1f\x1ePlain\x1f{}\x1f\x1f");
+  }
+
+  /// `Until:<delim>` with a brace-containing delimiter. The test covers
+  /// the case that livelocked 00_tokenize under v2: the delimiter tokens
+  /// must serialize as catcoded tokens (not as the raw spec string), so
+  /// `{`/`}` survive as CC_BEGIN / CC_END rather than being re-parsed as
+  /// spec-level braces.
+  #[test]
+  fn v3_encoding_until_with_braces() {
+    let delim = Tokens::new(vec![
+      Token { text: arena::pin("\\end"), code: Catcode::CS },
+      Token { text: arena::pin("{"), code: Catcode::BEGIN },
+      Token { text: arena::pin("verbatim"), code: Catcode::LETTER },
+      Token { text: arena::pin("}"), code: Catcode::END },
+    ]);
+    let ps = Parameters::new(vec![
+      raw_param("Until", "Until:\\end{verbatim}", vec![delim]),
+    ]);
+    let s = serialize_parameters_v3(&ps);
+    // Expected: Until<US>Until:\end{verbatim}<US><US>16:\end,1:{,11:verbatim,2:}
+    assert!(s.starts_with("Until\x1fUntil:\\end{verbatim}\x1f\x1f"));
+    assert!(s.contains("16:\\end,1:{,11:verbatim,2:}"));
+  }
+
+  /// `novalue` flag encodes as `n=1` in the flags field.
+  #[test]
+  fn v3_encoding_novalue_flag() {
+    let mut p = raw_param("Match", "Match:abc", vec![]);
+    p.novalue = true;
+    let ps = Parameters::new(vec![p]);
+    let s = serialize_parameters_v3(&ps);
+    assert_eq!(s, "Match\x1fMatch:abc\x1fn=1\x1f");
+  }
+
+  /// `optional` flag encodes as `o=1`; both flags together as `n=1;o=1`.
+  #[test]
+  fn v3_encoding_both_flags() {
+    let mut p = raw_param("OptionalMatch", "OptionalMatch:x", vec![]);
+    p.novalue = true;
+    p.optional = true;
+    let ps = Parameters::new(vec![p]);
+    let s = serialize_parameters_v3(&ps);
+    assert_eq!(s, "OptionalMatch\x1fOptionalMatch:x\x1fn=1;o=1\x1f");
+  }
+
+  /// Empty Parameters serializes to empty string.
+  #[test]
+  fn v3_encoding_empty() {
+    let ps = Parameters::new(vec![]);
+    assert_eq!(serialize_parameters_v3(&ps), "");
+  }
+
+  /// Multiple Tokens inside `extras` (as in `Match` with multiple choices)
+  /// are separated by GS. Verifies the three-level delimiter scheme.
+  #[test]
+  fn v3_encoding_multiple_extra_tokens() {
+    let t1 = Tokens::new(vec![Token { text: arena::pin("a"), code: Catcode::LETTER }]);
+    let t2 = Tokens::new(vec![Token { text: arena::pin("b"), code: Catcode::LETTER }]);
+    let ps = Parameters::new(vec![
+      raw_param("Match", "Match:ab", vec![t1, t2]),
+    ]);
+    let s = serialize_parameters_v3(&ps);
+    // Expected extras field: "11:a<GS>11:b"
+    assert_eq!(s, "Match\x1fMatch:ab\x1f\x1f11:a\x1d11:b");
+  }
 }

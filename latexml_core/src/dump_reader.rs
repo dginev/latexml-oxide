@@ -687,7 +687,7 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
 /// constructed via `Parameter::new(name, spec, Some(extras))`, which
 /// calls `init()` — the reader function is resolved against the live
 /// PARAMETER_TYPES table, mirroring the runtime path.
-fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::Parameters>, String> {
+pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::Parameters>, String> {
   if v3.is_empty() {
     return Ok(None);
   }
