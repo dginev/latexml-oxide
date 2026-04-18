@@ -481,7 +481,7 @@ pub fn decode_math_char_for_stomach(
     properties.insert("mathstyle", Stored::String(arena::pin(mathstyle)));
   }
 
-  let glyph_sym = arena::pin(glyph.to_string());
+  let glyph_sym = arena::pin_char(glyph);
 
   let font = props.font.map(|f| {
     Rc::new(arena::with(glyph_sym, |s| f.specialize(s)))
