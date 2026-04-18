@@ -213,6 +213,20 @@ A Rust safe-by-construction implementation should NEVER segfault. Sources invest
 **Completed:**
 - [x] mimalloc as global allocator — reduces glibc arena-mutex contention (~6% single-process).
 - [x] `--timeout` default 600s → 60s.
+- [x] `pin!(literal)` macro for call-site-cached `SymStr` interning
+  (~10× faster than `pin_static` for repeated state-key lookups).
+  Sym-keyed state API (`lookup_bool_sym`, `lookup_string_from_sym`,
+  `assign_value_sym`, `with_value_sym`, `with_stacked_values_sym`,
+  `lookup_token_sym`, `lookup_mathcode_sym`) take `SymStr` by value.
+  Removed all 29 `XXX_SYM` pre-pinned constants from arena.rs —
+  call sites now write `pin!("key")` inline.
+- [x] `extend_from_slice(tokens.unlist_ref())` pattern for Tokens —
+  skips Vec<Token> clone+move at 30+ hot sites across engine / package
+  bindings. `ArgWrap::unlist_cow()` for keyval-arg sites.
+- [x] Token text comparison via `t.text == pin!("...")` instead of
+  `t.to_string() == "..."` — avoids per-compare String allocation.
+- [x] `Tokens::untex` — O(n²) prepend loop fixed; `VecDeque::from(Vec)`
+  reuses heap buffer instead of `.into_iter().collect()`.
 
 **Callgrind (session 105):** Math parser Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute` 8.3%, `bv_scan` 7.1%, AVL ops 6.8%. Total Marpa-related >60% CPU.
 
