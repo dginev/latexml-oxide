@@ -40,15 +40,7 @@ LoadDefinitions!({
     } else {
       return Ok(vec![]);
     };
-    let iso: Option<&'static str> = match lang.as_str() {
-      "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
-      "french" | "francais" | "frenchb" => Some("fr"),
-      "english" => Some("en"),
-      "american" | "USenglish" => Some("en-US"),
-      "british" | "UKenglish" => Some("en-GB"),
-      "greek" | "polutonikogreek" => Some("el"),
-      _ => None,
-    };
+    let iso = crate::package::babel_support_sty::babel_language_to_iso(&lang);
     if let Some(code) = iso {
       state::assign_value("DOCUMENT_LANGUAGE",
         Stored::from(code.to_string()), Some(Scope::Global));
