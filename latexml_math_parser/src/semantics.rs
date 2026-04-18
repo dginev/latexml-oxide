@@ -2167,7 +2167,9 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
       Some(t) => Ok(t.clone()),
       None => Ok(None),
     },
-    _ => todo!(),
+    // Other XM variants (Token, Dual, Wrap, Choices, Arg, Ref) don't
+    // carry positional args — Perl's obtain_arg returns undef for these.
+    _ => Ok(None),
   }
 }
 
@@ -2446,10 +2448,11 @@ pub fn new_props(
   let idref = props.remove("idref");
   let fontref = props.remove("_font");
   let scriptpos = props.remove("scriptpos");
-  // TODO:
+  // TODO: explicit "font" prop path not yet wired — current callers never
+  // pass it. If ever hit, fall through to the content-based specialization
+  // (same as None), which is an approximation but won't crash.
   let font = match props.remove("font") {
-    Some(_fnt) => todo!(),
-    None => {
+    Some(_) | None => {
       if let Some(ref text) = content {
         if !text.is_empty() && !text.chars().all(|c| c.is_whitespace()) {
           font::FONT_TEXT_DEFAULT.specialize(text)
