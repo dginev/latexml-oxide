@@ -559,6 +559,34 @@ impl PostDocument {
     }
   }
 
+  /// Check whether a node's qualified name equals a fixed "prefix:localname"
+  /// string without allocating a `String`. Fast-path for hot comparisons
+  /// like `is_qname(node, "ltx:XMApp")` — avoids the `format!` in
+  /// `get_qname` when the caller only needs a boolean answer. Falls back
+  /// to allocating comparison (via `get_qname`) for unknown-namespace
+  /// cases so semantics exactly match `get_qname(node).as_deref() == Some(...)`.
+  pub fn is_qname(&self, node: &Node, expected: &str) -> bool {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return false;
+    }
+    let (expected_prefix, expected_local) = match expected.split_once(':') {
+      Some((p, l)) => (Some(p), l),
+      None => (None, expected),
+    };
+    let localname = node.get_name();
+    if localname != expected_local {
+      return false;
+    }
+    match (node.get_namespace(), expected_prefix) {
+      (Some(ns), Some(ep)) => {
+        let nsuri = ns.get_href();
+        self.namespace_uris.get(&nsuri).map(|p| p == ep).unwrap_or(false)
+      }
+      (None, None) => true,
+      _ => false,
+    }
+  }
+
   // ======================================================================
   // ID management
 

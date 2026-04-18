@@ -94,7 +94,7 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
   if let Some(role) = node.get_attribute("role") {
     return Some(role);
   }
-  if doc.get_qname(node).as_deref() == Some("ltx:XMApp") {
+  if doc.is_qname(node, "ltx:XMApp") {
     let children = element_children(node);
     if children.len() >= 2 {
       let op_role = children[0].get_attribute("role").unwrap_or_default();
@@ -214,7 +214,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   let args = &children[1..];
 
   // Realize the operator
-  let rop = if doc.get_qname(op).as_deref() == Some("ltx:XMRef") {
+  let rop = if doc.is_qname(op, "ltx:XMRef") {
     op.get_attribute("idref")
       .and_then(|id| doc.find_node_by_id(&id).cloned())
       .unwrap_or_else(|| op.clone())
@@ -250,9 +250,8 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
     "OVERACCENT" if !args.is_empty() => {
       // Perl MathML.pm L1492-1504: check if base is XMApp with UNDERACCENT → m:munderover
       let base = &args[0];
-      let base_qname = doc.get_qname(base);
       let base_children = element_children(base);
-      if base_qname.as_deref() == Some("ltx:XMApp") && base_children.len() == 2 {
+      if doc.is_qname(base, "ltx:XMApp") && base_children.len() == 2 {
         let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
         if inner_role == "UNDERACCENT" {
           // Combine into m:munderover: base_of_inner, under_accent, over_accent
@@ -279,9 +278,8 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
     "UNDERACCENT" if !args.is_empty() => {
       // Perl MathML.pm L1507-1519: check if base is XMApp with OVERACCENT → m:munderover
       let base = &args[0];
-      let base_qname = doc.get_qname(base);
       let base_children = element_children(base);
-      if base_qname.as_deref() == Some("ltx:XMApp") && base_children.len() == 2 {
+      if doc.is_qname(base, "ltx:XMApp") && base_children.len() == 2 {
         let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
         if inner_role == "OVERACCENT" {
           return NodeData::Element {
@@ -806,7 +804,7 @@ fn pmml_script_decipher(
   let mut current_base = base.clone();
   loop {
     // Realize XMRef
-    let realized = if doc.get_qname(&current_base).as_deref() == Some("ltx:XMRef") {
+    let realized = if doc.is_qname(&current_base, "ltx:XMRef") {
       current_base.get_attribute("idref")
         .and_then(|id| doc.find_node_by_id(&id).cloned())
         .unwrap_or(current_base.clone())
@@ -814,7 +812,7 @@ fn pmml_script_decipher(
       current_base.clone()
     };
 
-    if doc.get_qname(&realized).as_deref() != Some("ltx:XMApp") {
+    if !doc.is_qname(&realized, "ltx:XMApp") {
       break;
     }
 
@@ -824,7 +822,7 @@ fn pmml_script_decipher(
     }
 
     let xop = &children[0];
-    if doc.get_qname(xop).as_deref() != Some("ltx:XMTok") {
+    if !doc.is_qname(xop, "ltx:XMTok") {
       break;
     }
 
