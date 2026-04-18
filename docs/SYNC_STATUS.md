@@ -364,20 +364,22 @@ Nothing critical is missing from our data model — `PA`/`MPA` plus
 (#1) and the let ordering (#2) are the two gaps that block the
 Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
 
-- [ ] **(d.1) Bridge the closure-only gap between dump and
-  `latex_base.rs`.** (Revised scope, 2026-04-17.) The snapshot IS
-  already taken after just TeX.pool+plain (ini_tex.rs line 47), and
-  the dump already captures the LaTeX kernel including
-  `\documentclass`, `\@ifnextchar`, etc. What's missing is a specific
-  32-CS subset of `latex_base.rs` that uses closure-backed Expandables
-  / Primitives and is not overridden by `latex.ltx` raw tokens — so
-  `serialize_stored` returns `None` for them. Concrete next steps:
-  (a) instrument `ini_tex.rs` to log which `_base.rs` CSes end up
-  closure-backed at diff time; (b) decide between splitting
-  `latex_base.rs` into `_always` + `_redundant` modules, or teaching
-  `dump_writer.rs` to emit a new `REBIND\t<cs>` row the reader replays
-  via a targeted `RequirePackage`-like hook. Once the gap is closed,
-  the `LoadFormat`-style mutual-exclusivity branch is safe to flip.
+- [x] **(d.1) Bridge the closure-only gap between dump and
+  `latex_base.rs`.** **Done (2026-04-18).** Three landings:
+  - `Expandable::get_num_args` override so dump E-entries record
+    true nargs (commit a4e87219).
+  - `serialize_stored` handles `None`-body Expandables as empty E-
+    entries (commit 005b018a).
+  - `ini_tex.rs` surgically preloads `latex_base` after the snapshot
+    so its 20 `_base`-only CSes enter state before raw latex.ltx
+    (commit ddee6952). Exposing the module required making
+    `latexml_package::engine::{latex_bootstrap, latex_base}` `pub`.
+
+  Final gap: **1 CS** (down from 32). The holdout is `\wlog`, which
+  `plain_base.rs` defines as a closure-backed `Primitive` BEFORE the
+  snapshot; `serialize_stored`'s PA-identity guard correctly filters
+  it. Covering it would need either snapshotting earlier (before
+  `plain_base`) or an explicit `REBIND` row — not pursued.
 
 - [ ] **(d.2) Split PA/MPA into early / late buckets** based on
   whether the target CS existed in the snapshot. `dump_writer.rs`
