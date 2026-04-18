@@ -199,31 +199,55 @@ mutual-exclusivity flip. The 00_tokenize hang had multiple gates; the
 Each step is a separately-committable unit that ships value without
 flipping mutual-exclusivity:
 
-1. **(v3.a) Add writer-side Parameter sub-lines.** Backward-compatible:
-   v2 dumps still load via the existing `<proto>` 5th-field fallback;
-   v3 dumps carry richer data that the reader can use. Test-suite
-   unaffected.
+1. **(v3.a) Add writer-side Parameter sub-lines.** [DONE, commit 3e1f89eb2].
+   Backward-compatible: v2 dumps still load via the existing `<proto>`
+   5th-field fallback; v3 dumps carry richer data that the reader can
+   use. Test-suite unaffected.
 
-2. **(v3.b) Add reader-side Parameter sub-line parser.** Prefer
-   sub-lines when present, fall back to proto-parsing. One code path
-   isolated, feature-flagged via the format marker at the top of the
-   dump file.
+2. **(v3.b) Add reader-side Parameter sub-line parser.** [DONE, same
+   commit as v3.a]. Prefers v3 structured records when present, falls
+   back to v2 proto-parsing, then v1 nargs-repeat. One code path.
 
-3. **(v3.c) Wire `Until:`/`Match:` fixtures.** Pick one CS that
-   currently misbehaves (e.g. `\@xverbatim`), confirm the v3 entry
-   round-trips, add a dump-roundtrip unit test.
+3. **(v3.c) Wire `Until:`/`Match:` fixtures.** [DONE, commit 0be9641bf].
+   Six roundtrip unit tests cover Plain, Until-with-braces, novalue
+   flag, optional flag, empty, multi-Tokens extras. Lock the encoding
+   layer so future refactors don't silently break round-trip.
 
 4. **(v3.d) Filter closure-backed Registers** on the writer side.
-   Prevents silent failures when mutual-exclusivity flips; measurable
-   under the current add-only policy too.
+   [ALREADY DONE pre-v3]. `dump_writer.rs` L254-256 already matches
+   Perl's `dump_register` L371 — returns `None` when `getter` or
+   `setter` is present.
 
-5. **(v3.e) Bisect 00_tokenize hang** against v3. If the format v3
-   alone fixes it, ship mutual-exclusivity. If not, the remaining
-   gate is either PA-consumption or `@currname` — diagnose in
-   isolation.
+5. **(v3.e) Bisect 00_tokenize hang** against v3. [DONE, conclusive
+   negative result]. Added `LATEXML_MUTEX_BASE_DUMP=1` env gate in
+   `latex.rs` that makes `latex_base` skip when `latex_dump` loads
+   successfully, mirroring Perl's `LoadFormat` branching. Results
+   against the current v3 dump:
 
-6. **(v3.f) Ship mutual-exclusivity** — `_base.rs` skipped when dump
-   loads, per Perl's `LoadFormat` branching.
+   | Tokenize test | Default | Mutex mode |
+   |---|---|---|
+   | `alltt` | OK | OK (slow) |
+   | `badchars` | OK | OK |
+   | `comment` | OK | OK |
+   | `equality` | OK | **TIMEOUT** (30s+) |
+   | `hashes` | OK | **TIMEOUT** (30s+) |
+   | `ligatures` | OK | OK |
+
+   Minimal doc (`\documentclass{article}\begin{document}hello\end{document}`),
+   catcode assignment `\catcode`\&=1\relax`, `\ifx` with special
+   catcodes, and `\meaning` all complete in mutex mode. The hang
+   surfaces on `\makeatletter` + user `\def` combinations — pointing
+   at a specific interaction between a subset of `_base.rs` macros
+   and live user macro expansion that the v3 dump still doesn't
+   capture. The env gate is retained for future narrower bisection.
+
+6. **(v3.f) Ship mutual-exclusivity** — blocked pending v3.e root
+   cause. Next steps: (i) trace which specific CS expansion enters
+   the infinite loop on `hashes.tex` line 1-2 under mutex mode;
+   (ii) compare its v3 dump entry against its `_base.rs` source to
+   identify the semantic gap; (iii) decide whether to fix at the
+   serializer, the reader, or by adding another mandatory closure
+   re-install step between dump-load and `latex_constructs`.
 
 ## References
 

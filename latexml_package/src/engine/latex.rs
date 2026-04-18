@@ -38,12 +38,43 @@ LoadDefinitions!({
   // thread-local; `_base` loading proceeds unchanged below).
   latexml_core::state::stage_snapshot("bootstrap");
 
-  InnerPool!(latex_base);
+  // SYNC_STATUS D0: Perl's LoadFormat is mutually exclusive —
+  // `bootstrap + dump + constructs` when the dump exists, else
+  // `bootstrap + _base + constructs`. Our default still loads both
+  // (the add-only policy makes it safe but wastes ~10 ms / ~5 MB).
+  //
+  // `LATEXML_MUTEX_BASE_DUMP=1` opts into the Perl-style split for
+  // experiments (v3.e bisection). When set, `latex_base` is skipped
+  // whenever the dump load succeeds. See docs/DUMP_FORMAT_PERL_ANALYSIS.md
+  // for the prerequisites (v3.a-v3.d) this gate relies on.
+  let mutex_enabled = std::env::var("LATEXML_MUTEX_BASE_DUMP")
+    .ok()
+    .filter(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    .is_some();
+
+  let dump_loaded_ok = if mutex_enabled {
+    match crate::engine::latex_dump::load_definitions() {
+      Ok(()) => true,
+      Err(e) => {
+        log::warn!("latex_dump (mutex-mode): {}", e);
+        false
+      },
+    }
+  } else {
+    false
+  };
+
+  if !dump_loaded_ok {
+    InnerPool!(latex_base);
+  }
 
   // Perl: LoadPool('latex_dump') — precompiled latex.ltx state (expl3, fonts, captions).
   // Uses add-only policy: definitions already set by bootstrap+base are not overwritten.
-  if let Err(e) = crate::engine::latex_dump::load_definitions() {
-    log::warn!("latex_dump: {}", e);
+  // Skipped when mutex-mode already ran it above.
+  if !mutex_enabled {
+    if let Err(e) = crate::engine::latex_dump::load_definitions() {
+      log::warn!("latex_dump: {}", e);
+    }
   }
 
   // Perl: LoadPool('latex_constructs') — semantic definitions (constructors, environments).
