@@ -5388,7 +5388,7 @@ LoadDefinitions!({
     let reg = s!("\\cl@{}", within_str);
     // Prepend ctr and UNctr to the counter reset list for 'within'
     let prev = state::lookup_tokens(&reg).unwrap_or_default();
-    let mut toks = vec![T_CS!(ctr_str.clone()), T_CS!(unctr)];
+    let mut toks = vec![T_CS!(ctr_str), T_CS!(unctr)];
     toks.extend(prev.unlist());
     state::assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
   });
@@ -5399,8 +5399,8 @@ LoadDefinitions!({
     let within_str = Expand!(within).to_string();
     let reg = s!("\\cl@{}", within_str);
     if let Some(prev) = state::lookup_tokens(&reg) {
-      let ctr_cs = T_CS!(ctr_str.clone());
       let unctr_cs = T_CS!(s!("UN{}", ctr_str));
+      let ctr_cs = T_CS!(ctr_str);
       let filtered: Vec<Token> = prev.unlist().into_iter()
         .filter(|t| *t != ctr_cs && *t != unctr_cs)
         .collect();

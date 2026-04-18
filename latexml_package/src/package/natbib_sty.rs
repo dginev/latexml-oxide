@@ -137,7 +137,7 @@ LoadDefinitions!({
   DefMacro!("\\bibstyle{}", sub[(style_arg)] {
     let style = style_arg.to_string();
     let cs_name = s!("\\bibstyle@{style}");
-    if has_meaning(&T_CS!(cs_name.clone())) {
+    if has_meaning(&T_CS!(&cs_name)) {
       Ok(Tokens::new(vec![T_CS!(cs_name)]))
     } else {
       Ok(Tokens::new(vec![T_CS!("\\relax")]))
