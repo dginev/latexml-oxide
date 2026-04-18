@@ -259,21 +259,35 @@ differences. Each corresponds to an entry in the work plan below.
 1. **Snapshot taken at the wrong point.** Perl's `DumpFile` runs
    `LoadPool($name . '_bootstrap')` *before* snapshotting, and only
    the bootstrap. The subsequent raw-load's diff is therefore
-   "bootstrap → fully-initialized kernel". Our `ini_tex.rs` starts
-   from a state where `plain_bootstrap.rs` **+ `_base.rs` +
-   `_constructs.rs`** have already all run (whatever the engine
-   normally loads at `Core::new` time), so our diff captures only
-   "full kernel → full kernel + raw latex.ltx extras". The dump is
-   ~24k entries vs. what Perl's `latex_dump.pool.ltxml` captures:
-   the 8741-line block of the LaTeX kernel itself.
+   "bootstrap → fully-initialized kernel".
 
-   This is the biggest structural gap. It also explains why flipping
-   PA consumption on causes explosion: our dump only has the extra
-   expl3 definitions, not the LaTeX kernel — when `expl3.sty`'s guard
-   short-circuits, post-guard code executes against a hybrid state
-   (`_base.rs` primitives mixed with dump PAs mixed with dump
-   `@`-internal macros) that wasn't the state any single code path was
-   designed for.
+   **Empirical audit (2026-04-17):** our dump is already 24,319 lines,
+   of which 19,141 are unique `M` (Meaning) definitions. Spot-checked
+   CSes like `\documentclass`, `\@ifnextchar`, `\@ifundefined`,
+   `\addtocounter`, `\filecontents`, `\@onlypreamble` are all present
+   as `E`-encoded tokens-based expansions — i.e., the LaTeX kernel
+   itself IS captured. Of the 120 CSes defined by `latex_base.rs`,
+   88 already appear in the dump (redefined by `latex.ltx`'s raw
+   tokens); only **32** are `latex_base.rs`-only, because those are
+   closure-based primitives/expandables that `latex.ltx` doesn't
+   override and our `serialize_stored` returns `None` for
+   closure-backed `Stored::Expandable` / `Stored::Primitive`.
+
+   The 32-CS list includes LaTeX scratch/output-routine helpers:
+   `\@gobble[/two/four]`, `\@tempa/b/c`, `\@botlist`, `\@toplist`,
+   `\@deferlist`, `\@dbldeferlist`, `\@dbltoplist`, `\@midlist`,
+   `\MakeTextLowercase/Uppercase`, `\bibdata`, `\citation`, `\wlog`,
+   plus the font-size CSes `\xpt`/`\xipt`/…/`\xxpt`/`\vpt`/…/`\ixpt`.
+   These are the CSes a dump-only load path would be missing.
+
+   The blow-up when PA consumption flips on is therefore NOT because
+   the dump lacks the LaTeX kernel — it's because (a) the 32
+   closure-backed helpers go missing, and (b) `:`-style expl3 macro
+   bodies referenced by PAs aren't themselves loaded (`dump_reader.rs`
+   gates `M` loading to `@`-internal bodies only). Fixing d.1 requires
+   harvesting the closure-backed subset as a separate `keep_base.rs`
+   or teaching `dump_writer.rs` to synthesize stub entries that replay
+   a `RequirePackage`-style re-bind for those specific CSes.
 
 2. **Missing early/late let-assignment split.** Perl's `DumpFile`
    categorizes `\let` assignments into three buckets:
@@ -324,11 +338,20 @@ Nothing critical is missing from our data model — `PA`/`MPA` plus
 (#1) and the let ordering (#2) are the two gaps that block the
 Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
 
-- [ ] **(d.1) Move the snapshot earlier.** `ini_tex.rs` should
-  explicitly load `plain_bootstrap + latex_bootstrap` only, snapshot,
-  then raw-load `latex.ltx`. Result: dump includes the full LaTeX
-  kernel, so a dump-only load path can replace `_base.rs` entirely
-  (matching Perl's `LoadFormat` branching).
+- [ ] **(d.1) Bridge the closure-only gap between dump and
+  `latex_base.rs`.** (Revised scope, 2026-04-17.) The snapshot IS
+  already taken after just TeX.pool+plain (ini_tex.rs line 47), and
+  the dump already captures the LaTeX kernel including
+  `\documentclass`, `\@ifnextchar`, etc. What's missing is a specific
+  32-CS subset of `latex_base.rs` that uses closure-backed Expandables
+  / Primitives and is not overridden by `latex.ltx` raw tokens — so
+  `serialize_stored` returns `None` for them. Concrete next steps:
+  (a) instrument `ini_tex.rs` to log which `_base.rs` CSes end up
+  closure-backed at diff time; (b) decide between splitting
+  `latex_base.rs` into `_always` + `_redundant` modules, or teaching
+  `dump_writer.rs` to emit a new `REBIND\t<cs>` row the reader replays
+  via a targeted `RequirePackage`-like hook. Once the gap is closed,
+  the `LoadFormat`-style mutual-exclusivity branch is safe to flip.
 
 - [ ] **(d.2) Split PA/MPA into early / late buckets** based on
   whether the target CS existed in the snapshot. `dump_writer.rs`
