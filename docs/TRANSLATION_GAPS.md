@@ -40,7 +40,7 @@ Substantially ported (278 DefMath! definitions). Most core math symbols present.
 - [x] `cleanup_Math()` / `cleanup_XMText()` — `base_utilities.rs::cleanup_math` L1415, `cleanup_xmtext` L1513, `cleanup_xmtext_outer` L1506
 - [x] FLOATING script dispatch — `tex_math.rs` L43 (inline script-position detection rather than a DefRewrite chain, but covers the same cases)
 - [x] `adjustMathStyle_internal()` + `%mathstyle_adjust_map` — `tex_math.rs::mathstyle_adjust` L1854, `adjust_mathstyle_internal` L1877
-- [ ] `fracSizer()` (Perl L1054-1059, 6 lines) — **still missing**; used by `\over`/`\atop` to size vertical fractions. Low impact on current tests.
+- [x] `fracSizer()` — `tex_math.rs::frac_sizer` L235; wired as `sizer` on `\lx@generalized@over` so `\over`/`\atop`/`\above*` variants get TeX-faithful width/height/depth.
 - [x] `scriptSizer()` — `tex_math.rs::script_sizer` L226
 - [x] `revertScript()` — `tex_math.rs::revert_script` L210 (callers at L1507, 1519, 1531, 1541)
 - [x] `DefMathLigature` — macro at `prelude/setup_binding_language.rs::DefMathLigature` L186

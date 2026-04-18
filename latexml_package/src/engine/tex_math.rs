@@ -223,6 +223,32 @@ pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
   }
 }
 
+/// Fraction sizer — TeX-style width/height/depth for a fraction whose
+/// numerator and denominator are `top` and `bottom` digested boxes.
+///
+/// Perl: `fracSizer` in TeX_Math.pool.ltxml L1054-1059:
+///   w = max(numerator.width, denominator.width)
+///   d = denominator.total_height * 0.5
+///   h = numerator.total_height + d
+///
+/// Used by `\lx@generalized@over`, `\over`, `\atop`, `\above*` etc.
+pub fn frac_sizer(
+  top: &Digested,
+  bottom: &Digested,
+) -> Result<(Dimension, Dimension, Dimension)> {
+  let (tw, th, td, ..) = top.clone().get_size(None)?;
+  let (bw, bh, bd, ..) = bottom.clone().get_size(None)?;
+  // width: max of top and bottom widths
+  let w = Dimension(tw.value_of().max(bw.value_of()));
+  // depth: half of denominator's total height (height + depth)
+  let bot_total = bh.value_of() + bd.value_of();
+  let d = Dimension(bot_total / 2);
+  // height: numerator total height + depth
+  let top_total = th.value_of() + td.value_of();
+  let h = Dimension(top_total + d.value_of());
+  Ok((w, h, d))
+}
+
 fn script_sizer(
   script: &Digested,
   base_opt: Option<&Stored>,
@@ -1318,6 +1344,28 @@ LoadDefinitions!({
         }
       }
       Ok(Tokens::new(result))
+    },
+    // Perl fracSizer (TeX_Math.pool.ltxml L1054-1059): width is max of
+    // top/bottom widths; depth is half of denominator's total height;
+    // height is numerator total height + depth. Reads `top` and `bottom`
+    // properties that the after_digest above already attaches.
+    sizer => sub[w] {
+      use latexml_core::state::Stored;
+      let top = match w.get_property("top") {
+        Some(p) => match &*p {
+          Stored::Digested(d) => d.clone(),
+          _ => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+        },
+        None => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+      };
+      let bottom = match w.get_property("bottom") {
+        Some(p) => match &*p {
+          Stored::Digested(d) => d.clone(),
+          _ => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+        },
+        None => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+      };
+      frac_sizer(&top, &bottom)
     }
   );
 
