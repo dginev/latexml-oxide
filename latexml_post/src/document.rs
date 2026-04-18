@@ -1062,7 +1062,7 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::realizeXMNode`.
   pub fn realize_xm_node(&self, node: &Node) -> Option<Node> {
-    if self.get_qname(node).as_deref() == Some("ltx:XMRef") {
+    if self.is_qname(node, "ltx:XMRef") {
       let idref = node.get_attribute("idref")?;
       self.find_node_by_id(&idref).cloned()
     } else {

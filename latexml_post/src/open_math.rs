@@ -172,7 +172,7 @@ impl MathProcessor for OpenMath {
 /// Port of `om_expr`.
 fn om_expr(doc: &PostDocument, node: &Node) -> NodeData {
   // Realize XMRef nodes
-  let real_node = if doc.get_qname(node).as_deref() == Some("ltx:XMRef") {
+  let real_node = if doc.is_qname(node, "ltx:XMRef") {
     if let Some(idref) = node.get_attribute("idref") {
       doc.find_node_by_id(&idref).cloned()
     } else {
