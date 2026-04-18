@@ -218,36 +218,27 @@ flipping mutual-exclusivity:
    Perl's `dump_register` L371 — returns `None` when `getter` or
    `setter` is present.
 
-5. **(v3.e) Bisect 00_tokenize hang** against v3. [DONE, conclusive
-   negative result]. Added `LATEXML_DUMP_ONLY=1` env gate in
-   `latex.rs` that makes `latex_base` skip when `latex_dump` loads
-   successfully, mirroring Perl's `LoadFormat` branching. Results
-   against the current v3 dump:
+5. **(v3.e/v3.f) Mutual-exclusivity experiment ABANDONED (2026-04-18).**
+   We shipped an `LATEXML_DUMP_ONLY=1` env gate that made `_base.rs` skip
+   when the dump loaded (mirroring Perl's `LoadFormat`). Bisection showed
+   that ~296/415 tests passed under it at first, rising to 414/415 after
+   relocating closure-backed primitives and `\fontsize`. But the whole
+   experiment has been rolled back because **the design intention for
+   the Rust port is different from Perl's**:
+   - Perl's `_base.pool.ltxml` is interpreted `.ltxml` loading — a real
+     startup cost, hence Perl's mutual exclusion.
+   - Our `_base.rs` is ~3-5 ms of compiled Rust — no meaningful win from
+     skipping it.
+   - Under our unified design (`bootstrap → _base → dump → _constructs`,
+     always all four), closures in `_base.rs` are always defined;
+     serializable state from the dump layers on top via add-only; no
+     special "dump-only" mode is needed.
 
-   | Tokenize test | Default | Mutex mode |
-   |---|---|---|
-   | `alltt` | OK | OK (slow) |
-   | `badchars` | OK | OK |
-   | `comment` | OK | OK |
-   | `equality` | OK | **TIMEOUT** (30s+) |
-   | `hashes` | OK | **TIMEOUT** (30s+) |
-   | `ligatures` | OK | OK |
-
-   Minimal doc (`\documentclass{article}\begin{document}hello\end{document}`),
-   catcode assignment `\catcode`\&=1\relax`, `\ifx` with special
-   catcodes, and `\meaning` all complete in dump-only mode. The hang
-   surfaces on `\makeatletter` + user `\def` combinations — pointing
-   at a specific interaction between a subset of `_base.rs` macros
-   and live user macro expansion that the v3 dump still doesn't
-   capture. The env gate is retained for future narrower bisection.
-
-6. **(v3.f) Ship mutual-exclusivity** — blocked pending v3.e root
-   cause. Next steps: (i) trace which specific CS expansion enters
-   the infinite loop on `hashes.tex` line 1-2 under dump-only mode;
-   (ii) compare its v3 dump entry against its `_base.rs` source to
-   identify the semantic gap; (iii) decide whether to fix at the
-   serializer, the reader, or by adding another mandatory closure
-   re-install step between dump-load and `latex_constructs`.
+   The v3 structured Parameter encoding (v3.a-v3.c) stays landed — it
+   keeps the dump format correct for `Until:`/`Match:` delimiters even
+   under normal operation. Mutual-exclusivity itself is no longer a
+   goal. See `memory/project_load_order_design.md` for the authoritative
+   design note.
 
 ## References
 

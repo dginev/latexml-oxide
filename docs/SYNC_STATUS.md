@@ -88,8 +88,20 @@ Detailed fix history for phases above lives in git log. See the corresponding se
 lifecycle WORKS, `AtBeginDocument` hook chain ordering FIXED (root cause
 was the `@currname` leakage from plain `\input`, fixed in commit
 56b0c35d2). `tests/babel/page545` passes and is no longer `#[ignore]`d.
-Remaining items (dump/_base mutual exclusivity, d.1–d.5 dump pipeline
-optimizations) are performance optimizations, not correctness gaps.
+
+**Design clarification (2026-04-18):** the "dump/`_base` mutual
+exclusivity" item from earlier sessions is **no longer a goal**. Our
+Rust port's `_base.rs` runs in ~3-5 ms of compiled code (unlike Perl's
+interpreted `.ltxml` loading). The unified load order
+`bootstrap → _base → dump → _constructs` — always all four — is simpler
+and has no meaningful performance penalty. See
+`memory/project_load_order_design.md` for the authoritative note.
+
+Remaining d.1-d.5 items in this section were written when mutual
+exclusivity was an active goal; they should be read as historical
+context, not active work. The structured Parameter encoding (v3.a-v3.c)
+stays landed because it keeps the dump format correct for
+`Until:`/`Match:` delimiters even without a mutex-mode flip.
 
 Make `tests/babel/page545` pass via the **exact same raw-loading path**
 that Perl uses. Re-enabling this single test was a practical,
