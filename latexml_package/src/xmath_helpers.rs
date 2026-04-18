@@ -102,7 +102,7 @@ pub fn i_dual(
       opts.extend(ExplodeText!(key));
       opts.push(T_OTHER!("="));
       opts.push(T_BEGIN!());
-      opts.extend(value.clone().unlist());
+      opts.extend(value.unlist_ref().iter().copied());
       opts.push(T_END!());
       opt_count += 1;
     }
@@ -159,7 +159,7 @@ pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
     tks.extend(ExplodeText!(key));
     tks.push(T_OTHER!("="));
     tks.push(T_BEGIN!());
-    tks.extend(value.clone().unlist());
+    tks.extend(value.unlist_ref().iter().copied());
     tks.push(T_END!());
   }
   tks.push(T_OTHER!("]"));

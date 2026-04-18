@@ -327,7 +327,7 @@ LoadDefinitions!({
         let mut all_tokens = Vec::new();
         for stored_item in tks_list.iter() {
           if let Stored::Tokens(ref tks) = stored_item {
-            all_tokens.extend(tks.clone().unlist());
+            all_tokens.extend(tks.unlist_ref().iter().copied());
           }
         }
         if !all_tokens.is_empty() {
@@ -346,7 +346,7 @@ LoadDefinitions!({
         let mut all_tokens = Vec::new();
         for stored_item in tks_list.iter() {
           if let Stored::Tokens(ref tks) = stored_item {
-            all_tokens.extend(tks.clone().unlist());
+            all_tokens.extend(tks.unlist_ref().iter().copied());
           }
         }
         if !all_tokens.is_empty() {

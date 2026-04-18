@@ -76,7 +76,9 @@ pub fn parse_parameters(
   init_flag: bool,
 ) -> Result<Option<Parameters>> {
   let mut prototype = Cow::Borrowed(outer_prototype);
-  let mut parameters = Vec::new();
+  // parameters is capped at MAX_STEPS; most prototypes have ≤ 4 params,
+  // so pre-size conservatively for the common case.
+  let mut parameters = Vec::with_capacity(4);
   let mut steps = 0;
   const MAX_STEPS: usize = 50;
   while !prototype.is_empty() {
