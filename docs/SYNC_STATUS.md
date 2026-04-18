@@ -381,11 +381,14 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
   it. Covering it would need either snapshotting earlier (before
   `plain_base`) or an explicit `REBIND` row — not pursued.
 
-- [ ] **(d.2) Split PA/MPA into early / late buckets** based on
-  whether the target CS existed in the snapshot. `dump_writer.rs`
-  needs the same `%prev` / `%curr` comparison Perl does in
-  `DumpFile`; `dump_reader.rs` / the dump file layout need a way to
-  load-in-order that respects the bucket.
+- [x] **(d.2) Split PA/MPA into early / late buckets** based on
+  whether the target CS existed in the snapshot. **Done.**
+  `dump_writer.rs` lines 83-105 classify each PA/MPA alias via a
+  `bootstrap_snap.contains_key(…)` check and partition them into
+  `early_aliases` (target pre-existed) vs `late_aliases` (target
+  defined during raw-load). The dump file itself is laid out in
+  three sections (current dump: 342 early + 24,803 regular + 29 late)
+  so the reader processes them in the correct order.
 
 - [ ] **(d.3) Implement `\let`-alias ordering guarantees for PA
   entries.** Once (d.2) is in place, consuming PA becomes safe: the
