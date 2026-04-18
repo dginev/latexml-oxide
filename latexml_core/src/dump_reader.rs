@@ -176,7 +176,23 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
-      if is_at_internal && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
+      // Under `LATEXML_MUTEX_BASE_DUMP=1`, the dump must additionally
+      // supply public-CS macros that `_base.rs` normally owns — the
+      // `\Package*` / `\Class*` / `\GenericError` / `\GenericInfo`
+      // diagnostic family, which `\usepackage{...}` machinery invokes
+      // from user-facing style files. Relaxing to ALL public CSes
+      // pulls in `\document` + co. whose bodies reference the `\hook`
+      // system we don't fully support, so we enumerate the specific
+      // safe families instead.
+      let is_safe_public_family = matches!(name,
+        n if n.starts_with("Package")
+          || n.starts_with("Class")
+          || n.starts_with("Generic"));
+      let mutex_enabled = std::env::var("LATEXML_MUTEX_BASE_DUMP")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+      let pass_gate = is_at_internal || (mutex_enabled && is_safe_public_family);
+      if pass_gate && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(&key, data)
       } else {
         Ok(false)
@@ -374,13 +390,25 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   //
   // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`)
   // Unsafe: public macros without `:` or `@` (e.g., \document, \hook)
-  let name = key.trim_start_matches('\\');
-  let is_internal = name.contains(':') || name.contains('@');
-  if !is_internal {
-    // This is a "public" macro. Skip it — our engine either already defines
-    // it (caught by has_meaning above) or it's a raw TeX definition that
-    // would interfere with our LaTeXML-specific processing.
-    return Ok(false);
+  //
+  // The gate is disabled under `LATEXML_MUTEX_BASE_DUMP=1` because in
+  // mutex-mode the dump is the SOLE source of kernel definitions — the
+  // Rust-native `_base.rs` bindings that would normally install
+  // `\PackageInfo`, `\PackageError`, `\@latex@info` etc. are skipped.
+  // Keeping the gate would leave those CSes undefined and fire
+  // cascading `undefined:` errors from `\usepackage{...}` callers.
+  let mutex_enabled = std::env::var("LATEXML_MUTEX_BASE_DUMP")
+    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    .unwrap_or(false);
+  if !mutex_enabled {
+    let name = key.trim_start_matches('\\');
+    let is_internal = name.contains(':') || name.contains('@');
+    if !is_internal {
+      // This is a "public" macro. Skip it — our engine either already defines
+      // it (caught by has_meaning above) or it's a raw TeX definition that
+      // would interfere with our LaTeXML-specific processing.
+      return Ok(false);
+    }
   }
 
   let parts: Vec<&str> = data.splitn(2, '\t').collect();

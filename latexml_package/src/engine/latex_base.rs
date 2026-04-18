@@ -272,18 +272,10 @@ LoadDefinitions!({
   // Perl: latex_base.pool.ltxml lines 516-593
   //======================================================================
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
-  DefPrimitive!("\\@onlypreamble{}", {
-    only_preamble("\\@onlypreamble")?;
-  });
-  DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
-    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
-  });
-  DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
-    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;
-  });
-  DefPrimitive!("\\GenericInfo{}{}", sub[(arg1,arg2)] {
-    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
-  });
+  // Perl-parity: `\@onlypreamble`, `\GenericError/Warning/Info` are
+  // closure-backed primitives defined in `latex_constructs.pool.ltxml`
+  // (L5645-5648), not latex_base. Relocated there 2026-04-18 so they
+  // survive the dump/base mutual-exclusivity flip.
 
   Let!("\\MessageBreak", "\\relax");
   TeX!(
@@ -374,7 +366,8 @@ LoadDefinitions!({
        \@latex@info{#1\@gobble}}
      "
   );
-  DefPrimitive!("\\@setsize{}{}{}{}", None);
+  // Perl-parity: `\@setsize` is `DefMacro` in latex_constructs.pool.ltxml L5652.
+  // Relocated there 2026-04-18 (closure-backed; closure can't serialize).
   DefMacro!("\\hexnumber@ {}", "\\ifcase\\number#1
  0\\or 1\\or 2\\or 3\\or 4\\or 5\\or 6\\or 7\\or 8\\or
  9\\or A\\or B\\or C\\or D\\or E\\or F\\fi");
@@ -599,30 +592,12 @@ LoadDefinitions!({
   // (moved from latex_semi_undocumented.rs)
   //======================================================================
 
-  // \@ifnextchar — Perl latex_base (also used heavily in latex_constructs)
-  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
-    let next = gullet::read_non_space()?;
-    let next_test = match next {
-      Some(ref n) => XEquals!(&token, n),
-      None => XEquals!(&token, &*TOKEN_END)
-    };
-    let which = if next_test { t_if } else { t_else };
-    let mut result = which.substitute_parameters(&[]).unlist();
-    if let Some(t_next) = next {
-      result.push(t_next);
-    }
-    result
-  });
-  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
-  Let!("\\@ifnext", "\\@ifnextchar");
+  // Perl-parity: `\@ifnextchar`, `\kernel@ifnextchar`, `\@ifnext` are
+  // defined in latex_constructs.pool.ltxml L5687 (closure-backed, can't
+  // round-trip through the dump). Relocated there 2026-04-18.
 
-  // \makeatletter / \makeatother
-  DefPrimitive!("\\makeatletter", {
-    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
-  });
-  DefPrimitive!("\\makeatother", {
-    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
-  });
+  // Perl-parity: `\makeatletter` / `\makeatother` are defined in
+  // latex_constructs.pool.ltxml L5765-5766. Relocated there 2026-04-18.
 
   // L3 hook stubs — Perl latex_base L829-855
   DefMacro!("\\NewHook{}", None);

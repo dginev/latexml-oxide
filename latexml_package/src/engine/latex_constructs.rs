@@ -8600,4 +8600,59 @@ LoadDefinitions!({
       gullet::flush();
     }
   });
+
+  //======================================================================
+  // Closure-backed primitives — Perl: latex_constructs.pool.ltxml L5645-5766.
+  // These MUST live in `_constructs` (always loaded), not `_base` (optional
+  // under Perl's LoadFormat mutual-exclusivity). Their closures cannot be
+  // serialized into the kernel dump; defining them here guarantees they
+  // exist whether or not the dump short-circuits `_base`.
+  //
+  // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
+  // unblock `LATEXML_MUTEX_BASE_DUMP=1` paths (see SYNC_STATUS D0 v3.f).
+
+  // Perl L5645
+  DefPrimitive!("\\@onlypreamble{}", {
+    only_preamble("\\@onlypreamble")?;
+  });
+
+  // Perl L5646-5648
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
+    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
+  });
+  DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;
+  });
+  DefPrimitive!("\\GenericInfo{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
+  });
+
+  // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
+  DefMacro!("\\@setsize{}{}{}{}", "");
+
+  // Perl L5765-5766
+  DefPrimitive!("\\makeatletter", {
+    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
+  });
+  DefPrimitive!("\\makeatother", {
+    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
+  });
+
+  // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
+  // Relocated from latex_base.rs 2026-04-18 to survive mutex-mode.
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
+    let next = gullet::read_non_space()?;
+    let next_test = match next {
+      Some(ref n) => XEquals!(&token, n),
+      None => XEquals!(&token, &*TOKEN_END)
+    };
+    let which = if next_test { t_if } else { t_else };
+    let mut result = which.substitute_parameters(&[]).unlist();
+    if let Some(t_next) = next {
+      result.push(t_next);
+    }
+    result
+  });
+  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
+  Let!("\\@ifnext", "\\@ifnextchar");
 });
