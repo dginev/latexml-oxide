@@ -139,19 +139,7 @@ LoadDefinitions!({
   });
 });
 
-// Perl: TeX_Job.pool.ltxml — \today macro
-#[allow(dead_code)]
-const MONTH_NAMES: [&str; 12] = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-/// Return a string for today's date, e.g. "March 11, 2026"
-#[allow(dead_code)]
-pub fn today() -> String {
-  let month = state::lookup_number("\\month").map(|n| n.value_of()).unwrap_or(1);
-  let day = state::lookup_number("\\day").map(|n| n.value_of()).unwrap_or(1);
-  let year = state::lookup_number("\\year").map(|n| n.value_of()).unwrap_or(2000);
-  let month_name = MONTH_NAMES.get((month - 1) as usize).unwrap_or(&"?");
-  format!("{month_name} {day}, {year}")
-}
+// The \today macro's implementation lives in base_utilities::today()
+// (used by the Today! macro in prelude/setup_binding_language.rs). An
+// earlier parallel version here was dead code and has been removed; if
+// ever needed, the base_utilities version is the canonical one.
