@@ -1,11 +1,15 @@
 //! babel.sty — multilingual support
 //!
 //! Perl: babel.sty.ltxml (30 lines) — `InputDefinitions('babel', noltxml=>1)`.
-//! Our Rust port carries several pre-raw-load and post-raw-load workarounds
-//! to cover engine gaps Perl doesn't have (precompiled kernel, proper
-//! `\initiate@active@char`, kpsewhich-backed ini reading). See
-//! `wisdom_babel_fidelity_plan.md` in project memory for the staged plan
-//! to shrink this file back to ~30 lines.
+//! Our Rust port carries a thin orchestration layer on top of the raw babel
+//! load. With the @currname leakage fix in commit 56b0c35d2, babel's own
+//! option pipeline (and therefore its entire language-loading / shorthand /
+//! captions story) now works end-to-end. Only two small workarounds remain
+//! here: pre-allocating `\l@polutonikogreek` for older TeX Live builds that
+//! don't include it in the kernel dump, and setting DOCUMENT_LANGUAGE +
+//! `\bbl@main@language` globally (babel's own raw-load path may resolve
+//! main to a language whose .ldf happened to run last — not always the
+//! user's intended last option).
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -16,21 +20,12 @@ LoadDefinitions!({
 
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // --- Post-raw-load workarounds ------------------------------------------
-  // Caption strings come from the per-language Rust ports
-  // (english_sty.rs, french_ldf.rs, german_sty.rs, ngerman_sty.rs). Our
-  // `\lx@babel@activate@mainlang` below loads the matching port on demand
-  // and then calls `\captions<lang>`. This mirrors what Perl's precompiled
-  // kernel + babel's own \selectlanguage{\bbl@main@language} do end-to-end
-  // (which we can't rely on yet — \bbl@main@language is "nil" in our
-  // engine because the two-phase \ProcessOptions* pipeline doesn't fire
-  // \bbl@load@language cleanly; see SYNC_STATUS D0).
-
-  // Main-language activation: sets DOCUMENT_LANGUAGE, calls \captions<lang>,
-  // wires French :;!? and German " active-char dispatch. Bypasses babel's
-  // own \selectlanguage{\bbl@main@language} (which is "nil" in our engine
-  // due to the option-pipeline gap) by resolving the effective language
-  // from \opt@babel.sty directly.
+  // Sets DOCUMENT_LANGUAGE and force-sets \bbl@main@language from
+  // \opt@babel.sty so babel's `\AtBeginDocument{\selectlanguage{\bbl@main
+  // @language}}` picks up the user's intended main language (the last
+  // option), not whichever .ldf's \ldf@finish happened to run last.
+  // Everything else (captions activation, active-char shorthands, port
+  // dispatching) is handled end-to-end by babel's own chain.
   DefPrimitive!("\\lx@babel@activate@mainlang", {
     let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
       .map(|t| t.to_string()).unwrap_or_default();
