@@ -227,6 +227,17 @@ A Rust safe-by-construction implementation should NEVER segfault. Sources invest
   `t.to_string() == "..."` — avoids per-compare String allocation.
 - [x] `Tokens::untex` — O(n²) prepend loop fixed; `VecDeque::from(Vec)`
   reuses heap buffer instead of `.into_iter().collect()`.
+- [x] Token constructor macros (`T_CS!`, `T_LETTER!`, `T_OTHER!`,
+  `T_SPACE!`, `Token!(lit)`) route the literal arm through `pin!` —
+  these macros are invoked hundreds of times per document in macro
+  expansion / argument packing / template construction, and each
+  previously paid an arena RefCell borrow + hash probe.
+- [x] Math parser `parser.rs` ltx:XM* dispatch, `gullet::read_float` /
+  `read_factor` / `read_optional_signs` number-scan loops, and
+  `document.rs` / `alignment.rs` / `document/helpers.rs` qname probes
+  all switched from `arena::pin_static("lit")` to `pin!("lit")`.
+- [x] `assign_value_inplace_sym` sym-keyed variant — route MODE-switch
+  call sites (enter_horizontal, leave_horizontal, par end) to it.
 
 **Callgrind (session 105):** Math parser Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute` 8.3%, `bv_scan` 7.1%, AVL ops 6.8%. Total Marpa-related >60% CPU.
 
