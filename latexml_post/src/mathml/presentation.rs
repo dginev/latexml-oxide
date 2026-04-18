@@ -129,10 +129,16 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
 ///
 /// Port of `pmml` + `pmml_internal`.
 fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
-  let tag = doc.get_qname(node).unwrap_or_default();
+  // Fast-path dispatch: all tags we recognize live in the ltx namespace.
+  // Compare localname directly and check namespace prefix separately to
+  // avoid the `format!("{}:{}", prefix, localname)` allocation inside
+  // `get_qname`. On non-ltx nodes, fall through to the generic m:mtext
+  // wrapping (same as the original catchall).
+  let is_ltx = doc.qname_prefix(node).as_deref() == Some("ltx");
+  let localname = if is_ltx { node.get_name() } else { String::new() };
 
   // Follow XMRef
-  if tag == "ltx:XMRef" {
+  if is_ltx && localname == "XMRef" {
     if let Some(idref) = node.get_attribute("idref") {
       if let Some(target) = doc.find_node_by_id(&idref) {
         return pmml(doc, target);
@@ -141,47 +147,52 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
     return pmml_error("Unresolved XMRef");
   }
 
-  match tag.as_str() {
-    "ltx:XMath" => {
-      let results: Vec<NodeData> = element_children(node).iter().map(|c| pmml(doc, c)).collect();
-      pmml_row(results)
-    }
-    "ltx:XMDual" => {
-      let children = element_children(node);
-      if children.len() >= 2 {
-        pmml(doc, &children[1]) // Presentation branch
-      } else {
-        pmml_error("Empty XMDual")
+  if is_ltx {
+    match localname.as_str() {
+      "XMath" => {
+        let results: Vec<NodeData> =
+          element_children(node).iter().map(|c| pmml(doc, c)).collect();
+        return pmml_row(results);
       }
-    }
-    "ltx:XMWrap" | "ltx:XMArg" => {
-      let results: Vec<NodeData> = element_children(node).iter().map(|c| pmml(doc, c)).collect();
-      pmml_row(results)
-    }
-    "ltx:XMApp" => pmml_apply(doc, node),
-    "ltx:XMTok" => pmml_token(doc, node),
-    "ltx:XMHint" => pmml_hint(doc, node),
-    "ltx:XMArray" => pmml_array(doc, node),
-    "ltx:XMText" => {
-      // Perl L494-501: iterate over child nodes, not just text content.
-      // This preserves ltx:picture (SVG) elements inside XMText.
-      let mut children = Vec::new();
-      if let Some(child) = node.get_first_child() {
-        let mut current = Some(child);
-        while let Some(ref c) = current {
-          children.extend(super::pmml_text_aux(doc, c));
-          current = c.get_next_sibling();
+      "XMDual" => {
+        let children = element_children(node);
+        return if children.len() >= 2 {
+          pmml(doc, &children[1]) // Presentation branch
+        } else {
+          pmml_error("Empty XMDual")
+        };
+      }
+      "XMWrap" | "XMArg" => {
+        let results: Vec<NodeData> =
+          element_children(node).iter().map(|c| pmml(doc, c)).collect();
+        return pmml_row(results);
+      }
+      "XMApp" => return pmml_apply(doc, node),
+      "XMTok" => return pmml_token(doc, node),
+      "XMHint" => return pmml_hint(doc, node),
+      "XMArray" => return pmml_array(doc, node),
+      "XMText" => {
+        // Perl L494-501: iterate over child nodes, not just text content.
+        // This preserves ltx:picture (SVG) elements inside XMText.
+        let mut children = Vec::new();
+        if let Some(child) = node.get_first_child() {
+          let mut current = Some(child);
+          while let Some(ref c) = current {
+            children.extend(super::pmml_text_aux(doc, c));
+            current = c.get_next_sibling();
+          }
         }
+        return pmml_row(children);
       }
-      pmml_row(children)
+      _ => {}
     }
-    _ => {
-      NodeData::Element {
-        tag: "m:mtext".to_string(),
-        attributes: None,
-        children: vec![NodeData::Text(node.get_content())],
-      }
-    }
+  }
+
+  // Catchall: wrap content in m:mtext.
+  NodeData::Element {
+    tag: "m:mtext".to_string(),
+    attributes: None,
+    children: vec![NodeData::Text(node.get_content())],
   }
 }
 

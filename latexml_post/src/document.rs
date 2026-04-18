@@ -559,6 +559,21 @@ impl PostDocument {
     }
   }
 
+  /// Resolve a node's namespace URI to its registered prefix without
+  /// allocating a combined "prefix:localname". Returns the prefix as an
+  /// owned `String` (a copy of the entry in `namespace_uris`); callers
+  /// can then match on `node.get_name()` separately. Useful in hot
+  /// dispatch code where the `format!` in `get_qname` is the cost.
+  pub fn qname_prefix(&self, node: &Node) -> Option<String> {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return None;
+    }
+    node.get_namespace().and_then(|ns| {
+      let nsuri = ns.get_href();
+      self.namespace_uris.get(&nsuri).cloned()
+    })
+  }
+
   /// Check whether a node's qualified name equals a fixed "prefix:localname"
   /// string without allocating a `String`. Fast-path for hot comparisons
   /// like `is_qname(node, "ltx:XMApp")` — avoids the `format!` in
