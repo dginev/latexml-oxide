@@ -46,26 +46,14 @@ LoadDefinitions!({
         Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
-    // Force-set \bbl@main@language to the resolved language so babel's own
-    // `\AtBeginDocument{\selectlanguage{\bbl@main@language}}` picks up the
-    // correct value. Without this, babel's raw-load path may leave it as
-    // "nil" or pointing at a different language whose .ldf \ldf@finish
-    // ran last (e.g. greek.ldf in `[polutonikogreek,english]`).
+    // Force-set \bbl@main@language globally so babel's AtBeginDocument
+    // \selectlanguage{\bbl@main@language} picks up the user's intended
+    // main language (the LAST option), not whichever .ldf's \ldf@finish
+    // ran last. Babel's own chain then handles captions activation,
+    // active-char shorthands, and per-language port dispatching.
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
-    // Note: babel's now-working pipeline handles:
-    // - Loading per-language ports via \InputIfFileExists{<lang>.ldf}
-    //   (routed through our binding dispatcher).
-    // - Activating \captions<lang> via \AtBeginDocument's
-    //   \selectlanguage{\bbl@main@language} → our \select@language
-    //   override → babel's saved \bbl@switch which calls
-    //   \captions<lang>.
-    // - Active-char shorthands (German " / French :;!? if frenchb
-    //   path uses babel's \declare@shorthand mechanism).
-    // We used to invoke these manually here as a workaround for the
-    // @currname leakage bug (fixed in commit 56b0c35d2); dropping the
-    // redundant paths now.
   });
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
   // \begin{document} opens (and base_schema's after_open reads it).
