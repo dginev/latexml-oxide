@@ -67,24 +67,12 @@ LoadDefinitions!({
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
-    // Load per-language Rust ports for EVERY babel option, not just main.
-    // Needed so \begin{otherlanguage}{other} / \foreignlanguage{other}
-    // finds \captions<other> defined — babel's internal \bbl@switch
-    // calls it before our \ltx@bbl@select@language hook can load the port.
-    fn load_port_for(opt: &str) {
-      match opt {
-        "english" | "american" | "USenglish" | "british" | "UKenglish" =>
-          { let _ = crate::package::english_sty::load_definitions(); },
-        "french" | "francais" | "frenchb" =>
-          { let _ = crate::package::french_ldf::load_definitions(); },
-        "german" | "germanb" =>
-          { let _ = crate::package::german_sty::load_definitions(); },
-        "ngerman" | "ngermanb" =>
-          { let _ = crate::package::ngerman_sty::load_definitions(); },
-        _ => {}
-      }
-    }
-    for raw in opt_babel.split(',') { load_port_for(raw.trim()); }
+    // Note: babel's now-working option pipeline dispatches
+    // \InputIfFileExists{<lang>.ldf} for each option, which routes
+    // through our binding dispatcher to the per-language Rust ports
+    // (english_sty.rs / french_ldf.rs / german_sty.rs / ngerman_sty.rs).
+    // No manual port load here — previously needed as a workaround for
+    // the @currname leakage bug (now fixed, commit 56b0c35d2).
     // Activate captions. @ may be OTHER (at \begin{document}) so flip it
     // temporarily to LETTER to tokenize `\captions<lang>` as one CS.
     state::assign_catcode('@', Catcode::LETTER, None);
