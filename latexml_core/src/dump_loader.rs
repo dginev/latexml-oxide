@@ -649,9 +649,14 @@ fn install_expandable(
     } else {
       // Build a prototype string from the param specs
       let proto: String = param_specs.join("");
-      // init_flag=false: skip PARAMETER_TYPES lookup (may not be available during dump loading)
-      // The parameters will use default readers but preserve arg count for pack_parameters
-      crate::common::def_parser::parse_parameters(&proto, &cs, false)
+      // init_flag=true: we're running at runtime (engine is up via the
+      // `LATEXML_DUMP` env-var load path in core_interface.rs), so
+      // Parameter::init() can resolve readers via PARAMETER_TYPES.
+      // Without init, each Parameter falls back to the mock reader and
+      // any invocation that tries to consume arguments fails with
+      // "Missing argument {}". (Mirrors the dump_reader.rs fix — the
+      // two loaders share the same hazard.)
+      crate::common::def_parser::parse_parameters(&proto, &cs, true)
         .map_err(|e| format!("Parameter parse error for {}: {}", cs_name, e))?
     }
   } else {
