@@ -1793,7 +1793,10 @@ fn sideset_construct(
 
   // Process pre-scripts in reverse
   if let Some(pre_arg) = pre {
-    let items: Vec<_> = pre_arg.unlist().into_iter().rev().collect();
+    // Reverse the token Vec in-place instead of into_iter().rev().collect()
+    // which would allocate a second Vec.
+    let mut items = pre_arg.unlist();
+    items.reverse();
     for item in items {
       if let Some(scriptop) = is_script(&item) {
         let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };

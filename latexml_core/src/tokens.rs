@@ -443,7 +443,9 @@ impl Tokens {
     // initial Vec doublings on 1k+ token expansions (common for
     // expl3 macros).
     let mut rescanned = Vec::with_capacity(self.0.len());
-    let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
+    // `VecDeque::from(Vec)` reuses the Vec's heap buffer directly (no
+    // second allocation), unlike `into_iter().collect()` which copies.
+    let mut toks: VecDeque<Token> = VecDeque::from(self.unlist());
     while let Some(t) = toks.pop_front() {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         let next_t = toks.pop_front();
