@@ -108,7 +108,7 @@ LoadDefinitions!({
     let color = parse_color(model_str.as_deref(), &spec_str);
 
     // If in preamble, store for \normalcolor
-    if lookup_bool("inPreamble") {
+    if state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));

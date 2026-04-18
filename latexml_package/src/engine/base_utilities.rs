@@ -119,7 +119,7 @@ LoadDefinitions!({
     )
   });
 
-  DefConditional!("\\if@in@preamble", { lookup_bool("inPreamble") });
+  DefConditional!("\\if@in@preamble", { state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -159,7 +159,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
-    let inpreamble = lookup_bool("inPreamble");
+    let inpreamble = state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM);
     assign_value("inPreamble", false, None);
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
@@ -254,7 +254,7 @@ LoadDefinitions!({
     sub[(tag_tks, label_opt, tokens)] {
     let tag = tag_tks.unwrap().to_string();
     let label = label_opt.as_ref().map(|l| l.to_string());
-    let inpreamble = lookup_bool("inPreamble");
+    let inpreamble = state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM);
     assign_value("inPreamble", false, None);
 
     // Digest the content tokens
@@ -988,7 +988,7 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
     // Check the condition BEFORE endMode pops the frame.
     let post_mode = state::lookup_string_from_sym(&arena::MODE_SYM);
-    let bound_mode = state::lookup_string("BOUND_MODE");
+    let bound_mode = state::lookup_string_from_sym(&arena::BOUND_MODE_SYM);
     if post_mode == "horizontal" && bound_mode.ends_with("vertical")
       && has_only_simple_horizontal_content(&item)
     {

@@ -1698,7 +1698,7 @@ LoadDefinitions!({
   // \AfterEndPreamble
   // \AfterEndDocument
   DefMacro!("\\AfterPreamble{}", sub[(arg)] {
-  if lookup_bool("inPreamble") {
+  if state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) {
     push_value("@at@begin@document", arg.unlist())?;
     Tokens!()
   } else {

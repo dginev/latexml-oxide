@@ -417,7 +417,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
     // inside an environment). When the bound value matches but isn't in the top frame's
     // undo table, treat it as valid — the mode system is about tracking what mode we're in.
-    let current_bound = lookup_string("BOUND_MODE");
+    let current_bound = crate::state::lookup_string_from_sym(&crate::common::arena::BOUND_MODE_SYM);
     if current_bound != bound_mode
     {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
@@ -470,7 +470,7 @@ pub fn enter_horizontal() {
 /// Perl: sub leaveHorizontal
 pub fn leave_horizontal() -> Result<()> {
   let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
-  let bound = lookup_string("BOUND_MODE");
+  let bound = crate::state::lookup_string_from_sym(&crate::common::arena::BOUND_MODE_SYM);
   if mode == "horizontal" && bound.ends_with("vertical") {
     // This needs to be an invisible, and slightly gentler, \par
     assign_value("INTERNAL_PAR", true, Some(Scope::Local));
@@ -486,7 +486,7 @@ pub fn leave_horizontal() -> Result<()> {
 /// Perl: sub leaveHorizontal_internal
 pub fn leave_horizontal_internal() {
   let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
-  let bound = lookup_string("BOUND_MODE");
+  let bound = crate::state::lookup_string_from_sym(&crate::common::arena::BOUND_MODE_SYM);
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
     assign_value_inplace("MODE", arena::pin(&bound));

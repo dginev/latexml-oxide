@@ -427,7 +427,7 @@ LoadDefinitions!({
         op = "\\lx@end@inline@math";
       } else {
         // Perl: only check for $$ when within a vertical bound mode
-        let bound = state::lookup_string("BOUND_MODE");
+        let bound = state::lookup_string_from_sym(&arena::BOUND_MODE_SYM);
         if bound.ends_with("vertical") && gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
           op = "\\lx@begin@display@math";

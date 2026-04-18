@@ -724,7 +724,7 @@ LoadDefinitions!({
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     // Set current color
     def_color(".", &color, None)?;
-    if lookup_bool("inPreamble") {
+    if state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
@@ -754,7 +754,7 @@ LoadDefinitions!({
     if let Some(Stored::String(sym)) = state::lookup_value("color_.") {
       let stored_str = arena::to_string(sym);
       if let Some(color) = Color::from_stored(&stored_str) {
-        if lookup_bool("inPreamble") {
+        if state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) {
           assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
         }
         merge_font(fontmap!(color => color));

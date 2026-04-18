@@ -208,7 +208,7 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  if !lookup_bool("inPreamble") {
+  if !state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) {
     Error!(
       "unexpected",
       cs,

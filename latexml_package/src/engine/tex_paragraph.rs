@@ -111,7 +111,7 @@ LoadDefinitions!({
     before_digest => {
       // Perl: combine any digested horizontal material into a horizontal List
       let mode = state::lookup_string_from_sym(&arena::MODE_SYM);
-      let bound = lookup_string("BOUND_MODE");
+      let bound = state::lookup_string_from_sym(&arena::BOUND_MODE_SYM);
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
         repack_horizontal();

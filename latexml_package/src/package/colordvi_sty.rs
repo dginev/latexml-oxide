@@ -74,7 +74,7 @@ LoadDefinitions!({
       spec.split_whitespace().filter_map(|s| s.parse().ok()).collect()
     };
     let color = from_model_components("cmyk", &comps);
-    if lookup_bool("inPreamble") {
+    if state::lookup_bool_sym(&arena::IN_PREAMBLE_SYM) {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     MergeFont!(color => color);
