@@ -1168,13 +1168,15 @@ fn simplify_vertical_list(item: Digested) -> Digested {
 /// If whatsit has property $keyword, return Explode($keyword) ++ Revert($value)
 pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
   if let Some(value) = whatsit.get_property(keyword) {
-    // Explode the keyword string into T_OTHER tokens
+    // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
+    // uses a stack-buffer encode_utf8 and skips the per-char
+    // `c.to_string()` heap alloc the previous version did.
     let mut tokens: Vec<Token> = keyword.chars()
-      .map(|c| { let s = c.to_string(); T_OTHER!(s) }).collect();
-    // Revert the stored value to tokens
+      .map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER })
+      .collect();
     let val_str = value.to_attribute();
     tokens.extend(val_str.chars()
-      .map(|c| { let s = c.to_string(); T_OTHER!(s) }));
+      .map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }));
     tokens
   } else {
     Vec::new()
