@@ -1341,9 +1341,13 @@ pub fn define_new_theorem(
       Ok(())
     }));
 
+  // `thmset_for_before` is for the before_digest closure; clone needed
+  // because `thmset_str` is moved into `thmset_for_tags` below.
   let thmset_for_before = thmset_str.clone();
-  let counter_for_props = counter.clone();
-  let thmset_for_props = thmset_str.clone();
+  // `thmset_for_tags` and `counter_for_tags` are the last uses of
+  // thmset_str and counter — move instead of clone.
+  let thmset_for_tags = thmset_str;
+  let counter_for_tags = counter;
   let is_starred_for_props = is_starred;
   let has_type_for_props = has_type;
 
@@ -1389,9 +1393,7 @@ pub fn define_new_theorem(
     });
   options.after_construct.push(after_construct_closure);
 
-  // properties
-  let thmset_for_tags = thmset_for_props.clone();
-  let counter_for_tags = counter_for_props.clone();
+  // properties — capture thmset_for_tags / counter_for_tags by move.
   let props_closure: PropertiesClosure = Rc::new(
     #[allow(clippy::ptr_arg)]
     move |args: &Vec<Option<Digested>>| {
