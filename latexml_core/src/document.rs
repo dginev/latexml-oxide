@@ -421,7 +421,7 @@ impl Document {
               }
 
               for (key, mut value) in attrs_to_set {
-                if key == arena::pin_static("class") {
+                if key == pin!("class") {
                   // Merge and sort class values alphabetically, matching Perl's behavior
                   if let Some(ovalue) = current.get_attribute("class") {
                     let new_s = arena::with(value, |s| s.to_string());
@@ -445,7 +445,7 @@ impl Document {
             }
           }
           // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-          if qname != arena::pin_static("ltx:document")
+          if qname != pin!("ltx:document")
             && state::lookup_bool("GENERATE_IDS")
             && !current.has_attribute("xml:id")
             && !current.has_attribute("id") // SVG elements with plain id don't need xml:id
@@ -2749,7 +2749,7 @@ impl Document {
     let qname = get_node_qname(&node);
     // Special case: for XMArg used to wrap "formal" arguments on the content side,
     // mark them as visible as presentation as well.
-    if cvis && (qname == arena::pin_static("ltx:XMArg")) {
+    if cvis && (qname == pin!("ltx:XMArg")) {
       pvis = true;
     }
     if cvis {
@@ -2758,7 +2758,7 @@ impl Document {
     if pvis {
       node.set_attribute("_pvis", "1")?;
     }
-    if qname == arena::pin_static("ltx:XMDual") {
+    if qname == pin!("ltx:XMDual") {
       let mut children = xml::element_nodes(&node);
       let c = children.remove(0);
       let p = children.remove(0);
@@ -2768,7 +2768,7 @@ impl Document {
       if pvis {
         self.mark_xmnode_visibility_aux(p, false, true)?;
       }
-    } else if qname == arena::pin_static("ltx:XMRef") {
+    } else if qname == pin!("ltx:XMRef") {
       match node.get_attribute("idref") {
         None => {
           let key = node.get_attribute("_xmkey");

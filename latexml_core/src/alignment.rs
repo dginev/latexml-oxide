@@ -28,7 +28,6 @@ pub mod template;
 use self::cell::Cell;
 use self::normalize::*;
 use self::template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, TemplateConfig};
-use crate::common::arena;
 use crate::common::arena::SymHashMap;
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::NumericOps;
@@ -988,7 +987,7 @@ fn guess_alignment_headers(
   //       . (($x = $document->findnode('ancestor-or-self::*[@xml:id]', $table)) ?
   // $x->getAttribute('xml:id') : $tag))     if $LaTeXML::DEBUG{alignment};
 
-  let ismath = tag == arena::pin_static("ltx:XMArray");
+  let ismath = tag == crate::pin!("ltx:XMArray");
   let reversed = false;
   // Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting & characterizing each cell.
