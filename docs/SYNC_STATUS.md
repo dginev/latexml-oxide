@@ -4,7 +4,7 @@
 
 Updated 2026-04-17. Open gaps & active TODOs only; completed items live in git history.
 
-**Test inventory:** 413 integration tests pass (0 failures); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
+**Test inventory:** 409 integration tests pass (0 failures, 0 ignored); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
 **arxiv sandbox:** 100+ papers in `arxiv-examples/`. **93+%** on full catalog.
 
