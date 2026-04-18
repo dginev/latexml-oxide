@@ -710,13 +710,11 @@ LoadDefinitions!({
     def_macro(T_CS!(&inner_cs_name),
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure
-    let cs_clone = cs;
-    let inner_cs = inner_cs_name.clone();
-    let after_cs = after_cs_name.clone();
-    let ldel_c = ldel_toks.clone();
-    let rdel_c = rdel_toks.clone();
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs_clone, true)?,
+    // Create main \cmd with OptionalMatch:* [] expansion closure.
+    // Move inner_cs_name / after_cs_name / ldel_toks / rdel_toks
+    // directly into the closure capture — none are used after this
+    // point, so four setup-time clones are avoided.
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
       Some(ExpansionBody::Closure(Rc::new(move |args| {
         let star = &args[0]; // OptionalMatch:*
         let opt = &args[1];  // []
@@ -730,7 +728,7 @@ LoadDefinitions!({
           toks.extend(opt.clone().unlist());
         }
         // Left delimiter
-        toks.extend(ldel_c.iter().cloned());
+        toks.extend(ldel_toks.iter().cloned());
         // \def\delimsize{...}
         toks.push(T_CS!("\\def"));
         toks.push(T_CS!("\\delimsize"));
@@ -743,17 +741,17 @@ LoadDefinitions!({
         toks.push(T_END!());
         // \def\cmd@after{... rdel}
         toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs));
+        toks.push(T_CS!(&after_cs_name));
         toks.push(T_BEGIN!());
         if is_star {
           toks.push(T_CS!("\\right"));
         } else if has_opt {
           toks.extend(opt.clone().unlist());
         }
-        toks.extend(rdel_c.iter().cloned());
+        toks.extend(rdel_toks.iter().cloned());
         toks.push(T_END!());
         // \cmd@inner
-        toks.push(T_CS!(&inner_cs));
+        toks.push(T_CS!(&inner_cs_name));
         Ok(Tokens::new(toks))
       }))), None)?;
   });
@@ -779,14 +777,9 @@ LoadDefinitions!({
     def_macro(T_CS!(&inner_cs_name),
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure
-    let cs_clone = cs;
-    let inner_cs = inner_cs_name.clone();
-    let after_cs = after_cs_name.clone();
-    let ldel_c = ldel_toks.clone();
-    let rdel_c = rdel_toks.clone();
-    let pre_c = pre_toks.clone();
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs_clone, true)?,
+    // Create main \cmd with OptionalMatch:* [] expansion closure.
+    // Move the captured Vecs/Strings directly — no setup-time clones.
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
       Some(ExpansionBody::Closure(Rc::new(move |args| {
         let star = &args[0];
         let opt = &args[1];
@@ -794,7 +787,7 @@ LoadDefinitions!({
         let has_opt = !opt.is_empty();
         let mut toks: Vec<Token> = vec![];
         // Precode
-        toks.extend(pre_c.iter().cloned());
+        toks.extend(pre_toks.iter().cloned());
         // Prefix
         if is_star {
           toks.push(T_CS!("\\left"));
@@ -802,7 +795,7 @@ LoadDefinitions!({
           toks.extend(opt.clone().unlist());
         }
         // Left delimiter
-        toks.extend(ldel_c.iter().cloned());
+        toks.extend(ldel_toks.iter().cloned());
         // \def\delimsize{...}
         toks.push(T_CS!("\\def"));
         toks.push(T_CS!("\\delimsize"));
@@ -815,17 +808,17 @@ LoadDefinitions!({
         toks.push(T_END!());
         // \def\cmd@after{... rdel}
         toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs));
+        toks.push(T_CS!(&after_cs_name));
         toks.push(T_BEGIN!());
         if is_star {
           toks.push(T_CS!("\\right"));
         } else if has_opt {
           toks.extend(opt.clone().unlist());
         }
-        toks.extend(rdel_c.iter().cloned());
+        toks.extend(rdel_toks.iter().cloned());
         toks.push(T_END!());
         // \cmd@inner
-        toks.push(T_CS!(&inner_cs));
+        toks.push(T_CS!(&inner_cs_name));
         Ok(Tokens::new(toks))
       }))), None)?;
   });
