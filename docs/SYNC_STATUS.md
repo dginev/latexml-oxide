@@ -136,25 +136,24 @@ exact engine gaps:
   `babel_support_sty.rs`'s `\iflanguage` still auto-creates missing
   entries via `\newlanguage` as a belt-and-suspenders fallback.
 
-- [~] **`\openin`-based `.ini` loading.** PARTIAL (2026-04-17 verified):
-  `\babelprovide[import]{<lang>}` + `\selectlanguage{<lang>}` WORKS for
-  Latin-1 languages. Verified with `spanish`: produces
-  `refname=[Referencias] chaptername=[Capítulo] xml:lang="es"` end-to-end
-  via babel's own ini-parsing loop (no Rust per-language port involved).
-  `find_file`, `\openin`, `\ifeof`, and `\read` all function for
-  `babel-es.ini` and friends.
-  - **Remaining gap**: UTF-8 multi-byte chars in non-Latin ini files
-    (bulgarian/russian/greek captions) hit error-recovery as undefined
-    CS per-byte. Example: `refname=[Литература]` renders as 10
-    `<ERROR class="undefined"/>` elements. Root cause: \read catcode
-    handling of raw UTF-8 bytes during ini parsing.
-  - **Practical status**: babel's `\usepackage[<lang>]{babel}` path
-    still uses our per-language Rust ports (english_sty.rs,
-    french_ldf.rs, german_sty.rs, ngerman_sty.rs) because
-    `\bbl@main@language` resolution fails (see
-    `project_babel_second_processoptions_bug.md`). Fixing the option
-    pipeline would let the ini-loading path cover ALL options, making
-    our per-language ports redundant for Latin-1 languages.
+- [x] **`\openin`-based `.ini` loading.** WORKS (2026-04-17 verified):
+  `\babelprovide[import]{<lang>}` + `\selectlanguage{<lang>}` reads
+  `babel-<lang>.ini` via babel's own parsing loop and defines captions
+  end-to-end. Verified:
+  - **Latin-1** (`spanish`, `french` etc.) — works out of the box:
+    `refname=[Referencias] chaptername=[Capítulo] xml:lang="es"`.
+  - **Cyrillic** (`bulgarian`, `russian`) — works with explicit
+    `\usepackage[T2A]{fontenc}`: `refname=[Литература]`. Without T2A,
+    the LICR macros (`\CYRL \cyri \cyrt...`) are undefined.
+  - `find_file`, `\openin`, `\ifeof`, `\read` all function correctly
+    on `babel/locale/*.ini` paths.
+
+  **Caveat**: the `\usepackage[<lang>]{babel}` convenience path still
+  uses our per-language Rust ports (english_sty.rs, french_ldf.rs,
+  german_sty.rs, ngerman_sty.rs) because `\bbl@main@language`
+  resolution fails (see `project_babel_second_processoptions_bug.md`).
+  Fixing the option-pipeline gap would let the ini-loading path cover
+  ALL languages uniformly and make per-language ports redundant.
 
 - [ ] **`\initiate@active@char` / active-char lifecycle.** babel uses this
   for German `"a→ä`, French `:!?;`, Greek `~` → perispomeni, etc. The
