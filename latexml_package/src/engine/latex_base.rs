@@ -104,29 +104,22 @@ LoadDefinitions!({
   DefMacro!("\\@firstoftwo{}{}", "#1");
   DefMacro!("\\@secondoftwo{}{}", "#2");
   DefMacro!("\\@thirdofthree{}{}{}", "#3");
-  DefMacro!("\\@expandtwoargs{}{}{}", sub[(first,second,third)] {
-    let mut tks = first.unlist();
-    tks.push(T_BEGIN!());
-    tks.append(&mut Expand!(second).unlist());
-    tks.push(T_END!());
-    tks.push(T_BEGIN!());
-    tks.append(&mut Expand!(third).unlist());
-    tks.push(T_END!());
-    tks });
+  // Perl's latex_base.pool.ltxml L48 defines this as a closure, but
+  // latex.ltx's raw-load immediately OVERRIDES it with a token-list
+  // `\def\@expandtwoargs#1#2#3{...}`. Perl's dump therefore captures
+  // the token-list form (latex_dump.pool.ltxml L3245), which survives
+  // serialization into our kernel dump. Matching that form here means
+  // both behaviors are identical AND the CS round-trips under
+  // LATEXML_DUMP_ONLY=1.
+  DefMacro!(
+    "\\@expandtwoargs{}{}{}",
+    "\\protected@edef\\reserved@a{\\noexpand#1{#2}{#3}}\\reserved@a"
+  );
 
-  // Perl L50-52: \@makeother
-  DefMacro!("\\@makeother {}", sub[(arg)] {
-    let arg_str = arg.to_string();
-    let mut arg_chars = arg_str.chars();
-    let arg_c = match arg_chars.next() {
-      Some('\\') => arg_chars.next().unwrap(),
-      Some(other) => other,
-      None => {
-        Warn!("expected","character","\\@makeother called on empty argument?");
-        return Ok(Tokens!());
-      }};
-    assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
-  });
+  // Perl L50-52: `\@makeother` — similarly overridden by latex.ltx
+  // raw-load to `\catcode`#1 12\relax` (see latex_dump.pool.ltxml
+  // L3478). Token-list form survives the dump.
+  DefMacro!("\\@makeother {}", "\\catcode`#1 12\\relax");
 
   // Perl L55-64: @namedef, @nameuse, @cons, @car, @cdr, obeycr/restorecr
   TeX!(
