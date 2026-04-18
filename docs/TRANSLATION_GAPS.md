@@ -59,11 +59,11 @@ Substantially ported (278 DefMath! definitions). Most core math symbols present.
 
 ## 5. Package.pm — missing exported functions
 
-- [ ] Counter system — NewCounter, StepCounter, RefStepCounter, etc. (Perl L654-949, ~200 lines)
-- [ ] String cleaning — CleanID, CleanLabel, CleanClassName, etc. (Perl L482-585, ~100 lines)
-- [ ] Register codes — LookupMathcode, AssignMathcode, etc. (Perl L~50 lines)
-- [ ] DefConditionalI + IfCondition + SetCondition (Perl L1189-1279, ~90 lines)
-- [ ] RawTeX (Perl L976-995, 20 lines)
+- [x] Counter system — `counter/dialect.rs::new_counter` L53, `step_counter` L286, `maybe_preempt_refnum` L413 (RefStepCounter equivalent). Substantively ported.
+- [x] String cleaning — `common/cleaners.rs::clean_id` L58, `clean_label` L77, `clean_class_name` L98.
+- [x] Register codes — `state.rs::lookup_mathcode` L1549, `assign_mathcode` L1569.
+- [x] `DefConditional` family — macro at `prelude/setup_binding_language.rs::DefConditional` L237 covers both `DefConditional` and `DefConditionalI` use cases; `set_condition` at `content.rs` L1562.
+- [x] `RawTeX` — `stomach.rs::raw_tex` L725.
 
 ## 6. Box.pm — missing methods
 
