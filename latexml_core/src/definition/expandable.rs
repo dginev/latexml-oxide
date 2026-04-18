@@ -75,6 +75,12 @@ impl Object for Expandable {
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
   fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
+  fn get_num_args(&self) -> usize {
+    match self.paramlist {
+      Some(ref params) => params.get_num_args(),
+      None => 0,
+    }
+  }
   fn get_cs(&self) -> Cow<'_, Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<'_, str> {
     match self.alias {
