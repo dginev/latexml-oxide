@@ -457,7 +457,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 pub fn enter_horizontal() {
   let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
-    assign_value_inplace("MODE", arena::pin("horizontal"));
+    assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
     Warn!("unexpected", "enterHorizontal",
@@ -489,7 +489,7 @@ pub fn leave_horizontal_internal() {
   let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
-    assign_value_inplace("MODE", arena::pin(&bound));
+    assign_value_inplace_sym(crate::pin!("MODE"), arena::pin(&bound));
   }
 }
 

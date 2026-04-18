@@ -1008,7 +1008,11 @@ pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T
 /// This matches Perl's `assignValue(key, value, 'inplace')`.
 /// Used for MODE changes in enter_horizontal (switches mode without creating a new binding).
 pub fn assign_value_inplace(key: &str, value: impl Into<Stored>) {
-  let key_sym = arena::pin(key);
+  assign_value_inplace_sym(arena::pin(key), value)
+}
+/// Sym-keyed variant of `assign_value_inplace` — skip the per-call
+/// `arena::pin(key)` for hot callers with a pre-pinned SymStr.
+pub fn assign_value_inplace_sym(key_sym: SymStr, value: impl Into<Stored>) {
   let value = value.into();
   let state = &mut *state_mut!();
   let table = &mut state.value;

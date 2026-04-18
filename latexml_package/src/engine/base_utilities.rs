@@ -994,7 +994,7 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     {
       repack_horizontal_in_list(&mut item);
       // Restore MODE like leave_horizontal_internal does
-      state::assign_value_inplace("MODE", arena::pin(&bound_mode));
+      state::assign_value_inplace_sym(pin!("MODE"), arena::pin(&bound_mode));
     }
     // Perl: $stomach->endMode($mode) — pop the frame
     if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
