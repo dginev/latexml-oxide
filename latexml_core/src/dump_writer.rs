@@ -58,8 +58,10 @@ pub fn write_dump(
   writeln!(file, "#     M/PA:  PA\\t<target_cs>   (MPA for math primitives)").ok();
   writeln!(file, "#     M/T:   T\\t<meaning_token>").ok();
   writeln!(file, "#     M/R:   R\\t<cs>\\t<rtype>\\t<value>[\\t<mathglyph>]").ok();
-  writeln!(file, "#     V:     <type_code>\\t<value>   (B/I/S/CH/T/TK/N/F/G/MG/D/MD)").ok();
-  writeln!(file, "#     C/LC/UC/SC/MC/DC: CC\\t<code>").ok();
+  writeln!(file, "#     M/N:   N                     (None-meaning sentinel)").ok();
+  writeln!(file, "#     V:     <type>\\t<value>       (B,I,S,CH,T,TK,N,F,G,MG,D,MD,VD)").ok();
+  writeln!(file, "#     C:                  CC\\t<u8>   (catcode)").ok();
+  writeln!(file, "#     DC/LC/UC/SC/MC:     CH\\t<u32>  (char-indexed table entries)").ok();
   writeln!(file, "#   <flags> = subset of {{L, P}} (long, protected)").ok();
   writeln!(file, "#   All keys and proto are url-encoded (%09 for tab etc.); token body").ok();
   writeln!(file, "#   tokens use the form <catcode_int>:<url_encoded_text> joined by commas.").ok();
