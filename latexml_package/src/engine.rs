@@ -45,8 +45,8 @@ mod plain_constructs;      // Perl: plain_constructs.pool.ltxml
 mod math_common;           // Perl: math_common.pool.ltxml
 
 // LaTeX format — LoadFormat('latex') chain called by latex.rs
-mod latex_bootstrap;       // Perl: latex_bootstrap.pool.ltxml
-mod latex_base;            // Perl: latex_base.pool.ltxml
+pub mod latex_bootstrap;   // Perl: latex_bootstrap.pool.ltxml
+pub mod latex_base;        // Perl: latex_base.pool.ltxml
 pub mod latex_dump;        // Rust: precompiled latex.ltx state (auto-generated)
 pub mod latex_constructs;  // Perl: latex_constructs.pool.ltxml (C.1-C.15)
 

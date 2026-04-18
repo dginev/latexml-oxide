@@ -48,6 +48,18 @@ pub fn dump_format(
   let snap_size = snap.len();
   eprintln!("[ini_tex] Pre-dump snapshot: {} entries (staged as \"bootstrap\")", snap_size);
 
+  // Step 1b (D0 d.1): surgically load ONLY latex_base.rs after the
+  // snapshot so its _base-only CSes (\@tempa/b/c, \@currbox, \xpt and
+  // the other 17 entries listed in SYNC_STATUS) enter state before the
+  // raw latex.ltx load. We avoid the full latex.rs chain here —
+  // latex_bootstrap / latex_constructs / the old-dump load would
+  // contribute hundreds of unrelated entries and make the diff
+  // unreadable. The surgical call keeps the extra dump entries close
+  // to the 20-CS gap we actually care about.
+  if let Err(e) = latexml_package::engine::latex_base::load_definitions() {
+    eprintln!("[ini_tex] latex_base preload warning: {}", e);
+  }
+
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)
   // This digests the file through the engine, creating definitions.
