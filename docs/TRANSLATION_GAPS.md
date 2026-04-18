@@ -112,10 +112,25 @@ no-op stubs when a specific document surfaces the need. The Perl
 definitions include custom parameter types (`OpenAnnotSpecification`,
 `OpenActionSpecification`) that would need corresponding Rust ports.
 
-## Priority Order (by test impact)
+## Priority Order (by test impact) — UPDATED 2026-04-18
 
-1. **math_common** (Section 2) — blocks most math tests
-2. **compute_boxes_size helpers** (Section 1) — blocks sizes_test
-3. **TeX_Math scriptHandler** (Section 3) — blocks superscript/subscript tests
-4. **Package.pm counters** (Section 5) — blocks structured documents
-5. **Rewrite.pm** (Section 4) — blocks \not and XMWrap cleanup
+The 2026-03-15 priority list is largely resolved. Current summary:
+
+1. ~~math_common (Section 2)~~ — substantively ported (commit a0d8848 marked
+   5/6 items; only `XMWrap cleanup rewrite` remains, deliberately skipped).
+2. ~~compute_boxes_size helpers (Section 1)~~ — ported (already [x]).
+3. ~~TeX_Math scriptHandler (Section 3)~~ — ported (commit 4e54bf6 marked 8/9
+   items; only `fracSizer` remains, low impact).
+4. ~~Package.pm counters (Section 5)~~ — ported (commit c1ee42b marked 5/5).
+5. ~~Rewrite.pm (Section 4)~~ — ported (commit 921f179 marked all 8 items).
+
+**Remaining gaps worth tracking:**
+
+- `fracSizer` (Section 3) — used by `\over`/`\atop` for fraction sizing.
+- XMWrap cleanup rewrite (Section 2) — deliberately commented out.
+- 20 pdfTeX stubs (Section 9) — low-impact PDF-output primitives.
+
+All current [ ] items are either intentional divergences or low-priority
+stubs. The significant translation-gap work is done; future items
+should be added with fresh Perl↔Rust diff audits rather than the
+2026-03-15 snapshot this file was born from.
