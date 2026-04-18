@@ -689,7 +689,12 @@ LoadDefinitions!({
     getter => sub[args] {
       let ch_code   = args.remove(0).expect_number().value_of() as u8;
       let ch : char = ch_code as char;
-      let code = match lookup_mathcode(&ch.to_string()) {
+      // Avoid `ch.to_string()` alloc per call — encode_utf8 writes into
+      // a stack buffer and returns a borrowed &str. `\mathcode` is read
+      // per math-token during tokenization.
+      let mut buf = [0u8; 4];
+      let key = ch.encode_utf8(&mut buf);
+      let code = match lookup_mathcode(key) {
         None => ch_code,
         Some(code) => code as u8
       };
