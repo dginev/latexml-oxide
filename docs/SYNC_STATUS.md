@@ -261,24 +261,29 @@ differences. Each corresponds to an entry in the work plan below.
    the bootstrap. The subsequent raw-load's diff is therefore
    "bootstrap → fully-initialized kernel".
 
-   **Empirical audit (2026-04-17):** our dump is already 24,319 lines,
-   of which 19,141 are unique `M` (Meaning) definitions. Spot-checked
-   CSes like `\documentclass`, `\@ifnextchar`, `\@ifundefined`,
-   `\addtocounter`, `\filecontents`, `\@onlypreamble` are all present
-   as `E`-encoded tokens-based expansions — i.e., the LaTeX kernel
-   itself IS captured. Of the 120 CSes defined by `latex_base.rs`,
-   88 already appear in the dump (redefined by `latex.ltx`'s raw
-   tokens); only **32** are `latex_base.rs`-only, because those are
-   closure-based primitives/expandables that `latex.ltx` doesn't
-   override and our `serialize_stored` returns `None` for
-   closure-backed `Stored::Expandable` / `Stored::Primitive`.
+   **Empirical audit (2026-04-17, updated 2026-04-18):** after fixing
+   `Expandable::get_num_args` (so E-entries record their true arg
+   count) and `serialize_stored`'s None-body branch (so
+   `DefMacro!("\\cs", None)` mocks serialize as empty-body E-entries),
+   the regenerated dump is 25,478 entries. Of the 120 CSes defined by
+   `latex_base.rs`, **100** now overlap with the dump (up from 88);
+   the remaining **20 CSes** are still `latex_base.rs`-only:
+   - `\@tempa`, `\@tempb`, `\@tempc`, `\@currbox`
+   - `\MakeTextLowercase`, `\MakeTextUppercase`
+   - `\wlog`, `\ltx@hard@MessageBreak`
+   - Font-size CSes: `\vpt`/`\vipt`/…/`\ixpt`/`\xpt`/…/`\xxvpt`
 
-   The 32-CS list includes LaTeX scratch/output-routine helpers:
-   `\@gobble[/two/four]`, `\@tempa/b/c`, `\@botlist`, `\@toplist`,
-   `\@deferlist`, `\@dbldeferlist`, `\@dbltoplist`, `\@midlist`,
-   `\MakeTextLowercase/Uppercase`, `\bibdata`, `\citation`, `\wlog`,
-   plus the font-size CSes `\xpt`/`\xipt`/…/`\xxpt`/`\vpt`/…/`\ixpt`.
-   These are the CSes a dump-only load path would be missing.
+   Open mystery: these are all plain tokens-based Expandables (e.g.
+   `DefMacro!("\\xpt", r"\edef\f@size{\@xpt}\rm")`) — they should
+   serialize cleanly. Their absence from the post-load diff suggests
+   `_base.rs` is NOT actually running during `--init` (or only runs
+   partially). The `\@ifnextchar`/`\@ifundefined`-style CSes that DID
+   make it in are those that `latex.ltx` itself redefines via
+   `\long\def`, so the path up to that point works; the CSes that
+   `latex.ltx` never mentions stay missing. Next step: instrument
+   `ini_tex.rs` to log which `InnerPool!` blocks execute, and check
+   whether `\makeatletter`'s autoload is firing at all during raw
+   latex.ltx load.
 
    The blow-up when PA consumption flips on is therefore NOT because
    the dump lacks the LaTeX kernel — it's because (a) the 32
