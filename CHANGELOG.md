@@ -2,6 +2,24 @@
 
 ## [0.4.1] (in active development)
 
+  - **Babel parity**: reduced `babel_sty.rs` from 384 → 62 lines (85%) after
+    closing the `@currname` leakage bug in our `input_definitions` path
+    (plain `\input` now locally saves/restores `@currname`/`@currext`,
+    unblocking babel's two-phase `\ProcessOptions*` pipeline). Three
+    long-standing D0 items formally closed as a result:
+    `\openin`-based `.ini` loading, `\initiate@active@char` active-char
+    lifecycle, and AtBeginDocument hook chain ordering.
+  - Dump staleness warning at runtime: compares the dump's
+    `texlive.version` stamp against ambient `kpsewhich --version` and
+    logs a loud warning on mismatch (opt-out via
+    `LATEXML_SKIP_DUMP_STAMP_CHECK=1`).
+  - `make fresh-test` target regenerates the kernel dump from ambient
+    TeX Live before running tests; canonical path for CI.
+  - Reduced `todo!()` panics from ~15 to 3 (all deliberate invariant
+    asserts on unreachable branches).
+  - All clippy warnings fixed; `STAGED_SNAPSHOTS` nested generic type
+    factored into named aliases.
+
 ## [0.4.0] 2024-09-10
   - The project was refactored to indicate an official `latexml` clone with an `-oxide` suffix.
 
