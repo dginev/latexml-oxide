@@ -193,7 +193,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
     Stored::Catcode(cc) => Some(format!("CC\t{}", u8::from(*cc))),
     Stored::Token(t) => Some(format!("T\t{}", serialize_token(t))),
     Stored::Tokens(tks) => {
-      let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
+      let tok_strs: Vec<String> = tks.unlist_ref().iter().map(serialize_token).collect();
       Some(format!("TK\t{}", tok_strs.join(",")))
     }
     Stored::Expandable(exp) => {
@@ -225,7 +225,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         .unwrap_or_default();
       match exp.get_expansion() {
         Some(crate::definition::ExpansionBody::Tokens(tks)) => {
-          let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
+          let tok_strs: Vec<String> = tks.unlist_ref().iter().map(serialize_token).collect();
           Some(format!(
             "E\t{}\t{}\t{}\t{}\t{}\t{}",
             cs_name, nargs, flags, tok_strs.join(","), proto_encoded, v3_params
@@ -291,7 +291,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
           s
         }
         Some(crate::definition::register::RegisterValue::Tokens(tks)) => {
-          let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
+          let tok_strs: Vec<String> = tks.unlist_ref().iter().map(serialize_token).collect();
           tok_strs.join(",")
         }
         _ => "0".to_string(),
