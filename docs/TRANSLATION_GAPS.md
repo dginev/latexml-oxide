@@ -72,9 +72,16 @@ inaccurate — `rewrite.rs` is ~1200 lines of functioning code.)
 - [ ] `setProperties()` batch setter (Perl L171-175, 5 lines)
 - [ ] `getTotalHeight()` (Perl L202-210, 9 lines)
 
-## 7. Number.pm — missing methods
+## 7. Number.pm — N/A
 
-- [ ] `getStretch()`, `getShrink()`, `getStretchOrder()`, `getShrinkOrder()` stubs (Perl L125-128, 4 lines)
+Perl's `Number.pm` has stub methods `getStretch`/`getShrink`/`getStretchOrder`/
+`getShrinkOrder` that always return 0 — polymorphism shims for when a
+`Number` is used where a `Glue` is expected. Rust's type system makes this
+unnecessary: `Number` is `i64`-backed with no stretch/shrink fields, and
+the type system prevents calling glue-specific accessors on a number.
+`common/glue.rs::Glue { skip, plus, minus, pfill, mfill }` carries the
+stretch/shrink data as public fields (L106-109); direct field access
+replaces the Perl getters. No port needed.
 
 ## 8. Color.pm — substantively ported
 
