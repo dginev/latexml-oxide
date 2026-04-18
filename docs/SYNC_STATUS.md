@@ -2,7 +2,7 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-17. Open gaps & active TODOs only; completed items live in git history.
+Updated 2026-04-18. Open gaps & active TODOs only; completed items live in git history.
 
 **Test inventory:** 409 integration tests pass (0 failures, 0 ignored); all 10 tikz tests pass. MakeBibliography pipeline fully operational.
 
