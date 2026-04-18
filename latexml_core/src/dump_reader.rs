@@ -54,7 +54,11 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
   let mut errors = 0;
 
   for (lineno, line) in content.lines().enumerate() {
-    let line = line.trim();
+    // Trim only CR (from CRLF line endings); `lines()` already strips LF.
+    // Do NOT use `trim()` here — it strips trailing tabs, which are part of
+    // the tab-separated format for entries with empty trailing fields (e.g.
+    // E-entries with empty body: `E\t<cs>\t<nargs>\t<flags>\t`).
+    let line = line.trim_end_matches('\r');
     if line.is_empty() || line.starts_with('#') {
       continue;
     }
