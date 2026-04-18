@@ -2515,7 +2515,9 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt: ActionContext) -> Result<Option<XM>, 
 fn extract_separators(items: &mut [XM]) -> (Vec<&mut XM>, Vec<&mut XM>) {
   // TODO: consider using the separators at some point, but not for now
   let punct = Vec::new();
-  let mut args = Vec::new();
+  // `items` alternates [arg, sep, arg, sep, …, arg]; args count is
+  // `ceil(items.len() / 2)`. Pre-size to skip Vec doublings.
+  let mut args = Vec::with_capacity(items.len().div_ceil(2));
   let mut items_iter = items.iter_mut();
   while let Some(arg) = items_iter.next() {
     args.push(arg);
