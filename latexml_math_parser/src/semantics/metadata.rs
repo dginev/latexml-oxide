@@ -32,8 +32,11 @@ impl PartialEq for Meta {
 }
 impl Eq for Meta {}
 impl Display for Meta {
-  fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    todo!();
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    // Keep output terse — callers that need full detail should Debug-print.
+    write!(f, "Meta(bump={},", self.bumplevel)?;
+    if self.wasfloat { write!(f, "float")?; }
+    write!(f, ")")
   }
 }
 
