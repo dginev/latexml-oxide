@@ -359,8 +359,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       Ok(false)
     }
     "E" => {
-      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS
-      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
+      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO]
+      // PROTO is the 5th field (optional for forward compat with older
+      // dumps). When present, it's the full url-decoded prototype string
+      // e.g. "DefToken {}{}"; the reader feeds it to parse_parameters
+      // so param types (DefToken, Optional, Semiverbatim, …) round-trip
+      // correctly. When absent/empty, we fall back to nargs-based
+      // "{}".repeat(nargs), which flattens everything to Plain.
+      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(5, '\t').collect();
       if eparts.len() < 4 {
         return Err("Incomplete Expandable entry".into());
       }
@@ -369,18 +375,22 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let nargs: usize = eparts[1].parse().unwrap_or(0);
       let flags = eparts[2];
       let tok_data = eparts[3];
+      let proto_opt = eparts.get(4).map(|s| url_decode(s)).filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
       let is_protected = flags.contains('P');
 
       let expansion = parse_token_list(tok_data)?;
 
-      // Build parameter spec from nargs. Pass init_flag=true: we're
-      // running at runtime (engine is up), so Parameter::init() can
-      // resolve readers via PARAMETER_TYPES. Without init, each
-      // Parameter falls back to the mock reader that returns None,
-      // which surfaces as "Missing argument {}" at first invocation.
-      let paramlist = if nargs > 0 {
+      // Build parameter spec. Prefer the serialized prototype (preserves
+      // DefToken / Optional / Semiverbatim / etc.); fall back to the
+      // nargs-flattened form for older dumps without the proto field.
+      // init_flag=true: state is up at runtime so Parameter::init() can
+      // resolve readers via PARAMETER_TYPES.
+      let paramlist = if let Some(proto) = proto_opt {
+        crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
+          .map_err(|e| format!("Param parse: {}", e))?
+      } else if nargs > 0 {
         let proto = "{}".repeat(nargs);
         crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
           .map_err(|e| format!("Param parse: {}", e))?

@@ -169,17 +169,26 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       Some(format!("TK\t{}", tok_strs.join(",")))
     }
     Stored::Expandable(exp) => {
+      use crate::common::object::Object;
       let cs_name = exp.get_cs().with_str(url_encode);
       let nargs = exp.get_num_args();
       let mut flags = String::new();
       if exp.is_long { flags.push('L'); }
       if exp.is_protected() { flags.push('P'); }
+      // Serialize the full parameter prototype (not just nargs). The
+      // reader needs this to correctly round-trip `DefToken`,
+      // `Optional`, `Semiverbatim` etc.; see SYNC_STATUS D0 mutual-
+      // exclusivity note. Empty proto means no params.
+      let proto = exp.get_parameters()
+        .map(|p| p.stringify())
+        .unwrap_or_default();
+      let proto_encoded = url_encode(&proto);
       match exp.get_expansion() {
         Some(crate::definition::ExpansionBody::Tokens(tks)) => {
           let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
           Some(format!(
-            "E\t{}\t{}\t{}\t{}",
-            cs_name, nargs, flags, tok_strs.join(",")
+            "E\t{}\t{}\t{}\t{}\t{}",
+            cs_name, nargs, flags, tok_strs.join(","), proto_encoded
           ))
         }
         // No body at all (e.g. `DefMacro!("\\@gobble{}", None)`): serializes
@@ -188,7 +197,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         // expansion time reads and discards its arguments — semantically
         // identical to the no-body form's runtime behavior (expandable.rs
         // `invoke` matches `None` → reads args, returns NO_TOKENS).
-        None => Some(format!("E\t{}\t{}\t{}\t", cs_name, nargs, flags)),
+        None => Some(format!("E\t{}\t{}\t{}\t\t{}", cs_name, nargs, flags, proto_encoded)),
         // Closure-based — can't serialize.
         Some(crate::definition::ExpansionBody::Closure(_)) => Option::None,
       }
