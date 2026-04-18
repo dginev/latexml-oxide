@@ -590,7 +590,7 @@ impl Parameters {
   }
 
   pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
-    let mut args = Vec::new();
+    let mut args = Vec::with_capacity(self.0.len());
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
       if parameter.predigest.is_some() {
@@ -609,7 +609,7 @@ impl Parameters {
   }
 
   pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {
-    let mut args = Vec::new();
+    let mut args = Vec::with_capacity(self.0.len());
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if !parameter.novalue {

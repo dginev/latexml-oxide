@@ -167,7 +167,9 @@ impl Definition for Expandable {
           };
           if self.has_cc_arg {
             // Do we actually need to substitute the args in?
-            let mut args_tks = Vec::new();
+            // Pre-size: one entry per argument; avoids Vec doublings on
+            // macros with many args.
+            let mut args_tks = Vec::with_capacity(args.len());
             for arg in args.iter() {
               args_tks.push(arg.as_tokens()?);
             }
