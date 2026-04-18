@@ -296,10 +296,13 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   match kind {
     "ordinary" => define_ordinary(&qname, code)?,
     "command" => {
-      let macroname = if let Some(mpfx) = macroprefix {
-        s!("{mpfx}{key}")
-      } else {
-        s!("cmd{qname}")
+      // Perl #2777 (2026-03-27): macroprefix falls back to "cmd"+qname
+      // when undefined OR empty. The truthy check that existed pre-fix
+      // already treated empty-string as falsy; we match that semantics
+      // explicitly for Option<&str>.
+      let macroname = match macroprefix {
+        Some(mpfx) if !mpfx.is_empty() => s!("{mpfx}{key}"),
+        _ => s!("cmd{qname}"),
       };
       define_command(&qname, code, &macroname)?;
     },
