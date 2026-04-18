@@ -24,9 +24,14 @@ LoadDefinitions!({
   RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
   RawTeX!(r"\providecommand\datengerman{\dategerman}");
 
-  // German " shorthand dispatch (from germanb.ldf). babel's
-  // \initiate@active@char mechanism doesn't survive our raw load; we
-  // read the next char after " and emit the umlaut/ß/guillemet directly.
+  // German " shorthand dispatch (from germanb.ldf). We replace germanb.ldf
+  // entirely via our binding dispatcher, so babel's \initiate@active@char
+  // + \declare@shorthand{german}{"a}{...} calls in germanb.ldf never fire.
+  // Simpler to implement the dispatch here as a native primitive that
+  // reads the next token and emits the umlaut/ß/guillemet directly. A
+  // future refactor could load germanb.ldf raw in parallel (the
+  // \initiate@active@char machinery does work in our engine now — verified
+  // 2026-04-17) and drop this custom primitive.
   DefPrimitive!("\\lx@german@dq@dispatch", {
     let tok = gullet::read_token()?;
     let ch = tok.as_ref().map(|t| t.with_str(|s| s.to_string())).unwrap_or_default();
