@@ -81,576 +81,51 @@ Detailed fix history for phases above lives in git log. See the corresponding se
 
 ## Work Plan — Active TODO List
 
-### D0. Raw-binding fidelity — FUNCTIONALLY COMPLETE (was HIGHEST PRIORITY)
-
-**Status (2026-04-18):** Three landmark D0 items formally closed in session
-110 — `\openin`-based `.ini` loading WORKS, `\initiate@active@char`
-lifecycle WORKS, `AtBeginDocument` hook chain ordering FIXED (root cause
-was the `@currname` leakage from plain `\input`, fixed in commit
-56b0c35d2). `tests/babel/page545` passes and is no longer `#[ignore]`d.
-
-**Design clarification (2026-04-18):** the "dump/`_base` mutual
-exclusivity" item from earlier sessions is **no longer a goal**. Our
-Rust port's `_base.rs` runs in ~3-5 ms of compiled code (unlike Perl's
-interpreted `.ltxml` loading). The unified load order
-`bootstrap → _base → dump → _constructs` — always all four — is simpler
-and has no meaningful performance penalty. See
-`memory/project_load_order_design.md` for the authoritative note.
-
-Remaining d.1-d.5 items in this section were written when mutual
-exclusivity was an active goal; they should be read as historical
-context, not active work. The structured Parameter encoding (v3.a-v3.c)
-stays landed because it keeps the dump format correct for
-`Until:`/`Match:` delimiters even without a mutex-mode flip.
-
-Make `tests/babel/page545` pass via the **exact same raw-loading path**
-that Perl uses. Re-enabling this single test was a practical,
-fully-solvable project that closed deep engine gaps.
-
-**Background.** Perl's babel support is three tiny files:
-- `babel.sty.ltxml` (30 lines) — `InputDefinitions('babel', noltxml=>1, type=>sty)`
-- `babel.def.ltxml` (34 lines) — `Let('\bbl@opt@safe','\@empty')`, load raw
-  `babel.def`, require `babel_support`
-- `babel_support.sty.ltxml` (169 lines) — Unicode glyphs, language→ISO map,
-  `\select@language` hook that calls `MergeFont(language=>iso)`.
-
-All language-specific behavior (captions, shorthands, active punctuation,
-encoding switches, …) comes from the vanilla `.ldf` files that `babel.sty`
-pulls in via `\openin` + `\input` as options are processed.
-
-**Our Rust bindings**, as of session 110, are **62+196 lines**
-(`babel_sty.rs`, `babel_support_sty.rs`) — down from 384+153 at session
-start. After the `@currname` leakage fix (commit 56b0c35d2), babel's
-own option pipeline, caption activation, active-char shorthand setup,
-and per-language port dispatch all work end-to-end. `babel_sty.rs` is
-now a thin orchestration layer: pre-allocate `\l@polutonikogreek`,
-raw-load `babel.sty`, set DOCUMENT_LANGUAGE, and force-set
-`\bbl@main@language` so babel's `\AtBeginDocument{\selectlanguage}`
-picks the user's intended LAST option. Historical notes below preserved
-for context:
-
-```
-                           Perl          Local Rust                    CI Rust
-  p1 first chars:          <p>The ...    <p><text xml:lang="de">,</   <p>,The ...
-  para class:              ltx_align_left  (missing)                    (missing)
-  French colon spacing:    "français :"  "français:"                   "français:"
-```
-
-An experiment (`/loop`, 2026-04-17) replaced all three Rust babel files
-with line-for-line Perl ports. Four tests broke (`csquotes_test`,
-`french_test`, `german_test`, `greek_test`) and the failures revealed the
-exact engine gaps:
-
-**Tasks, roughly in dependency order:**
-
-- [x] **Precompile-phase language registers.** Perl's `make formats` puts
-  `\l@english`, `\l@german`, `\l@french`, … in the precompiled kernel so
-  babel's `\bbl@iflanguage` check passes. Status: the Rust kernel dump
-  (`resources/dumps/latex.dump.txt`, 24k entries) now carries **108**
-  `\l@<lang>` `CharDef` registers — confirmed via
-  `awk -F'\t' '$1=="M" && $2 ~ /^\\l@/' resources/dumps/latex.dump.txt |
-  wc -l` → 108. Includes `\l@english`, `\l@french`, `\l@german`,
-  `\l@ngerman`, `\l@greek`, `\l@russian`, and all mainline babel
-  languages. The runtime `language.def` / `hyphen.cfg` ingestion that
-  runs when `tools/make_formats.sh` regenerates the dump (via
-  `--init` path in `ini_tex.rs`) persists these into the emitted dump.
-  `babel_support_sty.rs`'s `\iflanguage` still auto-creates missing
-  entries via `\newlanguage` as a belt-and-suspenders fallback.
-
-- [x] **`\openin`-based `.ini` loading.** WORKS (2026-04-17 verified):
-  `\babelprovide[import]{<lang>}` + `\selectlanguage{<lang>}` reads
-  `babel-<lang>.ini` via babel's own parsing loop and defines captions
-  end-to-end. Verified:
-  - **Latin-1** (`spanish`, `french` etc.) — works out of the box:
-    `refname=[Referencias] chaptername=[Capítulo] xml:lang="es"`.
-  - **Cyrillic** (`bulgarian`, `russian`) — works with explicit
-    `\usepackage[T2A]{fontenc}`: `refname=[Литература]`. Without T2A,
-    the LICR macros (`\CYRL \cyri \cyrt...`) are undefined.
-  - `find_file`, `\openin`, `\ifeof`, `\read` all function correctly
-    on `babel/locale/*.ini` paths.
-
-  **Caveat**: the `\usepackage[<lang>]{babel}` convenience path still
-  uses our per-language Rust ports (english_sty.rs, french_ldf.rs,
-  german_sty.rs, ngerman_sty.rs) because `\bbl@main@language`
-  resolution fails (see `project_babel_second_processoptions_bug.md`).
-  Fixing the option-pipeline gap would let the ini-loading path cover
-  ALL languages uniformly and make per-language ports redundant.
-
-- [x] **`\initiate@active@char` / active-char lifecycle.** WORKS
-  (2026-04-17 verified): the primitive fires, `\useshorthands{"}`,
-  `\languageshorthands{system}`, and `\declare@shorthand{system}{"a}{ae}`
-  chain together end-to-end — `"a` → `ae` in rendered output.
-  Earlier "fails during raw loading" note was a red herring; the
-  underlying issue was the `@currname` leakage bug
-  (`project_babel_second_processoptions_bug.md`) preventing the option
-  pipeline from loading `germanb.ldf` in the first place. Once the
-  option pipeline closes, babel's own shorthand wiring activates
-  cleanly.
-
-- [x] **`AtBeginDocument` hook chain ordering.** FIXED session 110
-  (commit 56b0c35d2). Root cause was `@currname` leakage from plain
-  `\input`: our `input_definitions` only restored `@currname/@currext`
-  when `handleoptions=true`, but plain `\input` uses `handleoptions=
-  false` — so after babel.sty's `\input txtbabel.def` at L2242, the
-  callee's `@currname="txtbabel"` leaked into 2000+ lines of babel.sty,
-  causing `\ProcessOptions*` at L4291 to look up `opt@txtbabel.def`
-  (empty) instead of `opt@babel.sty`. Fix: plain `\input` now locally
-  saves/restores `@currname/@currext` around the nested input call.
-
-  Coordinated fix in `\lx@babel@activate@mainlang`: force-set
-  `\bbl@main@language` globally from `\opt@babel.sty`. Babel's raw-load
-  path may leave it pointing at a language whose `.ldf` `\ldf@finish`
-  happened to run last (e.g. "greek" for
-  `\usepackage[polutonikogreek,english]{babel}`), which would activate
-  the wrong language at `\AtBeginDocument`.
-
-- [x] **Kernel dump regeneration at build time.** Per design intent,
-  `resources/dumps/latex.dump.txt` should **not** be checked into VCS;
-  it should be rebuilt on each compile from the ambient texlive. (Status:
-  `resources/dumps/` is `.gitignore`d. `latexml_package/build.rs` used to
-  `include_str!` the dump at compile time, which locked it into whatever
-  texlive was present when someone last ran `--init` locally. As of
-  "Make the kernel dump a runtime artifact, not a compile-time one" — the
-  dump is resolved at runtime via `$LATEXML_DUMP_PATH`, `$LATEXML_DUMP_DIR`,
-  exe-relative paths, or the dev-tree path. `tools/make_formats.sh`
-  regenerates it in one step. CI runs `make_formats.sh` before tests, so
-  the dump the test suite consumes always matches the test-runtime texlive.)
-
-- [x] **Perl-parity `LATEXML_NODUMP` opt-out.** `Package.pm` `LoadFormat`:
-  `if (!$ENV{LATEXML_NODUMP} && FindFile($format . '_dump', ...))`. The
-  Rust runtime loader now honors the same env var — if set, the dump is
-  skipped unconditionally and the engine proceeds on the in-code bootstrap
-  path. Verified: `LATEXML_NODUMP=1` emits an info-level log, skips the
-  file search, returns `Ok(())`.
-
-- [ ] **Dump / `_base` mutual exclusivity (Perl-parity `LoadFormat`
-  branching).** Perl's `LoadFormat` takes **one** of two paths:
-  `bootstrap + dump + constructs` (when the dump exists) **or**
-  `bootstrap + _base + constructs` (when it does not). The two are
-  mutually exclusive — `_base` is the verbose source form of what the
-  dump serializes. Our `latex.rs` currently loads both: `bootstrap` →
-  `_base` (our `latex_base.rs` Rust bindings) → `dump` (add-only) →
-  `constructs`. Measured impact (2026-04-18, hello.tex): the dump
-  serializes **25,172** entries; **6,154** actually install into state
-  at load time, the other **19,018** skipped (mostly shadowed by
-  `_base.rs`'s compiled closures via add-only policy). Memory cost
-  ~5 MB RSS, time cost ~10 ms, **no measurable speed-up** on minimal
-  or medium docs. Full test suite passes identically with or without
-  the dump. Fix: make the `_base` pool vs `_dump` load mutually
-  exclusive so the dump's raison d'être (bypassing base reprocessing)
-  actually kicks in.
-
-  This is the cleanest lever that will make the kernel dump *do* what
-  it claims in the Perl design — and it becomes necessary once the
-  D0 precompile-phase work (language registers, `\openin` / `.ini`
-  loading, etc.) lands, because `_base` will no longer cover those
-  things alone.
-
-  **2026-04-18 blocker identified.** The dump E-entry format records
-  only `nargs` (count), not the parameter *types* — the writer does
-  `let nargs = exp.get_num_args()` and the reader rebuilds via
-  `"{}".repeat(nargs)`, i.e. every parameter becomes `Plain`. That's
-  fine when `_base.rs`'s closure is the active definition (the dump's
-  round-tripped version is shadowed by add-only), but breaks the
-  moment mutual-exclusivity flips.
-
-  Concrete failure case: `\@ifnextchar` in `_base.rs` is declared
-  `DefToken {}{}` — first arg is a **single token**, not a balanced
-  `{...}`. Round-trip through the dump turns it into `{}{}{}` — three
-  Plain args. When user code hits `\@ifnextchar[{...}{...}` the
-  reader tries to read `[` as a balanced group and the tokenize
-  pipeline livelocks. This was the 34-minute 00_tokenize hang we saw
-  on the PoC.
-
-  Prerequisite fix: extend the E format to carry the full prototype
-  string (e.g., `E\t<cs>\t<proto>\t<flags>\t<body>` where proto is
-  `Parameters::stringify()`, backed by each `Parameter`'s `spec`
-  SymStr). Reader then feeds `<proto>` to `parse_parameters` instead
-  of `"{}".repeat(nargs)`. Only after this can mutual-exclusivity be
-  safely enabled; otherwise `DefToken`, `Optional`, `Semiverbatim`,
-  and any custom parameter types all get flattened to `Plain`.
-
-  **Partial landing (commit fc45e068, 2026-04-18):** added a 5th
-  `<proto>` field to E-entries so the prototype now round-trips for
-  the common cases (`{}`, `[]`, `DefToken`, typed parameters). All
-  409 tests still pass; the field is silent under current add-only
-  gating. But mutual-exclusivity re-tested against the 5-field dump
-  **still livelocks** 00_tokenize — so the param-type mismatch was
-  ONE of the blockers, not the only one.
-
-  **Perl dumper analysis (2026-04-18):** detailed comparison in
-  [`docs/DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md).
-  Key finding: Perl dumps **structured Parameters**, not prototype
-  strings. Each Parameter is emitted as
-  `P(type, spec, extra=>[T(...catcoded-tokens...)])` and the load-time
-  `sub P = sub { Parameter->new(@_) }` bypasses `parse_parameters`
-  entirely. Delimiter tokens for `Until:\end{verbatim}` are preserved
-  catcode-by-catcode in the `extra` list, so the load side never needs
-  to re-parse the spec. Our v3 path is to add Parameter sub-lines
-  indented under each E-entry (e.g. `\tP\t<name>\t<spec>\t<token-count>\t<tok>…`),
-  feed them straight to `Parameter::new(name, spec, Some(extras))`
-  (already exists at `parameter.rs` L127), and drop the proto-parse
-  fallback for v3 dumps. The analysis doc also catalogues three gated
-  co-requirements (closure-backed Registers filtering, PA-consumption
-  for `:`-style M bodies, `@currname` leakage through dump load) that
-  must land *with* the flip, not after.
-
-  Next suspected blocker: the `Until:<delimiter>` form used by
-  `\@xverbatim` and similar doesn't round-trip cleanly. Our
-  `Parameters::stringify` produces `"Until:\\end{verbatim}"`, and
-  `parse_parameters`'s `PARAMSPECT_CHECK_RE` splits that into two
-  params — a `Until:\end` delimited-like form + a nested `{verbatim}`
-  which is then mis-parsed as a Plain param with inner type
-  "verbatim" (triggering the `Unrecognized parameter type with name
-  "verbatim"` warning we saw at hello load). For mutual-exclusivity,
-  either stringify+parse need to be proper inverses for all
-  delimited forms, or we serialize the prototype in a richer
-  structural format (e.g. one line per parameter with explicit
-  name/spec/extra fields).
-
-- [x] **Dump captures primitive aliases (`PA`/`MPA` entries).** The
-  short-circuit guard in texlive's `expl3.sty` is
-  `\ifx\csname tex_let:D\endcsname\relax` — it skips the 36k-line
-  `\input expl3-code.tex` if `\tex_let:D` is defined. `\tex_let:D` is
-  established by `\let \tex_let:D \let` in expl3-code.tex L276, i.e.
-  it's a `Rc<Primitive>` alias-share with `\let`. Closures can't be
-  serialized, so the dump previously lost all ~370 of these alias
-  relationships. (Status: `is_serializable` now returns true for
-  `Stored::Primitive`/`MathPrimitive`; `serialize_stored` emits
-  `PA\t<target_cs>`/`MPA\t<target_cs>`; the primary (canonical) entry
-  is filtered when `key == target_cs`. Current dump includes 373
-  PA entries: `\tex_let:D → \let`, `\tex_def:D → \def`,
-  `\tex_global:D → \global`, and hundreds more. `dump_reader` has
-  the PA handler wired (replays `\let <key> <target>` via
-  `state::let_i`) but **consumption is gated off** until the
-  mutual-exclusivity work below lands — see next item.)
-
-### Critical review: Perl dumper vs. Rust dumper
-
-A line-by-line comparison of `LaTeXML::Core::Dumper`, `Engine/TeX_Job.pool.ltxml::DumpFile`,
-and `Package.pm::LoadFormat` against our `dump_writer.rs` /
-`dump_reader.rs` / `ini_tex.rs` surfaces five significant structural
-differences. Each corresponds to an entry in the work plan below.
-
-1. **Snapshot taken at the wrong point.** Perl's `DumpFile` runs
-   `LoadPool($name . '_bootstrap')` *before* snapshotting, and only
-   the bootstrap. The subsequent raw-load's diff is therefore
-   "bootstrap → fully-initialized kernel".
-
-   **Empirical audit (2026-04-17, updated 2026-04-18):** after fixing
-   `Expandable::get_num_args` (so E-entries record their true arg
-   count) and `serialize_stored`'s None-body branch (so
-   `DefMacro!("\\cs", None)` mocks serialize as empty-body E-entries),
-   the regenerated dump is 25,478 entries. Of the 120 CSes defined by
-   `latex_base.rs`, **100** now overlap with the dump (up from 88);
-   the remaining **20 CSes** are still `latex_base.rs`-only:
-   - `\@tempa`, `\@tempb`, `\@tempc`, `\@currbox`
-   - `\MakeTextLowercase`, `\MakeTextUppercase`
-   - `\wlog`, `\ltx@hard@MessageBreak`
-   - Font-size CSes: `\vpt`/`\vipt`/…/`\ixpt`/`\xpt`/…/`\xxvpt`
-
-   **Investigation (2026-04-18, trace experiment):** confirmed via
-   an env-gated `eprintln!` at the top of `latex_base::LoadDefinitions`
-   that `_base.rs` does **NOT** run during `--init`. The
-   `\makeatletter` autoload trigger in `tex.rs` (which expands to
-   `\@load@latex@pool`) fails to fire during raw-load of `latex.ltx`
-   — the primitive never gets invoked, so `latex.rs::load_definitions`
-   is skipped entirely, and the 20 `_base.rs`-only CSes never enter
-   state. This is why they're missing from the dump even though their
-   bodies are trivially serializable.
-
-   A proof-of-concept patch to `ini_tex.rs` that explicitly calls
-   `input_definitions("LaTeX", pool)` after the snapshot does work —
-   gap closes from 20 → 10 CSes (only `\wlog` remains, because
-   `plain_base.rs` defines it as a closure-backed `Primitive`
-   BEFORE the snapshot, making it "primary" and thus filtered by
-   `serialize_stored`'s PA-identity guard). **But the patch regresses
-   the test suite**: the dump grows by ~333 entries (net), 8
-   tokenization tests fail with "EXPECTED extra line" truncated output.
-
-   **Dump diff audit (2026-04-18):** the patch actually changes 901
-   entries (756 net-new, 423 net-removed, 145 changed), not just the
-   20 we wanted. Because `input_definitions("LaTeX", pool)` runs the
-   full `latex.rs` chain (`latex_bootstrap` → `latex_base` → old
-   dump add-only → `latex_constructs`), the "new" entries include
-   _constructs.rs artifacts like `\@@appendix`, `\@caption@`,
-   `@ID@prefix@@bibitem`, `@declaredoptions`, `@desclevel`,
-   `@itemlevel`. Next attempt should load ONLY `latex_base::load_definitions`
-   (which is generated `pub` by the `LoadDefinitions!` macro but the
-   `engine::latex_base` *module* is private — needs a `pub mod` or a
-   re-export in `latexml_package::engine`). That narrows the change
-   from 901 → ~20 entries and makes the regression root-cause far
-   easier to isolate.
-
-   The blow-up when PA consumption flips on is therefore NOT because
-   the dump lacks the LaTeX kernel — it's because (a) the 32
-   closure-backed helpers go missing, and (b) `:`-style expl3 macro
-   bodies referenced by PAs aren't themselves loaded (`dump_reader.rs`
-   gates `M` loading to `@`-internal bodies only). Fixing d.1 requires
-   harvesting the closure-backed subset as a separate `keep_base.rs`
-   or teaching `dump_writer.rs` to synthesize stub entries that replay
-   a `RequirePackage`-style re-bind for those specific CSes.
-
-2. **Missing early/late let-assignment split.** Perl's `DumpFile`
-   categorizes `\let` assignments into three buckets:
-   - `@cmds_early` — `Lt(cs, target)` where the target existed
-     *before* the raw load (bootstrap primitive). Emitted **first**.
-   - `@cmds` — normal `I(dump)` / `Im(key, dump)` assignments.
-   - `@cmds_late` — `Lt(cs, target)` where the target was defined
-     *during* the raw load. Emitted **last** so its target is already
-     installed by the time the let fires.
-
-   Our PA/MPA entries are written in arbitrary (hash-iteration) order
-   and loaded in file order. If an alias points at a CS that the dump
-   also defines *later in the file*, the alias resolves against
-   either an undefined target (silent skip via our `has_meaning`
-   guard) or a stale binding. Perl's `@augtables = (…'prelet'…
-   'postlet'…)` encodes this split explicitly.
-
-3. **`I(dump)` vs `Im(key, dump)` distinction.** Perl emits `I(dump)`
-   when the definition's own CS matches the table key (the standard
-   case, where the value carries its own identity) — the CS is
-   embedded in the dump string itself. `Im(key, dump)` is for cases
-   where the value doesn't have a self-CS (a meaning assigned to a
-   token that doesn't identify itself). Our `M` entries always use
-   the external key; we don't distinguish the self-identifying case.
-
-4. **`IGNORED_SYMBOLS` is a specific blacklist, not substring
-   patterns.** Perl hard-codes `value:DOCUMENT_REWRITE_RULES`,
-   `value:PARAMETER_TYPES`, `value:TAG_PROPERTIES`,
-   `value:MATH_LIGATURES`, `value:TEXT_LIGATURES`, plus
-   `meaning:\lnot` and `meaning:\to` (both of which used to cause
-   test breakage via pre-2017 TeXLive `\let\lnot\neg`). Our
-   `SKIP_VALUE_KEYS` + `SKIP_VALUE_PREFIXES` + `SKIP_VALUE_CONTAINS`
-   mirror the *spirit* but miss the targeted specificity — e.g., our
-   `_loaded` substring blocks all of them, whereas Perl keeps
-   `expl3-code.tex_loaded` by *not* having it on the list.
-
-5. **Perl's dump is executable Perl code.** `latex_dump.pool.ltxml`
-   opens with `package LaTeXML::Internal::Dump; use LaTeXML::Core::Dumper
-   qw(:load);` and contains ~8k lines of the form `I(E(C('\foo'),…))`.
-   Load-time is `require FILE` — `perl` parses the compact
-   Huffman-named constructors (`C`, `L`, `T`, `E`, `I`, `Lt`, …) and
-   runs them. Very fast. Our format is tab-separated text parsed by
-   `parse_and_load` at runtime. Functionally equivalent, but we pay
-   more per entry than Perl does.
-
-Nothing critical is missing from our data model — `PA`/`MPA` plus
-`E`/`T`/`R`/`V` cover the same variants — but **the snapshot timing
-(#1) and the let ordering (#2) are the two gaps that block the
-Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
-
-- [x] **(d.1) Bridge the closure-only gap between dump and
-  `latex_base.rs`.** **Done (2026-04-18).** Three landings:
-  - `Expandable::get_num_args` override so dump E-entries record
-    true nargs (commit a4e87219).
-  - `serialize_stored` handles `None`-body Expandables as empty E-
-    entries (commit 005b018a).
-  - `ini_tex.rs` surgically preloads `latex_base` after the snapshot
-    so its 20 `_base`-only CSes enter state before raw latex.ltx
-    (commit ddee6952). Exposing the module required making
-    `latexml_package::engine::{latex_bootstrap, latex_base}` `pub`.
-
-  Final gap: **1 CS** (down from 32). The holdout is `\wlog`, which
-  `plain_base.rs` defines as a closure-backed `Primitive` BEFORE the
-  snapshot; `serialize_stored`'s PA-identity guard correctly filters
-  it. Covering it would need either snapshotting earlier (before
-  `plain_base`) or an explicit `REBIND` row — not pursued.
-
-- [x] **(d.2) Split PA/MPA into early / late buckets** based on
-  whether the target CS existed in the snapshot. **Done.**
-  `dump_writer.rs` lines 83-105 classify each PA/MPA alias via a
-  `bootstrap_snap.contains_key(…)` check and partition them into
-  `early_aliases` (target pre-existed) vs `late_aliases` (target
-  defined during raw-load). The dump file itself is laid out in
-  three sections (current dump: 342 early + 24,803 regular + 29 late)
-  so the reader processes them in the correct order.
-
-- [ ] **(d.3) Implement `\let`-alias ordering guarantees for PA
-  entries.** Once (d.2) is in place, consuming PA becomes safe: the
-  target is always defined before the alias fires.
-
-- [ ] **(d.4) Switch to Perl-style executable-constructor dump
-  format** (optional, perf-only). Compact constructors like `I(E(C,
-  Ps, T))` would let us skip string parsing. Not blocking for
-  correctness; measure first whether the tab-separated-text parse
-  is a real hotspot.
-
-- [ ] **(d.5) Harvest expl3 short-circuit.** With (d.1)–(d.3) in
-  place, enabling PA consumption + `expl3.sty_loaded` allow-list
-  should cleanly cut `\usepackage{expl3}` from 1.3 s to <100 ms
-  without any state-mix explosion.
-
-- [ ] **Harvest expl3 short-circuit (Perl's actual "massive speedup").**
-  First-principles derivation of what Perl's dump saves that ours
-  doesn't, with measurements:
-
-  | Path | Wall | RSS |
-  |---|---|---|
-  | Rust `--init=latex.ltx` raw-load (no dump) | 15.5 s | ~1 GB |
-  | Rust conversion of expl3 doc (with dump) | 1.37 s | 164 MB |
-  | Rust conversion of expl3 doc (`LATEXML_NODUMP=1`) | 1.36 s | 155 MB |
-  | Rust bootstrap+_base+constructs (compiled) | <10 ms | ~40 MB |
-
-  **Why our dump currently doesn't speed anything up:**
-  1. `_base.rs` is already pre-compiled Rust containing LaTeX-kernel
-     bindings. The dump's add-only policy sees ~19k of its 25,172 entries
-     as "already defined" and skips them — the state they'd add is
-     already set by compiled code. Only ~6,154 of the 25k install. This
-     is the *opposite* of Perl, where the dump REPLACES work that would
-     otherwise be done by interpreter-bound `.pool.ltxml` loading.
-  2. `\usepackage{expl3}` in a user doc calls `expl3_sty.rs::load_definitions`
-     which unconditionally `input_definitions("expl3", sty, noltxml=true)`,
-     re-processing all 36k lines of `expl3-code.tex`. This costs ~1.3 s.
-     The dump contains the post-load expl3 state (`expl3-code.tex_loaded=1`
-     plus ~17k expl3 definitions) but cannot short-circuit the raw load
-     because `dump_reader`'s `SKIP_VALUE_CONTAINS = ["_loaded", ...]`
-     strips every `_loaded` flag. Perl's dump preserves these flags, so
-     `\usepackage{expl3}` sees "already loaded" and skips the 36k-line
-     reprocess.
-
-  **What breaks when we naively lift the skip** (tried and reverted):
-  unblocking `_loaded`/`_found_loaded` for all keys sets 1000+
-  hyphenation-pattern flags. Downstream babel language.def loading
-  then skips files the engine depends on to register `\l@<lang>`,
-  triggering error recovery that balloons to **61 s / 4.5 GB RSS** on
-  the simple expl3 test doc. Short-circuiting expl3 alone
-  (`ALLOW_LOADED_EXCEPTIONS` carve-out + an expl3_sty guard) fires
-  correctly but the rest of the doc hits an interaction the dump
-  doesn't fully cover and still blows up.
-
-  **What's actually needed** to harvest the Perl speedup safely:
-
-  - (a) A curated subset of `_loaded` keys worth short-circuiting (at
-    minimum `expl3.sty_loaded` + `expl3-code.tex_loaded`, later babel
-    language flags once their bindings are Perl-strict).
-  - (b) For each key in that subset, a companion guarantee that the
-    corresponding `*_sty.rs` binding is idempotent when its raw-load
-    is skipped — the post-load catcode/message/fixup steps in
-    `expl3_sty.rs` need to be either captured by the dump or run
-    unconditionally so a partial dump doesn't leave the engine in a
-    half-initialized state.
-  - (c) Ideally, regenerate the dump against the exact binding that
-    will consume it (so the post-load side-effects of the Rust
-    wrapper ARE part of the snapshot), not from `--init=latex.ltx`
-    alone. That is: `--init` should include a tiny `\usepackage{expl3}`
-    stanza at the end so the .sty-level loaded flag is also captured.
-  - (d) Enable consumption of `PA`/`MPA` entries in `dump_reader`'s
-    M-table dispatcher (currently gated off). With the 373 aliases
-    re-applied, `\tex_let:D` is defined → `expl3.sty` guard fires →
-    raw `\input expl3-code.tex` skipped. **Verified mechanism**: I
-    confirmed this works end-to-end by temporarily enabling PA
-    consumption — `\ifx\csname tex_let:D\endcsname\relax` goes from
-    "IS_RELAX_FULL_LOAD" to "IS_NOT_RELAX_SHORT_CIRCUIT". The guard
-    fires correctly. BUT the code in `expl3.sty` after the guard
-    (`\__kernel_dependency_version_check:Nn`, `ProcessOptions \relax`,
-    `\keys_define:nn { sys }`, …) exercises expl3 machinery whose
-    state disagrees with what `_base.rs` has — a simple expl3 doc
-    balloons to 60 s / 4.5 GB RSS. Unblocking (d) requires (a)–(c)
-    first.
-
-  Once (a)–(d) are in place we should see the Perl-sized win:
-  ~1.3 s → ~50 ms per expl3 conversion.
-
-  **2026-04-17 update — failure-mode catalog from isolated experiments.**
-  With the (d.2) early/late split in place I re-tested narrower PA
-  consumption variants. Both failed with the same run-time shape
-  (~60 s timeout, RSS climbing, exit 143 SIGTERM-by-watchdog) but
-  for different reasons:
-
-  - **PA alone, no `:`-style Expandables**: `\tex_let:D` becomes
-    let-aliased to `\let` via the dump → `expl3.sty`'s own guard
-    `\ifx\csname tex_let:D\endcsname\relax` fires → raw
-    `\input expl3-code.tex` is skipped → `expl3.sty`'s post-guard
-    code (`\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
-    `\keys_define:nn { sys }`, …) references `:`-style macros we
-    still filter out → undefined-CS recovery → loop.
-  - **PA + `:`-style Expandables loaded**: the `:`-style macro
-    bodies reference each other through `\__kernel_…` and expl3
-    hooks. Loading them en-masse triggers a similar recovery
-    cascade.
-
-  Neither partial unblock works. The two have to be removed
-  **together AND** `expl3_sty.rs` needs to short-circuit its whole
-  `load_definitions` when the dump already has expl3 state so
-  `expl3.sty`'s post-guard code doesn't run at all. Each of the
-  three gates independently causes the same class of crash;
-  removing all three simultaneously is what gets the Perl speedup.
-
-- [x] **Page545 verification.** `cargo test -p latexml --test 81_babel
-  -- page545` passes. Status (2026-04-17): **3 of 4 diffs FIXED**, 1
-  documented as an intentional divergence (OXIDIZED_DESIGN #22).
-  - ✓ `ltx_align_left` on paragraphs — FIXED as side effect of comma fix
-  - ✓ stray leading comma in p1 — FIXED by removing `\let\@nil\relax`
-    from `latex_base.rs` (was a Rust-only addition that broke babel's
-    `\bbl@fornext` termination check)
-  - ✓ `français :` colon spacing — FIXED by making French active
-    `:;!?` primitives check `\languagename` / current font language
-  - ✓ missing trailing `<text xml:lang="de"></text>` nested empty
-    wrapper — accepted as intentional divergence (OXIDIZED_DESIGN #22:
-    Perl emits pedantic nested empty language-stack unwind wrappers
-    at group exit; Rust emits only the outer one; both are invisible
-    in rendering).
-
-- [~] **Drop Rust babel workarounds incrementally.** In progress.
-  Session 110 (2026-04-17): **babel_sty.rs cut 405 → 62 lines (85%)** via
-  relocation + consolidation — not yet engine-closed, but the remaining
-  code is a clean orchestration layer. Breakdown of moves:
-  - French captions/ordinals/guillemets/active-puncts (~100 lines):
-    `babel_sty.rs` → `french_ldf.rs` (where frenchb.ldf content belongs).
-    Includes frenchb's trailing `\xspace`/`\FBthickkern` kerning.
-  - German caption + `"` shorthand dispatch (~45 lines):
-    `babel_sty.rs` → `german_sty.rs` (where germanb.ldf content belongs).
-  - English/NGerman captions: moved to `english_sty.rs`/`ngerman_sty.rs`.
-  - `\lx@babel@activate@lang@post` + `\lx@babel@set@doclang` consolidated
-    into `\lx@babel@activate@mainlang` (run twice — at load-time for
-    DOCUMENT_LANGUAGE, at AtBeginDocument for late state refresh).
-  - Iterates over ALL options in `\opt@babel.sty` to load each language's
-    port up-front. Needed because babel's own `\select@language` calls
-    `\captions<lang>` before our `\ltx@bbl@select@language` hook can load
-    the port.
-  - `.ldf` dispatch entries added: english/german/germanb/ngerman/ngermanb.
-
-  Remaining gap to Perl's 30-line stub: ~100 lines of rationalized
-  workarounds for engine gaps (precompiled kernel, `\initiate@active@char`
-  lifecycle, `.ini` openin). Eliminating them requires the dump-capture-
-  language-layer step in the staged plan (memory:
-  `wisdom_babel_fidelity_plan.md`).
-
-- [x] **Un-ignore `page545_test`.** Done 2026-04-17 (commit 96d4bfbe4).
-  The expected XML in `tests/babel/page545.xml` matches Rust's output
-  byte-for-byte after the `\@nil` root-cause fix; `#[ignore]` removed.
-
-  Status of the four original diffs (final 2026-04-17):
-  - [x] **French `:`/`;`/`!`/`?` thin space** — fixed by making the
-    active-char primitives query the current font's language and only
-    emit `\u{2006}` when French is active. `\foreignlanguage{english}`
-    inside a French paragraph now emits bare punctuation.
-  - [x] **Stray `,` in p1** — root-caused and fixed. The Rust-only
-    `\let\@nil\relax` in `latex_base.rs` (added as a cells_test
-    workaround in fa0e9a08f) made `\ifx\@nil\relax` return TRUE,
-    prematurely terminating babel's `\bbl@fornext` iteration and
-    leaking the iterator-separator comma into the main token stream.
-    Perl keeps `\@nil` undefined so the test is FALSE. Removed the
-    stray `\let`.
-  - [x] **`\raggedright` missing `class="ltx_align_left"`** — resolved
-    as a side effect of the comma fix. The comma was landing in the
-    first auto-opened paragraph which was then captured as
-    `ALIGNING_NODE` instead of the document.
-  - [~] **Empty `<text xml:lang="de"></text>` in p4 not emitted** —
-    accepted as an intentional divergence (OXIDIZED_DESIGN #22).
-    Perl emits pedantic nested empty language-stack unwind wrappers;
-    Rust emits only the outermost. No rendering impact.
-
-**Why this is practical, not aspirational.** Every item above is
-mechanical: the Perl source is short, its intent is legible, and the
-divergences show up as specific XML diffs we can pin. No novel design is
-required — just closing each engine primitive to the point where the
-raw-loading path runs clean. When it does, one of the most complex
-packages in the LaTeX ecosystem becomes a ~50-line Rust stub, and every
-future babel upgrade from upstream flows in automatically.
-
----
+### D0. Raw-binding fidelity — COMPLETE
+
+**Status (2026-04-18):** `tests/babel/page545` passes (un-ignored, commit
+96d4bfbe4); three landmark items closed in session 110:
+- `\openin`-based `.ini` loading works (latin-1, cyrillic via T2A).
+- `\initiate@active@char` active-char lifecycle works end-to-end.
+- `AtBeginDocument` hook chain ordering fixed (commit 56b0c35d2 — root
+  cause was `@currname` leakage from plain `\input`).
+
+Language registers (`\l@english`, `\l@german`, …) all carried in the
+kernel dump (108 `\l@<lang>` entries, regenerated from ambient texlive
+via `tools/make_formats.sh`). Dump is .gitignored; CI runs
+`make_formats.sh` before tests so the runtime dump always matches
+the test-runtime texlive.
+
+**Historical work on mutual-exclusive `LoadFormat`** (Perl-style
+`bootstrap+dump+constructs` XOR `bootstrap+base+constructs` branching)
+has been **abandoned**. Our Rust port's `_base.rs` runs in ~3-5 ms of
+compiled code; skipping it saves no meaningful time and risks losing
+closure-backed defs. The unified load order
+(`bootstrap → _base → dump → _constructs`) always all four is simpler
+and correct. The `LATEXML_NODUMP=1` env var (Perl-parity opt-out) is
+still honored; the short-lived `LATEXML_DUMP_ONLY=1` experiment was
+removed in commit 4a9e213d5. See `memory/project_load_order_design.md`
+for the authoritative design note.
+
+**v3 structured Parameter encoding** (commits 3e1f89eb2, 0be9641bf)
+**stays landed** — independent of mutex-mode, it keeps
+`Until:\end{verbatim}` and `Match:...` delimiter tokens round-tripping
+through the dump correctly. See `docs/DUMP_FORMAT_PERL_ANALYSIS.md` for
+the Perl dumper analysis that motivated it.
+
+**Closure-backed primitive relocations** (commits 76569b75f,
+42dac16dc): 10 CSes moved from `latex_base.rs` to `latex_constructs.rs`
+matching Perl's source layout (`\makeatletter`, `\makeatother`,
+`\@ifnextchar`, `\Package{Error,Warning,Info}`, `\Generic{Error,…}`,
+`\@onlypreamble`, `\@setsize`, `\fontsize`, `\check@mathfonts`,
+`\@setfontsize`, `\kernel@ifnextchar`, `\@ifnext`). Our closure
+distribution now matches Perl's pattern: ~2 in `_base`, ~100 in
+`_constructs`.
+
+**Babel Rust bindings** slimmed 405 → 62 lines (85%) in session 110
+via relocation to per-language ports (`french_ldf.rs`, `german_sty.rs`,
+`english_sty.rs`, `ngerman_sty.rs`). Remaining ~100 lines are
+rationalized engine-gap workarounds.
 
 ### Phase D: 10k-Document Sandbox — Coverage & Performance
 
@@ -796,89 +271,32 @@ Items 1–4 are primarily **semantic** (inherent to math practice); further gram
 
 ## Recent Session Highlights
 
-### Session 109 (2026-04-17, /loop cycles) — page545 / D0 raw-binding milestone
+Kept compact — full per-session detail lives in git log and
+`memory/project_session_history.md`.
 
-**D0 HIGHEST PRIORITY task COMPLETE**: `tests/babel/page545` passes
-unignored. 6/6 babel tests green, 409/409 overall, 0 ignored.
-
-**Root-cause engine fix** — the stray leading comma that had
-plagued page545's `<p>` output was caused by a single Rust-only
-line in `latex_base.rs:30`:
-
-```
-\let\@nil\relax     % ← Rust-only workaround, NOT in Perl kernel
-```
-
-Perl leaves `\@nil` undefined so `\ifx\@nil\relax` is FALSE when
-both tokens are compared (undefined meaning ≠ `\relax` meaning).
-Our workaround made `\ifx\@nil\relax` TRUE, which prematurely
-terminated babel's `\bbl@fornext` termination check on the
-first empty-parameter iteration:
-
-```
-\def\bbl@fornext#1,{%
-  \ifx\@nil#1\relax\else ... \expandafter\bbl@fornext \fi}
-```
-
-With `#1 = empty`, the `\ifx\@nil\relax` evaluation was the
-termination signal instead of the intended recursion, leaving
-`\@nil,` unconsumed → trailing `,` emitted as stray text.
-
-**Side-effect fixes** (all driven by root-cause alignment):
-- `ltx_align_left` on paragraphs — FIXED
-- French active `:;!?` in non-French contexts — FIXED (now
-  language-aware via `lookup_font().language`)
-
-**Cleanups enabled**:
-- Dropped `\def\@fontenc@load@list{\@elt{OT1}}` workaround
-- Dropped 14 redundant `\l@<lang>` pre-definitions (kernel dump
-  now carries 108 language registers)
-- babel_sty.rs: 418 → 404 lines
-
-**Intentional divergence documented**: OXIDIZED_DESIGN #22 —
-single-level vs. per-frame language-stack unwind on group exit
-(Perl emits extra empty nested `<text xml:lang>` wrappers;
-Rust emits only the outer one; no rendering impact).
-
-### Session 108 (2026-04-17, /loop cycles)
-
-**Packages parity**: 50+ commits filling gaps against Perl: elsart, mn2e, aa, aas, revtex4, iopart, texvc (92 proofwiki macros), sv_support, ams_support, acmart, amsbook, revtex4, inst_support, microtype, html, subcaption, attachfile, floatflt/floatfig, subfloat, iopams, actuarialangle.
-
-**Real bug fixes**:
-- **xcolor case-sensitivity**: `\definecolor{x}{RGB}{153 153 192}` was producing `#FFFFFF` due to lowercased model dispatch. Fixed to case-sensitive match — lowercase rgb/cmy/gray take 0..1 components; uppercase RGB/HSB/Gray take 0..255.
-- **Page counter**: now starts at 1 per Perl #2442.
-- **Bibitem auto-open**: prune empty whatsit, reuse ID per Perl #2409.
-- **\text@frac semantic FRACOP**: `\case` in aas_support now produces semantic fraction markup.
-- **\person@thanks inline**: elsart_support_core.
-- **\backsimeq U+22CD** (Perl #2633); **mixed-delimiter definecolor** (Perl #2551); **Explode newline** reverted to CC_OTHER per Perl #2700.
-- **RefCell panics** fixed in `with_font_info` + `font::decode` re-entry (common/mathchar.rs, latexml_sty.rs).
-- **DefEnvironment scope lifecycle wisdom**: `after_digest` vs `after_digest_body` matters — body runs post-frame-pop, so local state assigns in before_digest are gone. Documented in `WISDOM.md`.
-
-**Sandbox transitions (broken → OK)**: 9 papers (0705.1190, 0705.2808, 0707.4170, 0710.2880, 0711.4787, 0802.1100, 0810.1610, 0704.2400, 0705.1050, 0705.2208).
-
-**Post-session 512 verification**:
-
-| Category | Count |
-|----------|-------|
-| ok | **477 (93.2%)** |
-| conversion_error | 21 (paper-specific) |
-| abort (timeout ~61s) | 14 |
-| **panics** | **0** |
-
-### Session 107 (2026-04-16)
-
-- Fix 4 speculative redesign (13 test XMLs updated)
-- Documented safety contracts on all 10 unsafe blocks
-- OXIDIZED_DESIGN #18 updated for Marpa design
-- Paper 0707.1173 conversion: 12.4s (from 22.6s baseline)
-
-### Session 106 (2026-04-16)
-
-- Grammar Fixes 1/2/3 (OTHER_OPEN split, formula_list removal, term_list collapse)
-- Narrowed `script_op`
-- 317 integration tests pass; total enumerated trees 3767→3544
-
-Earlier sessions (42–105) archived in git log and `memory/project_session_history.md`.
+- **Session 111 (2026-04-18)**: dump format v3 (structured Parameter
+  encoding writer/reader + 6 roundtrip tests); mutual-exclusivity
+  experiment (`LATEXML_DUMP_ONLY=1`) built up to 414/415 then
+  **abandoned** in favour of unified `bootstrap → _base → dump →
+  _constructs` load order; closure-backed primitive relocations for
+  Perl-parity (`\makeatletter`, `\@ifnextchar`, `\fontsize`, …);
+  hot-path allocation removals (per-char String in `font.rs`,
+  METRIC_MAP format!, namespace prefix check in `document.rs`,
+  Tokens clones in dump_writer).
+- **Session 110 (2026-04-17)**: D0 FUNCTIONALLY COMPLETE via
+  `@currname` leakage fix (commit 56b0c35d2); babel_sty.rs cut 405 →
+  62 lines; three D0 sub-items closed (`.ini` loading, active-char
+  lifecycle, AtBeginDocument ordering).
+- **Session 109 (2026-04-17)**: `page545_test` un-ignored; root cause
+  was Rust-only `\let\@nil\relax` in `latex_base.rs` breaking babel's
+  `\bbl@fornext` termination check. Removed. Ripple-fixed the French
+  `:;!?` spacing + `ltx_align_left` para class as side effects.
+- **Session 108 (2026-04-17)**: 50+ package-parity commits (elsart,
+  mn2e, aa, texvc, sv_support, etc.); xcolor RGB case-sensitivity
+  fix; RefCell panic fix in `with_font_info`. 512-paper sandbox:
+  93.2% ok, 0 panics.
+- **Sessions 42-107**: earlier work archived in git log and
+  `memory/project_session_history.md`.
 
 ---
 
