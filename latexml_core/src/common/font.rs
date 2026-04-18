@@ -1329,14 +1329,16 @@ impl Font {
     let size = self.get_size().unwrap_or(defsize());
     let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
-    let chars: Vec<char> = text.chars().collect();
+    // Iterate via Peekable — no intermediate Vec<char> allocation,
+    // and we get O(1) lookahead for kerning between consecutive chars.
+    let mut chars_iter = text.chars().peekable();
     // Stack buffers for char→&str and char+char→&str lookups, avoiding
     // String::to_string() + String::format!() heap allocations inside
     // the per-character hot loop. encode_utf8 writes directly to the
     // buffer and returns a borrowed &str slice — no allocation.
     let mut ch_buf = [0u8; 4];
     let mut kern_buf = [0u8; 8];
-    for (i, &ch) in chars.iter().enumerate() {
+    while let Some(ch) = chars_iter.next() {
       let metric = self.get_metric(Some(ch));
       let ch_key = ch.encode_utf8(&mut ch_buf);
       let entry_opt = metric.sizes.get(ch_key);
@@ -1347,9 +1349,9 @@ impl Font {
       };
       w += (cw * size).trunc() as i64;
       // Kerning: check kern between this char and next.
-      if i + 1 < chars.len() {
+      if let Some(&next_ch) = chars_iter.peek() {
         let first_len = ch.encode_utf8(&mut kern_buf).len();
-        let second_len = chars[i + 1].encode_utf8(&mut kern_buf[first_len..]).len();
+        let second_len = next_ch.encode_utf8(&mut kern_buf[first_len..]).len();
         let kern_key = std::str::from_utf8(&kern_buf[..first_len + second_len]).unwrap();
         if let Some(kern) = metric.kerns.get(kern_key) {
           w += (size * kern).trunc() as i64;
