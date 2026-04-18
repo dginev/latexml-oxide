@@ -1256,13 +1256,13 @@ impl Font {
     if let Some(name) = lookup_metric_name(family, series, shape) {
       let fullname = format!("{name}{size}");
       if let Some(metric) = STDMETRICS.get(fullname.as_str()) {
-        if ch_key.map_or(true, |k| metric.sizes.contains_key(k)) {
+        if ch_key.is_none_or(|k| metric.sizes.contains_key(k)) {
           return metric;
         }
       }
       // Try base name fallback
       let metric = get_metric_for_name(name);
-      if ch_key.map_or(true, |k| metric.sizes.contains_key(k)) {
+      if ch_key.is_none_or(|k| metric.sizes.contains_key(k)) {
         return metric;
       }
     }

@@ -162,12 +162,11 @@ LoadDefinitions!({
       return Ok(ArgWrap::None);
     } else if read_keyword(&["useobjnum"])?.is_some() {
       let _ = gullet::read_number()?;
-    } else if read_keyword(&["stream"])?.is_some() {
-      if read_keyword(&["attr"])?.is_some() {
+    } else if read_keyword(&["stream"])?.is_some()
+      && read_keyword(&["attr"])?.is_some() {
         gullet::skip_spaces()?;
         let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
       }
-    }
     gullet::skip_spaces()?;
     let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
   }), optional => true);

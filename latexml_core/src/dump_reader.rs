@@ -144,7 +144,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   match table {
     // V: Value entries (registers, fontdimen, font metadata).
     // Add-only policy: only loads if key has no existing value.
-    "V" => load_value(&key, data),
+    "V" => load_value(key, data),
     // M: Meaning entries (expandable definitions + primitive aliases).
     //
     // Current policy: only route `@`-internal entries (whose body does
@@ -177,22 +177,22 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
       if is_at_internal && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
-        load_meaning(&key, data)
+        load_meaning(key, data)
       } else {
         Ok(false)
       }
     },
     // LC/UC: case-mapping codes — safe, always load
-    "LC" => load_lccode(&key, data),
-    "UC" => load_uccode(&key, data),
+    "LC" => load_lccode(key, data),
+    "UC" => load_uccode(key, data),
     // SC: space factor codes — safe, always load
-    "SC" => load_sfcode(&key, data),
+    "SC" => load_sfcode(key, data),
     // C: catcodes — only for non-ASCII (>127). ASCII catcodes are set by
     // the engine; loading from dump would conflict.
     "C" => {
-      let ch = decode_char_key(&key);
+      let ch = decode_char_key(key);
       if ch.is_some_and(|c| c as u32 > 127) {
-        load_catcode(&key, data)
+        load_catcode(key, data)
       } else {
         Ok(false)
       }
@@ -710,7 +710,7 @@ pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::P
         .split('\x1d')
         .map(|tok_list| {
           parse_token_list(tok_list)
-            .map(|toks| crate::tokens::Tokens::new(toks))
+            .map(crate::tokens::Tokens::new)
         })
         .collect::<Result<Vec<_>, _>>()?
     };
