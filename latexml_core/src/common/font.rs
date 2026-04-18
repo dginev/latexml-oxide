@@ -213,26 +213,31 @@ static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> 
   0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"))
   });
 
-// Map Font family_series_shape to a TeX fontname (tfm)
-// Leave off the size, so we can punt to a loaded size in a pinch
-static METRIC_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
-  raw_map!(
-    "serif_medium_upright"       => "cmr",
-    "serif_medium_slanted"       => "cmsl",
-    "serif_medium_italic"        => "cmti",
-    "serif_medium_uprightitalic" => "cmu",
-    "serif_bold_upright"         => "cmbx",
-    "serif_medum_smallcaps"      => "cmcsc",
-    "sansserif_medium_upright"   => "cmss",
-    "sansserif_medium_italic"    => "cmssi",
-    "sansserif_bold_upright"     => "cmssbx",
-    "typewriter_medium_upright"  => "cmtt",
-    "typewriter_medium_slanted"  => "cmsltt",
-    "math_medium_italic"         => "cmmi",
-    "math_medium_upright"        => "cmr",
-    "math_bold_italic"           => "cmmib"
-  )
-});
+/// Map Font (family, series, shape) to a TeX fontname (tfm).
+/// Returns `None` if the combo isn't recognized. Matching on a tuple
+/// of `&str` lets callers skip allocating an intermediate
+/// `format!("{family}_{series}_{shape}")` key per lookup. Callers use
+/// `lookup_metric_name(family, series, shape)` instead of the former
+/// `METRIC_MAP.get(&format!(…))` pattern.
+fn lookup_metric_name(family: &str, series: &str, shape: &str) -> Option<&'static str> {
+  match (family, series, shape) {
+    ("serif",      "medium", "upright")       => Some("cmr"),
+    ("serif",      "medium", "slanted")       => Some("cmsl"),
+    ("serif",      "medium", "italic")        => Some("cmti"),
+    ("serif",      "medium", "uprightitalic") => Some("cmu"),
+    ("serif",      "bold",   "upright")       => Some("cmbx"),
+    ("serif",      "medum",  "smallcaps")     => Some("cmcsc"), // typo preserved from Perl
+    ("sansserif",  "medium", "upright")       => Some("cmss"),
+    ("sansserif",  "medium", "italic")        => Some("cmssi"),
+    ("sansserif",  "bold",   "upright")       => Some("cmssbx"),
+    ("typewriter", "medium", "upright")       => Some("cmtt"),
+    ("typewriter", "medium", "slanted")       => Some("cmsltt"),
+    ("math",       "medium", "italic")        => Some("cmmi"),
+    ("math",       "medium", "upright")       => Some("cmr"),
+    ("math",       "bold",   "italic")        => Some("cmmib"),
+    _ => None,
+  }
+}
 
 // Fallback fontnames for looking up random Unicode,
 // when they're not in the indicated FontMap
@@ -1243,13 +1248,12 @@ impl Font {
     let series = self.series.as_deref().unwrap_or("medium");
     let shape = self.shape.as_deref().unwrap_or("upright");
     let size = self.size.unwrap_or(defsize()) as i64;
-    let key = format!("{family}_{series}_{shape}");
     // Stack buffer for char→&str lookup key, reused across paths. Avoids
     // one String allocation per character per get_metric call (which is
     // called per-character inside compute_string_size).
     let mut ch_buf = [0u8; 4];
     let ch_key = c_opt.map(|c| c.encode_utf8(&mut ch_buf) as &str);
-    if let Some(name) = METRIC_MAP.get(key.as_str()) {
+    if let Some(name) = lookup_metric_name(family, series, shape) {
       let fullname = format!("{name}{size}");
       if let Some(metric) = STDMETRICS.get(fullname.as_str()) {
         if ch_key.map_or(true, |k| metric.sizes.contains_key(k)) {
