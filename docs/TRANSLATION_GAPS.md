@@ -114,16 +114,15 @@ pure parity):
   \pdfcolorstackinit                      — commented-out DefMacro at Perl L125
   \pdffontattr, \pdffontexpand            — comment-only at Perl L194-195
 
-Genuinely Perl-defined but Rust-missing — 1 item remaining:
+Genuinely Perl-defined but Rust-missing — now 0 items remaining:
 
   [x] \pdfannot                           — pdftex.rs DefPrimitive + OpenAnnotSpecification parameter type
   [x] \pdfobj                             — pdftex.rs DefPrimitive (shares OpenAnnotSpecification)
-  [ ] \pdfcolorstack                      — Perl L210, complex reader with 4 OptionalMatch flags + GeneralText
+  [x] \pdfcolorstack                      — pdftex.rs DefPrimitive with 4 OptionalMatch flags; consumes GeneralText unless action is `pop`
 
-The `\pdfcolorstack` stub is benign to skip for now (no test triggers
-it); would need a DefPrimitive with `Number OptionalMatch:set
-OptionalMatch:push OptionalMatch:pop OptionalMatch:current GeneralText`
-parameter list.
+Section 9 is fully resolved for the Perl-defined set. The
+comment-only items (L179-184, L125, L194-195 etc.) remain
+intentionally undefined — Perl documents but doesn't define them.
 
 ## Priority Order (by test impact) — UPDATED 2026-04-18
 
