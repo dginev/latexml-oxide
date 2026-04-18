@@ -832,3 +832,58 @@ interpretation — e.g. `\@ifnextchar[` reads `[{yes}` as arg #1 — check
 whether the CS's prototype includes a non-Plain parameter type that
 round-tripped as Plain.
 
+---
+
+## 34. The \makeatletter autoload doesn't fire during `--init` raw-load
+
+**Discovery:** During D0 d.1 investigation I kept expecting `latex_base.rs`
+to be loaded during `--init=latex.ltx`, because `tex.rs` installs
+`\makeatletter` as an autoload trigger (expands to `\@load@latex@pool
+\makeatletter`). An env-gated `eprintln!` at the top of `latex_base.rs`'s
+`LoadDefinitions!` block never fired during `--init`. Yet the dump still
+captured `\documentclass`, `\@ifnextchar`, etc. — leading to a puzzling
+"how does the LaTeX kernel get into the dump if `_base.rs` doesn't run?"
+
+**Analysis:** Two mechanisms deliver LaTeX-kernel CSes into state at
+`--init` time:
+
+1. **Raw latex.ltx processing** (what `--init` explicitly does). When the
+   tokenizer hits `\long\def\@ifnextchar#1#2#3{…}` mid-file, the engine's
+   `\def` primitive installs the token-based Expandable directly — no
+   `.pool.ltxml` dispatch needed. Most kernel macros are defined this way.
+
+2. **Autoload trigger** (what *should* load `_base.rs`). When the
+   tokenizer hits a `\makeatletter` invocation (not the `\def`
+   redefinition), it expands the autoload DefMacro → `\@load@latex@pool`
+   primitive fires → dispatches to `LaTeX.pool` → loads `latex.rs` →
+   loads `_bootstrap`, `_base`, old dump, `_constructs`.
+
+The subtle part: in `--init` mode, latex.ltx's `\makeatletter` is
+REDEFINED early (line ~15 of latex.ltx: `\def\makeatletter{\catcode`\@11…}`)
+BEFORE it gets INVOKED anywhere. After the redefinition the autoload is
+gone — so `\@load@latex@pool` never fires.
+
+That's why our dump contains most of the kernel (from raw `\def`s) but
+misses 20 `_base.rs`-only CSes like `\@tempa`, `\xpt`, `\MakeTextLowercase`:
+those CSes have NO corresponding `\def` in raw latex.ltx, and the
+autoload path that would define them via `_base.rs` never fires.
+
+**Fix:** D0 d.1 landing (commit ddee6952) explicitly calls
+`latex_base::load_definitions()` from `ini_tex.rs` right after the
+bootstrap snapshot. The surgical preload puts `_base.rs`'s closures/mocks
+into state before raw-load starts; any of them that latex.ltx's raw
+`\def` later overrides gets replaced with the tokens version (which is
+what we want); the ones latex.ltx doesn't touch stay as-is and end up
+in the dump via the diff.
+
+**Key insight:** Autoload triggers only fire on LOOKUP, not on
+redefinition. If a CS you expect to trigger autoload gets `\def`-ined
+before any invocation, the autoload is dead code. This is Perl parity —
+Perl LaTeXML has the same subtlety — but it's easy to miss when
+tracing the Rust side in isolation.
+
+**Sentinel:** If `_base.rs` or any `.pool.ltxml`-backed module seems not
+to be loading, check whether the autoload trigger CS gets `\def`-ined
+before invocation in the source TeX. Either invoke it explicitly
+earlier, or surgically preload the module.
+
