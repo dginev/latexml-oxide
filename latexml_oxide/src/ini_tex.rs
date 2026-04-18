@@ -35,10 +35,11 @@ pub fn dump_format(
   // kernel + raw latex.ltx extras". In Rust, at the point ini_tex fires
   // we have TeX + plain pools loaded (≈2300 entries — includes `\let`,
   // `\def`, `\relax`, and the other TeX primitives our PA aliases will
-  // reference). Our Rust `latex_base.rs` / `latex_constructs.rs` have
-  // NOT loaded yet (engine is lazy; `--init` raw-loads latex.ltx and
-  // skips binding dispatch, so `latex.rs::load_definitions` never fires
-  // during --init).
+  // reference). Step 1b below surgically preloads `latex_base.rs` so
+  // its `_base`-only CSes end up in the diff — without it, the
+  // `\makeatletter` autoload trigger never fires during `--init`'s
+  // raw-load path and 20 CSes (font-size aliases, scratch macros,
+  // output-routine stubs) would be missing from the dump.
   //
   // We stage this snapshot as "bootstrap" so dump_writer can classify
   // let-alias targets: targets present in this snapshot → early
