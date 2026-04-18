@@ -36,15 +36,15 @@ Substantially ported (278 DefMath! definitions). Most core math symbols present.
 
 ## 3. TeX_Math.pool.ltxml — missing functions
 
-- [ ] `scriptHandler()` — T_SUPER/T_SUB handling (Perl L353-426, 75 lines)
-- [ ] `cleanup_Math()` / `cleanup_XMText()` (Perl L190-311, 122 lines)
-- [ ] FLOATING script DefRewrite (Perl L527-551, 25 lines)
-- [ ] `adjustMathStyle_internal()` + %mathstyle_adjust_map (Perl L1024-1052, 29 lines)
-- [ ] `fracSizer()` (Perl L1054-1059, 6 lines)
-- [ ] `scriptSizer()` (Perl L460-493, 34 lines)
-- [ ] `revertScript()` (Perl L438-450, 13 lines)
-- [ ] DefMathLigature rules (Perl L1271-1274)
-- [ ] \skewchar register getter/setter (Perl L1202-1211, 10 lines)
+- [x] `scriptHandler()` — `tex_math.rs::script_handler` L71
+- [x] `cleanup_Math()` / `cleanup_XMText()` — `base_utilities.rs::cleanup_math` L1415, `cleanup_xmtext` L1513, `cleanup_xmtext_outer` L1506
+- [x] FLOATING script dispatch — `tex_math.rs` L43 (inline script-position detection rather than a DefRewrite chain, but covers the same cases)
+- [x] `adjustMathStyle_internal()` + `%mathstyle_adjust_map` — `tex_math.rs::mathstyle_adjust` L1854, `adjust_mathstyle_internal` L1877
+- [ ] `fracSizer()` (Perl L1054-1059, 6 lines) — **still missing**; used by `\over`/`\atop` to size vertical fractions. Low impact on current tests.
+- [x] `scriptSizer()` — `tex_math.rs::script_sizer` L226
+- [x] `revertScript()` — `tex_math.rs::revert_script` L210 (callers at L1507, 1519, 1531, 1541)
+- [x] `DefMathLigature` — macro at `prelude/setup_binding_language.rs::DefMathLigature` L186
+- [x] `\skewchar` — `tex_math.rs` L1395 `DefRegister!("\\skewchar{}", ...)`
 
 ## 4. Rewrite.pm (560 Perl → 350 Rust, mostly stubs)
 
