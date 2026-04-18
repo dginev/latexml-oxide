@@ -7,11 +7,7 @@ LoadDefinitions!({
   // (considering we don't do hyphenation, etc)
   RequirePackage!("babel", options => vec!["ngerman".to_string()]);
 
-  // Raw-load ngermanb.ldf so babel's authoritative \captionsngerman +
-  // \extrasngerman are installed from TeX Live source.
-  InputDefinitions!("ngermanb", noltxml => true, extension => Some(Cow::Borrowed("ldf")));
-  // \providecommand fallback — belt-and-suspenders if the raw load
-  // didn't complete before \select@language fires.
+  // NGerman shares captions with german (reformed orthography, same strings).
   RawTeX!(r"\providecommand\captionsngerman{%
     \def\prefacename{Vorwort}\def\refname{Literatur}%
     \def\abstractname{Zusammenfassung}\def\bibname{Literaturverzeichnis}%
