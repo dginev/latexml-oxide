@@ -394,7 +394,7 @@ macro_rules! T_SUB(() => { *$crate::token::TOKEN_SUB });
 #[macro_export]
 macro_rules! T_SPACE(() => { *$crate::token::TOKEN_SPACE };
 ($text:literal) => {
-  Token { text: $crate::common::arena::pin_static($text), code: Catcode::SPACE}
+  Token { text: $crate::pin!($text), code: Catcode::SPACE}
 });
 /// macro for a CR "\n" token
 #[macro_export]
@@ -404,7 +404,7 @@ macro_rules! T_CR(() => { *$crate::token::TOKEN_CR });
 macro_rules! T_LETTER {
   ($text:literal) => {
     Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: Catcode::LETTER,
     }
   };
@@ -420,7 +420,7 @@ macro_rules! T_LETTER {
 macro_rules! T_OTHER {
   ($text:literal) => {
     Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: Catcode::OTHER,
     }
   };
@@ -468,7 +468,7 @@ macro_rules! T_COMMENT {
 macro_rules! T_CS {
   ($text:literal) => {
     $crate::token::Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: $crate::token::Catcode::CS,
     }
   };
@@ -514,7 +514,7 @@ macro_rules! Token {
   };
   ($text:literal, $cc:expr) => {
     Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: $cc,
     }
   };
