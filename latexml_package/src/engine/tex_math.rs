@@ -849,7 +849,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
       if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
-        || lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
+        || state::lookup_bool_sym(&arena::GROUP_NONBOXING_SYM) { // or group was opened with \begingroup
         Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
         egroup()?;

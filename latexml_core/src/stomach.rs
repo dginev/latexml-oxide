@@ -98,7 +98,7 @@ pub fn initialize_stomach() {
     Some(Scope::Global),
   );
   assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-  assign_value("groupInitiator", "Initialization", Some(Scope::Global));
+  assign_value_sym(*arena::GROUP_INITIATOR_SYM, "Initialization", Some(Scope::Global));
   // Setup default fonts.
   assign_value("font", Font::text_default(), Some(Scope::Global));
   assign_value("mathfont", Font::math_default(), Some(Scope::Global));
@@ -131,10 +131,10 @@ pub fn push_stack_frame(nobox: bool) {
     Some(Scope::Local),
   ); // ALWAYS bind this!
   assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value("groupInitiator", current_token, Some(Scope::Local));
-  assign_value(
-    "groupInitiatorLocator",
+  assign_value_sym(*arena::GROUP_NONBOXING_SYM, nobox, Some(Scope::Local)); // ALWAYS bind this!
+  assign_value_sym(*arena::GROUP_INITIATOR_SYM, current_token, Some(Scope::Local));
+  assign_value_sym(
+    *arena::GROUP_INITIATOR_LOCATOR_SYM,
     gullet::get_locator(),
     Some(Scope::Local),
   );
@@ -198,19 +198,19 @@ pub fn current_frame_message() -> String {
   let target = if is_value_bound("MODE", Some(0)) {
     // SET mode in CURRENT frame ?
     Cow::Owned(s!("mode-switch to {}", crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM)))
-  } else if lookup_bool("groupNonBoxing") {
+  } else if lookup_bool_sym(&arena::GROUP_NONBOXING_SYM) {
     // Current frame is a non-boxing group?
     Cow::Borrowed("non-boxing group")
   } else {
     Cow::Borrowed("boxing group")
   };
 
-  let initiator = if let Some(t) = lookup_token("groupInitiator") {
+  let initiator = if let Some(t) = lookup_token_sym(&arena::GROUP_INITIATOR_SYM) {
     t.stringify()
   } else {
     String::new()
   };
-  let locator = lookup_string("groupInitiatorLocator");
+  let locator = lookup_string_from_sym(&arena::GROUP_INITIATOR_LOCATOR_SYM);
   s!(
     "current frame is {} due to {} {}",
     target,
@@ -246,7 +246,7 @@ pub fn egroup() -> Result<()> {
         current_frame_message()
       )
     );
-  } else if lookup_bool("groupNonBoxing") {
+  } else if lookup_bool_sym(&arena::GROUP_NONBOXING_SYM) {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
@@ -277,7 +277,7 @@ pub fn endgroup() -> Result<()> {
         current_frame_message()
       )
     );
-  } else if !lookup_bool("groupNonBoxing") {
+  } else if !lookup_bool_sym(&arena::GROUP_NONBOXING_SYM) {
     // or group was opened with \bgroup
     Error!(
       "unexpected",

@@ -151,6 +151,13 @@ pub static INTERPRETING_DEFINITIONS_SYM: Lazy<SymStr> =
   Lazy::new(|| pin_static("INTERPRETING_DEFINITIONS"));
 #[thread_local]
 pub static XGLOBAL_AT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("xglobal@"));
+#[thread_local]
+pub static GROUP_NONBOXING_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("groupNonBoxing"));
+#[thread_local]
+pub static GROUP_INITIATOR_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("groupInitiator"));
+#[thread_local]
+pub static GROUP_INITIATOR_LOCATOR_SYM: Lazy<SymStr> =
+  Lazy::new(|| pin_static("groupInitiatorLocator"));
 
 /// Assign a static str into the arena, returning a unique symbol.
 pub fn pin_static(text: &'static str) -> SymStr {

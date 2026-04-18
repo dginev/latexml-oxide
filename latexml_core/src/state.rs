@@ -1303,6 +1303,15 @@ pub fn lookup_token(key: &str) -> Option<Token> {
   }
 }
 
+/// a variant of `lookup_token` taking an already-pinned SymStr key —
+/// avoids the per-call `arena::pin(key)` hash lookup.
+pub fn lookup_token_sym(key: &SymStr) -> Option<Token> {
+  match state!().lookup_value_sym(key) {
+    Some(Stored::Token(t)) => Some(*t),
+    _ => None,
+  }
+}
+
 pub fn lookup_alignment() -> Option<Digested> {
   // Can only be a token or definition; we want defns!
   // is this the right logic here? don't expand unless digesting?
