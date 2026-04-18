@@ -12,7 +12,7 @@ Updated 2026-04-18. Open gaps & active TODOs only; completed items live in git h
 
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
 
-**Dump loading:** 5,834 entries from latex.ltx kernel (V + codes + @-internal M + Register). Add-only policy preserves engine semantics.
+**Dump loading:** 25,172 entries on disk; 6,154 installed into state at load time (19,018 skipped — `@`-internal gate for M, add-only skip for V/R/CD/LC/UC/SC already-defined by `_base.rs`). Add-only policy preserves engine semantics.
 
 **Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational:
 ```
