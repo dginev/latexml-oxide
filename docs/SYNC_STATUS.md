@@ -166,17 +166,22 @@ exact engine gaps:
   option pipeline closes, babel's own shorthand wiring activates
   cleanly.
 
-- [~] **`AtBeginDocument` hook chain ordering.** Stray-comma symptom
-  resolved session 109 (removed Rust-only `\let\@nil\relax` that broke
-  `\bbl@fornext`). babel's AtBeginDocument fires in a workable order now
-  for our tests. The deeper structural issue — babel's two-phase
-  `\ProcessOptions*` pipeline doesn't dispatch `\bbl@load@language{<lang>}`
-  for package options, leaving `\bbl@main@language` = "nil" — is now
-  papered over by our `\lx@babel@activate@mainlang` hook that resolves
-  the effective main language from `\opt@babel.sty` directly. A true fix
-  requires making babel's `\DeclareOption*{}` + `\ProcessOptions*` option
-  collection + fan-out cycle work end-to-end in our engine, which is a
-  substantive option-pipeline audit and not in the page545 critical path.
+- [x] **`AtBeginDocument` hook chain ordering.** FIXED session 110
+  (commit 56b0c35d2). Root cause was `@currname` leakage from plain
+  `\input`: our `input_definitions` only restored `@currname/@currext`
+  when `handleoptions=true`, but plain `\input` uses `handleoptions=
+  false` — so after babel.sty's `\input txtbabel.def` at L2242, the
+  callee's `@currname="txtbabel"` leaked into 2000+ lines of babel.sty,
+  causing `\ProcessOptions*` at L4291 to look up `opt@txtbabel.def`
+  (empty) instead of `opt@babel.sty`. Fix: plain `\input` now locally
+  saves/restores `@currname/@currext` around the nested input call.
+
+  Coordinated fix in `\lx@babel@activate@mainlang`: force-set
+  `\bbl@main@language` globally from `\opt@babel.sty`. Babel's raw-load
+  path may leave it pointing at a language whose `.ldf` `\ldf@finish`
+  happened to run last (e.g. "greek" for
+  `\usepackage[polutonikogreek,english]{babel}`), which would activate
+  the wrong language at `\AtBeginDocument`.
 
 - [x] **Kernel dump regeneration at build time.** Per design intent,
   `resources/dumps/latex.dump.txt` should **not** be checked into VCS;
