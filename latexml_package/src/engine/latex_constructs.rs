@@ -8638,6 +8638,17 @@ LoadDefinitions!({
     AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
   });
 
+  // Perl L5670-5673 — font size stubs. Token-list bodies (Perl:
+  // `Tokens()` = empty) that swallow their args. Relocated from
+  // latex_base.rs 2026-04-18 for Perl-parity AND so they round-trip
+  // through the dump under LATEXML_DUMP_ONLY=1 (the dump reader's
+  // @-internal safety filter rejects public-CS macros, so public
+  // kernel CSes like `\fontsize` must live in always-loaded
+  // `_constructs.rs`).
+  DefMacro!("\\check@mathfonts", None);
+  DefMacro!("\\fontsize{}{}", None);
+  DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
   // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {

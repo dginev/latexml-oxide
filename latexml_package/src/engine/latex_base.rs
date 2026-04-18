@@ -648,10 +648,12 @@ LoadDefinitions!({
   // Additional base definitions not in Perl's latex_base but needed early
   //======================================================================
 
-  // Font size/check stubs
-  DefMacro!("\\check@mathfonts", None);
-  DefMacro!("\\fontsize{}{}", None);
-  DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+  // Perl-parity: `\check@mathfonts`, `\fontsize`, `\@setfontsize` are
+  // defined in latex_constructs.pool.ltxml L5670-5673 (serialize-able
+  // token-list bodies). Relocated there 2026-04-18 — required to fix
+  // the `\fontsize` undefined error under LATEXML_DUMP_ONLY=1 where
+  // the dump reader's @-internal safety filter rejects public-CS
+  // macros whose definitions normally come from `_base.rs`.
 
   // Class internals used by raw TeX classes
   DefRegister!("\\@bls" => Dimension!("12pt"));
