@@ -545,6 +545,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         register_type: reg_type,
         value: reg_value,
         mathglyph,
+        locator: current_dump_locator(),
         ..Register::default()
       };
       // Set address from CS name
