@@ -17,11 +17,18 @@ fn merge_limits(pos: &str) {
   let default_level = get_script_level().to_string();
   stomach::with_box_list_mut(|list| {
     for b in list.iter_mut().rev() {
-      // extract trailing level number from existing scriptpos, or use current script level
+      // Extract trailing level digits from existing scriptpos. Find the
+      // first non-digit from the end, slice off the tail — skips the
+      // chars.rev.take_while.collect.into_iter.rev.collect two-Vec
+      // round-trip the previous code did.
       let prev = b.get_property("scriptpos").map(|v| v.to_string()).unwrap_or_default();
-      let level: String = prev.chars().rev().take_while(|c| c.is_ascii_digit()).collect::<Vec<_>>()
-        .into_iter().rev().collect();
-      let level = if level.is_empty() { &default_level } else { &level };
+      let digit_start = prev
+        .bytes()
+        .rposition(|c| !c.is_ascii_digit())
+        .map(|i| i + 1)
+        .unwrap_or(0);
+      let level_str: &str = &prev[digit_start..];
+      let level = if level_str.is_empty() { &default_level } else { level_str };
       b.set_property("scriptpos", format!("{pos}{level}"));
       // Perl: last unless IsEmpty($box) || IsScript($box)
       // Continue past empty boxes AND script boxes
