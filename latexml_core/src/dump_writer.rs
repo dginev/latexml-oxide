@@ -169,19 +169,28 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       Some(format!("TK\t{}", tok_strs.join(",")))
     }
     Stored::Expandable(exp) => {
-      if let Some(crate::definition::ExpansionBody::Tokens(tks)) = exp.get_expansion() {
-        let cs_name = exp.get_cs().with_str(url_encode);
-        let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
-        let nargs = exp.get_num_args();
-        let mut flags = String::new();
-        if exp.is_long { flags.push('L'); }
-        if exp.is_protected() { flags.push('P'); }
-        Some(format!(
-          "E\t{}\t{}\t{}\t{}",
-          cs_name, nargs, flags, tok_strs.join(",")
-        ))
-      } else {
-        Option::None // Closure-based, can't serialize
+      let cs_name = exp.get_cs().with_str(url_encode);
+      let nargs = exp.get_num_args();
+      let mut flags = String::new();
+      if exp.is_long { flags.push('L'); }
+      if exp.is_protected() { flags.push('P'); }
+      match exp.get_expansion() {
+        Some(crate::definition::ExpansionBody::Tokens(tks)) => {
+          let tok_strs: Vec<String> = tks.clone().unlist().iter().map(serialize_token).collect();
+          Some(format!(
+            "E\t{}\t{}\t{}\t{}",
+            cs_name, nargs, flags, tok_strs.join(",")
+          ))
+        }
+        // No body at all (e.g. `DefMacro!("\\@gobble{}", None)`): serializes
+        // as an E-entry with empty token body. The reader reconstructs an
+        // Expandable with empty Tokens + the original paramlist, which at
+        // expansion time reads and discards its arguments — semantically
+        // identical to the no-body form's runtime behavior (expandable.rs
+        // `invoke` matches `None` → reads args, returns NO_TOKENS).
+        None => Some(format!("E\t{}\t{}\t{}\t", cs_name, nargs, flags)),
+        // Closure-based — can't serialize.
+        Some(crate::definition::ExpansionBody::Closure(_)) => Option::None,
       }
     }
     // Closure-based primitives can't be serialized directly — but if the entry's
