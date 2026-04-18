@@ -7696,7 +7696,11 @@ LoadDefinitions!({
     let dx: f64 = dx_str.trim().parse().unwrap_or(0.0);
     let dy: f64 = dy_str.trim().parse().unwrap_or(0.0);
 
-    let mut result = Vec::new();
+    // Each iteration emits roughly `8 + body.len()` tokens; pre-size
+    // conservatively + use borrow-iter-copied for body to avoid the
+    // per-iteration Vec<Token> clone.
+    let body_len = body.len();
+    let mut result = Vec::with_capacity(((n as usize) * (8 + body_len)).min(1 << 20));
     for _ in 0..n {
       result.push(T_CS!("\\put"));
       result.push(T_OTHER!("("));
@@ -7705,7 +7709,7 @@ LoadDefinitions!({
       result.extend(Explode!(s!("{}", y)));
       result.push(T_OTHER!(")"));
       result.push(T_BEGIN!());
-      result.extend(body.clone().unlist());
+      result.extend(body.unlist_ref().iter().copied());
       result.push(T_END!());
       x += dx;
       y += dy;
