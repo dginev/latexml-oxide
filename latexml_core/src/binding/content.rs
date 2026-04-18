@@ -1681,13 +1681,13 @@ pub fn font_decode(
       if let Some(fm) = fmap {
         (Some(fm), s!("{}_{}", encoding, family))
       } else {
-        (map, encoding.clone())
+        (map, encoding)
       }
     } else {
-      (map, encoding.clone())
+      (map, encoding)
     }
   } else {
-    (map, encoding.clone())
+    (map, encoding)
   };
   let glyph = effective_map
     .as_ref()

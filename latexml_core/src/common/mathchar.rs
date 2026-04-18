@@ -306,7 +306,7 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
 
   let curfont = state::lookup_font().unwrap();
   let initfont = match state::lookup_value("initial_math_font") {
-    Some(Stored::Font(f)) => f.clone(),
+    Some(Stored::Font(f)) => f,
     _ => curfont.clone(),
   };
 

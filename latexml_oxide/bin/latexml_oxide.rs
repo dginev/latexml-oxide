@@ -248,7 +248,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       }
     };
     let dir_str = tempdir.path().to_string_lossy().to_string();
-    path_flags.push(dir_str.clone());
+    path_flags.push(dir_str);
     _archive_tempdir = Some(tempdir);
     main_tex
   } else {

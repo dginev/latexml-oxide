@@ -242,7 +242,7 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   let name = if !pathname_ext.is_empty() {
     format!("{}.{}", name_stem, pathname_ext)
   } else {
-    name_stem.clone()
+    name_stem
   };
 
   let cwd = cwd();

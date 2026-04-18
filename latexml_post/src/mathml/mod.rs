@@ -462,7 +462,7 @@ pub fn stylize_content(
 
   // Font-based CSS class fallbacks.
   // Port of Perl L746-756: only when variant was NOT converted to plane1.
-  let mut class_val = class.clone();
+  let mut class_val = class;
   if let Some(ref f) = font {
     if !is_format_only {
       if f.contains("caligraphic") {

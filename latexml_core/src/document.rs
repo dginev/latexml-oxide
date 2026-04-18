@@ -2602,7 +2602,7 @@ impl Document {
     };
     let final_id = if needs_modify {
       let badid = id.to_string();
-      let new_id = self.modify_id(badid.clone());
+      let new_id = self.modify_id(badid);
       Info!(
         "malformed",
         "id",

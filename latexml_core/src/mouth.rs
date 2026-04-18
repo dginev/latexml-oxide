@@ -186,7 +186,7 @@ impl Mouth {
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
       options.source = Some(source.to_string());
       if options.shortsource.is_none() {
-        options.shortsource = Some(if ext.is_empty() { name.to_string() } else { s!("{}.{}", name, ext) });
+        options.shortsource = Some(if ext.is_empty() { name } else { s!("{}.{}", name, ext) });
       }
       Mouth::new(source, Some(options))
     }

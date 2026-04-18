@@ -422,7 +422,7 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     if let Some(default) = default_token_content(&role) {
       text = default.to_string();
     } else {
-      text = meaning.clone()
+      text = meaning
         .or_else(|| node.get_attribute("name"))
         .unwrap_or_else(|| role.clone());
     }

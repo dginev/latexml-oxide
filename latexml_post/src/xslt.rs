@@ -243,7 +243,7 @@ impl Processor for XSLT {
         site_directory: doc.site_directory.clone(),
         source: doc.source.clone(),
         source_directory: doc.source_directory.clone(),
-        searchpaths: Some(doc.searchpaths.clone()),
+        searchpaths: Some(doc.searchpaths),
         ..PostDocumentOptions::default()
       },
     ).map_err(|e| PostError::Processing(format!("Failed to parse XSLT result: {}", e)))?;
