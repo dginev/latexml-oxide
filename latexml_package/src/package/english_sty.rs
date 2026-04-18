@@ -8,10 +8,12 @@ LoadDefinitions!({
   // PassOptions not yet supported; just load babel directly
   RequirePackage!("babel");
 
-  // Raw-load english.ldf so babel's own \captions<lang> etc. are defined
-  // from TeX Live's authoritative source. Our dispatcher would otherwise
-  // replace the raw load entirely with this port (which only calls
-  // RequirePackage("babel")); the InputDefinitions call here explicitly
-  // loads the .ldf content alongside.
+  // Raw-load english.ldf to register its `ver@english.ldf` entry and
+  // invoke babel's ini-based caption loading path for `en`. The actual
+  // \\captionsenglish comes from babel-en.ini via babel's \\babelprovide
+  // machinery during option processing (verified 2026-04-18: entries
+  // include \\enclname/\\ccname/\\headtoname/\\glossaryname, all from
+  // babel-en.ini — not from our previously-hardcoded providecommand
+  // stub).
   InputDefinitions!("english", noltxml => true, extension => Some(Cow::Borrowed("ldf")));
 });
