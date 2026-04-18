@@ -137,6 +137,35 @@ impl Catcode {
       ARG => "Arg",
     }
   }
+
+  /// SymStr form of `name()` — each variant caches its interned
+  /// symbol via `pin!`. Used by `Token::get_cs_name` /
+  /// `pin_cs_name` to avoid a per-call `pin_static` hash probe
+  /// (fires on every primitive-token definition lookup).
+  pub fn name_sym(self) -> crate::common::arena::SymStr {
+    use crate::token::Catcode::*;
+    match self {
+      ESCAPE => crate::pin!("Escape"),
+      BEGIN => crate::pin!("Begin"),
+      END => crate::pin!("End"),
+      MATH => crate::pin!("Math"),
+      ALIGN => crate::pin!("Align"),
+      EOL => crate::pin!("EOL"),
+      PARAM => crate::pin!("Parameter"),
+      SUPER => crate::pin!("Superscript"),
+      SUB => crate::pin!("Subscript"),
+      SPACE => crate::pin!("Space"),
+      IGNORE => crate::pin!("Ignore"),
+      LETTER => crate::pin!("Letter"),
+      OTHER => crate::pin!("Other"),
+      ACTIVE => crate::pin!("Active"),
+      COMMENT => crate::pin!("Comment"),
+      INVALID => crate::pin!("Invalid"),
+      CS => crate::pin!("ControlSequence"),
+      MARKER => crate::pin!("Marker"),
+      ARG => crate::pin!("Arg"),
+    }
+  }
   /// a \meaning-friendly name
   pub fn meaning(self) -> &'static str {
     use crate::token::Catcode::*;
@@ -620,7 +649,7 @@ impl Token {
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
   pub fn get_cs_name(&self) -> SymStr {
     if self.code.is_primitive() {
-      arena::pin_static(self.code.name())
+      self.code.name_sym()
     } else {
       self.get_sym()
     }
@@ -641,7 +670,7 @@ impl Token {
   /// artificial, but avoids the data race
   pub fn pin_cs_name(&self) -> SymStr {
     if self.code.is_primitive() {
-      arena::pin_static(self.code.name())
+      self.code.name_sym()
     } else {
       self.get_sym()
     }

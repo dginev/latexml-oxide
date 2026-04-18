@@ -471,7 +471,7 @@ impl Parameter {
   pub fn reparse(&self, tokens: Tokens) -> Result<ArgWrap> {
     // Needs neutralization, since the keyvals may have been tokenized already???
     // perhaps a better test would involve whether $tokens is, in fact, Tokens?
-    if self.name == arena::pin_static("Plain") || self.predigest.is_some() {
+    if self.name == pin!("Plain") || self.predigest.is_some() {
       // Gack!
       Ok(ArgWrap::Tokens(tokens))
     } else if self.semiverbatim.is_some() {

@@ -38,8 +38,6 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 use std::cell::Cell;
 use crate::pin;
 #[thread_local]
-static SPECIAL_RELAX_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("\\special_relax"));
-#[thread_local]
 static SPECIAL_RELAX_SMUGGLED: Cell<Option<Token>> = Cell::new(None);
 
 /// Store the unexpanded token smuggled inside \special_relax (Perl: $$special_relax[2])
@@ -57,7 +55,7 @@ fn peek_special_relax_smuggled() -> Option<Token> {
 /// Check if a token is \special_relax and its smuggled unexpanded token matches `target`
 fn special_relax_matches(token: &Token, target: &Token) -> bool {
   token.code == Catcode::CS
-    && token.text == *SPECIAL_RELAX_SYM
+    && token.text == pin!("\\special_relax")
     && peek_special_relax_smuggled().as_ref() == Some(target)
 }
 #[thread_local]

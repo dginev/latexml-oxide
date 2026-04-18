@@ -82,13 +82,6 @@ pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
-#[thread_local]
-pub static FONT_ELEMENT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:text"));
-#[thread_local]
-pub static MATH_TOKEN_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMTok"));
-#[thread_local]
-pub static MATH_HINT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMHint"));
-
 pub struct Document {
   pub document:                XmlDoc,
   pub pending:                 Vec<Node>,
@@ -526,7 +519,7 @@ impl Document {
           // by prior replace_node operations in libxml2.
           // Defer the actual collapse to after the traversal completes, since
           // replace_node can corrupt ancestor attribute lists in libxml2.
-          if (get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
+          if (get_node_qname(&child) == pin!("ltx:text"))
             && !was_forcefont
             && empty_attr_nodes.contains(&child.to_hashable())
           {
@@ -740,7 +733,7 @@ impl Document {
         .unwrap()
         .into_owned();
       self.open_text(object, &fnt)
-    } else if get_node_qname(&self.node) == arena::pin_static(MATH_TOKEN_NAME) {
+    } else if get_node_qname(&self.node) == pin!("ltx:XMTok") {
       // Or plain string in math mode.
       // Note text nodes can ONLY appear in <XMTok> or <text>!!!
       // Have we already opened an XMTok? Then insert into it.
@@ -921,7 +914,7 @@ impl Document {
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
       if t == qsym
-        && !(t == arena::pin_static(FONT_ELEMENT_NAME) && node.has_attribute("_fontswitch"))
+        && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch"))
       {
         break;
       }
@@ -1521,7 +1514,7 @@ impl Document {
     } else {
       text
     };
-    if qname == MATH_TOKEN_NAME && cur_qname == *MATH_TOKEN_SYM {
+    if qname == MATH_TOKEN_NAME && cur_qname == pin!("ltx:XMTok") {
       // Already INSIDE a token!
       if !text.is_empty() {
         self.open_math_text_internal(text)?;
@@ -1840,7 +1833,7 @@ impl Document {
       // with single child, AND, $node can have all the attributes that the child has (but at least
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
-        && (get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
+        && (get_node_qname(&c[0]) == pin!("ltx:text"))
         && model::can_have_attribute(qname, pin!("font"))
         && c[0]
           .get_attributes()
