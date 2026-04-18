@@ -77,7 +77,7 @@ LoadDefinitions!({
       .or_else(|| lookup_value("SUPERTABULAR_HEAD"));
     if let Some(Stored::Tokens(ref toks)) = head {
       let mut result = vec![T_CS!("\\lx@alignment@begin@heading")];
-      result.extend(toks.clone().unlist());
+      result.extend_from_slice(toks.unlist_ref());
       result.push(T_CS!("\\lx@alignment@end@heading"));
       result
     } else {
@@ -90,7 +90,7 @@ LoadDefinitions!({
       .or_else(|| lookup_value("SUPERTABULAR_TAIL"));
     if let Some(Stored::Tokens(ref toks)) = tail {
       let mut result = vec![T_CS!("\\lx@alignment@begin@heading")];
-      result.extend(toks.clone().unlist());
+      result.extend_from_slice(toks.unlist_ref());
       result.push(T_CS!("\\lx@alignment@end@heading"));
       result
     } else {
@@ -127,12 +127,12 @@ LoadDefinitions!({
       if let Some(Stored::Tokens(ref tc)) = toccap {
         if !tc.is_empty() {
           result.push(T_OTHER!("["));
-          result.extend(tc.clone().unlist());
+          result.extend_from_slice(tc.unlist_ref());
           result.push(T_OTHER!("]"));
         }
       }
       result.push(T_BEGIN!());
-      result.extend(c.clone().unlist());
+      result.extend_from_slice(c.unlist_ref());
       result.push(T_END!());
       result
     } else {

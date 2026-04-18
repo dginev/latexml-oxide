@@ -1057,8 +1057,8 @@ LoadDefinitions!({
     toks.push(T_BEGIN!()); toks.extend(y1.unlist()); toks.push(T_END!());
     toks.push(T_BEGIN!()); toks.extend(x2.unlist()); toks.push(T_END!());
     toks.push(T_BEGIN!()); toks.extend(y2.unlist()); toks.push(T_END!());
-    toks.push(T_BEGIN!()); toks.extend(x_step.clone().unlist()); toks.push(T_END!());
-    toks.push(T_BEGIN!()); toks.extend(y_step.clone().unlist()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend_from_slice(x_step.unlist_ref()); toks.push(T_END!());
+    toks.push(T_BEGIN!()); toks.extend_from_slice(y_step.unlist_ref()); toks.push(T_END!());
     toks.push(T_END!()); // close \pgfsysprotocol@literal arg
     // \lxSVG@(un)coloredpattern{name}{x_step}{y_step}{code}
     toks.push(op);

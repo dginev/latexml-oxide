@@ -56,7 +56,7 @@ fn make_kv_content(kv: &[(&str, Tokens)]) -> Option<Tokens> {
     tks.extend(ExplodeText!(key));
     tks.push(T_OTHER!("="));
     tks.push(T_BEGIN!());
-    tks.extend(value.clone().unlist());
+    tks.extend_from_slice(value.unlist_ref());
     tks.push(T_END!());
   }
   Some(Tokens::new(tks))
@@ -596,7 +596,7 @@ fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
     let mut remaining = digs;
     while !remaining.is_empty() {
       if !result.is_empty() {
-        result.extend(sep.clone().unlist());
+        result.extend_from_slice(sep.unlist_ref());
       }
       for _ in 0..g {
         if remaining.is_empty() { break; }
@@ -630,12 +630,12 @@ fn six_format_simplenumber(number: &SixNumber) -> Tokens {
           let cb = six_get_tokens("close-bracket");
           trailer.splice(0..0, cb.unlist());
         } else {
-          tokens.extend(s.clone().unlist());
+          tokens.extend_from_slice(s.unlist_ref());
         }
       } else if s_str.contains('+') && !six_get_bool("retain-explicit-plus") {
         // drop +
       } else {
-        tokens.extend(s.clone().unlist());
+        tokens.extend_from_slice(s.unlist_ref());
       }
     }
 
@@ -654,7 +654,7 @@ fn six_format_simplenumber(number: &SixNumber) -> Tokens {
       if has_decimal {
         if let Some(d) = decimal {
           if !d.is_empty() {
-            tokens.extend(d.clone().unlist());
+            tokens.extend_from_slice(d.unlist_ref());
           } else {
             tokens.extend(six_get_tokens("output-decimal-marker").unlist());
           }
@@ -705,13 +705,13 @@ fn six_format_infix(op: Tokens, left: Option<Tokens>, right: Option<Tokens>, arg
   );
 
   let mut pres = Vec::new();
-  if let Some(l) = &left { pres.extend(l.clone().unlist()); }
+  if let Some(l) = &left { pres.extend_from_slice(l.unlist_ref()); }
   pres.push(i_arg("2"));
   for i in 3..=n + 1 {
     pres.push(i_arg("1"));
     pres.push(i_arg(&i.to_string()));
   }
-  if let Some(r) = &right { pres.extend(r.clone().unlist()); }
+  if let Some(r) = &right { pres.extend_from_slice(r.unlist_ref()); }
 
   let mut all_args = vec![op];
   all_args.extend(args);
@@ -767,9 +767,9 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             };
 
             let mut result = Vec::new();
-            if let Some(r) = &real { result.extend(r.clone().unlist()); }
-            if let Some(s) = sign { result.extend(s.clone().unlist()); }
-            if let Some(im) = &imag { result.extend(im.clone().unlist()); }
+            if let Some(r) = &real { result.extend_from_slice(r.unlist_ref()); }
+            if let Some(s) = sign { result.extend_from_slice(s.unlist_ref()); }
+            if let Some(im) = &imag { result.extend_from_slice(im.unlist_ref()); }
             result.extend(i_tok.unlist());
             Tokens::new(result)
           } else {

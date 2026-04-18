@@ -727,9 +727,11 @@ LoadDefinitions!({
   // Perl #2772: \fam with getter/setter for fontfamily state
   DefRegister!("\\fam", Number!(-1),
     getter => {
-      let fam = state::lookup_value("fontfamily")
-        .map(|v| v.to_string().parse::<i64>().unwrap_or(-1))
-        .unwrap_or(-1);
+      let fam = match state::lookup_value("fontfamily") {
+        Some(Stored::Int(i)) => i,
+        Some(Stored::Number(n)) => n.0,
+        _ => -1,
+      };
       Some(RegisterValue::Number(Number::new(fam)))
     },
     setter => sub[value, scope, _args] {

@@ -725,7 +725,7 @@ LoadDefinitions!({
         if is_star {
           toks.push(T_CS!("\\left"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
         // Left delimiter
         toks.extend(ldel_toks.iter().cloned());
@@ -734,7 +734,7 @@ LoadDefinitions!({
         toks.push(T_CS!("\\delimsize"));
         toks.push(T_BEGIN!());
         if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         } else if is_star {
           toks.push(T_CS!("\\middle"));
         }
@@ -746,7 +746,7 @@ LoadDefinitions!({
         if is_star {
           toks.push(T_CS!("\\right"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
         toks.extend(rdel_toks.iter().cloned());
         toks.push(T_END!());
@@ -792,7 +792,7 @@ LoadDefinitions!({
         if is_star {
           toks.push(T_CS!("\\left"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
         // Left delimiter
         toks.extend(ldel_toks.iter().cloned());
@@ -801,7 +801,7 @@ LoadDefinitions!({
         toks.push(T_CS!("\\delimsize"));
         toks.push(T_BEGIN!());
         if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         } else if is_star {
           toks.push(T_CS!("\\middle"));
         }
@@ -813,7 +813,7 @@ LoadDefinitions!({
         if is_star {
           toks.push(T_CS!("\\right"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
         toks.extend(rdel_toks.iter().cloned());
         toks.push(T_END!());

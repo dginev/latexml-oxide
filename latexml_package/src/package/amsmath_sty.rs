@@ -852,7 +852,7 @@ LoadDefinitions!({
         if !br.is_empty() {
           before_row_toks.push(T_CS!("\\text"));
           before_row_toks.push(T_BEGIN!());
-          before_row_toks.extend(br.clone().unlist());
+          before_row_toks.extend_from_slice(&br.unlist_cow());
           before_row_toks.push(T_END!());
         }
       }
@@ -860,7 +860,7 @@ LoadDefinitions!({
         if !ar.is_empty() {
           after_row_toks.push(T_CS!("\\text"));
           after_row_toks.push(T_BEGIN!());
-          after_row_toks.extend(ar.clone().unlist());
+          after_row_toks.extend_from_slice(&ar.unlist_cow());
           after_row_toks.push(T_END!());
         }
       }

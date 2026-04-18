@@ -239,7 +239,7 @@ LoadDefinitions!({
     inv_tokens.push(T_END!());
     if let Some(ref lbl) = label {
       inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend(lbl.clone().unlist());
+      inv_tokens.extend_from_slice(lbl.unlist_ref());
       inv_tokens.push(T_OTHER!("]"));
     }
     inv_tokens.push(T_BEGIN!());
@@ -626,7 +626,7 @@ pub fn join_tokens(conjunction: &Tokens, things: Vec<Tokens>) -> Tokens {
   let mut first = true;
   for thing in things {
     if !first {
-      result.extend(conjunction.clone().unlist());
+      result.extend_from_slice(conjunction.unlist_ref());
     }
     result.extend(thing.unlist());
     first = false;

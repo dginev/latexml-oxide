@@ -5864,7 +5864,7 @@ LoadDefinitions!({
   // \+ increments tab start by adding \> to tabbing_start_tabs
   DefPrimitive!("\\@tabbing@increment", sub [_args] {
     let mut tabs = if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
-      toks.unlist().to_vec()
+      toks.unlist()
     } else {
       Vec::new()
     };
@@ -5879,7 +5879,7 @@ LoadDefinitions!({
   // \- decrements tab start by removing first element from tabbing_start_tabs
   DefPrimitive!("\\@tabbing@decrement", sub [_args] {
     let tabs = if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
-      let mut v = toks.unlist().to_vec();
+      let mut v = toks.unlist();
       if !v.is_empty() {
         v.remove(0);
       }

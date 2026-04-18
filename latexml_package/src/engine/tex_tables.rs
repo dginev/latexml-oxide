@@ -119,7 +119,7 @@ LoadDefinitions!({
   DefColumnType!("*{Number}{}", sub[(n,pattern)] {
     let mut tks = Vec::new();
     for _ in 1 ..= n.value_of() {
-      tks.extend(pattern.clone().unlist());
+      tks.extend_from_slice(pattern.unlist_ref());
     }
     tks
   });
@@ -213,7 +213,7 @@ LoadDefinitions!({
       }
       tks.push(T_BEGIN!());
       if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
-        tks.extend(template_tks.clone().unlist());
+        tks.extend_from_slice(template_tks.unlist_ref());
       }
       tks.push(T_CS!("\\cr"));
       if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {

@@ -6,7 +6,7 @@ use crate::prelude::*;
 fn absorbed_string(todelim: &Tokens) -> String {
   // Build \ensuremath{todelim} tokens
   let mut toks = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
-  toks.extend(todelim.clone().unlist());
+  toks.extend_from_slice(todelim.unlist_ref());
   toks.push(T_END!());
   // Digest and extract text from resulting boxes
   match stomach::digest(Tokens::new(toks)) {

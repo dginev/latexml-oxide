@@ -929,7 +929,7 @@ LoadDefinitions!({
         let a3 = Tokens::new(vec![i_arg("3")]);
         numer.extend(i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc.clone(), a3.clone()).unlist());
       } else {
-        numer.extend(pfunc.clone().unlist());
+        numer.extend_from_slice(pfunc.unlist_ref());
       }
       if has_expr && !has_open {
         numer.push(i_arg("1"));
@@ -1125,7 +1125,7 @@ LoadDefinitions!({
       let mut pres = Vec::new();
       pres.extend(open_tks.unlist());
       pres.push(i_arg("2"));
-      pres.extend(middle_tks.clone().unlist());
+      pres.extend_from_slice(middle_tks.unlist_ref());
       pres.push(i_arg("1"));
       pres.extend(middle_tks.unlist());
       pres.push(i_arg("3"));
@@ -1178,7 +1178,7 @@ LoadDefinitions!({
     let mut pres = Vec::new();
     pres.extend(open_tks.unlist());
     pres.push(i_arg("1"));
-    pres.extend(middle_tks.clone().unlist());
+    pres.extend_from_slice(middle_tks.unlist_ref());
     pres.push(i_arg("2"));
     pres.extend(middle_tks.unlist());
     pres.push(i_arg("3"));
@@ -1226,7 +1226,7 @@ LoadDefinitions!({
       if i > 0 { tks.push(T_CS!("\\\\")); }
       for j in 0..m_val {
         if j > 0 { tks.push(T_ALIGN!()); }
-        tks.extend(item_tks.clone().unlist());
+        tks.extend_from_slice(item_tks.unlist_ref());
       }
     }
     gullet::unread(Tokens::new(tks));
