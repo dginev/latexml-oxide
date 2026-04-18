@@ -148,7 +148,7 @@ pub fn push_stack_frame(nobox: bool) {
 pub fn execute_before_after_group() -> Result<()> {
   if let Some(Stored::VecDequeStored(beforeafter)) = remove_value("beforeAfterGroup") {
     if !beforeafter.is_empty() {
-      let mut result = Vec::new();
+      let mut result = Vec::with_capacity(beforeafter.len());
       for beforeafter_frame in beforeafter.into_iter() {
         match beforeafter_frame {
           Stored::Tokens(frametoks) => result.push(frametoks.be_digested()?),

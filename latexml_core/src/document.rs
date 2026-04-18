@@ -2891,13 +2891,14 @@ impl Document {
     if content_args.len() != pres_args.len() {
       return Ok(());
     }
+    let n_args = content_args.len();
 
     // Walk the corresponding children, double-check they are referenced in the same order
     enum NewArg {
       Single(Node),
       Pair(Node, Node), // (content_arg, pres_arg) — to be merged
     }
-    let mut new_args: Vec<NewArg> = Vec::new();
+    let mut new_args: Vec<NewArg> = Vec::with_capacity(n_args);
     for (c_arg, p_arg) in content_args.into_iter().zip(pres_args) {
       if let Some(c_idref) = c_arg.get_attribute("idref") {
         if c_idref == p_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
