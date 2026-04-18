@@ -970,7 +970,7 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
   // in the content will pop this frame, since \egroup is \let to T_END and
   // invoke_token handles it via the standard group-closing mechanism.
-  let current_mode = state::lookup_string("MODE");
+  let current_mode = state::lookup_string_from_sym(&arena::MODE_SYM);
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
   if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
     stomach::begin_mode(&current_mode)?;
@@ -987,7 +987,7 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
     // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
     // Check the condition BEFORE endMode pops the frame.
-    let post_mode = state::lookup_string("MODE");
+    let post_mode = state::lookup_string_from_sym(&arena::MODE_SYM);
     let bound_mode = state::lookup_string("BOUND_MODE");
     if post_mode == "horizontal" && bound_mode.ends_with("vertical")
       && has_only_simple_horizontal_content(&item)

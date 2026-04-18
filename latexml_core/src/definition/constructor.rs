@@ -271,7 +271,7 @@ impl Definition for Constructor {
     // Perl: $mode = $properties{mode} || $state->lookupValue('MODE') || 'restricted_horizontal';
     // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
     properties.entry("mode").or_insert_with(|| {
-      let mode = lookup_string("MODE");
+      let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
       Stored::String(crate::common::arena::pin(
         if mode.is_empty() { "restricted_horizontal" } else { &mode },
       ))

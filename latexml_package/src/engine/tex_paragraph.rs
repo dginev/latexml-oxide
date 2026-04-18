@@ -110,7 +110,7 @@ LoadDefinitions!({
     },
     before_digest => {
       // Perl: combine any digested horizontal material into a horizontal List
-      let mode = lookup_string("MODE");
+      let mode = state::lookup_string_from_sym(&arena::MODE_SYM);
       let bound = lookup_string("BOUND_MODE");
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
@@ -121,7 +121,7 @@ LoadDefinitions!({
       state::assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      whatsit.set_property("mode", lookup_string("MODE").to_string());
+      whatsit.set_property("mode", state::lookup_string_from_sym(&arena::MODE_SYM).to_string());
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);

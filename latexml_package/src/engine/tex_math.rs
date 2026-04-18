@@ -408,7 +408,7 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@dollar@default"), None, {
     let mut op = "\\lx@begin@inline@math";
     {
-      let mode = state::lookup_string("MODE");
+      let mode = state::lookup_string_from_sym(&arena::MODE_SYM);
       if mode == "display_math" {
         if gullet::if_next(T_MATH!())? {
           gullet::read_token()?;

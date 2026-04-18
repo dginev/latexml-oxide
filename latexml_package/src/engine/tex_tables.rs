@@ -539,7 +539,7 @@ pub fn alignment_bindings(
   xml_attributes: HashMap<String, String>,
 ) {
   let mode = if mode.is_empty() {
-    state::lookup_string("MODE")
+    state::lookup_string_from_sym(&arena::MODE_SYM)
   } else {
     mode
   };

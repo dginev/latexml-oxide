@@ -2807,7 +2807,7 @@ LoadDefinitions!({
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
       if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
-        let mode = state::lookup_string("MODE");
+        let mode = state::lookup_string_from_sym(&arena::MODE_SYM);
         if mode.contains("math") { // double-check we're really in math
           end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
@@ -6096,7 +6096,7 @@ LoadDefinitions!({
     }
     alignment_bindings(template, String::from("math"), SymHashMap::default(), attrs);
     // Perl: if display math, switch to text mathstyle
-    if state::lookup_string("MODE").ends_with("math") {
+    if state::lookup_string_from_sym(&arena::MODE_SYM).ends_with("math") {
       MergeFont!(mathstyle => "text");
     }
     Let!("\\\\", "\\lx@alignment@newline");

@@ -376,7 +376,7 @@ impl Parameter {
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
     // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
-    let mode = lookup_string("MODE");
+    let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes();
@@ -437,7 +437,7 @@ impl Parameter {
     self.revert_catcodes()?;
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
-    let newmode = lookup_string("MODE");
+    let newmode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
     if mode != newmode && mode != "horizontal" {
       crate::stomach::leave_horizontal_internal();
     }

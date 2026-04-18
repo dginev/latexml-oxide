@@ -197,7 +197,7 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
 pub fn current_frame_message() -> String {
   let target = if is_value_bound("MODE", Some(0)) {
     // SET mode in CURRENT frame ?
-    Cow::Owned(s!("mode-switch to {}", lookup_string("MODE")))
+    Cow::Owned(s!("mode-switch to {}", crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM)))
   } else if lookup_bool("groupNonBoxing") {
     // Current frame is a non-boxing group?
     Cow::Borrowed("non-boxing group")
@@ -242,7 +242,7 @@ pub fn egroup() -> Result<()> {
       get_current_token().unwrap(),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
-        lookup_string("MODE"),
+        crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM),
         current_frame_message()
       )
     );
@@ -273,7 +273,7 @@ pub fn endgroup() -> Result<()> {
       get_current_token().unwrap().to_string(),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
-        lookup_string("MODE"),
+        crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM),
         current_frame_message()
       )
     );
@@ -302,7 +302,7 @@ pub fn endgroup() -> Result<()> {
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes & groups should be much less coupled)
 pub fn set_mode(mode: &str) -> Result<()> {
-  let prevmode = lookup_string("MODE");
+  let prevmode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
   let ismath = mode.ends_with("math");
   // Perl: beginMode maps to internal mode names, but set_mode stores as-is
   // We also set BOUND_MODE so end_mode can find it
@@ -426,7 +426,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
-        lookup_string("MODE")
+        crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM)
       );
       let category = match get_current_token() {
         Some(ref token) => token.to_string(),
@@ -455,7 +455,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 /// Can only switch from vertical|internal_vertical to horizontal.
 /// Perl: sub enterHorizontal
 pub fn enter_horizontal() {
-  let mode = lookup_string("MODE");
+  let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
   if mode.ends_with("vertical") {
     assign_value_inplace("MODE", arena::pin("horizontal"));
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
@@ -469,7 +469,7 @@ pub fn enter_horizontal() {
 /// Resume vertical mode by executing \par, in TeX-like fashion.
 /// Perl: sub leaveHorizontal
 pub fn leave_horizontal() -> Result<()> {
-  let mode = lookup_string("MODE");
+  let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
   let bound = lookup_string("BOUND_MODE");
   if mode == "horizontal" && bound.ends_with("vertical") {
     // This needs to be an invisible, and slightly gentler, \par
@@ -485,7 +485,7 @@ pub fn leave_horizontal() -> Result<()> {
 /// Used within argument digestion, e.g. endMode for vertical modes.
 /// Perl: sub leaveHorizontal_internal
 pub fn leave_horizontal_internal() {
-  let mode = lookup_string("MODE");
+  let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
   let bound = lookup_string("BOUND_MODE");
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
@@ -954,7 +954,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
     Catcode::SPACE => {
       clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
       // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
-      let mode = lookup_string("MODE");
+      let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
       if mode.ends_with("math") || mode.ends_with("vertical") {
         Ok(None)
       } else {

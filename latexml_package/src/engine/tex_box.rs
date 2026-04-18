@@ -302,7 +302,7 @@ LoadDefinitions!({
     // Only set for vertical modes to enable vertical stacking in compute_size.
     // Not set for horizontal modes to avoid interfering with repack_horizontal's
     // mode detection logic which defaults to "horizontal" when mode property is None.
-    let mode_str = state::lookup_string("MODE");
+    let mode_str = state::lookup_string_from_sym(&arena::MODE_SYM);
     if mode_str.ends_with("vertical") {
       properties.insert("mode", Stored::String(arena::pin(&mode_str)));
     }
