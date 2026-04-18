@@ -746,3 +746,40 @@ Rust-specific: Perl's `afterDigest` in `DefEnvironment` is effectively Rust's
 `after_digest` in Rust unless there's a specific reason (body-structure
 modification) to defer until after frame pop.
 
+---
+
+## 32. parse_parameters(..., init_flag): true at runtime, false at compile-time
+
+**Discovery:** Attempting to flip mutual-exclusivity on the dump-load path
+surfaced "Missing argument {}" errors the moment any dump-provided Expandable
+tried to read an argument — e.g. `\@gobble{x}` said `x` was missing.
+
+**Analysis:** `def_parser::parse_parameters(proto, cs, init_flag)` has an
+`init_flag` parameter that controls whether each `Parameter` runs its
+`.init()` method. `init()` looks up the type's reader via the
+`PARAMETER_TYPES` mapping (populated by `base_parameter_types.rs`). With
+`init_flag=false`, no lookup happens; every `Parameter` keeps the default
+mock reader that returns `Ok(ArgWrap::None)` and emits a
+"Please define a real reader" warning. At invocation, the mock returns
+None for each arg → `checked_value` throws "Missing argument {}".
+
+The `false` was historically correct for callers that run at compile time
+(macros expanded before state init). But every RUNTIME path silently shipped
+broken `Parameters`. Four call sites needed the fix:
+
+- `dump_reader.rs` (was: false → true)
+- `dump_loader.rs` (was: false → true)
+- `dump_codegen.rs` codegen template (was: emitting false → now emits true)
+- `latex_constructs.rs::\DeclareTextFontCommand` (was: false → true)
+
+**Key insight:** When in doubt, `parse_parameters(..., true)` for runtime.
+Only use `false` when the resulting `Parameters` are consumed at
+compile-time or before state initialization. The mock reader's warning
+will surface at INVOCATION, not at definition time — so defective sites
+go undetected for a long time.
+
+**Sentinel:** If a dump-loaded or runtime-declared definition produces a
+"mock_reader: Please define a real reader, this is a mock fallback!"
+warning followed by "Missing argument {}", the root cause is an
+`init_flag=false` in the declaration path.
+
