@@ -375,10 +375,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
 
       let expansion = parse_token_list(tok_data)?;
 
-      // Build parameter spec from nargs
+      // Build parameter spec from nargs. Pass init_flag=true: we're
+      // running at runtime (engine is up), so Parameter::init() can
+      // resolve readers via PARAMETER_TYPES. Without init, each
+      // Parameter falls back to the mock reader that returns None,
+      // which surfaces as "Missing argument {}" at first invocation.
       let paramlist = if nargs > 0 {
         let proto = "{}".repeat(nargs);
-        crate::common::def_parser::parse_parameters(&proto, &cs_tok, false)
+        crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
           .map_err(|e| format!("Param parse: {}", e))?
       } else {
         None
