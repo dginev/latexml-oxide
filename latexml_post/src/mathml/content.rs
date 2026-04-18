@@ -226,7 +226,7 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
       let args = &children[1..];
 
       // Realize operator
-      let rop = if doc.get_qname(op).as_deref() == Some("ltx:XMRef") {
+      let rop = if doc.is_qname(op, "ltx:XMRef") {
         op.get_attribute("idref")
           .and_then(|id| doc.find_node_by_id(&id).cloned())
           .unwrap_or_else(|| op.clone())
