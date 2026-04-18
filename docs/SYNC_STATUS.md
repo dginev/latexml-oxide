@@ -155,12 +155,16 @@ exact engine gaps:
   Fixing the option-pipeline gap would let the ini-loading path cover
   ALL languages uniformly and make per-language ports redundant.
 
-- [ ] **`\initiate@active@char` / active-char lifecycle.** babel uses this
-  for German `"a→ä`, French `:!?;`, Greek `~` → perispomeni, etc. The
-  expansion-order and catcode-flip dance that it depends on doesn't
-  survive the raw-loading path in Rust — neither the shorthand itself
-  nor the restore on `\selectlanguage` fires. Needs a focused port of
-  how `\@sanitize` and active-char meaning stacking work.
+- [x] **`\initiate@active@char` / active-char lifecycle.** WORKS
+  (2026-04-17 verified): the primitive fires, `\useshorthands{"}`,
+  `\languageshorthands{system}`, and `\declare@shorthand{system}{"a}{ae}`
+  chain together end-to-end — `"a` → `ae` in rendered output.
+  Earlier "fails during raw loading" note was a red herring; the
+  underlying issue was the `@currname` leakage bug
+  (`project_babel_second_processoptions_bug.md`) preventing the option
+  pipeline from loading `germanb.ldf` in the first place. Once the
+  option pipeline closes, babel's own shorthand wiring activates
+  cleanly.
 
 - [~] **`AtBeginDocument` hook chain ordering.** Stray-comma symptom
   resolved session 109 (removed Rust-only `\let\@nil\relax` that broke
