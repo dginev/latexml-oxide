@@ -100,18 +100,6 @@ fn xy_capture_stroke_fill() -> (String, String, String) {
   (stroke, fill, dashes)
 }
 
-/// Helper: store SVG path attributes on whatsit for construction time.
-/// Perl: properties => sub { (path => ..., do_stroke => ..., do_fill => 0, dashes => ...) }
-#[allow(dead_code)]
-fn xy_store_path_props(whatsit: &mut impl BoxOps, path: &str, stroke: &str, fill: &str, dashes: &str) {
-  whatsit.set_property("xy_path", Stored::String(arena::pin(path)));
-  whatsit.set_property("xy_stroke", Stored::String(arena::pin(stroke)));
-  whatsit.set_property("xy_fill", Stored::String(arena::pin(fill)));
-  if !dashes.is_empty() {
-    whatsit.set_property("xy_dashes", Stored::String(arena::pin(dashes)));
-  }
-}
-
 /// Helper: read SVG path attributes from props at construction time and emit element.
 fn xy_emit_path(document: &mut Document, props: &latexml_core::common::arena::SymHashMap<Stored>) -> Result<()> {
   let path = match props.get("xy_path") {
