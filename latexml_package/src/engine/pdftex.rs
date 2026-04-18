@@ -153,6 +153,30 @@ LoadDefinitions!({
         // etc....
       } } }), optional => true);
 
+  // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
+  // Reads and discards the pdfTeX annotation-spec prefix:
+  //   reserveobjnum  | useobjnum <n>  | stream [attr <text>]
+  // then consumes the trailing general-text spec.
+  DefParameterType!(OpenAnnotSpecification, reader => reader!(_args, _extra, {
+    if read_keyword(&["reserveobjnum"])?.is_some() {
+      return Ok(ArgWrap::None);
+    } else if read_keyword(&["useobjnum"])?.is_some() {
+      let _ = gullet::read_number()?;
+    } else if read_keyword(&["stream"])?.is_some() {
+      if read_keyword(&["attr"])?.is_some() {
+        gullet::skip_spaces()?;
+        let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+      }
+    }
+    gullet::skip_spaces()?;
+    let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+  }), optional => true);
+
+  // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
+  DefPrimitive!("\\pdfannot OpenAnnotSpecification", None);
+  // \pdfobj — same shape. Perl pdfTeX.pool L219.
+  DefPrimitive!("\\pdfobj OpenAnnotSpecification", None);
+
   DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
   DefMacro!("\\pdfnames{}", "");
   DefMacro!("\\pdftrailer{}", "");
