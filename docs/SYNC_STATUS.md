@@ -81,10 +81,15 @@ Detailed fix history for phases above lives in git log. See the corresponding se
 
 ## Work Plan — Active TODO List
 
-### D0. Raw-binding fidelity — LARGELY COMPLETE (was HIGHEST PRIORITY)
+### D0. Raw-binding fidelity — FUNCTIONALLY COMPLETE (was HIGHEST PRIORITY)
 
-**Status (2026-04-17):** `tests/babel/page545` **passes** and is no
-longer `#[ignore]`d. The remaining engine gaps are non-blocking.
+**Status (2026-04-18):** Three landmark D0 items formally closed in session
+110 — `\openin`-based `.ini` loading WORKS, `\initiate@active@char`
+lifecycle WORKS, `AtBeginDocument` hook chain ordering FIXED (root cause
+was the `@currname` leakage from plain `\input`, fixed in commit
+56b0c35d2). `tests/babel/page545` passes and is no longer `#[ignore]`d.
+Remaining items (dump/_base mutual exclusivity, d.1–d.5 dump pipeline
+optimizations) are performance optimizations, not correctness gaps.
 
 Make `tests/babel/page545` pass via the **exact same raw-loading path**
 that Perl uses. Re-enabling this single test was a practical,
