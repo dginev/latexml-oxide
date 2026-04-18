@@ -311,7 +311,6 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
 /// - Private LaTeX internals (contain `@`) — only invoked by other macros
 /// - Skip all "public" macros that could be invoked during normal expansion
 ///   and might reference hooks/primitives not supported by our engine
-#[allow(dead_code)]
 fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let cs_tok = Token {
     text: arena::pin(key),
@@ -542,31 +541,11 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   Ok(true)
 }
 
-/// Load a delcode entry: DC\tCHAR\tCH\tVALUE
-#[allow(dead_code)]
-fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
-  let ch = decode_char_key(key).ok_or_else(|| format!("Bad delcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
-    return Err(format!("Bad delcode data: {}", data));
-  }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad delcode value: {}", e))?;
-  state::assign_delcode(ch, val, Some(Scope::Global));
-  Ok(true)
-}
-
-/// Load a mathcode entry: MC\tCHAR\tCH\tVALUE
-#[allow(dead_code)]
-fn load_mathcode(key: &str, data: &str) -> Result<bool, String> {
-  let ch = decode_char_key(key).ok_or_else(|| format!("Bad mathcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
-    return Err(format!("Bad mathcode data: {}", data));
-  }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad mathcode value: {}", e))?;
-  state::assign_mathcode(ch, val, Some(Scope::Global));
-  Ok(true)
-}
+// load_delcode and load_mathcode were implemented but never wired — the
+// "MC"/"DC" arm in parse_entry returns Ok(false) because the dumped values
+// are corrupted by expl3 format init (see comment on that arm). If we
+// eventually harvest clean delcode/mathcode data, restore them from git
+// history and point the "MC"/"DC" arm at them.
 
 /// Parse a single token from "CC:TEXT" format
 fn parse_token(s: &str) -> Result<Token, String> {
