@@ -39,9 +39,13 @@ LoadDefinitions!({
   Let!("\\@begindocumenthook", "\\@empty");
   Let!("\\@elt", "\\relax");
 
-  // Utility macros needed by error infrastructure
-  DefMacro!("\\@qend", { Tokens::new(Explode!("end")) });
-  DefMacro!("\\@qrelax", { Tokens::new(Explode!("relax")) });
+  // Utility macros needed by error infrastructure.
+  // Perl: latex_constructs.pool.ltxml L5536-5537 defines these via
+  // `DefMacroI('\@qend', undef, Tokens(Explode('end')))` — token-list
+  // bodies (NOT closures), so they survive dump serialization. We use
+  // matching string-literal token-list form here for the same reason.
+  DefMacro!("\\@qend", "end");
+  DefMacro!("\\@qrelax", "relax");
   DefMacro!("\\@spaces", r"\space\space\space\space");
   Let!("\\@sptoken", T_SPACE!());
 
@@ -90,11 +94,16 @@ LoadDefinitions!({
   DefMacro!("\\@gobble{}", None);
   DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
-  DefMacro!("\\@firstofone{}",       sub[(first)] { Ok(first) });
+  // Perl latex.ltx uses `\long\def\@firstofone#1{#1}` etc., overriding the
+  // closure-version defined in latex_base.pool.ltxml L46-48. The dump
+  // therefore captures these as token-list bodies (see latex_dump.pool.ltxml
+  // L3771 `\@thirdofthree T(A(3))`). Using token-list form here matches
+  // Perl's end-state AND lets these CSes survive mutex-mode dump loading.
+  DefMacro!("\\@firstofone{}", "#1");
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[(first,_second)] { Ok(first) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[(_first, second)] { Ok(second) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[(_first,_second, third)] { Ok(third) });
+  DefMacro!("\\@firstoftwo{}{}", "#1");
+  DefMacro!("\\@secondoftwo{}{}", "#2");
+  DefMacro!("\\@thirdofthree{}{}{}", "#3");
   DefMacro!("\\@expandtwoargs{}{}{}", sub[(first,second,third)] {
     let mut tks = first.unlist();
     tks.push(T_BEGIN!());
