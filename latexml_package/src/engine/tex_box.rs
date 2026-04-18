@@ -282,7 +282,7 @@ LoadDefinitions!({
       Tokens!(T_BEGIN!()),
       stored_map!("isEmpty" => true),
     );
-    let mode = Some(if lookup_bool("IN_MATH") {
+    let mode = Some(if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
       TexMode::Math
     } else {
       TexMode::Text

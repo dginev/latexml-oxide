@@ -612,7 +612,7 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet::unread(tokens);
     clear_prefixes(); // prefixes shouldn't apply here.
-    let mode = if lookup_bool("IN_MATH") {
+    let mode = if crate::state::lookup_bool_sym(&crate::common::arena::IN_MATH_SYM) {
       TexMode::Math
     } else {
       TexMode::Text
@@ -991,7 +991,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // TODO: Use for chars where font-encoding glyph differs from input.
       // Perl L248-257: if IN_MATH && mathcode → decodeMathChar (math box)
       // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
-      if lookup_bool("IN_MATH") {
+      if crate::state::lookup_bool_sym(&crate::common::arena::IN_MATH_SYM) {
         if let Some(mathcode) = lookup_mathcode_sym(&meaning.get_sym()) {
           return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
         }

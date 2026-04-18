@@ -239,7 +239,7 @@ impl Definition for Constructor {
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     let state_font = lookup_font();
-    let ismath = lookup_bool("IN_MATH");
+    let ismath = crate::state::lookup_bool_sym(&crate::common::arena::IN_MATH_SYM);
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {

@@ -2370,7 +2370,7 @@ LoadDefinitions!({
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
   DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
-    if lookup_bool("IN_MATH") {
+    if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {
       if let Some(context) = document.get_element() {
@@ -2806,7 +2806,7 @@ LoadDefinitions!({
     sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
         let mode = state::lookup_string("MODE");
         if mode.contains("math") { // double-check we're really in math
           end_mode(&mode)?;
@@ -4559,7 +4559,7 @@ LoadDefinitions!({
   // protected => true prevents read_x_token(fully_expand=false) from expanding this
   // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
   DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if lookup_bool("IN_MATH") {
+    if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
       stuff.unlist()
     } else {
       let mut result = vec![T_MATH!()];
@@ -7043,7 +7043,7 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $wasmath = LookupValue('IN_MATH') — uses boolean value, not key existence.
       // IN_MATH is initialized to false at startup, so is_some() would always be true.
-      let wasmath = state::lookup_bool("IN_MATH");
+      let wasmath = state::lookup_bool_sym(&arena::IN_MATH_SYM);
       stomach::begin_mode("restricted_horizontal")?;
       state::assign_value("FRAME_IN_MATH", wasmath, None); },
     properties => sub[args] {
@@ -7941,7 +7941,7 @@ LoadDefinitions!({
   // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
   DefPrimitive!("\\not@math@alphabet{}{}", "");
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
-    if lookup_bool("IN_MATH") {
+    if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
       let c = c.to_string();
       let message = s!("Command {:?} invalid in math mode", c);
       Warn!("unexpected", c, message);
@@ -8087,7 +8087,7 @@ LoadDefinitions!({
     // Move `font` and `mathcmd` directly into the closure capture —
     // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
         Ok(mathcmd.clone())
       } else {
         Ok(font.clone())
@@ -8169,7 +8169,7 @@ LoadDefinitions!({
     let text = arg.to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
-    let in_math = lookup_bool("IN_MATH");
+    let in_math = state::lookup_bool_sym(&arena::IN_MATH_SYM);
     let is_number = !text.is_empty() && text.chars().all(|c| c.is_ascii_digit());
     let mut props = stored_map!();
     if in_math {

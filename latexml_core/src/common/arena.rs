@@ -136,6 +136,16 @@ pub static TEXT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("text"));
 /// the unique symbol for str value "math"
 #[thread_local]
 pub static MATH_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("math"));
+/// Pre-pinned symbols for hot state lookup keys (used by lookup_* helpers
+/// and top callers to skip the per-call `pin(key)` hash lookup).
+#[thread_local]
+pub static IN_MATH_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("IN_MATH"));
+#[thread_local]
+pub static MODE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("MODE"));
+#[thread_local]
+pub static BOUND_MODE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("BOUND_MODE"));
+#[thread_local]
+pub static IN_PREAMBLE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("inPreamble"));
 
 /// Assign a static str into the arena, returning a unique symbol.
 pub fn pin_static(text: &'static str) -> SymStr {

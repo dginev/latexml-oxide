@@ -1174,6 +1174,26 @@ pub fn lookup_bool(key: &str) -> bool {
     Some(v) => v.into(),
   }
 }
+
+/// `lookup_bool` variant for hot call sites with a pre-pinned SymStr
+/// (see `arena::IN_MATH_SYM` etc.). Skips the per-call `arena::pin(key)`
+/// hash lookup — significant on every-expansion hot paths.
+pub fn lookup_bool_sym(key: &SymStr) -> bool {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => false,
+    Some(v) => v.into(),
+  }
+}
+
+/// `lookup_string` variant using a pre-pinned SymStr key.
+pub fn lookup_string_from_sym(key: &SymStr) -> String {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => String::new(),
+    Some(v) => v.into(),
+  }
+}
 /// like `lookup_value`, but casts the entry into a SymStr from the string interner
 ///  (`EMPTY_SYM` if None)
 pub fn lookup_string_sym(key: &str) -> SymStr {
@@ -1808,7 +1828,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   let is_active_or_cs = cc.is_active_or_cs();
   let lookup_sym = if is_active_or_cs
     || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
-      && lookup_bool("IN_MATH")
+      && lookup_bool_sym(&arena::IN_MATH_SYM)
       && (lookup_mathcode_sym(&t_sym).unwrap_or(0) == 0x8000))
   {
     t_sym

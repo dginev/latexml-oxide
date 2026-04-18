@@ -751,7 +751,7 @@ LoadDefinitions!({
     "\\vdots",
     "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})",
     properties => {
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
             .specialize("\u{22EE}"))))
@@ -773,7 +773,7 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
     sizer      => "\u{2026}",
     properties => {
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
             .specialize("\u{2026}"))))

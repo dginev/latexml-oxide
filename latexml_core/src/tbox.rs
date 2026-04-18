@@ -13,7 +13,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 use crate::gullet;
-use crate::state::{lookup_bool, lookup_font, with_value};
+use crate::state::{lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
@@ -112,7 +112,7 @@ impl Tbox {
         .entry("depth")
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
-    if lookup_bool("IN_MATH") {
+    if crate::state::lookup_bool_sym(&crate::common::arena::IN_MATH_SYM) {
       properties.insert("mode", Stored::String(*MATH_SYM));
       if text != empty_sym {
         with_value(

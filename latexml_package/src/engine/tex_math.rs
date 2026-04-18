@@ -468,7 +468,7 @@ LoadDefinitions!({
     let level = stomach::get_boxing_level();
     if lookup_int("MATH_ALIGN_$_BEGUN") == (level as i64) {
       // If we're begun making _something_ with $.
-      let l = if lookup_bool("IN_MATH") {
+      let l = if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
         // But we're somehow in math?
         stomach::invoke_token(&T_CS!("\\lx@end@inline@math"))
       } else {
@@ -478,7 +478,7 @@ LoadDefinitions!({
       l
     } else {
       assign_value("MATH_ALIGN_$_BEGUN", level + 1, None); // Note that we've begun something
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
         // If we're "still" in math
         stomach::invoke_token(&T_CS!("\\lx@begin@inmath@text"))
       } else {
