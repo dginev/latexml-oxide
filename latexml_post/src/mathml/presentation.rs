@@ -1228,13 +1228,14 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
 
 /// Walk the MathML tree and adjust spacing.
 pub fn adjust_spacing(node: &mut NodeData) {
-  let tag = get_node_tag(node).to_string();
-
-  if matches!(tag.as_str(), "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
+  // Fast-path leaf check on a borrowed &str — avoids a per-node String allocation.
+  let tag_ref = get_node_tag(node);
+  if matches!(tag_ref, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
     return;
   }
+  let is_mrow = is_mrow_like(tag_ref);
 
-  if is_mrow_like(&tag) {
+  if is_mrow {
     if let NodeData::Element { children, .. } = node {
       for child in children.iter_mut() {
         adjust_spacing(child);
