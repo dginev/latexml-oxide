@@ -71,7 +71,7 @@ latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletim
 - **Phase A (EMPTY→OK binding coverage)** — all Perl `.sty.ltxml` / `.cls.ltxml` files ported or stubbed.
 - **Phase B (parity improvement)** — per-package semantic alignment, rewrites.
 - **Phase C1–C3 / C5** — 97-paper sandbox baseline (93%+ OK), babel fix, directory/archive input parity, code quality sweep.
-- **Phase E (kernel dump integration)** — 5,834 dump entries loaded (V + @-internal M + Register + codes). Add-only policy with has_meaning/has_value safety, non-ASCII catcodes only, MC/DC skipped (expl3 init corrupts them). Auto-generated at build time via `build.rs`.
+- **Phase E (kernel dump integration)** — 25,172 entries serialized (latex.ltx kernel + expl3 state + register snapshot); 6,154 installed into state at load time (others shadowed by `_base.rs`'s closures via add-only policy). Gated to `@`-internal M entries, non-ASCII catcodes, Register + CharDef + LCode/UCode/SCode; MC/DC skipped (expl3 init corrupts them). Format v2: E-entries carry a 5th `<proto>` field so DefToken/Optional/Until/Match parameter types round-trip. Auto-generated at build time via `build.rs`.
 - **Phase F (engine file reorganization)** — 1:1 match with Perl's `Engine/` directory. `math_common.rs`, `plain_bootstrap.rs`, `plain_base.rs`, `plain_constructs.rs`, `latex_bootstrap.rs`, `latex_base.rs`, `latex_constructs.rs` (7800 lines, merged from 36 `latex_ch*.rs`). All Rust engine files now match Perl file names exactly.
 - **Phase G (SVG post-processor)** — inline SVG injection for `\begin{picture}` via post-XSLT regex replacement (avoids libxml2 UAF); covers lines, vectors, circles, ovals, framebox, qbezier, multiput.
 
