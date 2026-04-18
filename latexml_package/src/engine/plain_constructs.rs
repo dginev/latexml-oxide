@@ -554,7 +554,7 @@ LoadDefinitions!({
   //     MergeFont(family=>'caligraphic', series=>'medium', shape=>'upright', encoding=>'OMS');
   //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
   DefPrimitive!("\\cal", {
-    if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
+    if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
       merge_font(fontmap!(family => "caligraphic", series => "medium",
         shape => "upright", encoding => "OMS"));
     }

@@ -91,7 +91,7 @@ LoadDefinitions!({
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
   DefMacro!("\\verbatim@", {
-    let env = state::lookup_string_from_sym(&arena::CURRENT_ENVIRONMENT_SYM);
+    let env = state::lookup_string_from_sym(pin_literal!("current_environment"));
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
     // TODO: UGH!!! Isn't there a better way to approximate

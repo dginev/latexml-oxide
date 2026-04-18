@@ -215,7 +215,7 @@ LoadDefinitions!({
       );
       let h = y1 - y0;
       let x_px = if x0 > 0.0 { x0 } else { 0.0 };
-      let in_math = state::lookup_bool_sym(&arena::IN_MATH_SYM);
+      let in_math = state::lookup_bool_sym(pin_literal!("IN_MATH"));
       let y_px = if in_math { -(h / 2.0) } else { 0.0 };
       whatsit.set_property("transform", Stored::from(
         s!("matrix(1 0 0 1 {} {})", x_px, y_px)));

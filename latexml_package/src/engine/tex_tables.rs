@@ -539,7 +539,7 @@ pub fn alignment_bindings(
   xml_attributes: HashMap<String, String>,
 ) {
   let mode = if mode.is_empty() {
-    state::lookup_string_from_sym(&arena::MODE_SYM)
+    state::lookup_string_from_sym(pin_literal!("MODE"))
   } else {
     mode
   };
@@ -692,7 +692,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
 type DigestedColumn = Result<(Option<Digested>, Option<Token>, Option<String>, bool)>;
 pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) -> DigestedColumn {
   new_local_box_list();
-  let ismath = state::lookup_bool_sym(&arena::IN_MATH_SYM);
+  let ismath = state::lookup_bool_sym(pin_literal!("IN_MATH"));
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
@@ -849,7 +849,7 @@ pub fn extract_alignment_column(
 ) -> Result<Digested> {
   let mut boxes = VecDeque::new();
   boxes.extend(in_box.unlist());
-  let is_math = state::lookup_bool_sym(&arena::IN_MATH_SYM);
+  let is_math = state::lookup_bool_sym(pin_literal!("IN_MATH"));
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
   let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();

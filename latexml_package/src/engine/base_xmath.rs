@@ -543,7 +543,7 @@ LoadDefinitions!({
   sizer      => "\u{2026}",
   reversion  => "\\ldots",
   properties => {
-    if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
+    if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
       Ok(stored_map!("font" => lookup_font().unwrap().merge(
         fontmap!(family => "serif", series => "medium", shape => "upright")
           .specialize("\u{2026}"))))

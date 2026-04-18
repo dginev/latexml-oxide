@@ -8,6 +8,7 @@ use crate::tbox::Tbox;
 use crate::state;
 use crate::token::Token;
 use crate::common::error::Result;
+use crate::pin_literal;
 
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 
@@ -461,7 +462,7 @@ pub fn decode_math_char_for_stomach(
   };
 
   let mut properties = SymHashMap::default();
-  properties.insert("mode", Stored::String(*arena::MATH_SYM));
+  properties.insert("mode", Stored::String(pin_literal!("math")));
   if let Some(ref role) = props.role {
     properties.insert("role", Stored::String(arena::pin(role)));
   }

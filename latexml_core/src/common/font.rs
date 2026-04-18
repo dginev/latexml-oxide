@@ -1,5 +1,5 @@
 use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
+use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::color::{self, Color};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, kround};
@@ -23,6 +23,7 @@ use std::rc::Rc;
 
 pub mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
+use crate::pin_literal;
 
 pub type Fontmap = Rc<[Option<char>]>;
 
@@ -1926,7 +1927,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
 }
 
 pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool) -> SymStr {
-  let empty_sym = *EMPTY_SYM;
+  let empty_sym = pin_literal!("");
   if string == empty_sym {
     return empty_sym;
   }

@@ -276,13 +276,13 @@ LoadDefinitions!({
   DefPrimitive!("{", {
     bgroup();
     let open = Tbox::new(
-      *EMPTY_SYM,
+      pin_literal!(""),
       None,
       None,
       Tokens!(T_BEGIN!()),
       stored_map!("isEmpty" => true),
     );
-    let mode = Some(if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
+    let mode = Some(if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
       TexMode::Math
     } else {
       TexMode::Text
@@ -302,7 +302,7 @@ LoadDefinitions!({
     // Only set for vertical modes to enable vertical stacking in compute_size.
     // Not set for horizontal modes to avoid interfering with repack_horizontal's
     // mode detection logic which defaults to "horizontal" when mode property is None.
-    let mode_str = state::lookup_string_from_sym(&arena::MODE_SYM);
+    let mode_str = state::lookup_string_from_sym(pin_literal!("MODE"));
     if mode_str.ends_with("vertical") {
       properties.insert("mode", Stored::String(arena::pin(&mode_str)));
     }
@@ -325,7 +325,7 @@ LoadDefinitions!({
     let f = LookupFont!();
     egroup()?;
     Tbox::new(
-      *EMPTY_SYM,
+      pin_literal!(""),
       f,
       None,
       Tokens!(T_END!()),

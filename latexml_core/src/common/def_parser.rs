@@ -2,13 +2,14 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 
-use crate::common::arena::{self, EMPTY_SYM};
+use crate::common::arena::{self};
 use crate::common::error::*;
 
 use crate::mouth;
 use crate::parameter::{Parameter, Parameters};
 use crate::token::*;
 use crate::tokens::Tokens;
+use crate::pin_literal;
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
@@ -106,7 +107,7 @@ pub fn parse_parameters(
       let mut p = Parameter {
         name: arena::pin_static("Plain"),
         spec: if spec.is_empty() {
-          *EMPTY_SYM
+          pin_literal!("")
         } else {
           arena::pin(spec)
         },
@@ -134,7 +135,7 @@ pub fn parse_parameters(
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            *EMPTY_SYM
+            pin_literal!("")
           } else {
             arena::pin(spec)
           },
@@ -149,7 +150,7 @@ pub fn parse_parameters(
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            *EMPTY_SYM
+            pin_literal!("")
           } else {
             arena::pin(spec)
           },

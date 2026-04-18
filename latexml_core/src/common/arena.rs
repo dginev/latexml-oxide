@@ -79,92 +79,34 @@ fn with_arena_mut<R>(f: impl FnOnce(&mut Interner) -> R) -> R {
   }
 }
 
-/// the unique symbol for str value "ANY"
-#[thread_local]
-pub static ANY_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ANY"));
-/// the unique symbol for str value "#PCDATA"
-#[thread_local]
-pub static H_PCDATA_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#PCDATA"));
-/// the unique symbol for str value "#COMMENT"
-#[thread_local]
-pub static H_COMMENT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#Comment"));
-/// the unique symbol for the empty str value ""
-#[thread_local]
-pub static EMPTY_SYM: Lazy<SymStr> = Lazy::new(|| pin_static(""));
-/// the unique symbol for str value "ltx:*"
-#[thread_local]
-pub static LTX_STAR_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ltx:*"));
-/// the unique symbol for str value "ltx:p"
-#[thread_local]
-pub static LTX_P_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ltx:p"));
-/// the unique symbol for str value "\globaldefs"
-#[thread_local]
-pub static GLOBAL_DEFS_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("\\globaldefs"));
-/// the unique symbol for str value "\dont_expand"
-#[thread_local]
-pub static DONT_EXPAND_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("\\dont_expand"));
-/// the unique symbol for str value "_WildCard_"
-#[thread_local]
-pub static WILD_CARD_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("_WildCard_"));
-/// the unique symbol for str value "#ProcessingInstruction"
-#[thread_local]
-pub static H_PI_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#ProcessingInstruction"));
-/// the unique symbol for str value "#DTD"
-#[thread_local]
-pub static H_DTD_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#DTD"));
-/// the unique symbol for str value "#Document"
-#[thread_local]
-pub static H_DOC_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#Document"));
-/// the unique symbol for str value "#default"
-#[thread_local]
-pub static H_DEFAULT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#default"));
-/// the unique symbol for str value "ltx:_Capture_"
-#[thread_local]
-pub static CAPTURE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ltx:_Capture_"));
-/// the unique symbol for str value "font"
-#[thread_local]
-pub static FONT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("font"));
-/// the unique symbol for str value "xml:id"
-#[thread_local]
-pub static XML_ID_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("xml:id"));
-/// the unique symbol for str value "RelaxNG"
-#[thread_local]
-pub static RELAXNG_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("RelaxNG"));
-/// the unique symbol for str value "text"
-#[thread_local]
-pub static TEXT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("text"));
-/// the unique symbol for str value "math"
-#[thread_local]
-pub static MATH_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("math"));
-/// Pre-pinned symbols for hot state lookup keys (used by lookup_* helpers
-/// and top callers to skip the per-call `pin(key)` hash lookup).
-#[thread_local]
-pub static IN_MATH_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("IN_MATH"));
-#[thread_local]
-pub static MODE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("MODE"));
-#[thread_local]
-pub static BOUND_MODE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("BOUND_MODE"));
-#[thread_local]
-pub static IN_PREAMBLE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("inPreamble"));
-#[thread_local]
-pub static INTERPRETING_DEFINITIONS_SYM: Lazy<SymStr> =
-  Lazy::new(|| pin_static("INTERPRETING_DEFINITIONS"));
-#[thread_local]
-pub static XGLOBAL_AT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("xglobal@"));
-#[thread_local]
-pub static GROUP_NONBOXING_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("groupNonBoxing"));
-#[thread_local]
-pub static GROUP_INITIATOR_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("groupInitiator"));
-#[thread_local]
-pub static GROUP_INITIATOR_LOCATOR_SYM: Lazy<SymStr> =
-  Lazy::new(|| pin_static("groupInitiatorLocator"));
-#[thread_local]
-pub static CURRENT_ENVIRONMENT_SYM: Lazy<SymStr> =
-  Lazy::new(|| pin_static("current_environment"));
-
 /// Assign a static str into the arena, returning a unique symbol.
 pub fn pin_static(text: &'static str) -> SymStr {
   with_arena_mut(|arena| arena.get_or_intern_static(text))
+}
+
+/// Call-site-cached interning for string literals — the first call on a
+/// thread pins the literal via `pin_static`, later calls return the
+/// cached `SymStr` directly (thread-local `OnceCell` load, no arena
+/// access). Use this from hot state-key lookup sites so you can keep
+/// writing string literals at the call site and still skip the per-call
+/// `pin()` hash probe:
+///
+/// ```ignore
+/// if state::lookup_bool_sym(pin_literal!("groupNonBoxing")) { ... }
+/// ```
+///
+/// Each call site gets its own thread-local cache (no global registry,
+/// no dedicated pub-static constant per key), so there is no ergonomic
+/// cost beyond typing the macro name.
+#[macro_export]
+macro_rules! pin_literal {
+  ($s:literal) => {{
+    std::thread_local! {
+      static CACHED: std::cell::OnceCell<$crate::common::arena::SymStr>
+        = const { std::cell::OnceCell::new() };
+    }
+    CACHED.with(|c| *c.get_or_init(|| $crate::common::arena::pin_static($s)))
+  }};
 }
 
 /// Assign a string into the arena, returning a unique symbol.

@@ -4,7 +4,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr, EMPTY_SYM};
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font;
@@ -26,6 +26,7 @@ use crate::whatsit::Whatsit;
 use crate::{Digested, Locator, state};
 
 use super::argument::ArgWrap;
+use crate::pin_literal;
 
 /// The values that can be read by, and stored in, a Register
 #[derive(Clone, PartialEq)]
@@ -649,7 +650,7 @@ impl Definition for Register {
         } else {
           Tbox::new(
             font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-              .unwrap_or(*EMPTY_SYM),
+              .unwrap_or(pin_literal!("")),
             None,
             None,
             Tokens!(

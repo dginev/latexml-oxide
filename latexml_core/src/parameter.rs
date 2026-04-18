@@ -6,7 +6,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::Digested;
-use crate::common::arena::{self, EMPTY_SYM, SymStr};
+use crate::common::arena::{self, SymStr};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::definition::argument::ArgWrap;
@@ -18,6 +18,7 @@ use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::pin_literal;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
@@ -69,7 +70,7 @@ impl Default for Parameter {
       semiverbatim:  None,
       optional:      false,
       name:          arena::pin_static("parameter_default"),
-      spec:          *EMPTY_SYM,
+      spec:          pin_literal!(""),
       extra:         Vec::new(),
       inner:         None,
       reader:        Rc::new(|_args, _extra| {
@@ -376,7 +377,7 @@ impl Parameter {
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
     // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
-    let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
+    let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes();
@@ -437,7 +438,7 @@ impl Parameter {
     self.revert_catcodes()?;
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
-    let newmode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
+    let newmode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
     if mode != newmode && mode != "horizontal" {
       crate::stomach::leave_horizontal_internal();
     }

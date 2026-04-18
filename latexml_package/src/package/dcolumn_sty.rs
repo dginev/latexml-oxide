@@ -74,7 +74,7 @@ LoadDefinitions!({
     Let!("\\DC@saved@dollar", "$");
     state::let_i(&T_MATH!(), &T_CS!("\\relax"), None);
     // Start inline math if not already in math
-    let in_math = state::lookup_bool_sym(&arena::IN_MATH_SYM);
+    let in_math = state::lookup_bool_sym(pin_literal!("IN_MATH"));
     if in_math {
       state::assign_value("DC_started_math", Stored::Bool(false), None);
       Ok(Tokens::default())

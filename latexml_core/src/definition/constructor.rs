@@ -239,7 +239,7 @@ impl Definition for Constructor {
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     let state_font = lookup_font();
-    let ismath = crate::state::lookup_bool_sym(&crate::common::arena::IN_MATH_SYM);
+    let ismath = crate::state::lookup_bool_sym(crate::pin_literal!("IN_MATH"));
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
@@ -271,7 +271,7 @@ impl Definition for Constructor {
     // Perl: $mode = $properties{mode} || $state->lookupValue('MODE') || 'restricted_horizontal';
     // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
     properties.entry("mode").or_insert_with(|| {
-      let mode = crate::state::lookup_string_from_sym(&crate::common::arena::MODE_SYM);
+      let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
       Stored::String(crate::common::arena::pin(
         if mode.is_empty() { "restricted_horizontal" } else { &mode },
       ))

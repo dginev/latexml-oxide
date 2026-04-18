@@ -17,6 +17,7 @@ pub use latexml_core::alignment::{Alignment, AlignmentConfig};
 pub use latexml_core::common::LabelMappingHook;
 pub use latexml_core::common::arena;
 pub use latexml_core::common::arena::*;
+pub use latexml_core::pin_literal;
 pub use latexml_core::common::cleaners::*;
 pub use latexml_core::common::def_parser::{parse_parameters, parse_prototype};
 pub use latexml_core::common::dimension::Dimension;

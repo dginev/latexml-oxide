@@ -408,7 +408,7 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@dollar@default"), None, {
     let mut op = "\\lx@begin@inline@math";
     {
-      let mode = state::lookup_string_from_sym(&arena::MODE_SYM);
+      let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
       if mode == "display_math" {
         if gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
@@ -427,7 +427,7 @@ LoadDefinitions!({
         op = "\\lx@end@inline@math";
       } else {
         // Perl: only check for $$ when within a vertical bound mode
-        let bound = state::lookup_string_from_sym(&arena::BOUND_MODE_SYM);
+        let bound = state::lookup_string_from_sym(pin_literal!("BOUND_MODE"));
         if bound.ends_with("vertical") && gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
           op = "\\lx@begin@display@math";
@@ -468,7 +468,7 @@ LoadDefinitions!({
     let level = stomach::get_boxing_level();
     if lookup_int("MATH_ALIGN_$_BEGUN") == (level as i64) {
       // If we're begun making _something_ with $.
-      let l = if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
+      let l = if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
         // But we're somehow in math?
         stomach::invoke_token(&T_CS!("\\lx@end@inline@math"))
       } else {
@@ -478,7 +478,7 @@ LoadDefinitions!({
       l
     } else {
       assign_value("MATH_ALIGN_$_BEGUN", level + 1, None); // Note that we've begun something
-      if state::lookup_bool_sym(&arena::IN_MATH_SYM) {
+      if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
         // If we're "still" in math
         stomach::invoke_token(&T_CS!("\\lx@begin@inmath@text"))
       } else {
@@ -849,7 +849,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
       if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
-        || state::lookup_bool_sym(&arena::GROUP_NONBOXING_SYM) { // or group was opened with \begingroup
+        || state::lookup_bool_sym(pin_literal!("groupNonBoxing")) { // or group was opened with \begingroup
         Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
         egroup()?;
@@ -1036,7 +1036,7 @@ LoadDefinitions!({
   DefPrimitive!("\\displaystyle", {
     MergeFont!(mathstyle => "display");
     Tbox::new(
-      *EMPTY_SYM,
+      pin_literal!(""),
       None,
       None,
       Tokens!(T_CS!("\\displaystyle")),
@@ -1046,7 +1046,7 @@ LoadDefinitions!({
   DefPrimitive!("\\textstyle", {
     MergeFont!(mathstyle => "text");
     Tbox::new(
-      *EMPTY_SYM,
+      pin_literal!(""),
       None,
       None,
       Tokens!(T_CS!("\\textstyle")),
@@ -1056,7 +1056,7 @@ LoadDefinitions!({
   DefPrimitive!("\\scriptstyle", {
     MergeFont!(mathstyle => "script");
     Tbox::new(
-      *EMPTY_SYM,
+      pin_literal!(""),
       None,
       None,
       Tokens!(T_CS!("\\scriptstyle")),
@@ -1066,7 +1066,7 @@ LoadDefinitions!({
   DefPrimitive!("\\scriptscriptstyle", {
     MergeFont!(mathstyle => "scriptscript");
     Tbox::new(
-      *EMPTY_SYM,
+      pin_literal!(""),
       None,
       None,
       Tokens!(T_CS!("\\scriptscriptstyle")),
