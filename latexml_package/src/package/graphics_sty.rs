@@ -128,7 +128,7 @@ LoadDefinitions!({
   DefParameterType!(GraphixDimension, sub[_inner, _extra] {
     gullet::skip_spaces()?;
     let next = gullet::read_x_token(Some(false), false, None)?;
-    if next.is_none() || next.as_ref().is_some_and(|t| t.to_string() == "!") {
+    if next.is_none() || next.as_ref().is_some_and(|t| t.text == pin!("!")) {
       // ! or end-of-input: "let other dimensions determine size"
       Ok(Tokens!())
     } else {

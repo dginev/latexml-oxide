@@ -1148,7 +1148,7 @@ LoadDefinitions!({
       .cloned()
       .collect();
 
-    if toks.first().is_some_and(|t| t.to_string() == "+") {
+    if toks.first().is_some_and(|t| t.text == pin!("+")) {
       // Starts with '+' → treat as plain glue
       // Unread the tokens and read as glue
       gullet::unread(Tokens::new(toks));
