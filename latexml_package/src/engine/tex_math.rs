@@ -819,8 +819,9 @@ LoadDefinitions!({
       let n = gullet::read_number()?.value_of() >> 12;
       let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
-        let glyph_str = glyph.to_string();
-        if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
+        let mut glyph_buf = [0u8; 4];
+        let glyph_key = glyph.encode_utf8(&mut glyph_buf);
+        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           // Found the delimiter — unread it as a token
           let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER };
           gullet::unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
@@ -1173,8 +1174,9 @@ LoadDefinitions!({
       let n = gullet::read_number()?.value_of() >> 12;
       let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
-        let glyph_str = glyph.to_string();
-        if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
+        let mut glyph_buf = [0u8; 4];
+        let glyph_key = glyph.encode_utf8(&mut glyph_buf);
+        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER };
           gullet::unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
         } else {
