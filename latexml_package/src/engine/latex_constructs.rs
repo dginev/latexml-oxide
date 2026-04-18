@@ -34,12 +34,12 @@ pub fn begin_appendices(counter: &str) {
   let cs_ctr = T_CS!(s!("\\{counter}"));
   state::let_i(
     &T_CS!("\\lx@save@theappendex"),
-    &T_CS!(the_ctr.clone()),
+    &T_CS!(&the_ctr),
     Some(Scope::Global),
   );
   state::let_i(
     &T_CS!("\\lx@save@theappendex@ID"),
-    &T_CS!(the_ctr_id.clone()),
+    &T_CS!(&the_ctr_id),
     Some(Scope::Global),
   );
   state::let_i(
