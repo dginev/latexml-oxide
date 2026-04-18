@@ -273,17 +273,28 @@ differences. Each corresponds to an entry in the work plan below.
    - `\wlog`, `\ltx@hard@MessageBreak`
    - Font-size CSes: `\vpt`/`\vipt`/…/`\ixpt`/`\xpt`/…/`\xxvpt`
 
-   Open mystery: these are all plain tokens-based Expandables (e.g.
-   `DefMacro!("\\xpt", r"\edef\f@size{\@xpt}\rm")`) — they should
-   serialize cleanly. Their absence from the post-load diff suggests
-   `_base.rs` is NOT actually running during `--init` (or only runs
-   partially). The `\@ifnextchar`/`\@ifundefined`-style CSes that DID
-   make it in are those that `latex.ltx` itself redefines via
-   `\long\def`, so the path up to that point works; the CSes that
-   `latex.ltx` never mentions stay missing. Next step: instrument
-   `ini_tex.rs` to log which `InnerPool!` blocks execute, and check
-   whether `\makeatletter`'s autoload is firing at all during raw
-   latex.ltx load.
+   **Investigation (2026-04-18, trace experiment):** confirmed via
+   an env-gated `eprintln!` at the top of `latex_base::LoadDefinitions`
+   that `_base.rs` does **NOT** run during `--init`. The
+   `\makeatletter` autoload trigger in `tex.rs` (which expands to
+   `\@load@latex@pool`) fails to fire during raw-load of `latex.ltx`
+   — the primitive never gets invoked, so `latex.rs::load_definitions`
+   is skipped entirely, and the 20 `_base.rs`-only CSes never enter
+   state. This is why they're missing from the dump even though their
+   bodies are trivially serializable.
+
+   A proof-of-concept patch to `ini_tex.rs` that explicitly calls
+   `input_definitions("LaTeX", pool)` after the snapshot does work —
+   gap closes from 20 → 10 CSes (only `\wlog` remains, because
+   `plain_base.rs` defines it as a closure-backed `Primitive`
+   BEFORE the snapshot, making it "primary" and thus filtered by
+   `serialize_stored`'s PA-identity guard). **But the patch regresses
+   the test suite**: the dump grows by ~333 entries, 8 tokenization
+   tests fail with "EXPECTED extra line" truncated output. Root cause
+   of the regression is unconfirmed — likely one of the newly-added
+   dump entries installs something that breaks normal runtime state
+   at load time. Needs a targeted diff of the two dump files
+   (with and without the patch) to identify the offending entries.
 
    The blow-up when PA consumption flips on is therefore NOT because
    the dump lacks the LaTeX kernel — it's because (a) the 32
