@@ -415,17 +415,17 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
-    if !norefnum && lookup_meaning(&hj_refnum).is_some() {
+    if !norefnum && state::has_meaning(&hj_refnum) {
       state::let_i(&T_CS!(s!("\\the{ctr}")), &hj_refnum, Some(Scope::Global));
     }
-    if lookup_meaning(&hj_id).is_some() {
+    if state::has_meaning(&hj_id) {
       state::let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
     }
     let label = state::lookup_string("PEEKED_LABEL");
     let (fixedrefnum, fixedid) = mapper(&label, ctr, norefnum);
     if let Some(refnum) = fixedrefnum {
       if !norefnum {
-        if lookup_meaning(&hj_refnum).is_none() {
+        if !state::has_meaning(&hj_refnum) {
           // Save for later
           state::let_i(&hj_refnum, &T_CS!(s!("\\the{ctr}")), Some(Scope::Global));
         }
@@ -438,7 +438,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
       }
     }
     if let Some(id) = fixedid {
-      if lookup_meaning(&hj_id).is_none() {
+      if !state::has_meaning(&hj_id) {
         // Save for later
         state::let_i(&hj_id, &T_CS!(s!("\\the{ctr}@ID")), Some(Scope::Global));
       }
