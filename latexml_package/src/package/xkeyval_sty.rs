@@ -370,6 +370,9 @@ LoadDefinitions!({
 
     for skeyset in skeysets_str.split(',') {
       let skeyset = skeyset.trim();
+      // Perl #2777 (2026-03-27): skip empty keyset names from leading,
+      // trailing, or doubled commas.
+      if skeyset.is_empty() { continue; }
       if latexml_core::keyval::has_keyval(&sprefix, skeyset, &skey) {
         let keyset_owned = skeyset.to_string();
         DefMacro!(T_CS!("\\XKV@tfam"), None, {
