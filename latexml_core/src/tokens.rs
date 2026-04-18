@@ -351,7 +351,9 @@ impl Tokens {
   /// contain `%&#10;` escape sequences that depend on exact token lengths. We instead always
   /// produce compact, single-line output. Test `.xml` files should not contain `%&#10;`.
   pub fn untex(self) -> String {
-    let mut tokens: VecDeque<Token> = self.revert().into_iter().collect();
+    // `VecDeque::from(Vec)` reuses the Vec's heap buffer directly
+    // (no second allocation), unlike `.into_iter().collect()`.
+    let mut tokens: VecDeque<Token> = VecDeque::from(self.revert());
     let mut tex_string = String::new();
     let mut length = 0;
     let mut level = 0;
@@ -425,9 +427,15 @@ impl Tokens {
         }
       },
       i32::MIN..=-1 => {
-        for _ in 0..(-level) {
-          tex_string = String::from("{") + &tex_string;
+        // Prepend `-level` opening braces in one alloc (was O(n²) with
+        // String::from("{") + &tex_string per iteration).
+        let n = (-level) as usize;
+        let mut prefixed = String::with_capacity(n + tex_string.len());
+        for _ in 0..n {
+          prefixed.push('{');
         }
+        prefixed.push_str(&tex_string);
+        tex_string = prefixed;
       },
       0 => {},
     }
