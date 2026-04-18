@@ -357,7 +357,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         Info!("fallback", name,
           s!("Interpreted as versioned package, falling back to {fallback}"));
         // Load the fallback binding — use reloadable since we already marked original as "loaded"
-        let fallback_name = fallback.trim_end_matches(&format!(".{as_type}")).to_string();
+        let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
+        let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
         let fb_result = input_definitions(&fallback_name, InputDefinitionOptions {
           extension: Some(Cow::Borrowed(if as_type == "sty" { "sty" } else { "cls" })),
           options: Vec::new(),
