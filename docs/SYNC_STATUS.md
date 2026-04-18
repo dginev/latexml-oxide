@@ -550,6 +550,24 @@ Each cycle adds small targeted fixes for specific undefined/misbehaving commands
 
 **Most recent wave (session 108 /loop):** xcolor `RGB` case-sensitivity bug (all `{RGB}{r g b}` defs → white), page counter starts at 1 (#2442), `\braket` user-facing reversions (#2340), bibitem prune empty auto-opened (#2409), `\text@frac` constructor, `\person@thanks` inline, elsart/mn2e/aa/iopart/texvc/proofwiki/sv_support/ams_support/acmart/amsbook/revtex4/inst_support/microtype/html/subcaption/attachfile/floatflt/floatfig/subfloat/iopams/actuarialangle parity patches.
 
+**Measured impact of session 110 perf micro-optimizations (2026-04-18):**
+Six commits eliminated hot-path `String` allocations in the MathML
+post-processing pipeline (`adjust_spacing`, `adjust_pair`,
+`is_invisible_op` via new non-allocating variant, + introduced
+`PostDocument::is_qname` to replace 10 `.as_deref() == Some("ltx:X")`
+sites across `document.rs`, `open_math.rs`, `unicode_math.rs`,
+`mathml/presentation.rs`, `mathml/content.rs`). Re-ran 3 previously-
+timed-out papers from the 512-sample set:
+
+| Paper | Formulas | Pre-S110 | Post-S110 (60s cap) | Post-S110 (300s cap) |
+|---|---|---|---|---|
+| 0704.2334 | 1,550 | TIMEOUT | **34.9s OK** | — |
+| 0706.0243 | 3,508 | TIMEOUT | **55.0s OK** | — |
+| 0705.1522 | 4,416 | TIMEOUT | still TIMEOUT | **85.8s OK** |
+
+So 2 of 14 previously-timed-out papers now complete within the 60s cap,
+and at least 1 more is under Stage 2's proposed 120s cap.
+
 #### [ ] D3. Performance catalog — after Stage 1
 
 After Stage 1 reaches 7,898 with 0 non-timeout errors:
