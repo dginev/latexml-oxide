@@ -8082,13 +8082,13 @@ LoadDefinitions!({
     // cmd contains a CS token like \bf; get the first token
     let cmd_cs = *cmd.unlist_ref().first()
       .ok_or("DeclareOldFontCommand: expected a CS token")?;
-    let font_toks = font.clone();
-    let math_toks = mathcmd.clone();
+    // Move `font` and `mathcmd` directly into the closure capture —
+    // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
       if lookup_bool("IN_MATH") {
-        Ok(math_toks.clone())
+        Ok(mathcmd.clone())
       } else {
-        Ok(font_toks.clone())
+        Ok(font.clone())
       }
     })));
     Ok(Vec::new())
