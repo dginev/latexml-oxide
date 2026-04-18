@@ -21,6 +21,12 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
 /// Look up a named color from state, returning a Color object.
 /// Perl: LookupColor($name) in Package.pm
 pub fn lookup_color_obj(name: &str) -> Color {
+  // Empty or whitespace-only name: silently return BLACK (expression-decode
+  // paths invoke us with `""` or `" "` when parsing malformed input; no
+  // error needed here because the decoder already surfaces its own).
+  if name.trim().is_empty() {
+    return color::BLACK;
+  }
   let key = s!("color_{name}");
   match state::lookup_value(&key) {
     Some(Stored::String(sym)) => {
@@ -31,6 +37,16 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
+      // Perl #2697 (2026): surface a diagnostic rather than silently
+      // returning BLACK — an unresolvable color name in a user expression
+      // usually indicates a typo or missing \definecolor. Our signature
+      // returns Color (not Result), so we use Warn rather than Perl's
+      // Error; still loud enough to surface in the log.
+      Warn!(
+        "misdefined",
+        "color",
+        &s!("could not resolve <color> name '{}'", name)
+      );
       color::BLACK
     },
   }
