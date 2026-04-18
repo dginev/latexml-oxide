@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use std::io::Cursor;
 
 use latexml_core::common::arena::{self, SymHashMap};
+use latexml_core::pin;
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
 use latexml_core::common::xml::*;
 use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
@@ -428,7 +429,7 @@ impl MathParser {
   // ================================================================================
   /// Returns the number of XMath parse failures (for post-parse ltx_math_unparsed marking)
   pub fn xmath_failures(&self) -> usize {
-    *self.failed.get_sym(arena::pin_static("ltx:XMath")).unwrap_or(&0)
+    *self.failed.get_sym(pin!("ltx:XMath")).unwrap_or(&0)
   }
 
   pub fn clear(&mut self) {
@@ -569,7 +570,7 @@ impl MathParser {
       Ok(None)
     } else if let Some(mut result) = self.parse_single(&mut node, document, &rule)? {
       *self.passed.entry_sym(tag).or_insert(0) += 1;
-      if tag == arena::pin_static("ltx:XMath") {
+      if tag == pin!("ltx:XMath") {
         // Replace the content of XMath with parsed result
         self.n_parsed += 1;
         note_progress(&s!("[{}]", self.n_parsed));
@@ -650,7 +651,7 @@ impl MathParser {
     } else {
       // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
       *self.failed.entry_sym(tag).or_insert(0) += 1;
-      if tag == arena::pin_static("ltx:XMath") {
+      if tag == pin!("ltx:XMath") {
         self.failed_xmath_ids.push(node.to_hashable());
         // Kludge (OPEN/CLOSE wrapping) runs post-parse in core_interface.rs
         // using failed_xmath_ids to find the failed nodes.
@@ -663,9 +664,9 @@ impl MathParser {
   fn parse_children(&mut self, node: &Node, document: &mut Document) -> Result<()> {
     for child in element_nodes(node) {
       let tag = get_node_qname(&child);
-      if tag == arena::pin_static("ltx:XMArg") {
+      if tag == pin!("ltx:XMArg") {
         self.parse_rec(child, "Anything", document)?;
-      } else if tag == arena::pin_static("ltx:XMWrap") {
+      } else if tag == pin!("ltx:XMWrap") {
         if child.has_attribute("_rewrite") {
           // Rewrite-created XMWrap: parse inner structure (subscripts etc.) but
           // the XMWrap's role overrides whatever the inner parse produces.
@@ -687,11 +688,11 @@ impl MathParser {
         } else {
           self.parse_rec(child, "Anything", document)?;
         }
-      } else if tag == arena::pin_static("ltx:XMApp")
-        || tag == arena::pin_static("ltx:XMArray")
-        || tag == arena::pin_static("ltx:XMRow")
-        || tag == arena::pin_static("ltx:XMCell")
-        || tag == arena::pin_static("ltx:XMDual")
+      } else if tag == pin!("ltx:XMApp")
+        || tag == pin!("ltx:XMArray")
+        || tag == pin!("ltx:XMRow")
+        || tag == pin!("ltx:XMCell")
+        || tag == pin!("ltx:XMDual")
       {
         self.parse_children(&child, document)?;
       }
@@ -1311,7 +1312,7 @@ fn textrec(
       None => meaning,
     };
   }
-  if tag == arena::pin_static("ltx:XMApp") {
+  if tag == pin!("ltx:XMApp") {
     let mut args = element_nodes(&node);
     if args.is_empty() {
       // Perl: Error('expected','arguments',...) then returns empty
@@ -1339,7 +1340,7 @@ fn textrec(
     } else {
       string
     }
-  } else if tag == arena::pin_static("ltx:XMDual") {
+  } else if tag == pin!("ltx:XMDual") {
     let children = element_nodes(&node);
     let content = children
       .first()
@@ -1357,7 +1358,7 @@ fn textrec(
   // textrec($presentation,
   // $outer_bp, $outer_name)
   // : $text); }
-  } else if tag == arena::pin_static("ltx:XMTok") {
+  } else if tag == pin!("ltx:XMTok") {
     let name = match get_token_meaning(&node, document) {
       Some(meaning) => meaning,
       None => s!("Unknown"),
@@ -1366,14 +1367,14 @@ fn textrec(
       Some(v) => v.to_string(),
       None => name,
     }
-  } else if tag == arena::pin_static("ltx:XMWrap") || tag == arena::pin_static("ltx:XMCell") {
+  } else if tag == pin!("ltx:XMWrap") || tag == pin!("ltx:XMCell") {
     // ??
     element_nodes(&node)
       .into_iter()
       .map(|child| textrec(&child, None, None, document))
       .collect::<Vec<_>>()
       .join("@")
-  } else if tag == arena::pin_static("ltx:XMArg") {
+  } else if tag == pin!("ltx:XMArg") {
     let args = element_nodes(&node);
     if args.is_empty() {
       return String::new();
@@ -1383,7 +1384,7 @@ fn textrec(
       .map(|arg| textrec(arg, None, None, document))
       .collect::<Vec<_>>()
       .join("")
-  } else if tag == arena::pin_static("ltx:XMArray") {
+  } else if tag == pin!("ltx:XMArray") {
     textrec_array(&node, document)
   } else {
     s!("[{}]", p_get_value(&node))

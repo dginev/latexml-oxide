@@ -1138,7 +1138,7 @@ pub fn read_optional(default: Option<Tokens>) -> Result<Option<Tokens>> {
   match read_non_space()? {
     None => Ok(None),
     Some(t) => {
-      if t.get_catcode() == Catcode::OTHER && t.get_sym() == arena::pin_static("[") {
+      if t.get_catcode() == Catcode::OTHER && t.get_sym() == pin!("[") {
         Ok(Some(read_until(&Tokens!(T_OTHER!("]")))?))
       } else {
         unread_one(t);
