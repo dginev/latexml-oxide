@@ -29,7 +29,9 @@ impl Object for Float {
     let s = self.to_string();
     Ok(
       crate::Tbox::new(
-        crate::common::arena::into_pin(&s),
+        // `pin` takes `AsRef<str>` — `&String` borrows cleanly without
+        // an extra `.to_string()` clone that `into_pin` would force.
+        crate::common::arena::pin(&s),
         None, None,
         Tokens::new(ExplodeText!(&s)),
         crate::common::arena::SymHashMap::default(),

@@ -153,8 +153,6 @@ pub fn pin_char(c: char) -> SymStr {
   pin(s)
 }
 
-pub fn into_pin<T: ToString>(num: T) -> SymStr { pin(num.to_string()) }
-
 /// Resolve a symbol and call the closure with a `&str` reference.
 /// The closure may safely call `pin()` or any other arena function —
 /// re-entrant access reuses the cached borrow.
