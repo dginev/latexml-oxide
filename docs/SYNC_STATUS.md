@@ -289,12 +289,22 @@ differences. Each corresponds to an entry in the work plan below.
    `plain_base.rs` defines it as a closure-backed `Primitive`
    BEFORE the snapshot, making it "primary" and thus filtered by
    `serialize_stored`'s PA-identity guard). **But the patch regresses
-   the test suite**: the dump grows by ~333 entries, 8 tokenization
-   tests fail with "EXPECTED extra line" truncated output. Root cause
-   of the regression is unconfirmed — likely one of the newly-added
-   dump entries installs something that breaks normal runtime state
-   at load time. Needs a targeted diff of the two dump files
-   (with and without the patch) to identify the offending entries.
+   the test suite**: the dump grows by ~333 entries (net), 8
+   tokenization tests fail with "EXPECTED extra line" truncated output.
+
+   **Dump diff audit (2026-04-18):** the patch actually changes 901
+   entries (756 net-new, 423 net-removed, 145 changed), not just the
+   20 we wanted. Because `input_definitions("LaTeX", pool)` runs the
+   full `latex.rs` chain (`latex_bootstrap` → `latex_base` → old
+   dump add-only → `latex_constructs`), the "new" entries include
+   _constructs.rs artifacts like `\@@appendix`, `\@caption@`,
+   `@ID@prefix@@bibitem`, `@declaredoptions`, `@desclevel`,
+   `@itemlevel`. Next attempt should load ONLY `latex_base::load_definitions`
+   (which is generated `pub` by the `LoadDefinitions!` macro but the
+   `engine::latex_base` *module* is private — needs a `pub mod` or a
+   re-export in `latexml_package::engine`). That narrows the change
+   from 901 → ~20 entries and makes the regression root-cause far
+   easier to isolate.
 
    The blow-up when PA consumption flips on is therefore NOT because
    the dump lacks the LaTeX kernel — it's because (a) the 32
