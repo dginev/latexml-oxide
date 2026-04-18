@@ -862,7 +862,10 @@ pub fn read_balanced(
 pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
   skip_spaces()?;
   for keyword in keywords.iter() {
-    let mut matched = Vec::new();
+    // Pre-size to the keyword length — `matched` holds one token per
+    // matched char, and we unread them on no-match. Keyword-match
+    // runs on every parameter/keyword read; small win per call.
+    let mut matched = Vec::with_capacity(keyword.len());
     let mut ok = true;
     for expected in keyword.chars() {
       let Some(tok) = read_x_token(Some(false), false, None)? else { ok = false; break };
@@ -1321,7 +1324,9 @@ fn coerce_register(
 pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
   for choice in choices {
     let mut to_match: Vec<&Token> = choice.unlist_ref().iter().rev().collect();
-    let mut matched = Vec::new();
+    // `matched` accumulates tokens read so far, bounded by `choice.len()`.
+    // Pre-size to avoid reallocations on multi-token match attempts.
+    let mut matched = Vec::with_capacity(choice.unlist_ref().len());
     while !to_match.is_empty() {
       match read_token()? {
         None => break,
