@@ -1061,7 +1061,9 @@ fn guess_alignment_headers(
 // trailing rows marked as thead go into tfoot.
 fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
   let mut rows = document.findnodes("ltx:tr", Some(table));
-  let mut heads = Vec::new();
+  // `heads` is bounded by the initial thead-candidate rows; pre-size
+  // to `rows.len()` as a conservative upper bound.
+  let mut heads = Vec::with_capacity(rows.len());
   let mut maxreach = 0;
   // Scan initial rows as potential thead
   while !rows.is_empty() {
@@ -1353,14 +1355,16 @@ fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 }
 
 fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
-  let mut columns = Vec::new();
   let mut row_cells: Vec<_> = alignment
     .rows
     .iter_mut()
     .map(|r| r.get_columns_mut().iter_mut())
     .collect();
-  for _ in 0..row_cells[0].len() {
-    let mut column = Vec::new();
+  let n_cols = row_cells[0].len();
+  let n_rows = row_cells.len();
+  let mut columns = Vec::with_capacity(n_cols);
+  for _ in 0..n_cols {
+    let mut column = Vec::with_capacity(n_rows);
     for row_iter in row_cells.iter_mut() {
       column.push(row_iter.next().unwrap());
     }

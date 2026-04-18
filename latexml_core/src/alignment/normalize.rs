@@ -730,9 +730,11 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
     rowdepths.push(row.cached_depth.unwrap().value_of());
     rowheights.push(row.cached_height.unwrap().value_of());
   }
-  // Now compute the positions
-  let mut rowpos = Vec::new();
-  let mut colpos = Vec::new();
+  // Now compute the positions — one entry per row/col.
+  let mut rowpos = Vec::with_capacity(alignment.rows.len());
+  let mut colpos = Vec::with_capacity(
+    alignment.rows.front().map(|r| r.get_columns().len()).unwrap_or(0)
+  );
   let mut y: i64 = 0;
   // Row & column positions: left,top
   for (i, row) in alignment.rows.iter().enumerate() {
