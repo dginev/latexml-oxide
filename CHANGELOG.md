@@ -26,9 +26,25 @@
   - **Perl parity sweep** (commits back to 2025):
     #2771 if_count/absorb_count control-counter filter on dump writer;
     #2777 KeyVal empty-macroprefix fallback + empty-keyset skip;
+    #2698 aastex revtex4 option is a no-op;
     #2697 DecodeColor Warn on unresolvable name;
     #4e3d1b8d filecontents header prepend "from source" line;
     #aaacdba2 nominal Locator on dump-loaded Expandables + Registers.
+  - **TRANSLATION_GAPS.md audit + ports**: verified every section
+    against current Rust source with line citations. Three small
+    Box.pm helpers (`is_math`, `set_properties`, `total_height`) and
+    `fracSizer` from TeX_Math.pool ported. Seven pdfTeX primitives
+    added: no-op stubs for `\pdfsavepos`, `\pdfstartthread`,
+    `\pdfendthread`, `\pdfnoligatures`, `\pdfsetrandomseed`, `\lpfcode`,
+    `\rpfcode`; plus `OpenAnnotSpecification` parameter type +
+    `\pdfannot` + `\pdfobj` + `\pdfcolorstack` with full OptionalMatch
+    parameter parsing. Section 9 (pdfTeX) now has zero Perl-defined
+    gaps remaining.
+  - **dump_reader perf**: five-commit sequence cuts allocations across
+    the hot dump-load path — unused `_cs_name` decodes in E/R arms,
+    no-`%` fast path in `url_decode`, no-`%` fast path in
+    `parse_token`, Cow-wrapping the per-line key. Hundreds of thousands
+    of Strings avoided per dump load.
   - **Babel parity**: reduced `babel_sty.rs` from 384 → 62 lines (85%) after
     closing the `@currname` leakage bug in our `input_definitions` path
     (plain `\input` now locally saves/restores `@currname`/`@currext`,
