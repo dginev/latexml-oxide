@@ -185,12 +185,10 @@ static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
   "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5)
 });
 
-// Perl: Font.pm %mathstylesize — used in specialize() font size scaling (commented out in Perl too)
-#[allow(dead_code)]
-static MATH_STYLE_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
-  raw_map!(
-  "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5)
-});
+// Note: Perl's Font.pm has a %mathstylesize table used in specialize()
+// font-size scaling, but the path is commented out in Perl too. We don't
+// implement this yet — restore from git history if/when specialize wants
+// math-style-based size adjustment.
 
 /// A special form of merge when copying/moving nodes to a new context,
 /// particularly math which become scripts or such.
