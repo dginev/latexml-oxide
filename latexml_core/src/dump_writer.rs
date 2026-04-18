@@ -87,6 +87,18 @@ pub fn write_dump(
       continue;
     }
 
+    // Perl #2771 (2026-03-13): control-flow counters are runtime state,
+    // not kernel state. Skip for Value-table entries of that shape.
+    // dump_reader already skips these at load time; matching on write
+    // keeps the dump smaller and consistent with upstream's
+    // IGNORED_SYMBOLS list.
+    if matches!(*table, TableName::Value)
+      && matches!(key_str.as_str(), "if_count" | "absorb_count" | "if_stack")
+    {
+      skipped += 1;
+      continue;
+    }
+
     let Some(serialized) = serialize_stored(value) else {
       skipped += 1;
       continue;
