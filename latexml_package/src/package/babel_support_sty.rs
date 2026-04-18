@@ -171,16 +171,12 @@ LoadDefinitions!({
           state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
         }
       }
-      // Note: leaving French/German does not automatically deactivate the
-      // active-char meanings. Proper deactivation needs \initiate@active@char
-      // lifecycle work (group-scope meaning-stack push/pop). See SYNC_STATUS
-      // D0 — for now the dispatch primitives check \languagename themselves
-      // and fall back to bare punctuation in non-French groups.
-      //
-      // DOCUMENT_LANGUAGE is NOT set here — that's a one-shot set done at
-      // babel-init time by `\lx@babel@activate@mainlang` (babel_sty.rs).
-      // Setting it on every \selectlanguage call would clobber the root
-      // xml:lang when the document body switches languages.
+      // Leaving French/German does not automatically deactivate the
+      // active-char meanings. The dispatch primitives (\lx@french@punct@*)
+      // check \languagename themselves and fall back to bare punctuation in
+      // non-French groups. DOCUMENT_LANGUAGE is only set once at babel-init
+      // by \lx@babel@activate@mainlang (setting per-\selectlanguage would
+      // clobber the root xml:lang when the body switches languages).
     }
   });
 
