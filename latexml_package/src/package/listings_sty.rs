@@ -1853,15 +1853,14 @@ LoadDefinitions!({
     } else {
       parse_parameters(&param_spec, &cs, true)?
     };
-    // Capture start/end code tokens for the closure
-    let start_toks = start_code.clone();
-    let end_toks = end_code.clone();
-    let env_inner = env_name.clone();
+    // Move start_code / end_code / env_name directly into the closure
+    // capture — none are used outside, so three setup-time clones are
+    // avoided per `\lstnewenvironment` definition.
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         bgroup();
-        state::assign_value("current_environment", Stored::String(arena::pin(&env_inner)), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_inner)), None)?;
+        state::assign_value("current_environment", Stored::String(arena::pin(&env_name)), None);
+        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_name)), None)?;
         // Convert expansion args to format for substitute_parameters
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
@@ -1872,17 +1871,17 @@ LoadDefinitions!({
           })
           .collect();
         // Perl: lstPushValueLocally(LISTINGS_POSTAMBLE => $end->substituteParameters(@args))
-        if !end_toks.is_empty() {
-          let end_subst = end_toks.substitute_parameters(&sub_args);
+        if !end_code.is_empty() {
+          let end_subst = end_code.substitute_parameters(&sub_args);
           lst_push_value_locally("LISTINGS_POSTAMBLE", end_subst.unlist().to_vec());
         }
         // Perl: Digest($start->substituteParameters(@args))
         // This executes \lstset{...} which activates language, styles, etc.
-        if !start_toks.is_empty() {
-          let start_subst = start_toks.substitute_parameters(&sub_args);
+        if !start_code.is_empty() {
+          let start_subst = start_code.substitute_parameters(&sub_args);
           let _digested = stomach::digest(start_subst)?;
         }
-        let text = listings_read_raw_lines(&env_inner);
+        let text = listings_read_raw_lines(&env_name);
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
         let result = lst_process_display(name_opt, &text);
