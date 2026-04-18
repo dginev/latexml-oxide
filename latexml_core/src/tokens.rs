@@ -316,7 +316,10 @@ impl Tokens {
   // Using inline accessors on those assumptions
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
-    let mut result = Vec::new();
+    // Pre-size: the substituted result is at least as long as the
+    // template. Expansion bodies can be thousands of tokens in the
+    // expl3 kernel; pre-allocation skips the first several Vec doublings.
+    let mut result = Vec::with_capacity(self.0.len());
     for token in self.0.iter() {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
@@ -325,7 +328,11 @@ impl Tokens {
         let idx = token.with_str(|ts| ts.parse::<usize>().unwrap_or(0));
         if idx > 0 && idx <= args.len() {
           if let Some(ref arg) = args[idx - 1] {
-            result.extend(arg.clone().into_owned().unlist());
+            // `arg` is `Cow<Tokens>`; iterate via `unlist_ref` + copy
+            // (Tokens is a Vec<Token> of `Copy` tokens). Avoids the
+            // previous `clone().into_owned().unlist()` chain which
+            // double-cloned the Vec when `arg` was `Cow::Borrowed`.
+            result.extend(arg.as_ref().unlist_ref().iter().copied());
           }
         }
       }
