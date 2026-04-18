@@ -432,7 +432,7 @@ fn lst_add_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>
     }
     let key = s!("LST_WORDS@{word}@class");
     // Only set if not already in a class
-    if state::lookup_value(&key).is_none() {
+    if state::with_value(&key, |v| v.is_none()) {
       state::assign_value(&key, Stored::String(arena::pin(class)), None);
       // Track the word in the word list for case-insensitive duplication
       let list_key = "LST_WORD_LIST";

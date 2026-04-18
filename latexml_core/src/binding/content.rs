@@ -225,7 +225,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // announces — tracked per-filename via a state-value marker.
   let banner_key = s!("__loading_banner__{filename}");
   let this_frame_announces =
-    crate::state::lookup_value(&banner_key).is_none();
+    crate::state::with_value(&banner_key, |v| v.is_none());
   if this_frame_announces {
     note_begin(&s!("Loading {:?} definitions", filename));
     crate::state::assign_value(
