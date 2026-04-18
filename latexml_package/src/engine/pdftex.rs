@@ -172,7 +172,18 @@ LoadDefinitions!({
   DefPrimitive!("\\pdfresettimer", None);
   DefPrimitive!("\\pdfresettimerresettimer", None);
   // \pdfsetrandomseed number
-  // \pdfnoligatures font
+  DefPrimitive!("\\pdfsetrandomseed Number", None);
+  // \pdfnoligatures font (really a Token, but at this stub level we
+  // just need to consume a single token argument)
+  DefPrimitive!("\\pdfnoligatures Token", None);
+  // \pdfsavepos — mark current position; no-op stub
+  DefPrimitive!("\\pdfsavepos", None);
+  // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
+  DefPrimitive!("\\pdfstartthread", None);
+  DefPrimitive!("\\pdfendthread", None);
+  // Per-font extension codes (match \lpcode / \rpcode pattern)
+  DefRegister!("\\lpfcode Token Number", Number::new(0));
+  DefRegister!("\\rpfcode Token Number", Number::new(0));
   // \pdfprimitive control sequence
   // TODO:
   // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive

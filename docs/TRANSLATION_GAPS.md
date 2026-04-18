@@ -94,23 +94,28 @@ replaces the Perl getters. No port needed.
 ## 9. pdfTeX.pool.ltxml — 20 of 138 primitives still missing
 
 Audit (2026-04-18, diff of extracted CS names): 118 of 138 Perl CSes
-have Rust equivalents; 20 are genuinely missing and all are
-PDF-output-related stubs that our engine doesn't actually emit:
+have Rust equivalents. Of the remaining 20, the simple no-op stubs
+have now been ported:
 
-  \lpfcode, \rpfcode                      — "per font" extension codes (like \lpcode)
-  \pdfannot, \pdfdest, \pdfthread         — annotation/destination/thread markers
-  \pdfoutline, \pdfobj, \pdfnames         — PDF structure objects
-  \pdfsavepos, \pdfstartthread, \pdfendthread
-  \pdfximage, \pdfrefximage               — PDF image inclusion
-  \pdfcolorstack, \pdfcolorstackinit      — color-stack primitives
-  \pdffontattr, \pdffontexpand, \pdfnoligatures
-  \pdfsetrandomseed                       — randomness
-  \special, \vadjust                      — core TeX primitives (not PDF-specific)
+  [x] \lpfcode, \rpfcode                  — pdftex.rs DefRegister (matches \lpcode pattern)
+  [x] \pdfsavepos                         — DefPrimitive no-op
+  [x] \pdfstartthread, \pdfendthread      — DefPrimitive no-ops
+  [x] \pdfnoligatures                     — DefPrimitive consumes Token (font)
+  [x] \pdfsetrandomseed                   — DefPrimitive consumes Number
 
-All are safely missing for the test suite (nothing breaks). Port as
-no-op stubs when a specific document surfaces the need. The Perl
-definitions include custom parameter types (`OpenAnnotSpecification`,
-`OpenActionSpecification`) that would need corresponding Rust ports.
+Still missing (non-trivial — need custom `OpenAnnotSpecification` /
+`OpenActionSpecification` parameter-type ports before they can be
+sensibly stubbed):
+
+  [ ] \pdfannot, \pdfdest, \pdfthread
+  [ ] \pdfoutline, \pdfobj
+  [ ] \pdfximage, \pdfrefximage
+  [ ] \pdfcolorstack, \pdfcolorstackinit
+  [ ] \pdffontattr, \pdffontexpand
+  [ ] \special, \vadjust                  — core TeX primitives
+
+All of these are safely missing for the test suite (nothing breaks).
+Port them when a specific document surfaces the need.
 
 ## Priority Order (by test impact) — UPDATED 2026-04-18
 
