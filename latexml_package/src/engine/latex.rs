@@ -43,20 +43,20 @@ LoadDefinitions!({
   // `bootstrap + _base + constructs`. Our default still loads both
   // (the add-only policy makes it safe but wastes ~10 ms / ~5 MB).
   //
-  // `LATEXML_MUTEX_BASE_DUMP=1` opts into the Perl-style split for
+  // `LATEXML_DUMP_ONLY=1` opts into the Perl-style split for
   // experiments (v3.e bisection). When set, `latex_base` is skipped
   // whenever the dump load succeeds. See docs/DUMP_FORMAT_PERL_ANALYSIS.md
   // for the prerequisites (v3.a-v3.d) this gate relies on.
-  let mutex_enabled = std::env::var("LATEXML_MUTEX_BASE_DUMP")
+  let dump_only_mode = std::env::var("LATEXML_DUMP_ONLY")
     .ok()
     .filter(|v| v == "1" || v.eq_ignore_ascii_case("true"))
     .is_some();
 
-  let dump_loaded_ok = if mutex_enabled {
+  let dump_loaded_ok = if dump_only_mode {
     match crate::engine::latex_dump::load_definitions() {
       Ok(()) => true,
       Err(e) => {
-        log::warn!("latex_dump (mutex-mode): {}", e);
+        log::warn!("latex_dump (dump-only mode): {}", e);
         false
       },
     }
@@ -70,8 +70,8 @@ LoadDefinitions!({
 
   // Perl: LoadPool('latex_dump') — precompiled latex.ltx state (expl3, fonts, captions).
   // Uses add-only policy: definitions already set by bootstrap+base are not overwritten.
-  // Skipped when mutex-mode already ran it above.
-  if !mutex_enabled {
+  // Skipped when dump-only mode already ran it above.
+  if !dump_only_mode {
     if let Err(e) = crate::engine::latex_dump::load_definitions() {
       log::warn!("latex_dump: {}", e);
     }

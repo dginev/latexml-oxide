@@ -98,7 +98,7 @@ LoadDefinitions!({
   // closure-version defined in latex_base.pool.ltxml L46-48. The dump
   // therefore captures these as token-list bodies (see latex_dump.pool.ltxml
   // L3771 `\@thirdofthree T(A(3))`). Using token-list form here matches
-  // Perl's end-state AND lets these CSes survive mutex-mode dump loading.
+  // Perl's end-state AND lets these CSes survive dump-only mode dump loading.
   DefMacro!("\\@firstofone{}", "#1");
   Let!("\\@iden", "\\@firstofone");
   DefMacro!("\\@firstoftwo{}{}", "#1");

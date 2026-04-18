@@ -176,7 +176,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
-      // Under `LATEXML_MUTEX_BASE_DUMP=1`, the dump must additionally
+      // Under `LATEXML_DUMP_ONLY=1`, the dump must additionally
       // supply public-CS macros that `_base.rs` normally owns — the
       // `\Package*` / `\Class*` / `\GenericError` / `\GenericInfo`
       // diagnostic family, which `\usepackage{...}` machinery invokes
@@ -188,10 +188,10 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
         n if n.starts_with("Package")
           || n.starts_with("Class")
           || n.starts_with("Generic"));
-      let mutex_enabled = std::env::var("LATEXML_MUTEX_BASE_DUMP")
+      let dump_only_mode = std::env::var("LATEXML_DUMP_ONLY")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
-      let pass_gate = is_at_internal || (mutex_enabled && is_safe_public_family);
+      let pass_gate = is_at_internal || (dump_only_mode && is_safe_public_family);
       if pass_gate && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(&key, data)
       } else {
@@ -391,16 +391,16 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`)
   // Unsafe: public macros without `:` or `@` (e.g., \document, \hook)
   //
-  // The gate is disabled under `LATEXML_MUTEX_BASE_DUMP=1` because in
-  // mutex-mode the dump is the SOLE source of kernel definitions — the
+  // The gate is disabled under `LATEXML_DUMP_ONLY=1` because in
+  // dump-only mode the dump is the SOLE source of kernel definitions — the
   // Rust-native `_base.rs` bindings that would normally install
   // `\PackageInfo`, `\PackageError`, `\@latex@info` etc. are skipped.
   // Keeping the gate would leave those CSes undefined and fire
   // cascading `undefined:` errors from `\usepackage{...}` callers.
-  let mutex_enabled = std::env::var("LATEXML_MUTEX_BASE_DUMP")
+  let dump_only_mode = std::env::var("LATEXML_DUMP_ONLY")
     .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
     .unwrap_or(false);
-  if !mutex_enabled {
+  if !dump_only_mode {
     let name = key.trim_start_matches('\\');
     let is_internal = name.contains(':') || name.contains('@');
     if !is_internal {

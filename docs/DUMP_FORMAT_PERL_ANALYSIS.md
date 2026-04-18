@@ -219,7 +219,7 @@ flipping mutual-exclusivity:
    `setter` is present.
 
 5. **(v3.e) Bisect 00_tokenize hang** against v3. [DONE, conclusive
-   negative result]. Added `LATEXML_MUTEX_BASE_DUMP=1` env gate in
+   negative result]. Added `LATEXML_DUMP_ONLY=1` env gate in
    `latex.rs` that makes `latex_base` skip when `latex_dump` loads
    successfully, mirroring Perl's `LoadFormat` branching. Results
    against the current v3 dump:
@@ -235,7 +235,7 @@ flipping mutual-exclusivity:
 
    Minimal doc (`\documentclass{article}\begin{document}hello\end{document}`),
    catcode assignment `\catcode`\&=1\relax`, `\ifx` with special
-   catcodes, and `\meaning` all complete in mutex mode. The hang
+   catcodes, and `\meaning` all complete in dump-only mode. The hang
    surfaces on `\makeatletter` + user `\def` combinations — pointing
    at a specific interaction between a subset of `_base.rs` macros
    and live user macro expansion that the v3 dump still doesn't
@@ -243,7 +243,7 @@ flipping mutual-exclusivity:
 
 6. **(v3.f) Ship mutual-exclusivity** — blocked pending v3.e root
    cause. Next steps: (i) trace which specific CS expansion enters
-   the infinite loop on `hashes.tex` line 1-2 under mutex mode;
+   the infinite loop on `hashes.tex` line 1-2 under dump-only mode;
    (ii) compare its v3 dump entry against its `_base.rs` source to
    identify the semantic gap; (iii) decide whether to fix at the
    serializer, the reader, or by adding another mandatory closure

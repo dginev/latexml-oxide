@@ -8609,7 +8609,7 @@ LoadDefinitions!({
   // exist whether or not the dump short-circuits `_base`.
   //
   // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
-  // unblock `LATEXML_MUTEX_BASE_DUMP=1` paths (see SYNC_STATUS D0 v3.f).
+  // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
 
   // Perl L5645
   DefPrimitive!("\\@onlypreamble{}", {
@@ -8639,7 +8639,7 @@ LoadDefinitions!({
   });
 
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
-  // Relocated from latex_base.rs 2026-04-18 to survive mutex-mode.
+  // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
     let next = gullet::read_non_space()?;
     let next_test = match next {
