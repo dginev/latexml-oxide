@@ -1259,7 +1259,7 @@ LoadDefinitions!({
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
           let toks: Vec<Token> = num_str.chars().map(|c| {
-            Token::new(c.to_string(), Catcode::OTHER)
+            Token { text: arena::pin_char(c), code: Catcode::OTHER }
           }).collect();
           Ok(Tokens::new(toks))
         } else {
