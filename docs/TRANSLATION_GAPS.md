@@ -91,9 +91,26 @@ replaces the Perl getters. No port needed.
 - [x] Full color model support — `common/color.rs::to_cmyk` L110, `to_hsb` L130, `convert` L172 (dispatches across rgb, cmy, cmyk, hsb, gray, HTML, RGB, Hsb, HSB, Gray, tHsb, wave)
 - [x] Color mixing operations — `common/color.rs::mix` L235 (linear interpolation across color models); `xcolor_sty.rs::apply_mix_expr` L232 (parses !pct!name chains)
 
-## 9. pdfTeX.pool.ltxml — gaps (284 Perl → 254 Rust)
+## 9. pdfTeX.pool.ltxml — 20 of 138 primitives still missing
 
-- [ ] Check for any missing register/primitive definitions
+Audit (2026-04-18, diff of extracted CS names): 118 of 138 Perl CSes
+have Rust equivalents; 20 are genuinely missing and all are
+PDF-output-related stubs that our engine doesn't actually emit:
+
+  \lpfcode, \rpfcode                      — "per font" extension codes (like \lpcode)
+  \pdfannot, \pdfdest, \pdfthread         — annotation/destination/thread markers
+  \pdfoutline, \pdfobj, \pdfnames         — PDF structure objects
+  \pdfsavepos, \pdfstartthread, \pdfendthread
+  \pdfximage, \pdfrefximage               — PDF image inclusion
+  \pdfcolorstack, \pdfcolorstackinit      — color-stack primitives
+  \pdffontattr, \pdffontexpand, \pdfnoligatures
+  \pdfsetrandomseed                       — randomness
+  \special, \vadjust                      — core TeX primitives (not PDF-specific)
+
+All are safely missing for the test suite (nothing breaks). Port as
+no-op stubs when a specific document surfaces the need. The Perl
+definitions include custom parameter types (`OpenAnnotSpecification`,
+`OpenActionSpecification`) that would need corresponding Rust ports.
 
 ## Priority Order (by test impact)
 
