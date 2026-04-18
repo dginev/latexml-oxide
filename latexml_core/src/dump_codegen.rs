@@ -986,7 +986,11 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
        {s}{s}{s}.collect();\n\
        {s}{s}let params = if def.nargs > 0 {{\n\
        {s}{s}{s}let proto = \"{{}}\".repeat(def.nargs as usize);\n\
-       {s}{s}{s}parse_parameters(&proto, &cs, false).ok().flatten()\n\
+       {s}{s}{s}// init_flag=true: engine is up when this table is consumed\n\
+       {s}{s}{s}// at runtime, so Parameter::init() can resolve readers\n\
+       {s}{s}{s}// via PARAMETER_TYPES; without init the Plain reader\n\
+       {s}{s}{s}// falls back to mock_reader and invocation fails.\n\
+       {s}{s}{s}parse_parameters(&proto, &cs, true).ok().flatten()\n\
        {s}{s}}} else {{ None }};\n\
        {s}{s}let opts = Some(ExpandableOptions {{\n\
        {s}{s}{s}long: def.flags & 1 != 0,\n\
