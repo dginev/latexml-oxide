@@ -783,3 +783,52 @@ go undetected for a long time.
 warning followed by "Missing argument {}", the root cause is an
 `init_flag=false` in the declaration path.
 
+---
+
+## 33. Dump round-trip: nargs alone is insufficient for parameter fidelity
+
+**Discovery:** The D0 mutual-exclusivity PoC hung `00_tokenize` for 34+
+minutes at 300% CPU even AFTER landing all the `init_flag=true` and
+None-body-serialization fixes. Root cause traced to parameter-type
+flattening in the dump round-trip.
+
+**Analysis:** The v1 E-entry format recorded only `nargs` (a count), and
+`dump_reader` rebuilt `Parameters` via `"{}".repeat(nargs)` — flattening
+everything to Plain. For most CSes this is fine, but parameter types that
+affect argument-READ behavior diverge:
+
+- `DefToken` (reads a single token, not a balanced group)
+- `Optional` (reads `[…]`, with or without default value)
+- `Semiverbatim` (disables specified catcodes during reading)
+- `Until:<delim>` (reads tokens up to a delimiter; delimiter may contain braces)
+- `Match:<toks>` (matches specific token sequence; may contain braces)
+
+Round-tripped as Plain, each of these silently reads the WRONG thing. The
+`DefToken {}{}` signature of `\@ifnextchar` becomes `{}{}{}` — now user
+code `\@ifnextchar[{yes}{no}` tries to parse `[` as a balanced group.
+Livelock follows (tokenize pipeline can't recover).
+
+**Fix (v2 format, commit fc45e068):** Add a 5th tab-separated field to E
+entries that carries `Parameters::stringify()`. Reader prefers `<proto>`,
+falls back to `"{}".repeat(nargs)` when proto fails to parse.
+
+**Residual gap:** `Parameters::stringify` produces `"Until:\end{verbatim}"`
+for delimited-with-brace params; `parse_parameters`'s `PARAMSPECT_CHECK_RE`
+stops at `{`, so the tail mis-parses as a separate nested Plain with inner
+type "verbatim". Tests still pass because:
+- the `@`-internal gate shadows most dump entries via `_base.rs` closures
+- the v2 reader falls back gracefully on parse failure
+
+Full round-trip would require structural per-Parameter serialization
+(name + extra tokens) rather than a stringified summary.
+
+**Key insight:** `Parameters::stringify` is NOT a true inverse of
+`parse_parameters`. For any round-trip scenario that installs dump-loaded
+definitions as the active runtime definitions (mutual-exclusivity, daemon
+mode, etc.), plan for structural serialization from the start.
+
+**Sentinel:** When a dump-loaded CS invokes with unexpected input
+interpretation — e.g. `\@ifnextchar[` reads `[{yes}` as arg #1 — check
+whether the CS's prototype includes a non-Plain parameter type that
+round-tripped as Plain.
+
