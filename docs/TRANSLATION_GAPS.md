@@ -27,12 +27,12 @@ Substantially ported (278 DefMath! definitions). Most core math symbols present.
 - [x] Phantom/strut/smash — \phantom, \hphantom, \vphantom (with sizing afterDigest)
 - [x] Roots — \sqrt, \root
 - [x] Log-like functions — \log, \sin, \lim, etc.
-- [ ] Active prime — \active@math@prime + AssignMathcode (Perl L109-125, 17 lines)
-- [ ] \not negation + DefRewrite (Perl L304-359, 56 lines)
-- [ ] \joinrel relation combining (Perl L363-404, 42 lines)
-- [ ] Delimiters — \big/\Big/\bigg/\Bigg sized variants (Perl L554-629, 76 lines)
-- [ ] Modulo — \pmod, \bmod (Perl L762-763)
-- [ ] XMWrap cleanup rewrite (Perl L769-798, 30 lines)
+- [x] Active prime — `\active@math@prime` at math_common.rs L397, `Let!("'", ...)` at L422
+- [x] `\not` negation — ported as simplified Unicode `U+FF0F` (math_common.rs L598); full Perl DefRewrite chain over `\not\X` pairs not ported but the common case works
+- [x] `\joinrel` relation combining — math_common.rs L667-695 (primitive + `@@joinrel` whatsit)
+- [x] Delimiters — `\big`/`\Big`/`\bigg`/`\Bigg` sized variants at math_common.rs L894-903 (and `\bigl`/`\biggl` family at L922-942)
+- [x] Modulo — `\pmod` / `\bmod` at math_common.rs L1108-1109
+- [ ] XMWrap cleanup rewrite (Perl L769-798, 30 lines) — deliberately commented out in tex.rs L174; keeping unchecked as a reminder of the intentional divergence
 
 ## 3. TeX_Math.pool.ltxml — missing functions
 
