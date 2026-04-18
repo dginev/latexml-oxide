@@ -384,9 +384,11 @@ LoadDefinitions!({
   //   reportNoUnicode($cs);
   //   Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode'); });
   DefPrimitive!("\\lx@math@nounicode DefToken", sub[(cs)] {
-    let text = arena::pin(cs.to_string());
+    // `cs.get_sym()` returns the already-interned SymStr for the token
+    // text — avoids the `cs.to_string() + arena::pin` round-trip which
+    // allocated a String just to re-intern the same bytes.
     let tbox = Tbox::new(
-      text,
+      cs.get_sym(),
       None,
       None,
       Tokens!(cs),
