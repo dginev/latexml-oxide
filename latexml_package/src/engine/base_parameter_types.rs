@@ -307,8 +307,10 @@ LoadDefinitions!({
   // (like Match, but ignores catcodes)
   // Perl: returns undef on no-match.
   DefParameterType!(Keyword, sub[_inner, extra] {
-    let extra_string : String = extra.iter().map(ToString::to_string)
-      .collect::<Vec<String>>().join("");
+    // Concatenate the extras' string forms directly — collect::<String>
+    // handles Iterator<Item=String> by appending each in turn. The old
+    // `.collect::<Vec<String>>().join("")` allocated an intermediate Vec.
+    let extra_string: String = extra.iter().map(ToString::to_string).collect();
     match gullet::read_keyword(&[&extra_string])? {
       Some(t) => ArgWrap::Tokens(Tokens!(T_OTHER!(t))),
       None => ArgWrap::None,
