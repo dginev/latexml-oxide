@@ -643,6 +643,12 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
 }
 
 pub(crate) fn url_decode(s: &str) -> String {
+  // Fast path: the overwhelming majority of dump entries have no `%`
+  // escapes in their key or proto fields, so a single memcpy via
+  // `to_owned()` beats char-by-char iteration for ~19k key loads.
+  if !s.contains('%') {
+    return s.to_owned();
+  }
   let mut result = String::with_capacity(s.len());
   let mut chars = s.chars();
   while let Some(ch) = chars.next() {
