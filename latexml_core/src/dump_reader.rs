@@ -130,7 +130,15 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   }
 
   let table = parts[0];
-  let key = url_decode(parts[1]);
+  // Key decode: Cow borrows the original &str when no `%` escape is
+  // present (the overwhelming majority). Saves a per-line allocation
+  // for the ~25k dump entries that have plain CS-name keys.
+  let key_cow: std::borrow::Cow<'_, str> = if parts[1].contains('%') {
+    std::borrow::Cow::Owned(url_decode(parts[1]))
+  } else {
+    std::borrow::Cow::Borrowed(parts[1])
+  };
+  let key = key_cow.as_ref();
   let data = if parts.len() > 2 { parts[2] } else { "" };
 
   match table {
