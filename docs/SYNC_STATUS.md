@@ -232,6 +232,30 @@ exact engine gaps:
   loading, etc.) lands, because `_base` will no longer cover those
   things alone.
 
+  **2026-04-18 blocker identified.** The dump E-entry format records
+  only `nargs` (count), not the parameter *types* — the writer does
+  `let nargs = exp.get_num_args()` and the reader rebuilds via
+  `"{}".repeat(nargs)`, i.e. every parameter becomes `Plain`. That's
+  fine when `_base.rs`'s closure is the active definition (the dump's
+  round-tripped version is shadowed by add-only), but breaks the
+  moment mutual-exclusivity flips.
+
+  Concrete failure case: `\@ifnextchar` in `_base.rs` is declared
+  `DefToken {}{}` — first arg is a **single token**, not a balanced
+  `{...}`. Round-trip through the dump turns it into `{}{}{}` — three
+  Plain args. When user code hits `\@ifnextchar[{...}{...}` the
+  reader tries to read `[` as a balanced group and the tokenize
+  pipeline livelocks. This was the 34-minute 00_tokenize hang we saw
+  on the PoC.
+
+  Prerequisite fix: extend the E format to carry the full prototype
+  string (e.g., `E\t<cs>\t<proto>\t<flags>\t<body>` where proto is
+  `Parameters::stringify()`, backed by each `Parameter`'s `spec`
+  SymStr). Reader then feeds `<proto>` to `parse_parameters` instead
+  of `"{}".repeat(nargs)`. Only after this can mutual-exclusivity be
+  safely enabled; otherwise `DefToken`, `Optional`, `Semiverbatim`,
+  and any custom parameter types all get flattened to `Plain`.
+
 - [x] **Dump captures primitive aliases (`PA`/`MPA` entries).** The
   short-circuit guard in texlive's `expl3.sty` is
   `\ifx\csname tex_let:D\endcsname\relax` — it skips the 36k-line
