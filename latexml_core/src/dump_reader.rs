@@ -398,7 +398,11 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         return Err("Incomplete Expandable entry".into());
       }
 
-      let _cs_name = url_decode(eparts[0]);
+      // Note: eparts[0] is the internal CS name carried by the E
+      // serialization (the Expandable's `self.cs`), which for non-alias
+      // entries matches `key`. We don't decode it here — the outer key
+      // is already parsed above into `cs_tok`, and `Expandable::new`
+      // doesn't need a distinct internal name.
       let nargs: usize = eparts[1].parse().unwrap_or(0);
       let flags = eparts[2];
       let tok_data = eparts[3];
