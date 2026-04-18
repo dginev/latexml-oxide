@@ -1457,7 +1457,7 @@ pub fn read_float() -> Result<Float> {
   let s = if is_negative { -1.0 } else { 1.0 };
   let mut string = read_digits(&DIGIT_RE, true)?;
   let mut token = read_x_token(None, false, None)?;
-  if token.is_some() && token.as_ref().unwrap().get_sym() == arena::pin_static(".") {
+  if token.is_some() && token.as_ref().unwrap().get_sym() == pin!(".") {
     string = s!("{string}.{}", read_digits(&DIGIT_RE, true)?);
     token = read_x_token(None, false, None)?;
   }
@@ -1819,9 +1819,9 @@ fn read_optional_signs() -> Result<bool> {
   let mut sign = false;
   while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();
-    if sym == arena::pin_static("-") {
+    if sym == pin!("-") {
       sign = !sign;
-    } else if (sym != arena::pin_static("+")) && !is_space_or_implicit_space(&t) {
+    } else if (sym != pin!("+")) && !is_space_or_implicit_space(&t) {
       unread_one(t); // Unread and end
       break;
     }
@@ -1861,7 +1861,7 @@ fn read_factor() -> Result<Option<f64>> {
   let mut token_opt = read_x_token(None, false, None)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
-    if sym == arena::pin_static(".") || sym == arena::pin_static(",") {
+    if sym == pin!(".") || sym == pin!(",") {
       factor = s!("{}.{}", factor, read_digits(&DIGIT_RE, false)?);
       token_opt = read_x_token(None, false, None)?;
     }
