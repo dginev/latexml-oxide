@@ -8523,7 +8523,7 @@ LoadDefinitions!({
       + c.to_string().trim().parse::<i32>().unwrap_or(0);
     let (glyph, _font) = font_decode(n, None, None);
     if let Some(ch) = glyph {
-      vec![Tbox::new(arena::pin(ch.to_string()), None, None, Tokens!(), SymHashMap::default()).into()]
+      vec![Tbox::new(arena::pin_char(ch), None, None, Tokens!(), SymHashMap::default()).into()]
     } else {
       Vec::new()
     }
