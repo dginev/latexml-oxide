@@ -7,15 +7,8 @@ LoadDefinitions!({
   // (considering we don't do hyphenation, etc)
   RequirePackage!("babel", options => vec!["german".to_string()]);
 
-  // Raw-load germanb.ldf so babel's authoritative \captionsgerman +
-  // \extrasgerman are installed from TeX Live source (alongside the
-  // provideommand fallback below, in case the raw load is partial).
-  // Avoid recursing into this binding — noltxml=true skips the dispatcher.
-  InputDefinitions!("germanb", noltxml => true, extension => Some(Cow::Borrowed("ldf")));
-  // \providecommand fallback for \captionsgerman: used as a belt-and-
-  // suspenders backstop if germanb.ldf's raw load didn't complete in
-  // time (observed on some class+package option orderings where the
-  // raw load finishes AFTER \select@language fires).
+  // German caption strings (from germanb.ldf). \providecommand so raw
+  // babel/germanb.ldf processing (if any) doesn't overwrite.
   RawTeX!(r"\providecommand\captionsgerman{%
     \def\prefacename{Vorwort}\def\refname{Literatur}%
     \def\abstractname{Zusammenfassung}\def\bibname{Literaturverzeichnis}%
