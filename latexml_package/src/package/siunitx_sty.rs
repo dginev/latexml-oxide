@@ -1343,7 +1343,7 @@ fn six_enable_unit_macros(overwrite: bool) {
       if name.is_empty() { continue; }
       let cs = T_CS!(&format!("\\{name}"));
       let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
-      if overwrite || state::lookup_meaning(&cs).is_none() {
+      if overwrite || !state::has_meaning(&cs) {
         state::let_i(&cs, &impl_cs, None);
       }
     }
@@ -1561,7 +1561,7 @@ LoadDefinitions!({
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
 
     // Let \cs = \relax if not yet defined
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1583,7 +1583,7 @@ LoadDefinitions!({
 
     // Perl L1264: Uses collapsible form for prefix declarations
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1602,7 +1602,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1622,7 +1622,7 @@ LoadDefinitions!({
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
     // Let \cs = \relax if not yet defined (prevents "undefined" errors)
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1641,7 +1641,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1661,7 +1661,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
