@@ -477,9 +477,12 @@ LoadDefinitions!({
     if arg.is_none() {
       // No argument — put back the power and return bare operator
       if let Some(ref pwr) = power {
-        gullet::unread(Tokens::new(
-          [vec![T_OTHER!("[")], pwr.clone().unlist(), vec![T_OTHER!("]")]].concat()
-        ));
+        let pwr_toks = pwr.unlist_ref();
+        let mut bracketed = Vec::with_capacity(pwr_toks.len() + 2);
+        bracketed.push(T_OTHER!("["));
+        bracketed.extend_from_slice(pwr_toks);
+        bracketed.push(T_OTHER!("]"));
+        gullet::unread(Tokens::new(bracketed));
       }
       let result = i_dual(
         &[("reversion", cs_tks.clone())],
