@@ -146,6 +146,11 @@ pub static MODE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("MODE"));
 pub static BOUND_MODE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("BOUND_MODE"));
 #[thread_local]
 pub static IN_PREAMBLE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("inPreamble"));
+#[thread_local]
+pub static INTERPRETING_DEFINITIONS_SYM: Lazy<SymStr> =
+  Lazy::new(|| pin_static("INTERPRETING_DEFINITIONS"));
+#[thread_local]
+pub static XGLOBAL_AT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("xglobal@"));
 
 /// Assign a static str into the arena, returning a unique symbol.
 pub fn pin_static(text: &'static str) -> SymStr {

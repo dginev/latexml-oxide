@@ -8602,7 +8602,7 @@ LoadDefinitions!({
 
   // \@@end — saved TeX \end primitive
   DefPrimitive!("\\@@end", {
-    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+    if !state::lookup_bool_sym(&arena::INTERPRETING_DEFINITIONS_SYM) {
       gullet::flush();
     }
   });

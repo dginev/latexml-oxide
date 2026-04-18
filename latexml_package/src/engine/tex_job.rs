@@ -56,7 +56,7 @@ LoadDefinitions!({
     // When called during package/definition loading (e.g., expl3's error handler
     // calls \tex_end:D via \msg_fatal), ignore it. Package errors should not
     // terminate the entire document processing.
-    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+    if !state::lookup_bool_sym(&arena::INTERPRETING_DEFINITIONS_SYM) {
       leave_horizontal()?;
       gullet::flush();
     }
