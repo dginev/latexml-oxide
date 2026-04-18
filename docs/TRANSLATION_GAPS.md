@@ -93,29 +93,38 @@ replaces the Perl getters. No port needed.
 
 ## 9. pdfTeX.pool.ltxml — 20 of 138 primitives still missing
 
-Audit (2026-04-18, diff of extracted CS names): 118 of 138 Perl CSes
-have Rust equivalents. Of the remaining 20, the simple no-op stubs
-have now been ported:
+Audit (2026-04-18, refined): 118 of 138 Perl CSes have Rust
+equivalents. Of the other 20, most were "Perl comment only" (documented
+but not actually defined in pdfTeX.pool.ltxml) or defined in a
+different engine file:
 
-  [x] \lpfcode, \rpfcode                  — pdftex.rs DefRegister (matches \lpcode pattern)
-  [x] \pdfsavepos                         — DefPrimitive no-op
-  [x] \pdfstartthread, \pdfendthread      — DefPrimitive no-ops
-  [x] \pdfnoligatures                     — DefPrimitive consumes Token (font)
-  [x] \pdfsetrandomseed                   — DefPrimitive consumes Number
+  [x] \lpfcode, \rpfcode                  — pdftex.rs DefRegister
+  [x] \pdfsavepos                         — pdftex.rs no-op stub (Perl: comment only)
+  [x] \pdfstartthread, \pdfendthread      — pdftex.rs no-op stubs (Perl: comment only)
+  [x] \pdfnoligatures                     — pdftex.rs stub (Perl: comment only)
+  [x] \pdfsetrandomseed                   — pdftex.rs stub (Perl: comment only)
+  [x] \special                            — tex_file_io.rs L210 (not in pdftex pool either)
+  [x] \vadjust                            — tex_paragraph.rs L23 (not in pdftex pool either)
 
-Still missing (non-trivial — need custom `OpenAnnotSpecification` /
-`OpenActionSpecification` parameter-type ports before they can be
-sensibly stubbed):
+Perl-comment-only (documented but not actually Perl-defined — N/A for
+pure parity):
 
-  [ ] \pdfannot, \pdfdest, \pdfthread
-  [ ] \pdfoutline, \pdfobj
-  [ ] \pdfximage, \pdfrefximage
-  [ ] \pdfcolorstack, \pdfcolorstackinit
-  [ ] \pdffontattr, \pdffontexpand
-  [ ] \special, \vadjust                  — core TeX primitives
+  \pdfdest, \pdfthread, \pdfoutline       — all comment-only at Perl L179-184
+  \pdfximage, \pdfrefximage               — comment-only at Perl L144-145
+  \pdfcolorstackinit                      — commented-out DefMacro at Perl L125
+  \pdffontattr, \pdffontexpand            — comment-only at Perl L194-195
 
-All of these are safely missing for the test suite (nothing breaks).
-Port them when a specific document surfaces the need.
+Genuinely Perl-defined but Rust-missing (3 items, all need custom
+parameter-type ports):
+
+  [ ] \pdfannot                           — Perl L173, uses OpenAnnotSpecification
+  [ ] \pdfobj                             — Perl L219, uses OpenAnnotSpecification
+  [ ] \pdfcolorstack                      — Perl L210, complex reader
+
+All of the genuinely-missing 3 are safely missing for the test suite
+(nothing breaks). Port them when a specific document surfaces the
+need; the blocker is `OpenAnnotSpecification` / `OpenActionSpecification`
+parameter-type ports.
 
 ## Priority Order (by test impact) — UPDATED 2026-04-18
 
