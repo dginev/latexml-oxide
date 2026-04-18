@@ -101,12 +101,16 @@ All language-specific behavior (captions, shorthands, active punctuation,
 encoding switches, …) comes from the vanilla `.ldf` files that `babel.sty`
 pulls in via `\openin` + `\input` as options are processed.
 
-**Our Rust bindings**, by contrast, are **384+153 lines of workarounds**
-(`babel_sty.rs`, `babel_support_sty.rs`) that pre-declare things the raw
-path would otherwise build, hard-code caption strings that would otherwise
-come from `.ldf` files, and hand-roll active-char mechanisms. These were
-added in sessions 42–80 to keep the test suite running, but they mean
-Rust's babel is a different implementation from Perl's — and the diff shows:
+**Our Rust bindings**, as of session 110, are **62+196 lines**
+(`babel_sty.rs`, `babel_support_sty.rs`) — down from 384+153 at session
+start. After the `@currname` leakage fix (commit 56b0c35d2), babel's
+own option pipeline, caption activation, active-char shorthand setup,
+and per-language port dispatch all work end-to-end. `babel_sty.rs` is
+now a thin orchestration layer: pre-allocate `\l@polutonikogreek`,
+raw-load `babel.sty`, set DOCUMENT_LANGUAGE, and force-set
+`\bbl@main@language` so babel's `\AtBeginDocument{\selectlanguage}`
+picks the user's intended LAST option. Historical notes below preserved
+for context:
 
 ```
                            Perl          Local Rust                    CI Rust
@@ -454,7 +458,7 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
     in rendering).
 
 - [~] **Drop Rust babel workarounds incrementally.** In progress.
-  Session 110 (2026-04-17): **babel_sty.rs cut 405 → 128 lines (68%)** via
+  Session 110 (2026-04-17): **babel_sty.rs cut 405 → 62 lines (85%)** via
   relocation + consolidation — not yet engine-closed, but the remaining
   code is a clean orchestration layer. Breakdown of moves:
   - French captions/ordinals/guillemets/active-puncts (~100 lines):
