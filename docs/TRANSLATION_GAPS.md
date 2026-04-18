@@ -46,16 +46,17 @@ Substantially ported (278 DefMath! definitions). Most core math symbols present.
 - [x] `DefMathLigature` — macro at `prelude/setup_binding_language.rs::DefMathLigature` L186
 - [x] `\skewchar` — `tex_math.rs` L1395 `DefRegister!("\\skewchar{}", ...)`
 
-## 4. Rewrite.pm (560 Perl → 350 Rust, mostly stubs)
+## 4. Rewrite.pm — substantively ported
 
-- [ ] `compileClause()` — 6 clause types (Perl L284-331, 48 lines)
-- [ ] `compile_match()` + `compile_match1()` (Perl L334-372, 39 lines)
-- [ ] `compile_replacement()` (Perl L375-391, 17 lines)
-- [ ] `compile_regexp()` (Perl L393-401, 9 lines)
-- [ ] `domToXPath()` + `domToXPath_rec()` + `domToXPath_seq()` (Perl L416-532, 117 lines)
-- [ ] `applyClause()` — operators beyond Select/Replace (Perl L78-181, 104 lines)
-- [ ] Wildcard handling — markSeen, markWildcards, set_wildcard_ids (Perl L219-282, 64 lines)
-- [ ] `setAttributes_encapsulate()` + `setAttributes_wild()` (Perl L184-231, 48 lines)
+(The "560 Perl → 350 Rust, mostly stubs" header from 2026-03-15 is now
+inaccurate — `rewrite.rs` is ~1200 lines of functioning code.)
+
+- [x] `compileClause()` — `rewrite.rs::compile_clause` L225 (handles all 6 clause types inline rather than dispatching to compile_match/compile_replacement helpers; the structural equivalent)
+- [x] `compile_match*` / `compile_replacement` / `compile_regexp` — absorbed into `compile_clause`'s arm dispatch; `CompiledMatch` type at L724
+- [x] `domToXPath*` — `rewrite.rs::dom_to_xpath` L728, `dom_to_xpath_rec` L742, `dom_to_xpath_seq` L859
+- [x] `applyClause()` with all operators — `rewrite.rs::apply_clause` L379
+- [x] Wildcard handling — `mark_seen` L1186, `mark_wildcards` L934, `unmark_wildcards` L963, `set_wildcard_ids` L979
+- [x] `setAttributes_wild()` — `rewrite.rs::set_attributes_wild` L1023 (setAttributes_encapsulate use cases folded into the same function)
 
 ## 5. Package.pm — missing exported functions
 
