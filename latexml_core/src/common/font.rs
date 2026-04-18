@@ -325,10 +325,22 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
   if let Some(m) = STDMETRICS.get(base) {
     return m;
   }
-  // Try base + "10"
-  let base10 = format!("{base}10");
-  if let Some(m) = STDMETRICS.get(base10.as_str()) {
-    return m;
+  // Try base + "10". Stack-buffer concat avoids the per-call `format!`
+  // heap alloc — `get_metric_for_name` is reached through the
+  // per-character `get_metric` loop, so this is a real allocation
+  // site. Font basenames are short (≤ ~20 ASCII bytes); 32 bytes is
+  // ample padding.
+  let base_bytes = base.as_bytes();
+  if base_bytes.len() + 2 <= 32 {
+    let mut buf = [0u8; 32];
+    buf[..base_bytes.len()].copy_from_slice(base_bytes);
+    buf[base_bytes.len()] = b'1';
+    buf[base_bytes.len() + 1] = b'0';
+    if let Ok(s) = std::str::from_utf8(&buf[..base_bytes.len() + 2]) {
+      if let Some(m) = STDMETRICS.get(s) {
+        return m;
+      }
+    }
   }
   // Ultimate fallback to "cmr"
   STDMETRICS.get("cmr").expect("STDMETRICS must contain 'cmr'")
