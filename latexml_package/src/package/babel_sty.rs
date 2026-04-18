@@ -59,6 +59,14 @@ LoadDefinitions!({
         Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
+    // Force-set \bbl@main@language to the resolved language so babel's own
+    // `\AtBeginDocument{\selectlanguage{\bbl@main@language}}` picks up the
+    // correct value. Without this, babel's raw-load path may leave it as
+    // "nil" or pointing at a different language whose .ldf \ldf@finish
+    // ran last (e.g. greek.ldf in `[polutonikogreek,english]`).
+    def_macro(T_CS!("\\bbl@main@language"), None,
+      Tokens!(Explode!(lang.clone())),
+      Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
     // Load per-language Rust ports for EVERY babel option, not just main.
     // Needed so \begin{otherlanguage}{other} / \foreignlanguage{other}
     // finds \captions<other> defined — babel's internal \bbl@switch
