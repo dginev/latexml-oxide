@@ -438,7 +438,11 @@ impl Tokens {
   /// lists) Also unwraps \noexpand tokens, since that is also needed for macro bodies
   /// (but not strictly part of packing parameters)
   pub fn pack_parameters(self) -> Result<Self> {
-    let mut rescanned = Vec::new();
+    // Result is at most the same size as input (param-digit pairs
+    // collapse 2→1; other tokens copy 1→1). Pre-sizing avoids the
+    // initial Vec doublings on 1k+ token expansions (common for
+    // expl3 macros).
+    let mut rescanned = Vec::with_capacity(self.0.len());
     let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
     while let Some(t) = toks.pop_front() {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
