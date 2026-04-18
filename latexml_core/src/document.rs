@@ -291,9 +291,16 @@ impl Document {
 
   /// Check if any descendant of node uses the given namespace prefix.
   fn has_namespace_usage(&self, node: &Node, prefix: &str) -> bool {
-    // Check attributes of this node for prefix: usage
+    // Check attributes of this node for prefix: usage. The
+    // allocation-free check `starts_with(prefix) + byte-at-prefix.len()`
+    // replaces `format!("{prefix}:")` which would heap-allocate per node
+    // visited during the recursive descent.
+    let plen = prefix.len();
     for (key, _) in node.get_attributes() {
-      if key.starts_with(&format!("{prefix}:")) {
+      if key.len() > plen
+        && key.starts_with(prefix)
+        && key.as_bytes()[plen] == b':'
+      {
         return true;
       }
     }
