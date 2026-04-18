@@ -76,10 +76,13 @@ inaccurate — `rewrite.rs` is ~1200 lines of functioning code.)
 
 - [ ] `getStretch()`, `getShrink()`, `getStretchOrder()`, `getShrinkOrder()` stubs (Perl L125-128, 4 lines)
 
-## 8. Color.pm — gaps (693 Perl → 339 Rust)
+## 8. Color.pm — substantively ported
 
-- [ ] Full color model support (CMYK, HSB conversions)
-- [ ] Color mixing operations
+(The "693 Perl → 339 Rust" header from 2026-03-15 is stale.
+`common/color.rs` has all core models and conversions.)
+
+- [x] Full color model support — `common/color.rs::to_cmyk` L110, `to_hsb` L130, `convert` L172 (dispatches across rgb, cmy, cmyk, hsb, gray, HTML, RGB, Hsb, HSB, Gray, tHsb, wave)
+- [x] Color mixing operations — `common/color.rs::mix` L235 (linear interpolation across color models); `xcolor_sty.rs::apply_mix_expr` L232 (parses !pct!name chains)
 
 ## 9. pdfTeX.pool.ltxml — gaps (284 Perl → 254 Rust)
 
