@@ -108,26 +108,32 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     "V" => load_value(&key, data),
     // M: Meaning entries (expandable definitions + primitive aliases).
     //
-    // Currently conservative: only load `@`-internal Expandables whose
-    // expansion body doesn't reference the expl3 hook system.
+    // Current policy: only route `@`-internal entries (whose body does
+    // not reference the expl3 hook system) to `load_meaning`. Those
+    // include `@`-internal PA/MPA aliases, which DO get consumed via
+    // the PA arm of `load_meaning`. The @-internal gate is still the
+    // right safety fence: it keeps us out of the expl3 short-circuit
+    // hazard zone.
     //
-    // PA/MPA + `:`-style expl3 Expandables are BOTH gated off. Two
-    // experiments showed they each cause a blow-up on expl3 conversion:
+    // `:`-style expl3 Meanings and public-CS PAs (like
+    // `\tex_let:D → \let`) remain gated off because enabling them
+    // causes two failure modes, both observed in earlier experiments:
     //
-    //   - PA alone: `\tex_let:D → \let` gets re-aliased → expl3.sty's
-    //     guard `\ifx\csname tex_let:D\endcsname\relax` fires → raw
-    //     `\input expl3-code.tex` is skipped → expl3.sty's post-guard
-    //     code hits `\__kernel_dependency_version_check:Nn`,
-    //     `\ProcessOptions`, `\keys_define:nn { sys }`, … which are
-    //     `:`-style macros we don't load → undefined CS recovery →
-    //     infinite-looking loop (60 s timeout, memory climbing).
+    //   - PA alone: `\tex_let:D` becomes let-aliased to `\let` via
+    //     the dump → `expl3.sty`'s own guard fires → raw
+    //     `\input expl3-code.tex` is skipped → post-guard code hits
+    //     `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
+    //     `\keys_define:nn { sys }`, which are `:`-style macros we
+    //     don't load → undefined-CS recovery loop (60 s timeout,
+    //     memory climbing, SIGTERM-by-watchdog).
     //
-    //   - PA + `:`-style M: the `:`-style macro bodies themselves
-    //     trigger the same pattern via cross-references.
+    //   - PA + `:`-style M: the `:`-style bodies themselves trigger
+    //     the same pattern via cross-references.
     //
-    // Both need to be unblocked TOGETHER, in coordination with
-    // expl3_sty.rs short-circuiting its whole load_definitions when
-    // the dump already has expl3 state. See SYNC_STATUS D0 (d.5).
+    // Both must be unblocked TOGETHER, in coordination with
+    // `expl3_sty.rs` short-circuiting its whole `load_definitions`
+    // when the dump already supplies expl3 state. See SYNC_STATUS
+    // D0 (d.5).
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
