@@ -146,6 +146,37 @@ impl Tbox {
       || self.get_property_bool("isSpace")
       || arena::with(self.text, |text| text.trim().is_empty())
   }
+
+  /// Whether this box is in math mode.
+  /// Perl: Box.pm::isMath (L79-81).
+  pub fn is_math(&self) -> bool {
+    matches!(self.properties.get("mode"), Some(Stored::String(s)) if *s == *MATH_SYM)
+  }
+
+  /// Batch-insert properties. Equivalent to calling `set_property` for each
+  /// entry, but avoids re-looking up the properties map per call.
+  /// Perl: Box.pm::setProperties (L171-175).
+  pub fn set_properties<I>(&mut self, entries: I)
+  where I: IntoIterator<Item = (&'static str, Stored)> {
+    for (key, value) in entries {
+      self.properties.insert(key, value);
+    }
+  }
+
+  /// height + depth of this box (the TeX "total height").
+  /// Returns Dimension::default() (0pt) when either component is absent.
+  /// Perl: Box.pm::getTotalHeight (L202-210).
+  pub fn total_height(&self) -> Dimension {
+    let h = match self.properties.get("height") {
+      Some(Stored::Dimension(d)) => d.0,
+      _ => 0,
+    };
+    let d = match self.properties.get("depth") {
+      Some(Stored::Dimension(d)) => d.0,
+      _ => 0,
+    };
+    Dimension(h + d)
+  }
 }
 
 impl BoxOps for Tbox {

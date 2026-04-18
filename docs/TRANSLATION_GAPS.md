@@ -66,11 +66,11 @@ inaccurate — `rewrite.rs` is ~1200 lines of functioning code.)
 - [x] `DefConditional` family — macro at `prelude/setup_binding_language.rs::DefConditional` L237 covers both `DefConditional` and `DefConditionalI` use cases; `set_condition` at `content.rs` L1562.
 - [x] `RawTeX` — `stomach.rs::raw_tex` L725.
 
-## 6. Box.pm — missing methods
+## 6. Box.pm — ported
 
-- [ ] `isMath()` for Tbox (Perl L79-81, 3 lines)
-- [ ] `setProperties()` batch setter (Perl L171-175, 5 lines)
-- [ ] `getTotalHeight()` (Perl L202-210, 9 lines)
+- [x] `isMath()` — `tbox.rs::is_math` (checks `mode` property against `MATH_SYM`)
+- [x] `setProperties()` batch setter — `tbox.rs::set_properties`
+- [x] `getTotalHeight()` — `tbox.rs::total_height` (sums height + depth)
 
 ## 7. Number.pm — N/A
 
