@@ -862,8 +862,9 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
     }
     let level = level.unwrap_or_else(|| lookup_int("enumlevel").max(0) as i32);
     let level_str = roman_aux(level);
-    let tokens = stuff.clone().unlist();
-    let mut out: Vec<Token> = Vec::new();
+    // Iterate the borrowed token slice — no clone needed, only reads.
+    let tokens = stuff.unlist_ref();
+    let mut out: Vec<Token> = Vec::with_capacity(tokens.len());
     let ctr = T_OTHER!(s!("enum{level_str}"));
     let mut i = 0;
     while i < tokens.len() {
