@@ -2,6 +2,33 @@
 
 ## [0.4.1] (in active development)
 
+  - **D0 d.1 complete — dump / `_base` closure-only gap closed from
+    32 → 1 CSes** (the single holdout `\wlog` is defined by
+    `plain_base.rs` as a closure before the snapshot). Three landings:
+    (1) `Expandable::get_num_args` override so E-entries record correct
+    nargs; (2) `serialize_stored` handles `None`-body Expandables as
+    empty E-entries; (3) `ini_tex.rs` surgically preloads `latex_base`
+    after the bootstrap snapshot so its `_base`-only CSes enter state
+    before the raw-load.
+  - **Dump E-format v2** (new 5th field): full parameter prototype
+    serialized per entry via `Parameters::stringify()` so DefToken /
+    Optional / Until / Match types round-trip instead of being
+    flattened to Plain. Reader gracefully falls back to
+    `"{}".repeat(nargs)` when proto fails to parse.
+  - **Latent dump-pipeline bug fixes**: (a) `parse_and_load`'s
+    `line.trim()` stripped trailing tabs from empty-body E-entries,
+    causing `splitn(4)` to report 3 fields and reject the entry;
+    (b) `dump_reader`, `dump_loader`, `dump_codegen`, and
+    `latex_constructs::\DeclareTextFontCommand` all called
+    `parse_parameters(..., false)` which leaves declared Parameters
+    with the mock reader ("Missing argument {}" at first use) — now
+    all pass `init_flag=true` for runtime paths.
+  - **Perl parity sweep** (commits back to 2025):
+    #2771 if_count/absorb_count control-counter filter on dump writer;
+    #2777 KeyVal empty-macroprefix fallback + empty-keyset skip;
+    #2697 DecodeColor Warn on unresolvable name;
+    #4e3d1b8d filecontents header prepend "from source" line;
+    #aaacdba2 nominal Locator on dump-loaded Expandables + Registers.
   - **Babel parity**: reduced `babel_sty.rs` from 384 → 62 lines (85%) after
     closing the `@currname` leakage bug in our `input_definitions` path
     (plain `\input` now locally saves/restores `@currname`/`@currext`,
