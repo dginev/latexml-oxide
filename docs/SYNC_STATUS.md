@@ -256,6 +256,27 @@ exact engine gaps:
   safely enabled; otherwise `DefToken`, `Optional`, `Semiverbatim`,
   and any custom parameter types all get flattened to `Plain`.
 
+  **Partial landing (commit fc45e068, 2026-04-18):** added a 5th
+  `<proto>` field to E-entries so the prototype now round-trips for
+  the common cases (`{}`, `[]`, `DefToken`, typed parameters). All
+  409 tests still pass; the field is silent under current add-only
+  gating. But mutual-exclusivity re-tested against the 5-field dump
+  **still livelocks** 00_tokenize — so the param-type mismatch was
+  ONE of the blockers, not the only one.
+
+  Next suspected blocker: the `Until:<delimiter>` form used by
+  `\@xverbatim` and similar doesn't round-trip cleanly. Our
+  `Parameters::stringify` produces `"Until:\\end{verbatim}"`, and
+  `parse_parameters`'s `PARAMSPECT_CHECK_RE` splits that into two
+  params — a `Until:\end` delimited-like form + a nested `{verbatim}`
+  which is then mis-parsed as a Plain param with inner type
+  "verbatim" (triggering the `Unrecognized parameter type with name
+  "verbatim"` warning we saw at hello load). For mutual-exclusivity,
+  either stringify+parse need to be proper inverses for all
+  delimited forms, or we serialize the prototype in a richer
+  structural format (e.g. one line per parameter with explicit
+  name/spec/extra fields).
+
 - [x] **Dump captures primitive aliases (`PA`/`MPA` entries).** The
   short-circuit guard in texlive's `expl3.sty` is
   `\ifx\csname tex_let:D\endcsname\relax` — it skips the 36k-line
