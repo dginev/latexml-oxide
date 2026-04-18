@@ -818,7 +818,11 @@ impl State {
 
   pub fn lookup_stacked_values(&self, key: &str) -> Vec<&Stored> {
     let key_sym = arena::pin(key);
-    if let Some(vdq) = self.value.get(&key_sym) {
+    self.lookup_stacked_values_sym(&key_sym)
+  }
+
+  pub fn lookup_stacked_values_sym(&self, key: &SymStr) -> Vec<&Stored> {
+    if let Some(vdq) = self.value.get(key) {
       vdq.iter().collect::<Vec<&Stored>>()
     } else {
       Vec::new()
@@ -1161,6 +1165,11 @@ pub fn lookup_value(key: &str) -> Option<Stored> { state!().lookup_value(key).cl
 pub fn with_value<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&Stored>) -> R {
   caller(state!().lookup_value(key))
+}
+/// Sym-keyed variant of `with_value` — avoids the per-call `arena::pin(key)`.
+pub fn with_value_sym<R, FnR>(key: &SymStr, caller: FnR) -> R
+where FnR: FnOnce(Option<&Stored>) -> R {
+  caller(state!().lookup_value_sym(key))
 }
 pub fn with_value_mut<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Stored>) -> R {
@@ -2443,6 +2452,11 @@ pub fn set_input_encoding(val: Option<String>) {
 pub fn with_stacked_values<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Vec<&Stored>) -> R {
   caller(state!().lookup_stacked_values(key))
+}
+/// Sym-keyed variant of `with_stacked_values`.
+pub fn with_stacked_values_sym<R, FnR>(key: &SymStr, caller: FnR) -> R
+where FnR: FnOnce(Vec<&Stored>) -> R {
+  caller(state!().lookup_stacked_values_sym(key))
 }
 
 pub fn set_state(incoming_state: State) {

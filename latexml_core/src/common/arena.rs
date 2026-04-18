@@ -158,6 +158,9 @@ pub static GROUP_INITIATOR_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("groupIni
 #[thread_local]
 pub static GROUP_INITIATOR_LOCATOR_SYM: Lazy<SymStr> =
   Lazy::new(|| pin_static("groupInitiatorLocator"));
+#[thread_local]
+pub static CURRENT_ENVIRONMENT_SYM: Lazy<SymStr> =
+  Lazy::new(|| pin_static("current_environment"));
 
 /// Assign a static str into the arena, returning a unique symbol.
 pub fn pin_static(text: &'static str) -> SymStr {

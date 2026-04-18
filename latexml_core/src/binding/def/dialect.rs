@@ -1069,7 +1069,7 @@ pub fn def_environment(
 
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!({
-    assign_value("current_environment", env_name.clone(), None);
+    assign_value_sym(*arena::CURRENT_ENVIRONMENT_SYM, env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
     def_macro(
       T_CS!("\\@currenvir"),
@@ -1172,12 +1172,12 @@ pub fn def_environment(
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
   let unexpected_end_closure = after_digest_simple!(_whatsit, {
-    let env = lookup_string("current_environment");
+    let env = lookup_string_from_sym(&arena::CURRENT_ENVIRONMENT_SYM);
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
       let message2 = s!(
         "Current are {} ",
-        with_stacked_values("current_environment", |vals| vals
+        with_stacked_values_sym(&arena::CURRENT_ENVIRONMENT_SYM, |vals| vals
           .iter()
           .map(|x| s!("{:?}", x))
           .collect::<Vec<String>>()

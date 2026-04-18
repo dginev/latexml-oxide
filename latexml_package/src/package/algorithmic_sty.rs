@@ -19,7 +19,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@setup@algorithmic", {
     ResetCounter!("ALC@line");
     // If not within an algorithm environment, step the counter for its id's
-    let in_algorithm = state::with_stacked_values("current_environment", |vals| {
+    let in_algorithm = state::with_stacked_values_sym(&arena::CURRENT_ENVIRONMENT_SYM, |vals| {
       vals.iter().any(|s| s.to_string() == "algorithm")
     });
     if !in_algorithm {
