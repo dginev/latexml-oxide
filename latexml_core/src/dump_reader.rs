@@ -628,8 +628,18 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
 fn parse_token(s: &str) -> Result<Token, String> {
   let (cc_str, text) = s.split_once(':').ok_or("Missing ':' in token")?;
   let cc: u8 = cc_str.parse().map_err(|e| format!("Bad CC: {}", e))?;
+  // Fast path: most token text fields have no `%` escapes, so pin the
+  // &str directly — avoids the String allocation url_decode would make
+  // even on its own fast path. Parsing the expl3 kernel alone produces
+  // hundreds of thousands of token entries; every `to_owned()` avoided
+  // here matters.
+  let text_sym = if text.contains('%') {
+    arena::pin(url_decode(text))
+  } else {
+    arena::pin(text)
+  };
   Ok(Token {
-    text: arena::pin(url_decode(text)),
+    text: text_sym,
     code: Catcode::from(cc),
   })
 }
