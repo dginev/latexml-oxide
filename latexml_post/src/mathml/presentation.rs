@@ -1204,10 +1204,10 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
     return;
   }
 
-  let prev_tag = get_node_tag(prev).to_string();
-  let next_tag = get_node_tag(next).to_string();
+  let prev_is_mo = get_node_tag(prev) == "m:mo";
+  let next_is_mo = get_node_tag(next) == "m:mo";
 
-  if prev_tag == "m:mo" && next_tag == "m:mo" {
+  if prev_is_mo && next_is_mo {
     let n = next_dict_left;
     let rem = target - n;
     if rem >= 0.0 {
@@ -1219,9 +1219,9 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
         set_node_attr(next, "lspace", &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }));
       }
     }
-  } else if prev_tag == "m:mo" {
+  } else if prev_is_mo {
     set_node_attr(prev, "rspace", &fmt_em(target));
-  } else if next_tag == "m:mo" {
+  } else if next_is_mo {
     set_node_attr(next, "lspace", &fmt_em(target));
   }
 }
