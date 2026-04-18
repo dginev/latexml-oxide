@@ -571,7 +571,7 @@ LoadDefinitions!({
   DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
     let name_str = do_expand(name)?.to_string();
     let key = s!("color_{name_str}");
-    if state::lookup_value(&key).is_some() {
+    if state::with_value(&key, |v| v.is_some()) {
       return Ok(Vec::new()); // Already defined
     }
     let models_str = do_expand(models)?.to_string();
@@ -636,7 +636,7 @@ LoadDefinitions!({
         let specs = spec[comma_pos+1..].trim();
         let full_name = s!("{head_str}{name}{tail_str}");
         let key = s!("color_{full_name}");
-        if state::lookup_value(&key).is_some() { continue; }
+        if state::with_value(&key, |v| v.is_some()) { continue; }
         let color = parse_xcolor(Some(&models_str), specs, None);
         def_color(&full_name, &color, scope)?;
       }
@@ -1442,7 +1442,7 @@ fn define_colors_impl(id_pairs: &str, if_undef: bool) -> Result<()> {
     };
     if if_undef {
       let key = s!("color_{name}");
-      if state::lookup_value(&key).is_some() { continue; }
+      if state::with_value(&key, |v| v.is_some()) { continue; }
     }
     let from_key = s!("color_{from}");
     if let Some(stored) = state::lookup_value(&from_key) {

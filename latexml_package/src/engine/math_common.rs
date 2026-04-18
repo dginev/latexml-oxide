@@ -245,7 +245,7 @@ LoadDefinitions!({
           // Check isFontDef: lookupValue("fontinfo_<cs>")
           let cs_str = token.to_string();
           let fontinfo_key = s!("fontinfo_{}", cs_str);
-          if state::lookup_value(&fontinfo_key).is_some() {
+          if state::with_value(&fontinfo_key, |v| v.is_some()) {
             true
           } else {
             // Check \def, \edef, \gdef, \xdef

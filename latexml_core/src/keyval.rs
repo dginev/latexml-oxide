@@ -83,7 +83,7 @@ pub(crate) fn keyval_set(qname: &str, prop: &str, value: Stored) {
 /// check if a key-value pair is defined
 pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
   let qname = keyval_qname(prefix, keyset, key);
-  state::lookup_value(&s!("KEYVAL@defined@{}", qname)).is_some()
+  state::with_value(&s!("KEYVAL@defined@{}", qname), |v| v.is_some())
     || state::lookup_meaning(&T_CS!(s!("\\{qname}"))).is_some()
 }
 
