@@ -218,13 +218,15 @@ exact engine gaps:
   mutually exclusive — `_base` is the verbose source form of what the
   dump serializes. Our `latex.rs` currently loads both: `bootstrap` →
   `_base` (our `latex_base.rs` Rust bindings) → `dump` (add-only) →
-  `constructs`. Measured impact: the dump does **~6045 add-only inserts
-  on startup** (most pre-loaded entries are already defined by
-  `_base.rs`), costing ~5 MB RSS and ~10 ms, delivering **no measurable
-  speed-up** on minimal or medium docs. Full test suite passes
-  identically with or without the dump. Fix: make the `_base` pool vs
-  `_dump` load mutually exclusive so the dump's raison d'être
-  (bypassing base reprocessing) actually kicks in.
+  `constructs`. Measured impact (2026-04-18, hello.tex): the dump
+  serializes **25,172** entries; **6,154** actually install into state
+  at load time, the other **19,018** skipped (mostly shadowed by
+  `_base.rs`'s compiled closures via add-only policy). Memory cost
+  ~5 MB RSS, time cost ~10 ms, **no measurable speed-up** on minimal
+  or medium docs. Full test suite passes identically with or without
+  the dump. Fix: make the `_base` pool vs `_dump` load mutually
+  exclusive so the dump's raison d'être (bypassing base reprocessing)
+  actually kicks in.
 
   This is the cleanest lever that will make the kernel dump *do* what
   it claims in the Perl design — and it becomes necessary once the
@@ -463,11 +465,11 @@ Perl-sized expl3 speedup**. Harvesting the speedup safely requires:
 
   **Why our dump currently doesn't speed anything up:**
   1. `_base.rs` is already pre-compiled Rust containing LaTeX-kernel
-     bindings. The dump's add-only policy sees most of its 6045 entries
+     bindings. The dump's add-only policy sees ~19k of its 25,172 entries
      as "already defined" and skips them — the state they'd add is
-     already set by compiled code. This is the *opposite* of Perl, where
-     the dump REPLACES work that would otherwise be done by interpreter-
-     bound `.pool.ltxml` loading.
+     already set by compiled code. Only ~6,154 of the 25k install. This
+     is the *opposite* of Perl, where the dump REPLACES work that would
+     otherwise be done by interpreter-bound `.pool.ltxml` loading.
   2. `\usepackage{expl3}` in a user doc calls `expl3_sty.rs::load_definitions`
      which unconditionally `input_definitions("expl3", sty, noltxml=true)`,
      re-processing all 36k lines of `expl3-code.tex`. This costs ~1.3 s.
