@@ -8095,7 +8095,11 @@ LoadDefinitions!({
     expansion.push(T_PARAM!());
     expansion.push(T_OTHER!("1"));
     expansion.push(T_END!());
-    let params = parse_parameters("{}", &cs, false)?;
+    // init_flag=true: engine is up at \DeclareTextFontCommand expansion
+    // time, so Parameter::init() can resolve readers via PARAMETER_TYPES.
+    // With init=false the declared command's Plain arg uses the mock
+    // reader and fails to consume input at invocation.
+    let params = parse_parameters("{}", &cs, true)?;
     def_macro(cs, params,
       Some(ExpansionBody::Tokens(Tokens::new(expansion))), None)?;
   });
