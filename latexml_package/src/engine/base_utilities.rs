@@ -119,7 +119,7 @@ LoadDefinitions!({
     )
   });
 
-  DefConditional!("\\if@in@preamble", { state::lookup_bool_sym(pin_literal!("inPreamble")) });
+  DefConditional!("\\if@in@preamble", { state::lookup_bool_sym(pin!("inPreamble")) });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -159,7 +159,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
-    let inpreamble = state::lookup_bool_sym(pin_literal!("inPreamble"));
+    let inpreamble = state::lookup_bool_sym(pin!("inPreamble"));
     assign_value("inPreamble", false, None);
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
@@ -254,7 +254,7 @@ LoadDefinitions!({
     sub[(tag_tks, label_opt, tokens)] {
     let tag = tag_tks.unwrap().to_string();
     let label = label_opt.as_ref().map(|l| l.to_string());
-    let inpreamble = state::lookup_bool_sym(pin_literal!("inPreamble"));
+    let inpreamble = state::lookup_bool_sym(pin!("inPreamble"));
     assign_value("inPreamble", false, None);
 
     // Digest the content tokens
@@ -686,7 +686,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
       // Dubious, but assures that frontmatter appears in text mode...
       document.set_box_to_absorb(
         Tbox::new(
-          pin_literal!(""),
+          pin!(""),
           lookup_font(),
           None,
           Tokens!(T_SPACE!()),
@@ -970,7 +970,7 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
   // in the content will pop this frame, since \egroup is \let to T_END and
   // invoke_token handles it via the standard group-closing mechanism.
-  let current_mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+  let current_mode = state::lookup_string_from_sym(pin!("MODE"));
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
   if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
     stomach::begin_mode(&current_mode)?;
@@ -987,8 +987,8 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
     // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
     // Check the condition BEFORE endMode pops the frame.
-    let post_mode = state::lookup_string_from_sym(pin_literal!("MODE"));
-    let bound_mode = state::lookup_string_from_sym(pin_literal!("BOUND_MODE"));
+    let post_mode = state::lookup_string_from_sym(pin!("MODE"));
+    let bound_mode = state::lookup_string_from_sym(pin!("BOUND_MODE"));
     if post_mode == "horizontal" && bound_mode.ends_with("vertical")
       && has_only_simple_horizontal_content(&item)
     {

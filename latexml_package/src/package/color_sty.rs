@@ -108,7 +108,7 @@ LoadDefinitions!({
     let color = parse_color(model_str.as_deref(), &spec_str);
 
     // If in preamble, store for \normalcolor
-    if state::lookup_bool_sym(pin_literal!("inPreamble")) {
+    if state::lookup_bool_sym(pin!("inPreamble")) {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
@@ -125,7 +125,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\color",
       vec![Some(Tokens::from(T_OTHER!("rgb"))),
            Some(Tokens::from(T_OTHER!(&*comps)))]);
-    Ok(vec![Digested::from(Tbox::new(pin_literal!(""), None, None,
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, arena::SymHashMap::default()))])
   });
 
@@ -141,7 +141,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\pagecolor",
       vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
            Some(Tokens::from(T_OTHER!(&*spec_str)))]);
-    Ok(vec![Digested::from(Tbox::new(pin_literal!(""), None, None,
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, arena::SymHashMap::default()))])
   });
 

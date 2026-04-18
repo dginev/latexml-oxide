@@ -23,7 +23,7 @@ use std::rc::Rc;
 
 pub mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
-use crate::pin_literal;
+use crate::pin;
 
 pub type Fontmap = Rc<[Option<char>]>;
 
@@ -1927,7 +1927,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
 }
 
 pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool) -> SymStr {
-  let empty_sym = pin_literal!("");
+  let empty_sym = pin!("");
   if string == empty_sym {
     return empty_sym;
   }

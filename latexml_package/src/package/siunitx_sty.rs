@@ -393,7 +393,7 @@ fn six_apply_mathligatures(tokens: Vec<Token>) -> Vec<Token> {
     let name = t.to_string();
     match name.as_str() {
       "+" => {
-        if iter.peek().is_some_and(|n| n.to_string() == "-") {
+        if iter.peek().is_some_and(|n| n.text == pin!("-")) {
           iter.next();
           result.push(T_CS!("\\pm"));
         } else {
@@ -492,7 +492,7 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
         Some(n) => results.push(SixParseResult::Parsed(n)),
         None => break,
       }
-      if tokens.first().is_some_and(|t| t.to_string() == ";") {
+      if tokens.first().is_some_and(|t| t.text == pin!(";")) {
         tokens.remove(0);
       } else {
         break;
@@ -506,7 +506,7 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     let mut results = Vec::new();
     let mut current = Vec::new();
     for t in expr.unlist_ref() {
-      if t.to_string() == ";" {
+      if t.text == pin!(";") {
         results.push(SixParseResult::Raw(Tokens::new(current)));
         current = Vec::new();
       } else {
@@ -1130,7 +1130,7 @@ fn six_parse_literalunits(expr: &Tokens) -> Tokens {
 
   while let Some(t) = iter.next() {
     let tc = t.get_catcode();
-    if t.to_string() == "." {
+    if t.text == pin!(".") {
       result.extend(six_get_tokens("inter-unit-product").unlist());
     } else if tc == Catcode::SUPER {
       if let Some(next) = iter.peek() {

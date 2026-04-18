@@ -137,12 +137,12 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
 
   while let Ok(Some(token)) = gullet::read_token() {
     if let Some(until_tok) = until {
-      if token.to_string() == until_tok.to_string() {
+      if token.text == until_tok.text && token.code == until_tok.code {
         break;
       }
     }
     // Check for mathescape $ toggle
-    if mathescape && token.to_string() == "$" {
+    if mathescape && token.text == pin!("$") {
       inmath = !inmath;
       tokens.push(T_OTHER!("$"));
       continue;
@@ -1580,8 +1580,8 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
     // Perl lines 184-188: Extract optional [short caption] from caption text
     let mut toks: Vec<Token> = caption_tokens.unlist();
     let mut short_caption = Tokens!();
-    if toks.first().map(|t| t.to_string() == "[").unwrap_or(false) {
-      while !toks.is_empty() && toks[0].to_string() != "]" {
+    if toks.first().map(|t| t.text == pin!("[")).unwrap_or(false) {
+      while !toks.is_empty() && toks[0].text != pin!("]") {
         short_caption.unlist_mut().push(toks.remove(0));
       }
       if !toks.is_empty() { toks.remove(0); } // consume ']'

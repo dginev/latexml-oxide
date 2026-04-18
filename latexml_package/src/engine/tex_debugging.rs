@@ -140,7 +140,7 @@ LoadDefinitions!({
           // params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
           let mut arg_index = 0;
           for param in params.iter() {
-            let mut p_spec = pin_literal!("");
+            let mut p_spec = pin!("");
             let mut continue_flag = false;
             // TODO: avoiding the allocation is quite painful here, since arena gets into mutability
             // locking

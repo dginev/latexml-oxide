@@ -34,7 +34,7 @@ use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
 use crate::{Digested, DigestedData};
-use crate::pin_literal;
+use crate::pin;
 
 // expose Perl-style local assignments from state
 pub use crate::common::local_assignments::*;
@@ -620,7 +620,7 @@ impl State {
   ) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = self.value.get(&pin_literal!("\\globaldefs")) {
+    if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
         match *global_value {
@@ -834,7 +834,7 @@ impl State {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name == pin_literal!("") { None } else { Some(name) }
+      if name == pin!("") { None } else { Some(name) }
     } else {
       key.get_executable_primitive_name().map(arena::pin)
     };
@@ -1186,7 +1186,7 @@ pub fn lookup_bool(key: &str) -> bool {
 }
 
 /// `lookup_bool` variant for hot call sites with a pre-pinned SymStr
-/// (see `crate::pin_literal!`). Skips the per-call `arena::pin(key)` hash
+/// (see `crate::pin!`). Skips the per-call `arena::pin(key)` hash
 /// lookup — significant on every-expansion hot paths. `SymStr` is a
 /// `u32` wrapper (Copy), so it passes by value — no borrow overhead.
 pub fn lookup_bool_sym(key: SymStr) -> bool {
@@ -1206,11 +1206,11 @@ pub fn lookup_string_from_sym(key: SymStr) -> String {
   }
 }
 /// like `lookup_value`, but casts the entry into a SymStr from the string interner
-///  (`pin_literal!("")` if None)
+///  (`pin!("")` if None)
 pub fn lookup_string_sym(key: &str) -> SymStr {
   let state = state!();
   match state.lookup_value(key) {
-    None => pin_literal!(""),
+    None => pin!(""),
     Some(Stored::String(v)) => *v,
     Some(other) => arena::pin(other.to_string()),
   }
@@ -1242,7 +1242,7 @@ pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
 }
 /// convenience method to lookup the current value at the "font" key
 pub fn lookup_font() -> Option<Rc<Font>> {
-  match state!().lookup_value_sym(pin_literal!("font")) {
+  match state!().lookup_value_sym(pin!("font")) {
     None | Some(Stored::None) => None,
     Some(f) => f.into(),
   }
@@ -1401,7 +1401,7 @@ pub fn is_dont_expandable(token: &Token) -> bool {
   // (but not \let to a token)
   if token.get_catcode().is_active_or_cs() {
     let lookupname = token.text;
-    if lookupname != pin_literal!("") {
+    if lookupname != pin!("") {
       match state!().meaning.get(&lookupname) {
         Some(entry) => {
           if let Some(def) = entry.front() {
@@ -1694,7 +1694,7 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
 /// this may give the definition object (if defined) or another token (if \let) or undef
 /// Any other token is returned as is.
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
-  if token.get_catcode().is_active_or_cs() && token.text != pin_literal!("") {
+  if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
     match state!().meaning.get(&token.text) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => None,
@@ -1756,7 +1756,7 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
 
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
-  if token.get_catcode().is_active_or_cs() && token.text != pin_literal!("") {
+  if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
     match state!().meaning.get(&token.text) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => false,
@@ -1848,7 +1848,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   let is_active_or_cs = cc.is_active_or_cs();
   let lookup_sym = if is_active_or_cs
     || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
-      && lookup_bool_sym(crate::pin_literal!("IN_MATH"))
+      && lookup_bool_sym(crate::pin!("IN_MATH"))
       && (lookup_mathcode_sym(t_sym).unwrap_or(0) == 0x8000))
   {
     t_sym
@@ -1858,7 +1858,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   // Debug!("Looking up digestable {:?}", lookupname);
   let state = state!();
   let entry_opt = state.meaning.get(&lookup_sym);
-  if lookup_sym != pin_literal!("") && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
+  if lookup_sym != pin!("") && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
     // Debug!("Found definition for: {:?}", lookupname);
     if let Some(entry) = entry_opt {
       if let Some(front) = entry.front() {

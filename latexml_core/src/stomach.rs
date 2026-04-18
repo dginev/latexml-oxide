@@ -98,7 +98,7 @@ pub fn initialize_stomach() {
     Some(Scope::Global),
   );
   assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-  assign_value_sym(crate::pin_literal!("groupInitiator"), "Initialization", Some(Scope::Global));
+  assign_value_sym(crate::pin!("groupInitiator"), "Initialization", Some(Scope::Global));
   // Setup default fonts.
   assign_value("font", Font::text_default(), Some(Scope::Global));
   assign_value("mathfont", Font::math_default(), Some(Scope::Global));
@@ -131,10 +131,10 @@ pub fn push_stack_frame(nobox: bool) {
     Some(Scope::Local),
   ); // ALWAYS bind this!
   assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value_sym(crate::pin_literal!("groupNonBoxing"), nobox, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value_sym(crate::pin_literal!("groupInitiator"), current_token, Some(Scope::Local));
+  assign_value_sym(crate::pin!("groupNonBoxing"), nobox, Some(Scope::Local)); // ALWAYS bind this!
+  assign_value_sym(crate::pin!("groupInitiator"), current_token, Some(Scope::Local));
   assign_value_sym(
-    crate::pin_literal!("groupInitiatorLocator"),
+    crate::pin!("groupInitiatorLocator"),
     gullet::get_locator(),
     Some(Scope::Local),
   );
@@ -197,20 +197,20 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
 pub fn current_frame_message() -> String {
   let target = if is_value_bound("MODE", Some(0)) {
     // SET mode in CURRENT frame ?
-    Cow::Owned(s!("mode-switch to {}", crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"))))
-  } else if lookup_bool_sym(crate::pin_literal!("groupNonBoxing")) {
+    Cow::Owned(s!("mode-switch to {}", crate::state::lookup_string_from_sym(crate::pin!("MODE"))))
+  } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // Current frame is a non-boxing group?
     Cow::Borrowed("non-boxing group")
   } else {
     Cow::Borrowed("boxing group")
   };
 
-  let initiator = if let Some(t) = lookup_token_sym(crate::pin_literal!("groupInitiator")) {
+  let initiator = if let Some(t) = lookup_token_sym(crate::pin!("groupInitiator")) {
     t.stringify()
   } else {
     String::new()
   };
-  let locator = lookup_string_from_sym(crate::pin_literal!("groupInitiatorLocator"));
+  let locator = lookup_string_from_sym(crate::pin!("groupInitiatorLocator"));
   s!(
     "current frame is {} due to {} {}",
     target,
@@ -242,11 +242,11 @@ pub fn egroup() -> Result<()> {
       get_current_token().unwrap(),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
-        crate::state::lookup_string_from_sym(crate::pin_literal!("MODE")),
+        crate::state::lookup_string_from_sym(crate::pin!("MODE")),
         current_frame_message()
       )
     );
-  } else if lookup_bool_sym(crate::pin_literal!("groupNonBoxing")) {
+  } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
@@ -273,11 +273,11 @@ pub fn endgroup() -> Result<()> {
       get_current_token().unwrap().to_string(),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
-        crate::state::lookup_string_from_sym(crate::pin_literal!("MODE")),
+        crate::state::lookup_string_from_sym(crate::pin!("MODE")),
         current_frame_message()
       )
     );
-  } else if !lookup_bool_sym(crate::pin_literal!("groupNonBoxing")) {
+  } else if !lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \bgroup
     Error!(
       "unexpected",
@@ -302,7 +302,7 @@ pub fn endgroup() -> Result<()> {
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes & groups should be much less coupled)
 pub fn set_mode(mode: &str) -> Result<()> {
-  let prevmode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
+  let prevmode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
   let ismath = mode.ends_with("math");
   // Perl: beginMode maps to internal mode names, but set_mode stores as-is
   // We also set BOUND_MODE so end_mode can find it
@@ -417,7 +417,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
     // inside an environment). When the bound value matches but isn't in the top frame's
     // undo table, treat it as valid — the mode system is about tracking what mode we're in.
-    let current_bound = crate::state::lookup_string_from_sym(crate::pin_literal!("BOUND_MODE"));
+    let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
     if current_bound != bound_mode
     {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
@@ -426,7 +426,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
-        crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"))
+        crate::state::lookup_string_from_sym(crate::pin!("MODE"))
       );
       let category = match get_current_token() {
         Some(ref token) => token.to_string(),
@@ -455,7 +455,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 /// Can only switch from vertical|internal_vertical to horizontal.
 /// Perl: sub enterHorizontal
 pub fn enter_horizontal() {
-  let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
+  let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
     assign_value_inplace("MODE", arena::pin("horizontal"));
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
@@ -469,8 +469,8 @@ pub fn enter_horizontal() {
 /// Resume vertical mode by executing \par, in TeX-like fashion.
 /// Perl: sub leaveHorizontal
 pub fn leave_horizontal() -> Result<()> {
-  let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
-  let bound = crate::state::lookup_string_from_sym(crate::pin_literal!("BOUND_MODE"));
+  let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+  let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
   if mode == "horizontal" && bound.ends_with("vertical") {
     // This needs to be an invisible, and slightly gentler, \par
     assign_value("INTERNAL_PAR", true, Some(Scope::Local));
@@ -485,8 +485,8 @@ pub fn leave_horizontal() -> Result<()> {
 /// Used within argument digestion, e.g. endMode for vertical modes.
 /// Perl: sub leaveHorizontal_internal
 pub fn leave_horizontal_internal() {
-  let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
-  let bound = crate::state::lookup_string_from_sym(crate::pin_literal!("BOUND_MODE"));
+  let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+  let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
     assign_value_inplace("MODE", arena::pin(&bound));
@@ -612,7 +612,7 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet::unread(tokens);
     clear_prefixes(); // prefixes shouldn't apply here.
-    let mode = if crate::state::lookup_bool_sym(crate::pin_literal!("IN_MATH")) {
+    let mode = if crate::state::lookup_bool_sym(crate::pin!("IN_MATH")) {
       TexMode::Math
     } else {
       TexMode::Text
@@ -954,7 +954,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
     Catcode::SPACE => {
       clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
       // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
-      let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
       if mode.ends_with("math") || mode.ends_with("vertical") {
         Ok(None)
       } else {
@@ -991,7 +991,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // TODO: Use for chars where font-encoding glyph differs from input.
       // Perl L248-257: if IN_MATH && mathcode → decodeMathChar (math box)
       // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
-      if crate::state::lookup_bool_sym(crate::pin_literal!("IN_MATH")) {
+      if crate::state::lookup_bool_sym(crate::pin!("IN_MATH")) {
         if let Some(mathcode) = lookup_mathcode_sym(meaning.get_sym()) {
           return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
         }

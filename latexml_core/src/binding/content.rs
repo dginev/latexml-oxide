@@ -330,7 +330,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // This ordering ensures versioned-package fallback bindings take priority
     // over raw .sty files that may contain layout checks (like ICML's \ifdim
     // page-margin checks) that produce spurious warnings.
-    let interpreting = lookup_bool_sym(crate::pin_literal!("INTERPRETING_DEFINITIONS"));
+    let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
 
     // Step 2: If we're already interpreting raw TeX definitions, look for the file directly
     let found_raw = if interpreting && !options.notex {
@@ -676,7 +676,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   if clean_req.ends_with(".latexml") {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
-  if lookup_bool_sym(crate::pin_literal!("INTERPRETING_DEFINITIONS")) {
+  if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
     input_definitions(&clean_req, InputDefinitionOptions::default())
   } else if let Some(path) = find_file(&clean_req, None) {
     // Found something plausible..
@@ -740,11 +740,11 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
-  let was_interpreting = lookup_bool_sym(crate::pin_literal!("INTERPRETING_DEFINITIONS"));
+  let was_interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
   // And that if we're interpreting this TeX file of definitions,
   // we probably should interpret any TeX files IT loads.
   let was_including_styles = lookup_bool("INCLUDE_STYLES");
-  assign_value_sym(crate::pin_literal!("INTERPRETING_DEFINITIONS"), true, None);
+  assign_value_sym(crate::pin!("INTERPRETING_DEFINITIONS"), true, None);
   // If we're reading in these definitions, probaly will accept included ones?
   // (but not forbid ltxml ?)
   assign_value("INCLUDE_STYLES", true, None);
@@ -776,7 +776,7 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
     Ok(())
   })?;
 
-  assign_value_sym(crate::pin_literal!("INTERPRETING_DEFINITIONS"), was_interpreting, None);
+  assign_value_sym(crate::pin!("INTERPRETING_DEFINITIONS"), was_interpreting, None);
   assign_value("INCLUDE_STYLES", was_including_styles, None);
   expire_state_unlocked();
   Ok(())

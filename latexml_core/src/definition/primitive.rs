@@ -16,7 +16,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::pin_literal;
+use crate::pin;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
@@ -135,7 +135,7 @@ impl Definition for Primitive {
         let mut box_props = SymHashMap::default();
         box_props.insert("isEmpty", Stored::Bool(true));
         invoked_boxes.push(Digested::from(Tbox::new(
-          pin_literal!(""),
+          pin!(""),
           None,
           None,
           Tokens::new(box_tokens),

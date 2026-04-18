@@ -663,7 +663,7 @@ LoadDefinitions!({
       Ok(Tokens!())
     },
     predigest => sub[_arg] {
-      let ismath = state::lookup_bool_sym(pin_literal!("IN_MATH"));
+      let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
       let mut list = Vec::new();
       let mut next_token = None;
       while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
@@ -701,7 +701,7 @@ LoadDefinitions!({
   //   // "extra" passed into "predigest" as well.
   //   predigest => {
   //     todo!();
-  //     //   let ismath = state::lookup_bool_sym(pin_literal!("IN_MATH"));
+  //     //   let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
   //     //   stomach::digest_next_body(Some(until))?
   //   //   my @list   = $state->getStomach->digestNextBody($until);
   //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
@@ -721,7 +721,7 @@ LoadDefinitions!({
       Ok(Tokens!()) // all done in predigestion
     },
     predigest => {
-      let ismath   = state::lookup_bool_sym(pin_literal!("IN_MATH"));
+      let ismath   = state::lookup_bool_sym(pin!("IN_MATH"));
       let mut list     = stomach::digest_next_body(None)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
       list.retain(|tbox| !tbox.is_comment());

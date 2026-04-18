@@ -94,7 +94,7 @@ LoadDefinitions!({
           // Only set on the para about to close, if unknown!
           if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
-            if class_sym != pin_literal!("") {
+            if class_sym != pin!("") {
               let class_s = arena::with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
             }
@@ -110,8 +110,8 @@ LoadDefinitions!({
     },
     before_digest => {
       // Perl: combine any digested horizontal material into a horizontal List
-      let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
-      let bound = state::lookup_string_from_sym(pin_literal!("BOUND_MODE"));
+      let mode = state::lookup_string_from_sym(pin!("MODE"));
+      let bound = state::lookup_string_from_sym(pin!("BOUND_MODE"));
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
         repack_horizontal();
@@ -121,7 +121,7 @@ LoadDefinitions!({
       state::assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      whatsit.set_property("mode", state::lookup_string_from_sym(pin_literal!("MODE")).to_string());
+      whatsit.set_property("mode", state::lookup_string_from_sym(pin!("MODE")).to_string());
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);

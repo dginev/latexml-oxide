@@ -537,7 +537,7 @@ LoadDefinitions!({
     ];
     let is_color_cmd = token.with_str(|s| COLOR_CMDS.contains(&s));
     if is_color_cmd {
-      state::assign_value_sym(pin_literal!("xglobal@"), true, Some(Scope::Local));
+      state::assign_value_sym(pin!("xglobal@"), true, Some(Scope::Local));
       gullet::unread_one(token);
     } else {
       // Fallback: emit \global <token> (Perl: (T_CS('\global'), $token))
@@ -558,9 +558,9 @@ LoadDefinitions!({
     let models_str = do_expand(models)?.to_string();
     let specs_str = do_expand(specs)?.to_string();
     let color = parse_xcolor(Some(&models_str), &specs_str, None);
-    let scope = if state::lookup_bool_sym(pin_literal!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
-    state::assign_value_sym(pin_literal!("xglobal@"), false, Some(Scope::Local));
+    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -577,9 +577,9 @@ LoadDefinitions!({
     let models_str = do_expand(models)?.to_string();
     let specs_str = do_expand(specs)?.to_string();
     let color = parse_xcolor(Some(&models_str), &specs_str, None);
-    let scope = if state::lookup_bool_sym(pin_literal!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
-    state::assign_value_sym(pin_literal!("xglobal@"), false, Some(Scope::Local));
+    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -593,9 +593,9 @@ LoadDefinitions!({
     let colordesc_str = do_expand(colordesc)?.to_string();
     let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let color = parse_xcolor(None, &colordesc_str, tomodel_str.as_deref());
-    let scope = if state::lookup_bool_sym(pin_literal!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
-    state::assign_value_sym(pin_literal!("xglobal@"), false, Some(Scope::Local));
+    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -605,7 +605,7 @@ LoadDefinitions!({
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
     let specset_str = do_expand(specset)?.to_string();
-    let scope = if state::lookup_bool_sym(pin_literal!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
       if let Some(comma_pos) = spec.find(',') {
@@ -616,7 +616,7 @@ LoadDefinitions!({
         def_color(&full_name, &color, scope)?;
       }
     }
-    state::assign_value_sym(pin_literal!("xglobal@"), false, Some(Scope::Local));
+    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -628,7 +628,7 @@ LoadDefinitions!({
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
     let specset_str = do_expand(specset)?.to_string();
-    let scope = if state::lookup_bool_sym(pin_literal!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
       if let Some(comma_pos) = spec.find(',') {
@@ -641,7 +641,7 @@ LoadDefinitions!({
         def_color(&full_name, &color, scope)?;
       }
     }
-    state::assign_value_sym(pin_literal!("xglobal@"), false, Some(Scope::Local));
+    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -724,7 +724,7 @@ LoadDefinitions!({
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     // Set current color
     def_color(".", &color, None)?;
-    if state::lookup_bool_sym(pin_literal!("inPreamble")) {
+    if state::lookup_bool_sym(pin!("inPreamble")) {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
@@ -745,7 +745,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\color",
       vec![Some(Tokens::from(T_OTHER!("rgb"))),
            Some(Tokens::from(T_OTHER!(&*comps)))]);
-    Ok(vec![Digested::from(Tbox::new(pin_literal!(""), None, None,
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, arena::SymHashMap::default()))])
   });
 
@@ -754,7 +754,7 @@ LoadDefinitions!({
     if let Some(Stored::String(sym)) = state::lookup_value("color_.") {
       let stored_str = arena::to_string(sym);
       if let Some(color) = Color::from_stored(&stored_str) {
-        if state::lookup_bool_sym(pin_literal!("inPreamble")) {
+        if state::lookup_bool_sym(pin!("inPreamble")) {
           assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
         }
         merge_font(fontmap!(color => color));
@@ -772,7 +772,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\pagecolor",
       vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
            Some(Tokens::from(T_OTHER!(&*spec_str)))]);
-    Ok(vec![Digested::from(Tbox::new(pin_literal!(""), None, None,
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, arena::SymHashMap::default()))])
   });
 
@@ -791,7 +791,7 @@ LoadDefinitions!({
   // \blendcolors and \blendcolors*
   DefPrimitive!("\\blendcolors OptionalMatch:* {}", sub[(star, mix)] {
     let mix_str = do_expand(mix)?.to_string();
-    let scope = if state::lookup_bool_sym(pin_literal!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     let new_blend = if star.is_some() {
       // Starred: append to existing blend
       if let Some(Stored::String(old_sym)) = state::lookup_value("color_blend") {
@@ -804,7 +804,7 @@ LoadDefinitions!({
       mix_str
     };
     assign_value("color_blend", Stored::String(arena::pin(new_blend)), scope);
-    state::assign_value_sym(pin_literal!("xglobal@"), false, Some(Scope::Local));
+    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 

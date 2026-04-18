@@ -36,7 +36,7 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 // Perl smuggles the unexpanded token inside \special_relax's slot [2].
 // Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
 use std::cell::Cell;
-use crate::pin_literal;
+use crate::pin;
 #[thread_local]
 static SPECIAL_RELAX_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("\\special_relax"));
 #[thread_local]
@@ -457,7 +457,7 @@ pub fn read_token() -> Result<Option<Token>> {
           continue; // Perl: handleTemplate then continue while(1) loop
         }
       }
-      if nextt.code == Catcode::CS && nextt.text == pin_literal!("\\dont_expand") {
+      if nextt.code == Catcode::CS && nextt.text == pin!("\\dont_expand") {
         let unexpanded = read_token()?;
         // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
         if let Some(tok) = unexpanded {
@@ -522,7 +522,7 @@ pub fn read_x_token(
     }
     // we got a token
     let token = next_token.unwrap();
-    if token.get_catcode() == Catcode::CS && token.text == pin_literal!("\\dont_expand") {
+    if token.get_catcode() == Catcode::CS && token.text == pin!("\\dont_expand") {
       let unexpanded = match read_token()? {
         Some(t) => t,
         None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
@@ -752,7 +752,7 @@ pub fn read_balanced(
       // What's the right error handling now?
       None => break,
       Some(token) => match token.get_catcode() {
-        Catcode::CS if token.text == pin_literal!("\\dont_expand") => {
+        Catcode::CS if token.text == pin!("\\dont_expand") => {
           if let Some(next_t) = read_token()? {
             tokens.push(next_t); // Pass on NEXT token, unchanged.
           }

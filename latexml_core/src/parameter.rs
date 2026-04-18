@@ -18,7 +18,7 @@ use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::pin_literal;
+use crate::pin;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
@@ -70,7 +70,7 @@ impl Default for Parameter {
       semiverbatim:  None,
       optional:      false,
       name:          arena::pin_static("parameter_default"),
-      spec:          pin_literal!(""),
+      spec:          pin!(""),
       extra:         Vec::new(),
       inner:         None,
       reader:        Rc::new(|_args, _extra| {
@@ -377,7 +377,7 @@ impl Parameter {
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
     // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
-    let mode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
+    let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes();
@@ -438,7 +438,7 @@ impl Parameter {
     self.revert_catcodes()?;
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
-    let newmode = crate::state::lookup_string_from_sym(crate::pin_literal!("MODE"));
+    let newmode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
     if mode != newmode && mode != "horizontal" {
       crate::stomach::leave_horizontal_internal();
     }

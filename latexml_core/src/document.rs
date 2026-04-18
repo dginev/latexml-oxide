@@ -19,7 +19,7 @@ use std::rc::Rc;
 use crate::TexMode;
 use crate::util::radix::radix_alpha;
 use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::pin_literal;
+use crate::pin;
 use crate::common::error::*;
 use crate::common::font::{FONT_TEXT_DEFAULT, Font};
 use crate::common::locator::Locator;
@@ -1196,7 +1196,7 @@ impl Document {
     };
 
     let tag_hash = state::get_tag_property(tag);
-    let all_hash = state::get_tag_property(pin_literal!("ltx:*"));
+    let all_hash = state::get_tag_property(pin!("ltx:*"));
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another
@@ -1341,7 +1341,7 @@ impl Document {
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = get_node_qname(node);
-          model::can_contain_sym(node_qname, pin_literal!("#PCDATA"))
+          model::can_contain_sym(node_qname, pin!("#PCDATA"))
         };
 
         if !noindent {
@@ -1835,13 +1835,13 @@ impl Document {
   /// a single FONT_ELEMENT_NAME node; pull it up.
   fn auto_collapse_children(&mut self, node: &mut Node) -> Result<()> {
     let qname = get_node_qname(node);
-    if qname != pin_literal!("ltx:_Capture_") {
+    if qname != pin!("ltx:_Capture_") {
       let mut c = node.get_child_nodes();
       // with single child, AND, $node can have all the attributes that the child has (but at least
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
         && (get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
-        && model::can_have_attribute(qname, pin_literal!("font"))
+        && model::can_have_attribute(qname, pin!("font"))
         && c[0]
           .get_attributes()
           .keys()
@@ -2301,7 +2301,7 @@ impl Document {
       while (node.get_type() != Some(NodeType::DocumentNode)) && can_auto_close(&node) {
         let parent_opt = node.get_parent();
         let parent_name = match parent_opt {
-          None => pin_literal!(""),
+          None => pin!(""),
           Some(ref p) => get_node_qname(p),
         };
         if sym_can_contain_somehow(parent_name, qsym).is_some() {
@@ -3287,7 +3287,7 @@ impl Document {
           // namespace not already declared?
           None => {
             if let Some(prefix) = model::get_document_namespace_prefix(&ns_uri, false, false) {
-              if prefix != pin_literal!("") {
+              if prefix != pin!("") {
                 let mut root = self.document.get_root_element().unwrap();
                 match arena::with(prefix, |prefix_str| {
                   Namespace::new(prefix_str, &ns_uri, &mut root)
@@ -3847,8 +3847,8 @@ impl Document {
     // but isn't a _Capture_ node (which ultimately should disappear)
     let qname = get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
-      && model::can_have_attribute(qname, pin_literal!("xml:id"))
-      && (qname != pin_literal!("ltx:_Capture_"))
+      && model::can_have_attribute(qname, pin!("xml:id"))
+      && (qname != pin!("ltx:_Capture_"))
     {
       let mut ancestor = self
         .findnode("ancestor::*[@xml:id][1]", Some(node))

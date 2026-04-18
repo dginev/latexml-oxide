@@ -35,7 +35,7 @@ LoadDefinitions!({
     enter_horizontal();
     let number_tks = number.revert().unwrap_or_default().unlist();
     let decoded = match font::decode_str(number.value_of() as u8, None, false) {
-      None => pin_literal!(""),
+      None => pin!(""),
       Some(s) => s
     };
     Tbox::new(

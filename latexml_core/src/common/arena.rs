@@ -84,22 +84,27 @@ pub fn pin_static(text: &'static str) -> SymStr {
   with_arena_mut(|arena| arena.get_or_intern_static(text))
 }
 
-/// Call-site-cached interning for string literals — the first call on a
-/// thread pins the literal via `pin_static`, later calls return the
+/// Call-site-cached interning for string literals — the first call on
+/// a thread pins the literal via `pin_static`, later calls return the
 /// cached `SymStr` directly (thread-local `OnceCell` load, no arena
 /// access). Use this from hot state-key lookup sites so you can keep
 /// writing string literals at the call site and still skip the per-call
 /// `pin()` hash probe:
 ///
 /// ```ignore
-/// if state::lookup_bool_sym(pin_literal!("groupNonBoxing")) { ... }
+/// if state::lookup_bool_sym(pin!("groupNonBoxing")) { ... }
 /// ```
 ///
 /// Each call site gets its own thread-local cache (no global registry,
 /// no dedicated pub-static constant per key), so there is no ergonomic
 /// cost beyond typing the macro name.
+///
+/// Note: the macro `pin!` and the runtime-string function
+/// `arena::pin(s)` share a name but occupy different namespaces in
+/// Rust — `pin!(…)` is the macro, `pin(…)` is the function — so both
+/// remain callable.
 #[macro_export]
-macro_rules! pin_literal {
+macro_rules! pin {
   ($s:literal) => {{
     std::thread_local! {
       static CACHED: std::cell::OnceCell<$crate::common::arena::SymStr>

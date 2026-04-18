@@ -128,7 +128,7 @@ fn tikz_alignment_bindings(
   use latexml_core::common::arena::SymHashMap;
   use std::rc::Rc;
 
-  let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+  let mode = state::lookup_string_from_sym(pin!("MODE"));
   let is_math = mode.ends_with("math");
 
   let mut properties = SymHashMap::default();

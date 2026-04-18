@@ -208,7 +208,7 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  if !state::lookup_bool_sym(pin_literal!("inPreamble")) {
+  if !state::lookup_bool_sym(pin!("inPreamble")) {
     Error!(
       "unexpected",
       cs,
@@ -1829,7 +1829,7 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
           if let Some((_, unit)) = bibunitmap.iter().find(|(cs, _)| *cs == first_cs) {
             state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(arena::pin(unit)));
             // Strip * if present
-            if !tokens.is_empty() && tokens[0].to_string() == "*" {
+            if !tokens.is_empty() && tokens[0].text == pin!("*") {
               tokens.remove(0);
             }
             if !tokens.is_empty() {
@@ -2370,7 +2370,7 @@ LoadDefinitions!({
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
   DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
-    if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {
       if let Some(context) = document.get_element() {
@@ -2456,7 +2456,7 @@ LoadDefinitions!({
     let id = prop_str!(props,"id");
     // Already (auto) created?
     if let Some(mut docel) = document.findnode("/ltx:document", None) {
-      if id != pin_literal!("") {
+      if id != pin!("") {
         let id_s = arena::with(id, |s| s.to_string());
         document.set_attribute(&mut docel, "xml:id", &id_s)?;
       }
@@ -2806,8 +2806,8 @@ LoadDefinitions!({
     sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
-      if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
-        let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
+        let mode = state::lookup_string_from_sym(pin!("MODE"));
         if mode.contains("math") { // double-check we're really in math
           end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
@@ -4559,7 +4559,7 @@ LoadDefinitions!({
   // protected => true prevents read_x_token(fully_expand=false) from expanding this
   // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
   DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
       stuff.unlist()
     } else {
       let mut result = vec![T_MATH!()];
@@ -6096,7 +6096,7 @@ LoadDefinitions!({
     }
     alignment_bindings(template, String::from("math"), SymHashMap::default(), attrs);
     // Perl: if display math, switch to text mathstyle
-    if state::lookup_string_from_sym(pin_literal!("MODE")).ends_with("math") {
+    if state::lookup_string_from_sym(pin!("MODE")).ends_with("math") {
       MergeFont!(mathstyle => "text");
     }
     Let!("\\\\", "\\lx@alignment@newline");
@@ -7043,7 +7043,7 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $wasmath = LookupValue('IN_MATH') — uses boolean value, not key existence.
       // IN_MATH is initialized to false at startup, so is_some() would always be true.
-      let wasmath = state::lookup_bool_sym(pin_literal!("IN_MATH"));
+      let wasmath = state::lookup_bool_sym(pin!("IN_MATH"));
       stomach::begin_mode("restricted_horizontal")?;
       state::assign_value("FRAME_IN_MATH", wasmath, None); },
     properties => sub[args] {
@@ -7941,7 +7941,7 @@ LoadDefinitions!({
   // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
   DefPrimitive!("\\not@math@alphabet{}{}", "");
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
-    if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
       let c = c.to_string();
       let message = s!("Command {:?} invalid in math mode", c);
       Warn!("unexpected", c, message);
@@ -8087,7 +8087,7 @@ LoadDefinitions!({
     // Move `font` and `mathcmd` directly into the closure capture —
     // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
-      if state::lookup_bool_sym(pin_literal!("IN_MATH")) {
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
         Ok(mathcmd.clone())
       } else {
         Ok(font.clone())
@@ -8169,7 +8169,7 @@ LoadDefinitions!({
     let text = arg.to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
-    let in_math = state::lookup_bool_sym(pin_literal!("IN_MATH"));
+    let in_math = state::lookup_bool_sym(pin!("IN_MATH"));
     let is_number = !text.is_empty() && text.chars().all(|c| c.is_ascii_digit());
     let mut props = stored_map!();
     if in_math {
@@ -8602,7 +8602,7 @@ LoadDefinitions!({
 
   // \@@end — saved TeX \end primitive
   DefPrimitive!("\\@@end", {
-    if !state::lookup_bool_sym(pin_literal!("INTERPRETING_DEFINITIONS")) {
+    if !state::lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
       gullet::flush();
     }
   });

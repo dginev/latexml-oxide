@@ -89,20 +89,20 @@ LoadDefinitions!({
   // \ifvmode          c  is true if TeX is in vertical or internal vertical mode.
 
   DefConditional!("\\ifvmode", {
-    let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+    let mode = state::lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("vertical")
   });
   DefConditional!("\\ifhmode", {
-    let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+    let mode = state::lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("horizontal")
   });
   DefConditional!("\\ifinner", {
-    let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+    let mode = state::lookup_string_from_sym(pin!("MODE"));
     matches!(mode.as_str(), "restricted_horizontal" | "internal_vertical" | "math")
   });
   // Perl: LookupValue('MODE') =~ /math$/
   DefConditional!("\\ifmmode", {
-    let mode = state::lookup_string_from_sym(pin_literal!("MODE"));
+    let mode = state::lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("math")
   });
 

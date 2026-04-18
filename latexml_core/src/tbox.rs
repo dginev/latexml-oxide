@@ -17,7 +17,7 @@ use crate::state::{lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
-use crate::pin_literal;
+use crate::pin;
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
@@ -37,7 +37,7 @@ pub struct Tbox {
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text:       pin_literal!(""),
+      text:       pin!(""),
       font:       Rc::new(Font::text_default()),
       locator:    Locator::default(),
       properties: HashMap::default(),
@@ -81,7 +81,7 @@ impl Tbox {
       Some(f) => f,
       None => lookup_font().unwrap(),
     };
-    let empty_sym = pin_literal!("");
+    let empty_sym = pin!("");
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
       Tokens!(Token { text, code: Catcode::OTHER })
     } else {
@@ -113,8 +113,8 @@ impl Tbox {
         .entry("depth")
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
-    if crate::state::lookup_bool_sym(crate::pin_literal!("IN_MATH")) {
-      properties.insert("mode", Stored::String(pin_literal!("math")));
+    if crate::state::lookup_bool_sym(crate::pin!("IN_MATH")) {
+      properties.insert("mode", Stored::String(pin!("math")));
       if text != empty_sym {
         with_value(
           &arena::with(text, |text_str| s!("math_token_attributes_{}", text_str)),
@@ -151,7 +151,7 @@ impl Tbox {
   /// Whether this box is in math mode.
   /// Perl: Box.pm::isMath (L79-81).
   pub fn is_math(&self) -> bool {
-    matches!(self.properties.get("mode"), Some(Stored::String(s)) if *s == pin_literal!("math"))
+    matches!(self.properties.get("mode"), Some(Stored::String(s)) if *s == pin!("math"))
   }
 
   /// Batch-insert properties. Equivalent to calling `set_property` for each
@@ -220,11 +220,11 @@ impl BoxOps for Tbox {
     let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(Stored::String(s)) => *s,
-      _ => pin_literal!("text"),
+      _ => pin!("text"),
     };
 
     if !text.is_empty() {
-      if mode == pin_literal!("math") {
+      if mode == pin!("math") {
         // Perl: DefMath ?#isMath — in text context, produce plain text.
         // Check if we're inside a math element by walking up the DOM.
         // This handles \And in author frontmatter (text) while preserving

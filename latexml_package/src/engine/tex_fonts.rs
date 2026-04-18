@@ -191,7 +191,7 @@ LoadDefinitions!({
   // / (italic corr.)  c  inserts an italic correction.
   DefPrimitive!("\\/", {
     Tbox::new(
-      pin_literal!(""),
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\/")),

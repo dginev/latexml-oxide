@@ -26,7 +26,7 @@ use crate::whatsit::Whatsit;
 use crate::{Digested, Locator, state};
 
 use super::argument::ArgWrap;
-use crate::pin_literal;
+use crate::pin;
 
 /// The values that can be read by, and stored in, a Register
 #[derive(Clone, PartialEq)]
@@ -650,7 +650,7 @@ impl Definition for Register {
         } else {
           Tbox::new(
             font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-              .unwrap_or(pin_literal!("")),
+              .unwrap_or(pin!("")),
             None,
             None,
             Tokens!(

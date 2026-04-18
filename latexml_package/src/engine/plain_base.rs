@@ -488,7 +488,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\negthinspace", {
     Tbox::new(
-      pin_literal!(""),
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\negthinspace")),
@@ -500,7 +500,7 @@ LoadDefinitions!({
   // Math spacing: medspace, thickspace, and negatives — Perl latex_constructs L2510-2525
   DefPrimitive!("\\medspace", {
     Tbox::new(
-      pin_literal!(""), None, None,
+      pin!(""), None, None,
       Tokens!(T_CS!("\\medspace")),
       stored_map!("name" => "medspace", "width" => Dimension::from_str("0.22222em")?,
         "isSpace"=>true),
@@ -508,7 +508,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\negmedspace", {
     Tbox::new(
-      pin_literal!(""), None, None,
+      pin!(""), None, None,
       Tokens!(T_CS!("\\negmedspace")),
       stored_map!("name" => "negmedspace", "width" => Dimension::from_str("-0.22222em")?,
         "isSpace"=>true),

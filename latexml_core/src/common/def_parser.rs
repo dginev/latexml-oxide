@@ -9,7 +9,7 @@ use crate::mouth;
 use crate::parameter::{Parameter, Parameters};
 use crate::token::*;
 use crate::tokens::Tokens;
-use crate::pin_literal;
+use crate::pin;
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
@@ -107,7 +107,7 @@ pub fn parse_parameters(
       let mut p = Parameter {
         name: arena::pin_static("Plain"),
         spec: if spec.is_empty() {
-          pin_literal!("")
+          pin!("")
         } else {
           arena::pin(spec)
         },
@@ -135,7 +135,7 @@ pub fn parse_parameters(
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            pin_literal!("")
+            pin!("")
           } else {
             arena::pin(spec)
           },
@@ -150,7 +150,7 @@ pub fn parse_parameters(
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            pin_literal!("")
+            pin!("")
           } else {
             arena::pin(spec)
           },

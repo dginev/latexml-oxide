@@ -23,7 +23,7 @@ fn phys_read_size() -> Result<(bool, Option<Token>)> {
   let next = gullet::read_token()?;
   let mut pending = next;
   if let Some(ref t) = pending {
-    if t.to_string() == "*" {
+    if t.text == pin!("*") {
       no_stretch = true;
       pending = gullet::read_token()?;
     }

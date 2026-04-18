@@ -12,7 +12,7 @@ LoadDefinitions!({
       if t == T_OTHER!(".") {
         break;
       }
-      leading.push(Digested::from(Tbox::new(pin_literal!(""), None, None,
+      leading.push(Digested::from(Tbox::new(pin!(""), None, None,
         Tokens::new(vec![t]), arena::SymHashMap::default())));
     }
     Ok(leading)

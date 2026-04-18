@@ -15,7 +15,7 @@ use crate::util::pathname;
 use libxml::tree::Node;
 
 use super::arena::SymHashMap;
-use crate::pin_literal;
+use crate::pin;
 
 // use common::font::*;
 
@@ -100,7 +100,7 @@ impl Model {
   }
   pub fn register_namespace_sym(&mut self, codeprefix: SymStr, namespace_opt: Option<SymStr>) {
     // double-check empty strings are None
-    let namespace_opt_checked = namespace_opt.filter(|val| *val != pin_literal!(""));
+    let namespace_opt_checked = namespace_opt.filter(|val| *val != pin!(""));
     match namespace_opt_checked {
       Some(namespace) => {
         self
@@ -118,7 +118,7 @@ impl Model {
   }
 
   pub fn register_document_namespace(&mut self, docprefix: &str, namespace_opt: Option<&str>) {
-    let default_sym = pin_literal!("#default");
+    let default_sym = pin!("#default");
     let docprefix_sym = if docprefix.is_empty() {
       default_sym
     } else {
@@ -150,7 +150,7 @@ impl Model {
   }
 
   pub fn set_relaxng_schema(&mut self, schema: &str) {
-    self.schema_data = Some(vec![pin_literal!("RelaxNG"), arena::pin(schema)]);
+    self.schema_data = Some(vec![pin!("RelaxNG"), arena::pin(schema)]);
   }
   /// TODO: This is another component that would fit perfectly as a compiler plugin.
   /// For now, simply reimplementing the runtime loading of
@@ -293,7 +293,7 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
   } // Actually, they could have declared all sorts of Tags....
   // Only RelaxNG schemas are supported (DTD support removed from Rust port)
   if let Some(ref data) = model.schema_data {
-    if data[0] == pin_literal!("RelaxNG") {
+    if data[0] == pin!("RelaxNG") {
       name = arena::to_string(data[1]);
       model.schema = Some(Relaxng {
         name: name.clone(),
@@ -377,12 +377,12 @@ pub fn get_document_namespace_prefix(
       message2
     );
   }
-  let default_sym = pin_literal!("#default");
+  let default_sym = pin!("#default");
   docprefix.filter(|p| p != &default_sym)
 }
 
 pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
-  let h_default_sym = pin_literal!("#default");
+  let h_default_sym = pin!("#default");
   let docprefix_sym = if docprefix.is_empty() {
     h_default_sym
   } else {
@@ -569,7 +569,7 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
     NamespaceDecl => arena::pin_static("xmlns"),
 
     ElementNode | AttributeNode => {
-      let empty_sym = pin_literal!("");
+      let empty_sym = pin!("");
       let mut prefix = empty_sym;
       if let Some(ns) = node.get_namespace() {
         let href = ns.get_href();
@@ -636,9 +636,9 @@ pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
 /// interning-only helper.
 pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
   // Handle obvious cases explicitly.
-  if tag == pin_literal!("#PCDATA") || tag == pin_literal!("#Comment") || tag == pin_literal!("") {
+  if tag == pin!("#PCDATA") || tag == pin!("#Comment") || tag == pin!("") {
     return false;
-  } else if tag == pin_literal!("_WildCard_") {
+  } else if tag == pin!("_WildCard_") {
     return true;
   };
   if arena::with(tag, |tag_str| tag_str.ends_with("_Capture_"))
@@ -650,19 +650,19 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
     return true;
   }
 
-  if child == pin_literal!("_WildCard_") || child == pin_literal!("#Comment") || child == pin_literal!("#ProcessingInstruction") || child == pin_literal!("#DTD")
+  if child == pin!("_WildCard_") || child == pin!("#Comment") || child == pin!("#ProcessingInstruction") || child == pin!("#DTD")
   {
     return true;
   }
 
   let mut model = model_mut!();
-  if model.permissive && tag == pin_literal!("#Document") && child != pin_literal!("#PCDATA") {
+  if model.permissive && tag == pin!("#Document") && child != pin!("#PCDATA") {
     return true; // No schema? Punt!
   }
 
   // Else query tag properties.
   let model_entry = &mut model.tagprop.entry_sym(tag).or_default().model;
-  model_entry.contains(&pin_literal!("ANY")) || model_entry.contains(&child)
+  model_entry.contains(&pin!("ANY")) || model_entry.contains(&child)
 }
 
 /// Can an element with (qualified name) `tag` contain a `child` element?
@@ -689,7 +689,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
 
   // Else query tag properties.
   let model = &model.tagprop.get(tag).unwrap_or(&*DEFAULT_TAG_FRAME).model;
-  model.contains(&pin_literal!("ANY")) || model.contains(&arena::pin(child))
+  model.contains(&pin!("ANY")) || model.contains(&arena::pin(child))
 }
 
 pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
@@ -773,7 +773,7 @@ pub(crate) fn compute_indirect_model_aux(
 ) {
   let start = match start_opt {
     Some(s) => s,
-    None => pin_literal!(""),
+    None => pin!(""),
   };
 
   // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
@@ -786,15 +786,15 @@ pub(crate) fn compute_indirect_model_aux(
       continue;
     } // Already solved
 
-    if start != pin_literal!("") {
+    if start != pin!("") {
       desc
         .entry_sym(kid)
         .or_default()
         .insert_sym(start, desirability);
     }
 
-    if kid != pin_literal!("#PCDATA") && openable.contains(&kid) {
-      let inner = if start != pin_literal!("") { start } else { kid };
+    if kid != pin!("#PCDATA") && openable.contains(&kid) {
+      let inner = if start != pin!("") { start } else { kid };
 
       compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
     }
