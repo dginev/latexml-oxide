@@ -10,7 +10,7 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
 
-use crate::document::{element_children, NodeData, PostDocument};
+use crate::document::{element_children_iter, NodeData, PostDocument};
 use crate::math_processor::{MathConversion, MathProcessor};
 use crate::processor::{ProcessResult, Processor};
 
@@ -58,9 +58,8 @@ impl MathProcessor for XMath {
     let id_suffix = self.id_suffix();
     let xml = if !id_suffix.is_empty() {
       // Secondary: clone the XMath with modified IDs
-      let children: Vec<NodeData> = element_children(xmath)
-        .iter()
-        .map(|child| NodeData::XmlNode(child.clone()))
+      let children: Vec<NodeData> = element_children_iter(xmath)
+        .map(NodeData::XmlNode)
         .collect();
       Some(NodeData::Element {
         tag: "ltx:XMath".to_string(),
