@@ -48,10 +48,35 @@ pub fn load_from_str(content: &str) -> Result<usize, String> {
   load_from_str_internal(content, "<embedded>")
 }
 
+// Per-load context used to attach a nominal Locator to dump-installed
+// Expandables. Matches Perl #aaacdba2 (2026): dump-loaded definitions
+// should be traceable to the dump file + line, not report the arena's
+// internal location. Thread-local so concurrent loads (there are none
+// today, but the state is cooperative) don't clobber each other.
+thread_local! {
+  static CURRENT_LOAD_CTX: std::cell::Cell<Option<(crate::common::arena::SymStr, u32)>> =
+    const { std::cell::Cell::new(None) };
+}
+
+fn current_dump_locator() -> crate::common::locator::Locator {
+  if let Some((source, lineno)) = CURRENT_LOAD_CTX.with(|c| c.get()) {
+    crate::common::locator::Locator {
+      source,
+      from_line: lineno,
+      to_line: lineno,
+      from_column: 0,
+      to_column: 0,
+    }
+  } else {
+    crate::common::locator::Locator::default()
+  }
+}
+
 fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, String> {
   let mut count = 0;
   let mut skipped = 0;
   let mut errors = 0;
+  let source_sym = crate::common::arena::pin(source_name);
 
   for (lineno, line) in content.lines().enumerate() {
     // Trim only CR (from CRLF line endings); `lines()` already strips LF.
@@ -62,6 +87,8 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
     if line.is_empty() || line.starts_with('#') {
       continue;
     }
+
+    CURRENT_LOAD_CTX.with(|c| c.set(Some((source_sym, (lineno + 1) as u32))));
 
     match parse_and_load(line) {
       Ok(true) => count += 1,
@@ -422,7 +449,12 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
 
       let expansion_body = Tokens::from(expansion).into();
       match Expandable::new(cs_tok, paramlist, Some(expansion_body), options) {
-        Ok(exp) => {
+        Ok(mut exp) => {
+          // Perl #aaacdba2: stamp dump-loaded definitions with a
+          // nominal Locator pointing at the dump file + line. Helps
+          // diagnostics attribute errors to the dump source rather
+          // than the arena's compile-site default.
+          exp.locator = current_dump_locator();
           state::install_definition(exp, Some(Scope::Global));
           Ok(true)
         }
