@@ -8,8 +8,12 @@ LoadDefinitions!({
   // PassOptions not yet supported; just load babel directly
   RequirePackage!("babel");
 
-  // English captions — must reset all names when switching from other languages.
-  // Equivalent to what babel's english.ldf defines.
+  // English captions. With the @currname fix (56b0c35d2), babel's own
+  // \\captions<lang> usually defines these, but on the `\\usepackage
+  // [english]{babel}` path some class-option orderings (e.g.
+  // `[german]{article}` + `[french,english]{babel}` in page545_test) still
+  // leave \\captionsenglish undefined at the time \\select@language fires.
+  // \\providecommand supplies a safe fallback.
   RawTeX!(r"\providecommand\captionsenglish{%
     \def\prefacename{Preface}\def\refname{References}%
     \def\abstractname{Abstract}\def\bibname{Bibliography}%
