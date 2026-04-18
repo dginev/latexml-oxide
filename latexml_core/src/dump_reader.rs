@@ -500,11 +500,12 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
     }
     "R" => {
       // Register: R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
+      // rparts[0] (internal CS name) is redundant with the outer key —
+      // same reasoning as the E arm; we skip the decode + alloc.
       let rparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
       if rparts.len() < 3 {
         return Err("Incomplete Register entry".into());
       }
-      let _cs_name = url_decode(rparts[0]);
       let rtype = rparts[1];
       let value_str = rparts[2];
       let mathglyph = rparts.get(3).and_then(|s| s.parse::<u32>().ok()).and_then(char::from_u32);
