@@ -70,10 +70,12 @@ fn xy_packpath(parts: &[XyPathPart]) -> String {
   }).collect::<Vec<_>>().join(" ")
 }
 
-#[allow(dead_code)]
 enum XyPathPart {
   Cmd(&'static str),
   Dim(Dimension),
+  // Px is reserved for callers that already have pixel-unit values; currently
+  // no call site constructs this variant, but xy_packpath handles it.
+  #[allow(dead_code)]
   Px(f64),
 }
 
