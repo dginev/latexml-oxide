@@ -67,39 +67,18 @@ LoadDefinitions!({
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
-    // Note: babel's now-working option pipeline dispatches
-    // \InputIfFileExists{<lang>.ldf} for each option, which routes
-    // through our binding dispatcher to the per-language Rust ports
-    // (english_sty.rs / french_ldf.rs / german_sty.rs / ngerman_sty.rs).
-    // No manual port load here — previously needed as a workaround for
-    // the @currname leakage bug (now fixed, commit 56b0c35d2).
-    // Activate captions. @ may be OTHER (at \begin{document}) so flip it
-    // temporarily to LETTER to tokenize `\captions<lang>` as one CS.
-    state::assign_catcode('@', Catcode::LETTER, None);
-    let cs = s!("\\captions{}", lang);
-    if lookup_definition(&T_CS!(cs.clone()))?.is_some() {
-      stomach::digest(Tokenize!(&cs))?;
-    }
-    state::assign_catcode('@', Catcode::OTHER, None);
-    if lang == "french" || lang == "francais" || lang == "frenchb" {
-      for &(ch, cs_name) in &[
-        (':', "\\lx@french@punct@colon"),
-        (';', "\\lx@french@punct@semi"),
-        ('!', "\\lx@french@punct@exclam"),
-        ('?', "\\lx@french@punct@question"),
-      ] {
-        if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
-          state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
-          state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
-        }
-      }
-    }
-    if lang == "german" || lang == "germanb" || lang == "ngerman" || lang == "ngermanb" {
-      if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
-        state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
-        state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
-      }
-    }
+    // Note: babel's now-working pipeline handles:
+    // - Loading per-language ports via \InputIfFileExists{<lang>.ldf}
+    //   (routed through our binding dispatcher).
+    // - Activating \captions<lang> via \AtBeginDocument's
+    //   \selectlanguage{\bbl@main@language} → our \select@language
+    //   override → babel's saved \bbl@switch which calls
+    //   \captions<lang>.
+    // - Active-char shorthands (German " / French :;!? if frenchb
+    //   path uses babel's \declare@shorthand mechanism).
+    // We used to invoke these manually here as a workaround for the
+    // @currname leakage bug (fixed in commit 56b0c35d2); dropping the
+    // redundant paths now.
   });
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
   // \begin{document} opens (and base_schema's after_open reads it).
