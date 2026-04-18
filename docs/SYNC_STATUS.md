@@ -50,7 +50,7 @@ latexml_oxide --whatsin=archive --format=html5 --pmml --mathtex --noinvisibletim
 
 ## Package Bindings
 
-**100% coverage: all 406+ Perl bindings ported to Rust.** Zero `todo!()` panics. Zero MISSING.
+**100% coverage: all 406+ Perl bindings ported to Rust.** Zero MISSING. Three `todo!()` remain as deliberate invariant asserts on unreachable branches (be_absorbed for Alignment; get_meta for Ref/Arg XM variants).
 
 ## Tikz — Known Diffs (vs Perl output)
 
