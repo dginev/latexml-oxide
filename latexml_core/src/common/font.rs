@@ -271,7 +271,6 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
 ];
 
 // Perl: Font.pm %baseline_map — used in computeStringSize() for baseline calculation
-#[allow(dead_code)]
 static BASELINE_MAP: Lazy<HashMap<i64, f64>> = Lazy::new(|| {
   raw_map!(
     5 => 6.0, 6 => 7.0, 7 => 8.0, 8 => 9.5, 9 => 10.0, 10 => 12.0,
