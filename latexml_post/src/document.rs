@@ -1349,6 +1349,16 @@ pub fn element_children(node: &Node) -> Vec<Node> {
   result
 }
 
+/// Iterator version of `element_children` — walks the sibling chain lazily.
+/// Prefer this in hot paths that only need to read or filter children
+/// without materializing a Vec. Callers that need len() or random access
+/// still want the Vec version.
+pub fn element_children_iter(node: &Node) -> impl Iterator<Item = Node> {
+  let first = node.get_first_child();
+  std::iter::successors(first, |c| c.get_next_sibling())
+    .filter(|c| c.get_type() == Some(NodeType::ElementNode))
+}
+
 /// Compute a relative path from `base` to `path`.
 fn pathdiff(path: &str, base: &str) -> String {
   let p = Path::new(path);

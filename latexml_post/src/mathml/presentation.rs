@@ -14,7 +14,7 @@ use libxml::tree::Node;
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::document::{element_children, NodeData, PostDocument};
+use crate::document::{element_children, element_children_iter, NodeData, PostDocument};
 use super::operator_dictionary;
 
 // Thread-local flag for invisible times emission.
@@ -151,7 +151,7 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
     match localname.as_str() {
       "XMath" => {
         let results: Vec<NodeData> =
-          element_children(node).iter().map(|c| pmml(doc, c)).collect();
+          element_children_iter(node).map(|c| pmml(doc, &c)).collect();
         return pmml_row(results);
       }
       "XMDual" => {
@@ -164,7 +164,7 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
       }
       "XMWrap" | "XMArg" => {
         let results: Vec<NodeData> =
-          element_children(node).iter().map(|c| pmml(doc, c)).collect();
+          element_children_iter(node).map(|c| pmml(doc, &c)).collect();
         return pmml_row(results);
       }
       "XMApp" => return pmml_apply(doc, node),
