@@ -1244,36 +1244,32 @@ impl Font {
     let shape = self.shape.as_deref().unwrap_or("upright");
     let size = self.size.unwrap_or(defsize()) as i64;
     let key = format!("{family}_{series}_{shape}");
+    // Stack buffer for char→&str lookup key, reused across paths. Avoids
+    // one String allocation per character per get_metric call (which is
+    // called per-character inside compute_string_size).
+    let mut ch_buf = [0u8; 4];
+    let ch_key = c_opt.map(|c| c.encode_utf8(&mut ch_buf) as &str);
     if let Some(name) = METRIC_MAP.get(key.as_str()) {
       let fullname = format!("{name}{size}");
       if let Some(metric) = STDMETRICS.get(fullname.as_str()) {
-        if c_opt.is_none()
-          || c_opt
-            .map(|c| metric.sizes.contains_key(c.to_string().as_str()))
-            .unwrap_or(false)
-        {
+        if ch_key.map_or(true, |k| metric.sizes.contains_key(k)) {
           return metric;
         }
       }
       // Try base name fallback
       let metric = get_metric_for_name(name);
-      if c_opt.is_none()
-        || c_opt
-          .map(|c| metric.sizes.contains_key(c.to_string().as_str()))
-          .unwrap_or(false)
-      {
+      if ch_key.map_or(true, |k| metric.sizes.contains_key(k)) {
         return metric;
       }
     }
     // Look for a fallback metric if char given
-    if let Some(c) = c_opt {
-      let cstr = c.to_string();
+    if let Some(k) = ch_key {
       for name in METRIC_FALLBACKS {
         let fullname = format!("{name}{size}");
         let metric = STDMETRICS
           .get(fullname.as_str())
           .unwrap_or_else(|| get_metric_for_name(name));
-        if metric.sizes.contains_key(cstr.as_str()) {
+        if metric.sizes.contains_key(k) {
           return metric;
         }
       }
@@ -1318,19 +1314,28 @@ impl Font {
     let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     let chars: Vec<char> = text.chars().collect();
+    // Stack buffers for char→&str and char+char→&str lookups, avoiding
+    // String::to_string() + String::format!() heap allocations inside
+    // the per-character hot loop. encode_utf8 writes directly to the
+    // buffer and returns a borrowed &str slice — no allocation.
+    let mut ch_buf = [0u8; 4];
+    let mut kern_buf = [0u8; 8];
     for (i, &ch) in chars.iter().enumerate() {
       let metric = self.get_metric(Some(ch));
-      let entry_opt = metric.sizes.get(ch.to_string().as_str());
+      let ch_key = ch.encode_utf8(&mut ch_buf);
+      let entry_opt = metric.sizes.get(ch_key);
       let (cw, ch_sz, cd, ci) = if let Some(entry) = entry_opt {
         *entry
       } else {
         (0.75 * UNITY_F64, 0.7 * UNITY_F64, 0.2 * UNITY_F64, 0.0)
       };
       w += (cw * size).trunc() as i64;
-      // Kerning: check kern between this char and next
+      // Kerning: check kern between this char and next.
       if i + 1 < chars.len() {
-        let kern_key = format!("{}{}", ch, chars[i + 1]);
-        if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
+        let first_len = ch.encode_utf8(&mut kern_buf).len();
+        let second_len = chars[i + 1].encode_utf8(&mut kern_buf[first_len..]).len();
+        let kern_key = std::str::from_utf8(&kern_buf[..first_len + second_len]).unwrap();
+        if let Some(kern) = metric.kerns.get(kern_key) {
           w += (size * kern).trunc() as i64;
         }
       }
