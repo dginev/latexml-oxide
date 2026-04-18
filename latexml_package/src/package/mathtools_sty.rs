@@ -113,10 +113,10 @@ LoadDefinitions!({
 
     let name = name_arg.to_string();
     // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
-    let open_toks: Vec<Token> = open_arg.clone().unlist();
-    let close_toks: Vec<Token> = close_arg.clone().unlist();
-    let style_toks: Vec<Token> = if let Some(ref s) = style_opt {
-      s.clone().unlist()
+    let open_toks: Vec<Token> = open_arg.unlist();
+    let close_toks: Vec<Token> = close_arg.unlist();
+    let style_toks: Vec<Token> = if let Some(s) = style_opt {
+      s.unlist()
     } else { Vec::new() };
 
     // Define \fnum@equation@MT@{name} = {open [style] {\theequation} close}
@@ -173,10 +173,10 @@ LoadDefinitions!({
   DefPrimitive!("\\renewtagform{} [] {}{}", sub[(name_arg, style_opt, open_arg, close_arg)] {
     use latexml_core::common::def_parser::parse_parameters;
     let name = name_arg.to_string();
-    let open_toks: Vec<Token> = open_arg.clone().unlist();
-    let close_toks: Vec<Token> = close_arg.clone().unlist();
-    let style_toks: Vec<Token> = if let Some(ref s) = style_opt {
-      s.clone().unlist()
+    let open_toks: Vec<Token> = open_arg.unlist();
+    let close_toks: Vec<Token> = close_arg.unlist();
+    let style_toks: Vec<Token> = if let Some(s) = style_opt {
+      s.unlist()
     } else { Vec::new() };
     // Same body as \newtagform:
     let mut fnum_body = vec![T_BEGIN!()];
@@ -633,8 +633,8 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let cmd_name = cmd.trim_start_matches('\\');
-    let ldel_toks: Vec<Token> = ldel.clone().unlist();
-    let rdel_toks: Vec<Token> = rdel.clone().unlist();
+    let ldel_toks: Vec<Token> = ldel.unlist();
+    let rdel_toks: Vec<Token> = rdel.unlist();
     // Wrapper macros: #1#2#3 (identity by default, can be overridden)
     let star_wrapper_cs = s!("\\MT@delim@{}@star@wrapper", cmd_name);
     def_macro(T_CS!(&star_wrapper_cs),
@@ -698,9 +698,9 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.clone().unlist();
-    let rdel_toks: Vec<Token> = rdel.clone().unlist();
-    let body_toks: Vec<Token> = body.clone().unlist();
+    let ldel_toks: Vec<Token> = ldel.unlist();
+    let rdel_toks: Vec<Token> = rdel.unlist();
+    let body_toks: Vec<Token> = body.unlist();
     // Create \cmd@inner: n args, body = user_body + \cmd@after
     let inner_cs_name = s!("{}@inner", cmd);
     let after_cs_name = s!("{}@after", cmd);
@@ -762,11 +762,11 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.clone().unlist();
-    let rdel_toks: Vec<Token> = rdel.clone().unlist();
-    let body_toks: Vec<Token> = body.clone().unlist();
-    let pre_toks: Vec<Token> = pre.clone().unlist();
-    let post_toks: Vec<Token> = post.clone().unlist();
+    let ldel_toks: Vec<Token> = ldel.unlist();
+    let rdel_toks: Vec<Token> = rdel.unlist();
+    let body_toks: Vec<Token> = body.unlist();
+    let pre_toks: Vec<Token> = pre.unlist();
+    let post_toks: Vec<Token> = post.unlist();
     // Create \cmd@inner: n args, body = user_body + \cmd@after + postcode
     let inner_cs_name = s!("{}@inner", cmd);
     let after_cs_name = s!("{}@after", cmd);
@@ -831,7 +831,7 @@ LoadDefinitions!({
     let cmd_name = cmd.trim_start_matches('\\');
     let variant = nstar.to_string();
     let wrapper_cs = s!("\\MT@delim@{}@{}@wrapper", cmd_name, variant);
-    let body_toks: Vec<Token> = body.clone().unlist();
+    let body_toks: Vec<Token> = body.unlist();
     def_macro(T_CS!(&wrapper_cs),
       parse_parameters("{}{}{}", &T_CS!(&wrapper_cs), true)?,
       ExpansionBody::Tokens(Tokens::new(body_toks)), None)?;

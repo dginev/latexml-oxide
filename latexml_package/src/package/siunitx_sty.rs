@@ -503,15 +503,14 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     }
     results
   } else {
-    let tokens = expr.clone().unlist();
     let mut results = Vec::new();
     let mut current = Vec::new();
-    for t in tokens {
+    for t in expr.unlist_ref() {
       if t.to_string() == ";" {
         results.push(SixParseResult::Raw(Tokens::new(current)));
         current = Vec::new();
       } else {
-        current.push(t);
+        current.push(*t);
       }
     }
     if !current.is_empty() {
@@ -572,9 +571,9 @@ fn six_number_string(number: &SixNumber) -> String {
 }
 
 fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
-  let digs: Vec<Token> = digits.clone().unlist();
   let min: usize = six_get_choice("group-minimum-digits").parse().unwrap_or(5);
-  if min > digs.len() { return digits.clone(); }
+  if min > digits.len() { return digits.clone(); }
+  let digs: Vec<Token> = digits.unlist_ref().clone();
   let sep = six_get_tokens("group-separator");
   let g = 3usize;
   let mut result = Vec::new();
@@ -588,7 +587,7 @@ fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
         chunk.insert(0, remaining.pop().unwrap());
       }
       if !result.is_empty() {
-        result.splice(0..0, sep.clone().unlist());
+        result.splice(0..0, sep.unlist_ref().iter().copied());
       }
       result.splice(0..0, chunk);
     }
@@ -1126,9 +1125,8 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
 
 /// Perl: six_parse_literalunits — parse literal (non-macro) unit expressions
 fn six_parse_literalunits(expr: &Tokens) -> Tokens {
-  let tokens = expr.clone().unlist();
   let mut result = Vec::new();
-  let mut iter = tokens.into_iter().peekable();
+  let mut iter = expr.unlist_ref().iter().copied().peekable();
 
   while let Some(t) = iter.next() {
     let tc = t.get_catcode();
@@ -1192,9 +1190,8 @@ fn six_process_units(expr: &Tokens) -> Tokens {
 /// Replace \lx@six@unitobject{name} tokens with \mathrm{presentation} tokens.
 /// Must be called while siunitx_macros mapping is active (inside \SI{}{} processing).
 fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
-  let toks = tokens.clone().unlist();
   let mut result = Vec::new();
-  let mut iter = toks.into_iter().peekable();
+  let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut had_substitution = false;
 
   while let Some(t) = iter.next() {
@@ -1251,8 +1248,7 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
 
 /// Parse expanded tokens looking for \lx@six@unitobject{name} patterns
 fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
-  let toks = tokens.clone().unlist();
-  let mut iter = toks.into_iter().peekable();
+  let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut defns = Vec::new();
 
   while let Some(t) = iter.peek() {

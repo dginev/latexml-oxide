@@ -111,12 +111,13 @@ fn begin_enum_itemize(
 
 /// Perl: replace_star($tokens, $replacement) — enumitem.sty.ltxml L114-119
 fn replace_star(tokens: &Tokens, replacement: &Token) -> Tokens {
-  let mut out = Vec::new();
-  for t in tokens.clone().unlist() {
+  let src = tokens.unlist_ref();
+  let mut out = Vec::with_capacity(src.len());
+  for t in src {
     if t.with_str(|s| s == "*") && t.get_catcode() == Catcode::OTHER {
       out.push(*replacement);
     } else {
-      out.push(t);
+      out.push(*t);
     }
   }
   Tokens::new(out)
