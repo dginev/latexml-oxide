@@ -319,9 +319,10 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     let _qname_key_result = QNAME_KEY_RE.replace(&replacement, |refs: &Captures| -> String {
       is_match = true;
       let _key = refs.get(1).map_or("", |m| m.as_str()).to_string();
-      // TODO: We need a test to flesh this out - is there any?
-      todo!();
-      // String::new()
+      // TODO: Implement full attribute assignment when a test fixture
+      // exercises this path. Until then return empty so a chance match
+      // doesn't crash code generation — callers dedupe via is_match.
+      String::new()
     });
 
     // Else random text
