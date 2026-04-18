@@ -822,7 +822,7 @@ LoadDefinitions!({
         let glyph_str = glyph.to_string();
         if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
           // Found the delimiter — unread it as a token
-          let tok = T_OTHER!(entry.char.to_string());
+          let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER };
           gullet::unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
           // Unknown glyph, use dot delimiter
@@ -1175,7 +1175,7 @@ LoadDefinitions!({
       if let Some(glyph) = props.glyph {
         let glyph_str = glyph.to_string();
         if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
-          let tok = T_OTHER!(entry.char.to_string());
+          let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER };
           gullet::unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
         } else {
           gullet::unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));

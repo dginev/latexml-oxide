@@ -160,7 +160,7 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
       // In verbatim listing context, \end should appear as literal characters \ e n d
       let name = token.to_string();
       for c in name.chars() {
-        tokens.push(T_OTHER!(c.to_string()));
+        tokens.push(Token { text: arena::pin_char(c), code: Catcode::OTHER });
       }
     } else {
       tokens.push(token);
