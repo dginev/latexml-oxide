@@ -94,7 +94,7 @@ impl Actions {
   ) -> Result<Option<XM>, Box<dyn Error>> {
     match *n.borrow() {
       Node::Tree(ref rule, ref children) => {
-        let mut translated_children = Vec::new();
+        let mut translated_children = Vec::with_capacity(children.len());
         for child in children.iter() {
           let translated = self.translate_node(child, pragmas, ActionContext {
             nodes:    ctxt.nodes,
@@ -105,7 +105,7 @@ impl Actions {
         self.action_on(*rule, translated_children, pragmas, ctxt)
       },
       Node::Rule(ref rule, ref children) => {
-        let mut translated_children = Vec::new();
+        let mut translated_children = Vec::with_capacity(children.len());
         for child in children.iter() {
           translated_children.push(self.translate_node(child, pragmas, ActionContext {
             nodes:    ctxt.nodes,
@@ -545,10 +545,12 @@ fn restructure_flat_to_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
           );
           return Ok(());
         }
-        // Split XMWrap items into (items, separators)
-        // wrap_items = [f1, s1, f2, s2, f3, s3, f4]
-        let mut items: Vec<XM> = Vec::new();
-        let mut seps: Vec<XM> = Vec::new();
+        // Split XMWrap items into (items, separators).
+        // wrap_items = [f1, s1, f2, s2, f3, s3, f4] (alternates item/sep).
+        // Pre-size: ~half each, bounded by `wrap_items.len()`.
+        let wrap_len = wrap_items.len();
+        let mut items: Vec<XM> = Vec::with_capacity(wrap_len.div_ceil(2));
+        let mut seps: Vec<XM> = Vec::with_capacity(wrap_len / 2);
         for (i, item) in wrap_items.into_iter().enumerate() {
           if i % 2 == 0 { items.push(item); }
           else { seps.push(item); }
