@@ -1160,6 +1160,25 @@ fn get_node_text(node: &NodeData) -> String {
   }
 }
 
+/// Check if all text in `node` consists only of invisible-op characters,
+/// without allocating a concatenated String like `get_node_text` does.
+/// Used by `adjust_spacing` where we only need the boolean answer.
+fn is_node_text_invisible_op(node: &NodeData) -> bool {
+  fn check(node: &NodeData, seen_any: &mut bool) -> bool {
+    match node {
+      NodeData::Text(t) => {
+        if !t.is_empty() { *seen_any = true; }
+        t.chars().all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
+      }
+      NodeData::Element { children, .. } => children.iter().all(|c| check(c, seen_any)),
+      _ => true,
+    }
+  }
+  let mut seen_any = false;
+  let ok = check(node, &mut seen_any);
+  ok && seen_any
+}
+
 fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
   if let NodeData::Element { attributes, .. } = node {
     let attrs = attributes.get_or_insert_with(HashMap::new);
@@ -1247,7 +1266,7 @@ pub fn adjust_spacing(node: &mut NodeData) {
           let j = i + 1;
           // Skip invisible operators
           if j + 1 < len && get_node_tag(&children[j]) == "m:mo"
-            && is_invisible_op(&get_node_text(&children[j]))
+            && is_node_text_invisible_op(&children[j])
           {
             if j + 1 < len {
               let (left, right) = children.split_at_mut(j + 1);
