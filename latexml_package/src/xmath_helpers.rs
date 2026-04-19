@@ -98,9 +98,10 @@ pub fn i_dual(
   args: Vec<Tokens>,
 ) -> Result<Tokens> {
   // Keep original args for reversion substitution (actual content, not xmarg refs)
-  let mut orig_args: Vec<Tokens> = Vec::new();
-  let mut pargs: Vec<Tokens> = Vec::new();
-  let mut cargs: Vec<Tokens> = Vec::new();
+  let n_args = args.len();
+  let mut orig_args: Vec<Tokens> = Vec::with_capacity(n_args);
+  let mut pargs: Vec<Tokens> = Vec::with_capacity(n_args);
+  let mut cargs: Vec<Tokens> = Vec::with_capacity(n_args);
 
   for arg in args {
     let id = get_xm_arg_id()?;
@@ -154,7 +155,12 @@ pub fn i_dual(
   let wrapped_pres = i_wrap(None, pres_subst);
 
   // Assemble: \lx@dual[options]{content}{presentation}
-  let mut tks = vec![T_CS!("\\lx@dual")];
+  // Pre-size: \lx@dual + [opts] + {content} + {presentation}.
+  let opt_len = optional.as_ref().map(|o| o.len() + 2).unwrap_or(0);
+  let mut tks: Vec<Token> = Vec::with_capacity(
+    1 + opt_len + 2 + content_subst.len() + 2 + wrapped_pres.len(),
+  );
+  tks.push(T_CS!("\\lx@dual"));
   if let Some(opts) = optional {
     tks.push(T_OTHER!("["));
     tks.extend(opts.unlist());
