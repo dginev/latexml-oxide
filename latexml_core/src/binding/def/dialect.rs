@@ -1324,7 +1324,11 @@ pub fn def_environment(
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
 pub fn get_xmarg_id() -> Result<Tokens> {
-  step_counter("@lx@xmarg", false)?;
+  // `@lx@xmarg` is an internal-only counter (no user-visible
+  // counters nest inside it), so `noreset: true` skips the
+  // `\cl@@lx@xmarg` nested-reset probe — the same observation as
+  // in xmath_helpers::get_xm_arg_id.
+  step_counter("@lx@xmarg", true)?;
   def_macro(
     T_CS!("\\@@lx@xmarg@ID"),
     None,
