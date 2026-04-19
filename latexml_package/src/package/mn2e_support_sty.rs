@@ -36,7 +36,16 @@ LoadDefinitions!({
   DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>");
   DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
 
-  // Keywords — Perl L48-55
+  // Keywords — Perl mn2e_support.sty.ltxml L48-54:
+  //   DefEnvironment('{keywords}', '',
+  //     afterDigest => sub { push 'ltx:classification'→frontmatter });
+  //
+  // As an environment, `\endkeywords` is auto-defined, so raw
+  // `mn2e-breakabs.sty` redefinitions of `\endkeywords` (which reference
+  // undefined `\SFB@keywordstrue`) never fire. Body digests as frontmatter
+  // classification entry via `\@add@frontmatter`.
+  DefEnvironment!("{keywords}",
+    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Dates — Perl L61-66

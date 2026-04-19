@@ -97,10 +97,10 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 1101.2474  - [x] 1103.2925  - [x] 1105.0121  - [ ] 1107.0347
 - [ ] 1107.3732  - [x] 1108.0951  - [ ] 1108.3241  - [x] 1111.0334
 - [x] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
-- [ ] 1203.6616  - [ ] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
+- [x] 1203.6616  - [ ] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **44 of 64 now convert cleanly** via
+**Conversion errors (64)** status: **45 of 64 now convert cleanly** via
 sessions 120-122 per-paper Perl-parity fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
 - DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
