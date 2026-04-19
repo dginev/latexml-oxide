@@ -1307,9 +1307,12 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
     Some(Stored::Tokens(v)) => Some(v.clone()),
     Some(Stored::Token(v)) => Some(Tokens::new(vec![*v])),
     Some(Stored::String(sym)) => {
-      let astr = arena::to_string(*sym);
+      // Release the state borrow first, then pass the interned &str directly
+      // into tokenize_internal via the re-entrant arena — avoids materializing
+      // an owned String just to tokenize.
+      let sym = *sym;
       drop(state);
-      Some(mouth::tokenize_internal(&astr))
+      arena::with(sym, |astr| Some(mouth::tokenize_internal(astr)))
     },
     Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
     _ => None,
@@ -2289,16 +2292,26 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = SymHashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-  let mut openable: HashSet<SymStr> = HashSet::default();
+  // Perl Document.pm L196-199 maps the `autoOpen` property to a fractional
+  // OPENABILITY. Most tags get 1.0; `ltx:picture` gets 0.5 (L4995) so it
+  // loses path-priority against full auto-openers (para, p, text, item, …).
+  // We scale to u32 (100 = full, 50 = half) to keep integer arithmetic; the
+  // `desirability * openability / 100` recursion mirrors Perl's float math.
+  let mut openability: SymHashMap<u32> = SymHashMap::default();
   // Collect all known tags: from the schema model AND from state tag_properties
   let mut all_tags: HashSet<SymStr> = model::get_tags().into_iter().collect();
   for tag in state!().tag_properties.keys() {
     all_tags.insert(*tag);
   }
+  let picture_sym = pin!("ltx:picture");
   for tag in &all_tags {
     if let Some(x) = state!().tag_properties.get(tag) {
       if let Some(true) = x.auto_open {
-        openable.insert(*tag);
+        // Perl: Tag('ltx:picture', autoOpen => 0.5). All other autoOpen
+        // sites in the LaTeXML tree use `autoOpen => 1`, so a simple
+        // `tag == ltx:picture` check reproduces the fraction faithfully.
+        let priority = if *tag == picture_sym { 50u32 } else { 100u32 };
+        openability.insert_sym(*tag, priority);
       }
     }
   }
@@ -2306,7 +2319,7 @@ pub fn compute_indirect_model() -> IndirectModel {
   for tag in &all_tags {
     let tag = *tag;
     let mut desc: SymHashMap<SymHashMap<usize>> = SymHashMap::default();
-    compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
+    compute_indirect_model_aux(tag, None, 100, &mut openability, &mut desc);
     let desc_keys: Vec<SymStr> = desc.keys().copied().collect();
     for kid in desc_keys {
       // Find best path to `kid`.

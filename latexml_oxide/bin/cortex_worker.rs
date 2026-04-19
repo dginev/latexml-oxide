@@ -341,24 +341,43 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   }
 
   // Phase I.2: Heuristic detection (ported from arXiv::FileGuess via Pack.pm)
-  fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>) {
+  // Perl Pack.pm L25 TEX_EXT = qr/\.(?:[tT](:?[eE][xX]|[xX][tT])|ltx|LTX)$/
+  // → .tex, .txt, .ltx (case-insensitive).
+  fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>, fallback: bool) {
     if let Ok(entries) = fs::read_dir(dir) {
       for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-          collect_tex_files(&path, files);
-        } else if path.extension().is_some_and(|e| {
-          let e = e.to_ascii_lowercase();
-          e == "tex" || e == "txt"
-        }) {
-          files.push(path);
+          collect_tex_files(&path, files, fallback);
+        } else if !fallback {
+          if path.extension().is_some_and(|e| {
+            let e = e.to_ascii_lowercase();
+            e == "tex" || e == "txt" || e == "ltx"
+          }) {
+            files.push(path);
+          }
+        } else {
+          // Perl Pack/Dir.pm L47 fallback: `!/\./ || /\.[^.]{4,}$/`
+          //   → files with no extension, or with extension ≥4 chars.
+          // arxiv 0908.4110 ships a bare "birkhoffproofrev1" LaTeX source.
+          let ext_opt = path.extension().and_then(|e| e.to_str());
+          let keep = match ext_opt {
+            None => true,
+            Some(ext) => ext.len() >= 4,
+          };
+          if keep {
+            files.push(path);
+          }
         }
       }
     }
   }
 
   let mut tex_files: Vec<PathBuf> = Vec::new();
-  collect_tex_files(dir, &mut tex_files);
+  collect_tex_files(dir, &mut tex_files, false);
+  if tex_files.is_empty() {
+    collect_tex_files(dir, &mut tex_files, true);
+  }
   if tex_files.is_empty() {
     return Err("No .tex files found in archive".into());
   }

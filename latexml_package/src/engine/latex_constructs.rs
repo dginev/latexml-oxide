@@ -1863,7 +1863,9 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
     }
   };
   if let Some(title) = title_opt {
-    whatsit.set_property("titlefont", title.get_font()?.unwrap());
+    if let Some(titlefont) = title.get_font()? {
+      whatsit.set_property("titlefont", titlefont);
+    }
     whatsit.set_property("title", title);
   }
   if let Some(bs) = lookup_value("BIBSTYLE") {
@@ -4705,7 +4707,7 @@ LoadDefinitions!({
       state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
       // Set properties on the whatsit
       for (k, v) in eqn_props {
-        whatsit.set_property(&arena::to_string(k), v);
+        arena::with(k, |ks| whatsit.set_property(ks, v));
       }
       // Reset equation counter to 0
       reset_counter(&T_OTHER!("equation"))?;
@@ -6299,13 +6301,13 @@ LoadDefinitions!({
     set_bibstyle(&style);
     if let Some(mut bib) = document.findnode("//ltx:bibliography", None) {
       if let Some(Stored::String(bs)) = lookup_value("BIBSTYLE") {
-        document.set_attribute(&mut bib, "bibstyle", &arena::to_string(bs))?;
+        arena::with(bs, |s| document.set_attribute(&mut bib, "bibstyle", s))?;
       }
       if let Some(Stored::String(cs)) = lookup_value("CITE_STYLE") {
-        document.set_attribute(&mut bib, "citestyle", &arena::to_string(cs))?;
+        arena::with(cs, |s| document.set_attribute(&mut bib, "citestyle", s))?;
       }
       if let Some(Stored::String(so)) = lookup_value("CITE_SORT") {
-        document.set_attribute(&mut bib, "sort", &arena::to_string(so))?;
+        arena::with(so, |s| document.set_attribute(&mut bib, "sort", s))?;
       }
     }
   },
@@ -7420,10 +7422,21 @@ LoadDefinitions!({
   DefMacro!("\\lx@pic@bezier{} Pair Pair Pair", "\\qbezier[#1]#2#3#4");
   DefMacro!("\\@killglue", "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}");
 
-  // Tag: ltx:picture — auto-generate ID with "pic" prefix
-  Tag!("ltx:picture", after_open => sub[document, node] {
-    document.generate_id(node, "pic")?;
-  });
+  // Tag: ltx:picture — Perl latex_constructs.pool.ltxml L4995:
+  //   Tag('ltx:picture', autoOpen => 0.5, autoClose => 1, afterOpen => &GenerateID)
+  // The 0.5 fractional priority is honoured by `compute_indirect_model` in
+  // state.rs: picture is the only tag with lower-than-full openability, so
+  // other auto-openers (para, p, text, item, …) win whenever they can also
+  // reach the target element. Picture is selected only for picture-specific
+  // primitives (\line, \circle, \vector, \put) used bare inside a {figure}
+  // or similar context where no fuller wrapper fits.
+  Tag!("ltx:picture",
+    auto_open  => true,
+    auto_close => true,
+    after_open => sub[document, node] {
+      document.generate_id(node, "pic")?;
+    }
+  );
 
   // {picture} environment: (width,height) with optional (origin-x,origin-y)
   // Pair now survives digestion via RegisterValue::Pair, so properties can extract coordinates.
@@ -7432,7 +7445,7 @@ LoadDefinitions!({
       fill='none' stroke='none' unitlength='#unitlength'>\
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
-    mode => "text",
+    mode => "internal_vertical",
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
@@ -7482,7 +7495,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@pic@put Pair {}",
     "<ltx:g transform='#transform' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth'>#2</ltx:g>",
     alias => "\\put",
-    mode  => "text",
+    mode  => "restricted_horizontal",
     properties => sub[args] {
       let (x, y) = match args[0].as_ref() {
         Some(d) => match d.data() {
@@ -7743,7 +7756,7 @@ LoadDefinitions!({
       let framed = props.get("framed").is_some();
       // \@wholewidth captured at digest time in properties callback
       let thick = match props.get("thick") {
-        Some(Stored::String(s)) => arena::to_string(*s).parse::<f64>().unwrap_or(0.4),
+        Some(Stored::String(s)) => arena::with(*s, |v| v.parse::<f64>().unwrap_or(0.4)),
         _ => 0.4,
       };
       // Frame rect (only when framed=true)

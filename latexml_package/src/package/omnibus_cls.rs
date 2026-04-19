@@ -358,6 +358,14 @@ LoadDefinitions!({
       let pkg_str = pkg.to_string();
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+          // Clear this autoload entry before loading the package, so that if the
+          // package does not redefine this CS (e.g., `\begin{split}` — amsmath
+          // defines `\split`, not `\begin{split}`), the re-emitted CS falls
+          // through to normal resolution instead of looping back to this closure.
+          // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm.
+          latexml_core::state::assign_meaning(
+            &cs_clone, latexml_core::common::store::Stored::None,
+            Some(Scope::Global));
           require_package(&pkg_str, RequireOptions::default())?;
           Ok(Tokens!(cs_clone))
         })), None)?;

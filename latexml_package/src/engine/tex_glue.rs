@@ -207,7 +207,9 @@ LoadDefinitions!({
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
           if box_in_list.get_property_bool("isSkip") {
-            let width_stored = box_in_list.get_property("width").unwrap();
+            let Some(width_stored) = box_in_list.get_property("width") else {
+              break;
+            };
             if let Stored::Dimension(ref width_d) = *width_stored {
               return *width_d;
             } else {

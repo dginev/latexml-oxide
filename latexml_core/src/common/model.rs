@@ -768,7 +768,7 @@ pub(crate) fn compute_indirect_model_aux(
   tag: SymStr,
   start_opt: Option<SymStr>,
   desirability: usize,
-  openable: &mut HashSet<SymStr>,
+  openability: &mut SymHashMap<u32>,
   desc: &mut SymHashMap<SymHashMap<usize>>,
 ) {
   let start = match start_opt {
@@ -782,9 +782,12 @@ pub(crate) fn compute_indirect_model_aux(
   let tag_contents: Vec<SymStr> = get_tag_contents(tag);
 
   for kid in tag_contents {
+    // Perl Document.pm L217: `next if $::DESC{$kid}{$start}`. Any prior
+    // visit wins, so don't recompute — the bookkeeping is keyed on (kid,
+    // start) and collisions pick the earliest (best) path by sort order.
     if desc.entry_sym(kid).or_default().contains_key_sym(&start) {
       continue;
-    } // Already solved
+    }
 
     if start != pin!("") {
       desc
@@ -793,10 +796,14 @@ pub(crate) fn compute_indirect_model_aux(
         .insert_sym(start, desirability);
     }
 
-    if kid != pin!("#PCDATA") && openable.contains(&kid) {
-      let inner = if start != pin!("") { start } else { kid };
-
-      compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
+    if kid != pin!("#PCDATA") {
+      if let Some(priority) = openability.get_sym(kid).copied() {
+        let inner = if start != pin!("") { start } else { kid };
+        // Perl Document.pm L220: `$desirability * $x`. We keep integer
+        // arithmetic (priorities scaled by 100), so this is a scaled multiply.
+        let next_desirability = desirability * (priority as usize) / 100;
+        compute_indirect_model_aux(kid, Some(inner), next_desirability, openability, desc);
+      }
     }
   }
 }
