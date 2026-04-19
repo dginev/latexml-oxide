@@ -56,7 +56,7 @@ latex.rs                   (≈ LaTeX.pool)
 ├── latex_bootstrap.rs     (≈ latex_bootstrap.pool.ltxml)
 ├── latex_base.rs          (≈ latex_base.pool.ltxml)
 ├── latex_dump             (precompiled latex.ltx state)
-└── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, ~8400 lines, sections C.1–C.15)
+└── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, ~8675 lines, sections C.1–C.15)
 ```
 
 ## File-by-file mapping
@@ -111,14 +111,14 @@ Loading chain in `tex.rs`:
 |---|---|---|
 | `latex_bootstrap.pool.ltxml` | `latex_bootstrap.rs` | Stubs for font/counter internals |
 | `latex_base.pool.ltxml` | `latex_base.rs` | Infrastructure: DefMacro, Let, DefRegister, RawTeX |
-| `latex_constructs.pool.ltxml` | `latex_constructs.rs` | All constructors/environments (~8400 lines, C.1–C.15) |
+| `latex_constructs.pool.ltxml` | `latex_constructs.rs` | All constructors/environments (~8675 lines, C.1–C.15) |
 
 Loading chain in `latex.rs`:
 `LoadPool!("TeX")` → `InnerPool!(latex_bootstrap)` → `InnerPool!(latex_base)` → `latex_dump::load_definitions()` → `InnerPool!(latex_constructs)`
 
 ### LaTeX constructs — section mapping
 
-`latex_constructs.rs` (~8400 lines) is a single file matching Perl's
+`latex_constructs.rs` (~8675 lines) is a single file matching Perl's
 `latex_constructs.pool.ltxml` (6014 lines). It contains all LaTeX semantic
 definitions organized by Lamport chapter with section comment headers.
 
