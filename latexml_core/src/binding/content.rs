@@ -1348,8 +1348,10 @@ fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   ).ok()?;
   // Glued suffixes without separator
   let glued_rx = Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").ok()?;
-  // Prefixes
-  let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.])").ok()?;
+  // Prefixes. Perl Package.pm L2182: `^((?:rw|my|preprint)[-_.]?)` —
+  // separator is OPTIONAL, so `mysvjour3` strips to `svjour3` (not just
+  // `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
+  let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").ok()?;
 
   let mut base = name.to_string();
   let mut changed = false;
