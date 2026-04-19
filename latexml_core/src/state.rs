@@ -1354,8 +1354,19 @@ pub fn assign_register(
   scope: Option<Scope>,
   parameters: Vec<ArgWrap>,
 ) -> Result<()> {
-  let cs = T_CS!(cs);
-  let defn_opt = lookup_definition(&cs)?;
+  assign_register_token(&T_CS!(cs), value, scope, parameters)
+}
+/// `assign_register` variant taking a pre-built Token — lets hot
+/// callers skip the `T_CS!(&str)` pin when they already have the CS
+/// cached (e.g. via `T_CS!("\\c@…")` literal which routes through
+/// `pin!`).
+pub fn assign_register_token(
+  cs: &Token,
+  value: RegisterValue,
+  scope: Option<Scope>,
+  parameters: Vec<ArgWrap>,
+) -> Result<()> {
+  let defn_opt = lookup_definition(cs)?;
   if let Some(defn) = defn_opt {
     if defn.is_register() {
       defn.set_value(value, scope, parameters);
@@ -1370,8 +1381,12 @@ pub fn assign_register(
   Ok(())
 }
 pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
-  let cs = T_CS!(cs);
-  Ok(if let Some(defn) = lookup_definition(&cs)? {
+  lookup_register_token(&T_CS!(cs), parameters)
+}
+/// Token-keyed variant of `lookup_register` — saves the per-call
+/// `T_CS!(&str)` pin for hot callers with a cached CS token.
+pub fn lookup_register_token(cs: &Token, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+  Ok(if let Some(defn) = lookup_definition(cs)? {
     if defn.is_register() {
       defn.value_of(parameters)
     } else {
@@ -1380,8 +1395,6 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
       None
     }
   } else {
-    // let message = s!("The control sequence '{}' is not defined", cs);
-    // Warn!("expected", "register", message);
     None
   })
 }

@@ -18,12 +18,17 @@ use crate::prelude::*;
 /// Callers in Core dialect.rs (`get_xmarg_id`) still go through the
 /// full `step_counter` because they *do* expand the macro form.
 pub fn get_xm_arg_id() -> Result<String> {
-  let current = state::lookup_register("\\c@@lx@xmarg", Vec::new())?
+  // `T_CS!` with a literal arm routes through `pin!` — the Token
+  // construction is essentially free after first call (OnceCell load).
+  // Pass the Token straight to the register ops so they don't have to
+  // re-pin the `&str` key.
+  let cs = T_CS!("\\c@@lx@xmarg");
+  let current = state::lookup_register_token(&cs, Vec::new())?
     .map(|rv| rv.value_of())
     .unwrap_or(0);
   let next = current + 1;
-  state::assign_register(
-    "\\c@@lx@xmarg",
+  state::assign_register_token(
+    &cs,
     latexml_core::common::number::Number::new(next).into(),
     Some(state::Scope::Global),
     Vec::new(),
