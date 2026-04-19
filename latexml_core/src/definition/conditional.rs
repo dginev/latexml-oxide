@@ -200,15 +200,16 @@ impl Conditional {
     let args = self.read_arguments()?;
 
     state::get_ifframe().unwrap().borrow_mut().parsing = false;
-    let tracing = state::lookup_bool("tracingcommands");
-    //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
-    //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
+    // `tracingcommands` is normally unset; defer the state probe to
+    // the path that would actually read it. Conditional::invoke fires
+    // on every \if/\ifx/\ifnum/…, so avoiding a mandatory state
+    // lookup per conditional is a measurable win.
     if let Some(ref test) = self.test {
       if (test)(args)? {
         // true branch: do nothing, tokens follow naturally
       } else {
         let to = self.skip_conditional_body(-1);
-        if tracing {
+        if state::lookup_bool("tracingcommands") {
           Debug!("{{false}} [skipped to {:?}]\n", to);
         }
       }

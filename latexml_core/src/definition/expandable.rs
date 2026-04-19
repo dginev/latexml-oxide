@@ -100,9 +100,13 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
-    // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let _tracing = lookup_int("tracingmacros") > 0;
-    let _profiled = lookup_bool("PROFILING");
+    // Perl shortcut for "trivial" macros that were tracing- or
+    // profiling-aware. Neither tracing nor profiling is implemented
+    // in the Rust port (the returned `_tracing` / `_profiled` values
+    // were discarded), so the two state lookups were pure overhead
+    // on every macro expansion (\~350k calls in si.tex alone per
+    // callgrind). Removed — re-introduce only alongside the actual
+    // tracing/profiling features if/when they land.
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
