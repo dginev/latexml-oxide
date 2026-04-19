@@ -1,6 +1,6 @@
 # Perl vs Rust Test XML Differences
 
-> Comprehensive comparison of `LaTeXML/t/*.xml` (Perl ground truth) and `latexml_oxide/tests/*.xml` (Rust expected output). Last audited 2026-03-19.
+> Comprehensive comparison of `LaTeXML/t/*.xml` (Perl ground truth) and `latexml_oxide/tests/*.xml` (Rust expected output). Last audited 2026-04-19 (re-verified §E).
 
 ## A. `%&#10;` only — intentional Rust divergence (30 files)
 
@@ -55,23 +55,30 @@ Rust does not emit `%\n` (TeX comment-newline separator) in `tex=` attributes. D
 
 ## E. Perl updated — Rust needs code fixes (tracked in SYNC_STATUS.md)
 
-38. **`fonts/ding.xml`** — Perl updated `guessTableHeaders`: `<thead>` wrapper with `thead="column"`, empty `<td/>` for undefined dingbats. Rust has `thead="row"` and `?` placeholders. (~250 line diff)
+Re-verified 2026-04-19: 6 of 7 items below are now **resolved**
+(Rust `.xml` matches Perl `t/*.xml` byte-exactly). Only
+`graphics/xcolors.xml` still has residual diffs, and is much smaller
+(~182 lines, down from ~688).
 
-39. **`structure/figure_grids.xml`** — Perl now adds `ltx_figure_panel` CSS class to `<graphics>` inside figures. Missing in Rust. (~470 line diff, all from this one class)
+38. ~~**`fonts/ding.xml`**~~ — RESOLVED (0-diff 2026-04-19).
 
-40. **`alignment/tabular.xml`** — Header detection differences: Perl has `<thead>` wrapper with `thead="column"`, different border attributes, spacing differences.
+39. ~~**`structure/figure_grids.xml`**~~ — RESOLVED. `ltx_figure_panel`
+    class landed; 0-diff 2026-04-19.
 
-41. **`ams/dots.xml`** — Perl recognizes `d` as `meaning="differential-d" role="DIFFOP"` in integral contexts (`\int ... dx`). Rust treats `d` as plain UNKNOWN. Smart dots (⋯ vs …) now implemented.
+40. ~~**`alignment/tabular.xml`**~~ — RESOLVED; 0-diff 2026-04-19.
 
-42. **`graphics/framed.xml`** — Perl generates titled frame heading text (`<text>A Titled Frame</text>`). Missing in Rust.
+41. ~~**`ams/dots.xml`**~~ — RESOLVED. Smart dots + DIFFOP `d` landed;
+    0-diff 2026-04-19.
 
-43. **`graphics/xcolors.xml`** — Multiple issues (~688 line diff):
-    - Color complement/wheel computation errors in Rust
-    - Missing `pt` units in calc output
-    - `colortbl` row cycling broken (all "row 0" instead of cycling 1–9)
-    - Missing `ltx_guessed_headers` class on named colors tabular
+42. ~~**`graphics/framed.xml`**~~ — RESOLVED. Titled frame heading
+    landed; 0-diff 2026-04-19.
 
-44. **`complex/aliceblog.xml`** — RDFa support missing. Perl has `<rdf>` elements, `property=`, `typeof=`, `resource=` attributes. Rust produces `<ERROR class="undefined"/>` nodes. (~88 line diff)
+43. **`graphics/xcolors.xml`** — partially resolved (~688 → ~182 line
+    diff). Remaining issues concentrated around color complement/wheel
+    computation and colortbl row cycling. Tracked in SYNC_STATUS.md.
+
+44. ~~**`complex/aliceblog.xml`**~~ — RESOLVED. RDFa support landed;
+    0-diff 2026-04-19.
 
 ## F. Daemon/format differences (OUT OF SCOPE)
 
