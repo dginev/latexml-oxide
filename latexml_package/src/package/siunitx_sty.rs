@@ -64,13 +64,8 @@ fn six_get_choice_sym(key: SymStr) -> String {
   }
 }
 
-/// Perl: six_get — look up SIX_key from state. Still needed for the
-/// small set of sites that iterate over a dynamic slice of keys
-/// (notably `six_match_keys`). All literal-key callers route through
-/// `six_get_sym` + `six_pin!` to skip the format! and pin lookup.
-fn six_get(key: &str) -> Option<Stored> {
-  state::lookup_value(&format!("SIX_{key}"))
-}
+// six_get(&str) removed — all callers now use six_get_sym + six_pin!
+// which skips the per-call format!(\"SIX_{key}\") and arena::pin.
 
 /// Build raw keyvals content (without brackets) for passing to i_wrap
 fn make_kv_content(kv: &[(&str, Tokens)]) -> Option<Tokens> {
@@ -229,10 +224,10 @@ impl SixNumber {
 }
 
 /// Perl: six_match_keys — match and remove leading tokens matching sixkeys
-fn six_match_keys(tokens: &mut Vec<Token>, keys: &[&str]) -> Option<Tokens> {
+fn six_match_keys(tokens: &mut Vec<Token>, keys: &[SymStr]) -> Option<Tokens> {
   let mut tomatch: Vec<Token> = vec![T_SPACE!()];
   for key in keys {
-    if let Some(Stored::Tokens(toks)) = six_get(key) {
+    if let Some(Stored::Tokens(toks)) = six_get_sym(*key) {
       tomatch.extend(toks.unlist());
     }
   }
@@ -266,14 +261,14 @@ fn six_match_keys(tokens: &mut Vec<Token>, keys: &[&str]) -> Option<Tokens> {
 }
 
 fn six_match_sign(tokens: &mut Vec<Token>) -> Option<Tokens> {
-  six_match_keys(tokens, &["input-signs"])
+  six_match_keys(tokens, &[six_pin!("input-signs")])
 }
 
 fn six_match_simplenumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let sign = six_match_sign(tokens);
-  let integer = six_match_keys(tokens, &["input-digits", "input-symbols"]);
-  let (decimal, fraction) = if six_match_keys(tokens, &["input-decimal-markers"]).is_some() {
-    (Some(Tokens::default()), six_match_keys(tokens, &["input-digits", "input-symbols"]))
+  let integer = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
+  let (decimal, fraction) = if six_match_keys(tokens, &[six_pin!("input-decimal-markers")]).is_some() {
+    (Some(Tokens::default()), six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]))
   } else {
     (None, None)
   };
@@ -288,15 +283,15 @@ fn six_match_simplenumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let number = six_match_simplenumber(tokens)?;
 
-  if let Some(sign) = six_match_keys(tokens, &["input-uncertainty-signs"]) {
-    let int = six_match_keys(tokens, &["input-digits", "input-symbols"]);
-    let (dec, frac) = if six_match_keys(tokens, &["input-decimal-markers"]).is_some() {
-      (Some(Tokens::default()), six_match_keys(tokens, &["input-digits", "input-symbols"]))
+  if let Some(sign) = six_match_keys(tokens, &[six_pin!("input-uncertainty-signs")]) {
+    let int = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
+    let (dec, frac) = if six_match_keys(tokens, &[six_pin!("input-decimal-markers")]).is_some() {
+      (Some(Tokens::default()), six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]))
     } else {
       (None, None)
     };
 
-    if six_match_keys(tokens, &["input-decimal-markers", "input-complex-roots"]).is_some() {
+    if six_match_keys(tokens, &[six_pin!("input-decimal-markers"), six_pin!("input-complex-roots")]).is_some() {
       return Some(number);
     }
 
@@ -309,9 +304,9 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
     });
   }
 
-  if six_match_keys(tokens, &["input-open-uncertainty"]).is_some() {
-    let int = six_match_keys(tokens, &["input-digits", "input-symbols"]);
-    six_match_keys(tokens, &["input-close-uncertainty"]);
+  if six_match_keys(tokens, &[six_pin!("input-open-uncertainty")]).is_some() {
+    let int = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
+    six_match_keys(tokens, &[six_pin!("input-close-uncertainty")]);
     let uncertainty = SixNumber::simple(None, int, None, None);
     return Some(SixNumber::Operator {
       operator: "uncertain".to_string(),
@@ -327,7 +322,7 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let mut number = six_match_uncertainnumber(tokens)?;
 
-  if let Some(i) = six_match_keys(tokens, &["input-complex-roots"]) {
+  if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
     let sign = number.get_sign().cloned();
     number.set_sign(None);
     return Some(SixNumber::Operator {
@@ -338,7 +333,7 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   }
 
   if let Some(sign) = six_match_sign(tokens) {
-    if let Some(i) = six_match_keys(tokens, &["input-complex-roots"]) {
+    if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
       if let Some(imag) = six_match_uncertainnumber(tokens) {
         return Some(SixNumber::Operator {
           operator: "complex".to_string(),
@@ -347,7 +342,7 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
         });
       }
     } else if let Some(imag) = six_match_uncertainnumber(tokens) {
-      if let Some(i) = six_match_keys(tokens, &["input-complex-roots"]) {
+      if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
         return Some(SixNumber::Operator {
           operator: "complex".to_string(),
           arg1: Some(Box::new(number)), arg2: Some(Box::new(imag)),
@@ -363,9 +358,9 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let number = six_match_complexnumber(tokens)?;
 
-  if six_match_keys(tokens, &["input-exponent-markers"]).is_some() {
+  if six_match_keys(tokens, &[six_pin!("input-exponent-markers")]).is_some() {
     let sign = six_match_sign(tokens);
-    let exp = six_match_keys(tokens, &["input-digits", "input-symbols"]);
+    let exp = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
     let exp_number = SixNumber::simple(sign, exp, None, None);
     return Some(SixNumber::Operator {
       operator: "exponent".to_string(),
@@ -378,7 +373,7 @@ fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 }
 
 fn six_match_compoundnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
-  if let Some(comp) = six_match_keys(tokens, &["input-comparators"]) {
+  if let Some(comp) = six_match_keys(tokens, &[six_pin!("input-comparators")]) {
     return Some(SixNumber::Operator {
       operator: "comparator".to_string(),
       arg1: six_match_number(tokens).map(Box::new),
@@ -389,14 +384,14 @@ fn six_match_compoundnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 
   let mut number = six_match_scinumber(tokens)?;
   loop {
-    if six_match_keys(tokens, &["input-product"]).is_some() {
+    if six_match_keys(tokens, &[six_pin!("input-product")]).is_some() {
       let rhs = six_match_scinumber(tokens);
       number = SixNumber::Operator {
         operator: "product".to_string(),
         arg1: Some(Box::new(number)), arg2: rhs.map(Box::new),
         sign: None, symbol: None, comparator: None,
       };
-    } else if six_match_keys(tokens, &["input-quotient"]).is_some() {
+    } else if six_match_keys(tokens, &[six_pin!("input-quotient")]).is_some() {
       let rhs = six_match_scinumber(tokens);
       number = SixNumber::Operator {
         operator: "quotient".to_string(),
