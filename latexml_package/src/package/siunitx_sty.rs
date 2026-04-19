@@ -64,26 +64,13 @@ fn six_get_choice_sym(key: SymStr) -> String {
   }
 }
 
-/// Perl: six_get — look up SIX_key from state
+/// Perl: six_get — look up SIX_key from state. Still needed for the
+/// small set of sites that iterate over a dynamic slice of keys
+/// (notably `six_match_keys`). All literal-key callers route through
+/// `six_get_sym` + `six_pin!` to skip the format! and pin lookup.
 fn six_get(key: &str) -> Option<Stored> {
   state::lookup_value(&format!("SIX_{key}"))
 }
-
-/// Perl: six_get as Tokens
-fn six_get_tokens(key: &str) -> Tokens {
-  match six_get(key) {
-    Some(Stored::Tokens(t)) => t,
-    Some(Stored::String(s)) => {
-      let txt = arena::with(s, |t| t.to_string());
-      Tokenize!(&txt)
-    }
-    _ => Tokens::default(),
-  }
-}
-
-// `six_get_bool` / `six_get_choice` removed — all callers use the
-// `_sym` variants (see the pin!-backed `six_pin!` macro above) since
-// all their keys are string literals.
 
 /// Build raw keyvals content (without brackets) for passing to i_wrap
 fn make_kv_content(kv: &[(&str, Tokens)]) -> Option<Tokens> {
@@ -101,8 +88,8 @@ fn make_kv_content(kv: &[(&str, Tokens)]) -> Option<Tokens> {
 }
 
 /// Perl: six_get_op — look up an option, wrap in \text{} and I_wrap
-fn six_get_op(kv: &[(&str, Tokens)], key: &str) -> Tokens {
-  let text = six_get_tokens(key);
+fn six_get_op_sym(kv: &[(&str, Tokens)], key: SymStr) -> Tokens {
+  let text = six_get_tokens_sym(key);
   if text.is_empty() {
     i_wrap(make_kv_content(kv), Tokens::default())
   } else {
@@ -850,10 +837,7 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             n.get_integer().is_some() || n.get_fraction().is_some() || n.is_operator()
           });
           let times = if has_mantissa {
-            six_get_op(
-              &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-              "exponent-product",
-            )
+            six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("exponent-product"))
           } else {
             Tokens::new(vec![T_CS!("\\lx@InvisibleTimes")])
           };
@@ -877,10 +861,7 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
         "product" => {
           let fa1 = arg1.as_deref().map(|n| six_format_number_inner(n, 1)).unwrap_or_default();
           let fa2 = arg2.as_deref().map(|n| six_format_number_inner(n, 1)).unwrap_or_default();
-          let times = six_get_op(
-            &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-            "output-product",
-          );
+          let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("output-product"));
           six_format_infix(times, None, None, vec![fa1, fa2])
         }
         "quotient" => {
@@ -893,10 +874,7 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             tks.push(T_BEGIN!()); tks.extend(fa2.unlist()); tks.push(T_END!());
             Tokens::new(tks)
           } else {
-            let div = six_get_op(
-              &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
-              "output-quotient",
-            );
+            let div = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))], six_pin!("output-quotient"));
             six_format_infix(div, None, None, vec![fa1, fa2])
           }
         }
@@ -909,12 +887,12 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
 fn six_format_range(bracketed: bool, first: Tokens, last: Tokens) -> Tokens {
   let mut range_pres = Vec::new();
   range_pres.push(i_arg("1"));
-  range_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "range-phrase").unlist());
+  range_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("range-phrase")).unlist());
   range_pres.push(i_arg("2"));
 
   if bracketed {
-    range_pres.insert(0, six_get_op(&[("role", Tokenize!("OPEN"))], "open-bracket").unlist().remove(0));
-    range_pres.extend(six_get_op(&[("role", Tokenize!("CLOSE"))], "close-bracket").unlist());
+    range_pres.insert(0, six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket")).unlist().remove(0));
+    range_pres.extend(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket")).unlist());
   }
 
   let content = i_apply(
@@ -933,21 +911,21 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   let mut list_pres = Vec::new();
   if n == 2 {
     list_pres.push(i_arg("1"));
-    list_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "list-pair-separator").unlist());
+    list_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("list-pair-separator")).unlist());
     list_pres.push(i_arg("2"));
   } else {
     list_pres.push(i_arg("1"));
     for i in 2..n {
-      list_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "list-separator").unlist());
+      list_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("list-separator")).unlist());
       list_pres.push(i_arg(&i.to_string()));
     }
-    list_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "list-final-separator").unlist());
+    list_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("list-final-separator")).unlist());
     list_pres.push(i_arg(&n.to_string()));
   }
 
   if n > 1 && bracketed {
-    list_pres.splice(0..0, six_get_op(&[("role", Tokenize!("OPEN"))], "open-bracket").unlist());
-    list_pres.extend(six_get_op(&[("role", Tokenize!("CLOSE"))], "close-bracket").unlist());
+    list_pres.splice(0..0, six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket")).unlist());
+    list_pres.extend(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket")).unlist());
   }
 
   let content = i_apply(
@@ -1137,14 +1115,11 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
 /// Format product of units
 fn six_format_unitproduct(bracketed: bool, units: &[SixUnit]) -> Tokens {
   let formatted: Vec<Tokens> = units.iter().map(six_format_1unit).collect();
-  let inter = six_get_op(
-    &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-    "inter-unit-product",
-  );
+  let inter = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("inter-unit-product"));
   six_format_infix(
     inter,
-    if bracketed { Some(six_get_op(&[("role", Tokenize!("OPEN"))], "open-bracket")) } else { None },
-    if bracketed { Some(six_get_op(&[("role", Tokenize!("CLOSE"))], "close-bracket")) } else { None },
+    if bracketed { Some(six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket"))) } else { None },
+    if bracketed { Some(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket"))) } else { None },
     formatted,
   )
 }
@@ -1171,10 +1146,7 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
     Tokens::new(tks)
   } else if permode == "symbol" {
     let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
-    let per_sym = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
-      "per-symbol",
-    );
+    let per_sym = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))], six_pin!("per-symbol"));
     six_format_infix(per_sym, None, None, vec![
       six_format_unitproduct(false, &numer_units),
       six_format_unitproduct(bracket, &denom_units),
@@ -1873,10 +1845,7 @@ LoadDefinitions!({
     six_begin_processing(kv.as_ref());
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
-    let times = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-      "number-unit-product",
-    );
+    let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let funits = i_wrap(None, six_process_units(&units));
     let result = six_wrap(six_format_infix(times, None, None, vec![fnumber, funits]));
     six_end_processing();
@@ -1888,10 +1857,7 @@ LoadDefinitions!({
     let numbers = numbers_arg.clone();
     let units = units_arg.clone();
     six_begin_processing(kv.as_ref());
-    let times = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-      "number-unit-product",
-    );
+    let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("list-units"));
     let items: Vec<Tokens> = six_parse_numbers(&numbers).iter()
       .map(|p| six_format_number(p, 0)).collect();
@@ -1917,10 +1883,7 @@ LoadDefinitions!({
     let last = last_arg.clone();
     let units = units_arg.clone();
     six_begin_processing(kv.as_ref());
-    let times = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-      "number-unit-product",
-    );
+    let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("range-units"));
     let fnumber = six_format_number(&six_parse_number(&first), 0);
     let lnumber = six_format_number(&six_parse_number(&last), 0);
