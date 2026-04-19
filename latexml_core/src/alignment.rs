@@ -1089,9 +1089,11 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
     let line = heads.len();
     heads.push(rows.remove(0));
     for cell in cells {
+      // Malformed/non-numeric rowspan silently degrades to 0 — matches Perl's
+      // lax numeric coercion and prevents crashes on unusual input XML.
       let this_rowspan = cell
         .get_attribute("rowspan")
-        .map(|v| v.parse::<usize>().expect("rowspan should be a usize"))
+        .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(0)
         + line;
       if this_rowspan > maxreach {
