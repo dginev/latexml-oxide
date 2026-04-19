@@ -1275,7 +1275,7 @@ LoadDefinitions!({
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
     if matches!(expansion,Some(ExpansionBody::Closure(_))) {
-      Info!("unexpected", "patchcmd", "Patchcmd is not supported on LaTeXML-native definitions, will not patch {}",cs);
+      Info!("unexpected", "patchcmd", format!("Patchcmd is not supported on LaTeXML-native definitions, will not patch {}", cs));
       return Ok(failure)
     }
     let expansion_tokens = match expansion.unwrap() {

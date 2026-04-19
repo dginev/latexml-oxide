@@ -819,8 +819,7 @@ impl XM {
           Info!(
             "math_parser",
             "choices",
-            "to_xmath handler discarded {} parse choices.",
-            choices.len() - 1
+            format!("to_xmath handler discarded {} parse choices.", choices.len() - 1)
           );
         }
         choices.remove(0).into_xmath(owner, nodes, document)
