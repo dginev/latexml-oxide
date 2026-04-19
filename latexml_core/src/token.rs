@@ -864,17 +864,24 @@ impl Token {
       return true;
     }
     if matches!(cc, Catcode::CS | Catcode::ACTIVE) {
-      if let Some(defn) = state::lookup_meaning(self) {
-        let letto = match defn {
-          Stored::Token(t) => t,
-          Stored::Expandable(inner) => inner.get_cs().into_owned(),
-          Stored::Primitive(inner) => inner.get_cs().into_owned(),
-          Stored::MathPrimitive(inner) => inner.get_cs().into_owned(),
-          Stored::Register(inner) => inner.get_cs().into_owned(),
-          Stored::Conditional(inner) => inner.get_cs().into_owned(),
-          Stored::Constructor(inner) => inner.get_cs().into_owned(),
-          oops => panic!("unexpected definition {oops:?} for {self:?}"),
-        };
+      // Use the closure-based `with_meaning` — Token is `Copy`, so
+      // extracting a `Token` from the borrowed Stored is an implicit
+      // copy, not a clone. Avoids a full `Stored::clone()` per call
+      // (defined_as fires ~1% of total instructions on siunitx/
+      // physics-heavy docs).
+      let letto_opt: Option<Token> = state::with_meaning(self, |defn_opt| {
+        defn_opt.and_then(|defn| match defn {
+          Stored::Token(t) => Some(*t),
+          Stored::Expandable(inner) => Some(*inner.get_cs()),
+          Stored::Primitive(inner) => Some(*inner.get_cs()),
+          Stored::MathPrimitive(inner) => Some(*inner.get_cs()),
+          Stored::Register(inner) => Some(*inner.get_cs()),
+          Stored::Conditional(inner) => Some(*inner.get_cs()),
+          Stored::Constructor(inner) => Some(*inner.get_cs()),
+          _ => None,
+        })
+      });
+      if let Some(letto) = letto_opt {
         if (letto.get_catcode() == occ)
           && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym())
         {

@@ -1731,6 +1731,36 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   }
 }
 
+/// Closure-based variant of `lookup_meaning` — avoids the per-call
+/// `Stored::clone()` when the caller only needs to *inspect* the
+/// meaning (e.g. extract a CS Token from an Expandable/Primitive
+/// definition). Stored::clone is ~1% of total instructions on
+/// siunitx-heavy fixtures (5M+ calls per run, each cloning a full
+/// Stored enum). This helper borrows the stored value instead.
+///
+/// For non-CS/ACTIVE tokens, passes `Some(Stored::Token(*token))` —
+/// matching lookup_meaning's fallback semantics. Note this requires
+/// a single stack allocation of Stored::Token (Copy), not a heap
+/// clone.
+pub fn with_meaning<R>(token: &Token, f: impl FnOnce(Option<&Stored>) -> R) -> R {
+  let state = state!();
+  if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
+    match state.meaning.get(&token.text) {
+      Some(entry) => match entry.front() {
+        None | Some(Stored::None) => f(None),
+        Some(other) => f(Some(other)),
+      },
+      None => f(None),
+    }
+  } else {
+    // Non-CS/ACTIVE: the "meaning" is just the token itself. The
+    // caller gets a borrow of a temporary here, which is safe for
+    // the duration of the closure.
+    let s = Stored::Token(*token);
+    f(Some(&s))
+  }
+}
+
 /// like `lookup_value` but only recognizes `Stored::VecDequeStored`
 pub fn lookup_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
   match state!().lookup_value(key) {
