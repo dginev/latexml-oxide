@@ -212,21 +212,30 @@ fn six_match_keys(tokens: &mut Vec<Token>, keys: &[&str]) -> Option<Tokens> {
     }
   }
 
+  // Match by Token-text equality against `tomatch`. For a typical
+  // `tomatch` of a few dozen tokens and input of a few dozen tokens
+  // this is O(n*m) — still fast because `Token` eq is a `SymStr` u32
+  // compare, not a string compare.
   let mut matched = Vec::new();
-  while let Some(t) = tokens.first() {
-    let found = tomatch.iter().any(|m| t.eq(m));
-    if !found {
+  let mut consumed = 0;
+  for t in tokens.iter() {
+    if !tomatch.iter().any(|m| t == m) {
       break;
     }
-    let t = tokens.remove(0);
+    consumed += 1;
     if t.get_catcode() != Catcode::SPACE {
       if t.get_catcode() == Catcode::ESCAPE {
-        matched.push(t);
+        matched.push(*t);
         matched.push(T_SPACE!());
       } else {
-        matched.push(t);
+        matched.push(*t);
       }
     }
+  }
+  // Single drain at the end — the prior `tokens.remove(0)` per match
+  // was O(n) each call (memmove of the tail on every consumed token).
+  if consumed > 0 {
+    tokens.drain(..consumed);
   }
   if matched.is_empty() { None } else { Some(Tokens::new(matched)) }
 }
@@ -384,41 +393,45 @@ fn six_match_number(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 //======================================================================
 
 fn six_apply_mathligatures(tokens: Vec<Token>) -> Vec<Token> {
-  let mut result = Vec::new();
+  let mut result = Vec::with_capacity(tokens.len());
   let mut iter = tokens.into_iter().peekable();
+  // Pre-intern the ligature trigger chars so the per-token dispatch
+  // below compares SymStr (u32 equality) instead of allocating
+  // `t.to_string()` to compare with "+" / ">" / "<" / etc.
+  let plus = pin!("+");
+  let minus = pin!("-");
+  let gt = pin!(">");
+  let lt = pin!("<");
+  let eq = pin!("=");
   while let Some(t) = iter.next() {
     if t.get_catcode() == Catcode::COMMENT {
       continue;
     }
-    let name = t.to_string();
-    match name.as_str() {
-      "+" => {
-        if iter.peek().is_some_and(|n| n.text == pin!("-")) {
-          iter.next();
-          result.push(T_CS!("\\pm"));
-        } else {
-          result.push(t);
-        }
+    if t.text == plus {
+      if iter.peek().is_some_and(|n| n.text == minus) {
+        iter.next();
+        result.push(T_CS!("\\pm"));
+      } else {
+        result.push(t);
       }
-      ">" => {
-        if let Some(ns) = iter.peek().map(|n| n.to_string()) {
-          if ns == "=" { iter.next(); result.push(T_CS!("\\ge")); }
-          else if ns == ">" { iter.next(); result.push(T_CS!("\\gg")); }
-          else { result.push(t); }
-        } else {
-          result.push(t);
-        }
+    } else if t.text == gt {
+      if let Some(ns) = iter.peek().map(|n| n.text) {
+        if ns == eq { iter.next(); result.push(T_CS!("\\ge")); }
+        else if ns == gt { iter.next(); result.push(T_CS!("\\gg")); }
+        else { result.push(t); }
+      } else {
+        result.push(t);
       }
-      "<" => {
-        if let Some(ns) = iter.peek().map(|n| n.to_string()) {
-          if ns == "=" { iter.next(); result.push(T_CS!("\\le")); }
-          else if ns == "<" { iter.next(); result.push(T_CS!("\\ll")); }
-          else { result.push(t); }
-        } else {
-          result.push(t);
-        }
+    } else if t.text == lt {
+      if let Some(ns) = iter.peek().map(|n| n.text) {
+        if ns == eq { iter.next(); result.push(T_CS!("\\le")); }
+        else if ns == lt { iter.next(); result.push(T_CS!("\\ll")); }
+        else { result.push(t); }
+      } else {
+        result.push(t);
       }
-      _ => result.push(t),
+    } else {
+      result.push(t);
     }
   }
   result
@@ -1261,9 +1274,14 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
   let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut defns = Vec::new();
 
+  // Pre-intern the CS token names we dispatch on — avoid a per-iteration
+  // `t.to_string()` String alloc (was called on every peeked token).
+  let unitobject_sym = pin!("\\lx@six@unitobject");
+  let unitobject_arg_sym = pin!("\\lx@six@unitobject@arg");
+  let dot_sym = pin!(".");
+
   while let Some(t) = iter.peek() {
-    let ts = t.to_string();
-    if ts == "\\lx@six@unitobject" {
+    if t.text == unitobject_sym {
       iter.next();
       // Read {name} group
       if let Some(name) = read_brace_group_str(&mut iter) {
@@ -1275,7 +1293,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
           }
         }
       }
-    } else if ts == "\\lx@six@unitobject@arg" {
+    } else if t.text == unitobject_arg_sym {
       iter.next();
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
@@ -1293,7 +1311,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
           }
         }
       }
-    } else if t.get_catcode() == Catcode::SPACE || ts == "." {
+    } else if t.get_catcode() == Catcode::SPACE || t.text == dot_sym {
       iter.next(); // skip spaces and dots (unit product separators)
     } else if !defns.is_empty() {
       // Non-unit content after some units found — stop here, use what we have.
@@ -1318,7 +1336,9 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(iter: &mut std::iter::Peekabl
       for t in iter.by_ref() {
         if t.get_catcode() == Catcode::END { level -= 1; if level == 0 { break; } }
         else if t.get_catcode() == Catcode::BEGIN { level += 1; }
-        result.push_str(&t.to_string());
+        // `.with_str` borrows the arena entry directly — no per-token
+        // String alloc (the prior `&t.to_string()` was ~30 ns/token).
+        t.with_str(|s| result.push_str(s));
       }
       return Some(result);
     }
