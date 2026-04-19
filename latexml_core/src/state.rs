@@ -1255,7 +1255,10 @@ pub fn lookup_font() -> Option<Rc<Font>> {
 }
 /// convenience method to lookup the current value at the "mathfont" key
 pub fn lookup_mathfont() -> Option<Rc<Font>> {
-  match state!().lookup_value("mathfont") {
+  // Route through `lookup_value_sym` with a cached SymStr (via
+  // `pin!`) to skip the per-call `arena::pin("mathfont")` probe on
+  // this hot path (math-env entry/exit, per-formula checks).
+  match state!().lookup_value_sym(pin!("mathfont")) {
     None | Some(Stored::None) => None,
     Some(v) => v.into(),
   }
@@ -1263,7 +1266,7 @@ pub fn lookup_mathfont() -> Option<Rc<Font>> {
 
 /// a convenience method to globally asign a `Font` to the "font" key
 pub fn assign_font(font: Rc<Font>, scope: Option<Scope>) {
-  assign_value("font", Stored::Font(font), scope);
+  assign_value_sym(pin!("font"), Stored::Font(font), scope);
 }
 
 /// a variant of `lookup_value` that casts the value into `Number`
@@ -1332,7 +1335,7 @@ pub fn lookup_token_sym(key: SymStr) -> Option<Token> {
 pub fn lookup_alignment() -> Option<Digested> {
   // Can only be a token or definition; we want defns!
   // is this the right logic here? don't expand unless digesting?
-  state!().lookup_value("Alignment").and_then(|v| {
+  state!().lookup_value_sym(pin!("Alignment")).and_then(|v| {
     if let Stored::Digested(d) = v {
       if matches!(d.data(), DigestedData::Alignment(_)) {
         // for now clone the Digested object (approx. an Rc<_> clone)
