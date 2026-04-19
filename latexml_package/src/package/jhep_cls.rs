@@ -70,6 +70,8 @@ LoadDefinitions!({
   // Journal abbreviation macros with SPIRES links — Perl L145-240
   DefMacro!("\\ap{}{}{}",    "\\@spires{APNYA\\%2C#1\\%2C#3}{{\\it Ann.\\ Phys.\\ (NY) }{\\bf #1} (#2) #3}");
   DefMacro!("\\cqg{}{}{}",   "\\@spires{CQGRD\\%2C#1\\%2C#3}{{\\it Class.\\ and Quant.\\ Grav.\\ }{\\bf #1} (#2) #3}");
+  // Perl JHEP.cls.ltxml L169 — Computer Physics Communications journal alias
+  DefMacro!("\\cpc{}{}{}",   "\\@spires{CPHCB\\%2C#1\\%2C#3}{{\\it Comput.\\ Phys.\\ Commun.\\ }{\\bf #1} (#2) #3}");
   DefMacro!("\\cmp{}{}{}",   "\\@spires{CMPHA\\%2C#1\\%2C#3}{{\\it Commun.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}");
   DefMacro!("\\epjc{}{}{}",  "\\@spires{EPHJA\\%2CC#1\\%2C#3}{{\\it Eur.\\ Phys.\\ J. }{\\bf C #1} (#2) #3}");
   DefMacro!("\\grg{}{}{}",   "\\@spires{GRGVA\\%2C#1\\%2C#3}{{\\it Gen.\\ Rel.\\ Grav.\\ }{\\bf #1} (#2) #3}");
