@@ -30,16 +30,14 @@ impl Object for MuDimension {}
 impl MuDimension {
   pub fn new_spec(spec: &str) -> Self {
     if let Some(cap) = MUDIM_SPEC_RE.captures(spec) {
-      MuDimension(fixpoint(
-        cap
-          .get(1)
-          .map_or("", |m| m.as_str())
-          .parse::<f64>()
-          .unwrap(),
-        Some(UNITY_F64),
-      ))
+      // The numeric capture `-?\d*\.?\d*` can match empty (e.g. input
+      // "mu"); Perl's fixpoint coerces "" → 0 via numeric context, so
+      // unwrap_or(0.0) keeps parity.
+      let num: f64 = cap.get(1).map_or("", |m| m.as_str()).parse::<f64>().unwrap_or(0.0);
+      MuDimension(fixpoint(num, Some(UNITY_F64)))
     } else {
-      MuDimension(kround(spec.parse::<f64>().unwrap()))
+      // Perl parity: bad input coerces to 0.
+      MuDimension(kround(spec.parse::<f64>().unwrap_or(0.0)))
     }
   }
 }
