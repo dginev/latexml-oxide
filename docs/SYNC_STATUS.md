@@ -153,9 +153,10 @@ cargo test):
 | After pushback VecDeque→Vec | 16.46 | ~1.74s |
 | After arena resolve_unchecked | 15.94 | ~1.70s |
 | After dead tracing lookup removal | 15.32 | ~1.71s |
+| After Parameter::read destructure | ~15.0 | ~1.67s |
 
-~14% fewer instructions, ~9% faster on this workload. Wall clock
-noise is larger than the last two Ir deltas (~0.05s run-to-run).
+~16% fewer instructions, ~11% faster on this workload. Wall-clock
+noise is ~0.05s run-to-run, smaller than the cumulative delta.
 
 #### D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
 
