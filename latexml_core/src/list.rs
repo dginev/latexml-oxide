@@ -146,12 +146,13 @@ impl List {
     }
     // Maybe the most representative font for a List is the font of the LAST box (that _has_ a
     // font!) ???
+    // Walk boxes back-to-front for the most representative font.
+    // A single box whose font resolution errors (e.g. FontDirective::Closure
+    // returning Err) shouldn't crash the whole List; treat it as "no font"
+    // and keep walking.
     let mut font: Option<Font> = None;
     for bx in boxes.iter().rev() {
-      if let Some(bx_font) = bx
-        .get_font()
-        .expect("getting a font should go well during List construction")
-      {
+      if let Ok(Some(bx_font)) = bx.get_font() {
         font = Some(bx_font.into_owned());
         break;
       }
