@@ -3936,7 +3936,7 @@ impl Document {
           node.append_text(&child.get_content())?;
         },
         other => {
-          dbg!(other);
+          log::debug!("append_tree: unhandled libxml NodeType {other:?}");
         },
       }
     }
