@@ -100,7 +100,30 @@ Outstanding:
 - [ ] Long-running daemon / process pool to amortize 570 MB startup.
 - [ ] Fork-based parallelism for CoW memory sharing.
 
-**Callgrind (session 105):** Math parser Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute` 8.3%, `bv_scan` 7.1%, AVL ops 6.8%. Marpa-related >60% CPU.
+**Callgrind (session 105, 0707.1173 math-heavy paper):** Math parser
+Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute`
+8.3%, `bv_scan` 7.1%, AVL ops 6.8%. Marpa-related >60% CPU.
+
+**Callgrind (session 116, `complex/si.tex` siunitx-heavy):** Marpa is
+**0.0%** of CPU — this fixture has almost no complex math. The
+dominant costs are in gullet token reading and VecDeque-based
+pushback management:
+
+| Band | Share (Ir) | Site |
+|---|---|---|
+| Gullet token read path | ~15% | read_x_token + read_internal_token + read_token + read_balanced |
+| VecDeque ops (pushback + pending_comments) | ~10% | unread_vec + inner pushback.pop_front / push_front |
+| Allocation (mimalloc + memcpy) | ~5% | alloc/free/realloc + raw_vec grow |
+| Arena string-interner probes | ~2% | get_or_intern_using + hashbrown |
+| state::lookup_meaning | ~1.4% | per-token meaning lookup |
+| Stored::clone | ~1.0% | Stored enum clone (Tokens clone internally) |
+| Token::defined_as | ~1.2% | per-token cs comparison |
+| Parameter::read | ~1.8% | argument-parsing machinery |
+
+Takeaway: **the hot path depends heavily on the document**. Math-heavy
+docs are Marpa-bound; siunitx/physics-heavy docs are gullet-bound.
+Generalized wins should reduce per-token gullet cost (pushback
+structure, RefCell borrow amortization) rather than chase Marpa.
 
 #### D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
 
