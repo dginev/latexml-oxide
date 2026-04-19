@@ -265,11 +265,12 @@ LoadDefinitions!({
   // == Graphics path and inclusion ==
 
   // Perl L248-260: \graphicspath DirectoryList — pushes paths and inserts PIs.
-  // Perl uses DirectoryList param type; we use {} and parse braced groups manually.
-  DefConstructor!("\\graphicspath{}", "",
+  // DirectoryList reads the arg ToString-first so `_` in path names never
+  // becomes a SUB-catcode during digestion.
+  DefConstructor!("\\graphicspath DirectoryList", "",
     after_digest => sub[whatsit] {
       let arg = whatsit.get_arg(0).map(|a| a.to_string()).unwrap_or_default();
-      // Parse {dir1}{dir2}... — each directory is a braced group
+      // DirectoryList emits `{d1}{d2}…` — each dir is a brace group.
       let root = state::lookup_value("SOURCEDIRECTORY")
         .map(|v| v.to_string()).unwrap_or_default();
       for dir in arg.split('}') {
