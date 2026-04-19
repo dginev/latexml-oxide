@@ -116,3 +116,33 @@ pub fn radix_roman(mut n: i64) -> String {
 
 /// converts the number as a uppercase roman numeral
 pub fn radix_up_roman(n: i64) -> String { radix_roman(n).to_uppercase() }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn roman_non_positive_empty() {
+    assert_eq!(radix_roman(0), "");
+    assert_eq!(radix_roman(-1), "");
+    assert_eq!(radix_roman(i64::MIN), "");
+  }
+
+  #[test]
+  fn roman_basic_cases() {
+    assert_eq!(radix_roman(1), "i");
+    assert_eq!(radix_roman(4), "iv");
+    assert_eq!(radix_roman(9), "ix");
+    assert_eq!(radix_roman(1000), "m");
+    assert_eq!(radix_roman(1999), "mcmxcix");
+  }
+
+  #[test]
+  fn alpha_edge_cases() {
+    assert_eq!(radix_alpha(0), "");
+    assert_eq!(radix_alpha(-5), "");
+    assert_eq!(radix_alpha(1), "a");
+    assert_eq!(radix_alpha(26), "z");
+    assert_eq!(radix_alpha(27), "aa");
+  }
+}
