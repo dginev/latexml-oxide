@@ -2814,9 +2814,11 @@ LoadDefinitions!({
           state::assign_value("IN_MATH", false, Some(Scope::Global));
         }
       }
-      // Main logic
+      // Main logic — Perl's `$level > ...` coerces non-numeric to 0 via
+      // implicit numeric context; match that with unwrap_or(0) rather than
+      // panicking when a caller passes a surprising value.
       let level = level_arg.to_string();
-      let level_int = if level.is_empty() { 0 } else { level.parse::<i64>().expect(&level) };
+      let level_int = level.trim().parse::<i64>().unwrap_or(0);
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![
