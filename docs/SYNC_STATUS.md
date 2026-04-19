@@ -125,6 +125,15 @@ docs are Marpa-bound; siunitx/physics-heavy docs are gullet-bound.
 Generalized wins should reduce per-token gullet cost (pushback
 structure, RefCell borrow amortization) rather than chase Marpa.
 
+**After `state::with_meaning` conversion** (session 116 commits
+0f4797d7 / f3289ad7 / 706eaeaa): `Stored::clone` dropped from 1.02%
+to 0.17% (~85% reduction); `lookup_meaning` from 1.38% to 0.17%.
+Total instruction count: 17.87B → 17.33B (~3% fewer). The closure-based
+borrowing API is now the preferred pattern for Stored-inspecting
+callers — use `with_meaning(token, |m| … )` instead of
+`lookup_meaning(token)` whenever the caller only inspects the meaning
+(not moving ownership forward).
+
 #### D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
 
 - [ ] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
