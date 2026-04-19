@@ -1247,7 +1247,7 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
   while let Some(t) = iter.next() {
     if t.text == unitobject_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
-        if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+        if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
           // Decode directly from the arena-borrowed &str — was
           // cloning via `.to_string()` into a temporary String.
           if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
@@ -1268,7 +1268,7 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
     } else if t.text == unitobject_arg_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
-          if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+          if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
             if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               let pres = defn.presentation;
               if !pres.is_empty() {
@@ -1312,7 +1312,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       // Read {name} group
       if let Some(name) = read_brace_group_str(&mut iter) {
         // Look up in siunitx_macros mapping
-        if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+        if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
           if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
             defns.push(defn);
           }
@@ -1322,7 +1322,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       iter.next();
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
-          if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
+          if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
             if let Some(mut defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               // Apply arg to the appropriate field
               if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
@@ -1463,7 +1463,7 @@ fn resolve_unit_presentation(pres: &Tokens) -> String {
       let cs_name = tok.to_string();
       let unit_name = cs_name.trim_start_matches('\\');
       // Look up in siunitx_macros mapping
-      if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", unit_name) {
+      if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), unit_name) {
         let encoded_str = arena::with(encoded, |s| s.to_string());
         let parts: Vec<&str> = encoded_str.splitn(4, '|').collect();
         if parts.len() >= 2 {

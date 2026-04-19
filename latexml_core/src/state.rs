@@ -796,7 +796,9 @@ impl State {
   }
   /// manage a (global) hash of values
   pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Stored> {
-    let map_sym = arena::pin(map);
+    self.lookup_mapping_sym(arena::pin(map), key)
+  }
+  pub fn lookup_mapping_sym(&self, map_sym: SymStr, key: &str) -> Option<&Stored> {
     match self.value.get(&map_sym) {
       None => None,
       Some(map_vec) => match map_vec.front() {
@@ -1558,6 +1560,11 @@ pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
 
 pub fn lookup_mapping(map: &str, key: &str) -> Option<Stored> {
   state!().lookup_mapping(map, key).cloned()
+}
+/// Sym-keyed variant — skip the per-call `arena::pin(map)` for hot
+/// callers with a pre-pinned map key (e.g. via `pin!("siunitx_macros")`).
+pub fn lookup_mapping_sym(map_sym: SymStr, key: &str) -> Option<Stored> {
+  state!().lookup_mapping_sym(map_sym, key).cloned()
 }
 
 //======================================================================
