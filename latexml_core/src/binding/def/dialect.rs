@@ -1097,6 +1097,15 @@ pub fn def_environment(
     },
     None => {},
   }
+  // Clone before_digest so the bare `\name` form can run the same
+  // user-supplied hooks. Perl Package.pm L1949-1969 states that the bare
+  // form (entered e.g. via `\csname env\endcsname` or by another macro
+  // expanding to `\env[…]`) "gets the same hook pipeline as \begin{FOO}" —
+  // including the user's `beforeDigest`. sidecap's `\SCfigure[…]` → `\figure[…]`
+  // is the canonical trigger: without this, `beforeFloat('figure')` never
+  // fires, `\@captype` stays undefined, and nested `\caption` cascades as
+  // "outside any known float".
+  let bare_before_digest = options.before_digest.clone();
   before_digest_env.extend(options.before_digest);
 
   // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
@@ -1247,6 +1256,11 @@ pub fn def_environment(
       begin_mode_opt(&bmode, true)?;
     }));
   }
+  // Perl Package.pm L1949-1969: bare `\name` runs the same user beforeDigest
+  // hooks as `\begin{name}` (e.g. beforeFloat for `{figure}`). Order matters:
+  // bgroup + mode have already been pushed; the user hooks come last, mirroring
+  // the `\begin{name}` pipeline.
+  before_digest_bare.extend(bare_before_digest);
   let push_frame_bare = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
     push_frame();
     Ok(())

@@ -1,5 +1,6 @@
 //! JHEP.cls — Journal of High Energy Physics document class
 //! Perl: JHEP.cls.ltxml — 314 lines (mostly journal abbreviation macros)
+use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -53,11 +54,62 @@ LoadDefinitions!({
   DefMacro!("\\Proof", "\\emph{Proof.}\\ ");
 
   // Perl L80-83: Figure/table macros (map to environments)
-  DefMacro!("\\FIGURE[]{}", "#2");
-  DefMacro!("\\TABLE[]{}", "#2");
-  DefMacro!("\\EPSFIGURE[]{}{}", "\\begin{figure}[#1]\\epsfig{file=#2}\\caption{#3}\\end{figure}");
+  // Perl wraps into `{floatingfigure}` / `{floatingtable}` so the nested
+  // `\caption` sees a proper `\@captype`. Previously Rust expanded to bare
+  // `#2` which dumped the caption into text-mode and triggered
+  // `Error:unexpected:\caption (outside any known float)`.
+  DefMacro!("\\FIGURE[]{}", "\\begin{floatingfigure}[#1]#2\\end{floatingfigure}");
+  DefMacro!("\\TABLE[]{}",  "\\begin{floatingtable}[#1]#2\\end{floatingtable}");
+  DefMacro!("\\EPSFIGURE[]{}{}", "\\begin{floatingfigure}[#1]\\epsfig{file=#2}\\caption{#3}\\end{floatingfigure}");
   DefMacro!("\\TABULAR[]{}{}{}",
-    "\\begin{table}[#1]\\begin{tabular}{#2}#3\\end{tabular}\\caption{#4}\\end{table}");
+    "\\begin{floatingtable}[#1]\\begin{tabular}{#2}#3\\end{tabular}\\caption{#4}\\end{floatingtable}");
+
+  // Perl JHEP.cls.ltxml L85-89: \DOUBLEFIGURE[pos]{img1}{img2}{cap1}{cap2}
+  DefMacro!("\\DOUBLEFIGURE[]{}{}{}{}",
+    "\\begin{figure}[#1]\
+     \\begin{@half@doublefigure}\\epsfig{file=#2}\\caption{#4}\\end{@half@doublefigure}\
+     \\begin{@half@doublefigure}\\epsfig{file=#3}\\caption{#5}\\end{@half@doublefigure}\
+     \\end{figure}");
+  DefEnvironment!("{@half@doublefigure}",
+    "<ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:figure>#tags",
+    before_digest => { before_float("figure", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+
+  // Perl JHEP.cls.ltxml L96-100: \DOUBLETABLE[pos]{tab1}{tab2}{cap1}{cap2}
+  DefMacro!("\\DOUBLETABLE[]{}{}{}{}",
+    "\\begin{table}[#1]\
+     \\begin{@half@doubletable}#2\\caption{#4}\\end{@half@doubletable}\
+     \\begin{@half@doubletable}#3\\caption{#5}\\end{@half@doubletable}\
+     \\end{table}");
+  DefEnvironment!("{@half@doubletable}",
+    "<ltx:table xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:table>#tags",
+    before_digest => { before_float("table", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+
+  // Perl JHEP.cls.ltxml L109-117: JHEP-specific {floatingfigure} without
+  // the `{Dimension}` width arg that the standalone floatfig package uses.
+  DefEnvironment!("{floatingfigure}[]",
+    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
+    before_digest => { before_float("figure", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    properties    => sub[args] {
+      let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let float = if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" };
+      Ok(stored_map!("float" => float))
+    },
+    mode => "internal_vertical");
+  DefEnvironment!("{floatingtable}[]",
+    "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
+    before_digest => { before_float("table", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    properties    => sub[args] {
+      let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let float = if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" };
+      Ok(stored_map!("float" => float))
+    },
+    mode => "internal_vertical");
 
   // Perl L133-137: Hyperref stubs
   DefMacro!("\\JHEPspecialurl Semiverbatim", "");
