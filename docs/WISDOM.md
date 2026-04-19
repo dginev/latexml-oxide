@@ -887,3 +887,46 @@ to be loading, check whether the autoload trigger CS gets `\def`-ined
 before invocation in the source TeX. Either invoke it explicitly
 earlier, or surgically preload the module.
 
+
+## 35. Perl silent-coerce vs Rust panic — a recurring parity trap
+
+**Discovery:** A sweep through `.expect(...)` / `.unwrap()` sites turned
+up ten distinct cases (9 fixes across the cycle) where Rust panicked
+on input Perl silently handled. The common thread: Perl's implicit
+numeric / boolean / truthy coercion lets "bad" input flow through as
+`0` / `""` / `false`; Rust's strict Result/Option propagation turns the
+same input into a crash.
+
+**Why it matters:** Real-world documents contain surprising tokens
+(stray `#0`, user-redefined section macros passing non-numeric level,
+undefined length registers, rowspan typos). Perl emits a diagnostic and
+continues; our port used to abort the whole conversion.
+
+**Examples that landed this session:**
+- `Number::from(String)` / `Float::from(String)` panicking on
+  non-numeric input → `.unwrap_or(0)` / `.unwrap_or(0.0)` (matches
+  Perl's `Number("abc")` + arithmetic → 0).
+- `Dimension::spec_to_f64` panicking on `"pt"` (SPEC_RE allows empty
+  numeric capture).
+- `\setlength{\undefined}` panicking via `.expect("Variable must have
+  a Register definition.")` → Perl's `return unless $defn && …`.
+- `\@startsection` panicking if level arg isn't numeric.
+- `rowspan="abc"` panicking in alignment header heuristic.
+- `Mouth::has_more_input` panicking on `fill_buf()` I/O error.
+- `List` font walk panicking on one box's font-resolution error.
+- `clean_id` stripping idiom via wrong capture name (`$inner` vs
+  `$label`) — silent data loss rather than crash, but same class.
+- `input()` quote-unwrap `while` loop checking unchanged variable →
+  infinite loop on `\input{"file"}`.
+
+**How to spot next time:**
+1. Grep `.expect(` in the crate you're auditing.
+2. Cross-reference each site with its Perl counterpart — look for
+   `$x || 0` / `defined $foo ? ... : ...` / `return unless $defn`.
+3. If Perl has a fallback path and Rust has a panic path, fix to
+   match Perl. Add a regression test if the path is plausibly reachable.
+
+**Sentinel:** When the comment on a `.expect(...)` starts with
+"should never", "has no reason to fail", or "TODO: handle malformed
+values here", treat it as a parity gap to investigate, not a
+design assertion.
