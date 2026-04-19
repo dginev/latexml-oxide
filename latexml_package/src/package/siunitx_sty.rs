@@ -1131,26 +1131,39 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
     return six_format_unitproduct(false, units);
   }
 
-  let numer: Vec<&SixUnit> = units.iter().filter(|u| !u.per).collect();
-  let denom: Vec<&SixUnit> = units.iter().filter(|u| u.per).collect();
-
-  let denom_units: Vec<SixUnit> = denom.iter().map(|u| { let mut uu = (*u).clone(); uu.per = false; uu }).collect();
-  let numer_units: Vec<SixUnit> = numer.iter().map(|u| (*u).clone()).collect();
-
-  if permode == "fraction" {
-    let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
-    tks.extend(six_format_unitproduct(false, &numer_units).unlist());
-    tks.push(T_END!()); tks.push(T_BEGIN!());
-    tks.extend(six_format_unitproduct(false, &denom_units).unlist());
-    tks.push(T_END!());
-    Tokens::new(tks)
-  } else if permode == "symbol" {
-    let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
-    let per_sym = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))], six_pin!("per-symbol"));
-    six_format_infix(per_sym, None, None, vec![
-      six_format_unitproduct(false, &numer_units),
-      six_format_unitproduct(bracket, &denom_units),
-    ])
+  // For "fraction" and "symbol" modes we need partitioned owned
+  // unit lists. For any other permode the original `units` slice
+  // is used as-is.
+  if permode == "fraction" || permode == "symbol" {
+    let (numer_units, denom_units): (Vec<SixUnit>, Vec<SixUnit>) = {
+      let mut n = Vec::with_capacity(units.len());
+      let mut d = Vec::with_capacity(units.len());
+      for u in units {
+        if u.per {
+          let mut uu = u.clone();
+          uu.per = false;
+          d.push(uu);
+        } else {
+          n.push(u.clone());
+        }
+      }
+      (n, d)
+    };
+    if permode == "fraction" {
+      let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
+      tks.extend(six_format_unitproduct(false, &numer_units).unlist());
+      tks.push(T_END!()); tks.push(T_BEGIN!());
+      tks.extend(six_format_unitproduct(false, &denom_units).unlist());
+      tks.push(T_END!());
+      Tokens::new(tks)
+    } else {
+      let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
+      let per_sym = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))], six_pin!("per-symbol"));
+      six_format_infix(per_sym, None, None, vec![
+        six_format_unitproduct(false, &numer_units),
+        six_format_unitproduct(bracket, &denom_units),
+      ])
+    }
   } else {
     six_format_unitproduct(false, units)
   }
