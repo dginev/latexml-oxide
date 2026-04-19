@@ -547,33 +547,53 @@ pub fn read_x_token(
       }
       // And *then* continue the main loop checks
     } else if token.get_catcode().is_active_or_cs() {
-      match lookup_meaning(&token) {
-        Some(Stored::Token(let_token)) => {
+      // Read the meaning via closure so we can branch on the borrowed
+      // Stored without cloning (Stored::clone was ~1% of total on
+      // siunitx-heavy profiles; this site fires on every CS/ACTIVE
+      // expansion — the hottest lookup_meaning caller).
+      enum Outcome {
+        LetTo(Token),
+        Undefined,
+        NonExpandable,
+        Invoke(std::rc::Rc<dyn crate::definition::Definition>),
+      }
+      let outcome = state::with_meaning(&token, |defn_opt| {
+        match defn_opt {
+          Some(Stored::Token(t)) => Outcome::LetTo(*t),
+          Some(Stored::None) | None => Outcome::Undefined,
+          Some(other) => match other.to_definition() {
+            Some(defn) => {
+              if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
+                Outcome::NonExpandable
+              } else {
+                Outcome::Invoke(defn)
+              }
+            }
+            None => Outcome::Undefined,
+          },
+        }
+      });
+      match outcome {
+        Outcome::LetTo(let_token) => {
           return Ok(Some(if for_conditional { let_token } else { token }));
-        },
-        Some(Stored::None) | None => {
+        }
+        Outcome::Undefined => {
           if token.get_catcode() == Catcode::CS {
-            return Ok(Some(generate_error_stub(&token)?)); // cs SHOULD have defn by now; report
-          // early.
+            return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));
           }
-        },
-        Some(typed_defn) => {
-          let defn = typed_defn
-            .to_definition()
-            .expect("token expansion requires the Stored item to implement trait Definition");
-          if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
-            return Ok(Some(token));
-          } else {
-            local_current_token(token);
-            let invoked = defn.invoke(false)?;
-            // add the newly expanded tokens back into the gullet stream, in the ordinary case.
-            unread(invoked);
-            expire_current_token();
-            continue;
-          }
-        },
+        }
+        Outcome::NonExpandable => {
+          return Ok(Some(token));
+        }
+        Outcome::Invoke(defn) => {
+          local_current_token(token);
+          let invoked = defn.invoke(false)?;
+          unread(invoked);
+          expire_current_token();
+          continue;
+        }
       }
     } else {
       // Perl Gullet.pm L421-422: track { and } at scan level for ALIGN_STATE
