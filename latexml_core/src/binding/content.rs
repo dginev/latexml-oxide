@@ -1699,6 +1699,57 @@ pub fn convert_latex_args(
   }
 }
 
+/// Two-optional variant of `convert_latex_args` — mirrors Perl's
+/// `convert2optArgs` helper in twoopt.sty.ltxml. `\newcommandtwoopt{\cs}[n][d1][d2]{…}`
+/// builds a signature of `[Default d1][Default d2]{…}…` where the remaining
+/// `n - 2` args are plain required.
+pub fn convert_twoopt_args(
+  mut nargs: usize,
+  opt1: Option<Tokens>,
+  opt2: Option<Tokens>,
+) -> Result<Option<Parameters>> {
+  let mut params = Vec::new();
+  if let Some(tks) = opt1 {
+    params.push(
+      Parameter {
+        name: arena::pin_static("Optional"),
+        spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
+        extra: vec![tks],
+        ..Parameter::default()
+      }
+      .init()?,
+    );
+    nargs = nargs.saturating_sub(1);
+  }
+  if let Some(tks) = opt2 {
+    params.push(
+      Parameter {
+        name: arena::pin_static("Optional"),
+        spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
+        extra: vec![tks],
+        ..Parameter::default()
+      }
+      .init()?,
+    );
+    nargs = nargs.saturating_sub(1);
+  }
+  for _ in 1..=nargs {
+    params.push(
+      Parameter {
+        name: arena::pin_static("Plain"),
+        spec: arena::pin_static("{}"),
+        ..Parameter::default()
+      }
+      .init()?,
+    );
+  }
+  if params.is_empty() {
+    Ok(None)
+  } else {
+    Ok(Some(Parameters::new(params)))
+  }
+}
+
 /// Decode a codepoint using the fontmap for a given font and/or encoding (Perl: FontDecode).
 /// Returns the decoded glyph (if any) and the possibly-adjusted font.
 pub fn font_decode(
