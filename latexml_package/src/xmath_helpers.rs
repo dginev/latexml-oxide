@@ -225,7 +225,12 @@ pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
 
 /// Perl: I_symbol(kv, text) — generates `\lx@symbol[kv]{text}`.
 pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@symbol")];
+  let kv_total: usize = if kv.is_empty() { 0 } else {
+    kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
+  };
+  let text_len = text.as_ref().map(|t| t.len()).unwrap_or(0);
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 2 + text_len);
+  tks.push(T_CS!("\\lx@symbol"));
   let kvt = i_keyvals(kv);
   if !kvt.is_empty() {
     tks.extend(kvt.unlist());
@@ -240,7 +245,11 @@ pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
 
 /// Perl: I_superscript(kv, base, script) — generates `\lx@superscript[kv]{base}{script}`.
 pub fn i_superscript(kv: &[(&str, Tokens)], base: Tokens, script: Tokens) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@superscript")];
+  let kv_total: usize = if kv.is_empty() { 0 } else {
+    kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
+  };
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 4 + base.len() + script.len());
+  tks.push(T_CS!("\\lx@superscript"));
   let kvt = i_keyvals(kv);
   if !kvt.is_empty() {
     tks.extend(kvt.unlist());
