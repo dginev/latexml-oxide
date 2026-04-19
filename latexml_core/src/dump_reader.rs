@@ -579,16 +579,28 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         _ => return Ok(false),
       };
 
+      // Perl-parity with def_register (binding/def/dialect.rs): store the
+      // initial value at the Register's `address` slot AND set `default`, so
+      // a subsequent `value_of` lookup — which reads state::with_value(address)
+      // and falls back to `default` — actually sees the dump's initial value.
+      // CharDefs read their immediate `value` field instead, so we skip the
+      // storage write for them.
       let mut reg = Register {
         cs: cs_tok,
         register_type: reg_type,
-        value: reg_value,
+        value: reg_value.clone(),
+        default: if matches!(reg_type, RegisterType::CharDef) { None } else { reg_value.clone() },
         mathglyph,
         locator: current_dump_locator(),
         ..Register::default()
       };
       // Set address from CS name
       reg.address = key.to_string();
+      if !matches!(reg_type, RegisterType::CharDef) {
+        if let Some(ref rv) = reg_value {
+          state::assign_value(&reg.address, rv.clone(), Some(Scope::Global));
+        }
+      }
       state::install_definition(reg, Some(Scope::Global));
       Ok(true)
     }
