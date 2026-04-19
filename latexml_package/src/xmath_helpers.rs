@@ -7,8 +7,14 @@
 use crate::prelude::*;
 
 /// Perl: getXMArgID — step @lx@xmarg counter, return its value as a string.
+///
+/// Pass `noreset: true` to skip the `state::lookup_tokens(\\cl@<ctr>)`
+/// probe that `step_counter` does to reset nested counters. `@lx@xmarg`
+/// is a private internal id generator — nothing nests inside it — so
+/// the probe was pure overhead on siunitx-heavy documents (one extra
+/// state lookup per XMDual argument, ~780 per si_test).
 pub fn get_xm_arg_id() -> Result<String> {
-  step_counter("@lx@xmarg", false)?;
+  step_counter("@lx@xmarg", true)?;
   let val = state::lookup_register("\\c@@lx@xmarg", Vec::new())?
     .map(|rv| rv.value_of())
     .unwrap_or(0);
