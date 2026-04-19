@@ -859,9 +859,7 @@ LoadDefinitions!({
   DefMath!("\\rceil",  None, "\u{2309}", role => "CLOSE", stretchy => false); // RIGHT CEILING
   DefMath!("\\lfloor", None, "\u{230A}", role => "OPEN",  stretchy => false); // LEFT FLOOR
   DefMath!("\\rfloor", None, "\u{230B}", role => "CLOSE", stretchy => false); // RIGHT FLOOR
-  // Perl #2762: \lgroup / \rgroup delimiters
-  DefMath!("\\lgroup", None, "\u{27EE}", role => "OPEN",  stretchy => false); // MATHEMATICAL LEFT FLATTENED PARENTHESIS
-  DefMath!("\\rgroup", None, "\u{27EF}", role => "CLOSE", stretchy => false); // MATHEMATICAL RIGHT FLATTENED PARENTHESIS
+  // \lgroup / \rgroup are defined below with Perl #2762 parity comment (match Perl source layout).
 
   // Note: We should be using 27E8,27E9, which are "mathematical", not 2329,232A
 
