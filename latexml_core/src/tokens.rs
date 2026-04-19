@@ -108,7 +108,7 @@ impl<'a> From<&'a Tokens> for Token {
     if ts.0.is_empty() {
       T_CS!("\\relax") // empty Tokens → relax fallback
     } else if ts.0.len() == 1 {
-      *ts.0.first().unwrap()
+      ts.0[0]
     } else {
       panic!("Dangerous cast! Tokens->Token for {ts:?}");
       //let code = ts.0.first().unwrap().get_catcode();

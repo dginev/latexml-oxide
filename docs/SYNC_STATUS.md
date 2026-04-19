@@ -5,7 +5,7 @@
 Updated 2026-04-19. **Open gaps & active TODOs only.** Completed work
 lives in git log and `memory/project_session_history.md`.
 
-**Test inventory:** 413 integration tests pass (0 failures, 0 ignored).
+**Test inventory:** 416 tests pass (0 failures, 0 ignored) via `cargo test --release --tests`.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
