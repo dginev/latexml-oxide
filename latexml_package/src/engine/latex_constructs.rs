@@ -520,7 +520,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
 // #   preset => boolean
 // #   postset => boolean
 // #   deferretract=>boolean
-fn prepare_equation_counter(options: SymHashMap<Stored>) {
+pub fn prepare_equation_counter(options: SymHashMap<Stored>) {
   // Guard: ensure the equation counter exists — normally created by article.cls,
   // but standalone classes (jpsj2, appolb, etc.) may not define it.
   if lookup_definition(&T_CS!("\\theequation@ID")).ok().flatten().is_none() {
@@ -533,7 +533,7 @@ fn prepare_equation_counter(options: SymHashMap<Stored>) {
     Some(Scope::Global),
   );
 }
-fn before_equation() -> Result<()> {
+pub fn before_equation() -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
   maybe_peek_label()?;
@@ -578,7 +578,7 @@ fn before_equation() -> Result<()> {
   );
   Ok(())
 }
-fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
+pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   // Phase 1: Gather all needed data from state (immutable borrows only)
   enum EqAction { Retract, Postset, TagsUpdate, None }
   let mut action = EqAction::None;

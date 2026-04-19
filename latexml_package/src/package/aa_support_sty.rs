@@ -123,8 +123,48 @@ LoadDefinitions!({
   // Equations — allow $ within equation env — Perl L164-200
   //======================================================================
 
-  // Perl redefines {equation} and {equation*} to let $ work as \lx@dollar@in@mathmode.
-  // Our equation environments already handle this, so no override needed.
+  // Perl aa_support.sty.ltxml L164-200 redefines {equation} and {equation*}
+  // to `Let(T_MATH, '\lx@dollar@in@mathmode')` — making a literal `$`
+  // inside the equation body a no-op instead of closing display math. A&A
+  // papers commonly use the idiom `… \text ~ $\rm text$` to mix roman
+  // inline in equations, which would otherwise emit
+  //   Error:expected:$ Missing $ closing display math.
+  // for every occurrence (arxiv 0704.3480, 0707.0739, 0803.0466, 1103.2925
+  // — all {aa} papers with inline `$` inside display math).
+  //
+  // We re-DefEnvironment here with the same template as the base in
+  // engine::latex_constructs, but adding the Let in before_digest. The
+  // original is `locked => true`, but re-DefEnvironment inside the
+  // aa_support load path replaces it before any document body runs.
+  use crate::engine::latex_constructs::{
+    after_equation, before_equation, prepare_equation_counter,
+  };
+  DefEnvironment!(
+    "{equation}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      before_equation()?;
+      Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
+  DefEnvironment!(
+    "{equation*}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("preset" => true));
+      before_equation()?;
+      Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
 
   //======================================================================
   // Figures — Perl L202-218
