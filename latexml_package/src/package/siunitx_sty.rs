@@ -957,34 +957,44 @@ struct SixUnit {
 }
 
 /// Parse unit definitions into structured units
-fn six_parse_units(defns: &[SixUnitDefn]) -> Vec<SixUnit> {
+fn six_parse_units(defns: Vec<SixUnitDefn>) -> Vec<SixUnit> {
   let mut units = Vec::new();
   let sticky_per = six_get_bool("sticky-per");
   let mut saved_per = false;
+  // Consume defns as an iterator of Options — each slot holds the
+  // SixUnitDefn until we move it into a SixUnit role slot. This skips
+  // the per-role `.clone()` pass the prior `&[SixUnitDefn]` signature
+  // forced (6 × N clones per unit block, each cloning 3 Strings + 3
+  // optional allocations). Cost drops to zero allocations for the
+  // role-binding phase.
+  let mut slots: Vec<Option<SixUnitDefn>> = defns.into_iter().map(Some).collect();
   let mut idx = 0;
 
-  while idx < defns.len() {
+  while idx < slots.len() {
     let mut unit = SixUnit::default();
 
     for role in &["per", "prepower", "prefix", "unit", "qualifier", "postpower"] {
-      while idx < defns.len() {
-        let r = &defns[idx].unit_type;
-        if r == *role {
+      while idx < slots.len() {
+        let r_matches = slots[idx].as_ref().map(|d| d.unit_type.as_str()) == Some(*role);
+        let r_is_style = slots[idx].as_ref().map(|d| d.unit_type.as_str()) == Some("style");
+        if r_matches {
+          let d = slots[idx].take().unwrap();
           match *role {
             "per" => unit.per = true,
-            "prepower" => unit.prepower = Some(defns[idx].clone()),
-            "prefix" => unit.prefix = Some(defns[idx].clone()),
-            "unit" => unit.unit = Some(defns[idx].clone()),
-            "qualifier" => unit.qualifier = Some(defns[idx].clone()),
-            "postpower" => unit.postpower = Some(defns[idx].clone()),
+            "prepower" => unit.prepower = Some(d),
+            "prefix" => unit.prefix = Some(d),
+            "unit" => unit.unit = Some(d),
+            "qualifier" => unit.qualifier = Some(d),
+            "postpower" => unit.postpower = Some(d),
             _ => {}
           }
           idx += 1;
           break;
-        } else if r == "style" {
+        } else if r_is_style {
+          let d = slots[idx].take().unwrap();
           if unit.prefix.is_none() && unit.unit.is_none() {
-            if defns[idx].name == "cancel" { unit.cancel = true; }
-            if defns[idx].name == "highlight" { unit.highlight_color = defns[idx].color.clone(); }
+            if d.name == "cancel" { unit.cancel = true; }
+            if d.name == "highlight" { unit.highlight_color = d.color; }
           }
           idx += 1;
         } else {
@@ -996,7 +1006,7 @@ fn six_parse_units(defns: &[SixUnitDefn]) -> Vec<SixUnit> {
     if unit.unit.is_none() && unit.prefix.is_none() && !unit.per
       && unit.prepower.is_none() && unit.postpower.is_none()
     {
-      if idx < defns.len() { idx += 1; }
+      if idx < slots.len() { idx += 1; }
       continue;
     }
 
@@ -1177,7 +1187,7 @@ fn six_process_units(expr: &Tokens) -> Tokens {
   let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
   if let Some(defns) = six_convert_units_from_tokens(&expanded) {
     if !defns.is_empty() {
-      let units = six_parse_units(&defns);
+      let units = six_parse_units(defns);
       return six_format_units(&units);
     }
   }
