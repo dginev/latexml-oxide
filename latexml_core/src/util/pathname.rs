@@ -102,11 +102,11 @@ pub fn split(pathname: &str) -> (String, String, String) {
     Some(n) => n.to_string_lossy().to_string(),
     None => String::new(),
   };
+  // Perl pathname_split preserves case: `$name =~ s/\.([^\.]+)$//`
   let pathname_ext = match canonical_path.extension() {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
-  }
-  .to_lowercase();
+  };
   (pathdir, name, pathname_ext)
 }
 
@@ -304,9 +304,10 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
       } else if ext == "*" {
         exts.push(s!(".*"));
         exts.push(String::new());
-      } else if !pathname_ext.is_empty() && pathname_ext == ext.to_lowercase() {
-        // Perl: if ($pathname =~ /\.\Q$ext\E$/i) { push(@exts, ''); }
-        // The file already has this extension, so push '' for exact match
+      } else if !pathname_ext.is_empty() && pathname_ext.eq_ignore_ascii_case(&ext) {
+        // Perl Pathname.pm L353: `if ($pathname =~ /\.\Q$ext\E$/i)` — /i
+        // makes this a case-insensitive extension match; either case of
+        // file extension matches either case of requested type.
         exts.push(String::new());
         // Also push the extension itself (Perl pushes both)
         exts.push(format!(".{}", &ext));
@@ -378,7 +379,9 @@ pub fn directory(pathname: &str) -> String {
   }
 }
 
-/// obtain the extension portion of a pathname (via `Path::extension`)
+/// obtain the extension portion of a pathname (via `Path::extension`).
+/// Perl's `pathname_type` preserves case; callers that need a lowercased
+/// form should apply `.to_ascii_lowercase()` themselves.
 pub fn extension(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -386,7 +389,6 @@ pub fn extension(pathname: &str) -> String {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
   }
-  .to_lowercase()
 }
 
 /// Compose a pathname from dir, name, type components.

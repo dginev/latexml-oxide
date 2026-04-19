@@ -807,6 +807,7 @@ fn xkeyval_setup_document_class() {
       continue;
     }
     let (_area, _base, ext) = pathname::split(file);
+    // Perl xkeyval.sty.ltxml L254: `if ($ext eq $clsext)` — case-sensitive.
     if ext == clsext {
       let opt_cs = T_CS!(s!("\\opt@{file}"));
       if state::lookup_meaning(&opt_cs).is_some() {

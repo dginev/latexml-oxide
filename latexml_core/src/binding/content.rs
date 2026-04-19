@@ -1170,6 +1170,8 @@ pub fn require_resource(mut resource: Resource) {
     return;
   }
   if resource.mimetype.is_empty() && !resource.name.is_empty() {
+    // Perl Package.pm L3129: `my $ext = pathname_type($resource);` — no
+    // case-folding; `$resource_types{$ext}` is a case-sensitive lookup.
     let ext = pathname::extension(&resource.name);
     resource.mimetype = resource_type(&ext);
   }
