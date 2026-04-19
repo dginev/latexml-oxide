@@ -5062,14 +5062,27 @@ LoadDefinitions!({
       "\\mathpunct"=> Some("PUNCT"),
       _ => None,
     };
-    if let Some(ch) = glyph {
-      let presentation = ch.to_string();
-      let mut opts = MathPrimitiveOptions::default();
-      if let Some(r) = role {
-        opts.role = Some(r.to_string());
-      }
-      def_math(cs, None, presentation, opts)?;
+    // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` —
+    // called unconditionally, even when FontDecode returns `undef` (e.g. the
+    // encoding's `.fontmap.ltxml` isn't shipped with LaTeXML, like "U").
+    // Fall back to the raw codepoint so the CS is defined; better to render
+    // an ASCII stand-in than to cascade into Error:undefined for the
+    // command itself. arxiv 1011.1955 hits this with
+    //   \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
+    //   \DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}
+    // where no u.fontmap exists.
+    let presentation = match glyph {
+      Some(ch) => ch.to_string(),
+      None => {
+        let codepoint = code.value_of() as u32;
+        char::from_u32(codepoint).map(|c| c.to_string()).unwrap_or_default()
+      },
+    };
+    let mut opts = MathPrimitiveOptions::default();
+    if let Some(r) = role {
+      opts.role = Some(r.to_string());
     }
+    def_math(cs, None, presentation, opts)?;
   });
 
   DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
