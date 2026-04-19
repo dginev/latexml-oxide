@@ -283,10 +283,10 @@ impl Mouth {
   }
   fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
   fn open_http(&mut self, url: &str) {
-    eprintln!("Warning: HTTP input not supported: {url}");
+    log::warn!("HTTP input not supported: {url}");
   }
   fn open_https(&mut self, url: &str) {
-    eprintln!("Warning: HTTPS input not supported: {url}");
+    log::warn!("HTTPS input not supported: {url}");
   }
   // fn open_binding(&mut self, _content: &str) {}
 
