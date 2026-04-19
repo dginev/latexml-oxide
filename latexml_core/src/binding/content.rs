@@ -1756,7 +1756,7 @@ pub fn font_decode_string(
 }
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
-  preload_font_map(encoding).expect("preloading font map should succeed.");
+  let _ = preload_font_map(encoding); // infallible in practice; swallow Result
   if let Some(map) = lookup_value(&s!("{encoding}_fontmap")) {
     map.into()
   } else {

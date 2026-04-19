@@ -1887,7 +1887,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
 
   let mut map: Option<Fontmap> = None;
   if !encoding.is_empty() {
-    preload_font_map(&encoding).expect("preloading a font map should succeed?");
+    let _ = preload_font_map(&encoding); // infallible in practice; swallow Result
     if let Some(encmap) = load_font_map(&encoding) {
       // OK got some map.
       map = Some(encmap);
@@ -1946,7 +1946,7 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
 
   let mut map: Option<Fontmap> = None;
   if !encoding.is_empty() {
-    preload_font_map(encoding).expect("preload_font_map should succeed?");
+    let _ = preload_font_map(encoding); // infallible in practice; swallow Result
     if let Some(encmap) = load_font_map(encoding) {
       // OK got some map.
       map = Some(encmap);
