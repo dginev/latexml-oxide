@@ -13,6 +13,12 @@ LoadDefinitions!({
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("amssymb");
+  // The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
+  // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits
+  // this, but the real-world paper corpus (e.g. arxiv 1010.4240 via PoS →
+  // JHEP) depends on hyperref being active. Load it here so the arxiv sandbox
+  // resolves \href without an Error:undefined cascade.
+  RequirePackage!("hyperref");
 
   // Perl L40-58: Frontmatter
   DefMacro!("\\speaker{}", "\\@add@frontmatter{ltx:creator}[role=speaker]{\\@personname{#1}}");

@@ -136,8 +136,16 @@ LoadDefinitions!({
     "<ltx:classification scheme='keywords'>#body</ltx:classification>");
   // Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
   Let!("\\lx@begin@keywords", "\\keywords");
+  // Perl OmniBus.cls.ltxml L154. We differ from Perl's
+  // `\begin{keywords}#1\end{keywords}` path because our `{keywords}` env
+  // currently emits <ltx:classification> inline (a content-model error in
+  // contexts like <ltx:abstract>). Routing directly through
+  // `\@add@frontmatter` matches Perl's net effect — its after_digest_keywords
+  // pushes the body into `frontmatter`{ltx:classification} — without the
+  // inline detour that confuses the schema.
   DefMacro!("\\keywords@onearg{}",
-    "\\begin{keywords}#1\\end{keywords}\\let\\endkeyword\\relax\\let\\endkeywords\\relax");
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}\
+     \\let\\endkeyword\\relax\\let\\endkeywords\\relax");
   DefMacro!("\\maybe@end@keywords",
     "\\endkeywords\\let\\maybe@end@keywords\\relax");
   // Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run
@@ -356,18 +364,20 @@ LoadDefinitions!({
     if !IsDefined!(&cs) {
       let cs_clone = cs;
       let pkg_str = pkg.to_string();
+      let trigger_str = trigger.to_string();
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
-          // Clear this autoload entry before loading the package, so that if the
-          // package does not redefine this CS (e.g., `\begin{split}` — amsmath
-          // defines `\split`, not `\begin{split}`), the re-emitted CS falls
-          // through to normal resolution instead of looping back to this closure.
-          // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm.
+          // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
+          // clear this autoload CS before loading, then re-emit the trigger as
+          // tokenized text. Re-tokenizing is important for `\begin{env}` triggers
+          // — amsmath defines `\split` (not `\begin{split}`), so the raw single-CS
+          // token would look undefined after clearing. Tokenizing expands into
+          // `\begin` + `{env}` which the standard `\begin{}` dispatcher resolves.
           latexml_core::state::assign_meaning(
             &cs_clone, latexml_core::common::store::Stored::None,
             Some(Scope::Global));
           require_package(&pkg_str, RequireOptions::default())?;
-          Ok(Tokens!(cs_clone))
+          Ok(mouth::tokenize_internal(&trigger_str))
         })), None)?;
     }
   }
