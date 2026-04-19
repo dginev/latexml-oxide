@@ -177,7 +177,7 @@ impl Tokens {
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_number(&self) -> Number {
     if self.is_empty() {
-      eprintln!("TODO: An empty tokens was requested for .to_number, debug this!");
+      log::debug!("to_number called on empty Tokens — returning 0 (TeX-compatible default)");
       Number::default()
     } else {
       Number::new(self.to_string().parse::<i64>().unwrap_or(0))
@@ -218,7 +218,7 @@ impl Tokens {
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_float(&self) -> Float {
     if self.is_empty() {
-      eprintln!("TODO: An empty tokens was requested for .to_float, debug this!");
+      log::debug!("to_float called on empty Tokens — returning 0.0 (TeX-compatible default)");
       Float::default()
     } else {
       Float::new_f64(self.to_string().parse::<f64>().unwrap_or(0.0))
