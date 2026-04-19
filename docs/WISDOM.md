@@ -357,7 +357,7 @@ implemented. The `_` prefix can mask missing functionality.
 
 ---
 
-## 13. DefKeyVal machinery: default resolution and setKeysExpansion guard
+## 15. DefKeyVal machinery: default resolution and setKeysExpansion guard
 
 **Discovery:** Bare keys like `sensitive,` in listings language definitions
 weren't getting their default values applied, despite `DefKeyVal!("LST",
@@ -399,7 +399,7 @@ different key naming convention.
 
 ---
 
-## 13. Star (`*`) in CS names causes infinite compile loop
+## 16. Star (`*`) in CS names causes infinite compile loop
 
 **Date:** 2026-03-15
 
