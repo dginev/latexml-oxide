@@ -264,26 +264,47 @@ LoadDefinitions!({
 
   // == Graphics path and inclusion ==
 
-  // Perl L248-260: \graphicspath DirectoryList — pushes paths and inserts PIs.
+  // Perl graphics.sty.ltxml L248-260: \graphicspath DirectoryList.
+  //   properties: for each dir → PushValue(GRAPHICSPATHS => pathname_absolute(…))
+  //   body: for each path in props{paths} → insertPI('latexml', graphicspath=>$path)
+  //
   // DirectoryList reads the arg ToString-first so `_` in path names never
   // becomes a SUB-catcode during digestion.
-  DefConstructor!("\\graphicspath DirectoryList", "",
-    after_digest => sub[whatsit] {
-      let arg = whatsit.get_arg(0).map(|a| a.to_string()).unwrap_or_default();
-      // DirectoryList emits `{d1}{d2}…` — each dir is a brace group.
+  DefConstructor!("\\graphicspath DirectoryList",
+    sub[document, _args, props] {
+      if let Some(Stored::String(paths_sym)) = props.get("paths") {
+        let paths = arena::with(*paths_sym, |s| s.to_string());
+        for path in paths.split('\x1e').filter(|p| !p.is_empty()) {
+          let mut attrs = HashMap::default();
+          attrs.insert(String::from("graphicspath"), path.to_string());
+          document.insert_pi("latexml", Some(attrs))?;
+        }
+      }
+    },
+    properties => sub[args] {
+      let arg = args.first()
+        .and_then(|a| a.as_ref())
+        .map(|a| a.to_string())
+        .unwrap_or_default();
       let root = state::lookup_value("SOURCEDIRECTORY")
         .map(|v| v.to_string()).unwrap_or_default();
+      let mut collected: Vec<String> = Vec::new();
       for dir in arg.split('}') {
         let dir = dir.trim_start_matches('{').trim();
         if !dir.is_empty() {
+          // Perl: pathname_absolute(pathname_canonical($dir), $root)
           let path = if root.is_empty() || dir.starts_with('/') {
             dir.to_string()
           } else {
             s!("{}/{}", root, dir)
           };
-          let _ = state::push_value("GRAPHICSPATHS", Stored::String(arena::pin(path)));
+          // Perl: PushValue(GRAPHICSPATHS => $path)
+          let _ = state::push_value("GRAPHICSPATHS",
+            Stored::String(arena::pin(&path)));
+          collected.push(path);
         }
       }
+      Ok(stored_map!("paths" => collected.join("\x1e")))
     });
 
   // Perl: DefMacro('\includegraphics OptionalMatch:* [][] Semiverbatim',

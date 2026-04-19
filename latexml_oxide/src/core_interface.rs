@@ -497,7 +497,12 @@ impl DigestionAPI for Core {
         state::assign_value("SOURCEDIRECTORY", dir.clone(), None);
       }
       state::search_paths_push_front(dir.clone());
-      state::graphics_paths_push_front(dir);
+      // Perl Core.pm L200:
+      //   $state->unshiftValue(GRAPHICSPATHS => $dir)
+      //     if !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
+      if !state::get_graphics_paths().iter().any(|p| p == &dir) {
+        state::graphics_paths_push_front(dir);
+      }
       state::install_definition(
         Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!("\\jobname"),

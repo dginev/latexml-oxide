@@ -508,6 +508,24 @@ impl State {
       Some(Scope::Global),
     );
 
+    // Perl Core.pm L53: $state->assignValue(GRAPHICSPATHS => [map {…} @{$opts{graphicspaths}}])
+    // Mirror with a VecDequeStored of String entries; subsequent push/unshift
+    // operations in `\graphicspath`, `\svgpath`, and Core.pm-equivalent source
+    // directory prepends will append/prepend to this same list.
+    if !state.graphics_paths.is_empty() {
+      let vdq: VecDeque<Stored> = state
+        .graphics_paths
+        .iter()
+        .map(|p| Stored::String(arena::pin(p)))
+        .collect();
+      state.assign_internal(
+        TableName::Value,
+        arena::pin("GRAPHICSPATHS"),
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    }
+
     state
   }
 
@@ -2505,10 +2523,65 @@ pub fn search_paths_push_front(path: String) {
   state.search_paths.push_front(path);
 }
 pub fn has_search_paths() -> bool { !state!().search_paths.is_empty() }
-pub fn get_graphics_paths() -> Vec<String> { state!().graphics_paths.iter().cloned().collect() }
+/// Mirror Perl's `LookupValue('GRAPHICSPATHS')` — a list value that all
+/// `\graphicspath`, `\svgpath`, initial source-directory prepends, and
+/// `image_candidates` consult. Always return as `Vec<String>` even if the
+/// value was stored as `Strings` (initial assignValue) or `VecDequeStored`
+/// (after any push/unshift).
+pub fn get_graphics_paths() -> Vec<String> {
+  lookup_value("GRAPHICSPATHS")
+    .map(|v| match v {
+      Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
+      Stored::VecDequeStored(vdq) => vdq
+        .iter()
+        .filter_map(|item| match item {
+          Stored::String(s) => Some(arena::to_string(*s)),
+          _ => None,
+        })
+        .collect(),
+      _ => Vec::new(),
+    })
+    .unwrap_or_default()
+}
+
+/// Mirror Perl's `$state->unshiftValue(GRAPHICSPATHS => $dir)`. Used by
+/// Core.pm-style source-directory prepends.
 pub fn graphics_paths_push_front(path: String) {
+  let key = arena::pin("GRAPHICSPATHS");
+  let entry = Stored::String(arena::pin(&path));
   let mut state = state_mut!();
-  state.graphics_paths.push_front(path);
+  if !state.value.contains_key(&key) {
+    state.assign_internal(
+      TableName::Value,
+      key,
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    );
+  }
+  let receiver = state.value.get_mut(&key).unwrap().front_mut();
+  match receiver {
+    Some(Stored::VecDequeStored(vdq)) => vdq.push_front(entry),
+    Some(Stored::Strings(syms)) => {
+      let mut vdq: VecDeque<Stored> = syms.iter().map(|s| Stored::String(*s)).collect();
+      vdq.push_front(entry);
+      state.assign_internal(
+        TableName::Value,
+        key,
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    },
+    _ => {
+      let mut vdq = VecDeque::new();
+      vdq.push_front(entry);
+      state.assign_internal(
+        TableName::Value,
+        key,
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    },
+  }
 }
 
 /// manage a (global) hash of values
