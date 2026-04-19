@@ -128,12 +128,25 @@ pub fn pin_char(c: char) -> SymStr {
 /// Resolve a symbol and call the closure with a `&str` reference.
 /// The closure may safely call `pin()` or any other arena function —
 /// re-entrant access reuses the cached borrow.
+///
+/// # Safety
+///
+/// Uses `resolve_unchecked` → `from_utf8_unchecked`. Sound because
+/// every path into the arena (`pin_static(&'static str)`,
+/// `pin<S: AsRef<str>>(s)`, `pin_char(c: char)`) can only produce a
+/// SymStr from content that was already valid UTF-8. The interner's
+/// buffer is append-only by design: once a byte range is associated
+/// with a symbol it is never mutated. Callgrind showed the default
+/// validating `resolve` was ~3% of total Ir via `str::from_utf8`.
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   with_arena_mut(|arena| {
-    let s = arena
-      .resolve(sym)
-      .expect("arena::with: symbol not found in arena");
+    // SAFETY: all input strings were valid UTF-8 at intern time (see
+    // docstring above); every SymStr in this codebase originates
+    // from a successful `get_or_intern(_static|_char)` call on a
+    // valid `&str`, so the symbol always corresponds to a valid
+    // byte range in the interner's buffer.
+    let s = unsafe { arena.resolve_unchecked(sym) };
     caller(s)
   })
 }
@@ -141,12 +154,10 @@ where FnR: FnOnce(&str) -> R {
 pub fn with2<R, FnR>(sym1: SymStr, sym2: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str) -> R {
   with_arena_mut(|arena| {
-    let s1 = arena
-      .resolve(sym1)
-      .expect("arena::with2: symbol not found in arena");
-    let s2 = arena
-      .resolve(sym2)
-      .expect("arena::with2: symbol not found in arena");
+    // SAFETY: same invariant as `arena::with` — every SymStr here was
+    // returned by a successful intern of a valid &str.
+    let s1 = unsafe { arena.resolve_unchecked(sym1) };
+    let s2 = unsafe { arena.resolve_unchecked(sym2) };
     caller(s1, s2)
   })
 }
@@ -154,15 +165,10 @@ where FnR: FnOnce(&str, &str) -> R {
 pub fn with3<R, FnR>(sym1: SymStr, sym2: SymStr, sym3: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str, &str) -> R {
   with_arena_mut(|arena| {
-    let s1 = arena
-      .resolve(sym1)
-      .expect("arena::with3: symbol not found in arena");
-    let s2 = arena
-      .resolve(sym2)
-      .expect("arena::with3: symbol not found in arena");
-    let s3 = arena
-      .resolve(sym3)
-      .expect("arena::with3: symbol not found in arena");
+    // SAFETY: see `arena::with`.
+    let s1 = unsafe { arena.resolve_unchecked(sym1) };
+    let s2 = unsafe { arena.resolve_unchecked(sym2) };
+    let s3 = unsafe { arena.resolve_unchecked(sym3) };
     caller(s1, s2, s3)
   })
 }
@@ -170,13 +176,10 @@ where FnR: FnOnce(&str, &str, &str) -> R {
 pub fn with_many<R, FnR>(syms: &[SymStr], caller: FnR) -> R
 where FnR: FnOnce(Vec<&str>) -> R {
   with_arena_mut(|arena| {
+    // SAFETY: see `arena::with`.
     let many = syms
       .iter()
-      .map(|sym| {
-        arena
-          .resolve(*sym)
-          .expect("arena::with_many: symbol not found in arena")
-      })
+      .map(|sym| unsafe { arena.resolve_unchecked(*sym) })
       .collect();
     caller(many)
   })
@@ -184,10 +187,8 @@ where FnR: FnOnce(Vec<&str>) -> R {
 
 pub fn to_string(sym: SymStr) -> String {
   with_arena_mut(|arena| {
-    arena
-      .resolve(sym)
-      .expect("arena::to_string: symbol not found in arena")
-      .to_owned()
+    // SAFETY: see `arena::with`.
+    unsafe { arena.resolve_unchecked(sym) }.to_owned()
   })
 }
 
