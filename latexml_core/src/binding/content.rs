@@ -643,11 +643,12 @@ pub fn input_content(request: &str, options: InputOptions) -> Result<()> {
 /// in which case we may really want to load a binding.
 /// Note that generic style files (non-latex) often have a .tex extension.
 pub fn input(request: &str, options: InputOptions) -> Result<()> {
-  // unwrap if in quotes \input{"file name"}
-  let mut clean_req = Cow::Borrowed(request);
-  while request.starts_with('"') && request.ends_with('"') {
-    clean_req = Cow::Owned(QUOTE_WRAPPED.replace(&clean_req, "$1").into_owned());
-  }
+  // unwrap if in quotes \input{"file name"} — Perl parity:
+  // `$request =~ s/^("+)(.+)\g1$/$2/;` (single-pass strip of a matching
+  // leading+trailing run of quotes). The previous `while` loop checked
+  // the unchanged `request`, which spun forever on any quoted input
+  // since the replacement only touches `clean_req`.
+  let clean_req = QUOTE_WRAPPED.replace(request, "$1");
   // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
   // if pathname_is_literaldata(request) {
   //   let (dir, name, ftype) = pathname_split(request);
