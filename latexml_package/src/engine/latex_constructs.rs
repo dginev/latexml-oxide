@@ -6908,23 +6908,26 @@ LoadDefinitions!({
     Ok(vec![])
   });
 
+  // Perl parity: `return unless $defn && ($defn ne 'missing');` — silently
+  // skip when the target variable has no register definition (e.g. undefined
+  // length register). Matches calc_sty.rs's \setlength/\addtolength fallback.
   DefPrimitive!("\\setlength {Variable}{Dimension}", sub[(variable,length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("if a Variable parameter provides a token, it must have a Register definition.");
-      defn.set_value(length.into(), None, params);
+      if let Some(defn) = rtoken.to_register() {
+        defn.set_value(length.into(), None, params);
+      }
     }
     Ok(Vec::new())
   });
   DefPrimitive!("\\addtolength {Variable}{Dimension}", sub[(variable,length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("if a Variable parameter provides a token, it must have a Register definition.");
-      // TODO: can we avoid cloning the params?
-      let oldlength = defn.value_of(params.clone()).unwrap_or_default();
-      defn.set_value(oldlength.add(length), None, params);
+      if let Some(defn) = rtoken.to_register() {
+        // TODO: can we avoid cloning the params?
+        let oldlength = defn.value_of(params.clone()).unwrap_or_default();
+        defn.set_value(oldlength.add(length), None, params);
+      }
     }
     Ok(Vec::new())
   });
