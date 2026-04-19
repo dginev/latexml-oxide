@@ -2,9 +2,20 @@
 
 > Comprehensive comparison of `LaTeXML/t/*.xml` (Perl ground truth) and `latexml_oxide/tests/*.xml` (Rust expected output). Last audited 2026-04-19 (re-verified §E).
 
-## A. `%&#10;` only — intentional Rust divergence (30 files)
+## A. `%&#10;` related — intentional Rust divergence (30 files)
 
-Rust does not emit `%\n` (TeX comment-newline separator) in `tex=` attributes. Documented in `CLAUDE.md`. No action needed.
+Rust does not emit `%\n` (TeX comment-newline separator) in `tex=`
+attributes (documented in `CLAUDE.md`). These 30 files all exhibit
+that divergence.
+
+**Caveat (2026-04-19):** re-audit found that many of the files below
+*also* have substantial additional differences beyond just `%&#10;`
+(e.g. `complex/si` has ~5706 non-`%&#10;` lines diverging, `physics`
+~3225, `mathtools` ~2681). The bullet list preserves the original
+2026-03-19 categorization, but the "only `%&#10;`" claim is no longer
+literally true for the large-math fixtures — they track unrelated
+semantic divergences too. Those residual diffs need a fresh audit
+pass to either close or classify.
 
 1. `fonts/acc.xml`
 2. `fonts/mathaccents.xml`
