@@ -100,11 +100,8 @@ impl From<&str> for Float {
   }
 }
 impl From<String> for Float {
-  fn from(spec: String) -> Self {
-    Float(
-      spec
-        .parse::<f64>()
-        .expect("Float::from(String) does not handle malformed spec strings"),
-    )
-  }
+  /// Parse a string into a Float. Non-numeric input silently becomes 0.0
+  /// to match Perl's implicit numeric coercion — `Float("abc")` + x in
+  /// Perl yields x, not a panic.
+  fn from(spec: String) -> Self { Float(spec.trim().parse::<f64>().unwrap_or(0.0)) }
 }
