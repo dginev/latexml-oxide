@@ -145,7 +145,15 @@ LoadDefinitions!({
   DefPrimitive!("\\closeout Number", sub[(port)] {
     AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
   });
-  DefPrimitive!("\\write Number {}", sub[(port_n, tokens)] {
+  // Perl: DefPrimitive('\write Number XGeneralText', sub { … UnTeX($tokens,1) … })
+  // XGeneralText is the TeX <general text> — balanced group read with PARTIAL
+  // expansion (respects `\the`, `\showthe`, `\unexpanded`, `\detokenize`).
+  // Using a raw `{}` followed by `Expand!` over-expands active chars like `~`
+  // → `\lx@NBSP`, whose untex leaks the literal string `"\lx@NBSP"` to the
+  // aux file; when `\input` reads it back with `@` in OTHER catcode, the CS
+  // splits into `\lx`+`@NBSP` — an "undefined \lx" error. arxiv 1112.4846
+  // (harvmac `\listrefs`) triggered this.
+  DefPrimitive!("\\write Number XGeneralText", sub[(port_n, tokens)] {
     let port = port_n.value_of();
     let handle = with_value(&s!("output_file:{}", port), |val_opt|
     if let Some(filename) = val_opt {
@@ -153,13 +161,13 @@ LoadDefinitions!({
     } else { String::new() });
     if !handle.is_empty() {
       let mut contents : String = LookupString!(&handle);
-      contents.push_str(&Expand!(tokens).untex());
+      contents.push_str(&tokens.untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else if port < 0 {
-      NoteLog!(Expand!(tokens).untex());
+      NoteLog!(tokens.untex());
     } else {
-      Note!(Expand!(tokens).untex());
+      Note!(tokens.untex());
     }
   });
 
