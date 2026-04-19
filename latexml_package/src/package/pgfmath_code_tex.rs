@@ -86,8 +86,7 @@ fn pgfmath_factorial(n: i64) -> f64 {
 fn parse_pgf_number(arg: &Tokens) -> f64 {
   // First try direct string (avoids expansion overhead for literal numbers)
   let s = arg.to_string();
-  let s = s.trim();
-  let s = s.strip_prefix("--").unwrap_or(s);
+  let s = strip_leading_double_negation(s.trim());
   if s == "." { return 0.0; }
   if let Ok(v) = s.parse::<f64>() {
     return v;
@@ -95,13 +94,21 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
   // If direct parse fails (e.g. unexpanded macro), expand and retry
   if let Ok(expanded) = gullet::do_expand(arg.clone()) {
     let s = expanded.to_string();
-    let s = s.trim();
-    let s = s.strip_prefix("--").unwrap_or(s);
+    let s = strip_leading_double_negation(s.trim());
     if s == "." { return 0.0; }
     s.parse::<f64>().unwrap_or(0.0)
   } else {
     0.0
   }
+}
+
+// Perl #2711 uses `s/^\-\-//g`, which strips every leading `--` pair
+// (e.g. `----5` → `5`). `strip_prefix` only removes one pair.
+fn strip_leading_double_negation(mut s: &str) -> &str {
+  while let Some(rest) = s.strip_prefix("--") {
+    s = rest;
+  }
+  s
 }
 
 // ==================== Simple Number Check ====================
