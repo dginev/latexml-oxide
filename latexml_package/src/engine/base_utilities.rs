@@ -1743,7 +1743,7 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
 // Several extension of the keyval package exist, the most common one we support
 // is the xkeyval package. This introduces further variations on the keyval
 // arguments parsing, in particular it allows to read keys from more than one
-// keyset at once. These can be specified by giving comma-seperated values in
+// keyset at once. These can be specified by giving comma-separated values in
 // the keyset argument. By default, a key will only be set in the **first**
 // keyset it occurs in. By using
 //   RequiredKeyVals+: $keysets
@@ -1765,7 +1765,7 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
 //   OptionalKeyVals[*][+]: $prefix|$keysets
 //
 // Finally, it is possible to specify specific keys to skip when digesting the
-// object. This can be achieved using comma-seperated key values in
+// object. This can be achieved using comma-separated key values in
 //   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
 //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
