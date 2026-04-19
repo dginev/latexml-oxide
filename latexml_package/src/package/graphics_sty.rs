@@ -198,13 +198,25 @@ LoadDefinitions!({
   DefKeyVal!("Grot", "y", "Dimension");
   DefKeyVal!("Grot", "units", "");
 
-  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
-    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Some(body) = whatsit.get_arg(3) {
-        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
+  // ORDER MATTERS: define `{rotatebox}` environment FIRST, then the
+  // `\rotatebox` DefConstructor. DefEnvironment auto-registers a bare
+  // `\rotatebox` CS (Perl Package.pm L1949-1969 hook-pipeline parity)
+  // with the environment's signature `{Float}` and the env's mode setup.
+  // If the env def runs AFTER the DefConstructor, the env's bare form
+  // clobbers the constructor — users writing `\rotatebox{0}{…}` then get
+  // the ENV semantics (single `{Float}` arg, `restricted_horizontal` body
+  // that never unwinds on the outer `\end{figure}`). arxiv 1007.3314 hit
+  // this: `graphicx.sty` happens to re-register `\rotatebox` AFTER the
+  // env, so graphicx-loading papers worked, but bare `graphics`-only
+  // papers (revtex4 with `\usepackage[dvips]{graphics}`) left the env
+  // bare form active and tripped `\end{figure} in restricted_horizontal`.
+  // DefEnvironment form — used as `\begin{rotatebox}{90}…\end{rotatebox}`.
+  DefEnvironment!("{rotatebox}{Float}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
+    after_digest_body => sub[whatsit] {
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);
           }
@@ -212,13 +224,17 @@ LoadDefinitions!({
       }
     });
 
-  // {rotatebox} environment form — used as \begin{rotatebox}{90}...\end{rotatebox}
-  DefEnvironment!("{rotatebox}{Float}",
-    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
-    after_digest_body => sub[whatsit] {
-      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Ok(Some(body)) = whatsit.get_body() {
-        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
+  // Now re-register the bare `\rotatebox` as a DefConstructor, overriding
+  // the env's auto-registered bare form. `\rotatebox[keys]{angle}{body}`
+  // needs the OptionalKeyVals + Float + group signature that the env
+  // cannot express.
+  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Some(body) = whatsit.get_arg(3) {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);
           }
