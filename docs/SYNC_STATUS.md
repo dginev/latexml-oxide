@@ -90,18 +90,18 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 0908.0398  - [x] 0909.2656  - [ ] 0909.3444  - [ ] 0909.5007
 - [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
 - [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [ ] 1004.2626
-- [x] 1005.1610  - [ ] 1006.5231  - [ ] 1007.2309  - [x] 1007.3314
+- [x] 1005.1610  - [x] 1006.5231  - [ ] 1007.2309  - [x] 1007.3314
 - [x] 1007.4392  - [ ] 1008.2152  - [x] 1008.4386  - [x] 1009.1431
 - [x] 1010.1244  - [x] 1010.3600  - [x] 1010.4240  - [x] 1011.1955
 - [x] 1011.4834  - [x] 1011.5076  - [ ] 1012.3836  - [ ] 1101.2149
 - [x] 1101.2474  - [x] 1103.2925  - [x] 1105.0121  - [ ] 1107.0347
-- [ ] 1107.3732  - [ ] 1108.0951  - [ ] 1108.3241  - [ ] 1111.0334
-- [ ] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
+- [ ] 1107.3732  - [x] 1108.0951  - [ ] 1108.3241  - [x] 1111.0334
+- [x] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
 - [ ] 1203.6616  - [ ] 1204.5278  - [ ] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **37 of 64 now convert cleanly** via session
-120 per-paper Perl-parity fixes:
+**Conversion errors (64)** status: **41 of 64 now convert cleanly** via
+sessions 120-122 per-paper Perl-parity fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
 - DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
 - `\author` accepts `OptionalMatch:* [short]` (mn, mn2e, elsart, revtex journal forms)
