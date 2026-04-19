@@ -478,7 +478,7 @@ chain), not just the next `tight_term`.
 **Rationale:** `\sum_{i=0}^{\infty} f_i x^i` should produce `∑(f_i * x^i)`, not
 `∑(f_i) * x^i`. The summation variable `i` appears in both `f_i` and `x^i`, so the
 entire product is the summand. Perl's `addOpArgs` (Parse::RecDescent) non-deterministically
-selects narrow absorption for some expressions (documented in KNOWN_PERL_ERRORS #8).
+selects narrow absorption for some expressions (documented in KNOWN_PERL_ERRORS #9).
 
 **Grammar:** `bigop_application = bigop/scripted_bigop/composed_bigop term`, lifted to
 `expression` level so bigops can't be followed by invisible-times on the right.

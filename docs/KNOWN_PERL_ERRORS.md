@@ -128,7 +128,7 @@ to this entry.
 
 ---
 
-## 7. `NewScript` XMDual content arm uses meaningless `Apply(∅, XMRef)` for subscripted identifiers
+## 8. `NewScript` XMDual content arm uses meaningless `Apply(∅, XMRef)` for subscripted identifiers
 
 **Perl source:** `LaTeXML/MathParser.pm` line 1637, `NewScript()` function
 
@@ -188,7 +188,7 @@ If XMDual is needed later, the content branch should use a skolem `XMTok[name="f
 
 ---
 
-## 8. `addOpArgs` narrow bigop absorption in declare test
+## 9. `addOpArgs` narrow bigop absorption in declare test
 
 **Perl source:** `LaTeXML/MathGrammar` lines 668-672, `addOpArgs` / `moreOpArgFactors`
 
@@ -215,7 +215,7 @@ is updated to match the mathematically correct broad absorption.
 
 ---
 
-## 9. Quantifier period-binding parsed as formulae split
+## 10. Quantifier period-binding parsed as formulae split
 
 **Symptom:** `\exists x. P(x)` is parsed as `formulae@(exists@(x), P*x)` — two
 separate formulas separated by a period. The correct mathematical reading is
@@ -237,7 +237,7 @@ integrand and differential.
 quantifier-period-body grammar rules rather than mimicking Perl's incorrect
 formulae split.
 
-## 10. `io.tex` produces `Error:unexpected:}` from unmatched braces in `\read` content
+## 11. `io.tex` produces `Error:unexpected:}` from unmatched braces in `\read` content
 
 **Perl source:** `Stomach.pm` L336–340 (`egroup()`)
 
@@ -277,7 +277,7 @@ errors, but it would also change the test output (requiring XML updates).
 
 ---
 
-## 11. `SVGNextObject()` timing inconsistency between clipPaths and shadings
+## 12. `SVGNextObject()` timing inconsistency between clipPaths and shadings
 
 **Perl source:** `pgfsys-latexml.def.ltxml` lines 348, 371, 674, 699
 
