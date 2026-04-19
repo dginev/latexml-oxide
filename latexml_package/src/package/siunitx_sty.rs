@@ -1226,14 +1226,18 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
   let mut result = Vec::new();
   let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut had_substitution = false;
+  // Pre-intern the two dispatch CS names so the per-token check is
+  // u32 equality (not `t.to_string()` alloc + string compare).
+  let unitobject_sym = pin!("\\lx@six@unitobject");
+  let unitobject_arg_sym = pin!("\\lx@six@unitobject@arg");
 
   while let Some(t) = iter.next() {
-    let ts = t.to_string();
-    if ts == "\\lx@six@unitobject" {
+    if t.text == unitobject_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-          let encoded_str = arena::with(encoded, |s| s.to_string());
-          if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+          // Decode directly from the arena-borrowed &str — was
+          // cloning via `.to_string()` into a temporary String.
+          if let Some(defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
             let pres = defn.presentation;
             if !pres.is_empty() {
               // Emit raw presentation tokens — six_parse_literalunits will wrap
@@ -1248,12 +1252,11 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
         result.extend(ExplodeText!(&name));
         had_substitution = true;
       }
-    } else if ts == "\\lx@six@unitobject@arg" {
+    } else if t.text == unitobject_arg_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
           if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-            let encoded_str = arena::with(encoded, |s| s.to_string());
-            if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+            if let Some(defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
               let pres = defn.presentation;
               if !pres.is_empty() {
                 result.extend(pres.unlist());
@@ -1297,8 +1300,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       if let Some(name) = read_brace_group_str(&mut iter) {
         // Look up in siunitx_macros mapping
         if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-          let encoded_str = arena::with(encoded, |s| s.to_string());
-          if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+          if let Some(defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
             defns.push(defn);
           }
         }
@@ -1308,8 +1310,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
           if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-            let encoded_str = arena::with(encoded, |s| s.to_string());
-            if let Some(mut defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+            if let Some(mut defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
               // Apply arg to the appropriate field
               if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
                 defn.power = Some(Tokenize!(&arg));
