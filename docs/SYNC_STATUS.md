@@ -151,8 +151,9 @@ cargo test):
 | After with_meaning refactor | 17.33 | ~1.80s |
 | After read_balanced pre-size | 16.94 | ~1.77s |
 | After pushback VecDeque→Vec | 16.46 | ~1.74s |
+| After arena resolve_unchecked | 15.94 | ~1.70s |
 
-~8% fewer instructions, ~7% faster on this workload.
+~11% fewer instructions, ~10% faster on this workload.
 
 #### D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
 
