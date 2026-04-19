@@ -35,25 +35,25 @@ const UP_GREEK: &[char] = &[
 
 /// (Internal) Converts the number into one of the char symbols
 pub fn radix_format(mut number: i64, symbols: &[char]) -> String {
-  let mut text = String::new();
+  let mut chars: Vec<char> = Vec::new();
   let max = symbols.len() as i64;
   while number > 0 {
     let index = (number - 1) % max;
-    text = symbols[index as usize].to_string() + &text;
+    chars.push(symbols[index as usize]);
     number = (number - 1) / max;
   }
-  text
+  chars.into_iter().rev().collect()
 }
 /// (Internal) Converts the number into one of the str symbols
 pub fn radix_format_str(mut number: i64, symbols: &[&str]) -> String {
-  let mut text = String::new();
+  let mut parts: Vec<&str> = Vec::new();
   let max = symbols.len() as i64;
   while number > 0 {
     let index = (number - 1) % max;
-    text = symbols[index as usize].to_string() + &text;
+    parts.push(symbols[index as usize]);
     number = (number - 1) / max;
   }
-  text
+  parts.into_iter().rev().collect()
 }
 
 /// converts the number into one or more lowercase latin letters
