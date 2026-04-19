@@ -67,7 +67,10 @@ pub fn i_xmref(id: &str) -> Tokens {
 
 /// Perl: I_wrap(keyvals, content) — generates `\lx@wrap[keyvals]{content}` tokens.
 pub fn i_wrap(keyvals: Option<Tokens>, content: Tokens) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@wrap")];
+  // Pre-size: \lx@wrap + optional [kv] + {content}
+  let kv_len = keyvals.as_ref().map(|k| k.len() + 2).unwrap_or(0);
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_len + 2 + content.len());
+  tks.push(T_CS!("\\lx@wrap"));
   if let Some(kv) = keyvals {
     tks.push(T_OTHER!("["));
     tks.extend(kv.unlist());
@@ -189,7 +192,14 @@ pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
 
 /// Perl: I_apply(kv, op, @args) — generates `\lx@apply[kv]{\lx@wrap{op}}{\lx@wrap{arg1}...}`.
 pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@apply")];
+  // Pre-size: \lx@apply + keyvals + 6 wrap-structure tokens for op
+  // + per-arg (3 structure + arg.len()) + args list wrap (2).
+  let args_total: usize = args.iter().map(|a| a.len() + 3).sum();
+  let kv_total: usize = if kv.is_empty() { 0 } else {
+    kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
+  };
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 6 + op.len() + 2 + args_total);
+  tks.push(T_CS!("\\lx@apply"));
   let kvt = i_keyvals(kv);
   if !kvt.is_empty() {
     tks.extend(kvt.unlist());
