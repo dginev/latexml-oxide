@@ -73,7 +73,8 @@ pub fn radix_roman(mut n: u32) -> String {
   let mut s = String::new();
   let mut div: u32 = 1000;
 
-  if n > div {
+  // `n >= div` (not `n > div`) — `radix_roman(1000)` must produce "m".
+  if n >= div {
     for _ in 0..(n / div) {
       s.push('m');
     }
@@ -138,6 +139,9 @@ mod tests {
     assert_eq!(radix_roman(9), "ix");
     assert_eq!(radix_roman(14), "xiv");
     assert_eq!(radix_roman(42), "xlii");
+    assert_eq!(radix_roman(1000), "m"); // boundary that was broken (`n > div` bug)
     assert_eq!(radix_roman(1999), "mcmxcix");
+    assert_eq!(radix_roman(2000), "mm");
+    assert_eq!(radix_roman(3999), "mmmcmxcix");
   }
 }
