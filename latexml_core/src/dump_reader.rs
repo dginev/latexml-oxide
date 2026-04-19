@@ -217,6 +217,14 @@ const SKIP_VALUE_KEYS: &[&str] = &[
   "CURRENT_INPUT_ENCODING",
   "SUPPRESS_UNEXPECTED_ERRORS",
   "SUPPRESS_UNDEFINED_ERRORS",
+  // Upstream Perl IGNORED_SYMBOLS (TeX_Job.pool.ltxml): runtime-only
+  // tables that re-populate from the engine — can't meaningfully round-
+  // trip through the dump.
+  "DOCUMENT_REWRITE_RULES",
+  "PARAMETER_TYPES",
+  "TAG_PROPERTIES",
+  "MATH_LIGATURES",
+  "TEXT_LIGATURES",
 ];
 
 /// V entry key prefixes to skip.

@@ -89,13 +89,23 @@ pub fn write_dump(
       continue;
     }
 
-    // Perl #2771 (2026-03-13): control-flow counters are runtime state,
-    // not kernel state. Skip for Value-table entries of that shape.
-    // dump_reader already skips these at load time; matching on write
-    // keeps the dump smaller and consistent with upstream's
-    // IGNORED_SYMBOLS list.
+    // Perl #2771 (2026-03-13) + upstream IGNORED_SYMBOLS: these are
+    // runtime-only Value entries — control-flow counters, and large
+    // registered-rule tables that can't meaningfully round-trip through
+    // the dump (they hold closures, cross-refs, or re-populate during
+    // engine init anyway). Match Perl's TeX_Job.pool.ltxml list.
     if matches!(*table, TableName::Value)
-      && matches!(key_str.as_str(), "if_count" | "absorb_count" | "if_stack")
+      && matches!(
+        key_str.as_str(),
+        "if_count"
+          | "absorb_count"
+          | "if_stack"
+          | "DOCUMENT_REWRITE_RULES"
+          | "PARAMETER_TYPES"
+          | "TAG_PROPERTIES"
+          | "MATH_LIGATURES"
+          | "TEXT_LIGATURES"
+      )
     {
       skipped += 1;
       continue;
