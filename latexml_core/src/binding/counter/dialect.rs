@@ -521,7 +521,7 @@ fn deactivate_counter_scope(ctr: SymStr) {
       if let Stored::String(scope) = scope_stored {
         state::deactivate_scope(scope);
       } else {
-        panic!("assignmenet scopes should be stored as strings, got: {scope_stored:?}");
+        panic!("assignment scopes should be stored as strings, got: {scope_stored:?}");
       }
     }
   }

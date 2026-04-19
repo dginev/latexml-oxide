@@ -200,11 +200,11 @@ impl Definition for Expandable {
   fn invoke_primitive(&self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
-      "do_absorbtion on Expandable should never be called!"
+      "do_absorption on Expandable should never be called!"
     );
   }
 }

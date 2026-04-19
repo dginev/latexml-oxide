@@ -406,7 +406,7 @@ impl BoxOps for Whatsit {
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 
-    self.definition.do_absorbtion(document, self)
+    self.definition.do_absorption(document, self)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
   }
   fn get_body(&self) -> Result<Option<Digested>> {

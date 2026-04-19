@@ -324,7 +324,7 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, document: &mut Document, whatsit: &Whatsit) -> Result<Vec<Node>> {
     for pre_closure in &self.before_construct {
       pre_closure(document, whatsit)?;
     }

@@ -154,11 +154,11 @@ impl Definition for Primitive {
     Ok(invoked_boxes)
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
-      "do_absorbtion on Primitive should never be called!"
+      "do_absorption on Primitive should never be called!"
     );
   }
 

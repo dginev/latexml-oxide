@@ -273,7 +273,7 @@ pub trait Definition: Object {
 
   fn get_num_args(&self) -> usize { 0 }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>>;
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>>;
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { None }
