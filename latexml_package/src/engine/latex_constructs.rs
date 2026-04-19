@@ -1053,7 +1053,9 @@ pub fn use_theorem_style(name: &str) {
               i += 2;
               continue;
             },
-            _ => mouth::tokenize(&val.to_string()),
+            // Values round-tripping through tokens — use internal cattable so
+            // any `\lx@…` names re-tokenize as single CS (not `\lx`+`@…`).
+            _ => mouth::tokenize_internal(&val.to_string()),
           };
           let _ = state::assign_register(
             &key,
@@ -1416,7 +1418,7 @@ pub fn define_new_theorem(
               T_BEGIN!(),
             ]);
             let mut full_toks = tag_tokens.unlist();
-            full_toks.extend(mouth::tokenize(&thmset_for_tags).unlist());
+            full_toks.extend(mouth::tokenize_internal(&thmset_for_tags).unlist());
             full_toks.push(T_END!());
             full_toks.push(T_END!());
             let tags = stomach::digest(Tokens::new(full_toks))?;

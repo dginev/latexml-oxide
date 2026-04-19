@@ -1243,6 +1243,10 @@ LoadDefinitions!({
     let tks = match n_val {
       0 => Tokenize!("1 & 0 \\\\ 0 & 1"),
       1 => Tokenize!("0 & 1 \\\\ 1 & 0"),
+      // FIXME: should be TokenizeInternal for `\lx@physics@iunit` parity, but
+      // enabling that regresses the physics test's paulimatrix nesting.
+      // Tracked as a follow-up — needs DefMath `alias` support to match Perl
+      // which emits `name="i"` via the alias path instead of the raw CS name.
       2 => Tokenize!("0 & -\\lx@physics@iunit \\\\ \\lx@physics@iunit & 0"),
       3 => Tokenize!("1 & 0 \\\\ 0 & -1"),
       _ => Tokens::default(),
