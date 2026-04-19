@@ -3598,7 +3598,17 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@author", "\\@empty");
-  DefMacro!("\\author{}", "\\def\\@author{#1}\\lx@make@authors@anded{#1}", locked => true);
+  // Perl latex_constructs.pool.ltxml L1116:
+  //   DefMacro('\author[]{}', '\def\@author{#2}\lx@make@authors@anded{#2}', locked => 1);
+  // The optional `[short]` arg is standard for many journal classes (mn,
+  // elsart, revtex variants, etc.); without it, `\author[short]{long}`
+  // leaves `[short]` in the token stream, dumping it into whatever context
+  // was around — most visibly, if the author has `$...$` math, the leftover
+  // `[short]` gets parsed inside math, which then drifts into `\thanks`
+  // bodies and produces XMTok-in-note schema errors (arxiv 0709.4470,
+  // 0802.3360). The short form is used for running heads/toc and is
+  // otherwise discarded.
+  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@make@authors@anded{#2}", locked => true);
   DefMacro!("\\lx@make@authors@anded{}", sub[(authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
