@@ -86,7 +86,17 @@ static COLUMN_ENDS: Lazy<[(Token, &'static str, bool); 6]> = Lazy::new(|| {
 pub struct MouthRuntime {
   pub autoclose: bool,
   pub mouth:     Mouth,
-  pub pushback:  VecDeque<Token>,
+  /// Pushback LIFO stack: the "next to read" token is at `pushback.last()`.
+  /// Invariant: reading pops from the back; `unread_one` pushes to the back;
+  /// `unread_vec` iterates its input in reverse and pushes each — so the
+  /// first element of an unread Vec ends up on top (= next to read).
+  /// See `flush_mouth` for the rare FIFO-prepend semantics (\endinput).
+  ///
+  /// Previously a `VecDeque<Token>` — switched to a plain Vec because the
+  /// hot-path is pure LIFO and VecDeque's push_front/pop_front machinery
+  /// (head-pointer + wrap arithmetic) showed up at ~3.3% of total Ir in
+  /// callgrind on siunitx-heavy fixtures.
+  pub pushback:  Vec<Token>,
 }
 
 #[derive(Debug, Default)]
@@ -206,8 +216,11 @@ pub fn unread(tokens: Tokens) { unread_vec(tokens.unlist()); }
 /// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
 pub fn unread_mut(tokens: &mut Tokens) {
   if let Some(ref mut runtime) = gullet_mut!().runtime {
+    // Iterate in reverse and push to the stack top — the first element
+    // of `tokens` ends up on top (= next to read). Same semantics as
+    // the old VecDeque push_front pattern.
     for token in tokens.unlist_mut().drain(..).rev() {
-      runtime.pushback.push_front(token);
+      runtime.pushback.push(token);
     }
   };
 }
@@ -220,7 +233,7 @@ pub fn unread_one(token: Token) {
     _ => {},
   }
   if let Some(ref mut runtime) = gullet_mut!().runtime {
-    runtime.pushback.push_front(token);
+    runtime.pushback.push(token);
   };
 }
 /// Unreads a `Vec<Token>` to the start of the token stream
@@ -228,13 +241,18 @@ pub fn unread_one(token: Token) {
 pub fn unread_vec(tokens: Vec<Token>) {
   let mut level: i64 = 0;
   if let Some(ref mut runtime) = gullet_mut!().runtime {
+    // Reserve once, push each token in reverse-iteration order so the
+    // first element of `tokens` ends up at the stack top. Same
+    // semantics as the old VecDeque push_front loop, but without
+    // per-element head-pointer arithmetic.
+    runtime.pushback.reserve(tokens.len());
     for token in tokens.into_iter().rev() {
       match token.get_catcode() {
         Catcode::BEGIN => level -= 1, // Retract scanned braces
         Catcode::END => level += 1,
         _ => {},
       }
-      runtime.pushback.push_front(token);
+      runtime.pushback.push(token);
     }
   }
   if level != 0 {
@@ -257,7 +275,7 @@ pub fn open_mouth(mouth: Mouth, autoclose: bool) {
   gullet.runtime = Some(MouthRuntime {
     mouth,
     autoclose,
-    pushback: VecDeque::with_capacity(128),
+    pushback: Vec::with_capacity(128),
   });
 }
 
@@ -291,10 +309,19 @@ pub fn close_mouth(forced: bool) -> Result<()> {
 /// Corresponds to TeX's \endinput
 pub fn flush_mouth() {
   if let Some(ref mut runtime) = runtime!() {
+    // Collect remaining mouth tokens in mouth order (t1, t2, t3, …),
+    // then splice them into the stack's BOTTOM in reverse order so
+    // that after the stack's existing top is popped, the mouth tokens
+    // come out in the original mouth order (t1 first, then t2, …).
+    let mut trailer: Vec<Token> = Vec::new();
     while !runtime.mouth.is_eol() {
       if let Some(token) = runtime.mouth.read_token() {
-        runtime.pushback.push_back(token);
+        trailer.push(token);
       }
+    }
+    if !trailer.is_empty() {
+      trailer.reverse();
+      runtime.pushback.splice(0..0, trailer);
     }
     // Stop reading (clear buffers, close file) but do NOT restore catcodes.
     // Catcodes are restored by close_mouth → finish() when the mouth is
@@ -361,7 +388,7 @@ fn read_internal_token() -> Option<Token> {
   } = *gullet_mut!();
   let pushback = &mut runtime.as_mut().unwrap().pushback;
   // Check in pushback first....
-  while let Some(pushback_token) = pushback.pop_front() {
+  while let Some(pushback_token) = pushback.pop() {
     match pushback_token.get_catcode() {
       Catcode::COMMENT => pending_comments.push_back(pushback_token),
       Catcode::MARKER => handle_marker(pushback_token),
@@ -614,7 +641,10 @@ pub fn read_raw_line() -> Option<String> {
   // but we'll convert them back to string.
   let mut gullet = gullet_mut!();
   if let Some(ref mut runtime) = gullet.runtime {
-    let tokens: Vec<Token> = runtime.pushback.drain(..).collect();
+    // Vec-as-stack stores bottom-to-top, but the caller expects
+    // "next to read" first — reverse the drained order to match the
+    // old VecDeque drain(..) which was front-to-back (= next-to-read).
+    let tokens: Vec<Token> = runtime.pushback.drain(..).rev().collect();
 
     // TODO
     // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
@@ -739,7 +769,7 @@ pub fn read_balanced(
       tokens.extend(gullet_mut!().pending_comments.drain(..));
     }
     // Examine pushback first
-    while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop_front() {
+    while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop() {
       match pushback_token.get_catcode() {
         Catcode::COMMENT => tokens.push(pushback_token),
         Catcode::MARKER => handle_marker(pushback_token),
@@ -2072,7 +2102,7 @@ pub fn flush() {
   }
   g.runtime = Some(MouthRuntime {
     mouth:     Mouth::default(),
-    pushback:  VecDeque::with_capacity(128),
+    pushback:  Vec::with_capacity(128),
     autoclose: true,
   });
   g.mouthstack = VecDeque::new();
