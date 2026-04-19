@@ -118,6 +118,18 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
   + `latexml_contrib::class_binding_names` (`mn2ebis`→`mn2e`, `IEEEtranTCOM`→`IEEEtran`)
 - Unified `(name, ext, loader)` BINDINGS table as single source of truth
 
+**High-fidelity parity tasks (currently-passing papers with XML divergence):**
+- [ ] **1209.2771 Figure 6 misshapen** — `\resizebox{6cm}{!}{\includegraphics*{.eps}}`
+  inside `{figure*}` + sidecap: Perl produces `inline-block height="149.2pt"
+  xscale="0.521457952339131"` (scale DOWN from EPS native size), Rust produces
+  `height="12.0pt" xscale="1.5967220330120122"` (scale UP from a wrong default
+  body size). Root cause: we don't read EPS BoundingBox to seed the intrinsic
+  graphics box size; `Digested::get_size` for a `<ltx:graphics>` whatsit returns
+  a placeholder. Fix path: port Perl's `Image::Size` / BoundingBox comment reader
+  to pre-populate `width`/`height` on `<ltx:graphics>` properties during
+  `\@includegraphics` properties. Until then, `\resizebox` scale factors are
+  wrong whenever the image native dims matter (figures *, two-column layouts).
+
 **Remaining 27 failing conversion_error papers grouped by root cluster:**
 - **Rc shared-Node (D3b)**: 0805.2376, 1007.2309, 1108.3241, 1204.5278 — dcpic/pictexwd/curves
   packages; raising `set_node_rc_guard` cap just shifts the symptom → genuine accumulating
