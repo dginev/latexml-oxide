@@ -134,6 +134,26 @@ callers — use `with_meaning(token, |m| … )` instead of
 `lookup_meaning(token)` whenever the caller only inspects the meaning
 (not moving ownership forward).
 
+**After pushback VecDeque→Vec (LIFO stack)** (session 117 commit
+2f48e7c4): unread_vec + push_front VecDeque overhead dropped from
+~4.3% to ~3.0%. Total instruction count: 17.33B → 16.46B (another
+~5%). The gullet pushback is pure LIFO in hot paths; the VecDeque
+head-pointer arithmetic was paying for a FIFO capability used only
+by \\endinput (`flush_mouth`), which is now handled via a single
+`splice(0..0, …)` on the rare path.
+
+**Cumulative perf trajectory on si.tex** (direct conversion, not
+cargo test):
+
+| Session phase | Ir (billion) | wall-clock |
+|---|---|---|
+| Session start | 17.87 | ~1.88s |
+| After with_meaning refactor | 17.33 | ~1.80s |
+| After read_balanced pre-size | 16.94 | ~1.77s |
+| After pushback VecDeque→Vec | 16.46 | ~1.74s |
+
+~8% fewer instructions, ~7% faster on this workload.
+
 #### D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
 
 - [ ] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
