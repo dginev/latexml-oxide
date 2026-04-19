@@ -176,7 +176,15 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
-      if is_at_internal && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
+      // Safe additional gate: public CharDef/Register entries (payload
+      // starts with `R\t…`). These set a character code or register value
+      // and never chain into expl3/hook machinery, so they can't trigger
+      // the cascade the expl3 short-circuit is guarding against. Allows
+      // plain-TeX math chardefs like `\ldotp`, `\cdotp`, `\intop` to load
+      // without opening the door to public Expandable bodies.
+      let is_public_register = data.starts_with("R\t");
+      if (is_at_internal || is_public_register)
+        && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(key, data)
       } else {
         Ok(false)
@@ -380,14 +388,18 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // \UseOneTimeHook) can reference expl3 hooks and internal state that
   // our engine doesn't fully support, causing cascading errors.
   //
-  // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`)
-  // Unsafe: public macros without `:` or `@` (e.g., \document, \hook) —
-  //         their bodies reference the hook system we don't fully support.
-  //         `_base.rs` + `_constructs.rs` already define the public CSes
-  //         the engine cares about; public-CS dump entries are redundant.
+  // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`),
+  //       AND public Register/CharDef entries (they set char codes and
+  //       can't chain into expl3 cascades).
+  // Unsafe: public Expandable macros without `:` or `@` (e.g., \document,
+  //         \hook) — their bodies reference the hook system we don't
+  //         fully support. `_base.rs` + `_constructs.rs` already define
+  //         the public CSes the engine cares about; public-CS Expandable
+  //         dump entries are redundant.
   let name = key.trim_start_matches('\\');
   let is_internal = name.contains(':') || name.contains('@');
-  if !is_internal {
+  let is_public_register = data.starts_with("R\t");
+  if !is_internal && !is_public_register {
     return Ok(false);
   }
 
