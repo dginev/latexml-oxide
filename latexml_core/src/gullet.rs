@@ -390,37 +390,29 @@ fn read_internal_token() -> Option<Token> {
 pub fn read_token() -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
   loop {
+    // Defensive checks: combine into a single mutable borrow to avoid
+    // the previous immutable→drop→mutable borrow dance. Also skip the
+    // pushback_limit probe entirely when no limit is set (the default
+    // for normal conversion runs).
     {
-      // each time we try to read, do the defensive checks
-      let gullet = gullet!();
-      // If we're without a runtime, bail
-      if gullet.runtime.is_none() {
+      let mut g = gullet_mut!();
+      if g.runtime.is_none() {
         return Ok(None);
       }
-      // some infinite loops are hard to predict and may be
-      // better guarded against via a global token limit.
-      let token_limit = gullet.token_limit;
-      let pushback_limit = gullet.pushback_limit;
-      let progress = gullet.progress;
-      let pushback_len = gullet.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
-      drop(gullet);
-      if let Some(limit) = token_limit {
-        gullet_mut!().progress = progress + 1;
-        if progress + 1 > limit {
-          Fatal!(
-            Timeout,
-            TokenLimit,
-            s!("Token limit of {} exceeded, infinite loop?", limit)
-          );
+      if let Some(limit) = g.token_limit {
+        g.progress += 1;
+        if g.progress > limit {
+          let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
+          drop(g);
+          Fatal!(Timeout, TokenLimit, msg);
         }
       }
-      if let Some(limit) = pushback_limit {
-        if pushback_len > limit {
-          Fatal!(
-            Timeout,
-            PushbackLimit,
-            s!("Pushback limit of {} exceeded, infinite loop?", limit)
-          );
+      if let Some(limit) = g.pushback_limit {
+        let pb_len = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
+        if pb_len > limit {
+          let msg = s!("Pushback limit of {} exceeded, infinite loop?", limit);
+          drop(g);
+          Fatal!(Timeout, PushbackLimit, msg);
         }
       }
     }
