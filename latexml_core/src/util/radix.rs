@@ -71,7 +71,13 @@ pub fn radix_up_greek(n: i64) -> String { radix_format(n, UP_GREEK) }
 // namely, it's very limited.... what happened to my much-improved version?
 const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 /// converts the number as a lowercase roman numeral
+///
+/// Perl parity: `roman(n)` returns the empty string for n <= 0. TeX's
+/// `\romannumeral` also produces no output for non-positive input.
 pub fn radix_roman(mut n: i64) -> String {
+  if n <= 0 {
+    return String::new();
+  }
   let mut s = String::new();
   let mut div = 1000;
   if n >= div {
