@@ -566,13 +566,17 @@ impl Definition for Register {
         let loc = if args.is_empty() {
           Cow::Borrowed(&self.address)
         } else {
+          // If an arg fails to revert to tokens (e.g. an unexpected Pair
+          // or KV variant), contribute an empty string to the location
+          // key rather than panicking. This keeps register assignment
+          // alive on edge cases where the caller passes an atypical arg.
           let args_string: String = args
             .into_iter()
             .map(|a| {
               a.as_tokens()
-                .expect("TODO: handle malformed values here.")
-                .unwrap()
-                .to_string()
+                .ok()
+                .flatten()
+                .map_or_else(String::new, |tks| tks.to_string())
             })
             .collect::<Vec<String>>()
             .join("");
