@@ -546,6 +546,20 @@ pub fn ref_step_id(ctype: &str) -> Result<HashMap<Stored>> {
     None => ctype.to_string(),
   });
   let unctr = s!("UN{ctr}");
+  // Perl Package.pm L863-864 ("Avoid fatals..."): if `\c@UN<ctr>` isn't
+  // defined as a register, `NewCounter(ctr)` creates both `\c@<ctr>` and
+  // `\c@UN<ctr>` and the associated `\the<ctr>@ID` expansion. Without it,
+  // unnumbered-section callers like `\specialsection*{}` (which amsart
+  // Let's to `\chapter*{}` even though amsart has no chapter counter) hit
+  // Error:undefined:\thechapter@ID because the counter was never created.
+  let unctr_cmd = s!("\\c@{unctr}");
+  let unctr_defined = state::lookup_register(&unctr_cmd, Vec::new())
+    .ok()
+    .flatten()
+    .is_some();
+  if !unctr_defined {
+    let _ = new_counter(&ctr, "document", None);
+  }
   step_counter(&unctr, false)?;
   maybe_preempt_refnum(&ctr, true);
   let cunctr_val = lookup_number(&s!("\\c@{unctr}"))
