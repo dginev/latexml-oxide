@@ -5,7 +5,9 @@ use latexml_core::common::{Config, DataSize, OutputFormat};
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
-use latexml_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
+use latexml_core::state::{
+  add_class_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch,
+};
 use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report_mut, s};
 use std::rc::Rc;
 
@@ -53,10 +55,21 @@ impl Converter {
   pub fn initialize_session(&mut self) -> Result<()> {
     // Add default package bindings
     set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+    // Expose the primary crate's class-binding names so `load_class`
+    // can implement Perl's LoadClass prefix-match fallback. Source of
+    // truth: `latexml_package::BINDINGS`.
+    add_class_binding_names(latexml_package::class_binding_names());
     // Add additional binding definitions if any
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
       set_extra_bindings_dispatch(closure.clone());
     }
+    // Also expose contrib's class-binding names so memoir / siamltex /
+    // scrbook / etc. participate in the same fallback pool. We unconditionally
+    // register latexml_contrib here because the canonical setup for both
+    // `latexml_oxide` and `cortex_worker` binaries loads it — if a downstream
+    // embedder replaces the dispatchers, they can register a different
+    // extension's class names the same way via `add_class_binding_names`.
+    add_class_binding_names(latexml_contrib::class_binding_names());
     // Prepare LaTeXML object — load TeX pool + user preloads
     // Perl: $self->initializeState($mode.".pool", @{$$self{preload} || []})
     let mut preloads = vec![s!("TeX.pool")];

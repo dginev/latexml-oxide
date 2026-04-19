@@ -258,6 +258,14 @@ pub struct State {
   pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// Names (without `.cls` suffix) of all class bindings the dispatchers
+  /// can load, stacked one slice per registered dispatcher. Used by
+  /// `load_class` to implement Perl's prefix-match fallback for unknown
+  /// class names (Package.pm L2702-2706). Populated at startup by each
+  /// binding crate via `add_class_binding_names`, so both
+  /// `latexml_package` and `latexml_contrib` contribute their classes to
+  /// the fallback pool.
+  pub class_binding_names:     Vec<&'static [&'static str]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
 }
@@ -308,6 +316,7 @@ impl Default for State {
       nomathparse:             false,
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      class_binding_names:     Vec::new(),
       label_mapping_hook:      None,
     }
   }
@@ -2451,6 +2460,27 @@ pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
 pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();
   state.extra_bindings_dispatch = Some(dispatcher);
+}
+
+/// Snapshot of all registered class-name slices (one per dispatcher).
+/// Callers (e.g. `load_class`) typically flatten this to iterate every
+/// candidate name across all registered binding crates.
+pub fn get_class_binding_names() -> Vec<&'static [&'static str]> {
+  state!().class_binding_names.clone()
+}
+/// Append one crate's class-name slice. Call this from each binding crate's
+/// dispatcher-registration site (e.g. `set_bindings_dispatch` companion
+/// for `latexml_package`, `set_extra_bindings_dispatch` companion for
+/// `latexml_contrib`). Duplicates are deduplicated by pointer so repeated
+/// calls from the same crate don't inflate the fallback pool.
+pub fn add_class_binding_names(names: &'static [&'static str]) {
+  let mut state = state_mut!();
+  // Pointer-level dedup: two slices from the same static are equal here.
+  let ptr = names.as_ptr();
+  if state.class_binding_names.iter().any(|s| s.as_ptr() == ptr) {
+    return;
+  }
+  state.class_binding_names.push(names);
 }
 
 pub fn get_label_mapping_hook() -> Option<LabelMappingHook> {

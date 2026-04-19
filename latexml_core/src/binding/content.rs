@@ -1206,21 +1206,62 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     noerror: true,
     ..InputDefinitionOptions::default()
   });
-  // Perl: if class not found, fall back to OmniBus (with raw cls loading allowed
-  // there so that the cmslatex.cls / etc. raw definitions still get executed).
+  // Perl Package.pm L2679 (LoadClass branch): scan the raw .cls for
+  // \usepackage/\RequirePackage/\LoadClass dependencies when no .cls.ltxml
+  // binding was found. This matters for unknown classes that nonetheless
+  // pull in well-known packages (e.g. ijms-preprint.cls loads amsmath);
+  // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
+  // undefined and the `_` characters then reach the stomach as subscript
+  // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
+  if !lookup_bool(&s!("{name}.cls_found_loaded")) {
+    maybe_require_dependencies(name, "cls");
+  }
+  // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
+  // Scan all known cls bindings (longest-first), pick the first whose name is a
+  // prefix of the requested class. This catches author-renamed classes like
+  //   mysvjour3.cls → ProvidesClass{svjour3} → binding: svjour3
+  //   mn2ebis.cls   → starts with "mn2e"   → binding: mn2e
+  //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
+  // Fall through to OmniBus only when nothing matches.
   if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
     && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
-      Warn!("missing_file", name, format!("Can't find binding for class {name} (using OmniBus)"));
       note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
-      return input_definitions("OmniBus", InputDefinitionOptions {
+
+      // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
+      //       my ($alternate) = grep { $class =~ /^\Q$_\E/ } @classes;
+      // Flatten across ALL registered binding crates (latexml_package +
+      // latexml_contrib + any future extensions) so contrib classes like
+      // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
+      let alternate = {
+        let all_slices = crate::state::get_class_binding_names();
+        let mut sorted: Vec<&str> = all_slices.iter()
+          .flat_map(|s| s.iter().copied())
+          .filter(|n| *n != "OmniBus" && *n != name)
+          .collect();
+        sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
+        sorted.into_iter().find(|candidate| name.starts_with(candidate))
+      };
+
+      let target = alternate.unwrap_or("OmniBus");
+      Warn!("missing_file", name,
+        format!("Can't find binding for class {name} (using {target})"),
+        "Anticipate undefined macros or environments");
+      let loaded = input_definitions(target, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("cls")),
-        options,
-        after,
+        options: options.clone(),
+        after: after.clone(),
         notex: true,
         handleoptions: true,
         noerror: true,
         ..InputDefinitionOptions::default()
       });
+      // Perl Package.pm L2715: after loading the alternate class binding, scan
+      // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
+      // alternate rarely covers all dependencies the renamed class adds.
+      if alternate.is_some() {
+        maybe_require_dependencies(name, "cls");
+      }
+      return loaded;
     }
   result
 }

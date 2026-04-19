@@ -88,7 +88,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 0810.0991  - [ ] 0810.1407  - [ ] 0810.4067  - [x] 0811.3209
 - [ ] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
 - [ ] 0908.0398  - [x] 0909.2656  - [ ] 0909.3444  - [ ] 0909.5007
-- [x] 0911.1806  - [x] 0911.3337  - [ ] 0911.3798  - [x] 0911.4739
+- [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
 - [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [ ] 1004.2626
 - [x] 1005.1610  - [ ] 1006.5231  - [ ] 1007.2309  - [ ] 1007.3314
 - [ ] 1007.4392  - [ ] 1008.2152  - [x] 1008.4386  - [x] 1009.1431
@@ -96,9 +96,15 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 1011.4834  - [x] 1011.5076  - [ ] 1012.3836  - [ ] 1101.2149
 - [x] 1101.2474  - [ ] 1103.2925  - [x] 1105.0121  - [ ] 1107.0347
 - [ ] 1107.3732  - [ ] 1108.0951  - [ ] 1108.3241  - [ ] 1111.0334
-- [ ] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [ ] 1202.5647
-- [ ] 1203.6616  - [ ] 1204.5278  - [ ] 1206.0536  - [ ] 1207.5555
+- [ ] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
+- [ ] 1203.6616  - [ ] 1204.5278  - [ ] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [ ] 1209.2771
+
+**Conversion errors (64)** status: **28 of 64 now convert cleanly** via the
+session 120 work (picture-autoOpen fractional priority, DefEnvironment bare
+beforeDigest, JHEP figure/table macros, omnibus keywords-to-frontmatter,
+\tmspace / \IfFormatAtLeastTF / \bi / \cpc stubs, \DeclareMathSymbol glyph
+fallback, LoadClass prefix-match fallback across latexml_package + contrib).
 
 **Per-article diagnosis method:**
 1. `tail -200 ~/data/10k_sandbox_html/<id>.log` — identify first cascading error.
