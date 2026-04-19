@@ -8,17 +8,27 @@ use crate::prelude::*;
 
 /// Perl: getXMArgID — step @lx@xmarg counter, return its value as a string.
 ///
-/// Pass `noreset: true` to skip the `state::lookup_tokens(\\cl@<ctr>)`
-/// probe that `step_counter` does to reset nested counters. `@lx@xmarg`
-/// is a private internal id generator — nothing nests inside it — so
-/// the probe was pure overhead on siunitx-heavy documents (one extra
-/// state lookup per XMDual argument, ~780 per si_test).
+/// Fast path for the xmath_helpers callers: they only read the
+/// register value — they never expand `\the@lx@xmarg@ID`. That means
+/// we don't need the full `step_counter` machinery (which also
+/// def_macro's `\@@lx@xmarg@ID`, probes `\cl@@lx@xmarg` for nested
+/// counters, and allocates two format! strings per call). Directly
+/// read+write the `\c@@lx@xmarg` register instead.
+///
+/// Callers in Core dialect.rs (`get_xmarg_id`) still go through the
+/// full `step_counter` because they *do* expand the macro form.
 pub fn get_xm_arg_id() -> Result<String> {
-  step_counter("@lx@xmarg", true)?;
-  let val = state::lookup_register("\\c@@lx@xmarg", Vec::new())?
+  let current = state::lookup_register("\\c@@lx@xmarg", Vec::new())?
     .map(|rv| rv.value_of())
     .unwrap_or(0);
-  Ok(val.to_string())
+  let next = current + 1;
+  state::assign_register(
+    "\\c@@lx@xmarg",
+    latexml_core::common::number::Number::new(next).into(),
+    Some(state::Scope::Global),
+    Vec::new(),
+  )?;
+  Ok(next.to_string())
 }
 
 /// Perl: I_arg(n) — create a parameter token #n (cc ARG).
