@@ -341,11 +341,16 @@ impl Parameter {
     };
     self.revert_catcodes()?;
 
+    // Single arena borrow to compute both name-prefix checks that
+    // this function needs — was two separate `arena::with` calls
+    // (each a RefCell borrow + interner resolve), now a single
+    // closure that returns the pair.
+    let (is_optional_match, is_until) = arena::with(self.name, |name| {
+      (name.starts_with("OptionalMatch"), name.starts_with("Until"))
+    });
+
     // Perl: experiment: skip spaces after a successful OptionalMatch read
-    if !value_arg.is_none()
-      && self.optional
-      && arena::with(self.name, |name| name.starts_with("OptionalMatch"))
-    {
+    if !value_arg.is_none() && self.optional && is_optional_match {
       gullet::skip_spaces()?;
     }
 
@@ -354,7 +359,7 @@ impl Parameter {
         // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens>
         // in the long-run        Until *may* have a value, but it also may *not*, both OK.
         // So... except it from the error message here
-        if !arena::with(self.name, |name| name.starts_with("Until")) {
+        if !is_until {
           let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
           Error!(
             "expected",
