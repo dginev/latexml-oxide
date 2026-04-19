@@ -2275,7 +2275,7 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 //   return $code; }
 // #======================================================================
 
-// TODO: Continue here -- need to diagnoze why the indirect model is not returning
+// TODO: Continue here -- need to diagnose why the indirect model is not returning
 // an intermediate "ltx:p" when asking for "#PCDATA" inside "ltx:_CaptureBlock_",
 // instead getting an intermediate "ltx:para".
 
