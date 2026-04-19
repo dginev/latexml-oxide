@@ -320,24 +320,19 @@ impl Parameter {
 
     let closure = &self.reader;
     let value_from_reader: ArgWrap = closure(self.inner.as_ref(), &self.extra)?;
-    let value_arg = if value_from_reader.is_tokens() {
-      match value_from_reader.owned_tokens() {
-        Some(mut value) => {
-          if let Some(ref semi_chars) = self.semiverbatim {
-            value = value.neutralize(semi_chars);
-          }
-          ArgWrap::Tokens(value)
-        },
-        None => {
-          if self.optional {
-            ArgWrap::None
-          } else {
-            ArgWrap::Tokens(Tokens!())
-          }
-        },
+    // Direct enum destructure: was `is_tokens() then owned_tokens()`
+    // which matched twice (once for the is_tokens check, again for
+    // the owned_tokens dispatch over all ArgWrap variants). This
+    // function fires on every parameter read of every macro call —
+    // ~2M times on si.tex per callgrind.
+    let value_arg = match value_from_reader {
+      ArgWrap::Tokens(mut value) => {
+        if let Some(ref semi_chars) = self.semiverbatim {
+          value = value.neutralize(semi_chars);
+        }
+        ArgWrap::Tokens(value)
       }
-    } else {
-      value_from_reader
+      other => other,
     };
     self.revert_catcodes()?;
 
