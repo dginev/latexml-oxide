@@ -725,7 +725,12 @@ pub fn read_balanced(
       return Ok(Tokens!());
     }
   }
-  let mut tokens = Vec::new();
+  // Pre-size the token accumulator: most balanced reads are short
+  // macro arguments (~4–16 tokens). This skips the Vec's early
+  // doublings that the callgrind profile attributes to
+  // `raw_vec::finish_grow` (1% of total instructions in read_balanced
+  // alone).
+  let mut tokens: Vec<Token> = Vec::with_capacity(16);
   let mut level = 1;
   loop {
     // we'll keep comments in the result
