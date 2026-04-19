@@ -143,7 +143,7 @@ Sources: libxml2 FFI (UAF on unlinking), libxslt C (namespaced elements), Rust u
 Outstanding:
 - [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
 - [ ] Replace unsafe-over-FFI with safe wrappers where practical.
-- [ ] 0805.2376 "shared Node" error (Rc mutation during tree traversal).
+- [ ] Rc `Can not mutably reference a shared Node "text"` cluster — strong count grows past cap (libxml `set_node_rc_guard`). Raising the cap shifts the symptom one node higher (cap 50 → err at 51; cap 128 → err at 129), so it's a genuine accumulating-holder leak, not benign sharing. Hits all 4 dcpic / pictexwd / curves papers: 0805.2376, 1007.2309, 1108.3241, 1204.5278. Likely in alignment or diagram-cell machinery — the shared handle is always `"text"`. Leaving at guard=50 until the real root cause is found.
 
 #### D4. Performance — parallel scaling and allocations
 
