@@ -466,7 +466,19 @@ impl BoxOps for Alignment {
   }
 
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
-    todo!(); // call the mutable version only, we need to rearrange the alignment first!
+    // Alignments must be absorbed via `be_absorbed_mut` because
+    // `normalize_alignment` mutates the carrier (rearranging rows,
+    // applying border specs, etc). The `Digested::be_absorbed` dispatch
+    // for `DigestedData::Alignment` correctly calls `be_absorbed_mut`;
+    // this immutable path should never be reached in practice. Surface
+    // a meaningful error rather than a bare `todo!()` panic if an
+    // unexpected caller lands here.
+    fatal!(
+      Internal,
+      Misdefined,
+      "Alignment::be_absorbed called — use be_absorbed_mut instead \
+       (alignment rearrangement requires &mut self)"
+    );
   }
   fn be_absorbed_mut(&mut self, document: &mut Document) -> Result<Vec<Node>> {
     let ismath = self.is_math;
