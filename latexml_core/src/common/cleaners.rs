@@ -59,7 +59,11 @@ pub fn clean_id(key: &str) -> String {
   let cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
   let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
   // Remove common idiom:
-  let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$inner");
+  // Perl parity: CleanID strips `${}^{foo}$` down to just `foo`.
+  // The regex captures that inner content as named group `label`; the
+  // replacement must reference it by the correct name (`$inner` was a
+  // stale typo that silently erased the captured text).
+  let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$label");
   // transform some forbidden chars
   let cleaned_3 = cleaned_2
     .replace(':', "..") // No colons!
@@ -186,6 +190,14 @@ mod tests {
   fn clean_id_empty_stays_empty() {
     assert_eq!(clean_id(""), "");
     assert_eq!(clean_id("   "), "");
+  }
+
+  #[test]
+  fn clean_id_dirty_idiom_preserves_label() {
+    // Perl: $key =~ s/\$\{\}\^\{(.*?)\}\$/$1/g; retains the captured
+    // content. Common TeX idiom from latex generates ${}^{foo}$.
+    assert_eq!(clean_id("${}^{foo}$"), "foo");
+    assert_eq!(clean_id("bar${}^{tag}$"), "bartag");
   }
 
   #[test]
