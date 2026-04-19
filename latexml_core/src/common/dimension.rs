@@ -59,11 +59,13 @@ impl Dimension {
     if spec.is_empty() {
       Ok(0.0)
     } else if let Some(cap) = SPEC_RE.captures(spec) {
-      // Dimensions given.
-      let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
-      let num: f64 = num_str.parse::<f64>().expect(&num_str);
-      let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
-      let converted_unit = convert_unit(&unit);
+      // Dimensions given. SPEC_RE's numeric part is `-?\d*\.?\d*` which
+      // can match empty (e.g. input "pt"); Perl's `fixpoint($1, ...)`
+      // coerces "" → 0 via numeric context, so unwrap_or(0.0) keeps parity.
+      let num_str = cap.get(1).map_or("", |m| m.as_str());
+      let num: f64 = num_str.parse::<f64>().unwrap_or(0.0);
+      let unit = cap.get(2).map_or("", |m| m.as_str());
+      let converted_unit = convert_unit(unit);
       Ok(fixpoint(num, Some(converted_unit)) as f64)
     } else {
       // When scaled points passed in (typically the result of Perl calculations on other
@@ -73,7 +75,8 @@ impl Dimension {
       // As it turns out, using int() here results in non-terminating loops in pgf/tikz.
       // So, we use round (Knuth style)
       // Note that divide and such explicitly use int(), however!
-      Ok(kround(spec.parse::<f64>().expect(spec)) as f64)
+      // Perl parity: `kround($spec || 0)` — non-numeric input coerces to 0.
+      Ok(kround(spec.parse::<f64>().unwrap_or(0.0)) as f64)
     }
   }
 }
