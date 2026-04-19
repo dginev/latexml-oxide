@@ -56,7 +56,7 @@ pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
 
 /// cleans a string down to characters acceptable for an id attribute
 pub fn clean_id(key: &str) -> String {
-  let cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
+  let cleaned = Cow::Borrowed(key.trim()); // Trim leading/trailing whitespace
   let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
   // Remove common idiom:
   // Perl parity: CleanID strips `${}^{foo}$` down to just `foo`.
@@ -139,7 +139,7 @@ pub fn trimmed_comma_list(text: &str) -> Vec<String> {
 
 /// cleans a string down to characters acceptable for a URL
 pub fn clean_url(url: &str) -> String {
-  let cleaned = url.trim_start().trim_end(); // Trim leading/trailing, in any case
+  let cleaned = url.trim(); // Trim leading/trailing whitespace
   TILDE_NOISE_RE.replace_all(cleaned, "~").to_string()
 }
 
