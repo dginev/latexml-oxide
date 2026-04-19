@@ -48,7 +48,10 @@ pub fn i_arg(n: &str) -> Token {
 
 /// Perl: I_xmarg(id, arg) — generates `\lx@xmarg{id}{arg}` tokens.
 pub fn i_xmarg(id: &str, arg: Tokens) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@xmarg"), T_BEGIN!()];
+  // Pre-size: \lx@xmarg {id} {arg} = 1 + 2 + id.len() + 2 + arg.len()
+  let mut tks: Vec<Token> = Vec::with_capacity(5 + id.len() + arg.len());
+  tks.push(T_CS!("\\lx@xmarg"));
+  tks.push(T_BEGIN!());
   tks.extend(ExplodeText!(id));
   tks.push(T_END!());
   tks.push(T_BEGIN!());
@@ -59,7 +62,10 @@ pub fn i_xmarg(id: &str, arg: Tokens) -> Tokens {
 
 /// Perl: I_xmref(id) — generates `\lx@xmref{id}` tokens.
 pub fn i_xmref(id: &str) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@xmref"), T_BEGIN!()];
+  // Pre-size: \lx@xmref {id} = 1 + 2 + id.len()
+  let mut tks: Vec<Token> = Vec::with_capacity(3 + id.len());
+  tks.push(T_CS!("\\lx@xmref"));
+  tks.push(T_BEGIN!());
   tks.extend(ExplodeText!(id));
   tks.push(T_END!());
   Tokens::new(tks)
@@ -181,7 +187,11 @@ pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
   if kv.is_empty() {
     return Tokens::default();
   }
-  let mut tks = vec![T_OTHER!("[")];
+  // Pre-size: 2 brackets + per-kv (key_len + value_len + 4 structure
+  // tokens: `=`, `{`, `}`, optional `,`).
+  let total: usize = 2 + kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>();
+  let mut tks: Vec<Token> = Vec::with_capacity(total);
+  tks.push(T_OTHER!("["));
   for (i, (key, value)) in kv.iter().enumerate() {
     if i > 0 {
       tks.push(T_OTHER!(","));
