@@ -1250,7 +1250,7 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
         if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
           // Decode directly from the arena-borrowed &str — was
           // cloning via `.to_string()` into a temporary String.
-          if let Some(defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
+          if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
             let pres = defn.presentation;
             if !pres.is_empty() {
               // Emit raw presentation tokens — six_parse_literalunits will wrap
@@ -1269,7 +1269,7 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
           if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-            if let Some(defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
+            if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               let pres = defn.presentation;
               if !pres.is_empty() {
                 result.extend(pres.unlist());
@@ -1313,7 +1313,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       if let Some(name) = read_brace_group_str(&mut iter) {
         // Look up in siunitx_macros mapping
         if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-          if let Some(defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
+          if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
             defns.push(defn);
           }
         }
@@ -1323,7 +1323,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
           if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-            if let Some(mut defn) = arena::with(encoded, |s| decode_unit_defn_from_encoded(&name, s)) {
+            if let Some(mut defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               // Apply arg to the appropriate field
               if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
                 defn.power = Some(Tokenize!(&arg));
@@ -1370,20 +1370,53 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(iter: &mut std::iter::Peekabl
   None
 }
 
-/// Decode a SixUnitDefn from "type|presentation|power|base" format
-fn decode_unit_defn_from_encoded(name: &str, encoded: &str) -> Option<SixUnitDefn> {
-  let parts: Vec<&str> = encoded.splitn(4, '|').collect();
-  if parts.is_empty() { return None; }
-  Some(SixUnitDefn {
-    name: name.to_string(),
-    unit_type: parts[0].to_string(),
-    presentation: Tokenize!(parts.get(1).unwrap_or(&"")),
-    power: parts.get(2).and_then(|p| if p.is_empty() { None } else { Some(Tokenize!(p)) }),
-    base: parts.get(3).and_then(|b| b.parse().ok()),
-    arg: None,
-    color: None,
-  })
+// Cache of decoded SixUnitDefn "template" (everything except the
+// caller-provided `name`) keyed by the encoded string's interned
+// SymStr. Every \SI / \num / \si invocation re-decodes the same
+// unit definitions (e.g. `\metre`, `\kilo`) for every usage — the
+// raw decode allocates 3 Strings + 2 Token vectors each time.
+// Caching by the encoded SymStr is automatically invalidation-safe:
+// if a \DeclareSIUnit redefines `\metre`, the new encoded string
+// interns to a different SymStr, so the old cache entry is simply
+// never looked up again.
+thread_local! {
+  static UNIT_DEFN_CACHE: std::cell::RefCell<
+    rustc_hash::FxHashMap<::latexml_core::common::arena::SymStr, SixUnitDefn>,
+  > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
 }
+
+/// Decode a SixUnitDefn from "type|presentation|power|base" format.
+/// Takes the already-interned `encoded_sym` so we can cache-lookup
+/// without re-pinning. `name` is the caller's lookup key (not part of
+/// the encoded value).
+fn decode_unit_defn_from_encoded_sym(
+  name: &str,
+  encoded_sym: ::latexml_core::common::arena::SymStr,
+) -> Option<SixUnitDefn> {
+  // Fast path: cache hit by the encoded string's SymStr.
+  if let Some(cached) = UNIT_DEFN_CACHE.with(|c| c.borrow().get(&encoded_sym).cloned()) {
+    let mut defn = cached;
+    defn.name = name.to_string();
+    return Some(defn);
+  }
+
+  let defn = ::latexml_core::common::arena::with(encoded_sym, |encoded| {
+    let parts: Vec<&str> = encoded.splitn(4, '|').collect();
+    if parts.is_empty() { return None; }
+    Some(SixUnitDefn {
+      name: name.to_string(),
+      unit_type: parts[0].to_string(),
+      presentation: Tokenize!(parts.get(1).unwrap_or(&"")),
+      power: parts.get(2).and_then(|p| if p.is_empty() { None } else { Some(Tokenize!(p)) }),
+      base: parts.get(3).and_then(|b| b.parse().ok()),
+      arg: None,
+      color: None,
+    })
+  })?;
+  UNIT_DEFN_CACHE.with(|c| c.borrow_mut().insert(encoded_sym, defn.clone()));
+  Some(defn)
+}
+
 
 /// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
 fn six_enable_unit_macros(overwrite: bool) {
