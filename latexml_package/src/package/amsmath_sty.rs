@@ -340,6 +340,17 @@ LoadDefinitions!({
   // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
   DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");
 
+  // Real amsmath defines `\tmspace#1#2#3` as
+  //   \def\tmspace#1#2#3{\ifmmode\mskip#1#2\else\kern#1#3\fi}
+  // i.e. math-mode muskip or text-mode kern. Perl's LaTeXML amsmath
+  // binding never defines it (it is elsewhere replaced by the expanded
+  // equivalents in latex_dump.pool.ltxml), but real source that expands
+  // amsmath's `\,` via its original macro path still invokes `\tmspace`
+  // directly. We model it as a no-op consumer of its three arguments —
+  // the visual spacing is lost, but we avoid a cascade of
+  // Error:undefined that trips `_` into subscript-in-text-mode chaos.
+  DefMacro!("\\tmspace{}{}{}", "");
+
   //======================================================================
   // Section 4.3 Dots
   DefMath!("\\dotsc", "\u{2026}", role => "ID", alias => "\\dotsc");

@@ -8455,6 +8455,15 @@ LoadDefinitions!({
     }
   });
 
+  // LaTeX3 format-version guard (ltcmd.dtx 2020/10/01 kernel). Source that
+  // checks for format features writes
+  //   \IfFormatAtLeastTF{YYYY/MM/DD}{then}{else}
+  // expecting the `then` branch on modern LaTeX. LaTeXML simulates a
+  // current-enough format, so always take `#2`. This is how babel's
+  // greek.ldf probes for LaTeX3 catcode primitives; without the stub it
+  // emits Error:undefined and bails out of the language setup.
+  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
+
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
     let file_string = file_tks.to_string();
