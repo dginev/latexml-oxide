@@ -171,6 +171,11 @@ LoadDefinitions!({
   // Perl L114-116: \bcal calligraphic bold primitive
   DefPrimitive!("\\bcal", "",
     font => { family => "caligraphic", series => "bold", shape => "upright", forcebold => true });
+  // Perl iopart_support.sty.ltxml L117-119: \bi upright bold italic font
+  // (math-mode analogue of \mathbf that keeps the italic family). arxiv
+  // papers using iopart / iopart-num call this for vectors.
+  DefPrimitive!("\\bi", "",
+    font => { family => "italic", series => "bold", shape => "upright", forcebold => true });
   DefMacro!("\\dsty", "\\displaystyle");
   DefMacro!("\\tsty", "\\textstyle");
   DefMacro!("\\ssty", "\\scriptstyle");
