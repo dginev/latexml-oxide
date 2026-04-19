@@ -713,7 +713,7 @@ pub fn read_balanced(
       None => false,
       Some(token) => {
         token.get_catcode() == Catcode::BEGIN
-          || state::lookup_meaning(&token) == Some(Stored::Token(T_BEGIN!()))
+          || state::with_meaning(&token, |m| matches!(m, Some(Stored::Token(t)) if *t == T_BEGIN!()))
       },
     };
     if !is_open {
@@ -798,8 +798,15 @@ pub fn read_balanced(
           }
           // Note: use general-purpose lookup, since we may reexamine $defn below
           if expansion_level != Off && cc.is_active_or_cs() {
-            let meaning_opt = lookup_meaning(&token);
-            if let Some(defn) = meaning_opt.as_ref().and_then(|item| item.to_definition()) {
+            // Borrow the stored meaning via with_meaning so the Stored
+            // enum is not cloned per token. We extract (a) whether a
+            // meaning exists at all (for the undefined-CS diagnostic
+            // below) and (b) the Rc<dyn Definition> if it's a proper
+            // definition — both are cheap (bool + Rc-clone).
+            let (has_meaning, defn_opt) = state::with_meaning(&token, |m| {
+              (m.is_some(), m.and_then(|s| s.to_definition()))
+            });
+            if let Some(defn) = defn_opt {
               if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
                 local_current_token(token);
                 let expansion = defn.invoke(false)?;
@@ -828,7 +835,7 @@ pub fn read_balanced(
                 expire_current_token();
                 continue;
               }
-            } else if cc == Catcode::CS && meaning_opt.is_none() {
+            } else if cc == Catcode::CS && !has_meaning {
               // cs SHOULD have defn by now; report early!
               generate_error_stub(&token)?;
             }
@@ -1800,9 +1807,9 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
   }
   // Check for implicit space: CS/ACTIVE let to a space token
   if token.get_catcode() == Catcode::CS || token.get_catcode() == Catcode::ACTIVE {
-    if let Some(Stored::Token(let_tok)) = state::lookup_meaning(token) {
-      return let_tok.get_catcode() == Catcode::SPACE;
-    }
+    return state::with_meaning(token, |m| {
+      matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::SPACE)
+    });
   }
   false
 }
