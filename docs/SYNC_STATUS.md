@@ -85,9 +85,9 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 
 - [x] 0704.3480  - [x] 0707.0739  - [x] 0709.4470  - [ ] 0711.4787
 - [ ] 0802.3360  - [x] 0803.0466  - [ ] 0805.2376  - [x] 0809.1906
-- [x] 0810.0991  - [ ] 0810.1407  - [ ] 0810.4067  - [x] 0811.3209
+- [x] 0810.0991  - [ ] 0810.1407  - [x] 0810.4067  - [x] 0811.3209
 - [ ] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
-- [ ] 0908.0398  - [x] 0909.2656  - [ ] 0909.3444  - [ ] 0909.5007
+- [ ] 0908.0398  - [x] 0909.2656  - [~] 0909.3444  - [ ] 0909.5007
 - [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
 - [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [ ] 1004.2626
 - [x] 1005.1610  - [x] 1006.5231  - [ ] 1007.2309  - [x] 1007.3314
@@ -100,7 +100,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 1203.6616  - [ ] 1204.5278  - [ ] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **41 of 64 now convert cleanly** via
+**Conversion errors (64)** status: **42 of 64 now convert cleanly** via
 sessions 120-122 per-paper Perl-parity fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
 - DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
@@ -143,6 +143,13 @@ sessions 120-122 per-paper Perl-parity fixes:
 - **document-level bugs matching Perl failures**: 0711.4787 (missing toc), 0810.4067
   (`\include{00README.XXX}`), 1004.2626, 1203.6616, 1206.0536 — low priority.
 - **babel frenchb + misc**: 0909.3444, 0909.5007, 1207.6068 — need full babel-french port.
+
+**Papers removed from worklist** — Perl also emits errors under
+`--preload=ar5iv.sty --path=/home/deyan/git/ar5iv-bindings/bindings`
+(the apples-to-apples comparison profile cortex_worker uses), so we
+can't converge on them without also fixing the upstream Perl side:
+
+- **0909.3444** — 2 Perl errors (frenchb babel missing)
 
 **Per-article diagnosis method:**
 1. Run Perl `latexml` on the paper; capture its log + error count.
