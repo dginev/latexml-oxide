@@ -543,17 +543,16 @@ impl Mouth {
   /// Note: we need mutability, as we may refill the internal BufReader
   /// when performing the check.
   pub fn has_more_input(&mut self) -> bool {
-    !self.is_eol()
-      || !self.buffer.is_empty()
-      || !self.raw_buffer.is_empty()
-      || (self.reader.is_some()
-        && !self
-          .reader
-          .as_mut()
-          .unwrap()
-          .fill_buf()
-          .expect("fill_buf should have no reason to fail.")
-          .is_empty())
+    if !self.is_eol() || !self.buffer.is_empty() || !self.raw_buffer.is_empty() {
+      return true;
+    }
+    // Peek the underlying reader if present. A fill_buf I/O error is treated
+    // as end-of-input (return false) rather than panicking — the caller will
+    // naturally stop requesting tokens and the Mouth will be closed out.
+    match self.reader.as_mut() {
+      Some(r) => r.fill_buf().map(|buf| !buf.is_empty()).unwrap_or(false),
+      None => false,
+    }
   }
 
   /// Read the next token, or undef if exhausted.
