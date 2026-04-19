@@ -90,7 +90,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 0908.0398  - [x] 0909.2656  - [ ] 0909.3444  - [ ] 0909.5007
 - [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
 - [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [ ] 1004.2626
-- [x] 1005.1610  - [ ] 1006.5231  - [ ] 1007.2309  - [ ] 1007.3314
+- [x] 1005.1610  - [ ] 1006.5231  - [ ] 1007.2309  - [x] 1007.3314
 - [x] 1007.4392  - [ ] 1008.2152  - [x] 1008.4386  - [x] 1009.1431
 - [x] 1010.1244  - [x] 1010.3600  - [x] 1010.4240  - [x] 1011.1955
 - [x] 1011.4834  - [x] 1011.5076  - [ ] 1012.3836  - [ ] 1101.2149
@@ -98,19 +98,50 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 1107.3732  - [ ] 1108.0951  - [ ] 1108.3241  - [ ] 1111.0334
 - [ ] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
 - [ ] 1203.6616  - [ ] 1204.5278  - [ ] 1206.0536  - [x] 1207.5555
-- [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [ ] 1209.2771
+- [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **28 of 64 now convert cleanly** via the
-session 120 work (picture-autoOpen fractional priority, DefEnvironment bare
-beforeDigest, JHEP figure/table macros, omnibus keywords-to-frontmatter,
-\tmspace / \IfFormatAtLeastTF / \bi / \cpc stubs, \DeclareMathSymbol glyph
-fallback, LoadClass prefix-match fallback across latexml_package + contrib).
+**Conversion errors (64)** status: **37 of 64 now convert cleanly** via session
+120 per-paper Perl-parity fixes:
+- picture-autoOpen fractional priority (port of Perl's 0.5 openability)
+- DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
+- `\author` accepts `OptionalMatch:* [short]` (mn, mn2e, elsart, revtex journal forms)
+- `\braket/\Braket/\set/\Set` preserve token identity (fix `\mbf r` → `\mbfr` fusion)
+- aa_support + mn2e_support redefine `{equation}/{equation*}` to `Let(T_MATH, \lx@dollar@in@mathmode)`
+- `ref_step_id` auto-creates counter when `\c@UN<ctr>` undefined (Perl L863-864)
+- `twoopt` real impl (`\newcommandtwoopt` / `\renewcommandtwoopt` / `\providecommandtwoopt`)
+- `\DeclareMathSymbol` always defines CS, raw-codepoint fallback (FontDecode undef)
+- graphics_sty: `{rotatebox}` env BEFORE `\rotatebox` DefConstructor
+- JHEP loads hyperref; JHEP `{floatingfigure}` / `{floatingtable}` / `\DOUBLEFIGURE`
+- omnibus `\keywords@onearg` → `\@add@frontmatter` (not inline env)
+- `\tmspace` / `\IfFormatAtLeastTF` / `\bi` / `\cpc` stubs
+- LoadClass prefix-match fallback across `latexml_package::class_binding_names`
+  + `latexml_contrib::class_binding_names` (`mn2ebis`→`mn2e`, `IEEEtranTCOM`→`IEEEtran`)
+- Unified `(name, ext, loader)` BINDINGS table as single source of truth
+
+**Remaining 27 failing conversion_error papers grouped by root cluster:**
+- **Rc shared-Node (D3b)**: 0805.2376, 1007.2309, 1108.3241, 1204.5278 — dcpic/pictexwd/curves
+  packages; raising `set_node_rc_guard` cap just shifts the symptom → genuine accumulating
+  leak in alignment / diagram-cell Rc<_Node> handles.
+- **cp1251 / T2A cyrillic**: 1201.1473, 1209.1578 — full encoding table + cyrillic CS port.
+- **expl3 catcode leakage**: 1008.2152 (`\sum_`), 1107.0347 (`\delta_`) — tied to
+  project_expl3_short_circuit; blocked on 4 gates.
+- **missing / cascade XMTok**: 0802.3360, 0810.1407, 0811.4212, 0908.0398, 0909.5007,
+  1006.5231, 1012.3836, 1101.2149, 1108.0951, 1111.0334, 1107.3732, 1112.4846
+  — each a specific upstream path divergence; apply `wisdom_upstream_error_attribution`.
+- **document-level bugs matching Perl failures**: 0711.4787 (missing toc), 0810.4067
+  (`\include{00README.XXX}`), 1004.2626, 1203.6616, 1206.0536 — low priority.
+- **babel frenchb + misc**: 0909.3444, 0909.5007, 1207.6068 — need full babel-french port.
 
 **Per-article diagnosis method:**
-1. `tail -200 ~/data/10k_sandbox_html/<id>.log` — identify first cascading error.
-2. `unzip ~/data/10k_sandbox/<id>.zip` in a tmp dir; find the offending construct.
-3. Distill a minimal `.tex` reproducer; compare `latexml` vs `latexml_oxide` outputs.
-4. Trace to a Perl behavior in `LaTeXML/lib/` and patch the Rust translation.
+1. Run Perl `latexml` on the paper; capture its log + error count.
+2. If Perl errors too with the *same* CS, skip — likely a shared document bug.
+3. If Perl succeeds (or gets further), apply `wisdom_upstream_error_attribution`:
+   the divergence is earlier than the named symptom. Read the `.sty`/`.cls` source,
+   trace the conditional / option / flag / deferred-hook machinery, identify what
+   branch Perl takes that Rust doesn't.
+4. Ensure all 423 tests still pass; mark the entry `[x]` here with a one-line note.
+5. Use the parallel sweep (`parallel -j 12`) after every landed fix to catch cascaded
+   benefits and regressions across the full 64-paper set.
 5. Ensure all 423 tests still pass; mark the entry `[x]` here with a one-line note.
 
 ### Phase D: 10k-Document Sandbox
@@ -136,11 +167,66 @@ Each cycle adds targeted fixes for specific undefined/misbehaving commands per l
 
 **Known content-model gap — FIXED (session 119):** Perl's `Tag('ltx:picture', autoOpen => 0.5)` wraps bare picture primitives (`\line`, `\circle`, `\vector`, `\put`) used outside `{picture}`. Ported the fractional-priority model in `compute_indirect_model`/`_aux`: priorities are scaled u32 (100 = full, 50 = half), multiplied at each recursion step, and the best-priority start tag wins. Picture gets 50, everything else gets 100, so picture only wraps when no fuller path exists. `Tag!("ltx:picture", auto_open => true, auto_close => true, …)` is now enabled. 9 `malformed:ltx:g` papers fixed, plus `ltx:line`/`ltx:rect` collateral.
 
-#### D3. Performance catalog — after D1 reaches 7,898 / 0 errors
+#### D3. Performance catalog — slow-paper backlog (session 120 baseline)
 
-1. List tasks >60s with wall-clock time
-2. Profile top offenders (flamegraph, token count, loop detection)
-3. Targeted optimizations
+Parallel `cortex_worker --standalone` sweep of the 64 Phase-D0 conversion_error
+papers at `-j 12` recorded wall time per paper after the session 120 coverage
+fixes. Papers >5s are perf candidates; >10s are priority. Each was run with
+a 30s cortex_worker timeout so all completed inside the run.
+
+**Tier A — clean AND slow (>10s, 0 errors)** — purest signal for profiling:
+
+| id | dt (s) | note |
+|----|-------:|------|
+| 0906.1883 | 31.2 | aa class; why slow? (profile first) |
+| 1011.1955 | 20.9 | amsart, `\DeclareMathSymbol` intensive |
+| 1009.1431 | 19.5 | — |
+| 1008.4386 | 17.4 | — |
+| 0909.2656 | 14.5 | — |
+| 0911.4739 | 11.1 | JHEP |
+| 1005.1610 | 10.3 | iopart |
+| 0803.0466 | 10.0 | aa |
+
+**Tier B — clean, 5-10s** (0909.5007 removed, still has errors):
+
+| id | dt (s) |
+|----|-------:|
+| 1207.6456 |  9.5 |
+| 1003.2989 |  9.4 |
+| 1011.4834 |  5.5 |
+
+**Tier C — still failing, also slow** (profile after fix):
+
+| id | dt (s) | errs |
+|----|-------:|-----:|
+| 0802.3360 | 27.0 | 3 |
+| 1209.1578 | 25.1 | 130 (cyrillic flood — likely cp1251 fallback hot loop) |
+| 1107.3732 | 22.1 | 1 |
+| 1203.6616 | 15.8 | 2 |
+| 0909.5007 | 14.4 | 2 |
+| 0711.4787 | 11.8 | 2 |
+| 1108.0951 |  8.1 | 1 |
+| 1004.2626 |  6.5 | 6 |
+
+**Active perf tasks (D3):**
+- [ ] Pick 0906.1883 (clean, 31s) for a flamegraph run — biggest clean signal.
+  Compare with Perl's wall on the same input.
+- [ ] 1209.1578 cyrillic cascade — likely a hot-loop in cp1251 missing-char
+  recovery path; profile as errs-dropping pair with the cyrillic encoding port.
+- [ ] Capture the 10+ Tier A papers as a perf corpus alongside `complex/si.tex`
+  so session-over-session regressions are visible.
+- [ ] Record each tier's dt trend in `docs/PERFORMANCE.md` for each major
+  commit (the existing si.tex Ir trajectory only probes the siunitx workload).
+
+**Method (after session 120 feedback_parallel_sweeps memory):**
+```bash
+printf '%s\n' $ids | parallel -j 12 --line-buffer \
+  "t0=\$(date +%s.%N); errs=\$(./target/release/cortex_worker --standalone \
+    --input ~/data/10k_sandbox/{}.zip --output /tmp/{}.zip --timeout 30 2>&1 \
+    | grep -cE 'Error:'); t1=\$(date +%s.%N); \
+   dt=\$(echo \"\$t1-\$t0\" | bc -l); \
+   printf '%s errs=%s dt=%.1fs\\n' '{}' \"\$errs\" \"\$dt\""
+```
 
 #### D3b. Stability — eliminate SIGSEGV
 
