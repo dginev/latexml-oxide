@@ -162,19 +162,11 @@ Earlier session fixes:
   `\@includegraphics` properties. Until then, `\resizebox` scale factors are
   wrong whenever the image native dims matter (figures *, two-column layouts).
 
-**Remaining 27 failing conversion_error papers grouped by root cluster:**
-- **Rc shared-Node (D3b)**: 0805.2376, 1007.2309, 1108.3241, 1204.5278 — dcpic/pictexwd/curves
-  packages; raising `set_node_rc_guard` cap just shifts the symptom → genuine accumulating
-  leak in alignment / diagram-cell Rc<_Node> handles.
-- **cp1251 / T2A cyrillic**: 1201.1473, 1209.1578 — full encoding table + cyrillic CS port.
-- **expl3 catcode leakage**: 1008.2152 (`\sum_`), 1107.0347 (`\delta_`) — tied to
-  project_expl3_short_circuit; blocked on 4 gates.
-- **missing / cascade XMTok**: 0802.3360, 0810.1407, 0811.4212, 0908.0398, 0909.5007,
-  1006.5231, 1012.3836, 1101.2149, 1108.0951, 1111.0334, 1107.3732, 1112.4846
-  — each a specific upstream path divergence; apply `wisdom_upstream_error_attribution`.
-- **document-level bugs matching Perl failures**: 0711.4787 (missing toc), 0810.4067
-  (`\include{00README.XXX}`), 1004.2626, 1203.6616, 1206.0536 — low priority.
-- **babel frenchb + misc**: 0909.3444, 0909.5007, 1207.6068 — need full babel-french port.
+**All 64 conversion_error papers are now clean** (session 123). The
+clusters above are kept as historical index — each was resolved via
+per-paper Perl-parity investigation using `wisdom_upstream_error_attribution`.
+Only 2 systemic aborts remain outside conversion_error (xy-pic OOM:
+0710.1208, 1004.3503).
 
 **Papers removed from worklist** — Perl also emits errors under
 `--preload=ar5iv.sty --path=/home/deyan/git/ar5iv-bindings/bindings`
