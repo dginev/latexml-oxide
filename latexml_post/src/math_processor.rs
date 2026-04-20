@@ -154,17 +154,14 @@ pub fn process_math(
   doc.mark_xm_node_visibility();
   processor.preprocess(doc, &maths);
 
-  // Count Math nodes, then process one at a time by re-fetching each time.
-  // This avoids holding multiple Rc references which prevents new_child.
-  let n = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]").len();
-
-  // Process in reverse order: nested math first (carried along with outer)
-  // Re-fetch each iteration to get a fresh single reference.
-  for i in (0..n).rev() {
-    let maths = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]");
-    if let Some(math) = maths.into_iter().nth(i) {
-      process_math_node(processor, doc, &math, keep_xmath)?;
-    }
+  // Re-fetch once after preprocess in case it restructured things (matches
+  // Perl Post.pm L307-308 "# Re-Fetch the math nodes, in case preprocessing
+  // has messed them up!!!"). Then iterate in reverse so nested math is
+  // converted first and carried along with the enclosing math.
+  let maths = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]");
+  let n = maths.len();
+  for math in maths.into_iter().rev() {
+    process_math_node(processor, doc, &math, keep_xmath)?;
   }
 
   // Clean up _cvis/_pvis internal visibility markers from XMath nodes

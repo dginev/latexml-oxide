@@ -182,13 +182,31 @@ historical fix needs verification.
   cortex --bin cortex_worker`: 1024/1159 = 88.4% clean on same sample.
   Failure breakdown:
   - 51 watchdog (exit 134) — pathological serial hangs / very slow.
-  - 8 SIGSEGV (exit 139) — **all 8 in MathML post-processing** (the
+  - 8 SIGSEGV (exit 139) — **all 8 FIXED in session 127**: all eight
+    were in the MathML::Presentation post-processing path (the
     conversion log reports "Conversion complete: No obvious problems"
     then `latexml_post MathML::Presentation` abort). Papers: 0709.2286,
     0710.1208, 1110.2158, 1212.2052, 1402.6805, 1504.04055, 1605.07431,
-    1611.00957. Verified: `--no-pmml` suppresses the crash on 1611.00957.
-    Open task: find the specific XMath node shape that trips the
-    `pmml`/`pmml_apply`/`pmml_array` recursion.
+    1611.00957. Root causes + fixes landed:
+    1. **`Document::replace_node` text-merge UAF** (core path, affected
+       conversion output — see the 1212.2052 entry above). Cleared
+       0709.2286, 1402.6805, 1504.04055, 1212.2052.
+    2. **`process_math` O(n²) refetch** (`latexml_post/math_processor.rs`)
+       — the iteration re-evaluated `//ltx:Math[...]` inside the loop
+       once per Math node, turning 3845 Maths into 3845² XPath evals.
+       Matched Perl Post.pm L307-320 (single fetch, iterate reverse).
+       Cleared 1611.00957 alone; unblocked 1212.2052's end-to-end
+       post-processing path (which was timing out at 60s, now 11s).
+    3. **Eager materialization of `ltx:picture` inside `pmml_text_aux`**
+       (`latexml_post/mathml/mod.rs`). The prior code wrapped the
+       picture node lazily as `NodeData::XmlNode(node.clone())`; once
+       the enclosing XMath was unlinked by `process_math_node`, the
+       Rust Node wrapper's libxml2 pointer became dangling, so
+       `add_xml_node`'s `get_properties` SIGSEGV'd reading a freed
+       attribute. New helper `convert_xm_text_content` mirrors Perl's
+       `MathProcessor::convertXMTextContent` — eagerly rebuilds the
+       subtree as owned `NodeData`. Cleared 0710.1208, 1110.2158,
+       1605.07431.
   - 2 panic (exit 101) — 1410.8508, 1608.08252. Not yet triaged.
 
 **Follow-up task: dump Let-alias preservation** — Perl LaTeXML's dump

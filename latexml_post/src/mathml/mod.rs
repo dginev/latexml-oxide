@@ -1102,11 +1102,19 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
           results
         }
         "ltx:picture" => {
-          // Picture in text: wrap in mtext
+          // Picture in text: wrap in mtext. Eagerly materialize the picture
+          // subtree into owned NodeData so the result is not tied to the
+          // source node's libxml2 lifetime. Perl: MathProcessor.pm
+          // convertXMTextContent (Post.pm L456-489). A lazy
+          // `NodeData::XmlNode(node.clone())` here SIGSEGVs in
+          // `add_xml_node` once the parent XMath is unlinked (its children
+          // are stripped into a detached document fragment and later
+          // accesses via the stale rust-libxml wrapper dereference freed
+          // memory — reproducible on 0710.1208 / 1110.2158 / 1605.07431).
           vec![NodeData::Element {
             tag: "m:mtext".to_string(),
             attributes: None,
-            children: vec![NodeData::XmlNode(node.clone())],
+            children: convert_xm_text_content(doc, node, true),
           }]
         }
         _ => {
@@ -1123,6 +1131,93 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
     }
     _ => vec![],
   }
+}
+
+/// Eagerly materialize an XMText-or-picture subtree into owned NodeData.
+///
+/// Port of `LaTeXML::Post::MathProcessor::convertXMTextContent`
+/// (Post.pm L456-489). Walks `node` recursively and rebuilds the subtree
+/// as owned NodeData, so downstream consumers do not depend on the
+/// source node's libxml2 lifetime. Internal `_*` attributes and stray
+/// `xml:id` are dropped (Perl mirrors this); `fragid` would be remapped
+/// to a fresh id in Perl but MathML::Presentation does not carry a
+/// processor-level id suffix through this path, so we drop it too and
+/// let the surrounding MathML ids govern.
+///
+/// When `convert_spaces` is true, leading/trailing whitespace on text
+/// nodes is replaced with NBSP so the rendered MathML does not collapse
+/// the space. Nested `ltx:Math` would in Perl re-enter the MathML
+/// converter; we preserve it as a plain element subtree here (same
+/// limitation as the enclosing pmml_text_aux path: nested math in
+/// mtext is uncommon, and the XSLT stage can still render it).
+pub fn convert_xm_text_content(
+  _doc: &PostDocument,
+  node: &Node,
+  convert_spaces: bool,
+) -> Vec<NodeData> {
+  use libxml::tree::NodeType;
+
+  fn rebuild(node: &Node, convert_spaces: bool) -> Option<NodeData> {
+    match node.get_type() {
+      Some(NodeType::TextNode) => {
+        let mut text = node.get_content();
+        if convert_spaces {
+          if text.starts_with(char::is_whitespace) {
+            text = format!("\u{00A0}{}", text.trim_start());
+          }
+          if text.ends_with(char::is_whitespace) {
+            text = format!("{}\u{00A0}", text.trim_end());
+          }
+        }
+        Some(NodeData::Text(text))
+      }
+      Some(NodeType::ElementNode) => {
+        let tag = {
+          let local = node.get_name();
+          match node.get_namespace() {
+            Some(ns) => {
+              let prefix = ns.get_prefix();
+              if prefix.is_empty() {
+                local
+              } else {
+                format!("{prefix}:{local}")
+              }
+            }
+            None => local,
+          }
+        };
+        // Copy attributes, skipping internal `_*`, `xml:id`, and `fragid`.
+        // Matches Perl convertXMTextContent (Post.pm L479-483); the
+        // `fragid → xml:id` remap requires the MathProcessor's IDSuffix
+        // which this helper does not receive — drop both here rather
+        // than forge a wrong id.
+        let mut attrs: HashMap<String, String> = HashMap::new();
+        for (k, v) in node.get_attributes() {
+          if k.starts_with('_') || k == "xml:id" || k == "fragid" {
+            continue;
+          }
+          attrs.insert(k, v);
+        }
+        let children: Vec<NodeData> = node
+          .get_child_nodes()
+          .iter()
+          .filter_map(|c| rebuild(c, convert_spaces))
+          .collect();
+        Some(NodeData::Element {
+          tag,
+          attributes: if attrs.is_empty() { None } else { Some(attrs) },
+          children,
+        })
+      }
+      _ => None,
+    }
+  }
+
+  node
+    .get_child_nodes()
+    .iter()
+    .filter_map(|c| rebuild(c, convert_spaces))
+    .collect()
 }
 
 /// Unwrap an mrow if it has no attributes.
