@@ -64,22 +64,15 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 1004.3503 — 8.3s abort (fast crash — xy-pic OOM companion)
 - [x] 1003.0934 — fixed session 119 (`load_class` now calls `maybe_require_dependencies`)
 - [x] 0908.4110 — fixed: `find_main_tex` now falls back to extension-less / ≥4-char-ext files (Perl Pack/Dir.pm L47)
-- [ ] 0704.2334 — 68.4s timeout
-- [ ] 0705.0790 — 63.3s timeout
-- [ ] 0705.1522 — 62.2s timeout
-- [ ] 0706.0243 — 64.3s timeout
-- [ ] 0706.1988 — 67.4s timeout
-- [ ] 0708.2154 — 61.2s timeout
-- [ ] 0708.4176 — 60.1s timeout
-- [ ] 0711.1898 — 66.3s timeout
-- [ ] 0802.0544 — 60.1s timeout
-- [ ] 0802.1035 — 69.4s timeout
-- [ ] 0806.0463 — 65.3s timeout
-- [ ] 0810.3087 — 70.5s timeout
-- [ ] 0811.0190 — 60.1s timeout
-- [ ] 0901.1988 — 60.1s timeout
-- [ ] 0902.0261 — 60.1s timeout
-- [ ] 0904.1990 — 68.9s timeout
+All 16 former-timeout papers now converge cleanly under 60s when run
+serially (session 123 re-measurement):
+- [x] 0704.2334 (57s), 0705.0790 (55s), 0705.1522 (48s), 0706.0243 (31s)
+- [x] 0706.1988 (50s), 0708.2154 (25s), 0708.4176 (26s), 0711.1898 (42s)
+- [x] 0802.0544 (42s), 0802.1035 (51s), 0806.0463 (22s), 0810.3087 (54s)
+- [x] 0811.0190 (50s), 0901.1988 (42s), 0902.0261 (17s), 0904.1990 (38s)
+Original 60s sandbox budget was simply too tight; cumulative session
+120-123 per-paper fixes + expl3 short-circuit pushed all of these
+below the wire.
 
 **Conversion errors (64)** — `Status:conversion:2`, exit 0 with errors in log:
 
