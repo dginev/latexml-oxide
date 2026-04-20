@@ -301,3 +301,40 @@ Fixed by matching Perl's properties-based approach.
 **Rust fix:** Moved `svg_next_object()` to `properties` closures for clipPath
 constructors (`\lxSVG@drawpath@clipped`, `\lxSVG@discardpath@clipped`), matching
 Perl's digestion-phase counter increment timing.
+
+---
+
+## 13. Duplicate xml:id generation for `\subequations` after `\addtocounter{equation}{-1}` inside theorem with shared `equation` counter
+
+**Perl source:** `LaTeXML/Package/amsmath.sty.ltxml` (subequations environment)
+plus shared-counter interaction with `\newtheorem{thm}[equation]{...}`.
+
+**Symptom:** Documents with the pattern:
+```tex
+\newtheorem{thm}[equation]{Theorem}
+...
+\begin{thm} \label{...}
+...
+\end{thm}
+\addtocounter{equation}{-1}
+\begin{subequations}
+\begin{equation}\label{eq:foo}
+...
+\end{equation}
+\end{subequations}
+```
+trigger `Info:malformed:id Duplicated attribute xml:id` warnings in Perl LaTeXML.
+The preceding theorem got xml:id e.g. `S5.E2` (via the shared equation counter);
+the following subequations' equationgroup, after the `\addtocounter{-1}`,
+tries to use the same number and claims `S5.E2` as well.
+
+**Minimal trigger:** arxiv 1106.1389 (14 duplicate-id warnings in Perl).
+
+**Impact in Perl:** non-fatal (Info-level warnings only) — Perl's post-processing
+continues and emits a valid-enough HTML.
+
+**Impact in Rust:** same duplicate-id generation, but Rust's libxml2 validation
+layer spins on the duplicate-id resolution during post-processing scan, causing
+a 100s+ wall-clock time and 16 GB RSS where Perl completes in a few seconds.
+That O(n²) amplification in libxml2 is a Rust-specific follow-up (noted in
+`SYNC_STATUS.md`); the underlying duplicate-id generation is upstream Perl behavior.
