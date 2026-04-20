@@ -4217,12 +4217,28 @@ LoadDefinitions!({
       ref_step_item_counter(undigested) }
   );
 
-  DefEnvironment!("{trivlist}",
-    "<ltx:itemize>#body</ltx:itemize>",
+  // Perl latex_constructs.pool.ltxml L1720-1726:
+  //   DefConstructor('\trivlist', "<ltx:itemize _autoclose='1'>", mode=>internal_vertical, …);
+  //   DefConstructor('\endtrivlist', sub { maybeCloseElement('ltx:itemize') }, beforeDigest=>Digest('\par'));
+  // The `\endtrivlist` is an *idempotent* closer — `maybeCloseElement` is a
+  // no-op when the element is already closed. That matters when user code
+  // calls `\endtrivlist` directly (e.g. arxiv 0908.0398's `\cqfd → …\endtrivlist`),
+  // then `\end{proof}` closes the outer trivlist, then `\end{proof}`'s own
+  // `\endproof → \endtrivlist` fires again. Perl swallows the double-close;
+  // Rust's previous DefEnvironment emitted a strict env-frame closer that
+  // errored on the second call.
+  DefConstructor!("\\trivlist",
+    "<ltx:itemize _autoclose='1'>",
+    mode => "internal_vertical",
     properties => {
-      begin_itemize("trivlist", None, BeginItemizeOptions::default()) },
-    before_digest_end => { Digest!("\\par")?; },
-    mode => "internal_vertical"
+      begin_itemize("trivlist", None, BeginItemizeOptions::default())?
+    }
+  );
+  DefConstructor!("\\endtrivlist",
+    sub[document, _args, _props] {
+      document.maybe_close_element("ltx:itemize")?;
+    },
+    before_digest => { Digest!("\\par")?; }
   );
 
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
