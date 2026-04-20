@@ -145,21 +145,21 @@ LoadDefinitions!({
     let cs_str = token.to_string();
     // Determine which font CS to look up
     let lookup_cs = if cs_str == "\\font" {
-      // Current font — look up current_FontDef, fallback to \lx@default@font
-      match state::lookup_value("current_FontDef") {
+      // Current font — look up current_FontDef, fallback to \lx@default@font.
+      // with_value avoids the Stored envelope clone; Token is Copy.
+      state::with_value("current_FontDef", |v| match v {
         Some(Stored::Token(t)) => t.to_string(),
         _ => s!("\\lx@default@font"),
-      }
+      })
     } else {
       cs_str
     };
     let key = s!("fontinfo_{}", lookup_cs);
-    let name = state::lookup_value(&key).and_then(|stored| {
-      if let Stored::Font(f) = stored {
-        f.name.as_ref().map(|n| n.to_string())
-      } else {
-        None
-      }
+    // Same pattern for the font-name read — we only need the owned name
+    // String, never the Rc<Font>.
+    let name = state::with_value(&key, |v| match v {
+      Some(Stored::Font(f)) => f.name.as_ref().map(|n| n.to_string()),
+      _ => None,
     });
     Tokens::new(Explode!(name.unwrap_or_else(|| s!("fontname not available"))))
   });
