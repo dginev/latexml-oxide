@@ -434,10 +434,10 @@ fn lst_add_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>
       state::assign_value(&key, Stored::String(arena::pin(class)), None);
       // Track the word in the word list for case-insensitive duplication
       let list_key = "LST_WORD_LIST";
-      let mut list = match state::lookup_value(list_key) {
+      let mut list = state::with_value(list_key, |v| match v {
         Some(Stored::Strings(v)) => v.to_vec(),
         _ => Vec::new(),
-      };
+      });
       list.push(arena::pin(&word));
       state::assign_value(list_key, Stored::Strings(list.into()), None);
     }
@@ -452,10 +452,9 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
       word = format!("{pfx}{word}");
     }
     let key = s!("LST_WORDS@{word}@class");
-    if let Some(val) = state::lookup_value(&key) {
-      if val.to_string() == class {
-        state::assign_value(&key, Stored::None, None);
-      }
+    let matches_class = state::with_value(&key, |v| v.map(|s| s.to_string() == class).unwrap_or(false));
+    if matches_class {
+      state::assign_value(&key, Stored::None, None);
     }
   }
 }
@@ -752,7 +751,7 @@ fn build_char_class(class: &str) -> String {
     if let Some(c) = char::from_u32(code) {
       let escaped = regex::escape(&c.to_string());
       let key = s!("LST_CHAR@{class}@{escaped}");
-      if matches!(state::lookup_value(&key), Some(Stored::Bool(true))) {
+      if state::with_value(&key, |v| matches!(v, Some(Stored::Bool(true)))) {
         result.push(c);
       }
     }
