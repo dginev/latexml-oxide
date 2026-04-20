@@ -114,40 +114,18 @@ macro_rules! pin {
   }};
 }
 
-/// Distinct-symbol sentinel threshold. `string-interner`'s BufferBackend
-/// uses u32 byte offsets (~4GB range); average arena string is ~20 bytes,
-/// so overflow risk starts around 100M unique symbols. We fire at 10M —
-/// comfortably below the danger zone, and several orders of magnitude
-/// above what any healthy document needs (observed peak: ~17k symbols).
-///
-/// Historical note: a prior version of this sentinel gated on total call
-/// count (50M). That was wrong — dedup-heavy hot loops (e.g. the runaway
-/// error recovery in 1210.4211) pin the *same* dozen keys tens of
-/// millions of times without risking arena overflow at all. The correct
-/// signal is distinct-symbol count, which only grows when genuinely
-/// unique strings enter the arena.
-const ARENA_SYMBOL_PANIC_THRESHOLD: usize = 10_000_000;
-
 /// Assign a string into the arena, returning a unique symbol.
+///
+/// No overflow guard: the main-level wall-clock watchdog (watchdog.rs)
+/// catches genuinely runaway loops that would eventually saturate the
+/// BufferBackend's u32 byte-offset range (~4.29 GB) long before any
+/// real-world workload approaches it. Earlier versions had both a
+/// call-count and a distinct-symbol sentinel; the call-count one
+/// false-fired on dedup-heavy hot loops, and the distinct-symbol one
+/// added a per-call `arena.len()` read on a hot path (~350k calls
+/// per doc). Neither cost was paying for itself.
 pub fn pin<S: AsRef<str>>(text: S) -> SymStr {
-  with_arena_mut(|arena| {
-    let sym = arena.get_or_intern(text);
-    // Gate the size check behind a cheap modulus — checking `arena.len()`
-    // on every pin is itself cheap (it's a single atomic load in the
-    // hot path, since `len` isn't tracked in any per-symbol structure),
-    // but we only need to panic once at the threshold, so sampling is
-    // sufficient.
-    let len = arena.len();
-    if len == ARENA_SYMBOL_PANIC_THRESHOLD {
-      panic!(
-        "arena interner reached {len} distinct symbols — approaching u32 \
-         byte-offset overflow. A runaway loop is producing genuinely \
-         unique strings. See SYNC_STATUS 0906.1883 for context (prior \
-         incident: 163M Mouth::default() pinning unique Anonymous String N)."
-      );
-    }
-    sym
-  })
+  with_arena_mut(|arena| arena.get_or_intern(text))
 }
 
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
