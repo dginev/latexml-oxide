@@ -239,7 +239,7 @@ pub fn egroup() -> Result<()> {
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
       "unexpected",
-      get_current_token().unwrap(),
+      get_current_token().unwrap_or(T_CS!("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
         crate::state::lookup_string_from_sym(crate::pin!("MODE")),
@@ -250,7 +250,7 @@ pub fn egroup() -> Result<()> {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
-      get_current_token().unwrap(),
+      get_current_token().unwrap_or(T_CS!("\\?")),
       s!("Attempt to close boxing group; {}", current_frame_message())
     );
   } else {
@@ -270,7 +270,7 @@ pub fn endgroup() -> Result<()> {
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
       "unexpected",
-      get_current_token().unwrap().to_string(),
+      get_current_token().map(|t| t.to_string()).unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
         crate::state::lookup_string_from_sym(crate::pin!("MODE")),
@@ -281,7 +281,7 @@ pub fn endgroup() -> Result<()> {
     // or group was opened with \bgroup
     Error!(
       "unexpected",
-      get_current_token().unwrap().to_string(),
+      get_current_token().map(|t| t.to_string()).unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close non-boxing group; {}",
         current_frame_message()
