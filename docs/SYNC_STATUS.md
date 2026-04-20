@@ -67,15 +67,23 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 
 **Known perf cliff (session 123 investigation):**
 - [~] 0906.1883 — was 1m47s with 10001 cascading errors. Root cause
-  narrowed: local `birkmult.cls` triggers `maybe_require_dependencies`
-  which pre-loads amstex/amsmath/amsthm BEFORE OmniBus fallback. Without
-  the local cls, OmniBus runs directly with no prior deps and the paper
-  converges in 0.9s. The pre-load ordering corrupts the mouth stack
-  during some subsequent macro expansion. **Session 123 mitigation**:
+  narrowed further (session 123, final turn): during the run, something
+  creates ~163 MILLION `Mouth::default()` instances in a tight loop
+  (gid counter observed at 163,174,849). Each new Mouth generates a
+  unique "Anonymous String N" source, each pinned into the arena
+  (~19 bytes each). At 163M × 19 bytes ≈ 3.1 GB, the string-interner's
+  `BufferBackend` byte-offset exceeds `u32::MAX` (4.3 GB) and wraps —
+  `arena::pin` returns SymStr values like 3, 95, 187 (post-wrap), which
+  resolve to garbage (middle of unrelated interned strings). That's the
+  "garbled Reading from ..." text observed in error emission. This is
+  a DOWNSTREAM symptom; the primary bug is the 163M-mouth creation
+  loop — likely triggered by the local `birkmult.cls` +
+  dep-scan-load-order interaction. A dedicated debugger/profiler
+  session is needed to trace the loop. **Session 123 mitigation**:
   `reading_from_mouth` now rate-limits the "Mouth is unexpectedly already
   closed" cascade (first 10 normal, suppress to 50, then Fatal). Process
-  now reaches post-processing with a clean error signal instead of 17MB
-  of log noise. Root cause still pending a debugger session.
+  reaches post-processing with a clean error signal instead of 17MB of
+  log noise.
 All 16 former-timeout papers now converge cleanly under 60s when run
 serially (session 123 re-measurement):
 - [x] 0704.2334 (57s), 0705.0790 (55s), 0705.1522 (48s), 0706.0243 (31s)
