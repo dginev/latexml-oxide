@@ -2969,8 +2969,12 @@ impl Document {
           tref.set_attribute("idref", &branchid)?;
         } // Change dualid refs to branchid
       } else {
-        branch.set_attribute("xml:id", &dualid)?; // Just use same ID on the branch
-        self.record_id_with_node(&dualid, &branch);
+        // Assign the dual's id to the branch. Record first so we
+        // receive a deduplicated id if something else claimed it
+        // between the `unrecord_id` above and now — write the
+        // deduped value, not the original.
+        let deduped = self.record_id_with_node(&dualid, &branch);
+        branch.set_attribute("xml:id", &deduped)?;
       }
     }
     // Direct DOM swap: Perl uses replaceChild (no re-creation, no hooks fired twice)
