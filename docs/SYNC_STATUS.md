@@ -163,16 +163,12 @@ Earlier session fixes:
 - Unified `(name, ext, loader)` BINDINGS table as single source of truth
 
 **High-fidelity parity tasks (currently-passing papers with XML divergence):**
-- [ ] **1209.2771 Figure 6 misshapen** — `\resizebox{6cm}{!}{\includegraphics*{.eps}}`
-  inside `{figure*}` + sidecap: Perl produces `inline-block height="149.2pt"
-  xscale="0.521457952339131"` (scale DOWN from EPS native size), Rust produces
-  `height="12.0pt" xscale="1.5967220330120122"` (scale UP from a wrong default
-  body size). Root cause: we don't read EPS BoundingBox to seed the intrinsic
-  graphics box size; `Digested::get_size` for a `<ltx:graphics>` whatsit returns
-  a placeholder. Fix path: port Perl's `Image::Size` / BoundingBox comment reader
-  to pre-populate `width`/`height` on `<ltx:graphics>` properties during
-  `\@includegraphics` properties. Until then, `\resizebox` scale factors are
-  wrong whenever the image native dims matter (figures *, two-column layouts).
+- [x] **1209.2771 Figure 6 misshapen** — FIXED session 123. Ported Perl's
+  LaTeXML::Util::Image::image_size EPS branch: `read_image_dimensions`
+  now parses `%%HiResBoundingBox:` / `%%BoundingBox:` (with DOS EPSI
+  binary preview offset support). `\resizebox{6cm}{!}{\includegraphics*
+  {.eps}}` now produces `height="149.2pt" xscale="0.521457..."` matching
+  Perl to 10 significant digits.
 
 **All 64 conversion_error papers are now clean** (session 123). The
 clusters above are kept as historical index — each was resolved via
