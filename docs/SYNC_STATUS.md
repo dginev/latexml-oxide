@@ -65,25 +65,20 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 1003.0934 — fixed session 119 (`load_class` now calls `maybe_require_dependencies`)
 - [x] 0908.4110 — fixed: `find_main_tex` now falls back to extension-less / ≥4-char-ext files (Perl Pack/Dir.pm L47)
 
-**Known perf cliff (session 123 investigation):**
-- [~] 0906.1883 — was 1m47s with 10001 cascading errors. Root cause
-  narrowed further (session 123, final turn): during the run, something
-  creates ~163 MILLION `Mouth::default()` instances in a tight loop
-  (gid counter observed at 163,174,849). Each new Mouth generates a
-  unique "Anonymous String N" source, each pinned into the arena
-  (~19 bytes each). At 163M × 19 bytes ≈ 3.1 GB, the string-interner's
-  `BufferBackend` byte-offset exceeds `u32::MAX` (4.3 GB) and wraps —
-  `arena::pin` returns SymStr values like 3, 95, 187 (post-wrap), which
-  resolve to garbage (middle of unrelated interned strings). That's the
-  "garbled Reading from ..." text observed in error emission. This is
-  a DOWNSTREAM symptom; the primary bug is the 163M-mouth creation
-  loop — likely triggered by the local `birkmult.cls` +
-  dep-scan-load-order interaction. A dedicated debugger/profiler
-  session is needed to trace the loop. **Session 123 mitigation**:
-  `reading_from_mouth` now rate-limits the "Mouth is unexpectedly already
-  closed" cascade (first 10 normal, suppress to 50, then Fatal). Process
-  reaches post-processing with a clean error signal instead of 17MB of
-  log noise.
+**0906.1883 — FIXED session 123 (final turn):**
+Root cause identified and patched in `latexml_package::package::omnibus_cls`:
+autoload stubs for `\theoremstyle`, `\newtheorem` aliases, and
+`\begin{theorem}` envs were overwriting pre-loaded amsthm CSes when
+`maybe_require_dependencies` scanned a local `.cls` that
+`\RequirePackage{amsthm}`. The stub calls `require_package("amsthm")`
+(no-op, already loaded), then re-emits the original CS — triggering
+itself infinitely. Loop generated 163M `Mouth::default()` instances
+(gid overflow), each pinning a unique anonymous source into the arena,
+blowing the `string-interner` past `u32::MAX` byte-offset and
+corrupting SymStr values. Guard each stub with `if IsDefined!(&cs)
+{ continue; }`. Also added a 50M-pin runaway guard in `arena::pin`
+as a defense-in-depth sentinel for similar future issues.
+**Result:** 1m47s + 10001 errors → 1.07s + 0 errors.
 All 16 former-timeout papers now converge cleanly under 60s when run
 serially (session 123 re-measurement):
 - [x] 0704.2334 (57s), 0705.0790 (55s), 0705.1522 (48s), 0706.0243 (31s)
