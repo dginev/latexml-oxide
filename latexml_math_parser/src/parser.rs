@@ -1341,10 +1341,17 @@ fn textrec(
       string
     }
   } else if tag == pin!("ltx:XMDual") {
+    // XMDual normally has exactly 2 children (content-branch, presentation-
+    // branch). A malformed dual can show up in practice — e.g. after a
+    // partial rewrite that detached one side, or from a replacement pattern
+    // whose semantic arm is empty. Fall back to the empty string so the
+    // tex-attribute serialization stays intact rather than aborting the
+    // whole conversion.
     let children = element_nodes(&node);
-    let content = children
-      .first()
-      .expect("XMDual should always have 2 child elements.");
+    let Some(content) = children.first() else {
+      log::warn!("XMDual element has no child arguments");
+      return String::new();
+    };
     textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the
   // semantic form
   // Fall back to
