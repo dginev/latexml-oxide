@@ -2062,13 +2062,17 @@ where FnR: FnOnce() -> Result<R> {
       break;
     } else if gullet!().mouthstack.is_empty() {
       if should_emit_mouth_closed() {
+        // `arena::to_string` clones the resolved &str into an owned String
+        // BEFORE we hand it to Error! — a following `arena::pin` triggered
+        // deep inside generate_message!/get_location() can grow the
+        // interner's buffer and invalidate a borrowed &str (observed as
+        // garbled, buffer-adjacent symbol content in 0906.1883 errors).
+        let src = arena::to_string(context_mouth_source);
         Error!(
           "unexpected",
           "<closed>",
           "Mouth is unexpectedly already closed",
-          arena::with(context_mouth_source, |source| s!(
-            "Reading from {source}, but it has already been closed."
-          ))
+          s!("Reading from {src}, but it has already been closed.")
         );
       }
       record_mouth_closed_error();
@@ -2091,13 +2095,12 @@ where FnR: FnOnce() -> Result<R> {
         // mouth was already consumed. Don't close this mouth (it belongs to an
         // outer reading_from_mouth call). Just error and stop.
         if should_emit_mouth_closed() {
+          let src = arena::to_string(context_mouth_source);
           Error!(
             "unexpected",
             "<closed>",
             "Mouth is unexpectedly already closed",
-            arena::with(context_mouth_source, |source| s!(
-              "Reading from {source}, but it has already been closed (found different non-closable mouth on top)."
-            ))
+            s!("Reading from {src}, but it has already been closed (found different non-closable mouth on top).")
           );
         }
         record_mouth_closed_error();
