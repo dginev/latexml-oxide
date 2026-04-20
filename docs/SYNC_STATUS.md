@@ -60,8 +60,8 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 
 **Aborts + error (20)** — process-level failures (SIGABRT / exit=1):
 
-- [ ] 0710.1208 — 2.5s abort (fast crash — xy-pic OOM)
-- [ ] 1004.3503 — 8.3s abort (fast crash — xy-pic OOM companion)
+- [x] 0710.1208 — FIXED session 124: `\lx@xy@crv@decipher` used `do_expand` on `\xycrvdrop@` / `\xycrvconn@`, re-invoking `\dir{-->}` drawing and looping via the curve pipeline. Now reads the macro *body* (Perl uses `LookupDefinition(...)->getExpansion`). 21GB OOM → 1.35s / 232MB.
+- [x] 1004.3503 — fixed by same `macro_body` change. 6.17s / 898MB, 0 errors.
 - [x] 1003.0934 — fixed session 119 (`load_class` now calls `maybe_require_dependencies`)
 - [x] 0908.4110 — fixed: `find_main_tex` now falls back to extension-less / ≥4-char-ext files (Perl Pack/Dir.pm L47)
 
@@ -173,29 +173,19 @@ Earlier session fixes:
   {.eps}}` now produces `height="149.2pt" xscale="0.521457..."` matching
   Perl to 10 significant digits.
 
-**All 64 conversion_error papers are now clean** (session 123). The
-clusters above are kept as historical index — each was resolved via
-per-paper Perl-parity investigation using `wisdom_upstream_error_attribution`.
-Only 2 systemic aborts remain outside conversion_error (xy-pic OOM:
-0710.1208, 1004.3503).
+**All 64 conversion_error papers are now clean** (session 123) AND **both
+xy-pic OOM aborts FIXED** (session 124). Phase D0 worklist now at **84/84 converged**.
 
-**Minimal repro (bisected session 124):**
-
-```latex
-\documentclass{article}
-\usepackage[all]{xy}
-\begin{document}
-$$\xymatrix{ A \ar@/^5ex/@{-->}[r] & B }$$
-\end{document}
-```
-
-Exactly the pair `@/curve/` + `@{style}` OOMs (21GB / 19s kill).
-`@/curve/` alone → 0.18s OK, `@{style}` alone → 0.17s OK,
-`@/curve/` + `@<offset>` → 0.19s OK. So the interaction is curve-shape + dash-style only.
-
-Key diagnostic from `--timeout=5` run (before kill): **one `Warn:expected:<number>` for `\ifcase` with `next token is Some("}")`** arrives just as `<xymatrix 2x1` is opened, then memory explodes to 6.8GB in ~3s. The pin-sentinel (50M) does not fire → growth is NOT arena; not pushback (previously ruled out); not per-digested token (`--token-limit=2000000` no effect). Growth is likely in a runaway macro body / Tokens storage.
-
-Perl handles the same input in 2.9s / 330MB. So some xy `\ifcase` branch falls through to a zero-case loop under Rust-only conditions; `xyarc.tex` has 4 `\ifcase` sites and is the next place to bisect (look at ones reached under curve-style interaction).
+**Session 124 xy-pic fix:** `\lx@xy@crv@decipher` (xylatexml_tex.rs L799) was
+calling `macro_string` (which runs `do_expand`) on `\xycrvdrop@` and `\xycrvconn@`
+to inspect what drop/connection was requested. The Perl source uses
+`ToString(LookupDefinition(T_CS('\xycrvdrop@'))->getExpansion)` — reading the
+macro body, NOT expanding it. When `@/curve/` and `@{-->}` appear together,
+expanding `\xycrvconn@` re-invokes `\dir{-->}` which feeds back into the curve
+pipeline and re-invokes `\lx@xy@crv@decipher`, looping unbounded (21GB RSS / 19s
+wall before OOM kill). New `macro_body` helper returns the raw Tokens body via
+`lookup_definition(...)->get_expansion()`. Minimal repro
+`$$\xymatrix{A \ar@/^5ex/@{-->}[r] & B}$$`: 21GB OOM → 59MB / 0.13s.
 
 **Papers removed from worklist** — Perl also emits errors under
 `--preload=ar5iv.sty --path=/home/deyan/git/ar5iv-bindings/bindings`
