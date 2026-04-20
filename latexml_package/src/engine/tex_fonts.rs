@@ -30,19 +30,20 @@ LoadDefinitions!({
       else if ts.starts_with("\\scriptfont") && ts == "\\scriptfont" { Some("scriptfont") }
       else { None }
     }) {
-      // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf)
+      // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf).
+      // with_value avoids the Stored envelope clone; Token is Copy.
       let fam = gullet::read_number()?.value_of();
       let key = s!("{font_type}_{fam}");
-      match state::lookup_value(&key) {
-        Some(Stored::Token(t)) => t,
+      state::with_value(&key, |v| match v {
+        Some(Stored::Token(t)) => *t,
         _ => token,
-      }
+      })
     } else if token.with_str(|ts| ts == "\\font") {
       // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font')
-      match state::lookup_value("current_FontDef") {
-        Some(Stored::Token(t)) => t,
+      state::with_value("current_FontDef", |v| match v {
+        Some(Stored::Token(t)) => *t,
         _ => T_CS!("\\lx@default@font"),
-      }
+      })
     } else {
       token
     }
