@@ -38,8 +38,12 @@ LoadDefinitions!({
     Ok(())
   });
   // \multirow[vpos]{nrows}[bigstruts]{width}[fixup]{content}
-  // Macro: sets up rowspan via \lx@multirow@setup, then passes content through.
-  // Content stays in the token stream so alignment cell processing picks it up.
+  //
+  // Perl multirow.sty.ltxml L38 wraps content in `\hbox{\multirowsetup #6}`
+  // and digests the whole thing. The \hbox forces text mode so nested
+  // `$…$` cleanly switches into math — otherwise in array cell context
+  // (outer math), the inner `$` toggles math OFF, landing the content in
+  // text mode with script errors. arxiv 1004.2626 Table 6 was the witness.
   DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]{}",
-    "\\lx@multirow@setup{#2}[#1]{#4}#6");
+    "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\multirowsetup #6}");
 });

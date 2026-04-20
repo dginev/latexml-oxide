@@ -89,7 +89,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
 - [ ] 0908.0398  - [x] 0909.2656  - [~] 0909.3444  - [ ] 0909.5007
 - [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
-- [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [ ] 1004.2626
+- [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [x] 1004.2626
 - [x] 1005.1610  - [x] 1006.5231  - [ ] 1007.2309  - [x] 1007.3314
 - [x] 1007.4392  - [ ] 1008.2152  - [x] 1008.4386  - [x] 1009.1431
 - [x] 1010.1244  - [x] 1010.3600  - [x] 1010.4240  - [x] 1011.1955
@@ -100,7 +100,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 1203.6616  - [ ] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **45 of 64 now convert cleanly** via
+**Conversion errors (64)** status: **47 of 64 now convert cleanly** via
 sessions 120-122 per-paper Perl-parity fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
 - DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
