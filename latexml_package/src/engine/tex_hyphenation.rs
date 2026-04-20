@@ -49,24 +49,25 @@ LoadDefinitions!({
     getter => sub[args] {
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();
-      // Look up the shared font key for this CS
-      let hc_key = match state::lookup_value(&s!("font_shared_key_{cs_str}")) {
-        Some(Stored::String(s)) => s!("hyphenchar_{}", arena::to_string(s)),
+      // Look up the shared font key via with_value to avoid cloning the
+      // Stored envelope on the String arm (just carrying a Copy SymStr).
+      let hc_key = state::with_value(&s!("font_shared_key_{cs_str}"), |v| match v {
+        Some(Stored::String(s)) => s!("hyphenchar_{}", arena::to_string(*s)),
         _ => s!("hyphenchar_{cs_str}"),
-      };
-      match state::lookup_value(&hc_key) {
-        Some(Stored::Number(n)) => n,
+      });
+      state::with_value(&hc_key, |v| match v {
+        Some(Stored::Number(n)) => *n,
         _ => Number::new(b'-' as i64),
-      }
+      })
     },
     setter => sub[value, _scope, args] {
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();
-      // Look up the shared font key for this CS
-      let hc_key = match state::lookup_value(&s!("font_shared_key_{cs_str}")) {
-        Some(Stored::String(s)) => s!("hyphenchar_{}", arena::to_string(s)),
+      // Look up the shared font key via with_value — same reasoning as above.
+      let hc_key = state::with_value(&s!("font_shared_key_{cs_str}"), |v| match v {
+        Some(Stored::String(s)) => s!("hyphenchar_{}", arena::to_string(*s)),
         _ => s!("hyphenchar_{cs_str}"),
-      };
+      });
       // Perl stores directly in fontinfo hash (unscoped/global)
       state::assign_value(
         &hc_key,
