@@ -2496,6 +2496,19 @@ LoadDefinitions!({
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);
     }
+    // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
+    // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
+    // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
+    // packages like mhchem.sty end with an unmatched final `\ExplSyntaxOn`
+    // (see mhchem.sty tail, "legacy" block), and LaTeX's kernel relies on
+    // this scheduled cleanup to restore catcodes before the document body.
+    // Without this, `\sum_{...}` tokenizes as the CS `\sum_` (letter `_`)
+    // rather than `\sum` + `_` + `{...}`.
+    if state::lookup_catcode('_') == Some(Catcode::LETTER)
+      && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
+    {
+      boxes.push(stomach::digest(Tokens!(T_CS!("\\ExplSyntaxOff")))?);
+    }
     // Fire babel language activation AFTER all hooks (including babel's own
     // \selectlanguage call). This runs even if babel's hook code has errors.
     // Use T_CS! directly since @ is OTHER catcode at \begin{document} time.
