@@ -176,6 +176,12 @@ Earlier session fixes:
 **All 64 conversion_error papers are now clean** (session 123) AND **both
 xy-pic OOM aborts FIXED** (session 124). Phase D0 worklist now at **84/84 converged**.
 
+**Session 124 parallel verification (`parallel -j 12`):** all 84 real papers
+from the D0 worklist run via direct `latexml_oxide --timeout=60`:
+**84 / 84 clean** (exit 0, 0 errors, 0 warnings). Under parallel-12 load:
+avg 3.0s, fastest 0.02s (0905.4086), slowest 16.84s (0704.2334, previously
+one of the 16 former-timeout papers). No paper exceeds the 60s budget.
+
 **Session 124 xy-pic fix:** `\lx@xy@crv@decipher` (xylatexml_tex.rs L799) was
 calling `macro_string` (which runs `do_expand`) on `\xycrvdrop@` and `\xycrvconn@`
 to inspect what drop/connection was requested. The Perl source uses
