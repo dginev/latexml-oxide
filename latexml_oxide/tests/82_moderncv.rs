@@ -1,12 +1,3 @@
-use latexml::util::test::*;
-const DIR: &str = "tests/moderncv";
+use latexml::tex_tests;
 
-#[test]
-fn cs_cv_test() {
-  latexml_test_single("tests/moderncv/cs_cv.tex", "cs_cv", DIR, None, None);
-}
-
-#[test]
-fn orc_test() {
-  latexml_test_single("tests/moderncv/orc.tex", "orc", DIR, None, None);
-}
+tex_tests!("tests/moderncv");

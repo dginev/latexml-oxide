@@ -20,12 +20,14 @@ Cargo workspace with 6 crates:
 - **latexml_math_parser** — Math expression parser with Marpa-style grammar
 - **latexml_codegen** — Proc macros for compile-time code generation (constructable, modelable, parametrizeable, testable, tokenizeable)
 - **latexml_contrib** — User-contributed style packages
+- **latexml_post** - post-processing functionality to HTML/MathML/ePub/JATS/... following the core XML generation phase
 
 Supporting directories:
 - `resources/` — CSS, JavaScript, RelaxNG schemas, XSLT, Profiles
 - `tools/` — Utility scripts (e.g. `compile_metrics.pl`)
 - `.githooks/` — Pre-push hook for quality checks
 - `docs/` — Internal project documentation (see below)
+- `background/` — TeX documentation and code, the original project generating PDF, which LaTeXML emulates and adapts
 
 ## Internal Documentation
 
@@ -45,16 +47,11 @@ Three key documents track porting progress and known issues:
 
 ## Build & Test
 
-Requires **Rust nightly** (v1.83+).
-
-System dependencies (Ubuntu):
-```bash
-sudo apt install libxml2-dev libxslt1-dev libkpathsea-dev texlive-latex-base imagemagick
-```
+Requires **Rust nightly**.
 
 ```bash
 # Run all tests
-RUST_BACKTRACE=1 cargo test --tests -- --nocapture
+RUST_BACKTRACE=1 cargo test --tests --release -- --nocapture
 
 # Convert a formula
 cargo run --release --bin latexmlmath_oxide '1+1=2'
@@ -130,10 +127,6 @@ Do **not** stop early.
 | `LaTeXML::Core::State` | `latexml_core::state` — global state |
 | `LaTeXML::Core::Definition` | `latexml_core::definition` — macro/command defs |
 | `LaTeXML::Package` | `latexml_package` — package loading |
-
-## CI
-
-GitHub Actions runs on push/PR: installs system deps, uses Rust nightly, runs `cargo test`.
 
 ---
 
