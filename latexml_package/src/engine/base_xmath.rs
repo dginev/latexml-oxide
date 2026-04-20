@@ -353,11 +353,14 @@ LoadDefinitions!({
             Tokens::new(tks)
           },
           _other => {
-            // Context-dependent reversion: use presentation if DUAL_BRANCH is "presentation",
-            // otherwise use content
-            let dual_branch = state::lookup_value("DUAL_BRANCH")
-              .map(|v| v.to_string()).unwrap_or_default();
-            if dual_branch == "presentation" {
+            // Context-dependent reversion: use presentation if DUAL_BRANCH
+            // is "presentation", otherwise use content. with_value avoids
+            // the Stored::clone + full to_string we previously paid just
+            // to compare against a single literal.
+            let is_presentation = state::with_value("DUAL_BRANCH", |v| {
+              v.map(|s| s.to_string() == "presentation").unwrap_or(false)
+            });
+            if is_presentation {
               match &pr {
                 Some(Stored::Reversion(Reversion::Tokens(tks))) => tks.clone(),
                 Some(Stored::Reversion(Reversion::Closure(cl))) => cl(wself,args)?,
