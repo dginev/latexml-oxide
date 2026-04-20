@@ -96,16 +96,25 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 1011.4834  - [x] 1011.5076  - [x] 1012.3836  - [x] 1101.2149
 - [x] 1101.2474  - [x] 1103.2925  - [x] 1105.0121  - [x] 1107.0347
 - [ ] 1107.3732  - [x] 1108.0951  - [x] 1108.3241  - [x] 1111.0334
-- [x] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
+- [x] 1112.4846  - [x] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
 - [x] 1203.6616  - [x] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
-- [~] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
+- [~] 1207.6068  - [x] 1207.6456  - [x] 1209.1578  - [x] 1209.2771
 
 > `[~] 1207.6068`: Perl emits 30 errors on this fragment (acknowledgements-only
 > file, no `\documentclass`). Per the sandbox baseline rule — only
 > Perl-error-free cases count — this paper is excluded from the parity target.
 
-**Conversion errors (64)** status: **61 of 64 now convert cleanly** via
+**Conversion errors (64)** status: **63 of 64 now convert cleanly** via
 sessions 120-123 per-paper Perl-parity fixes. Session 123 added:
+- cp1251 reloadability: `_load_binding` and raw-find-file path now
+  respect the `reloadable` option, letting `\inputencoding{cp1251}`
+  re-run `cp1251.def`'s `\DeclareInputText` after
+  `set_input_encoding` resets the high-byte map. Clears 1201.1473.
+- fontenc cyrillic extended-CS stubs: the T2A/T2B/T2C cyrillic CSes
+  listed in `\@uclclist` are now stub-defined (empty expansion).
+  Perl treats `\@uclclist` as a token-level scan, so undefined CSes
+  don't trigger there; Rust expands eagerly so we need the stubs.
+  Clears 1209.1578.
 - Raise libxml `NODE_RC_MAX_GUARD` 50 → 8192 in `document.rs`. The
   guard is a diagnostic threshold, not a safety requirement (real
   aliasing is caught by `weak_count == 0`). Clears 1007.2309 /
