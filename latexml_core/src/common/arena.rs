@@ -114,8 +114,30 @@ macro_rules! pin {
   }};
 }
 
+/// Cumulative `pin` call count — incremented on every call even when
+/// the string is deduplicated (same call pressure regardless).
+/// A runaway Mouth loop (observed in 0906.1883: 163M unique anonymous
+/// mouth-source strings) exceeds the `string-interner` BufferBackend's
+/// u32 byte-offset range (~4GB), at which point SymStr values wrap and
+/// resolve returns garbage. 50M pins is a conservative threshold:
+/// normal documents are well under 1M. Panic at 50M surfaces the loop
+/// site cleanly before the arena silently overflows.
+#[thread_local]
+static PIN_CALLS: std::cell::Cell<usize> = std::cell::Cell::new(0);
+
 /// Assign a string into the arena, returning a unique symbol.
 pub fn pin<S: AsRef<str>>(text: S) -> SymStr {
+  let count = PIN_CALLS.get().wrapping_add(1);
+  PIN_CALLS.set(count);
+  if count == 50_000_000 {
+    // Only fire once (on exact equality) to avoid re-entering panic
+    // machinery that itself might pin strings for its own formatting.
+    panic!(
+      "arena::pin invoked 50,000,000 times — arena is near u32 offset \
+       overflow. A runaway loop is creating unique strings. See \
+       SYNC_STATUS 0906.1883 for context (163M Mouth::default() loop)."
+    );
+  }
   with_arena_mut(|arena| arena.get_or_intern(text))
 }
 

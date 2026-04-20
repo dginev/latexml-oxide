@@ -236,6 +236,16 @@ LoadDefinitions!({
     "\\newtheorem{prin}[thm]{Principle}",
     "\\newtheorem{alg}{Algorithm}",
   );
+  // Only install autoload stubs for CSes that aren't already defined. If
+  // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that
+  // `\RequirePackage{amsthm}`), its own `\theoremstyle`/`\newtheorem`
+  // definitions are already in place. Overwriting with our stub would
+  // create an infinite loop:
+  //   stub invokes → require_package('amsthm') no-ops (already loaded)
+  //   → re-emits `\theoremstyle` → stub invokes again …
+  // Observed in arxiv 0906.1883 where birkmult.cls's dep-scan pre-loaded
+  // amsthm, and the resulting 163M-iteration pin loop blew the arena
+  // past `u32::MAX` offset (SymStr wraparound → garbled error text).
   for env in [
     "conjecture", "theorem", "corollary", "definition", "example", "exercise",
     "lemma", "note", "problem", "proof", "proposition", "question", "remark",
@@ -245,6 +255,7 @@ LoadDefinitions!({
   ] {
     let beginenv = s!("\\begin{{{env}}}");
     let cs = T_CS!(&beginenv);
+    if IsDefined!(&cs) { continue; }
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
     def_macro(cs, None,
@@ -258,6 +269,7 @@ LoadDefinitions!({
   // Perl L216-219: newtheorem aliases auto-load amsthm
   for alias in ["\\newproclaim", "\\newdef", "\\newremark"] {
     let cs = T_CS!(alias);
+    if IsDefined!(&cs) { continue; }
     def_macro(cs, None,
       latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
         require_package("amsthm", RequireOptions::default())?;
@@ -267,11 +279,13 @@ LoadDefinitions!({
   // Perl L220: \theoremstyle autoloads amsthm
   {
     let cs = T_CS!("\\theoremstyle");
-    def_macro(cs, None,
-      latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
-        require_package("amsthm", RequireOptions::default())?;
-        Ok(Tokens!(T_CS!("\\theoremstyle")))
-      })), None)?;
+    if !IsDefined!(&cs) {
+      def_macro(cs, None,
+        latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+          require_package("amsthm", RequireOptions::default())?;
+          Ok(Tokens!(T_CS!("\\theoremstyle")))
+        })), None)?;
+    }
   }
 
   // Perl L222-223: abstract aliases
