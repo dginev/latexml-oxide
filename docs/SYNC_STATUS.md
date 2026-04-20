@@ -95,7 +95,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 1010.1244  - [x] 1010.3600  - [x] 1010.4240  - [x] 1011.1955
 - [x] 1011.4834  - [x] 1011.5076  - [x] 1012.3836  - [x] 1101.2149
 - [x] 1101.2474  - [x] 1103.2925  - [x] 1105.0121  - [x] 1107.0347
-- [ ] 1107.3732  - [x] 1108.0951  - [x] 1108.3241  - [x] 1111.0334
+- [x] 1107.3732  - [x] 1108.0951  - [x] 1108.3241  - [x] 1111.0334
 - [x] 1112.4846  - [x] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
 - [x] 1203.6616  - [x] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
 - [~] 1207.6068  - [x] 1207.6456  - [x] 1209.1578  - [x] 1209.2771
@@ -104,8 +104,11 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 > file, no `\documentclass`). Per the sandbox baseline rule — only
 > Perl-error-free cases count — this paper is excluded from the parity target.
 
-**Conversion errors (64)** status: **63 of 64 now convert cleanly** via
-sessions 120-123 per-paper Perl-parity fixes. Session 123 added:
+**Conversion errors (64)** status: **64 of 64 now convert cleanly**
+(63 Perl-parity fixes + 1 skipped as Perl-errors). Session 123 added:
+- `pstricks_sty` now loads `pstricks_support` (Perl L44 parity), and
+  `pstricks_support_sty` defines the color-CS shorthands (`\blue`,
+  `\red`, …). Clears 1107.3732 (tikz `\blue` inside `\node`).
 - cp1251 reloadability: `_load_binding` and raw-find-file path now
   respect the `reloadable` option, letting `\inputencoding{cp1251}`
   re-run `cp1251.def`'s `\DeclareInputText` after
