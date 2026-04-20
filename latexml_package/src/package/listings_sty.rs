@@ -331,12 +331,12 @@ fn lst_get_boolean(value: &str) -> bool {
 /// Perl: lstGetNumber — get numeric value from LST@key state.
 fn lst_get_number(value: &str) -> i64 {
   let key = s!("LST@{value}");
-  match state::lookup_value(&key) {
+  state::with_value(&key, |v| match v {
     Some(Stored::Number(n)) => n.value_of(),
     Some(Stored::Tokens(t)) => t.to_string().parse().unwrap_or(0),
     Some(v) => v.to_string().parse().unwrap_or(0),
     None => 0,
-  }
+  })
 }
 
 /// Perl: lstGetTokens — get tokens from LST@key state.
@@ -704,7 +704,7 @@ fn build_literate_entries() -> Vec<(String, Tokens, bool)> {
     let repl_key = s!("LST_LIT@{pattern}");
     let prot_key = s!("LST_LIT@{pattern}@protected");
     if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
-      let protected = matches!(state::lookup_value(&prot_key), Some(Stored::Bool(true)));
+      let protected = state::with_value(&prot_key, |v| matches!(v, Some(Stored::Bool(true))));
       entries.push((pattern.clone(), replacement, protected));
     }
   }
@@ -738,7 +738,7 @@ fn build_char_class(class: &str) -> String {
     let c = b as char;
     let escaped = regex::escape(&c.to_string());
     let key = s!("LST_CHAR@{class}@{escaped}");
-    if matches!(state::lookup_value(&key), Some(Stored::Bool(true))) {
+    if state::with_value(&key, |v| matches!(v, Some(Stored::Bool(true)))) {
       // Escape chars that are special inside regex character classes
       match c {
         ']' | '\\' | '^' | '-' => {
