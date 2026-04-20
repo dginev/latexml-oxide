@@ -125,18 +125,30 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   `KNOWN_PERL_ERRORS.md`), but the **O(n²) amplification in Rust
   post-processing** is a Rust-specific follow-up.
 
-**Test-suite refactor task (round 17):** audit the entire test suite
-and migrate all `latexml_test_single` call sites back to the
-dynamically-assembled `latexml_tests` pattern. Representative starting
-point: `81_babel.rs` (6 single-tests → should reuse `latexml_tests`
-directory-scan). Per-file single-test explosion lives in: `50_structure.rs`
-(42), `70_parse.rs` (29), `53_alignment.rs` (29), `22_fonts.rs` (23),
-`40_math.rs` (14), `33_keyval_options.rs` (11), `86_tikz.rs` (10),
-`65_graphics.rs` (9), `32_keyval.rs` (8), `56_ams.rs` (7), `81_babel.rs`
-(6), `55_theorem.rs` (5), `85_pgf.rs`/`84_slides.rs`/`83_expl3.rs`/
-`82_moderncv.rs` (2 each). Goal: restore the "drop a `[name].tex` +
-`[name].xml` pair into the dir and it's picked up automatically"
-ergonomics; eliminate hand-maintained single-test lists.
+**Test-suite refactor (round 17 — [x] DONE):** all 14 test files that
+used hand-maintained `latexml_test_single` lists migrated to one-line
+`tex_tests!("tests/<dir>")` macro invocations. The macro expands to
+`#[derive(GlobTeXTests)]` which globs `*.tex+.xml` pairs at compile
+time and emits one `#[test]` fn per pair — preserving per-test
+isolation, per-test `#[ignore]` support, and per-directory dispatcher
+choice while restoring "drop a pair into the dir, it's auto-picked-up"
+ergonomics. Commits `c02398271` (batch 1: babel, moderncv, expl3,
+slides, pgf, theorem), `5363b30ec` (batch 2: ams, tikz,
+keyval_options + proc-macro digit-prefix fix + orphan-pair cleanup),
+`8b8789e42` (batch 3: fonts, alignment, parse), `ea05eeb1e` (batch 4:
+structure, keyval, graphics, math). Net: 14 files, ~201 tests,
+~1938 lines deleted vs. ~128 lines added. Workspace 424/424.
+
+Heterogeneous-dispatch files (structure/keyval/graphics/math) were
+handled by applying the directory's union dispatcher uniformly and
+relying on two properties: (1) `latexml_contrib::dispatch` is a strict
+no-op for unrecognised filenames — behaviourally identical to `None`
+for tests that don't use contrib-specific packages; (2) the
+`validate_requirements` stub in `util/test.rs:100` returns `true`
+unconditionally, so REQUIRES maps were cosmetic. If REQUIRES gating
+is ever implemented, it will need an `ignored_if_missing!`
+mechanism invoked from within the generated tests, not a static
+directory-level attribute.
 - [x] **1404.1913** — FIXED (session 127, same commit as 1212.2052).
   The "double free or corruption (fasttop)" during Finalizing was
   another instance of the `Document::replace_node` text-merge UAF:
