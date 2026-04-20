@@ -84,24 +84,32 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 **Conversion errors (64)** — `Status:conversion:2`, exit 0 with errors in log:
 
 - [x] 0704.3480  - [x] 0707.0739  - [x] 0709.4470  - [x] 0711.4787
-- [ ] 0802.3360  - [x] 0803.0466  - [ ] 0805.2376  - [x] 0809.1906
-- [x] 0810.0991  - [ ] 0810.1407  - [x] 0810.4067  - [x] 0811.3209
-- [ ] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
+- [x] 0802.3360  - [x] 0803.0466  - [ ] 0805.2376  - [x] 0809.1906
+- [x] 0810.0991  - [x] 0810.1407  - [x] 0810.4067  - [x] 0811.3209
+- [x] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
 - [x] 0908.0398  - [x] 0909.2656  - [~] 0909.3444  - [x] 0909.5007
 - [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
 - [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [x] 1004.2626
 - [x] 1005.1610  - [x] 1006.5231  - [ ] 1007.2309  - [x] 1007.3314
 - [x] 1007.4392  - [ ] 1008.2152  - [x] 1008.4386  - [x] 1009.1431
 - [x] 1010.1244  - [x] 1010.3600  - [x] 1010.4240  - [x] 1011.1955
-- [x] 1011.4834  - [x] 1011.5076  - [x] 1012.3836  - [ ] 1101.2149
+- [x] 1011.4834  - [x] 1011.5076  - [x] 1012.3836  - [x] 1101.2149
 - [x] 1101.2474  - [x] 1103.2925  - [x] 1105.0121  - [ ] 1107.0347
 - [ ] 1107.3732  - [x] 1108.0951  - [ ] 1108.3241  - [x] 1111.0334
 - [x] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
 - [x] 1203.6616  - [ ] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **51 of 64 now convert cleanly** via
-sessions 120-122 per-paper Perl-parity fixes:
+**Conversion errors (64)** status: **55 of 64 now convert cleanly** via
+sessions 120-123 per-paper Perl-parity fixes. Session 123 added:
+- `def_math_constructor` isMath branch on Whatsit prop, not DOM
+  (`?#isMath` is `$prop{'isMath'}`) — clears 0802.3360
+- revtex4.cls: load amsmath/amsfonts/amssymb only on option
+  (Perl parity; prior Rust unconditionally pulled amsmath, whose
+  `\pmatrix`/`\endpmatrix` semantics clobbered plain-TeX
+  `\pmatrix{…}`) — clears 0810.1407 / 0811.4212 / 1101.2149
+
+Earlier session fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
 - DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
 - `\author` accepts `OptionalMatch:* [short]` (mn, mn2e, elsart, revtex journal forms)
