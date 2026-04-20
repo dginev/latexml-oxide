@@ -229,25 +229,29 @@ Each cycle adds targeted fixes for specific undefined/misbehaving commands per l
 
 **Known content-model gap — FIXED (session 119):** Perl's `Tag('ltx:picture', autoOpen => 0.5)` wraps bare picture primitives (`\line`, `\circle`, `\vector`, `\put`) used outside `{picture}`. Ported the fractional-priority model in `compute_indirect_model`/`_aux`: priorities are scaled u32 (100 = full, 50 = half), multiplied at each recursion step, and the best-priority start tag wins. Picture gets 50, everything else gets 100, so picture only wraps when no fuller path exists. `Tag!("ltx:picture", auto_open => true, auto_close => true, …)` is now enabled. 9 `malformed:ltx:g` papers fixed, plus `ltx:line`/`ltx:rect` collateral.
 
-#### D3. Performance catalog — slow-paper backlog (session 120 baseline)
+#### D3. Performance catalog — slow-paper backlog (session 124 refresh)
 
-Parallel `cortex_worker --standalone` sweep of the 64 Phase-D0 conversion_error
-papers at `-j 12` recorded wall time per paper after the session 120 coverage
-fixes. Papers >5s are perf candidates; >10s are priority. Each was run with
-a 30s cortex_worker timeout so all completed inside the run.
+**Tier A revisit (session 124, direct `latexml_oxide` wall-clock, idle):**
 
-**Tier A — clean AND slow (>10s, 0 errors)** — purest signal for profiling:
+| id | dt (s) Orig | dt (s) Cur | speedup |
+|----|-----------:|-----------:|--------:|
+| 0906.1883 | 31.2 | 0.55 | 57× |
+| 1011.1955 | 20.9 | 2.61 | 8× |
+| 1009.1431 | 19.5 | 1.54 | 13× |
+| 1008.4386 | 17.4 | 2.04 | 8× |
+| 0909.2656 | 14.5 | 0.29 | 50× |
+| 0911.4739 | 11.1 | 0.70 | 16× |
+| 1005.1610 | 10.3 | 0.57 | 18× |
+| 0803.0466 | 10.0 | 0.59 | 17× |
 
-| id | dt (s) | note |
-|----|-------:|------|
-| 0906.1883 | 31.2 | aa class; why slow? (profile first) |
-| 1011.1955 | 20.9 | amsart, `\DeclareMathSymbol` intensive |
-| 1009.1431 | 19.5 | — |
-| 1008.4386 | 17.4 | — |
-| 0909.2656 | 14.5 | — |
-| 0911.4739 | 11.1 | JHEP |
-| 1005.1610 | 10.3 | iopart |
-| 0803.0466 | 10.0 | aa |
+Note: original baselines were measured under `cortex_worker --standalone`
+with zip archive I/O at `-j 12` parallel; the refreshed run is direct
+`latexml_oxide --timeout=60` under idle load. Wrapper overhead ≈0.3-0.5s
+and parallel contention additionally inflate the cortex_worker numbers.
+Still, all Tier A papers now clear 3s on the bare binary — the slow-paper
+backlog is effectively resolved for this tier under the cumulative session
+116-124 engine fixes (omnibus stub guard, pin_char cache, expl3
+short-circuit, xy-pic crv_decipher body read).
 
 **Tier B — clean, 5-10s** (0909.5007 removed, still has errors):
 
