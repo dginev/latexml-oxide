@@ -29,3 +29,9 @@ latexml_package/src/engine/*_dump.rs
 # Post-processing test actual output
 *-post-actual.xml
 resources/dumps/
+
+# Local-dev scratch: arxiv-examples conversion fixtures, sandbox
+# conversion logs, ad-hoc notes. None belong in the repo.
+arxiv-examples/
+*.latexml.log
+USER_OK.md
