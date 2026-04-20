@@ -88,26 +88,24 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   macros) and completes in 7.35s. Arena sentinel false-positive removed
   (session 124); the underlying recovery-loop divergence vs Perl is
   still open.
-- [~] **1212.2052** — SIGSEGV, reproducible serially.
-  Minimal repro:
-  ```latex
-  \documentclass{article}
-  \begin{document}
-  $\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,$
-  \end{document}
-  ```
-  Exactly 17 consecutive math-space tokens (`\,`, `\quad`, etc.) inside
-  a math environment trigger the crash (16 works, 17 fails). Crash is
-  NOT in math parsing (reproduces with `--nomathparse`). Session-125
-  narrowing: the DOM is corrupted *by the end of the Building phase* —
-  a plain `document.to_string()` immediately after absorb already
-  SIGSEGVs in libxml2's `xmlSaveDoc`. That is, the rewrite-time
-  `findnodes` crash observed earlier is a downstream symptom, not the
-  root cause: the Rust-side DOM construction for 17 consecutive XMHint
-  siblings leaves a dangling pointer that libxml2 then chases. Perl
-  processes the identical input cleanly (output: 17 thin-space chars
-  inside a `<p>`). Same `Rc<Node>` aliasing family as the D3b cluster
-  and 1404.1913. Root-cause is in Rust's absorb/open_element pipeline.
+- [x] **1212.2052** — FIXED (session 127). Root cause in
+  `Document::replace_node` (document.rs:3574). libxml2's
+  `xmlAddNextSibling` merges adjacent text nodes — it appends the new
+  node's content into the existing sibling and frees the new node,
+  returning the merged node. The Rust wrapper discards that return
+  value, so after the second text-node insertion our `c0_opt`
+  insertion anchor already pointed at freed memory. Third and later
+  insertions then mutated a dangling pointer; for short runs this only
+  caused silent data loss (all but 2 thinspaces dropped for N≥2),
+  but at ≥17 consecutive XMHint siblings the accumulated corruption
+  landed on a hot libxml2 dict/hash entry and later SIGSEGV'd during
+  XPath evaluation in Rewriting. Fix: in `replace_node`, when the
+  previous sibling (`c0_opt`) and the incoming `with_node` are both
+  TextNodes, append content directly to `c0_opt` instead of routing
+  through `add_next_sibling` (which would free `with_node`).
+  Verified: 1212.2052 converges with 0 errors / 0 warnings; N=2..100
+  thinspace repros produce the correct N-character output matching
+  Perl exactly.
 - [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
   loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
   internals. Likely a babel 3.x port gap.

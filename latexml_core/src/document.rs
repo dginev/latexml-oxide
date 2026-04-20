@@ -3573,10 +3573,29 @@ impl Document {
   //     with the low-level libxml layer. I've encountered segfaults here.
   pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<()> {
     if let Some(_parent) = node.get_parent() {
+      // libxml2's xmlAddNextSibling merges consecutive text nodes: when both
+      // the reference sibling and the new node are TextNode, it appends the
+      // new node's content to the reference node and frees the new node. The
+      // Rust wrapper doesn't surface the merged result, so naively advancing
+      // `c0_opt` to `with_node` would capture a pointer to freed memory,
+      // producing silent data loss for the third+ insertion and eventually
+      // a libxml2 SIGSEGV when the dangling pointer is re-traversed (e.g.
+      // during a later XPath evaluation). Detect the text-text case and
+      // coalesce in-place instead.
       let mut c0_opt: Option<Node> = None;
       for mut with_node in with.into_iter() {
         with_node.unlink();
+        let is_text = with_node.get_type() == Some(NodeType::TextNode);
         if let Some(mut c0) = c0_opt {
+          let c0_is_text = c0.get_type() == Some(NodeType::TextNode);
+          if is_text && c0_is_text {
+            let existing = c0.get_content();
+            let added = with_node.get_content();
+            c0.set_content(&format!("{existing}{added}"))?;
+            // with_node is still a standalone (unlinked) text node; drop it.
+            c0_opt = Some(c0);
+            continue;
+          }
           c0.add_next_sibling(&mut with_node)?;
         } else {
           // first node, swap in
