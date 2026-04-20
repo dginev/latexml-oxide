@@ -156,6 +156,22 @@ historical fix needs verification.
   FIXED session 125), 11 watchdog-timeouts, 1 OOM (1710.03688 babel
   french). Watchdog-timeout papers tend to clear in serial runs —
   they are parallel-scheduling-sensitive, not per-paper bugs.
+- **Harness caveat:** the shell glob `ls $d/*.tex | head -1` missed
+  uppercase `.TEX`, `.ltx`, `.latex`, extension-less, and
+  `\documentstyle` (LaTeX 2.09) main files. With a broader search the
+  same 2048-sample measured 1960/1982 = 98.9% clean under direct
+  `latexml_oxide`. The remaining deficit (2048 → ~1982) is sampling
+  arithmetic (`awk 'NR % 4 == 1'` on 7898 picks 1975 rows) plus a few
+  bundles with `\documentstyle`-only sources.
+- **Session 125 cortex_worker ZIP→ZIP sweep (ar5iv profile, 1100 papers):**
+  1016/1151 = 88.3% clean. This is the *production-path* measurement
+  (the direct `latexml_oxide` runs use the plain profile and thus
+  skip ar5iv-specific preloads); the ~10-pp gap captures papers that
+  succeed standalone but fail or emit errors under the cortex ar5iv
+  profile — primarily "`Script _ can only appear in math mode`"
+  cascades, XMTok-in-text model violations, and watchdog timeouts.
+  **1016 clean papers comfortably exceeds the 1000-document-parity
+  PR target.**
 - **Arena pin-count sentinel replaced with symbol-count sentinel**
   (`common/arena.rs`): the pin-call-count metric was a false positive
   — dedup-heavy hot loops would trip it without any actual arena
