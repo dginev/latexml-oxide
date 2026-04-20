@@ -126,7 +126,13 @@ enum Placement_ {
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
-    set_node_rc_guard(1024); // We will need a high threshold for Node mutability
+    // `NODE_RC_MAX_GUARD` is libxml's diagnostic threshold for mutable
+    // access to Rc-shared nodes; the real aliasing guarantee is the
+    // `weak_count == 0` check in `Node::mut_node`. For legitimate large
+    // documents (e.g. arxiv 0805.2376 with deep dcpic commutative-diagram
+    // sharing), natural ref counts exceed the crate's default of 2 by
+    // several orders of magnitude. Raise to 8192 to accommodate.
+    set_node_rc_guard(8192);
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
