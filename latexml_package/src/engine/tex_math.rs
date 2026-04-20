@@ -724,14 +724,16 @@ LoadDefinitions!({
     assign_delcode(args[0].value_of() as u8 as char,
       value.value_of() as u16, scope);
   });
-  // Perl #2772: \fam with getter/setter for fontfamily state
+  // Perl #2772: \fam with getter/setter for fontfamily state.
+  // Reader uses with_value to avoid a Stored::clone on the
+  // Int/Number cases (both Copy). Hot during math-mode font switches.
   DefRegister!("\\fam", Number!(-1),
     getter => {
-      let fam = match state::lookup_value("fontfamily") {
-        Some(Stored::Int(i)) => i,
+      let fam = state::with_value("fontfamily", |v| match v {
+        Some(Stored::Int(i)) => *i,
         Some(Stored::Number(n)) => n.0,
         _ => -1,
-      };
+      });
       Some(RegisterValue::Number(Number::new(fam)))
     },
     setter => sub[value, scope, _args] {
