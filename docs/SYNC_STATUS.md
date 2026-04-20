@@ -253,36 +253,31 @@ backlog is effectively resolved for this tier under the cumulative session
 116-124 engine fixes (omnibus stub guard, pin_char cache, expl3
 short-circuit, xy-pic crv_decipher body read).
 
-**Tier B — clean, 5-10s** (0909.5007 removed, still has errors):
+**Tier C revisit (session 124, same methodology as Tier A above):**
 
-| id | dt (s) |
-|----|-------:|
-| 1207.6456 |  9.5 |
-| 1003.2989 |  9.4 |
-| 1011.4834 |  5.5 |
+| id | dt (s) Orig | errs Orig | dt (s) Cur | errs Cur |
+|----|-----------:|----------:|-----------:|---------:|
+| 0802.3360 | 27.0 | 3   | 1.83 | 0 |
+| 1209.1578 | 25.1 | 130 | 3.08 | 0 |
+| 1107.3732 | 22.1 | 1   | 2.67 | 0 |
+| 1203.6616 | 15.8 | 2   | 1.49 | 0 |
+| 0909.5007 | 14.4 | 2   | 1.19 | 0 |
+| 0711.4787 | 11.8 | 2   | 1.25 | 0 |
+| 1108.0951 |  8.1 | 1   | 0.68 | 0 |
+| 1004.2626 |  6.5 | 6   | 0.88 | 0 |
 
-**Tier C — still failing, also slow** (profile after fix):
+All 8 Tier C papers now clean (0 errors, 0 warnings) under 3.1s. The
+session 120-124 per-paper Perl-parity fixes (recorded above under the
+64 conversion_error list) resolved each root cause and the cumulative
+engine perf wins dropped the wall-clock alongside. **Tier B (3 papers)
+was a subset of now-resolved entries** — retired.
 
-| id | dt (s) | errs |
-|----|-------:|-----:|
-| 0802.3360 | 27.0 | 3 |
-| 1209.1578 | 25.1 | 130 (cyrillic flood — likely cp1251 fallback hot loop) |
-| 1107.3732 | 22.1 | 1 |
-| 1203.6616 | 15.8 | 2 |
-| 0909.5007 | 14.4 | 2 |
-| 0711.4787 | 11.8 | 2 |
-| 1108.0951 |  8.1 | 1 |
-| 1004.2626 |  6.5 | 6 |
-
-**Active perf tasks (D3):**
-- [ ] Pick 0906.1883 (clean, 31s) for a flamegraph run — biggest clean signal.
-  Compare with Perl's wall on the same input.
-- [ ] 1209.1578 cyrillic cascade — likely a hot-loop in cp1251 missing-char
-  recovery path; profile as errs-dropping pair with the cyrillic encoding port.
-- [ ] Capture the 10+ Tier A papers as a perf corpus alongside `complex/si.tex`
-  so session-over-session regressions are visible.
-- [ ] Record each tier's dt trend in `docs/PERFORMANCE.md` for each major
-  commit (the existing si.tex Ir trajectory only probes the siunitx workload).
+**Active perf tasks (D3) — post-124 status:**
+- [x] Tier A/B/C backlog resolved. Remaining papers all under 4s on
+  direct `latexml_oxide` (cortex_worker zip + -j 12 adds ~0.5s fixed
+  overhead + contention). No individual paper is a performance outlier.
+- [ ] Capture Tier A (~10 papers) + `complex/si.tex` as a standing perf
+  corpus. File: `docs/PERFORMANCE.md` when a tracked regression surfaces.
 
 **Method (after session 120 feedback_parallel_sweeps memory):**
 ```bash
