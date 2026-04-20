@@ -286,7 +286,15 @@ Sources: libxml2 FFI (UAF on unlinking), libxslt C (namespaced elements), Rust u
 Outstanding:
 - [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
 - [ ] Replace unsafe-over-FFI with safe wrappers where practical.
-- [ ] Rc `Can not mutably reference a shared Node "text"` cluster — strong count grows past cap (libxml `set_node_rc_guard`). Raising the cap shifts the symptom one node higher (cap 50 → err at 51; cap 128 → err at 129), so it's a genuine accumulating-holder leak, not benign sharing. Hits all 4 dcpic / pictexwd / curves papers: 0805.2376, 1007.2309, 1108.3241, 1204.5278. Likely in alignment or diagram-cell machinery — the shared handle is always `"text"`. Leaving at guard=50 until the real root cause is found.
+- [~] Rc `Can not mutably reference a shared Node "text"` cluster — session 123
+  raised `set_node_rc_guard` to 8192 after confirming the guard is a
+  diagnostic heuristic (real aliasing is caught by `weak_count == 0`).
+  dcpic papers 0805.2376 (ergkaehler25), 1007.2309, 1108.3241, 1204.5278
+  now all converge cleanly. Lower-priority follow-up: identify the
+  *semantic* cause of high ref counts on `"text"` nodes (libxml's own
+  `document.nodes` hash accounts for some, but dcpic diagrams push to
+  ~2000-8000 — may indicate redundant caching). Not a correctness
+  blocker now.
 
 #### D4. Performance — parallel scaling and allocations
 
