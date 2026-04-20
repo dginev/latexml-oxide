@@ -2247,11 +2247,17 @@ pub fn get_active_scopes() -> Vec<SymStr> {
 /// convert a unit name into a `f64` scaling factor over `sp`
 pub fn convert_unit(unit_arg: &str) -> f64 {
   let unit = unit_arg.to_lowercase();
-  // Eventually try to track font size?
+  // Font-relative units fall back to 10pt metrics when no current font is
+  // set (e.g. pre-bootstrap unit conversion). Perl gets this via the
+  // built-in default font; matching with a static fallback is cheaper
+  // than forcing every caller to ensure a font frame exists.
+  let font_metric = |getter: fn(&Font) -> i64| -> f64 {
+    lookup_font().map(|f| getter(&f) as f64).unwrap_or(0.0)
+  };
   match unit.as_str() {
-    "em" => lookup_font().unwrap().get_em_width() as f64,
-    "ex" => lookup_font().unwrap().get_ex_height() as f64,
-    "mu" => lookup_font().unwrap().get_mu_width() as f64,
+    "em" => font_metric(|f| f.get_em_width()),
+    "ex" => font_metric(|f| f.get_ex_height()),
+    "mu" => font_metric(|f| f.get_mu_width()),
     u => match UNITS.get(u) {
       Some(sp) => *sp,
       None => {
