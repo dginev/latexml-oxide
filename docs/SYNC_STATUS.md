@@ -182,6 +182,17 @@ from the D0 worklist run via direct `latexml_oxide --timeout=60`:
 avg 3.0s, fastest 0.02s (0905.4086), slowest 16.84s (0704.2334, previously
 one of the 16 former-timeout papers). No paper exceeds the 60s budget.
 
+**Session 124 D1 micro-ramp (128-paper even-spread sample, `parallel -j 12`):**
+127/128 clean initially — one new panic on 1311.6082 (revtex4-1 paper
+using `\listfiles` with a missing `docs.sty`). Root cause: Rust
+engine/tex.rs auto-registers `\listfiles` as a pool-load autoload trigger
+(expand → `\@load@latex@pool \listfiles`), but Rust's latex_constructs.rs
+never ported Perl's `DefPrimitive('\listfiles', undef)` (L4354).
+Post-load, `\listfiles` remained a trigger → re-emit loop → unique
+mouth-source per iteration → 50M arena::pin sentinel → panic. Fixed by
+porting the no-op primitive. 1311.6082 now 0.41s / 0 errors.
+Post-fix: **128 / 128 clean**.
+
 **Session 124 xy-pic fix:** `\lx@xy@crv@decipher` (xylatexml_tex.rs L799) was
 calling `macro_string` (which runs `do_expand`) on `\xycrvdrop@` and `\xycrvconn@`
 to inspect what drop/connection was requested. The Perl source uses
