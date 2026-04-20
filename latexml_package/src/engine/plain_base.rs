@@ -185,6 +185,10 @@ LoadDefinitions!({
     \mathchardef\@m=1000
     \mathchardef\@M=10000
     \mathchardef\@MM=20000
+    \mathchardef\cdotp=25089
+    \mathchardef\ldotp=24890
+    \mathchardef\intop=4946
+    \mathchardef\ointop=4936
     \countdef\m@ne=21\relax
     \m@ne=-1"
   );
@@ -240,8 +244,15 @@ LoadDefinitions!({
     // classify_box returns "" for None, making \ifvoid true.
     DefRegister!(t, None, Number(n), readonly => true);
   });
-  DefPrimitive!("\\newhelp DefToken {}", sub[(token,arg)] {
-    state::assign_value(&token.to_string(), arg, None);
+  // Perl plain_base.pool.ltxml L213:
+  //   \outer\def\newhelp#1#2{\newtoks#1#1\expandafter{\csname#2\endcsname}}
+  // allocates a \newtoks register so `#1` becomes defined, then stores
+  // the help text. LaTeXML has no errhelp output, so the stored text
+  // is irrelevant; what matters is that #1 is installed as a Toks
+  // register, otherwise later `\errhelp\defbhelp@` reports undefined.
+  // arxiv 1012.3836 (amstex.tex) was the witness.
+  DefPrimitive!("\\newhelp DefToken {}", sub[(token, _arg)] {
+    DefRegister!(token, None, Tokens!(), allocate => "\\toks");
   });
   DefPrimitive!("\\newtoks DefToken", sub[(name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");

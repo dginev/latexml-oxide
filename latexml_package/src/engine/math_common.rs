@@ -1024,11 +1024,15 @@ LoadDefinitions!({
   // TeX Book, Appendix B. p. 361
 
   // This is actually LaTeX's definition, but let's just do it this way.
+  // Locked to prevent raw plain-TeX/amstex overrides that expand via
+  // the \radical primitive (undefined in LaTeXML) — arxiv 1012.3836
+  // uses amstex's `\def\sqrt#1{\radical"270370 {#1}}`.
   DefConstructor!(
     "\\sqrt OptionalInScriptStyle Digested",
     "?#1(<ltx:XMApp><ltx:XMTok meaning='nth-root'/>\
     <ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)\
-    (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)"
+    (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)",
+    locked => true
   );
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
