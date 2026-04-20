@@ -312,9 +312,7 @@ fn lst_split_delimiters(delims: &Tokens) -> (String, String) {
 /// Perl: lstGetLiteral — get string value from LST@key state.
 fn lst_get_literal(value: &str) -> String {
   let key = s!("LST@{value}");
-  let v = state::lookup_value(&key)
-    .map(|s| s.to_string())
-    .unwrap_or_default();
+  let v = state::with_value(&key, |s| s.map(|s| s.to_string()).unwrap_or_default());
   // Strip outer {} if present
   if v.starts_with('{') && v.ends_with('}') {
     v[1..v.len() - 1].to_string()

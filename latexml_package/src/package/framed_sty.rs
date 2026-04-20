@@ -11,15 +11,16 @@ fn current_background_hex() -> String {
 /// Look up a named color from state, returning hex attribute string.
 fn lookup_color_hex(name: &str) -> String {
   let key = s!("color_{name}");
-  match state::lookup_value(&key) {
+  // with_value avoids cloning the Stored envelope on the String arm.
+  state::with_value(&key, |v| match v {
     Some(Stored::String(sym)) => {
-      let stored_str = arena::with(sym, |s| s.to_string());
+      let stored_str = arena::with(*sym, |s| s.to_string());
       Color::from_stored(&stored_str)
         .map(|c| c.to_attribute())
         .unwrap_or_else(|| color::BLACK.to_attribute())
     },
     _ => color::BLACK.to_attribute(),
-  }
+  })
 }
 
 LoadDefinitions!({
