@@ -84,7 +84,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 **Conversion errors (64)** — `Status:conversion:2`, exit 0 with errors in log:
 
 - [x] 0704.3480  - [x] 0707.0739  - [x] 0709.4470  - [x] 0711.4787
-- [x] 0802.3360  - [x] 0803.0466  - [ ] 0805.2376  - [x] 0809.1906
+- [x] 0802.3360  - [x] 0803.0466  - [x] 0805.2376  - [x] 0809.1906
 - [x] 0810.0991  - [x] 0810.1407  - [x] 0810.4067  - [x] 0811.3209
 - [x] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
 - [x] 0908.0398  - [x] 0909.2656  - [~] 0909.3444  - [x] 0909.5007
@@ -104,13 +104,13 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 > file, no `\documentclass`). Per the sandbox baseline rule — only
 > Perl-error-free cases count — this paper is excluded from the parity target.
 
-**Conversion errors (64)** status: **60 of 64 now convert cleanly** via
+**Conversion errors (64)** status: **61 of 64 now convert cleanly** via
 sessions 120-123 per-paper Perl-parity fixes. Session 123 added:
-- Raise libxml `NODE_RC_MAX_GUARD` 50 → 1024 in `document.rs`. The
+- Raise libxml `NODE_RC_MAX_GUARD` 50 → 8192 in `document.rs`. The
   guard is a diagnostic threshold, not a safety requirement (real
   aliasing is caught by `weak_count == 0`). Clears 1007.2309 /
-  1108.3241 / 1204.5278. 0805.2376 still hits 1025; likely a real
-  shared-node bug needing separate fix.
+  1108.3241 / 1204.5278 (previously at ~50 refs) and 0805.2376
+  (dcpic.sty diagrams, ~2000-8000 refs).
 - `\begin{document}` preamble cleanup: fire `\ExplSyntaxOff` when `_`
   catcode is still LETTER (mirrors latex.ltx L7122 preamble-end hook).
   Fixes `mhchem.sty` trailing `\ExplSyntaxOn` leak — clears 1008.2152
