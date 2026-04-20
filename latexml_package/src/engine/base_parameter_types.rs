@@ -234,8 +234,15 @@ LoadDefinitions!({
   novalue => true);
 
   DefParameterType!(XUntil, sub[_inner, untils] {
-    // Make sure it's a single token!!!
-    let until : Token = untils.first().expect("XUntil needs a token Extra.").into();
+    // XUntil requires a delimiter token in its Extras slot. A malformed
+    // parameter spec (bare `XUntil` with no `:delim` attached) would panic
+    // with the prior .expect(); degrade to reading nothing so the caller
+    // sees an empty Tokens result instead of an abort.
+    let Some(until_tks) = untils.first() else {
+      Warn!("expected", "token", "XUntil parameter missing delimiter token");
+      return Ok(ArgWrap::Tokens(Tokens!()));
+    };
+    let until : Token = until_tks.into();
     let mut tokens : Vec<Token> = Vec::new();
     while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
       if token == until {
