@@ -83,16 +83,20 @@ LoadDefinitions!({
       if let Stored::Primitive(_) = &definition {
         let cs_str = token.to_string();
         let key = s!("fontinfo_{}", cs_str);
-        if let Some(Stored::Font(f)) = state::lookup_value(&key) {
-          if let Some(name) = f.name.as_ref() {
-            let at_key = s!("fontinfo_at_{}", cs_str);
-            let at_info = match state::lookup_value(&at_key) {
-              Some(Stored::String(s)) => format!(" at {}", arena::to_string(s)),
-              _ => String::new(),
-            };
-            meaning = format!("select font {}{}", name, at_info);
-            return Ok(Tokens::new(Explode!(meaning)));
-          }
+        // with_value avoids the Stored envelope clone on the Font arm;
+        // we only need the font's name string out.
+        let name_opt = state::with_value(&key, |v| match v {
+          Some(Stored::Font(f)) => f.name.as_ref().map(|n| n.to_string()),
+          _ => None,
+        });
+        if let Some(name) = name_opt {
+          let at_key = s!("fontinfo_at_{}", cs_str);
+          let at_info = state::with_value(&at_key, |v| match v {
+            Some(Stored::String(s)) => format!(" at {}", arena::to_string(*s)),
+            _ => String::new(),
+          });
+          meaning = format!("select font {}{}", name, at_info);
+          return Ok(Tokens::new(Explode!(meaning)));
         }
       }
       let definition : Stored = match definition {
