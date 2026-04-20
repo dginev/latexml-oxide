@@ -91,14 +91,19 @@ impl From<Token> for Vec<Token> {
 impl From<Tokens> for Token {
   fn from(mut ts: Tokens) -> Token {
     if ts.0.is_empty() {
-      panic!("Tried to cast an empty Tokens object into a single Token");
+      // Match the &Tokens impl below: empty → \relax fallback rather
+      // than panic. Callers that must see the empty case are rare and
+      // should inspect Tokens directly.
+      T_CS!("\\relax")
     } else if ts.0.len() == 1 {
       ts.0.remove(0)
     } else {
-      panic!("Dangerous cast! Tokens->Token for {ts:?}");
-      //let code = ts.0.first().unwrap().get_catcode();
-      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts,
-      // single); Token::new(Cow::Owned(ts.to_string()), code)
+      // Prefer the first token and warn; cascading a panic here usually
+      // means a stringly-typed binding slot received a multi-token value
+      // (e.g. a macro argument coerced into a single-token slot). The
+      // first token preserves TEx's "grab a single token" semantics.
+      log::warn!("multi-token Tokens cast into single Token: {ts:?}");
+      ts.0.remove(0)
     }
   }
 }
@@ -110,10 +115,8 @@ impl<'a> From<&'a Tokens> for Token {
     } else if ts.0.len() == 1 {
       ts.0[0]
     } else {
-      panic!("Dangerous cast! Tokens->Token for {ts:?}");
-      //let code = ts.0.first().unwrap().get_catcode();
-      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts,
-      // single); Token::new(Cow::Owned(ts.to_string()), code)
+      log::warn!("multi-token Tokens cast into single Token: {ts:?}");
+      ts.0[0]
     }
   }
 }
@@ -122,7 +125,7 @@ impl From<Option<Tokens>> for Token {
   fn from(ts_opt: Option<Tokens>) -> Token {
     match ts_opt {
       Some(ts) => ts.into(),
-      None => panic!("Casting a None (undef Tokens) into a Token is a Bug."),
+      None => T_CS!("\\relax"), // None → relax, matching the empty-Tokens path
     }
   }
 }
