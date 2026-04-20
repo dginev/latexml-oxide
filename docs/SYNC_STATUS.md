@@ -73,6 +73,13 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   Perl's `$tree->parentNode` returns undef silently and subsequent
   `$parent->lastChild`/`->childNodes` calls no-op; Rust now early-returns
   `Ok(())` on None, matching Perl's effective skip.
+- [x] **hep-ph/9210235** — FIXED (semantics.rs:1619): math-parser
+  single-arg delimited branch did `create_xmrefs(...).remove(0)`.
+  `create_xmrefs` filters out XMHint and other ephemeral variants, so
+  when the sole arg was a spacing hint the ref-vec came back empty and
+  `.remove(0)` panicked. Fall back to a bare XMWrap when refs is empty
+  — the Dual with an XMRef to nothing would be meaningless anyway.
+  Found in D1 2048-sample.
 - [~] **1210.4211** — INTERMITTENT under parallel load. Serial run
   clean (0.09s). Flaky reproduction under GNU parallel / sandbox
   stress — error cascade (`\ref / \UG / \If / \caption / \thesubsection`
@@ -143,6 +150,12 @@ historical fix needs verification.
 - **D1 512-sample (even spread):** 520/521 real papers clean.
   1210.4211 hangs under certain parallel-wrap contexts (see "New D1
   discoveries" above).
+- **D1 1024-sample (session 124):** 976/993 = 98.3% clean.
+- **D1 2048-sample (session 125):** 1932/1977 = 97.7% clean. 15 distinct
+  failures: 2 SIGSEGV (1212.2052 family), 1 panic (hep-ph/9210235,
+  FIXED session 125), 11 watchdog-timeouts, 1 OOM (1710.03688 babel
+  french). Watchdog-timeout papers tend to clear in serial runs —
+  they are parallel-scheduling-sensitive, not per-paper bugs.
 - **Arena pin-count sentinel replaced with symbol-count sentinel**
   (`common/arena.rs`): the pin-call-count metric was a false positive
   — dedup-heavy hot loops would trip it without any actual arena
