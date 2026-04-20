@@ -469,23 +469,24 @@ fn lst_delete_class(_class: &str) {
 
 /// Perl L617-622: lstDeleteDelimiterKind — delete delimiters whose class starts with `kind`.
 fn lst_delete_delimiter_kind(kind: &str) {
-  // Get list of delimiter keys
-  if let Some(keys_stored) = state::lookup_value("LST_DELIM_KEYS") {
-    let keys_str = keys_stored.to_string();
+  // Snapshot the keys-string via with_value so the subsequent per-key
+  // class lookups don't race against the outer lookup holding a clone.
+  let keys_str = state::with_value("LST_DELIM_KEYS",
+    |v| v.map(|s| s.to_string()).unwrap_or_default());
+  if !keys_str.is_empty() {
     for open_key in keys_str.split_whitespace() {
       let open_key = open_key.trim();
       if open_key.is_empty() { continue; }
       let class_key = s!("LST_DELIM@{}@class", open_key);
-      if let Some(class_val) = state::lookup_value(&class_key) {
-        let class = class_val.to_string();
-        if class.starts_with(kind) {
+      let class_starts = state::with_value(&class_key,
+        |v| v.map(|s| s.to_string().starts_with(kind)).unwrap_or(false));
+      if class_starts {
           // Remove delimiter entries
           state::assign_value(&class_key, Stored::default(), None);
           state::assign_value(&s!("LST_DELIM@{}@open", open_key), Stored::default(), None);
-          state::assign_value(&s!("LST_DELIM@{}@close", open_key), Stored::default(), None);
-          state::assign_value(&s!("LST_DELIM@{}@recursive", open_key), Stored::default(), None);
-          state::assign_value(&s!("LST_DELIM@{}@invisible", open_key), Stored::default(), None);
-        }
+        state::assign_value(&s!("LST_DELIM@{}@close", open_key), Stored::default(), None);
+        state::assign_value(&s!("LST_DELIM@{}@recursive", open_key), Stored::default(), None);
+        state::assign_value(&s!("LST_DELIM@{}@invisible", open_key), Stored::default(), None);
       }
     }
   }
