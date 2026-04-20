@@ -2033,7 +2033,25 @@ where FnR: FnOnce() -> Result<R> {
       return Err(e);
     }
   };
-  // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
+  // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it.
+  // Rate-limit the "mouth closed" error — when the gullet gets into a state
+  // where the cleanup loop keeps finding stale mouths above the target, the
+  // same error can fire on EVERY caller of reading_from_mouth. Arxiv 0906.1883
+  // (birkmult + local .cls) can trigger 10K+ such firings, one per stack frame.
+  // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
+  // the mouth stack" signal instead of filling the log with identical messages.
+  thread_local! {
+    static MOUTH_CLOSED_ERRORS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  }
+  fn record_mouth_closed_error() {
+    MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1)));
+  }
+  fn should_emit_mouth_closed() -> bool {
+    MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10)
+  }
+  fn mouth_closed_budget_exhausted() -> bool {
+    MOUTH_CLOSED_ERRORS.with(|c| c.get() >= 50)
+  }
   loop {
     let mouth_source = gullet!()
       .runtime
@@ -2043,14 +2061,21 @@ where FnR: FnOnce() -> Result<R> {
       close_mouth(true)?;
       break;
     } else if gullet!().mouthstack.is_empty() {
-      Error!(
-        "unexpected",
-        "<closed>",
-        "Mouth is unexpectedly already closed",
-        arena::with(context_mouth_source, |source| s!(
-          "Reading from {source}, but it has already been closed."
-        ))
-      );
+      if should_emit_mouth_closed() {
+        Error!(
+          "unexpected",
+          "<closed>",
+          "Mouth is unexpectedly already closed",
+          arena::with(context_mouth_source, |source| s!(
+            "Reading from {source}, but it has already been closed."
+          ))
+        );
+      }
+      record_mouth_closed_error();
+      if mouth_closed_budget_exhausted() {
+        Fatal!(Stomach, Recursion,
+          "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent");
+      }
       break;
     } else {
       let is_autoclosable = gullet!()
@@ -2065,14 +2090,21 @@ where FnR: FnOnce() -> Result<R> {
         // Non-autoclosable mouth that isn't our target — this means our target
         // mouth was already consumed. Don't close this mouth (it belongs to an
         // outer reading_from_mouth call). Just error and stop.
-        Error!(
-          "unexpected",
-          "<closed>",
-          "Mouth is unexpectedly already closed",
-          arena::with(context_mouth_source, |source| s!(
-            "Reading from {source}, but it has already been closed (found different non-closable mouth on top)."
-          ))
-        );
+        if should_emit_mouth_closed() {
+          Error!(
+            "unexpected",
+            "<closed>",
+            "Mouth is unexpectedly already closed",
+            arena::with(context_mouth_source, |source| s!(
+              "Reading from {source}, but it has already been closed (found different non-closable mouth on top)."
+            ))
+          );
+        }
+        record_mouth_closed_error();
+        if mouth_closed_budget_exhausted() {
+          Fatal!(Stomach, Recursion,
+            "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent");
+        }
         break;
       }
     }
