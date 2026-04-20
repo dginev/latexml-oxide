@@ -1886,13 +1886,15 @@ impl Document {
       let is_forced = force.is_some_and(|f| f.contains(effective_key));
       // Special case attributes
       if is_xml_id {
-        // Use the replacement id
+        // Use the replacement id. record_id_with_node returns a
+        // deduplicated id when a DIFFERENT node already claims the
+        // same one; must use the return value, not the original `val`.
         let to_has_id = to.has_attribute("xml:id")
           || to.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some();
         if !to_has_id || is_forced {
           self.unrecord_id(val);
-          self.record_id_with_node(val, to);
-          to.set_attribute("xml:id", val)?;
+          let deduped = self.record_id_with_node(val, to);
+          to.set_attribute("xml:id", &deduped)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
         self.add_ss_values(to, key, val)?;
@@ -2473,9 +2475,18 @@ impl Document {
         // SVG elements use plain id, not xml:id (matching Perl behavior)
         node.set_attribute(key, value)?;
       } else {
-        // LaTeXML elements: always use xml:id
-        self.record_id_with_node(value, node);
-        node.set_attribute("xml:id", value)?;
+        // LaTeXML elements: always use xml:id.
+        // record_id_with_node detects duplicates and returns a
+        // deduplicated id when a DIFFERENT node already claims the
+        // same id. Previously we discarded that return value and
+        // wrote the original `value`, which meant libxml2 saw two
+        // nodes with the same xml:id. The post-processing scan's
+        // libxml2 idHash lookups then ran O(n²) on any document
+        // with enough duplicates (see 1106.1389 / KNOWN_PERL_ERRORS
+        // #13: 14 duplicate-id sites from \addtocounter{equation}{-1}
+        // + \subequations inside a \newtheorem[equation] theorem).
+        let deduped = self.record_id_with_node(value, node);
+        node.set_attribute("xml:id", &deduped)?;
       }
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
