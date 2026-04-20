@@ -515,24 +515,31 @@ fn deactivate_counter_scope(ctr: SymStr) {
       s!("nested_counters_{cstr}"),
     )
   });
-  let scopes = lookup_value(&scopes_for_counter);
-  if let Some(Stored::VecDequeStored(stored_scopes)) = scopes {
-    for scope_stored in stored_scopes {
-      if let Stored::String(scope) = scope_stored {
-        state::deactivate_scope(scope);
-      } else {
-        panic!("assignment scopes should be stored as strings, got: {scope_stored:?}");
-      }
-    }
+  // with_value avoids the outer Stored::clone by reading through a
+  // borrow; we still collect the scope SymStrs (Copy) or panic-pointers
+  // into owned Vecs to outlive the borrow.
+  let scope_syms: Vec<SymStr> = state::with_value(&scopes_for_counter, |v| match v {
+    Some(Stored::VecDequeStored(stored_scopes)) => stored_scopes
+      .iter()
+      .map(|s| match s {
+        Stored::String(scope) => *scope,
+        _ => panic!("assignment scopes should be stored as strings, got: {s:?}"),
+      })
+      .collect(),
+    _ => Vec::new(),
+  });
+  for scope in scope_syms {
+    state::deactivate_scope(scope);
   }
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  let nested = lookup_value(&nested_counters);
-  if let Some(Stored::Strings(stored_counters)) = nested {
-    for inner_ctr in &*stored_counters {
-      deactivate_counter_scope(*inner_ctr);
-    }
+  let inner_ctrs: Vec<SymStr> = state::with_value(&nested_counters, |v| match v {
+    Some(Stored::Strings(stored_counters)) => stored_counters.iter().copied().collect(),
+    _ => Vec::new(),
+  });
+  for inner_ctr in inner_ctrs {
+    deactivate_counter_scope(inner_ctr);
   }
 }
 
@@ -793,9 +800,11 @@ pub fn begin_itemize(
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(&listcounter)];
     let cl_name = s!("\\cl@{outerusecounter}");
-    if let Some(Stored::Tokens(tks)) = lookup_value(&cl_name) {
-      cl_toks.extend(tks.unlist());
-    }
+    let existing = state::with_value(&cl_name, |v| match v {
+      Some(Stored::Tokens(tks)) => tks.clone().unlist(),
+      _ => Vec::new(),
+    });
+    cl_toks.extend(existing);
     state::assign_value(
       &cl_name,
       Stored::Tokens(Tokens::new(cl_toks)),
