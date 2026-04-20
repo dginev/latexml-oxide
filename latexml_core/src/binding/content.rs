@@ -1799,16 +1799,14 @@ pub fn font_decode(
     None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
-  // Check for family-specific map
+  // Check for family-specific map. Use with_value to avoid cloning the
+  // Stored envelope when the From<&Stored>→Option<Fontmap> impl only
+  // needs the enum variant discriminant + an Rc bump.
   let (effective_map, _effective_enc) = if let Some(family) = font.get_family() {
     let fam_key = s!("{}_{}_fontmap", encoding, family);
-    if let Some(fmap) = lookup_value(&fam_key) {
-      let fmap: Option<Fontmap> = fmap.into();
-      if let Some(fm) = fmap {
-        (Some(fm), s!("{}_{}", encoding, family))
-      } else {
-        (map, encoding)
-      }
+    let fam_map: Option<Fontmap> = with_value(&fam_key, |v| v.and_then(|s| s.into()));
+    if let Some(fm) = fam_map {
+      (Some(fm), s!("{}_{}", encoding, family))
     } else {
       (map, encoding)
     }
@@ -1835,15 +1833,11 @@ pub fn font_decode_string(
     None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
-  // Check for family-specific map
+  // Check for family-specific map — same with_value motivation as above.
   let effective_map = if let Some(family) = font.get_family() {
     let fam_key = s!("{}_{}_fontmap", encoding, family);
-    if let Some(fmap) = lookup_value(&fam_key) {
-      let fmap: Option<Fontmap> = fmap.into();
-      fmap.or(map)
-    } else {
-      map
-    }
+    let fam_map: Option<Fontmap> = with_value(&fam_key, |v| v.and_then(|s| s.into()));
+    fam_map.or(map)
   } else {
     map
   };
@@ -1882,11 +1876,9 @@ pub fn font_decode_string(
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
   let _ = preload_font_map(encoding); // infallible in practice; swallow Result
-  if let Some(map) = lookup_value(&s!("{encoding}_fontmap")) {
-    map.into()
-  } else {
-    None
-  }
+  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
+  // Rc bump on the inner slice regardless.
+  with_value(&s!("{encoding}_fontmap"), |v| v.and_then(|s| s.into()))
 }
 pub fn preload_font_map(encoding: &str) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.
