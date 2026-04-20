@@ -172,6 +172,22 @@ historical fix needs verification.
   cascades, XMTok-in-text model violations, and watchdog timeouts.
   **1016 clean papers comfortably exceeds the 1000-document-parity
   PR target.**
+
+- **Session 126 cortex_worker rebuild + re-sweep (after math-parser
+  hep-ph/9210235 fix landed):** binary at Apr 19 22:07 was stale; the
+  `cortex` feature gate meant my earlier `cargo build --release` didn't
+  rebuild the cortex binary. After `cargo build --release --features
+  cortex --bin cortex_worker`: 1024/1159 = 88.4% clean on same sample.
+  Failure breakdown:
+  - 51 watchdog (exit 134) — pathological serial hangs / very slow.
+  - 8 SIGSEGV (exit 139) — **all 8 in MathML post-processing** (the
+    conversion log reports "Conversion complete: No obvious problems"
+    then `latexml_post MathML::Presentation` abort). Papers: 0709.2286,
+    0710.1208, 1110.2158, 1212.2052, 1402.6805, 1504.04055, 1605.07431,
+    1611.00957. Verified: `--no-pmml` suppresses the crash on 1611.00957.
+    Open task: find the specific XMath node shape that trips the
+    `pmml`/`pmml_apply`/`pmml_array` recursion.
+  - 2 panic (exit 101) — 1410.8508, 1608.08252. Not yet triaged.
 - **Arena pin-count sentinel replaced with symbol-count sentinel**
   (`common/arena.rs`): the pin-call-count metric was a false positive
   — dedup-heavy hot loops would trip it without any actual arena

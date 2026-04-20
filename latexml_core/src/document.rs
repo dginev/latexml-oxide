@@ -3473,8 +3473,26 @@ impl Document {
           for (key, val) in child.get_attributes() {
             match key.as_str() {
               "xml:id" | "id" => {
-                // Use the replacement id
-                let mapped_id = id_map.get(&val).unwrap();
+                // Use the replacement id. The pre-walk
+                // (findvalues/collect_xml_ids_from) normally populates
+                // id_map with every `xml:id` it can see, but the
+                // namespace/prefix of the attribute key returned by
+                // libxml2's `get_attributes()` can differ from what the
+                // XPath / DOM walk picked up (e.g. when the incoming
+                // node's tree came through a cloneNode that stripped
+                // the xml namespace). Fall back to minting a fresh
+                // replacement id on-the-fly rather than panicking —
+                // 1410.8508 hit this when the pre-walk found zero ids
+                // but attributes on a child node did carry xml:id.
+                let fresh;
+                let mapped_id = match id_map.get(&val) {
+                  Some(id) => id,
+                  None => {
+                    fresh = self.modify_id(val.clone());
+                    id_map.insert(val.clone(), fresh.clone());
+                    id_map.get(&val).unwrap()
+                  }
+                };
                 let newid = self.record_id_with_node(mapped_id, &new);
                 new.set_attribute(&key, &newid)?;
                 // Update id_map so subsequent idref lookups use the ACTUAL recorded id.

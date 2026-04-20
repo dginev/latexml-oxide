@@ -8440,6 +8440,14 @@ LoadDefinitions!({
     let mut read = Vec::new();
 
     while let Some(t) = gullet::read_token()? {
+      // Stop as soon as we've matched the full token sequence —
+      // otherwise the `toks[0]` index panics on the next iteration
+      // (arxiv 1608.08252 hit this with a matching prefix followed
+      // by arbitrary tokens in the stream).
+      if toks.is_empty() {
+        read.push(t);
+        break;
+      }
       if t == toks[0] {
         toks.pop_front();
         read.push(t);
