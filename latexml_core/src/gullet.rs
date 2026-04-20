@@ -1442,9 +1442,15 @@ pub fn read_number() -> Result<Number> {
     Ok(Number::new(s * n.value_of()))
   } else {
     let next = read_token()?;
-    let current = get_current_token().unwrap();
+    // Fallback for the error message if the current-token register is not
+    // populated — hitting "missing number" with no current token is rare
+    // but plausible (deeply nested macro-expansion paths can leave the
+    // register empty), and the diagnostic should not bring the run down.
+    let current = get_current_token()
+      .map(|t| format!("{t:?}"))
+      .unwrap_or_else(|| String::from("<none>"));
     let message = s!(
-      "Missing number, treated as zero while processing {:?}, next token is {:?}",
+      "Missing number, treated as zero while processing {}, next token is {:?}",
       current,
       next
     );
