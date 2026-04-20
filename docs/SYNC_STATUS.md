@@ -188,6 +188,25 @@ historical fix needs verification.
     Open task: find the specific XMath node shape that trips the
     `pmml`/`pmml_apply`/`pmml_array` recursion.
   - 2 panic (exit 101) — 1410.8508, 1608.08252. Not yet triaged.
+
+**Follow-up task: dump Let-alias preservation** — Perl LaTeXML's dump
+format distinguishes `Lt('\cs','\target')` (Let alias) from `I(E(...))`
+(full Expandable definition). Our Rust dump serialises both as `M E`
+records, which forces the dump-loader's safety gate at
+`dump_reader.rs:177-191` to choose between (a) admitting all
+public-CS M records and risking expl3/hook cascades, or (b) skipping
+them all and missing plain Let aliases that latex.ltx relies on —
+`\let\a=\@tabacckludge` (L10007) is the representative case. Session
+126 worked around this by adding explicit `Let!("\\a", ...)` to
+`latex_constructs.rs`, which mirrors Perl's latex.ltx source exactly,
+but leaves the structural divergence from Perl-LaTeXML's dump
+representation. A principled follow-up is to teach the dump
+serializer to preserve `Let` as its own record type (perhaps `L
+<cs> <target>`) and the loader to admit them independently of the
+gate — they carry no body, so no cascade risk. That would let us
+delete the hand-written `Let!` for `\a` and recover the other
+plain-LaTeX public-CS aliases currently filtered out (`\filecontents`,
+`\fbox`, `\itshape`, `\ae`, `\shipout`, etc.) wholesale.
 - **Arena pin-count sentinel replaced with symbol-count sentinel**
   (`common/arena.rs`): the pin-call-count metric was a false positive
   — dedup-heavy hot loops would trip it without any actual arena
