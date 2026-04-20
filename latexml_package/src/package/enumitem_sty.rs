@@ -147,13 +147,15 @@ fn end_enum_itemize(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
 fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
   let mut keys: Vec<String> = Vec::new();
 
-  // Load existing keys
-  if let Some(Stored::String(existing_keys)) = state::lookup_value(&s!("{name}@keys")) {
-    let keys_str = arena::to_string(existing_keys);
-    for k in keys_str.split(',') {
-      if !k.is_empty() {
-        keys.push(k.to_string());
-      }
+  // Load existing keys — with_value avoids the Stored envelope clone
+  // when we only need the inner SymStr to stringify.
+  let keys_str = state::with_value(&s!("{name}@keys"), |v| match v {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::new(),
+  });
+  for k in keys_str.split(',') {
+    if !k.is_empty() {
+      keys.push(k.to_string());
     }
   }
 
@@ -196,22 +198,28 @@ fn merged_enumitem_keyvals(
   ];
 
   for def_name in &default_names {
-    let keys_key = s!("{def_name}@keys");
-    if let Some(Stored::String(keys_sym)) = state::lookup_value(&keys_key) {
-      let keys_str = arena::to_string(keys_sym);
-      for key in keys_str.split(',') {
-        if !key.is_empty() {
-          let val_key = s!("{def_name}@{key}");
-          if let Some(val) = state::lookup_value(&val_key) {
-            let aw = match val {
-              Stored::Tokens(t) => ArgWrap::Tokens(t),
-              Stored::Number(n) => ArgWrap::Number(n),
-              Stored::None => ArgWrap::None,
-              Stored::String(s) => ArgWrap::Tokens(mouth::tokenize_internal(&arena::to_string(s))),
-              _ => ArgWrap::None,
-            };
-            hash.insert(key.to_string(), aw);
-          }
+    // with_value pulls the keys-string out of the Stored::String arm
+    // without cloning the envelope; the per-key inner lookup still
+    // needs to produce an owned ArgWrap, so we pay the clone there.
+    let keys_str = state::with_value(&s!("{def_name}@keys"), |v| match v {
+      Some(Stored::String(s)) => arena::to_string(*s),
+      _ => String::new(),
+    });
+    if keys_str.is_empty() {
+      continue;
+    }
+    for key in keys_str.split(',') {
+      if !key.is_empty() {
+        let val_key = s!("{def_name}@{key}");
+        if let Some(val) = state::lookup_value(&val_key) {
+          let aw = match val {
+            Stored::Tokens(t) => ArgWrap::Tokens(t),
+            Stored::Number(n) => ArgWrap::Number(n),
+            Stored::None => ArgWrap::None,
+            Stored::String(s) => ArgWrap::Tokens(mouth::tokenize_internal(&arena::to_string(s))),
+            _ => ArgWrap::None,
+          };
+          hash.insert(key.to_string(), aw);
         }
       }
     }
