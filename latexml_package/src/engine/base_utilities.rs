@@ -322,19 +322,25 @@ LoadDefinitions!({
     after_digest => {
       // Perl: digest @at@begin@maketitle tokens (which runs \@add@to@frontmatter@now
       // for each deferred frontmatter entry, populating the frontmatter hash)
-      if let Some(Stored::VecDequeStored(ref tks_list)) = state::lookup_value("@at@begin@maketitle") {
-        // Collect all token lists into one
-        let mut all_tokens = Vec::new();
-        for stored_item in tks_list.iter() {
-          if let Stored::Tokens(ref tks) = stored_item {
-            all_tokens.extend(tks.unlist_ref().iter().copied());
+      // with_value walks the VecDeque in-place so we don't pay for a
+      // full Stored::clone (each inner Tokens would Rc-bump again).
+      let all_tokens = state::with_value("@at@begin@maketitle", |v| {
+        if let Some(Stored::VecDequeStored(tks_list)) = v {
+          let mut acc = Vec::new();
+          for stored_item in tks_list.iter() {
+            if let Stored::Tokens(ref tks) = stored_item {
+              acc.extend(tks.unlist_ref().iter().copied());
+            }
           }
+          acc
+        } else {
+          Vec::new()
         }
-        if !all_tokens.is_empty() {
-          let _ = stomach::digest(Tokens::new(all_tokens));
-        }
-        state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
+      });
+      if !all_tokens.is_empty() {
+        let _ = stomach::digest(Tokens::new(all_tokens));
       }
+      state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
       state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
     });
 
@@ -342,18 +348,23 @@ LoadDefinitions!({
   // Perl: processes @at@begin@maketitle tokens.
   DefPrimitive!("\\lx@frontmatter@fallback", None,
     after_digest => {
-      if let Some(Stored::VecDequeStored(ref tks_list)) = state::lookup_value("@at@begin@maketitle") {
-        let mut all_tokens = Vec::new();
-        for stored_item in tks_list.iter() {
-          if let Stored::Tokens(ref tks) = stored_item {
-            all_tokens.extend(tks.unlist_ref().iter().copied());
+      let all_tokens = state::with_value("@at@begin@maketitle", |v| {
+        if let Some(Stored::VecDequeStored(tks_list)) = v {
+          let mut acc = Vec::new();
+          for stored_item in tks_list.iter() {
+            if let Stored::Tokens(ref tks) = stored_item {
+              acc.extend(tks.unlist_ref().iter().copied());
+            }
           }
+          acc
+        } else {
+          Vec::new()
         }
-        if !all_tokens.is_empty() {
-          let _ = stomach::digest(Tokens::new(all_tokens));
-        }
-        state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
+      });
+      if !all_tokens.is_empty() {
+        let _ = stomach::digest(Tokens::new(all_tokens));
       }
+      state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
     });
 
   // Maintain a list of classes that apply to the document root.
