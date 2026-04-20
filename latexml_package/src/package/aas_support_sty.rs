@@ -177,7 +177,7 @@ LoadDefinitions!({
   // If yes → \caption; if no → \@figcaption (wraps in figure env).
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
   DefMacro!("\\figcaption[]", sub[(opt_arg)] {
-    let env = state::lookup_string("current_environment");
+    let env = state::lookup_string_from_sym(pin!("current_environment"));
     if env.contains("figure") {
       // Inside figure: act as \caption
       if let Some(opt) = opt_arg {

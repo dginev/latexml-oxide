@@ -2,6 +2,67 @@
 
 ## [0.4.1] (in active development)
 
+  - **D0 d.1 complete — dump / `_base` closure-only gap closed from
+    32 → 1 CSes** (the single holdout `\wlog` is defined by
+    `plain_base.rs` as a closure before the snapshot). Three landings:
+    (1) `Expandable::get_num_args` override so E-entries record correct
+    nargs; (2) `serialize_stored` handles `None`-body Expandables as
+    empty E-entries; (3) `ini_tex.rs` surgically preloads `latex_base`
+    after the bootstrap snapshot so its `_base`-only CSes enter state
+    before the raw-load.
+  - **Dump E-format v2** (new 5th field): full parameter prototype
+    serialized per entry via `Parameters::stringify()` so DefToken /
+    Optional / Until / Match types round-trip instead of being
+    flattened to Plain. Reader gracefully falls back to
+    `"{}".repeat(nargs)` when proto fails to parse.
+  - **Latent dump-pipeline bug fixes**: (a) `parse_and_load`'s
+    `line.trim()` stripped trailing tabs from empty-body E-entries,
+    causing `splitn(4)` to report 3 fields and reject the entry;
+    (b) `dump_reader`, `dump_loader`, `dump_codegen`, and
+    `latex_constructs::\DeclareTextFontCommand` all called
+    `parse_parameters(..., false)` which leaves declared Parameters
+    with the mock reader ("Missing argument {}" at first use) — now
+    all pass `init_flag=true` for runtime paths.
+  - **Perl parity sweep** (commits back to 2025):
+    #2771 if_count/absorb_count control-counter filter on dump writer;
+    #2777 KeyVal empty-macroprefix fallback + empty-keyset skip;
+    #2698 aastex revtex4 option is a no-op;
+    #2697 DecodeColor Warn on unresolvable name;
+    #4e3d1b8d filecontents header prepend "from source" line;
+    #aaacdba2 nominal Locator on dump-loaded Expandables + Registers.
+  - **TRANSLATION_GAPS.md audit + ports**: verified every section
+    against current Rust source with line citations. Three small
+    Box.pm helpers (`is_math`, `set_properties`, `total_height`) and
+    `fracSizer` from TeX_Math.pool ported. Seven pdfTeX primitives
+    added: no-op stubs for `\pdfsavepos`, `\pdfstartthread`,
+    `\pdfendthread`, `\pdfnoligatures`, `\pdfsetrandomseed`, `\lpfcode`,
+    `\rpfcode`; plus `OpenAnnotSpecification` parameter type +
+    `\pdfannot` + `\pdfobj` + `\pdfcolorstack` with full OptionalMatch
+    parameter parsing. Section 9 (pdfTeX) now has zero Perl-defined
+    gaps remaining.
+  - **dump_reader perf**: five-commit sequence cuts allocations across
+    the hot dump-load path — unused `_cs_name` decodes in E/R arms,
+    no-`%` fast path in `url_decode`, no-`%` fast path in
+    `parse_token`, Cow-wrapping the per-line key. Hundreds of thousands
+    of Strings avoided per dump load.
+  - **Babel parity**: reduced `babel_sty.rs` from 384 → 62 lines (85%) after
+    closing the `@currname` leakage bug in our `input_definitions` path
+    (plain `\input` now locally saves/restores `@currname`/`@currext`,
+    unblocking babel's two-phase `\ProcessOptions*` pipeline). Three
+    long-standing D0 items formally closed as a result:
+    `\openin`-based `.ini` loading, `\initiate@active@char` active-char
+    lifecycle, and AtBeginDocument hook chain ordering.
+  - Dump staleness warning at runtime: compares the dump's
+    `texlive.version` stamp against ambient `kpsewhich --version` and
+    logs a loud warning on mismatch (opt-out via
+    `LATEXML_SKIP_DUMP_STAMP_CHECK=1`).
+  - `make fresh-test` target regenerates the kernel dump from ambient
+    TeX Live before running tests; canonical path for CI.
+  - Reduced `todo!()` panics from ~15 to 3 (all deliberate invariant
+    asserts on unreachable branches).
+  - All clippy warnings fixed; `STAGED_SNAPSHOTS` nested generic type
+    factored into named aliases.
+
 ## [0.4.0] 2024-09-10
   - The project was refactored to indicate an official `latexml` clone with an `-oxide` suffix.
 

@@ -58,7 +58,7 @@ LoadDefinitions!({
     // A head
     result.push(T_BEGIN!()); result.push(T_CS!("\\lx@diagbox@head"));
     result.push(T_BEGIN!()); result.push(T_OTHER!("l")); result.push(T_END!());
-    result.push(T_BEGIN!()); result.extend(font_tokens.clone().unlist()); result.push(T_END!());
+    result.push(T_BEGIN!()); result.extend_from_slice(font_tokens.unlist_ref()); result.push(T_END!());
     result.push(T_BEGIN!()); result.extend(a_content.unlist()); result.push(T_END!());
     result.push(T_END!());
     // M head (optional)
@@ -66,14 +66,14 @@ LoadDefinitions!({
       result.push(T_OTHER!("["));
       result.push(T_CS!("\\lx@diagbox@head"));
       result.push(T_BEGIN!()); result.extend(ExplodeText!(align_m)); result.push(T_END!());
-      result.push(T_BEGIN!()); result.extend(font_tokens.clone().unlist()); result.push(T_END!());
+      result.push(T_BEGIN!()); result.extend_from_slice(font_tokens.unlist_ref()); result.push(T_END!());
       result.push(T_BEGIN!()); result.extend(m.unlist()); result.push(T_END!());
       result.push(T_OTHER!("]"));
     }
     // B head
     result.push(T_BEGIN!()); result.push(T_CS!("\\lx@diagbox@head"));
     result.push(T_BEGIN!()); result.push(T_OTHER!("r")); result.push(T_END!());
-    result.push(T_BEGIN!()); result.extend(font_tokens.clone().unlist()); result.push(T_END!());
+    result.push(T_BEGIN!()); result.extend_from_slice(font_tokens.unlist_ref()); result.push(T_END!());
     result.push(T_BEGIN!()); result.extend(b_content.unlist()); result.push(T_END!());
     result.push(T_END!());
 

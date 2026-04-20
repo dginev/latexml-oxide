@@ -6,7 +6,7 @@ use crate::prelude::*;
 fn absorbed_string(todelim: &Tokens) -> String {
   // Build \ensuremath{todelim} tokens
   let mut toks = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
-  toks.extend(todelim.clone().unlist());
+  toks.extend_from_slice(todelim.unlist_ref());
   toks.push(T_END!());
   // Digest and extract text from resulting boxes
   match stomach::digest(Tokens::new(toks)) {
@@ -74,7 +74,7 @@ LoadDefinitions!({
     Let!("\\DC@saved@dollar", "$");
     state::let_i(&T_MATH!(), &T_CS!("\\relax"), None);
     // Start inline math if not already in math
-    let in_math = lookup_bool("IN_MATH");
+    let in_math = state::lookup_bool_sym(pin!("IN_MATH"));
     if in_math {
       state::assign_value("DC_started_math", Stored::Bool(false), None);
       Ok(Tokens::default())

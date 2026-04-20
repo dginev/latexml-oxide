@@ -313,7 +313,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
 pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<dyn Error>> {
   let nodes = ctxt.nodes;
   let document = ctxt.document;
-  let mut refs = Vec::new();
+  let mut refs = Vec::with_capacity(args.len());
   for arg in args {
     match arg {
       XM::Token(ref mut props, _meta) => {

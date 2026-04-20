@@ -245,7 +245,7 @@ LoadDefinitions!({
           // Check isFontDef: lookupValue("fontinfo_<cs>")
           let cs_str = token.to_string();
           let fontinfo_key = s!("fontinfo_{}", cs_str);
-          if state::lookup_value(&fontinfo_key).is_some() {
+          if state::with_value(&fontinfo_key, |v| v.is_some()) {
             true
           } else {
             // Check \def, \edef, \gdef, \xdef
@@ -751,7 +751,7 @@ LoadDefinitions!({
     "\\vdots",
     "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})",
     properties => {
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
             .specialize("\u{22EE}"))))
@@ -773,7 +773,7 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
     sizer      => "\u{2026}",
     properties => {
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
             .specialize("\u{2026}"))))
@@ -859,9 +859,7 @@ LoadDefinitions!({
   DefMath!("\\rceil",  None, "\u{2309}", role => "CLOSE", stretchy => false); // RIGHT CEILING
   DefMath!("\\lfloor", None, "\u{230A}", role => "OPEN",  stretchy => false); // LEFT FLOOR
   DefMath!("\\rfloor", None, "\u{230B}", role => "CLOSE", stretchy => false); // RIGHT FLOOR
-  // Perl #2762: \lgroup / \rgroup delimiters
-  DefMath!("\\lgroup", None, "\u{27EE}", role => "OPEN",  stretchy => false); // MATHEMATICAL LEFT FLATTENED PARENTHESIS
-  DefMath!("\\rgroup", None, "\u{27EF}", role => "CLOSE", stretchy => false); // MATHEMATICAL RIGHT FLATTENED PARENTHESIS
+  // \lgroup / \rgroup are defined below with Perl #2762 parity comment (match Perl source layout).
 
   // Note: We should be using 27E8,27E9, which are "mathematical", not 2329,232A
 
@@ -1026,11 +1024,15 @@ LoadDefinitions!({
   // TeX Book, Appendix B. p. 361
 
   // This is actually LaTeX's definition, but let's just do it this way.
+  // Locked to prevent raw plain-TeX/amstex overrides that expand via
+  // the \radical primitive (undefined in LaTeXML) — arxiv 1012.3836
+  // uses amstex's `\def\sqrt#1{\radical"270370 {#1}}`.
   DefConstructor!(
     "\\sqrt OptionalInScriptStyle Digested",
     "?#1(<ltx:XMApp><ltx:XMTok meaning='nth-root'/>\
     <ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)\
-    (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)"
+    (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)",
+    locked => true
   );
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {

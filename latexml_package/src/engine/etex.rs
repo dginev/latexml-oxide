@@ -124,7 +124,9 @@ LoadDefinitions!({
       let font_rc = fontchar_lookup_font(&font_tok);
       if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
-          let (_, h, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
+          let mut buf = [0u8; 4];
+          let key = ch.encode_utf8(&mut buf);
+          let (_, h, _) = font.compute_string_size(key, SymHashMap::default());
           return Some(RegisterValue::Dimension(h));
         }
       }
@@ -139,7 +141,9 @@ LoadDefinitions!({
       let font_rc = fontchar_lookup_font(&font_tok);
       if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
-          let (w, _, _) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
+          let mut buf = [0u8; 4];
+          let key = ch.encode_utf8(&mut buf);
+          let (w, _, _) = font.compute_string_size(key, SymHashMap::default());
           return Some(RegisterValue::Dimension(w));
         }
       }
@@ -154,7 +158,9 @@ LoadDefinitions!({
       let font_rc = fontchar_lookup_font(&font_tok);
       if let Some(font) = font_rc {
         if let Some(ch) = char::from_u32(code as u32) {
-          let (_, _, d) = font.compute_string_size(&ch.to_string(), SymHashMap::default());
+          let mut buf = [0u8; 4];
+          let key = ch.encode_utf8(&mut buf);
+          let (_, _, d) = font.compute_string_size(key, SymHashMap::default());
           return Some(RegisterValue::Dimension(d));
         }
       }

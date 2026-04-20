@@ -75,6 +75,12 @@ impl Object for Expandable {
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
   fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
+  fn get_num_args(&self) -> usize {
+    match self.paramlist {
+      Some(ref params) => params.get_num_args(),
+      None => 0,
+    }
+  }
   fn get_cs(&self) -> Cow<'_, Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<'_, str> {
     match self.alias {
@@ -94,9 +100,13 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
-    // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let _tracing = lookup_int("tracingmacros") > 0;
-    let _profiled = lookup_bool("PROFILING");
+    // Perl shortcut for "trivial" macros that were tracing- or
+    // profiling-aware. Neither tracing nor profiling is implemented
+    // in the Rust port (the returned `_tracing` / `_profiled` values
+    // were discarded), so the two state lookups were pure overhead
+    // on every macro expansion (\~350k calls in si.tex alone per
+    // callgrind). Removed — re-introduce only alongside the actual
+    // tracing/profiling features if/when they land.
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
@@ -161,7 +171,9 @@ impl Definition for Expandable {
           };
           if self.has_cc_arg {
             // Do we actually need to substitute the args in?
-            let mut args_tks = Vec::new();
+            // Pre-size: one entry per argument; avoids Vec doublings on
+            // macros with many args.
+            let mut args_tks = Vec::with_capacity(args.len());
             for arg in args.iter() {
               args_tks.push(arg.as_tokens()?);
             }
@@ -188,11 +200,11 @@ impl Definition for Expandable {
   fn invoke_primitive(&self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
-      "do_absorbtion on Expandable should never be called!"
+      "do_absorption on Expandable should never be called!"
     );
   }
 }

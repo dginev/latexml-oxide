@@ -106,7 +106,7 @@ fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
 /// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
   let tokens = latexml_core::mouth::tokenize(text);
-  let mut toks: Vec<Token> = tokens.unlist().to_vec();
+  let mut toks: Vec<Token> = tokens.unlist();
   let mut level: i32 = 0;
   for t in &toks {
     match t.get_catcode() {
@@ -137,12 +137,12 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
 
   while let Ok(Some(token)) = gullet::read_token() {
     if let Some(until_tok) = until {
-      if token.to_string() == until_tok.to_string() {
+      if token.text == until_tok.text && token.code == until_tok.code {
         break;
       }
     }
     // Check for mathescape $ toggle
-    if mathescape && token.to_string() == "$" {
+    if mathescape && token.text == pin!("$") {
       inmath = !inmath;
       tokens.push(T_OTHER!("$"));
       continue;
@@ -152,7 +152,7 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
       // In math mode with {, read balanced group and preserve
       tokens.push(T_BEGIN!());
       if let Ok(balanced) = gullet::read_balanced(ExpansionLevel::Off, false, false) {
-        tokens.extend(balanced.unlist().to_vec());
+        tokens.extend(balanced.unlist());
       }
       tokens.push(T_END!());
     } else if !inmath && cc.is_active_or_cs() {
@@ -160,7 +160,7 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
       // In verbatim listing context, \end should appear as literal characters \ e n d
       let name = token.to_string();
       for c in name.chars() {
-        tokens.push(T_OTHER!(c.to_string()));
+        tokens.push(Token { text: arena::pin_char(c), code: Catcode::OTHER });
       }
     } else {
       tokens.push(token);
@@ -363,7 +363,7 @@ fn lst_class_name(class: &str, n: Option<i64>) -> String {
 fn lst_push_value_locally(list: &str, values: Vec<Token>) {
   let key = list;
   let prev = match state::lookup_value(key) {
-    Some(Stored::Tokens(t)) => t.unlist().to_vec(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => vec![],
   };
   let mut combined = prev;
@@ -432,7 +432,7 @@ fn lst_add_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>
     }
     let key = s!("LST_WORDS@{word}@class");
     // Only set if not already in a class
-    if state::lookup_value(&key).is_none() {
+    if state::with_value(&key, |v| v.is_none()) {
       state::assign_value(&key, Stored::String(arena::pin(class)), None);
       // Track the word in the word list for case-insensitive duplication
       let list_key = "LST_WORD_LIST";
@@ -648,10 +648,10 @@ fn lst_add_delimiter(
       Tokens!()
     };
     let open_tex = if invisible {
-      if style_is_markup { style_tokens.clone() } else { Tokens!() }
+      if style_is_markup { style_tokens } else { Tokens!() }
     } else if style_is_markup {
       // Perl: Tokens($styleTeX->unlist, $open)
-      let mut toks = style_tokens.clone().unlist();
+      let mut toks = style_tokens.unlist();
       toks.push(T_OTHER!(&open_str));
       Tokens::new(toks)
     } else {
@@ -797,10 +797,10 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
       if let Some(rescanned) = lst_rescan(Some(begin)) {
         if is_leaf {
           // Leaf class tokens are delimiter chars — emit before styling
-          delim_tokens.extend(rescanned.unlist().to_vec());
+          delim_tokens.extend(rescanned.unlist());
         } else {
           // Parent class tokens are styling (e.g. \itshape) — scope in a group
-          style_tokens.extend(rescanned.unlist().to_vec());
+          style_tokens.extend(rescanned.unlist());
         }
       }
     }
@@ -844,7 +844,7 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
     if let Some(Stored::Tokens(end)) = state::lookup_value(&end_key) {
       if let Some(rescanned) = lst_rescan(Some(end)) {
         if is_leaf {
-          delim_tokens.extend(rescanned.unlist().to_vec());
+          delim_tokens.extend(rescanned.unlist());
         }
       }
     }
@@ -1055,11 +1055,11 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
 
   // Add preamble tokens
   if let Some(Stored::Tokens(preamble)) = state::lookup_value("LISTINGS_PREAMBLE") {
-    ctx.lsttokens.extend(preamble.unlist().to_vec());
+    ctx.lsttokens.extend(preamble.unlist());
   }
   let basicstyle = lst_get_tokens("basicstyle");
   if !basicstyle.is_empty() {
-    ctx.lsttokens.extend(basicstyle.unlist().to_vec());
+    ctx.lsttokens.extend(basicstyle.unlist());
   }
 
   // Perl: while ($listing && !&$linetest($linenum)) { skip lines before firstline }
@@ -1117,7 +1117,7 @@ fn lst_process_start_line(ctx: &mut LstContext) {
   if numpos != "none" {
     let is_empty = ctx.listing.starts_with('\n') || ctx.listing.is_empty();
     let number_tokens = lst_do_number(ctx, is_empty);
-    ctx.lsttokens.extend(number_tokens.unlist().to_vec());
+    ctx.lsttokens.extend(number_tokens.unlist());
   }
   ctx.lsttokens.push(T_END!());
 }
@@ -1221,7 +1221,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
             ctx.lsttokens.push(T_CS!("\\@listingLiterate"));
             ctx.lsttokens.push(T_BEGIN!());
-            ctx.lsttokens.extend(replacement.unlist().to_vec());
+            ctx.lsttokens.extend(replacement.unlist());
             ctx.lsttokens.push(T_END!());
           }
           continue;
@@ -1370,7 +1370,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
               if let Some(rescanned) =
                 lst_rescan(Some(Tokens::new(vec![T_OTHER!(&s)])))
               {
-                rescanned.unlist().to_vec()
+                rescanned.unlist()
               } else {
                 vec![T_OTHER!(&s)]
               }
@@ -1445,7 +1445,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
     if ctx.listing.starts_with('\x0C') {
       ctx.listing = ctx.listing[1..].to_string();
       let ff = lst_get_tokens("formfeed");
-      ctx.lsttokens.extend(ff.unlist().to_vec());
+      ctx.lsttokens.extend(ff.unlist());
       ctx.colnum += 1;
       continue;
     }
@@ -1482,7 +1482,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
         for c in matched.chars() {
           let ch_str = c.to_string();
           if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&ch_str)]))) {
-            ctx.lsttokens.extend(rescanned.unlist().to_vec());
+            ctx.lsttokens.extend(rescanned.unlist());
           }
         }
         ctx.colnum += matched.len() as i64;
@@ -1495,7 +1495,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
       ctx.listing = ctx.listing[ch.len_utf8()..].to_string();
       let ch_str = ch.to_string();
       if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&ch_str)]))) {
-        ctx.lsttokens.extend(rescanned.unlist().to_vec());
+        ctx.lsttokens.extend(rescanned.unlist());
       }
       ctx.colnum += 1;
     }
@@ -1532,7 +1532,7 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
   let mut body_tokens = Vec::new();
   // Add preamble_before
   if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
-    body_tokens.extend(pre.unlist().to_vec());
+    body_tokens.extend(pre.unlist());
   }
   // Invocation of \@@listings@block{counter}{processed}{name}
   let name_tokens = name.unwrap_or(Tokens!());
@@ -1547,7 +1547,7 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
 
   let mut trailer = Vec::new();
   if let Some(Stored::Tokens(post)) = state::lookup_value("LISTINGS_POSTAMBLE") {
-    trailer.extend(post.unlist().to_vec());
+    trailer.extend(post.unlist());
   }
   trailer.push(T_END!()); // balance bgroup from the caller
 
@@ -1580,8 +1580,8 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
     // Perl lines 184-188: Extract optional [short caption] from caption text
     let mut toks: Vec<Token> = caption_tokens.unlist();
     let mut short_caption = Tokens!();
-    if toks.first().map(|t| t.to_string() == "[").unwrap_or(false) {
-      while !toks.is_empty() && toks[0].to_string() != "]" {
+    if toks.first().map(|t| t.text == pin!("[")).unwrap_or(false) {
+      while !toks.is_empty() && toks[0].text != pin!("]") {
         short_caption.unlist_mut().push(toks.remove(0));
       }
       if !toks.is_empty() { toks.remove(0); } // consume ']'
@@ -1630,7 +1630,7 @@ fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
       result.push(T_CS!("\\def"));
       result.push(T_CS!("\\lstname"));
       result.push(T_BEGIN!());
-      result.extend(n.clone().unlist().to_vec());
+      result.extend_from_slice(n.unlist_ref());
       result.push(T_END!());
     }
   }
@@ -1704,11 +1704,11 @@ LoadDefinitions!({
     let body = listings_read_raw_string(until.as_ref());
     let mut result = Vec::new();
     if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
-      result.extend(pre.unlist().to_vec());
+      result.extend(pre.unlist());
     }
     result.extend(lst_process_inline(&body));
     if let Some(Stored::Tokens(post)) = state::lookup_value("LISTINGS_POSTAMBLE") {
-      result.extend(post.unlist().to_vec());
+      result.extend(post.unlist());
     }
     result.push(T_END!()); // balance bgroup
     Ok(Tokens::new(result))
@@ -1773,11 +1773,11 @@ LoadDefinitions!({
         let _ = &kv; // lstActivate placeholder
         let mut result = Vec::new();
         if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
-          result.extend(pre.unlist().to_vec());
+          result.extend(pre.unlist());
         }
         result.extend(lst_process_inline(&text));
         if let Some(Stored::Tokens(post)) = state::lookup_value("LISTINGS_POSTAMBLE") {
-          result.extend(post.unlist().to_vec());
+          result.extend(post.unlist());
         }
         result.push(T_END!()); // balance bgroup
         Ok(Tokens::new(result))
@@ -1853,15 +1853,14 @@ LoadDefinitions!({
     } else {
       parse_parameters(&param_spec, &cs, true)?
     };
-    // Capture start/end code tokens for the closure
-    let start_toks = start_code.clone();
-    let end_toks = end_code.clone();
-    let env_inner = env_name.clone();
+    // Move start_code / end_code / env_name directly into the closure
+    // capture — none are used outside, so three setup-time clones are
+    // avoided per `\lstnewenvironment` definition.
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         bgroup();
-        state::assign_value("current_environment", Stored::String(arena::pin(&env_inner)), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_inner)), None)?;
+        state::assign_value("current_environment", Stored::String(arena::pin(&env_name)), None);
+        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_name)), None)?;
         // Convert expansion args to format for substitute_parameters
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
@@ -1872,17 +1871,17 @@ LoadDefinitions!({
           })
           .collect();
         // Perl: lstPushValueLocally(LISTINGS_POSTAMBLE => $end->substituteParameters(@args))
-        if !end_toks.is_empty() {
-          let end_subst = end_toks.substitute_parameters(&sub_args);
-          lst_push_value_locally("LISTINGS_POSTAMBLE", end_subst.unlist().to_vec());
+        if !end_code.is_empty() {
+          let end_subst = end_code.substitute_parameters(&sub_args);
+          lst_push_value_locally("LISTINGS_POSTAMBLE", end_subst.unlist());
         }
         // Perl: Digest($start->substituteParameters(@args))
         // This executes \lstset{...} which activates language, styles, etc.
-        if !start_toks.is_empty() {
-          let start_subst = start_toks.substitute_parameters(&sub_args);
+        if !start_code.is_empty() {
+          let start_subst = start_code.substitute_parameters(&sub_args);
           let _digested = stomach::digest(start_subst)?;
         }
-        let text = listings_read_raw_lines(&env_inner);
+        let text = listings_read_raw_lines(&env_name);
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
         let result = lst_process_display(name_opt, &text);

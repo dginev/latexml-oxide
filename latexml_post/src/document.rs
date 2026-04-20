@@ -559,6 +559,49 @@ impl PostDocument {
     }
   }
 
+  /// Resolve a node's namespace URI to its registered prefix without
+  /// allocating a combined "prefix:localname". Returns the prefix as an
+  /// owned `String` (a copy of the entry in `namespace_uris`); callers
+  /// can then match on `node.get_name()` separately. Useful in hot
+  /// dispatch code where the `format!` in `get_qname` is the cost.
+  pub fn qname_prefix(&self, node: &Node) -> Option<String> {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return None;
+    }
+    node.get_namespace().and_then(|ns| {
+      let nsuri = ns.get_href();
+      self.namespace_uris.get(&nsuri).cloned()
+    })
+  }
+
+  /// Check whether a node's qualified name equals a fixed "prefix:localname"
+  /// string without allocating a `String`. Fast-path for hot comparisons
+  /// like `is_qname(node, "ltx:XMApp")` — avoids the `format!` in
+  /// `get_qname` when the caller only needs a boolean answer. Falls back
+  /// to allocating comparison (via `get_qname`) for unknown-namespace
+  /// cases so semantics exactly match `get_qname(node).as_deref() == Some(...)`.
+  pub fn is_qname(&self, node: &Node, expected: &str) -> bool {
+    if node.get_type() != Some(NodeType::ElementNode) {
+      return false;
+    }
+    let (expected_prefix, expected_local) = match expected.split_once(':') {
+      Some((p, l)) => (Some(p), l),
+      None => (None, expected),
+    };
+    let localname = node.get_name();
+    if localname != expected_local {
+      return false;
+    }
+    match (node.get_namespace(), expected_prefix) {
+      (Some(ns), Some(ep)) => {
+        let nsuri = ns.get_href();
+        self.namespace_uris.get(&nsuri).map(|p| p == ep).unwrap_or(false)
+      }
+      (None, None) => true,
+      _ => false,
+    }
+  }
+
   // ======================================================================
   // ID management
 
@@ -1034,7 +1077,7 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::realizeXMNode`.
   pub fn realize_xm_node(&self, node: &Node) -> Option<Node> {
-    if self.get_qname(node).as_deref() == Some("ltx:XMRef") {
+    if self.is_qname(node, "ltx:XMRef") {
       let idref = node.get_attribute("idref")?;
       self.find_node_by_id(&idref).cloned()
     } else {
@@ -1304,6 +1347,16 @@ pub fn element_children(node: &Node) -> Vec<Node> {
     }
   }
   result
+}
+
+/// Iterator version of `element_children` — walks the sibling chain lazily.
+/// Prefer this in hot paths that only need to read or filter children
+/// without materializing a Vec. Callers that need len() or random access
+/// still want the Vec version.
+pub fn element_children_iter(node: &Node) -> impl Iterator<Item = Node> {
+  let first = node.get_first_child();
+  std::iter::successors(first, |c| c.get_next_sibling())
+    .filter(|c| c.get_type() == Some(NodeType::ElementNode))
 }
 
 /// Compute a relative path from `base` to `path`.

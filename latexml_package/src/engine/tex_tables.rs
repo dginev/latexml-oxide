@@ -119,7 +119,7 @@ LoadDefinitions!({
   DefColumnType!("*{Number}{}", sub[(n,pattern)] {
     let mut tks = Vec::new();
     for _ in 1 ..= n.value_of() {
-      tks.extend(pattern.clone().unlist());
+      tks.extend_from_slice(pattern.unlist_ref());
     }
     tks
   });
@@ -213,7 +213,7 @@ LoadDefinitions!({
       }
       tks.push(T_BEGIN!());
       if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
-        tks.extend(template_tks.clone().unlist());
+        tks.extend_from_slice(template_tks.unlist_ref());
       }
       tks.push(T_CS!("\\cr"));
       if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
@@ -539,7 +539,7 @@ pub fn alignment_bindings(
   xml_attributes: HashMap<String, String>,
 ) {
   let mode = if mode.is_empty() {
-    state::lookup_string("MODE")
+    state::lookup_string_from_sym(pin!("MODE"))
   } else {
     mode
   };
@@ -692,7 +692,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
 type DigestedColumn = Result<(Option<Digested>, Option<Token>, Option<String>, bool)>;
 pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) -> DigestedColumn {
   new_local_box_list();
-  let ismath = lookup_bool("IN_MATH");
+  let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
@@ -849,7 +849,7 @@ pub fn extract_alignment_column(
 ) -> Result<Digested> {
   let mut boxes = VecDeque::new();
   boxes.extend(in_box.unlist());
-  let is_math = lookup_bool("IN_MATH");
+  let is_math = state::lookup_bool_sym(pin!("IN_MATH"));
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
   let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();

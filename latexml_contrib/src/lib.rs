@@ -103,104 +103,146 @@ pub mod ucs_sty;
 pub mod ut_thesis_cls;
 pub mod ws_p8_50x6_00_cls;
 
-pub fn dispatch(filename: &str) -> Option<Result<()>> {
-  match filename {
-    // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "apackage.sty" => Some(apackage_sty::load_definitions()),
-    "filelistclass.cls" => Some(filelistclass_cls::load_definitions()),
-    "myclass.cls" => Some(myclass_cls::load_definitions()),
-    "mykeyval.sty" => Some(mykeyval_sty::load_definitions()),
-    "mytemplate.sty" => Some(mytemplate_sty::load_definitions()),
-    "myxkeyval.sty" => Some(myxkeyval_sty::load_definitions()),
+/// Type of a binding loader fn — matches the return type of every
+/// `*::load_definitions` in this crate.
+pub type BindingLoader = fn() -> Result<()>;
+
+/// Single source of truth for contrib bindings. Pairs a filename (`name`,
+/// `ext`) with its `load_definitions` fn. Used by `dispatch` (runtime
+/// loader) and by `class_binding_names` (consumed by
+/// `latexml_core::binding::content::load_class` for the prefix-match
+/// fallback alongside `latexml_package::BINDINGS`).
+///
+/// II. Connect the filename to the `load_definitions` function of your
+///     `.rs` binding by adding a new row here.
+pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
+    ("apackage", "sty", apackage_sty::load_definitions),
+    ("filelistclass", "cls", filelistclass_cls::load_definitions),
+    ("myclass", "cls", myclass_cls::load_definitions),
+    ("mykeyval", "sty", mykeyval_sty::load_definitions),
+    ("mytemplate", "sty", mytemplate_sty::load_definitions),
+    ("myxkeyval", "sty", myxkeyval_sty::load_definitions),
     // xkeyval test packages — passthrough to raw TeX (noltxml)
-    "xkvdop1.sty" => Some(xkvdop1_sty::load_definitions()),
-    "xkvdop2.sty" => Some(xkvdop2_sty::load_definitions()),
-    "xkvdop3.sty" => Some(xkvdop3_sty::load_definitions()),
-    "xkvdop4.sty" => Some(xkvdop4_sty::load_definitions()),
-    "xkvdop5.cls" => Some(xkvdop5_cls::load_definitions()),
-    "xkvdop6.cls" => Some(xkvdop6_cls::load_definitions()),
-    "xkvview.sty" => Some(xkvview_sty::load_definitions()),
+    ("xkvdop1", "sty", xkvdop1_sty::load_definitions),
+    ("xkvdop2", "sty", xkvdop2_sty::load_definitions),
+    ("xkvdop3", "sty", xkvdop3_sty::load_definitions),
+    ("xkvdop4", "sty", xkvdop4_sty::load_definitions),
+    ("xkvdop5", "cls", xkvdop5_cls::load_definitions),
+    ("xkvdop6", "cls", xkvdop6_cls::load_definitions),
+    ("xkvview", "sty", xkvview_sty::load_definitions),
     // ar5iv-bindings ports
-    "aliascnt.sty" => Some(aliascnt_sty::load_definitions()),
-    "atableau.sty" => Some(atableau_sty::load_definitions()),
-    "bussproofs.sty" => Some(bussproofs_sty::load_definitions()),
-    "capt-of.sty" => Some(capt_of_sty::load_definitions()),
-    "chngpage.sty" => Some(chngpage_sty::load_definitions()),
-    "commath.sty" => Some(commath_sty::load_definitions()),
-    "czjphys.cls" => Some(czjphys_cls::load_definitions()),
-    "dblfloatfix.sty" => Some(dblfloatfix_sty::load_definitions()),
-    "deluxe.sty" => Some(deluxe_sty::load_definitions()),
-    "diagrams.sty" => Some(diagrams_sty::load_definitions()),
-    "fp.sty" => Some(fp_sty::load_definitions()),
-    "fullname.sty" => Some(fullname_sty::load_definitions()),
-    "glyphtounicode.tex" => Some(glyphtounicode_tex::load_definitions()),
-    "hepnames.sty" => Some(hepnames_sty::load_definitions()),
-    "hepparticles.sty" => Some(hepparticles_sty::load_definitions()),
-    "jpc.sty" => Some(jpc_sty::load_definitions()),
-    "kotexutf.sty" => Some(kotexutf_sty::load_definitions()),
-    "lanlmac.tex" => Some(lanlmac_tex::load_definitions()),
-    "letltxmacro.sty" => Some(letltxmacro_sty::load_definitions()),
-    "ltluatex.tex" => Some(ltluatex_tex::load_definitions()),
-    "luatexbase.sty" => Some(luatexbase_sty::load_definitions()),
-    "needspace.sty" => Some(needspace_sty::load_definitions()),
-    "pinlabel.sty" => Some(pinlabel_sty::load_definitions()),
-    "program.sty" => Some(program_sty::load_definitions()),
-    "scrpage2.sty" => Some(scrpage2_sty::load_definitions()),
-    "stix2.sty" => Some(stix2_sty::load_definitions()),
-    "stix.sty" => Some(stix_sty::load_definitions()),
-    "svg-extract.sty" => Some(svg_extract_sty::load_definitions()),
-    "tipa.sty" => Some(tipa_sty::load_definitions()),
-    "tlp.cls" => Some(tlp_cls::load_definitions()),
-    "axessibility.sty" => Some(axessibility_sty::load_definitions()),
-    "breqn.sty" => Some(breqn_sty::load_definitions()),
-    "catchfile.sty" => Some(catchfile_sty::load_definitions()),
-    "changepage.sty" => Some(changepage_sty::load_definitions()),
-    "CJK.sty" => Some(cjk_sty::load_definitions()),
-    "CJKutf8.sty" => Some(cjkutf8_sty::load_definitions()),
-    "cmcal.sty" => Some(cmcal_sty::load_definitions()),
-    "datetime2.sty" => Some(datetime2_sty::load_definitions()),
-    "datetime.sty" => Some(datetime_sty::load_definitions()),
-    "emlines.sty" => Some(emlines_sty::load_definitions()),
-    "hobby.code.tex" => Some(hobby_code_tex::load_definitions()),
-    "hyphenat.sty" => Some(hyphenat_sty::load_definitions()),
-    "l3draw.sty" => Some(l3draw_sty::load_definitions()),
-    "lettrine.sty" => Some(lettrine_sty::load_definitions()),
-    "libertine.sty" => Some(libertine_sty::load_definitions()),
-    "ltablex.sty" => Some(ltablex_sty::load_definitions()),
-    "MnSymbol.sty" => Some(mnsymbol_sty::load_definitions()),
-    "mssymb.tex" => Some(mssymb_tex::load_definitions()),
-    "oldgerm.sty" => Some(oldgerm_sty::load_definitions()),
-    "pst-plot.sty" => Some(pst_plot_sty::load_definitions()),
-    "savetrees.sty" => Some(savetrees_sty::load_definitions()),
-    "scrbook.cls" => Some(scrbook_cls::load_definitions()),
-    "tabularray.sty" => Some(tabularray_sty::load_definitions()),
-    "xltabular.sty" => Some(xltabular_sty::load_definitions()),
-    "xr.sty" => Some(xr_sty::load_definitions()),
-    "ar5iv.sty" => Some(ar5iv_sty::load_definitions()),
-    "arxbj.cls" => Some(arxbj_cls::load_definitions()),
-    "arydshln.sty" => Some(arydshln_sty::load_definitions()),
-    "changes.sty" => Some(changes_sty::load_definitions()),
-    "currfile.sty" => Some(currfile_sty::load_definitions()),
-    "diagrams.tex" => Some(diagrams_tex::load_definitions()),
-    "equations.sty" => Some(equations_sty::load_definitions()),
-    "eso-pic.sty" => Some(eso_pic_sty::load_definitions()),
-    "forest.sty" => Some(forest_sty::load_definitions()),
-    "harvmac.tex" => Some(harvmac_tex::load_definitions()),
-    "mciteplus.sty" => Some(mciteplus_sty::load_definitions()),
-    "mdframed.sty" => Some(mdframed_sty::load_definitions()),
-    "memoir.cls" => Some(memoir_cls::load_definitions()),
-    "minted.sty" => Some(minted_sty::load_definitions()),
-    "nicematrix.sty" => Some(nicematrix_sty::load_definitions()),
-    "pb-diagram.sty" => Some(pb_diagram_sty::load_definitions()),
-    "siamltex.cls" => Some(siamltex_cls::load_definitions()),
-    "svn-multi.sty" => Some(svn_multi_sty::load_definitions()),
-    "svninfo.sty" => Some(svninfo_sty::load_definitions()),
-    "tabu.sty" => Some(tabu_sty::load_definitions()),
-    "ucs.sty" => Some(ucs_sty::load_definitions()),
-    "ut-thesis.cls" => Some(ut_thesis_cls::load_definitions()),
-    "ws-p8-50x6-00.cls" => Some(ws_p8_50x6_00_cls::load_definitions()),
-    _ => None,
-  }
+    ("aliascnt", "sty", aliascnt_sty::load_definitions),
+    ("atableau", "sty", atableau_sty::load_definitions),
+    ("bussproofs", "sty", bussproofs_sty::load_definitions),
+    ("capt-of", "sty", capt_of_sty::load_definitions),
+    ("chngpage", "sty", chngpage_sty::load_definitions),
+    ("commath", "sty", commath_sty::load_definitions),
+    ("czjphys", "cls", czjphys_cls::load_definitions),
+    ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
+    ("deluxe", "sty", deluxe_sty::load_definitions),
+    ("diagrams", "sty", diagrams_sty::load_definitions),
+    ("fp", "sty", fp_sty::load_definitions),
+    ("fullname", "sty", fullname_sty::load_definitions),
+    ("glyphtounicode", "tex", glyphtounicode_tex::load_definitions),
+    ("hepnames", "sty", hepnames_sty::load_definitions),
+    ("hepparticles", "sty", hepparticles_sty::load_definitions),
+    ("jpc", "sty", jpc_sty::load_definitions),
+    ("kotexutf", "sty", kotexutf_sty::load_definitions),
+    ("lanlmac", "tex", lanlmac_tex::load_definitions),
+    ("letltxmacro", "sty", letltxmacro_sty::load_definitions),
+    ("ltluatex", "tex", ltluatex_tex::load_definitions),
+    ("luatexbase", "sty", luatexbase_sty::load_definitions),
+    ("needspace", "sty", needspace_sty::load_definitions),
+    ("pinlabel", "sty", pinlabel_sty::load_definitions),
+    ("program", "sty", program_sty::load_definitions),
+    ("scrpage2", "sty", scrpage2_sty::load_definitions),
+    ("stix2", "sty", stix2_sty::load_definitions),
+    ("stix", "sty", stix_sty::load_definitions),
+    ("svg-extract", "sty", svg_extract_sty::load_definitions),
+    ("tipa", "sty", tipa_sty::load_definitions),
+    ("tlp", "cls", tlp_cls::load_definitions),
+    ("axessibility", "sty", axessibility_sty::load_definitions),
+    ("breqn", "sty", breqn_sty::load_definitions),
+    ("catchfile", "sty", catchfile_sty::load_definitions),
+    ("changepage", "sty", changepage_sty::load_definitions),
+    ("CJK", "sty", cjk_sty::load_definitions),
+    ("CJKutf8", "sty", cjkutf8_sty::load_definitions),
+    ("cmcal", "sty", cmcal_sty::load_definitions),
+    ("datetime2", "sty", datetime2_sty::load_definitions),
+    ("datetime", "sty", datetime_sty::load_definitions),
+    ("emlines", "sty", emlines_sty::load_definitions),
+    ("hobby", "code.tex", hobby_code_tex::load_definitions),
+    ("hyphenat", "sty", hyphenat_sty::load_definitions),
+    ("l3draw", "sty", l3draw_sty::load_definitions),
+    ("lettrine", "sty", lettrine_sty::load_definitions),
+    ("libertine", "sty", libertine_sty::load_definitions),
+    ("ltablex", "sty", ltablex_sty::load_definitions),
+    ("MnSymbol", "sty", mnsymbol_sty::load_definitions),
+    ("mssymb", "tex", mssymb_tex::load_definitions),
+    ("oldgerm", "sty", oldgerm_sty::load_definitions),
+    ("pst-plot", "sty", pst_plot_sty::load_definitions),
+    ("savetrees", "sty", savetrees_sty::load_definitions),
+    ("scrbook", "cls", scrbook_cls::load_definitions),
+    ("tabularray", "sty", tabularray_sty::load_definitions),
+    ("xltabular", "sty", xltabular_sty::load_definitions),
+    ("xr", "sty", xr_sty::load_definitions),
+    ("ar5iv", "sty", ar5iv_sty::load_definitions),
+    ("arxbj", "cls", arxbj_cls::load_definitions),
+    ("arydshln", "sty", arydshln_sty::load_definitions),
+    ("changes", "sty", changes_sty::load_definitions),
+    ("currfile", "sty", currfile_sty::load_definitions),
+    ("diagrams", "tex", diagrams_tex::load_definitions),
+    ("equations", "sty", equations_sty::load_definitions),
+    ("eso-pic", "sty", eso_pic_sty::load_definitions),
+    ("forest", "sty", forest_sty::load_definitions),
+    ("harvmac", "tex", harvmac_tex::load_definitions),
+    ("mciteplus", "sty", mciteplus_sty::load_definitions),
+    ("mdframed", "sty", mdframed_sty::load_definitions),
+    ("memoir", "cls", memoir_cls::load_definitions),
+    ("minted", "sty", minted_sty::load_definitions),
+    ("nicematrix", "sty", nicematrix_sty::load_definitions),
+    ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
+    ("siamltex", "cls", siamltex_cls::load_definitions),
+    ("svn-multi", "sty", svn_multi_sty::load_definitions),
+    ("svninfo", "sty", svninfo_sty::load_definitions),
+    ("tabu", "sty", tabu_sty::load_definitions),
+    ("ucs", "sty", ucs_sty::load_definitions),
+    ("ut-thesis", "cls", ut_thesis_cls::load_definitions),
+    ("ws-p8-50x6-00", "cls", ws_p8_50x6_00_cls::load_definitions),
+];
+
+/// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`,
+/// `"hobby.code.tex"`) through its compiled `load_definitions` fn, or return
+/// `None` when the filename has no registered binding. Splits on the *first*
+/// `.` so `("hobby", "code.tex", …)` matches correctly — mirrors
+/// `latexml_package::dispatch`.
+pub fn dispatch(filename: &str) -> Option<Result<()>> {
+  let (base, ext) = filename.split_once('.')?;
+  BINDINGS
+    .iter()
+    .find(|(name, extension, _)| *name == base && *extension == ext)
+    .map(|(_, _, loader)| loader())
+}
+
+/// Names of all registered class bindings in this crate (without the `.cls`
+/// suffix), in registration order. Consumed alongside
+/// `latexml_package::class_binding_names` by the Perl-parity `LoadClass`
+/// prefix-match fallback, so contrib classes like `memoir`, `siamltex`,
+/// `scrbook`, etc. are eligible as alternates for unknown author-renamed
+/// classes. Lazily materialized from `BINDINGS` once and cached via
+/// `OnceLock`.
+pub fn class_binding_names() -> &'static [&'static str] {
+  use std::sync::OnceLock;
+  static NAMES: OnceLock<Vec<&'static str>> = OnceLock::new();
+  NAMES
+    .get_or_init(|| {
+      BINDINGS
+        .iter()
+        .filter(|(_, ext, _)| *ext == "cls")
+        .map(|(name, _, _)| *name)
+        .collect()
+    })
+    .as_slice()
 }
 
 // III. That's all! Run "cargo test" in the latexml_oxide/ root and your binding will be compiled

@@ -51,8 +51,6 @@ pub mod rewrite;
 /// conversion
 #[macro_use]
 pub mod state;
-/// Loader for Perl LaTeXML kernel dump files
-pub mod dump_loader;
 /// Writer for Rust-native kernel dump files
 pub mod dump_writer;
 /// Reader for Rust-native kernel dump files

@@ -145,7 +145,15 @@ LoadDefinitions!({
   DefPrimitive!("\\closeout Number", sub[(port)] {
     AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
   });
-  DefPrimitive!("\\write Number {}", sub[(port_n, tokens)] {
+  // Perl: DefPrimitive('\write Number XGeneralText', sub { … UnTeX($tokens,1) … })
+  // XGeneralText is the TeX <general text> — balanced group read with PARTIAL
+  // expansion (respects `\the`, `\showthe`, `\unexpanded`, `\detokenize`).
+  // Using a raw `{}` followed by `Expand!` over-expands active chars like `~`
+  // → `\lx@NBSP`, whose untex leaks the literal string `"\lx@NBSP"` to the
+  // aux file; when `\input` reads it back with `@` in OTHER catcode, the CS
+  // splits into `\lx`+`@NBSP` — an "undefined \lx" error. arxiv 1112.4846
+  // (harvmac `\listrefs`) triggered this.
+  DefPrimitive!("\\write Number XGeneralText", sub[(port_n, tokens)] {
     let port = port_n.value_of();
     let handle = with_value(&s!("output_file:{}", port), |val_opt|
     if let Some(filename) = val_opt {
@@ -153,13 +161,13 @@ LoadDefinitions!({
     } else { String::new() });
     if !handle.is_empty() {
       let mut contents : String = LookupString!(&handle);
-      contents.push_str(&Expand!(tokens).untex());
+      contents.push_str(&tokens.untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else if port < 0 {
-      NoteLog!(Expand!(tokens).untex());
+      NoteLog!(tokens.untex());
     } else {
-      Note!(Expand!(tokens).untex());
+      Note!(tokens.untex());
     }
   });
 
@@ -183,8 +191,25 @@ LoadDefinitions!({
         LoadPool!("LaTeX");
       }
     }
+    // Save @currname/@currext around the input call. Our input_definitions
+    // sets these but only restores them when handleoptions=true; plain
+    // \input uses handleoptions=false. Without a local save/restore, the
+    // callee's @currname leaks into the caller, breaking e.g. babel.sty's
+    // later \ProcessOptions* at L4291 after \input txtbabel.def.
+    let prev_currname = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+      Some(gullet::do_expand(T_CS!("\\@currname"))?.to_string())
+    } else { None };
+    let prev_currext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+      Some(gullet::do_expand(T_CS!("\\@currext"))?.to_string())
+    } else { None };
     let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
     input(&Tokens::new(tks).to_string(), reloadable_opts)?;
+    if let Some(prev) = prev_currname {
+      def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(prev)), None)?;
+    }
+    if let Some(prev) = prev_currext {
+      def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prev)), None)?;
+    }
   });
   //======================================================================
   // Special output

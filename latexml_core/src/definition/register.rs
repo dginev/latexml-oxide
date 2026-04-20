@@ -4,7 +4,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr, EMPTY_SYM};
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font;
@@ -26,6 +26,7 @@ use crate::whatsit::Whatsit;
 use crate::{Digested, Locator, state};
 
 use super::argument::ArgWrap;
+use crate::pin;
 
 /// The values that can be read by, and stored in, a Register
 #[derive(Clone, PartialEq)]
@@ -565,13 +566,17 @@ impl Definition for Register {
         let loc = if args.is_empty() {
           Cow::Borrowed(&self.address)
         } else {
+          // If an arg fails to revert to tokens (e.g. an unexpected Pair
+          // or KV variant), contribute an empty string to the location
+          // key rather than panicking. This keeps register assignment
+          // alive on edge cases where the caller passes an atypical arg.
           let args_string: String = args
             .into_iter()
             .map(|a| {
               a.as_tokens()
-                .expect("TODO: handle malformed values here.")
-                .unwrap()
-                .to_string()
+                .ok()
+                .flatten()
+                .map_or_else(String::new, |tks| tks.to_string())
             })
             .collect::<Vec<String>>()
             .join("");
@@ -649,7 +654,7 @@ impl Definition for Register {
         } else {
           Tbox::new(
             font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-              .unwrap_or(*EMPTY_SYM),
+              .unwrap_or(pin!("")),
             None,
             None,
             Tokens!(
@@ -688,11 +693,11 @@ impl Definition for Register {
     }
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
-      "do_absorbtion on Primitive should never be called!"
+      "do_absorption on Primitive should never be called!"
     );
   }
   fn value_of(&self, args: Vec<ArgWrap>) -> Option<RegisterValue> {

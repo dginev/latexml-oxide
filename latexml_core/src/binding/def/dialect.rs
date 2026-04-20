@@ -726,9 +726,49 @@ pub fn def_math_constructor(
     Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
-    // If trivial presentation, allow it in Text
+    // Perl defmath_cons (Package.pm L1841-1844):
+    //   $nargs == 0
+    //     && $presentation !~ /(?:\(|\)|\\)/
+    //   ? "?#isMath(<ltx:XMTok …$end_tok)($qpresentation)"
+    //   : "<ltx:XMTok …$end_tok"
+    //
+    // The `?#isMath(…)(…)` form is Perl's construction-time conditional —
+    // in math context emit the XMTok, otherwise emit the bare presentation
+    // character. The check is gated on presentation NOT containing `(`,
+    // `)`, or `\`, which would collide with template-specials.
+    //
+    // Ported here as a runtime DOM-ancestry walk (same predicate as
+    // `tbox.rs::be_absorbed`), and the presentation-content guard mirrors
+    // Perl's regex. `\rightarrowfill` (`\x{2192}`, no specials) gets the
+    // text fallback; symbols like `\(` / `\)` / anything with a backslash
+    // keep the unconditional XMTok — matching Perl.
+    let presentation_is_trivial = !presentation_for_replacement
+      .chars()
+      .any(|c| c == '(' || c == ')' || c == '\\');
     Rc::new(
       move |document: &mut Document, _, props: &SymHashMap<Stored>| {
+        let font_opt = match props.get("font") {
+          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+          Some(Stored::FontDirective(FontDirective::Closure(code))) => {
+            Some(Cow::Owned(code(None)?))
+          },
+          Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
+          _ => None,
+        };
+        // Perl's `?#isMath(…)` conditional compiles to `ToString($prop{'isMath'})`
+        // (Constructor/Compiler.pm parse_conditional L164-173 + L197: `#prop` →
+        // `$prop{'prop'}`). That property is set on the Whatsit at digestion
+        // time from the stomach's math-mode flag (Constructor.pm L108). So the
+        // check here is on the *Whatsit's* isMath, not document-ancestry — an
+        // `\hbox{\rightarrowfill}` inside `\mathop{…}` digests the XMTok with
+        // isMath=false (hbox switched stomach to text mode), even though the
+        // document insertion point is nested under <ltx:Math>.
+        let is_math = matches!(props.get("isMath"), Some(Stored::Bool(true)));
+        if !is_math && presentation_is_trivial {
+          // Perl `?#isMath(…)(plain)` text branch — just emit the char.
+          document.absorb_string(&presentation_for_replacement, props)?;
+          return Ok(());
+        }
         let mut attrs = HashMap::default();
         for key in ["role", "scriptpos", "stretchy"] {
           if let Some(v) = props.get(key) {
@@ -740,14 +780,6 @@ pub fn def_math_constructor(
             attrs.insert(key.to_string(), v.to_string());
           }
         }
-        let font_opt = match props.get("font") {
-          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
-          Some(Stored::FontDirective(FontDirective::Closure(code))) => {
-            Some(Cow::Owned(code(None)?))
-          },
-          Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
-          _ => None,
-        };
         if let Some(font) = font_opt {
           document.open_element("ltx:XMTok", Some(attrs), Some(&font))?;
         } else {
@@ -755,11 +787,16 @@ pub fn def_math_constructor(
         }
         document.absorb_string(&presentation_for_replacement, props)?;
         document.close_element("ltx:XMTok")?;
-
         Ok(())
       },
     )
   } else {
+    // Perl defmath_cons (Package.pm L1847-1851): when `$nargs` > 0 the
+    // template is always `<ltx:XMApp>…<ltx:XMTok …/></ltx:XMApp>` — there
+    // is NO text-mode fallback for this arm. The `requireMath` beforeDigest
+    // (Perl L1689, same as Rust L1606) has already warned the user; math
+    // context is assumed. Keep parity — emit the XMApp/XMTok structure as
+    // before.
     Rc::new(
       move |document: &mut Document, args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
         let mut attrs = HashMap::default();
@@ -1069,7 +1106,7 @@ pub fn def_environment(
 
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!({
-    assign_value("current_environment", env_name.clone(), None);
+    assign_value_sym(crate::pin!("current_environment"), env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
     def_macro(
       T_CS!("\\@currenvir"),
@@ -1097,6 +1134,15 @@ pub fn def_environment(
     },
     None => {},
   }
+  // Clone before_digest so the bare `\name` form can run the same
+  // user-supplied hooks. Perl Package.pm L1949-1969 states that the bare
+  // form (entered e.g. via `\csname env\endcsname` or by another macro
+  // expanding to `\env[…]`) "gets the same hook pipeline as \begin{FOO}" —
+  // including the user's `beforeDigest`. sidecap's `\SCfigure[…]` → `\figure[…]`
+  // is the canonical trigger: without this, `beforeFloat('figure')` never
+  // fires, `\@captype` stays undefined, and nested `\caption` cascades as
+  // "outside any known float".
+  let bare_before_digest = options.before_digest.clone();
   before_digest_env.extend(options.before_digest);
 
   // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
@@ -1172,12 +1218,12 @@ pub fn def_environment(
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
   let unexpected_end_closure = after_digest_simple!(_whatsit, {
-    let env = lookup_string("current_environment");
+    let env = lookup_string_from_sym(crate::pin!("current_environment"));
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
       let message2 = s!(
         "Current are {} ",
-        with_stacked_values("current_environment", |vals| vals
+        with_stacked_values_sym(crate::pin!("current_environment"), |vals| vals
           .iter()
           .map(|x| s!("{:?}", x))
           .collect::<Vec<String>>()
@@ -1247,6 +1293,11 @@ pub fn def_environment(
       begin_mode_opt(&bmode, true)?;
     }));
   }
+  // Perl Package.pm L1949-1969: bare `\name` runs the same user beforeDigest
+  // hooks as `\begin{name}` (e.g. beforeFloat for `{figure}`). Order matters:
+  // bgroup + mode have already been pushed; the user hooks come last, mirroring
+  // the `\begin{name}` pipeline.
+  before_digest_bare.extend(bare_before_digest);
   let push_frame_bare = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
     push_frame();
     Ok(())
@@ -1324,7 +1375,11 @@ pub fn def_environment(
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
 pub fn get_xmarg_id() -> Result<Tokens> {
-  step_counter("@lx@xmarg", false)?;
+  // `@lx@xmarg` is an internal-only counter (no user-visible
+  // counters nest inside it), so `noreset: true` skips the
+  // `\cl@@lx@xmarg` nested-reset probe — the same observation as
+  // in xmath_helpers::get_xm_arg_id.
+  step_counter("@lx@xmarg", true)?;
   def_macro(
     T_CS!("\\@@lx@xmarg@ID"),
     None,
@@ -1634,9 +1689,19 @@ pub fn allocate_register(rtype: &str) -> Result<Option<String>> {
   if !addr.is_empty() {
     // addr is a Register but MUST be stored as \count<#>
     if let Some(n) = lookup_number(addr) {
-      let next = n.value_of() + 1;
+      // Perl Package.pm L617-622: the allocation counter picks the NEXT
+      // unbound slot. If `\<type>N+1` is already an explicit DefRegister
+      // (e.g. a system-allocated `\count10`, `\toks0`), advance past it
+      // so the new register doesn't collide. Matches Perl's
+      //   while ($STATE->isValueBound($loc)) { $next++; $loc = $type . $next; }
+      let mut next = n.value_of() + 1;
+      let mut loc = format!("{rtype}{next}");
+      while crate::state::is_value_bound(&loc, None) {
+        next += 1;
+        loc = format!("{rtype}{next}");
+      }
       assign_value(addr, Number::new(next), Some(Scope::Global));
-      Ok(Some(format!("{rtype}{next}")))
+      Ok(Some(loc))
     } else {
       Ok(None)
     }

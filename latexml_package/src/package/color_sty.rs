@@ -21,6 +21,12 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
 /// Look up a named color from state, returning a Color object.
 /// Perl: LookupColor($name) in Package.pm
 pub fn lookup_color_obj(name: &str) -> Color {
+  // Empty or whitespace-only name: silently return BLACK (expression-decode
+  // paths invoke us with `""` or `" "` when parsing malformed input; no
+  // error needed here because the decoder already surfaces its own).
+  if name.trim().is_empty() {
+    return color::BLACK;
+  }
   let key = s!("color_{name}");
   match state::lookup_value(&key) {
     Some(Stored::String(sym)) => {
@@ -31,6 +37,16 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
+      // Perl #2697 (2026): surface a diagnostic rather than silently
+      // returning BLACK — an unresolvable color name in a user expression
+      // usually indicates a typo or missing \definecolor. Our signature
+      // returns Color (not Result), so we use Warn rather than Perl's
+      // Error; still loud enough to surface in the log.
+      Warn!(
+        "misdefined",
+        "color",
+        &s!("could not resolve <color> name '{}'", name)
+      );
       color::BLACK
     },
   }
@@ -92,7 +108,7 @@ LoadDefinitions!({
     let color = parse_color(model_str.as_deref(), &spec_str);
 
     // If in preamble, store for \normalcolor
-    if lookup_bool("inPreamble") {
+    if state::lookup_bool_sym(pin!("inPreamble")) {
       assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
@@ -109,7 +125,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\color",
       vec![Some(Tokens::from(T_OTHER!("rgb"))),
            Some(Tokens::from(T_OTHER!(&*comps)))]);
-    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, arena::SymHashMap::default()))])
   });
 
@@ -125,7 +141,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\pagecolor",
       vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
            Some(Tokens::from(T_OTHER!(&*spec_str)))]);
-    Ok(vec![Digested::from(Tbox::new(*EMPTY_SYM, None, None,
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, arena::SymHashMap::default()))])
   });
 

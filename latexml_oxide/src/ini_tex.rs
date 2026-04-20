@@ -29,11 +29,37 @@ pub fn dump_format(
 ) -> Result<usize, String> {
   eprintln!("[ini_tex] Dumping format from {}", init_file);
 
-  // Step 1: Take a snapshot of the state BEFORE processing.
-  // Perl: DumpFile takes snapshot, then loads file, then diffs.
+  // Step 1: snapshot the state BEFORE raw-loading latex.ltx.
+  //
+  // Perl's DumpFile semantics: the diff captures "bootstrap → full
+  // kernel + raw latex.ltx extras". In Rust, at the point ini_tex fires
+  // we have TeX + plain pools loaded (≈2300 entries — includes `\let`,
+  // `\def`, `\relax`, and the other TeX primitives our PA aliases will
+  // reference). Step 1b below surgically preloads `latex_base.rs` so
+  // its `_base`-only CSes end up in the diff — without it, the
+  // `\makeatletter` autoload trigger never fires during `--init`'s
+  // raw-load path and 20 CSes (font-size aliases, scratch macros,
+  // output-routine stubs) would be missing from the dump.
+  //
+  // We stage this snapshot as "bootstrap" so dump_writer can classify
+  // let-alias targets: targets present in this snapshot → early
+  // section; targets appearing only after the raw-load → late section.
   let snap = state::take_snapshot();
+  state::stage_snapshot_value("bootstrap", snap.clone());
   let snap_size = snap.len();
-  eprintln!("[ini_tex] Pre-dump snapshot: {} entries", snap_size);
+  eprintln!("[ini_tex] Pre-dump snapshot: {} entries (staged as \"bootstrap\")", snap_size);
+
+  // Step 1b (D0 d.1): surgically load ONLY latex_base.rs after the
+  // snapshot so its _base-only CSes (\@tempa/b/c, \@currbox, \xpt and
+  // the other 17 entries listed in SYNC_STATUS) enter state before the
+  // raw latex.ltx load. We avoid the full latex.rs chain here —
+  // latex_bootstrap / latex_constructs / the old-dump load would
+  // contribute hundreds of unrelated entries and make the diff
+  // unreadable. The surgical call keeps the extra dump entries close
+  // to the 20-CS gap we actually care about.
+  if let Err(e) = latexml_package::engine::latex_base::load_definitions() {
+    eprintln!("[ini_tex] latex_base preload warning: {}", e);
+  }
 
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)

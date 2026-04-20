@@ -136,8 +136,16 @@ LoadDefinitions!({
     "<ltx:classification scheme='keywords'>#body</ltx:classification>");
   // Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
   Let!("\\lx@begin@keywords", "\\keywords");
+  // Perl OmniBus.cls.ltxml L154. We differ from Perl's
+  // `\begin{keywords}#1\end{keywords}` path because our `{keywords}` env
+  // currently emits <ltx:classification> inline (a content-model error in
+  // contexts like <ltx:abstract>). Routing directly through
+  // `\@add@frontmatter` matches Perl's net effect — its after_digest_keywords
+  // pushes the body into `frontmatter`{ltx:classification} — without the
+  // inline detour that confuses the schema.
   DefMacro!("\\keywords@onearg{}",
-    "\\begin{keywords}#1\\end{keywords}\\let\\endkeyword\\relax\\let\\endkeywords\\relax");
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}\
+     \\let\\endkeyword\\relax\\let\\endkeywords\\relax");
   DefMacro!("\\maybe@end@keywords",
     "\\endkeywords\\let\\maybe@end@keywords\\relax");
   // Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run
@@ -228,6 +236,16 @@ LoadDefinitions!({
     "\\newtheorem{prin}[thm]{Principle}",
     "\\newtheorem{alg}{Algorithm}",
   );
+  // Only install autoload stubs for CSes that aren't already defined. If
+  // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that
+  // `\RequirePackage{amsthm}`), its own `\theoremstyle`/`\newtheorem`
+  // definitions are already in place. Overwriting with our stub would
+  // create an infinite loop:
+  //   stub invokes → require_package('amsthm') no-ops (already loaded)
+  //   → re-emits `\theoremstyle` → stub invokes again …
+  // Observed in arxiv 0906.1883 where birkmult.cls's dep-scan pre-loaded
+  // amsthm, and the resulting 163M-iteration pin loop blew the arena
+  // past `u32::MAX` offset (SymStr wraparound → garbled error text).
   for env in [
     "conjecture", "theorem", "corollary", "definition", "example", "exercise",
     "lemma", "note", "problem", "proof", "proposition", "question", "remark",
@@ -237,6 +255,7 @@ LoadDefinitions!({
   ] {
     let beginenv = s!("\\begin{{{env}}}");
     let cs = T_CS!(&beginenv);
+    if IsDefined!(&cs) { continue; }
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
     def_macro(cs, None,
@@ -250,6 +269,7 @@ LoadDefinitions!({
   // Perl L216-219: newtheorem aliases auto-load amsthm
   for alias in ["\\newproclaim", "\\newdef", "\\newremark"] {
     let cs = T_CS!(alias);
+    if IsDefined!(&cs) { continue; }
     def_macro(cs, None,
       latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
         require_package("amsthm", RequireOptions::default())?;
@@ -259,11 +279,13 @@ LoadDefinitions!({
   // Perl L220: \theoremstyle autoloads amsthm
   {
     let cs = T_CS!("\\theoremstyle");
-    def_macro(cs, None,
-      latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
-        require_package("amsthm", RequireOptions::default())?;
-        Ok(Tokens!(T_CS!("\\theoremstyle")))
-      })), None)?;
+    if !IsDefined!(&cs) {
+      def_macro(cs, None,
+        latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+          require_package("amsthm", RequireOptions::default())?;
+          Ok(Tokens!(T_CS!("\\theoremstyle")))
+        })), None)?;
+    }
   }
 
   // Perl L222-223: abstract aliases
@@ -356,10 +378,20 @@ LoadDefinitions!({
     if !IsDefined!(&cs) {
       let cs_clone = cs;
       let pkg_str = pkg.to_string();
+      let trigger_str = trigger.to_string();
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+          // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
+          // clear this autoload CS before loading, then re-emit the trigger as
+          // tokenized text. Re-tokenizing is important for `\begin{env}` triggers
+          // — amsmath defines `\split` (not `\begin{split}`), so the raw single-CS
+          // token would look undefined after clearing. Tokenizing expands into
+          // `\begin` + `{env}` which the standard `\begin{}` dispatcher resolves.
+          latexml_core::state::assign_meaning(
+            &cs_clone, latexml_core::common::store::Stored::None,
+            Some(Scope::Global));
           require_package(&pkg_str, RequireOptions::default())?;
-          Ok(Tokens!(cs_clone))
+          Ok(mouth::tokenize_internal(&trigger_str))
         })), None)?;
     }
   }

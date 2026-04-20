@@ -48,16 +48,47 @@ pub fn load_from_str(content: &str) -> Result<usize, String> {
   load_from_str_internal(content, "<embedded>")
 }
 
+// Per-load context used to attach a nominal Locator to dump-installed
+// Expandables. Matches Perl #aaacdba2 (2026): dump-loaded definitions
+// should be traceable to the dump file + line, not report the arena's
+// internal location. Thread-local so concurrent loads (there are none
+// today, but the state is cooperative) don't clobber each other.
+thread_local! {
+  static CURRENT_LOAD_CTX: std::cell::Cell<Option<(crate::common::arena::SymStr, u32)>> =
+    const { std::cell::Cell::new(None) };
+}
+
+fn current_dump_locator() -> crate::common::locator::Locator {
+  if let Some((source, lineno)) = CURRENT_LOAD_CTX.with(|c| c.get()) {
+    crate::common::locator::Locator {
+      source,
+      from_line: lineno,
+      to_line: lineno,
+      from_column: 0,
+      to_column: 0,
+    }
+  } else {
+    crate::common::locator::Locator::default()
+  }
+}
+
 fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, String> {
   let mut count = 0;
   let mut skipped = 0;
   let mut errors = 0;
+  let source_sym = crate::common::arena::pin(source_name);
 
   for (lineno, line) in content.lines().enumerate() {
-    let line = line.trim();
+    // Trim only CR (from CRLF line endings); `lines()` already strips LF.
+    // Do NOT use `trim()` here — it strips trailing tabs, which are part of
+    // the tab-separated format for entries with empty trailing fields (e.g.
+    // E-entries with empty body: `E\t<cs>\t<nargs>\t<flags>\t`).
+    let line = line.trim_end_matches('\r');
     if line.is_empty() || line.starts_with('#') {
       continue;
     }
+
+    CURRENT_LOAD_CTX.with(|c| c.set(Some((source_sym, (lineno + 1) as u32))));
 
     match parse_and_load(line) {
       Ok(true) => count += 1,
@@ -99,38 +130,77 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   }
 
   let table = parts[0];
-  let key = url_decode(parts[1]);
+  // Key decode: Cow borrows the original &str when no `%` escape is
+  // present (the overwhelming majority). Saves a per-line allocation
+  // for the ~25k dump entries that have plain CS-name keys.
+  let key_cow: std::borrow::Cow<'_, str> = if parts[1].contains('%') {
+    std::borrow::Cow::Owned(url_decode(parts[1]))
+  } else {
+    std::borrow::Cow::Borrowed(parts[1])
+  };
+  let key = key_cow.as_ref();
   let data = if parts.len() > 2 { parts[2] } else { "" };
 
   match table {
     // V: Value entries (registers, fontdimen, font metadata).
     // Add-only policy: only loads if key has no existing value.
-    "V" => load_value(&key, data),
-    // M: Meaning entries (expandable definitions).
-    // Load @-internal entries (with '@' in name) whose expansions don't
-    // reference the expl3 hook system. These are LaTeX kernel internals
-    // like \@fontswitch, \@thmcounter, etc. that raw TeX classes need.
-    // Skip public macros and expl3 entries (with ':') — too risky.
+    "V" => load_value(key, data),
+    // M: Meaning entries (expandable definitions + primitive aliases).
+    //
+    // Current policy: only route `@`-internal entries (whose body does
+    // not reference the expl3 hook system) to `load_meaning`. Those
+    // include `@`-internal PA/MPA aliases, which DO get consumed via
+    // the PA arm of `load_meaning`. The @-internal gate is still the
+    // right safety fence: it keeps us out of the expl3 short-circuit
+    // hazard zone.
+    //
+    // `:`-style expl3 Meanings and public-CS PAs (like
+    // `\tex_let:D → \let`) remain gated off because enabling them
+    // causes two failure modes, both observed in earlier experiments:
+    //
+    //   - PA alone: `\tex_let:D` becomes let-aliased to `\let` via
+    //     the dump → `expl3.sty`'s own guard fires → raw
+    //     `\input expl3-code.tex` is skipped → post-guard code hits
+    //     `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
+    //     `\keys_define:nn { sys }`, which are `:`-style macros we
+    //     don't load → undefined-CS recovery loop (60 s timeout,
+    //     memory climbing, SIGTERM-by-watchdog).
+    //
+    //   - PA + `:`-style M: the `:`-style bodies themselves trigger
+    //     the same pattern via cross-references.
+    //
+    // Both must be unblocked TOGETHER, in coordination with
+    // `expl3_sty.rs` short-circuiting its whole `load_definitions`
+    // when the dump already supplies expl3 state. See SYNC_STATUS
+    // D0 (d.5).
     "M" => {
       let name = key.trim_start_matches('\\');
       let is_at_internal = name.contains('@') && !name.contains(':');
-      if is_at_internal && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
-        load_meaning(&key, data)
+      // Safe additional gate: public CharDef/Register entries (payload
+      // starts with `R\t…`). These set a character code or register value
+      // and never chain into expl3/hook machinery, so they can't trigger
+      // the cascade the expl3 short-circuit is guarding against. Allows
+      // plain-TeX math chardefs like `\ldotp`, `\cdotp`, `\intop` to load
+      // without opening the door to public Expandable bodies.
+      let is_public_register = data.starts_with("R\t");
+      if (is_at_internal || is_public_register)
+        && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
+        load_meaning(key, data)
       } else {
         Ok(false)
       }
     },
     // LC/UC: case-mapping codes — safe, always load
-    "LC" => load_lccode(&key, data),
-    "UC" => load_uccode(&key, data),
+    "LC" => load_lccode(key, data),
+    "UC" => load_uccode(key, data),
     // SC: space factor codes — safe, always load
-    "SC" => load_sfcode(&key, data),
+    "SC" => load_sfcode(key, data),
     // C: catcodes — only for non-ASCII (>127). ASCII catcodes are set by
     // the engine; loading from dump would conflict.
     "C" => {
-      let ch = decode_char_key(&key);
+      let ch = decode_char_key(key);
       if ch.is_some_and(|c| c as u32 > 127) {
-        load_catcode(&key, data)
+        load_catcode(key, data)
       } else {
         Ok(false)
       }
@@ -155,6 +225,14 @@ const SKIP_VALUE_KEYS: &[&str] = &[
   "CURRENT_INPUT_ENCODING",
   "SUPPRESS_UNEXPECTED_ERRORS",
   "SUPPRESS_UNDEFINED_ERRORS",
+  // Upstream Perl IGNORED_SYMBOLS (TeX_Job.pool.ltxml): runtime-only
+  // tables that re-populate from the engine — can't meaningfully round-
+  // trip through the dump.
+  "DOCUMENT_REWRITE_RULES",
+  "PARAMETER_TYPES",
+  "TAG_PROPERTIES",
+  "MATH_LIGATURES",
+  "TEXT_LIGATURES",
 ];
 
 /// V entry key prefixes to skip.
@@ -165,8 +243,26 @@ const SKIP_VALUE_PREFIXES: &[&str] = &[
 ];
 
 /// V entry key substrings to skip.
+///
+/// Note: `_loaded` / `_found_loaded` flags are present in the dump (correctly,
+/// since `--init=latex.ltx` sees expl3-code.tex, hyphenation patterns, and
+/// hundreds of other raw-loaded files). But carrying them through into state
+/// at dump-load time blows up in practice:
+///
+///  - Hyphenation `loadhyph-*.tex_loaded` flags make subsequent raw-loading of
+///    babel's language.def skip files that set `\l@<lang>` registers our
+///    engine then discovers aren't present, triggering a flood of error
+///    recovery that can consume gigabytes of RAM.
+///  - `expl3.ltx_loaded=1` plus `expl3.sty_loaded=` NOT being set means
+///    `\usepackage{expl3}` doesn't short-circuit AT the .sty layer, but the
+///    raw .ltx re-load now enters a stranger code path with partial flags.
+///
+/// The proper fix, tracked as the "dump/_base mutual-exclusivity" item in
+/// SYNC_STATUS D0, is to have exactly ONE loading path (dump-cache or raw-load)
+/// active at a time, mirroring Perl's `LoadFormat` branching. Until that lands,
+/// keep the skip list conservative so mixed paths don't trigger recovery loops.
 const SKIP_VALUE_CONTAINS: &[&str] = &[
-  "_loaded",       // Package loading flags — must be set by actual loading
+  "_loaded",       // Package loading flags — see doc comment above
   "_found_loaded", // Package found+loaded flags
 ];
 
@@ -187,7 +283,7 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       return Ok(false);
     }
   }
-  // Skip by substring
+  // Skip by substring.
   for substr in SKIP_VALUE_CONTAINS {
     if key.contains(substr) {
       return Ok(false);
@@ -276,7 +372,6 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
 /// - Private LaTeX internals (contain `@`) — only invoked by other macros
 /// - Skip all "public" macros that could be invoked during normal expansion
 ///   and might reference hooks/primitives not supported by our engine
-#[allow(dead_code)]
 fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let cs_tok = Token {
     text: arena::pin(key),
@@ -293,14 +388,18 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // \UseOneTimeHook) can reference expl3 hooks and internal state that
   // our engine doesn't fully support, causing cascading errors.
   //
-  // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`)
-  // Unsafe: public macros without `:` or `@` (e.g., \document, \hook)
+  // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`),
+  //       AND public Register/CharDef entries (they set char codes and
+  //       can't chain into expl3 cascades).
+  // Unsafe: public Expandable macros without `:` or `@` (e.g., \document,
+  //         \hook) — their bodies reference the hook system we don't
+  //         fully support. `_base.rs` + `_constructs.rs` already define
+  //         the public CSes the engine cares about; public-CS Expandable
+  //         dump entries are redundant.
   let name = key.trim_start_matches('\\');
   let is_internal = name.contains(':') || name.contains('@');
-  if !is_internal {
-    // This is a "public" macro. Skip it — our engine either already defines
-    // it (caught by has_meaning above) or it's a raw TeX definition that
-    // would interfere with our LaTeXML-specific processing.
+  let is_public_register = data.starts_with("R\t");
+  if !is_internal && !is_public_register {
     return Ok(false);
   }
 
@@ -315,29 +414,80 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       Ok(false)
     }
     "E" => {
-      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS
-      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
+      // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO[\tV3_PARAMS]]
+      //
+      // Three historical shapes, read in fallback order:
+      //   v3 — 6th field present: structured Parameter records; bypasses
+      //        parse_parameters entirely. Only format that round-trips
+      //        Until:/Match: with catcoded delimiter tokens intact.
+      //   v2 — 5th field present: url-decoded prototype string fed to
+      //        parse_parameters. Good for {} / [] / DefToken / simple
+      //        typed params; loses brace-in-delimiter forms.
+      //   v1 — nargs only: "{}".repeat(nargs), all params flattened to
+      //        Plain. Kept as last resort so ancient dumps still load.
+      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(6, '\t').collect();
       if eparts.len() < 4 {
         return Err("Incomplete Expandable entry".into());
       }
 
-      let _cs_name = url_decode(eparts[0]);
+      // Note: eparts[0] is the internal CS name carried by the E
+      // serialization (the Expandable's `self.cs`), which for non-alias
+      // entries matches `key`. We don't decode it here — the outer key
+      // is already parsed above into `cs_tok`, and `Expandable::new`
+      // doesn't need a distinct internal name.
       let nargs: usize = eparts[1].parse().unwrap_or(0);
       let flags = eparts[2];
       let tok_data = eparts[3];
+      let proto_opt = eparts.get(4).map(|s| url_decode(s)).filter(|s| !s.is_empty());
+      let v3_opt = eparts.get(5).filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
       let is_protected = flags.contains('P');
 
       let expansion = parse_token_list(tok_data)?;
 
-      // Build parameter spec from nargs
-      let paramlist = if nargs > 0 {
-        let proto = "{}".repeat(nargs);
-        crate::common::def_parser::parse_parameters(&proto, &cs_tok, false)
-          .map_err(|e| format!("Param parse: {}", e))?
+      // Build parameter spec, preferring v3 structured → v2 proto →
+      // v1 nargs-repeat fallback. init_flag=true for both fallbacks:
+      // state is live at runtime so Parameter::init() can resolve
+      // readers via PARAMETER_TYPES.
+      let paramlist = if let Some(v3) = v3_opt {
+        match parse_parameters_v3(v3) {
+          Ok(pl) => pl,
+          Err(_) => proto_opt
+            .as_ref()
+            .and_then(|p| crate::common::def_parser::parse_parameters(p, &cs_tok, true).ok())
+            .flatten()
+            .or_else(|| {
+              if nargs > 0 {
+                let fallback = "{}".repeat(nargs);
+                crate::common::def_parser::parse_parameters(&fallback, &cs_tok, true)
+                  .ok()
+                  .flatten()
+              } else {
+                None
+              }
+            }),
+        }
       } else {
-        None
+        // v2 path: no v3 field, fall back to proto-parsing (with the
+        // original silent-degrade-to-nargs behavior).
+        match proto_opt {
+          Some(proto) => match crate::common::def_parser::parse_parameters(&proto, &cs_tok, true) {
+            Ok(pl) => pl,
+            Err(_) if nargs > 0 => {
+              let fallback = "{}".repeat(nargs);
+              crate::common::def_parser::parse_parameters(&fallback, &cs_tok, true)
+                .map_err(|e| format!("Param parse fallback: {}", e))?
+            }
+            Err(_) => None,
+          },
+          None if nargs > 0 => {
+            let proto = "{}".repeat(nargs);
+            crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
+              .map_err(|e| format!("Param parse: {}", e))?
+          }
+          None => None,
+        }
       };
 
       let options = Some(ExpandableOptions {
@@ -349,7 +499,12 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
 
       let expansion_body = Tokens::from(expansion).into();
       match Expandable::new(cs_tok, paramlist, Some(expansion_body), options) {
-        Ok(exp) => {
+        Ok(mut exp) => {
+          // Perl #aaacdba2: stamp dump-loaded definitions with a
+          // nominal Locator pointing at the dump file + line. Helps
+          // diagnostics attribute errors to the dump source rather
+          // than the arena's compile-site default.
+          exp.locator = current_dump_locator();
           state::install_definition(exp, Some(Scope::Global));
           Ok(true)
         }
@@ -362,13 +517,41 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       state::assign_meaning(&cs_tok, tok, Some(Scope::Global));
       Ok(true)
     }
+    "PA" | "MPA" => {
+      // Primitive alias: PA\t<target_cs> — the entry's meaning is an
+      // Rc<Primitive> whose own cs is <target_cs>. If <target_cs> == key
+      // this is the "primary" entry (already provided by compiled bindings
+      // in _base.rs etc.); skip. Otherwise, replay `\let <key> <target>`
+      // so the Rc<Primitive> is shared just as it was when the dump was
+      // generated. This is how \tex_let:D, \tex_def:D, etc. survive the
+      // dump — without this the expl3.sty short-circuit guard
+      // `\ifx\csname tex_let:D\endcsname\relax` never fires and the 36k
+      // lines of expl3-code.tex get reprocessed on every run.
+      let target_cs_raw = url_decode(parts.get(1).unwrap_or(&""));
+      if target_cs_raw == key {
+        return Ok(false);
+      }
+      let target_tok = Token {
+        text: arena::pin(&target_cs_raw),
+        code: Catcode::CS,
+      };
+      // Skip silently if the target isn't in bindings — rare and means
+      // the alias points at a CS only defined during raw-load that we
+      // also lost. The engine's undefined-CS handler will cope at runtime.
+      if !state::has_meaning(&target_tok) {
+        return Ok(false);
+      }
+      state::let_i(&cs_tok, &target_tok, Some(Scope::Global));
+      Ok(true)
+    }
     "R" => {
       // Register: R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
+      // rparts[0] (internal CS name) is redundant with the outer key —
+      // same reasoning as the E arm; we skip the decode + alloc.
       let rparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
       if rparts.len() < 3 {
         return Err("Incomplete Register entry".into());
       }
-      let _cs_name = url_decode(rparts[0]);
       let rtype = rparts[1];
       let value_str = rparts[2];
       let mathglyph = rparts.get(3).and_then(|s| s.parse::<u32>().ok()).and_then(char::from_u32);
@@ -408,15 +591,28 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         _ => return Ok(false),
       };
 
+      // Perl-parity with def_register (binding/def/dialect.rs): store the
+      // initial value at the Register's `address` slot AND set `default`, so
+      // a subsequent `value_of` lookup — which reads state::with_value(address)
+      // and falls back to `default` — actually sees the dump's initial value.
+      // CharDefs read their immediate `value` field instead, so we skip the
+      // storage write for them.
       let mut reg = Register {
         cs: cs_tok,
         register_type: reg_type,
-        value: reg_value,
+        value: reg_value.clone(),
+        default: if matches!(reg_type, RegisterType::CharDef) { None } else { reg_value.clone() },
         mathglyph,
+        locator: current_dump_locator(),
         ..Register::default()
       };
       // Set address from CS name
       reg.address = key.to_string();
+      if !matches!(reg_type, RegisterType::CharDef) {
+        if let Some(ref rv) = reg_value {
+          state::assign_value(&reg.address, rv.clone(), Some(Scope::Global));
+        }
+      }
       state::install_definition(reg, Some(Scope::Global));
       Ok(true)
     }
@@ -480,38 +676,28 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   Ok(true)
 }
 
-/// Load a delcode entry: DC\tCHAR\tCH\tVALUE
-#[allow(dead_code)]
-fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
-  let ch = decode_char_key(key).ok_or_else(|| format!("Bad delcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
-    return Err(format!("Bad delcode data: {}", data));
-  }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad delcode value: {}", e))?;
-  state::assign_delcode(ch, val, Some(Scope::Global));
-  Ok(true)
-}
-
-/// Load a mathcode entry: MC\tCHAR\tCH\tVALUE
-#[allow(dead_code)]
-fn load_mathcode(key: &str, data: &str) -> Result<bool, String> {
-  let ch = decode_char_key(key).ok_or_else(|| format!("Bad mathcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
-    return Err(format!("Bad mathcode data: {}", data));
-  }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad mathcode value: {}", e))?;
-  state::assign_mathcode(ch, val, Some(Scope::Global));
-  Ok(true)
-}
+// load_delcode and load_mathcode were implemented but never wired — the
+// "MC"/"DC" arm in parse_entry returns Ok(false) because the dumped values
+// are corrupted by expl3 format init (see comment on that arm). If we
+// eventually harvest clean delcode/mathcode data, restore them from git
+// history and point the "MC"/"DC" arm at them.
 
 /// Parse a single token from "CC:TEXT" format
 fn parse_token(s: &str) -> Result<Token, String> {
   let (cc_str, text) = s.split_once(':').ok_or("Missing ':' in token")?;
   let cc: u8 = cc_str.parse().map_err(|e| format!("Bad CC: {}", e))?;
+  // Fast path: most token text fields have no `%` escapes, so pin the
+  // &str directly — avoids the String allocation url_decode would make
+  // even on its own fast path. Parsing the expl3 kernel alone produces
+  // hundreds of thousands of token entries; every `to_owned()` avoided
+  // here matters.
+  let text_sym = if text.contains('%') {
+    arena::pin(url_decode(text))
+  } else {
+    arena::pin(text)
+  };
   Ok(Token {
-    text: arena::pin(url_decode(text)),
+    text: text_sym,
     code: Catcode::from(cc),
   })
 }
@@ -524,7 +710,76 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
   s.split(',').map(parse_token).collect()
 }
 
-fn url_decode(s: &str) -> String {
+/// Decode the v3 structured Parameters encoding emitted by
+/// `dump_writer::serialize_parameters_v3` (see that function's docstring
+/// and `docs/DUMP_FORMAT_PERL_ANALYSIS.md` for the layout).
+///
+/// Returns `Ok(None)` for an empty record (no parameters); `Ok(Some(ps))`
+/// on success; `Err` if any record is malformed. Each Parameter is
+/// constructed via `Parameter::new(name, spec, Some(extras))`, which
+/// calls `init()` — the reader function is resolved against the live
+/// PARAMETER_TYPES table, mirroring the runtime path.
+pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::Parameters>, String> {
+  if v3.is_empty() {
+    return Ok(None);
+  }
+  let mut params = Vec::new();
+  for record in v3.split('\x1e') {
+    // <name>\x1f<spec>\x1f<flags>\x1f<extras>
+    let fields: Vec<&str> = record.splitn(4, '\x1f').collect();
+    if fields.len() != 4 {
+      return Err(format!("v3 Parameter record has {} fields, expected 4", fields.len()));
+    }
+    let name = url_decode(fields[0]);
+    let spec = url_decode(fields[1]);
+    let flags = fields[2];
+    let extras_str = fields[3];
+
+    let extras = if extras_str.is_empty() {
+      Vec::new()
+    } else {
+      extras_str
+        .split('\x1d')
+        .map(|tok_list| {
+          parse_token_list(tok_list)
+            .map(crate::tokens::Tokens::new)
+        })
+        .collect::<Result<Vec<_>, _>>()?
+    };
+
+    let mut param = crate::parameter::Parameter::new(name, spec, Some(extras))
+      .map_err(|e| format!("Parameter::new failed: {}", e))?;
+
+    // Apply flags after construction — Parameter::new + init() handle
+    // the reader side, but novalue/optional are struct-level booleans
+    // that the spec-driven init() may or may not have set (e.g. "Optional"
+    // prefix auto-sets optional, but we want explicit round-trip).
+    for flag in flags.split(';').filter(|s| !s.is_empty()) {
+      match flag {
+        "n=1" => param.novalue = true,
+        "o=1" => param.optional = true,
+        _ => {
+          // Unknown flag — ignore for forward compat; future flags
+          // added to the writer shouldn't break older readers.
+        }
+      }
+    }
+    params.push(param);
+  }
+  if params.is_empty() {
+    Ok(None)
+  } else {
+    Ok(Some(crate::parameter::Parameters::new(params)))
+  }
+}
+
+pub(crate) fn url_decode(s: &str) -> String {
+  // Fast path: the overwhelming majority of dump entries have no `%`
+  // escapes in their key or proto fields, so a single memcpy via
+  // `to_owned()` beats char-by-char iteration for ~19k key loads.
+  if !s.contains('%') {
+    return s.to_owned();
+  }
   let mut result = String::with_capacity(s.len());
   let mut chars = s.chars();
   while let Some(ch) = chars.next() {

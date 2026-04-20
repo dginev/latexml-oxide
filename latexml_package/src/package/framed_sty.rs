@@ -8,18 +8,6 @@ fn current_background_hex() -> String {
     .unwrap_or_default()
 }
 
-/// Perl: framed.sty.ltxml — MergeFont(background => LookupValue('color_shadecolor'))
-#[allow(dead_code)]
-fn merge_shade_background() {
-  let key = "color_shadecolor";
-  if let Some(Stored::String(sym)) = state::lookup_value(key) {
-    let stored_str = arena::with(sym, |s| s.to_string());
-    if let Some(c) = Color::from_stored(&stored_str) {
-      merge_font(fontmap!(bg => c));
-    }
-  }
-}
-
 /// Look up a named color from state, returning hex attribute string.
 fn lookup_color_hex(name: &str) -> String {
   let key = s!("color_{name}");

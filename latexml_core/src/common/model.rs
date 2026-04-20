@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use crate::common::arena::{self, ANY_SYM, SymStr};
+use crate::common::arena::{self, SymStr};
 use crate::common::error::*;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::XML_NS;
@@ -14,10 +14,8 @@ use crate::document::Document;
 use crate::util::pathname;
 use libxml::tree::Node;
 
-use super::arena::{
-  EMPTY_SYM, H_COMMENT_SYM, H_DEFAULT_SYM, H_DOC_SYM, H_DTD_SYM, H_PCDATA_SYM, H_PI_SYM,
-  RELAXNG_SYM, SymHashMap, WILD_CARD_SYM,
-};
+use super::arena::SymHashMap;
+use crate::pin;
 
 // use common::font::*;
 
@@ -102,7 +100,7 @@ impl Model {
   }
   pub fn register_namespace_sym(&mut self, codeprefix: SymStr, namespace_opt: Option<SymStr>) {
     // double-check empty strings are None
-    let namespace_opt_checked = namespace_opt.filter(|val| *val != *EMPTY_SYM);
+    let namespace_opt_checked = namespace_opt.filter(|val| *val != pin!(""));
     match namespace_opt_checked {
       Some(namespace) => {
         self
@@ -120,7 +118,7 @@ impl Model {
   }
 
   pub fn register_document_namespace(&mut self, docprefix: &str, namespace_opt: Option<&str>) {
-    let default_sym = *H_DEFAULT_SYM;
+    let default_sym = pin!("#default");
     let docprefix_sym = if docprefix.is_empty() {
       default_sym
     } else {
@@ -152,7 +150,7 @@ impl Model {
   }
 
   pub fn set_relaxng_schema(&mut self, schema: &str) {
-    self.schema_data = Some(vec![*RELAXNG_SYM, arena::pin(schema)]);
+    self.schema_data = Some(vec![pin!("RelaxNG"), arena::pin(schema)]);
   }
   /// TODO: This is another component that would fit perfectly as a compiler plugin.
   /// For now, simply reimplementing the runtime loading of
@@ -295,7 +293,7 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
   } // Actually, they could have declared all sorts of Tags....
   // Only RelaxNG schemas are supported (DTD support removed from Rust port)
   if let Some(ref data) = model.schema_data {
-    if data[0] == *RELAXNG_SYM {
+    if data[0] == pin!("RelaxNG") {
       name = arena::to_string(data[1]);
       model.schema = Some(Relaxng {
         name: name.clone(),
@@ -379,12 +377,12 @@ pub fn get_document_namespace_prefix(
       message2
     );
   }
-  let default_sym = *H_DEFAULT_SYM;
+  let default_sym = pin!("#default");
   docprefix.filter(|p| p != &default_sym)
 }
 
 pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
-  let h_default_sym = *H_DEFAULT_SYM;
+  let h_default_sym = pin!("#default");
   let docprefix_sym = if docprefix.is_empty() {
     h_default_sym
   } else {
@@ -571,7 +569,7 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
     NamespaceDecl => arena::pin_static("xmlns"),
 
     ElementNode | AttributeNode => {
-      let empty_sym = *EMPTY_SYM;
+      let empty_sym = pin!("");
       let mut prefix = empty_sym;
       if let Some(ns) = node.get_namespace() {
         let href = ns.get_href();
@@ -638,9 +636,9 @@ pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
 /// interning-only helper.
 pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
   // Handle obvious cases explicitly.
-  if tag == *H_PCDATA_SYM || tag == *H_COMMENT_SYM || tag == *EMPTY_SYM {
+  if tag == pin!("#PCDATA") || tag == pin!("#Comment") || tag == pin!("") {
     return false;
-  } else if tag == *WILD_CARD_SYM {
+  } else if tag == pin!("_WildCard_") {
     return true;
   };
   if arena::with(tag, |tag_str| tag_str.ends_with("_Capture_"))
@@ -652,19 +650,19 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
     return true;
   }
 
-  if child == *WILD_CARD_SYM || child == *H_COMMENT_SYM || child == *H_PI_SYM || child == *H_DTD_SYM
+  if child == pin!("_WildCard_") || child == pin!("#Comment") || child == pin!("#ProcessingInstruction") || child == pin!("#DTD")
   {
     return true;
   }
 
   let mut model = model_mut!();
-  if model.permissive && tag == *H_DOC_SYM && child != *H_PCDATA_SYM {
+  if model.permissive && tag == pin!("#Document") && child != pin!("#PCDATA") {
     return true; // No schema? Punt!
   }
 
   // Else query tag properties.
   let model_entry = &mut model.tagprop.entry_sym(tag).or_default().model;
-  model_entry.contains(&ANY_SYM) || model_entry.contains(&child)
+  model_entry.contains(&pin!("ANY")) || model_entry.contains(&child)
 }
 
 /// Can an element with (qualified name) `tag` contain a `child` element?
@@ -691,7 +689,7 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
 
   // Else query tag properties.
   let model = &model.tagprop.get(tag).unwrap_or(&*DEFAULT_TAG_FRAME).model;
-  model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
+  model.contains(&pin!("ANY")) || model.contains(&arena::pin(child))
 }
 
 pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
@@ -770,12 +768,12 @@ pub(crate) fn compute_indirect_model_aux(
   tag: SymStr,
   start_opt: Option<SymStr>,
   desirability: usize,
-  openable: &mut HashSet<SymStr>,
+  openability: &mut SymHashMap<u32>,
   desc: &mut SymHashMap<SymHashMap<usize>>,
 ) {
   let start = match start_opt {
     Some(s) => s,
-    None => *EMPTY_SYM,
+    None => pin!(""),
   };
 
   // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
@@ -784,21 +782,28 @@ pub(crate) fn compute_indirect_model_aux(
   let tag_contents: Vec<SymStr> = get_tag_contents(tag);
 
   for kid in tag_contents {
+    // Perl Document.pm L217: `next if $::DESC{$kid}{$start}`. Any prior
+    // visit wins, so don't recompute — the bookkeeping is keyed on (kid,
+    // start) and collisions pick the earliest (best) path by sort order.
     if desc.entry_sym(kid).or_default().contains_key_sym(&start) {
       continue;
-    } // Already solved
+    }
 
-    if start != *EMPTY_SYM {
+    if start != pin!("") {
       desc
         .entry_sym(kid)
         .or_default()
         .insert_sym(start, desirability);
     }
 
-    if kid != *H_PCDATA_SYM && openable.contains(&kid) {
-      let inner = if start != *EMPTY_SYM { start } else { kid };
-
-      compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
+    if kid != pin!("#PCDATA") {
+      if let Some(priority) = openability.get_sym(kid).copied() {
+        let inner = if start != pin!("") { start } else { kid };
+        // Perl Document.pm L220: `$desirability * $x`. We keep integer
+        // arithmetic (priorities scaled by 100), so this is a scaled multiply.
+        let next_desirability = desirability * (priority as usize) / 100;
+        compute_indirect_model_aux(kid, Some(inner), next_desirability, openability, desc);
+      }
     }
   }
 }

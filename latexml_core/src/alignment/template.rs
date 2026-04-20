@@ -288,7 +288,10 @@ impl Template {
     };
     if let Some(prev) = last {
       if !self.disabled_intercolumn {
-        let mut after = prev.after.clone().unwrap_or_default().unlist();
+        // `take()` moves out the current Option<Tokens> (replacing with
+        // None) — we immediately re-assign, so the clone in the old
+        // `.clone().unwrap_or_default().unlist()` was redundant.
+        let mut after = prev.after.take().unwrap_or_default().unlist();
         after.push(T_CS!("\\lx@intercol"));
         prev.after = Some(Tokens::new(after));
         prev.has_intercol_after = true;
@@ -306,7 +309,7 @@ impl Template {
   // NOT \halign style templates!
   pub fn add_after_column(&mut self, new: Vec<Token>) {
     if let Some(current_column) = self.columns.last_mut() {
-      let current_after = current_column.after.clone().unwrap_or_default().unlist();
+      let current_after = current_column.after.take().unwrap_or_default().unlist();
       current_column.after = Some(Tokens!(T_CS!("\\lx@column@trimright"), new, current_after));
     }
   }
@@ -315,7 +318,7 @@ impl Template {
   pub fn add_between_column(&mut self, tokens: Vec<Token>) {
     if let Some(current_column) = self.columns.last_mut() {
       let mut combined = Vec::new();
-      let current_after = current_column.after.clone().unwrap_or_default().unlist();
+      let current_after = current_column.after.take().unwrap_or_default().unlist();
       combined.extend(current_after);
       // Perl L69-70: prepend \lx@intercol unless disabled_intercolumn
       if !self.disabled_intercolumn {
@@ -337,7 +340,7 @@ impl Template {
       self.columns.last_mut()
     } {
       if !self.disabled_intercolumn {
-        let mut after = prev.after.clone().unwrap_or_default().unlist();
+        let mut after = prev.after.take().unwrap_or_default().unlist();
         after.push(T_CS!("\\lx@intercol"));
         prev.after = Some(Tokens::new(after));
         prev.has_intercol_after = true;

@@ -137,7 +137,7 @@ LoadDefinitions!({
   DefMacro!("\\bibstyle{}", sub[(style_arg)] {
     let style = style_arg.to_string();
     let cs_name = s!("\\bibstyle@{style}");
-    if has_meaning(&T_CS!(cs_name.clone())) {
+    if has_meaning(&T_CS!(&cs_name)) {
       Ok(Tokens::new(vec![T_CS!(cs_name)]))
     } else {
       Ok(Tokens::new(vec![T_CS!("\\relax")]))
@@ -652,19 +652,19 @@ LoadDefinitions!({
           assign_value("CITE_SEPARATOR", Stored::Tokens(Tokens!(T_OTHER!(","))), None);
         },
         "citesep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
           assign_value("CITE_SEPARATOR", Stored::Tokens(toks), None);
         },
         "aysep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
           assign_value("CITE_AY_SEPARATOR", Stored::Tokens(toks), None);
         },
         "yysep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
           assign_value("CITE_YY_SEPARATOR", Stored::Tokens(toks), None);
         },
         "notesep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| T_OTHER!(s!("{c}"))).collect::<Vec<_>>());
+          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
           assign_value("CITE_NOTE_SEPARATOR", Stored::Tokens(toks), None);
         },
         _ => {

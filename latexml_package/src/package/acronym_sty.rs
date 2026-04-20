@@ -38,7 +38,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@AC@if{}{}{}", sub[(id, short, long)] {
     let id_str = id.to_string();
     let key = s!("ACROUSED@{id_str}");
-    if state::lookup_value(&key).is_some() {
+    if state::with_value(&key, |v| v.is_some()) {
       Ok(short)
     } else {
       state::assign_value(&key, Stored::Number(Number::new(1)), Some(Scope::Global));

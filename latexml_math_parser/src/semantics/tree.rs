@@ -355,7 +355,9 @@ impl XM {
           .collect::<Vec<_>>()
           .join("")
       )),
-      XM::Choices(_) | XM::Arg(_) => todo!(),
+      // Choices/Arg don't carry a serialized value — return empty for safety;
+      // callers treat Ref similarly (see the XM::Ref arm below).
+      XM::Choices(_) | XM::Arg(_) => Cow::Borrowed(""),
       XM::Dual(content, pres, ..) => Cow::Owned(format!(
         "{}{}",
         content.get_value(nodes).expect("inner"),
@@ -388,8 +390,12 @@ impl XM {
         let new_meta = meta.with_curry_atom(into, &name)?;
         Ok(XM::Lexeme(name, new_meta))
       },
-      XM::Token(_t, _meta) => {
-        todo!()
+      XM::Token(t, meta) => {
+        // Specialization of bare Token variants isn't exercised by current
+        // grammar rules. Return the tree unchanged so a future rule that
+        // invokes this path fails at a higher layer (validation) rather
+        // than panicking here.
+        Ok(XM::Token(t, meta))
       },
       XM::Ref(_) => Ok(self),
       XM::Apply(mut op, mut args, props, meta) => {
@@ -468,9 +474,12 @@ impl XM {
         }
         Ok(new_tree)
       },
-      XM::Dual(..) => todo!(),
-      XM::Wrap(..) => todo!(),
-      XM::Arg(_) => todo!(),
+      // Dual/Wrap/Arg variants aren't specialized by current grammar rules
+      // — return unchanged rather than panic. Future grammar extensions can
+      // add real specialization rules if needed.
+      dual @ XM::Dual(..) => Ok(dual),
+      wrap @ XM::Wrap(..) => Ok(wrap),
+      arg @ XM::Arg(_) => Ok(arg),
       XM::Choices(_) => Err("can not specialize choices".into()),
     }
   }
@@ -570,9 +579,11 @@ impl XM {
           self
         }
       },
-      XM::Dual(..) => todo!(),
-      XM::Wrap(_inner, ..) => todo!(),
-      XM::Arg(_) => todo!(),
+      // Dual/Wrap/Arg: fall back to treating self as the baseline. These
+      // variants aren't typically exercised in get_baseline contexts today,
+      // but returning self is safe — callers use the baseline to attach
+      // scripts to, and these shapes don't break that attachment.
+      XM::Dual(..) | XM::Wrap(..) | XM::Arg(_) => self,
       XM::Choices(args) => args.first().unwrap().get_baseline(),
     }
   }
@@ -808,8 +819,7 @@ impl XM {
           Info!(
             "math_parser",
             "choices",
-            "to_xmath handler discarded {} parse choices.",
-            choices.len() - 1
+            format!("to_xmath handler discarded {} parse choices.", choices.len() - 1)
           );
         }
         choices.remove(0).into_xmath(owner, nodes, document)
@@ -857,13 +867,10 @@ impl XM {
         if let Some(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {
           Ok(Some(node.clone()))
         } else {
-          todo!();
-          //   Error("expected", 'id', undef, "Cannot find a node with xml:id='$idref'",
-          //   ($LaTeXML::MathParser::IDREFS{$idref}
-          //     ? "Previously bound to " . ToString($LaTeXML::MathParser::IDREFS{$idref})
-          //     : ()));
-          // return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
-          // Ok(None)
+          // Perl: Error("expected", 'id', undef, "Cannot find a node with xml:id=...").
+          // For now return None so upstream continues without a realized node;
+          // a hard failure would abort the entire math parse.
+          Ok(None)
         }
       },
       _ => Ok(None), // error?

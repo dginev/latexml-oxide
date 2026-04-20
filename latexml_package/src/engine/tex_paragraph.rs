@@ -94,7 +94,7 @@ LoadDefinitions!({
           // Only set on the para about to close, if unknown!
           if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
-            if class_sym != *EMPTY_SYM {
+            if class_sym != pin!("") {
               let class_s = arena::with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
             }
@@ -110,18 +110,18 @@ LoadDefinitions!({
     },
     before_digest => {
       // Perl: combine any digested horizontal material into a horizontal List
-      let mode = lookup_string("MODE");
-      let bound = lookup_string("BOUND_MODE");
+      let mode = state::lookup_string_from_sym(pin!("MODE"));
+      let bound = state::lookup_string_from_sym(pin!("BOUND_MODE"));
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
         repack_horizontal();
-        assign_value_inplace("MODE", bound.to_string()); // Resume vertical/internal_vertical
+        assign_value_inplace_sym(pin!("MODE"), bound.to_string()); // Resume vertical/internal_vertical
       }
       state::assign_value("parshape", Stored::None, None);
       state::assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      whatsit.set_property("mode", lookup_string("MODE").to_string());
+      whatsit.set_property("mode", state::lookup_string_from_sym(pin!("MODE")).to_string());
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);

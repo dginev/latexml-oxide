@@ -35,25 +35,25 @@ const UP_GREEK: &[char] = &[
 
 /// (Internal) Converts the number into one of the char symbols
 pub fn radix_format(mut number: i64, symbols: &[char]) -> String {
-  let mut text = String::new();
+  let mut chars: Vec<char> = Vec::new();
   let max = symbols.len() as i64;
   while number > 0 {
     let index = (number - 1) % max;
-    text = symbols[index as usize].to_string() + &text;
+    chars.push(symbols[index as usize]);
     number = (number - 1) / max;
   }
-  text
+  chars.into_iter().rev().collect()
 }
 /// (Internal) Converts the number into one of the str symbols
 pub fn radix_format_str(mut number: i64, symbols: &[&str]) -> String {
-  let mut text = String::new();
+  let mut parts: Vec<&str> = Vec::new();
   let max = symbols.len() as i64;
   while number > 0 {
     let index = (number - 1) % max;
-    text = symbols[index as usize].to_string() + &text;
+    parts.push(symbols[index as usize]);
     number = (number - 1) / max;
   }
-  text
+  parts.into_iter().rev().collect()
 }
 
 /// converts the number into one or more lowercase latin letters
@@ -71,7 +71,13 @@ pub fn radix_up_greek(n: i64) -> String { radix_format(n, UP_GREEK) }
 // namely, it's very limited.... what happened to my much-improved version?
 const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 /// converts the number as a lowercase roman numeral
+///
+/// Perl parity: `roman(n)` returns the empty string for n <= 0. TeX's
+/// `\romannumeral` also produces no output for non-positive input.
 pub fn radix_roman(mut n: i64) -> String {
+  if n <= 0 {
+    return String::new();
+  }
   let mut s = String::new();
   let mut div = 1000;
   if n >= div {
@@ -110,3 +116,33 @@ pub fn radix_roman(mut n: i64) -> String {
 
 /// converts the number as a uppercase roman numeral
 pub fn radix_up_roman(n: i64) -> String { radix_roman(n).to_uppercase() }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn roman_non_positive_empty() {
+    assert_eq!(radix_roman(0), "");
+    assert_eq!(radix_roman(-1), "");
+    assert_eq!(radix_roman(i64::MIN), "");
+  }
+
+  #[test]
+  fn roman_basic_cases() {
+    assert_eq!(radix_roman(1), "i");
+    assert_eq!(radix_roman(4), "iv");
+    assert_eq!(radix_roman(9), "ix");
+    assert_eq!(radix_roman(1000), "m");
+    assert_eq!(radix_roman(1999), "mcmxcix");
+  }
+
+  #[test]
+  fn alpha_edge_cases() {
+    assert_eq!(radix_alpha(0), "");
+    assert_eq!(radix_alpha(-5), "");
+    assert_eq!(radix_alpha(1), "a");
+    assert_eq!(radix_alpha(26), "z");
+    assert_eq!(radix_alpha(27), "aa");
+  }
+}

@@ -108,7 +108,7 @@ impl<'a> From<&'a Tokens> for Token {
     if ts.0.is_empty() {
       T_CS!("\\relax") // empty Tokens → relax fallback
     } else if ts.0.len() == 1 {
-      *ts.0.first().unwrap()
+      ts.0[0]
     } else {
       panic!("Dangerous cast! Tokens->Token for {ts:?}");
       //let code = ts.0.first().unwrap().get_catcode();
@@ -177,7 +177,7 @@ impl Tokens {
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_number(&self) -> Number {
     if self.is_empty() {
-      eprintln!("TODO: An empty tokens was requested for .to_number, debug this!");
+      log::debug!("to_number called on empty Tokens — returning 0 (TeX-compatible default)");
       Number::default()
     } else {
       Number::new(self.to_string().parse::<i64>().unwrap_or(0))
@@ -218,7 +218,7 @@ impl Tokens {
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_float(&self) -> Float {
     if self.is_empty() {
-      eprintln!("TODO: An empty tokens was requested for .to_float, debug this!");
+      log::debug!("to_float called on empty Tokens — returning 0.0 (TeX-compatible default)");
       Float::default()
     } else {
       Float::new_f64(self.to_string().parse::<f64>().unwrap_or(0.0))
@@ -316,7 +316,10 @@ impl Tokens {
   // Using inline accessors on those assumptions
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
-    let mut result = Vec::new();
+    // Pre-size: the substituted result is at least as long as the
+    // template. Expansion bodies can be thousands of tokens in the
+    // expl3 kernel; pre-allocation skips the first several Vec doublings.
+    let mut result = Vec::with_capacity(self.0.len());
     for token in self.0.iter() {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
@@ -325,7 +328,11 @@ impl Tokens {
         let idx = token.with_str(|ts| ts.parse::<usize>().unwrap_or(0));
         if idx > 0 && idx <= args.len() {
           if let Some(ref arg) = args[idx - 1] {
-            result.extend(arg.clone().into_owned().unlist());
+            // `arg` is `Cow<Tokens>`; iterate via `unlist_ref` + copy
+            // (Tokens is a Vec<Token> of `Copy` tokens). Avoids the
+            // previous `clone().into_owned().unlist()` chain which
+            // double-cloned the Vec when `arg` was `Cow::Borrowed`.
+            result.extend(arg.as_ref().unlist_ref().iter().copied());
           }
         }
       }
@@ -344,7 +351,9 @@ impl Tokens {
   /// contain `%&#10;` escape sequences that depend on exact token lengths. We instead always
   /// produce compact, single-line output. Test `.xml` files should not contain `%&#10;`.
   pub fn untex(self) -> String {
-    let mut tokens: VecDeque<Token> = self.revert().into_iter().collect();
+    // `VecDeque::from(Vec)` reuses the Vec's heap buffer directly
+    // (no second allocation), unlike `.into_iter().collect()`.
+    let mut tokens: VecDeque<Token> = VecDeque::from(self.revert());
     let mut tex_string = String::new();
     let mut length = 0;
     let mut level = 0;
@@ -418,9 +427,15 @@ impl Tokens {
         }
       },
       i32::MIN..=-1 => {
-        for _ in 0..(-level) {
-          tex_string = String::from("{") + &tex_string;
+        // Prepend `-level` opening braces in one alloc (was O(n²) with
+        // String::from("{") + &tex_string per iteration).
+        let n = (-level) as usize;
+        let mut prefixed = String::with_capacity(n + tex_string.len());
+        for _ in 0..n {
+          prefixed.push('{');
         }
+        prefixed.push_str(&tex_string);
+        tex_string = prefixed;
       },
       0 => {},
     }
@@ -431,8 +446,14 @@ impl Tokens {
   /// lists) Also unwraps \noexpand tokens, since that is also needed for macro bodies
   /// (but not strictly part of packing parameters)
   pub fn pack_parameters(self) -> Result<Self> {
-    let mut rescanned = Vec::new();
-    let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
+    // Result is at most the same size as input (param-digit pairs
+    // collapse 2→1; other tokens copy 1→1). Pre-sizing avoids the
+    // initial Vec doublings on 1k+ token expansions (common for
+    // expl3 macros).
+    let mut rescanned = Vec::with_capacity(self.0.len());
+    // `VecDeque::from(Vec)` reuses the Vec's heap buffer directly (no
+    // second allocation), unlike `into_iter().collect()` which copies.
+    let mut toks: VecDeque<Token> = VecDeque::from(self.unlist());
     while let Some(t) = toks.pop_front() {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         let next_t = toks.pop_front();

@@ -52,11 +52,6 @@ impl FoodType {
   }
 }
 
-// Perf/safety: `Cell<usize>` over `static mut` — thread_local guarantees
-// single-threaded access, and Cell gives us get/set without any `unsafe`.
-#[thread_local]
-static LASTID: std::cell::Cell<usize> = std::cell::Cell::new(0);
-
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 // LOWERHEX_REGEX removed — replaced with direct matches!() check in tex_hex_caret path.
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
@@ -101,6 +96,17 @@ impl PartialEq for Mouth {
 
 impl Default for Mouth {
   fn default() -> Self {
+    // Historically the source was `"Anonymous String {gid}"` with a
+    // per-instance gid, which Locator::source then pinned into the arena.
+    // The gid served no functional purpose and made every anonymous mouth
+    // unique at the SymStr layer — fine for a handful of mouths, but
+    // catastrophic when a runaway error-recovery path creates millions
+    // (arxiv 1210.4211 under parallel load: 50M anonymous mouths saturated
+    // the u32 interner offset). Collapsing onto a shared static label makes
+    // the per-mouth cost arena-free, and the pin-count sentinel remains as
+    // a symptom detector for the *actual* bug (something is still creating
+    // 50M anonymous mouths — that's a runaway loop to track down, now with
+    // the arena side-effect removed).
     Mouth {
       notes:                  false,
       note_message:           None,
@@ -112,7 +118,7 @@ impl Default for Mouth {
       colno:                  0,
       chars:                  VecDeque::new(),
       nchars:                 0,
-      source:                 s!("Anonymous String {}", &Mouth::gid()),
+      source:                 String::from("Anonymous String"),
       shortsource:            s!("String"),
       // handle : None,
       foodtype:               FoodType::File,
@@ -186,7 +192,7 @@ impl Mouth {
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
       options.source = Some(source.to_string());
       if options.shortsource.is_none() {
-        options.shortsource = Some(if ext.is_empty() { name.to_string() } else { s!("{}.{}", name, ext) });
+        options.shortsource = Some(if ext.is_empty() { name } else { s!("{}.{}", name, ext) });
       }
       Mouth::new(source, Some(options))
     }
@@ -283,10 +289,10 @@ impl Mouth {
   }
   fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
   fn open_http(&mut self, url: &str) {
-    eprintln!("Warning: HTTP input not supported: {url}");
+    log::warn!("HTTP input not supported: {url}");
   }
   fn open_https(&mut self, url: &str) {
-    eprintln!("Warning: HTTPS input not supported: {url}");
+    log::warn!("HTTPS input not supported: {url}");
   }
   // fn open_binding(&mut self, _content: &str) {}
 
@@ -543,17 +549,16 @@ impl Mouth {
   /// Note: we need mutability, as we may refill the internal BufReader
   /// when performing the check.
   pub fn has_more_input(&mut self) -> bool {
-    !self.is_eol()
-      || !self.buffer.is_empty()
-      || !self.raw_buffer.is_empty()
-      || (self.reader.is_some()
-        && !self
-          .reader
-          .as_mut()
-          .unwrap()
-          .fill_buf()
-          .expect("fill_buf should have no reason to fail.")
-          .is_empty())
+    if !self.is_eol() || !self.buffer.is_empty() || !self.raw_buffer.is_empty() {
+      return true;
+    }
+    // Peek the underlying reader if present. A fill_buf I/O error is treated
+    // as end-of-input (return false) rather than panicking — the caller will
+    // naturally stop requesting tokens and the Mouth will be closed out.
+    match self.reader.as_mut() {
+      Some(r) => r.fill_buf().map(|buf| !buf.is_empty()).unwrap_or(false),
+      None => false,
+    }
   }
 
   /// Read the next token, or undef if exhausted.
@@ -891,13 +896,6 @@ impl Mouth {
     let mut v: Vec<char> = self.chars.drain(..).collect();
     v.splice(range, with.iter().cloned());
     self.chars = v.into_iter().collect();
-  }
-
-  fn gid() -> usize {
-    // Thread_local Cell: single-threaded access guaranteed by #[thread_local].
-    let next = LASTID.get() + 1;
-    LASTID.set(next);
-    next
   }
 
   /// Checks if Mouth read is at the end of a line.

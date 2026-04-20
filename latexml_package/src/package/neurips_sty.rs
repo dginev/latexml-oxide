@@ -14,7 +14,7 @@ LoadDefinitions!({
     state::assign_value("neurips_nonatbib", Stored::from(1), Some(Scope::Global));
   });
   ProcessOptions!();
-  if state::lookup_value("neurips_nonatbib").is_none() {
+  if state::with_value("neurips_nonatbib", |v| v.is_none()) {
     RequirePackage!("natbib");
   }
   DefMacro!("\\AND",                                   "");

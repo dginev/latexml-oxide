@@ -137,6 +137,35 @@ impl Catcode {
       ARG => "Arg",
     }
   }
+
+  /// SymStr form of `name()` — each variant caches its interned
+  /// symbol via `pin!`. Used by `Token::get_cs_name` /
+  /// `pin_cs_name` to avoid a per-call `pin_static` hash probe
+  /// (fires on every primitive-token definition lookup).
+  pub fn name_sym(self) -> crate::common::arena::SymStr {
+    use crate::token::Catcode::*;
+    match self {
+      ESCAPE => crate::pin!("Escape"),
+      BEGIN => crate::pin!("Begin"),
+      END => crate::pin!("End"),
+      MATH => crate::pin!("Math"),
+      ALIGN => crate::pin!("Align"),
+      EOL => crate::pin!("EOL"),
+      PARAM => crate::pin!("Parameter"),
+      SUPER => crate::pin!("Superscript"),
+      SUB => crate::pin!("Subscript"),
+      SPACE => crate::pin!("Space"),
+      IGNORE => crate::pin!("Ignore"),
+      LETTER => crate::pin!("Letter"),
+      OTHER => crate::pin!("Other"),
+      ACTIVE => crate::pin!("Active"),
+      COMMENT => crate::pin!("Comment"),
+      INVALID => crate::pin!("Invalid"),
+      CS => crate::pin!("ControlSequence"),
+      MARKER => crate::pin!("Marker"),
+      ARG => crate::pin!("Arg"),
+    }
+  }
   /// a \meaning-friendly name
   pub fn meaning(self) -> &'static str {
     use crate::token::Catcode::*;
@@ -394,7 +423,7 @@ macro_rules! T_SUB(() => { *$crate::token::TOKEN_SUB });
 #[macro_export]
 macro_rules! T_SPACE(() => { *$crate::token::TOKEN_SPACE };
 ($text:literal) => {
-  Token { text: $crate::common::arena::pin_static($text), code: Catcode::SPACE}
+  Token { text: $crate::pin!($text), code: Catcode::SPACE}
 });
 /// macro for a CR "\n" token
 #[macro_export]
@@ -404,7 +433,7 @@ macro_rules! T_CR(() => { *$crate::token::TOKEN_CR });
 macro_rules! T_LETTER {
   ($text:literal) => {
     Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: Catcode::LETTER,
     }
   };
@@ -420,7 +449,7 @@ macro_rules! T_LETTER {
 macro_rules! T_OTHER {
   ($text:literal) => {
     Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: Catcode::OTHER,
     }
   };
@@ -468,7 +497,7 @@ macro_rules! T_COMMENT {
 macro_rules! T_CS {
   ($text:literal) => {
     $crate::token::Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: $crate::token::Catcode::CS,
     }
   };
@@ -514,7 +543,7 @@ macro_rules! Token {
   };
   ($text:literal, $cc:expr) => {
     Token {
-      text: $crate::common::arena::pin_static($text),
+      text: $crate::pin!($text),
       code: $cc,
     }
   };
@@ -620,7 +649,7 @@ impl Token {
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
   pub fn get_cs_name(&self) -> SymStr {
     if self.code.is_primitive() {
-      arena::pin_static(self.code.name())
+      self.code.name_sym()
     } else {
       self.get_sym()
     }
@@ -641,7 +670,7 @@ impl Token {
   /// artificial, but avoids the data race
   pub fn pin_cs_name(&self) -> SymStr {
     if self.code.is_primitive() {
-      arena::pin_static(self.code.name())
+      self.code.name_sym()
     } else {
       self.get_sym()
     }
@@ -835,17 +864,24 @@ impl Token {
       return true;
     }
     if matches!(cc, Catcode::CS | Catcode::ACTIVE) {
-      if let Some(defn) = state::lookup_meaning(self) {
-        let letto = match defn {
-          Stored::Token(t) => t,
-          Stored::Expandable(inner) => inner.get_cs().into_owned(),
-          Stored::Primitive(inner) => inner.get_cs().into_owned(),
-          Stored::MathPrimitive(inner) => inner.get_cs().into_owned(),
-          Stored::Register(inner) => inner.get_cs().into_owned(),
-          Stored::Conditional(inner) => inner.get_cs().into_owned(),
-          Stored::Constructor(inner) => inner.get_cs().into_owned(),
-          oops => panic!("unexpected definition {oops:?} for {self:?}"),
-        };
+      // Use the closure-based `with_meaning` — Token is `Copy`, so
+      // extracting a `Token` from the borrowed Stored is an implicit
+      // copy, not a clone. Avoids a full `Stored::clone()` per call
+      // (defined_as fires ~1% of total instructions on siunitx/
+      // physics-heavy docs).
+      let letto_opt: Option<Token> = state::with_meaning(self, |defn_opt| {
+        defn_opt.and_then(|defn| match defn {
+          Stored::Token(t) => Some(*t),
+          Stored::Expandable(inner) => Some(*inner.get_cs()),
+          Stored::Primitive(inner) => Some(*inner.get_cs()),
+          Stored::MathPrimitive(inner) => Some(*inner.get_cs()),
+          Stored::Register(inner) => Some(*inner.get_cs()),
+          Stored::Conditional(inner) => Some(*inner.get_cs()),
+          Stored::Constructor(inner) => Some(*inner.get_cs()),
+          _ => None,
+        })
+      });
+      if let Some(letto) = letto_opt {
         if (letto.get_catcode() == occ)
           && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym())
         {

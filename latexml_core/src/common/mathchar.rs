@@ -8,6 +8,7 @@ use crate::tbox::Tbox;
 use crate::state;
 use crate::token::Token;
 use crate::common::error::Result;
+use crate::pin;
 
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 
@@ -305,15 +306,18 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
   n %= 256;
 
   let curfont = state::lookup_font().unwrap();
-  let initfont = match state::lookup_value("initial_math_font") {
-    Some(Stored::Font(f)) => f.clone(),
-    _ => curfont.clone(),
-  };
+  // `with_value` borrows the Stored — for `Stored::Font(f)` we need
+  // the `Rc<Font>` out, so clone the Rc (cheap refcount bump) rather
+  // than the entire Stored enum.
+  let initfont = state::with_value("initial_math_font", |v| match v {
+    Some(Stored::Font(f)) => Rc::clone(f),
+    _ => Rc::clone(&curfont),
+  });
 
   let mut use_current_font = false;
   let mut maybe_rev = curfam_val >= 0 && fam != 1;
   let mut fontdef_tok: Option<Token> = None;
-  
+
   if class == 7 && curfam_val < 0 && curfont != initfont {
     use_current_font = true;
     maybe_rev = true;
@@ -322,17 +326,35 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
 
   let mut downsize = 0;
   if fontdef_tok.is_none() {
+    // Token is Copy (SymStr + Catcode = 8 bytes), so the closure extracts
+    // the Token by-value without cloning the enclosing Stored.
+    let extract_token = |key: &str| -> Option<Token> {
+      state::with_value(key, |v| match v {
+        Some(Stored::Token(t)) => Some(*t),
+        _ => None,
+      })
+    };
     let style = curfont.get_mathstyle().map(|s| s.to_string()).unwrap_or_default();
     let style_str = if style == "script" || style == "scriptscript" || style == "text" { style.as_str() } else { "text" };
     if style_str == "text" {
-      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t); }
+      fontdef_tok = extract_token(&crate::s!("textfont_{fam}"));
     } else if style_str == "script" {
-      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t); }
-      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t); downsize = 1; }
+      fontdef_tok = extract_token(&crate::s!("scriptfont_{fam}"));
+      if fontdef_tok.is_none() {
+        fontdef_tok = extract_token(&crate::s!("textfont_{fam}"));
+        if fontdef_tok.is_some() { downsize = 1; }
+      }
     } else if style_str == "scriptscript" {
-      if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptscriptfont_{fam}")) { fontdef_tok = Some(t); }
-      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("scriptfont_{fam}")) { fontdef_tok = Some(t); downsize = 1; }
-      else if let Some(Stored::Token(t)) = state::lookup_value(&crate::s!("textfont_{fam}")) { fontdef_tok = Some(t); downsize = 2; }
+      fontdef_tok = extract_token(&crate::s!("scriptscriptfont_{fam}"));
+      if fontdef_tok.is_none() {
+        fontdef_tok = extract_token(&crate::s!("scriptfont_{fam}"));
+        if fontdef_tok.is_some() {
+          downsize = 1;
+        } else {
+          fontdef_tok = extract_token(&crate::s!("textfont_{fam}"));
+          if fontdef_tok.is_some() { downsize = 2; }
+        }
+      }
     }
   }
   
@@ -358,7 +380,11 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
           f = f.merge_ref(info);
         } else {
           // Perl: fallback to \lx@default@font if not found
-          if let Some(Stored::Token(d_tok)) = state::lookup_value("\\lx@default@font") {
+          let d_tok_opt = state::with_value("\\lx@default@font", |v| match v {
+            Some(Stored::Token(t)) => Some(*t),
+            _ => None,
+          });
+          if let Some(d_tok) = d_tok_opt {
              state::with_font_info(&d_tok, |d_info| {
                if let Some(Stored::Font(ref d_f)) = d_info.unwrap_or(None) {
                  f = f.merge_ref(d_f);
@@ -427,7 +453,7 @@ pub fn decode_math_char(mut n: u16, reversion: Option<crate::tokens::Tokens>) ->
   let mut final_reversion = reversion;
   if let Some(rev) = final_reversion.clone() {
     let mut wrap = maybe_rev && !d.is_empty();
-    if state::lookup_value("LaTeX.pool.ltxml_loaded").is_some() {
+    if state::with_value("LaTeX.pool.ltxml_loaded", |v| v.is_some()) {
       wrap = false;
     }
     if wrap {
@@ -461,7 +487,7 @@ pub fn decode_math_char_for_stomach(
   };
 
   let mut properties = SymHashMap::default();
-  properties.insert("mode", Stored::String(*arena::MATH_SYM));
+  properties.insert("mode", Stored::String(pin!("math")));
   if let Some(ref role) = props.role {
     properties.insert("role", Stored::String(arena::pin(role)));
   }
@@ -481,7 +507,7 @@ pub fn decode_math_char_for_stomach(
     properties.insert("mathstyle", Stored::String(arena::pin(mathstyle)));
   }
 
-  let glyph_sym = arena::pin(glyph.to_string());
+  let glyph_sym = arena::pin_char(glyph);
 
   let font = props.font.map(|f| {
     Rc::new(arena::with(glyph_sym, |s| f.specialize(s)))

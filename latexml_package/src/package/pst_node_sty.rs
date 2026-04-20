@@ -58,4 +58,13 @@ LoadDefinitions!({
   DefMacro!("\\psrowalign{}", "");
   DefMacro!("\\pscolalign{}", "");
   DefMacro!("\\ncdot", "");
+
+  // Perl L224-232: \cnodeput OptionalMatch:* [] OptionalBracketed ZeroPSCoord {} {}
+  // builds a \rput{\circlenode{#5}{#6}} expansion. For LaTeXML DVI-only
+  // binding, reduce to placing the body.
+  DefMacro!("\\cnodeput OptionalMatch:* [] [] {}{}{}", "#6");
+  // Perl L334-339: \ncdiagg {} {} — node diagonal connection; DVI-only no-op.
+  DefMacro!("\\ncdiagg OptionalMatch:* []{}{}", "");
+  // Perl L341-346: \pcdiagg — same shape.
+  DefMacro!("\\pcdiagg OptionalMatch:* []{}{}", "");
 });

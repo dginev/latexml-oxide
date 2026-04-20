@@ -357,7 +357,7 @@ implemented. The `_` prefix can mask missing functionality.
 
 ---
 
-## 13. DefKeyVal machinery: default resolution and setKeysExpansion guard
+## 15. DefKeyVal machinery: default resolution and setKeysExpansion guard
 
 **Discovery:** Bare keys like `sensitive,` in listings language definitions
 weren't getting their default values applied, despite `DefKeyVal!("LST",
@@ -399,7 +399,7 @@ different key naming convention.
 
 ---
 
-## 13. Star (`*`) in CS names causes infinite compile loop
+## 16. Star (`*`) in CS names causes infinite compile loop
 
 **Date:** 2026-03-15
 
@@ -746,3 +746,187 @@ Rust-specific: Perl's `afterDigest` in `DefEnvironment` is effectively Rust's
 `after_digest` in Rust unless there's a specific reason (body-structure
 modification) to defer until after frame pop.
 
+---
+
+## 32. parse_parameters(..., init_flag): true at runtime, false at compile-time
+
+**Discovery:** Attempting to flip mutual-exclusivity on the dump-load path
+surfaced "Missing argument {}" errors the moment any dump-provided Expandable
+tried to read an argument — e.g. `\@gobble{x}` said `x` was missing.
+
+**Analysis:** `def_parser::parse_parameters(proto, cs, init_flag)` has an
+`init_flag` parameter that controls whether each `Parameter` runs its
+`.init()` method. `init()` looks up the type's reader via the
+`PARAMETER_TYPES` mapping (populated by `base_parameter_types.rs`). With
+`init_flag=false`, no lookup happens; every `Parameter` keeps the default
+mock reader that returns `Ok(ArgWrap::None)` and emits a
+"Please define a real reader" warning. At invocation, the mock returns
+None for each arg → `checked_value` throws "Missing argument {}".
+
+The `false` was historically correct for callers that run at compile time
+(macros expanded before state init). But every RUNTIME path silently shipped
+broken `Parameters`. Four call sites needed the fix:
+
+- `dump_reader.rs` (was: false → true)
+- `dump_loader.rs` (was: false → true)
+- `dump_codegen.rs` codegen template (was: emitting false → now emits true)
+- `latex_constructs.rs::\DeclareTextFontCommand` (was: false → true)
+
+**Key insight:** When in doubt, `parse_parameters(..., true)` for runtime.
+Only use `false` when the resulting `Parameters` are consumed at
+compile-time or before state initialization. The mock reader's warning
+will surface at INVOCATION, not at definition time — so defective sites
+go undetected for a long time.
+
+**Sentinel:** If a dump-loaded or runtime-declared definition produces a
+"mock_reader: Please define a real reader, this is a mock fallback!"
+warning followed by "Missing argument {}", the root cause is an
+`init_flag=false` in the declaration path.
+
+---
+
+## 33. Dump round-trip: nargs alone is insufficient for parameter fidelity
+
+**Discovery:** The D0 mutual-exclusivity PoC hung `00_tokenize` for 34+
+minutes at 300% CPU even AFTER landing all the `init_flag=true` and
+None-body-serialization fixes. Root cause traced to parameter-type
+flattening in the dump round-trip.
+
+**Analysis:** The v1 E-entry format recorded only `nargs` (a count), and
+`dump_reader` rebuilt `Parameters` via `"{}".repeat(nargs)` — flattening
+everything to Plain. For most CSes this is fine, but parameter types that
+affect argument-READ behavior diverge:
+
+- `DefToken` (reads a single token, not a balanced group)
+- `Optional` (reads `[…]`, with or without default value)
+- `Semiverbatim` (disables specified catcodes during reading)
+- `Until:<delim>` (reads tokens up to a delimiter; delimiter may contain braces)
+- `Match:<toks>` (matches specific token sequence; may contain braces)
+
+Round-tripped as Plain, each of these silently reads the WRONG thing. The
+`DefToken {}{}` signature of `\@ifnextchar` becomes `{}{}{}` — now user
+code `\@ifnextchar[{yes}{no}` tries to parse `[` as a balanced group.
+Livelock follows (tokenize pipeline can't recover).
+
+**Fix (v2 format, commit fc45e068):** Add a 5th tab-separated field to E
+entries that carries `Parameters::stringify()`. Reader prefers `<proto>`,
+falls back to `"{}".repeat(nargs)` when proto fails to parse.
+
+**Residual gap:** `Parameters::stringify` produces `"Until:\end{verbatim}"`
+for delimited-with-brace params; `parse_parameters`'s `PARAMSPECT_CHECK_RE`
+stops at `{`, so the tail mis-parses as a separate nested Plain with inner
+type "verbatim". Tests still pass because:
+- the `@`-internal gate shadows most dump entries via `_base.rs` closures
+- the v2 reader falls back gracefully on parse failure
+
+Full round-trip would require structural per-Parameter serialization
+(name + extra tokens) rather than a stringified summary.
+
+**Key insight:** `Parameters::stringify` is NOT a true inverse of
+`parse_parameters`. For any round-trip scenario that installs dump-loaded
+definitions as the active runtime definitions (mutual-exclusivity, daemon
+mode, etc.), plan for structural serialization from the start.
+
+**Sentinel:** When a dump-loaded CS invokes with unexpected input
+interpretation — e.g. `\@ifnextchar[` reads `[{yes}` as arg #1 — check
+whether the CS's prototype includes a non-Plain parameter type that
+round-tripped as Plain.
+
+---
+
+## 34. The \makeatletter autoload doesn't fire during `--init` raw-load
+
+**Discovery:** During D0 d.1 investigation I kept expecting `latex_base.rs`
+to be loaded during `--init=latex.ltx`, because `tex.rs` installs
+`\makeatletter` as an autoload trigger (expands to `\@load@latex@pool
+\makeatletter`). An env-gated `eprintln!` at the top of `latex_base.rs`'s
+`LoadDefinitions!` block never fired during `--init`. Yet the dump still
+captured `\documentclass`, `\@ifnextchar`, etc. — leading to a puzzling
+"how does the LaTeX kernel get into the dump if `_base.rs` doesn't run?"
+
+**Analysis:** Two mechanisms deliver LaTeX-kernel CSes into state at
+`--init` time:
+
+1. **Raw latex.ltx processing** (what `--init` explicitly does). When the
+   tokenizer hits `\long\def\@ifnextchar#1#2#3{…}` mid-file, the engine's
+   `\def` primitive installs the token-based Expandable directly — no
+   `.pool.ltxml` dispatch needed. Most kernel macros are defined this way.
+
+2. **Autoload trigger** (what *should* load `_base.rs`). When the
+   tokenizer hits a `\makeatletter` invocation (not the `\def`
+   redefinition), it expands the autoload DefMacro → `\@load@latex@pool`
+   primitive fires → dispatches to `LaTeX.pool` → loads `latex.rs` →
+   loads `_bootstrap`, `_base`, old dump, `_constructs`.
+
+The subtle part: in `--init` mode, latex.ltx's `\makeatletter` is
+REDEFINED early (line ~15 of latex.ltx: `\def\makeatletter{\catcode`\@11…}`)
+BEFORE it gets INVOKED anywhere. After the redefinition the autoload is
+gone — so `\@load@latex@pool` never fires.
+
+That's why our dump contains most of the kernel (from raw `\def`s) but
+misses 20 `_base.rs`-only CSes like `\@tempa`, `\xpt`, `\MakeTextLowercase`:
+those CSes have NO corresponding `\def` in raw latex.ltx, and the
+autoload path that would define them via `_base.rs` never fires.
+
+**Fix:** D0 d.1 landing (commit ddee6952) explicitly calls
+`latex_base::load_definitions()` from `ini_tex.rs` right after the
+bootstrap snapshot. The surgical preload puts `_base.rs`'s closures/mocks
+into state before raw-load starts; any of them that latex.ltx's raw
+`\def` later overrides gets replaced with the tokens version (which is
+what we want); the ones latex.ltx doesn't touch stay as-is and end up
+in the dump via the diff.
+
+**Key insight:** Autoload triggers only fire on LOOKUP, not on
+redefinition. If a CS you expect to trigger autoload gets `\def`-ined
+before any invocation, the autoload is dead code. This is Perl parity —
+Perl LaTeXML has the same subtlety — but it's easy to miss when
+tracing the Rust side in isolation.
+
+**Sentinel:** If `_base.rs` or any `.pool.ltxml`-backed module seems not
+to be loading, check whether the autoload trigger CS gets `\def`-ined
+before invocation in the source TeX. Either invoke it explicitly
+earlier, or surgically preload the module.
+
+
+## 35. Perl silent-coerce vs Rust panic — a recurring parity trap
+
+**Discovery:** A sweep through `.expect(...)` / `.unwrap()` sites turned
+up ten distinct cases (9 fixes across the cycle) where Rust panicked
+on input Perl silently handled. The common thread: Perl's implicit
+numeric / boolean / truthy coercion lets "bad" input flow through as
+`0` / `""` / `false`; Rust's strict Result/Option propagation turns the
+same input into a crash.
+
+**Why it matters:** Real-world documents contain surprising tokens
+(stray `#0`, user-redefined section macros passing non-numeric level,
+undefined length registers, rowspan typos). Perl emits a diagnostic and
+continues; our port used to abort the whole conversion.
+
+**Examples that landed this session:**
+- `Number::from(String)` / `Float::from(String)` panicking on
+  non-numeric input → `.unwrap_or(0)` / `.unwrap_or(0.0)` (matches
+  Perl's `Number("abc")` + arithmetic → 0).
+- `Dimension::spec_to_f64` panicking on `"pt"` (SPEC_RE allows empty
+  numeric capture).
+- `\setlength{\undefined}` panicking via `.expect("Variable must have
+  a Register definition.")` → Perl's `return unless $defn && …`.
+- `\@startsection` panicking if level arg isn't numeric.
+- `rowspan="abc"` panicking in alignment header heuristic.
+- `Mouth::has_more_input` panicking on `fill_buf()` I/O error.
+- `List` font walk panicking on one box's font-resolution error.
+- `clean_id` stripping idiom via wrong capture name (`$inner` vs
+  `$label`) — silent data loss rather than crash, but same class.
+- `input()` quote-unwrap `while` loop checking unchanged variable →
+  infinite loop on `\input{"file"}`.
+
+**How to spot next time:**
+1. Grep `.expect(` in the crate you're auditing.
+2. Cross-reference each site with its Perl counterpart — look for
+   `$x || 0` / `defined $foo ? ... : ...` / `return unless $defn`.
+3. If Perl has a fallback path and Rust has a panic path, fix to
+   match Perl. Add a regression test if the path is plausibly reachable.
+
+**Sentinel:** When the comment on a `.expect(...)` starts with
+"should never", "has no reason to fail", or "TODO: handle malformed
+values here", treat it as a parity gap to investigate, not a
+design assertion.

@@ -276,13 +276,13 @@ LoadDefinitions!({
   DefPrimitive!("{", {
     bgroup();
     let open = Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       None,
       None,
       Tokens!(T_BEGIN!()),
       stored_map!("isEmpty" => true),
     );
-    let mode = Some(if lookup_bool("IN_MATH") {
+    let mode = Some(if state::lookup_bool_sym(pin!("IN_MATH")) {
       TexMode::Math
     } else {
       TexMode::Text
@@ -302,7 +302,7 @@ LoadDefinitions!({
     // Only set for vertical modes to enable vertical stacking in compute_size.
     // Not set for horizontal modes to avoid interfering with repack_horizontal's
     // mode detection logic which defaults to "horizontal" when mode property is None.
-    let mode_str = state::lookup_string("MODE");
+    let mode_str = state::lookup_string_from_sym(pin!("MODE"));
     if mode_str.ends_with("vertical") {
       properties.insert("mode", Stored::String(arena::pin(&mode_str)));
     }
@@ -325,7 +325,7 @@ LoadDefinitions!({
     let f = LookupFont!();
     egroup()?;
     Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       f,
       None,
       Tokens!(T_END!()),
@@ -384,9 +384,11 @@ LoadDefinitions!({
   //   reportNoUnicode($cs);
   //   Box(ToString($cs), undef, undef, $cs, class => 'ltx_nounicode'); });
   DefPrimitive!("\\lx@math@nounicode DefToken", sub[(cs)] {
-    let text = arena::pin(cs.to_string());
+    // `cs.get_sym()` returns the already-interned SymStr for the token
+    // text — avoids the `cs.to_string() + arena::pin` round-trip which
+    // allocated a String just to re-intern the same bytes.
     let tbox = Tbox::new(
-      text,
+      cs.get_sym(),
       None,
       None,
       Tokens!(cs),

@@ -43,12 +43,31 @@ LoadDefinitions!({
 
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
 
-  // Structured abstract (5-arg or 1-arg) — Perl L73-93
+  // Structured abstract (5-arg or 1-arg) — Perl aa_support.sty.ltxml L73-93.
+  // aa.cls's `\abstract` is either a single-arg traditional abstract OR a
+  // 5-arg structured one (context / aims / methods / results / conclusions).
   DefMacro!("\\abstract@old{}", "\\@add@frontmatter{ltx:abstract}{#1}");
-  DefMacro!("\\abstract@new{}{}{}{}{}", "\\@add@frontmatter{ltx:abstract}{#2\\par#3\\par#4}");
-  // \abstract dispatches based on whether next token is { — Perl L88-93
-  // Simplified: just use the 1-arg version
-  DefMacro!("\\abstract{}", "\\abstract@old{#1}");
+  DefMacro!("\\abstract@new{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:abstract}[name={\\abstractname}]{\
+     \\ifx.#1.\\else\\textit{Context. }#1\\par\\fi\
+     \\textit{Aims. }#2\\par\
+     \\textit{Methods. }#3\\par\
+     \\textit{Results. }#4\\par\
+     \\ifx.#5.\\else\\textit{Conclusions. }#5\\fi}");
+  // Perl L88-93: `\abstract{#1}` reads one arg, peeks for T_BEGIN; if present,
+  // dispatches to \abstract@new (4 more args), else to \abstract@old. Our
+  // previous always-1-arg stub dumped the remaining 4 `{…}` groups into the
+  // document body, reordering the frontmatter/body (arxiv 1209.2771:
+  // abstract paragraphs showed up BEFORE <title> and no <abstract> emitted).
+  DefMacro!("\\abstract{}", sub[(arg1)] {
+    gullet::skip_spaces()?;
+    let next_is_begin = gullet::if_next(T_BEGIN!())?;
+    let target = if next_is_begin { "\\abstract@new" } else { "\\abstract@old" };
+    let mut out = vec![T_CS!(target), T_BEGIN!()];
+    out.extend(arg1.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
 
   // Keywords — Perl L95-96
   DefMacro!("\\keywordname", "\\sffamily\\bfseries Key Words.");
@@ -123,8 +142,48 @@ LoadDefinitions!({
   // Equations — allow $ within equation env — Perl L164-200
   //======================================================================
 
-  // Perl redefines {equation} and {equation*} to let $ work as \lx@dollar@in@mathmode.
-  // Our equation environments already handle this, so no override needed.
+  // Perl aa_support.sty.ltxml L164-200 redefines {equation} and {equation*}
+  // to `Let(T_MATH, '\lx@dollar@in@mathmode')` — making a literal `$`
+  // inside the equation body a no-op instead of closing display math. A&A
+  // papers commonly use the idiom `… \text ~ $\rm text$` to mix roman
+  // inline in equations, which would otherwise emit
+  //   Error:expected:$ Missing $ closing display math.
+  // for every occurrence (arxiv 0704.3480, 0707.0739, 0803.0466, 1103.2925
+  // — all {aa} papers with inline `$` inside display math).
+  //
+  // We re-DefEnvironment here with the same template as the base in
+  // engine::latex_constructs, but adding the Let in before_digest. The
+  // original is `locked => true`, but re-DefEnvironment inside the
+  // aa_support load path replaces it before any document body runs.
+  use crate::engine::latex_constructs::{
+    after_equation, before_equation, prepare_equation_counter,
+  };
+  DefEnvironment!(
+    "{equation}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      before_equation()?;
+      Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
+  DefEnvironment!(
+    "{equation*}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("preset" => true));
+      before_equation()?;
+      Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
 
   //======================================================================
   // Figures — Perl L202-218

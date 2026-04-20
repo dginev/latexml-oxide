@@ -1,20 +1,39 @@
 use crate::prelude::*;
+use latexml_core::binding::content::convert_twoopt_args;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: twoopt.sty.ltxml
-  // \newcommandtwoopt, \renewcommandtwoopt, \providecommandtwoopt:
-  // These use complex sub{} bodies with convert2optArgs helper to build
-  // parameters with two optional arguments and then call DefMacroI.
-  // Stub: define as no-ops that absorb their arguments.
-  // The real implementation would need runtime DefMacroI with dynamic parameter construction.
+  // Perl twoopt.sty.ltxml L20-52. Builds Parameters with two optional args
+  // + plain args, then installs the CS via DefMacroI. Matches Perl's
+  // `convert2optArgs` helper + DefPrimitive bodies exactly.
 
-  // \newcommandtwoopt * \cs [Number] [] [] {}
-  DefMacro!("\\newcommandtwoopt OptionalMatch:* DefToken [Number][][]{}", None);
+  // \newcommandtwoopt[*]\cs[nargs][opt1][opt2]{body}
+  DefPrimitive!("\\newcommandtwoopt OptionalMatch:* DefToken [Number][][]{}",
+    sub[(_star, cs, nargs, opt1, opt2, body)] {
+      if !IsDefinable!(&cs) {
+        if !has_value(&s!("{}:locked", cs.to_string())) {
+          let msg = s!("Ignoring redefinition (\\newcommandtwoopt) of {}", cs.stringify());
+          Info!("ignore", cs, msg);
+        }
+        return Ok(vec![]);
+      }
+      let n = nargs.value_of() as usize;
+      let params = convert_twoopt_args(n, opt1, opt2)?;
+      DefMacro!(cs, params, body);
+    });
 
-  // \renewcommandtwoopt * \cs [Number] [] [] {}
-  DefMacro!("\\renewcommandtwoopt OptionalMatch:* DefToken [Number][][]{}", None);
+  DefPrimitive!("\\renewcommandtwoopt OptionalMatch:* DefToken [Number][][]{}",
+    sub[(_star, cs, nargs, opt1, opt2, body)] {
+      let n = nargs.value_of() as usize;
+      let params = convert_twoopt_args(n, opt1, opt2)?;
+      DefMacro!(cs, params, body);
+    });
 
-  // \providecommandtwoopt * \cs [Number] [] [] {}
-  DefMacro!("\\providecommandtwoopt OptionalMatch:* DefToken [Number][][]{}", None);
+  DefPrimitive!("\\providecommandtwoopt OptionalMatch:* DefToken [Number][][]{}",
+    sub[(_star, cs, nargs, opt1, opt2, body)] {
+      if !IsDefinable!(&cs) { return Ok(vec![]); }
+      let n = nargs.value_of() as usize;
+      let params = convert_twoopt_args(n, opt1, opt2)?;
+      DefMacro!(cs, params, body);
+    });
 });

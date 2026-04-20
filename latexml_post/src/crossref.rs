@@ -447,7 +447,7 @@ impl CrossRef {
       None => return,
     };
 
-    let mut current_id = root_id.clone();
+    let mut current_id = root_id;
     let mut rel = "up".to_string();
     loop {
       let parent_id = self.db.lookup(&format!("ID:{}", current_id))

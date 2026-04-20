@@ -415,17 +415,17 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
-    if !norefnum && lookup_meaning(&hj_refnum).is_some() {
+    if !norefnum && state::has_meaning(&hj_refnum) {
       state::let_i(&T_CS!(s!("\\the{ctr}")), &hj_refnum, Some(Scope::Global));
     }
-    if lookup_meaning(&hj_id).is_some() {
+    if state::has_meaning(&hj_id) {
       state::let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
     }
     let label = state::lookup_string("PEEKED_LABEL");
     let (fixedrefnum, fixedid) = mapper(&label, ctr, norefnum);
     if let Some(refnum) = fixedrefnum {
       if !norefnum {
-        if lookup_meaning(&hj_refnum).is_none() {
+        if !state::has_meaning(&hj_refnum) {
           // Save for later
           state::let_i(&hj_refnum, &T_CS!(s!("\\the{ctr}")), Some(Scope::Global));
         }
@@ -438,7 +438,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
       }
     }
     if let Some(id) = fixedid {
-      if lookup_meaning(&hj_id).is_none() {
+      if !state::has_meaning(&hj_id) {
         // Save for later
         state::let_i(&hj_id, &T_CS!(s!("\\the{ctr}@ID")), Some(Scope::Global));
       }
@@ -515,24 +515,31 @@ fn deactivate_counter_scope(ctr: SymStr) {
       s!("nested_counters_{cstr}"),
     )
   });
-  let scopes = lookup_value(&scopes_for_counter);
-  if let Some(Stored::VecDequeStored(stored_scopes)) = scopes {
-    for scope_stored in stored_scopes {
-      if let Stored::String(scope) = scope_stored {
-        state::deactivate_scope(scope);
-      } else {
-        panic!("assignmenet scopes should be stored as strings, got: {scope_stored:?}");
-      }
-    }
+  // with_value avoids the outer Stored::clone by reading through a
+  // borrow; we still collect the scope SymStrs (Copy) or panic-pointers
+  // into owned Vecs to outlive the borrow.
+  let scope_syms: Vec<SymStr> = state::with_value(&scopes_for_counter, |v| match v {
+    Some(Stored::VecDequeStored(stored_scopes)) => stored_scopes
+      .iter()
+      .map(|s| match s {
+        Stored::String(scope) => *scope,
+        _ => panic!("assignment scopes should be stored as strings, got: {s:?}"),
+      })
+      .collect(),
+    _ => Vec::new(),
+  });
+  for scope in scope_syms {
+    state::deactivate_scope(scope);
   }
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  let nested = lookup_value(&nested_counters);
-  if let Some(Stored::Strings(stored_counters)) = nested {
-    for inner_ctr in &*stored_counters {
-      deactivate_counter_scope(*inner_ctr);
-    }
+  let inner_ctrs: Vec<SymStr> = state::with_value(&nested_counters, |v| match v {
+    Some(Stored::Strings(stored_counters)) => stored_counters.iter().copied().collect(),
+    _ => Vec::new(),
+  });
+  for inner_ctr in inner_ctrs {
+    deactivate_counter_scope(inner_ctr);
   }
 }
 
@@ -546,6 +553,20 @@ pub fn ref_step_id(ctype: &str) -> Result<HashMap<Stored>> {
     None => ctype.to_string(),
   });
   let unctr = s!("UN{ctr}");
+  // Perl Package.pm L863-864 ("Avoid fatals..."): if `\c@UN<ctr>` isn't
+  // defined as a register, `NewCounter(ctr)` creates both `\c@<ctr>` and
+  // `\c@UN<ctr>` and the associated `\the<ctr>@ID` expansion. Without it,
+  // unnumbered-section callers like `\specialsection*{}` (which amsart
+  // Let's to `\chapter*{}` even though amsart has no chapter counter) hit
+  // Error:undefined:\thechapter@ID because the counter was never created.
+  let unctr_cmd = s!("\\c@{unctr}");
+  let unctr_defined = state::lookup_register(&unctr_cmd, Vec::new())
+    .ok()
+    .flatten()
+    .is_some();
+  if !unctr_defined {
+    let _ = new_counter(&ctr, "document", None);
+  }
   step_counter(&unctr, false)?;
   maybe_preempt_refnum(&ctr, true);
   let cunctr_val = lookup_number(&s!("\\c@{unctr}"))
@@ -779,9 +800,11 @@ pub fn begin_itemize(
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(&listcounter)];
     let cl_name = s!("\\cl@{outerusecounter}");
-    if let Some(Stored::Tokens(tks)) = lookup_value(&cl_name) {
-      cl_toks.extend(tks.unlist());
-    }
+    let existing = state::with_value(&cl_name, |v| match v {
+      Some(Stored::Tokens(tks)) => tks.clone().unlist(),
+      _ => Vec::new(),
+    });
+    cl_toks.extend(existing);
     state::assign_value(
       &cl_name,
       Stored::Tokens(Tokens::new(cl_toks)),
@@ -862,8 +885,9 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
     }
     let level = level.unwrap_or_else(|| lookup_int("enumlevel").max(0) as i32);
     let level_str = roman_aux(level);
-    let tokens = stuff.clone().unlist();
-    let mut out: Vec<Token> = Vec::new();
+    // Iterate the borrowed token slice — no clone needed, only reads.
+    let tokens = stuff.unlist_ref();
+    let mut out: Vec<Token> = Vec::with_capacity(tokens.len());
     let ctr = T_OTHER!(s!("enum{level_str}"));
     let mut i = 0;
     while i < tokens.len() {

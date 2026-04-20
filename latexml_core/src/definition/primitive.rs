@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 
 use crate::Digested;
-use crate::common::arena::{SymHashMap, EMPTY_SYM};
+use crate::common::arena::{SymHashMap};
 use crate::common::store::Stored;
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -16,6 +16,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::pin;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
@@ -134,7 +135,7 @@ impl Definition for Primitive {
         let mut box_props = SymHashMap::default();
         box_props.insert("isEmpty", Stored::Bool(true));
         invoked_boxes.push(Digested::from(Tbox::new(
-          *EMPTY_SYM,
+          pin!(""),
           None,
           None,
           Tokens::new(box_tokens),
@@ -153,11 +154,11 @@ impl Definition for Primitive {
     Ok(invoked_boxes)
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
-      "do_absorbtion on Primitive should never be called!"
+      "do_absorption on Primitive should never be called!"
     );
   }
 

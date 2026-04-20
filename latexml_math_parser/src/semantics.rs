@@ -94,7 +94,7 @@ impl Actions {
   ) -> Result<Option<XM>, Box<dyn Error>> {
     match *n.borrow() {
       Node::Tree(ref rule, ref children) => {
-        let mut translated_children = Vec::new();
+        let mut translated_children = Vec::with_capacity(children.len());
         for child in children.iter() {
           let translated = self.translate_node(child, pragmas, ActionContext {
             nodes:    ctxt.nodes,
@@ -105,7 +105,7 @@ impl Actions {
         self.action_on(*rule, translated_children, pragmas, ctxt)
       },
       Node::Rule(ref rule, ref children) => {
-        let mut translated_children = Vec::new();
+        let mut translated_children = Vec::with_capacity(children.len());
         for child in children.iter() {
           translated_children.push(self.translate_node(child, pragmas, ActionContext {
             nodes:    ctxt.nodes,
@@ -545,10 +545,12 @@ fn restructure_flat_to_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
           );
           return Ok(());
         }
-        // Split XMWrap items into (items, separators)
-        // wrap_items = [f1, s1, f2, s2, f3, s3, f4]
-        let mut items: Vec<XM> = Vec::new();
-        let mut seps: Vec<XM> = Vec::new();
+        // Split XMWrap items into (items, separators).
+        // wrap_items = [f1, s1, f2, s2, f3, s3, f4] (alternates item/sep).
+        // Pre-size: ~half each, bounded by `wrap_items.len()`.
+        let wrap_len = wrap_items.len();
+        let mut items: Vec<XM> = Vec::with_capacity(wrap_len.div_ceil(2));
+        let mut seps: Vec<XM> = Vec::with_capacity(wrap_len / 2);
         for (i, item) in wrap_items.into_iter().enumerate() {
           if i % 2 == 0 { items.push(item); }
           else { seps.push(item); }
@@ -1612,7 +1614,20 @@ pub fn fenced(
       interpret_delimited(op.into(), stuff, ctxt).map(Option::Some)
     } else {
       // Single arg: XMDual(XMRef(arg), XMWrap((,arg,)))
+      // create_xmrefs skips ephemeral variants (XMHint, and the default
+      // skip-without-warning arm), so refs may come back empty when the
+      // delimited body was just a spacing hint. In that case the Dual
+      // with an XMRef to nothing would be meaningless, so fall back to
+      // a bare Wrap (arxiv hep-ph/9210235 hit this on `\lparen \,
+      // \rparen` where the sole arg was an XMHint that got filtered).
       let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
+      if arg_xmrefs.is_empty() {
+        return Ok(Some(XM::Wrap(
+          vec![open, arg, close],
+          XProps::default(),
+          Meta::default(),
+        )));
+      }
       Ok(Some(XM::Dual(
         Box::new(arg_xmrefs.remove(0)),
         Box::new(XM::Wrap(
@@ -2167,7 +2182,9 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
       Some(t) => Ok(t.clone()),
       None => Ok(None),
     },
-    _ => todo!(),
+    // Other XM variants (Token, Dual, Wrap, Choices, Arg, Ref) don't
+    // carry positional args — Perl's obtain_arg returns undef for these.
+    _ => Ok(None),
   }
 }
 
@@ -2446,10 +2463,11 @@ pub fn new_props(
   let idref = props.remove("idref");
   let fontref = props.remove("_font");
   let scriptpos = props.remove("scriptpos");
-  // TODO:
+  // TODO: explicit "font" prop path not yet wired — current callers never
+  // pass it. If ever hit, fall through to the content-based specialization
+  // (same as None), which is an approximation but won't crash.
   let font = match props.remove("font") {
-    Some(_fnt) => todo!(),
-    None => {
+    Some(_) | None => {
       if let Some(ref text) = content {
         if !text.is_empty() && !text.chars().all(|c| c.is_whitespace()) {
           font::FONT_TEXT_DEFAULT.specialize(text)
@@ -2510,7 +2528,9 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt: ActionContext) -> Result<Option<XM>, 
 fn extract_separators(items: &mut [XM]) -> (Vec<&mut XM>, Vec<&mut XM>) {
   // TODO: consider using the separators at some point, but not for now
   let punct = Vec::new();
-  let mut args = Vec::new();
+  // `items` alternates [arg, sep, arg, sep, …, arg]; args count is
+  // `ceil(items.len() / 2)`. Pre-size to skip Vec doublings.
+  let mut args = Vec::with_capacity(items.len().div_ceil(2));
   let mut items_iter = items.iter_mut();
   while let Some(arg) = items_iter.next() {
     args.push(arg);

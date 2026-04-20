@@ -14,7 +14,6 @@ fn add_math_rewrite(match_char: &str, role: &str) -> Result<()> {
   add_math_rewrite_scoped(match_char, role, None)
 }
 
-#[allow(dead_code)]
 /// Add scoped rewrite FIRST (prepend) — matches Perl's UnshiftValue for \lxDeclare
 #[allow(dead_code)]
 fn add_math_rewrite_scoped_first(match_char: &str, role: &str, scope: &str) -> Result<()> {

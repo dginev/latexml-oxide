@@ -340,6 +340,17 @@ LoadDefinitions!({
   // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
   DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");
 
+  // Real amsmath defines `\tmspace#1#2#3` as
+  //   \def\tmspace#1#2#3{\ifmmode\mskip#1#2\else\kern#1#3\fi}
+  // i.e. math-mode muskip or text-mode kern. Perl's LaTeXML amsmath
+  // binding never defines it (it is elsewhere replaced by the expanded
+  // equivalents in latex_dump.pool.ltxml), but real source that expands
+  // amsmath's `\,` via its original macro path still invokes `\tmspace`
+  // directly. We model it as a no-op consumer of its three arguments —
+  // the visual spacing is lost, but we avoid a cascade of
+  // Error:undefined that trips `_` into subscript-in-text-mode chaos.
+  DefMacro!("\\tmspace{}{}{}", "");
+
   //======================================================================
   // Section 4.3 Dots
   DefMath!("\\dotsc", "\u{2026}", role => "ID", alias => "\\dotsc");
@@ -852,7 +863,7 @@ LoadDefinitions!({
         if !br.is_empty() {
           before_row_toks.push(T_CS!("\\text"));
           before_row_toks.push(T_BEGIN!());
-          before_row_toks.extend(br.clone().unlist());
+          before_row_toks.extend_from_slice(&br.unlist_cow());
           before_row_toks.push(T_END!());
         }
       }
@@ -860,7 +871,7 @@ LoadDefinitions!({
         if !ar.is_empty() {
           after_row_toks.push(T_CS!("\\text"));
           after_row_toks.push(T_BEGIN!());
-          after_row_toks.extend(ar.clone().unlist());
+          after_row_toks.extend_from_slice(&ar.unlist_cow());
           after_row_toks.push(T_END!());
         }
       }
@@ -988,7 +999,7 @@ LoadDefinitions!({
   // Perl: \if@in@ams@align — checks if current environment starts with "align"
   // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')
   DefConditional!("\\if@in@ams@align", {
-    state::with_stacked_values("current_environment", |vals| {
+    state::with_stacked_values_sym(pin!("current_environment"), |vals| {
       vals.iter().any(|v| v.to_string().starts_with("align"))
     })
   });
@@ -1793,7 +1804,10 @@ fn sideset_construct(
 
   // Process pre-scripts in reverse
   if let Some(pre_arg) = pre {
-    let items: Vec<_> = pre_arg.unlist().into_iter().rev().collect();
+    // Reverse the token Vec in-place instead of into_iter().rev().collect()
+    // which would allocate a second Vec.
+    let mut items = pre_arg.unlist();
+    items.reverse();
     for item in items {
       if let Some(scriptop) = is_script(&item) {
         let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };

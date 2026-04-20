@@ -432,7 +432,7 @@ impl Processor for Split {
     };
 
     // Ensure root has an ID (Writer will remove TEMPORARY_DOCUMENT_ID)
-    let mut root_mut = root.clone();
+    let mut root_mut = root;
     if get_xml_id(&root_mut).is_none() {
       root_mut
         .set_attribute("xml:id", "TEMPORARY_DOCUMENT_ID")

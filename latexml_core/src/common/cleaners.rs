@@ -56,10 +56,14 @@ pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
 
 /// cleans a string down to characters acceptable for an id attribute
 pub fn clean_id(key: &str) -> String {
-  let cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
+  let cleaned = Cow::Borrowed(key.trim()); // Trim leading/trailing whitespace
   let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
   // Remove common idiom:
-  let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$inner");
+  // Perl parity: CleanID strips `${}^{foo}$` down to just `foo`.
+  // The regex captures that inner content as named group `label`; the
+  // replacement must reference it by the correct name (`$inner` was a
+  // stale typo that silently erased the captured text).
+  let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$label");
   // transform some forbidden chars
   let cleaned_3 = cleaned_2
     .replace(':', "..") // No colons!
@@ -71,7 +75,16 @@ pub fn clean_id(key: &str) -> String {
     .replace('&', "-amp-");
   let cleaned_4 = unidecode(&cleaned_3);
   let cleaned_5 = NON_ID_CHARSET_RE.replace_all(&cleaned_4, ""); // remove everything else.
-  cleaned_5.to_string()
+  let out = cleaned_5.as_ref();
+  // Perl parity (Package.pm CleanID): XML ids must start with a letter or `_`
+  // (since we already replaced `:` with `..`). Prepend "X" when the cleaned
+  // key starts with anything else — protects against leading `.`, `-`, or
+  // digits, which would otherwise produce invalid id attributes.
+  match out.chars().next() {
+    Some(c) if c.is_ascii_alphabetic() || c == '_' => out.to_string(),
+    Some(_) => format!("X{out}"),
+    None => String::new(),
+  }
 }
 /// cleans a string down to characters acceptable for a label attribute
 pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str> {
@@ -126,7 +139,7 @@ pub fn trimmed_comma_list(text: &str) -> Vec<String> {
 
 /// cleans a string down to characters acceptable for a URL
 pub fn clean_url(url: &str) -> String {
-  let cleaned = url.trim_start().trim_end(); // Trim leading/trailing, in any case
+  let cleaned = url.trim(); // Trim leading/trailing whitespace
   TILDE_NOISE_RE.replace_all(cleaned, "~").to_string()
 }
 
@@ -146,4 +159,57 @@ pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
     String::new()
   };
   clean_url(&(base + url + &fragid))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn clean_id_preserves_alpha_start() {
+    assert_eq!(clean_id("foo"), "foo");
+    assert_eq!(clean_id("Foo_bar"), "Foo_bar");
+    assert_eq!(clean_id("_underscore"), "_underscore");
+  }
+
+  #[test]
+  fn clean_id_prepends_x_for_non_alpha_start() {
+    // Leading digit, dot, or hyphen is invalid in XML ids — prepend X.
+    assert_eq!(clean_id("1foo"), "X1foo");
+    assert_eq!(clean_id(".foo"), "X.foo");
+    assert_eq!(clean_id("-foo"), "X-foo");
+  }
+
+  #[test]
+  fn clean_id_after_colon_replacement() {
+    // `:` becomes `..`, so ":foo" → "..foo" → needs X prefix.
+    assert_eq!(clean_id(":foo"), "X..foo");
+  }
+
+  #[test]
+  fn clean_id_empty_stays_empty() {
+    assert_eq!(clean_id(""), "");
+    assert_eq!(clean_id("   "), "");
+  }
+
+  #[test]
+  fn clean_id_dirty_idiom_preserves_label() {
+    // Perl: $key =~ s/\$\{\}\^\{(.*?)\}\$/$1/g; retains the captured
+    // content. Common TeX idiom from latex generates ${}^{foo}$.
+    assert_eq!(clean_id("${}^{foo}$"), "foo");
+    assert_eq!(clean_id("bar${}^{tag}$"), "bartag");
+  }
+
+  #[test]
+  fn roman_aux_non_positive() {
+    assert_eq!(roman_aux(0i64), "");
+    assert_eq!(roman_aux(-1i64), "");
+  }
+
+  #[test]
+  fn roman_aux_basic() {
+    assert_eq!(roman_aux(1i64), "i");
+    assert_eq!(roman_aux(1000i64), "m");
+    assert_eq!(roman_aux(1999i64), "mcmxcix");
+  }
 }

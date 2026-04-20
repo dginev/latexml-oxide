@@ -310,7 +310,7 @@ macro_rules! prop_str {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
       Some(&Stored::String(ref id)) => *id,
-      _ => *EMPTY_SYM,
+      _ => pin!(""),
     }
   };
 }
@@ -423,7 +423,7 @@ macro_rules! Roman {
 #[macro_export]
 macro_rules! requireMath {
   ($cs_name:expr) => {
-    if !$crate::state::lookup_bool("IN_MATH") {
+    if !$crate::state::lookup_bool_sym($crate::pin!("IN_MATH")) {
       let message = s!("{} should only appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
     }
@@ -432,7 +432,7 @@ macro_rules! requireMath {
 #[macro_export]
 macro_rules! forbidMath {
   ($cs_name:expr) => {
-    if $crate::state::lookup_bool("IN_MATH") {
+    if $crate::state::lookup_bool_sym($crate::pin!("IN_MATH")) {
       let message = s!("{} should not appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
     }

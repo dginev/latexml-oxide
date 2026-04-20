@@ -5,6 +5,73 @@
 //! \selectlanguage hook for xml:lang attribute.
 use crate::prelude::*;
 
+/// Map a babel language option to its BCP 47 / ISO language tag.
+/// Ported from Perl babel_support.sty.ltxml's `$bbl_language_map`.
+/// Used by both `\ltx@bbl@select@language` (runtime switch) and
+/// `\lx@babel@activate@mainlang` (load-time main-language resolution).
+pub fn babel_language_to_iso(lang: &str) -> Option<&'static str> {
+  match lang {
+    "albanian" => Some("sq"),
+    "acadian" | "canadien" => Some("fr-CA"),
+    "afrikaans" => Some("af"),
+    "american" | "USenglish" => Some("en-US"),
+    "australian" => Some("en-AU"),
+    "austrian" | "naustrian" => Some("de-AT"),
+    "bahasa" | "bahasai" | "indon" | "indonesian" => Some("in"),
+    "bahasam" | "malay" | "meyalu" => Some("ms"),
+    "basque" => Some("eu"),
+    "breton" => Some("br"),
+    "bulgarian" => Some("bg"),
+    "brazil" | "brazilian" => Some("pt-BR"),
+    "british" | "UKenglish" => Some("en-GB"),
+    "canadian" => Some("en-CA"),
+    "catalan" => Some("ca"),
+    "croatian" => Some("hr"),
+    "czech" => Some("cs"),
+    "danish" => Some("da"),
+    "dutch" => Some("nl"),
+    "english" => Some("en"),
+    "esperanto" => Some("eo"),
+    "estonian" => Some("et"),
+    "finnish" => Some("fi"),
+    "francais" | "french" | "frenchb" => Some("fr"),
+    "galician" => Some("gl"),
+    "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
+    "greek" | "polutonikogreek" => Some("el"),
+    "hebrew" => Some("he"),
+    "hindi" => Some("hi"),
+    "hungarian" => Some("hu"),
+    "icelandic" => Some("is"),
+    "interlingua" => Some("ia"),
+    "irish" => Some("ga"),
+    "italian" => Some("it"),
+    "latin" => Some("la"),
+    "lowersorbian" => Some("dsb"),
+    "newzealand" => Some("en-NZ"),
+    "norsk" | "nynorsk" => Some("nn"),
+    "nswissgerman" | "swissgerman" => Some("gsw"),
+    "polish" => Some("pl"),
+    "portuges" | "portuguese" => Some("pt"),
+    "romanian" => Some("ro"),
+    "romansh" => Some("rm"),
+    "russian" | "russianb" => Some("ru"),
+    "samin" => Some("se"),
+    "scottish" => Some("gd"),
+    "serbian" | "serbianc" => Some("sr"),
+    "slovak" => Some("sk"),
+    "slovene" => Some("sl"),
+    "spanish" => Some("es"),
+    "swedish" => Some("sv"),
+    "thai" => Some("th"),
+    "turkish" => Some("tr"),
+    "ukraineb" | "ukrainian" => Some("uk"),
+    "usorbian" | "uppersorbian" => Some("hsb"),
+    "vietnamese" | "vietnam" => Some("vi"),
+    "welsh" => Some("cy"),
+    _ => None,
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Unicode quote characters (Perl L24-42)
@@ -44,66 +111,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\ltx@bbl@select@language{}", sub[(language)] {
     let lang = language.to_string();
-    let iso = match lang.as_str() {
-      "albanian" => Some("sq"),
-      "acadian" | "canadien" => Some("fr-CA"),
-      "afrikaans" => Some("af"),
-      "american" | "USenglish" => Some("en-US"),
-      "australian" => Some("en-AU"),
-      "austrian" | "naustrian" => Some("de-AT"),
-      "bahasa" | "bahasai" | "indon" | "indonesian" => Some("in"),
-      "bahasam" | "malay" | "meyalu" => Some("ms"),
-      "basque" => Some("eu"),
-      "breton" => Some("br"),
-      "bulgarian" => Some("bg"),
-      "brazil" | "brazilian" => Some("pt-BR"),
-      "british" | "UKenglish" => Some("en-GB"),
-      "canadian" => Some("en-CA"),
-      "catalan" => Some("ca"),
-      "croatian" => Some("hr"),
-      "czech" => Some("cs"),
-      "danish" => Some("da"),
-      "dutch" => Some("nl"),
-      "english" => Some("en"),
-      "esperanto" => Some("eo"),
-      "estonian" => Some("et"),
-      "finnish" => Some("fi"),
-      "francais" | "french" | "frenchb" => Some("fr"),
-      "galician" => Some("gl"),
-      "german" | "germanb" | "ngerman" | "ngermanb" => Some("de"),
-      "greek" | "polutonikogreek" => Some("el"),
-      "hebrew" => Some("he"),
-      "hindi" => Some("hi"),
-      "hungarian" => Some("hu"),
-      "icelandic" => Some("is"),
-      "interlingua" => Some("ia"),
-      "irish" => Some("ga"),
-      "italian" => Some("it"),
-      "latin" => Some("la"),
-      "lowersorbian" => Some("dsb"),
-      "newzealand" => Some("en-NZ"),
-      "norsk" | "nynorsk" => Some("nn"),
-      "nswissgerman" | "swissgerman" => Some("gsw"),
-      "polish" => Some("pl"),
-      "portuges" | "portuguese" => Some("pt"),
-      "romanian" => Some("ro"),
-      "romansh" => Some("rm"),
-      "russian" | "russianb" => Some("ru"),
-      "samin" => Some("se"),
-      "scottish" => Some("gd"),
-      "serbian" | "serbianc" => Some("sr"),
-      "slovak" => Some("sk"),
-      "slovene" => Some("sl"),
-      "spanish" => Some("es"),
-      "swedish" => Some("sv"),
-      "thai" => Some("th"),
-      "turkish" => Some("tr"),
-      "ukraineb" | "ukrainian" => Some("uk"),
-      "usorbian" | "uppersorbian" => Some("hsb"),
-      "vietnamese" | "vietnam" => Some("vi"),
-      "welsh" => Some("cy"),
-      _ => None,
-    };
+    let iso = babel_language_to_iso(&lang);
     if let Some(code) = iso {
       // Set cf@encoding to current encoding
       def_macro(T_CS!("\\cf@encoding"), None,
@@ -135,9 +143,40 @@ LoadDefinitions!({
           state::let_i(&T_ACTIVE!('~'), &T_CS!("\\ltx@save@greek@tilde"), None);
         }
       }
-      // Note: do NOT set DOCUMENT_LANGUAGE here — it's set once during babel init
-      // in \lx@babel@activate@lang@post. Setting it here would override the main
-      // language whenever \selectlanguage is called in the document body.
+      // French active punctuation: Perl's frenchb.ldf `\extrasfrench`
+      // hook activates `:`, `;`, `!`, `?` to emit a thin space before them;
+      // `\noextrasfrench` deactivates on language exit. We mirror that.
+      //
+      // Dispatch primitives are defined in babel_sty.rs unconditionally.
+      if code == "fr" {
+        // Entering French: flip catcodes to ACTIVE, attach dispatch meanings.
+        for &(ch, cs_name) in &[
+          (':', "\\lx@french@punct@colon"),
+          (';', "\\lx@french@punct@semi"),
+          ('!', "\\lx@french@punct@exclam"),
+          ('?', "\\lx@french@punct@question"),
+        ] {
+          if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
+            state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
+            state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
+          }
+        }
+      }
+      // German: activate " as the shorthand dispatch for umlauts + opens
+      // the \mdqon / \mdqoff toggle. Babel's germanb.ldf normally does this
+      // via \initiate@active@char; we reproduce it with a direct meaning.
+      if code == "de" || code == "de-AT" {
+        if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+          state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
+          state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+        }
+      }
+      // Leaving French/German does not automatically deactivate the
+      // active-char meanings. The dispatch primitives (\lx@french@punct@*)
+      // check \languagename themselves and fall back to bare punctuation in
+      // non-French groups. DOCUMENT_LANGUAGE is only set once at babel-init
+      // by \lx@babel@activate@mainlang (setting per-\selectlanguage would
+      // clobber the root xml:lang when the body switches languages).
     }
   });
 

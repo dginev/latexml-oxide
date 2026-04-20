@@ -307,8 +307,10 @@ LoadDefinitions!({
   // (like Match, but ignores catcodes)
   // Perl: returns undef on no-match.
   DefParameterType!(Keyword, sub[_inner, extra] {
-    let extra_string : String = extra.iter().map(ToString::to_string)
-      .collect::<Vec<String>>().join("");
+    // Concatenate the extras' string forms directly — collect::<String>
+    // handles Iterator<Item=String> by appending each in turn. The old
+    // `.collect::<Vec<String>>().join("")` allocated an intermediate Vec.
+    let extra_string: String = extra.iter().map(ToString::to_string).collect();
     match gullet::read_keyword(&[&extra_string])? {
       Some(t) => ArgWrap::Tokens(Tokens!(T_OTHER!(t))),
       None => ArgWrap::None,
@@ -538,33 +540,51 @@ LoadDefinitions!({
     LoadPool!(&name.to_string());
   });
 
-  // A LaTeX style directory List
-  DefParameterType!(DirectoryList, sub[__inner, _extra] {
-      // my ($gullet) = @_;
-      // $gullet->skipSpaces;
-      // if ($gullet->ifNext(T_BEGIN)) {
-      //   $gullet->readToken;
-      //   my @dirs = ();
-      //   $gullet->skipSpaces;
-      //   while ($gullet->ifNext(T_BEGIN)) {
-      //     # Should these be Semiverbatim ??
-      //     push(@dirs, $gullet->readArg);
-      //     $gullet->readMatch(T_OTHER(',')); }
-      //   $gullet->skipSpaces;
-      //   if ($gullet->ifNext(T_END)) {
-      //     $gullet->readToken; }
-      //   else {
-      //     Error('expected', '}', $gullet, "A closing } was supposed to be here"); }
-      //   LaTeXML::Core::Array->new(
-      //     open => T_BEGIN, close => T_END, itemopen => T_BEGIN, itemclose => T_END,
-      //     type => LaTeXML::Package::parseParameters(ToString("Semiverbatim"), "CommaList")->[0],
-      //     values => [@dirs]); }
-      // else {
-      //   Error('expected', 'DirectoryList', $gullet,
-      //          "A DirectoryList was supposed to be here"); } });
-      // Stub: DirectoryList parameter type not yet ported
-      Tokens!()
-  });
+  // A LaTeX-style directory list: `{{dir1}{dir2}{dir3}}`.
+  // Perl Base_ParameterTypes.pool.ltxml L280-L300. Inner args read with
+  // Semiverbatim catcodes so `_`, `/`, `#` in path names don't tokenize
+  // as SUB/ACTIVE — otherwise `\graphicspath{{figuras_paper/}}` would
+  // hit `Script _ can only appear in math mode` when the `_` leaks into
+  // the stream.
+  DefParameterType!(DirectoryList, sub[_inner, _extra] {
+    gullet::skip_spaces()?;
+    // Outer `{`
+    if !gullet::if_next(T_BEGIN!())? {
+      Error!("expected", "DirectoryList",
+        "A DirectoryList was supposed to be here");
+      return Ok(Tokens!().into());
+    }
+    gullet::read_token()?; // consume `{`
+    // Collect directory names joined as `{dir1}{dir2}` so the
+    // `\graphicspath` properties callback can split on `}` to recover
+    // individual entries.
+    let mut collected: Vec<Token> = Vec::new();
+    gullet::skip_spaces()?;
+    while gullet::if_next(T_BEGIN!())? {
+      // Read one Semiverbatim arg — `{` is consumed by read_arg_semiv.
+      let arg = gullet::read_arg(ExpansionLevel::Off)?;
+      collected.push(T_BEGIN!());
+      collected.extend(arg.unlist());
+      collected.push(T_END!());
+      // Optional `,` separator between entries (per-Perl readMatch).
+      gullet::skip_spaces()?;
+      if gullet::if_next(T_OTHER!(","))? {
+        gullet::read_token()?;
+        gullet::skip_spaces()?;
+      }
+    }
+    // Consume closing `}`.
+    gullet::skip_spaces()?;
+    if gullet::if_next(T_END!())? {
+      gullet::read_token()?;
+    } else {
+      Error!("expected", "}",
+        "A closing } was supposed to be here");
+    }
+    Tokens::new(collected)
+  },
+  // Treat as semiverbatim for tokenization-sensitive chars: _ / # & $ ~ ^ % @.
+  semiverbatim => Some(Vec::new()));
 
   // This reads a Box as needed by \raise, \lower, \moveleft, \moveright.
   // Hopefully there are no issues with the box being digested
@@ -661,7 +681,7 @@ LoadDefinitions!({
       Ok(Tokens!())
     },
     predigest => sub[_arg] {
-      let ismath = lookup_bool("IN_MATH");
+      let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
       let mut list = Vec::new();
       let mut next_token = None;
       while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
@@ -699,7 +719,7 @@ LoadDefinitions!({
   //   // "extra" passed into "predigest" as well.
   //   predigest => {
   //     todo!();
-  //     //   let ismath = lookup_bool("IN_MATH");
+  //     //   let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
   //     //   stomach::digest_next_body(Some(until))?
   //   //   my @list   = $state->getStomach->digestNextBody($until);
   //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
@@ -719,7 +739,7 @@ LoadDefinitions!({
       Ok(Tokens!()) // all done in predigestion
     },
     predigest => {
-      let ismath   = lookup_bool("IN_MATH");
+      let ismath   = state::lookup_bool_sym(pin!("IN_MATH"));
       let mut list     = stomach::digest_next_body(None)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
       list.retain(|tbox| !tbox.is_comment());
@@ -791,7 +811,7 @@ LoadDefinitions!({
   // Several extension of the keyval package exist, the most common one we support
   // is the xkeyval package. This introduces further variations on the keyval
   // arguments parsing, in particular it allows to read keys from more than one
-  // keyset at once. These can be specified by giving comma-seperated values in
+  // keyset at once. These can be specified by giving comma-separated values in
   // the keyset argument. By default, a key will only be set in the **first**
   // keyset it occurs in. By using
   //   RequiredKeyVals+: $keysets
@@ -813,7 +833,7 @@ LoadDefinitions!({
   //   OptionalKeyVals[*][+]: $prefix|$keysets
   //
   // Finally, it is possible to specify specific keys to skip when digesting the
-  // object. This can be achieved using comma-seperated key values in
+  // object. This can be achieved using comma-separated key values in
   //   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
   //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 

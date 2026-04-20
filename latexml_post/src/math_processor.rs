@@ -224,7 +224,7 @@ fn process_math_node(
     // Mark XMath IDs as reusable (it will be removed)
     doc.preremove_nodes(&[xmath.clone()]);
     // Remove XMath from the Math element
-    doc.remove_nodes(&[xmath.clone()]);
+    doc.remove_nodes(&[xmath]);
   }
 
   // Remove blank text nodes from Math

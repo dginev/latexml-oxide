@@ -3,3 +3,7 @@
 # Some tests (colortbls, etc.) trigger deep recursion in the TeX engine
 # which causes stack overflow at 8MB, crashing the entire test binary.
 RUST_MIN_STACK = "16777216"
+
+# For fresh-test (regenerate kernel dump against ambient TeXLive, then test),
+# see `make fresh-test` in the top-level Makefile. Cargo aliases can't chain
+# shell commands, so that orchestration lives in make, not here.

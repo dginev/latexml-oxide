@@ -1,5 +1,5 @@
 use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, EMPTY_SYM, SymHashMap, SymStr};
+use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::color::{self, Color};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, kround};
@@ -23,6 +23,7 @@ use std::rc::Rc;
 
 pub mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
+use crate::pin;
 
 pub type Fontmap = Rc<[Option<char>]>;
 
@@ -185,12 +186,10 @@ static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
   "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5)
 });
 
-// Perl: Font.pm %mathstylesize — used in specialize() font size scaling (commented out in Perl too)
-#[allow(dead_code)]
-static MATH_STYLE_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
-  raw_map!(
-  "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5)
-});
+// Note: Perl's Font.pm has a %mathstylesize table used in specialize()
+// font-size scaling, but the path is commented out in Perl too. We don't
+// implement this yet — restore from git history if/when specialize wants
+// math-style-based size adjustment.
 
 /// A special form of merge when copying/moving nodes to a new context,
 /// particularly math which become scripts or such.
@@ -215,26 +214,31 @@ static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> 
   0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"))
   });
 
-// Map Font family_series_shape to a TeX fontname (tfm)
-// Leave off the size, so we can punt to a loaded size in a pinch
-static METRIC_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
-  raw_map!(
-    "serif_medium_upright"       => "cmr",
-    "serif_medium_slanted"       => "cmsl",
-    "serif_medium_italic"        => "cmti",
-    "serif_medium_uprightitalic" => "cmu",
-    "serif_bold_upright"         => "cmbx",
-    "serif_medum_smallcaps"      => "cmcsc",
-    "sansserif_medium_upright"   => "cmss",
-    "sansserif_medium_italic"    => "cmssi",
-    "sansserif_bold_upright"     => "cmssbx",
-    "typewriter_medium_upright"  => "cmtt",
-    "typewriter_medium_slanted"  => "cmsltt",
-    "math_medium_italic"         => "cmmi",
-    "math_medium_upright"        => "cmr",
-    "math_bold_italic"           => "cmmib"
-  )
-});
+/// Map Font (family, series, shape) to a TeX fontname (tfm).
+/// Returns `None` if the combo isn't recognized. Matching on a tuple
+/// of `&str` lets callers skip allocating an intermediate
+/// `format!("{family}_{series}_{shape}")` key per lookup. Callers use
+/// `lookup_metric_name(family, series, shape)` instead of the former
+/// `METRIC_MAP.get(&format!(…))` pattern.
+fn lookup_metric_name(family: &str, series: &str, shape: &str) -> Option<&'static str> {
+  match (family, series, shape) {
+    ("serif",      "medium", "upright")       => Some("cmr"),
+    ("serif",      "medium", "slanted")       => Some("cmsl"),
+    ("serif",      "medium", "italic")        => Some("cmti"),
+    ("serif",      "medium", "uprightitalic") => Some("cmu"),
+    ("serif",      "bold",   "upright")       => Some("cmbx"),
+    ("serif",      "medum",  "smallcaps")     => Some("cmcsc"), // typo preserved from Perl
+    ("sansserif",  "medium", "upright")       => Some("cmss"),
+    ("sansserif",  "medium", "italic")        => Some("cmssi"),
+    ("sansserif",  "bold",   "upright")       => Some("cmssbx"),
+    ("typewriter", "medium", "upright")       => Some("cmtt"),
+    ("typewriter", "medium", "slanted")       => Some("cmsltt"),
+    ("math",       "medium", "italic")        => Some("cmmi"),
+    ("math",       "medium", "upright")       => Some("cmr"),
+    ("math",       "bold",   "italic")        => Some("cmmib"),
+    _ => None,
+  }
+}
 
 // Fallback fontnames for looking up random Unicode,
 // when they're not in the indicated FontMap
@@ -271,7 +275,6 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
 ];
 
 // Perl: Font.pm %baseline_map — used in computeStringSize() for baseline calculation
-#[allow(dead_code)]
 static BASELINE_MAP: Lazy<HashMap<i64, f64>> = Lazy::new(|| {
   raw_map!(
     5 => 6.0, 6 => 7.0, 7 => 8.0, 8 => 9.5, 9 => 10.0, 10 => 12.0,
@@ -323,10 +326,22 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
   if let Some(m) = STDMETRICS.get(base) {
     return m;
   }
-  // Try base + "10"
-  let base10 = format!("{base}10");
-  if let Some(m) = STDMETRICS.get(base10.as_str()) {
-    return m;
+  // Try base + "10". Stack-buffer concat avoids the per-call `format!`
+  // heap alloc — `get_metric_for_name` is reached through the
+  // per-character `get_metric` loop, so this is a real allocation
+  // site. Font basenames are short (≤ ~20 ASCII bytes); 32 bytes is
+  // ample padding.
+  let base_bytes = base.as_bytes();
+  if base_bytes.len() + 2 <= 32 {
+    let mut buf = [0u8; 32];
+    buf[..base_bytes.len()].copy_from_slice(base_bytes);
+    buf[base_bytes.len()] = b'1';
+    buf[base_bytes.len() + 1] = b'0';
+    if let Ok(s) = std::str::from_utf8(&buf[..base_bytes.len() + 2]) {
+      if let Some(m) = STDMETRICS.get(s) {
+        return m;
+      }
+    }
   }
   // Ultimate fallback to "cmr"
   STDMETRICS.get("cmr").expect("STDMETRICS must contain 'cmr'")
@@ -1246,37 +1261,32 @@ impl Font {
     let series = self.series.as_deref().unwrap_or("medium");
     let shape = self.shape.as_deref().unwrap_or("upright");
     let size = self.size.unwrap_or(defsize()) as i64;
-    let key = format!("{family}_{series}_{shape}");
-    if let Some(name) = METRIC_MAP.get(key.as_str()) {
+    // Stack buffer for char→&str lookup key, reused across paths. Avoids
+    // one String allocation per character per get_metric call (which is
+    // called per-character inside compute_string_size).
+    let mut ch_buf = [0u8; 4];
+    let ch_key = c_opt.map(|c| c.encode_utf8(&mut ch_buf) as &str);
+    if let Some(name) = lookup_metric_name(family, series, shape) {
       let fullname = format!("{name}{size}");
       if let Some(metric) = STDMETRICS.get(fullname.as_str()) {
-        if c_opt.is_none()
-          || c_opt
-            .map(|c| metric.sizes.contains_key(c.to_string().as_str()))
-            .unwrap_or(false)
-        {
+        if ch_key.is_none_or(|k| metric.sizes.contains_key(k)) {
           return metric;
         }
       }
       // Try base name fallback
       let metric = get_metric_for_name(name);
-      if c_opt.is_none()
-        || c_opt
-          .map(|c| metric.sizes.contains_key(c.to_string().as_str()))
-          .unwrap_or(false)
-      {
+      if ch_key.is_none_or(|k| metric.sizes.contains_key(k)) {
         return metric;
       }
     }
     // Look for a fallback metric if char given
-    if let Some(c) = c_opt {
-      let cstr = c.to_string();
+    if let Some(k) = ch_key {
       for name in METRIC_FALLBACKS {
         let fullname = format!("{name}{size}");
         let metric = STDMETRICS
           .get(fullname.as_str())
           .unwrap_or_else(|| get_metric_for_name(name));
-        if metric.sizes.contains_key(cstr.as_str()) {
+        if metric.sizes.contains_key(k) {
           return metric;
         }
       }
@@ -1320,20 +1330,31 @@ impl Font {
     let size = self.get_size().unwrap_or(defsize());
     let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
-    let chars: Vec<char> = text.chars().collect();
-    for (i, &ch) in chars.iter().enumerate() {
+    // Iterate via Peekable — no intermediate Vec<char> allocation,
+    // and we get O(1) lookahead for kerning between consecutive chars.
+    let mut chars_iter = text.chars().peekable();
+    // Stack buffers for char→&str and char+char→&str lookups, avoiding
+    // String::to_string() + String::format!() heap allocations inside
+    // the per-character hot loop. encode_utf8 writes directly to the
+    // buffer and returns a borrowed &str slice — no allocation.
+    let mut ch_buf = [0u8; 4];
+    let mut kern_buf = [0u8; 8];
+    while let Some(ch) = chars_iter.next() {
       let metric = self.get_metric(Some(ch));
-      let entry_opt = metric.sizes.get(ch.to_string().as_str());
+      let ch_key = ch.encode_utf8(&mut ch_buf);
+      let entry_opt = metric.sizes.get(ch_key);
       let (cw, ch_sz, cd, ci) = if let Some(entry) = entry_opt {
         *entry
       } else {
         (0.75 * UNITY_F64, 0.7 * UNITY_F64, 0.2 * UNITY_F64, 0.0)
       };
       w += (cw * size).trunc() as i64;
-      // Kerning: check kern between this char and next
-      if i + 1 < chars.len() {
-        let kern_key = format!("{}{}", ch, chars[i + 1]);
-        if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
+      // Kerning: check kern between this char and next.
+      if let Some(&next_ch) = chars_iter.peek() {
+        let first_len = ch.encode_utf8(&mut kern_buf).len();
+        let second_len = next_ch.encode_utf8(&mut kern_buf[first_len..]).len();
+        let kern_key = std::str::from_utf8(&kern_buf[..first_len + second_len]).unwrap();
+        if let Some(kern) = metric.kerns.get(kern_key) {
           w += (size * kern).trunc() as i64;
         }
       }
@@ -1866,7 +1887,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
 
   let mut map: Option<Fontmap> = None;
   if !encoding.is_empty() {
-    preload_font_map(&encoding).expect("preloading a font map should succeed?");
+    let _ = preload_font_map(&encoding); // infallible in practice; swallow Result
     if let Some(encmap) = load_font_map(&encoding) {
       // OK got some map.
       map = Some(encmap);
@@ -1906,7 +1927,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
 }
 
 pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool) -> SymStr {
-  let empty_sym = *EMPTY_SYM;
+  let empty_sym = pin!("");
   if string == empty_sym {
     return empty_sym;
   }
@@ -1925,7 +1946,7 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
 
   let mut map: Option<Fontmap> = None;
   if !encoding.is_empty() {
-    preload_font_map(encoding).expect("preload_font_map should succeed?");
+    let _ = preload_font_map(encoding); // infallible in practice; swallow Result
     if let Some(encmap) = load_font_map(encoding) {
       // OK got some map.
       map = Some(encmap);

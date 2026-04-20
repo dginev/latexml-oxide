@@ -14,7 +14,7 @@ use libxml::tree::Node;
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::document::{element_children, NodeData, PostDocument};
+use crate::document::{element_children, element_children_iter, NodeData, PostDocument};
 use super::operator_dictionary;
 
 // Thread-local flag for invisible times emission.
@@ -94,7 +94,7 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
   if let Some(role) = node.get_attribute("role") {
     return Some(role);
   }
-  if doc.get_qname(node).as_deref() == Some("ltx:XMApp") {
+  if doc.is_qname(node, "ltx:XMApp") {
     let children = element_children(node);
     if children.len() >= 2 {
       let op_role = children[0].get_attribute("role").unwrap_or_default();
@@ -129,10 +129,16 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
 ///
 /// Port of `pmml` + `pmml_internal`.
 fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
-  let tag = doc.get_qname(node).unwrap_or_default();
+  // Fast-path dispatch: all tags we recognize live in the ltx namespace.
+  // Compare localname directly and check namespace prefix separately to
+  // avoid the `format!("{}:{}", prefix, localname)` allocation inside
+  // `get_qname`. On non-ltx nodes, fall through to the generic m:mtext
+  // wrapping (same as the original catchall).
+  let is_ltx = doc.qname_prefix(node).as_deref() == Some("ltx");
+  let localname = if is_ltx { node.get_name() } else { String::new() };
 
   // Follow XMRef
-  if tag == "ltx:XMRef" {
+  if is_ltx && localname == "XMRef" {
     if let Some(idref) = node.get_attribute("idref") {
       if let Some(target) = doc.find_node_by_id(&idref) {
         return pmml(doc, target);
@@ -141,47 +147,52 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
     return pmml_error("Unresolved XMRef");
   }
 
-  match tag.as_str() {
-    "ltx:XMath" => {
-      let results: Vec<NodeData> = element_children(node).iter().map(|c| pmml(doc, c)).collect();
-      pmml_row(results)
-    }
-    "ltx:XMDual" => {
-      let children = element_children(node);
-      if children.len() >= 2 {
-        pmml(doc, &children[1]) // Presentation branch
-      } else {
-        pmml_error("Empty XMDual")
+  if is_ltx {
+    match localname.as_str() {
+      "XMath" => {
+        let results: Vec<NodeData> =
+          element_children_iter(node).map(|c| pmml(doc, &c)).collect();
+        return pmml_row(results);
       }
-    }
-    "ltx:XMWrap" | "ltx:XMArg" => {
-      let results: Vec<NodeData> = element_children(node).iter().map(|c| pmml(doc, c)).collect();
-      pmml_row(results)
-    }
-    "ltx:XMApp" => pmml_apply(doc, node),
-    "ltx:XMTok" => pmml_token(doc, node),
-    "ltx:XMHint" => pmml_hint(doc, node),
-    "ltx:XMArray" => pmml_array(doc, node),
-    "ltx:XMText" => {
-      // Perl L494-501: iterate over child nodes, not just text content.
-      // This preserves ltx:picture (SVG) elements inside XMText.
-      let mut children = Vec::new();
-      if let Some(child) = node.get_first_child() {
-        let mut current = Some(child);
-        while let Some(ref c) = current {
-          children.extend(super::pmml_text_aux(doc, c));
-          current = c.get_next_sibling();
+      "XMDual" => {
+        let children = element_children(node);
+        return if children.len() >= 2 {
+          pmml(doc, &children[1]) // Presentation branch
+        } else {
+          pmml_error("Empty XMDual")
+        };
+      }
+      "XMWrap" | "XMArg" => {
+        let results: Vec<NodeData> =
+          element_children_iter(node).map(|c| pmml(doc, &c)).collect();
+        return pmml_row(results);
+      }
+      "XMApp" => return pmml_apply(doc, node),
+      "XMTok" => return pmml_token(doc, node),
+      "XMHint" => return pmml_hint(doc, node),
+      "XMArray" => return pmml_array(doc, node),
+      "XMText" => {
+        // Perl L494-501: iterate over child nodes, not just text content.
+        // This preserves ltx:picture (SVG) elements inside XMText.
+        let mut children = Vec::new();
+        if let Some(child) = node.get_first_child() {
+          let mut current = Some(child);
+          while let Some(ref c) = current {
+            children.extend(super::pmml_text_aux(doc, c));
+            current = c.get_next_sibling();
+          }
         }
+        return pmml_row(children);
       }
-      pmml_row(children)
+      _ => {}
     }
-    _ => {
-      NodeData::Element {
-        tag: "m:mtext".to_string(),
-        attributes: None,
-        children: vec![NodeData::Text(node.get_content())],
-      }
-    }
+  }
+
+  // Catchall: wrap content in m:mtext.
+  NodeData::Element {
+    tag: "m:mtext".to_string(),
+    attributes: None,
+    children: vec![NodeData::Text(node.get_content())],
   }
 }
 
@@ -214,7 +225,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   let args = &children[1..];
 
   // Realize the operator
-  let rop = if doc.get_qname(op).as_deref() == Some("ltx:XMRef") {
+  let rop = if doc.is_qname(op, "ltx:XMRef") {
     op.get_attribute("idref")
       .and_then(|id| doc.find_node_by_id(&id).cloned())
       .unwrap_or_else(|| op.clone())
@@ -250,9 +261,8 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
     "OVERACCENT" if !args.is_empty() => {
       // Perl MathML.pm L1492-1504: check if base is XMApp with UNDERACCENT → m:munderover
       let base = &args[0];
-      let base_qname = doc.get_qname(base);
       let base_children = element_children(base);
-      if base_qname.as_deref() == Some("ltx:XMApp") && base_children.len() == 2 {
+      if doc.is_qname(base, "ltx:XMApp") && base_children.len() == 2 {
         let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
         if inner_role == "UNDERACCENT" {
           // Combine into m:munderover: base_of_inner, under_accent, over_accent
@@ -279,9 +289,8 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
     "UNDERACCENT" if !args.is_empty() => {
       // Perl MathML.pm L1507-1519: check if base is XMApp with OVERACCENT → m:munderover
       let base = &args[0];
-      let base_qname = doc.get_qname(base);
       let base_children = element_children(base);
-      if base_qname.as_deref() == Some("ltx:XMApp") && base_children.len() == 2 {
+      if doc.is_qname(base, "ltx:XMApp") && base_children.len() == 2 {
         let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
         if inner_role == "OVERACCENT" {
           return NodeData::Element {
@@ -413,7 +422,7 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     if let Some(default) = default_token_content(&role) {
       text = default.to_string();
     } else {
-      text = meaning.clone()
+      text = meaning
         .or_else(|| node.get_attribute("name"))
         .unwrap_or_else(|| role.clone());
     }
@@ -806,7 +815,7 @@ fn pmml_script_decipher(
   let mut current_base = base.clone();
   loop {
     // Realize XMRef
-    let realized = if doc.get_qname(&current_base).as_deref() == Some("ltx:XMRef") {
+    let realized = if doc.is_qname(&current_base, "ltx:XMRef") {
       current_base.get_attribute("idref")
         .and_then(|id| doc.find_node_by_id(&id).cloned())
         .unwrap_or(current_base.clone())
@@ -814,7 +823,7 @@ fn pmml_script_decipher(
       current_base.clone()
     };
 
-    if doc.get_qname(&realized).as_deref() != Some("ltx:XMApp") {
+    if !doc.is_qname(&realized, "ltx:XMApp") {
       break;
     }
 
@@ -824,7 +833,7 @@ fn pmml_script_decipher(
     }
 
     let xop = &children[0];
-    if doc.get_qname(xop).as_deref() != Some("ltx:XMTok") {
+    if !doc.is_qname(xop, "ltx:XMTok") {
       break;
     }
 
@@ -1160,6 +1169,25 @@ fn get_node_text(node: &NodeData) -> String {
   }
 }
 
+/// Check if all text in `node` consists only of invisible-op characters,
+/// without allocating a concatenated String like `get_node_text` does.
+/// Used by `adjust_spacing` where we only need the boolean answer.
+fn is_node_text_invisible_op(node: &NodeData) -> bool {
+  fn check(node: &NodeData, seen_any: &mut bool) -> bool {
+    match node {
+      NodeData::Text(t) => {
+        if !t.is_empty() { *seen_any = true; }
+        t.chars().all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
+      }
+      NodeData::Element { children, .. } => children.iter().all(|c| check(c, seen_any)),
+      _ => true,
+    }
+  }
+  let mut seen_any = false;
+  let ok = check(node, &mut seen_any);
+  ok && seen_any
+}
+
 fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
   if let NodeData::Element { attributes, .. } = node {
     let attrs = attributes.get_or_insert_with(HashMap::new);
@@ -1204,10 +1232,10 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
     return;
   }
 
-  let prev_tag = get_node_tag(prev).to_string();
-  let next_tag = get_node_tag(next).to_string();
+  let prev_is_mo = get_node_tag(prev) == "m:mo";
+  let next_is_mo = get_node_tag(next) == "m:mo";
 
-  if prev_tag == "m:mo" && next_tag == "m:mo" {
+  if prev_is_mo && next_is_mo {
     let n = next_dict_left;
     let rem = target - n;
     if rem >= 0.0 {
@@ -1219,22 +1247,23 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
         set_node_attr(next, "lspace", &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }));
       }
     }
-  } else if prev_tag == "m:mo" {
+  } else if prev_is_mo {
     set_node_attr(prev, "rspace", &fmt_em(target));
-  } else if next_tag == "m:mo" {
+  } else if next_is_mo {
     set_node_attr(next, "lspace", &fmt_em(target));
   }
 }
 
 /// Walk the MathML tree and adjust spacing.
 pub fn adjust_spacing(node: &mut NodeData) {
-  let tag = get_node_tag(node).to_string();
-
-  if matches!(tag.as_str(), "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
+  // Fast-path leaf check on a borrowed &str — avoids a per-node String allocation.
+  let tag_ref = get_node_tag(node);
+  if matches!(tag_ref, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
     return;
   }
+  let is_mrow = is_mrow_like(tag_ref);
 
-  if is_mrow_like(&tag) {
+  if is_mrow {
     if let NodeData::Element { children, .. } = node {
       for child in children.iter_mut() {
         adjust_spacing(child);
@@ -1246,7 +1275,7 @@ pub fn adjust_spacing(node: &mut NodeData) {
           let j = i + 1;
           // Skip invisible operators
           if j + 1 < len && get_node_tag(&children[j]) == "m:mo"
-            && is_invisible_op(&get_node_text(&children[j]))
+            && is_node_text_invisible_op(&children[j])
           {
             if j + 1 < len {
               let (left, right) = children.split_at_mut(j + 1);

@@ -121,19 +121,19 @@ LoadDefinitions!({
   DefConstructor!("\\lower Dimension MoveableBox",
     sub[document, args, props] {
       let svg = in_svg(document);
-      let noautoclose = string_map!("_noautoclose" => "1");
+      // Move the initial attrs map unconditionally into whichever branch
+      // runs — only one executes per call, so no clone is needed.
+      let mut attrs = string_map!("_noautoclose" => "1");
       let node = if svg {
         let transform = match props.get("transform") {
           Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
         };
-        let mut attrs = noautoclose.clone();
         if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
         document.open_element("svg:g", Some(attrs), None)?
       } else {
         let y_attr = match props.get("y") {
           Some(Stored::Dimension(d)) => d.to_attribute(), _ => String::new()
         };
-        let mut attrs = noautoclose;
         if !y_attr.is_empty() { attrs.insert(String::from("yoffset"), y_attr); }
         document.open_element("ltx:text", Some(attrs), None)?
       };
@@ -170,19 +170,17 @@ LoadDefinitions!({
   DefConstructor!("\\raise Dimension MoveableBox",
     sub[document, args, props] {
       let svg = in_svg(document);
-      let noautoclose = string_map!("_noautoclose" => "1");
+      let mut attrs = string_map!("_noautoclose" => "1");
       let node = if svg {
         let transform = match props.get("transform") {
           Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
         };
-        let mut attrs = noautoclose.clone();
         if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
         document.open_element("svg:g", Some(attrs), None)?
       } else {
         let y_attr = match props.get("y") {
           Some(Stored::Dimension(d)) => d.to_attribute(), _ => String::new()
         };
-        let mut attrs = noautoclose;
         if !y_attr.is_empty() { attrs.insert(String::from("yoffset"), y_attr); }
         document.open_element("ltx:text", Some(attrs), None)?
       };

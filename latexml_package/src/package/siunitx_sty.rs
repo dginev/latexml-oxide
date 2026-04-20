@@ -10,14 +10,33 @@ use crate::xmath_helpers::*;
 // SIX keyvals helpers
 //======================================================================
 
-/// Perl: six_get — look up SIX_key from state
-fn six_get(key: &str) -> Option<Stored> {
-  state::lookup_value(&format!("SIX_{key}"))
+/// `six_pin!("key")` — concatenates `"SIX_"` + `key` at compile time,
+/// then caches the interned `SymStr` per call site. Every subsequent
+/// lookup on the same thread is a `OnceCell` load + u32 compare — no
+/// `format!()` allocation, no hash probe into the arena.
+///
+/// siunitx reads its options on every `\num` / `\SI` / `\ang` expansion
+/// and `format!("SIX_{key}")` was one of the measurable chunks of the
+/// siunitx critical path. This macro replaces the `&str`-based `six_get`
+/// family for the (41 of 52) call sites that pass a string literal.
+macro_rules! six_pin {
+  ($key:literal) => {{
+    std::thread_local! {
+      static CACHED: std::cell::OnceCell<::latexml_core::common::arena::SymStr>
+        = const { std::cell::OnceCell::new() };
+    }
+    CACHED.with(|c| *c.get_or_init(|| ::latexml_core::common::arena::pin_static(concat!("SIX_", $key))))
+  }};
 }
 
-/// Perl: six_get as Tokens
-fn six_get_tokens(key: &str) -> Tokens {
-  match six_get(key) {
+/// SymStr-keyed six_get: skip the per-call `format!` + `arena::pin`
+/// that the `&str` variant pays.
+fn six_get_sym(key: SymStr) -> Option<Stored> {
+  state::with_value_sym(key, |v| v.cloned())
+}
+
+fn six_get_tokens_sym(key: SymStr) -> Tokens {
+  match six_get_sym(key) {
     Some(Stored::Tokens(t)) => t,
     Some(Stored::String(s)) => {
       let txt = arena::with(s, |t| t.to_string());
@@ -27,9 +46,8 @@ fn six_get_tokens(key: &str) -> Tokens {
   }
 }
 
-/// Perl: six_getBool — look up boolean SIX option
-fn six_get_bool(key: &str) -> bool {
-  match six_get(key) {
+fn six_get_bool_sym(key: SymStr) -> bool {
+  match six_get_sym(key) {
     Some(Stored::String(s)) => arena::with(s, |txt| txt.trim() == "true"),
     Some(Stored::Tokens(t)) => t.to_string().trim() == "true",
     Some(Stored::Bool(b)) => b,
@@ -37,15 +55,17 @@ fn six_get_bool(key: &str) -> bool {
   }
 }
 
-/// Perl: six_getChoice — look up choice SIX option
-fn six_get_choice(key: &str) -> String {
-  match six_get(key) {
+fn six_get_choice_sym(key: SymStr) -> String {
+  match six_get_sym(key) {
     Some(Stored::String(s)) => arena::with(s, |txt| txt.trim().to_string()),
     Some(Stored::Tokens(t)) => t.to_string().trim().to_string(),
     Some(v) => v.to_string().trim().to_string(),
     None => String::new(),
   }
 }
+
+// six_get(&str) removed — all callers now use six_get_sym + six_pin!
+// which skips the per-call format!(\"SIX_{key}\") and arena::pin.
 
 /// Build raw keyvals content (without brackets) for passing to i_wrap
 fn make_kv_content(kv: &[(&str, Tokens)]) -> Option<Tokens> {
@@ -56,15 +76,15 @@ fn make_kv_content(kv: &[(&str, Tokens)]) -> Option<Tokens> {
     tks.extend(ExplodeText!(key));
     tks.push(T_OTHER!("="));
     tks.push(T_BEGIN!());
-    tks.extend(value.clone().unlist());
+    tks.extend_from_slice(value.unlist_ref());
     tks.push(T_END!());
   }
   Some(Tokens::new(tks))
 }
 
 /// Perl: six_get_op — look up an option, wrap in \text{} and I_wrap
-fn six_get_op(kv: &[(&str, Tokens)], key: &str) -> Tokens {
-  let text = six_get_tokens(key);
+fn six_get_op_sym(kv: &[(&str, Tokens)], key: SymStr) -> Tokens {
+  let text = six_get_tokens_sym(key);
   if text.is_empty() {
     i_wrap(make_kv_content(kv), Tokens::default())
   } else {
@@ -115,7 +135,7 @@ fn six_begin_processing(kv: Option<&KeyVals>) {
     six_setup(kv);
   }
   // Redefine input-protect-tokens: make each CS token into T_OTHER of its name
-  if let Some(Stored::Tokens(protect)) = six_get("input-protect-tokens") {
+  if let Some(Stored::Tokens(protect)) = six_get_sym(six_pin!("input-protect-tokens")) {
     for token in protect.unlist() {
       if token.get_catcode() == Catcode::ESCAPE {
         let name = token.to_string();
@@ -204,42 +224,51 @@ impl SixNumber {
 }
 
 /// Perl: six_match_keys — match and remove leading tokens matching sixkeys
-fn six_match_keys(tokens: &mut Vec<Token>, keys: &[&str]) -> Option<Tokens> {
+fn six_match_keys(tokens: &mut Vec<Token>, keys: &[SymStr]) -> Option<Tokens> {
   let mut tomatch: Vec<Token> = vec![T_SPACE!()];
   for key in keys {
-    if let Some(Stored::Tokens(toks)) = six_get(key) {
+    if let Some(Stored::Tokens(toks)) = six_get_sym(*key) {
       tomatch.extend(toks.unlist());
     }
   }
 
+  // Match by Token-text equality against `tomatch`. For a typical
+  // `tomatch` of a few dozen tokens and input of a few dozen tokens
+  // this is O(n*m) — still fast because `Token` eq is a `SymStr` u32
+  // compare, not a string compare.
   let mut matched = Vec::new();
-  while let Some(t) = tokens.first() {
-    let found = tomatch.iter().any(|m| t.eq(m));
-    if !found {
+  let mut consumed = 0;
+  for t in tokens.iter() {
+    if !tomatch.iter().any(|m| t == m) {
       break;
     }
-    let t = tokens.remove(0);
+    consumed += 1;
     if t.get_catcode() != Catcode::SPACE {
       if t.get_catcode() == Catcode::ESCAPE {
-        matched.push(t);
+        matched.push(*t);
         matched.push(T_SPACE!());
       } else {
-        matched.push(t);
+        matched.push(*t);
       }
     }
+  }
+  // Single drain at the end — the prior `tokens.remove(0)` per match
+  // was O(n) each call (memmove of the tail on every consumed token).
+  if consumed > 0 {
+    tokens.drain(..consumed);
   }
   if matched.is_empty() { None } else { Some(Tokens::new(matched)) }
 }
 
 fn six_match_sign(tokens: &mut Vec<Token>) -> Option<Tokens> {
-  six_match_keys(tokens, &["input-signs"])
+  six_match_keys(tokens, &[six_pin!("input-signs")])
 }
 
 fn six_match_simplenumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let sign = six_match_sign(tokens);
-  let integer = six_match_keys(tokens, &["input-digits", "input-symbols"]);
-  let (decimal, fraction) = if six_match_keys(tokens, &["input-decimal-markers"]).is_some() {
-    (Some(Tokens::default()), six_match_keys(tokens, &["input-digits", "input-symbols"]))
+  let integer = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
+  let (decimal, fraction) = if six_match_keys(tokens, &[six_pin!("input-decimal-markers")]).is_some() {
+    (Some(Tokens::default()), six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]))
   } else {
     (None, None)
   };
@@ -254,15 +283,15 @@ fn six_match_simplenumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let number = six_match_simplenumber(tokens)?;
 
-  if let Some(sign) = six_match_keys(tokens, &["input-uncertainty-signs"]) {
-    let int = six_match_keys(tokens, &["input-digits", "input-symbols"]);
-    let (dec, frac) = if six_match_keys(tokens, &["input-decimal-markers"]).is_some() {
-      (Some(Tokens::default()), six_match_keys(tokens, &["input-digits", "input-symbols"]))
+  if let Some(sign) = six_match_keys(tokens, &[six_pin!("input-uncertainty-signs")]) {
+    let int = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
+    let (dec, frac) = if six_match_keys(tokens, &[six_pin!("input-decimal-markers")]).is_some() {
+      (Some(Tokens::default()), six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]))
     } else {
       (None, None)
     };
 
-    if six_match_keys(tokens, &["input-decimal-markers", "input-complex-roots"]).is_some() {
+    if six_match_keys(tokens, &[six_pin!("input-decimal-markers"), six_pin!("input-complex-roots")]).is_some() {
       return Some(number);
     }
 
@@ -275,9 +304,9 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
     });
   }
 
-  if six_match_keys(tokens, &["input-open-uncertainty"]).is_some() {
-    let int = six_match_keys(tokens, &["input-digits", "input-symbols"]);
-    six_match_keys(tokens, &["input-close-uncertainty"]);
+  if six_match_keys(tokens, &[six_pin!("input-open-uncertainty")]).is_some() {
+    let int = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
+    six_match_keys(tokens, &[six_pin!("input-close-uncertainty")]);
     let uncertainty = SixNumber::simple(None, int, None, None);
     return Some(SixNumber::Operator {
       operator: "uncertain".to_string(),
@@ -293,7 +322,7 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let mut number = six_match_uncertainnumber(tokens)?;
 
-  if let Some(i) = six_match_keys(tokens, &["input-complex-roots"]) {
+  if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
     let sign = number.get_sign().cloned();
     number.set_sign(None);
     return Some(SixNumber::Operator {
@@ -304,7 +333,7 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   }
 
   if let Some(sign) = six_match_sign(tokens) {
-    if let Some(i) = six_match_keys(tokens, &["input-complex-roots"]) {
+    if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
       if let Some(imag) = six_match_uncertainnumber(tokens) {
         return Some(SixNumber::Operator {
           operator: "complex".to_string(),
@@ -313,7 +342,7 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
         });
       }
     } else if let Some(imag) = six_match_uncertainnumber(tokens) {
-      if let Some(i) = six_match_keys(tokens, &["input-complex-roots"]) {
+      if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
         return Some(SixNumber::Operator {
           operator: "complex".to_string(),
           arg1: Some(Box::new(number)), arg2: Some(Box::new(imag)),
@@ -329,9 +358,9 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   let number = six_match_complexnumber(tokens)?;
 
-  if six_match_keys(tokens, &["input-exponent-markers"]).is_some() {
+  if six_match_keys(tokens, &[six_pin!("input-exponent-markers")]).is_some() {
     let sign = six_match_sign(tokens);
-    let exp = six_match_keys(tokens, &["input-digits", "input-symbols"]);
+    let exp = six_match_keys(tokens, &[six_pin!("input-digits"), six_pin!("input-symbols")]);
     let exp_number = SixNumber::simple(sign, exp, None, None);
     return Some(SixNumber::Operator {
       operator: "exponent".to_string(),
@@ -344,7 +373,7 @@ fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 }
 
 fn six_match_compoundnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
-  if let Some(comp) = six_match_keys(tokens, &["input-comparators"]) {
+  if let Some(comp) = six_match_keys(tokens, &[six_pin!("input-comparators")]) {
     return Some(SixNumber::Operator {
       operator: "comparator".to_string(),
       arg1: six_match_number(tokens).map(Box::new),
@@ -355,14 +384,14 @@ fn six_match_compoundnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 
   let mut number = six_match_scinumber(tokens)?;
   loop {
-    if six_match_keys(tokens, &["input-product"]).is_some() {
+    if six_match_keys(tokens, &[six_pin!("input-product")]).is_some() {
       let rhs = six_match_scinumber(tokens);
       number = SixNumber::Operator {
         operator: "product".to_string(),
         arg1: Some(Box::new(number)), arg2: rhs.map(Box::new),
         sign: None, symbol: None, comparator: None,
       };
-    } else if six_match_keys(tokens, &["input-quotient"]).is_some() {
+    } else if six_match_keys(tokens, &[six_pin!("input-quotient")]).is_some() {
       let rhs = six_match_scinumber(tokens);
       number = SixNumber::Operator {
         operator: "quotient".to_string(),
@@ -384,41 +413,45 @@ fn six_match_number(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 //======================================================================
 
 fn six_apply_mathligatures(tokens: Vec<Token>) -> Vec<Token> {
-  let mut result = Vec::new();
+  let mut result = Vec::with_capacity(tokens.len());
   let mut iter = tokens.into_iter().peekable();
+  // Pre-intern the ligature trigger chars so the per-token dispatch
+  // below compares SymStr (u32 equality) instead of allocating
+  // `t.to_string()` to compare with "+" / ">" / "<" / etc.
+  let plus = pin!("+");
+  let minus = pin!("-");
+  let gt = pin!(">");
+  let lt = pin!("<");
+  let eq = pin!("=");
   while let Some(t) = iter.next() {
     if t.get_catcode() == Catcode::COMMENT {
       continue;
     }
-    let name = t.to_string();
-    match name.as_str() {
-      "+" => {
-        if iter.peek().is_some_and(|n| n.to_string() == "-") {
-          iter.next();
-          result.push(T_CS!("\\pm"));
-        } else {
-          result.push(t);
-        }
+    if t.text == plus {
+      if iter.peek().is_some_and(|n| n.text == minus) {
+        iter.next();
+        result.push(T_CS!("\\pm"));
+      } else {
+        result.push(t);
       }
-      ">" => {
-        if let Some(ns) = iter.peek().map(|n| n.to_string()) {
-          if ns == "=" { iter.next(); result.push(T_CS!("\\ge")); }
-          else if ns == ">" { iter.next(); result.push(T_CS!("\\gg")); }
-          else { result.push(t); }
-        } else {
-          result.push(t);
-        }
+    } else if t.text == gt {
+      if let Some(ns) = iter.peek().map(|n| n.text) {
+        if ns == eq { iter.next(); result.push(T_CS!("\\ge")); }
+        else if ns == gt { iter.next(); result.push(T_CS!("\\gg")); }
+        else { result.push(t); }
+      } else {
+        result.push(t);
       }
-      "<" => {
-        if let Some(ns) = iter.peek().map(|n| n.to_string()) {
-          if ns == "=" { iter.next(); result.push(T_CS!("\\le")); }
-          else if ns == "<" { iter.next(); result.push(T_CS!("\\ll")); }
-          else { result.push(t); }
-        } else {
-          result.push(t);
-        }
+    } else if t.text == lt {
+      if let Some(ns) = iter.peek().map(|n| n.text) {
+        if ns == eq { iter.next(); result.push(T_CS!("\\le")); }
+        else if ns == lt { iter.next(); result.push(T_CS!("\\ll")); }
+        else { result.push(t); }
+      } else {
+        result.push(t);
       }
-      _ => result.push(t),
+    } else {
+      result.push(t);
     }
   }
   result
@@ -439,14 +472,14 @@ fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
       *arg2 = arg2.take().map(|n| Box::new(six_postprocess_aux(*n)));
     }
     SixNumber::Simple { decimal, fraction, integer, sign, .. } => {
-      if six_get_bool("add-decimal-zero") && decimal.is_some() && fraction.is_none() {
+      if six_get_bool_sym(six_pin!("add-decimal-zero")) && decimal.is_some() && fraction.is_none() {
         *fraction = Some(Tokens::new(vec![T_OTHER!("0")]));
       }
-      if six_get_bool("add-integer-zero") && decimal.is_some() && integer.is_none() {
+      if six_get_bool_sym(six_pin!("add-integer-zero")) && decimal.is_some() && integer.is_none() {
         *integer = Some(Tokens::new(vec![T_OTHER!("0")]));
       }
       if sign.is_none() {
-        if let Some(Stored::Tokens(s)) = six_get("explicit-sign") {
+        if let Some(Stored::Tokens(s)) = six_get_sym(six_pin!("explicit-sign")) {
           if !s.is_empty() { *sign = Some(s); }
         }
       }
@@ -465,7 +498,7 @@ enum SixParseResult {
 }
 
 fn six_parse_number(expr: &Tokens) -> SixParseResult {
-  if six_get_bool("parse-numbers") {
+  if six_get_bool_sym(six_pin!("parse-numbers")) {
     let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let result = six_postprocess(six_match_number(&mut tokens));
@@ -482,7 +515,7 @@ fn six_parse_number(expr: &Tokens) -> SixParseResult {
 }
 
 fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
-  if six_get_bool("parse-numbers") {
+  if six_get_bool_sym(six_pin!("parse-numbers")) {
     let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let mut results = Vec::new();
@@ -492,7 +525,7 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
         Some(n) => results.push(SixParseResult::Parsed(n)),
         None => break,
       }
-      if tokens.first().is_some_and(|t| t.to_string() == ";") {
+      if tokens.first().is_some_and(|t| t.text == pin!(";")) {
         tokens.remove(0);
       } else {
         break;
@@ -503,15 +536,14 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     }
     results
   } else {
-    let tokens = expr.clone().unlist();
     let mut results = Vec::new();
     let mut current = Vec::new();
-    for t in tokens {
-      if t.to_string() == ";" {
+    for t in expr.unlist_ref() {
+      if t.text == pin!(";") {
         results.push(SixParseResult::Raw(Tokens::new(current)));
         current = Vec::new();
       } else {
-        current.push(t);
+        current.push(*t);
       }
     }
     if !current.is_empty() {
@@ -572,10 +604,10 @@ fn six_number_string(number: &SixNumber) -> String {
 }
 
 fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
-  let digs: Vec<Token> = digits.clone().unlist();
-  let min: usize = six_get_choice("group-minimum-digits").parse().unwrap_or(5);
-  if min > digs.len() { return digits.clone(); }
-  let sep = six_get_tokens("group-separator");
+  let min: usize = six_get_choice_sym(six_pin!("group-minimum-digits")).parse().unwrap_or(5);
+  if min > digits.len() { return digits.clone(); }
+  let digs: Vec<Token> = digits.unlist_ref().clone();
+  let sep = six_get_tokens_sym(six_pin!("group-separator"));
   let g = 3usize;
   let mut result = Vec::new();
 
@@ -588,7 +620,7 @@ fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
         chunk.insert(0, remaining.pop().unwrap());
       }
       if !result.is_empty() {
-        result.splice(0..0, sep.clone().unlist());
+        result.splice(0..0, sep.unlist_ref().iter().copied());
       }
       result.splice(0..0, chunk);
     }
@@ -596,7 +628,7 @@ fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
     let mut remaining = digs;
     while !remaining.is_empty() {
       if !result.is_empty() {
-        result.extend(sep.clone().unlist());
+        result.extend_from_slice(sep.unlist_ref());
       }
       for _ in 0..g {
         if remaining.is_empty() { break; }
@@ -610,14 +642,14 @@ fn six_groupdigits(digits: &Tokens, direction: i32) -> Tokens {
 
 fn six_format_simplenumber(number: &SixNumber) -> Tokens {
   if let SixNumber::Simple { sign, integer, fraction, decimal } = number {
-    let grouping = six_get_choice("group-digits");
+    let grouping = six_get_choice_sym(six_pin!("group-digits"));
     let mut tokens = Vec::new();
     let mut trailer = Vec::new();
 
     if let Some(s) = sign {
       let s_str = s.to_string();
       if s_str.contains('-') {
-        if let Some(Stored::Tokens(c)) = six_get("negative-color") {
+        if let Some(Stored::Tokens(c)) = six_get_sym(six_pin!("negative-color")) {
           tokens.push(T_BEGIN!());
           tokens.push(T_CS!("\\color"));
           tokens.push(T_BEGIN!());
@@ -625,17 +657,17 @@ fn six_format_simplenumber(number: &SixNumber) -> Tokens {
           tokens.push(T_END!());
           trailer.insert(0, T_END!());
         }
-        if six_get_bool("bracket-negative-numbers") {
-          tokens.extend(six_get_tokens("open-bracket").unlist());
-          let cb = six_get_tokens("close-bracket");
+        if six_get_bool_sym(six_pin!("bracket-negative-numbers")) {
+          tokens.extend(six_get_tokens_sym(six_pin!("open-bracket")).unlist());
+          let cb = six_get_tokens_sym(six_pin!("close-bracket"));
           trailer.splice(0..0, cb.unlist());
         } else {
-          tokens.extend(s.clone().unlist());
+          tokens.extend_from_slice(s.unlist_ref());
         }
-      } else if s_str.contains('+') && !six_get_bool("retain-explicit-plus") {
+      } else if s_str.contains('+') && !six_get_bool_sym(six_pin!("retain-explicit-plus")) {
         // drop +
       } else {
-        tokens.extend(s.clone().unlist());
+        tokens.extend_from_slice(s.unlist_ref());
       }
     }
 
@@ -650,18 +682,18 @@ fn six_format_simplenumber(number: &SixNumber) -> Tokens {
 
     let has_decimal = decimal.is_some();
     let has_fraction = fraction.is_some();
-    if six_get_bool("copy-decimal-marker") {
+    if six_get_bool_sym(six_pin!("copy-decimal-marker")) {
       if has_decimal {
         if let Some(d) = decimal {
           if !d.is_empty() {
-            tokens.extend(d.clone().unlist());
+            tokens.extend_from_slice(d.unlist_ref());
           } else {
-            tokens.extend(six_get_tokens("output-decimal-marker").unlist());
+            tokens.extend(six_get_tokens_sym(six_pin!("output-decimal-marker")).unlist());
           }
         }
       }
     } else if has_fraction || has_decimal {
-      tokens.extend(six_get_tokens("output-decimal-marker").unlist());
+      tokens.extend(six_get_tokens_sym(six_pin!("output-decimal-marker")).unlist());
     }
 
     if let Some(frac) = fraction {
@@ -705,13 +737,13 @@ fn six_format_infix(op: Tokens, left: Option<Tokens>, right: Option<Tokens>, arg
   );
 
   let mut pres = Vec::new();
-  if let Some(l) = &left { pres.extend(l.clone().unlist()); }
+  if let Some(l) = &left { pres.extend_from_slice(l.unlist_ref()); }
   pres.push(i_arg("2"));
   for i in 3..=n + 1 {
     pres.push(i_arg("1"));
     pres.push(i_arg(&i.to_string()));
   }
-  if let Some(r) = &right { pres.extend(r.clone().unlist()); }
+  if let Some(r) = &right { pres.extend_from_slice(r.unlist_ref()); }
 
   let mut all_args = vec![op];
   all_args.extend(args);
@@ -730,7 +762,7 @@ fn six_format_number(number: &SixParseResult, bracket: i32) -> Tokens {
 }
 
 fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
-  let bracket = if bracket > 0 && six_get_bool("bracket-numbers") { bracket } else { 0 };
+  let bracket = if bracket > 0 && six_get_bool_sym(six_pin!("bracket-numbers")) { bracket } else { 0 };
 
   match number {
     SixNumber::Simple { .. } => six_format_simplenumber(number),
@@ -739,16 +771,16 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
         "uncertain" => {
           let a1 = arg1.as_deref();
           let a2 = arg2.as_deref();
-          if a2.is_none() || six_get_bool("omit-uncertainty") {
+          if a2.is_none() || six_get_bool_sym(six_pin!("omit-uncertainty")) {
             return a1.map(|n| six_format_number_inner(n, 0)).unwrap_or_default();
           }
           let fa1 = a1.map(|n| six_format_number_inner(n, 0)).unwrap_or_default();
           let fa2 = a2.map(|n| six_format_number_inner(n, 0)).unwrap_or_default();
-          if six_get_bool("separate-uncertainty") {
+          if six_get_bool_sym(six_pin!("separate-uncertainty")) {
             six_format_infix(Tokens::new(vec![T_CS!("\\pm")]), None, None, vec![fa1, fa2])
           } else {
-            let open = six_get_tokens("output-open-uncertainty");
-            let close = six_get_tokens("output-close-uncertainty");
+            let open = six_get_tokens_sym(six_pin!("output-open-uncertainty"));
+            let close = six_get_tokens_sym(six_pin!("output-close-uncertainty"));
             let mut tks = fa1.unlist();
             tks.extend(open.unlist());
             tks.extend(fa2.unlist());
@@ -760,16 +792,16 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           if let SixNumber::Operator { arg1, arg2, sign, symbol, .. } = number {
             let real = arg1.as_deref().map(|n| six_format_number_inner(n, 0));
             let imag = arg2.as_deref().map(|n| six_format_number_inner(n, 0));
-            let i_tok = if six_get_bool("copy-complex-root") {
-              symbol.clone().unwrap_or_else(|| six_get_tokens("output-complex-root"))
+            let i_tok = if six_get_bool_sym(six_pin!("copy-complex-root")) {
+              symbol.clone().unwrap_or_else(|| six_get_tokens_sym(six_pin!("output-complex-root")))
             } else {
-              six_get_tokens("output-complex-root")
+              six_get_tokens_sym(six_pin!("output-complex-root"))
             };
 
             let mut result = Vec::new();
-            if let Some(r) = &real { result.extend(r.clone().unlist()); }
-            if let Some(s) = sign { result.extend(s.clone().unlist()); }
-            if let Some(im) = &imag { result.extend(im.clone().unlist()); }
+            if let Some(r) = &real { result.extend_from_slice(r.unlist_ref()); }
+            if let Some(s) = sign { result.extend_from_slice(s.unlist_ref()); }
+            if let Some(im) = &imag { result.extend_from_slice(im.unlist_ref()); }
             result.extend(i_tok.unlist());
             Tokens::new(result)
           } else {
@@ -783,13 +815,13 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           if let Some(a2) = a2 {
             let has_content = a2.get_integer().is_some_and(|i| !i.is_empty())
               || a2.get_fraction().is_some_and(|f| !f.is_empty());
-            if !six_get_bool("retain-zero-exponent") && !has_content {
+            if !six_get_bool_sym(six_pin!("retain-zero-exponent")) && !has_content {
               return a1.map(|n| six_format_number_inner(n, 0)).unwrap_or_default();
             }
           }
 
           let fa1 = a1.map(|n| six_format_number_inner(n, 1)).unwrap_or_default();
-          let base = six_get_tokens("exponent-base");
+          let base = six_get_tokens_sym(six_pin!("exponent-base"));
           let fa2 = a2.map(|n| six_format_number_inner(n, 0)).unwrap_or_default();
           let power = i_superscript(
             &[("operator_meaning", Tokenize!("power"))],
@@ -800,18 +832,15 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             n.get_integer().is_some() || n.get_fraction().is_some() || n.is_operator()
           });
           let times = if has_mantissa {
-            six_get_op(
-              &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-              "exponent-product",
-            )
+            six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("exponent-product"))
           } else {
             Tokens::new(vec![T_CS!("\\lx@InvisibleTimes")])
           };
 
           six_format_infix(
             times,
-            if bracket > 1 { Some(six_get_tokens("open-bracket")) } else { None },
-            if bracket > 1 { Some(six_get_tokens("close-bracket")) } else { None },
+            if bracket > 1 { Some(six_get_tokens_sym(six_pin!("open-bracket"))) } else { None },
+            if bracket > 1 { Some(six_get_tokens_sym(six_pin!("close-bracket"))) } else { None },
             vec![fa1, power],
           )
         }
@@ -827,26 +856,20 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
         "product" => {
           let fa1 = arg1.as_deref().map(|n| six_format_number_inner(n, 1)).unwrap_or_default();
           let fa2 = arg2.as_deref().map(|n| six_format_number_inner(n, 1)).unwrap_or_default();
-          let times = six_get_op(
-            &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-            "output-product",
-          );
+          let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("output-product"));
           six_format_infix(times, None, None, vec![fa1, fa2])
         }
         "quotient" => {
           let fa1 = arg1.as_deref().map(|n| six_format_number_inner(n, 1)).unwrap_or_default();
           let fa2 = arg2.as_deref().map(|n| six_format_number_inner(n, 2)).unwrap_or_default();
-          if six_get_choice("quotient-mode") == "fraction" {
-            let frac = six_get_tokens("fraction-function");
+          if six_get_choice_sym(six_pin!("quotient-mode")) == "fraction" {
+            let frac = six_get_tokens_sym(six_pin!("fraction-function"));
             let mut tks = frac.unlist();
             tks.push(T_BEGIN!()); tks.extend(fa1.unlist()); tks.push(T_END!());
             tks.push(T_BEGIN!()); tks.extend(fa2.unlist()); tks.push(T_END!());
             Tokens::new(tks)
           } else {
-            let div = six_get_op(
-              &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
-              "output-quotient",
-            );
+            let div = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))], six_pin!("output-quotient"));
             six_format_infix(div, None, None, vec![fa1, fa2])
           }
         }
@@ -859,12 +882,12 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
 fn six_format_range(bracketed: bool, first: Tokens, last: Tokens) -> Tokens {
   let mut range_pres = Vec::new();
   range_pres.push(i_arg("1"));
-  range_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "range-phrase").unlist());
+  range_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("range-phrase")).unlist());
   range_pres.push(i_arg("2"));
 
   if bracketed {
-    range_pres.insert(0, six_get_op(&[("role", Tokenize!("OPEN"))], "open-bracket").unlist().remove(0));
-    range_pres.extend(six_get_op(&[("role", Tokenize!("CLOSE"))], "close-bracket").unlist());
+    range_pres.insert(0, six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket")).unlist().remove(0));
+    range_pres.extend(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket")).unlist());
   }
 
   let content = i_apply(
@@ -883,21 +906,21 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   let mut list_pres = Vec::new();
   if n == 2 {
     list_pres.push(i_arg("1"));
-    list_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "list-pair-separator").unlist());
+    list_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("list-pair-separator")).unlist());
     list_pres.push(i_arg("2"));
   } else {
     list_pres.push(i_arg("1"));
     for i in 2..n {
-      list_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "list-separator").unlist());
+      list_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("list-separator")).unlist());
       list_pres.push(i_arg(&i.to_string()));
     }
-    list_pres.extend(six_get_op(&[("role", Tokenize!("PUNCT"))], "list-final-separator").unlist());
+    list_pres.extend(six_get_op_sym(&[("role", Tokenize!("PUNCT"))], six_pin!("list-final-separator")).unlist());
     list_pres.push(i_arg(&n.to_string()));
   }
 
   if n > 1 && bracketed {
-    list_pres.splice(0..0, six_get_op(&[("role", Tokenize!("OPEN"))], "open-bracket").unlist());
-    list_pres.extend(six_get_op(&[("role", Tokenize!("CLOSE"))], "close-bracket").unlist());
+    list_pres.splice(0..0, six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket")).unlist());
+    list_pres.extend(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket")).unlist());
   }
 
   let content = i_apply(
@@ -910,7 +933,7 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
 
 /// Perl: six_wrap — wrap in inline math with optional color
 fn six_wrap(content: Tokens) -> Tokens {
-  let color = six_get_tokens("color");
+  let color = six_get_tokens_sym(six_pin!("color"));
   let mut tks = Vec::new();
   if !color.is_empty() {
     tks.push(T_BEGIN!());
@@ -922,7 +945,7 @@ fn six_wrap(content: Tokens) -> Tokens {
   tks.push(T_CS!("\\lx@begin@inline@math"));
   tks.extend(content.unlist());
   tks.push(T_CS!("\\lx@end@inline@math"));
-  if !six_get_tokens("color").is_empty() {
+  if !six_get_tokens_sym(six_pin!("color")).is_empty() {
     tks.push(T_END!());
   }
   Tokens::new(tks)
@@ -958,34 +981,44 @@ struct SixUnit {
 }
 
 /// Parse unit definitions into structured units
-fn six_parse_units(defns: &[SixUnitDefn]) -> Vec<SixUnit> {
+fn six_parse_units(defns: Vec<SixUnitDefn>) -> Vec<SixUnit> {
   let mut units = Vec::new();
-  let sticky_per = six_get_bool("sticky-per");
+  let sticky_per = six_get_bool_sym(six_pin!("sticky-per"));
   let mut saved_per = false;
+  // Consume defns as an iterator of Options — each slot holds the
+  // SixUnitDefn until we move it into a SixUnit role slot. This skips
+  // the per-role `.clone()` pass the prior `&[SixUnitDefn]` signature
+  // forced (6 × N clones per unit block, each cloning 3 Strings + 3
+  // optional allocations). Cost drops to zero allocations for the
+  // role-binding phase.
+  let mut slots: Vec<Option<SixUnitDefn>> = defns.into_iter().map(Some).collect();
   let mut idx = 0;
 
-  while idx < defns.len() {
+  while idx < slots.len() {
     let mut unit = SixUnit::default();
 
     for role in &["per", "prepower", "prefix", "unit", "qualifier", "postpower"] {
-      while idx < defns.len() {
-        let r = &defns[idx].unit_type;
-        if r == *role {
+      while idx < slots.len() {
+        let r_matches = slots[idx].as_ref().map(|d| d.unit_type.as_str()) == Some(*role);
+        let r_is_style = slots[idx].as_ref().map(|d| d.unit_type.as_str()) == Some("style");
+        if r_matches {
+          let d = slots[idx].take().unwrap();
           match *role {
             "per" => unit.per = true,
-            "prepower" => unit.prepower = Some(defns[idx].clone()),
-            "prefix" => unit.prefix = Some(defns[idx].clone()),
-            "unit" => unit.unit = Some(defns[idx].clone()),
-            "qualifier" => unit.qualifier = Some(defns[idx].clone()),
-            "postpower" => unit.postpower = Some(defns[idx].clone()),
+            "prepower" => unit.prepower = Some(d),
+            "prefix" => unit.prefix = Some(d),
+            "unit" => unit.unit = Some(d),
+            "qualifier" => unit.qualifier = Some(d),
+            "postpower" => unit.postpower = Some(d),
             _ => {}
           }
           idx += 1;
           break;
-        } else if r == "style" {
+        } else if r_is_style {
+          let d = slots[idx].take().unwrap();
           if unit.prefix.is_none() && unit.unit.is_none() {
-            if defns[idx].name == "cancel" { unit.cancel = true; }
-            if defns[idx].name == "highlight" { unit.highlight_color = defns[idx].color.clone(); }
+            if d.name == "cancel" { unit.cancel = true; }
+            if d.name == "highlight" { unit.highlight_color = d.color; }
           }
           idx += 1;
         } else {
@@ -997,7 +1030,7 @@ fn six_parse_units(defns: &[SixUnitDefn]) -> Vec<SixUnit> {
     if unit.unit.is_none() && unit.prefix.is_none() && !unit.per
       && unit.prepower.is_none() && unit.postpower.is_none()
     {
-      if idx < defns.len() { idx += 1; }
+      if idx < slots.len() { idx += 1; }
       continue;
     }
 
@@ -1077,48 +1110,55 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
 /// Format product of units
 fn six_format_unitproduct(bracketed: bool, units: &[SixUnit]) -> Tokens {
   let formatted: Vec<Tokens> = units.iter().map(six_format_1unit).collect();
-  let inter = six_get_op(
-    &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-    "inter-unit-product",
-  );
+  let inter = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("inter-unit-product"));
   six_format_infix(
     inter,
-    if bracketed { Some(six_get_op(&[("role", Tokenize!("OPEN"))], "open-bracket")) } else { None },
-    if bracketed { Some(six_get_op(&[("role", Tokenize!("CLOSE"))], "close-bracket")) } else { None },
+    if bracketed { Some(six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket"))) } else { None },
+    if bracketed { Some(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket"))) } else { None },
     formatted,
   )
 }
 
 /// Format units handling per-mode
 fn six_format_units(units: &[SixUnit]) -> Tokens {
-  let permode = six_get_choice("per-mode");
+  let permode = six_get_choice_sym(six_pin!("per-mode"));
   if permode == "reciprocal" || units.iter().all(|u| !u.per) {
     return six_format_unitproduct(false, units);
   }
 
-  let numer: Vec<&SixUnit> = units.iter().filter(|u| !u.per).collect();
-  let denom: Vec<&SixUnit> = units.iter().filter(|u| u.per).collect();
-
-  let denom_units: Vec<SixUnit> = denom.iter().map(|u| { let mut uu = (*u).clone(); uu.per = false; uu }).collect();
-  let numer_units: Vec<SixUnit> = numer.iter().map(|u| (*u).clone()).collect();
-
-  if permode == "fraction" {
-    let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
-    tks.extend(six_format_unitproduct(false, &numer_units).unlist());
-    tks.push(T_END!()); tks.push(T_BEGIN!());
-    tks.extend(six_format_unitproduct(false, &denom_units).unlist());
-    tks.push(T_END!());
-    Tokens::new(tks)
-  } else if permode == "symbol" {
-    let bracket = denom_units.len() > 1 && six_get_bool("bracket-unit-denominator");
-    let per_sym = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
-      "per-symbol",
-    );
-    six_format_infix(per_sym, None, None, vec![
-      six_format_unitproduct(false, &numer_units),
-      six_format_unitproduct(bracket, &denom_units),
-    ])
+  // For "fraction" and "symbol" modes we need partitioned owned
+  // unit lists. For any other permode the original `units` slice
+  // is used as-is.
+  if permode == "fraction" || permode == "symbol" {
+    let (numer_units, denom_units): (Vec<SixUnit>, Vec<SixUnit>) = {
+      let mut n = Vec::with_capacity(units.len());
+      let mut d = Vec::with_capacity(units.len());
+      for u in units {
+        if u.per {
+          let mut uu = u.clone();
+          uu.per = false;
+          d.push(uu);
+        } else {
+          n.push(u.clone());
+        }
+      }
+      (n, d)
+    };
+    if permode == "fraction" {
+      let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
+      tks.extend(six_format_unitproduct(false, &numer_units).unlist());
+      tks.push(T_END!()); tks.push(T_BEGIN!());
+      tks.extend(six_format_unitproduct(false, &denom_units).unlist());
+      tks.push(T_END!());
+      Tokens::new(tks)
+    } else {
+      let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
+      let per_sym = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))], six_pin!("per-symbol"));
+      six_format_infix(per_sym, None, None, vec![
+        six_format_unitproduct(false, &numer_units),
+        six_format_unitproduct(bracket, &denom_units),
+      ])
+    }
   } else {
     six_format_unitproduct(false, units)
   }
@@ -1126,14 +1166,13 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
 
 /// Perl: six_parse_literalunits — parse literal (non-macro) unit expressions
 fn six_parse_literalunits(expr: &Tokens) -> Tokens {
-  let tokens = expr.clone().unlist();
   let mut result = Vec::new();
-  let mut iter = tokens.into_iter().peekable();
+  let mut iter = expr.unlist_ref().iter().copied().peekable();
 
   while let Some(t) = iter.next() {
     let tc = t.get_catcode();
-    if t.to_string() == "." {
-      result.extend(six_get_tokens("inter-unit-product").unlist());
+    if t.text == pin!(".") {
+      result.extend(six_get_tokens_sym(six_pin!("inter-unit-product")).unlist());
     } else if tc == Catcode::SUPER {
       if let Some(next) = iter.peek() {
         if next.get_catcode() == Catcode::BEGIN {
@@ -1179,7 +1218,7 @@ fn six_process_units(expr: &Tokens) -> Tokens {
   let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
   if let Some(defns) = six_convert_units_from_tokens(&expanded) {
     if !defns.is_empty() {
-      let units = six_parse_units(&defns);
+      let units = six_parse_units(defns);
       return six_format_units(&units);
     }
   }
@@ -1192,18 +1231,21 @@ fn six_process_units(expr: &Tokens) -> Tokens {
 /// Replace \lx@six@unitobject{name} tokens with \mathrm{presentation} tokens.
 /// Must be called while siunitx_macros mapping is active (inside \SI{}{} processing).
 fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
-  let toks = tokens.clone().unlist();
   let mut result = Vec::new();
-  let mut iter = toks.into_iter().peekable();
+  let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut had_substitution = false;
+  // Pre-intern the two dispatch CS names so the per-token check is
+  // u32 equality (not `t.to_string()` alloc + string compare).
+  let unitobject_sym = pin!("\\lx@six@unitobject");
+  let unitobject_arg_sym = pin!("\\lx@six@unitobject@arg");
 
   while let Some(t) = iter.next() {
-    let ts = t.to_string();
-    if ts == "\\lx@six@unitobject" {
+    if t.text == unitobject_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
-        if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-          let encoded_str = arena::with(encoded, |s| s.to_string());
-          if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+        if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
+          // Decode directly from the arena-borrowed &str — was
+          // cloning via `.to_string()` into a temporary String.
+          if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
             let pres = defn.presentation;
             if !pres.is_empty() {
               // Emit raw presentation tokens — six_parse_literalunits will wrap
@@ -1218,12 +1260,11 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
         result.extend(ExplodeText!(&name));
         had_substitution = true;
       }
-    } else if ts == "\\lx@six@unitobject@arg" {
+    } else if t.text == unitobject_arg_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
-          if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-            let encoded_str = arena::with(encoded, |s| s.to_string());
-            if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+          if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
+            if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               let pres = defn.presentation;
               if !pres.is_empty() {
                 result.extend(pres.unlist());
@@ -1251,31 +1292,33 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
 
 /// Parse expanded tokens looking for \lx@six@unitobject{name} patterns
 fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
-  let toks = tokens.clone().unlist();
-  let mut iter = toks.into_iter().peekable();
+  let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut defns = Vec::new();
 
+  // Pre-intern the CS token names we dispatch on — avoid a per-iteration
+  // `t.to_string()` String alloc (was called on every peeked token).
+  let unitobject_sym = pin!("\\lx@six@unitobject");
+  let unitobject_arg_sym = pin!("\\lx@six@unitobject@arg");
+  let dot_sym = pin!(".");
+
   while let Some(t) = iter.peek() {
-    let ts = t.to_string();
-    if ts == "\\lx@six@unitobject" {
+    if t.text == unitobject_sym {
       iter.next();
       // Read {name} group
       if let Some(name) = read_brace_group_str(&mut iter) {
         // Look up in siunitx_macros mapping
-        if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-          let encoded_str = arena::with(encoded, |s| s.to_string());
-          if let Some(defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+        if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
+          if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
             defns.push(defn);
           }
         }
       }
-    } else if ts == "\\lx@six@unitobject@arg" {
+    } else if t.text == unitobject_arg_sym {
       iter.next();
       if let Some(name) = read_brace_group_str(&mut iter) {
         if let Some(arg) = read_brace_group_str(&mut iter) {
-          if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", &name) {
-            let encoded_str = arena::with(encoded, |s| s.to_string());
-            if let Some(mut defn) = decode_unit_defn_from_encoded(&name, &encoded_str) {
+          if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), &name) {
+            if let Some(mut defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               // Apply arg to the appropriate field
               if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
                 defn.power = Some(Tokenize!(&arg));
@@ -1287,7 +1330,7 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
           }
         }
       }
-    } else if t.get_catcode() == Catcode::SPACE || ts == "." {
+    } else if t.get_catcode() == Catcode::SPACE || t.text == dot_sym {
       iter.next(); // skip spaces and dots (unit product separators)
     } else if !defns.is_empty() {
       // Non-unit content after some units found — stop here, use what we have.
@@ -1312,7 +1355,9 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(iter: &mut std::iter::Peekabl
       for t in iter.by_ref() {
         if t.get_catcode() == Catcode::END { level -= 1; if level == 0 { break; } }
         else if t.get_catcode() == Catcode::BEGIN { level += 1; }
-        result.push_str(&t.to_string());
+        // `.with_str` borrows the arena entry directly — no per-token
+        // String alloc (the prior `&t.to_string()` was ~30 ns/token).
+        t.with_str(|s| result.push_str(s));
       }
       return Some(result);
     }
@@ -1320,20 +1365,53 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(iter: &mut std::iter::Peekabl
   None
 }
 
-/// Decode a SixUnitDefn from "type|presentation|power|base" format
-fn decode_unit_defn_from_encoded(name: &str, encoded: &str) -> Option<SixUnitDefn> {
-  let parts: Vec<&str> = encoded.splitn(4, '|').collect();
-  if parts.is_empty() { return None; }
-  Some(SixUnitDefn {
-    name: name.to_string(),
-    unit_type: parts[0].to_string(),
-    presentation: Tokenize!(parts.get(1).unwrap_or(&"")),
-    power: parts.get(2).and_then(|p| if p.is_empty() { None } else { Some(Tokenize!(p)) }),
-    base: parts.get(3).and_then(|b| b.parse().ok()),
-    arg: None,
-    color: None,
-  })
+// Cache of decoded SixUnitDefn "template" (everything except the
+// caller-provided `name`) keyed by the encoded string's interned
+// SymStr. Every \SI / \num / \si invocation re-decodes the same
+// unit definitions (e.g. `\metre`, `\kilo`) for every usage — the
+// raw decode allocates 3 Strings + 2 Token vectors each time.
+// Caching by the encoded SymStr is automatically invalidation-safe:
+// if a \DeclareSIUnit redefines `\metre`, the new encoded string
+// interns to a different SymStr, so the old cache entry is simply
+// never looked up again.
+thread_local! {
+  static UNIT_DEFN_CACHE: std::cell::RefCell<
+    rustc_hash::FxHashMap<::latexml_core::common::arena::SymStr, SixUnitDefn>,
+  > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
 }
+
+/// Decode a SixUnitDefn from "type|presentation|power|base" format.
+/// Takes the already-interned `encoded_sym` so we can cache-lookup
+/// without re-pinning. `name` is the caller's lookup key (not part of
+/// the encoded value).
+fn decode_unit_defn_from_encoded_sym(
+  name: &str,
+  encoded_sym: ::latexml_core::common::arena::SymStr,
+) -> Option<SixUnitDefn> {
+  // Fast path: cache hit by the encoded string's SymStr.
+  if let Some(cached) = UNIT_DEFN_CACHE.with(|c| c.borrow().get(&encoded_sym).cloned()) {
+    let mut defn = cached;
+    defn.name = name.to_string();
+    return Some(defn);
+  }
+
+  let defn = ::latexml_core::common::arena::with(encoded_sym, |encoded| {
+    let parts: Vec<&str> = encoded.splitn(4, '|').collect();
+    if parts.is_empty() { return None; }
+    Some(SixUnitDefn {
+      name: name.to_string(),
+      unit_type: parts[0].to_string(),
+      presentation: Tokenize!(parts.get(1).unwrap_or(&"")),
+      power: parts.get(2).and_then(|p| if p.is_empty() { None } else { Some(Tokenize!(p)) }),
+      base: parts.get(3).and_then(|b| b.parse().ok()),
+      arg: None,
+      color: None,
+    })
+  })?;
+  UNIT_DEFN_CACHE.with(|c| c.borrow_mut().insert(encoded_sym, defn.clone()));
+  Some(defn)
+}
+
 
 /// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
 fn six_enable_unit_macros(overwrite: bool) {
@@ -1343,7 +1421,7 @@ fn six_enable_unit_macros(overwrite: bool) {
       if name.is_empty() { continue; }
       let cs = T_CS!(&format!("\\{name}"));
       let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
-      if overwrite || state::lookup_meaning(&cs).is_none() {
+      if overwrite || !state::has_meaning(&cs) {
         state::let_i(&cs, &impl_cs, None);
       }
     }
@@ -1380,7 +1458,7 @@ fn resolve_unit_presentation(pres: &Tokens) -> String {
       let cs_name = tok.to_string();
       let unit_name = cs_name.trim_start_matches('\\');
       // Look up in siunitx_macros mapping
-      if let Some(Stored::String(encoded)) = state::lookup_mapping("siunitx_macros", unit_name) {
+      if let Some(Stored::String(encoded)) = state::lookup_mapping_sym(pin!("siunitx_macros"), unit_name) {
         let encoded_str = arena::with(encoded, |s| s.to_string());
         let parts: Vec<&str> = encoded_str.splitn(4, '|').collect();
         if parts.len() >= 2 {
@@ -1477,8 +1555,8 @@ LoadDefinitions!({
   //======================================================================
   // \lx@six@initialize
   DefPrimitive!("\\lx@six@initialize", {
-    if six_get_bool("free-standing-units") {
-      six_enable_unit_macros(six_get_bool("overwrite-functions"));
+    if six_get_bool_sym(six_pin!("free-standing-units")) {
+      six_enable_unit_macros(six_get_bool_sym(six_pin!("overwrite-functions")));
     }
   });
 
@@ -1561,7 +1639,7 @@ LoadDefinitions!({
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
 
     // Let \cs = \relax if not yet defined
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1583,7 +1661,7 @@ LoadDefinitions!({
 
     // Perl L1264: Uses collapsible form for prefix declarations
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1602,7 +1680,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1622,7 +1700,7 @@ LoadDefinitions!({
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
     // Let \cs = \relax if not yet defined (prevents "undefined" errors)
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1641,7 +1719,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1661,7 +1739,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if state::lookup_meaning(&cs).is_none() {
+    if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
@@ -1809,10 +1887,7 @@ LoadDefinitions!({
     six_begin_processing(kv.as_ref());
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
-    let times = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-      "number-unit-product",
-    );
+    let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let funits = i_wrap(None, six_process_units(&units));
     let result = six_wrap(six_format_infix(times, None, None, vec![fnumber, funits]));
     six_end_processing();
@@ -1824,11 +1899,8 @@ LoadDefinitions!({
     let numbers = numbers_arg.clone();
     let units = units_arg.clone();
     six_begin_processing(kv.as_ref());
-    let times = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-      "number-unit-product",
-    );
-    let mode = six_get_choice("list-units");
+    let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
+    let mode = six_get_choice_sym(six_pin!("list-units"));
     let items: Vec<Tokens> = six_parse_numbers(&numbers).iter()
       .map(|p| six_format_number(p, 0)).collect();
     six_enable_unit_macros(true);
@@ -1853,11 +1925,8 @@ LoadDefinitions!({
     let last = last_arg.clone();
     let units = units_arg.clone();
     six_begin_processing(kv.as_ref());
-    let times = six_get_op(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))],
-      "number-unit-product",
-    );
-    let mode = six_get_choice("range-units");
+    let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
+    let mode = six_get_choice_sym(six_pin!("range-units"));
     let fnumber = six_format_number(&six_parse_number(&first), 0);
     let lnumber = six_format_number(&six_parse_number(&last), 0);
     six_enable_unit_macros(true);

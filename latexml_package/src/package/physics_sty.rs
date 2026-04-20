@@ -23,7 +23,7 @@ fn phys_read_size() -> Result<(bool, Option<Token>)> {
   let next = gullet::read_token()?;
   let mut pending = next;
   if let Some(ref t) = pending {
-    if t.to_string() == "*" {
+    if t.text == pin!("*") {
       no_stretch = true;
       pending = gullet::read_token()?;
     }
@@ -477,9 +477,12 @@ LoadDefinitions!({
     if arg.is_none() {
       // No argument — put back the power and return bare operator
       if let Some(ref pwr) = power {
-        gullet::unread(Tokens::new(
-          [vec![T_OTHER!("[")], pwr.clone().unlist(), vec![T_OTHER!("]")]].concat()
-        ));
+        let pwr_toks = pwr.unlist_ref();
+        let mut bracketed = Vec::with_capacity(pwr_toks.len() + 2);
+        bracketed.push(T_OTHER!("["));
+        bracketed.extend_from_slice(pwr_toks);
+        bracketed.push(T_OTHER!("]"));
+        gullet::unread(Tokens::new(bracketed));
       }
       let result = i_dual(
         &[("reversion", cs_tks.clone())],
@@ -834,7 +837,7 @@ LoadDefinitions!({
     };
 
     // Check if expr is empty
-    let expr = expr.and_then(|e| if e.is_empty() { None } else { Some(e) });
+    let expr = expr.filter(|e| !e.is_empty());
 
     let frac_cs = if inline { T_CS!("\\ifrac") } else { T_CS!("\\frac") };
 
@@ -929,7 +932,7 @@ LoadDefinitions!({
         let a3 = Tokens::new(vec![i_arg("3")]);
         numer.extend(i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc.clone(), a3.clone()).unlist());
       } else {
-        numer.extend(pfunc.clone().unlist());
+        numer.extend_from_slice(pfunc.unlist_ref());
       }
       if has_expr && !has_open {
         numer.push(i_arg("1"));
@@ -1125,7 +1128,7 @@ LoadDefinitions!({
       let mut pres = Vec::new();
       pres.extend(open_tks.unlist());
       pres.push(i_arg("2"));
-      pres.extend(middle_tks.clone().unlist());
+      pres.extend_from_slice(middle_tks.unlist_ref());
       pres.push(i_arg("1"));
       pres.extend(middle_tks.unlist());
       pres.push(i_arg("3"));
@@ -1178,7 +1181,7 @@ LoadDefinitions!({
     let mut pres = Vec::new();
     pres.extend(open_tks.unlist());
     pres.push(i_arg("1"));
-    pres.extend(middle_tks.clone().unlist());
+    pres.extend_from_slice(middle_tks.unlist_ref());
     pres.push(i_arg("2"));
     pres.extend(middle_tks.unlist());
     pres.push(i_arg("3"));
@@ -1226,7 +1229,7 @@ LoadDefinitions!({
       if i > 0 { tks.push(T_CS!("\\\\")); }
       for j in 0..m_val {
         if j > 0 { tks.push(T_ALIGN!()); }
-        tks.extend(item_tks.clone().unlist());
+        tks.extend_from_slice(item_tks.unlist_ref());
       }
     }
     gullet::unread(Tokens::new(tks));
@@ -1240,6 +1243,10 @@ LoadDefinitions!({
     let tks = match n_val {
       0 => Tokenize!("1 & 0 \\\\ 0 & 1"),
       1 => Tokenize!("0 & 1 \\\\ 1 & 0"),
+      // FIXME: should be TokenizeInternal for `\lx@physics@iunit` parity, but
+      // enabling that regresses the physics test's paulimatrix nesting.
+      // Tracked as a follow-up — needs DefMath `alias` support to match Perl
+      // which emits `name="i"` via the alias path instead of the raw CS name.
       2 => Tokenize!("0 & -\\lx@physics@iunit \\\\ \\lx@physics@iunit & 0"),
       3 => Tokenize!("1 & 0 \\\\ 0 & -1"),
       _ => Tokens::default(),

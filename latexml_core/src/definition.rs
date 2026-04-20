@@ -131,7 +131,7 @@ impl PartialEq for Reversion {
 
 impl From<&str> for Reversion {
   fn from(t: &str) -> Reversion {
-    Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().ok().unwrap())
+    Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().unwrap())
   }
 }
 impl From<Tokens> for Reversion {
@@ -273,7 +273,7 @@ pub trait Definition: Object {
 
   fn get_num_args(&self) -> usize { 0 }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>>;
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>>;
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { None }

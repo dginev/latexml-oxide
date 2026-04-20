@@ -5,9 +5,6 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line" xml:lang="de">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-report.css" type="text/css"/>
-  <para xml:id="p1">
-    <p>,</p>
-  </para>
   <title>Deutsch Test</title>
   <creator role="author">
     <personname>Frau Blücher</personname>

@@ -14,20 +14,30 @@ LoadDefinitions!({
   // caused \cs_new:Npn to find them already defined, triggering \msg_error:nnee
   // which has a complex expansion chain that consumed the rest of the file.
 
-  // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
-  // Suppress errors during loading: expl3-code.tex has many forward references
-  // (functions used before defined) and one expansion chain issue producing
-  // an extra \endcsname. Pre-definitions above eliminate the l3file forward-refs;
-  // SUPPRESS_UNDEFINED_ERRORS handles remaining forward-refs within the 36K lines.
-  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, Some(Scope::Global));
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
-  // Suppress log output during loading: expl3-code.tex fires \errmessage for
-  // forward-ref errors and missing Unicode data files (harmless noise).
-  latexml_core::common::error::set_suppress_log_output(true);
-  let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
-    noltxml => true, extension => Some(Cow::Borrowed("sty"))));
-  latexml_core::common::error::set_suppress_log_output(false);
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
+  // Short-circuit raw expl3.sty loading when the dump already provides
+  // expl3's core definitions (detected via `\tex_let:D`, which the raw
+  // expl3.sty itself uses as the gate for `\input expl3-code.tex` on
+  // line 54 of l3kernel/expl3.sty). This avoids re-digesting 36k lines
+  // of `expl3-code.tex` whose compiled form is already in the dump.
+  // Mirrors the TeX-level guard; we just inspect the same condition from
+  // Rust to avoid opening the raw mouth entirely.
+  let dump_has_expl3 = lookup_definition(&T_CS!("\\tex_let:D"))?.is_some();
+  if !dump_has_expl3 {
+    // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
+    // Suppress errors during loading: expl3-code.tex has many forward references
+    // (functions used before defined) and one expansion chain issue producing
+    // an extra \endcsname. Pre-definitions above eliminate the l3file forward-refs;
+    // SUPPRESS_UNDEFINED_ERRORS handles remaining forward-refs within the 36K lines.
+    state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, Some(Scope::Global));
+    state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
+    // Suppress log output during loading: expl3-code.tex fires \errmessage for
+    // forward-ref errors and missing Unicode data files (harmless noise).
+    latexml_core::common::error::set_suppress_log_output(true);
+    let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
+      noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+    latexml_core::common::error::set_suppress_log_output(false);
+    state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
+  }
 
   // Post-load: set expl3 catcodes for fixup commands.
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));

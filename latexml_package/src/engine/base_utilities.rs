@@ -119,7 +119,7 @@ LoadDefinitions!({
     )
   });
 
-  DefConditional!("\\if@in@preamble", { lookup_bool("inPreamble") });
+  DefConditional!("\\if@in@preamble", { state::lookup_bool_sym(pin!("inPreamble")) });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -159,7 +159,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
-    let inpreamble = lookup_bool("inPreamble");
+    let inpreamble = state::lookup_bool_sym(pin!("inPreamble"));
     assign_value("inPreamble", false, None);
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
@@ -239,7 +239,7 @@ LoadDefinitions!({
     inv_tokens.push(T_END!());
     if let Some(ref lbl) = label {
       inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend(lbl.clone().unlist());
+      inv_tokens.extend_from_slice(lbl.unlist_ref());
       inv_tokens.push(T_OTHER!("]"));
     }
     inv_tokens.push(T_BEGIN!());
@@ -254,7 +254,7 @@ LoadDefinitions!({
     sub[(tag_tks, label_opt, tokens)] {
     let tag = tag_tks.unwrap().to_string();
     let label = label_opt.as_ref().map(|l| l.to_string());
-    let inpreamble = lookup_bool("inPreamble");
+    let inpreamble = state::lookup_bool_sym(pin!("inPreamble"));
     assign_value("inPreamble", false, None);
 
     // Digest the content tokens
@@ -327,7 +327,7 @@ LoadDefinitions!({
         let mut all_tokens = Vec::new();
         for stored_item in tks_list.iter() {
           if let Stored::Tokens(ref tks) = stored_item {
-            all_tokens.extend(tks.clone().unlist());
+            all_tokens.extend(tks.unlist_ref().iter().copied());
           }
         }
         if !all_tokens.is_empty() {
@@ -346,7 +346,7 @@ LoadDefinitions!({
         let mut all_tokens = Vec::new();
         for stored_item in tks_list.iter() {
           if let Stored::Tokens(ref tks) = stored_item {
-            all_tokens.extend(tks.clone().unlist());
+            all_tokens.extend(tks.unlist_ref().iter().copied());
           }
         }
         if !all_tokens.is_empty() {
@@ -626,7 +626,7 @@ pub fn join_tokens(conjunction: &Tokens, things: Vec<Tokens>) -> Tokens {
   let mut first = true;
   for thing in things {
     if !first {
-      result.extend(conjunction.clone().unlist());
+      result.extend_from_slice(conjunction.unlist_ref());
     }
     result.extend(thing.unlist());
     first = false;
@@ -686,7 +686,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
       // Dubious, but assures that frontmatter appears in text mode...
       document.set_box_to_absorb(
         Tbox::new(
-          *EMPTY_SYM,
+          pin!(""),
           lookup_font(),
           None,
           Tokens!(T_SPACE!()),
@@ -970,7 +970,7 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
   // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
   // in the content will pop this frame, since \egroup is \let to T_END and
   // invoke_token handles it via the standard group-closing mechanism.
-  let current_mode = state::lookup_string("MODE");
+  let current_mode = state::lookup_string_from_sym(pin!("MODE"));
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
   if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
     stomach::begin_mode(&current_mode)?;
@@ -987,14 +987,14 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
     // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
     // Check the condition BEFORE endMode pops the frame.
-    let post_mode = state::lookup_string("MODE");
-    let bound_mode = state::lookup_string("BOUND_MODE");
+    let post_mode = state::lookup_string_from_sym(pin!("MODE"));
+    let bound_mode = state::lookup_string_from_sym(pin!("BOUND_MODE"));
     if post_mode == "horizontal" && bound_mode.ends_with("vertical")
       && has_only_simple_horizontal_content(&item)
     {
       repack_horizontal_in_list(&mut item);
       // Restore MODE like leave_horizontal_internal does
-      state::assign_value_inplace("MODE", arena::pin(&bound_mode));
+      state::assign_value_inplace_sym(pin!("MODE"), arena::pin(&bound_mode));
     }
     // Perl: $stomach->endMode($mode) — pop the frame
     if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
@@ -1168,13 +1168,15 @@ fn simplify_vertical_list(item: Digested) -> Digested {
 /// If whatsit has property $keyword, return Explode($keyword) ++ Revert($value)
 pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
   if let Some(value) = whatsit.get_property(keyword) {
-    // Explode the keyword string into T_OTHER tokens
+    // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
+    // uses a stack-buffer encode_utf8 and skips the per-char
+    // `c.to_string()` heap alloc the previous version did.
     let mut tokens: Vec<Token> = keyword.chars()
-      .map(|c| { let s = c.to_string(); T_OTHER!(s) }).collect();
-    // Revert the stored value to tokens
+      .map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER })
+      .collect();
     let val_str = value.to_attribute();
     tokens.extend(val_str.chars()
-      .map(|c| { let s = c.to_string(); T_OTHER!(s) }));
+      .map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }));
     tokens
   } else {
     Vec::new()
@@ -1741,7 +1743,7 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
 // Several extension of the keyval package exist, the most common one we support
 // is the xkeyval package. This introduces further variations on the keyval
 // arguments parsing, in particular it allows to read keys from more than one
-// keyset at once. These can be specified by giving comma-seperated values in
+// keyset at once. These can be specified by giving comma-separated values in
 // the keyset argument. By default, a key will only be set in the **first**
 // keyset it occurs in. By using
 //   RequiredKeyVals+: $keysets
@@ -1763,7 +1765,7 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
 //   OptionalKeyVals[*][+]: $prefix|$keysets
 //
 // Finally, it is possible to specify specific keys to skip when digesting the
-// object. This can be achieved using comma-seperated key values in
+// object. This can be achieved using comma-separated key values in
 //   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
 //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 

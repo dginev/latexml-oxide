@@ -28,7 +28,6 @@ pub mod template;
 use self::cell::Cell;
 use self::normalize::*;
 use self::template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, TemplateConfig};
-use crate::common::arena;
 use crate::common::arena::SymHashMap;
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::NumericOps;
@@ -467,7 +466,19 @@ impl BoxOps for Alignment {
   }
 
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
-    todo!(); // call the mutable version only, we need to rearrange the alignment first!
+    // Alignments must be absorbed via `be_absorbed_mut` because
+    // `normalize_alignment` mutates the carrier (rearranging rows,
+    // applying border specs, etc). The `Digested::be_absorbed` dispatch
+    // for `DigestedData::Alignment` correctly calls `be_absorbed_mut`;
+    // this immutable path should never be reached in practice. Surface
+    // a meaningful error rather than a bare `todo!()` panic if an
+    // unexpected caller lands here.
+    fatal!(
+      Internal,
+      Misdefined,
+      "Alignment::be_absorbed called — use be_absorbed_mut instead \
+       (alignment rearrangement requires &mut self)"
+    );
   }
   fn be_absorbed_mut(&mut self, document: &mut Document) -> Result<Vec<Node>> {
     let ismath = self.is_math;
@@ -988,7 +999,7 @@ fn guess_alignment_headers(
   //       . (($x = $document->findnode('ancestor-or-self::*[@xml:id]', $table)) ?
   // $x->getAttribute('xml:id') : $tag))     if $LaTeXML::DEBUG{alignment};
 
-  let ismath = tag == arena::pin_static("ltx:XMArray");
+  let ismath = tag == crate::pin!("ltx:XMArray");
   let reversed = false;
   // Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting & characterizing each cell.
@@ -1061,7 +1072,9 @@ fn guess_alignment_headers(
 // trailing rows marked as thead go into tfoot.
 fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
   let mut rows = document.findnodes("ltx:tr", Some(table));
-  let mut heads = Vec::new();
+  // `heads` is bounded by the initial thead-candidate rows; pre-size
+  // to `rows.len()` as a conservative upper bound.
+  let mut heads = Vec::with_capacity(rows.len());
   let mut maxreach = 0;
   // Scan initial rows as potential thead
   while !rows.is_empty() {
@@ -1076,9 +1089,11 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
     let line = heads.len();
     heads.push(rows.remove(0));
     for cell in cells {
+      // Malformed/non-numeric rowspan silently degrades to 0 — matches Perl's
+      // lax numeric coercion and prevents crashes on unusual input XML.
       let this_rowspan = cell
         .get_attribute("rowspan")
-        .map(|v| v.parse::<usize>().expect("rowspan should be a usize"))
+        .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(0)
         + line;
       if this_rowspan > maxreach {
@@ -1353,14 +1368,16 @@ fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 }
 
 fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
-  let mut columns = Vec::new();
   let mut row_cells: Vec<_> = alignment
     .rows
     .iter_mut()
     .map(|r| r.get_columns_mut().iter_mut())
     .collect();
-  for _ in 0..row_cells[0].len() {
-    let mut column = Vec::new();
+  let n_cols = row_cells[0].len();
+  let n_rows = row_cells.len();
+  let mut columns = Vec::with_capacity(n_cols);
+  for _ in 0..n_cols {
+    let mut column = Vec::with_capacity(n_rows);
     for row_iter in row_cells.iter_mut() {
       column.push(row_iter.next().unwrap());
     }

@@ -17,11 +17,18 @@ fn merge_limits(pos: &str) {
   let default_level = get_script_level().to_string();
   stomach::with_box_list_mut(|list| {
     for b in list.iter_mut().rev() {
-      // extract trailing level number from existing scriptpos, or use current script level
+      // Extract trailing level digits from existing scriptpos. Find the
+      // first non-digit from the end, slice off the tail — skips the
+      // chars.rev.take_while.collect.into_iter.rev.collect two-Vec
+      // round-trip the previous code did.
       let prev = b.get_property("scriptpos").map(|v| v.to_string()).unwrap_or_default();
-      let level: String = prev.chars().rev().take_while(|c| c.is_ascii_digit()).collect::<Vec<_>>()
-        .into_iter().rev().collect();
-      let level = if level.is_empty() { &default_level } else { &level };
+      let digit_start = prev
+        .bytes()
+        .rposition(|c| !c.is_ascii_digit())
+        .map(|i| i + 1)
+        .unwrap_or(0);
+      let level_str: &str = &prev[digit_start..];
+      let level = if level_str.is_empty() { &default_level } else { level_str };
       b.set_property("scriptpos", format!("{pos}{level}"));
       // Perl: last unless IsEmpty($box) || IsScript($box)
       // Continue past empty boxes AND script boxes
@@ -223,6 +230,32 @@ pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
   }
 }
 
+/// Fraction sizer — TeX-style width/height/depth for a fraction whose
+/// numerator and denominator are `top` and `bottom` digested boxes.
+///
+/// Perl: `fracSizer` in TeX_Math.pool.ltxml L1054-1059:
+///   w = max(numerator.width, denominator.width)
+///   d = denominator.total_height * 0.5
+///   h = numerator.total_height + d
+///
+/// Used by `\lx@generalized@over`, `\over`, `\atop`, `\above*` etc.
+pub fn frac_sizer(
+  top: &Digested,
+  bottom: &Digested,
+) -> Result<(Dimension, Dimension, Dimension)> {
+  let (tw, th, td, ..) = top.clone().get_size(None)?;
+  let (bw, bh, bd, ..) = bottom.clone().get_size(None)?;
+  // width: max of top and bottom widths
+  let w = Dimension(tw.value_of().max(bw.value_of()));
+  // depth: half of denominator's total height (height + depth)
+  let bot_total = bh.value_of() + bd.value_of();
+  let d = Dimension(bot_total / 2);
+  // height: numerator total height + depth
+  let top_total = th.value_of() + td.value_of();
+  let h = Dimension(top_total + d.value_of());
+  Ok((w, h, d))
+}
+
 fn script_sizer(
   script: &Digested,
   base_opt: Option<&Stored>,
@@ -375,7 +408,7 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@dollar@default"), None, {
     let mut op = "\\lx@begin@inline@math";
     {
-      let mode = state::lookup_string("MODE");
+      let mode = state::lookup_string_from_sym(pin!("MODE"));
       if mode == "display_math" {
         if gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
@@ -394,7 +427,7 @@ LoadDefinitions!({
         op = "\\lx@end@inline@math";
       } else {
         // Perl: only check for $$ when within a vertical bound mode
-        let bound = state::lookup_string("BOUND_MODE");
+        let bound = state::lookup_string_from_sym(pin!("BOUND_MODE"));
         if bound.ends_with("vertical") && gullet::if_next(T_MATH!())? {
           gullet::read_token()?;
           op = "\\lx@begin@display@math";
@@ -435,7 +468,7 @@ LoadDefinitions!({
     let level = stomach::get_boxing_level();
     if lookup_int("MATH_ALIGN_$_BEGUN") == (level as i64) {
       // If we're begun making _something_ with $.
-      let l = if lookup_bool("IN_MATH") {
+      let l = if state::lookup_bool_sym(pin!("IN_MATH")) {
         // But we're somehow in math?
         stomach::invoke_token(&T_CS!("\\lx@end@inline@math"))
       } else {
@@ -445,7 +478,7 @@ LoadDefinitions!({
       l
     } else {
       assign_value("MATH_ALIGN_$_BEGUN", level + 1, None); // Note that we've begun something
-      if lookup_bool("IN_MATH") {
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
         // If we're "still" in math
         stomach::invoke_token(&T_CS!("\\lx@begin@inmath@text"))
       } else {
@@ -663,7 +696,12 @@ LoadDefinitions!({
     getter => sub[args] {
       let ch_code   = args.remove(0).expect_number().value_of() as u8;
       let ch : char = ch_code as char;
-      let code = match lookup_mathcode(&ch.to_string()) {
+      // Avoid `ch.to_string()` alloc per call — encode_utf8 writes into
+      // a stack buffer and returns a borrowed &str. `\mathcode` is read
+      // per math-token during tokenization.
+      let mut buf = [0u8; 4];
+      let key = ch.encode_utf8(&mut buf);
+      let code = match lookup_mathcode(key) {
         None => ch_code,
         Some(code) => code as u8
       };
@@ -689,9 +727,11 @@ LoadDefinitions!({
   // Perl #2772: \fam with getter/setter for fontfamily state
   DefRegister!("\\fam", Number!(-1),
     getter => {
-      let fam = state::lookup_value("fontfamily")
-        .map(|v| v.to_string().parse::<i64>().unwrap_or(-1))
-        .unwrap_or(-1);
+      let fam = match state::lookup_value("fontfamily") {
+        Some(Stored::Int(i)) => i,
+        Some(Stored::Number(n)) => n.0,
+        _ => -1,
+      };
       Some(RegisterValue::Number(Number::new(fam)))
     },
     setter => sub[value, scope, _args] {
@@ -788,10 +828,11 @@ LoadDefinitions!({
       let n = gullet::read_number()?.value_of() >> 12;
       let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
-        let glyph_str = glyph.to_string();
-        if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
+        let mut glyph_buf = [0u8; 4];
+        let glyph_key = glyph.encode_utf8(&mut glyph_buf);
+        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           // Found the delimiter — unread it as a token
-          let tok = T_OTHER!(entry.char.to_string());
+          let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER };
           gullet::unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
           // Unknown glyph, use dot delimiter
@@ -808,7 +849,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
       if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
-        || lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
+        || state::lookup_bool_sym(pin!("groupNonBoxing")) { // or group was opened with \begingroup
         Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
         egroup()?;
@@ -995,7 +1036,7 @@ LoadDefinitions!({
   DefPrimitive!("\\displaystyle", {
     MergeFont!(mathstyle => "display");
     Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\displaystyle")),
@@ -1005,7 +1046,7 @@ LoadDefinitions!({
   DefPrimitive!("\\textstyle", {
     MergeFont!(mathstyle => "text");
     Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\textstyle")),
@@ -1015,7 +1056,7 @@ LoadDefinitions!({
   DefPrimitive!("\\scriptstyle", {
     MergeFont!(mathstyle => "script");
     Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\scriptstyle")),
@@ -1025,7 +1066,7 @@ LoadDefinitions!({
   DefPrimitive!("\\scriptscriptstyle", {
     MergeFont!(mathstyle => "scriptscript");
     Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\scriptscriptstyle")),
@@ -1142,9 +1183,10 @@ LoadDefinitions!({
       let n = gullet::read_number()?.value_of() >> 12;
       let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
-        let glyph_str = glyph.to_string();
-        if let Some(entry) = DELIMITER_MAP.get(glyph_str.as_str()) {
-          let tok = T_OTHER!(entry.char.to_string());
+        let mut glyph_buf = [0u8; 4];
+        let glyph_key = glyph.encode_utf8(&mut glyph_buf);
+        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
+          let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER };
           gullet::unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
         } else {
           gullet::unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
@@ -1318,6 +1360,28 @@ LoadDefinitions!({
         }
       }
       Ok(Tokens::new(result))
+    },
+    // Perl fracSizer (TeX_Math.pool.ltxml L1054-1059): width is max of
+    // top/bottom widths; depth is half of denominator's total height;
+    // height is numerator total height + depth. Reads `top` and `bottom`
+    // properties that the after_digest above already attaches.
+    sizer => sub[w] {
+      use latexml_core::state::Stored;
+      let top = match w.get_property("top") {
+        Some(p) => match &*p {
+          Stored::Digested(d) => d.clone(),
+          _ => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+        },
+        None => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+      };
+      let bottom = match w.get_property("bottom") {
+        Some(p) => match &*p {
+          Stored::Digested(d) => d.clone(),
+          _ => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+        },
+        None => return Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+      };
+      frac_sizer(&top, &bottom)
     }
   );
 

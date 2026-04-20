@@ -730,9 +730,11 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
     rowdepths.push(row.cached_depth.unwrap().value_of());
     rowheights.push(row.cached_height.unwrap().value_of());
   }
-  // Now compute the positions
-  let mut rowpos = Vec::new();
-  let mut colpos = Vec::new();
+  // Now compute the positions — one entry per row/col.
+  let mut rowpos = Vec::with_capacity(alignment.rows.len());
+  let mut colpos = Vec::with_capacity(
+    alignment.rows.front().map(|r| r.get_columns().len()).unwrap_or(0)
+  );
   let mut y: i64 = 0;
   // Row & column positions: left,top
   for (i, row) in alignment.rows.iter().enumerate() {
@@ -783,17 +785,18 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
       // middle (default)
       // Perl L622-623: math axis approximation
       let c = {
-        use crate::state::lookup_value;
-        
-        lookup_value("font")
-          .and_then(|v| {
+        use crate::state::with_value_sym;
+
+        with_value_sym(crate::pin!("font"), |v_opt| {
+          v_opt.and_then(|v| {
             if let Stored::Font(ref f) = v {
               f.get_size().map(|s| (s * UNITY as f64) as i64 / 2)
             } else {
               None
             }
           })
-          .unwrap_or_else(|| Dimension::from_str("1ex").map(|d| d.value_of()).unwrap_or(0))
+        })
+        .unwrap_or_else(|| Dimension::from_str("1ex").map(|d| d.value_of()).unwrap_or(0))
       };
       alignment.cached_height = Some(Dimension::new((y + c) / 2));
       alignment.cached_depth = Some(Dimension::new((y - c) / 2));

@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 // use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::arena::{self, DONT_EXPAND_SYM, SymStr};
+use crate::common::arena::{self, SymStr};
 use crate::common::store::Stored;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -36,8 +36,7 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 // Perl smuggles the unexpanded token inside \special_relax's slot [2].
 // Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
 use std::cell::Cell;
-#[thread_local]
-static SPECIAL_RELAX_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("\\special_relax"));
+use crate::pin;
 #[thread_local]
 static SPECIAL_RELAX_SMUGGLED: Cell<Option<Token>> = Cell::new(None);
 
@@ -56,7 +55,7 @@ fn peek_special_relax_smuggled() -> Option<Token> {
 /// Check if a token is \special_relax and its smuggled unexpanded token matches `target`
 fn special_relax_matches(token: &Token, target: &Token) -> bool {
   token.code == Catcode::CS
-    && token.text == *SPECIAL_RELAX_SYM
+    && token.text == pin!("\\special_relax")
     && peek_special_relax_smuggled().as_ref() == Some(target)
 }
 #[thread_local]
@@ -87,7 +86,17 @@ static COLUMN_ENDS: Lazy<[(Token, &'static str, bool); 6]> = Lazy::new(|| {
 pub struct MouthRuntime {
   pub autoclose: bool,
   pub mouth:     Mouth,
-  pub pushback:  VecDeque<Token>,
+  /// Pushback LIFO stack: the "next to read" token is at `pushback.last()`.
+  /// Invariant: reading pops from the back; `unread_one` pushes to the back;
+  /// `unread_vec` iterates its input in reverse and pushes each — so the
+  /// first element of an unread Vec ends up on top (= next to read).
+  /// See `flush_mouth` for the rare FIFO-prepend semantics (\endinput).
+  ///
+  /// Previously a `VecDeque<Token>` — switched to a plain Vec because the
+  /// hot-path is pure LIFO and VecDeque's push_front/pop_front machinery
+  /// (head-pointer + wrap arithmetic) showed up at ~3.3% of total Ir in
+  /// callgrind on siunitx-heavy fixtures.
+  pub pushback:  Vec<Token>,
 }
 
 #[derive(Debug, Default)]
@@ -207,8 +216,11 @@ pub fn unread(tokens: Tokens) { unread_vec(tokens.unlist()); }
 /// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
 pub fn unread_mut(tokens: &mut Tokens) {
   if let Some(ref mut runtime) = gullet_mut!().runtime {
+    // Iterate in reverse and push to the stack top — the first element
+    // of `tokens` ends up on top (= next to read). Same semantics as
+    // the old VecDeque push_front pattern.
     for token in tokens.unlist_mut().drain(..).rev() {
-      runtime.pushback.push_front(token);
+      runtime.pushback.push(token);
     }
   };
 }
@@ -221,7 +233,7 @@ pub fn unread_one(token: Token) {
     _ => {},
   }
   if let Some(ref mut runtime) = gullet_mut!().runtime {
-    runtime.pushback.push_front(token);
+    runtime.pushback.push(token);
   };
 }
 /// Unreads a `Vec<Token>` to the start of the token stream
@@ -229,13 +241,18 @@ pub fn unread_one(token: Token) {
 pub fn unread_vec(tokens: Vec<Token>) {
   let mut level: i64 = 0;
   if let Some(ref mut runtime) = gullet_mut!().runtime {
+    // Reserve once, push each token in reverse-iteration order so the
+    // first element of `tokens` ends up at the stack top. Same
+    // semantics as the old VecDeque push_front loop, but without
+    // per-element head-pointer arithmetic.
+    runtime.pushback.reserve(tokens.len());
     for token in tokens.into_iter().rev() {
       match token.get_catcode() {
         Catcode::BEGIN => level -= 1, // Retract scanned braces
         Catcode::END => level += 1,
         _ => {},
       }
-      runtime.pushback.push_front(token);
+      runtime.pushback.push(token);
     }
   }
   if level != 0 {
@@ -258,7 +275,7 @@ pub fn open_mouth(mouth: Mouth, autoclose: bool) {
   gullet.runtime = Some(MouthRuntime {
     mouth,
     autoclose,
-    pushback: VecDeque::with_capacity(128),
+    pushback: Vec::with_capacity(128),
   });
 }
 
@@ -292,10 +309,19 @@ pub fn close_mouth(forced: bool) -> Result<()> {
 /// Corresponds to TeX's \endinput
 pub fn flush_mouth() {
   if let Some(ref mut runtime) = runtime!() {
+    // Collect remaining mouth tokens in mouth order (t1, t2, t3, …),
+    // then splice them into the stack's BOTTOM in reverse order so
+    // that after the stack's existing top is popped, the mouth tokens
+    // come out in the original mouth order (t1 first, then t2, …).
+    let mut trailer: Vec<Token> = Vec::new();
     while !runtime.mouth.is_eol() {
       if let Some(token) = runtime.mouth.read_token() {
-        runtime.pushback.push_back(token);
+        trailer.push(token);
       }
+    }
+    if !trailer.is_empty() {
+      trailer.reverse();
+      runtime.pushback.splice(0..0, trailer);
     }
     // Stop reading (clear buffers, close file) but do NOT restore catcodes.
     // Catcodes are restored by close_mouth → finish() when the mouth is
@@ -362,7 +388,7 @@ fn read_internal_token() -> Option<Token> {
   } = *gullet_mut!();
   let pushback = &mut runtime.as_mut().unwrap().pushback;
   // Check in pushback first....
-  while let Some(pushback_token) = pushback.pop_front() {
+  while let Some(pushback_token) = pushback.pop() {
     match pushback_token.get_catcode() {
       Catcode::COMMENT => pending_comments.push_back(pushback_token),
       Catcode::MARKER => handle_marker(pushback_token),
@@ -391,37 +417,29 @@ fn read_internal_token() -> Option<Token> {
 pub fn read_token() -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
   loop {
+    // Defensive checks: combine into a single mutable borrow to avoid
+    // the previous immutable→drop→mutable borrow dance. Also skip the
+    // pushback_limit probe entirely when no limit is set (the default
+    // for normal conversion runs).
     {
-      // each time we try to read, do the defensive checks
-      let gullet = gullet!();
-      // If we're without a runtime, bail
-      if gullet.runtime.is_none() {
+      let mut g = gullet_mut!();
+      if g.runtime.is_none() {
         return Ok(None);
       }
-      // some infinite loops are hard to predict and may be
-      // better guarded against via a global token limit.
-      let token_limit = gullet.token_limit;
-      let pushback_limit = gullet.pushback_limit;
-      let progress = gullet.progress;
-      let pushback_len = gullet.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
-      drop(gullet);
-      if let Some(limit) = token_limit {
-        gullet_mut!().progress = progress + 1;
-        if progress + 1 > limit {
-          Fatal!(
-            Timeout,
-            TokenLimit,
-            s!("Token limit of {} exceeded, infinite loop?", limit)
-          );
+      if let Some(limit) = g.token_limit {
+        g.progress += 1;
+        if g.progress > limit {
+          let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
+          drop(g);
+          Fatal!(Timeout, TokenLimit, msg);
         }
       }
-      if let Some(limit) = pushback_limit {
-        if pushback_len > limit {
-          Fatal!(
-            Timeout,
-            PushbackLimit,
-            s!("Pushback limit of {} exceeded, infinite loop?", limit)
-          );
+      if let Some(limit) = g.pushback_limit {
+        let pb_len = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
+        if pb_len > limit {
+          let msg = s!("Pushback limit of {} exceeded, infinite loop?", limit);
+          drop(g);
+          Fatal!(Timeout, PushbackLimit, msg);
         }
       }
     }
@@ -456,7 +474,7 @@ pub fn read_token() -> Result<Option<Token>> {
           continue; // Perl: handleTemplate then continue while(1) loop
         }
       }
-      if nextt.code == Catcode::CS && nextt.text == *DONT_EXPAND_SYM {
+      if nextt.code == Catcode::CS && nextt.text == pin!("\\dont_expand") {
         let unexpanded = read_token()?;
         // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
         if let Some(tok) = unexpanded {
@@ -521,7 +539,7 @@ pub fn read_x_token(
     }
     // we got a token
     let token = next_token.unwrap();
-    if token.get_catcode() == Catcode::CS && token.text == *DONT_EXPAND_SYM {
+    if token.get_catcode() == Catcode::CS && token.text == pin!("\\dont_expand") {
       let unexpanded = match read_token()? {
         Some(t) => t,
         None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
@@ -556,33 +574,53 @@ pub fn read_x_token(
       }
       // And *then* continue the main loop checks
     } else if token.get_catcode().is_active_or_cs() {
-      match lookup_meaning(&token) {
-        Some(Stored::Token(let_token)) => {
+      // Read the meaning via closure so we can branch on the borrowed
+      // Stored without cloning (Stored::clone was ~1% of total on
+      // siunitx-heavy profiles; this site fires on every CS/ACTIVE
+      // expansion — the hottest lookup_meaning caller).
+      enum Outcome {
+        LetTo(Token),
+        Undefined,
+        NonExpandable,
+        Invoke(std::rc::Rc<dyn crate::definition::Definition>),
+      }
+      let outcome = state::with_meaning(&token, |defn_opt| {
+        match defn_opt {
+          Some(Stored::Token(t)) => Outcome::LetTo(*t),
+          Some(Stored::None) | None => Outcome::Undefined,
+          Some(other) => match other.to_definition() {
+            Some(defn) => {
+              if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
+                Outcome::NonExpandable
+              } else {
+                Outcome::Invoke(defn)
+              }
+            }
+            None => Outcome::Undefined,
+          },
+        }
+      });
+      match outcome {
+        Outcome::LetTo(let_token) => {
           return Ok(Some(if for_conditional { let_token } else { token }));
-        },
-        Some(Stored::None) | None => {
+        }
+        Outcome::Undefined => {
           if token.get_catcode() == Catcode::CS {
-            return Ok(Some(generate_error_stub(&token)?)); // cs SHOULD have defn by now; report
-          // early.
+            return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));
           }
-        },
-        Some(typed_defn) => {
-          let defn = typed_defn
-            .to_definition()
-            .expect("token expansion requires the Stored item to implement trait Definition");
-          if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
-            return Ok(Some(token));
-          } else {
-            local_current_token(token);
-            let invoked = defn.invoke(false)?;
-            // add the newly expanded tokens back into the gullet stream, in the ordinary case.
-            unread(invoked);
-            expire_current_token();
-            continue;
-          }
-        },
+        }
+        Outcome::NonExpandable => {
+          return Ok(Some(token));
+        }
+        Outcome::Invoke(defn) => {
+          local_current_token(token);
+          let invoked = defn.invoke(false)?;
+          unread(invoked);
+          expire_current_token();
+          continue;
+        }
       }
     } else {
       // Perl Gullet.pm L421-422: track { and } at scan level for ALIGN_STATE
@@ -603,7 +641,10 @@ pub fn read_raw_line() -> Option<String> {
   // but we'll convert them back to string.
   let mut gullet = gullet_mut!();
   if let Some(ref mut runtime) = gullet.runtime {
-    let tokens: Vec<Token> = runtime.pushback.drain(..).collect();
+    // Vec-as-stack stores bottom-to-top, but the caller expects
+    // "next to read" first — reverse the drained order to match the
+    // old VecDeque drain(..) which was front-to-back (= next-to-read).
+    let tokens: Vec<Token> = runtime.pushback.drain(..).rev().collect();
 
     // TODO
     // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
@@ -702,7 +743,7 @@ pub fn read_balanced(
       None => false,
       Some(token) => {
         token.get_catcode() == Catcode::BEGIN
-          || state::lookup_meaning(&token) == Some(Stored::Token(T_BEGIN!()))
+          || state::with_meaning(&token, |m| matches!(m, Some(Stored::Token(t)) if *t == T_BEGIN!()))
       },
     };
     if !is_open {
@@ -714,7 +755,12 @@ pub fn read_balanced(
       return Ok(Tokens!());
     }
   }
-  let mut tokens = Vec::new();
+  // Pre-size the token accumulator: most balanced reads are short
+  // macro arguments (~4–16 tokens). This skips the Vec's early
+  // doublings that the callgrind profile attributes to
+  // `raw_vec::finish_grow` (1% of total instructions in read_balanced
+  // alone).
+  let mut tokens: Vec<Token> = Vec::with_capacity(16);
   let mut level = 1;
   loop {
     // we'll keep comments in the result
@@ -723,7 +769,7 @@ pub fn read_balanced(
       tokens.extend(gullet_mut!().pending_comments.drain(..));
     }
     // Examine pushback first
-    while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop_front() {
+    while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop() {
       match pushback_token.get_catcode() {
         Catcode::COMMENT => tokens.push(pushback_token),
         Catcode::MARKER => handle_marker(pushback_token),
@@ -751,7 +797,7 @@ pub fn read_balanced(
       // What's the right error handling now?
       None => break,
       Some(token) => match token.get_catcode() {
-        Catcode::CS if token.text == *DONT_EXPAND_SYM => {
+        Catcode::CS if token.text == pin!("\\dont_expand") => {
           if let Some(next_t) = read_token()? {
             tokens.push(next_t); // Pass on NEXT token, unchanged.
           }
@@ -787,8 +833,15 @@ pub fn read_balanced(
           }
           // Note: use general-purpose lookup, since we may reexamine $defn below
           if expansion_level != Off && cc.is_active_or_cs() {
-            let meaning_opt = lookup_meaning(&token);
-            if let Some(defn) = meaning_opt.as_ref().and_then(|item| item.to_definition()) {
+            // Borrow the stored meaning via with_meaning so the Stored
+            // enum is not cloned per token. We extract (a) whether a
+            // meaning exists at all (for the undefined-CS diagnostic
+            // below) and (b) the Rc<dyn Definition> if it's a proper
+            // definition — both are cheap (bool + Rc-clone).
+            let (has_meaning, defn_opt) = state::with_meaning(&token, |m| {
+              (m.is_some(), m.and_then(|s| s.to_definition()))
+            });
+            if let Some(defn) = defn_opt {
               if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
                 local_current_token(token);
                 let expansion = defn.invoke(false)?;
@@ -817,7 +870,7 @@ pub fn read_balanced(
                 expire_current_token();
                 continue;
               }
-            } else if cc == Catcode::CS && meaning_opt.is_none() {
+            } else if cc == Catcode::CS && !has_meaning {
               // cs SHOULD have defn by now; report early!
               generate_error_stub(&token)?;
             }
@@ -862,7 +915,10 @@ pub fn read_balanced(
 pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
   skip_spaces()?;
   for keyword in keywords.iter() {
-    let mut matched = Vec::new();
+    // Pre-size to the keyword length — `matched` holds one token per
+    // matched char, and we unread them on no-match. Keyword-match
+    // runs on every parameter/keyword read; small win per call.
+    let mut matched = Vec::with_capacity(keyword.len());
     let mut ok = true;
     for expected in keyword.chars() {
       let Some(tok) = read_x_token(Some(false), false, None)? else { ok = false; break };
@@ -1134,7 +1190,7 @@ pub fn read_optional(default: Option<Tokens>) -> Result<Option<Tokens>> {
   match read_non_space()? {
     None => Ok(None),
     Some(t) => {
-      if t.get_catcode() == Catcode::OTHER && t.get_sym() == arena::pin_static("[") {
+      if t.get_catcode() == Catcode::OTHER && t.get_sym() == pin!("[") {
         Ok(Some(read_until(&Tokens!(T_OTHER!("]")))?))
       } else {
         unread_one(t);
@@ -1321,7 +1377,9 @@ fn coerce_register(
 pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
   for choice in choices {
     let mut to_match: Vec<&Token> = choice.unlist_ref().iter().rev().collect();
-    let mut matched = Vec::new();
+    // `matched` accumulates tokens read so far, bounded by `choice.len()`.
+    // Pre-size to avoid reallocations on multi-token match attempts.
+    let mut matched = Vec::with_capacity(choice.unlist_ref().len());
     while !to_match.is_empty() {
       match read_token()? {
         None => break,
@@ -1451,7 +1509,7 @@ pub fn read_float() -> Result<Float> {
   let s = if is_negative { -1.0 } else { 1.0 };
   let mut string = read_digits(&DIGIT_RE, true)?;
   let mut token = read_x_token(None, false, None)?;
-  if token.is_some() && token.as_ref().unwrap().get_sym() == arena::pin_static(".") {
+  if token.is_some() && token.as_ref().unwrap().get_sym() == pin!(".") {
     string = s!("{string}.{}", read_digits(&DIGIT_RE, true)?);
     token = read_x_token(None, false, None)?;
   }
@@ -1784,9 +1842,9 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
   }
   // Check for implicit space: CS/ACTIVE let to a space token
   if token.get_catcode() == Catcode::CS || token.get_catcode() == Catcode::ACTIVE {
-    if let Some(Stored::Token(let_tok)) = state::lookup_meaning(token) {
-      return let_tok.get_catcode() == Catcode::SPACE;
-    }
+    return state::with_meaning(token, |m| {
+      matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::SPACE)
+    });
   }
   false
 }
@@ -1813,9 +1871,9 @@ fn read_optional_signs() -> Result<bool> {
   let mut sign = false;
   while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();
-    if sym == arena::pin_static("-") {
+    if sym == pin!("-") {
       sign = !sign;
-    } else if (sym != arena::pin_static("+")) && !is_space_or_implicit_space(&t) {
+    } else if (sym != pin!("+")) && !is_space_or_implicit_space(&t) {
       unread_one(t); // Unread and end
       break;
     }
@@ -1855,7 +1913,7 @@ fn read_factor() -> Result<Option<f64>> {
   let mut token_opt = read_x_token(None, false, None)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
-    if sym == arena::pin_static(".") || sym == arena::pin_static(",") {
+    if sym == pin!(".") || sym == pin!(",") {
       factor = s!("{}.{}", factor, read_digits(&DIGIT_RE, false)?);
       token_opt = read_x_token(None, false, None)?;
     }
@@ -1975,7 +2033,25 @@ where FnR: FnOnce() -> Result<R> {
       return Err(e);
     }
   };
-  // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
+  // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it.
+  // Rate-limit the "mouth closed" error — when the gullet gets into a state
+  // where the cleanup loop keeps finding stale mouths above the target, the
+  // same error can fire on EVERY caller of reading_from_mouth. Arxiv 0906.1883
+  // (birkmult + local .cls) can trigger 10K+ such firings, one per stack frame.
+  // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
+  // the mouth stack" signal instead of filling the log with identical messages.
+  thread_local! {
+    static MOUTH_CLOSED_ERRORS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  }
+  fn record_mouth_closed_error() {
+    MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1)));
+  }
+  fn should_emit_mouth_closed() -> bool {
+    MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10)
+  }
+  fn mouth_closed_budget_exhausted() -> bool {
+    MOUTH_CLOSED_ERRORS.with(|c| c.get() >= 50)
+  }
   loop {
     let mouth_source = gullet!()
       .runtime
@@ -1985,14 +2061,25 @@ where FnR: FnOnce() -> Result<R> {
       close_mouth(true)?;
       break;
     } else if gullet!().mouthstack.is_empty() {
-      Error!(
-        "unexpected",
-        "<closed>",
-        "Mouth is unexpectedly already closed",
-        arena::with(context_mouth_source, |source| s!(
-          "Reading from {source}, but it has already been closed."
-        ))
-      );
+      if should_emit_mouth_closed() {
+        // `arena::to_string` clones the resolved &str into an owned String
+        // BEFORE we hand it to Error! — a following `arena::pin` triggered
+        // deep inside generate_message!/get_location() can grow the
+        // interner's buffer and invalidate a borrowed &str (observed as
+        // garbled, buffer-adjacent symbol content in 0906.1883 errors).
+        let src = arena::to_string(context_mouth_source);
+        Error!(
+          "unexpected",
+          "<closed>",
+          "Mouth is unexpectedly already closed",
+          s!("Reading from {src}, but it has already been closed.")
+        );
+      }
+      record_mouth_closed_error();
+      if mouth_closed_budget_exhausted() {
+        Fatal!(Stomach, Recursion,
+          "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent");
+      }
       break;
     } else {
       let is_autoclosable = gullet!()
@@ -2007,14 +2094,20 @@ where FnR: FnOnce() -> Result<R> {
         // Non-autoclosable mouth that isn't our target — this means our target
         // mouth was already consumed. Don't close this mouth (it belongs to an
         // outer reading_from_mouth call). Just error and stop.
-        Error!(
-          "unexpected",
-          "<closed>",
-          "Mouth is unexpectedly already closed",
-          arena::with(context_mouth_source, |source| s!(
-            "Reading from {source}, but it has already been closed (found different non-closable mouth on top)."
-          ))
-        );
+        if should_emit_mouth_closed() {
+          let src = arena::to_string(context_mouth_source);
+          Error!(
+            "unexpected",
+            "<closed>",
+            "Mouth is unexpectedly already closed",
+            s!("Reading from {src}, but it has already been closed (found different non-closable mouth on top).")
+          );
+        }
+        record_mouth_closed_error();
+        if mouth_closed_budget_exhausted() {
+          Fatal!(Stomach, Recursion,
+            "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent");
+        }
         break;
       }
     }
@@ -2044,7 +2137,7 @@ pub fn flush() {
   }
   g.runtime = Some(MouthRuntime {
     mouth:     Mouth::default(),
-    pushback:  VecDeque::with_capacity(128),
+    pushback:  Vec::with_capacity(128),
     autoclose: true,
   });
   g.mouthstack = VecDeque::new();

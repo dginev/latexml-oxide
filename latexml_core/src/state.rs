@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::alignment::Alignment;
 use crate::common::{BindingDispatcher, LabelMappingHook};
-use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, SymHashMap, SymStr};
+use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -34,6 +34,7 @@ use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
 use crate::{Digested, DigestedData};
+use crate::pin;
 
 // expose Perl-style local assignments from state
 pub use crate::common::local_assignments::*;
@@ -257,6 +258,14 @@ pub struct State {
   pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// Names (without `.cls` suffix) of all class bindings the dispatchers
+  /// can load, stacked one slice per registered dispatcher. Used by
+  /// `load_class` to implement Perl's prefix-match fallback for unknown
+  /// class names (Package.pm L2702-2706). Populated at startup by each
+  /// binding crate via `add_class_binding_names`, so both
+  /// `latexml_package` and `latexml_contrib` contribute their classes to
+  /// the fallback pool.
+  pub class_binding_names:     Vec<&'static [&'static str]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
 }
@@ -307,6 +316,7 @@ impl Default for State {
       nomathparse:             false,
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      class_binding_names:     Vec::new(),
       label_mapping_hook:      None,
     }
   }
@@ -498,6 +508,24 @@ impl State {
       Some(Scope::Global),
     );
 
+    // Perl Core.pm L53: $state->assignValue(GRAPHICSPATHS => [map {…} @{$opts{graphicspaths}}])
+    // Mirror with a VecDequeStored of String entries; subsequent push/unshift
+    // operations in `\graphicspath`, `\svgpath`, and Core.pm-equivalent source
+    // directory prepends will append/prepend to this same list.
+    if !state.graphics_paths.is_empty() {
+      let vdq: VecDeque<Stored> = state
+        .graphics_paths
+        .iter()
+        .map(|p| Stored::String(arena::pin(p)))
+        .collect();
+      state.assign_internal(
+        TableName::Value,
+        arena::pin("GRAPHICSPATHS"),
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    }
+
     state
   }
 
@@ -619,7 +647,7 @@ impl State {
   ) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = self.value.get(&GLOBAL_DEFS_SYM) {
+    if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
         match *global_value {
@@ -758,8 +786,8 @@ impl State {
       },
     }
   }
-  pub fn lookup_value_sym(&self, key: &SymStr) -> Option<&Stored> {
-    match self.value.get(key) {
+  pub fn lookup_value_sym(&self, key: SymStr) -> Option<&Stored> {
+    match self.value.get(&key) {
       None => None,
       Some(vvec) => match vvec.front() {
         None | Some(Stored::None) => None,
@@ -795,7 +823,9 @@ impl State {
   }
   /// manage a (global) hash of values
   pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Stored> {
-    let map_sym = arena::pin(map);
+    self.lookup_mapping_sym(arena::pin(map), key)
+  }
+  pub fn lookup_mapping_sym(&self, map_sym: SymStr, key: &str) -> Option<&Stored> {
     match self.value.get(&map_sym) {
       None => None,
       Some(map_vec) => match map_vec.front() {
@@ -818,7 +848,11 @@ impl State {
 
   pub fn lookup_stacked_values(&self, key: &str) -> Vec<&Stored> {
     let key_sym = arena::pin(key);
-    if let Some(vdq) = self.value.get(&key_sym) {
+    self.lookup_stacked_values_sym(key_sym)
+  }
+
+  pub fn lookup_stacked_values_sym(&self, key: SymStr) -> Vec<&Stored> {
+    if let Some(vdq) = self.value.get(&key) {
       vdq.iter().collect::<Vec<&Stored>>()
     } else {
       Vec::new()
@@ -829,7 +863,7 @@ impl State {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name == *EMPTY_SYM { None } else { Some(name) }
+      if name == pin!("") { None } else { Some(name) }
     } else {
       key.get_executable_primitive_name().map(arena::pin)
     };
@@ -1003,7 +1037,11 @@ pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T
 /// This matches Perl's `assignValue(key, value, 'inplace')`.
 /// Used for MODE changes in enter_horizontal (switches mode without creating a new binding).
 pub fn assign_value_inplace(key: &str, value: impl Into<Stored>) {
-  let key_sym = arena::pin(key);
+  assign_value_inplace_sym(arena::pin(key), value)
+}
+/// Sym-keyed variant of `assign_value_inplace` — skip the per-call
+/// `arena::pin(key)` for hot callers with a pre-pinned SymStr.
+pub fn assign_value_inplace_sym(key_sym: SymStr, value: impl Into<Stored>) {
   let value = value.into();
   let state = &mut *state_mut!();
   let table = &mut state.value;
@@ -1055,11 +1093,11 @@ pub fn checkin_value(key: &str, value: Stored) {
   match state_mut!().value.get_mut(&arena::pin(key)) {
     None => {
       // Key was never assigned — silently ignore the checkin
-      eprintln!("Warning: checkin_value called for unknown key '{key}'");
+      log::warn!("checkin_value called for unknown key '{key}'");
     },
     Some(vvec) => match vvec.front_mut() {
       None => {
-        eprintln!("Warning: checkin_value called with empty value stack for key '{key}'");
+        log::warn!("checkin_value called with empty value stack for key '{key}'");
       },
       Some(found) => {
         match found {
@@ -1162,6 +1200,11 @@ pub fn with_value<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&Stored>) -> R {
   caller(state!().lookup_value(key))
 }
+/// Sym-keyed variant of `with_value` — avoids the per-call `arena::pin(key)`.
+pub fn with_value_sym<R, FnR>(key: SymStr, caller: FnR) -> R
+where FnR: FnOnce(Option<&Stored>) -> R {
+  caller(state!().lookup_value_sym(key))
+}
 pub fn with_value_mut<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Stored>) -> R {
   caller(state_mut!().lookup_value_mut(key))
@@ -1174,12 +1217,33 @@ pub fn lookup_bool(key: &str) -> bool {
     Some(v) => v.into(),
   }
 }
+
+/// `lookup_bool` variant for hot call sites with a pre-pinned SymStr
+/// (see `crate::pin!`). Skips the per-call `arena::pin(key)` hash
+/// lookup — significant on every-expansion hot paths. `SymStr` is a
+/// `u32` wrapper (Copy), so it passes by value — no borrow overhead.
+pub fn lookup_bool_sym(key: SymStr) -> bool {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => false,
+    Some(v) => v.into(),
+  }
+}
+
+/// `lookup_string` variant using a pre-pinned SymStr key.
+pub fn lookup_string_from_sym(key: SymStr) -> String {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => String::new(),
+    Some(v) => v.into(),
+  }
+}
 /// like `lookup_value`, but casts the entry into a SymStr from the string interner
-///  (`EMPTY_SYM` if None)
+///  (`pin!("")` if None)
 pub fn lookup_string_sym(key: &str) -> SymStr {
   let state = state!();
   match state.lookup_value(key) {
-    None => *EMPTY_SYM,
+    None => pin!(""),
     Some(Stored::String(v)) => *v,
     Some(other) => arena::pin(other.to_string()),
   }
@@ -1211,14 +1275,17 @@ pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
 }
 /// convenience method to lookup the current value at the "font" key
 pub fn lookup_font() -> Option<Rc<Font>> {
-  match state!().lookup_value_sym(&FONT_SYM) {
+  match state!().lookup_value_sym(pin!("font")) {
     None | Some(Stored::None) => None,
     Some(f) => f.into(),
   }
 }
 /// convenience method to lookup the current value at the "mathfont" key
 pub fn lookup_mathfont() -> Option<Rc<Font>> {
-  match state!().lookup_value("mathfont") {
+  // Route through `lookup_value_sym` with a cached SymStr (via
+  // `pin!`) to skip the per-call `arena::pin("mathfont")` probe on
+  // this hot path (math-env entry/exit, per-formula checks).
+  match state!().lookup_value_sym(pin!("mathfont")) {
     None | Some(Stored::None) => None,
     Some(v) => v.into(),
   }
@@ -1226,7 +1293,7 @@ pub fn lookup_mathfont() -> Option<Rc<Font>> {
 
 /// a convenience method to globally asign a `Font` to the "font" key
 pub fn assign_font(font: Rc<Font>, scope: Option<Scope>) {
-  assign_value("font", Stored::Font(font), scope);
+  assign_value_sym(pin!("font"), Stored::Font(font), scope);
 }
 
 /// a variant of `lookup_value` that casts the value into `Number`
@@ -1267,9 +1334,12 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
     Some(Stored::Tokens(v)) => Some(v.clone()),
     Some(Stored::Token(v)) => Some(Tokens::new(vec![*v])),
     Some(Stored::String(sym)) => {
-      let astr = arena::to_string(*sym);
+      // Release the state borrow first, then pass the interned &str directly
+      // into tokenize_internal via the re-entrant arena — avoids materializing
+      // an owned String just to tokenize.
+      let sym = *sym;
       drop(state);
-      Some(mouth::tokenize_internal(&astr))
+      arena::with(sym, |astr| Some(mouth::tokenize_internal(astr)))
     },
     Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
     _ => None,
@@ -1283,10 +1353,19 @@ pub fn lookup_token(key: &str) -> Option<Token> {
   }
 }
 
+/// a variant of `lookup_token` taking an already-pinned SymStr key —
+/// avoids the per-call `arena::pin(key)` hash lookup.
+pub fn lookup_token_sym(key: SymStr) -> Option<Token> {
+  match state!().lookup_value_sym(key) {
+    Some(Stored::Token(t)) => Some(*t),
+    _ => None,
+  }
+}
+
 pub fn lookup_alignment() -> Option<Digested> {
   // Can only be a token or definition; we want defns!
   // is this the right logic here? don't expand unless digesting?
-  state!().lookup_value("Alignment").and_then(|v| {
+  state!().lookup_value_sym(pin!("Alignment")).and_then(|v| {
     if let Stored::Digested(d) = v {
       if matches!(d.data(), DigestedData::Alignment(_)) {
         // for now clone the Digested object (approx. an Rc<_> clone)
@@ -1310,8 +1389,19 @@ pub fn assign_register(
   scope: Option<Scope>,
   parameters: Vec<ArgWrap>,
 ) -> Result<()> {
-  let cs = T_CS!(cs);
-  let defn_opt = lookup_definition(&cs)?;
+  assign_register_token(&T_CS!(cs), value, scope, parameters)
+}
+/// `assign_register` variant taking a pre-built Token — lets hot
+/// callers skip the `T_CS!(&str)` pin when they already have the CS
+/// cached (e.g. via `T_CS!("\\c@…")` literal which routes through
+/// `pin!`).
+pub fn assign_register_token(
+  cs: &Token,
+  value: RegisterValue,
+  scope: Option<Scope>,
+  parameters: Vec<ArgWrap>,
+) -> Result<()> {
+  let defn_opt = lookup_definition(cs)?;
   if let Some(defn) = defn_opt {
     if defn.is_register() {
       defn.set_value(value, scope, parameters);
@@ -1326,8 +1416,12 @@ pub fn assign_register(
   Ok(())
 }
 pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
-  let cs = T_CS!(cs);
-  Ok(if let Some(defn) = lookup_definition(&cs)? {
+  lookup_register_token(&T_CS!(cs), parameters)
+}
+/// Token-keyed variant of `lookup_register` — saves the per-call
+/// `T_CS!(&str)` pin for hot callers with a cached CS token.
+pub fn lookup_register_token(cs: &Token, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+  Ok(if let Some(defn) = lookup_definition(cs)? {
     if defn.is_register() {
       defn.value_of(parameters)
     } else {
@@ -1336,8 +1430,6 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
       None
     }
   } else {
-    // let message = s!("The control sequence '{}' is not defined", cs);
-    // Warn!("expected", "register", message);
     None
   })
 }
@@ -1361,7 +1453,7 @@ pub fn is_dont_expandable(token: &Token) -> bool {
   // (but not \let to a token)
   if token.get_catcode().is_active_or_cs() {
     let lookupname = token.text;
-    if lookupname != *EMPTY_SYM {
+    if lookupname != pin!("") {
       match state!().meaning.get(&lookupname) {
         Some(entry) => {
           if let Some(def) = entry.front() {
@@ -1502,6 +1594,11 @@ pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
 pub fn lookup_mapping(map: &str, key: &str) -> Option<Stored> {
   state!().lookup_mapping(map, key).cloned()
 }
+/// Sym-keyed variant — skip the per-call `arena::pin(map)` for hot
+/// callers with a pre-pinned map key (e.g. via `pin!("siunitx_macros")`).
+pub fn lookup_mapping_sym(map_sym: SymStr, key: &str) -> Option<Stored> {
+  state!().lookup_mapping_sym(map_sym, key).cloned()
+}
 
 //======================================================================
 /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
@@ -1556,8 +1653,8 @@ pub fn lookup_mathcode(key: &str) -> Option<u16> {
     None => None,
   }
 }
-pub fn lookup_mathcode_sym(key_sym: &SymStr) -> Option<u16> {
-  match state!().mathcode.get(key_sym) {
+pub fn lookup_mathcode_sym(key_sym: SymStr) -> Option<u16> {
+  match state!().mathcode.get(&key_sym) {
     Some(c) => match c.front() {
       Some(Stored::Charcode(codeval)) => Some(*codeval),
       _ => None,
@@ -1654,7 +1751,7 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
 /// this may give the definition object (if defined) or another token (if \let) or undef
 /// Any other token is returned as is.
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
-  if token.get_catcode().is_active_or_cs() && token.text != *EMPTY_SYM {
+  if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
     match state!().meaning.get(&token.text) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => None,
@@ -1664,6 +1761,36 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
     }
   } else {
     Some(Stored::Token(*token))
+  }
+}
+
+/// Closure-based variant of `lookup_meaning` — avoids the per-call
+/// `Stored::clone()` when the caller only needs to *inspect* the
+/// meaning (e.g. extract a CS Token from an Expandable/Primitive
+/// definition). Stored::clone is ~1% of total instructions on
+/// siunitx-heavy fixtures (5M+ calls per run, each cloning a full
+/// Stored enum). This helper borrows the stored value instead.
+///
+/// For non-CS/ACTIVE tokens, passes `Some(Stored::Token(*token))` —
+/// matching lookup_meaning's fallback semantics. Note this requires
+/// a single stack allocation of Stored::Token (Copy), not a heap
+/// clone.
+pub fn with_meaning<R>(token: &Token, f: impl FnOnce(Option<&Stored>) -> R) -> R {
+  let state = state!();
+  if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
+    match state.meaning.get(&token.text) {
+      Some(entry) => match entry.front() {
+        None | Some(Stored::None) => f(None),
+        Some(other) => f(Some(other)),
+      },
+      None => f(None),
+    }
+  } else {
+    // Non-CS/ACTIVE: the "meaning" is just the token itself. The
+    // caller gets a borrow of a temporary here, which is safe for
+    // the duration of the closure.
+    let s = Stored::Token(*token);
+    f(Some(&s))
   }
 }
 
@@ -1716,7 +1843,7 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
 
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
-  if token.get_catcode().is_active_or_cs() && token.text != *EMPTY_SYM {
+  if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
     match state!().meaning.get(&token.text) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => false,
@@ -1808,8 +1935,8 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   let is_active_or_cs = cc.is_active_or_cs();
   let lookup_sym = if is_active_or_cs
     || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
-      && lookup_bool("IN_MATH")
-      && (lookup_mathcode_sym(&t_sym).unwrap_or(0) == 0x8000))
+      && lookup_bool_sym(crate::pin!("IN_MATH"))
+      && (lookup_mathcode_sym(t_sym).unwrap_or(0) == 0x8000))
   {
     t_sym
   } else {
@@ -1818,7 +1945,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   // Debug!("Looking up digestable {:?}", lookupname);
   let state = state!();
   let entry_opt = state.meaning.get(&lookup_sym);
-  if lookup_sym != *EMPTY_SYM && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
+  if lookup_sym != pin!("") && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
     // Debug!("Found definition for: {:?}", lookupname);
     if let Some(entry) = entry_opt {
       if let Some(front) = entry.front() {
@@ -2178,7 +2305,7 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 //   return $code; }
 // #======================================================================
 
-// TODO: Continue here -- need to diagnoze why the indirect model is not returning
+// TODO: Continue here -- need to diagnose why the indirect model is not returning
 // an intermediate "ltx:p" when asking for "#PCDATA" inside "ltx:_CaptureBlock_",
 // instead getting an intermediate "ltx:para".
 
@@ -2192,16 +2319,26 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
 pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = SymHashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-  let mut openable: HashSet<SymStr> = HashSet::default();
+  // Perl Document.pm L196-199 maps the `autoOpen` property to a fractional
+  // OPENABILITY. Most tags get 1.0; `ltx:picture` gets 0.5 (L4995) so it
+  // loses path-priority against full auto-openers (para, p, text, item, …).
+  // We scale to u32 (100 = full, 50 = half) to keep integer arithmetic; the
+  // `desirability * openability / 100` recursion mirrors Perl's float math.
+  let mut openability: SymHashMap<u32> = SymHashMap::default();
   // Collect all known tags: from the schema model AND from state tag_properties
   let mut all_tags: HashSet<SymStr> = model::get_tags().into_iter().collect();
   for tag in state!().tag_properties.keys() {
     all_tags.insert(*tag);
   }
+  let picture_sym = pin!("ltx:picture");
   for tag in &all_tags {
     if let Some(x) = state!().tag_properties.get(tag) {
       if let Some(true) = x.auto_open {
-        openable.insert(*tag);
+        // Perl: Tag('ltx:picture', autoOpen => 0.5). All other autoOpen
+        // sites in the LaTeXML tree use `autoOpen => 1`, so a simple
+        // `tag == ltx:picture` check reproduces the fraction faithfully.
+        let priority = if *tag == picture_sym { 50u32 } else { 100u32 };
+        openability.insert_sym(*tag, priority);
       }
     }
   }
@@ -2209,7 +2346,7 @@ pub fn compute_indirect_model() -> IndirectModel {
   for tag in &all_tags {
     let tag = *tag;
     let mut desc: SymHashMap<SymHashMap<usize>> = SymHashMap::default();
-    compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
+    compute_indirect_model_aux(tag, None, 100, &mut openability, &mut desc);
     let desc_keys: Vec<SymStr> = desc.keys().copied().collect();
     for kid in desc_keys {
       // Find best path to `kid`.
@@ -2343,6 +2480,27 @@ pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   state.extra_bindings_dispatch = Some(dispatcher);
 }
 
+/// Snapshot of all registered class-name slices (one per dispatcher).
+/// Callers (e.g. `load_class`) typically flatten this to iterate every
+/// candidate name across all registered binding crates.
+pub fn get_class_binding_names() -> Vec<&'static [&'static str]> {
+  state!().class_binding_names.clone()
+}
+/// Append one crate's class-name slice. Call this from each binding crate's
+/// dispatcher-registration site (e.g. `set_bindings_dispatch` companion
+/// for `latexml_package`, `set_extra_bindings_dispatch` companion for
+/// `latexml_contrib`). Duplicates are deduplicated by pointer so repeated
+/// calls from the same crate don't inflate the fallback pool.
+pub fn add_class_binding_names(names: &'static [&'static str]) {
+  let mut state = state_mut!();
+  // Pointer-level dedup: two slices from the same static are equal here.
+  let ptr = names.as_ptr();
+  if state.class_binding_names.iter().any(|s| s.as_ptr() == ptr) {
+    return;
+  }
+  state.class_binding_names.push(names);
+}
+
 pub fn get_label_mapping_hook() -> Option<LabelMappingHook> {
   state!().label_mapping_hook.clone()
 }
@@ -2365,10 +2523,65 @@ pub fn search_paths_push_front(path: String) {
   state.search_paths.push_front(path);
 }
 pub fn has_search_paths() -> bool { !state!().search_paths.is_empty() }
-pub fn get_graphics_paths() -> Vec<String> { state!().graphics_paths.iter().cloned().collect() }
+/// Mirror Perl's `LookupValue('GRAPHICSPATHS')` — a list value that all
+/// `\graphicspath`, `\svgpath`, initial source-directory prepends, and
+/// `image_candidates` consult. Always return as `Vec<String>` even if the
+/// value was stored as `Strings` (initial assignValue) or `VecDequeStored`
+/// (after any push/unshift).
+pub fn get_graphics_paths() -> Vec<String> {
+  lookup_value("GRAPHICSPATHS")
+    .map(|v| match v {
+      Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
+      Stored::VecDequeStored(vdq) => vdq
+        .iter()
+        .filter_map(|item| match item {
+          Stored::String(s) => Some(arena::to_string(*s)),
+          _ => None,
+        })
+        .collect(),
+      _ => Vec::new(),
+    })
+    .unwrap_or_default()
+}
+
+/// Mirror Perl's `$state->unshiftValue(GRAPHICSPATHS => $dir)`. Used by
+/// Core.pm-style source-directory prepends.
 pub fn graphics_paths_push_front(path: String) {
+  let key = arena::pin("GRAPHICSPATHS");
+  let entry = Stored::String(arena::pin(&path));
   let mut state = state_mut!();
-  state.graphics_paths.push_front(path);
+  if !state.value.contains_key(&key) {
+    state.assign_internal(
+      TableName::Value,
+      key,
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    );
+  }
+  let receiver = state.value.get_mut(&key).unwrap().front_mut();
+  match receiver {
+    Some(Stored::VecDequeStored(vdq)) => vdq.push_front(entry),
+    Some(Stored::Strings(syms)) => {
+      let mut vdq: VecDeque<Stored> = syms.iter().map(|s| Stored::String(*s)).collect();
+      vdq.push_front(entry);
+      state.assign_internal(
+        TableName::Value,
+        key,
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    },
+    _ => {
+      let mut vdq = VecDeque::new();
+      vdq.push_front(entry);
+      state.assign_internal(
+        TableName::Value,
+        key,
+        Stored::VecDequeStored(vdq),
+        Some(Scope::Global),
+      );
+    },
+  }
 }
 
 /// manage a (global) hash of values
@@ -2415,6 +2628,11 @@ pub fn with_stacked_values<R, FnR>(key: &str, caller: FnR) -> R
 where FnR: FnOnce(Vec<&Stored>) -> R {
   caller(state!().lookup_stacked_values(key))
 }
+/// Sym-keyed variant of `with_stacked_values`.
+pub fn with_stacked_values_sym<R, FnR>(key: SymStr, caller: FnR) -> R
+where FnR: FnOnce(Vec<&Stored>) -> R {
+  caller(state!().lookup_stacked_values_sym(key))
+}
 
 pub fn set_state(incoming_state: State) {
   // Reset state rotation to Main to prevent stale Sty/Std state from previous runs
@@ -2445,8 +2663,22 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Register(_) => true,
     // Font: serializable (data only)
     Font(_) => true,
+    // Primitives/MathPrimitives: the CLOSURE can't be serialized, but the
+    // Primitive carries its own canonical CS name. If the entry's key
+    // differs from that canonical CS, this is a `\let`-alias we CAN
+    // capture (as a "PA" pointer) so the dump reader replays the `\let`
+    // at load time. dump_writer returns the PA/MPA tag; dump_reader
+    // re-applies via state::let_i. This is how \tex_let:D, \tex_def:D,
+    // and the hundreds of other expl3-renamed primitives survive the
+    // dump without needing to re-run 36k lines of expl3-code.tex.
+    //
+    // Returning true here only means "pass to dump_writer"; the writer's
+    // serialize_stored will emit Option::None for entries that ARE the
+    // primary (canonical) binding (key == primitive.cs), and those get
+    // filtered by the writer's `filter_map(serialize_stored)`.
+    Primitive(_) | MathPrimitive(_) => true,
     // These contain closures — NOT serializable
-    Primitive(_) | Constructor(_) | Conditional(_) | MathPrimitive(_) => false,
+    Constructor(_) | Conditional(_) => false,
     // Collections: serializable if contents are
     VecDequeStored(_) | HashStored(_) | HashString(_) => true,
     // Everything else: skip for safety
@@ -2464,4 +2696,45 @@ pub fn diff_snapshot(
   snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
 ) -> Vec<(TableName, SymStr, Stored)> {
   state!().diff_from_snapshot(snap)
+}
+
+// Thread-local holder for the snapshot taken at a named init phase.
+// Currently only "bootstrap" is used: when `latex.rs` finishes loading
+// `latex_bootstrap`, it stashes the state snapshot here. `ini_tex::dump_format`
+// reads it so its diff matches Perl's `DumpFile` semantics — "what did raw
+// latex.ltx + the rest of the engine init add on top of pure bootstrap".
+// Without this hook the snapshot is taken after `_base.rs` + `_constructs.rs`
+// have also run, making the diff far narrower than Perl's dump. See
+// SYNC_STATUS D0 (d.1).
+type StateSnapshot = std::collections::HashMap<(TableName, SymStr), Stored>;
+type StagedSnapshotMap = rustc_hash::FxHashMap<&'static str, StateSnapshot>;
+
+thread_local! {
+  static STAGED_SNAPSHOTS: std::cell::RefCell<StagedSnapshotMap> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Take a snapshot now and store it under a named key for later retrieval.
+/// Intended for phased engine init (e.g. `stage_snapshot("bootstrap")` called
+/// right after `latex_bootstrap` has loaded).
+pub fn stage_snapshot(name: &'static str) {
+  let snap = take_snapshot();
+  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+}
+
+/// Stage an already-taken snapshot under a named key. Used by callers
+/// (like `ini_tex`) that want to snapshot at a specific point without
+/// waiting for a pool hook.
+pub fn stage_snapshot_value(
+  name: &'static str,
+  snap: std::collections::HashMap<(TableName, SymStr), Stored>,
+) {
+  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+}
+
+/// Retrieve a previously staged snapshot, if present.
+pub fn get_staged_snapshot(
+  name: &str,
+) -> Option<std::collections::HashMap<(TableName, SymStr), Stored>> {
+  STAGED_SNAPSHOTS.with(|m| m.borrow().get(name).cloned())
 }

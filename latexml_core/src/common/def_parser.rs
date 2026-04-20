@@ -2,13 +2,14 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 
-use crate::common::arena::{self, EMPTY_SYM};
+use crate::common::arena::{self};
 use crate::common::error::*;
 
 use crate::mouth;
 use crate::parameter::{Parameter, Parameters};
 use crate::token::*;
 use crate::tokens::Tokens;
+use crate::pin;
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
@@ -76,7 +77,9 @@ pub fn parse_parameters(
   init_flag: bool,
 ) -> Result<Option<Parameters>> {
   let mut prototype = Cow::Borrowed(outer_prototype);
-  let mut parameters = Vec::new();
+  // parameters is capped at MAX_STEPS; most prototypes have ≤ 4 params,
+  // so pre-size conservatively for the common case.
+  let mut parameters = Vec::with_capacity(4);
   let mut steps = 0;
   const MAX_STEPS: usize = 50;
   while !prototype.is_empty() {
@@ -104,7 +107,7 @@ pub fn parse_parameters(
       let mut p = Parameter {
         name: arena::pin_static("Plain"),
         spec: if spec.is_empty() {
-          *EMPTY_SYM
+          pin!("")
         } else {
           arena::pin(spec)
         },
@@ -132,7 +135,7 @@ pub fn parse_parameters(
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            *EMPTY_SYM
+            pin!("")
           } else {
             arena::pin(spec)
           },
@@ -147,7 +150,7 @@ pub fn parse_parameters(
         let mut p = Parameter {
           name: arena::pin_static("Optional"),
           spec: if spec.is_empty() {
-            *EMPTY_SYM
+            pin!("")
           } else {
             arena::pin(spec)
           },

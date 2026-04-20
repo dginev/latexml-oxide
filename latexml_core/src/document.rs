@@ -18,10 +18,8 @@ use std::rc::Rc;
 
 use crate::TexMode;
 use crate::util::radix::radix_alpha;
-use crate::common::arena::{
-  self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, SymHashMap, SymStr,
-  XML_ID_SYM,
-};
+use crate::common::arena::{self, SymHashMap, SymStr};
+use crate::pin;
 use crate::common::error::*;
 use crate::common::font::{FONT_TEXT_DEFAULT, Font};
 use crate::common::locator::Locator;
@@ -84,13 +82,6 @@ pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
-#[thread_local]
-pub static FONT_ELEMENT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:text"));
-#[thread_local]
-pub static MATH_TOKEN_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMTok"));
-#[thread_local]
-pub static MATH_HINT_SYM: Lazy<SymStr> = Lazy::new(|| arena::pin_static("ltx:XMHint"));
-
 pub struct Document {
   pub document:                XmlDoc,
   pub pending:                 Vec<Node>,
@@ -135,7 +126,13 @@ enum Placement_ {
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
-    set_node_rc_guard(50); // We will need a high threshold for Node mutability
+    // `NODE_RC_MAX_GUARD` is libxml's diagnostic threshold for mutable
+    // access to Rc-shared nodes; the real aliasing guarantee is the
+    // `weak_count == 0` check in `Node::mut_node`. For legitimate large
+    // documents (e.g. arxiv 0805.2376 with deep dcpic commutative-diagram
+    // sharing), natural ref counts exceed the crate's default of 2 by
+    // several orders of magnitude. Raise to 8192 to accommodate.
+    set_node_rc_guard(8192);
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -291,9 +288,16 @@ impl Document {
 
   /// Check if any descendant of node uses the given namespace prefix.
   fn has_namespace_usage(&self, node: &Node, prefix: &str) -> bool {
-    // Check attributes of this node for prefix: usage
+    // Check attributes of this node for prefix: usage. The
+    // allocation-free check `starts_with(prefix) + byte-at-prefix.len()`
+    // replaces `format!("{prefix}:")` which would heap-allocate per node
+    // visited during the recursive descent.
+    let plen = prefix.len();
     for (key, _) in node.get_attributes() {
-      if key.starts_with(&format!("{prefix}:")) {
+      if key.len() > plen
+        && key.starts_with(prefix)
+        && key.as_bytes()[plen] == b':'
+      {
         return true;
       }
     }
@@ -416,7 +420,7 @@ impl Document {
               }
 
               for (key, mut value) in attrs_to_set {
-                if key == arena::pin_static("class") {
+                if key == pin!("class") {
                   // Merge and sort class values alphabetically, matching Perl's behavior
                   if let Some(ovalue) = current.get_attribute("class") {
                     let new_s = arena::with(value, |s| s.to_string());
@@ -440,7 +444,7 @@ impl Document {
             }
           }
           // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-          if qname != arena::pin_static("ltx:document")
+          if qname != pin!("ltx:document")
             && state::lookup_bool("GENERATE_IDS")
             && !current.has_attribute("xml:id")
             && !current.has_attribute("id") // SVG elements with plain id don't need xml:id
@@ -521,7 +525,7 @@ impl Document {
           // by prior replace_node operations in libxml2.
           // Defer the actual collapse to after the traversal completes, since
           // replace_node can corrupt ancestor attribute lists in libxml2.
-          if (get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
+          if (get_node_qname(&child) == pin!("ltx:text"))
             && !was_forcefont
             && empty_attr_nodes.contains(&child.to_hashable())
           {
@@ -735,7 +739,7 @@ impl Document {
         .unwrap()
         .into_owned();
       self.open_text(object, &fnt)
-    } else if get_node_qname(&self.node) == arena::pin_static(MATH_TOKEN_NAME) {
+    } else if get_node_qname(&self.node) == pin!("ltx:XMTok") {
       // Or plain string in math mode.
       // Note text nodes can ONLY appear in <XMTok> or <text>!!!
       // Have we already opened an XMTok? Then insert into it.
@@ -916,7 +920,7 @@ impl Document {
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
       if t == qsym
-        && !(t == arena::pin_static(FONT_ELEMENT_NAME) && node.has_attribute("_fontswitch"))
+        && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch"))
       {
         break;
       }
@@ -1191,7 +1195,7 @@ impl Document {
     };
 
     let tag_hash = state::get_tag_property(tag);
-    let all_hash = state::get_tag_property(*LTX_STAR_SYM);
+    let all_hash = state::get_tag_property(pin!("ltx:*"));
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another
@@ -1336,7 +1340,7 @@ impl Document {
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = get_node_qname(node);
-          model::can_contain_sym(node_qname, *H_PCDATA_SYM)
+          model::can_contain_sym(node_qname, pin!("#PCDATA"))
         };
 
         if !noindent {
@@ -1516,7 +1520,7 @@ impl Document {
     } else {
       text
     };
-    if qname == MATH_TOKEN_NAME && cur_qname == *MATH_TOKEN_SYM {
+    if qname == MATH_TOKEN_NAME && cur_qname == pin!("ltx:XMTok") {
       // Already INSIDE a token!
       if !text.is_empty() {
         self.open_math_text_internal(text)?;
@@ -1830,13 +1834,13 @@ impl Document {
   /// a single FONT_ELEMENT_NAME node; pull it up.
   fn auto_collapse_children(&mut self, node: &mut Node) -> Result<()> {
     let qname = get_node_qname(node);
-    if qname != *CAPTURE_SYM {
+    if qname != pin!("ltx:_Capture_") {
       let mut c = node.get_child_nodes();
       // with single child, AND, $node can have all the attributes that the child has (but at least
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
-        && (get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
-        && model::can_have_attribute(qname, *FONT_SYM)
+        && (get_node_qname(&c[0]) == pin!("ltx:text"))
+        && model::can_have_attribute(qname, pin!("font"))
         && c[0]
           .get_attributes()
           .keys()
@@ -2296,7 +2300,7 @@ impl Document {
       while (node.get_type() != Some(NodeType::DocumentNode)) && can_auto_close(&node) {
         let parent_opt = node.get_parent();
         let parent_name = match parent_opt {
-          None => *EMPTY_SYM,
+          None => pin!(""),
           Some(ref p) => get_node_qname(p),
         };
         if sym_can_contain_somehow(parent_name, qsym).is_some() {
@@ -2595,7 +2599,7 @@ impl Document {
     };
     let final_id = if needs_modify {
       let badid = id.to_string();
-      let new_id = self.modify_id(badid.clone());
+      let new_id = self.modify_id(badid);
       Info!(
         "malformed",
         "id",
@@ -2744,7 +2748,7 @@ impl Document {
     let qname = get_node_qname(&node);
     // Special case: for XMArg used to wrap "formal" arguments on the content side,
     // mark them as visible as presentation as well.
-    if cvis && (qname == arena::pin_static("ltx:XMArg")) {
+    if cvis && (qname == pin!("ltx:XMArg")) {
       pvis = true;
     }
     if cvis {
@@ -2753,7 +2757,7 @@ impl Document {
     if pvis {
       node.set_attribute("_pvis", "1")?;
     }
-    if qname == arena::pin_static("ltx:XMDual") {
+    if qname == pin!("ltx:XMDual") {
       let mut children = xml::element_nodes(&node);
       let c = children.remove(0);
       let p = children.remove(0);
@@ -2763,7 +2767,7 @@ impl Document {
       if pvis {
         self.mark_xmnode_visibility_aux(p, false, true)?;
       }
-    } else if qname == arena::pin_static("ltx:XMRef") {
+    } else if qname == pin!("ltx:XMRef") {
       match node.get_attribute("idref") {
         None => {
           let key = node.get_attribute("_xmkey");
@@ -2884,13 +2888,14 @@ impl Document {
     if content_args.len() != pres_args.len() {
       return Ok(());
     }
+    let n_args = content_args.len();
 
     // Walk the corresponding children, double-check they are referenced in the same order
     enum NewArg {
       Single(Node),
       Pair(Node, Node), // (content_arg, pres_arg) — to be merged
     }
-    let mut new_args: Vec<NewArg> = Vec::new();
+    let mut new_args: Vec<NewArg> = Vec::with_capacity(n_args);
     for (c_arg, p_arg) in content_args.into_iter().zip(pres_args) {
       if let Some(c_idref) = c_arg.get_attribute("idref") {
         if c_idref == p_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
@@ -3281,7 +3286,7 @@ impl Document {
           // namespace not already declared?
           None => {
             if let Some(prefix) = model::get_document_namespace_prefix(&ns_uri, false, false) {
-              if prefix != *EMPTY_SYM {
+              if prefix != pin!("") {
                 let mut root = self.document.get_root_element().unwrap();
                 match arena::with(prefix, |prefix_str| {
                   Namespace::new(prefix_str, &ns_uri, &mut root)
@@ -3468,8 +3473,26 @@ impl Document {
           for (key, val) in child.get_attributes() {
             match key.as_str() {
               "xml:id" | "id" => {
-                // Use the replacement id
-                let mapped_id = id_map.get(&val).unwrap();
+                // Use the replacement id. The pre-walk
+                // (findvalues/collect_xml_ids_from) normally populates
+                // id_map with every `xml:id` it can see, but the
+                // namespace/prefix of the attribute key returned by
+                // libxml2's `get_attributes()` can differ from what the
+                // XPath / DOM walk picked up (e.g. when the incoming
+                // node's tree came through a cloneNode that stripped
+                // the xml namespace). Fall back to minting a fresh
+                // replacement id on-the-fly rather than panicking —
+                // 1410.8508 hit this when the pre-walk found zero ids
+                // but attributes on a child node did carry xml:id.
+                let fresh;
+                let mapped_id = match id_map.get(&val) {
+                  Some(id) => id,
+                  None => {
+                    fresh = self.modify_id(val.clone());
+                    id_map.insert(val.clone(), fresh.clone());
+                    id_map.get(&val).unwrap()
+                  }
+                };
                 let newid = self.record_id_with_node(mapped_id, &new);
                 new.set_attribute(&key, &newid)?;
                 // Update id_map so subsequent idref lookups use the ACTUAL recorded id.
@@ -3841,8 +3864,8 @@ impl Document {
     // but isn't a _Capture_ node (which ultimately should disappear)
     let qname = get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
-      && model::can_have_attribute(qname, *XML_ID_SYM)
-      && (qname != *CAPTURE_SYM)
+      && model::can_have_attribute(qname, pin!("xml:id"))
+      && (qname != pin!("ltx:_Capture_"))
     {
       let mut ancestor = self
         .findnode("ancestor::*[@xml:id][1]", Some(node))
@@ -3937,7 +3960,7 @@ impl Document {
           node.append_text(&child.get_content())?;
         },
         other => {
-          dbg!(other);
+          log::debug!("append_tree: unhandled libxml NodeType {other:?}");
         },
       }
     }

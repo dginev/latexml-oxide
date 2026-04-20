@@ -113,10 +113,10 @@ LoadDefinitions!({
 
     let name = name_arg.to_string();
     // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
-    let open_toks: Vec<Token> = open_arg.clone().unlist();
-    let close_toks: Vec<Token> = close_arg.clone().unlist();
-    let style_toks: Vec<Token> = if let Some(ref s) = style_opt {
-      s.clone().unlist()
+    let open_toks: Vec<Token> = open_arg.unlist();
+    let close_toks: Vec<Token> = close_arg.unlist();
+    let style_toks: Vec<Token> = if let Some(s) = style_opt {
+      s.unlist()
     } else { Vec::new() };
 
     // Define \fnum@equation@MT@{name} = {open [style] {\theequation} close}
@@ -173,10 +173,10 @@ LoadDefinitions!({
   DefPrimitive!("\\renewtagform{} [] {}{}", sub[(name_arg, style_opt, open_arg, close_arg)] {
     use latexml_core::common::def_parser::parse_parameters;
     let name = name_arg.to_string();
-    let open_toks: Vec<Token> = open_arg.clone().unlist();
-    let close_toks: Vec<Token> = close_arg.clone().unlist();
-    let style_toks: Vec<Token> = if let Some(ref s) = style_opt {
-      s.clone().unlist()
+    let open_toks: Vec<Token> = open_arg.unlist();
+    let close_toks: Vec<Token> = close_arg.unlist();
+    let style_toks: Vec<Token> = if let Some(s) = style_opt {
+      s.unlist()
     } else { Vec::new() };
     // Same body as \newtagform:
     let mut fnum_body = vec![T_BEGIN!()];
@@ -633,8 +633,8 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let cmd_name = cmd.trim_start_matches('\\');
-    let ldel_toks: Vec<Token> = ldel.clone().unlist();
-    let rdel_toks: Vec<Token> = rdel.clone().unlist();
+    let ldel_toks: Vec<Token> = ldel.unlist();
+    let rdel_toks: Vec<Token> = rdel.unlist();
     // Wrapper macros: #1#2#3 (identity by default, can be overridden)
     let star_wrapper_cs = s!("\\MT@delim@{}@star@wrapper", cmd_name);
     def_macro(T_CS!(&star_wrapper_cs),
@@ -698,9 +698,9 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.clone().unlist();
-    let rdel_toks: Vec<Token> = rdel.clone().unlist();
-    let body_toks: Vec<Token> = body.clone().unlist();
+    let ldel_toks: Vec<Token> = ldel.unlist();
+    let rdel_toks: Vec<Token> = rdel.unlist();
+    let body_toks: Vec<Token> = body.unlist();
     // Create \cmd@inner: n args, body = user_body + \cmd@after
     let inner_cs_name = s!("{}@inner", cmd);
     let after_cs_name = s!("{}@after", cmd);
@@ -710,13 +710,11 @@ LoadDefinitions!({
     def_macro(T_CS!(&inner_cs_name),
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure
-    let cs_clone = cs;
-    let inner_cs = inner_cs_name.clone();
-    let after_cs = after_cs_name.clone();
-    let ldel_c = ldel_toks.clone();
-    let rdel_c = rdel_toks.clone();
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs_clone, true)?,
+    // Create main \cmd with OptionalMatch:* [] expansion closure.
+    // Move inner_cs_name / after_cs_name / ldel_toks / rdel_toks
+    // directly into the closure capture — none are used after this
+    // point, so four setup-time clones are avoided.
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
       Some(ExpansionBody::Closure(Rc::new(move |args| {
         let star = &args[0]; // OptionalMatch:*
         let opt = &args[1];  // []
@@ -727,33 +725,33 @@ LoadDefinitions!({
         if is_star {
           toks.push(T_CS!("\\left"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
         // Left delimiter
-        toks.extend(ldel_c.iter().cloned());
+        toks.extend(ldel_toks.iter().cloned());
         // \def\delimsize{...}
         toks.push(T_CS!("\\def"));
         toks.push(T_CS!("\\delimsize"));
         toks.push(T_BEGIN!());
         if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         } else if is_star {
           toks.push(T_CS!("\\middle"));
         }
         toks.push(T_END!());
         // \def\cmd@after{... rdel}
         toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs));
+        toks.push(T_CS!(&after_cs_name));
         toks.push(T_BEGIN!());
         if is_star {
           toks.push(T_CS!("\\right"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
-        toks.extend(rdel_c.iter().cloned());
+        toks.extend(rdel_toks.iter().cloned());
         toks.push(T_END!());
         // \cmd@inner
-        toks.push(T_CS!(&inner_cs));
+        toks.push(T_CS!(&inner_cs_name));
         Ok(Tokens::new(toks))
       }))), None)?;
   });
@@ -764,11 +762,11 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let n = nargs.value_of() as usize;
-    let ldel_toks: Vec<Token> = ldel.clone().unlist();
-    let rdel_toks: Vec<Token> = rdel.clone().unlist();
-    let body_toks: Vec<Token> = body.clone().unlist();
-    let pre_toks: Vec<Token> = pre.clone().unlist();
-    let post_toks: Vec<Token> = post.clone().unlist();
+    let ldel_toks: Vec<Token> = ldel.unlist();
+    let rdel_toks: Vec<Token> = rdel.unlist();
+    let body_toks: Vec<Token> = body.unlist();
+    let pre_toks: Vec<Token> = pre.unlist();
+    let post_toks: Vec<Token> = post.unlist();
     // Create \cmd@inner: n args, body = user_body + \cmd@after + postcode
     let inner_cs_name = s!("{}@inner", cmd);
     let after_cs_name = s!("{}@after", cmd);
@@ -779,14 +777,9 @@ LoadDefinitions!({
     def_macro(T_CS!(&inner_cs_name),
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
       ExpansionBody::Tokens(Tokens::new(inner_body_toks)), None)?;
-    // Create main \cmd with OptionalMatch:* [] expansion closure
-    let cs_clone = cs;
-    let inner_cs = inner_cs_name.clone();
-    let after_cs = after_cs_name.clone();
-    let ldel_c = ldel_toks.clone();
-    let rdel_c = rdel_toks.clone();
-    let pre_c = pre_toks.clone();
-    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs_clone, true)?,
+    // Create main \cmd with OptionalMatch:* [] expansion closure.
+    // Move the captured Vecs/Strings directly — no setup-time clones.
+    def_macro(cs, parse_parameters("OptionalMatch:* []", &cs, true)?,
       Some(ExpansionBody::Closure(Rc::new(move |args| {
         let star = &args[0];
         let opt = &args[1];
@@ -794,38 +787,38 @@ LoadDefinitions!({
         let has_opt = !opt.is_empty();
         let mut toks: Vec<Token> = vec![];
         // Precode
-        toks.extend(pre_c.iter().cloned());
+        toks.extend(pre_toks.iter().cloned());
         // Prefix
         if is_star {
           toks.push(T_CS!("\\left"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
         // Left delimiter
-        toks.extend(ldel_c.iter().cloned());
+        toks.extend(ldel_toks.iter().cloned());
         // \def\delimsize{...}
         toks.push(T_CS!("\\def"));
         toks.push(T_CS!("\\delimsize"));
         toks.push(T_BEGIN!());
         if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         } else if is_star {
           toks.push(T_CS!("\\middle"));
         }
         toks.push(T_END!());
         // \def\cmd@after{... rdel}
         toks.push(T_CS!("\\def"));
-        toks.push(T_CS!(&after_cs));
+        toks.push(T_CS!(&after_cs_name));
         toks.push(T_BEGIN!());
         if is_star {
           toks.push(T_CS!("\\right"));
         } else if has_opt {
-          toks.extend(opt.clone().unlist());
+          toks.extend_from_slice(&opt.unlist_cow());
         }
-        toks.extend(rdel_c.iter().cloned());
+        toks.extend(rdel_toks.iter().cloned());
         toks.push(T_END!());
         // \cmd@inner
-        toks.push(T_CS!(&inner_cs));
+        toks.push(T_CS!(&inner_cs_name));
         Ok(Tokens::new(toks))
       }))), None)?;
   });
@@ -838,7 +831,7 @@ LoadDefinitions!({
     let cmd_name = cmd.trim_start_matches('\\');
     let variant = nstar.to_string();
     let wrapper_cs = s!("\\MT@delim@{}@{}@wrapper", cmd_name, variant);
-    let body_toks: Vec<Token> = body.clone().unlist();
+    let body_toks: Vec<Token> = body.unlist();
     def_macro(T_CS!(&wrapper_cs),
       parse_parameters("{}{}{}", &T_CS!(&wrapper_cs), true)?,
       ExpansionBody::Tokens(Tokens::new(body_toks)), None)?;

@@ -27,8 +27,6 @@ LoadDefinitions!({
     \def\@namedef#1{\expandafter\def\csname #1\endcsname}
     \def\@nameuse#1{\csname #1\endcsname}
     \def\@cons#1#2{\begingroup\let\@elt\relax\xdef#1{#1\@elt #2}\endgroup}
-    \let\@nil\relax
-    \let\@nnil\relax
     \let\@arrayparboxrestore\relax
     \def\@car#1#2\@nil{#1}
     \def\@cdr#1#2\@nil{#2}
@@ -41,9 +39,13 @@ LoadDefinitions!({
   Let!("\\@begindocumenthook", "\\@empty");
   Let!("\\@elt", "\\relax");
 
-  // Utility macros needed by error infrastructure
-  DefMacro!("\\@qend", { Tokens::new(Explode!("end")) });
-  DefMacro!("\\@qrelax", { Tokens::new(Explode!("relax")) });
+  // Utility macros needed by error infrastructure.
+  // Perl: latex_constructs.pool.ltxml L5536-5537 defines these via
+  // `DefMacroI('\@qend', undef, Tokens(Explode('end')))` — token-list
+  // bodies (NOT closures), so they survive dump serialization. We use
+  // matching string-literal token-list form here for the same reason.
+  DefMacro!("\\@qend", "end");
+  DefMacro!("\\@qrelax", "relax");
   DefMacro!("\\@spaces", r"\space\space\space\space");
   Let!("\\@sptoken", T_SPACE!());
 
@@ -92,11 +94,20 @@ LoadDefinitions!({
   DefMacro!("\\@gobble{}", None);
   DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
-  DefMacro!("\\@firstofone{}",       sub[(first)] { Ok(first) });
+  // Perl latex.ltx uses `\long\def\@firstofone#1{#1}` etc., overriding the
+  // closure-version defined in latex_base.pool.ltxml L46-48. The dump
+  // therefore captures these as token-list bodies (see latex_dump.pool.ltxml
+  // L3771 `\@thirdofthree T(A(3))`). Using token-list form here matches
+  // Perl's end-state AND lets these CSes survive dump-only mode dump loading.
+  DefMacro!("\\@firstofone{}", "#1");
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[(first,_second)] { Ok(first) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[(_first, second)] { Ok(second) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[(_first,_second, third)] { Ok(third) });
+  DefMacro!("\\@firstoftwo{}{}", "#1");
+  DefMacro!("\\@secondoftwo{}{}", "#2");
+  DefMacro!("\\@thirdofthree{}{}{}", "#3");
+  // Perl L48: `\@expandtwoargs{}{}{}` — closure body. Closures can't be
+  // serialized into the dump, but `_base.rs` is always loaded before
+  // the dump, so the closure is always available. Dump's add-only
+  // policy then skips any same-named dump entry.
   DefMacro!("\\@expandtwoargs{}{}{}", sub[(first,second,third)] {
     let mut tks = first.unlist();
     tks.push(T_BEGIN!());
@@ -107,7 +118,7 @@ LoadDefinitions!({
     tks.push(T_END!());
     tks });
 
-  // Perl L50-52: \@makeother
+  // Perl L50-52: `\@makeother` — closure.
   DefMacro!("\\@makeother {}", sub[(arg)] {
     let arg_str = arg.to_string();
     let mut arg_chars = arg_str.chars();
@@ -274,18 +285,10 @@ LoadDefinitions!({
   // Perl: latex_base.pool.ltxml lines 516-593
   //======================================================================
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
-  DefPrimitive!("\\@onlypreamble{}", {
-    only_preamble("\\@onlypreamble")?;
-  });
-  DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
-    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
-  });
-  DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
-    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;
-  });
-  DefPrimitive!("\\GenericInfo{}{}", sub[(arg1,arg2)] {
-    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
-  });
+  // Perl-parity: `\@onlypreamble`, `\GenericError/Warning/Info` are
+  // closure-backed primitives defined in `latex_constructs.pool.ltxml`
+  // (L5645-5648), not latex_base. Relocated there 2026-04-18 so they
+  // survive the dump/base mutual-exclusivity flip.
 
   Let!("\\MessageBreak", "\\relax");
   TeX!(
@@ -376,7 +379,8 @@ LoadDefinitions!({
        \@latex@info{#1\@gobble}}
      "
   );
-  DefPrimitive!("\\@setsize{}{}{}{}", None);
+  // Perl-parity: `\@setsize` is `DefMacro` in latex_constructs.pool.ltxml L5652.
+  // Relocated there 2026-04-18 (closure-backed; closure can't serialize).
   DefMacro!("\\hexnumber@ {}", "\\ifcase\\number#1
  0\\or 1\\or 2\\or 3\\or 4\\or 5\\or 6\\or 7\\or 8\\or
  9\\or A\\or B\\or C\\or D\\or E\\or F\\fi");
@@ -601,30 +605,12 @@ LoadDefinitions!({
   // (moved from latex_semi_undocumented.rs)
   //======================================================================
 
-  // \@ifnextchar — Perl latex_base (also used heavily in latex_constructs)
-  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
-    let next = gullet::read_non_space()?;
-    let next_test = match next {
-      Some(ref n) => XEquals!(&token, n),
-      None => XEquals!(&token, &*TOKEN_END)
-    };
-    let which = if next_test { t_if } else { t_else };
-    let mut result = which.substitute_parameters(&[]).unlist();
-    if let Some(t_next) = next {
-      result.push(t_next);
-    }
-    result
-  });
-  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
-  Let!("\\@ifnext", "\\@ifnextchar");
+  // Perl-parity: `\@ifnextchar`, `\kernel@ifnextchar`, `\@ifnext` are
+  // defined in latex_constructs.pool.ltxml L5687 (closure-backed, can't
+  // round-trip through the dump). Relocated there 2026-04-18.
 
-  // \makeatletter / \makeatother
-  DefPrimitive!("\\makeatletter", {
-    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
-  });
-  DefPrimitive!("\\makeatother", {
-    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
-  });
+  // Perl-parity: `\makeatletter` / `\makeatother` are defined in
+  // latex_constructs.pool.ltxml L5765-5766. Relocated there 2026-04-18.
 
   // L3 hook stubs — Perl latex_base L829-855
   DefMacro!("\\NewHook{}", None);
@@ -666,10 +652,12 @@ LoadDefinitions!({
   // Additional base definitions not in Perl's latex_base but needed early
   //======================================================================
 
-  // Font size/check stubs
-  DefMacro!("\\check@mathfonts", None);
-  DefMacro!("\\fontsize{}{}", None);
-  DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+  // Perl-parity: `\check@mathfonts`, `\fontsize`, `\@setfontsize` are
+  // defined in latex_constructs.pool.ltxml L5670-5673 (serialize-able
+  // token-list bodies). Relocated there 2026-04-18 — required to fix
+  // the `\fontsize` undefined error under LATEXML_DUMP_ONLY=1 where
+  // the dump reader's @-internal safety filter rejects public-CS
+  // macros whose definitions normally come from `_base.rs`.
 
   // Class internals used by raw TeX classes
   DefRegister!("\\@bls" => Dimension!("12pt"));

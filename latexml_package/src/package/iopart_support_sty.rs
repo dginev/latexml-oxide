@@ -108,20 +108,16 @@ LoadDefinitions!({
 
   // Acknowledgements — Perl L249-251 (DefConstructor, defined below)
 
-  // Misc — Perl L130-180
-  DefMacro!("\\ft{}", "\\footnote{#1}");
-  DefMacro!("\\query{}", "");
-  DefMacro!("\\eqalign{}", "\\begin{aligned}#1\\end{aligned}");
-  DefMacro!("\\eqalignno{}", "\\begin{aligned}#1\\end{aligned}");
-  DefMacro!("\\cases{}", "\\begin{cases}#1\\end{cases}");
-  DefMacro!("\\pmatrix{}", "\\begin{pmatrix}#1\\end{pmatrix}");
+  // Misc — Perl L121,136
+  // Note: \eqalign/\eqalignno/\cases/\pmatrix come from Plain TeX (plain_constructs);
+  // \ft, \query, \bbox, \overmark are not in Perl iopart_support.sty.ltxml.
+  // Perl L121: \fl expands to nothing
+  DefMacro!("\\fl", "");
   // Perl L136: \buildrel{} \over{} — uses literal \over delimiter between args
   // Use RawTeX \def because the Rust DefMacro parser doesn't support CS delimiters
   RawTeX!("\\def\\buildrel#1\\over#2{\\mathrel{\\mathop{#2}\\limits^{#1}}}");
-  DefMacro!("\\overmark{}", "");
-  DefMacro!("\\fl", "");
-  DefMacro!("\\bi{}", "\\boldsymbol{#1}");
-  DefMacro!("\\bbox{}", "\\mathbf{#1}");
+  // Perl L122: \case (not \cases) — two-arg textstyle fraction
+  DefMacro!("\\case{}{}", "{\\textstyle\\frac{#1}{#2}}");
 
   // Spacing — Perl L223-227
   Let!("\\ms", "\\,");
@@ -161,11 +157,10 @@ LoadDefinitions!({
   DefMacro!("\\arcsec", "\u{2033}");
 
   // Math operators — Perl L110-134
-  DefMath!("\\rmd", "\\mathrm{d}", role => "DIFFOP", meaning => "differential-d");
+  DefMath!("\\rmd", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
   DefMath!("\\rme", "\u{2147}", role => "ID", meaning => "exponential-e");
   DefMath!("\\rmi", "\u{2148}", role => "ID", meaning => "imaginary-i");
   Let!("\\e", "\\rme");
-  DefMacro!("\\case{}{}", "{\\textstyle\\frac{#1}{#2}}");
   DefMath!("\\Tr", "\\mathrm{Tr}", role => "OPFUNCTION", meaning => "trace");
   DefMath!("\\tr", "\\mathrm{tr}", role => "OPFUNCTION", meaning => "trace");
   DefMath!("\\Or", "\\mathrm{O}", role => "OPFUNCTION", meaning => "Big-O");
@@ -176,6 +171,11 @@ LoadDefinitions!({
   // Perl L114-116: \bcal calligraphic bold primitive
   DefPrimitive!("\\bcal", "",
     font => { family => "caligraphic", series => "bold", shape => "upright", forcebold => true });
+  // Perl iopart_support.sty.ltxml L117-119: \bi upright bold italic font
+  // (math-mode analogue of \mathbf that keeps the italic family). arxiv
+  // papers using iopart / iopart-num call this for vectors.
+  DefPrimitive!("\\bi", "",
+    font => { family => "italic", series => "bold", shape => "upright", forcebold => true });
   DefMacro!("\\dsty", "\\displaystyle");
   DefMacro!("\\tsty", "\\textstyle");
   DefMacro!("\\ssty", "\\scriptstyle");

@@ -148,11 +148,11 @@ impl Definition for Conditional {
   }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
+  fn do_absorption(&self, _document: &mut Document, _whatsit: &Whatsit) -> Result<Vec<Node>> {
     fatal!(
       Definition,
       Unexpected,
-      "do_absorbtion on Conditional should never be called!"
+      "do_absorption on Conditional should never be called!"
     );
   }
 }
@@ -200,15 +200,16 @@ impl Conditional {
     let args = self.read_arguments()?;
 
     state::get_ifframe().unwrap().borrow_mut().parsing = false;
-    let tracing = state::lookup_bool("tracingcommands");
-    //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
-    //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
+    // `tracingcommands` is normally unset; defer the state probe to
+    // the path that would actually read it. Conditional::invoke fires
+    // on every \if/\ifx/\ifnum/…, so avoiding a mandatory state
+    // lookup per conditional is a measurable win.
     if let Some(ref test) = self.test {
       if (test)(args)? {
         // true branch: do nothing, tokens follow naturally
       } else {
         let to = self.skip_conditional_body(-1);
-        if tracing {
+        if state::lookup_bool("tracingcommands") {
           Debug!("{{false}} [skipped to {:?}]\n", to);
         }
       }

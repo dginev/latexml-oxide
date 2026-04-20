@@ -1,8 +1,8 @@
-/// Integration tests for the latexml_post processing pipeline.
-///
-/// Port of LaTeXML/t/90_latexmlpost.t
-/// For each test `$name` there should be `$name.xml` (input) and
-/// `$name-post.xml` (expected output from `latexmlpost --keepXMath --pmml`).
+//! Integration tests for the latexml_post processing pipeline.
+//!
+//! Port of LaTeXML/t/90_latexmlpost.t
+//! For each test `$name` there should be `$name.xml` (input) and
+//! `$name-post.xml` (expected output from `latexmlpost --keepXMath --pmml`).
 
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::mathml::MathML;

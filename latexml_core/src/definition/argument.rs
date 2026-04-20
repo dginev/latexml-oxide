@@ -378,6 +378,17 @@ impl ArgWrap {
     }
   }
 
+  /// Borrow the token slice backing an ArgWrap::Tokens, falling back
+  /// to an owned Vec<Token> for the other variants. Avoids a full
+  /// Tokens clone in the common `ArgWrap::Tokens(_)` case.
+  pub fn unlist_cow(&self) -> Cow<'_, [Token]> {
+    match self {
+      ArgWrap::Tokens(tks) => Cow::Borrowed(tks.unlist_ref()),
+      ArgWrap::None => Cow::Borrowed(&[]),
+      _ => Cow::Owned(self.clone().unlist()),
+    }
+  }
+
   pub fn is_empty(&self) -> bool {
     use ArgWrap::*;
     match self {

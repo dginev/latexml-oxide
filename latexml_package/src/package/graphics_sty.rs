@@ -128,7 +128,7 @@ LoadDefinitions!({
   DefParameterType!(GraphixDimension, sub[_inner, _extra] {
     gullet::skip_spaces()?;
     let next = gullet::read_x_token(Some(false), false, None)?;
-    if next.is_none() || next.as_ref().is_some_and(|t| t.to_string() == "!") {
+    if next.is_none() || next.as_ref().is_some_and(|t| t.text == pin!("!")) {
       // ! or end-of-input: "let other dimensions determine size"
       Ok(Tokens!())
     } else {
@@ -198,13 +198,25 @@ LoadDefinitions!({
   DefKeyVal!("Grot", "y", "Dimension");
   DefKeyVal!("Grot", "units", "");
 
-  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
-    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Some(body) = whatsit.get_arg(3) {
-        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
+  // ORDER MATTERS: define `{rotatebox}` environment FIRST, then the
+  // `\rotatebox` DefConstructor. DefEnvironment auto-registers a bare
+  // `\rotatebox` CS (Perl Package.pm L1949-1969 hook-pipeline parity)
+  // with the environment's signature `{Float}` and the env's mode setup.
+  // If the env def runs AFTER the DefConstructor, the env's bare form
+  // clobbers the constructor — users writing `\rotatebox{0}{…}` then get
+  // the ENV semantics (single `{Float}` arg, `restricted_horizontal` body
+  // that never unwinds on the outer `\end{figure}`). arxiv 1007.3314 hit
+  // this: `graphicx.sty` happens to re-register `\rotatebox` AFTER the
+  // env, so graphicx-loading papers worked, but bare `graphics`-only
+  // papers (revtex4 with `\usepackage[dvips]{graphics}`) left the env
+  // bare form active and tripped `\end{figure} in restricted_horizontal`.
+  // DefEnvironment form — used as `\begin{rotatebox}{90}…\end{rotatebox}`.
+  DefEnvironment!("{rotatebox}{Float}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
+    after_digest_body => sub[whatsit] {
+      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Ok(Some(body)) = whatsit.get_body() {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);
           }
@@ -212,13 +224,17 @@ LoadDefinitions!({
       }
     });
 
-  // {rotatebox} environment form — used as \begin{rotatebox}{90}...\end{rotatebox}
-  DefEnvironment!("{rotatebox}{Float}",
-    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
-    after_digest_body => sub[whatsit] {
-      let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Ok(Some(body)) = whatsit.get_body() {
-        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
+  // Now re-register the bare `\rotatebox` as a DefConstructor, overriding
+  // the env's auto-registered bare form. `\rotatebox[keys]{angle}{body}`
+  // needs the OptionalKeyVals + Float + group signature that the env
+  // cannot express.
+  DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
+    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+    mode => "restricted_horizontal", enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+      if let Some(body) = whatsit.get_arg(3) {
+        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);
           }
@@ -248,25 +264,47 @@ LoadDefinitions!({
 
   // == Graphics path and inclusion ==
 
-  // Perl L248-260: \graphicspath DirectoryList — pushes paths and inserts PIs.
-  // Perl uses DirectoryList param type; we use {} and parse braced groups manually.
-  DefConstructor!("\\graphicspath{}", "",
-    after_digest => sub[whatsit] {
-      let arg = whatsit.get_arg(0).map(|a| a.to_string()).unwrap_or_default();
-      // Parse {dir1}{dir2}... — each directory is a braced group
+  // Perl graphics.sty.ltxml L248-260: \graphicspath DirectoryList.
+  //   properties: for each dir → PushValue(GRAPHICSPATHS => pathname_absolute(…))
+  //   body: for each path in props{paths} → insertPI('latexml', graphicspath=>$path)
+  //
+  // DirectoryList reads the arg ToString-first so `_` in path names never
+  // becomes a SUB-catcode during digestion.
+  DefConstructor!("\\graphicspath DirectoryList",
+    sub[document, _args, props] {
+      if let Some(Stored::String(paths_sym)) = props.get("paths") {
+        let paths = arena::with(*paths_sym, |s| s.to_string());
+        for path in paths.split('\x1e').filter(|p| !p.is_empty()) {
+          let mut attrs = HashMap::default();
+          attrs.insert(String::from("graphicspath"), path.to_string());
+          document.insert_pi("latexml", Some(attrs))?;
+        }
+      }
+    },
+    properties => sub[args] {
+      let arg = args.first()
+        .and_then(|a| a.as_ref())
+        .map(|a| a.to_string())
+        .unwrap_or_default();
       let root = state::lookup_value("SOURCEDIRECTORY")
         .map(|v| v.to_string()).unwrap_or_default();
+      let mut collected: Vec<String> = Vec::new();
       for dir in arg.split('}') {
         let dir = dir.trim_start_matches('{').trim();
         if !dir.is_empty() {
+          // Perl: pathname_absolute(pathname_canonical($dir), $root)
           let path = if root.is_empty() || dir.starts_with('/') {
             dir.to_string()
           } else {
             s!("{}/{}", root, dir)
           };
-          let _ = state::push_value("GRAPHICSPATHS", Stored::String(arena::pin(path)));
+          // Perl: PushValue(GRAPHICSPATHS => $path)
+          let _ = state::push_value("GRAPHICSPATHS",
+            Stored::String(arena::pin(&path)));
+          collected.push(path);
         }
       }
+      Ok(stored_map!("paths" => collected.join("\x1e")))
     });
 
   // Perl: DefMacro('\includegraphics OptionalMatch:* [][] Semiverbatim',

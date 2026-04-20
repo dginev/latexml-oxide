@@ -4,7 +4,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, EMPTY_SYM, MATH_SYM, SymStr, TEXT_SYM};
+use crate::common::arena::{self, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -13,10 +13,11 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 use crate::gullet;
-use crate::state::{lookup_bool, lookup_font, with_value};
+use crate::state::{lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
+use crate::pin;
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
@@ -36,7 +37,7 @@ pub struct Tbox {
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text:       *EMPTY_SYM,
+      text:       pin!(""),
       font:       Rc::new(Font::text_default()),
       locator:    Locator::default(),
       properties: HashMap::default(),
@@ -80,7 +81,7 @@ impl Tbox {
       Some(f) => f,
       None => lookup_font().unwrap(),
     };
-    let empty_sym = *EMPTY_SYM;
+    let empty_sym = pin!("");
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
       Tokens!(Token { text, code: Catcode::OTHER })
     } else {
@@ -112,8 +113,8 @@ impl Tbox {
         .entry("depth")
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
-    if lookup_bool("IN_MATH") {
-      properties.insert("mode", Stored::String(*MATH_SYM));
+    if crate::state::lookup_bool_sym(crate::pin!("IN_MATH")) {
+      properties.insert("mode", Stored::String(pin!("math")));
       if text != empty_sym {
         with_value(
           &arena::with(text, |text_str| s!("math_token_attributes_{}", text_str)),
@@ -145,6 +146,37 @@ impl Tbox {
     self.get_property_bool("isEmpty")
       || self.get_property_bool("isSpace")
       || arena::with(self.text, |text| text.trim().is_empty())
+  }
+
+  /// Whether this box is in math mode.
+  /// Perl: Box.pm::isMath (L79-81).
+  pub fn is_math(&self) -> bool {
+    matches!(self.properties.get("mode"), Some(Stored::String(s)) if *s == pin!("math"))
+  }
+
+  /// Batch-insert properties. Equivalent to calling `set_property` for each
+  /// entry, but avoids re-looking up the properties map per call.
+  /// Perl: Box.pm::setProperties (L171-175).
+  pub fn set_properties<I>(&mut self, entries: I)
+  where I: IntoIterator<Item = (&'static str, Stored)> {
+    for (key, value) in entries {
+      self.properties.insert(key, value);
+    }
+  }
+
+  /// height + depth of this box (the TeX "total height").
+  /// Returns Dimension::default() (0pt) when either component is absent.
+  /// Perl: Box.pm::getTotalHeight (L202-210).
+  pub fn total_height(&self) -> Dimension {
+    let h = match self.properties.get("height") {
+      Some(Stored::Dimension(d)) => d.0,
+      _ => 0,
+    };
+    let d = match self.properties.get("depth") {
+      Some(Stored::Dimension(d)) => d.0,
+      _ => 0,
+    };
+    Dimension(h + d)
   }
 }
 
@@ -188,11 +220,11 @@ impl BoxOps for Tbox {
     let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(Stored::String(s)) => *s,
-      _ => *TEXT_SYM,
+      _ => pin!("text"),
     };
 
     if !text.is_empty() {
-      if mode == *MATH_SYM {
+      if mode == pin!("math") {
         // Perl: DefMath ?#isMath — in text context, produce plain text.
         // Check if we're inside a math element by walking up the DOM.
         // This handles \And in author frontmatter (text) while preserving

@@ -370,6 +370,9 @@ LoadDefinitions!({
 
     for skeyset in skeysets_str.split(',') {
       let skeyset = skeyset.trim();
+      // Perl #2777 (2026-03-27): skip empty keyset names from leading,
+      // trailing, or doubled commas.
+      if skeyset.is_empty() { continue; }
       if latexml_core::keyval::has_keyval(&sprefix, skeyset, &skey) {
         let keyset_owned = skeyset.to_string();
         DefMacro!(T_CS!("\\XKV@tfam"), None, {
@@ -804,6 +807,7 @@ fn xkeyval_setup_document_class() {
       continue;
     }
     let (_area, _base, ext) = pathname::split(file);
+    // Perl xkeyval.sty.ltxml L254: `if ($ext eq $clsext)` — case-sensitive.
     if ext == clsext {
       let opt_cs = T_CS!(s!("\\opt@{file}"));
       if state::lookup_meaning(&opt_cs).is_some() {

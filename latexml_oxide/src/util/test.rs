@@ -167,6 +167,7 @@ fn process_texfile(
   });
   // Add the package bindings
   state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_class_binding_names(latexml_package::class_binding_names());
   // If we want to test the latexml_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
   if let Some(dispatcher) = extra_bindings_dispatcher {
@@ -232,6 +233,7 @@ pub fn new_test_engine() -> Core {
   });
   load_model!("LaTeXML");
   state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
+  state::add_class_binding_names(latexml_package::class_binding_names());
   core_engine
 }
 

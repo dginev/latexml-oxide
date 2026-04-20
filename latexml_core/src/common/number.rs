@@ -43,7 +43,10 @@ macro_rules! Number {
 }
 
 impl From<String> for Number {
-  fn from(s: String) -> Number { Number(s.parse::<i64>().unwrap()) }
+  /// Parse a string into a Number. Non-numeric input silently becomes 0
+  /// to match Perl's `Number(ToString($x))` coercion — Perl's implicit
+  /// numeric context treats "abc" / undef as 0 without panicking.
+  fn from(s: String) -> Number { Number(s.trim().parse::<i64>().unwrap_or(0)) }
 }
 
 impl fmt::Display for Number {

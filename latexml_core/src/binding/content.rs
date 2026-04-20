@@ -213,8 +213,25 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     return Ok(());
   }
 
-  // Mark as loaded, then process the definitions
-  note_begin(&s!("Loading {:?} definitions", filename));
+  // Mark as loaded, then process the definitions.
+  //
+  // Suppress the "Loading X definitions" banner when we're inside a
+  // nested input_definitions call for the SAME file — that's the
+  // pattern where an .ltxml binding (e.g. babel_sty.rs) immediately
+  // calls `input_definitions(name, noltxml=true)` to raw-load the
+  // texlive .sty. Both frames used to print, producing the confusing
+  // duplicate `(Loading "babel.sty" definitions... (Loading
+  // "babel.sty" definitions...` trace. Now only the outermost frame
+  // announces — tracked per-filename via a state-value marker.
+  let banner_key = s!("__loading_banner__{filename}");
+  let this_frame_announces =
+    crate::state::with_value(&banner_key, |v| v.is_none());
+  if this_frame_announces {
+    note_begin(&s!("Loading {:?} definitions", filename));
+    crate::state::assign_value(
+      &banner_key, true, Some(crate::state::Scope::Global),
+    );
+  }
   def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
 
@@ -252,7 +269,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // This prevents double-loading when e.g. smfart calls load_class("amsart")
   // after the binding already set the _loaded flag.
   if !options.reloadable && lookup_bool(&s!("{filename}_loaded")) {
-    note_end(&s!("Loading {:?} definitions", filename));
+    if this_frame_announces {
+      note_end(&s!("Loading {:?} definitions", filename));
+      crate::state::assign_value(
+        &banner_key, crate::common::store::Stored::None,
+        Some(crate::state::Scope::Global),
+      );
+    }
     return Ok(());
   }
 
@@ -261,8 +284,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   let is_binding = if options.noltxml {
     false
   } else {
-    match load_external_binding(&filename).and_then(|ext| {
-      if ext { Ok(true) } else { load_binding(&filename) }
+    match _load_binding(false, &filename, options.reloadable).and_then(|ext| {
+      if ext { Ok(true) } else { _load_binding(true, &filename, options.reloadable) }
     }) {
       Ok(v) => v,
       Err(e) => {
@@ -307,7 +330,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // This ordering ensures versioned-package fallback bindings take priority
     // over raw .sty files that may contain layout checks (like ICML's \ifdim
     // page-margin checks) that produce spurious warnings.
-    let interpreting = lookup_bool("INTERPRETING_DEFINITIONS");
+    let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
 
     // Step 2: If we're already interpreting raw TeX definitions, look for the file directly
     let found_raw = if interpreting && !options.notex {
@@ -334,7 +357,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         Info!("fallback", name,
           s!("Interpreted as versioned package, falling back to {fallback}"));
         // Load the fallback binding — use reloadable since we already marked original as "loaded"
-        let fallback_name = fallback.trim_end_matches(&format!(".{as_type}")).to_string();
+        let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
+        let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
         let fb_result = input_definitions(&fallback_name, InputDefinitionOptions {
           extension: Some(Cow::Borrowed(if as_type == "sty" { "sty" } else { "cls" })),
           options: Vec::new(),
@@ -359,7 +383,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Perl Package.pm L2122-2125
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.notex && !interpreting && !lookup_bool(&s!("{filename}_loaded")) {
+    } else if !options.notex && !interpreting
+      && (options.reloadable || !lookup_bool(&s!("{filename}_loaded")))
+    {
       find_file(
         &filename,
         Some(FindFileOptions {
@@ -385,7 +411,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
         // InputDefinitions which returns undef on not-found even with noerror=>1.
-        note_end(&s!("Loading {:?} definitions", filename));
+        if this_frame_announces {
+          note_end(&s!("Loading {:?} definitions", filename));
+          crate::state::assign_value(
+            &banner_key, crate::common::store::Stored::None,
+            Some(crate::state::Scope::Global),
+          );
+        }
         return Err(s!("File not found: {}", filename).into());
       }
       // Mark as loaded even on failure — prevents retrying a missing file
@@ -450,19 +482,27 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     }
     reset_options()?;
   }
-  note_end(&s!("Loading {:?} definitions", filename));
+  if this_frame_announces {
+    note_end(&s!("Loading {:?} definitions", filename));
+    crate::state::assign_value(
+      &banner_key, crate::common::store::Stored::None,
+      Some(crate::state::Scope::Global),
+    );
+  }
   Ok(())
 }
 
 /// loads a binding from the main binding dispatcher, if available+found
-pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file) }
+pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file, false) }
 /// loads a binding from an external binding dispatcher, if available+found
-pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file) }
+pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file, false) }
 // in the spirit of Perl's Package::loadLTXML
-fn _load_binding(internal: bool, request: &str) -> Result<bool> {
-  // Perl loadLTXML L2311-2313: skip if already loaded
+fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool> {
+  // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
+  // (e.g. `\inputencoding{cp1251}` re-invokes cp1251.def to re-register
+  // DeclareInputText mappings after `set_input_encoding` reset them).
   let loaded_key = s!("{request}_found_loaded");
-  if lookup_bool(&loaded_key) {
+  if !reloadable && lookup_bool(&loaded_key) {
     return Ok(true);
   }
 
@@ -607,11 +647,12 @@ pub fn input_content(request: &str, options: InputOptions) -> Result<()> {
 /// in which case we may really want to load a binding.
 /// Note that generic style files (non-latex) often have a .tex extension.
 pub fn input(request: &str, options: InputOptions) -> Result<()> {
-  // unwrap if in quotes \input{"file name"}
-  let mut clean_req = Cow::Borrowed(request);
-  while request.starts_with('"') && request.ends_with('"') {
-    clean_req = Cow::Owned(QUOTE_WRAPPED.replace(&clean_req, "$1").into_owned());
-  }
+  // unwrap if in quotes \input{"file name"} — Perl parity:
+  // `$request =~ s/^("+)(.+)\g1$/$2/;` (single-pass strip of a matching
+  // leading+trailing run of quotes). The previous `while` loop checked
+  // the unchanged `request`, which spun forever on any quoted input
+  // since the replacement only touches `clean_req`.
+  let clean_req = QUOTE_WRAPPED.replace(request, "$1");
   // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
   // if pathname_is_literaldata(request) {
   //   let (dir, name, ftype) = pathname_split(request);
@@ -640,8 +681,33 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   if clean_req.ends_with(".latexml") {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
-  if lookup_bool("INTERPRETING_DEFINITIONS") {
-    input_definitions(&clean_req, InputDefinitionOptions::default())
+  if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
+    return input_definitions(&clean_req, InputDefinitionOptions::default());
+  }
+  // Perl Package.pm L2109-2113: FindFile_aux checks for `"$file.ltxml"` in
+  // $ltxml_paths BEFORE consulting raw TeX paths. In Rust the bindings are
+  // compile-time dispatch tables rather than on-disk .ltxml files, so the
+  // equivalent check is: if a binding dispatcher responds to `<name>.tex`,
+  // load it (matching `\input harvmac` → `harvmac.tex.ltxml` preference
+  // over a local `harvmac.tex`). Skip when the request carries a directory
+  // (explicit local path).
+  let binding_loaded = {
+    let has_dir = clean_req.contains('/') || clean_req.contains('\\');
+    let ext = clean_req.rsplit('.').next().unwrap_or("");
+    let is_tex_like = ext == clean_req.as_ref() || ext == "tex";
+    if !has_dir && is_tex_like {
+      let tex_name = if ext == "tex" {
+        clean_req.to_string()
+      } else {
+        s!("{}.tex", clean_req)
+      };
+      load_binding(&tex_name)? || load_external_binding(&tex_name)?
+    } else {
+      false
+    }
+  };
+  if binding_loaded {
+    Ok(())
   } else if let Some(path) = find_file(&clean_req, None) {
     // Found something plausible..
     // let ftype = if pathname_is_literaldata(path) { "tex" } else {
@@ -704,11 +770,11 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
-  let was_interpreting = lookup_bool("INTERPRETING_DEFINITIONS");
+  let was_interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
   // And that if we're interpreting this TeX file of definitions,
   // we probably should interpret any TeX files IT loads.
   let was_including_styles = lookup_bool("INCLUDE_STYLES");
-  assign_value("INTERPRETING_DEFINITIONS", true, None);
+  assign_value_sym(crate::pin!("INTERPRETING_DEFINITIONS"), true, None);
   // If we're reading in these definitions, probaly will accept included ones?
   // (but not forbid ltxml ?)
   assign_value("INCLUDE_STYLES", true, None);
@@ -740,7 +806,7 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
     Ok(())
   })?;
 
-  assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
+  assign_value_sym(crate::pin!("INTERPRETING_DEFINITIONS"), was_interpreting, None);
   assign_value("INCLUDE_STYLES", was_including_styles, None);
   expire_state_unlocked();
   Ok(())
@@ -1133,6 +1199,8 @@ pub fn require_resource(mut resource: Resource) {
     return;
   }
   if resource.mimetype.is_empty() && !resource.name.is_empty() {
+    // Perl Package.pm L3129: `my $ext = pathname_type($resource);` — no
+    // case-folding; `$resource_types{$ext}` is a case-sensitive lookup.
     let ext = pathname::extension(&resource.name);
     resource.mimetype = resource_type(&ext);
   }
@@ -1169,21 +1237,62 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     noerror: true,
     ..InputDefinitionOptions::default()
   });
-  // Perl: if class not found, fall back to OmniBus (with raw cls loading allowed
-  // there so that the cmslatex.cls / etc. raw definitions still get executed).
+  // Perl Package.pm L2679 (LoadClass branch): scan the raw .cls for
+  // \usepackage/\RequirePackage/\LoadClass dependencies when no .cls.ltxml
+  // binding was found. This matters for unknown classes that nonetheless
+  // pull in well-known packages (e.g. ijms-preprint.cls loads amsmath);
+  // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
+  // undefined and the `_` characters then reach the stomach as subscript
+  // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
+  if !lookup_bool(&s!("{name}.cls_found_loaded")) {
+    maybe_require_dependencies(name, "cls");
+  }
+  // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
+  // Scan all known cls bindings (longest-first), pick the first whose name is a
+  // prefix of the requested class. This catches author-renamed classes like
+  //   mysvjour3.cls → ProvidesClass{svjour3} → binding: svjour3
+  //   mn2ebis.cls   → starts with "mn2e"   → binding: mn2e
+  //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
+  // Fall through to OmniBus only when nothing matches.
   if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
     && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
-      Warn!("missing_file", name, format!("Can't find binding for class {name} (using OmniBus)"));
       note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
-      return input_definitions("OmniBus", InputDefinitionOptions {
+
+      // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
+      //       my ($alternate) = grep { $class =~ /^\Q$_\E/ } @classes;
+      // Flatten across ALL registered binding crates (latexml_package +
+      // latexml_contrib + any future extensions) so contrib classes like
+      // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
+      let alternate = {
+        let all_slices = crate::state::get_class_binding_names();
+        let mut sorted: Vec<&str> = all_slices.iter()
+          .flat_map(|s| s.iter().copied())
+          .filter(|n| *n != "OmniBus" && *n != name)
+          .collect();
+        sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
+        sorted.into_iter().find(|candidate| name.starts_with(candidate))
+      };
+
+      let target = alternate.unwrap_or("OmniBus");
+      Warn!("missing_file", name,
+        format!("Can't find binding for class {name} (using {target})"),
+        "Anticipate undefined macros or environments");
+      let loaded = input_definitions(target, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("cls")),
-        options,
-        after,
+        options: options.clone(),
+        after: after.clone(),
         notex: true,
         handleoptions: true,
         noerror: true,
         ..InputDefinitionOptions::default()
       });
+      // Perl Package.pm L2715: after loading the alternate class binding, scan
+      // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
+      // alternate rarely covers all dependencies the renamed class adds.
+      if alternate.is_some() {
+        maybe_require_dependencies(name, "cls");
+      }
+      return loaded;
     }
   result
 }
@@ -1245,8 +1354,10 @@ fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   ).ok()?;
   // Glued suffixes without separator
   let glued_rx = Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").ok()?;
-  // Prefixes
-  let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.])").ok()?;
+  // Prefixes. Perl Package.pm L2182: `^((?:rw|my|preprint)[-_.]?)` —
+  // separator is OPTIONAL, so `mysvjour3` strips to `svjour3` (not just
+  // `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
+  let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").ok()?;
 
   let mut base = name.to_string();
   let mut changed = false;
@@ -1621,6 +1732,57 @@ pub fn convert_latex_args(
   }
 }
 
+/// Two-optional variant of `convert_latex_args` — mirrors Perl's
+/// `convert2optArgs` helper in twoopt.sty.ltxml. `\newcommandtwoopt{\cs}[n][d1][d2]{…}`
+/// builds a signature of `[Default d1][Default d2]{…}…` where the remaining
+/// `n - 2` args are plain required.
+pub fn convert_twoopt_args(
+  mut nargs: usize,
+  opt1: Option<Tokens>,
+  opt2: Option<Tokens>,
+) -> Result<Option<Parameters>> {
+  let mut params = Vec::new();
+  if let Some(tks) = opt1 {
+    params.push(
+      Parameter {
+        name: arena::pin_static("Optional"),
+        spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
+        extra: vec![tks],
+        ..Parameter::default()
+      }
+      .init()?,
+    );
+    nargs = nargs.saturating_sub(1);
+  }
+  if let Some(tks) = opt2 {
+    params.push(
+      Parameter {
+        name: arena::pin_static("Optional"),
+        spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
+        extra: vec![tks],
+        ..Parameter::default()
+      }
+      .init()?,
+    );
+    nargs = nargs.saturating_sub(1);
+  }
+  for _ in 1..=nargs {
+    params.push(
+      Parameter {
+        name: arena::pin_static("Plain"),
+        spec: arena::pin_static("{}"),
+        ..Parameter::default()
+      }
+      .init()?,
+    );
+  }
+  if params.is_empty() {
+    Ok(None)
+  } else {
+    Ok(Some(Parameters::new(params)))
+  }
+}
+
 /// Decode a codepoint using the fontmap for a given font and/or encoding (Perl: FontDecode).
 /// Returns the decoded glyph (if any) and the possibly-adjusted font.
 pub fn font_decode(
@@ -1645,13 +1807,13 @@ pub fn font_decode(
       if let Some(fm) = fmap {
         (Some(fm), s!("{}_{}", encoding, family))
       } else {
-        (map, encoding.clone())
+        (map, encoding)
       }
     } else {
-      (map, encoding.clone())
+      (map, encoding)
     }
   } else {
-    (map, encoding.clone())
+    (map, encoding)
   };
   let glyph = effective_map
     .as_ref()
@@ -1719,7 +1881,7 @@ pub fn font_decode_string(
 }
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
-  preload_font_map(encoding).expect("preloading font map should succeed.");
+  let _ = preload_font_map(encoding); // infallible in practice; swallow Result
   if let Some(map) = lookup_value(&s!("{encoding}_fontmap")) {
     map.into()
   } else {

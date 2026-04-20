@@ -79,91 +79,111 @@ fn with_arena_mut<R>(f: impl FnOnce(&mut Interner) -> R) -> R {
   }
 }
 
-/// the unique symbol for str value "ANY"
-#[thread_local]
-pub static ANY_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ANY"));
-/// the unique symbol for str value "#PCDATA"
-#[thread_local]
-pub static H_PCDATA_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#PCDATA"));
-/// the unique symbol for str value "#COMMENT"
-#[thread_local]
-pub static H_COMMENT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#Comment"));
-/// the unique symbol for the empty str value ""
-#[thread_local]
-pub static EMPTY_SYM: Lazy<SymStr> = Lazy::new(|| pin_static(""));
-/// the unique symbol for str value "ltx:*"
-#[thread_local]
-pub static LTX_STAR_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ltx:*"));
-/// the unique symbol for str value "ltx:p"
-#[thread_local]
-pub static LTX_P_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ltx:p"));
-/// the unique symbol for str value "\globaldefs"
-#[thread_local]
-pub static GLOBAL_DEFS_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("\\globaldefs"));
-/// the unique symbol for str value "\dont_expand"
-#[thread_local]
-pub static DONT_EXPAND_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("\\dont_expand"));
-/// the unique symbol for str value "_WildCard_"
-#[thread_local]
-pub static WILD_CARD_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("_WildCard_"));
-/// the unique symbol for str value "#ProcessingInstruction"
-#[thread_local]
-pub static H_PI_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#ProcessingInstruction"));
-/// the unique symbol for str value "#DTD"
-#[thread_local]
-pub static H_DTD_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#DTD"));
-/// the unique symbol for str value "#Document"
-#[thread_local]
-pub static H_DOC_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#Document"));
-/// the unique symbol for str value "#default"
-#[thread_local]
-pub static H_DEFAULT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("#default"));
-/// the unique symbol for str value "ltx:_Capture_"
-#[thread_local]
-pub static CAPTURE_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("ltx:_Capture_"));
-/// the unique symbol for str value "font"
-#[thread_local]
-pub static FONT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("font"));
-/// the unique symbol for str value "xml:id"
-#[thread_local]
-pub static XML_ID_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("xml:id"));
-/// the unique symbol for str value "RelaxNG"
-#[thread_local]
-pub static RELAXNG_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("RelaxNG"));
-/// the unique symbol for str value "text"
-#[thread_local]
-pub static TEXT_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("text"));
-/// the unique symbol for str value "math"
-#[thread_local]
-pub static MATH_SYM: Lazy<SymStr> = Lazy::new(|| pin_static("math"));
-
 /// Assign a static str into the arena, returning a unique symbol.
 pub fn pin_static(text: &'static str) -> SymStr {
   with_arena_mut(|arena| arena.get_or_intern_static(text))
 }
 
+/// Call-site-cached interning for string literals — the first call on
+/// a thread pins the literal via `pin_static`, later calls return the
+/// cached `SymStr` directly (thread-local `OnceCell` load, no arena
+/// access). Use this from hot state-key lookup sites so you can keep
+/// writing string literals at the call site and still skip the per-call
+/// `pin()` hash probe:
+///
+/// ```ignore
+/// if state::lookup_bool_sym(pin!("groupNonBoxing")) { ... }
+/// ```
+///
+/// Each call site gets its own thread-local cache (no global registry,
+/// no dedicated pub-static constant per key), so there is no ergonomic
+/// cost beyond typing the macro name.
+///
+/// Note: the macro `pin!` and the runtime-string function
+/// `arena::pin(s)` share a name but occupy different namespaces in
+/// Rust — `pin!(…)` is the macro, `pin(…)` is the function — so both
+/// remain callable.
+#[macro_export]
+macro_rules! pin {
+  ($s:literal) => {{
+    std::thread_local! {
+      static CACHED: std::cell::OnceCell<$crate::common::arena::SymStr>
+        = const { std::cell::OnceCell::new() };
+    }
+    CACHED.with(|c| *c.get_or_init(|| $crate::common::arena::pin_static($s)))
+  }};
+}
+
 /// Assign a string into the arena, returning a unique symbol.
+///
+/// No overflow guard: the main-level wall-clock watchdog (watchdog.rs)
+/// catches genuinely runaway loops that would eventually saturate the
+/// BufferBackend's u32 byte-offset range (~4.29 GB) long before any
+/// real-world workload approaches it. Earlier versions had both a
+/// call-count and a distinct-symbol sentinel; the call-count one
+/// false-fired on dedup-heavy hot loops, and the distinct-symbol one
+/// added a per-call `arena.len()` read on a hot path (~350k calls
+/// per doc). Neither cost was paying for itself.
 pub fn pin<S: AsRef<str>>(text: S) -> SymStr {
   with_arena_mut(|arena| arena.get_or_intern(text))
 }
 
-pub fn pin_char(c: char) -> SymStr {
-  let mut tmp = [0u8; 4];
-  let s = c.encode_utf8(&mut tmp);
-  pin(s)
-}
+/// ASCII char-pin cache: every unique ASCII byte resolves to a single
+/// SymStr for the lifetime of the thread (arena is append-only, syms
+/// never change). Cache entries use `u32::MAX` as the "not yet pinned"
+/// sentinel — all valid interner offsets are strictly below that.
+/// Called from `lookup_catcode` / `assign_catcode` on every token,
+/// so the RefCell + hashmap overhead on `pin` is a measurable cost
+/// (1.4% Ir per callgrind on siunitx-heavy fixtures). The fast path
+/// avoids `with_arena_mut` entirely for the common ASCII case.
+#[thread_local]
+static ASCII_CHAR_SYM: [std::cell::Cell<u32>; 128] = [const { std::cell::Cell::new(u32::MAX) }; 128];
 
-pub fn into_pin<T: ToString>(num: T) -> SymStr { pin(num.to_string()) }
+pub fn pin_char(c: char) -> SymStr {
+  use string_interner::Symbol;
+  let code = c as u32;
+  if code < 128 {
+    let cached = ASCII_CHAR_SYM[code as usize].get();
+    if cached != u32::MAX {
+      // SAFETY: cached was produced by a prior successful `pin` below, so
+      // the SymStr is valid for this arena.
+      return SymStr::try_from_usize(cached as usize)
+        .expect("invalid cached ASCII SymStr");
+    }
+  }
+  let sym = {
+    let mut tmp = [0u8; 4];
+    let s = c.encode_utf8(&mut tmp);
+    pin(s)
+  };
+  if code < 128 {
+    ASCII_CHAR_SYM[code as usize].set(sym.to_usize() as u32);
+  }
+  sym
+}
 
 /// Resolve a symbol and call the closure with a `&str` reference.
 /// The closure may safely call `pin()` or any other arena function —
 /// re-entrant access reuses the cached borrow.
+///
+/// # Safety
+///
+/// Uses `resolve_unchecked` → `from_utf8_unchecked`. Sound because
+/// every path into the arena (`pin_static(&'static str)`,
+/// `pin<S: AsRef<str>>(s)`, `pin_char(c: char)`) can only produce a
+/// SymStr from content that was already valid UTF-8. The interner's
+/// buffer is append-only by design: once a byte range is associated
+/// with a symbol it is never mutated. Callgrind showed the default
+/// validating `resolve` was ~3% of total Ir via `str::from_utf8`.
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   with_arena_mut(|arena| {
-    let s = arena
-      .resolve(sym)
-      .expect("arena::with: symbol not found in arena");
+    // SAFETY: all input strings were valid UTF-8 at intern time (see
+    // docstring above); every SymStr in this codebase originates
+    // from a successful `get_or_intern(_static|_char)` call on a
+    // valid `&str`, so the symbol always corresponds to a valid
+    // byte range in the interner's buffer.
+    let s = unsafe { arena.resolve_unchecked(sym) };
     caller(s)
   })
 }
@@ -171,12 +191,10 @@ where FnR: FnOnce(&str) -> R {
 pub fn with2<R, FnR>(sym1: SymStr, sym2: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str) -> R {
   with_arena_mut(|arena| {
-    let s1 = arena
-      .resolve(sym1)
-      .expect("arena::with2: symbol not found in arena");
-    let s2 = arena
-      .resolve(sym2)
-      .expect("arena::with2: symbol not found in arena");
+    // SAFETY: same invariant as `arena::with` — every SymStr here was
+    // returned by a successful intern of a valid &str.
+    let s1 = unsafe { arena.resolve_unchecked(sym1) };
+    let s2 = unsafe { arena.resolve_unchecked(sym2) };
     caller(s1, s2)
   })
 }
@@ -184,15 +202,10 @@ where FnR: FnOnce(&str, &str) -> R {
 pub fn with3<R, FnR>(sym1: SymStr, sym2: SymStr, sym3: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str, &str) -> R {
   with_arena_mut(|arena| {
-    let s1 = arena
-      .resolve(sym1)
-      .expect("arena::with3: symbol not found in arena");
-    let s2 = arena
-      .resolve(sym2)
-      .expect("arena::with3: symbol not found in arena");
-    let s3 = arena
-      .resolve(sym3)
-      .expect("arena::with3: symbol not found in arena");
+    // SAFETY: see `arena::with`.
+    let s1 = unsafe { arena.resolve_unchecked(sym1) };
+    let s2 = unsafe { arena.resolve_unchecked(sym2) };
+    let s3 = unsafe { arena.resolve_unchecked(sym3) };
     caller(s1, s2, s3)
   })
 }
@@ -200,13 +213,10 @@ where FnR: FnOnce(&str, &str, &str) -> R {
 pub fn with_many<R, FnR>(syms: &[SymStr], caller: FnR) -> R
 where FnR: FnOnce(Vec<&str>) -> R {
   with_arena_mut(|arena| {
+    // SAFETY: see `arena::with`.
     let many = syms
       .iter()
-      .map(|sym| {
-        arena
-          .resolve(*sym)
-          .expect("arena::with_many: symbol not found in arena")
-      })
+      .map(|sym| unsafe { arena.resolve_unchecked(*sym) })
       .collect();
     caller(many)
   })
@@ -214,10 +224,8 @@ where FnR: FnOnce(Vec<&str>) -> R {
 
 pub fn to_string(sym: SymStr) -> String {
   with_arena_mut(|arena| {
-    arena
-      .resolve(sym)
-      .expect("arena::to_string: symbol not found in arena")
-      .to_owned()
+    // SAFETY: see `arena::with`.
+    unsafe { arena.resolve_unchecked(sym) }.to_owned()
   })
 }
 

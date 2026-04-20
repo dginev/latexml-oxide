@@ -83,7 +83,7 @@ pub(crate) fn keyval_set(qname: &str, prop: &str, value: Stored) {
 /// check if a key-value pair is defined
 pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
   let qname = keyval_qname(prefix, keyset, key);
-  state::lookup_value(&s!("KEYVAL@defined@{}", qname)).is_some()
+  state::with_value(&s!("KEYVAL@defined@{}", qname), |v| v.is_some())
     || state::lookup_meaning(&T_CS!(s!("\\{qname}"))).is_some()
 }
 
@@ -124,10 +124,13 @@ pub struct KeyvalConfig<'a> {
 fn register_keyval(qname: &str) {
   use crate::common::arena;
   let registry_key = "KEYVAL@registry";
-  let mut registry: Vec<crate::common::arena::SymStr> = match state::lookup_value(registry_key) {
-    Some(Stored::Strings(v)) => v.to_vec(),
-    _ => Vec::new(),
-  };
+  // Borrow the registry via `with_value` to skip the outer Stored::clone
+  // (lookup_value clones the enum; we only need the inner Vec<SymStr>).
+  let mut registry: Vec<crate::common::arena::SymStr> =
+    state::with_value(registry_key, |v| match v {
+      Some(Stored::Strings(v)) => v.to_vec(),
+      _ => Vec::new(),
+    });
   let sym = arena::pin(qname);
   // avoid duplicates (re-definitions)
   if !registry.contains(&sym) {
@@ -150,10 +153,11 @@ pub struct KeyvalMeta {
 pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
   use crate::common::arena;
   let registry_key = "KEYVAL@registry";
-  let registry = match state::lookup_value(registry_key) {
+  let registry = state::with_value(registry_key, |v| match v {
     Some(Stored::Strings(v)) => v.to_vec(),
-    _ => return Vec::new(),
-  };
+    _ => Vec::new(),
+  });
+  if registry.is_empty() { return Vec::new(); }
   let mut result = Vec::new();
   for sym in registry {
     let qname = arena::to_string(sym);
@@ -296,10 +300,13 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   match kind {
     "ordinary" => define_ordinary(&qname, code)?,
     "command" => {
-      let macroname = if let Some(mpfx) = macroprefix {
-        s!("{mpfx}{key}")
-      } else {
-        s!("cmd{qname}")
+      // Perl #2777 (2026-03-27): macroprefix falls back to "cmd"+qname
+      // when undefined OR empty. The truthy check that existed pre-fix
+      // already treated empty-string as falsy; we match that semantics
+      // explicitly for Option<&str>.
+      let macroname = match macroprefix {
+        Some(mpfx) if !mpfx.is_empty() => s!("{mpfx}{key}"),
+        _ => s!("cmd{qname}"),
       };
       define_command(&qname, code, &macroname)?;
     },

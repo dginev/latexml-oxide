@@ -127,6 +127,16 @@ struct ExpandEntry {
   tok_start: u32,
   tok_count: u16,
 }
+struct LetAliasEntry {
+  key: String,    // e.g. "\\tex_let:D"
+  target: String, // e.g. "\\let"
+  // Reserved for future use: when we start emitting MathPrimitive-specific
+  // assignment calls, this flag distinguishes PA (ordinary Primitive alias)
+  // from MPA (MathPrimitive alias). Today `state::let_i` handles both by
+  // copying the target's Stored meaning, so the flag is advisory.
+  #[allow(dead_code)]
+  is_math: bool,
+}
 struct TokData {
   cc: u8,
   text: String,
@@ -161,6 +171,7 @@ struct DumpData {
   // Meaning table
   let_defs: Vec<TokenEntry>,
   expandables: Vec<ExpandEntry>,
+  let_aliases: Vec<LetAliasEntry>, // PA / MPA entries
 
   // Token pools (flattened)
   value_tokens: Vec<TokData>,
@@ -190,6 +201,7 @@ impl DumpData {
       + self.mathcodes.len()
       + self.let_defs.len()
       + self.expandables.len()
+      + self.let_aliases.len()
   }
 }
 
@@ -409,6 +421,20 @@ fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
         data.let_defs.push(TokenEntry { key: key.to_string(), cc, text });
       }
     }
+    "PA" | "MPA" => {
+      // Primitive alias: \let <key> = <target>.
+      // Emit as a call to state::let_i at load time; target must already
+      // be defined (guaranteed by the (d.2) early/late ordering).
+      let target = url_decode(parts.get(1).unwrap_or(&""));
+      if target.is_empty() || target == key {
+        return; // self-alias or malformed: skip
+      }
+      data.let_aliases.push(LetAliasEntry {
+        key: key.to_string(),
+        target,
+        is_math: parts[0] == "MPA",
+      });
+    }
     _ => {}
   }
 }
@@ -533,6 +559,7 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
   emit_token_array(&mut out, "LET_DEFINITIONS", &data.let_defs)?;
   emit_expand_array(&mut out, "EXPANDABLE_DEFS", &data.expandables)?;
   emit_tok_pool(&mut out, "EXPAND_TOKENS", &data.expand_tokens)?;
+  emit_let_alias_array(&mut out, "LET_ALIAS_DEFS", &data.let_aliases)?;
 
   // load_definitions function
   emit_load_fn(&mut out, &data)?;
@@ -645,6 +672,24 @@ fn emit_token_array(
   writeln!(out, "static {name}: &[(&str, u8, &str)] = &[").map_err(we)?;
   for e in entries {
     writeln!(out, "  ({}, {}, {}),", rust_escape(&e.key), e.cc, rust_escape(&e.text)).map_err(we)?;
+  }
+  writeln!(out, "];\n").map_err(we)
+}
+
+/// Emit a static array of (key, target) pairs for primitive let-aliases.
+/// The `is_math` field on `LetAliasEntry` is currently advisory only —
+/// `state::let_i` installs whatever meaning the target token has, so the
+/// runtime distinction between Primitive and MathPrimitive is handled by
+/// `Stored` unification rather than the loader.
+fn emit_let_alias_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[LetAliasEntry],
+) -> Result<(), String> {
+  writeln!(out, "static {name}: &[(&str, &str)] = &[").map_err(we)?;
+  for e in entries {
+    writeln!(out, "  ({}, {}),", rust_escape(&e.key), rust_escape(&e.target))
+      .map_err(we)?;
   }
   writeln!(out, "];\n").map_err(we)
 }
@@ -941,7 +986,11 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
        {s}{s}{s}.collect();\n\
        {s}{s}let params = if def.nargs > 0 {{\n\
        {s}{s}{s}let proto = \"{{}}\".repeat(def.nargs as usize);\n\
-       {s}{s}{s}parse_parameters(&proto, &cs, false).ok().flatten()\n\
+       {s}{s}{s}// init_flag=true: engine is up when this table is consumed\n\
+       {s}{s}{s}// at runtime, so Parameter::init() can resolve readers\n\
+       {s}{s}{s}// via PARAMETER_TYPES; without init the Plain reader\n\
+       {s}{s}{s}// falls back to mock_reader and invocation fails.\n\
+       {s}{s}{s}parse_parameters(&proto, &cs, true).ok().flatten()\n\
        {s}{s}}} else {{ None }};\n\
        {s}{s}let opts = Some(ExpandableOptions {{\n\
        {s}{s}{s}long: def.flags & 1 != 0,\n\
@@ -952,6 +1001,25 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
        {s}{s}if let Ok(exp) = Expandable::new(cs, params, Some(Tokens::from(toks).into()), opts) {{\n\
        {s}{s}{s}state::install_definition(exp, Some(Scope::Global));\n\
        {s}{s}}}\n\
+       {s}}}"
+    )
+    .map_err(we)?;
+  }
+
+  // Primitive-alias entries (M/PA, M/MPA). The write pass ordered these
+  // so that `target` is either a bootstrap primitive (always present) or
+  // an entry defined earlier in this pass. Skip self-aliases and any
+  // alias whose key already has a meaning (add-only parity).
+  if !data.let_aliases.is_empty() {
+    writeln!(
+      out,
+      "{s}for &(key_s, target_s) in LET_ALIAS_DEFS {{\n\
+       {s}{s}if key_s == target_s {{ continue; }}\n\
+       {s}{s}let key_tok = Token {{ text: arena::pin(key_s), code: Catcode::CS }};\n\
+       {s}{s}if state::has_meaning(&key_tok) {{ continue; }}\n\
+       {s}{s}let target_tok = Token {{ text: arena::pin(target_s), code: Catcode::CS }};\n\
+       {s}{s}if !state::has_meaning(&target_tok) {{ continue; }}\n\
+       {s}{s}state::let_i(&key_tok, &target_tok, Some(Scope::Global));\n\
        {s}}}"
     )
     .map_err(we)?;

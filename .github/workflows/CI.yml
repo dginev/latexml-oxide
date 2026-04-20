@@ -46,7 +46,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
-            texlive texlive-latex-extra texlive-science
+            texlive texlive-latex-extra texlive-science \
+            texlive-lang-german texlive-lang-french texlive-lang-greek \
+            texlive-lang-cyrillic texlive-lang-european
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -57,10 +59,20 @@ jobs:
       # plus rand, chrono, tempdir, walkdir, zip v0.6 — ~15 min of extra
       # compile time we don't need to validate the core conversion pipeline.
       # Cortex worker is a production deployment artifact, built separately.
+
+      # Rust-port equivalent of Perl's `make formats` — builds latexml_oxide
+      # once, then runs --init=latex.ltx to produce resources/dumps/latex.dump.txt
+      # against the runner's ambient texlive. The dump is NOT embedded by
+      # build.rs (it's read from disk at runtime), so the dump the test suite
+      # consumes matches the texlive the test runtime sees — not the
+      # developer-laptop-texlive-era snapshot the embedded dump used to freeze.
+      # See docs/SYNC_STATUS.md D0 for context.
+      - name: make formats
+        run: tools/make_formats.sh
       - name: run tests
-        # One shot: cargo test builds and runs. We use --release because the
-        # test suite runs many full-document conversions and dev-profile runs
-        # are too slow even when compilation is faster. The env knobs above
-        # keep peak RAM manageable; --test-threads=1 serializes execution so
-        # at most one conversion's working set is live at a time.
+        # We use --release because the test suite runs many full-document
+        # conversions and dev-profile runs are too slow even when compilation
+        # is faster. The env knobs above keep peak RAM manageable;
+        # --test-threads=1 serializes execution so at most one conversion's
+        # working set is live at a time.
         run: cargo test --release --tests --workspace -- --test-threads=1

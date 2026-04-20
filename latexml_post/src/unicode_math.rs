@@ -113,7 +113,7 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
   if let Some(role) = node.get_attribute("role") {
     return Some(role);
   }
-  if doc.get_qname(node).as_deref() == Some("ltx:XMApp") {
+  if doc.is_qname(node, "ltx:XMApp") {
     let children = element_children(node);
     if children.len() >= 2 {
       let op_role = children[0].get_attribute("role").unwrap_or_default();

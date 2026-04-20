@@ -7,12 +7,33 @@
 use crate::prelude::*;
 
 /// Perl: getXMArgID — step @lx@xmarg counter, return its value as a string.
+///
+/// Fast path for the xmath_helpers callers: they only read the
+/// register value — they never expand `\the@lx@xmarg@ID`. That means
+/// we don't need the full `step_counter` machinery (which also
+/// def_macro's `\@@lx@xmarg@ID`, probes `\cl@@lx@xmarg` for nested
+/// counters, and allocates two format! strings per call). Directly
+/// read+write the `\c@@lx@xmarg` register instead.
+///
+/// Callers in Core dialect.rs (`get_xmarg_id`) still go through the
+/// full `step_counter` because they *do* expand the macro form.
 pub fn get_xm_arg_id() -> Result<String> {
-  step_counter("@lx@xmarg", false)?;
-  let val = state::lookup_register("\\c@@lx@xmarg", Vec::new())?
+  // `T_CS!` with a literal arm routes through `pin!` — the Token
+  // construction is essentially free after first call (OnceCell load).
+  // Pass the Token straight to the register ops so they don't have to
+  // re-pin the `&str` key.
+  let cs = T_CS!("\\c@@lx@xmarg");
+  let current = state::lookup_register_token(&cs, Vec::new())?
     .map(|rv| rv.value_of())
     .unwrap_or(0);
-  Ok(val.to_string())
+  let next = current + 1;
+  state::assign_register_token(
+    &cs,
+    latexml_core::common::number::Number::new(next).into(),
+    Some(state::Scope::Global),
+    Vec::new(),
+  )?;
+  Ok(next.to_string())
 }
 
 /// Perl: I_arg(n) — create a parameter token #n (cc ARG).
@@ -27,7 +48,10 @@ pub fn i_arg(n: &str) -> Token {
 
 /// Perl: I_xmarg(id, arg) — generates `\lx@xmarg{id}{arg}` tokens.
 pub fn i_xmarg(id: &str, arg: Tokens) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@xmarg"), T_BEGIN!()];
+  // Pre-size: \lx@xmarg {id} {arg} = 1 + 2 + id.len() + 2 + arg.len()
+  let mut tks: Vec<Token> = Vec::with_capacity(5 + id.len() + arg.len());
+  tks.push(T_CS!("\\lx@xmarg"));
+  tks.push(T_BEGIN!());
   tks.extend(ExplodeText!(id));
   tks.push(T_END!());
   tks.push(T_BEGIN!());
@@ -38,7 +62,10 @@ pub fn i_xmarg(id: &str, arg: Tokens) -> Tokens {
 
 /// Perl: I_xmref(id) — generates `\lx@xmref{id}` tokens.
 pub fn i_xmref(id: &str) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@xmref"), T_BEGIN!()];
+  // Pre-size: \lx@xmref {id} = 1 + 2 + id.len()
+  let mut tks: Vec<Token> = Vec::with_capacity(3 + id.len());
+  tks.push(T_CS!("\\lx@xmref"));
+  tks.push(T_BEGIN!());
   tks.extend(ExplodeText!(id));
   tks.push(T_END!());
   Tokens::new(tks)
@@ -46,7 +73,10 @@ pub fn i_xmref(id: &str) -> Tokens {
 
 /// Perl: I_wrap(keyvals, content) — generates `\lx@wrap[keyvals]{content}` tokens.
 pub fn i_wrap(keyvals: Option<Tokens>, content: Tokens) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@wrap")];
+  // Pre-size: \lx@wrap + optional [kv] + {content}
+  let kv_len = keyvals.as_ref().map(|k| k.len() + 2).unwrap_or(0);
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_len + 2 + content.len());
+  tks.push(T_CS!("\\lx@wrap"));
   if let Some(kv) = keyvals {
     tks.push(T_OTHER!("["));
     tks.extend(kv.unlist());
@@ -74,9 +104,10 @@ pub fn i_dual(
   args: Vec<Tokens>,
 ) -> Result<Tokens> {
   // Keep original args for reversion substitution (actual content, not xmarg refs)
-  let mut orig_args: Vec<Tokens> = Vec::new();
-  let mut pargs: Vec<Tokens> = Vec::new();
-  let mut cargs: Vec<Tokens> = Vec::new();
+  let n_args = args.len();
+  let mut orig_args: Vec<Tokens> = Vec::with_capacity(n_args);
+  let mut pargs: Vec<Tokens> = Vec::with_capacity(n_args);
+  let mut cargs: Vec<Tokens> = Vec::with_capacity(n_args);
 
   for arg in args {
     let id = get_xm_arg_id()?;
@@ -102,7 +133,7 @@ pub fn i_dual(
       opts.extend(ExplodeText!(key));
       opts.push(T_OTHER!("="));
       opts.push(T_BEGIN!());
-      opts.extend(value.clone().unlist());
+      opts.extend(value.unlist_ref().iter().copied());
       opts.push(T_END!());
       opt_count += 1;
     }
@@ -130,7 +161,12 @@ pub fn i_dual(
   let wrapped_pres = i_wrap(None, pres_subst);
 
   // Assemble: \lx@dual[options]{content}{presentation}
-  let mut tks = vec![T_CS!("\\lx@dual")];
+  // Pre-size: \lx@dual + [opts] + {content} + {presentation}.
+  let opt_len = optional.as_ref().map(|o| o.len() + 2).unwrap_or(0);
+  let mut tks: Vec<Token> = Vec::with_capacity(
+    1 + opt_len + 2 + content_subst.len() + 2 + wrapped_pres.len(),
+  );
+  tks.push(T_CS!("\\lx@dual"));
   if let Some(opts) = optional {
     tks.push(T_OTHER!("["));
     tks.extend(opts.unlist());
@@ -151,7 +187,11 @@ pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
   if kv.is_empty() {
     return Tokens::default();
   }
-  let mut tks = vec![T_OTHER!("[")];
+  // Pre-size: 2 brackets + per-kv (key_len + value_len + 4 structure
+  // tokens: `=`, `{`, `}`, optional `,`).
+  let total: usize = 2 + kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>();
+  let mut tks: Vec<Token> = Vec::with_capacity(total);
+  tks.push(T_OTHER!("["));
   for (i, (key, value)) in kv.iter().enumerate() {
     if i > 0 {
       tks.push(T_OTHER!(","));
@@ -159,7 +199,7 @@ pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
     tks.extend(ExplodeText!(key));
     tks.push(T_OTHER!("="));
     tks.push(T_BEGIN!());
-    tks.extend(value.clone().unlist());
+    tks.extend(value.unlist_ref().iter().copied());
     tks.push(T_END!());
   }
   tks.push(T_OTHER!("]"));
@@ -168,7 +208,14 @@ pub fn i_keyvals(kv: &[(&str, Tokens)]) -> Tokens {
 
 /// Perl: I_apply(kv, op, @args) — generates `\lx@apply[kv]{\lx@wrap{op}}{\lx@wrap{arg1}...}`.
 pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@apply")];
+  // Pre-size: \lx@apply + keyvals + 6 wrap-structure tokens for op
+  // + per-arg (3 structure + arg.len()) + args list wrap (2).
+  let args_total: usize = args.iter().map(|a| a.len() + 3).sum();
+  let kv_total: usize = if kv.is_empty() { 0 } else {
+    kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
+  };
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 6 + op.len() + 2 + args_total);
+  tks.push(T_CS!("\\lx@apply"));
   let kvt = i_keyvals(kv);
   if !kvt.is_empty() {
     tks.extend(kvt.unlist());
@@ -194,7 +241,12 @@ pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
 
 /// Perl: I_symbol(kv, text) — generates `\lx@symbol[kv]{text}`.
 pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@symbol")];
+  let kv_total: usize = if kv.is_empty() { 0 } else {
+    kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
+  };
+  let text_len = text.as_ref().map(|t| t.len()).unwrap_or(0);
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 2 + text_len);
+  tks.push(T_CS!("\\lx@symbol"));
   let kvt = i_keyvals(kv);
   if !kvt.is_empty() {
     tks.extend(kvt.unlist());
@@ -209,7 +261,11 @@ pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
 
 /// Perl: I_superscript(kv, base, script) — generates `\lx@superscript[kv]{base}{script}`.
 pub fn i_superscript(kv: &[(&str, Tokens)], base: Tokens, script: Tokens) -> Tokens {
-  let mut tks = vec![T_CS!("\\lx@superscript")];
+  let kv_total: usize = if kv.is_empty() { 0 } else {
+    kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
+  };
+  let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 4 + base.len() + script.len());
+  tks.push(T_CS!("\\lx@superscript"));
   let kvt = i_keyvals(kv);
   if !kvt.is_empty() {
     tks.extend(kvt.unlist());

@@ -81,22 +81,30 @@ LoadDefinitions!({
   DefMathRewrite!(xpath => concat!("descendant-or-self::ltx:XMWrap[",
     // Only XMWrap's from the above class of operators
     "(@role='OP' or @role='BIGOP' or @role='RELOP' ",
-    "or @role='ADDOP' or @role='MULOP' or @role='BINOP'",
+    "or @role='ADDOP' or @role='MULOP' or @role='BINOP' ",
     "or @role='OPEN' or @role='CLOSE')",
     " and count(child::*) > 1 ",
     // with only XMTok as children with the roles in (roughly) the same set
     " and not(child::*[local-name() != 'XMTok'])",
     " and not(ltx:XMTok[",
-    "@role !='OP' and @role!='BIGOP' and @role!='RELOP' and role!='METARELOP'",
-    "and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP'",
+    "@role!='OP' and @role!='BIGOP' and @role!='RELOP' and @role!='METARELOP' ",
+    "and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP' ",
     "and @role!='OPEN' and @role!='CLOSE'",
     "])]"),
   replace => sub[document, nodes] {
+    // Perl: `$node->cloneNode(0)` — SHALLOW clone (attributes only, no
+    // children). Rust's `Node::clone` is an Rc clone (same underlying node),
+    // so we build a fresh XMTok and carry attributes across.
     let node = nodes.pop().unwrap();
-    let mut replacement = node.clone();
-    let content     = node.get_content();
-    replacement.append_text(&content)?;
-    replacement.set_name("ltx:XMTok")?;
+    let content = node.get_content();
+    let doc = document.get_document();
+    let mut replacement = libxml::tree::Node::new("XMTok", None, doc)?;
+    for (k, v) in node.get_attributes() {
+      replacement.set_attribute(&k, &v)?;
+    }
+    if !content.is_empty() {
+      replacement.append_text(&content)?;
+    }
     document.get_node_mut().add_child(&mut replacement)?;
   });
 
@@ -177,6 +185,10 @@ LoadDefinitions!({
     \mathchardef\@m=1000
     \mathchardef\@M=10000
     \mathchardef\@MM=20000
+    \mathchardef\cdotp=25089
+    \mathchardef\ldotp=24890
+    \mathchardef\intop=4946
+    \mathchardef\ointop=4936
     \countdef\m@ne=21\relax
     \m@ne=-1"
   );
@@ -232,8 +244,15 @@ LoadDefinitions!({
     // classify_box returns "" for None, making \ifvoid true.
     DefRegister!(t, None, Number(n), readonly => true);
   });
-  DefPrimitive!("\\newhelp DefToken {}", sub[(token,arg)] {
-    state::assign_value(&token.to_string(), arg, None);
+  // Perl plain_base.pool.ltxml L213:
+  //   \outer\def\newhelp#1#2{\newtoks#1#1\expandafter{\csname#2\endcsname}}
+  // allocates a \newtoks register so `#1` becomes defined, then stores
+  // the help text. LaTeXML has no errhelp output, so the stored text
+  // is irrelevant; what matters is that #1 is installed as a Toks
+  // register, otherwise later `\errhelp\defbhelp@` reports undefined.
+  // arxiv 1012.3836 (amstex.tex) was the witness.
+  DefPrimitive!("\\newhelp DefToken {}", sub[(token, _arg)] {
+    DefRegister!(token, None, Tokens!(), allocate => "\\toks");
   });
   DefPrimitive!("\\newtoks DefToken", sub[(name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
@@ -488,7 +507,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\negthinspace", {
     Tbox::new(
-      *EMPTY_SYM,
+      pin!(""),
       None,
       None,
       Tokens!(T_CS!("\\negthinspace")),
@@ -500,7 +519,7 @@ LoadDefinitions!({
   // Math spacing: medspace, thickspace, and negatives — Perl latex_constructs L2510-2525
   DefPrimitive!("\\medspace", {
     Tbox::new(
-      *EMPTY_SYM, None, None,
+      pin!(""), None, None,
       Tokens!(T_CS!("\\medspace")),
       stored_map!("name" => "medspace", "width" => Dimension::from_str("0.22222em")?,
         "isSpace"=>true),
@@ -508,7 +527,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\negmedspace", {
     Tbox::new(
-      *EMPTY_SYM, None, None,
+      pin!(""), None, None,
       Tokens!(T_CS!("\\negmedspace")),
       stored_map!("name" => "negmedspace", "width" => Dimension::from_str("-0.22222em")?,
         "isSpace"=>true),

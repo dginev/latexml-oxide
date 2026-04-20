@@ -153,6 +153,29 @@ LoadDefinitions!({
         // etc....
       } } }), optional => true);
 
+  // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
+  // Reads and discards the pdfTeX annotation-spec prefix:
+  //   reserveobjnum  | useobjnum <n>  | stream [attr <text>]
+  // then consumes the trailing general-text spec.
+  DefParameterType!(OpenAnnotSpecification, reader => reader!(_args, _extra, {
+    if read_keyword(&["reserveobjnum"])?.is_some() {
+      return Ok(ArgWrap::None);
+    } else if read_keyword(&["useobjnum"])?.is_some() {
+      let _ = gullet::read_number()?;
+    } else if read_keyword(&["stream"])?.is_some()
+      && read_keyword(&["attr"])?.is_some() {
+        gullet::skip_spaces()?;
+        let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+      }
+    gullet::skip_spaces()?;
+    let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+  }), optional => true);
+
+  // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
+  DefPrimitive!("\\pdfannot OpenAnnotSpecification", None);
+  // \pdfobj — same shape. Perl pdfTeX.pool L219.
+  DefPrimitive!("\\pdfobj OpenAnnotSpecification", None);
+
   DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
   DefMacro!("\\pdfnames{}", "");
   DefMacro!("\\pdftrailer{}", "");
@@ -172,23 +195,43 @@ LoadDefinitions!({
   DefPrimitive!("\\pdfresettimer", None);
   DefPrimitive!("\\pdfresettimerresettimer", None);
   // \pdfsetrandomseed number
-  // \pdfnoligatures font
+  DefPrimitive!("\\pdfsetrandomseed Number", None);
+  // \pdfnoligatures font (really a Token, but at this stub level we
+  // just need to consume a single token argument)
+  DefPrimitive!("\\pdfnoligatures Token", None);
+  // \pdfsavepos — mark current position; no-op stub
+  DefPrimitive!("\\pdfsavepos", None);
+  // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
+  DefPrimitive!("\\pdfstartthread", None);
+  DefPrimitive!("\\pdfendthread", None);
+  // Per-font extension codes (match \lpcode / \rpcode pattern)
+  DefRegister!("\\lpfcode Token Number", Number::new(0));
+  DefRegister!("\\rpfcode Token Number", Number::new(0));
   // \pdfprimitive control sequence
   // TODO:
   // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
   DefMacro!("\\pdfprimitive DefToken", "#1"); // we can just ignore the advanced effects for now.
 
-  // \pdfcolorstack stack number stack action general text
-  //TODO:
-  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop
-  // OptionalMatch:current', sub {   # for now, carefully read and discard all arguments
-  //   my ($stomach, $number, $set, $push, $pop, $current) = @_;
-  //   return if ($pop);
-  //   my $gullet = $stomach->getGullet;
-  //   $gullet->skipSpaces;
-  //   my $general_text_param = LookupMapping('PARAMETER_TYPES', 'GeneralText');
-  //   my $discard            = &{ $$general_text_param{reader} }($gullet);
-  //   return; });
+  // \pdfcolorstack stack_num {set|push|pop|current} [general_text]
+  //
+  // Perl pdfTeX.pool L210: reads stack-number + action keyword, then
+  // consumes a trailing general-text spec UNLESS the action was `pop`
+  // (which has no spec, just pops the top of the stack). All values
+  // are discarded — our engine doesn't emit PDF colorstack operations.
+  //
+  // Using OptionalMatch for each keyword matches the Perl signature.
+  // GeneralText is the balanced-group reader.
+  DefPrimitive!(
+    "\\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current",
+    sub[(_number, _set, _push, pop, _current)] {
+      // If action was `pop`, there's no trailing general-text spec.
+      // Otherwise read and discard the general-text argument.
+      if pop.is_none() {
+        gullet::skip_spaces()?;
+        let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+      }
+    }
+  );
   DefMacro!("\\pdfsetmatrix", "");
   DefMacro!("\\pdfsave", "");
   DefMacro!("\\pdfrestore", "");

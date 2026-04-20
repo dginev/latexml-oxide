@@ -34,6 +34,20 @@ fn macro_string(cs: &str) -> String {
   gullet::do_expand(T_CS!(cs)).map(|t| t.to_string()).unwrap_or_default()
 }
 
+/// Helper: read a macro's raw definition body (no expansion).
+/// Mirrors Perl's `ToString(LookupDefinition(T_CS('\\cs'))->getExpansion)` — it
+/// returns the *right-hand side* of the `\def`, not the result of evaluating it.
+/// Required when the body itself contains drawing directives (e.g. `\dir{-->}`)
+/// that must not be re-invoked: expanding them while deciphering the curve style
+/// re-enters the curve pipeline and loops without bound.
+fn macro_body(cs: &str) -> String {
+  let Ok(Some(defn)) = state::lookup_definition(&T_CS!(cs)) else { return String::new() };
+  match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(tks)) => tks.to_string(),
+    _ => String::new(),
+  }
+}
+
 /// Helper: get cos/sin direction (Perl: xy_getOrientation)
 fn xy_get_orientation() -> (f64, f64) {
   let c: f64 = macro_string("\\cosDirection").parse().unwrap_or(1.0);
@@ -70,10 +84,12 @@ fn xy_packpath(parts: &[XyPathPart]) -> String {
   }).collect::<Vec<_>>().join(" ")
 }
 
-#[allow(dead_code)]
 enum XyPathPart {
   Cmd(&'static str),
   Dim(Dimension),
+  // Px is reserved for callers that already have pixel-unit values; currently
+  // no call site constructs this variant, but xy_packpath handles it.
+  #[allow(dead_code)]
   Px(f64),
 }
 
@@ -96,18 +112,6 @@ fn xy_capture_stroke_fill() -> (String, String, String) {
   let (stroke, fill) = xy_fill_stroke();
   let dashes = state::lookup_string("xy_linepattern");
   (stroke, fill, dashes)
-}
-
-/// Helper: store SVG path attributes on whatsit for construction time.
-/// Perl: properties => sub { (path => ..., do_stroke => ..., do_fill => 0, dashes => ...) }
-#[allow(dead_code)]
-fn xy_store_path_props(whatsit: &mut impl BoxOps, path: &str, stroke: &str, fill: &str, dashes: &str) {
-  whatsit.set_property("xy_path", Stored::String(arena::pin(path)));
-  whatsit.set_property("xy_stroke", Stored::String(arena::pin(stroke)));
-  whatsit.set_property("xy_fill", Stored::String(arena::pin(fill)));
-  if !dashes.is_empty() {
-    whatsit.set_property("xy_dashes", Stored::String(arena::pin(dashes)));
-  }
 }
 
 /// Helper: read SVG path attributes from props at construction time and emit element.
@@ -807,9 +811,12 @@ LoadDefinitions!({
 
   // \lx@xy@crv@decipher — parse curve drop/connection styles (Perl L609-640)
   DefPrimitive!("\\lx@xy@crv@decipher", {
-    // Parse \xycrvdrop@ and \xycrvconn@ to determine line pattern and multiplicity
-    let drop = macro_string("\\xycrvdrop@").trim().to_string();
-    let conn = macro_string("\\xycrvconn@").trim().to_string();
+    // Parse \xycrvdrop@ and \xycrvconn@ to determine line pattern and multiplicity.
+    // Perl uses LookupDefinition(...)->getExpansion which returns the raw macro body;
+    // expanding via do_expand re-invokes drawing macros such as \dir{-->} and causes
+    // the curve pipeline to recurse into itself (see SYNC_STATUS xy-pic OOM repro).
+    let drop = macro_body("\\xycrvdrop@").trim().to_string();
+    let conn = macro_body("\\xycrvconn@").trim().to_string();
     if !drop.is_empty() {
       // Check for "=<spacing>{char}" pattern (dotted with given spacing)
       if let Some(rest) = drop.strip_prefix("=<") {

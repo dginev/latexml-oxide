@@ -13,7 +13,7 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::document::{element_children, NodeData, PostDocument};
+use crate::document::{element_children_iter, NodeData, PostDocument};
 use crate::processor::{ProcessResult, Processor};
 
 const SVG_URI: &str = "http://www.w3.org/2000/svg";
@@ -46,12 +46,9 @@ impl SVG {
       .unwrap_or(0.0);
 
     // Build a group with the y-flip transform
-    let mut children = Vec::new();
-    for child in element_children(node) {
-      if let Some(converted) = self.convert_node(doc, &child) {
-        children.push(converted);
-      }
-    }
+    let children: Vec<NodeData> = element_children_iter(node)
+      .filter_map(|child| self.convert_node(doc, &child))
+      .collect();
 
     let g_transform = format!("translate(0,{:.2}) scale(1,-1)", h);
     let g = NodeData::Element {
@@ -418,9 +415,8 @@ impl SVG {
 
   /// Convert all element children of a node.
   fn convert_children(&self, doc: &PostDocument, node: &Node) -> Vec<NodeData> {
-    element_children(node)
-      .iter()
-      .filter_map(|child| self.convert_node(doc, child))
+    element_children_iter(node)
+      .filter_map(|child| self.convert_node(doc, &child))
       .collect()
   }
 

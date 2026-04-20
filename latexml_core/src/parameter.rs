@@ -6,7 +6,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::Digested;
-use crate::common::arena::{self, EMPTY_SYM, SymStr};
+use crate::common::arena::{self, SymStr};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::definition::argument::ArgWrap;
@@ -18,6 +18,7 @@ use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::pin;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
@@ -69,7 +70,7 @@ impl Default for Parameter {
       semiverbatim:  None,
       optional:      false,
       name:          arena::pin_static("parameter_default"),
-      spec:          *EMPTY_SYM,
+      spec:          pin!(""),
       extra:         Vec::new(),
       inner:         None,
       reader:        Rc::new(|_args, _extra| {
@@ -319,32 +320,32 @@ impl Parameter {
 
     let closure = &self.reader;
     let value_from_reader: ArgWrap = closure(self.inner.as_ref(), &self.extra)?;
-    let value_arg = if value_from_reader.is_tokens() {
-      match value_from_reader.owned_tokens() {
-        Some(mut value) => {
-          if let Some(ref semi_chars) = self.semiverbatim {
-            value = value.neutralize(semi_chars);
-          }
-          ArgWrap::Tokens(value)
-        },
-        None => {
-          if self.optional {
-            ArgWrap::None
-          } else {
-            ArgWrap::Tokens(Tokens!())
-          }
-        },
+    // Direct enum destructure: was `is_tokens() then owned_tokens()`
+    // which matched twice (once for the is_tokens check, again for
+    // the owned_tokens dispatch over all ArgWrap variants). This
+    // function fires on every parameter read of every macro call —
+    // ~2M times on si.tex per callgrind.
+    let value_arg = match value_from_reader {
+      ArgWrap::Tokens(mut value) => {
+        if let Some(ref semi_chars) = self.semiverbatim {
+          value = value.neutralize(semi_chars);
+        }
+        ArgWrap::Tokens(value)
       }
-    } else {
-      value_from_reader
+      other => other,
     };
     self.revert_catcodes()?;
 
+    // Single arena borrow to compute both name-prefix checks that
+    // this function needs — was two separate `arena::with` calls
+    // (each a RefCell borrow + interner resolve), now a single
+    // closure that returns the pair.
+    let (is_optional_match, is_until) = arena::with(self.name, |name| {
+      (name.starts_with("OptionalMatch"), name.starts_with("Until"))
+    });
+
     // Perl: experiment: skip spaces after a successful OptionalMatch read
-    if !value_arg.is_none()
-      && self.optional
-      && arena::with(self.name, |name| name.starts_with("OptionalMatch"))
-    {
+    if !value_arg.is_none() && self.optional && is_optional_match {
       gullet::skip_spaces()?;
     }
 
@@ -353,7 +354,7 @@ impl Parameter {
         // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens>
         // in the long-run        Until *may* have a value, but it also may *not*, both OK.
         // So... except it from the error message here
-        if !arena::with(self.name, |name| name.starts_with("Until")) {
+        if !is_until {
           let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
           Error!(
             "expected",
@@ -376,7 +377,7 @@ impl Parameter {
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
     // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
-    let mode = lookup_string("MODE");
+    let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes();
@@ -437,7 +438,7 @@ impl Parameter {
     self.revert_catcodes()?;
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
-    let newmode = lookup_string("MODE");
+    let newmode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
     if mode != newmode && mode != "horizontal" {
       crate::stomach::leave_horizontal_internal();
     }
@@ -470,7 +471,7 @@ impl Parameter {
   pub fn reparse(&self, tokens: Tokens) -> Result<ArgWrap> {
     // Needs neutralization, since the keyvals may have been tokenized already???
     // perhaps a better test would involve whether $tokens is, in fact, Tokens?
-    if self.name == arena::pin_static("Plain") || self.predigest.is_some() {
+    if self.name == pin!("Plain") || self.predigest.is_some() {
       // Gack!
       Ok(ArgWrap::Tokens(tokens))
     } else if self.semiverbatim.is_some() {
@@ -590,7 +591,7 @@ impl Parameters {
   }
 
   pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
-    let mut args = Vec::new();
+    let mut args = Vec::with_capacity(self.0.len());
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
       if parameter.predigest.is_some() {
@@ -609,7 +610,7 @@ impl Parameters {
   }
 
   pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {
-    let mut args = Vec::new();
+    let mut args = Vec::with_capacity(self.0.len());
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if !parameter.novalue {

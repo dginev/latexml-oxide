@@ -161,7 +161,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
         rest = &stripped[end..];
       }
       Some(Rc::new(move |w| {
-        let mut boxes: Vec<Digested> = Vec::new();
+        let mut boxes: Vec<Digested> = Vec::with_capacity(refs.len());
         for r in &refs {
           match r {
             SizerRef::Arg(n) => {

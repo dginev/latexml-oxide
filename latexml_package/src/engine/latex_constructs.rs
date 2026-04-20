@@ -34,12 +34,12 @@ pub fn begin_appendices(counter: &str) {
   let cs_ctr = T_CS!(s!("\\{counter}"));
   state::let_i(
     &T_CS!("\\lx@save@theappendex"),
-    &T_CS!(the_ctr.clone()),
+    &T_CS!(&the_ctr),
     Some(Scope::Global),
   );
   state::let_i(
     &T_CS!("\\lx@save@theappendex@ID"),
-    &T_CS!(the_ctr_id.clone()),
+    &T_CS!(&the_ctr_id),
     Some(Scope::Global),
   );
   state::let_i(
@@ -208,7 +208,7 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  if !lookup_bool("inPreamble") {
+  if !state::lookup_bool_sym(pin!("inPreamble")) {
     Error!(
       "unexpected",
       cs,
@@ -520,7 +520,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
 // #   preset => boolean
 // #   postset => boolean
 // #   deferretract=>boolean
-fn prepare_equation_counter(options: SymHashMap<Stored>) {
+pub fn prepare_equation_counter(options: SymHashMap<Stored>) {
   // Guard: ensure the equation counter exists — normally created by article.cls,
   // but standalone classes (jpsj2, appolb, etc.) may not define it.
   if lookup_definition(&T_CS!("\\theequation@ID")).ok().flatten().is_none() {
@@ -533,7 +533,7 @@ fn prepare_equation_counter(options: SymHashMap<Stored>) {
     Some(Scope::Global),
   );
 }
-fn before_equation() -> Result<()> {
+pub fn before_equation() -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
   maybe_peek_label()?;
@@ -578,7 +578,7 @@ fn before_equation() -> Result<()> {
   );
   Ok(())
 }
-fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
+pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   // Phase 1: Gather all needed data from state (immutable borrows only)
   enum EqAction { Retract, Postset, TagsUpdate, None }
   let mut action = EqAction::None;
@@ -1053,7 +1053,9 @@ pub fn use_theorem_style(name: &str) {
               i += 2;
               continue;
             },
-            _ => mouth::tokenize(&val.to_string()),
+            // Values round-tripping through tokens — use internal cattable so
+            // any `\lx@…` names re-tokenize as single CS (not `\lx`+`@…`).
+            _ => mouth::tokenize_internal(&val.to_string()),
           };
           let _ = state::assign_register(
             &key,
@@ -1341,9 +1343,13 @@ pub fn define_new_theorem(
       Ok(())
     }));
 
+  // `thmset_for_before` is for the before_digest closure; clone needed
+  // because `thmset_str` is moved into `thmset_for_tags` below.
   let thmset_for_before = thmset_str.clone();
-  let counter_for_props = counter.clone();
-  let thmset_for_props = thmset_str.clone();
+  // `thmset_for_tags` and `counter_for_tags` are the last uses of
+  // thmset_str and counter — move instead of clone.
+  let thmset_for_tags = thmset_str;
+  let counter_for_tags = counter;
   let is_starred_for_props = is_starred;
   let has_type_for_props = has_type;
 
@@ -1389,9 +1395,7 @@ pub fn define_new_theorem(
     });
   options.after_construct.push(after_construct_closure);
 
-  // properties
-  let thmset_for_tags = thmset_for_props.clone();
-  let counter_for_tags = counter_for_props.clone();
+  // properties — capture thmset_for_tags / counter_for_tags by move.
   let props_closure: PropertiesClosure = Rc::new(
     #[allow(clippy::ptr_arg)]
     move |args: &Vec<Option<Digested>>| {
@@ -1414,7 +1418,7 @@ pub fn define_new_theorem(
               T_BEGIN!(),
             ]);
             let mut full_toks = tag_tokens.unlist();
-            full_toks.extend(mouth::tokenize(&thmset_for_tags).unlist());
+            full_toks.extend(mouth::tokenize_internal(&thmset_for_tags).unlist());
             full_toks.push(T_END!());
             full_toks.push(T_END!());
             let tags = stomach::digest(Tokens::new(full_toks))?;
@@ -1827,7 +1831,7 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
           if let Some((_, unit)) = bibunitmap.iter().find(|(cs, _)| *cs == first_cs) {
             state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(arena::pin(unit)));
             // Strip * if present
-            if !tokens.is_empty() && tokens[0].to_string() == "*" {
+            if !tokens.is_empty() && tokens[0].text == pin!("*") {
               tokens.remove(0);
             }
             if !tokens.is_empty() {
@@ -1861,7 +1865,9 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
     }
   };
   if let Some(title) = title_opt {
-    whatsit.set_property("titlefont", title.get_font()?.unwrap());
+    if let Some(titlefont) = title.get_font()? {
+      whatsit.set_property("titlefont", titlefont);
+    }
     whatsit.set_property("title", title);
   }
   if let Some(bs) = lookup_value("BIBSTYLE") {
@@ -2368,7 +2374,7 @@ LoadDefinitions!({
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
   DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
-    if lookup_bool("IN_MATH") {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {
       if let Some(context) = document.get_element() {
@@ -2454,7 +2460,7 @@ LoadDefinitions!({
     let id = prop_str!(props,"id");
     // Already (auto) created?
     if let Some(mut docel) = document.findnode("/ltx:document", None) {
-      if id != *EMPTY_SYM {
+      if id != pin!("") {
         let id_s = arena::with(id, |s| s.to_string());
         document.set_attribute(&mut docel, "xml:id", &id_s)?;
       }
@@ -2489,6 +2495,19 @@ LoadDefinitions!({
     // Includes babel's \lx@babel@activate@mainlang.
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);
+    }
+    // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
+    // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
+    // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
+    // packages like mhchem.sty end with an unmatched final `\ExplSyntaxOn`
+    // (see mhchem.sty tail, "legacy" block), and LaTeX's kernel relies on
+    // this scheduled cleanup to restore catcodes before the document body.
+    // Without this, `\sum_{...}` tokenizes as the CS `\sum_` (letter `_`)
+    // rather than `\sum` + `_` + `{...}`.
+    if state::lookup_catcode('_') == Some(Catcode::LETTER)
+      && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
+    {
+      boxes.push(stomach::digest(Tokens!(T_CS!("\\ExplSyntaxOff")))?);
     }
     // Fire babel language activation AFTER all hooks (including babel's own
     // \selectlanguage call). This runs even if babel's hook code has errors.
@@ -2804,17 +2823,19 @@ LoadDefinitions!({
     sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
-      if lookup_bool("IN_MATH") {
-        let mode = state::lookup_string("MODE");
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
+        let mode = state::lookup_string_from_sym(pin!("MODE"));
         if mode.contains("math") { // double-check we're really in math
           end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
           state::assign_value("IN_MATH", false, Some(Scope::Global));
         }
       }
-      // Main logic
+      // Main logic — Perl's `$level > ...` coerces non-numeric to 0 via
+      // implicit numeric context; match that with unwrap_or(0) rather than
+      // panicking when a caller passes a surprising value.
       let level = level_arg.to_string();
-      let level_int = if level.is_empty() { 0 } else { level.parse::<i64>().expect(&level) };
+      let level_int = level.trim().parse::<i64>().unwrap_or(0);
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![
@@ -2869,7 +2890,7 @@ LoadDefinitions!({
       // an issue again
       //
       // Part 2: I have now, with great attention and profiling, solidified the position that
-      //       Whatsits are immutable during the absorbtion phase -- and hence
+      //       Whatsits are immutable during the absorption phase -- and hence
       // the args and props passed in here will remain immutable in latexml_oxide.
       // Hence, for this absorb call to run correctly, it must either:
       // 1) Accept a cloned value as currently, paying with performance
@@ -3592,7 +3613,17 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@author", "\\@empty");
-  DefMacro!("\\author{}", "\\def\\@author{#1}\\lx@make@authors@anded{#1}", locked => true);
+  // Perl latex_constructs.pool.ltxml L1116:
+  //   DefMacro('\author[]{}', '\def\@author{#2}\lx@make@authors@anded{#2}', locked => 1);
+  // The optional `[short]` arg is standard for many journal classes (mn,
+  // elsart, revtex variants, etc.); without it, `\author[short]{long}`
+  // leaves `[short]` in the token stream, dumping it into whatever context
+  // was around — most visibly, if the author has `$...$` math, the leftover
+  // `[short]` gets parsed inside math, which then drifts into `\thanks`
+  // bodies and produces XMTok-in-note schema errors (arxiv 0709.4470,
+  // 0802.3360). The short form is used for running heads/toc and is
+  // otherwise discarded.
+  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@make@authors@anded{#2}", locked => true);
   DefMacro!("\\lx@make@authors@anded{}", sub[(authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
@@ -4199,12 +4230,28 @@ LoadDefinitions!({
       ref_step_item_counter(undigested) }
   );
 
-  DefEnvironment!("{trivlist}",
-    "<ltx:itemize>#body</ltx:itemize>",
+  // Perl latex_constructs.pool.ltxml L1720-1726:
+  //   DefConstructor('\trivlist', "<ltx:itemize _autoclose='1'>", mode=>internal_vertical, …);
+  //   DefConstructor('\endtrivlist', sub { maybeCloseElement('ltx:itemize') }, beforeDigest=>Digest('\par'));
+  // The `\endtrivlist` is an *idempotent* closer — `maybeCloseElement` is a
+  // no-op when the element is already closed. That matters when user code
+  // calls `\endtrivlist` directly (e.g. arxiv 0908.0398's `\cqfd → …\endtrivlist`),
+  // then `\end{proof}` closes the outer trivlist, then `\end{proof}`'s own
+  // `\endproof → \endtrivlist` fires again. Perl swallows the double-close;
+  // Rust's previous DefEnvironment emitted a strict env-frame closer that
+  // errored on the second call.
+  DefConstructor!("\\trivlist",
+    "<ltx:itemize _autoclose='1'>",
+    mode => "internal_vertical",
     properties => {
-      begin_itemize("trivlist", None, BeginItemizeOptions::default()) },
-    before_digest_end => { Digest!("\\par")?; },
-    mode => "internal_vertical"
+      begin_itemize("trivlist", None, BeginItemizeOptions::default())?
+    }
+  );
+  DefConstructor!("\\endtrivlist",
+    sub[document, _args, _props] {
+      document.maybe_close_element("ltx:itemize")?;
+    },
+    before_digest => { Digest!("\\par")?; }
   );
 
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
@@ -4557,7 +4604,7 @@ LoadDefinitions!({
   // protected => true prevents read_x_token(fully_expand=false) from expanding this
   // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
   DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if lookup_bool("IN_MATH") {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
       stuff.unlist()
     } else {
       let mut result = vec![T_MATH!()];
@@ -4701,7 +4748,7 @@ LoadDefinitions!({
       state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
       // Set properties on the whatsit
       for (k, v) in eqn_props {
-        whatsit.set_property(&arena::to_string(k), v);
+        arena::with(k, |ks| whatsit.set_property(ks, v));
       }
       // Reset equation counter to 0
       reset_counter(&T_OTHER!("equation"))?;
@@ -4827,6 +4874,15 @@ LoadDefinitions!({
   //======================================================================
 
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
+  // latex.ltx L10007: `\let\a=\@tabacckludge` — the globally-visible
+  // alias used for accent-composition inside arguments (e.g. `\'{\a i}`
+  // to produce í via the `\'` table). Perl-parity: the dump already
+  // has `M \a E \@tabacckludge`, but our dump gate skips public-CS
+  // Meanings without `:` or `@` in the name (expl3-cascade safety),
+  // so `\a` never got defined. Rebind explicitly here. Inside a
+  // `tabbing` environment, tabbing_bindings() overrides this local
+  // to `\@tabbing@accent`. Found in arxiv 1611.05395.
+  Let!("\\a", "\\@tabacckludge");
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star,cs_token,nargs,opt,body)] {
@@ -5056,14 +5112,27 @@ LoadDefinitions!({
       "\\mathpunct"=> Some("PUNCT"),
       _ => None,
     };
-    if let Some(ch) = glyph {
-      let presentation = ch.to_string();
-      let mut opts = MathPrimitiveOptions::default();
-      if let Some(r) = role {
-        opts.role = Some(r.to_string());
-      }
-      def_math(cs, None, presentation, opts)?;
+    // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` —
+    // called unconditionally, even when FontDecode returns `undef` (e.g. the
+    // encoding's `.fontmap.ltxml` isn't shipped with LaTeXML, like "U").
+    // Fall back to the raw codepoint so the CS is defined; better to render
+    // an ASCII stand-in than to cascade into Error:undefined for the
+    // command itself. arxiv 1011.1955 hits this with
+    //   \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
+    //   \DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}
+    // where no u.fontmap exists.
+    let presentation = match glyph {
+      Some(ch) => ch.to_string(),
+      None => {
+        let codepoint = code.value_of() as u32;
+        char::from_u32(codepoint).map(|c| c.to_string()).unwrap_or_default()
+      },
+    };
+    let mut opts = MathPrimitiveOptions::default();
+    if let Some(r) = role {
+      opts.role = Some(r.to_string());
     }
+    def_math(cs, None, presentation, opts)?;
   });
 
   DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
@@ -5388,7 +5457,7 @@ LoadDefinitions!({
     let reg = s!("\\cl@{}", within_str);
     // Prepend ctr and UNctr to the counter reset list for 'within'
     let prev = state::lookup_tokens(&reg).unwrap_or_default();
-    let mut toks = vec![T_CS!(ctr_str.clone()), T_CS!(unctr)];
+    let mut toks = vec![T_CS!(ctr_str), T_CS!(unctr)];
     toks.extend(prev.unlist());
     state::assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
   });
@@ -5399,8 +5468,8 @@ LoadDefinitions!({
     let within_str = Expand!(within).to_string();
     let reg = s!("\\cl@{}", within_str);
     if let Some(prev) = state::lookup_tokens(&reg) {
-      let ctr_cs = T_CS!(ctr_str.clone());
       let unctr_cs = T_CS!(s!("UN{}", ctr_str));
+      let ctr_cs = T_CS!(ctr_str);
       let filtered: Vec<Token> = prev.unlist().into_iter()
         .filter(|t| *t != ctr_cs && *t != unctr_cs)
         .collect();
@@ -5862,7 +5931,7 @@ LoadDefinitions!({
   // \+ increments tab start by adding \> to tabbing_start_tabs
   DefPrimitive!("\\@tabbing@increment", sub [_args] {
     let mut tabs = if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
-      toks.unlist().to_vec()
+      toks.unlist()
     } else {
       Vec::new()
     };
@@ -5877,7 +5946,7 @@ LoadDefinitions!({
   // \- decrements tab start by removing first element from tabbing_start_tabs
   DefPrimitive!("\\@tabbing@decrement", sub [_args] {
     let tabs = if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
-      let mut v = toks.unlist().to_vec();
+      let mut v = toks.unlist();
       if !v.is_empty() {
         v.remove(0);
       }
@@ -6094,7 +6163,7 @@ LoadDefinitions!({
     }
     alignment_bindings(template, String::from("math"), SymHashMap::default(), attrs);
     // Perl: if display math, switch to text mathstyle
-    if state::lookup_string("MODE").ends_with("math") {
+    if state::lookup_string_from_sym(pin!("MODE")).ends_with("math") {
       MergeFont!(mathstyle => "text");
     }
     Let!("\\\\", "\\lx@alignment@newline");
@@ -6126,6 +6195,13 @@ LoadDefinitions!({
   // C.11.1 Files
   //======================================================================
   DefPrimitive!("\\nofiles", None);
+
+  // Perl: DefPrimitive('\listfiles', undef) — no-op. Required so the
+  // autoload trigger for `\listfiles` (engine/tex.rs) gets overridden
+  // after LaTeX.pool loads; otherwise the trigger re-expands itself
+  // after each pool load, creating a unique mouth-source per iteration
+  // that eventually trips the 50M arena::pin sentinel (arxiv 1311.6082).
+  DefPrimitive!("\\listfiles", None);
 
   //======================================================================
   // C.11.2 Cross-References
@@ -6295,13 +6371,13 @@ LoadDefinitions!({
     set_bibstyle(&style);
     if let Some(mut bib) = document.findnode("//ltx:bibliography", None) {
       if let Some(Stored::String(bs)) = lookup_value("BIBSTYLE") {
-        document.set_attribute(&mut bib, "bibstyle", &arena::to_string(bs))?;
+        arena::with(bs, |s| document.set_attribute(&mut bib, "bibstyle", s))?;
       }
       if let Some(Stored::String(cs)) = lookup_value("CITE_STYLE") {
-        document.set_attribute(&mut bib, "citestyle", &arena::to_string(cs))?;
+        arena::with(cs, |s| document.set_attribute(&mut bib, "citestyle", s))?;
       }
       if let Some(Stored::String(so)) = lookup_value("CITE_SORT") {
-        document.set_attribute(&mut bib, "sort", &arena::to_string(so))?;
+        arena::with(so, |s| document.set_attribute(&mut bib, "sort", s))?;
       }
     }
   },
@@ -6667,6 +6743,11 @@ LoadDefinitions!({
     gullet::skip_spaces()?;
     let filename_toks = gullet::read_arg(ExpansionLevel::Off)?;
     let filename = filename_toks.to_string();
+    // Perl latex_constructs L4316-4353: header comments match Perl's
+    // three-line preamble. The \jobname line is synthesized as `\jobname`
+    // (unexpanded literal) rather than the digested jobname — our tests
+    // don't exercise a specific date and we don't want to leak
+    // compile-time state into the dump-like content cache.
     let mut lines: Vec<String> = vec![
       format!("%% LaTeX2e file `{filename}'"),
       if header_star {
@@ -6674,6 +6755,7 @@ LoadDefinitions!({
       } else {
         "%% generated by the `filecontents' environment".to_string()
       },
+      "%% from source `\\jobname' on YYYY/MM/DD.".to_string(),
     ];
     if !header_star { lines.push("%%".to_string()); }
     // Discard remainder of \begin{filecontents} line
@@ -6900,23 +6982,26 @@ LoadDefinitions!({
     Ok(vec![])
   });
 
+  // Perl parity: `return unless $defn && ($defn ne 'missing');` — silently
+  // skip when the target variable has no register definition (e.g. undefined
+  // length register). Matches calc_sty.rs's \setlength/\addtolength fallback.
   DefPrimitive!("\\setlength {Variable}{Dimension}", sub[(variable,length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("if a Variable parameter provides a token, it must have a Register definition.");
-      defn.set_value(length.into(), None, params);
+      if let Some(defn) = rtoken.to_register() {
+        defn.set_value(length.into(), None, params);
+      }
     }
     Ok(Vec::new())
   });
   DefPrimitive!("\\addtolength {Variable}{Dimension}", sub[(variable,length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("if a Variable parameter provides a token, it must have a Register definition.");
-      // TODO: can we avoid cloning the params?
-      let oldlength = defn.value_of(params.clone()).unwrap_or_default();
-      defn.set_value(oldlength.add(length), None, params);
+      if let Some(defn) = rtoken.to_register() {
+        // TODO: can we avoid cloning the params?
+        let oldlength = defn.value_of(params.clone()).unwrap_or_default();
+        defn.set_value(oldlength.add(length), None, params);
+      }
     }
     Ok(Vec::new())
   });
@@ -7035,7 +7120,7 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $wasmath = LookupValue('IN_MATH') — uses boolean value, not key existence.
       // IN_MATH is initialized to false at startup, so is_some() would always be true.
-      let wasmath = state::lookup_bool("IN_MATH");
+      let wasmath = state::lookup_bool_sym(pin!("IN_MATH"));
       stomach::begin_mode("restricted_horizontal")?;
       state::assign_value("FRAME_IN_MATH", wasmath, None); },
     properties => sub[args] {
@@ -7407,10 +7492,21 @@ LoadDefinitions!({
   DefMacro!("\\lx@pic@bezier{} Pair Pair Pair", "\\qbezier[#1]#2#3#4");
   DefMacro!("\\@killglue", "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}");
 
-  // Tag: ltx:picture — auto-generate ID with "pic" prefix
-  Tag!("ltx:picture", after_open => sub[document, node] {
-    document.generate_id(node, "pic")?;
-  });
+  // Tag: ltx:picture — Perl latex_constructs.pool.ltxml L4995:
+  //   Tag('ltx:picture', autoOpen => 0.5, autoClose => 1, afterOpen => &GenerateID)
+  // The 0.5 fractional priority is honoured by `compute_indirect_model` in
+  // state.rs: picture is the only tag with lower-than-full openability, so
+  // other auto-openers (para, p, text, item, …) win whenever they can also
+  // reach the target element. Picture is selected only for picture-specific
+  // primitives (\line, \circle, \vector, \put) used bare inside a {figure}
+  // or similar context where no fuller wrapper fits.
+  Tag!("ltx:picture",
+    auto_open  => true,
+    auto_close => true,
+    after_open => sub[document, node] {
+      document.generate_id(node, "pic")?;
+    }
+  );
 
   // {picture} environment: (width,height) with optional (origin-x,origin-y)
   // Pair now survives digestion via RegisterValue::Pair, so properties can extract coordinates.
@@ -7419,7 +7515,7 @@ LoadDefinitions!({
       fill='none' stroke='none' unitlength='#unitlength'>\
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
-    mode => "text",
+    mode => "internal_vertical",
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
@@ -7469,7 +7565,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@pic@put Pair {}",
     "<ltx:g transform='#transform' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth'>#2</ltx:g>",
     alias => "\\put",
-    mode  => "text",
+    mode  => "restricted_horizontal",
     properties => sub[args] {
       let (x, y) = match args[0].as_ref() {
         Some(d) => match d.data() {
@@ -7690,7 +7786,11 @@ LoadDefinitions!({
     let dx: f64 = dx_str.trim().parse().unwrap_or(0.0);
     let dy: f64 = dy_str.trim().parse().unwrap_or(0.0);
 
-    let mut result = Vec::new();
+    // Each iteration emits roughly `8 + body.len()` tokens; pre-size
+    // conservatively + use borrow-iter-copied for body to avoid the
+    // per-iteration Vec<Token> clone.
+    let body_len = body.len();
+    let mut result = Vec::with_capacity(((n as usize) * (8 + body_len)).min(1 << 20));
     for _ in 0..n {
       result.push(T_CS!("\\put"));
       result.push(T_OTHER!("("));
@@ -7699,7 +7799,7 @@ LoadDefinitions!({
       result.extend(Explode!(s!("{}", y)));
       result.push(T_OTHER!(")"));
       result.push(T_BEGIN!());
-      result.extend(body.clone().unlist());
+      result.extend(body.unlist_ref().iter().copied());
       result.push(T_END!());
       x += dx;
       y += dy;
@@ -7726,7 +7826,7 @@ LoadDefinitions!({
       let framed = props.get("framed").is_some();
       // \@wholewidth captured at digest time in properties callback
       let thick = match props.get("thick") {
-        Some(Stored::String(s)) => arena::to_string(*s).parse::<f64>().unwrap_or(0.4),
+        Some(Stored::String(s)) => arena::with(*s, |v| v.parse::<f64>().unwrap_or(0.4)),
         _ => 0.4,
       };
       // Frame rect (only when framed=true)
@@ -7929,7 +8029,7 @@ LoadDefinitions!({
   // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
   DefPrimitive!("\\not@math@alphabet{}{}", "");
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
-    if lookup_bool("IN_MATH") {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
       let c = c.to_string();
       let message = s!("Command {:?} invalid in math mode", c);
       Warn!("unexpected", c, message);
@@ -8072,13 +8172,13 @@ LoadDefinitions!({
     // cmd contains a CS token like \bf; get the first token
     let cmd_cs = *cmd.unlist_ref().first()
       .ok_or("DeclareOldFontCommand: expected a CS token")?;
-    let font_toks = font.clone();
-    let math_toks = mathcmd.clone();
+    // Move `font` and `mathcmd` directly into the closure capture —
+    // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
-      if lookup_bool("IN_MATH") {
-        Ok(math_toks.clone())
+      if state::lookup_bool_sym(pin!("IN_MATH")) {
+        Ok(mathcmd.clone())
       } else {
-        Ok(font_toks.clone())
+        Ok(font.clone())
       }
     })));
     Ok(Vec::new())
@@ -8095,7 +8195,11 @@ LoadDefinitions!({
     expansion.push(T_PARAM!());
     expansion.push(T_OTHER!("1"));
     expansion.push(T_END!());
-    let params = parse_parameters("{}", &cs, false)?;
+    // init_flag=true: engine is up at \DeclareTextFontCommand expansion
+    // time, so Parameter::init() can resolve readers via PARAMETER_TYPES.
+    // With init=false the declared command's Plain arg uses the mock
+    // reader and fails to consume input at invocation.
+    let params = parse_parameters("{}", &cs, true)?;
     def_macro(cs, params,
       Some(ExpansionBody::Tokens(Tokens::new(expansion))), None)?;
   });
@@ -8153,7 +8257,7 @@ LoadDefinitions!({
     let text = arg.to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
-    let in_math = lookup_bool("IN_MATH");
+    let in_math = state::lookup_bool_sym(pin!("IN_MATH"));
     let is_number = !text.is_empty() && text.chars().all(|c| c.is_ascii_digit());
     let mut props = stored_map!();
     if in_math {
@@ -8345,6 +8449,14 @@ LoadDefinitions!({
     let mut read = Vec::new();
 
     while let Some(t) = gullet::read_token()? {
+      // Stop as soon as we've matched the full token sequence —
+      // otherwise the `toks[0]` index panics on the next iteration
+      // (arxiv 1608.08252 hit this with a matching prefix followed
+      // by arbitrary tokens in the stream).
+      if toks.is_empty() {
+        read.push(t);
+        break;
+      }
       if t == toks[0] {
         toks.pop_front();
         read.push(t);
@@ -8420,6 +8532,15 @@ LoadDefinitions!({
       else_tks
     }
   });
+
+  // LaTeX3 format-version guard (ltcmd.dtx 2020/10/01 kernel). Source that
+  // checks for format features writes
+  //   \IfFormatAtLeastTF{YYYY/MM/DD}{then}{else}
+  // expecting the `then` branch on modern LaTeX. LaTeXML simulates a
+  // current-enough format, so always take `#2`. This is how babel's
+  // greek.ldf probes for LaTeX3 catcode primitives; without the stub it
+  // emits Error:undefined and bails out of the language setup.
+  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
@@ -8513,7 +8634,7 @@ LoadDefinitions!({
       + c.to_string().trim().parse::<i32>().unwrap_or(0);
     let (glyph, _font) = font_decode(n, None, None);
     if let Some(ch) = glyph {
-      vec![Tbox::new(arena::pin(ch.to_string()), None, None, Tokens!(), SymHashMap::default()).into()]
+      vec![Tbox::new(arena::pin_char(ch), None, None, Tokens!(), SymHashMap::default()).into()]
     } else {
       Vec::new()
     }
@@ -8586,8 +8707,74 @@ LoadDefinitions!({
 
   // \@@end — saved TeX \end primitive
   DefPrimitive!("\\@@end", {
-    if !lookup_bool("INTERPRETING_DEFINITIONS") {
+    if !state::lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
       gullet::flush();
     }
   });
+
+  //======================================================================
+  // Closure-backed primitives — Perl: latex_constructs.pool.ltxml L5645-5766.
+  // These MUST live in `_constructs` (always loaded), not `_base` (optional
+  // under Perl's LoadFormat mutual-exclusivity). Their closures cannot be
+  // serialized into the kernel dump; defining them here guarantees they
+  // exist whether or not the dump short-circuits `_base`.
+  //
+  // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
+  // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
+
+  // Perl L5645
+  DefPrimitive!("\\@onlypreamble{}", {
+    only_preamble("\\@onlypreamble")?;
+  });
+
+  // Perl L5646-5648
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
+    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
+  });
+  DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;
+  });
+  DefPrimitive!("\\GenericInfo{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
+  });
+
+  // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
+  DefMacro!("\\@setsize{}{}{}{}", "");
+
+  // Perl L5765-5766
+  DefPrimitive!("\\makeatletter", {
+    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
+  });
+  DefPrimitive!("\\makeatother", {
+    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
+  });
+
+  // Perl L5670-5673 — font size stubs. Token-list bodies (Perl:
+  // `Tokens()` = empty) that swallow their args. Relocated from
+  // latex_base.rs 2026-04-18 for Perl-parity AND so they round-trip
+  // through the dump under LATEXML_DUMP_ONLY=1 (the dump reader's
+  // @-internal safety filter rejects public-CS macros, so public
+  // kernel CSes like `\fontsize` must live in always-loaded
+  // `_constructs.rs`).
+  DefMacro!("\\check@mathfonts", None);
+  DefMacro!("\\fontsize{}{}", None);
+  DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+
+  // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
+  // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
+    let next = gullet::read_non_space()?;
+    let next_test = match next {
+      Some(ref n) => XEquals!(&token, n),
+      None => XEquals!(&token, &*TOKEN_END)
+    };
+    let which = if next_test { t_if } else { t_else };
+    let mut result = which.substitute_parameters(&[]).unlist();
+    if let Some(t_next) = next {
+      result.push(t_next);
+    }
+    result
+  });
+  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
+  Let!("\\@ifnext", "\\@ifnextchar");
 });

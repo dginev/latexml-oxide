@@ -10,7 +10,7 @@ LoadDefinitions!({
 
   // Load the raw cleveref.sty (for language-dependent definitions)
   // Pretend amsmath is loaded to avoid errors
-  let ams_loaded = lookup_value("amsmath.sty_loaded").is_some();
+  let ams_loaded = state::with_value("amsmath.sty_loaded", |v| v.is_some());
   assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
   InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   if !ams_loaded {

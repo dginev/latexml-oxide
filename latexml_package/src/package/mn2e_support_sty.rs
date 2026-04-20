@@ -36,7 +36,16 @@ LoadDefinitions!({
   DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>");
   DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
 
-  // Keywords — Perl L48-55
+  // Keywords — Perl mn2e_support.sty.ltxml L48-54:
+  //   DefEnvironment('{keywords}', '',
+  //     afterDigest => sub { push 'ltx:classification'→frontmatter });
+  //
+  // As an environment, `\endkeywords` is auto-defined, so raw
+  // `mn2e-breakabs.sty` redefinitions of `\endkeywords` (which reference
+  // undefined `\SFB@keywordstrue`) never fire. Body digests as frontmatter
+  // classification entry via `\@add@frontmatter`.
+  DefEnvironment!("{keywords}",
+    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Dates — Perl L61-66
@@ -228,4 +237,43 @@ LoadDefinitions!({
   Let!("\\@internalcite", "\\cite");
   DefMacro!("\\shortcite", "\\cite");
   DefMacro!("\\citename{}", "#1");
+
+  // Perl mn2e_support.sty.ltxml L212-245: "Redefine equations (bizarrely)
+  // to allow $ within" — rebind T_MATH inside display math so a literal
+  // `$` becomes a no-op, not an attempt to close math. MN (Monthly
+  // Notices) papers routinely write idioms like
+  //   T_0 =\, $HJD$\, 2453195.2859 \pm 0.0003
+  // inside `\begin{equation} … \end{equation}` where `$HJD$` is a
+  // text-escape to typeset "HJD" in roman. Without the override, Rust
+  // raised Error:expected:$ Missing $ closing display math at every
+  // occurrence. Matches the identical port in aa_support_sty.
+  use crate::engine::latex_constructs::{
+    after_equation, before_equation, prepare_equation_counter,
+  };
+  DefEnvironment!(
+    "{equation}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      before_equation()?;
+      Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
+  DefEnvironment!(
+    "{equation*}",
+    "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    mode => "display_math",
+    before_digest => {
+      prepare_equation_counter(stored_map!("preset" => true));
+      before_equation()?;
+      Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
+    },
+    after_digest_body => sub[whatsit] {
+      after_equation(Some(whatsit))?;
+    },
+    locked => true);
 });

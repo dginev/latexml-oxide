@@ -146,13 +146,10 @@ impl DigestionAPI for Core {
     if let Some(ref dump_path) = dump_path {
       let path = std::path::Path::new(dump_path);
       if path.exists() {
-        let result = if dump_path.ends_with(".oxide") {
-          // Rust-native format (from --init mode)
-          latexml_core::dump_reader::load_native_dump(path)
-        } else {
-          // Perl format (from Perl's make formats)
-          latexml_core::dump_loader::load_dump(path)
-        };
+        // Rust-native tab-separated format (from --init mode). The
+        // Perl-format `dump_loader` was deleted 2026-04-18 (dead code —
+        // we never consumed Perl-generated dumps).
+        let result = latexml_core::dump_reader::load_native_dump(path);
         match result {
           Ok(count) => {
             eprintln!(
@@ -500,7 +497,12 @@ impl DigestionAPI for Core {
         state::assign_value("SOURCEDIRECTORY", dir.clone(), None);
       }
       state::search_paths_push_front(dir.clone());
-      state::graphics_paths_push_front(dir);
+      // Perl Core.pm L200:
+      //   $state->unshiftValue(GRAPHICSPATHS => $dir)
+      //     if !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
+      if !state::get_graphics_paths().iter().any(|p| p == &dir) {
+        state::graphics_paths_push_front(dir);
+      }
       state::install_definition(
         Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!("\\jobname"),

@@ -472,7 +472,16 @@ impl Rewrite {
           }
         },
         Replace => {
-          let mut parent = tree.get_parent().unwrap();
+          // Perl Rewrite.pm L122 uses `$tree->parentNode` with no check —
+          // XML::LibXML returns undef silently and subsequent operations
+          // (lastChild / childNodes) on undef are no-ops in practice,
+          // effectively skipping root-level rewrites. In Rust we have to
+          // be explicit: if the matched node is detached or is the root,
+          // there's no parent tree structure to splice into, so skip the
+          // clause just as Perl's no-op degrades to.
+          let Some(mut parent) = tree.get_parent() else {
+            return Ok(());
+          };
           // Remove & separate nodes to be replaced, and sibling nodes following them.
           let mut following = VecDeque::new(); // Collect the matching and following nodes
           while let Some(mut sib) = parent.get_last_child() {

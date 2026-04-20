@@ -213,7 +213,10 @@ impl Whatsit {
     let mut in_toks = VecDeque::from(spec.unlist());
     let args = self.get_args();
     let props = &self.properties;
-    let mut result = Vec::new();
+    // Pre-size: `result` is at least as long as the template; args
+    // substitute 1:1 or 1:N. Modest over-allocation beats repeated
+    // doublings on reversion of large whatsits.
+    let mut result = Vec::with_capacity(in_toks.len());
     while let Some(token) = in_toks.pop_front() {
       if token.get_catcode() != Catcode::ARG {
         // Non '#'; copy it
@@ -403,7 +406,7 @@ impl BoxOps for Whatsit {
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 
-    self.definition.do_absorbtion(document, self)
+    self.definition.do_absorption(document, self)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
   }
   fn get_body(&self) -> Result<Option<Digested>> {

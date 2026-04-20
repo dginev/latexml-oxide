@@ -232,26 +232,27 @@ LoadDefinitions!({
     AddToCounter!(&ctr_str, num);
   });
 
-  // \setlength{Variable}{}
+  // \setlength{Variable}{} — Perl parity: silently no-op on undefined variable
+  // (Perl: `return unless $defn && ($defn ne 'missing');`).
   DefPrimitive!("\\setlength{Variable}{}", sub[(variable, arg)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("Variable must have a Register definition.");
-      let value = read_expression("Glue", arg)?;
-      defn.set_value(value, None, params);
+      if let Some(defn) = rtoken.to_register() {
+        let value = read_expression("Glue", arg)?;
+        defn.set_value(value, None, params);
+      }
     }
   });
 
-  // \addtolength{Variable}{}
+  // \addtolength{Variable}{} — Perl parity: silently no-op on undefined variable.
   DefPrimitive!("\\addtolength{Variable}{}", sub[(variable, arg)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register()
-        .expect("Variable must have a Register definition.");
-      let old_value = defn.value_of(params.clone()).unwrap_or_default();
-      let delta = read_expression("Glue", arg)?;
-      defn.set_value(old_value.add(delta), None, params);
+      if let Some(defn) = rtoken.to_register() {
+        let old_value = defn.value_of(params.clone()).unwrap_or_default();
+        let delta = read_expression("Glue", arg)?;
+        defn.set_value(old_value.add(delta), None, params);
+      }
     }
   });
 

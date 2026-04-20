@@ -6,27 +6,35 @@
 
 ## 1. Avoid String Allocation on Hot Paths
 
-**Principle:** Never use `.to_string()`, `String::from()`, or `format!()` when a string is already in the interner arena. Use the `arena::with*` family of methods for comparisons and reads, and `arena::pin` / `arena::pin_static` for storage.
+**Principle:** Never use `.to_string()`, `String::from()`, or `format!()` when a string is already in the interner arena. For string *literals*, prefer the call-site-cached `pin!("…")` macro — it interns once per call site and resolves subsequent lookups with a `u32` load. For runtime strings, use `arena::pin(s)`. For comparisons and reads, use the `arena::with*` family.
 
-**Why:** String allocation is one of the most frequent hidden costs. The arena interner exists precisely to avoid repeated heap allocations for the same string. Every `.to_string()` on an interned symbol defeats this purpose.
+**Why:** String allocation is one of the most frequent hidden costs. The arena interner exists precisely to avoid repeated heap allocations for the same string. Every `.to_string()` on an interned symbol defeats this purpose. `pin!("foo")` caches the interned `SymStr` in a per-site `thread_local! OnceCell`, avoiding the 30-50 ns intern-table probe on subsequent calls (just a branch + load).
 
 **Examples:**
 ```rust
 // BAD: allocates a new String just to compare
 if arena::to_string(sym) == "foo" { ... }
 
-// GOOD: resolve in-place without allocation
+// BETTER: resolve in-place without allocation
 if arena::with(sym, |s| s == "foo") { ... }
 
-// BAD: allocate to store
-let name = sym.to_string();
+// BEST (for literals): compare interned SymStrs directly
+if sym == pin!("foo") { ... }
+
+// BAD: allocate to store under a literal key
+let name = "some_key".to_string();
 state::assign_value(&name, ...);
 
-// GOOD: use interned symbol directly
-let name = arena::pin("some_key");
+// GOOD: use the sym-keyed state API with pin!
+state::assign_value_sym(pin!("some_key"), ..., None);
 ```
 
-**When to apply:** Any code that runs per-token, per-macro-expansion, per-digest, or per-node. State lookups, token comparisons, CS name checks.
+**When to apply:** Any code that runs per-token, per-macro-expansion, per-digest, or per-node. State lookups, token comparisons, CS name checks. The sym-keyed state API (`lookup_bool_sym`/`assign_value_sym`/`with_value_sym`) takes `SymStr` *by value* — `SymStr` is a `u32` wrapper (Copy), so passing by value is cheaper than borrowing.
+
+**`pin!` vs `arena::pin`:**
+- `pin!("literal")` (macro) — per-site OnceCell cache, for string literals. Cheapest.
+- `arena::pin(runtime_str)` (function) — single intern on a dynamic `&str` / `String`.
+- Both return the same `SymStr` on equal input; the macro is just a fast path for known-at-compile-time strings.
 
 ---
 

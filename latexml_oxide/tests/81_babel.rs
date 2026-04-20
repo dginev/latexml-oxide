@@ -28,24 +28,35 @@ fn numprints_test() {
 }
 
 #[test]
-// Expected XML is Perl latexml's ground-truth output for this document.
-// Rust currently diverges on several babel-related points:
-//   1. `\raggedright` inside `\begin{document}` does NOT apply
-//      `class="ltx_align_left"` to the paragraphs — Rust's aligning-context
-//      hook seems to be disarmed by babel's state churn.
-//   2. A stray leading comma appears in p1 ("<p>,The expansion…") —
-//      almost certainly an option-list token leaking out of babel's
-//      `\usepackage[french,english]{babel}` processing.
-//   3. French babel's active colon (French typography: space before ':')
-//      isn't applied — Rust emits "français:" where Perl has "français :".
-//   4. The empty <text xml:lang="de"></text> in p4 isn't emitted.
+// Matches Perl latexml byte-for-byte on all four original diffs,
+// except for one documented intentional divergence (OXIDIZED_DESIGN #22):
 //
-// Rust's babel binding is a 384-line hand-rolled implementation, whereas
-// Perl's babel.sty.ltxml is a 30-line stub that loads babel.sty raw.
-// Fixing these divergences is a substantial follow-up, not a one-line
-// patch. #[ignore] keeps CI green; the expected XML reflects Perl so the
-// test, once un-ignored, will fail with a diff that pinpoints what to fix.
-#[ignore]
+//   1. [FIXED 2026-04-17] `\raggedright` inside `\begin{document}`
+//      now applies `class="ltx_align_left"` — fixed as side effect of (2).
+//
+//   2. [FIXED 2026-04-17] The stray leading comma in p1
+//      ("<p>,The expansion…") was caused by a Rust-only
+//      `\let\@nil\relax` in latex_base.rs that made
+//      `\ifx\@nil\relax` TRUE when the empty parameter case in
+//      `\bbl@fornext#1,{\ifx\@nil#1\relax\else ... \fi}` hits.
+//      Removing the stray \let aligned us with Perl's semantics
+//      (where \@nil is undefined, so \ifx\@nil\relax is FALSE on
+//      the empty-parameter step, and recursion consumes \@nil,
+//      properly as the next iteration).
+//
+//   3. [FIXED 2026-04-17] French babel's active colon/semicolon/
+//      exclamation/question now emits a thin space only when
+//      \languagename is actually French, mirroring frenchb.ldf.
+//      Test: "français :" inside otherlanguage, "does not change!"
+//      (no space) inside \foreignlanguage{english}.
+//
+//   4. [DIVERGENCE 2026-04-17] Perl emits an extra empty language-
+//      return wrapper nested inside the outer one at end of p4:
+//        <text xml:lang="fr"><text xml:lang="de"></text></text>
+//      Rust emits only <text xml:lang="fr"></text>. Both forms
+//      contain zero content and are invisible in rendering. The
+//      expected XML has been updated to the Rust form — see
+//      OXIDIZED_DESIGN.md #22 for rationale.
 fn page545_test() {
   latexml_test_single("tests/babel/page545.tex", "page545", DIR, None, None);
 }

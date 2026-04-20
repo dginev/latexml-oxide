@@ -14,9 +14,10 @@ Generating the dump requires running our engine. The engine is what we're buildi
 
 ```
 resources/dumps/
-  plain.dump.txt      # 438 entries, ~50KB (checked into git)
-  latex.dump.txt      # 21905 entries, ~8MB (git-ignored, cached)
+  latex.dump.txt      # 25,172 entries, ~3.7MB (git-ignored, regenerated via tools/make_formats.sh)
   texlive.version     # kpsewhich version hash (for staleness detection)
+  # (plain.dump.txt previously lived here as a checked-in 438-entry file,
+  # now superseded by inline compiled plain_dump.rs via dump_codegen.)
 
 latexml_package/build.rs
   → checks resources/dumps/ for cached dumps
