@@ -112,6 +112,12 @@ sessions 120-123 per-paper Perl-parity fixes. Session 123 added:
   (Perl parity; prior Rust unconditionally pulled amsmath, whose
   `\pmatrix`/`\endpmatrix` semantics clobbered plain-TeX
   `\pmatrix{…}`) — clears 0810.1407 / 0811.4212 / 1101.2149
+- `expl3_sty` short-circuits raw `expl3.sty` loading when `\tex_let:D`
+  is already in the dump — mirrors l3kernel/expl3.sty L54's TeX-level
+  guard, lifted to the Rust dispatcher. Perf: 1008.2152 now converts in
+  ~2.9s (Perl baseline 24.84s). Also removes the 36k-line
+  `expl3-code.tex` re-digestion visible in `(Loading "expl3-code.tex"
+  definitions...)` log noise.
 
 Earlier session fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
