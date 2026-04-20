@@ -726,9 +726,59 @@ pub fn def_math_constructor(
     Rc::new(move |_whatsit| Ok(lookup_font().unwrap().specialize(&presentation_for_font)))
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
-    // If trivial presentation, allow it in Text
+    // Perl defmath_cons (Package.pm L1841-1844):
+    //   $nargs == 0
+    //     && $presentation !~ /(?:\(|\)|\\)/
+    //   ? "?#isMath(<ltx:XMTok …$end_tok)($qpresentation)"
+    //   : "<ltx:XMTok …$end_tok"
+    //
+    // The `?#isMath(…)(…)` form is Perl's construction-time conditional —
+    // in math context emit the XMTok, otherwise emit the bare presentation
+    // character. The check is gated on presentation NOT containing `(`,
+    // `)`, or `\`, which would collide with template-specials.
+    //
+    // Ported here as a runtime DOM-ancestry walk (same predicate as
+    // `tbox.rs::be_absorbed`), and the presentation-content guard mirrors
+    // Perl's regex. `\rightarrowfill` (`\x{2192}`, no specials) gets the
+    // text fallback; symbols like `\(` / `\)` / anything with a backslash
+    // keep the unconditional XMTok — matching Perl.
+    let presentation_is_trivial = !presentation_for_replacement
+      .chars()
+      .any(|c| c == '(' || c == ')' || c == '\\');
     Rc::new(
       move |document: &mut Document, _, props: &SymHashMap<Stored>| {
+        let font_opt = match props.get("font") {
+          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+          Some(Stored::FontDirective(FontDirective::Closure(code))) => {
+            Some(Cow::Owned(code(None)?))
+          },
+          Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
+          _ => None,
+        };
+        // In-math-context ancestry walk — mirrors `tbox.rs::be_absorbed`
+        // (Perl's `?#isMath` template conditional resolves at construction
+        // time against the current document insertion context).
+        let in_math_context = {
+          let mut node = document.node.clone();
+          let mut found = false;
+          loop {
+            let qname = crate::document::get_node_qname(&node);
+            if crate::common::arena::with(qname, |n| n.contains("XM") || n.contains("Math")) {
+              found = true;
+              break;
+            }
+            match node.get_parent() {
+              Some(parent) => node = parent,
+              None => break,
+            }
+          }
+          found
+        };
+        if !in_math_context && presentation_is_trivial {
+          // Perl `?#isMath(…)(plain)` text branch — just emit the char.
+          document.absorb_string(&presentation_for_replacement, props)?;
+          return Ok(());
+        }
         let mut attrs = HashMap::default();
         for key in ["role", "scriptpos", "stretchy"] {
           if let Some(v) = props.get(key) {
@@ -740,14 +790,6 @@ pub fn def_math_constructor(
             attrs.insert(key.to_string(), v.to_string());
           }
         }
-        let font_opt = match props.get("font") {
-          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
-          Some(Stored::FontDirective(FontDirective::Closure(code))) => {
-            Some(Cow::Owned(code(None)?))
-          },
-          Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
-          _ => None,
-        };
         if let Some(font) = font_opt {
           document.open_element("ltx:XMTok", Some(attrs), Some(&font))?;
         } else {
@@ -755,11 +797,16 @@ pub fn def_math_constructor(
         }
         document.absorb_string(&presentation_for_replacement, props)?;
         document.close_element("ltx:XMTok")?;
-
         Ok(())
       },
     )
   } else {
+    // Perl defmath_cons (Package.pm L1847-1851): when `$nargs` > 0 the
+    // template is always `<ltx:XMApp>…<ltx:XMTok …/></ltx:XMApp>` — there
+    // is NO text-mode fallback for this arm. The `requireMath` beforeDigest
+    // (Perl L1689, same as Rust L1606) has already warned the user; math
+    // context is assumed. Keep parity — emit the XMApp/XMTok structure as
+    // before.
     Rc::new(
       move |document: &mut Document, args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
         let mut attrs = HashMap::default();
