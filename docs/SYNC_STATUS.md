@@ -100,7 +100,7 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [x] 1203.6616  - [ ] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
 - [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
 
-**Conversion errors (64)** status: **49 of 64 now convert cleanly** via
+**Conversion errors (64)** status: **50 of 64 now convert cleanly** via
 sessions 120-122 per-paper Perl-parity fixes:
 - picture-autoOpen fractional priority (port of Perl's 0.5 openability)
 - DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
