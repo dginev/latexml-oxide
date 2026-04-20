@@ -78,10 +78,12 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
-    let mouth_opt =
-      if let Some(Stored::Mouth(mouth_stored)) = lookup_value(&format!("input_file:{port}")) {
-        Some(mouth_stored)
-      } else { None };
+    // Same with_value pattern as etex.rs \readline: Rc::clone the mouth
+    // ref instead of cloning the Stored envelope around it.
+    let mouth_opt = with_value(&format!("input_file:{port}"), |v| match v {
+      Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
+      _ => None,
+    });
     if let Some(mouth_obj) = mouth_opt {
       bgroup();
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
