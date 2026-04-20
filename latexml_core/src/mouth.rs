@@ -52,11 +52,6 @@ impl FoodType {
   }
 }
 
-// Perf/safety: `Cell<usize>` over `static mut` — thread_local guarantees
-// single-threaded access, and Cell gives us get/set without any `unsafe`.
-#[thread_local]
-static LASTID: std::cell::Cell<usize> = std::cell::Cell::new(0);
-
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 // LOWERHEX_REGEX removed — replaced with direct matches!() check in tex_hex_caret path.
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
@@ -101,6 +96,17 @@ impl PartialEq for Mouth {
 
 impl Default for Mouth {
   fn default() -> Self {
+    // Historically the source was `"Anonymous String {gid}"` with a
+    // per-instance gid, which Locator::source then pinned into the arena.
+    // The gid served no functional purpose and made every anonymous mouth
+    // unique at the SymStr layer — fine for a handful of mouths, but
+    // catastrophic when a runaway error-recovery path creates millions
+    // (arxiv 1210.4211 under parallel load: 50M anonymous mouths saturated
+    // the u32 interner offset). Collapsing onto a shared static label makes
+    // the per-mouth cost arena-free, and the pin-count sentinel remains as
+    // a symptom detector for the *actual* bug (something is still creating
+    // 50M anonymous mouths — that's a runaway loop to track down, now with
+    // the arena side-effect removed).
     Mouth {
       notes:                  false,
       note_message:           None,
@@ -112,7 +118,7 @@ impl Default for Mouth {
       colno:                  0,
       chars:                  VecDeque::new(),
       nchars:                 0,
-      source:                 s!("Anonymous String {}", &Mouth::gid()),
+      source:                 String::from("Anonymous String"),
       shortsource:            s!("String"),
       // handle : None,
       foodtype:               FoodType::File,
@@ -890,13 +896,6 @@ impl Mouth {
     let mut v: Vec<char> = self.chars.drain(..).collect();
     v.splice(range, with.iter().cloned());
     self.chars = v.into_iter().collect();
-  }
-
-  fn gid() -> usize {
-    // Thread_local Cell: single-threaded access guaranteed by #[thread_local].
-    let next = LASTID.get() + 1;
-    LASTID.set(next);
-    next
   }
 
   /// Checks if Mouth read is at the end of a line.
