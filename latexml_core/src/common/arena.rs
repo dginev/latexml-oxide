@@ -141,10 +141,38 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr {
   with_arena_mut(|arena| arena.get_or_intern(text))
 }
 
+/// ASCII char-pin cache: every unique ASCII byte resolves to a single
+/// SymStr for the lifetime of the thread (arena is append-only, syms
+/// never change). Cache entries use `u32::MAX` as the "not yet pinned"
+/// sentinel — all valid interner offsets are strictly below that.
+/// Called from `lookup_catcode` / `assign_catcode` on every token,
+/// so the RefCell + hashmap overhead on `pin` is a measurable cost
+/// (1.4% Ir per callgrind on siunitx-heavy fixtures). The fast path
+/// avoids `with_arena_mut` entirely for the common ASCII case.
+#[thread_local]
+static ASCII_CHAR_SYM: [std::cell::Cell<u32>; 128] = [const { std::cell::Cell::new(u32::MAX) }; 128];
+
 pub fn pin_char(c: char) -> SymStr {
-  let mut tmp = [0u8; 4];
-  let s = c.encode_utf8(&mut tmp);
-  pin(s)
+  use string_interner::Symbol;
+  let code = c as u32;
+  if code < 128 {
+    let cached = ASCII_CHAR_SYM[code as usize].get();
+    if cached != u32::MAX {
+      // SAFETY: cached was produced by a prior successful `pin` below, so
+      // the SymStr is valid for this arena.
+      return SymStr::try_from_usize(cached as usize)
+        .expect("invalid cached ASCII SymStr");
+    }
+  }
+  let sym = {
+    let mut tmp = [0u8; 4];
+    let s = c.encode_utf8(&mut tmp);
+    pin(s)
+  };
+  if code < 128 {
+    ASCII_CHAR_SYM[code as usize].set(sym.to_usize() as u32);
+  }
+  sym
 }
 
 /// Resolve a symbol and call the closure with a `&str` reference.
