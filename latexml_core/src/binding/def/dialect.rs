@@ -1652,9 +1652,19 @@ pub fn allocate_register(rtype: &str) -> Result<Option<String>> {
   if !addr.is_empty() {
     // addr is a Register but MUST be stored as \count<#>
     if let Some(n) = lookup_number(addr) {
-      let next = n.value_of() + 1;
+      // Perl Package.pm L617-622: the allocation counter picks the NEXT
+      // unbound slot. If `\<type>N+1` is already an explicit DefRegister
+      // (e.g. a system-allocated `\count10`, `\toks0`), advance past it
+      // so the new register doesn't collide. Matches Perl's
+      //   while ($STATE->isValueBound($loc)) { $next++; $loc = $type . $next; }
+      let mut next = n.value_of() + 1;
+      let mut loc = format!("{rtype}{next}");
+      while crate::state::is_value_bound(&loc, None) {
+        next += 1;
+        loc = format!("{rtype}{next}");
+      }
       assign_value(addr, Number::new(next), Some(Scope::Global));
-      Ok(Some(format!("{rtype}{next}")))
+      Ok(Some(loc))
     } else {
       Ok(None)
     }
