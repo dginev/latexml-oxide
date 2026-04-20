@@ -6187,6 +6187,13 @@ LoadDefinitions!({
   //======================================================================
   DefPrimitive!("\\nofiles", None);
 
+  // Perl: DefPrimitive('\listfiles', undef) — no-op. Required so the
+  // autoload trigger for `\listfiles` (engine/tex.rs) gets overridden
+  // after LaTeX.pool loads; otherwise the trigger re-expands itself
+  // after each pool load, creating a unique mouth-source per iteration
+  // that eventually trips the 50M arena::pin sentinel (arxiv 1311.6082).
+  DefPrimitive!("\\listfiles", None);
+
   //======================================================================
   // C.11.2 Cross-References
   //======================================================================
