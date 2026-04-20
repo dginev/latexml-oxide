@@ -68,17 +68,42 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   `DefPrimitive('\listfiles', undef)` (latex_constructs.pool.ltxml L4354).
   Post-load, the trigger kept self-re-emitting; 50M pin-count sentinel
   fired. Added the no-op primitive (latex_constructs.rs L6188).
-- [~] **1210.4211** — INTERMITTENT under parallel load. Serial run:
-  clean (0 errors / 0.09s). Some parallel-wrap contexts trigger an
-  error cascade: `\ref / \UG / \If / \dotsc / \caption / \thesubsection`
-  all undefined, then a recovery loop spins in `input_content ↔
-  _load_binding ↔ maybe_require_dependencies`. Perl also sees the same
-  undefined-CS cascade under the same parallel-wrap context (51 errors,
-  27 undefined macros) but completes in 7.35s; Rust hangs until the
-  60s watchdog aborts. The false-positive pin-count sentinel was
-  replaced with an arena-size sentinel (session 124); Mouth::default
-  no longer pins unique "Anonymous String N" strings. Root cause of
-  the recovery-loop divergence vs Perl still open.
+- [x] **1611.10101** — FIXED (rewrite.rs L475): `tree.get_parent().unwrap()`
+  in the Replace clause panicked on root-level / detached match nodes.
+  Perl's `$tree->parentNode` returns undef silently and subsequent
+  `$parent->lastChild`/`->childNodes` calls no-op; Rust now early-returns
+  `Ok(())` on None, matching Perl's effective skip.
+- [~] **1210.4211** — INTERMITTENT under parallel load. Serial run
+  clean (0.09s). Flaky reproduction under GNU parallel / sandbox
+  stress — error cascade (`\ref / \UG / \If / \caption / \thesubsection`
+  undefined) triggers an unbounded recovery loop. Perl sees the same
+  undefined-CS cascade under the same context (51 errors, 27 undefined
+  macros) and completes in 7.35s. Arena sentinel false-positive removed
+  (session 124); the underlying recovery-loop divergence vs Perl is
+  still open.
+- [~] **1212.2052** — SIGSEGV during Rewriting, reproducible serially.
+  Minimal repro:
+  ```latex
+  \documentclass{article}
+  \begin{document}
+  $\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,$
+  \end{document}
+  ```
+  Exactly 17 consecutive math-space tokens (`\,`, `\quad`, etc.) inside
+  a math environment trigger the crash (16 works, 17 fails). Disabling
+  math parsing with `--nomathparse` suppresses the crash — the fault
+  is somewhere in the Marpa grammar's handling of long runs of XMHint
+  tokens. `max_consecutive_dupes = 16` in parser.rs:930 is suspicious
+  but not obviously causal. Needs gdb investigation.
+- [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
+  loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
+  internals. Likely a babel 3.x port gap.
+- [~] **1404.1913** — "double free or corruption (fasttop)" during
+  Finalizing. libxml2 aliasing-class bug, similar family to the
+  prior `Rc<Node>` `weak_count == 0` cluster.
+- [~] **1605.01946 / 1709.05096 / 1805.09247** — watchdog timeouts under
+  parallel load, converge cleanly in serial (same pattern as
+  1210.4211). System-scheduling interaction, not per-paper.
 
 **Phase D0 cumulative fixes (session 123-124):**
 
