@@ -930,11 +930,20 @@ pub(crate) fn lookup_lex_node<'a>(
   lex: &'a str,
   nodes: &'a [Node],
 ) -> Result<&'a Node, Box<dyn Error>> {
-  let node_idx = lex.split(':').next_back().unwrap().parse::<usize>().expect(lex) - 1;
-  let node = nodes
+  // Lex strings are produced internally by the grammar (`{name}:{value}:{idx}`
+  // shape), so the suffix parses cleanly under normal operation. If we ever
+  // hit a malformed lex — e.g. because a custom rule emitted a short form —
+  // return an Err rather than panicking, matching the degrade-not-panic
+  // policy used elsewhere on user-reachable paths.
+  let idx_str = lex.split(':').next_back().unwrap_or("");
+  let node_idx = idx_str
+    .parse::<usize>()
+    .map_err(|e| format!("malformed lex {lex:?}: {e}"))?
+    .checked_sub(1)
+    .ok_or_else(|| format!("lex idx 0 (expected 1-based) in {lex:?}"))?;
+  nodes
     .get(node_idx)
-    .expect("lex node lookup is grammar-internal and should always have an accurate index.");
-  Ok(node)
+    .ok_or_else(|| format!("lex idx {node_idx} out of range (nodes.len={}) in {lex:?}", nodes.len()).into())
 }
 
 fn aux_generate_indent(level: &[bool], is_base: bool) -> String {
