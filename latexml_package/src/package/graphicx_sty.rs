@@ -261,10 +261,10 @@ fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
       let trimmed = line.trim_start();
       let rest = if let Some(r) = trimmed.strip_prefix("%%HiResBoundingBox:") {
         // HiRes wins — take and stop searching.
-        parse_bbox(r).map(|b| { found = Some(b); b })
+        parse_bbox(r).inspect(|&b| { found = Some(b); })
       } else if found.is_none() {
-        trimmed.strip_prefix("%%BoundingBox:").and_then(parse_bbox).map(|b| {
-          found = Some(b); b
+        trimmed.strip_prefix("%%BoundingBox:").and_then(parse_bbox).inspect(|&b| {
+          found = Some(b);
         })
       } else {
         None

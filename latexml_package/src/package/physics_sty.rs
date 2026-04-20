@@ -837,7 +837,7 @@ LoadDefinitions!({
     };
 
     // Check if expr is empty
-    let expr = expr.and_then(|e| if e.is_empty() { None } else { Some(e) });
+    let expr = expr.filter(|e| !e.is_empty());
 
     let frac_cs = if inline { T_CS!("\\ifrac") } else { T_CS!("\\frac") };
 

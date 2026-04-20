@@ -682,15 +682,16 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
-    input_definitions(&clean_req, InputDefinitionOptions::default())
-  } else if {
-    // Perl Package.pm L2109-2113: FindFile_aux checks for `"$file.ltxml"` in
-    // $ltxml_paths BEFORE consulting raw TeX paths. In Rust the bindings are
-    // compile-time dispatch tables rather than on-disk .ltxml files, so the
-    // equivalent check is: if a binding dispatcher responds to `<name>.tex`,
-    // load it (matching `\input harvmac` → `harvmac.tex.ltxml` preference
-    // over a local `harvmac.tex`). Skip when the request carries a directory
-    // (explicit local path).
+    return input_definitions(&clean_req, InputDefinitionOptions::default());
+  }
+  // Perl Package.pm L2109-2113: FindFile_aux checks for `"$file.ltxml"` in
+  // $ltxml_paths BEFORE consulting raw TeX paths. In Rust the bindings are
+  // compile-time dispatch tables rather than on-disk .ltxml files, so the
+  // equivalent check is: if a binding dispatcher responds to `<name>.tex`,
+  // load it (matching `\input harvmac` → `harvmac.tex.ltxml` preference
+  // over a local `harvmac.tex`). Skip when the request carries a directory
+  // (explicit local path).
+  let binding_loaded = {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
     let ext = clean_req.rsplit('.').next().unwrap_or("");
     let is_tex_like = ext == clean_req.as_ref() || ext == "tex";
@@ -704,7 +705,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     } else {
       false
     }
-  } {
+  };
+  if binding_loaded {
     Ok(())
   } else if let Some(path) = find_file(&clean_req, None) {
     // Found something plausible..
