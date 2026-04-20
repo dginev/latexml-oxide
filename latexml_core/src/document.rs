@@ -126,7 +126,7 @@ enum Placement_ {
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
-    set_node_rc_guard(50); // We will need a high threshold for Node mutability
+    set_node_rc_guard(1024); // We will need a high threshold for Node mutability
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
