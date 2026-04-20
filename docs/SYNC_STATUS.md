@@ -90,11 +90,17 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   \end{document}
   ```
   Exactly 17 consecutive math-space tokens (`\,`, `\quad`, etc.) inside
-  a math environment trigger the crash (16 works, 17 fails). Disabling
-  math parsing with `--nomathparse` suppresses the crash — the fault
-  is somewhere in the Marpa grammar's handling of long runs of XMHint
-  tokens. `max_consecutive_dupes = 16` in parser.rs:930 is suspicious
-  but not obviously causal. Needs gdb investigation.
+  a math environment trigger the crash (16 works, 17 fails). The crash
+  is NOT in math parsing (reproduces with `--nomathparse`). gdb shows
+  the crash in libxml2's `xmlXPathNodeEval` → `xmlStrndup` → `_int_malloc`
+  heap-allocation failure, called from `document.findnodes` in
+  `rewrite.rs:401` while evaluating the FLOATSUPERSCRIPT rewrite XPath
+  (tex_math.rs:1611). Perl uses the identical XPath and the identical
+  input converges cleanly with `<p>                 </p>` as output —
+  so the XPath is fine, libxml2 is fine, and the fault is Rust-side
+  DOM construction leaving a dangling pointer or corrupted node when
+  serializing many consecutive XMHint siblings. Likely the same
+  `Rc<Node>` aliasing family as the D3b cluster and 1404.1913 double-free.
 - [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
   loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
   internals. Likely a babel 3.x port gap.
