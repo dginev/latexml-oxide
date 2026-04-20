@@ -55,10 +55,14 @@ impl KeyVal {
   }
   pub fn get_default(&self) -> Option<Stored> { self.get_prop("default") }
   pub fn get_type(&self) -> Option<Rc<Parameter>> {
-    match self.get_prop("type") {
-      Some(Stored::Parameter(p)) => Some(p),
+    // Read directly via with_value — avoids the Stored::clone that
+    // get_prop's lookup_value pays just so we can pattern-match on
+    // the Parameter variant and Rc::clone its body. Hot path during
+    // keyval parsing.
+    state::with_value(&s!("KEYVAL@type@{}", self.get_header()), |v| match v {
+      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
       _ => None,
-    }
+    })
   }
 }
 
