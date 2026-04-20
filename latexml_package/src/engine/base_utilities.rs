@@ -166,9 +166,9 @@ LoadDefinitions!({
     // So, we append this entry before digesting (Perl comment from Base_Utility.pool.ltxml)
     let tag = tag_tks.to_string();
     if let Some(keys) = keys_opt {
-      let known_key = if let Some(Stored::HashTagData(ref mut frnt)) = lookup_value("frontmatter") {
-        frnt.contains_key(&tag)
-      } else { false };
+      let known_key = state::with_value("frontmatter", |v| {
+        matches!(v, Some(Stored::HashTagData(frnt)) if frnt.contains_key(&tag))
+      });
       if known_key && keys.has_key("replace") {
         state::with_value_mut("frontmatter", |val_opt| {
           if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
@@ -667,12 +667,18 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   let frontmatter_elements_set: HashSet<String> =
     FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
-  // Get frontmatter hash
-  let frontmatter_ref = match state::lookup_value("frontmatter") {
-    Some(Stored::HashTagData(frnt)) => frnt,
-    _ => return Ok(()),
-  };
-  let set_keys: Vec<String> = frontmatter_ref.keys().cloned().collect();
+  // Collect the frontmatter hash keys via with_value — we only need the
+  // key set here; the full HashTagData clone previously happened just
+  // to call .keys().cloned().collect(). The hash itself is consumed a
+  // few lines below via remove_value, so no iteration on the borrow
+  // survives past this closure.
+  let set_keys: Vec<String> = state::with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frnt)) => frnt.keys().cloned().collect(),
+    _ => Vec::new(),
+  });
+  if set_keys.is_empty() {
+    return Ok(());
+  }
 
   // If doc ONLY has abstract as frontmatter, defer until abstract's document location
   if set_keys.len() == 1
