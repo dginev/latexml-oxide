@@ -255,12 +255,17 @@ LoadDefinitions!({
         xml_attrs.insert(String::from("width"), w);
       }
       alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
-      // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX tabular)
-      if let Some(Stored::Digested(ref d)) = state::lookup_value("Alignment") {
-        if let latexml_core::digested::DigestedData::Alignment(ref alignment) = d.data() {
-          alignment.borrow_mut().is_halign = true;
+      // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
+      // tabular). with_value avoids the Stored::clone on the Digested
+      // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
+      // still works fine through the borrow.
+      state::with_value("Alignment", |v| {
+        if let Some(Stored::Digested(ref d)) = v {
+          if let latexml_core::digested::DigestedData::Alignment(ref alignment) = d.data() {
+            alignment.borrow_mut().is_halign = true;
+          }
         }
-      }
+      });
       digest_alignment_body(whatsit)?;
       end_mode("restricted_horizontal")?;
       decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
