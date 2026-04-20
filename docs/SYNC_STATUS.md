@@ -81,7 +81,7 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   macros) and completes in 7.35s. Arena sentinel false-positive removed
   (session 124); the underlying recovery-loop divergence vs Perl is
   still open.
-- [~] **1212.2052** — SIGSEGV during Rewriting, reproducible serially.
+- [~] **1212.2052** — SIGSEGV, reproducible serially.
   Minimal repro:
   ```latex
   \documentclass{article}
@@ -90,17 +90,17 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   \end{document}
   ```
   Exactly 17 consecutive math-space tokens (`\,`, `\quad`, etc.) inside
-  a math environment trigger the crash (16 works, 17 fails). The crash
-  is NOT in math parsing (reproduces with `--nomathparse`). gdb shows
-  the crash in libxml2's `xmlXPathNodeEval` → `xmlStrndup` → `_int_malloc`
-  heap-allocation failure, called from `document.findnodes` in
-  `rewrite.rs:401` while evaluating the FLOATSUPERSCRIPT rewrite XPath
-  (tex_math.rs:1611). Perl uses the identical XPath and the identical
-  input converges cleanly with `<p>                 </p>` as output —
-  so the XPath is fine, libxml2 is fine, and the fault is Rust-side
-  DOM construction leaving a dangling pointer or corrupted node when
-  serializing many consecutive XMHint siblings. Likely the same
-  `Rc<Node>` aliasing family as the D3b cluster and 1404.1913 double-free.
+  a math environment trigger the crash (16 works, 17 fails). Crash is
+  NOT in math parsing (reproduces with `--nomathparse`). Session-125
+  narrowing: the DOM is corrupted *by the end of the Building phase* —
+  a plain `document.to_string()` immediately after absorb already
+  SIGSEGVs in libxml2's `xmlSaveDoc`. That is, the rewrite-time
+  `findnodes` crash observed earlier is a downstream symptom, not the
+  root cause: the Rust-side DOM construction for 17 consecutive XMHint
+  siblings leaves a dangling pointer that libxml2 then chases. Perl
+  processes the identical input cleanly (output: 17 thin-space chars
+  inside a `<p>`). Same `Rc<Node>` aliasing family as the D3b cluster
+  and 1404.1913. Root-cause is in Rust's absorb/open_element pipeline.
 - [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
   loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
   internals. Likely a babel 3.x port gap.
@@ -273,9 +273,20 @@ printf '%s\n' $ids | parallel -j 12 --line-buffer \
 
 Sources: libxml2 FFI (UAF on unlinking), libxslt C (namespaced elements), Rust unsafe in arena, parallel benchmark writes sharing paths.
 
+**Policy:** no direct `libxml::bindings::*` FFI calls from the latexml
+project. When a safe API is missing, add it to the `rust-libxml`
+wrapper crate at `~/git/rust-libxml` and vendor-patch or upstream the
+addition. That keeps unsafety isolated to one dependency and lets
+future stability work on libxml2 node lifetimes happen in one place
+rather than scattered across latexml_core / latexml_post / etc. Current
+direct `libxml::bindings::*` call sites (should shrink to 0 over time):
+`latexml_core/src/lib.rs`, `latexml_core/src/document.rs` — 5 total.
+
 Outstanding:
 - [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
 - [ ] Replace unsafe-over-FFI with safe wrappers where practical.
+- [ ] Migrate the remaining `libxml::bindings::*` callers to high-level
+  `rust-libxml` methods; upstream new methods as needed.
 - [~] Rc `Can not mutably reference a shared Node "text"` cluster — session 123
   raised `set_node_rc_guard` to 8192 after confirming the guard is a
   diagnostic heuristic (real aliasing is caught by `weak_count == 0`).
