@@ -98,7 +98,11 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 1107.3732  - [x] 1108.0951  - [ ] 1108.3241  - [x] 1111.0334
 - [x] 1112.4846  - [ ] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
 - [x] 1203.6616  - [ ] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
-- [ ] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
+- [~] 1207.6068  - [x] 1207.6456  - [ ] 1209.1578  - [x] 1209.2771
+
+> `[~] 1207.6068`: Perl emits 30 errors on this fragment (acknowledgements-only
+> file, no `\documentclass`). Per the sandbox baseline rule — only
+> Perl-error-free cases count — this paper is excluded from the parity target.
 
 **Conversion errors (64)** status: **55 of 64 now convert cleanly** via
 sessions 120-123 per-paper Perl-parity fixes. Session 123 added:
