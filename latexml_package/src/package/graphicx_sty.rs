@@ -202,7 +202,7 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 }
 
 /// Read image dimensions (width, height) in pixels from a file.
-/// Supports PNG and JPEG formats.
+/// Supports PNG, JPEG, and EPS (PostScript BoundingBox).
 fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
   use std::io::Read;
   let mut file = std::fs::File::open(path).ok()?;
@@ -236,7 +236,66 @@ fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
     }
   }
 
+  // EPS: PostScript BoundingBox comment. Perl: LaTeXML::Util::Image reads
+  // the leading `%%BoundingBox: llx lly urx ury` (values in bp, 1bp=1/72").
+  // `%%HiResBoundingBox:` is preferred when present (float precision). We
+  // read the first ~8KB since BoundingBox can be deferred (`(atend)` form
+  // is also valid but would require scanning the tail; skip that).
+  if (header[0] == b'%' && (header[1] == b'!' || header[1] == b'%'))
+    || (header.starts_with(b"\xc5\xd0\xd3\xc6"))  // EPS with binary preview header
+  {
+    let mut data = header.to_vec();
+    // Read up to 32KB — BoundingBox typically in first few hundred bytes
+    let mut extra = [0u8; 32768];
+    let n = file.read(&mut extra).ok().unwrap_or(0);
+    data.extend_from_slice(&extra[..n]);
+    // If DOS EPSI binary preview: first 4 bytes are C5 D0 D3 C6, next 4
+    // little-endian is offset to the PostScript section. Skip to it.
+    let text_start = if data.starts_with(b"\xc5\xd0\xd3\xc6") && data.len() >= 8 {
+      u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize
+    } else { 0 };
+    let text = std::str::from_utf8(data.get(text_start..)?).ok()?;
+    // Prefer HiResBoundingBox (float) over BoundingBox (int).
+    let mut found: Option<(f64, f64, f64, f64)> = None;
+    for line in text.lines() {
+      let trimmed = line.trim_start();
+      let rest = if let Some(r) = trimmed.strip_prefix("%%HiResBoundingBox:") {
+        // HiRes wins — take and stop searching.
+        parse_bbox(r).map(|b| { found = Some(b); b })
+      } else if found.is_none() {
+        trimmed.strip_prefix("%%BoundingBox:").and_then(parse_bbox).map(|b| {
+          found = Some(b); b
+        })
+      } else {
+        None
+      };
+      if rest.is_some() && trimmed.starts_with("%%HiResBoundingBox:") { break; }
+    }
+    if let Some((llx, lly, urx, ury)) = found {
+      let w = (urx - llx).max(0.0);
+      let h = (ury - lly).max(0.0);
+      if w > 0.0 && h > 0.0 {
+        // EPS BoundingBox is in bp (1bp = 1/72"). Return as pixels at the
+        // same bp-per-pixel rate the caller expects (it divides by dppt =
+        // dpi/72.27 downstream). Using 1:1 means callers get bp-sized
+        // pixels, consistent with Perl's `image_size` returning bp for
+        // EPS (LaTeXML::Util::Image::image_size L45-L60).
+        return Some((w.round() as u32, h.round() as u32));
+      }
+    }
+  }
+
   None
+}
+
+/// Parse "llx lly urx ury" from a BoundingBox comment body.
+fn parse_bbox(rest: &str) -> Option<(f64, f64, f64, f64)> {
+  let mut it = rest.split_whitespace();
+  let llx = it.next()?.parse::<f64>().ok()?;
+  let lly = it.next()?.parse::<f64>().ok()?;
+  let urx = it.next()?.parse::<f64>().ok()?;
+  let ury = it.next()?.parse::<f64>().ok()?;
+  Some((llx, lly, urx, ury))
 }
 
 LoadDefinitions!({
