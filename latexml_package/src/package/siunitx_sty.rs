@@ -1415,24 +1415,26 @@ fn decode_unit_defn_from_encoded_sym(
 
 /// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
 fn six_enable_unit_macros(overwrite: bool) {
-  if let Some(Stored::String(names)) = state::lookup_value("siunitx_macro_names") {
-    let names_str = arena::with(names, |s| s.to_string());
-    for name in names_str.split(',') {
-      if name.is_empty() { continue; }
-      let cs = T_CS!(&format!("\\{name}"));
-      let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
-      if overwrite || !state::has_meaning(&cs) {
-        state::let_i(&cs, &impl_cs, None);
-      }
+  // with_value avoids the Stored::String envelope clone; we only need
+  // the inner SymStr stringified for iteration.
+  let names_str = state::with_value("siunitx_macro_names", |v| match v {
+    Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
+    _ => String::new(),
+  });
+  for name in names_str.split(',') {
+    if name.is_empty() { continue; }
+    let cs = T_CS!(&format!("\\{name}"));
+    let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
+    if overwrite || !state::has_meaning(&cs) {
+      state::let_i(&cs, &impl_cs, None);
     }
   }
 }
 
 /// Register a unit macro name for six_enableUnitMacros
 fn register_unit_macro_name(name: &str) {
-  let existing = state::lookup_value("siunitx_macro_names")
-    .map(|s| s.to_string())
-    .unwrap_or_default();
+  let existing = state::with_value("siunitx_macro_names",
+    |v| v.map(|s| s.to_string()).unwrap_or_default());
   let new = if existing.is_empty() {
     name.to_string()
   } else {
