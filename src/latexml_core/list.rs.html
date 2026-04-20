@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/list.rs`."><title>list.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>list.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::Node;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/list.rs`."><title>list.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>list.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>std::fmt;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -146,48 +146,49 @@
 <a href=#146 id=146 data-nosnippet>146</a>    }
 <a href=#147 id=147 data-nosnippet>147</a>    <span class="comment">// Maybe the most representative font for a List is the font of the LAST box (that _has_ a
 <a href=#148 id=148 data-nosnippet>148</a>    // font!) ???
-<a href=#149 id=149 data-nosnippet>149</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt; = <span class="prelude-val">None</span>;
-<a href=#150 id=150 data-nosnippet>150</a>    <span class="kw">for </span>bx <span class="kw">in </span>boxes.iter().rev() {
-<a href=#151 id=151 data-nosnippet>151</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(bx_font) = bx
-<a href=#152 id=152 data-nosnippet>152</a>        .get_font()
-<a href=#153 id=153 data-nosnippet>153</a>        .expect(<span class="string">"getting a font should go well during List construction"</span>)
-<a href=#154 id=154 data-nosnippet>154</a>      {
-<a href=#155 id=155 data-nosnippet>155</a>        font = <span class="prelude-val">Some</span>(bx_font.into_owned());
-<a href=#156 id=156 data-nosnippet>156</a>        <span class="kw">break</span>;
-<a href=#157 id=157 data-nosnippet>157</a>      }
-<a href=#158 id=158 data-nosnippet>158</a>    }
-<a href=#159 id=159 data-nosnippet>159</a>    List {
-<a href=#160 id=160 data-nosnippet>160</a>      boxes,
-<a href=#161 id=161 data-nosnippet>161</a>      font,
-<a href=#162 id=162 data-nosnippet>162</a>      mode: <span class="prelude-val">None</span>,
-<a href=#163 id=163 data-nosnippet>163</a>      locator,
-<a href=#164 id=164 data-nosnippet>164</a>      properties: HashMap::default(),
-<a href=#165 id=165 data-nosnippet>165</a>    }
-<a href=#166 id=166 data-nosnippet>166</a>  }
-<a href=#167 id=167 data-nosnippet>167</a>
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-<a href=#169 id=169 data-nosnippet>169</a>    <span class="comment">// 1. A space-like thing
-<a href=#170 id=170 data-nosnippet>170</a>    // 2. empty contents
-<a href=#171 id=171 data-nosnippet>171</a>    </span><span class="self">self</span>.get_property_bool(<span class="string">"isEmpty"</span>)
-<a href=#172 id=172 data-nosnippet>172</a>      || <span class="self">self</span>.get_property_bool(<span class="string">"isSpace"</span>)
-<a href=#173 id=173 data-nosnippet>173</a>      || <span class="self">self
-<a href=#174 id=174 data-nosnippet>174</a>        </span>.boxes
-<a href=#175 id=175 data-nosnippet>175</a>        .iter()
-<a href=#176 id=176 data-nosnippet>176</a>        .all(|item| item.is_empty().unwrap_or(<span class="bool-val">false</span>))
-<a href=#177 id=177 data-nosnippet>177</a>  }
-<a href=#178 id=178 data-nosnippet>178</a>}
-<a href=#179 id=179 data-nosnippet>179</a>
-<a href=#180 id=180 data-nosnippet>180</a><span class="kw">impl </span>From&lt;List&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="kw">fn </span>from(list: List) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="kw">let </span>tmp: Digested = list.into();
-<a href=#183 id=183 data-nosnippet>183</a>    tmp.into()
-<a href=#184 id=184 data-nosnippet>184</a>  }
-<a href=#185 id=185 data-nosnippet>185</a>}
-<a href=#186 id=186 data-nosnippet>186</a>
-<a href=#187 id=187 data-nosnippet>187</a><span class="kw">impl </span>From&lt;List&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="kw">fn </span>from(value: List) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#189 id=189 data-nosnippet>189</a>    <span class="kw">let </span>tmp: Digested = value.into();
-<a href=#190 id=190 data-nosnippet>190</a>    tmp.into()
-<a href=#191 id=191 data-nosnippet>191</a>  }
-<a href=#192 id=192 data-nosnippet>192</a>}
+<a href=#149 id=149 data-nosnippet>149</a>    // Walk boxes back-to-front for the most representative font.
+<a href=#150 id=150 data-nosnippet>150</a>    // A single box whose font resolution errors (e.g. FontDirective::Closure
+<a href=#151 id=151 data-nosnippet>151</a>    // returning Err) shouldn't crash the whole List; treat it as "no font"
+<a href=#152 id=152 data-nosnippet>152</a>    // and keep walking.
+<a href=#153 id=153 data-nosnippet>153</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt; = <span class="prelude-val">None</span>;
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="kw">for </span>bx <span class="kw">in </span>boxes.iter().rev() {
+<a href=#155 id=155 data-nosnippet>155</a>      <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(bx_font)) = bx.get_font() {
+<a href=#156 id=156 data-nosnippet>156</a>        font = <span class="prelude-val">Some</span>(bx_font.into_owned());
+<a href=#157 id=157 data-nosnippet>157</a>        <span class="kw">break</span>;
+<a href=#158 id=158 data-nosnippet>158</a>      }
+<a href=#159 id=159 data-nosnippet>159</a>    }
+<a href=#160 id=160 data-nosnippet>160</a>    List {
+<a href=#161 id=161 data-nosnippet>161</a>      boxes,
+<a href=#162 id=162 data-nosnippet>162</a>      font,
+<a href=#163 id=163 data-nosnippet>163</a>      mode: <span class="prelude-val">None</span>,
+<a href=#164 id=164 data-nosnippet>164</a>      locator,
+<a href=#165 id=165 data-nosnippet>165</a>      properties: HashMap::default(),
+<a href=#166 id=166 data-nosnippet>166</a>    }
+<a href=#167 id=167 data-nosnippet>167</a>  }
+<a href=#168 id=168 data-nosnippet>168</a>
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+<a href=#170 id=170 data-nosnippet>170</a>    <span class="comment">// 1. A space-like thing
+<a href=#171 id=171 data-nosnippet>171</a>    // 2. empty contents
+<a href=#172 id=172 data-nosnippet>172</a>    </span><span class="self">self</span>.get_property_bool(<span class="string">"isEmpty"</span>)
+<a href=#173 id=173 data-nosnippet>173</a>      || <span class="self">self</span>.get_property_bool(<span class="string">"isSpace"</span>)
+<a href=#174 id=174 data-nosnippet>174</a>      || <span class="self">self
+<a href=#175 id=175 data-nosnippet>175</a>        </span>.boxes
+<a href=#176 id=176 data-nosnippet>176</a>        .iter()
+<a href=#177 id=177 data-nosnippet>177</a>        .all(|item| item.is_empty().unwrap_or(<span class="bool-val">false</span>))
+<a href=#178 id=178 data-nosnippet>178</a>  }
+<a href=#179 id=179 data-nosnippet>179</a>}
+<a href=#180 id=180 data-nosnippet>180</a>
+<a href=#181 id=181 data-nosnippet>181</a><span class="kw">impl </span>From&lt;List&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="kw">fn </span>from(list: List) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">let </span>tmp: Digested = list.into();
+<a href=#184 id=184 data-nosnippet>184</a>    tmp.into()
+<a href=#185 id=185 data-nosnippet>185</a>  }
+<a href=#186 id=186 data-nosnippet>186</a>}
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a><span class="kw">impl </span>From&lt;List&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Digested&gt; {
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="kw">fn </span>from(value: List) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">let </span>tmp: Digested = value.into();
+<a href=#191 id=191 data-nosnippet>191</a>    tmp.into()
+<a href=#192 id=192 data-nosnippet>192</a>  }
+<a href=#193 id=193 data-nosnippet>193</a>}
 </code></pre></div></section></main></body></html>

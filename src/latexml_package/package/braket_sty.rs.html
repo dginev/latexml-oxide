@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/braket_sty.rs`."><title>braket_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>braket_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/braket_sty.rs`."><title>braket_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>braket_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -35,105 +35,99 @@
 <a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Braket@DD{}{}{}"</span>, <span class="string">"\\left\\langle#1\\,\\middle\\|\\,#2\\,\\middle\\|\\,#3\\right\\rangle"</span>,
 <a href=#36 id=36 data-nosnippet>36</a>    meaning =&gt; <span class="string">"quantum-operator-product"</span>, reversion =&gt; <span class="string">"\\Braket{#1\\|#2\\|#3}"</span>);
 <a href=#37 id=37 data-nosnippet>37</a>
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="comment">// \braket — splits argument on | bars to dispatch to V/D variants — Perl L57-66
-<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\braket{}"</span>, sub[args] {
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
-<a href=#41 id=41 data-nosnippet>41</a>    <span class="kw">let </span>vbar = <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>);
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = {
-<a href=#43 id=43 data-nosnippet>43</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
-<a href=#44 id=44 data-nosnippet>44</a>      <span class="kw">let </span><span class="kw-2">mut </span>current = Vec::new();
-<a href=#45 id=45 data-nosnippet>45</a>      <span class="kw">for </span>t <span class="kw">in </span>arg.unlist().iter() {
-<a href=#46 id=46 data-nosnippet>46</a>        <span class="kw">if </span><span class="kw-2">*</span>t == vbar {
-<a href=#47 id=47 data-nosnippet>47</a>          result.push(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>current)));
-<a href=#48 id=48 data-nosnippet>48</a>        } <span class="kw">else </span>{
-<a href=#49 id=49 data-nosnippet>49</a>          current.push(<span class="kw-2">*</span>t);
-<a href=#50 id=50 data-nosnippet>50</a>        }
-<a href=#51 id=51 data-nosnippet>51</a>      }
-<a href=#52 id=52 data-nosnippet>52</a>      result.push(Tokens::new(current));
-<a href=#53 id=53 data-nosnippet>53</a>      result
-<a href=#54 id=54 data-nosnippet>54</a>    };
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">let </span>expansion = <span class="kw">match </span>parts.len() {
-<a href=#56 id=56 data-nosnippet>56</a>      <span class="number">2 </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@braket@V{{{}}}{{{}}}"</span>, parts[<span class="number">0</span>], parts[<span class="number">1</span>]),
-<a href=#57 id=57 data-nosnippet>57</a>      n <span class="kw">if </span>n &gt;= <span class="number">3 </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@braket@VV{{{}}}{{{}}}{{{}}}"</span>, parts[<span class="number">0</span>], parts[<span class="number">1</span>], parts[<span class="number">2</span>]),
-<a href=#58 id=58 data-nosnippet>58</a>      <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@braket@{{{}}}"</span>, parts[<span class="number">0</span>]),
-<a href=#59 id=59 data-nosnippet>59</a>    };
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion))
-<a href=#61 id=61 data-nosnippet>61</a>  });
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Braket{}"</span>, sub[args] {
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">let </span>vbar = <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>);
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = {
-<a href=#66 id=66 data-nosnippet>66</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
-<a href=#67 id=67 data-nosnippet>67</a>      <span class="kw">let </span><span class="kw-2">mut </span>current = Vec::new();
-<a href=#68 id=68 data-nosnippet>68</a>      <span class="kw">for </span>t <span class="kw">in </span>arg.unlist().iter() {
-<a href=#69 id=69 data-nosnippet>69</a>        <span class="kw">if </span><span class="kw-2">*</span>t == vbar {
-<a href=#70 id=70 data-nosnippet>70</a>          result.push(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>current)));
-<a href=#71 id=71 data-nosnippet>71</a>        } <span class="kw">else </span>{
-<a href=#72 id=72 data-nosnippet>72</a>          current.push(<span class="kw-2">*</span>t);
-<a href=#73 id=73 data-nosnippet>73</a>        }
-<a href=#74 id=74 data-nosnippet>74</a>      }
-<a href=#75 id=75 data-nosnippet>75</a>      result.push(Tokens::new(current));
-<a href=#76 id=76 data-nosnippet>76</a>      result
-<a href=#77 id=77 data-nosnippet>77</a>    };
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">let </span>expansion = <span class="kw">match </span>parts.len() {
-<a href=#79 id=79 data-nosnippet>79</a>      <span class="number">2 </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@Braket@V{{{}}}{{{}}}"</span>, parts[<span class="number">0</span>], parts[<span class="number">1</span>]),
-<a href=#80 id=80 data-nosnippet>80</a>      n <span class="kw">if </span>n &gt;= <span class="number">3 </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@Braket@VV{{{}}}{{{}}}{{{}}}"</span>, parts[<span class="number">0</span>], parts[<span class="number">1</span>], parts[<span class="number">2</span>]),
-<a href=#81 id=81 data-nosnippet>81</a>      <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@Braket@{{{}}}"</span>, parts[<span class="number">0</span>]),
-<a href=#82 id=82 data-nosnippet>82</a>    };
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion))
-<a href=#84 id=84 data-nosnippet>84</a>  });
-<a href=#85 id=85 data-nosnippet>85</a>
-<a href=#86 id=86 data-nosnippet>86</a>  <span class="comment">// Set notation (Perl L117-146)
-<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@set@{}"</span>, <span class="string">"\\{#1\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
-<a href=#88 id=88 data-nosnippet>88</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Set@{}"</span>, <span class="string">"\\left\\{#1\\right\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@set@V{}{}"</span>, <span class="string">"\\{#1\\;|\\;#2\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
-<a href=#90 id=90 data-nosnippet>90</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@set@D{}{}"</span>, <span class="string">"\\{#1\\;\\|\\;#2\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Set@V{}{}"</span>, <span class="string">"\\left\\{#1\\;\\middle|\\;#2\\right\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
-<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Set@D{}{}"</span>, <span class="string">"\\left\\{#1\\;\\middle\\|\\;#2\\right\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// \set/\Set — split on | for set-builder notation — Perl L117-126
-<a href=#94 id=94 data-nosnippet>94</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\set{}"</span>, sub[args] {
-<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
-<a href=#96 id=96 data-nosnippet>96</a>    <span class="kw">let </span>vbar = <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>);
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = {
-<a href=#98 id=98 data-nosnippet>98</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
-<a href=#99 id=99 data-nosnippet>99</a>      <span class="kw">let </span><span class="kw-2">mut </span>current = Vec::new();
-<a href=#100 id=100 data-nosnippet>100</a>      <span class="kw">for </span>t <span class="kw">in </span>arg.unlist().iter() {
-<a href=#101 id=101 data-nosnippet>101</a>        <span class="kw">if </span><span class="kw-2">*</span>t == vbar {
-<a href=#102 id=102 data-nosnippet>102</a>          result.push(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>current)));
-<a href=#103 id=103 data-nosnippet>103</a>        } <span class="kw">else </span>{
-<a href=#104 id=104 data-nosnippet>104</a>          current.push(<span class="kw-2">*</span>t);
-<a href=#105 id=105 data-nosnippet>105</a>        }
-<a href=#106 id=106 data-nosnippet>106</a>      }
-<a href=#107 id=107 data-nosnippet>107</a>      result.push(Tokens::new(current));
-<a href=#108 id=108 data-nosnippet>108</a>      result
-<a href=#109 id=109 data-nosnippet>109</a>    };
-<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">let </span>expansion = <span class="kw">match </span>parts.len() {
-<a href=#111 id=111 data-nosnippet>111</a>      n <span class="kw">if </span>n &gt;= <span class="number">2 </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@set@V{{{}}}{{{}}}"</span>, parts[<span class="number">0</span>], parts[<span class="number">1</span>]),
-<a href=#112 id=112 data-nosnippet>112</a>      <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@set@{{{}}}"</span>, parts[<span class="number">0</span>]),
-<a href=#113 id=113 data-nosnippet>113</a>    };
-<a href=#114 id=114 data-nosnippet>114</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion))
-<a href=#115 id=115 data-nosnippet>115</a>  });
-<a href=#116 id=116 data-nosnippet>116</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Set{}"</span>, sub[args] {
-<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
-<a href=#118 id=118 data-nosnippet>118</a>    <span class="kw">let </span>vbar = <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = {
-<a href=#120 id=120 data-nosnippet>120</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
-<a href=#121 id=121 data-nosnippet>121</a>      <span class="kw">let </span><span class="kw-2">mut </span>current = Vec::new();
-<a href=#122 id=122 data-nosnippet>122</a>      <span class="kw">for </span>t <span class="kw">in </span>arg.unlist().iter() {
-<a href=#123 id=123 data-nosnippet>123</a>        <span class="kw">if </span><span class="kw-2">*</span>t == vbar {
-<a href=#124 id=124 data-nosnippet>124</a>          result.push(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>current)));
-<a href=#125 id=125 data-nosnippet>125</a>        } <span class="kw">else </span>{
-<a href=#126 id=126 data-nosnippet>126</a>          current.push(<span class="kw-2">*</span>t);
-<a href=#127 id=127 data-nosnippet>127</a>        }
-<a href=#128 id=128 data-nosnippet>128</a>      }
-<a href=#129 id=129 data-nosnippet>129</a>      result.push(Tokens::new(current));
-<a href=#130 id=130 data-nosnippet>130</a>      result
-<a href=#131 id=131 data-nosnippet>131</a>    };
-<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">let </span>expansion = <span class="kw">match </span>parts.len() {
-<a href=#133 id=133 data-nosnippet>133</a>      n <span class="kw">if </span>n &gt;= <span class="number">2 </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@Set@V{{{}}}{{{}}}"</span>, parts[<span class="number">0</span>], parts[<span class="number">1</span>]),
-<a href=#134 id=134 data-nosnippet>134</a>      <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"\\lx@Set@{{{}}}"</span>, parts[<span class="number">0</span>]),
-<a href=#135 id=135 data-nosnippet>135</a>    };
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion))
-<a href=#137 id=137 data-nosnippet>137</a>  });
-<a href=#138 id=138 data-nosnippet>138</a>});
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="comment">// \braket — splits argument on | bars to dispatch to V/D variants — Perl L57-66.
+<a href=#39 id=39 data-nosnippet>39</a>  //
+<a href=#40 id=40 data-nosnippet>40</a>  // Perl uses Invocation(T_CS('\lx@braket@' . $codes), @args) to pass the
+<a href=#41 id=41 data-nosnippet>41</a>  // part Tokens raw, preserving each token's identity. Our earlier
+<a href=#42 id=42 data-nosnippet>42</a>  // `tokenize_internal(&amp;format!("…{}", parts[0]))` path re-tokenized the
+<a href=#43 id=43 data-nosnippet>43</a>  // stringified arg, and TeX's CS-builder then fused `\mbf r` into a single
+<a href=#44 id=44 data-nosnippet>44</a>  // `\mbfr` CS (no space survived the Display round-trip). The direct
+<a href=#45 id=45 data-nosnippet>45</a>  // Token construction avoids the round-trip entirely.
+<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\braket{}"</span>, sub[args] {
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
+<a href=#48 id=48 data-nosnippet>48</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = split_braket_parts(arg);
+<a href=#49 id=49 data-nosnippet>49</a>    <span class="kw">let </span>(cs, n) = pick_braket_cs(<span class="string">"\\lx@braket@"</span>, parts.len());
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="prelude-val">Ok</span>(build_invocation(cs, <span class="kw-2">&amp;</span>parts[..n]))
+<a href=#51 id=51 data-nosnippet>51</a>  });
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Braket{}"</span>, sub[args] {
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = split_braket_parts(arg);
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">let </span>(cs, n) = pick_braket_cs(<span class="string">"\\lx@Braket@"</span>, parts.len());
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="prelude-val">Ok</span>(build_invocation(cs, <span class="kw-2">&amp;</span>parts[..n]))
+<a href=#57 id=57 data-nosnippet>57</a>  });
+<a href=#58 id=58 data-nosnippet>58</a>
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="comment">// Set notation (Perl L117-146)
+<a href=#60 id=60 data-nosnippet>60</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@set@{}"</span>, <span class="string">"\\{#1\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Set@{}"</span>, <span class="string">"\\left\\{#1\\right\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@set@V{}{}"</span>, <span class="string">"\\{#1\\;|\\;#2\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@set@D{}{}"</span>, <span class="string">"\\{#1\\;\\|\\;#2\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Set@V{}{}"</span>, <span class="string">"\\left\\{#1\\;\\middle|\\;#2\\right\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@Set@D{}{}"</span>, <span class="string">"\\left\\{#1\\;\\middle\\|\\;#2\\right\\}"</span>, meaning =&gt; <span class="string">"set"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// \set/\Set — split on | for set-builder notation — Perl L117-126
+<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\set{}"</span>, sub[args] {
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
+<a href=#69 id=69 data-nosnippet>69</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = split_braket_parts(arg);
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">let </span>cs = <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>{ <span class="string">"\\lx@set@V" </span>} <span class="kw">else </span>{ <span class="string">"\\lx@set@" </span>};
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">let </span>n = <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>{ <span class="number">2 </span>} <span class="kw">else </span>{ <span class="number">1 </span>};
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="prelude-val">Ok</span>(build_invocation(cs, <span class="kw-2">&amp;</span>parts[..n]))
+<a href=#73 id=73 data-nosnippet>73</a>  });
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Set{}"</span>, sub[args] {
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>arg = args[<span class="number">0</span>].clone().into_tokens_result()<span class="question-mark">?</span>;
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">let </span>parts: Vec&lt;Tokens&gt; = split_braket_parts(arg);
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span>cs = <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>{ <span class="string">"\\lx@Set@V" </span>} <span class="kw">else </span>{ <span class="string">"\\lx@Set@" </span>};
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">let </span>n = <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>{ <span class="number">2 </span>} <span class="kw">else </span>{ <span class="number">1 </span>};
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="prelude-val">Ok</span>(build_invocation(cs, <span class="kw-2">&amp;</span>parts[..n]))
+<a href=#80 id=80 data-nosnippet>80</a>  });
+<a href=#81 id=81 data-nosnippet>81</a>});
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a><span class="doccomment">/// Split a token list on top-level `|` OTHER tokens. Nested braces are
+<a href=#84 id=84 data-nosnippet>84</a>/// respected: a `|` inside `{…}` stays within the current part. Mirrors
+<a href=#85 id=85 data-nosnippet>85</a>/// Perl's `splitBraketArg` for the single-bar case (we do not yet
+<a href=#86 id=86 data-nosnippet>86</a>/// distinguish `\|` double-bar from `|`, matching the simpler branch of
+<a href=#87 id=87 data-nosnippet>87</a>/// the Perl helper).
+<a href=#88 id=88 data-nosnippet>88</a></span><span class="kw">fn </span>split_braket_parts(arg: Tokens) -&gt; Vec&lt;Tokens&gt; {
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="kw">let </span>vbar = <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>);
+<a href=#90 id=90 data-nosnippet>90</a>  <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Tokens&gt; = Vec::new();
+<a href=#91 id=91 data-nosnippet>91</a>  <span class="kw">let </span><span class="kw-2">mut </span>current: Vec&lt;Token&gt; = Vec::new();
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="kw">for </span>t <span class="kw">in </span>arg.unlist() {
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN { depth += <span class="number">1</span>; }
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">else if </span>t.get_catcode() == Catcode::END { depth -= <span class="number">1</span>; }
+<a href=#96 id=96 data-nosnippet>96</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; t == vbar {
+<a href=#97 id=97 data-nosnippet>97</a>      result.push(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>current)));
+<a href=#98 id=98 data-nosnippet>98</a>    } <span class="kw">else </span>{
+<a href=#99 id=99 data-nosnippet>99</a>      current.push(t);
+<a href=#100 id=100 data-nosnippet>100</a>    }
+<a href=#101 id=101 data-nosnippet>101</a>  }
+<a href=#102 id=102 data-nosnippet>102</a>  result.push(Tokens::new(current));
+<a href=#103 id=103 data-nosnippet>103</a>  result
+<a href=#104 id=104 data-nosnippet>104</a>}
+<a href=#105 id=105 data-nosnippet>105</a>
+<a href=#106 id=106 data-nosnippet>106</a><span class="doccomment">/// Pick the `\lx@braket@…` / `\lx@Braket@…` dispatch target plus the
+<a href=#107 id=107 data-nosnippet>107</a>/// actual argument count to forward, based on how many `|`-separated
+<a href=#108 id=108 data-nosnippet>108</a>/// parts the user supplied.
+<a href=#109 id=109 data-nosnippet>109</a></span><span class="kw">fn </span>pick_braket_cs(prefix: <span class="kw-2">&amp;</span>str, n_parts: usize) -&gt; (String, usize) {
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="kw">match </span>n_parts {
+<a href=#111 id=111 data-nosnippet>111</a>    <span class="number">2 </span>=&gt; (<span class="macro">format!</span>(<span class="string">"{prefix}V"</span>), <span class="number">2</span>),
+<a href=#112 id=112 data-nosnippet>112</a>    n <span class="kw">if </span>n &gt;= <span class="number">3 </span>=&gt; (<span class="macro">format!</span>(<span class="string">"{prefix}VV"</span>), <span class="number">3</span>),
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">_ </span>=&gt; (prefix.to_string(), <span class="number">1</span>),
+<a href=#114 id=114 data-nosnippet>114</a>  }
+<a href=#115 id=115 data-nosnippet>115</a>}
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a><span class="doccomment">/// Build `\cs{arg1}{arg2}…` as a raw Token stream — mirrors Perl's
+<a href=#118 id=118 data-nosnippet>118</a>/// `Invocation(T_CS($cs), @args)`. Each arg is wrapped in an explicit
+<a href=#119 id=119 data-nosnippet>119</a>/// `{…}` group so the downstream macro reads it as a single argument
+<a href=#120 id=120 data-nosnippet>120</a>/// without re-tokenizing a Display-formatted form (which would fuse
+<a href=#121 id=121 data-nosnippet>121</a>/// `\mbf r` into `\mbfr`).
+<a href=#122 id=122 data-nosnippet>122</a></span><span class="kw">fn </span>build_invocation(cs: <span class="kw">impl </span>AsRef&lt;str&gt;, args: <span class="kw-2">&amp;</span>[Tokens]) -&gt; Tokens {
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="kw">let </span>total_tokens: usize = args.iter().map(|a| a.len() + <span class="number">2</span>).sum();
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(<span class="number">1 </span>+ total_tokens);
+<a href=#125 id=125 data-nosnippet>125</a>  out.push(<span class="macro">T_CS!</span>(cs.as_ref()));
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="kw">for </span>arg <span class="kw">in </span>args {
+<a href=#127 id=127 data-nosnippet>127</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#128 id=128 data-nosnippet>128</a>    out.extend(arg.clone().unlist());
+<a href=#129 id=129 data-nosnippet>129</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#130 id=130 data-nosnippet>130</a>  }
+<a href=#131 id=131 data-nosnippet>131</a>  Tokens::new(out)
+<a href=#132 id=132 data-nosnippet>132</a>}
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/xcolor_sty.rs`."><title>xcolor_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>xcolor_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/xcolor_sty.rs`."><title>xcolor_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>xcolor_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::package::color_sty::lookup_color_obj;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::common::color::{BLACK, WHITE, Color, color_from_model_spec, from_model_components};
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -537,7 +537,7 @@
 <a href=#537 id=537 data-nosnippet>537</a>    ];
 <a href=#538 id=538 data-nosnippet>538</a>    <span class="kw">let </span>is_color_cmd = token.with_str(|s| COLOR_CMDS.contains(<span class="kw-2">&amp;</span>s));
 <a href=#539 id=539 data-nosnippet>539</a>    <span class="kw">if </span>is_color_cmd {
-<a href=#540 id=540 data-nosnippet>540</a>      assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#540 id=540 data-nosnippet>540</a>      state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#541 id=541 data-nosnippet>541</a>      gullet::unread_one(token);
 <a href=#542 id=542 data-nosnippet>542</a>    } <span class="kw">else </span>{
 <a href=#543 id=543 data-nosnippet>543</a>      <span class="comment">// Fallback: emit \global &lt;token&gt; (Perl: (T_CS('\global'), $token))
@@ -558,9 +558,9 @@
 <a href=#558 id=558 data-nosnippet>558</a>    <span class="kw">let </span>models_str = do_expand(models)<span class="question-mark">?</span>.to_string();
 <a href=#559 id=559 data-nosnippet>559</a>    <span class="kw">let </span>specs_str = do_expand(specs)<span class="question-mark">?</span>.to_string();
 <a href=#560 id=560 data-nosnippet>560</a>    <span class="kw">let </span>color = parse_xcolor(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>models_str), <span class="kw-2">&amp;</span>specs_str, <span class="prelude-val">None</span>);
-<a href=#561 id=561 data-nosnippet>561</a>    <span class="kw">let </span>scope = <span class="kw">if </span>lookup_bool(<span class="string">"xglobal@"</span>) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#561 id=561 data-nosnippet>561</a>    <span class="kw">let </span>scope = <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>)) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 <a href=#562 id=562 data-nosnippet>562</a>    def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, scope)<span class="question-mark">?</span>;
-<a href=#563 id=563 data-nosnippet>563</a>    assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#563 id=563 data-nosnippet>563</a>    state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#564 id=564 data-nosnippet>564</a>    <span class="prelude-val">Ok</span>(Vec::new())
 <a href=#565 id=565 data-nosnippet>565</a>  });
 <a href=#566 id=566 data-nosnippet>566</a>
@@ -571,15 +571,15 @@
 <a href=#571 id=571 data-nosnippet>571</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\providecolor[]{}{}{}"</span>, sub[(type_opt, name, models, specs)] {
 <a href=#572 id=572 data-nosnippet>572</a>    <span class="kw">let </span>name_str = do_expand(name)<span class="question-mark">?</span>.to_string();
 <a href=#573 id=573 data-nosnippet>573</a>    <span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"color_{name_str}"</span>);
-<a href=#574 id=574 data-nosnippet>574</a>    <span class="kw">if </span>state::lookup_value(<span class="kw-2">&amp;</span>key).is_some() {
+<a href=#574 id=574 data-nosnippet>574</a>    <span class="kw">if </span>state::with_value(<span class="kw-2">&amp;</span>key, |v| v.is_some()) {
 <a href=#575 id=575 data-nosnippet>575</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()); <span class="comment">// Already defined
 <a href=#576 id=576 data-nosnippet>576</a>    </span>}
 <a href=#577 id=577 data-nosnippet>577</a>    <span class="kw">let </span>models_str = do_expand(models)<span class="question-mark">?</span>.to_string();
 <a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">let </span>specs_str = do_expand(specs)<span class="question-mark">?</span>.to_string();
 <a href=#579 id=579 data-nosnippet>579</a>    <span class="kw">let </span>color = parse_xcolor(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>models_str), <span class="kw-2">&amp;</span>specs_str, <span class="prelude-val">None</span>);
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="kw">let </span>scope = <span class="kw">if </span>lookup_bool(<span class="string">"xglobal@"</span>) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#580 id=580 data-nosnippet>580</a>    <span class="kw">let </span>scope = <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>)) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 <a href=#581 id=581 data-nosnippet>581</a>    def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, scope)<span class="question-mark">?</span>;
-<a href=#582 id=582 data-nosnippet>582</a>    assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#582 id=582 data-nosnippet>582</a>    state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#583 id=583 data-nosnippet>583</a>    <span class="prelude-val">Ok</span>(Vec::new())
 <a href=#584 id=584 data-nosnippet>584</a>  });
 <a href=#585 id=585 data-nosnippet>585</a>
@@ -593,9 +593,9 @@
 <a href=#593 id=593 data-nosnippet>593</a>    <span class="kw">let </span>colordesc_str = do_expand(colordesc)<span class="question-mark">?</span>.to_string();
 <a href=#594 id=594 data-nosnippet>594</a>    <span class="kw">let </span>tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
 <a href=#595 id=595 data-nosnippet>595</a>    <span class="kw">let </span>color = parse_xcolor(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>colordesc_str, tomodel_str.as_deref());
-<a href=#596 id=596 data-nosnippet>596</a>    <span class="kw">let </span>scope = <span class="kw">if </span>lookup_bool(<span class="string">"xglobal@"</span>) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#596 id=596 data-nosnippet>596</a>    <span class="kw">let </span>scope = <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>)) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 <a href=#597 id=597 data-nosnippet>597</a>    def_color(<span class="kw-2">&amp;</span>name_str, <span class="kw-2">&amp;</span>color, scope)<span class="question-mark">?</span>;
-<a href=#598 id=598 data-nosnippet>598</a>    assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#598 id=598 data-nosnippet>598</a>    state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#599 id=599 data-nosnippet>599</a>    <span class="prelude-val">Ok</span>(Vec::new())
 <a href=#600 id=600 data-nosnippet>600</a>  });
 <a href=#601 id=601 data-nosnippet>601</a>
@@ -605,7 +605,7 @@
 <a href=#605 id=605 data-nosnippet>605</a>    <span class="kw">let </span>head_str = do_expand(head)<span class="question-mark">?</span>.to_string();
 <a href=#606 id=606 data-nosnippet>606</a>    <span class="kw">let </span>tail_str = do_expand(tail)<span class="question-mark">?</span>.to_string();
 <a href=#607 id=607 data-nosnippet>607</a>    <span class="kw">let </span>specset_str = do_expand(specset)<span class="question-mark">?</span>.to_string();
-<a href=#608 id=608 data-nosnippet>608</a>    <span class="kw">let </span>scope = <span class="kw">if </span>lookup_bool(<span class="string">"xglobal@"</span>) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#608 id=608 data-nosnippet>608</a>    <span class="kw">let </span>scope = <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>)) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 <a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">for </span>spec <span class="kw">in </span>specset_str.split(<span class="string">';'</span>) {
 <a href=#610 id=610 data-nosnippet>610</a>      <span class="kw">let </span>spec = spec.trim();
 <a href=#611 id=611 data-nosnippet>611</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(comma_pos) = spec.find(<span class="string">','</span>) {
@@ -616,7 +616,7 @@
 <a href=#616 id=616 data-nosnippet>616</a>        def_color(<span class="kw-2">&amp;</span>full_name, <span class="kw-2">&amp;</span>color, scope)<span class="question-mark">?</span>;
 <a href=#617 id=617 data-nosnippet>617</a>      }
 <a href=#618 id=618 data-nosnippet>618</a>    }
-<a href=#619 id=619 data-nosnippet>619</a>    assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#619 id=619 data-nosnippet>619</a>    state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#620 id=620 data-nosnippet>620</a>    <span class="prelude-val">Ok</span>(Vec::new())
 <a href=#621 id=621 data-nosnippet>621</a>  });
 <a href=#622 id=622 data-nosnippet>622</a>
@@ -628,7 +628,7 @@
 <a href=#628 id=628 data-nosnippet>628</a>    <span class="kw">let </span>head_str = do_expand(head)<span class="question-mark">?</span>.to_string();
 <a href=#629 id=629 data-nosnippet>629</a>    <span class="kw">let </span>tail_str = do_expand(tail)<span class="question-mark">?</span>.to_string();
 <a href=#630 id=630 data-nosnippet>630</a>    <span class="kw">let </span>specset_str = do_expand(specset)<span class="question-mark">?</span>.to_string();
-<a href=#631 id=631 data-nosnippet>631</a>    <span class="kw">let </span>scope = <span class="kw">if </span>lookup_bool(<span class="string">"xglobal@"</span>) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#631 id=631 data-nosnippet>631</a>    <span class="kw">let </span>scope = <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>)) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 <a href=#632 id=632 data-nosnippet>632</a>    <span class="kw">for </span>spec <span class="kw">in </span>specset_str.split(<span class="string">';'</span>) {
 <a href=#633 id=633 data-nosnippet>633</a>      <span class="kw">let </span>spec = spec.trim();
 <a href=#634 id=634 data-nosnippet>634</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(comma_pos) = spec.find(<span class="string">','</span>) {
@@ -636,12 +636,12 @@
 <a href=#636 id=636 data-nosnippet>636</a>        <span class="kw">let </span>specs = spec[comma_pos+<span class="number">1</span>..].trim();
 <a href=#637 id=637 data-nosnippet>637</a>        <span class="kw">let </span>full_name = <span class="macro">s!</span>(<span class="string">"{head_str}{name}{tail_str}"</span>);
 <a href=#638 id=638 data-nosnippet>638</a>        <span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"color_{full_name}"</span>);
-<a href=#639 id=639 data-nosnippet>639</a>        <span class="kw">if </span>state::lookup_value(<span class="kw-2">&amp;</span>key).is_some() { <span class="kw">continue</span>; }
+<a href=#639 id=639 data-nosnippet>639</a>        <span class="kw">if </span>state::with_value(<span class="kw-2">&amp;</span>key, |v| v.is_some()) { <span class="kw">continue</span>; }
 <a href=#640 id=640 data-nosnippet>640</a>        <span class="kw">let </span>color = parse_xcolor(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>models_str), specs, <span class="prelude-val">None</span>);
 <a href=#641 id=641 data-nosnippet>641</a>        def_color(<span class="kw-2">&amp;</span>full_name, <span class="kw-2">&amp;</span>color, scope)<span class="question-mark">?</span>;
 <a href=#642 id=642 data-nosnippet>642</a>      }
 <a href=#643 id=643 data-nosnippet>643</a>    }
-<a href=#644 id=644 data-nosnippet>644</a>    assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#644 id=644 data-nosnippet>644</a>    state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#645 id=645 data-nosnippet>645</a>    <span class="prelude-val">Ok</span>(Vec::new())
 <a href=#646 id=646 data-nosnippet>646</a>  });
 <a href=#647 id=647 data-nosnippet>647</a>
@@ -724,7 +724,7 @@
 <a href=#724 id=724 data-nosnippet>724</a>    <span class="kw">let </span>color = parse_xcolor(model_str.as_deref(), <span class="kw-2">&amp;</span>spec_str, <span class="prelude-val">None</span>);
 <a href=#725 id=725 data-nosnippet>725</a>    <span class="comment">// Set current color
 <a href=#726 id=726 data-nosnippet>726</a>    </span>def_color(<span class="string">"."</span>, <span class="kw-2">&amp;</span>color, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#727 id=727 data-nosnippet>727</a>    <span class="kw">if </span>lookup_bool(<span class="string">"inPreamble"</span>) {
+<a href=#727 id=727 data-nosnippet>727</a>    <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"inPreamble"</span>)) {
 <a href=#728 id=728 data-nosnippet>728</a>      assign_value(<span class="string">"preambleTextcolor"</span>, Stored::String(arena::pin(color.to_stored())), <span class="prelude-val">None</span>);
 <a href=#729 id=729 data-nosnippet>729</a>    }
 <a href=#730 id=730 data-nosnippet>730</a>    merge_font(<span class="macro">fontmap!</span>(color =&gt; color));
@@ -745,7 +745,7 @@
 <a href=#745 id=745 data-nosnippet>745</a>    <span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\color"</span>,
 <a href=#746 id=746 data-nosnippet>746</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="string">"rgb"</span>))),
 <a href=#747 id=747 data-nosnippet>747</a>           <span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;*</span>comps)))]);
-<a href=#748 id=748 data-nosnippet>748</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#748 id=748 data-nosnippet>748</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
 <a href=#749 id=749 data-nosnippet>749</a>      reversion_tokens, arena::SymHashMap::default()))])
 <a href=#750 id=750 data-nosnippet>750</a>  });
 <a href=#751 id=751 data-nosnippet>751</a>
@@ -754,7 +754,7 @@
 <a href=#754 id=754 data-nosnippet>754</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(sym)) = state::lookup_value(<span class="string">"color_."</span>) {
 <a href=#755 id=755 data-nosnippet>755</a>      <span class="kw">let </span>stored_str = arena::to_string(sym);
 <a href=#756 id=756 data-nosnippet>756</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(color) = Color::from_stored(<span class="kw-2">&amp;</span>stored_str) {
-<a href=#757 id=757 data-nosnippet>757</a>        <span class="kw">if </span>lookup_bool(<span class="string">"inPreamble"</span>) {
+<a href=#757 id=757 data-nosnippet>757</a>        <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"inPreamble"</span>)) {
 <a href=#758 id=758 data-nosnippet>758</a>          assign_value(<span class="string">"preambleTextcolor"</span>, Stored::String(arena::pin(color.to_stored())), <span class="prelude-val">None</span>);
 <a href=#759 id=759 data-nosnippet>759</a>        }
 <a href=#760 id=760 data-nosnippet>760</a>        merge_font(<span class="macro">fontmap!</span>(color =&gt; color));
@@ -772,7 +772,7 @@
 <a href=#772 id=772 data-nosnippet>772</a>    </span><span class="kw">let </span>reversion_tokens = <span class="macro">Invocation!</span>(<span class="string">"\\pagecolor"</span>,
 <a href=#773 id=773 data-nosnippet>773</a>      <span class="macro">vec!</span>[model_str.as_deref().map(|s| Tokens::from(<span class="macro">T_OTHER!</span>(s))),
 <a href=#774 id=774 data-nosnippet>774</a>           <span class="prelude-val">Some</span>(Tokens::from(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;*</span>spec_str)))]);
-<a href=#775 id=775 data-nosnippet>775</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="kw-2">*</span>EMPTY_SYM, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#775 id=775 data-nosnippet>775</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox::new(<span class="macro">pin!</span>(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
 <a href=#776 id=776 data-nosnippet>776</a>      reversion_tokens, arena::SymHashMap::default()))])
 <a href=#777 id=777 data-nosnippet>777</a>  });
 <a href=#778 id=778 data-nosnippet>778</a>
@@ -791,7 +791,7 @@
 <a href=#791 id=791 data-nosnippet>791</a>  <span class="comment">// \blendcolors and \blendcolors*
 <a href=#792 id=792 data-nosnippet>792</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\blendcolors OptionalMatch:* {}"</span>, sub[(star, mix)] {
 <a href=#793 id=793 data-nosnippet>793</a>    <span class="kw">let </span>mix_str = do_expand(mix)<span class="question-mark">?</span>.to_string();
-<a href=#794 id=794 data-nosnippet>794</a>    <span class="kw">let </span>scope = <span class="kw">if </span>lookup_bool(<span class="string">"xglobal@"</span>) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#794 id=794 data-nosnippet>794</a>    <span class="kw">let </span>scope = <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>)) { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 <a href=#795 id=795 data-nosnippet>795</a>    <span class="kw">let </span>new_blend = <span class="kw">if </span>star.is_some() {
 <a href=#796 id=796 data-nosnippet>796</a>      <span class="comment">// Starred: append to existing blend
 <a href=#797 id=797 data-nosnippet>797</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(old_sym)) = state::lookup_value(<span class="string">"color_blend"</span>) {
@@ -804,7 +804,7 @@
 <a href=#804 id=804 data-nosnippet>804</a>      mix_str
 <a href=#805 id=805 data-nosnippet>805</a>    };
 <a href=#806 id=806 data-nosnippet>806</a>    assign_value(<span class="string">"color_blend"</span>, Stored::String(arena::pin(new_blend)), scope);
-<a href=#807 id=807 data-nosnippet>807</a>    assign_value(<span class="string">"xglobal@"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#807 id=807 data-nosnippet>807</a>    state::assign_value_sym(<span class="macro">pin!</span>(<span class="string">"xglobal@"</span>), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#808 id=808 data-nosnippet>808</a>    <span class="prelude-val">Ok</span>(Vec::new())
 <a href=#809 id=809 data-nosnippet>809</a>  });
 <a href=#810 id=810 data-nosnippet>810</a>
@@ -1259,7 +1259,7 @@
 <a href=#1259 id=1259 data-nosnippet>1259</a>          <span class="kw">let </span>row_num = cell.borrow().current_row_number();
 <a href=#1260 id=1260 data-nosnippet>1260</a>          <span class="kw">let </span>num_str = row_num.to_string();
 <a href=#1261 id=1261 data-nosnippet>1261</a>          <span class="kw">let </span>toks: Vec&lt;Token&gt; = num_str.chars().map(|c| {
-<a href=#1262 id=1262 data-nosnippet>1262</a>            Token::new(c.to_string(), Catcode::OTHER)
+<a href=#1262 id=1262 data-nosnippet>1262</a>            Token { text: arena::pin_char(c), code: Catcode::OTHER }
 <a href=#1263 id=1263 data-nosnippet>1263</a>          }).collect();
 <a href=#1264 id=1264 data-nosnippet>1264</a>          <span class="prelude-val">Ok</span>(Tokens::new(toks))
 <a href=#1265 id=1265 data-nosnippet>1265</a>        } <span class="kw">else </span>{
@@ -1442,7 +1442,7 @@
 <a href=#1442 id=1442 data-nosnippet>1442</a>    };
 <a href=#1443 id=1443 data-nosnippet>1443</a>    <span class="kw">if </span>if_undef {
 <a href=#1444 id=1444 data-nosnippet>1444</a>      <span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"color_{name}"</span>);
-<a href=#1445 id=1445 data-nosnippet>1445</a>      <span class="kw">if </span>state::lookup_value(<span class="kw-2">&amp;</span>key).is_some() { <span class="kw">continue</span>; }
+<a href=#1445 id=1445 data-nosnippet>1445</a>      <span class="kw">if </span>state::with_value(<span class="kw-2">&amp;</span>key, |v| v.is_some()) { <span class="kw">continue</span>; }
 <a href=#1446 id=1446 data-nosnippet>1446</a>    }
 <a href=#1447 id=1447 data-nosnippet>1447</a>    <span class="kw">let </span>from_key = <span class="macro">s!</span>(<span class="string">"color_{from}"</span>);
 <a href=#1448 id=1448 data-nosnippet>1448</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(stored) = state::lookup_value(<span class="kw-2">&amp;</span>from_key) {

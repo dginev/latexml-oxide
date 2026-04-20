@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["base_utilities","base_xmath","etex","latex","latex_constructs","latex_dump","pdftex","plain_dump","tex","tex_tables"]};
+window.SIDEBAR_ITEMS = {"mod":["base_utilities","base_xmath","etex","latex","latex_base","latex_bootstrap","latex_constructs","latex_dump","pdftex","plain_dump","tex","tex_tables"]};

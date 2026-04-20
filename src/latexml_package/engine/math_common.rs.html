@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/math_common.rs`."><title>math_common.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (7af3402cd 2026-04-16)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>math_common.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// math_common — Common math definitions, always loaded.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/engine/math_common.rs`."><title>math_common.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/engine/</div>math_common.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// math_common — Common math definitions, always loaded.
 <a href=#2 id=2 data-nosnippet>2</a>// Corresponds to Perl Engine/math_common.pool.ltxml.
 <a href=#3 id=3 data-nosnippet>3</a>//
 <a href=#4 id=4 data-nosnippet>4</a>// Contains: Greek letters, symbols, operators, relations, arrows,
@@ -245,7 +245,7 @@
 <a href=#245 id=245 data-nosnippet>245</a>          <span class="comment">// Check isFontDef: lookupValue("fontinfo_&lt;cs&gt;")
 <a href=#246 id=246 data-nosnippet>246</a>          </span><span class="kw">let </span>cs_str = token.to_string();
 <a href=#247 id=247 data-nosnippet>247</a>          <span class="kw">let </span>fontinfo_key = <span class="macro">s!</span>(<span class="string">"fontinfo_{}"</span>, cs_str);
-<a href=#248 id=248 data-nosnippet>248</a>          <span class="kw">if </span>state::lookup_value(<span class="kw-2">&amp;</span>fontinfo_key).is_some() {
+<a href=#248 id=248 data-nosnippet>248</a>          <span class="kw">if </span>state::with_value(<span class="kw-2">&amp;</span>fontinfo_key, |v| v.is_some()) {
 <a href=#249 id=249 data-nosnippet>249</a>            <span class="bool-val">true
 <a href=#250 id=250 data-nosnippet>250</a>          </span>} <span class="kw">else </span>{
 <a href=#251 id=251 data-nosnippet>251</a>            <span class="comment">// Check \def, \edef, \gdef, \xdef
@@ -751,7 +751,7 @@
 <a href=#751 id=751 data-nosnippet>751</a>    <span class="string">"\\vdots"</span>,
 <a href=#752 id=752 data-nosnippet>752</a>    <span class="string">"?#isMath(&lt;ltx:XMTok name='vdots' font='#font' role='ID'&gt;\u{22EE}&lt;/ltx:XMTok&gt;)(\u{22EE})"</span>,
 <a href=#753 id=753 data-nosnippet>753</a>    properties =&gt; {
-<a href=#754 id=754 data-nosnippet>754</a>      <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+<a href=#754 id=754 data-nosnippet>754</a>      <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
 <a href=#755 id=755 data-nosnippet>755</a>        <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"font" </span>=&gt; lookup_font().unwrap().merge(
 <a href=#756 id=756 data-nosnippet>756</a>          <span class="macro">fontmap!</span>(family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>)
 <a href=#757 id=757 data-nosnippet>757</a>            .specialize(<span class="string">"\u{22EE}"</span>))))
@@ -773,7 +773,7 @@
 <a href=#773 id=773 data-nosnippet>773</a>    <span class="string">"?#isMath(&lt;ltx:XMTok name='dots' font='#font' role='ID'&gt;\u{2026}&lt;/ltx:XMTok&gt;)(\u{2026})"</span>,
 <a href=#774 id=774 data-nosnippet>774</a>    sizer      =&gt; <span class="string">"\u{2026}"</span>,
 <a href=#775 id=775 data-nosnippet>775</a>    properties =&gt; {
-<a href=#776 id=776 data-nosnippet>776</a>      <span class="kw">if </span>lookup_bool(<span class="string">"IN_MATH"</span>) {
+<a href=#776 id=776 data-nosnippet>776</a>      <span class="kw">if </span>state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
 <a href=#777 id=777 data-nosnippet>777</a>        <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"font" </span>=&gt; lookup_font().unwrap().merge(
 <a href=#778 id=778 data-nosnippet>778</a>          <span class="macro">fontmap!</span>(family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>)
 <a href=#779 id=779 data-nosnippet>779</a>            .specialize(<span class="string">"\u{2026}"</span>))))
@@ -859,262 +859,264 @@
 <a href=#859 id=859 data-nosnippet>859</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rceil"</span>,  <span class="prelude-val">None</span>, <span class="string">"\u{2309}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT CEILING
 <a href=#860 id=860 data-nosnippet>860</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lfloor"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{230A}"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT FLOOR
 <a href=#861 id=861 data-nosnippet>861</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rfloor"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{230B}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT FLOOR
-<a href=#862 id=862 data-nosnippet>862</a>  // Perl #2762: \lgroup / \rgroup delimiters
-<a href=#863 id=863 data-nosnippet>863</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27EE}"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// MATHEMATICAL LEFT FLATTENED PARENTHESIS
-<a href=#864 id=864 data-nosnippet>864</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27EF}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// MATHEMATICAL RIGHT FLATTENED PARENTHESIS
+<a href=#862 id=862 data-nosnippet>862</a>  // \lgroup / \rgroup are defined below with Perl #2762 parity comment (match Perl source layout).
+<a href=#863 id=863 data-nosnippet>863</a>
+<a href=#864 id=864 data-nosnippet>864</a>  // Note: We should be using 27E8,27E9, which are "mathematical", not 2329,232A
 <a href=#865 id=865 data-nosnippet>865</a>
-<a href=#866 id=866 data-nosnippet>866</a>  // Note: We should be using 27E8,27E9, which are "mathematical", not 2329,232A
-<a href=#867 id=867 data-nosnippet>867</a>
-<a href=#868 id=868 data-nosnippet>868</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\langle"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27E8}"</span>, role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT-POINTING ANGLE BRACKET
-<a href=#869 id=869 data-nosnippet>869</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rangle"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27E9}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT-POINTING ANGLE BRACKET
-<a href=#870 id=870 data-nosnippet>870</a>
-<a href=#871 id=871 data-nosnippet>871</a>  // Not sure these should be defined here, or latex, or even latex compat mode.
-<a href=#872 id=872 data-nosnippet>872</a>  // Updated to use proper codepoints: U+27EE/27EF (MATHEMATICAL LEFT/RIGHT FLATTENED PARENTHESIS)
-<a href=#873 id=873 data-nosnippet>873</a>  // Perl commit "Lrgroup (#2762)": removed bold font, using dedicated Unicode codepoints.
-<a href=#874 id=874 data-nosnippet>874</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27EE}"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>);
-<a href=#875 id=875 data-nosnippet>875</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27EF}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>);
-<a href=#876 id=876 data-nosnippet>876</a>  <span class="macro">DefMath!</span>(<span class="string">"\\bracevert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, font =&gt; { series =&gt; <span class="string">"bold" </span>}, role =&gt; <span class="string">"VERTBAR"</span>);
-<a href=#877 id=877 data-nosnippet>877</a>
-<a href=#878 id=878 data-nosnippet>878</a>  <span class="comment">// TeX marks some symbols as delimiters which can be used with \left,\right,
-<a href=#879 id=879 data-nosnippet>879</a>  // but many of which have different grammatical roles otherwise, eg. arrows, &lt;, &gt;.
-<a href=#880 id=880 data-nosnippet>880</a>  // Short of setting up TeX's complicated encoding machinery, I need an explicit
-<a href=#881 id=881 data-nosnippet>881</a>  // mapping.  Unfortunately, this doesn't (yet) support people declaring thier own delimiters!
-<a href=#882 id=882 data-nosnippet>882</a>
-<a href=#883 id=883 data-nosnippet>883</a>  // With new treatment of Simple Symbols as just Box's with assigned attributes,
-<a href=#884 id=884 data-nosnippet>884</a>  // we're not getting whatsits, and so we're not looking them up the same way!!!
-<a href=#885 id=885 data-nosnippet>885</a>  // TEMPORARILY (?) hack the Delimiter map
-<a href=#886 id=886 data-nosnippet>886</a>  // foreach my $entry (values %DELIMITER_MAP) {
-<a href=#887 id=887 data-nosnippet>887</a>  //   $DELIMITER_MAP{ $$entry{char} } = $entry; }
-<a href=#888 id=888 data-nosnippet>888</a>
-<a href=#889 id=889 data-nosnippet>889</a>  // sub lookup_delimiter {
-<a href=#890 id=890 data-nosnippet>890</a>  //   my ($delim) = @_;
-<a href=#891 id=891 data-nosnippet>891</a>  //   return $DELIMITER_MAP{$delim}; }
-<a href=#892 id=892 data-nosnippet>892</a>
-<a href=#893 id=893 data-nosnippet>893</a>  // Perl PR#2596: TeXDelimiter reads like {} (for correct math XMTok digestion)
-<a href=#894 id=894 data-nosnippet>894</a>  // but reverts WITHOUT adding braces: \Big( not \Big{(}
-<a href=#895 id=895 data-nosnippet>895</a>  // Perl: augmentDelimiterProperties($doc, $whatsit, undef, 0) — look up delimiter
-<a href=#896 id=896 data-nosnippet>896</a>  // in map and set name/meaning (but don't change role or stretchy).
-<a href=#897 id=897 data-nosnippet>897</a>  // Perl: font =&gt; { size =&gt; 'big' } where 'big' → 1.2 * DEFSIZE(10) = 12.0 absolute pt.
-<a href=#898 id=898 data-nosnippet>898</a>  // Named sizes map to absolute values, NOT scale factors.
-<a href=#899 id=899 data-nosnippet>899</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\big TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
+<a href=#866 id=866 data-nosnippet>866</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\langle"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27E8}"</span>, role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT-POINTING ANGLE BRACKET
+<a href=#867 id=867 data-nosnippet>867</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rangle"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27E9}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT-POINTING ANGLE BRACKET
+<a href=#868 id=868 data-nosnippet>868</a>
+<a href=#869 id=869 data-nosnippet>869</a>  // Not sure these should be defined here, or latex, or even latex compat mode.
+<a href=#870 id=870 data-nosnippet>870</a>  // Updated to use proper codepoints: U+27EE/27EF (MATHEMATICAL LEFT/RIGHT FLATTENED PARENTHESIS)
+<a href=#871 id=871 data-nosnippet>871</a>  // Perl commit "Lrgroup (#2762)": removed bold font, using dedicated Unicode codepoints.
+<a href=#872 id=872 data-nosnippet>872</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27EE}"</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>);
+<a href=#873 id=873 data-nosnippet>873</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rgroup"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{27EF}"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>);
+<a href=#874 id=874 data-nosnippet>874</a>  <span class="macro">DefMath!</span>(<span class="string">"\\bracevert"</span>, <span class="prelude-val">None</span>, <span class="string">"|"</span>, font =&gt; { series =&gt; <span class="string">"bold" </span>}, role =&gt; <span class="string">"VERTBAR"</span>);
+<a href=#875 id=875 data-nosnippet>875</a>
+<a href=#876 id=876 data-nosnippet>876</a>  <span class="comment">// TeX marks some symbols as delimiters which can be used with \left,\right,
+<a href=#877 id=877 data-nosnippet>877</a>  // but many of which have different grammatical roles otherwise, eg. arrows, &lt;, &gt;.
+<a href=#878 id=878 data-nosnippet>878</a>  // Short of setting up TeX's complicated encoding machinery, I need an explicit
+<a href=#879 id=879 data-nosnippet>879</a>  // mapping.  Unfortunately, this doesn't (yet) support people declaring thier own delimiters!
+<a href=#880 id=880 data-nosnippet>880</a>
+<a href=#881 id=881 data-nosnippet>881</a>  // With new treatment of Simple Symbols as just Box's with assigned attributes,
+<a href=#882 id=882 data-nosnippet>882</a>  // we're not getting whatsits, and so we're not looking them up the same way!!!
+<a href=#883 id=883 data-nosnippet>883</a>  // TEMPORARILY (?) hack the Delimiter map
+<a href=#884 id=884 data-nosnippet>884</a>  // foreach my $entry (values %DELIMITER_MAP) {
+<a href=#885 id=885 data-nosnippet>885</a>  //   $DELIMITER_MAP{ $$entry{char} } = $entry; }
+<a href=#886 id=886 data-nosnippet>886</a>
+<a href=#887 id=887 data-nosnippet>887</a>  // sub lookup_delimiter {
+<a href=#888 id=888 data-nosnippet>888</a>  //   my ($delim) = @_;
+<a href=#889 id=889 data-nosnippet>889</a>  //   return $DELIMITER_MAP{$delim}; }
+<a href=#890 id=890 data-nosnippet>890</a>
+<a href=#891 id=891 data-nosnippet>891</a>  // Perl PR#2596: TeXDelimiter reads like {} (for correct math XMTok digestion)
+<a href=#892 id=892 data-nosnippet>892</a>  // but reverts WITHOUT adding braces: \Big( not \Big{(}
+<a href=#893 id=893 data-nosnippet>893</a>  // Perl: augmentDelimiterProperties($doc, $whatsit, undef, 0) — look up delimiter
+<a href=#894 id=894 data-nosnippet>894</a>  // in map and set name/meaning (but don't change role or stretchy).
+<a href=#895 id=895 data-nosnippet>895</a>  // Perl: font =&gt; { size =&gt; 'big' } where 'big' → 1.2 * DEFSIZE(10) = 12.0 absolute pt.
+<a href=#896 id=896 data-nosnippet>896</a>  // Named sizes map to absolute values, NOT scale factors.
+<a href=#897 id=897 data-nosnippet>897</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\big TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
+<a href=#898 id=898 data-nosnippet>898</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">""</span>)<span class="question-mark">?</span>; });
+<a href=#899 id=899 data-nosnippet>899</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Big TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
 <a href=#900 id=900 data-nosnippet>900</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">""</span>)<span class="question-mark">?</span>; });
-<a href=#901 id=901 data-nosnippet>901</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Big TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
+<a href=#901 id=901 data-nosnippet>901</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigg TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
 <a href=#902 id=902 data-nosnippet>902</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">""</span>)<span class="question-mark">?</span>; });
-<a href=#903 id=903 data-nosnippet>903</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigg TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
+<a href=#903 id=903 data-nosnippet>903</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigg TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
 <a href=#904 id=904 data-nosnippet>904</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">""</span>)<span class="question-mark">?</span>; });
-<a href=#905 id=905 data-nosnippet>905</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigg TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
-<a href=#906 id=906 data-nosnippet>906</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">""</span>)<span class="question-mark">?</span>; });
-<a href=#907 id=907 data-nosnippet>907</a>
-<a href=#908 id=908 data-nosnippet>908</a>  <span class="comment">// sub addDelimiterRole {
-<a href=#909 id=909 data-nosnippet>909</a>  //   my ($document, $role) = @_;
-<a href=#910 id=910 data-nosnippet>910</a>  //   my $current = $document-&gt;getNode;
-<a href=#911 id=911 data-nosnippet>911</a>  //   my $delim   = $document-&gt;getLastChildElement($current) || $current;
-<a href=#912 id=912 data-nosnippet>912</a>  //   my $delim_role = (($delim &amp;&amp; ($delim-&gt;nodeType == XML_ELEMENT_NODE) &amp;&amp;
-<a href=#913 id=913 data-nosnippet>913</a>  // $delim-&gt;getAttribute('role')) || '&lt;none&gt;');   # if there is some delimiter-like role on the
-<a href=#914 id=914 data-nosnippet>914</a>  // "delimiter", switch it, otherwise, leave it alone!   if ($delim &amp;&amp; ($delim_role =~
-<a href=#915 id=915 data-nosnippet>915</a>  // /^(OPEN|MIDDLE|CLOSE|VERTBAR|&lt;none&gt;)$/)) {     ## Maybe we shouldn't switch VERTBAR ?
-<a href=#916 id=916 data-nosnippet>916</a>  //     ## The catch is that occasionally people use a single \Bigl (or whatever)
-<a href=#917 id=917 data-nosnippet>917</a>  //     ## where they should have used a \Big
-<a href=#918 id=918 data-nosnippet>918</a>  //     $document-&gt;setAttribute($delim, role =&gt; $role); }
-<a href=#919 id=919 data-nosnippet>919</a>  //   return; }
-<a href=#920 id=920 data-nosnippet>920</a>
-<a href=#921 id=921 data-nosnippet>921</a>  // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
-<a href=#922 id=922 data-nosnippet>922</a>  // Perl: font =&gt; { size =&gt; 'big' } where rationalizeFontSize('big') = 1.2 * DEFSIZE(10) = 12.0pt
-<a href=#923 id=923 data-nosnippet>923</a>  // Named sizes are absolute, not relative — must use `size` (not `scale`).
-<a href=#924 id=924 data-nosnippet>924</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\bigl TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
-<a href=#925 id=925 data-nosnippet>925</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
-<a href=#926 id=926 data-nosnippet>926</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigm TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
-<a href=#927 id=927 data-nosnippet>927</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
-<a href=#928 id=928 data-nosnippet>928</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigr TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
-<a href=#929 id=929 data-nosnippet>929</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
-<a href=#930 id=930 data-nosnippet>930</a>
-<a href=#931 id=931 data-nosnippet>931</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigl TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
-<a href=#932 id=932 data-nosnippet>932</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
-<a href=#933 id=933 data-nosnippet>933</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigm TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
-<a href=#934 id=934 data-nosnippet>934</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
-<a href=#935 id=935 data-nosnippet>935</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigr TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
-<a href=#936 id=936 data-nosnippet>936</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
-<a href=#937 id=937 data-nosnippet>937</a>
-<a href=#938 id=938 data-nosnippet>938</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\biggl TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
-<a href=#939 id=939 data-nosnippet>939</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
-<a href=#940 id=940 data-nosnippet>940</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\biggm TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
-<a href=#941 id=941 data-nosnippet>941</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
-<a href=#942 id=942 data-nosnippet>942</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\biggr TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
-<a href=#943 id=943 data-nosnippet>943</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
-<a href=#944 id=944 data-nosnippet>944</a>
-<a href=#945 id=945 data-nosnippet>945</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Biggl TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
-<a href=#946 id=946 data-nosnippet>946</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
-<a href=#947 id=947 data-nosnippet>947</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Biggm TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
-<a href=#948 id=948 data-nosnippet>948</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
-<a href=#949 id=949 data-nosnippet>949</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Biggr TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
-<a href=#950 id=950 data-nosnippet>950</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
-<a href=#951 id=951 data-nosnippet>951</a>
-<a href=#952 id=952 data-nosnippet>952</a>  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\vert"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>));
-<a href=#953 id=953 data-nosnippet>953</a>  <span class="macro">Let!</span>(<span class="string">"\\Vert"</span>, <span class="string">"\\|"</span>);
-<a href=#954 id=954 data-nosnippet>954</a>  <span class="comment">//======================================================================
-<a href=#955 id=955 data-nosnippet>955</a>  // TeX Book, Appendix B. p. 360
-<a href=#956 id=956 data-nosnippet>956</a>  //
-<a href=#957 id=957 data-nosnippet>957</a>  // Note that in TeX, all 4 args get digested(!)
-<a href=#958 id=958 data-nosnippet>958</a>  // and the choice is made when absorbing!
-<a href=#959 id=959 data-nosnippet>959</a>
-<a href=#960 id=960 data-nosnippet>960</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#961 id=961 data-nosnippet>961</a>    <span class="string">"\\mathpalette{}{}"</span>,
-<a href=#962 id=962 data-nosnippet>962</a>    <span class="string">r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"
-<a href=#963 id=963 data-nosnippet>963</a>  </span>);
-<a href=#964 id=964 data-nosnippet>964</a>
-<a href=#965 id=965 data-nosnippet>965</a>  <span class="comment">// Perl: DefConstructor('\phantom{}', "?#isMath(...)(...)", properties =&gt; {isSpace=&gt;1}, afterDigest =&gt; ...)
-<a href=#966 id=966 data-nosnippet>966</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#967 id=967 data-nosnippet>967</a>    <span class="string">"\\phantom{}"</span>,
-<a href=#968 id=968 data-nosnippet>968</a>    <span class="string">"?#isMath(&lt;ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/&gt;)\
-<a href=#969 id=969 data-nosnippet>969</a>      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>,
-<a href=#970 id=970 data-nosnippet>970</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) },
-<a href=#971 id=971 data-nosnippet>971</a>    after_digest =&gt; sub[whatsit] {
-<a href=#972 id=972 data-nosnippet>972</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg_mut(<span class="number">1</span>) {
-<a href=#973 id=973 data-nosnippet>973</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = arg.get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#974 id=974 data-nosnippet>974</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::Dimension(w));
-<a href=#975 id=975 data-nosnippet>975</a>        whatsit.set_property(<span class="string">"height"</span>, Stored::Dimension(h));
-<a href=#976 id=976 data-nosnippet>976</a>        whatsit.set_property(<span class="string">"depth"</span>, Stored::Dimension(d));
-<a href=#977 id=977 data-nosnippet>977</a>      }
-<a href=#978 id=978 data-nosnippet>978</a>    });
-<a href=#979 id=979 data-nosnippet>979</a>
-<a href=#980 id=980 data-nosnippet>980</a>  <span class="macro">DefConstructor!</span>(
-<a href=#981 id=981 data-nosnippet>981</a>    <span class="string">"\\hphantom{}"</span>,
-<a href=#982 id=982 data-nosnippet>982</a>    <span class="string">"?#isMath(&lt;ltx:XMHint width='#width' name='hphantom'/&gt;)\
-<a href=#983 id=983 data-nosnippet>983</a>      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>,
-<a href=#984 id=984 data-nosnippet>984</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) },
-<a href=#985 id=985 data-nosnippet>985</a>    <span class="comment">// Perl 09fb2e6f: In text mode, wrap argument in restricted_horizontal
-<a href=#986 id=986 data-nosnippet>986</a>    // to prevent display math from leaking through (e.g. quantikz2).
-<a href=#987 id=987 data-nosnippet>987</a>    </span>before_digest =&gt; {
-<a href=#988 id=988 data-nosnippet>988</a>      <span class="kw">if </span>!<span class="macro">LookupBool!</span>(<span class="string">"IN_MATH"</span>) {
-<a href=#989 id=989 data-nosnippet>989</a>        begin_mode(<span class="string">"restricted_horizontal"</span>)<span class="question-mark">?</span>;
-<a href=#990 id=990 data-nosnippet>990</a>        <span class="macro">AssignValue!</span>(<span class="string">"_hphantom_mode_override" </span>=&gt; <span class="bool-val">true</span>);
-<a href=#991 id=991 data-nosnippet>991</a>      } <span class="kw">else </span>{
-<a href=#992 id=992 data-nosnippet>992</a>        <span class="macro">AssignValue!</span>(<span class="string">"_hphantom_mode_override" </span>=&gt; <span class="bool-val">false</span>);
-<a href=#993 id=993 data-nosnippet>993</a>      }
-<a href=#994 id=994 data-nosnippet>994</a>    },
-<a href=#995 id=995 data-nosnippet>995</a>    after_digest =&gt; sub[whatsit] {
-<a href=#996 id=996 data-nosnippet>996</a>      <span class="kw">if </span><span class="macro">LookupBool!</span>(<span class="string">"_hphantom_mode_override"</span>) {
-<a href=#997 id=997 data-nosnippet>997</a>        end_mode(<span class="string">"restricted_horizontal"</span>)<span class="question-mark">?</span>;
-<a href=#998 id=998 data-nosnippet>998</a>      }
-<a href=#999 id=999 data-nosnippet>999</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg_mut(<span class="number">1</span>) {
-<a href=#1000 id=1000 data-nosnippet>1000</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = arg.get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1001 id=1001 data-nosnippet>1001</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::Dimension(w));
-<a href=#1002 id=1002 data-nosnippet>1002</a>        whatsit.set_property(<span class="string">"height"</span>, Stored::Dimension(h));
-<a href=#1003 id=1003 data-nosnippet>1003</a>        whatsit.set_property(<span class="string">"depth"</span>, Stored::Dimension(d));
-<a href=#1004 id=1004 data-nosnippet>1004</a>      }
-<a href=#1005 id=1005 data-nosnippet>1005</a>    });
-<a href=#1006 id=1006 data-nosnippet>1006</a>
-<a href=#1007 id=1007 data-nosnippet>1007</a>  <span class="macro">DefConstructor!</span>(
-<a href=#1008 id=1008 data-nosnippet>1008</a>    <span class="string">"\\vphantom{}"</span>,
-<a href=#1009 id=1009 data-nosnippet>1009</a>    <span class="string">"?#isMath(&lt;ltx:XMHint height='#height' depth='#depth' name='vphantom'/&gt;)\
-<a href=#1010 id=1010 data-nosnippet>1010</a>      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>,
-<a href=#1011 id=1011 data-nosnippet>1011</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) },
-<a href=#1012 id=1012 data-nosnippet>1012</a>    after_digest =&gt; sub[whatsit] {
-<a href=#1013 id=1013 data-nosnippet>1013</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg_mut(<span class="number">1</span>) {
-<a href=#1014 id=1014 data-nosnippet>1014</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = arg.get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1015 id=1015 data-nosnippet>1015</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::Dimension(w));
-<a href=#1016 id=1016 data-nosnippet>1016</a>        whatsit.set_property(<span class="string">"height"</span>, Stored::Dimension(h));
-<a href=#1017 id=1017 data-nosnippet>1017</a>        whatsit.set_property(<span class="string">"depth"</span>, Stored::Dimension(d));
-<a href=#1018 id=1018 data-nosnippet>1018</a>      }
-<a href=#1019 id=1019 data-nosnippet>1019</a>    });
-<a href=#1020 id=1020 data-nosnippet>1020</a>
-<a href=#1021 id=1021 data-nosnippet>1021</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathstrut"</span>, <span class="string">"?#isMath(&lt;ltx:XMHint name='mathstrut'/&gt;)()"</span>,
-<a href=#1022 id=1022 data-nosnippet>1022</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) });
-<a href=#1023 id=1023 data-nosnippet>1023</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\smash{}"</span>, <span class="string">"#1"</span>); <span class="comment">// well, what?
-<a href=#1024 id=1024 data-nosnippet>1024</a>
-<a href=#1025 id=1025 data-nosnippet>1025</a>  //======================================================================
-<a href=#1026 id=1026 data-nosnippet>1026</a>  // TeX Book, Appendix B. p. 361
-<a href=#1027 id=1027 data-nosnippet>1027</a>
-<a href=#1028 id=1028 data-nosnippet>1028</a>  // This is actually LaTeX's definition, but let's just do it this way.
-<a href=#1029 id=1029 data-nosnippet>1029</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#1030 id=1030 data-nosnippet>1030</a>    <span class="string">"\\sqrt OptionalInScriptStyle Digested"</span>,
-<a href=#1031 id=1031 data-nosnippet>1031</a>    <span class="string">"?#1(&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='nth-root'/&gt;\
-<a href=#1032 id=1032 data-nosnippet>1032</a>    &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)\
-<a href=#1033 id=1033 data-nosnippet>1033</a>    (&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='square-root'/&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)"
-<a href=#1034 id=1034 data-nosnippet>1034</a>  </span>);
-<a href=#1035 id=1035 data-nosnippet>1035</a>
-<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="macro">DefParameterType!</span>(ScriptStyleUntil, sub[_inner,until] {
-<a href=#1037 id=1037 data-nosnippet>1037</a>    gullet::read_until(<span class="kw-2">&amp;</span>until[<span class="number">0</span>]) },
-<a href=#1038 id=1038 data-nosnippet>1038</a>  before_digest =&gt; {
-<a href=#1039 id=1039 data-nosnippet>1039</a>    bgroup();
-<a href=#1040 id=1040 data-nosnippet>1040</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"script"</span>);
-<a href=#1041 id=1041 data-nosnippet>1041</a>  },
-<a href=#1042 id=1042 data-nosnippet>1042</a>  after_digest =&gt; {
-<a href=#1043 id=1043 data-nosnippet>1043</a>    egroup()<span class="question-mark">?</span>; },
-<a href=#1044 id=1044 data-nosnippet>1044</a>  reversion =&gt; sub[args,_inner,_extra] {
-<a href=#1045 id=1045 data-nosnippet>1045</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(args).revert(), <span class="macro">T_END!</span>())) });
-<a href=#1046 id=1046 data-nosnippet>1046</a>
-<a href=#1047 id=1047 data-nosnippet>1047</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\root ScriptStyleUntil:\\of {}"</span>,
-<a href=#1048 id=1048 data-nosnippet>1048</a>    <span class="string">"&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='nth-root'/&gt;\
-<a href=#1049 id=1049 data-nosnippet>1049</a>      &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
-<a href=#1050 id=1050 data-nosnippet>1050</a>      &lt;/ltx:XMApp&gt;"</span>,
-<a href=#1051 id=1051 data-nosnippet>1051</a>    reversion =&gt; <span class="string">"\\root #1 \\of {#2}"</span>);
-<a href=#1052 id=1052 data-nosnippet>1052</a>
-<a href=#1053 id=1053 data-nosnippet>1053</a>  <span class="comment">//----------------------------------------------------------------------
-<a href=#1054 id=1054 data-nosnippet>1054</a>  // LaTeX; Table 3.9. Log-like Functions, p.44.
-<a href=#1055 id=1055 data-nosnippet>1055</a>  //----------------------------------------------------------------------
-<a href=#1056 id=1056 data-nosnippet>1056</a>  // NOTE: Classifying some as TRIGFUNCTION might clarify 'pi' ambiguities ?
-<a href=#1057 id=1057 data-nosnippet>1057</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\arccos"</span>, <span class="prelude-val">None</span>, <span class="string">"arccos"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"inverse-cosine"</span>);
-<a href=#1058 id=1058 data-nosnippet>1058</a>  <span class="macro">DefMath!</span>(<span class="string">"\\arcsin"</span>, <span class="prelude-val">None</span>, <span class="string">"arcsin"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"inverse-sine"</span>);
-<a href=#1059 id=1059 data-nosnippet>1059</a>  <span class="macro">DefMath!</span>(<span class="string">"\\arctan"</span>, <span class="prelude-val">None</span>, <span class="string">"arctan"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"inverse-tangent"</span>);
-<a href=#1060 id=1060 data-nosnippet>1060</a>  <span class="macro">DefMath!</span>(<span class="string">"\\arg"</span>,    <span class="prelude-val">None</span>, <span class="string">"arg"</span>,    role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"argument"</span>);
-<a href=#1061 id=1061 data-nosnippet>1061</a>
-<a href=#1062 id=1062 data-nosnippet>1062</a>  <span class="macro">DefMath!</span>(<span class="string">"\\cos"</span>,  <span class="prelude-val">None</span>, <span class="string">"cos"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"cosine"</span>);
-<a href=#1063 id=1063 data-nosnippet>1063</a>  <span class="macro">DefMath!</span>(<span class="string">"\\cosh"</span>, <span class="prelude-val">None</span>, <span class="string">"cosh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-cosine"</span>);
-<a href=#1064 id=1064 data-nosnippet>1064</a>  <span class="macro">DefMath!</span>(<span class="string">"\\cot"</span>,  <span class="prelude-val">None</span>, <span class="string">"cot"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"cotangent"</span>);
-<a href=#1065 id=1065 data-nosnippet>1065</a>  <span class="macro">DefMath!</span>(<span class="string">"\\coth"</span>, <span class="prelude-val">None</span>, <span class="string">"coth"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-cotangent"</span>);
-<a href=#1066 id=1066 data-nosnippet>1066</a>
-<a href=#1067 id=1067 data-nosnippet>1067</a>  <span class="macro">DefMath!</span>(<span class="string">"\\csc"</span>, <span class="prelude-val">None</span>, <span class="string">"csc"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"cosecant"</span>);
-<a href=#1068 id=1068 data-nosnippet>1068</a>  <span class="macro">DefMath!</span>(<span class="string">"\\deg"</span>, <span class="prelude-val">None</span>, <span class="string">"deg"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>,   meaning =&gt; <span class="string">"degree"</span>);
-<a href=#1069 id=1069 data-nosnippet>1069</a>  <span class="macro">DefMath!</span>(<span class="string">"\\det"</span>, <span class="prelude-val">None</span>, <span class="string">"det"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"determinant"</span>,
-<a href=#1070 id=1070 data-nosnippet>1070</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1071 id=1071 data-nosnippet>1071</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dim"</span>, <span class="prelude-val">None</span>, <span class="string">"dim"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"dimension"</span>);
-<a href=#1072 id=1072 data-nosnippet>1072</a>
-<a href=#1073 id=1073 data-nosnippet>1073</a>  <span class="macro">DefMath!</span>(<span class="string">"\\exp"</span>, <span class="prelude-val">None</span>, <span class="string">"exp"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"exponential"</span>);
-<a href=#1074 id=1074 data-nosnippet>1074</a>  <span class="macro">DefMath!</span>(<span class="string">"\\gcd"</span>, <span class="prelude-val">None</span>, <span class="string">"gcd"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"gcd"</span>,
-<a href=#1075 id=1075 data-nosnippet>1075</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1076 id=1076 data-nosnippet>1076</a>  <span class="macro">DefMath!</span>(<span class="string">"\\hom"</span>, <span class="prelude-val">None</span>, <span class="string">"hom"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>);
-<a href=#1077 id=1077 data-nosnippet>1077</a>  <span class="macro">DefMath!</span>(<span class="string">"\\inf"</span>, <span class="prelude-val">None</span>, <span class="string">"inf"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"infimum"</span>,
-<a href=#1078 id=1078 data-nosnippet>1078</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1079 id=1079 data-nosnippet>1079</a>
-<a href=#1080 id=1080 data-nosnippet>1080</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ker"</span>, <span class="prelude-val">None</span>, <span class="string">"ker"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"kernel"</span>);
-<a href=#1081 id=1081 data-nosnippet>1081</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lg"</span>, <span class="prelude-val">None</span>, <span class="string">"lg"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>);
-<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lim"</span>, <span class="prelude-val">None</span>, <span class="string">"lim"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit"</span>,
-<a href=#1083 id=1083 data-nosnippet>1083</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1084 id=1084 data-nosnippet>1084</a>  <span class="macro">DefMath!</span>(<span class="string">"\\liminf"</span>, <span class="prelude-val">None</span>, <span class="string">"lim inf"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit-infimum"</span>,
+<a href=#905 id=905 data-nosnippet>905</a>
+<a href=#906 id=906 data-nosnippet>906</a>  <span class="comment">// sub addDelimiterRole {
+<a href=#907 id=907 data-nosnippet>907</a>  //   my ($document, $role) = @_;
+<a href=#908 id=908 data-nosnippet>908</a>  //   my $current = $document-&gt;getNode;
+<a href=#909 id=909 data-nosnippet>909</a>  //   my $delim   = $document-&gt;getLastChildElement($current) || $current;
+<a href=#910 id=910 data-nosnippet>910</a>  //   my $delim_role = (($delim &amp;&amp; ($delim-&gt;nodeType == XML_ELEMENT_NODE) &amp;&amp;
+<a href=#911 id=911 data-nosnippet>911</a>  // $delim-&gt;getAttribute('role')) || '&lt;none&gt;');   # if there is some delimiter-like role on the
+<a href=#912 id=912 data-nosnippet>912</a>  // "delimiter", switch it, otherwise, leave it alone!   if ($delim &amp;&amp; ($delim_role =~
+<a href=#913 id=913 data-nosnippet>913</a>  // /^(OPEN|MIDDLE|CLOSE|VERTBAR|&lt;none&gt;)$/)) {     ## Maybe we shouldn't switch VERTBAR ?
+<a href=#914 id=914 data-nosnippet>914</a>  //     ## The catch is that occasionally people use a single \Bigl (or whatever)
+<a href=#915 id=915 data-nosnippet>915</a>  //     ## where they should have used a \Big
+<a href=#916 id=916 data-nosnippet>916</a>  //     $document-&gt;setAttribute($delim, role =&gt; $role); }
+<a href=#917 id=917 data-nosnippet>917</a>  //   return; }
+<a href=#918 id=918 data-nosnippet>918</a>
+<a href=#919 id=919 data-nosnippet>919</a>  // Sized delimiters with role assignment (l=OPEN, m=MIDDLE, r=CLOSE)
+<a href=#920 id=920 data-nosnippet>920</a>  // Perl: font =&gt; { size =&gt; 'big' } where rationalizeFontSize('big') = 1.2 * DEFSIZE(10) = 12.0pt
+<a href=#921 id=921 data-nosnippet>921</a>  // Named sizes are absolute, not relative — must use `size` (not `scale`).
+<a href=#922 id=922 data-nosnippet>922</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\bigl TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
+<a href=#923 id=923 data-nosnippet>923</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
+<a href=#924 id=924 data-nosnippet>924</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigm TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
+<a href=#925 id=925 data-nosnippet>925</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
+<a href=#926 id=926 data-nosnippet>926</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\bigr TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">12.0 </span>},
+<a href=#927 id=927 data-nosnippet>927</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
+<a href=#928 id=928 data-nosnippet>928</a>
+<a href=#929 id=929 data-nosnippet>929</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigl TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
+<a href=#930 id=930 data-nosnippet>930</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
+<a href=#931 id=931 data-nosnippet>931</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigm TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
+<a href=#932 id=932 data-nosnippet>932</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
+<a href=#933 id=933 data-nosnippet>933</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Bigr TeXDelimiter"</span>,  <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">16.0 </span>},
+<a href=#934 id=934 data-nosnippet>934</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
+<a href=#935 id=935 data-nosnippet>935</a>
+<a href=#936 id=936 data-nosnippet>936</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\biggl TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
+<a href=#937 id=937 data-nosnippet>937</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
+<a href=#938 id=938 data-nosnippet>938</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\biggm TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
+<a href=#939 id=939 data-nosnippet>939</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
+<a href=#940 id=940 data-nosnippet>940</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\biggr TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">21.0 </span>},
+<a href=#941 id=941 data-nosnippet>941</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
+<a href=#942 id=942 data-nosnippet>942</a>
+<a href=#943 id=943 data-nosnippet>943</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Biggl TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
+<a href=#944 id=944 data-nosnippet>944</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"OPEN"</span>)<span class="question-mark">?</span>; });
+<a href=#945 id=945 data-nosnippet>945</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Biggm TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
+<a href=#946 id=946 data-nosnippet>946</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"MIDDLE"</span>)<span class="question-mark">?</span>; });
+<a href=#947 id=947 data-nosnippet>947</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Biggr TeXDelimiter"</span>, <span class="string">"#1"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">26.0 </span>},
+<a href=#948 id=948 data-nosnippet>948</a>    after_construct =&gt; sub[document, _whatsit] { augment_delimiter_properties(document, <span class="string">"CLOSE"</span>)<span class="question-mark">?</span>; });
+<a href=#949 id=949 data-nosnippet>949</a>
+<a href=#950 id=950 data-nosnippet>950</a>  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\vert"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"|"</span>));
+<a href=#951 id=951 data-nosnippet>951</a>  <span class="macro">Let!</span>(<span class="string">"\\Vert"</span>, <span class="string">"\\|"</span>);
+<a href=#952 id=952 data-nosnippet>952</a>  <span class="comment">//======================================================================
+<a href=#953 id=953 data-nosnippet>953</a>  // TeX Book, Appendix B. p. 360
+<a href=#954 id=954 data-nosnippet>954</a>  //
+<a href=#955 id=955 data-nosnippet>955</a>  // Note that in TeX, all 4 args get digested(!)
+<a href=#956 id=956 data-nosnippet>956</a>  // and the choice is made when absorbing!
+<a href=#957 id=957 data-nosnippet>957</a>
+<a href=#958 id=958 data-nosnippet>958</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#959 id=959 data-nosnippet>959</a>    <span class="string">"\\mathpalette{}{}"</span>,
+<a href=#960 id=960 data-nosnippet>960</a>    <span class="string">r"\mathchoice{#1\displaystyle{#2}}{#1\textstyle{#2}}{#1\scriptstyle{#2}}{#1\scriptscriptstyle{#2}}"
+<a href=#961 id=961 data-nosnippet>961</a>  </span>);
+<a href=#962 id=962 data-nosnippet>962</a>
+<a href=#963 id=963 data-nosnippet>963</a>  <span class="comment">// Perl: DefConstructor('\phantom{}', "?#isMath(...)(...)", properties =&gt; {isSpace=&gt;1}, afterDigest =&gt; ...)
+<a href=#964 id=964 data-nosnippet>964</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#965 id=965 data-nosnippet>965</a>    <span class="string">"\\phantom{}"</span>,
+<a href=#966 id=966 data-nosnippet>966</a>    <span class="string">"?#isMath(&lt;ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/&gt;)\
+<a href=#967 id=967 data-nosnippet>967</a>      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>,
+<a href=#968 id=968 data-nosnippet>968</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) },
+<a href=#969 id=969 data-nosnippet>969</a>    after_digest =&gt; sub[whatsit] {
+<a href=#970 id=970 data-nosnippet>970</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg_mut(<span class="number">1</span>) {
+<a href=#971 id=971 data-nosnippet>971</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = arg.get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#972 id=972 data-nosnippet>972</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::Dimension(w));
+<a href=#973 id=973 data-nosnippet>973</a>        whatsit.set_property(<span class="string">"height"</span>, Stored::Dimension(h));
+<a href=#974 id=974 data-nosnippet>974</a>        whatsit.set_property(<span class="string">"depth"</span>, Stored::Dimension(d));
+<a href=#975 id=975 data-nosnippet>975</a>      }
+<a href=#976 id=976 data-nosnippet>976</a>    });
+<a href=#977 id=977 data-nosnippet>977</a>
+<a href=#978 id=978 data-nosnippet>978</a>  <span class="macro">DefConstructor!</span>(
+<a href=#979 id=979 data-nosnippet>979</a>    <span class="string">"\\hphantom{}"</span>,
+<a href=#980 id=980 data-nosnippet>980</a>    <span class="string">"?#isMath(&lt;ltx:XMHint width='#width' name='hphantom'/&gt;)\
+<a href=#981 id=981 data-nosnippet>981</a>      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>,
+<a href=#982 id=982 data-nosnippet>982</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) },
+<a href=#983 id=983 data-nosnippet>983</a>    <span class="comment">// Perl 09fb2e6f: In text mode, wrap argument in restricted_horizontal
+<a href=#984 id=984 data-nosnippet>984</a>    // to prevent display math from leaking through (e.g. quantikz2).
+<a href=#985 id=985 data-nosnippet>985</a>    </span>before_digest =&gt; {
+<a href=#986 id=986 data-nosnippet>986</a>      <span class="kw">if </span>!<span class="macro">LookupBool!</span>(<span class="string">"IN_MATH"</span>) {
+<a href=#987 id=987 data-nosnippet>987</a>        begin_mode(<span class="string">"restricted_horizontal"</span>)<span class="question-mark">?</span>;
+<a href=#988 id=988 data-nosnippet>988</a>        <span class="macro">AssignValue!</span>(<span class="string">"_hphantom_mode_override" </span>=&gt; <span class="bool-val">true</span>);
+<a href=#989 id=989 data-nosnippet>989</a>      } <span class="kw">else </span>{
+<a href=#990 id=990 data-nosnippet>990</a>        <span class="macro">AssignValue!</span>(<span class="string">"_hphantom_mode_override" </span>=&gt; <span class="bool-val">false</span>);
+<a href=#991 id=991 data-nosnippet>991</a>      }
+<a href=#992 id=992 data-nosnippet>992</a>    },
+<a href=#993 id=993 data-nosnippet>993</a>    after_digest =&gt; sub[whatsit] {
+<a href=#994 id=994 data-nosnippet>994</a>      <span class="kw">if </span><span class="macro">LookupBool!</span>(<span class="string">"_hphantom_mode_override"</span>) {
+<a href=#995 id=995 data-nosnippet>995</a>        end_mode(<span class="string">"restricted_horizontal"</span>)<span class="question-mark">?</span>;
+<a href=#996 id=996 data-nosnippet>996</a>      }
+<a href=#997 id=997 data-nosnippet>997</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg_mut(<span class="number">1</span>) {
+<a href=#998 id=998 data-nosnippet>998</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = arg.get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#999 id=999 data-nosnippet>999</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::Dimension(w));
+<a href=#1000 id=1000 data-nosnippet>1000</a>        whatsit.set_property(<span class="string">"height"</span>, Stored::Dimension(h));
+<a href=#1001 id=1001 data-nosnippet>1001</a>        whatsit.set_property(<span class="string">"depth"</span>, Stored::Dimension(d));
+<a href=#1002 id=1002 data-nosnippet>1002</a>      }
+<a href=#1003 id=1003 data-nosnippet>1003</a>    });
+<a href=#1004 id=1004 data-nosnippet>1004</a>
+<a href=#1005 id=1005 data-nosnippet>1005</a>  <span class="macro">DefConstructor!</span>(
+<a href=#1006 id=1006 data-nosnippet>1006</a>    <span class="string">"\\vphantom{}"</span>,
+<a href=#1007 id=1007 data-nosnippet>1007</a>    <span class="string">"?#isMath(&lt;ltx:XMHint height='#height' depth='#depth' name='vphantom'/&gt;)\
+<a href=#1008 id=1008 data-nosnippet>1008</a>      (&lt;ltx:text class='ltx_phantom'&gt;#1&lt;/ltx:text&gt;)"</span>,
+<a href=#1009 id=1009 data-nosnippet>1009</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) },
+<a href=#1010 id=1010 data-nosnippet>1010</a>    after_digest =&gt; sub[whatsit] {
+<a href=#1011 id=1011 data-nosnippet>1011</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg_mut(<span class="number">1</span>) {
+<a href=#1012 id=1012 data-nosnippet>1012</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = arg.get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1013 id=1013 data-nosnippet>1013</a>        whatsit.set_property(<span class="string">"width"</span>, Stored::Dimension(w));
+<a href=#1014 id=1014 data-nosnippet>1014</a>        whatsit.set_property(<span class="string">"height"</span>, Stored::Dimension(h));
+<a href=#1015 id=1015 data-nosnippet>1015</a>        whatsit.set_property(<span class="string">"depth"</span>, Stored::Dimension(d));
+<a href=#1016 id=1016 data-nosnippet>1016</a>      }
+<a href=#1017 id=1017 data-nosnippet>1017</a>    });
+<a href=#1018 id=1018 data-nosnippet>1018</a>
+<a href=#1019 id=1019 data-nosnippet>1019</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\mathstrut"</span>, <span class="string">"?#isMath(&lt;ltx:XMHint name='mathstrut'/&gt;)()"</span>,
+<a href=#1020 id=1020 data-nosnippet>1020</a>    properties =&gt; { <span class="macro">stored_map!</span>(<span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>) });
+<a href=#1021 id=1021 data-nosnippet>1021</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\smash{}"</span>, <span class="string">"#1"</span>); <span class="comment">// well, what?
+<a href=#1022 id=1022 data-nosnippet>1022</a>
+<a href=#1023 id=1023 data-nosnippet>1023</a>  //======================================================================
+<a href=#1024 id=1024 data-nosnippet>1024</a>  // TeX Book, Appendix B. p. 361
+<a href=#1025 id=1025 data-nosnippet>1025</a>
+<a href=#1026 id=1026 data-nosnippet>1026</a>  // This is actually LaTeX's definition, but let's just do it this way.
+<a href=#1027 id=1027 data-nosnippet>1027</a>  // Locked to prevent raw plain-TeX/amstex overrides that expand via
+<a href=#1028 id=1028 data-nosnippet>1028</a>  // the \radical primitive (undefined in LaTeXML) — arxiv 1012.3836
+<a href=#1029 id=1029 data-nosnippet>1029</a>  // uses amstex's `\def\sqrt#1{\radical"270370 {#1}}`.
+<a href=#1030 id=1030 data-nosnippet>1030</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#1031 id=1031 data-nosnippet>1031</a>    <span class="string">"\\sqrt OptionalInScriptStyle Digested"</span>,
+<a href=#1032 id=1032 data-nosnippet>1032</a>    <span class="string">"?#1(&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='nth-root'/&gt;\
+<a href=#1033 id=1033 data-nosnippet>1033</a>    &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)\
+<a href=#1034 id=1034 data-nosnippet>1034</a>    (&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='square-root'/&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)"</span>,
+<a href=#1035 id=1035 data-nosnippet>1035</a>    locked =&gt; <span class="bool-val">true
+<a href=#1036 id=1036 data-nosnippet>1036</a>  </span>);
+<a href=#1037 id=1037 data-nosnippet>1037</a>
+<a href=#1038 id=1038 data-nosnippet>1038</a>  <span class="macro">DefParameterType!</span>(ScriptStyleUntil, sub[_inner,until] {
+<a href=#1039 id=1039 data-nosnippet>1039</a>    gullet::read_until(<span class="kw-2">&amp;</span>until[<span class="number">0</span>]) },
+<a href=#1040 id=1040 data-nosnippet>1040</a>  before_digest =&gt; {
+<a href=#1041 id=1041 data-nosnippet>1041</a>    bgroup();
+<a href=#1042 id=1042 data-nosnippet>1042</a>    <span class="macro">MergeFont!</span>(mathstyle =&gt; <span class="string">"script"</span>);
+<a href=#1043 id=1043 data-nosnippet>1043</a>  },
+<a href=#1044 id=1044 data-nosnippet>1044</a>  after_digest =&gt; {
+<a href=#1045 id=1045 data-nosnippet>1045</a>    egroup()<span class="question-mark">?</span>; },
+<a href=#1046 id=1046 data-nosnippet>1046</a>  reversion =&gt; sub[args,_inner,_extra] {
+<a href=#1047 id=1047 data-nosnippet>1047</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(args).revert(), <span class="macro">T_END!</span>())) });
+<a href=#1048 id=1048 data-nosnippet>1048</a>
+<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\root ScriptStyleUntil:\\of {}"</span>,
+<a href=#1050 id=1050 data-nosnippet>1050</a>    <span class="string">"&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning='nth-root'/&gt;\
+<a href=#1051 id=1051 data-nosnippet>1051</a>      &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
+<a href=#1052 id=1052 data-nosnippet>1052</a>      &lt;/ltx:XMApp&gt;"</span>,
+<a href=#1053 id=1053 data-nosnippet>1053</a>    reversion =&gt; <span class="string">"\\root #1 \\of {#2}"</span>);
+<a href=#1054 id=1054 data-nosnippet>1054</a>
+<a href=#1055 id=1055 data-nosnippet>1055</a>  <span class="comment">//----------------------------------------------------------------------
+<a href=#1056 id=1056 data-nosnippet>1056</a>  // LaTeX; Table 3.9. Log-like Functions, p.44.
+<a href=#1057 id=1057 data-nosnippet>1057</a>  //----------------------------------------------------------------------
+<a href=#1058 id=1058 data-nosnippet>1058</a>  // NOTE: Classifying some as TRIGFUNCTION might clarify 'pi' ambiguities ?
+<a href=#1059 id=1059 data-nosnippet>1059</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\arccos"</span>, <span class="prelude-val">None</span>, <span class="string">"arccos"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"inverse-cosine"</span>);
+<a href=#1060 id=1060 data-nosnippet>1060</a>  <span class="macro">DefMath!</span>(<span class="string">"\\arcsin"</span>, <span class="prelude-val">None</span>, <span class="string">"arcsin"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"inverse-sine"</span>);
+<a href=#1061 id=1061 data-nosnippet>1061</a>  <span class="macro">DefMath!</span>(<span class="string">"\\arctan"</span>, <span class="prelude-val">None</span>, <span class="string">"arctan"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"inverse-tangent"</span>);
+<a href=#1062 id=1062 data-nosnippet>1062</a>  <span class="macro">DefMath!</span>(<span class="string">"\\arg"</span>,    <span class="prelude-val">None</span>, <span class="string">"arg"</span>,    role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"argument"</span>);
+<a href=#1063 id=1063 data-nosnippet>1063</a>
+<a href=#1064 id=1064 data-nosnippet>1064</a>  <span class="macro">DefMath!</span>(<span class="string">"\\cos"</span>,  <span class="prelude-val">None</span>, <span class="string">"cos"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"cosine"</span>);
+<a href=#1065 id=1065 data-nosnippet>1065</a>  <span class="macro">DefMath!</span>(<span class="string">"\\cosh"</span>, <span class="prelude-val">None</span>, <span class="string">"cosh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-cosine"</span>);
+<a href=#1066 id=1066 data-nosnippet>1066</a>  <span class="macro">DefMath!</span>(<span class="string">"\\cot"</span>,  <span class="prelude-val">None</span>, <span class="string">"cot"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"cotangent"</span>);
+<a href=#1067 id=1067 data-nosnippet>1067</a>  <span class="macro">DefMath!</span>(<span class="string">"\\coth"</span>, <span class="prelude-val">None</span>, <span class="string">"coth"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-cotangent"</span>);
+<a href=#1068 id=1068 data-nosnippet>1068</a>
+<a href=#1069 id=1069 data-nosnippet>1069</a>  <span class="macro">DefMath!</span>(<span class="string">"\\csc"</span>, <span class="prelude-val">None</span>, <span class="string">"csc"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"cosecant"</span>);
+<a href=#1070 id=1070 data-nosnippet>1070</a>  <span class="macro">DefMath!</span>(<span class="string">"\\deg"</span>, <span class="prelude-val">None</span>, <span class="string">"deg"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>,   meaning =&gt; <span class="string">"degree"</span>);
+<a href=#1071 id=1071 data-nosnippet>1071</a>  <span class="macro">DefMath!</span>(<span class="string">"\\det"</span>, <span class="prelude-val">None</span>, <span class="string">"det"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"determinant"</span>,
+<a href=#1072 id=1072 data-nosnippet>1072</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1073 id=1073 data-nosnippet>1073</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dim"</span>, <span class="prelude-val">None</span>, <span class="string">"dim"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"dimension"</span>);
+<a href=#1074 id=1074 data-nosnippet>1074</a>
+<a href=#1075 id=1075 data-nosnippet>1075</a>  <span class="macro">DefMath!</span>(<span class="string">"\\exp"</span>, <span class="prelude-val">None</span>, <span class="string">"exp"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"exponential"</span>);
+<a href=#1076 id=1076 data-nosnippet>1076</a>  <span class="macro">DefMath!</span>(<span class="string">"\\gcd"</span>, <span class="prelude-val">None</span>, <span class="string">"gcd"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"gcd"</span>,
+<a href=#1077 id=1077 data-nosnippet>1077</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1078 id=1078 data-nosnippet>1078</a>  <span class="macro">DefMath!</span>(<span class="string">"\\hom"</span>, <span class="prelude-val">None</span>, <span class="string">"hom"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>);
+<a href=#1079 id=1079 data-nosnippet>1079</a>  <span class="macro">DefMath!</span>(<span class="string">"\\inf"</span>, <span class="prelude-val">None</span>, <span class="string">"inf"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"infimum"</span>,
+<a href=#1080 id=1080 data-nosnippet>1080</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1081 id=1081 data-nosnippet>1081</a>
+<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ker"</span>, <span class="prelude-val">None</span>, <span class="string">"ker"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"kernel"</span>);
+<a href=#1083 id=1083 data-nosnippet>1083</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lg"</span>, <span class="prelude-val">None</span>, <span class="string">"lg"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>);
+<a href=#1084 id=1084 data-nosnippet>1084</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lim"</span>, <span class="prelude-val">None</span>, <span class="string">"lim"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit"</span>,
 <a href=#1085 id=1085 data-nosnippet>1085</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1086 id=1086 data-nosnippet>1086</a>  <span class="macro">DefMath!</span>(<span class="string">"\\limsup"</span>, <span class="prelude-val">None</span>, <span class="string">"lim sup"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit-supremum"</span>,
+<a href=#1086 id=1086 data-nosnippet>1086</a>  <span class="macro">DefMath!</span>(<span class="string">"\\liminf"</span>, <span class="prelude-val">None</span>, <span class="string">"lim inf"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit-infimum"</span>,
 <a href=#1087 id=1087 data-nosnippet>1087</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1088 id=1088 data-nosnippet>1088</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ln"</span>,  <span class="prelude-val">None</span>, <span class="string">"ln"</span>,  role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"natural-logarithm"</span>);
-<a href=#1089 id=1089 data-nosnippet>1089</a>  <span class="macro">DefMath!</span>(<span class="string">"\\log"</span>, <span class="prelude-val">None</span>, <span class="string">"log"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"logarithm"</span>);
-<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="macro">DefMath!</span>(<span class="string">"\\max"</span>, <span class="prelude-val">None</span>, <span class="string">"max"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"maximum"</span>,
-<a href=#1091 id=1091 data-nosnippet>1091</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1092 id=1092 data-nosnippet>1092</a>  <span class="macro">DefMath!</span>(<span class="string">"\\min"</span>, <span class="prelude-val">None</span>, <span class="string">"min"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"minimum"</span>,
+<a href=#1088 id=1088 data-nosnippet>1088</a>  <span class="macro">DefMath!</span>(<span class="string">"\\limsup"</span>, <span class="prelude-val">None</span>, <span class="string">"lim sup"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"limit-supremum"</span>,
+<a href=#1089 id=1089 data-nosnippet>1089</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ln"</span>,  <span class="prelude-val">None</span>, <span class="string">"ln"</span>,  role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"natural-logarithm"</span>);
+<a href=#1091 id=1091 data-nosnippet>1091</a>  <span class="macro">DefMath!</span>(<span class="string">"\\log"</span>, <span class="prelude-val">None</span>, <span class="string">"log"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"logarithm"</span>);
+<a href=#1092 id=1092 data-nosnippet>1092</a>  <span class="macro">DefMath!</span>(<span class="string">"\\max"</span>, <span class="prelude-val">None</span>, <span class="string">"max"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"maximum"</span>,
 <a href=#1093 id=1093 data-nosnippet>1093</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Pr"</span>,  <span class="prelude-val">None</span>, <span class="string">"Pr"</span>,  role =&gt; <span class="string">"OPFUNCTION"</span>,
+<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="macro">DefMath!</span>(<span class="string">"\\min"</span>, <span class="prelude-val">None</span>, <span class="string">"min"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"minimum"</span>,
 <a href=#1095 id=1095 data-nosnippet>1095</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1096 id=1096 data-nosnippet>1096</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sec"</span>, <span class="prelude-val">None</span>, <span class="string">"sec"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning   =&gt; <span class="string">"secant"</span>);
-<a href=#1097 id=1097 data-nosnippet>1097</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sin"</span>, <span class="prelude-val">None</span>, <span class="string">"sin"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning   =&gt; <span class="string">"sine"</span>);
-<a href=#1098 id=1098 data-nosnippet>1098</a>
-<a href=#1099 id=1099 data-nosnippet>1099</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sinh"</span>, <span class="prelude-val">None</span>, <span class="string">"sinh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-sine"</span>);
-<a href=#1100 id=1100 data-nosnippet>1100</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sup"</span>, <span class="prelude-val">None</span>, <span class="string">"sup"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"supremum"</span>,
-<a href=#1101 id=1101 data-nosnippet>1101</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1102 id=1102 data-nosnippet>1102</a>  <span class="macro">DefMath!</span>(<span class="string">"\\tan"</span>,  <span class="prelude-val">None</span>, <span class="string">"tan"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"tangent"</span>);
-<a href=#1103 id=1103 data-nosnippet>1103</a>  <span class="macro">DefMath!</span>(<span class="string">"\\tanh"</span>, <span class="prelude-val">None</span>, <span class="string">"tanh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-tangent"</span>);
-<a href=#1104 id=1104 data-nosnippet>1104</a>
-<a href=#1105 id=1105 data-nosnippet>1105</a>  <span class="comment">//----------------------------------------------------------------------
-<a href=#1106 id=1106 data-nosnippet>1106</a>  // Modulo
-<a href=#1107 id=1107 data-nosnippet>1107</a>
-<a href=#1108 id=1108 data-nosnippet>1108</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\pmod{}"</span>, <span class="string">r"\;\;(\mathop{{\rm mod}} #1)"</span>, role =&gt; <span class="string">"MODIFIER"</span>); <span class="comment">//  , meaning=&gt;"modulo");
-<a href=#1109 id=1109 data-nosnippet>1109</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\bmod"</span>, <span class="string">"mod"</span>, role =&gt; <span class="string">"MODIFIEROP"</span>, meaning =&gt; <span class="string">"modulo"</span>);
-<a href=#1110 id=1110 data-nosnippet>1110</a>
-<a href=#1111 id=1111 data-nosnippet>1111</a>  <span class="comment">//======================================================================
-<a href=#1112 id=1112 data-nosnippet>1112</a>  // \choose &amp; friends — Perl: math_common.pool.ltxml L634-642
-<a href=#1113 id=1113 data-nosnippet>1113</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\choose"</span>,
-<a href=#1114 id=1114 data-nosnippet>1114</a>    <span class="string">"\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left=\\lx@left(,right=\\lx@right)}"</span>);
-<a href=#1115 id=1115 data-nosnippet>1115</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\brace"</span>,
-<a href=#1116 id=1116 data-nosnippet>1116</a>    <span class="string">"\\lx@generalized@over{\\brace}{thickness=0pt,left=\\lx@left\\{,right=\\lx@right\\}}"</span>);
-<a href=#1117 id=1117 data-nosnippet>1117</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\brack"</span>,
-<a href=#1118 id=1118 data-nosnippet>1118</a>    <span class="string">"\\lx@generalized@over{\\brack}{thickness=0pt,left=\\lx@left[,right=\\lx@right]}"</span>);
-<a href=#1119 id=1119 data-nosnippet>1119</a>});
+<a href=#1096 id=1096 data-nosnippet>1096</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Pr"</span>,  <span class="prelude-val">None</span>, <span class="string">"Pr"</span>,  role =&gt; <span class="string">"OPFUNCTION"</span>,
+<a href=#1097 id=1097 data-nosnippet>1097</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1098 id=1098 data-nosnippet>1098</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sec"</span>, <span class="prelude-val">None</span>, <span class="string">"sec"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning   =&gt; <span class="string">"secant"</span>);
+<a href=#1099 id=1099 data-nosnippet>1099</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sin"</span>, <span class="prelude-val">None</span>, <span class="string">"sin"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning   =&gt; <span class="string">"sine"</span>);
+<a href=#1100 id=1100 data-nosnippet>1100</a>
+<a href=#1101 id=1101 data-nosnippet>1101</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sinh"</span>, <span class="prelude-val">None</span>, <span class="string">"sinh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-sine"</span>);
+<a href=#1102 id=1102 data-nosnippet>1102</a>  <span class="macro">DefMath!</span>(<span class="string">"\\sup"</span>, <span class="prelude-val">None</span>, <span class="string">"sup"</span>, role =&gt; <span class="string">"LIMITOP"</span>, meaning =&gt; <span class="string">"supremum"</span>,
+<a href=#1103 id=1103 data-nosnippet>1103</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1104 id=1104 data-nosnippet>1104</a>  <span class="macro">DefMath!</span>(<span class="string">"\\tan"</span>,  <span class="prelude-val">None</span>, <span class="string">"tan"</span>,  role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"tangent"</span>);
+<a href=#1105 id=1105 data-nosnippet>1105</a>  <span class="macro">DefMath!</span>(<span class="string">"\\tanh"</span>, <span class="prelude-val">None</span>, <span class="string">"tanh"</span>, role =&gt; <span class="string">"TRIGFUNCTION"</span>, meaning =&gt; <span class="string">"hyperbolic-tangent"</span>);
+<a href=#1106 id=1106 data-nosnippet>1106</a>
+<a href=#1107 id=1107 data-nosnippet>1107</a>  <span class="comment">//----------------------------------------------------------------------
+<a href=#1108 id=1108 data-nosnippet>1108</a>  // Modulo
+<a href=#1109 id=1109 data-nosnippet>1109</a>
+<a href=#1110 id=1110 data-nosnippet>1110</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\pmod{}"</span>, <span class="string">r"\;\;(\mathop{{\rm mod}} #1)"</span>, role =&gt; <span class="string">"MODIFIER"</span>); <span class="comment">//  , meaning=&gt;"modulo");
+<a href=#1111 id=1111 data-nosnippet>1111</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\bmod"</span>, <span class="string">"mod"</span>, role =&gt; <span class="string">"MODIFIEROP"</span>, meaning =&gt; <span class="string">"modulo"</span>);
+<a href=#1112 id=1112 data-nosnippet>1112</a>
+<a href=#1113 id=1113 data-nosnippet>1113</a>  <span class="comment">//======================================================================
+<a href=#1114 id=1114 data-nosnippet>1114</a>  // \choose &amp; friends — Perl: math_common.pool.ltxml L634-642
+<a href=#1115 id=1115 data-nosnippet>1115</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\choose"</span>,
+<a href=#1116 id=1116 data-nosnippet>1116</a>    <span class="string">"\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left=\\lx@left(,right=\\lx@right)}"</span>);
+<a href=#1117 id=1117 data-nosnippet>1117</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\brace"</span>,
+<a href=#1118 id=1118 data-nosnippet>1118</a>    <span class="string">"\\lx@generalized@over{\\brace}{thickness=0pt,left=\\lx@left\\{,right=\\lx@right\\}}"</span>);
+<a href=#1119 id=1119 data-nosnippet>1119</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\brack"</span>,
+<a href=#1120 id=1120 data-nosnippet>1120</a>    <span class="string">"\\lx@generalized@over{\\brack}{thickness=0pt,left=\\lx@left[,right=\\lx@right]}"</span>);
+<a href=#1121 id=1121 data-nosnippet>1121</a>});
 </code></pre></div></section></main></body></html>

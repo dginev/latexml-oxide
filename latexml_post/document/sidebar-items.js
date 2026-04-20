@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["LTX_NSURI"],"enum":["Conjunction","NodeData"],"fn":["element_children","get_xml_id"],"struct":["PostDocument","PostDocumentOptions"]};
+window.SIDEBAR_ITEMS = {"constant":["LTX_NSURI"],"enum":["Conjunction","NodeData"],"fn":["element_children","element_children_iter","get_xml_id"],"struct":["PostDocument","PostDocumentOptions"]};
