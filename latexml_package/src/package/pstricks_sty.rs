@@ -6,6 +6,11 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("xcolor");
+  // Perl pstricks.sty.ltxml L44: `RequirePackage('pstricks_support')`.
+  // pstricks_support defines color-CS shorthands (`\blue`, `\red`, …)
+  // that PSTricks-using papers (e.g. arxiv 1107.3732) reference inside
+  // `\tikzpicture{\node{\blue{…}}}`. Without it those CSes are undefined.
+  RequirePackage!("pstricks_support");
 
   // Core PSTricks parameter setting
   DefMacro!("\\psset{}", "");

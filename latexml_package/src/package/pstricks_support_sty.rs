@@ -68,4 +68,21 @@ LoadDefinitions!({
   DefMacro!("\\pst@getangle{}", "");
   DefMacro!("\\pst@number{}", "");
   DefMacro!("\\pst@coor", "");
+
+  // Perl pstricks_support.sty.ltxml L1042-1055: color shorthands. pstricks
+  // re-binds these CSes (usually provided by color.sty / xcolor.sty as the
+  // named colors) so that `\blue`, `\red`, etc. in figure/node text resolve
+  // to a `\color{…}` call. Arxiv 1107.3732 uses `\node[…]{\blue{\small …}}`
+  // inside `\tikzpicture`; without these, `\blue` is undefined and errors.
+  DefMacro!("\\black", "\\color{black}");
+  DefMacro!("\\darkgray", "\\color{darkgray}");
+  DefMacro!("\\gray", "\\color{gray}");
+  DefMacro!("\\lightgray", "\\color{lightgray}");
+  DefMacro!("\\white", "\\color{white}");
+  DefMacro!("\\blue", "\\color{blue}");
+  DefMacro!("\\red", "\\color{red}");
+  DefMacro!("\\green", "\\color{green}");
+  DefMacro!("\\yellow", "\\color{yellow}");
+  DefMacro!("\\magenta", "\\color{magenta}");
+  DefMacro!("\\cyan", "\\color{cyan}");
 });
