@@ -313,6 +313,14 @@ Outstanding:
 - [ ] Investigate shared read-only engine state across processes (mmap dump).
 - [ ] Long-running daemon / process pool to amortize 570 MB startup.
 - [ ] Fork-based parallelism for CoW memory sharing.
+- [~] `lookup_value(key)` → `with_value(key, |v| …)` closure refactor
+  (248 sites). Session 123 did: `mathchar.rs` (8 sites), the
+  `pin_char` ASCII cache, and `defined_as` (session 116). Pattern:
+  `Option<Stored>` allocates the enum envelope when all you need is a
+  Copy variant (Token, Int, Bool) or an Rc bump (Font, Tokens). Saves
+  a Stored::clone per call. Remaining sites: `state.rs` (17),
+  `binding/content.rs` (5), `keyval.rs` (4, but tricky — they return
+  Option<Stored> APIs), `binding/counter/dialect.rs` (3).
 
 **Callgrind (session 105, 0707.1173 math-heavy paper):** Math parser
 Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute`
