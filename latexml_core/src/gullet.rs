@@ -1468,9 +1468,15 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
       let cc = token.get_catcode();
       let mut text = token.to_string();
       if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
-        // Read decimal literal
+        // Read decimal literal. Overflow is rare but possible on weird
+        // input (digit runs wider than i64::MAX); Perl's TeX silently
+        // truncates such values, so we fall back to i64::MAX / MIN on
+        // parse failure rather than panicking with .expect().
         text.push_str(&read_digits(&DIGIT_RE, true)?);
-        Ok(Some(Number::new(text.parse::<i64>().expect(&text))))
+        let n = text.parse::<i64>().unwrap_or_else(|_| {
+          if text.starts_with('-') { i64::MIN } else { i64::MAX }
+        });
+        Ok(Some(Number::new(n)))
       } else if token == T_OTHER!("'") {
         // Read Octal literal
         let decimal = i64::from_str_radix(&read_digits(&OCT_RE, true)?, 8)?;
@@ -1519,7 +1525,10 @@ pub fn read_float() -> Result<Float> {
         unread_one(t);
       }
     }
-    Some(string.parse::<f64>().expect(&string))
+    // Same rationale as read_normal_integer above: malformed float
+    // literals (e.g. very long digit runs, "1e" without exponent)
+    // should degrade to 0.0 rather than panic.
+    Some(string.parse::<f64>().unwrap_or(0.0))
   } else {
     if let Some(t) = token {
       unread_one(t); // Unread

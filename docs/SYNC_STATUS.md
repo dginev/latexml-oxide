@@ -9,10 +9,11 @@ lives in git log and `memory/project_session_history.md`.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
-**10k sandbox:** session-127 **500-paper random sweep: 496/500 =
-99.2% OK** (up from session-126 88.4%). All 4 failures are perf
-(3 × 90s timeout, 1 × OOM-kill); **0 SIGSEGV, 0 panic, 0
-correctness regressions**. Runner: `tools/benchmark_10k.sh`; tool:
+**10k sandbox:** session-127 **1000-paper random sweep: 999/1000 =
+99.8% OK** (up from session-126 88.4%). Only 1 failure (1106.1389,
+digestion-phase 92s wall-clock timeout); **0 SIGSEGV, 0 panic, 0
+correctness regressions**. Previously-measured 500-paper subset was
+496/500 = 99.2%. Runner: `tools/benchmark_10k.sh`; tool:
 `cortex_worker --standalone --timeout 90`.
 
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
