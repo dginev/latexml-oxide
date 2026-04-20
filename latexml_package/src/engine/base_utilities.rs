@@ -388,28 +388,42 @@ LoadDefinitions!({
 
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[(ttype)] {
-    let mut tags = Vec::new();
-    if let Some(Stored::HashStored(formatters)) =
-      lookup_value("type_tag_formatter") {
-      let keys_sym : Vec<_> = formatters.keys().copied().collect();
-      let mut sorted_keys : Vec<String> = arena::with_many(&keys_sym, |keys| {
-        keys.into_iter().map(str::to_owned).collect()
-      });
-      sorted_keys.sort();
-      for role in sorted_keys.iter() {
-        let formatter_opt = match formatters.get(role) {
-          Some(Stored::Token(t)) => Some(*t),
-          Some(Stored::String(sym)) => Some(Token { text: *sym, code: Catcode::CS }),
-          _ => None
-        };
-        if let Some(formatter_token) = formatter_opt {
-          tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
-            vec![
-              Tokens!(T_OTHER!(role)),
-              build_invocation(formatter_token, vec![Some(ttype.clone())])?
-            ])
-          );
+    // Pull the (role -> formatter) pairs out of HashStored via with_value
+    // so we don't clone the whole hashmap envelope; the per-role tokens
+    // are Copy and the per-role String arm just dereferences a SymStr.
+    let role_formatters: Vec<(String, Option<Token>)> = state::with_value(
+      "type_tag_formatter",
+      |v| match v {
+        Some(Stored::HashStored(formatters)) => {
+          let keys_sym: Vec<_> = formatters.keys().copied().collect();
+          let mut sorted_keys: Vec<String> = arena::with_many(&keys_sym, |keys| {
+            keys.into_iter().map(str::to_owned).collect()
+          });
+          sorted_keys.sort();
+          sorted_keys
+            .into_iter()
+            .map(|role| {
+              let ft = match formatters.get(&role) {
+                Some(Stored::Token(t)) => Some(*t),
+                Some(Stored::String(sym)) => Some(Token { text: *sym, code: Catcode::CS }),
+                _ => None,
+              };
+              (role, ft)
+            })
+            .collect()
         }
+        _ => Vec::new(),
+      },
+    );
+    let mut tags = Vec::new();
+    for (role, formatter_opt) in role_formatters {
+      if let Some(formatter_token) = formatter_opt {
+        tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
+          vec![
+            Tokens!(T_OTHER!(role.as_str())),
+            build_invocation(formatter_token, vec![Some(ttype.clone())])?
+          ])
+        );
       }
     }
 
