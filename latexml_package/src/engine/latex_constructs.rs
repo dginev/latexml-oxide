@@ -408,12 +408,17 @@ fn setup_aligning_context(doc: &mut Document) {
 }
 /// Perl: applyAligningContext — applies align/class to children added AFTER \centering.
 fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> Result<()> {
-  let node_opt = state::lookup_value("ALIGNING_NODE");
-  if let Some(Stored::Node(node)) = node_opt {
-    let previous_opt = match state::lookup_value("ALIGNING_PREV_CHILD") {
-      Some(Stored::Node(prev)) => Some(prev),
+  // with_value avoids two Stored envelope clones; Node is Rc-backed so we
+  // still pay a Rc::clone inside the closure but skip the enum match work.
+  let node_opt = state::with_value("ALIGNING_NODE", |v| match v {
+    Some(Stored::Node(node)) => Some(node.clone()),
+    _ => None,
+  });
+  if let Some(node) = node_opt {
+    let previous_opt = state::with_value("ALIGNING_PREV_CHILD", |v| match v {
+      Some(Stored::Node(prev)) => Some(prev.clone()),
       _ => None,
-    };
+    });
     let children = node.get_child_nodes();
     let mut past_previous = previous_opt.is_none(); // if no previous, apply to all
     for mut child in children {
