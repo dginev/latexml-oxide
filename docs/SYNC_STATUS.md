@@ -179,6 +179,24 @@ per-paper Perl-parity investigation using `wisdom_upstream_error_attribution`.
 Only 2 systemic aborts remain outside conversion_error (xy-pic OOM:
 0710.1208, 1004.3503).
 
+**Minimal repro (bisected session 124):**
+
+```latex
+\documentclass{article}
+\usepackage[all]{xy}
+\begin{document}
+$$\xymatrix{ A \ar@/^5ex/@{-->}[r] & B }$$
+\end{document}
+```
+
+Exactly the pair `@/curve/` + `@{style}` OOMs (21GB / 19s kill).
+`@/curve/` alone → 0.18s OK, `@{style}` alone → 0.17s OK,
+`@/curve/` + `@<offset>` → 0.19s OK. So the interaction is curve-shape + dash-style only.
+
+Key diagnostic from `--timeout=5` run (before kill): **one `Warn:expected:<number>` for `\ifcase` with `next token is Some("}")`** arrives just as `<xymatrix 2x1` is opened, then memory explodes to 6.8GB in ~3s. The pin-sentinel (50M) does not fire → growth is NOT arena; not pushback (previously ruled out); not per-digested token (`--token-limit=2000000` no effect). Growth is likely in a runaway macro body / Tokens storage.
+
+Perl handles the same input in 2.9s / 330MB. So some xy `\ifcase` branch falls through to a zero-case loop under Rust-only conditions; `xyarc.tex` has 4 `\ifcase` sites and is the next place to bisect (look at ones reached under curve-style interaction).
+
 **Papers removed from worklist** — Perl also emits errors under
 `--preload=ar5iv.sty --path=/home/deyan/git/ar5iv-bindings/bindings`
 (the apples-to-apples comparison profile cortex_worker uses), so we
