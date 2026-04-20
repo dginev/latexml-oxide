@@ -755,26 +755,16 @@ pub fn def_math_constructor(
           Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
           _ => None,
         };
-        // In-math-context ancestry walk — mirrors `tbox.rs::be_absorbed`
-        // (Perl's `?#isMath` template conditional resolves at construction
-        // time against the current document insertion context).
-        let in_math_context = {
-          let mut node = document.node.clone();
-          let mut found = false;
-          loop {
-            let qname = crate::document::get_node_qname(&node);
-            if crate::common::arena::with(qname, |n| n.contains("XM") || n.contains("Math")) {
-              found = true;
-              break;
-            }
-            match node.get_parent() {
-              Some(parent) => node = parent,
-              None => break,
-            }
-          }
-          found
-        };
-        if !in_math_context && presentation_is_trivial {
+        // Perl's `?#isMath(…)` conditional compiles to `ToString($prop{'isMath'})`
+        // (Constructor/Compiler.pm parse_conditional L164-173 + L197: `#prop` →
+        // `$prop{'prop'}`). That property is set on the Whatsit at digestion
+        // time from the stomach's math-mode flag (Constructor.pm L108). So the
+        // check here is on the *Whatsit's* isMath, not document-ancestry — an
+        // `\hbox{\rightarrowfill}` inside `\mathop{…}` digests the XMTok with
+        // isMath=false (hbox switched stomach to text mode), even though the
+        // document insertion point is nested under <ltx:Math>.
+        let is_math = matches!(props.get("isMath"), Some(Stored::Bool(true)));
+        if !is_math && presentation_is_trivial {
           // Perl `?#isMath(…)(plain)` text branch — just emit the char.
           document.absorb_string(&presentation_for_replacement, props)?;
           return Ok(());
