@@ -333,8 +333,17 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         }
       },
       XM::Lexeme(lex, _) => {
-        // If arg is already XML, it's too late to get automatic ID's
-        let node = lookup_lex_node(lex, nodes).expect("lexemes should only have valid ids.");
+        // If arg is already XML, it's too late to get automatic ID's.
+        // lookup_lex_node now returns Err for malformed lex strings instead
+        // of panicking; skip the arg on failure rather than abort the whole
+        // ref-building pass.
+        let node = match lookup_lex_node(lex, nodes) {
+          Ok(n) => n,
+          Err(e) => {
+            log::warn!("create_xmrefs: skipping lexeme with invalid node lookup: {e}");
+            continue;
+          }
+        };
 
         match node.get_attribute("xml:id") {
           //  already has id, so refer to it.
