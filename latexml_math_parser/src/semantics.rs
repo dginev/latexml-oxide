@@ -2583,11 +2583,13 @@ fn morph_vertbar(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
 /// is used as the left operand of invisible times with a delimited right side,
 /// mark the token with possibleFunction="yes".
 fn maybe_mark_possible_function(left: &mut Option<XM>, right: &Option<XM>, nodes: &[XMLNode]) {
-  // Only active when MATHPARSER_SPECULATE is set
-  if !matches!(
-    latexml_core::state::lookup_value("MATHPARSER_SPECULATE"),
-    Some(latexml_core::state::Stored::Bool(true))
-  ) {
+  // Only active when MATHPARSER_SPECULATE is set. Use with_value to
+  // avoid cloning the Stored envelope on every invisible-times probe
+  // (runs per token in the math parser).
+  let speculate = latexml_core::state::with_value("MATHPARSER_SPECULATE", |v| {
+    matches!(v, Some(latexml_core::state::Stored::Bool(true)))
+  });
+  if !speculate {
     return;
   }
   // Check if right side contains delimiters (parenthesized group)
