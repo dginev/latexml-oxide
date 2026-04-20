@@ -1269,7 +1269,22 @@ fn parse_scriptpos_str(sp: &str) -> (&str, u32) {
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pub fn text_form(node: &Node, document: &Document) -> String { textrec(node, None, None, document) }
+pub fn text_form(node: &Node, document: &Document) -> String {
+  // Reset depth guard for each top-level invocation (text_form is the
+  // single public entry point).
+  TEXTREC_DEPTH.with(|d| d.set(0));
+  textrec(node, None, None, document)
+}
+
+// Depth guard for textrec / textrec_apply recursion. Malformed XM trees
+// (e.g. an XMRef chain that loops back through an XMApp) can otherwise
+// exhaust the thread stack — observed on arxiv 1407.5769. 256 is well
+// above any legitimate math-tree nesting but shallow enough to abort
+// fast when the loop starts.
+const TEXTREC_MAX_DEPTH: u32 = 256;
+thread_local! {
+  static TEXTREC_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
 
 // ================================================================================
 // Some more XML utilities, but math specific (?)
@@ -1297,6 +1312,28 @@ fn textrec(
   outer_name_opt: Option<&str>,
   document: &Document,
 ) -> String {
+  // Depth guard — see TEXTREC_MAX_DEPTH comment. Increment + defer a
+  // decrement so early returns still balance.
+  let entered = TEXTREC_DEPTH.with(|d| {
+    let v = d.get();
+    if v >= TEXTREC_MAX_DEPTH {
+      false
+    } else {
+      d.set(v + 1);
+      true
+    }
+  });
+  if !entered {
+    return String::new();
+  }
+  struct _Dec;
+  impl Drop for _Dec {
+    fn drop(&mut self) {
+      TEXTREC_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+    }
+  }
+  let _dec = _Dec;
+
   let node = realize_xmnode(node_opt, document);
   let tag = get_node_qname(&node);
   let outer_bp = outer_bp_opt.unwrap_or(0);
