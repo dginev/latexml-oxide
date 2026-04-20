@@ -47,8 +47,10 @@ LoadDefinitions!({
   // \readline; like \read, but only spaces & other
   DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
     let file_key = format!("input_file:{port}");
-    let mouth_opt = if let Some(Stored::Mouth(mouth)) = lookup_value(&file_key) {
-      Some(mouth) } else { None };
+    let mouth_opt = with_value(&file_key, |v| match v {
+      Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
+      _ => None,
+    });
     if let Some(mouth) = mouth_opt {
       let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
       // DG: Can't we do this \endlinechar check in readRawLine ?!

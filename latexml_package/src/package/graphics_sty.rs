@@ -286,8 +286,8 @@ LoadDefinitions!({
         .and_then(|a| a.as_ref())
         .map(|a| a.to_string())
         .unwrap_or_default();
-      let root = state::lookup_value("SOURCEDIRECTORY")
-        .map(|v| v.to_string()).unwrap_or_default();
+      let root = state::with_value("SOURCEDIRECTORY",
+        |v| v.map(|s| s.to_string()).unwrap_or_default());
       let mut collected: Vec<String> = Vec::new();
       for dir in arg.split('}') {
         let dir = dir.trim_start_matches('{').trim();
