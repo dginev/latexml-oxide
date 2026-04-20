@@ -109,9 +109,13 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
 - [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
   loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
   internals. Likely a babel 3.x port gap.
-- [~] **1404.1913** — "double free or corruption (fasttop)" during
-  Finalizing. libxml2 aliasing-class bug, similar family to the
-  prior `Rc<Node>` `weak_count == 0` cluster.
+- [x] **1404.1913** — FIXED (session 127, same commit as 1212.2052).
+  The "double free or corruption (fasttop)" during Finalizing was
+  another instance of the `Document::replace_node` text-merge UAF:
+  multiple text-node runs fed into `add_next_sibling` left
+  `c0_opt` pointing at libxml2-freed memory, which glibc's malloc
+  eventually caught during teardown. Now converges cleanly
+  (25.5k lines, 0 errors, 2 warnings).
 - [~] **1605.01946 / 1709.05096 / 1805.09247** — watchdog timeouts under
   parallel load, converge cleanly in serial (same pattern as
   1210.4211). System-scheduling interaction, not per-paper.
