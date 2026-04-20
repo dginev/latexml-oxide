@@ -125,10 +125,13 @@ impl Definition for Conditional {
       Else | Or => self.invoke_else(),
       Fi => self.invoke_fi(),
       _ => {
-        let message = s!(
-          "Unknown conditional control sequence {}",
-          get_current_token().unwrap().stringify()
-        );
+        // Diagnostic-only path: format the current CS name, or "\\?" if the
+        // current-token register is empty. Never panic here — we are
+        // already in error-emission territory.
+        let cur = get_current_token()
+          .map(|t| t.stringify())
+          .unwrap_or_else(|| String::from("\\?"));
+        let message = s!("Unknown conditional control sequence {}", cur);
         Error!("unexpected", self.cs, message);
         Ok(Tokens!())
       },
@@ -417,9 +420,12 @@ impl Conditional {
         Ok(Tokens!())
       }
     } else {
+      let cur = get_current_token()
+        .map(|t| t.stringify())
+        .unwrap_or_else(|| String::from("\\?"));
       let message = s!(
         "Didn't expect a {:?} since we seem not to be in a conditional",
-        get_current_token().unwrap().stringify()
+        cur
       );
       Error!("unexpected", "fi", message);
       Ok(Tokens!())

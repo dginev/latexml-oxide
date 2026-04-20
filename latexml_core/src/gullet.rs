@@ -1601,10 +1601,10 @@ pub fn read_dimension() -> Result<Dimension> {
     let d_signed = if is_negative { -d } else { d };
     Ok(Dimension::new(fixpoint(d_signed, Some(unit))))
   } else {
-    let message = s!(
-      "Missing number, treated as zero. while processing {:?}",
-      get_current_token().unwrap()
-    );
+    let cur = get_current_token()
+      .map(|t| format!("{t:?}"))
+      .unwrap_or_else(|| String::from("<none>"));
+    let message = s!("Missing number, treated as zero. while processing {}", cur);
     Warn!("expected", "<number>", message);
     Ok(Dimension::new(0))
   }
