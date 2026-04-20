@@ -124,10 +124,13 @@ pub struct KeyvalConfig<'a> {
 fn register_keyval(qname: &str) {
   use crate::common::arena;
   let registry_key = "KEYVAL@registry";
-  let mut registry: Vec<crate::common::arena::SymStr> = match state::lookup_value(registry_key) {
-    Some(Stored::Strings(v)) => v.to_vec(),
-    _ => Vec::new(),
-  };
+  // Borrow the registry via `with_value` to skip the outer Stored::clone
+  // (lookup_value clones the enum; we only need the inner Vec<SymStr>).
+  let mut registry: Vec<crate::common::arena::SymStr> =
+    state::with_value(registry_key, |v| match v {
+      Some(Stored::Strings(v)) => v.to_vec(),
+      _ => Vec::new(),
+    });
   let sym = arena::pin(qname);
   // avoid duplicates (re-definitions)
   if !registry.contains(&sym) {
@@ -150,10 +153,11 @@ pub struct KeyvalMeta {
 pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
   use crate::common::arena;
   let registry_key = "KEYVAL@registry";
-  let registry = match state::lookup_value(registry_key) {
+  let registry = state::with_value(registry_key, |v| match v {
     Some(Stored::Strings(v)) => v.to_vec(),
-    _ => return Vec::new(),
-  };
+    _ => Vec::new(),
+  });
+  if registry.is_empty() { return Vec::new(); }
   let mut result = Vec::new();
   for sym in registry {
     let qname = arena::to_string(sym);
