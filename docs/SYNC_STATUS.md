@@ -80,14 +80,12 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   `.remove(0)` panicked. Fall back to a bare XMWrap when refs is empty
   — the Dual with an XMRef to nothing would be meaningless anyway.
   Found in D1 2048-sample.
-- [~] **1210.4211** — INTERMITTENT under parallel load. Serial run
-  clean (0.09s). Flaky reproduction under GNU parallel / sandbox
-  stress — error cascade (`\ref / \UG / \If / \caption / \thesubsection`
-  undefined) triggers an unbounded recovery loop. Perl sees the same
-  undefined-CS cascade under the same context (51 errors, 27 undefined
-  macros) and completes in 7.35s. Arena sentinel false-positive removed
-  (session 124); the underlying recovery-loop divergence vs Perl is
-  still open.
+- [x] **1210.4211** — CLEAN in session 127 (0.1s end-to-end,
+  0 errors, 0 warnings under cortex_worker). The intermittent
+  parallel-load recovery-loop divergence no longer reproduces now
+  that the `Document::replace_node` text-merge UAF is fixed; the
+  silent DOM corruption at run-time appears to have been a major
+  contributor to the downstream instability.
 - [x] **1212.2052** — FIXED (session 127). Root cause in
   `Document::replace_node` (document.rs:3574). libxml2's
   `xmlAddNextSibling` merges adjacent text nodes — it appends the new
@@ -116,9 +114,16 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
   `c0_opt` pointing at libxml2-freed memory, which glibc's malloc
   eventually caught during teardown. Now converges cleanly
   (25.5k lines, 0 errors, 2 warnings).
-- [~] **1605.01946 / 1709.05096 / 1805.09247** — watchdog timeouts under
-  parallel load, converge cleanly in serial (same pattern as
-  1210.4211). System-scheduling interaction, not per-paper.
+- [x] **1605.01946** — CLEAN in session 127 (5.4s, 0 errors,
+  0 warnings). Same root cause as 1210.4211: downstream instability
+  disappeared once the replace_node UAF was fixed.
+- [x] **1805.09247** — CLEAN in session 127 (4.6s, 0 errors,
+  0 warnings). Ditto.
+- [~] **1709.05096** — STILL SLOW (>90s wall under parallel load,
+  hits the cortex_worker main-level timeout during digestion — not
+  post-processing). Repeated `Info:undefined:… KV:vattach …` scanning
+  suggests a keyval loop paying per-row cost in a huge tabular.
+  Candidate for D4 perf audit; not a correctness blocker.
 
 **Phase D0 cumulative fixes (session 123-124):**
 
@@ -207,7 +212,11 @@ historical fix needs verification.
        `MathProcessor::convertXMTextContent` — eagerly rebuilds the
        subtree as owned `NodeData`. Cleared 0710.1208, 1110.2158,
        1605.07431.
-  - 2 panic (exit 101) — 1410.8508, 1608.08252. Not yet triaged.
+  - 2 panic (exit 101) — 1410.8508, 1608.08252. Both **cleared in
+    session 127** by the same suite of post-processing fixes that
+    resolved the 8 SIGSEGVs — these were further symptoms of the
+    `Document::replace_node` / lazy-XmlNode libxml aliasing class.
+    Both now converge cleanly: 1410.8508 in 9.1s, 1608.08252 in 1.3s.
 
 **Follow-up task: dump Let-alias preservation** — Perl LaTeXML's dump
 format distinguishes `Lt('\cs','\target')` (Let alias) from `I(E(...))`
