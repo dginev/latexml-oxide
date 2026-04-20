@@ -68,6 +68,43 @@ fn setup_cyrillic() -> Result<()> {
   DefMacro!("\\CYRYA", "\u{042F}");
   DefMacro!("\\CYRYO", "\u{0401}");
 
+  // Stub-define the remaining entries in @uclclist so that document-level
+  // expansion of the uclclist doesn't trip undefined-CS errors. Perl's
+  // LaTeXML processes @uclclist via a token-level scan (MakeUppercase /
+  // MakeLowercase) that doesn't invoke the CSes, so Perl tolerates these
+  // being undefined; Rust's digestion path expands them eagerly. We stub
+  // them as identity-empty so they carry no output but don't error.
+  // These are the T2A/T2B/T2C-extended cyrillic CSes; when the document
+  // doesn't actually use them in text output (the common case for non-
+  // cyrillic papers that nonetheless import babel), the stub is
+  // semantically invisible.
+  for cs in [
+    "cyrabhch", "CYRABHCH", "cyrabhchdsc", "CYRABHCHDSC", "cyrabhdze",
+    "CYRABHDZE", "cyrabhha", "CYRABHHA", "cyrae", "CYRAE", "cyrbyus",
+    "CYRBYUS", "cyrchldsc", "CYRCHLDSC", "cyrchrdsc", "CYRCHRDSC",
+    "cyrchvcrs", "CYRCHVCRS", "cyrdelta", "CYRDELTA", "cyrdje", "CYRDJE",
+    "cyrdze", "CYRDZE", "cyrdzhe", "CYRDZHE", "cyreps", "CYREPS",
+    "cyrfita", "CYRFITA", "cyrgdsc", "CYRGDSC", "cyrgdschcrs",
+    "CYRGDSCHCRS", "cyrghcrs", "CYRGHCRS", "cyrghk", "CYRGHK", "cyrgup",
+    "CYRGUP", "cyrhdsc", "CYRHDSC", "cyrhhcrs", "CYRHHCRS", "cyrhhk",
+    "CYRHHK", "cyrie", "CYRIE", "cyrii", "CYRII", "cyrishrtdsc",
+    "CYRISHRTDSC", "cyrizh", "CYRIZH", "cyrje", "CYRJE", "cyrkbeak",
+    "CYRKBEAK", "cyrkdsc", "CYRKDSC", "cyrkhcrs", "CYRKHCRS", "cyrkhk",
+    "CYRKHK", "cyrkvcrs", "CYRKVCRS", "cyrldsc", "CYRLDSC", "cyrlhk",
+    "CYRLHK", "cyrlje", "CYRLJE", "cyrmdsc", "CYRMDSC", "cyrmhk",
+    "CYRMHK", "cyrndsc", "CYRNDSC", "cyrng", "CYRNG", "cyrnhk", "CYRNHK",
+    "cyrnje", "CYRNJE", "cyrnlhk", "CYRNLHK", "cyrotld", "CYROTLD",
+    "cyrphk", "CYRPHK", "cyrq", "CYRQ", "cyrrdsc", "CYRRDSC", "cyrrhk",
+    "CYRRHK", "cyrrtick", "CYRRTICK", "cyrsacrs", "CYRSACRS", "cyrschwa",
+    "CYRSCHWA", "cyrsdsc", "CYRSDSC", "cyrsemisftsn", "CYRSEMISFTSN",
+    "cyrshha", "CYRSHHA", "cyrtdsc", "CYRTDSC", "cyrtetse", "CYRTETSE",
+    "cyrtshe", "CYRTSHE", "cyrushrt", "CYRUSHRT", "cyrw", "CYRW",
+    "cyry", "CYRY", "cyryat", "CYRYAT", "cyryhcrs", "CYRYHCRS", "cyryi",
+    "CYRYI", "cyrzdsc", "CYRZDSC", "cyrzhdsc", "CYRZHDSC",
+  ].iter() {
+    let cs_tok = T_CS!(&s!("\\{}", cs));
+    def_macro(cs_tok, None, Tokens!(), None)?;
+  }
   AddToMacro!("\\@uclclist", r"\cyra\CYRA\cyrabhch\CYRABHCH\cyrabhchdsc\CYRABHCHDSC\cyrabhdze\CYRABHDZE\cyrabhha\CYRABHHA\cyrae\CYRAE\cyrb\CYRB\cyrbyus\CYRBYUS\cyrc\CYRC\cyrch\CYRCH\cyrchldsc\CYRCHLDSC\cyrchrdsc\CYRCHRDSC\cyrchvcrs\CYRCHVCRS\cyrd\CYRD\cyrdelta\CYRDELTA\cyrdje\CYRDJE\cyrdze\CYRDZE\cyrdzhe\CYRDZHE\cyre\CYRE\cyreps\CYREPS\cyrerev\CYREREV\cyrery\CYRERY\cyrf\CYRF\cyrfita\CYRFITA\cyrg\CYRG\cyrgdsc\CYRGDSC\cyrgdschcrs\CYRGDSCHCRS\cyrghcrs\CYRGHCRS\cyrghk\CYRGHK\cyrgup\CYRGUP\cyrh\CYRH\cyrhdsc\CYRHDSC\cyrhhcrs\CYRHHCRS\cyrhhk\CYRHHK\cyrhrdsn\CYRHRDSN\cyri\CYRI\cyrie\CYRIE\cyrii\CYRII\cyrishrt\CYRISHRT\cyrishrtdsc\CYRISHRTDSC\cyrizh\CYRIZH\cyrje\CYRJE\cyrk\CYRK\cyrkbeak\CYRKBEAK\cyrkdsc\CYRKDSC\cyrkhcrs\CYRKHCRS\cyrkhk\CYRKHK\cyrkvcrs\CYRKVCRS\cyrl\CYRL\cyrldsc\CYRLDSC\cyrlhk\CYRLHK\cyrlje\CYRLJE\cyrm\CYRM\cyrmdsc\CYRMDSC\cyrmhk\CYRMHK\cyrn\CYRN\cyrndsc\CYRNDSC\cyrng\CYRNG\cyrnhk\CYRNHK\cyrnje\CYRNJE\cyrnlhk\CYRNLHK\cyro\CYRO\cyrotld\CYROTLD\cyrp\CYRP\cyrphk\CYRPHK\cyrq\CYRQ\cyrr\CYRR\cyrrdsc\CYRRDSC\cyrrhk\CYRRHK\cyrrtick\CYRRTICK\cyrs\CYRS\cyrsacrs\CYRSACRS\cyrschwa\CYRSCHWA\cyrsdsc\CYRSDSC\cyrsemisftsn\CYRSEMISFTSN\cyrsftsn\CYRSFTSN\cyrsh\CYRSH\cyrshch\CYRSHCH\cyrshha\CYRSHHA\cyrt\CYRT\cyrtdsc\CYRTDSC\cyrtetse\CYRTETSE\cyrtshe\CYRTSHE\cyru\CYRU\cyrushrt\CYRUSHRT\cyrv\CYRV\cyrw\CYRW\cyry\CYRY\cyrya\CYRYA\cyryat\CYRYAT\cyryhcrs\CYRYHCRS\cyryi\CYRYI\cyryo\CYRYO\cyryu\CYRYU\cyrz\CYRZ\cyrzdsc\CYRZDSC\cyrzh\CYRZH\cyrzhdsc\CYRZHDSC");
   Ok(())
 }

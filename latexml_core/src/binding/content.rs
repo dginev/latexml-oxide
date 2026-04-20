@@ -284,8 +284,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   let is_binding = if options.noltxml {
     false
   } else {
-    match load_external_binding(&filename).and_then(|ext| {
-      if ext { Ok(true) } else { load_binding(&filename) }
+    match _load_binding(false, &filename, options.reloadable).and_then(|ext| {
+      if ext { Ok(true) } else { _load_binding(true, &filename, options.reloadable) }
     }) {
       Ok(v) => v,
       Err(e) => {
@@ -383,7 +383,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Perl Package.pm L2122-2125
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.notex && !interpreting && !lookup_bool(&s!("{filename}_loaded")) {
+    } else if !options.notex && !interpreting
+      && (options.reloadable || !lookup_bool(&s!("{filename}_loaded")))
+    {
       find_file(
         &filename,
         Some(FindFileOptions {
@@ -491,14 +493,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 }
 
 /// loads a binding from the main binding dispatcher, if available+found
-pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file) }
+pub fn load_binding(file: &str) -> Result<bool> { _load_binding(true, file, false) }
 /// loads a binding from an external binding dispatcher, if available+found
-pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file) }
+pub fn load_external_binding(file: &str) -> Result<bool> { _load_binding(false, file, false) }
 // in the spirit of Perl's Package::loadLTXML
-fn _load_binding(internal: bool, request: &str) -> Result<bool> {
-  // Perl loadLTXML L2311-2313: skip if already loaded
+fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool> {
+  // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
+  // (e.g. `\inputencoding{cp1251}` re-invokes cp1251.def to re-register
+  // DeclareInputText mappings after `set_input_encoding` reset them).
   let loaded_key = s!("{request}_found_loaded");
-  if lookup_bool(&loaded_key) {
+  if !reloadable && lookup_bool(&loaded_key) {
     return Ok(true);
   }
 
