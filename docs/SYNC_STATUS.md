@@ -64,6 +64,18 @@ distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
 - [ ] 1004.3503 — 8.3s abort (fast crash — xy-pic OOM companion)
 - [x] 1003.0934 — fixed session 119 (`load_class` now calls `maybe_require_dependencies`)
 - [x] 0908.4110 — fixed: `find_main_tex` now falls back to extension-less / ≥4-char-ext files (Perl Pack/Dir.pm L47)
+
+**Known perf cliff (session 123 investigation):**
+- [ ] 0906.1883 — 1m47s Rust vs 7.27s Perl (~15× slower). Unknown class
+  `birkmult.cls` → OmniBus fallback + dependency scan (amstex / amsmath /
+  amsthm loaded). Document body eventually emits 10001 "Mouth is
+  unexpectedly already closed" errors with garbled-SymStr context; hits the
+  `TooManyErrors` cap. First 100s are slow pre-error digestion, then errors
+  cascade in ~7s. Reading_from_mouth loop at `gullet.rs:2037` emits the
+  error from each failed invocation; something upstream retries the
+  reading_from_mouth 10K+ times. Likely tied to OmniBus error-recovery path
+  for undefined CSes (the paper has many `\let\foo\undefined` +
+  `\newsymbol\foo 0xNNNN`). Needs a dedicated profiling session.
 All 16 former-timeout papers now converge cleanly under 60s when run
 serially (session 123 re-measurement):
 - [x] 0704.2334 (57s), 0705.0790 (55s), 0705.1522 (48s), 0706.0243 (31s)
