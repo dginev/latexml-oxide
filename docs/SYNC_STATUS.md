@@ -49,149 +49,81 @@ lives in git log and `memory/project_session_history.md`.
 
 ## Work Plan — Active TODOs
 
-### Phase D0: 2k-sandbox failing articles — HIGH PRIORITY
+### Phase D0: 2k-sandbox failing articles — **COMPLETE (84/84)**
 
-From `~/data/10k_sandbox_html/results.tsv` (1962 papers run, 1877 ok / 95.7%).
-**84 failing articles** total: 19 aborts + 1 error + 64 conversion_errors.
-**Goal:** every article below must convert error-free. Resolve article-by-article —
-distill minimal `.tex` examples, compare Perl vs Rust, patch the root cause.
-**Do not rerun the full sandbox** until every individual issue is solved
-(expensive; the list here is the authoritative worklist).
+From `~/data/10k_sandbox_html/results.tsv` (1962 papers, 1877 ok / 95.7%).
+The original 84-paper worklist (19 aborts + 1 error + 64 conversion_errors)
+is fully resolved. The per-paper [x] checklist previously here has been
+retired — the only entry kept as reference is the Perl-error-only exclusion:
 
-**Aborts + error (20)** — process-level failures (SIGABRT / exit=1):
-
-- [x] 0710.1208 — FIXED session 124: `\lx@xy@crv@decipher` used `do_expand` on `\xycrvdrop@` / `\xycrvconn@`, re-invoking `\dir{-->}` drawing and looping via the curve pipeline. Now reads the macro *body* (Perl uses `LookupDefinition(...)->getExpansion`). 21GB OOM → 1.35s / 232MB.
-- [x] 1004.3503 — fixed by same `macro_body` change. 6.17s / 898MB, 0 errors.
-- [x] 1003.0934 — fixed session 119 (`load_class` now calls `maybe_require_dependencies`)
-- [x] 0908.4110 — fixed: `find_main_tex` now falls back to extension-less / ≥4-char-ext files (Perl Pack/Dir.pm L47)
-
-**0906.1883 — FIXED session 123 (final turn):**
-Root cause identified and patched in `latexml_package::package::omnibus_cls`:
-autoload stubs for `\theoremstyle`, `\newtheorem` aliases, and
-`\begin{theorem}` envs were overwriting pre-loaded amsthm CSes when
-`maybe_require_dependencies` scanned a local `.cls` that
-`\RequirePackage{amsthm}`. The stub calls `require_package("amsthm")`
-(no-op, already loaded), then re-emits the original CS — triggering
-itself infinitely. Loop generated 163M `Mouth::default()` instances
-(gid overflow), each pinning a unique anonymous source into the arena,
-blowing the `string-interner` past `u32::MAX` byte-offset and
-corrupting SymStr values. Guard each stub with `if IsDefined!(&cs)
-{ continue; }`. Also added a 50M-pin runaway guard in `arena::pin`
-as a defense-in-depth sentinel for similar future issues.
-**Result:** 1m47s + 10001 errors → 1.07s + 0 errors.
-All 16 former-timeout papers now converge cleanly under 60s when run
-serially (session 123 re-measurement):
-- [x] 0704.2334 (57s), 0705.0790 (55s), 0705.1522 (48s), 0706.0243 (31s)
-- [x] 0706.1988 (50s), 0708.2154 (25s), 0708.4176 (26s), 0711.1898 (42s)
-- [x] 0802.0544 (42s), 0802.1035 (51s), 0806.0463 (22s), 0810.3087 (54s)
-- [x] 0811.0190 (50s), 0901.1988 (42s), 0902.0261 (17s), 0904.1990 (38s)
-Original 60s sandbox budget was simply too tight; cumulative session
-120-123 per-paper fixes + expl3 short-circuit pushed all of these
-below the wire.
-
-**Conversion errors (64)** — `Status:conversion:2`, exit 0 with errors in log:
-
-- [x] 0704.3480  - [x] 0707.0739  - [x] 0709.4470  - [x] 0711.4787
-- [x] 0802.3360  - [x] 0803.0466  - [x] 0805.2376  - [x] 0809.1906
-- [x] 0810.0991  - [x] 0810.1407  - [x] 0810.4067  - [x] 0811.3209
-- [x] 0811.4212  - [x] 0904.2651  - [x] 0905.4086  - [x] 0906.1883
-- [x] 0908.0398  - [x] 0909.2656  - [~] 0909.3444  - [x] 0909.5007
-- [x] 0911.1806  - [x] 0911.3337  - [x] 0911.3798  - [x] 0911.4739
-- [x] 0912.2337  - [x] 1003.2989  - [x] 1003.3360  - [x] 1004.2626
-- [x] 1005.1610  - [x] 1006.5231  - [x] 1007.2309  - [x] 1007.3314
-- [x] 1007.4392  - [x] 1008.2152  - [x] 1008.4386  - [x] 1009.1431
-- [x] 1010.1244  - [x] 1010.3600  - [x] 1010.4240  - [x] 1011.1955
-- [x] 1011.4834  - [x] 1011.5076  - [x] 1012.3836  - [x] 1101.2149
-- [x] 1101.2474  - [x] 1103.2925  - [x] 1105.0121  - [x] 1107.0347
-- [x] 1107.3732  - [x] 1108.0951  - [x] 1108.3241  - [x] 1111.0334
-- [x] 1112.4846  - [x] 1201.1473  - [x] 1201.4735  - [x] 1202.5647
-- [x] 1203.6616  - [x] 1204.5278  - [x] 1206.0536  - [x] 1207.5555
-- [~] 1207.6068  - [x] 1207.6456  - [x] 1209.1578  - [x] 1209.2771
-
-> `[~] 1207.6068`: Perl emits 30 errors on this fragment (acknowledgements-only
+> `[~] 1207.6068` — Perl emits 30 errors on this fragment (acknowledgements-only
 > file, no `\documentclass`). Per the sandbox baseline rule — only
 > Perl-error-free cases count — this paper is excluded from the parity target.
+> `[~] 0909.3444` — Perl emits 2 errors (frenchb babel missing).
 
-**Conversion errors (64)** status: **64 of 64 now convert cleanly**
-(63 Perl-parity fixes + 1 skipped as Perl-errors). Session 123 added:
-- `pstricks_sty` now loads `pstricks_support` (Perl L44 parity), and
-  `pstricks_support_sty` defines the color-CS shorthands (`\blue`,
-  `\red`, …). Clears 1107.3732 (tikz `\blue` inside `\node`).
-- cp1251 reloadability: `_load_binding` and raw-find-file path now
-  respect the `reloadable` option, letting `\inputencoding{cp1251}`
-  re-run `cp1251.def`'s `\DeclareInputText` after
-  `set_input_encoding` resets the high-byte map. Clears 1201.1473.
-- fontenc cyrillic extended-CS stubs: the T2A/T2B/T2C cyrillic CSes
-  listed in `\@uclclist` are now stub-defined (empty expansion).
-  Perl treats `\@uclclist` as a token-level scan, so undefined CSes
-  don't trigger there; Rust expands eagerly so we need the stubs.
-  Clears 1209.1578.
-- Raise libxml `NODE_RC_MAX_GUARD` 50 → 8192 in `document.rs`. The
-  guard is a diagnostic threshold, not a safety requirement (real
-  aliasing is caught by `weak_count == 0`). Clears 1007.2309 /
-  1108.3241 / 1204.5278 (previously at ~50 refs) and 0805.2376
-  (dcpic.sty diagrams, ~2000-8000 refs).
-- `\begin{document}` preamble cleanup: fire `\ExplSyntaxOff` when `_`
-  catcode is still LETTER (mirrors latex.ltx L7122 preamble-end hook).
-  Fixes `mhchem.sty` trailing `\ExplSyntaxOn` leak — clears 1008.2152
-  and 1107.0347.
-- `def_math_constructor` isMath branch on Whatsit prop, not DOM
-  (`?#isMath` is `$prop{'isMath'}`) — clears 0802.3360
-- revtex4.cls: load amsmath/amsfonts/amssymb only on option
-  (Perl parity; prior Rust unconditionally pulled amsmath, whose
-  `\pmatrix`/`\endpmatrix` semantics clobbered plain-TeX
-  `\pmatrix{…}`) — clears 0810.1407 / 0811.4212 / 1101.2149
-- `expl3_sty` short-circuits raw `expl3.sty` loading when `\tex_let:D`
-  is already in the dump — mirrors l3kernel/expl3.sty L54's TeX-level
-  guard, lifted to the Rust dispatcher. Perf: 1008.2152 now converts in
-  ~2.9s (Perl baseline 24.84s). Also removes the 36k-line
-  `expl3-code.tex` re-digestion visible in `(Loading "expl3-code.tex"
-  definitions...)` log noise.
+**New D1 ramp-up discoveries (session 124):**
 
-Earlier session fixes:
-- picture-autoOpen fractional priority (port of Perl's 0.5 openability)
-- DefEnvironment bare `\name` runs user `beforeDigest` (sidecap's `\SCfigure`)
-- `\author` accepts `OptionalMatch:* [short]` (mn, mn2e, elsart, revtex journal forms)
-- `\braket/\Braket/\set/\Set` preserve token identity (fix `\mbf r` → `\mbfr` fusion)
-- aa_support + mn2e_support redefine `{equation}/{equation*}` to `Let(T_MATH, \lx@dollar@in@mathmode)`
-- `ref_step_id` auto-creates counter when `\c@UN<ctr>` undefined (Perl L863-864)
-- `twoopt` real impl (`\newcommandtwoopt` / `\renewcommandtwoopt` / `\providecommandtwoopt`)
-- `\DeclareMathSymbol` always defines CS, raw-codepoint fallback (FontDecode undef)
-- graphics_sty: `{rotatebox}` env BEFORE `\rotatebox` DefConstructor
-- JHEP loads hyperref; JHEP `{floatingfigure}` / `{floatingtable}` / `\DOUBLEFIGURE`
-- omnibus `\keywords@onearg` → `\@add@frontmatter` (not inline env)
-- `\tmspace` / `\IfFormatAtLeastTF` / `\bi` / `\cpc` stubs
-- LoadClass prefix-match fallback across `latexml_package::class_binding_names`
-  + `latexml_contrib::class_binding_names` (`mn2ebis`→`mn2e`, `IEEEtranTCOM`→`IEEEtran`)
-- Unified `(name, ext, loader)` BINDINGS table as single source of truth
+- [x] **1311.6082** — FIXED: Rust engine/tex.rs auto-registered `\listfiles`
+  as an autoload trigger, but never ported Perl's
+  `DefPrimitive('\listfiles', undef)` (latex_constructs.pool.ltxml L4354).
+  Post-load, the trigger kept self-re-emitting; 50M pin-count sentinel
+  fired. Added the no-op primitive (latex_constructs.rs L6188).
+- [~] **1210.4211** — INTERMITTENT under parallel load. Serial run:
+  clean (0 errors / 0.09s). Some parallel-wrap contexts trigger an
+  error cascade: `\ref / \UG / \If / \dotsc / \caption / \thesubsection`
+  all undefined, then a recovery loop spins in `input_content ↔
+  _load_binding ↔ maybe_require_dependencies`. Perl also sees the same
+  undefined-CS cascade under the same parallel-wrap context (51 errors,
+  27 undefined macros) but completes in 7.35s; Rust hangs until the
+  60s watchdog aborts. The false-positive pin-count sentinel was
+  replaced with an arena-size sentinel (session 124); Mouth::default
+  no longer pins unique "Anonymous String N" strings. Root cause of
+  the recovery-loop divergence vs Perl still open.
 
-**High-fidelity parity tasks (currently-passing papers with XML divergence):**
-- [x] **1209.2771 Figure 6 misshapen** — FIXED session 123. Ported Perl's
-  LaTeXML::Util::Image::image_size EPS branch: `read_image_dimensions`
-  now parses `%%HiResBoundingBox:` / `%%BoundingBox:` (with DOS EPSI
-  binary preview offset support). `\resizebox{6cm}{!}{\includegraphics*
-  {.eps}}` now produces `height="149.2pt" xscale="0.521457..."` matching
-  Perl to 10 significant digits.
+**Phase D0 cumulative fixes (session 123-124):**
 
-**All 64 conversion_error papers are now clean** (session 123) AND **both
-xy-pic OOM aborts FIXED** (session 124). Phase D0 worklist now at **84/84 converged**.
+Ported/patched Perl-parity gaps across: xy-pic curve deciphering,
+omnibus autoload stub guards, pstricks support, cp1251 reloadability,
+fontenc cyrillic stubs, libxml NODE_RC_MAX_GUARD, `\begin{document}`
+ExplSyntaxOff preamble cleanup, `def_math_constructor` isMath on
+Whatsit props, revtex4 amsmath gating, expl3 short-circuit,
+`\listfiles` no-op primitive. The detailed per-fix narration previously
+tracked here (pstricks, cp1251, fontenc cyrillic, node_rc_guard,
+ExplSyntaxOff preamble, revtex4 amsmath gate, expl3 short-circuit,
+DefEnvironment beforeDigest, `\braket` token identity, ref_step_id
+auto-counter, graphics rotatebox ordering, JHEP hyperref, xy-pic
+crv_decipher body read, etc.) is now retired — consult git log if a
+historical fix needs verification.
 
-**Session 124 parallel verification (`parallel -j 12`):** all 84 real papers
-from the D0 worklist run via direct `latexml_oxide --timeout=60`:
-**84 / 84 clean** (exit 0, 0 errors, 0 warnings). Under parallel-12 load:
-avg 3.0s, fastest 0.02s (0905.4086), slowest 16.84s (0704.2334, previously
-one of the 16 former-timeout papers). No paper exceeds the 60s budget.
+**High-fidelity parity tasks retained:**
+- [x] **1209.2771 Figure 6** — EPS BoundingBox port of Perl's
+  `LaTeXML::Util::Image::image_size`, `read_image_dimensions` now
+  parses `%%HiResBoundingBox:`/`%%BoundingBox:` with DOS EPSI preview
+  offset support. `\resizebox{6cm}{!}{\includegraphics*{.eps}}` now
+  matches Perl to 10 significant digits.
 
-**Session 124 D1 micro-ramp (128-paper even-spread sample, `parallel -j 12`):**
-127/128 clean initially — one new panic on 1311.6082 (revtex4-1 paper
-using `\listfiles` with a missing `docs.sty`). Root cause: Rust
-engine/tex.rs auto-registers `\listfiles` as a pool-load autoload trigger
-(expand → `\@load@latex@pool \listfiles`), but Rust's latex_constructs.rs
-never ported Perl's `DefPrimitive('\listfiles', undef)` (L4354).
-Post-load, `\listfiles` remained a trigger → re-emit loop → unique
-mouth-source per iteration → 50M arena::pin sentinel → panic. Fixed by
-porting the no-op primitive. 1311.6082 now 0.41s / 0 errors.
-Post-fix: **128 / 128 clean**.
+**Session 124 verification & new work:**
+
+- **D0 84/84 parallel verification (`parallel -j 12`):** all 84 worklist
+  papers via direct `latexml_oxide --timeout=60` — exit 0, 0 errors,
+  0 warnings. Avg 3.0s, max 16.84s (0704.2334).
+- **D1 128-sample (even spread across 7898):** 128/128 clean after
+  `\listfiles` fix.
+- **D1 512-sample (even spread):** 520/521 real papers clean.
+  1210.4211 hangs under certain parallel-wrap contexts (see "New D1
+  discoveries" above).
+- **Arena pin-count sentinel replaced with symbol-count sentinel**
+  (`common/arena.rs`): the pin-call-count metric was a false positive
+  — dedup-heavy hot loops would trip it without any actual arena
+  overflow risk. The correct signal is `arena.len()` (distinct symbol
+  count); threshold raised to 10M which is still two orders below the
+  danger zone (~100M symbols given average string length). The real
+  recovery-loop bug 1210.4211 exhibits is now silent on the arena
+  side, and surfaces only as the main-level wall-clock watchdog abort.
+- **Mouth `Anonymous String {gid}` → `Anonymous String`:** the
+  per-instance gid was pinning a unique SymStr per anonymous mouth;
+  it served no functional purpose beyond visual disambiguation. All
+  anonymous mouths now share one arena entry regardless of call count.
 
 **Session 124 xy-pic fix:** `\lx@xy@crv@decipher` (xylatexml_tex.rs L799) was
 calling `macro_string` (which runs `do_expand`) on `\xycrvdrop@` and `\xycrvconn@`
