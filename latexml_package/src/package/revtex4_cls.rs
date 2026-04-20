@@ -18,11 +18,19 @@ LoadDefinitions!({
     // sub-styles
     "aps", "pra", "prb", "prc", "prd", "pre", "prl", "prstab", "rmp",
     "osa", "osameet", "opex", "tops", "josa",
-    // package options
-    "amsfonts", "amssymb", "amsmath",
-    "noamsfonts", "noamssymb", "noamsmath",
   ].iter() {
     DeclareOption!(*option, None);
+  }
+
+  // Perl L41-45: amsfonts/amssymb/amsmath options push the package into
+  // @revtex_toload; no-variants remove it. Packages are NOT loaded unless
+  // explicitly requested (otherwise amsmath's `\pmatrix` would clobber the
+  // plain-TeX `\pmatrix{…}` form, breaking documents like 0810.1407 whose
+  // equation bodies use `\pmatrix{s\cr 0\cr}`).
+  for pkg in ["amsfonts", "amssymb", "amsmath"] {
+    let pkg_name = pkg;
+    DeclareOption!(pkg, { RequirePackage!(pkg_name); });
+    DeclareOption!(&s!("no{pkg}"), None);
   }
 
   // Perl L47-49: osajnl defines \ocis -> \pacs
@@ -38,11 +46,4 @@ LoadDefinitions!({
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("revtex4_support");
-
-  // Perl L58: load AMS packages after article+revtex4_support.
-  // Perl tracks which ones via DeclareOption handlers, but since most revtex4
-  // papers use amsmath, we load them unconditionally (Perl's default for revtex4).
-  for pkg in ["amsfonts", "amssymb", "amsmath"] {
-    RequirePackage!(pkg);
-  }
 });
