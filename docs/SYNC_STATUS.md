@@ -419,6 +419,17 @@ cargo test):
 | After arena resolve_unchecked | 15.94 | ~1.70s |
 | After dead tracing lookup removal | 15.32 | ~1.71s |
 | After Parameter::read destructure | ~15.0 | ~1.67s |
+| Session 123 start (D0 engine fixes accumulated) | (n/m) | ~2.80s |
+| After `pin_char` ASCII cache (session 123) | (n/m) | ~2.29s |
+| After arena sentinel removal + Mouth gid removal (session 126) | (n/m) | ~1.88s |
+
+The ~+1.13s drift between sessions 117 and 123 correlates with D0
+engine-level fixes (error-recovery rate-limiting, arena pin-count
+sentinel with `arena.len()` probe, `NODE_RC_MAX_GUARD` bump). Session
+123-126 walked back ~0.92s of that via `pin_char` caching and the
+sentinel/gid simplifications. Net round-16 change vs round-15 start:
+~same wall-clock at higher correctness (84 paper D0 + 16 D1 paper
+fixes landed).
 
 ~16% fewer instructions, ~11% faster on this workload. Wall-clock
 noise is ~0.05s run-to-run, smaller than the cumulative delta.

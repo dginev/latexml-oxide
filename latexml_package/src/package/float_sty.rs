@@ -54,10 +54,19 @@ LoadDefinitions!({
 /// and DefEnvironmentI. Used by both float.sty \newfloat and newfloat.sty
 /// \DeclareFloatingEnvironment.
 pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Result<()> {
-  // Get current float style
-  let style = stomach::digest(T_CS!("\\float@style"))
-    .map(|d| d.to_string())
-    .unwrap_or_else(|_| "plain".to_string());
+  // Get current float style. `\float@style` is only defined by float.sty;
+  // newfloat.sty is independent of float.sty and Perl's newfloat.sty.ltxml
+  // never reads `\float@style` (it hardcodes the default layout). To keep
+  // the shared helper usable from both call sites without a spurious
+  // `undefined:\float@style` error when newfloat is loaded alone, probe
+  // the definition first and fall back to "plain" silently when absent.
+  let style = if lookup_definition(&T_CS!("\\float@style"))?.is_some() {
+    stomach::digest(T_CS!("\\float@style"))
+      .map(|d| d.to_string())
+      .unwrap_or_else(|_| "plain".to_string())
+  } else {
+    "plain".to_string()
+  };
 
   // NewCounter($type, $within)
   new_counter(ftype, within, None)?;
