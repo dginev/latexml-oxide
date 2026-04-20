@@ -1614,7 +1614,20 @@ pub fn fenced(
       interpret_delimited(op.into(), stuff, ctxt).map(Option::Some)
     } else {
       // Single arg: XMDual(XMRef(arg), XMWrap((,arg,)))
+      // create_xmrefs skips ephemeral variants (XMHint, and the default
+      // skip-without-warning arm), so refs may come back empty when the
+      // delimited body was just a spacing hint. In that case the Dual
+      // with an XMRef to nothing would be meaningless, so fall back to
+      // a bare Wrap (arxiv hep-ph/9210235 hit this on `\lparen \,
+      // \rparen` where the sole arg was an XMHint that got filtered).
       let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
+      if arg_xmrefs.is_empty() {
+        return Ok(Some(XM::Wrap(
+          vec![open, arg, close],
+          XProps::default(),
+          Meta::default(),
+        )));
+      }
       Ok(Some(XM::Dual(
         Box::new(arg_xmrefs.remove(0)),
         Box::new(XM::Wrap(
