@@ -1677,3 +1677,89 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
     None
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use libxml::parser::Parser as XmlParser;
+
+  // Keep the Document alive for the duration of each test — Node holds an
+  // implicit weak ref, so dropping the owning Document before reading the
+  // Node leaves us with a hollow handle (get_type returns None, etc.).
+  fn parse(xml: &str) -> libxml::tree::Document {
+    XmlParser::default().parse_string(xml).expect("parse xml")
+  }
+  fn root(doc: &libxml::tree::Document) -> Node {
+    doc.get_root_element().expect("root")
+  }
+
+  #[test]
+  fn is_float_script_recognized() {
+    assert!(is_float_script("FLOATSUPERSCRIPT"));
+    assert!(is_float_script("FLOATSUBSCRIPT"));
+    assert!(!is_float_script("SUPERSCRIPT"));
+    assert!(!is_float_script("POSTSUPERSCRIPT"));
+    assert!(!is_float_script(""));
+  }
+
+  #[test]
+  fn is_post_script_recognized() {
+    assert!(is_post_script("POSTSUPERSCRIPT"));
+    assert!(is_post_script("POSTSUBSCRIPT"));
+    assert!(!is_post_script("SUPERSCRIPT"));
+    assert!(!is_post_script("FLOATSUPERSCRIPT"));
+    assert!(!is_post_script(""));
+  }
+
+  #[test]
+  fn parse_scriptpos_empty_defaults_to_post_zero() {
+    assert_eq!(parse_scriptpos_str(""), ("post", 0));
+  }
+
+  #[test]
+  fn parse_scriptpos_str_just_position() {
+    // No digits → level 0.
+    assert_eq!(parse_scriptpos_str("post"), ("post", 0));
+    assert_eq!(parse_scriptpos_str("mid"), ("mid", 0));
+  }
+
+  #[test]
+  fn parse_scriptpos_str_position_and_level() {
+    assert_eq!(parse_scriptpos_str("post1"), ("post", 1));
+    assert_eq!(parse_scriptpos_str("mid2"), ("mid", 2));
+    assert_eq!(parse_scriptpos_str("pre3"), ("pre", 3));
+  }
+
+  #[test]
+  fn parse_scriptpos_str_just_digit_is_empty_pos() {
+    // Entirely-numeric input → position is the empty string, level parses.
+    assert_eq!(parse_scriptpos_str("5"), ("", 5));
+  }
+
+  #[test]
+  fn p_get_attribute_returns_attr_on_element() {
+    let doc = parse(r#"<XMTok role="ADDOP" meaning="plus">+</XMTok>"#);
+    let n = root(&doc);
+    assert_eq!(p_get_attribute(&n, "role").as_deref(), Some("ADDOP"));
+    assert_eq!(p_get_attribute(&n, "meaning").as_deref(), Some("plus"));
+    assert_eq!(p_get_attribute(&n, "absent"), None);
+  }
+
+  #[test]
+  fn p_get_value_element_content_wins() {
+    let doc = parse(r#"<XMTok name="fallback">+</XMTok>"#);
+    assert_eq!(p_get_value(&root(&doc)), "+");
+  }
+
+  #[test]
+  fn p_get_value_element_falls_back_to_name_attr() {
+    let doc = parse(r#"<XMTok name="plus"/>"#);
+    assert_eq!(p_get_value(&root(&doc)), "plus");
+  }
+
+  #[test]
+  fn p_get_value_element_empty_with_no_name_is_empty() {
+    let doc = parse(r#"<XMTok/>"#);
+    assert_eq!(p_get_value(&root(&doc)), "");
+  }
+}
