@@ -4879,12 +4879,17 @@ LoadDefinitions!({
   //======================================================================
 
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
-  // latex.ltx L10007 — `\let\a=\@tabacckludge`. Recovered from the
-  // dump's Let-alias record now that `dump_reader.rs`'s M gate admits
-  // public PA/MPA aliases whose key and target are both non-expl3
-  // (no `:`). Inside a `tabbing` environment, tabbing_bindings()
-  // overrides this local to `\@tabbing@accent`. Found in arxiv
-  // 1611.05395.
+  // latex.ltx L10007 — `\let\a=\@tabacckludge`. The dump carries this
+  // as a PA record (`M \a PA \@tabacckludge`), but it can't be applied
+  // there: load order is `bootstrap → _base → dump → _constructs`, and
+  // `\@tabacckludge` itself is defined right above (in _constructs),
+  // so at dump-load time the PA's target is undefined and
+  // `load_meaning`'s target check returns Ok(false). Until we grow a
+  // deferred-alias retry pass, the alias stays hand-written here to
+  // match the latex.ltx source. Inside a `tabbing` environment,
+  // tabbing_bindings() overrides this local to `\@tabbing@accent`.
+  // Found in arxiv 1611.05395.
+  Let!("\\a", "\\@tabacckludge");
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star,cs_token,nargs,opt,body)] {

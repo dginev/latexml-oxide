@@ -415,8 +415,11 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // our engine doesn't fully support, causing cascading errors.
   //
   // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`),
-  //       AND public Register/CharDef entries (they set char codes and
-  //       can't chain into expl3 cascades).
+  //       public Register/CharDef entries (they set char codes and
+  //       can't chain into expl3 cascades), AND public PA/MPA let-aliases
+  //       whose target is not a `:`-style expl3 identifier (they replay
+  //       `\let <key> <target>` against an existing Rc<Primitive>, so
+  //       there's no body cascade either).
   // Unsafe: public Expandable macros without `:` or `@` (e.g., \document,
   //         \hook) — their bodies reference the hook system we don't
   //         fully support. `_base.rs` + `_constructs.rs` already define
@@ -425,7 +428,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let name = key.trim_start_matches('\\');
   let is_internal = name.contains(':') || name.contains('@');
   let is_public_register = data.starts_with("R\t");
-  if !is_internal && !is_public_register {
+  let is_public_let_alias = {
+    let rest_opt = data.strip_prefix("PA\t").or_else(|| data.strip_prefix("MPA\t"));
+    rest_opt.is_some_and(|rest| {
+      let target_raw = if rest.contains('%') { url_decode(rest) } else { rest.to_string() };
+      !target_raw.trim_start_matches('\\').contains(':')
+    })
+  };
+  if !is_internal && !is_public_register && !is_public_let_alias {
     return Ok(false);
   }
 
