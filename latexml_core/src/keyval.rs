@@ -516,3 +516,59 @@ fn define_boolean(
     None,
   )
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn keyval_default_fields() {
+    let kv = KeyVal::default();
+    assert_eq!(kv.prefix, "KV");
+    assert!(kv.keyset.is_empty());
+    assert!(kv.key.is_empty());
+  }
+
+  #[test]
+  fn keyval_new_custom_prefix() {
+    let kv = KeyVal::new(Some("custom".to_string()), "ks".to_string(), "k".to_string());
+    assert_eq!(kv.prefix, "custom");
+    assert_eq!(kv.keyset, "ks");
+    assert_eq!(kv.key, "k");
+  }
+
+  #[test]
+  fn keyval_new_default_prefix_on_none() {
+    // None prefix → default "KV".
+    let kv = KeyVal::new(None, "ks".to_string(), "k".to_string());
+    assert_eq!(kv.prefix, "KV");
+  }
+
+  #[test]
+  fn keyval_get_header_format() {
+    let kv = KeyVal::new(Some("P".to_string()), "set".to_string(), "width".to_string());
+    assert_eq!(kv.get_header(), "P@set@width");
+  }
+
+  #[test]
+  fn keyval_get_header_default_prefix() {
+    let kv = KeyVal::new(None, "tabular".to_string(), "vattach".to_string());
+    assert_eq!(kv.get_header(), "KV@tabular@vattach");
+  }
+
+  #[test]
+  fn keyval_equality_by_all_fields() {
+    let a = KeyVal::new(Some("P".to_string()), "ks".to_string(), "k".to_string());
+    let b = KeyVal::new(Some("P".to_string()), "ks".to_string(), "k".to_string());
+    let c = KeyVal::new(Some("P".to_string()), "ks".to_string(), "other".to_string());
+    assert_eq!(a, b);
+    assert_ne!(a, c);
+  }
+
+  #[test]
+  fn keyval_qname_normalizes_empty_prefix() {
+    // Empty prefix is substituted with "KV".
+    assert_eq!(keyval_qname("", "set", "k"), "KV@set@k");
+    assert_eq!(keyval_qname("P", "set", "k"), "P@set@k");
+  }
+}
