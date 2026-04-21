@@ -242,6 +242,16 @@ impl Document {
   // ancestors. It removes the `helper' attributes that store fonts, source
   // box, etc.
   pub fn finalize(&mut self) -> Result<()> {
+    // Rebuild idstore from current DOM before prune_xmduals. Upstream
+    // passes (math-parser `replace_tree`, various `unbind_node()`
+    // sites) can drop XMRef-target nodes without calling unrecord_id,
+    // leaving dangling entries in `idstore`. `mark_xmnode_visibility`
+    // dereferences lookup_id results as it recurses through XMRef
+    // nodes, which SIGSEGVs on those stale entries (observed on
+    // arxiv 1605.08055 in the 10k sandbox). A fresh DOM walk drops
+    // all such dangling entries; duplicates already in DOM are
+    // resolved with modify_id via record_node_ids' existing logic.
+    self.rebuild_idstore_from_dom()?;
     self.prune_xmduals()?;
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
@@ -2683,6 +2693,26 @@ impl Document {
         self.unrecord_id(&id);
       }
     }
+  }
+
+  /// Discard the in-memory `idstore` cache and rebuild it from the
+  /// current DOM state. Use before operations that trust every
+  /// `lookup_id` result (e.g. `mark_xmnode_visibility`, which
+  /// recurses into XMRef targets) so that no dangling cache entries
+  /// remain — some upstream paths (math parser `replace_tree`,
+  /// certain `unbind_node()` sites) drop nodes without calling
+  /// `unrecord_id` / `unrecord_node_ids`, and accessing a freed
+  /// libxml2 Node via the stale cache SIGSEGVs.
+  ///
+  /// The rebuild is a DOM walk, so live id uniqueness is restored
+  /// alongside — duplicates already in DOM are resolved with
+  /// `modify_id`, matching `record_node_ids` semantics.
+  pub fn rebuild_idstore_from_dom(&mut self) -> Result<()> {
+    self.idstore.clear();
+    if let Some(root) = self.document.get_root_element() {
+      self.record_node_ids(&root)?;
+    }
+    Ok(())
   }
 
   /// Get a new, related, but unique id.
