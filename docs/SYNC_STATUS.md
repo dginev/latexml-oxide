@@ -110,25 +110,37 @@ Three failure classes in the session-128 7933-paper sweep, after the
   > 15% on any corpus entry between commits. Reproducer:
   `tools/run_perf_corpus.sh` (idle-serial, no parallelism). Round-17
   baseline is the dated table in `PERFORMANCE.md`.
-- [~] **0911.4739** (5.04 s) and **1005.1610** (7.38 s) now exceed the
-  "all under 3s" claim from session-124 memory. Round-17 diagnosis
-  (2026-04-21): both papers are **post-processing bound, not
-  digestion bound**. `--format=xml` (no post) times:
-  - 0911.4739: pre-post 0.72 s → full 4.99 s (post = 86% of wall)
-  - 1005.1610: pre-post 0.58 s → full 7.36 s (post = 92% of wall)
-  Math-parse cost itself is ~45 ms total across 84 audited formulas
-  in 1005.1610 — <1% of the total. Post-processing chews through 365-771
-  MathML::Presentation nodes at ~19 ms each. Next cycle: profile
-  `latexml_post::math_processor` + `latexml_post::xslt` for the
-  per-node hot band (likely XPath re-eval, attribute-merge, or tree
-  walk allocation).
+- [x] **0911.4739** (5.04 s) and **1005.1610** (7.38 s) Tier A
+  outliers — **root-caused**: both are Graphics-phase bound (PDF/EPS
+  → PNG conversion via the external `convert` CLI from ImageMagick).
+  Round-17 per-phase audit with a new `LATEXML_POST_AUDIT=1` env
+  flag (commit `8df9c7b53`):
 
-- [ ] **Profile MathML::Presentation per-node cost**. ~19 ms per
-  math node observed on 1005.1610 (365 nodes, ~6.8 s). Identify
-  whether the hot band is `Node::clone` into a fresh tree,
-  `findnodes`-per-iteration (the O(n²) pattern fixed in session 127
-  for `process_math`), `stylize_content` plane1-mapping, or XSLT
-  stylesheet application.
+  | paper     | Graphics | MathML | XSLT | Scan | total post |
+  |-----------|---------:|-------:|-----:|-----:|-----------:|
+  | 1005.1610 | 6614 ms  |  23 ms | 76ms | 30ms |     ~6.8 s |
+  | 0911.4739 | 4087 ms  |  29 ms |130ms | 40ms |     ~4.3 s |
+
+  1005.1610 has 10 PDF figures totalling ~7.5 MB; 0911.4739 has 31
+  mixed EPS/PDF. Each `convert` subprocess fork-execs ImageMagick,
+  rasterises the PDF at density=150, and writes PNG. At 132-660 ms
+  per image this is intrinsic rasterisation cost, not a Rust perf
+  problem. MathML::Presentation itself is 15-29 ms total across
+  365-771 nodes — trivial.
+
+  Use `LATEXML_POST_AUDIT=1 latexml_oxide --post …` to reproduce the
+  per-phase breakdown on any paper.
+
+- [ ] **Parallelise Graphics phase.** 10-31 independent `convert`
+  subprocess calls run serially today (`latexml_post::graphics::Graphics::process`
+  for-loop over nodes). With enough CPU they could run in parallel
+  via `rayon::iter::par_iter()` or a dedicated thread pool sized to
+  `num_cpus` / conversion-heaviness. Projected win: ~4-6 s on
+  1005.1610 (currently ~6.6 s serial → ~1-1.5 s parallel at -j 8).
+  Non-trivial: the current loop mutates the DOM (`node.set_attribute`)
+  — parallel workers must stage results into a `Vec<(node_id, w, h,
+  imagesrc)>` and apply the mutations on the main thread. Also needs
+  a shared `resource_counter` (the `x1`, `x2` …  naming scheme).
 
 Specific slow-convergence follow-ups:
 

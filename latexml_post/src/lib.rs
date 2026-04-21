@@ -99,6 +99,7 @@ impl Post {
     let mut docs = vec![doc];
 
     log::info!("post-processing");
+    let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
 
     for processor in processors.iter_mut() {
       let mut new_docs = Vec::new();
@@ -117,7 +118,12 @@ impl Post {
             }
           );
           log::info!("{}", msg);
+          let t0 = if audit { Some(std::time::Instant::now()) } else { None };
           let result_docs = processor.process(doc, nodes)?;
+          if let Some(t0) = t0 {
+            let ms = t0.elapsed().as_millis();
+            log::info!("POST_AUDIT stage {} took {}ms ({} nodes)", processor.get_name(), ms, n);
+          }
           new_docs.extend(result_docs);
         } else {
           new_docs.push(doc);

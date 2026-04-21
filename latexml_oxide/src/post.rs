@@ -48,6 +48,18 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     sp.push(src_dir.to_string());
     doc_opts.searchpaths = Some(sp);
   }
+  let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
+  let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {
+    if audit { Some((name.to_string(), std::time::Instant::now())) } else { None }
+  };
+  let audit_end = |started: Option<(String, std::time::Instant)>| {
+    if let Some((name, t0)) = started {
+      let ms = t0.elapsed().as_millis();
+      log::info!("POST_AUDIT phase {} took {}ms", name, ms);
+    }
+  };
+
+  let t_parse = audit_start("PostDocument::new_from_string");
   let doc = match PostDocument::new_from_string(xml, doc_opts) {
     Ok(d) => d,
     Err(e) => {
@@ -55,8 +67,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       return xml.to_string();
     }
   };
+  audit_end(t_parse);
 
   // Phase 1: Scan
+  let t_scan = audit_start("Scan");
   let db = ObjectDB::new();
   let mut scanner = latexml_post::scan::Scan::new(db);
   let scan_nodes = scanner.to_process(&doc);
@@ -67,8 +81,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       return xml.to_string();
     }
   };
+  audit_end(t_scan);
 
   // Phase 1.5: MakeBibliography
+  let t_bib = audit_start("MakeBibliography");
   let db = scanner.db;
   let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(db, false);
   let bib_nodes = bibmaker.to_process(&doc);
@@ -83,8 +99,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   } else {
     doc
   };
+  audit_end(t_bib);
 
   // Phase 2: CrossRef
+  let t_xref = audit_start("CrossRef");
   let db = bibmaker.db;
   let mut crossref = latexml_post::crossref::CrossRef::new(
     db,
@@ -99,8 +117,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       return xml.to_string();
     }
   };
+  audit_end(t_xref);
 
   // Phase 2.5: Graphics
+  let t_gfx = audit_start("Graphics");
   let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true);
   let graphics_nodes = graphics_proc.to_process(&doc);
   let doc = if !graphics_nodes.is_empty() {
@@ -114,6 +134,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   } else {
     doc
   };
+  audit_end(t_gfx);
 
   // Phase 2.6: SVG (convert ltx:picture children to svg:svg + svg:* elements)
   // Without this, the XSLT picture template falls back to "as-TeX" mode and
@@ -128,7 +149,9 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // Workaround: extract SVG fragments from the INTERMEDIATE XML using
   // string processing (no libxml2 involvement), then inject them into
   // the final HTML AFTER XSLT completes.
+  let t_svg = audit_start("SVG extraction");
   let svg_fragments = extract_svg_fragments(xml);
+  audit_end(t_svg);
 
   // Phase 2.75: Split
   let doc = if split {
@@ -223,9 +246,14 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   }
 
-  match post.process_chain(doc, &mut processors) {
+  let t_chain = audit_start("process_chain");
+  let chain_result = post.process_chain(doc, &mut processors);
+  audit_end(t_chain);
+  match chain_result {
     Ok(results) => {
+      let t_serialize = audit_start("to_xml_string");
       let output = results[0].to_xml_string();
+      audit_end(t_serialize);
       if stylesheet.is_some_and(|s| s.contains("html")) {
         // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
         // libxml2's to_string() includes it by default; we strip it here.

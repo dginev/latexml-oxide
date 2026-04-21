@@ -160,8 +160,26 @@ pub fn process_math(
   // converted first and carried along with the enclosing math.
   let maths = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]");
   let n = maths.len();
-  for math in maths.into_iter().rev() {
+  // LATEXML_POST_AUDIT=1 records per-node wall-clock for the math
+  // post-processing loop — diagnosis aid for MathML::Presentation perf.
+  let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
+  let mut total_ns: u128 = 0;
+  let mut max_ns: u128 = 0;
+  let mut max_idx: usize = 0;
+  for (i, math) in maths.into_iter().rev().enumerate() {
+    let t0 = if audit { Some(std::time::Instant::now()) } else { None };
     process_math_node(processor, doc, &math, keep_xmath)?;
+    if let Some(t0) = t0 {
+      let ns = t0.elapsed().as_nanos();
+      total_ns += ns;
+      if ns > max_ns { max_ns = ns; max_idx = i; }
+    }
+  }
+  if audit {
+    log::info!(
+      "POST_AUDIT: {} math nodes in {}ms (max {}µs at index {})",
+      n, total_ns / 1_000_000, max_ns / 1_000, max_idx
+    );
   }
 
   // Clean up _cvis/_pvis internal visibility markers from XMath nodes
