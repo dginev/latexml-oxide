@@ -2550,6 +2550,23 @@ pub fn get_graphics_paths() -> Vec<String> {
     .unwrap_or_default()
 }
 
+/// Zero-alloc membership test for GRAPHICSPATHS. Mirrors the Perl idiom
+/// `grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') }` but
+/// without allocating an owned `Vec<String>` for a single boolean — the
+/// interned-symbol `with`/`with2` family resolves each path in place.
+pub fn graphics_paths_contains(needle: &str) -> bool {
+  lookup_value("GRAPHICSPATHS")
+    .map(|v| match v {
+      Stored::Strings(syms) => syms.iter().any(|s| arena::with(*s, |p| p == needle)),
+      Stored::VecDequeStored(vdq) => vdq.iter().any(|item| match item {
+        Stored::String(s) => arena::with(*s, |p| p == needle),
+        _ => false,
+      }),
+      _ => false,
+    })
+    .unwrap_or(false)
+}
+
 /// Mirror Perl's `$state->unshiftValue(GRAPHICSPATHS => $dir)`. Used by
 /// Core.pm-style source-directory prepends.
 pub fn graphics_paths_push_front(path: String) {

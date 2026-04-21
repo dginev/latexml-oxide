@@ -500,7 +500,7 @@ impl DigestionAPI for Core {
       // Perl Core.pm L200:
       //   $state->unshiftValue(GRAPHICSPATHS => $dir)
       //     if !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
-      if !state::get_graphics_paths().iter().any(|p| p == &dir) {
+      if !state::graphics_paths_contains(&dir) {
         state::graphics_paths_push_front(dir);
       }
       state::install_definition(

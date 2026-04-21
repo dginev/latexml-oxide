@@ -417,6 +417,46 @@ Remaining semantic-ambiguity hotspots (see
   plan for each. Not scheduled — tracked here so the categorical
   rethink isn't forgotten when the near-term pragma list stabilises.
 
+- [ ] **Rationalize the `Stored` enum** (`latexml_core::common::store::Stored`).
+  Nearly every step in the core business logic assigns or looks up a
+  `Stored` value through the state API — macro bodies, counters,
+  graphics paths, keyval stores, registers, font specs, the lot.
+  Because the enum is the universal value currency, its memory
+  footprint and method-dispatch cost is a first-order driver of
+  overall conversion speed and RSS.
+
+  Round-17 observations supporting this:
+  - `arena::to_string(sym)` heap-allocates each time — motivated the
+    zero-alloc `state::graphics_paths_contains` helper landed today
+    (`<round-17>`), but the same waste pattern recurs across every
+    caller of `get_graphics_paths` / `get_search_paths` / etc.
+  - `Stored::clone()` shows up in callgrind as a non-trivial band
+    (session 116-117 already cut it from 1.02% → 0.17% by routing
+    hot paths through `state::with_meaning`, but the remaining 0.17%
+    is still a per-token cost at conversion scale).
+  - The variant set has grown organically (`String`, `Strings`,
+    `VecDequeStored`, `Number`, `Dimension`, `Glue`, `MuGlue`,
+    `RegisterValue`, `Tokens`, `Expandable`, `Meaning`, …) with
+    ad-hoc packing; likely overlap we could coalesce.
+
+  Proposed investigation:
+  1. Measure `size_of::<Stored>()` and the histogram of live-instance
+    variants on a representative paper (complex/si.tex and a
+    math-heavy paper).
+  2. Split hot variants into `Copy`-able small forms vs heap-carrying
+    forms; consider an enum-with-small-variants pattern
+    (`SmallStored` fitting in a `u64`/`u128`).
+  3. Add `with_*`-style closure accessors for every variant that
+    currently hands out owned data — mirror the `state::with_value`
+    refactor done for `lookup_value` (D4 tracks that separately).
+  4. Audit method dispatch: many `match`-on-variant call sites can be
+    pushed into inherent methods on `Stored` (`as_string()`,
+    `as_int()`, `as_tokens()`) with inlined fast-paths.
+
+  This is a high-payoff but invasive refactor — deferred until D4
+  allocation hotspot work has more per-variant data to guide the
+  redesign. Not scheduled.
+
 ### Other structural follow-ups
 
 - [ ] **Dump Let-alias preservation.** Perl serialises
