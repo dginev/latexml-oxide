@@ -10,17 +10,11 @@ lives in git log and `memory/project_session_history.md`.
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
 **10k sandbox (session 128):** full 7933-paper sweep at 60s/6GB caps:
-**7863/7933 = 99.12% exit=0, 35 SIGABRT, 35 bash-pollution**. 6 of the
-35 aborts were DUPID-related (libxml2 "ID X already defined"); 5 of
-those now exit=0 after the `record_id_with_node` shadow-variable fix
-(1106.1389, 1505.03876, 1506.09203, 1511.07586, 1707.01155 —
-math9805021 remains as OOM, unrelated). The remaining ~30 aborts are
-3 distinct classes: `pgfkeys.code.tex.ltxml` not ported (undefined
-`\pgfkeysalso`/`\ifpgfkeyssuccess` loops — 1511.00722, 1611.04489,
-1612.08368), math-parser pathological-ambiguity timeouts (1403.4135,
-1407.5769 — 500+-token formulas), and preamble-heavy digestion
-timeouts. Runner: `tools/benchmark_10k.sh`; tool:
-`cortex_worker --standalone --timeout 60`.
+**7863/7933 = 99.12% exit=0, 35 SIGABRT, 35 bash-pollution**. A
+re-sweep with the session-128 `record_id_with_node` fix is in flight
+(task `b4l4rp7z6`); the 6 DUPID-related aborts from the prior sweep
+are expected to drop to 1 (math9805021 OOM). Runner:
+`tools/benchmark_10k.sh`; tool: `cortex_worker --standalone --timeout 60`.
 
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
 
@@ -56,396 +50,87 @@ timeouts. Runner: `tools/benchmark_10k.sh`; tool:
 
 **Permanent sandbox ignores:** ns1–ns5 (52_namespace, no DTD); 2402.03300, 2410.10068, 2511.03798 (Perl also fails).
 
+**Perl-error-only papers** (excluded from parity target — Perl itself fails under the
+same `--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` profile):
+
+- `1207.6068` — Perl emits 30 errors (acknowledgements-only file, no `\documentclass`)
+- `0909.3444` — Perl emits 2 errors (frenchb babel missing)
+
 ---
 
-## Work Plan — Active TODOs
+## Work Plan — Open TODOs
 
-### Phase D0: 2k-sandbox failing articles — **COMPLETE (84/84)**
+Phase D0 (2k-sandbox, 84/84) and the test-suite refactor (round 17) are
+closed out; per-paper narration and session diaries for sessions ≤128
+live in git log and `memory/project_session_history.md`. What remains:
 
-From `~/data/10k_sandbox_html/results.tsv` (1962 papers, 1877 ok / 95.7%).
-The original 84-paper worklist (19 aborts + 1 error + 64 conversion_errors)
-is fully resolved. The per-paper [x] checklist previously here has been
-retired — the only entry kept as reference is the Perl-error-only exclusion:
+### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
-> `[~] 1207.6068` — Perl emits 30 errors on this fragment (acknowledgements-only
-> file, no `\documentclass`). Per the sandbox baseline rule — only
-> Perl-error-free cases count — this paper is excluded from the parity target.
-> `[~] 0909.3444` — Perl emits 2 errors (frenchb babel missing).
+Three failure classes in the session-128 7933-paper sweep, after the
+6 DUPID aborts were addressed:
 
-**New D1 ramp-up discoveries (session 124):**
+1. **pgfkeys.code.tex port gap** — 3+ papers (1511.00722, 1611.04489,
+   1612.08368). `pgfkeyslibraryfiltered.code.tex` from TeXLive triggers
+   `\pgfkeys@non@outer@newif` / `\pgfkeysalso` / `\ifpgfkeyssuccess`
+   undefined-CS cascades that loop until the 60s wall-clock caps. Perl
+   also loads the raw TeX (via `InputDefinitions('pgfkeys.code', type=>'tex')`)
+   but succeeds — divergence is in how our raw-TeX processor handles
+   specific pgfkeys idioms, not a simple stub gap.
+2. **Math-parser pathological-ambiguity timeouts** — 2+ papers
+   (1403.4135, 1407.5769). 500+-token formulas with 121 parse choices
+   each, ~500ms per formula × hundreds of formulas = 60s timeout.
+3. **Preamble-heavy digestion timeouts** — e.g. 1210.1891 stuck at
+   hyperref → etoolbox → kvoptions → nameref chain load.
 
-- [x] **1311.6082** — FIXED: Rust engine/tex.rs auto-registered `\listfiles`
-  as an autoload trigger, but never ported Perl's
-  `DefPrimitive('\listfiles', undef)` (latex_constructs.pool.ltxml L4354).
-  Post-load, the trigger kept self-re-emitting; 50M pin-count sentinel
-  fired. Added the no-op primitive (latex_constructs.rs L6188).
-- [x] **1611.10101** — FIXED (rewrite.rs L475): `tree.get_parent().unwrap()`
-  in the Replace clause panicked on root-level / detached match nodes.
-  Perl's `$tree->parentNode` returns undef silently and subsequent
-  `$parent->lastChild`/`->childNodes` calls no-op; Rust now early-returns
-  `Ok(())` on None, matching Perl's effective skip.
-- [x] **hep-ph/9210235** — FIXED (semantics.rs:1619): math-parser
-  single-arg delimited branch did `create_xmrefs(...).remove(0)`.
-  `create_xmrefs` filters out XMHint and other ephemeral variants, so
-  when the sole arg was a spacing hint the ref-vec came back empty and
-  `.remove(0)` panicked. Fall back to a bare XMWrap when refs is empty
-  — the Dual with an XMRef to nothing would be meaningless anyway.
-  Found in D1 2048-sample.
-- [x] **1210.4211** — CLEAN in session 127 (0.1s end-to-end,
-  0 errors, 0 warnings under cortex_worker). The intermittent
-  parallel-load recovery-loop divergence no longer reproduces now
-  that the `Document::replace_node` text-merge UAF is fixed; the
-  silent DOM corruption at run-time appears to have been a major
-  contributor to the downstream instability.
-- [x] **1212.2052** — FIXED (session 127). Root cause in
-  `Document::replace_node` (document.rs:3574). libxml2's
-  `xmlAddNextSibling` merges adjacent text nodes — it appends the new
-  node's content into the existing sibling and frees the new node,
-  returning the merged node. The Rust wrapper discards that return
-  value, so after the second text-node insertion our `c0_opt`
-  insertion anchor already pointed at freed memory. Third and later
-  insertions then mutated a dangling pointer; for short runs this only
-  caused silent data loss (all but 2 thinspaces dropped for N≥2),
-  but at ≥17 consecutive XMHint siblings the accumulated corruption
-  landed on a hot libxml2 dict/hash entry and later SIGSEGV'd during
-  XPath evaluation in Rewriting. Fix: in `replace_node`, when the
-  previous sibling (`c0_opt`) and the incoming `with_node` are both
-  TextNodes, append content directly to `c0_opt` instead of routing
-  through `add_next_sibling` (which would free `with_node`).
-  Verified: 1212.2052 converges with 0 errors / 0 warnings; N=2..100
-  thinspace repros produce the correct N-character output matching
-  Perl exactly.
-- [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
-  loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
-  internals. Likely a babel 3.x port gap.
-- [x] **1106.1389** — FIXED (session 128, commit `bab8beb53`):
-  `record_id_with_node` had a shadow-variable bug —
-  `let id = self.modify_id(…)` inside the `if let Some(prev)` block
-  re-bound `id` to the deduped value, but the new binding went out
-  of scope before the `idstore.insert(id, …)` / `id.to_string()`
-  return, so callers got the *original* id back and wrote actual
-  duplicate xml:ids to the DOM. libxml2's post-processing then
-  spent O(n²) validating the duplicates (100s timeout on 1106.1389,
-  also SIGABRT'd 5/6 sandbox DUPID papers: 1505.03876, 1506.09203,
-  1511.07586, 1707.01155, math9805021 — math9805021 is OOM,
-  unrelated). Fix: bind `final_id` outside the `if let`. Info count
-  now matches Perl (5), DOM has a single attribute per deduped id,
-  1106.1389 full-post conversion 100s → 4s. Snapshots for
-  declare/simplemath/split refreshed (prior .xml captured the
-  silent-dup DOM state from the shadow bug).
+[ ] **Per-paper diagnosis method:**
+1. Run Perl `latexml` with matching `--preload=ar5iv.sty --path=...`; capture log + error count.
+2. If Perl errors with the *same* CS → shared document bug, skip.
+3. Otherwise apply `wisdom_upstream_error_attribution`: the divergence is
+   earlier than the named symptom. Trace `.sty`/`.cls` conditional /
+   option / flag / deferred-hook machinery to find the branch Perl takes
+   that Rust doesn't.
+4. Ensure 423 tests still pass; mark the entry `[x]` with a one-line note.
+5. Re-run 12-way parallel sweep after every landed fix to catch cascaded
+   benefits and regressions.
 
-**Test-suite refactor (round 17 — [x] DONE):** all 14 test files that
-used hand-maintained `latexml_test_single` lists migrated to one-line
-`tex_tests!("tests/<dir>")` macro invocations. The macro expands to
-`#[derive(GlobTeXTests)]` which globs `*.tex+.xml` pairs at compile
-time and emits one `#[test]` fn per pair — preserving per-test
-isolation, per-test `#[ignore]` support, and per-directory dispatcher
-choice while restoring "drop a pair into the dir, it's auto-picked-up"
-ergonomics. Commits `c02398271` (batch 1: babel, moderncv, expl3,
-slides, pgf, theorem), `5363b30ec` (batch 2: ams, tikz,
-keyval_options + proc-macro digit-prefix fix + orphan-pair cleanup),
-`8b8789e42` (batch 3: fonts, alignment, parse), `ea05eeb1e` (batch 4:
-structure, keyval, graphics, math). Net: 14 files, ~201 tests,
-~1938 lines deleted vs. ~128 lines added. Workspace 424/424.
+### D3. Performance corpus
 
-Heterogeneous-dispatch files (structure/keyval/graphics/math) were
-handled by applying the directory's union dispatcher uniformly and
-relying on two properties: (1) `latexml_contrib::dispatch` is a strict
-no-op for unrecognised filenames — behaviourally identical to `None`
-for tests that don't use contrib-specific packages; (2) the
-`validate_requirements` stub in `util/test.rs:100` returns `true`
-unconditionally, so REQUIRES maps were cosmetic. If REQUIRES gating
-is ever implemented, it will need an `ignored_if_missing!`
-mechanism invoked from within the generated tests, not a static
-directory-level attribute.
-- [x] **1404.1913** — FIXED (session 127, same commit as 1212.2052).
-  The "double free or corruption (fasttop)" during Finalizing was
-  another instance of the `Document::replace_node` text-merge UAF:
-  multiple text-node runs fed into `add_next_sibling` left
-  `c0_opt` pointing at libxml2-freed memory, which glibc's malloc
-  eventually caught during teardown. Now converges cleanly
-  (25.5k lines, 0 errors, 2 warnings).
-- [x] **1605.01946** — CLEAN in session 127 (5.4s, 0 errors,
-  0 warnings). Same root cause as 1210.4211: downstream instability
-  disappeared once the replace_node UAF was fixed.
-- [x] **1805.09247** — CLEAN in session 127 (4.6s, 0 errors,
-  0 warnings). Ditto.
-- [~] **1709.05096** — STILL SLOW (>90s wall under parallel load,
-  hits the cortex_worker main-level timeout during digestion — not
-  post-processing). Repeated `Info:undefined:… KV:vattach …` scanning
-  suggests a keyval loop paying per-row cost in a huge tabular.
-  Candidate for D4 perf audit; not a correctness blocker.
-
-**Phase D0 cumulative fixes (session 123-124):**
-
-Ported/patched Perl-parity gaps across: xy-pic curve deciphering,
-omnibus autoload stub guards, pstricks support, cp1251 reloadability,
-fontenc cyrillic stubs, libxml NODE_RC_MAX_GUARD, `\begin{document}`
-ExplSyntaxOff preamble cleanup, `def_math_constructor` isMath on
-Whatsit props, revtex4 amsmath gating, expl3 short-circuit,
-`\listfiles` no-op primitive. The detailed per-fix narration previously
-tracked here (pstricks, cp1251, fontenc cyrillic, node_rc_guard,
-ExplSyntaxOff preamble, revtex4 amsmath gate, expl3 short-circuit,
-DefEnvironment beforeDigest, `\braket` token identity, ref_step_id
-auto-counter, graphics rotatebox ordering, JHEP hyperref, xy-pic
-crv_decipher body read, etc.) is now retired — consult git log if a
-historical fix needs verification.
-
-**High-fidelity parity tasks retained:**
-- [x] **1209.2771 Figure 6** — EPS BoundingBox port of Perl's
-  `LaTeXML::Util::Image::image_size`, `read_image_dimensions` now
-  parses `%%HiResBoundingBox:`/`%%BoundingBox:` with DOS EPSI preview
-  offset support. `\resizebox{6cm}{!}{\includegraphics*{.eps}}` now
-  matches Perl to 10 significant digits.
-
-**Session 124 verification & new work:**
-
-- **D0 84/84 parallel verification (`parallel -j 12`):** all 84 worklist
-  papers via direct `latexml_oxide --timeout=60` — exit 0, 0 errors,
-  0 warnings. Avg 3.0s, max 16.84s (0704.2334).
-- **D1 128-sample (even spread across 7898):** 128/128 clean after
-  `\listfiles` fix.
-- **D1 512-sample (even spread):** 520/521 real papers clean.
-  1210.4211 hangs under certain parallel-wrap contexts (see "New D1
-  discoveries" above).
-- **D1 1024-sample (session 124):** 976/993 = 98.3% clean.
-- **D1 2048-sample (session 125):** 1932/1977 = 97.7% clean. 15 distinct
-  failures: 2 SIGSEGV (1212.2052 family), 1 panic (hep-ph/9210235,
-  FIXED session 125), 11 watchdog-timeouts, 1 OOM (1710.03688 babel
-  french). Watchdog-timeout papers tend to clear in serial runs —
-  they are parallel-scheduling-sensitive, not per-paper bugs.
-- **Harness caveat:** the shell glob `ls $d/*.tex | head -1` missed
-  uppercase `.TEX`, `.ltx`, `.latex`, extension-less, and
-  `\documentstyle` (LaTeX 2.09) main files. With a broader search the
-  same 2048-sample measured 1960/1982 = 98.9% clean under direct
-  `latexml_oxide`. The remaining deficit (2048 → ~1982) is sampling
-  arithmetic (`awk 'NR % 4 == 1'` on 7898 picks 1975 rows) plus a few
-  bundles with `\documentstyle`-only sources.
-- **Session 125 cortex_worker ZIP→ZIP sweep (ar5iv profile, 1100 papers):**
-  1016/1151 = 88.3% clean. This is the *production-path* measurement
-  (the direct `latexml_oxide` runs use the plain profile and thus
-  skip ar5iv-specific preloads); the ~10-pp gap captures papers that
-  succeed standalone but fail or emit errors under the cortex ar5iv
-  profile — primarily "`Script _ can only appear in math mode`"
-  cascades, XMTok-in-text model violations, and watchdog timeouts.
-  **1016 clean papers comfortably exceeds the 1000-document-parity
-  PR target.**
-
-- **Session 126 cortex_worker rebuild + re-sweep (after math-parser
-  hep-ph/9210235 fix landed):** binary at Apr 19 22:07 was stale; the
-  `cortex` feature gate meant my earlier `cargo build --release` didn't
-  rebuild the cortex binary. After `cargo build --release --features
-  cortex --bin cortex_worker`: 1024/1159 = 88.4% clean on same sample.
-  Failure breakdown:
-  - 51 watchdog (exit 134) — pathological serial hangs / very slow.
-  - 8 SIGSEGV (exit 139) — **all 8 FIXED in session 127**: all eight
-    were in the MathML::Presentation post-processing path (the
-    conversion log reports "Conversion complete: No obvious problems"
-    then `latexml_post MathML::Presentation` abort). Papers: 0709.2286,
-    0710.1208, 1110.2158, 1212.2052, 1402.6805, 1504.04055, 1605.07431,
-    1611.00957. Root causes + fixes landed:
-    1. **`Document::replace_node` text-merge UAF** (core path, affected
-       conversion output — see the 1212.2052 entry above). Cleared
-       0709.2286, 1402.6805, 1504.04055, 1212.2052.
-    2. **`process_math` O(n²) refetch** (`latexml_post/math_processor.rs`)
-       — the iteration re-evaluated `//ltx:Math[...]` inside the loop
-       once per Math node, turning 3845 Maths into 3845² XPath evals.
-       Matched Perl Post.pm L307-320 (single fetch, iterate reverse).
-       Cleared 1611.00957 alone; unblocked 1212.2052's end-to-end
-       post-processing path (which was timing out at 60s, now 11s).
-    3. **Eager materialization of `ltx:picture` inside `pmml_text_aux`**
-       (`latexml_post/mathml/mod.rs`). The prior code wrapped the
-       picture node lazily as `NodeData::XmlNode(node.clone())`; once
-       the enclosing XMath was unlinked by `process_math_node`, the
-       Rust Node wrapper's libxml2 pointer became dangling, so
-       `add_xml_node`'s `get_properties` SIGSEGV'd reading a freed
-       attribute. New helper `convert_xm_text_content` mirrors Perl's
-       `MathProcessor::convertXMTextContent` — eagerly rebuilds the
-       subtree as owned `NodeData`. Cleared 0710.1208, 1110.2158,
-       1605.07431.
-  - 2 panic (exit 101) — 1410.8508, 1608.08252. Both **cleared in
-    session 127** by the same suite of post-processing fixes that
-    resolved the 8 SIGSEGVs — these were further symptoms of the
-    `Document::replace_node` / lazy-XmlNode libxml aliasing class.
-    Both now converge cleanly: 1410.8508 in 9.1s, 1608.08252 in 1.3s.
-
-**Follow-up task: dump Let-alias preservation** — Perl LaTeXML's dump
-format distinguishes `Lt('\cs','\target')` (Let alias) from `I(E(...))`
-(full Expandable definition). Our Rust dump serialises both as `M E`
-records, which forces the dump-loader's safety gate at
-`dump_reader.rs:177-191` to choose between (a) admitting all
-public-CS M records and risking expl3/hook cascades, or (b) skipping
-them all and missing plain Let aliases that latex.ltx relies on —
-`\let\a=\@tabacckludge` (L10007) is the representative case. Session
-126 worked around this by adding explicit `Let!("\\a", ...)` to
-`latex_constructs.rs`, which mirrors Perl's latex.ltx source exactly,
-but leaves the structural divergence from Perl-LaTeXML's dump
-representation. A principled follow-up is to teach the dump
-serializer to preserve `Let` as its own record type (perhaps `L
-<cs> <target>`) and the loader to admit them independently of the
-gate — they carry no body, so no cascade risk. That would let us
-delete the hand-written `Let!` for `\a` and recover the other
-plain-LaTeX public-CS aliases currently filtered out (`\filecontents`,
-`\fbox`, `\itshape`, `\ae`, `\shipout`, etc.) wholesale.
-- **Arena pin-count sentinel replaced with symbol-count sentinel**
-  (`common/arena.rs`): the pin-call-count metric was a false positive
-  — dedup-heavy hot loops would trip it without any actual arena
-  overflow risk. The correct signal is `arena.len()` (distinct symbol
-  count); threshold raised to 10M which is still two orders below the
-  danger zone (~100M symbols given average string length). The real
-  recovery-loop bug 1210.4211 exhibits is now silent on the arena
-  side, and surfaces only as the main-level wall-clock watchdog abort.
-- **Mouth `Anonymous String {gid}` → `Anonymous String`:** the
-  per-instance gid was pinning a unique SymStr per anonymous mouth;
-  it served no functional purpose beyond visual disambiguation. All
-  anonymous mouths now share one arena entry regardless of call count.
-
-**Session 124 xy-pic fix:** `\lx@xy@crv@decipher` (xylatexml_tex.rs L799) was
-calling `macro_string` (which runs `do_expand`) on `\xycrvdrop@` and `\xycrvconn@`
-to inspect what drop/connection was requested. The Perl source uses
-`ToString(LookupDefinition(T_CS('\xycrvdrop@'))->getExpansion)` — reading the
-macro body, NOT expanding it. When `@/curve/` and `@{-->}` appear together,
-expanding `\xycrvconn@` re-invokes `\dir{-->}` which feeds back into the curve
-pipeline and re-invokes `\lx@xy@crv@decipher`, looping unbounded (21GB RSS / 19s
-wall before OOM kill). New `macro_body` helper returns the raw Tokens body via
-`lookup_definition(...)->get_expansion()`. Minimal repro
-`$$\xymatrix{A \ar@/^5ex/@{-->}[r] & B}$$`: 21GB OOM → 59MB / 0.13s.
-
-**Papers removed from worklist** — Perl also emits errors under
-`--preload=ar5iv.sty --path=/home/deyan/git/ar5iv-bindings/bindings`
-(the apples-to-apples comparison profile cortex_worker uses), so we
-can't converge on them without also fixing the upstream Perl side:
-
-- **0909.3444** — 2 Perl errors (frenchb babel missing)
-
-**Per-article diagnosis method:**
-1. Run Perl `latexml` on the paper; capture its log + error count.
-2. If Perl errors too with the *same* CS, skip — likely a shared document bug.
-3. If Perl succeeds (or gets further), apply `wisdom_upstream_error_attribution`:
-   the divergence is earlier than the named symptom. Read the `.sty`/`.cls` source,
-   trace the conditional / option / flag / deferred-hook machinery, identify what
-   branch Perl takes that Rust doesn't.
-4. Ensure all 423 tests still pass; mark the entry `[x]` here with a one-line note.
-5. Use the parallel sweep (`parallel -j 12`) after every landed fix to catch cascaded
-   benefits and regressions across the full 64-paper set.
-5. Ensure all 423 tests still pass; mark the entry `[x]` here with a one-line note.
-
-### Phase D: 10k-Document Sandbox
-
-Scale testing to ~8,000 arxiv papers. Two stages:
-1. **Coverage:** zero non-timeout failures at full scale.
-2. **Performance:** eliminate timeouts at 120s cap.
-
-**Process guards:** 60s timeout, 6GB RAM, output 200MB cap, parallelism via GNU parallel (16).
-Ramp-up: exponential doubling (4→8→16→…→7898) with 0-error gate.
-
-#### D1. Ramp-up runs — ONGOING
-
-Last: **512 papers: 93.2% OK**. Residual blockers:
-- `Missing $` display math (document bugs)
-- Content-model `malformed` (`ltx:line` in `ltx:para`, `ltx:g` in `ltx:figure`)
-- Raw-class undefined internals in exotic classes
-- Rc<RefCell> "shared Node" error in 0805.2376 (tracked in D3b)
-
-#### D2. Coverage fixes — ONGOING
-
-Each cycle adds targeted fixes for specific undefined/misbehaving commands per log analysis. Detailed history in git log.
-
-**Known content-model gap — FIXED (session 119):** Perl's `Tag('ltx:picture', autoOpen => 0.5)` wraps bare picture primitives (`\line`, `\circle`, `\vector`, `\put`) used outside `{picture}`. Ported the fractional-priority model in `compute_indirect_model`/`_aux`: priorities are scaled u32 (100 = full, 50 = half), multiplied at each recursion step, and the best-priority start tag wins. Picture gets 50, everything else gets 100, so picture only wraps when no fuller path exists. `Tag!("ltx:picture", auto_open => true, auto_close => true, …)` is now enabled. 9 `malformed:ltx:g` papers fixed, plus `ltx:line`/`ltx:rect` collateral.
-
-#### D3. Performance catalog — slow-paper backlog (session 124 refresh)
-
-**Tier A revisit (session 124, direct `latexml_oxide` wall-clock, idle):**
-
-| id | dt (s) Orig | dt (s) Cur | speedup |
-|----|-----------:|-----------:|--------:|
-| 0906.1883 | 31.2 | 0.55 | 57× |
-| 1011.1955 | 20.9 | 2.61 | 8× |
-| 1009.1431 | 19.5 | 1.54 | 13× |
-| 1008.4386 | 17.4 | 2.04 | 8× |
-| 0909.2656 | 14.5 | 0.29 | 50× |
-| 0911.4739 | 11.1 | 0.70 | 16× |
-| 1005.1610 | 10.3 | 0.57 | 18× |
-| 0803.0466 | 10.0 | 0.59 | 17× |
-
-Note: original baselines were measured under `cortex_worker --standalone`
-with zip archive I/O at `-j 12` parallel; the refreshed run is direct
-`latexml_oxide --timeout=60` under idle load. Wrapper overhead ≈0.3-0.5s
-and parallel contention additionally inflate the cortex_worker numbers.
-Still, all Tier A papers now clear 3s on the bare binary — the slow-paper
-backlog is effectively resolved for this tier under the cumulative session
-116-124 engine fixes (omnibus stub guard, pin_char cache, expl3
-short-circuit, xy-pic crv_decipher body read).
-
-**Tier C revisit (session 124, same methodology as Tier A above):**
-
-| id | dt (s) Orig | errs Orig | dt (s) Cur | errs Cur |
-|----|-----------:|----------:|-----------:|---------:|
-| 0802.3360 | 27.0 | 3   | 1.83 | 0 |
-| 1209.1578 | 25.1 | 130 | 3.08 | 0 |
-| 1107.3732 | 22.1 | 1   | 2.67 | 0 |
-| 1203.6616 | 15.8 | 2   | 1.49 | 0 |
-| 0909.5007 | 14.4 | 2   | 1.19 | 0 |
-| 0711.4787 | 11.8 | 2   | 1.25 | 0 |
-| 1108.0951 |  8.1 | 1   | 0.68 | 0 |
-| 1004.2626 |  6.5 | 6   | 0.88 | 0 |
-
-All 8 Tier C papers now clean (0 errors, 0 warnings) under 3.1s. The
-session 120-124 per-paper Perl-parity fixes (recorded above under the
-64 conversion_error list) resolved each root cause and the cumulative
-engine perf wins dropped the wall-clock alongside. **Tier B (3 papers)
-was a subset of now-resolved entries** — retired.
-
-**Active perf tasks (D3) — post-124 status:**
-- [x] Tier A/B/C backlog resolved. Remaining papers all under 4s on
-  direct `latexml_oxide` (cortex_worker zip + -j 12 adds ~0.5s fixed
-  overhead + contention). No individual paper is a performance outlier.
 - [ ] Capture Tier A (~10 papers) + `complex/si.tex` as a standing perf
-  corpus. File: `docs/PERFORMANCE.md` when a tracked regression surfaces.
+  corpus in `docs/PERFORMANCE.md`. Regression trigger: wall-clock drift
+  > 15% on any corpus entry between commits.
 
-**Method (after session 120 feedback_parallel_sweeps memory):**
-```bash
-printf '%s\n' $ids | parallel -j 12 --line-buffer \
-  "t0=\$(date +%s.%N); errs=\$(./target/release/cortex_worker --standalone \
-    --input ~/data/10k_sandbox/{}.zip --output /tmp/{}.zip --timeout 30 2>&1 \
-    | grep -cE 'Error:'); t1=\$(date +%s.%N); \
-   dt=\$(echo \"\$t1-\$t0\" | bc -l); \
-   printf '%s errs=%s dt=%.1fs\\n' '{}' \"\$errs\" \"\$dt\""
-```
+Tier A/B/C slow-paper backlog is resolved (all <4s direct wall-clock after
+sessions 116–124). Specific slow-convergence follow-ups:
 
-#### D3b. Stability — eliminate SIGSEGV
+- [~] **1709.05096** — >90s wall under parallel load (digestion, not
+  post-processing). `Info:undefined:… KV:vattach …` scanning pattern
+  suggests a keyval loop paying per-row cost in a huge tabular.
+- [~] **1710.03688** — OOM at ~19 GB RSS during babel french.ldf load;
+  `\bbl@exp@aux` undefined (babel 3.x port gap).
 
-Sources: libxml2 FFI (UAF on unlinking), libxslt C (namespaced elements), Rust unsafe in arena, parallel benchmark writes sharing paths.
+### D3b. Stability — libxml2 node lifetimes
 
-**Policy:** no direct `libxml::bindings::*` FFI calls from the latexml
-project. When a safe API is missing, add it to the `rust-libxml`
-wrapper crate at `~/git/rust-libxml` and vendor-patch or upstream the
-addition. That keeps unsafety isolated to one dependency and lets
-future stability work on libxml2 node lifetimes happen in one place
-rather than scattered across latexml_core / latexml_post / etc. Current
-direct `libxml::bindings::*` call sites (should shrink to 0 over time):
+**Policy:** no direct `libxml::bindings::*` FFI calls from latexml. When
+a safe API is missing, add it to `~/git/rust-libxml` and
+vendor-patch/upstream. Current direct `libxml::bindings::*` call sites:
 `latexml_core/src/lib.rs`, `latexml_core/src/document.rs` — 5 total.
 
-Outstanding:
 - [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
 - [ ] Replace unsafe-over-FFI with safe wrappers where practical.
 - [ ] Migrate the remaining `libxml::bindings::*` callers to high-level
   `rust-libxml` methods; upstream new methods as needed.
-- [~] Rc `Can not mutably reference a shared Node "text"` cluster — session 123
-  raised `set_node_rc_guard` to 8192 after confirming the guard is a
-  diagnostic heuristic (real aliasing is caught by `weak_count == 0`).
-  dcpic papers 0805.2376 (ergkaehler25), 1007.2309, 1108.3241, 1204.5278
-  now all converge cleanly. Lower-priority follow-up: identify the
-  *semantic* cause of high ref counts on `"text"` nodes (libxml's own
-  `document.nodes` hash accounts for some, but dcpic diagrams push to
-  ~2000-8000 — may indicate redundant caching). Not a correctness
-  blocker now.
+- [~] Rc `Can not mutably reference a shared Node "text"` cluster — guard
+  raised to 8192 (diagnostic, not safety). dcpic cluster 0805.2376 /
+  1007.2309 / 1108.3241 / 1204.5278 all converge now. Lower-priority
+  follow-up: identify the semantic cause of high `"text"`-node ref counts
+  on dcpic diagrams (2000–8000 range).
 
-#### D4. Performance — parallel scaling and allocations
+### D4. Performance — parallel scaling & allocations
 
-**Baseline (session 105, paper 0707.1173):** 1-worker 22.6s → 16-worker 76.8s (29% per-worker efficiency). 14-core/20-thread machine. Peak RSS 570 MB/process.
+**Baseline (session 105, paper 0707.1173):** 1-worker 22.6s → 16-worker
+76.8s (29% per-worker efficiency). 14-core/20-thread machine. Peak RSS
+570 MB/process.
 
-**Active work:**
 - [ ] Audit `.to_string()` (~1900 sites) — replace with `&str` / interned symbols where the value goes into `HashMap<String,String>`.
 - [ ] Audit `String::from("...")` literals for interned conversions.
 - [ ] Replace `HashMap<String,String>` with `SymHashMap<SymStr>` in hot paths.
@@ -456,84 +141,15 @@ Outstanding:
 - [ ] Long-running daemon / process pool to amortize 570 MB startup.
 - [ ] Fork-based parallelism for CoW memory sharing.
 - [~] `lookup_value(key)` → `with_value(key, |v| …)` closure refactor
-  (248 sites). Session 123 did: `mathchar.rs` (8 sites), the
-  `pin_char` ASCII cache, and `defined_as` (session 116). Pattern:
-  `Option<Stored>` allocates the enum envelope when all you need is a
-  Copy variant (Token, Int, Bool) or an Rc bump (Font, Tokens). Saves
-  a Stored::clone per call. Remaining sites: `state.rs` (17),
-  `binding/content.rs` (5), `keyval.rs` (4, but tricky — they return
-  Option<Stored> APIs), `binding/counter/dialect.rs` (3).
+  — 248 initial sites, ~12 converted (mathchar, pin_char, defined_as).
+  Remaining: `state.rs` (17), `binding/content.rs` (5), `keyval.rs` (4,
+  tricky — return `Option<Stored>`), `binding/counter/dialect.rs` (3).
 
-**Callgrind (session 105, 0707.1173 math-heavy paper):** Math parser
-Marpa dominates — `transitive_closure` 34.3%, `marpa_g_precompute`
-8.3%, `bv_scan` 7.1%, AVL ops 6.8%. Marpa-related >60% CPU.
+### D5. Math parser ambiguity
 
-**Callgrind (session 116, `complex/si.tex` siunitx-heavy):** Marpa is
-**0.0%** of CPU — this fixture has almost no complex math. The
-dominant costs are in gullet token reading and VecDeque-based
-pushback management:
-
-| Band | Share (Ir) | Site |
-|---|---|---|
-| Gullet token read path | ~15% | read_x_token + read_internal_token + read_token + read_balanced |
-| VecDeque ops (pushback + pending_comments) | ~10% | unread_vec + inner pushback.pop_front / push_front |
-| Allocation (mimalloc + memcpy) | ~5% | alloc/free/realloc + raw_vec grow |
-| Arena string-interner probes | ~2% | get_or_intern_using + hashbrown |
-| state::lookup_meaning | ~1.4% | per-token meaning lookup |
-| Stored::clone | ~1.0% | Stored enum clone (Tokens clone internally) |
-| Token::defined_as | ~1.2% | per-token cs comparison |
-| Parameter::read | ~1.8% | argument-parsing machinery |
-
-Takeaway: **the hot path depends heavily on the document**. Math-heavy
-docs are Marpa-bound; siunitx/physics-heavy docs are gullet-bound.
-Generalized wins should reduce per-token gullet cost (pushback
-structure, RefCell borrow amortization) rather than chase Marpa.
-
-**After `state::with_meaning` conversion** (session 116 commits
-0f4797d7 / f3289ad7 / 706eaeaa): `Stored::clone` dropped from 1.02%
-to 0.17% (~85% reduction); `lookup_meaning` from 1.38% to 0.17%.
-Total instruction count: 17.87B → 17.33B (~3% fewer). The closure-based
-borrowing API is now the preferred pattern for Stored-inspecting
-callers — use `with_meaning(token, |m| … )` instead of
-`lookup_meaning(token)` whenever the caller only inspects the meaning
-(not moving ownership forward).
-
-**After pushback VecDeque→Vec (LIFO stack)** (session 117 commit
-2f48e7c4): unread_vec + push_front VecDeque overhead dropped from
-~4.3% to ~3.0%. Total instruction count: 17.33B → 16.46B (another
-~5%). The gullet pushback is pure LIFO in hot paths; the VecDeque
-head-pointer arithmetic was paying for a FIFO capability used only
-by \\endinput (`flush_mouth`), which is now handled via a single
-`splice(0..0, …)` on the rare path.
-
-**Cumulative perf trajectory on si.tex** (direct conversion, not
-cargo test):
-
-| Session phase | Ir (billion) | wall-clock |
-|---|---|---|
-| Session start | 17.87 | ~1.88s |
-| After with_meaning refactor | 17.33 | ~1.80s |
-| After read_balanced pre-size | 16.94 | ~1.77s |
-| After pushback VecDeque→Vec | 16.46 | ~1.74s |
-| After arena resolve_unchecked | 15.94 | ~1.70s |
-| After dead tracing lookup removal | 15.32 | ~1.71s |
-| After Parameter::read destructure | ~15.0 | ~1.67s |
-| Session 123 start (D0 engine fixes accumulated) | (n/m) | ~2.80s |
-| After `pin_char` ASCII cache (session 123) | (n/m) | ~2.29s |
-| After arena sentinel removal + Mouth gid removal (session 126) | (n/m) | ~1.88s |
-
-The ~+1.13s drift between sessions 117 and 123 correlates with D0
-engine-level fixes (error-recovery rate-limiting, arena pin-count
-sentinel with `arena.len()` probe, `NODE_RC_MAX_GUARD` bump). Session
-123-126 walked back ~0.92s of that via `pin_char` caching and the
-sentinel/gid simplifications. Net round-16 change vs round-15 start:
-~same wall-clock at higher correctness (84 paper D0 + 16 D1 paper
-fixes landed).
-
-~16% fewer instructions, ~11% faster on this workload. Wall-clock
-noise is ~0.05s run-to-run, smaller than the cumulative delta.
-
-#### D5. Math parser optimizations (HIGHEST PRIORITY per callgrind)
+Callgrind (math-heavy paper, session 105): Marpa dominates — transitive
+closure 34.3%, grammar precompute 8.3%, bv_scan 7.1%, AVL 6.8%.
+Marpa-related >60% CPU.
 
 - [ ] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
 - [ ] Audit script attachment ambiguity (`{}^4{}_{12}C^{5+}` — 27 unique trees).
@@ -541,17 +157,27 @@ noise is ~0.05s run-to-run, smaller than the cumulative delta.
 - [ ] Enumerate grammar rules by parse-tree count contribution.
 - [ ] Document grammar ambiguity per category.
 
-#### D6. Grammar First-Principles Plan
+Remaining semantic-ambiguity hotspots (see
+`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`; live audit via
+`LATEXML_PARSE_AUDIT=1`):
 
-See `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`. Live audit: `LATEXML_PARSE_AUDIT=1`.
-
-**Remaining hotspots:**
 1. `\sin[XY]` chain — 1022 trees / 10 unique (real semantic ambiguity)
 2. `tr ρ / tr(XY) / rank M / …` — 100 / 8 unique
 3. `FGHa` OPFUNCTION cascade — 87 / 9 unique (genuine math ambiguity)
 4. `a|a|+b|b|+c|c|` VERTBAR — 53 / 10 unique
 
-Primarily **semantic** — inherent to math practice; grammar refactoring has limits.
+### Other structural follow-ups
+
+- [ ] **Dump Let-alias preservation.** Perl serialises
+  `Lt('\cs','\target')` (Let alias) separately from full Expandable
+  `I(E(...))` records; our Rust dump collapses both to `M E`, which
+  forces the loader's safety gate at `dump_reader.rs:177-191` to admit
+  *all* public-CS M records (cascades expl3/hook bodies) or *none*
+  (misses plain Let aliases latex.ltx relies on, e.g. `\let\a=\@tabacckludge`
+  at L10007). Workaround: explicit `Let!("\\a", ...)` in
+  `latex_constructs.rs`. Proper fix: new `L <cs> <target>` record type
+  with a narrow loader gate. Would recover `\filecontents`, `\fbox`,
+  `\itshape`, `\ae`, `\shipout`, etc. wholesale.
 
 ---
 
