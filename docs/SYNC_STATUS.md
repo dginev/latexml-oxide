@@ -42,7 +42,7 @@ handful of slow-convergence papers. Runner:
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| base_parameter_types.rs | MINOR | `DirectoryList`/`CommaList`: no Array type in Rust (ported to `{d1}{d2}...` token-stream encoding) |
+| base_parameter_types.rs | MINOR | `DirectoryList`/`CommaList`: no Array type in Rust (ported to `{d1}{d2}...` token-stream encoding); parameterized `CommaList:Type` form still unported |
 | tex_box.rs | MINOR | Minor box dimension edge cases |
 | tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics |
 | tex_tables.rs | MINOR | Minor: padding CSS classes (XSLT concern) |

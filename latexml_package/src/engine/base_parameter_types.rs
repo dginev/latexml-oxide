@@ -770,37 +770,50 @@ LoadDefinitions!({
   //DefParameterType!(Length, sub {
   ////   my($gullet,$unit)=@_;
 
-  // CommaList expects something like {balancedstuff,...}
-  DefParameterType!(CommaList, sub[__inner, _extra] {
-      // my ($gullet, $type) = @_;
-      // my $typedef = $type &&
-      //       LaTeXML::Package::parseParameters(ToString($type), "CommaList")->[0];
-      // my @items = ();
-      // if ($gullet->ifNext(T_BEGIN)) {
-      //   $gullet->readToken;
-      //   my @tokens = ();
-      //   my $comma  = T_OTHER(',');
-      //   while (my $token = $gullet->readToken) {
-      //     my $cc = $token->getCatcode;
-      //     if ($cc == CC_END) {
-      //       push(@items, Tokens(@tokens));
-      //       last; }
-      //     elsif ($token->equals($comma)) {
-      //       push(@items, Tokens(@tokens)); @tokens = (); }
-      //     elsif ($cc == CC_BEGIN) {
-      //       push(@tokens, $token, $gullet->readBalanced->unlist, T_END); }
-      //     else {
-      //       push(@tokens, $token); } }
-      //   if ($typedef) {
-      //     @items = map { [$typedef->reparseArgument($gullet, $_)]->[0] } @items; } }
-      // else {
-      //   # If no brace, just read one item or token, but still make Array!
-      //   push(@items, ($typedef ? $typedef->readArguments($gullet, "CommaList")
-      //       : ($gullet->readToken))); }
-      // LaTeXML::Core::Array->new(open => T_BEGIN, close => T_END, type => $typedef,
-      //   values => [@items]); });
-      // Stub: CommaList parameter type not yet ported
-      Tokens!()
+  // CommaList expects something like {item1,item2,...}; items may be
+  // `{balanced}` groups or plain token runs. Perl returns a
+  // `LaTeXML::Core::Array`; Rust has no Array type and follows the
+  // `DirectoryList` convention — emit a token stream where each item
+  // is wrapped in its own `{...}`. Callers that need typed parsing
+  // (Perl's `$typedef->reparseArgument`) must reparse each item;
+  // this port does not yet handle the parameterized `CommaList:Type`
+  // form.
+  DefParameterType!(CommaList, sub[_inner, _extra] {
+    gullet::skip_spaces()?;
+    let mut collected: Vec<Token> = Vec::new();
+    if gullet::if_next(T_BEGIN!())? {
+      gullet::read_token()?; // consume outer `{`
+      let mut current: Vec<Token> = Vec::new();
+      let comma = T_OTHER!(",");
+      while let Some(token) = gullet::read_token()? {
+        let cc = token.get_catcode();
+        if cc == Catcode::END {
+          collected.push(T_BEGIN!());
+          collected.extend(current);
+          collected.push(T_END!());
+          break;
+        } else if token == comma {
+          collected.push(T_BEGIN!());
+          collected.extend(current);
+          collected.push(T_END!());
+          current = Vec::new();
+        } else if cc == Catcode::BEGIN {
+          // Nested `{balanced}` — preserve brace wrapping.
+          current.push(token);
+          let balanced = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+          current.extend(balanced.unlist());
+          current.push(T_END!());
+        } else {
+          current.push(token);
+        }
+      }
+    } else if let Some(token) = gullet::read_token()? {
+      // No outer brace — read a single token as the sole item.
+      collected.push(T_BEGIN!());
+      collected.push(token);
+      collected.push(T_END!());
+    }
+    Tokens::new(collected)
   });
 
   // Support for Key / Value arguments.
