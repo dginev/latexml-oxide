@@ -1805,3 +1805,96 @@ pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Re
   }
   Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use libxml::parser::Parser as XmlParser;
+
+  // See wisdom_libxml_node_doc_lifetime.md — keep the Document alive.
+  fn parse(xml: &str) -> libxml::tree::Document {
+    XmlParser::default().parse_string(xml).expect("parse")
+  }
+
+  #[test]
+  fn first_child_element_returns_first_elem() {
+    let doc = parse(r#"<parent>text<a/><b/></parent>"#);
+    let root = doc.get_root_element().unwrap();
+    let first = first_child_element(&root).expect("has a child");
+    assert_eq!(first.get_name(), "a");
+  }
+
+  #[test]
+  fn first_child_element_none_for_leaf() {
+    let doc = parse(r#"<leaf/>"#);
+    let root = doc.get_root_element().unwrap();
+    assert!(first_child_element(&root).is_none());
+  }
+
+  #[test]
+  fn first_child_element_skips_text_nodes() {
+    // get_child_elements already filters text — so a pure-text leading child
+    // is not returned.
+    let doc = parse(r#"<p>   <i/></p>"#);
+    let root = doc.get_root_element().unwrap();
+    let first = first_child_element(&root).expect("has element child");
+    assert_eq!(first.get_name(), "i");
+  }
+
+  #[test]
+  fn collect_xml_ids_walks_recursively() {
+    let doc = parse(
+      r#"<root xml:id="r">
+           <child xml:id="c1"/>
+           <inner>
+             <deep xml:id="d1"/>
+           </inner>
+           <child xml:id="c2"/>
+         </root>"#,
+    );
+    let root = doc.get_root_element().unwrap();
+    let mut ids = Vec::new();
+    collect_xml_ids(&root, &mut ids);
+    // Order is DOM order: root first, then depth-first children.
+    assert_eq!(ids, vec!["r", "c1", "d1", "c2"]);
+  }
+
+  #[test]
+  fn collect_xml_ids_empty_for_no_ids() {
+    let doc = parse(r#"<root><a/><b><c/></b></root>"#);
+    let root = doc.get_root_element().unwrap();
+    let mut ids = Vec::new();
+    collect_xml_ids(&root, &mut ids);
+    assert!(ids.is_empty());
+  }
+
+  #[test]
+  fn collect_xmrefs_finds_by_element_name_and_idref() {
+    let doc = parse(
+      r#"<root>
+           <XMRef idref="a1"/>
+           <inner>
+             <XMRef idref="b1"/>
+             <XMRef/>
+             <other idref="c1"/>
+           </inner>
+         </root>"#,
+    );
+    let root = doc.get_root_element().unwrap();
+    let mut refs = Vec::new();
+    collect_xmrefs(&root, &mut refs);
+    // Must have idref attribute AND be named XMRef.
+    assert_eq!(refs.len(), 2);
+    let idrefs: Vec<String> = refs.iter().map(|r| r.get_attribute("idref").unwrap()).collect();
+    assert_eq!(idrefs, vec!["a1", "b1"]);
+  }
+
+  #[test]
+  fn collect_xmrefs_empty_for_no_matches() {
+    let doc = parse(r#"<root><child/></root>"#);
+    let root = doc.get_root_element().unwrap();
+    let mut refs = Vec::new();
+    collect_xmrefs(&root, &mut refs);
+    assert!(refs.is_empty());
+  }
+}
