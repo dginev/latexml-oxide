@@ -244,20 +244,40 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
           && !name.contains(':')
           && !target_raw.trim_start_matches('\\').contains(':')
       };
-      // Round 17 — deep dumper parity first step: admit `:`-named N
-      // (None) and T (Token) records. These can't cascade —
-      //   • N returns Ok(false) immediately in load_meaning (no-op).
-      //   • T calls a single assign_meaning() with a Token value
-      //     already parsed from the dump; no expansion / hook chain.
-      // Baseline: 44 colon-N + 14 colon-T records in the current
-      // latex.dump.txt. Canary: 83_expl3 test (where the
-      // earlier PA-widening experiment infinite-looped). If N+T
-      // alone pass, we've trimmed the gate-exclusion set from
-      // {E, R, PA, N, T} down to {E, R, PA}.
+      // Round 17 — deep dumper parity, progressive widening of the
+      // `:`-named entry admission. Each class is added only after
+      // empirical verification that 83_expl3 + the full workspace
+      // test suite pass. The record-type classification of the
+      // 8,914 `:`-named M entries in the baseline latex.dump.txt:
+      //   8,484 E  (Expandable — most can cascade via expansion)
+      //     216 R  (Register — already admitted via is_public_register)
+      //     156 PA (let-alias — trips expl3.sty guard; needs coord)
+      //      44 N  (None — no-op)
+      //      14 T  (Token — single assign_meaning, no chain)
+      //
+      // Step 1 (b44a065b6): N + T records — no cascade risk.
+      // Step 2 (this commit): :-named E records with nargs=0 AND
+      //   empty body — 43 of 8,484. These define empty macros,
+      //   which expand to nothing. Canary-safe because the expl3.sty
+      //   guard tests `\tex_let:D` (a PA, not an E), so admitting
+      //   bodyless E entries doesn't trip it. The add-only policy in
+      //   load_meaning means any later raw-expl3 redefinition wins.
       let is_safe_colon_noncascade = name.contains(':')
         && (data.starts_with("N") || data.starts_with("T\t"));
+      let is_safe_colon_empty_e = name.contains(':')
+        && data.starts_with("E\t")
+        && {
+          // E record format: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO[\tV3]]
+          // Safe iff NARGS == "0" and TOKENS is empty. Use `split`
+          // (unlimited) so TOKENS is isolated as its own field rather
+          // than the tail of a splitn remainder.
+          let eparts: Vec<&str> = data.split('\t').collect();
+          eparts.get(2).map(|s| *s == "0").unwrap_or(false)
+            && eparts.get(4).map(|s| s.is_empty()).unwrap_or(true)
+        };
       if (is_at_internal || is_public_register || is_safe_let_alias
-        || is_safe_colon_noncascade)
+        || is_safe_colon_noncascade
+        || is_safe_colon_empty_e)
         && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(key, data)
       } else {
