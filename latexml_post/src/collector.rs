@@ -165,3 +165,85 @@ impl Processor for Collector {
     Ok(vec![doc])
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::document::PostDocumentOptions;
+
+  fn doc_with_dest(dest: Option<&str>) -> PostDocument {
+    let opts = PostDocumentOptions {
+      destination: dest.map(|s| s.to_string()),
+      ..PostDocumentOptions::default()
+    };
+    PostDocument::new_from_string("<root/>", opts).expect("parse")
+  }
+
+  #[test]
+  fn new_sets_name_defaults() {
+    let c = Collector::new("MyCollector");
+    assert_eq!(c.get_name(), "MyCollector");
+    assert!(c.resource_directory.is_none());
+    assert!(c.resource_prefix.is_none());
+    assert!(!c.has_scanner);
+  }
+
+  #[test]
+  fn with_scanner_flips_flag() {
+    let c = Collector::new("X").with_scanner();
+    assert!(c.has_scanner);
+  }
+
+  #[test]
+  fn get_page_name_no_destination_is_bare_initial_xml() {
+    let doc = doc_with_dest(None);
+    assert_eq!(get_page_name(&doc, "A"), "A.xml");
+  }
+
+  #[test]
+  fn get_page_name_index_uses_just_initial() {
+    let doc = doc_with_dest(Some("/tmp/index.html"));
+    // stem == "index" → name becomes just the initial.
+    assert_eq!(get_page_name(&doc, "A"), "/tmp/A.html");
+  }
+
+  #[test]
+  fn get_page_name_non_index_appends_initial() {
+    let doc = doc_with_dest(Some("/tmp/doc.html"));
+    assert_eq!(get_page_name(&doc, "A"), "/tmp/doc.A.html");
+  }
+
+  #[test]
+  fn get_page_name_preserves_extension() {
+    let doc = doc_with_dest(Some("/tmp/foo.xml"));
+    assert_eq!(get_page_name(&doc, "B"), "/tmp/foo.B.xml");
+  }
+
+  #[test]
+  fn make_sub_collection_documents_empty_map_returns_empty() {
+    let mut doc = doc_with_dest(None);
+    let root = doc.get_document_element().expect("root");
+    let collections: HashMap<String, Vec<NodeData>> = HashMap::new();
+    let result = make_sub_collection_documents(&mut doc, &root, &collections);
+    assert!(result.is_empty());
+  }
+
+  #[test]
+  fn make_sub_collection_documents_populated_map_currently_returns_empty() {
+    // The implementation notes it doesn't yet create sub-documents for
+    // initials[1..] (needs PostDocument::newDocument infra). Lock that in.
+    let mut doc = doc_with_dest(None);
+    let root = doc.get_document_element().expect("root");
+    let mut collections: HashMap<String, Vec<NodeData>> = HashMap::new();
+    collections.insert(
+      "A".to_string(),
+      vec![NodeData::Text("entry-a".to_string())],
+    );
+    collections.insert(
+      "B".to_string(),
+      vec![NodeData::Text("entry-b".to_string())],
+    );
+    let result = make_sub_collection_documents(&mut doc, &root, &collections);
+    assert!(result.is_empty());
+  }
+}
