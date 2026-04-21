@@ -171,16 +171,20 @@ Three failure classes in the session-128 7933-paper sweep, after the
     exclude; the 200 KB threshold we suggest does
 
   **Still to do**:
-  - Timeout on the inkscape subprocess (to defend against
-    pathological small-PDF cases that might still be slow). Current
-    code just waits for it to finish.
-  - Port the 7 cases of pathological imagemagick PDFs documented in
-    issue #902 (arxiv:1804.00311, arxiv:1807.01606) as a perf
+  - [x] Timeout on the inkscape subprocess — landed. Default 15 s
+    (overridable via `LATEXML_INKSCAPE_TIMEOUT_SECS`). Rust-side
+    spawn + poll + SIGKILL in `Graphics::run_with_timeout`; 6 new
+    unit tests lock in the timeout/kill semantics, the file-size
+    heuristic, and SVG viewBox parsing (also fixed a bug where the
+    XML-prolog `?>` was mis-matched as the root-tag close).
+  - [ ] Port the 7 cases of pathological imagemagick PDFs documented
+    in issue #902 (arxiv:1804.00311, arxiv:1807.01606) as a perf
     benchmark — inkscape should handle these without timing out.
-  - EPS support via the same path (inkscape can read EPS via
+  - [ ] EPS support via the same path (inkscape can read EPS via
     ghostscript; current `should_try_svg_path` only accepts `.pdf`).
-  - Consider pdf2svg as a cheaper fallback when inkscape is absent
-    but pdf2svg is available — smaller install, simpler flags.
+  - [ ] Consider pdf2svg as a cheaper fallback when inkscape is
+    absent but pdf2svg is available — smaller install, simpler
+    flags.
 
 
 Specific slow-convergence follow-ups:

@@ -473,6 +473,14 @@ impl Graphics {
   ///
   /// `page` is 1-based (graphicx convention); converted to 0-based for
   /// inkscape's `--pdf-page`.
+  ///
+  /// Guarded by a **hard timeout** (15 s default; see
+  /// `inkscape_timeout_secs`). Pathological small-PDF cases have been
+  /// observed — if inkscape is still running after the deadline we SIGKILL
+  /// it and return `false` so the caller falls back to ImageMagick. The
+  /// timeout is generous enough (15 s) for all well-behaved small vector
+  /// plots and strict enough to prevent the 46 s+ runaway behaviour seen
+  /// on Fade.pdf-class inputs.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
     let mut cmd = std::process::Command::new("inkscape");
     cmd.arg("--export-type=svg")
@@ -482,9 +490,60 @@ impl Graphics {
       cmd.arg(format!("--pdf-page={}", p.saturating_sub(1).max(0)));
     }
     cmd.arg(source);
-    match cmd.output() {
-      Ok(output) => output.status.success() && Path::new(dest).exists(),
-      Err(_) => false,
+    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    match Self::run_with_timeout(cmd, timeout) {
+      Some(status) => status.success() && Path::new(dest).exists(),
+      None => {
+        log::warn!("Graphics: inkscape SVG conversion for {} exceeded {} s — killed", source, timeout.as_secs());
+        // Best-effort cleanup of a partial output.
+        let _ = std::fs::remove_file(dest);
+        false
+      }
+    }
+  }
+
+  /// Hard timeout (seconds) for the `inkscape` subprocess. Overridable via
+  /// the `LATEXML_INKSCAPE_TIMEOUT_SECS` environment variable for
+  /// debugging; defaults to 15 s — enough for all benign vector-authored
+  /// plots we've measured (< 1 s typical), strict enough to cut off the
+  /// Fade.pdf-class 40 s+ runaway cases.
+  fn inkscape_timeout_secs() -> u64 {
+    std::env::var("LATEXML_INKSCAPE_TIMEOUT_SECS")
+      .ok()
+      .and_then(|s| s.parse::<u64>().ok())
+      .filter(|&n| n > 0)
+      .unwrap_or(15)
+  }
+
+  /// Run `cmd` and enforce a wall-clock timeout. Returns `Some(status)` on
+  /// clean exit, `None` if the child was killed on timeout or spawn
+  /// failed. Polls every 50 ms — cheap compared to the subprocess cost.
+  fn run_with_timeout(
+    mut cmd: std::process::Command,
+    timeout: std::time::Duration,
+  ) -> Option<std::process::ExitStatus> {
+    // Redirect stdio so a slow inkscape doesn't block on a full pipe.
+    cmd.stdout(std::process::Stdio::null())
+      .stderr(std::process::Stdio::null());
+    let mut child = cmd.spawn().ok()?;
+    let start = std::time::Instant::now();
+    loop {
+      match child.try_wait() {
+        Ok(Some(status)) => return Some(status),
+        Ok(None) => {
+          if start.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            return None;
+          }
+          std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        Err(_) => {
+          let _ = child.kill();
+          let _ = child.wait();
+          return None;
+        }
+      }
     }
   }
 
@@ -493,10 +552,15 @@ impl Graphics {
   /// Returns None on parse failure so callers can skip dimension attributes.
   fn read_svg_dimensions(path: &str) -> Option<(u32, u32)> {
     let content = std::fs::read_to_string(path).ok()?;
-    // Look at just the root <svg> opening tag (first ~1 KB is enough).
+    // Look at just the root <svg> opening tag (first ~2 KB is enough).
+    // We must skip the optional `<?xml … ?>` prolog and any `<!-- … -->`
+    // or `<!DOCTYPE …>` preamble — otherwise `find('>')` matches the
+    // prolog's `?>` instead of the root tag.
     let head = &content[..content.len().min(2048)];
-    let svg_tag_end = head.find('>')?;
-    let root = &head[..=svg_tag_end];
+    let svg_start = head.find("<svg")?;
+    let svg_rest = &head[svg_start..];
+    let svg_tag_end = svg_rest.find('>')?;
+    let root = &svg_rest[..=svg_tag_end];
     let extract = |attr: &str| -> Option<String> {
       let key = format!("{}=\"", attr);
       let start = root.find(&key)? + key.len();
@@ -847,5 +911,105 @@ impl Processor for Graphics {
       n_to_process
     );
     Ok(vec![doc])
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// `run_with_timeout` kills the child and returns `None` when the
+  /// process exceeds the deadline. Uses `sleep` as a stand-in for any
+  /// runaway subprocess (inkscape, convert, …).
+  #[test]
+  fn run_with_timeout_kills_slow_child() {
+    let start = std::time::Instant::now();
+    let mut cmd = std::process::Command::new("sleep");
+    cmd.arg("10");
+    let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_millis(200));
+    let elapsed = start.elapsed();
+    assert!(result.is_none(), "run_with_timeout should return None on kill");
+    // We expect around 200 ms (+ ≤ 50 ms poll interval + SIGKILL reap
+    // overhead). Give it 2 s of slack for CI noise.
+    assert!(
+      elapsed < std::time::Duration::from_secs(2),
+      "killed run should return quickly, took {:?}",
+      elapsed
+    );
+  }
+
+  /// Fast-completing child returns its real exit status, not a kill.
+  #[test]
+  fn run_with_timeout_returns_status_for_fast_child() {
+    let mut cmd = std::process::Command::new("true");
+    let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
+    let status = result.expect("expected clean exit");
+    assert!(status.success(), "`true` should exit successfully");
+  }
+
+  /// Missing binary → `None`, not a panic.
+  #[test]
+  fn run_with_timeout_handles_spawn_failure() {
+    let cmd = std::process::Command::new("/this/binary/does/not/exist/12345");
+    let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(1));
+    assert!(result.is_none());
+  }
+
+  /// File-size heuristic: PDF under threshold triggers SVG attempt,
+  /// large PDF does not, non-PDF is always skipped, threshold=0 disables.
+  #[test]
+  fn should_try_svg_path_heuristic() {
+    let tmp = std::env::temp_dir().join("latexml_graphics_svg_gate_test");
+    std::fs::create_dir_all(&tmp).unwrap();
+    let small_pdf = tmp.join("small.pdf");
+    let big_pdf = tmp.join("big.pdf");
+    let png = tmp.join("raster.png");
+    std::fs::write(&small_pdf, vec![0u8; 10 * 1024]).unwrap(); // 10 KB
+    std::fs::write(&big_pdf, vec![0u8; 500 * 1024]).unwrap(); // 500 KB
+    std::fs::write(&png, vec![0u8; 10 * 1024]).unwrap(); // PNG, irrelevant size
+
+    // threshold = 0 → always false.
+    assert!(!Graphics::should_try_svg_path(small_pdf.to_str().unwrap(), 0));
+    // Under threshold → true.
+    assert!(Graphics::should_try_svg_path(small_pdf.to_str().unwrap(), 200));
+    // Over threshold → false.
+    assert!(!Graphics::should_try_svg_path(big_pdf.to_str().unwrap(), 200));
+    // Non-PDF → always false even under threshold.
+    assert!(!Graphics::should_try_svg_path(png.to_str().unwrap(), 200));
+    // Missing file → false, not panic.
+    assert!(!Graphics::should_try_svg_path("/no/such/file.pdf", 200));
+
+    std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  /// SVG viewBox parsing extracts width/height.
+  #[test]
+  fn read_svg_dimensions_parses_viewbox() {
+    let tmp = std::env::temp_dir().join("latexml_svg_dim_test.svg");
+    std::fs::write(
+      &tmp,
+      r#"<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="10cm" height="7.5cm">
+  <rect width="640" height="480" fill="black"/>
+</svg>"#,
+    ).unwrap();
+    let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
+    assert_eq!(dims, (640, 480));
+    std::fs::remove_file(&tmp).ok();
+  }
+
+  /// Falls back to width/height attrs when viewBox is missing.
+  #[test]
+  fn read_svg_dimensions_falls_back_to_width_height() {
+    let tmp = std::env::temp_dir().join("latexml_svg_dim_fallback.svg");
+    std::fs::write(
+      &tmp,
+      r#"<svg xmlns="http://www.w3.org/2000/svg" width="123.7pt" height="99.4pt">
+  <rect/>
+</svg>"#,
+    ).unwrap();
+    let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
+    assert_eq!(dims, (124, 99));
+    std::fs::remove_file(&tmp).ok();
   }
 }
