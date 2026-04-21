@@ -478,3 +478,83 @@ impl BoxOps for Whatsit {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn whatsit_default_has_empty_args_and_properties() {
+    let w = Whatsit::default();
+    assert_eq!(w.args.len(), 0);
+    assert_eq!(w.properties.len(), 0);
+    assert!(w.reversion.is_none());
+    assert!(w.dual_reversion.is_none());
+  }
+
+  #[test]
+  fn is_math_false_by_default() {
+    let w = Whatsit::default();
+    assert!(!w.is_math());
+  }
+
+  #[test]
+  fn is_math_reads_bool_property() {
+    let mut w = Whatsit::default();
+    w.properties.insert("isMath", Stored::Bool(true));
+    assert!(w.is_math());
+    w.properties.insert("isMath", Stored::Bool(false));
+    assert!(!w.is_math());
+  }
+
+  #[test]
+  fn is_math_non_bool_is_false() {
+    // If the property exists but isn't a Bool, is_math reports false.
+    let mut w = Whatsit::default();
+    w.properties.insert("isMath", Stored::Int(1));
+    assert!(!w.is_math());
+  }
+
+  #[test]
+  fn get_arg_zero_returns_none_and_warns() {
+    let w = Whatsit::default();
+    assert!(w.get_arg(0).is_none());
+  }
+
+  #[test]
+  fn get_arg_out_of_range_returns_none() {
+    let w = Whatsit::default();
+    assert!(w.get_arg(1).is_none(), "empty args vec");
+    assert!(w.get_arg(100).is_none());
+  }
+
+  #[test]
+  fn set_args_stores_vec() {
+    let mut w = Whatsit::default();
+    w.set_args(vec![None, None, None]);
+    assert_eq!(w.args.len(), 3);
+  }
+
+  #[test]
+  fn set_properties_merges_into_existing() {
+    let mut w = Whatsit::default();
+    let mut extra = HashMap::default();
+    extra.insert("foo", Stored::Bool(true));
+    extra.insert("bar", Stored::Int(42));
+    w.set_properties(extra);
+    assert_eq!(w.properties.len(), 2);
+  }
+
+  #[test]
+  fn whatsit_default_equality() {
+    let a = Whatsit::default();
+    let b = Whatsit::default();
+    assert_eq!(a, b);
+  }
+
+  #[test]
+  fn get_trailer_none_by_default() {
+    let w = Whatsit::default();
+    assert!(w.get_trailer().is_none());
+  }
+}
