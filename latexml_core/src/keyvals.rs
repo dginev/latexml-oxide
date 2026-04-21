@@ -236,15 +236,33 @@ impl KeyVals {
     // throw an error (not really), unless we record the missing macros
     // Since we're not as obsessive about declaring ALL keys, we'll soften the blow
     if keysets.is_empty() {
-      let all_joined = allkeysets.join(",");
       if self.skip_missing == SkipMissing::None {
-        Info!(
-          "undefined",
-          "Encountered unknown KeyVals key",
-          s!(
-            "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
-          )
-        );
+        // Rate-limit: only emit Info the first time this (prefix, key,
+        // keysets) tuple fires. A large `tabular` with 700 rows can
+        // otherwise produce 700 identical "Encountered unknown KeyVals
+        // key 'vattach'" messages (arxiv 1709.05096), each allocating
+        // a formatted String + going through the log backend. Perl's
+        // Info() has an equivalent deduper in Error.pm via
+        // maxWarnings limits; our rate-limit is per (prefix,key,keysets)
+        // and unbounded in count, so the first occurrence is always
+        // visible but repeats are silently dropped.
+        thread_local! {
+          static SEEN_MISSING: std::cell::RefCell<std::collections::HashSet<(String, String, String)>> =
+            std::cell::RefCell::new(std::collections::HashSet::new());
+        }
+        let all_joined = allkeysets.join(",");
+        let is_new = SEEN_MISSING.with(|cell| {
+          cell.borrow_mut().insert((prefix.clone(), key.to_string(), all_joined.clone()))
+        });
+        if is_new {
+          Info!(
+            "undefined",
+            "Encountered unknown KeyVals key",
+            s!(
+              "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
+            )
+          );
+        }
       }
       return Vec::new();
     }
