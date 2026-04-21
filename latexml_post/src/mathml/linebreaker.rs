@@ -266,3 +266,98 @@ impl Linebreaker {
 fn estimate_text_width(s: &str) -> f64 {
   s.chars().count() as f64 * 0.6
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn penalty_constants_ordering() {
+    // NOBREAK must dwarf every other penalty (used as "never break here" sentinel).
+    assert!(NOBREAK > PENALTY_LIMIT);
+    assert!(PENALTY_LIMIT > BADBREAK_FACTOR);
+    assert!(BADBREAK_FACTOR > POORBREAK_FACTOR);
+    assert!(POORBREAK_FACTOR > PENALTY_OK);
+    assert!(PENALTY_OK > 0);
+  }
+
+  #[test]
+  fn break_before_ops_contains_plus_minus() {
+    let ops = break_before_ops();
+    assert!(ops.contains("+"));
+    assert!(ops.contains("-"));
+    assert!(ops.contains("\u{00B1}")); // ±
+    assert!(ops.contains("\u{2212}")); // −
+  }
+
+  #[test]
+  fn break_after_ops_contains_comma() {
+    let ops = break_after_ops();
+    assert!(ops.contains(","));
+  }
+
+  #[test]
+  fn relation_ops_contains_common() {
+    let ops = relation_ops();
+    assert!(ops.contains("="));
+    assert!(ops.contains("<"));
+    assert!(ops.contains(">"));
+    assert!(ops.contains("\u{2264}")); // ≤
+    assert!(ops.contains("\u{2265}")); // ≥
+    assert!(ops.contains("\u{2260}")); // ≠
+  }
+
+  #[test]
+  fn fence_ops_contains_parens_brackets_braces() {
+    let ops = fence_ops();
+    for c in ["(", ")", "[", "]", "{", "}"] {
+      assert!(ops.contains(c), "missing {c}");
+    }
+  }
+
+  #[test]
+  fn separator_ops_distinct_from_relation() {
+    let sep = separator_ops();
+    let rel = relation_ops();
+    // Separators and relations should not overlap.
+    for s in &sep {
+      assert!(!rel.contains(s), "{s:?} should not be both separator and relation");
+    }
+    // Common separators present.
+    assert!(sep.contains(","));
+    assert!(sep.contains(";"));
+  }
+
+  #[test]
+  fn convert_ops_invisible_to_visible_times() {
+    let pairs = convert_ops();
+    assert_eq!(pairs.len(), 1);
+    assert_eq!(pairs[0], ("\u{2062}", "\u{00D7}"),
+      "INVISIBLE TIMES → MULTIPLICATION SIGN");
+  }
+
+  #[test]
+  fn layout_no_break_has_zero_penalty() {
+    let l = Layout::no_break(5.0);
+    assert_eq!(l.width, 5.0);
+    assert_eq!(l.penalty, 0);
+    assert!(!l.has_break);
+    assert!(l.breaks.is_empty());
+    assert_eq!(l.indent, 0.0);
+  }
+
+  #[test]
+  fn estimate_text_width_proportional_to_length() {
+    // 0.6 em per character (rough).
+    assert!((estimate_text_width("") - 0.0).abs() < 1e-6);
+    assert!((estimate_text_width("a") - 0.6).abs() < 1e-6);
+    assert!((estimate_text_width("abcde") - 3.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn estimate_text_width_counts_chars_not_bytes() {
+    // Unicode chars count as 1 each, even multi-byte.
+    // "αβγ" is 3 chars = 1.8 em, not 6 bytes.
+    assert!((estimate_text_width("αβγ") - 1.8).abs() < 1e-6);
+  }
+}
