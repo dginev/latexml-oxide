@@ -401,11 +401,16 @@ impl Mouth {
   /// Matches Perl's per-line decode behavior.
   fn decode_bytes(raw_line: &[u8], location: String) -> String {
     if let Some(ref encoding_sym) = get_input_encoding() {
-      let encoding_name = crate::common::arena::to_string(*encoding_sym);
-      let file_str = if encoding_name.eq_ignore_ascii_case("iso-8859-1")
-        || encoding_name.eq_ignore_ascii_case("latin1")
-        || encoding_name.eq_ignore_ascii_case("latin-1")
-      {
+      // Probe the encoding without allocating — this fires per input
+      // line, so even a small heap alloc per call adds up on large
+      // documents. Only resolve the symbol to an owned String when we
+      // actually need it for the misdefined-encoding Info! message.
+      let is_latin1 = crate::common::arena::with(*encoding_sym, |s| {
+        s.eq_ignore_ascii_case("iso-8859-1")
+          || s.eq_ignore_ascii_case("latin1")
+          || s.eq_ignore_ascii_case("latin-1")
+      });
+      let file_str = if is_latin1 {
         raw_line.iter().map(|&b| b as char).collect::<String>()
       } else {
         // Fallback: try UTF-8 with lossy conversion
@@ -413,6 +418,7 @@ impl Mouth {
       };
       let replaced = file_str.replace('\u{FFFD}', " ");
       if replaced.len() != file_str.len() {
+        let encoding_name = crate::common::arena::to_string(*encoding_sym);
         Info!(
           "misdefined",
           &encoding_name,

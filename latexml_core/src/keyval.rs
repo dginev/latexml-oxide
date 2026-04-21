@@ -164,23 +164,28 @@ pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
   if registry.is_empty() { return Vec::new(); }
   let mut result = Vec::new();
   for sym in registry {
-    let qname = arena::to_string(sym);
-    let key = keyval_get(&qname, "key_name")
-      .map(|s| s.to_string())
-      .unwrap_or_default();
-    let prefix = keyval_get(&qname, "keyval_prefix")
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "KV".to_string());
-    let keyset = keyval_get(&qname, "keyset")
-      .map(|s| s.to_string())
-      .unwrap_or_default();
-    let kind = keyval_get(&qname, "kind")
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "ordinary".to_string());
-    let default = keyval_get(&qname, "default")
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "[none]".to_string());
-    result.push(KeyvalMeta { key, prefix, keyset, kind, default });
+    // Resolve the interned qname once via a closure — the five
+    // keyval_get calls below all take `&str`, so we hand each the same
+    // resolved borrow rather than allocating a per-key String.
+    let entry = arena::with(sym, |qname| {
+      let key = keyval_get(qname, "key_name")
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+      let prefix = keyval_get(qname, "keyval_prefix")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "KV".to_string());
+      let keyset = keyval_get(qname, "keyset")
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+      let kind = keyval_get(qname, "kind")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "ordinary".to_string());
+      let default = keyval_get(qname, "default")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "[none]".to_string());
+      KeyvalMeta { key, prefix, keyset, kind, default }
+    });
+    result.push(entry);
   }
   result
 }
