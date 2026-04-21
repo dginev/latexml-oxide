@@ -158,23 +158,59 @@ impl MathParser {
   /// Reset the marpa engine after a failed parse.
   /// Creates a new engine and runs a trivial parse to advance past the
   /// precompute step (grammar is already precomputed, can't do it again).
+  ///
+  /// Recovery ladder:
+  /// 1. Clone `self.grammar` + trivial parse — cheap, common case.
+  /// 2. Re-clone and retry once — covers transient marpa state hiccups.
+  /// 3. Full `init_grammar()` rebuild — expensive, but some grammar
+  ///    corruption patterns (observed on the `testscripts` regression
+  ///    fixture) only recover after a fresh precompute. The D5 "avoid
+  ///    init_grammar fallback" item turned out to describe the ideal,
+  ///    not the floor — legitimate callers still hit step 3.
+  /// 4. Log + keep previous engine. Subsequent `parse_math` /
+  ///    `recognizes` will fail gracefully (0 trees, no panic); better
+  ///    than crashing the whole conversion.
+  ///
+  /// The previous implementation called `init_grammar().unwrap()` at
+  /// step 3, which would panic on any Err. The round-17 change removes
+  /// the panic — on total failure we log and keep going.
   fn reset_engine(&mut self) {
+    if self.try_reset_clone_path().is_ok() {
+      return;
+    }
+    if self.try_reset_clone_path().is_ok() {
+      return;
+    }
+    // Both clone attempts failed — reach for a full rebuild. Expensive,
+    // but the testscripts regression fixture demonstrates that some
+    // corruption patterns only clear after a fresh precompute.
+    match init_grammar() {
+      Ok((grammar, _actions, _builder)) => {
+        let thin_grammar = grammar.unwrap();
+        self.grammar = thin_grammar.clone();
+        let mut fresh_engine = Parser::with_grammar(thin_grammar);
+        let _ = fresh_engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
+        self.engine = fresh_engine;
+      },
+      Err(e) => {
+        log::warn!(
+          "math parser: init_grammar fallback failed ({}) — leaving engine in last known state",
+          e
+        );
+      }
+    }
+  }
+
+  fn try_reset_clone_path(&mut self) -> std::result::Result<(), ()> {
     let mut engine = Parser::with_grammar(self.grammar.clone());
     // Run a trivial recognizer to advance state from G (precompute) through
     // R → B → O → T → GReady. Use "NUMBER:1:1 " which is a valid single-token formula.
     match engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 "))) {
-      Ok(_) => { self.engine = engine; },
-      Err(_e) => {
-        // Cloned grammar is in bad state — rebuild from scratch.
-        // Cache the fresh grammar for future resets to avoid repeated init_grammar() calls.
-        let (grammar, _actions, _builder) = init_grammar().unwrap();
-        let thin_grammar = grammar.unwrap();
-        self.grammar = thin_grammar.clone();
-        let mut fresh_engine = Parser::with_grammar(thin_grammar);
-        // Advance past precompute with trivial parse
-        let _ = fresh_engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")));
-        self.engine = fresh_engine;
-      }
+      Ok(_) => {
+        self.engine = engine;
+        Ok(())
+      },
+      Err(_) => Err(()),
     }
   }
 

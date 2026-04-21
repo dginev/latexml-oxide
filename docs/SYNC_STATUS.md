@@ -312,7 +312,20 @@ Callgrind (math-heavy paper, session 105): Marpa dominates — transitive
 closure 34.3%, grammar precompute 8.3%, bv_scan 7.1%, AVL 6.8%.
 Marpa-related >60% CPU.
 
-- [ ] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
+- [~] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
+  **Partial landing round 17.** The fallback path is still needed
+  (`testscripts_test` fixture demonstrates grammar-corruption patterns
+  that only clear after a fresh precompute), but the recovery ladder
+  is now: (1) clone `self.grammar` + trivial parse, (2) retry once —
+  covers transient state hiccups without reaching for init_grammar,
+  (3) full `init_grammar()` rebuild if both clone attempts fail, (4)
+  log + keep previous engine if init_grammar itself errors. Removed
+  the `init_grammar().unwrap()` panic — subsequent formula parses
+  fail cleanly (0 trees) rather than crashing the whole conversion.
+  The "avoid" goal remains aspirational; the real win is graceful
+  degradation, not elimination. Still-open refinement: instrument the
+  fallback call count on the 10k sandbox and identify the triggering
+  grammar cases to see if they are addressable at the grammar level.
 - [ ] Audit script attachment ambiguity (`{}^4{}_{12}C^{5+}` — 27 unique trees).
 - [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
 - [ ] Enumerate grammar rules by parse-tree count contribution.
