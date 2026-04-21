@@ -67,6 +67,15 @@ LoadDefinitions!({
   DefMacro!("\\roster", "\\begin{enumerate}");
   DefMacro!("\\endroster", "\\end{enumerate}");
 
+  // Perl amsppt.sty.ltxml L261-263: \block — simple block-quote container.
+  // Previously unported. DigestUntil parameter type landed in 27cc66b60
+  // makes this a direct translation.
+  DefConstructor!(
+    "\\block DigestUntil:\\endblock",
+    "<ltx:quote>#1</ltx:quote>"
+  );
+  Let!(T_CS!("\\endblock"), T_CS!("\\relax"));
+
   // Footnotes — Perl L305-350
   DefMacro!("\\footnote", "\\lx@note{footnote}");
 
