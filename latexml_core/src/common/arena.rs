@@ -232,3 +232,93 @@ pub fn to_string(sym: SymStr) -> String {
 pub fn join(syms: &[SymStr], sep: &str) -> String { with_many(syms, |strs| strs.join(sep)) }
 
 pub fn len() -> usize { with_arena_mut(|arena| arena.len()) }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn pin_dedups_equal_strings() {
+    let a = pin("arena_test_foo");
+    let b = pin("arena_test_foo");
+    assert_eq!(a, b,
+      "equal strings must return the same SymStr");
+  }
+
+  #[test]
+  fn pin_distinguishes_different_strings() {
+    let a = pin("arena_test_bar");
+    let b = pin("arena_test_baz");
+    assert_ne!(a, b);
+  }
+
+  #[test]
+  fn pin_static_matches_pin() {
+    let a = pin_static("arena_test_qux");
+    let b = pin("arena_test_qux");
+    assert_eq!(a, b,
+      "pin_static and pin should intern to the same SymStr");
+  }
+
+  #[test]
+  fn to_string_roundtrips() {
+    let sym = pin("arena_test_quux");
+    assert_eq!(to_string(sym), "arena_test_quux");
+  }
+
+  #[test]
+  fn with_borrows_without_allocating() {
+    let sym = pin("arena_test_corge");
+    let len = with(sym, |s| s.len());
+    assert_eq!(len, "arena_test_corge".len());
+  }
+
+  #[test]
+  fn with_predicate_returns_bool() {
+    let sym = pin("arena_test_predicate");
+    let starts_with = with(sym, |s| s.starts_with("arena"));
+    assert!(starts_with);
+  }
+
+  #[test]
+  fn pin_char_ascii_roundtrips() {
+    let sym = pin_char('a');
+    assert_eq!(to_string(sym), "a");
+    let sym2 = pin_char('a');
+    assert_eq!(sym, sym2,
+      "ASCII char pin is cached");
+  }
+
+  #[test]
+  fn pin_char_distinct_chars_distinct_syms() {
+    assert_ne!(pin_char('a'), pin_char('b'));
+    assert_ne!(pin_char('0'), pin_char('1'));
+  }
+
+  #[test]
+  fn pin_char_unicode_roundtrips() {
+    // Non-ASCII chars go through the general arena path.
+    let sym = pin_char('π');
+    assert_eq!(to_string(sym), "π");
+  }
+
+  #[test]
+  fn join_concatenates_with_separator() {
+    let a = pin("arena_test_alpha");
+    let b = pin("arena_test_beta");
+    let c = pin("arena_test_gamma");
+    let out = join(&[a, b, c], ",");
+    assert_eq!(out, "arena_test_alpha,arena_test_beta,arena_test_gamma");
+  }
+
+  #[test]
+  fn pin_macro_caches_per_site() {
+    // The `pin!` macro returns a cached SymStr per call site. Two
+    // call sites with identical strings cache independently but
+    // intern to the same underlying symbol.
+    let a = pin!("arena_test_literal");
+    let b = pin!("arena_test_literal");
+    assert_eq!(a, b,
+      "same literal at different call sites → same SymStr");
+  }
+}
