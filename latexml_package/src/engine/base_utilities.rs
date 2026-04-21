@@ -1641,32 +1641,65 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td[not(ltx:Math)]',
   ////                                 $text_node)
   {
-    // Stub: tabular→XMArray conversion in math mode is complex and deferred.
-    // Perl code unwraps tbody, renames nodes to XMArray/XMRow/XMCell.
-    // // First step is remove any ltx:tbody from the tabular!
-    // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
-    //   document.unwrapNodes($tb); }
-    // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
-    // my $table = document.renameNode($children[0], 'ltx:XMArray');
-    // foreach my $row ($table->childNodes) {
-    //   $row = document.renameNode($row, 'ltx:XMRow');
-    //   foreach my $cell ($row->childNodes) {
-    //     $cell = document.renameNode($cell, 'ltx:XMCell');
-    //     foreach my $m ($cell->childNodes) {
-    //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap
-    // the Math/XMath layer         document.replaceNode($m,
-    // map { $_->childNodes } $m->childNodes); }       else
-    // {                                           // Otherwise, wrap whatever it
-    // is in an XMText         document.wrapNodes('ltx:
-    // XMText', $m); } } } }
-    // And now we don't need the XMText any more.
-    // foreach my $attr ($text_node->attributes) {    // Copy the child's
-    // attributes (should Merge!!)
-    //   $table->setAttribute($attr->nodeName => $attr->getValue); }
-    // my $newtable = document.unwrapNodes($text_node);
-    // if (my $id = $text_node->getAttribute('xml:id')) {
-    //   document.unRecordID($id);
-    //   document.recordID($id, $newtable); } }
+    // Perl TeX_Math.pool.ltxml L281-310: unwrap tbody, rename
+    // tabular→XMArray / tr→XMRow / td→XMCell, within each cell unwrap any
+    // Math (pull XMath contents up) or wrap plain content in XMText,
+    // propagate XMText attributes up to the table, then unwrap the XMText.
+    // First: remove any ltx:tbody wrapping.
+    for tb in document.findnodes("ltx:tabular/ltx:tbody", Some(&text_node)) {
+      document.unwrap_nodes(tb)?;
+    }
+    // Rename tabular → XMArray
+    let first_child = children.first().cloned().unwrap();
+    let mut table = document.rename_node(first_child, "ltx:XMArray", false)?;
+    let rows: Vec<Node> = table
+      .get_child_nodes()
+      .into_iter()
+      .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+      .collect();
+    for row in rows {
+      let row = document.rename_node(row, "ltx:XMRow", false)?;
+      let cells: Vec<Node> = row
+        .get_child_nodes()
+        .into_iter()
+        .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+        .collect();
+      for cell in cells {
+        let cell = document.rename_node(cell, "ltx:XMCell", false)?;
+        let cell_kids: Vec<Node> = cell
+          .get_child_nodes()
+          .into_iter()
+          .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+          .collect();
+        for m in cell_kids {
+          if model::with_node_qname(&m, |qn| qn == "ltx:Math") {
+            // Perl: replaceNode($m, map { $_->childNodes } $m->childNodes)
+            //  — Math wraps an XMath, XMath wraps the actual tokens. Pull
+            //  those up, discarding the Math/XMath layers.
+            let grandkids: Vec<Node> = m
+              .get_child_nodes()
+              .into_iter()
+              .flat_map(|x| x.get_child_nodes())
+              .collect();
+            document.replace_node(m, grandkids)?;
+          } else {
+            document.wrap_nodes("ltx:XMText", vec![m])?;
+          }
+        }
+      }
+    }
+    // Copy all of XMText's attributes (incl. xml:id) onto the table.
+    let id_opt = text_node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
+    for (key, value) in text_node.get_attributes() {
+      table.set_attribute(&key, &value)?;
+    }
+    // Unwrap the XMText (its only child is now `table`).
+    document.unwrap_nodes(text_node)?;
+    if let Some(id) = id_opt {
+      document.unrecord_id(&id);
+      // Re-record the id on the renamed table (and any nested ids).
+      document.record_node_ids(&table)?;
+    }
   }
   Ok(())
 }
