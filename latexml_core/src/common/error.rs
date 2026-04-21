@@ -638,3 +638,93 @@ pub fn note_end(_stage: &str) {
   use log::info;
   info!(target: "note", " )");
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  // These tests share a thread-local `REPORT`, so each test must
+  // `initialize_report()` first. They must NOT run truly in parallel
+  // over the same thread, but cargo's default harness only runs tests
+  // in parallel on separate threads (each with its own thread-local),
+  // so this is safe.
+
+  #[test]
+  fn initialize_report_clears_state() {
+    note_status(LogStatus::Warning, None);
+    initialize_report();
+    assert_eq!(get_status(LogStatus::Warning), 0);
+  }
+
+  #[test]
+  fn note_status_increments_counters() {
+    initialize_report();
+    note_status(LogStatus::Warning, None);
+    note_status(LogStatus::Warning, None);
+    note_status(LogStatus::Error, None);
+    assert_eq!(get_status(LogStatus::Warning), 2);
+    assert_eq!(get_status(LogStatus::Error), 1);
+    assert_eq!(get_status(LogStatus::Fatal), 0);
+  }
+
+  #[test]
+  fn fatal_status_is_sticky_and_returns_1() {
+    initialize_report();
+    note_status(LogStatus::Fatal, None);
+    note_status(LogStatus::Fatal, None);
+    // get_status for Fatal returns 0 or 1, not a counter.
+    assert_eq!(get_status(LogStatus::Fatal), 1);
+  }
+
+  #[test]
+  fn get_status_code_priority_order() {
+    initialize_report();
+    assert_eq!(get_status_code(), 0, "clean state → 0");
+    note_status(LogStatus::Warning, None);
+    assert_eq!(get_status_code(), 1, "warning → 1");
+    note_status(LogStatus::Error, None);
+    assert_eq!(get_status_code(), 2, "error wins over warning → 2");
+    note_status(LogStatus::Fatal, None);
+    assert_eq!(get_status_code(), 3, "fatal wins over error → 3");
+  }
+
+  #[test]
+  fn status_message_clean_is_no_obvious_problems() {
+    initialize_report();
+    assert_eq!(get_status_message(), "No obvious problems");
+  }
+
+  #[test]
+  fn status_message_plural_warnings() {
+    initialize_report();
+    note_status(LogStatus::Warning, None);
+    let m = get_status_message();
+    assert_eq!(m, "1 warning", "singular form");
+
+    note_status(LogStatus::Warning, None);
+    let m = get_status_message();
+    assert_eq!(m, "2 warnings", "plural form");
+  }
+
+  #[test]
+  fn status_message_multiple_categories_joined() {
+    initialize_report();
+    note_status(LogStatus::Warning, None);
+    note_status(LogStatus::Warning, None);
+    note_status(LogStatus::Error, None);
+    let m = get_status_message();
+    assert!(m.contains("2 warnings") && m.contains("1 error") && m.contains("; "),
+      "got {m:?}");
+  }
+
+  #[test]
+  fn suppress_log_output_returns_prior_value() {
+    let prior = set_suppress_log_output(true);
+    assert!(is_log_output_suppressed());
+    let prior2 = set_suppress_log_output(false);
+    assert_eq!(prior2, true, "round-trip prior value");
+    assert!(!is_log_output_suppressed());
+    // Clean up to original state.
+    set_suppress_log_output(prior);
+  }
+}
