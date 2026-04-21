@@ -53,3 +53,52 @@ impl fmt::Display for Pair {
     write!(f, "({},{})", self.x, self.y)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn pair_new_and_getters() {
+    let p = Pair::new(Float(1.5), Float(-2.5));
+    assert_eq!(p.get_x().0, 1.5);
+    assert_eq!(p.get_y().0, -2.5);
+  }
+
+  #[test]
+  fn pair_default_is_origin() {
+    let p = Pair::default();
+    assert_eq!(p.get_x().0, 0.0);
+    assert_eq!(p.get_y().0, 0.0);
+  }
+
+  #[test]
+  fn pair_display_format() {
+    let p = Pair::new(Float(1.0), Float(2.0));
+    assert_eq!(format!("{p}"), "(1.0,2.0)");
+  }
+
+  #[test]
+  fn pair_display_negative() {
+    let p = Pair::new(Float(-1.5), Float(-2.5));
+    assert_eq!(format!("{p}"), "(-1.5,-2.5)");
+  }
+
+  #[test]
+  fn pair_to_attribute_uses_float_attribute_format() {
+    // to_attribute delegates to Float::to_attribute for each axis.
+    // Float's NumericOps::to_attribute default is to_string(), so
+    // output matches Display.
+    let p = Pair::new(Float(3.0), Float(4.0));
+    assert_eq!(p.to_attribute(), "3.0,4.0");
+  }
+
+  #[test]
+  fn pair_equality() {
+    let a = Pair::new(Float(1.0), Float(2.0));
+    let b = Pair::new(Float(1.0), Float(2.0));
+    let c = Pair::new(Float(1.0), Float(3.0));
+    assert_eq!(a, b);
+    assert_ne!(a, c);
+  }
+}
