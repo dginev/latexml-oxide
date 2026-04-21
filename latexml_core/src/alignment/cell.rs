@@ -72,3 +72,90 @@ impl Cell {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn cell_default_flags_all_false() {
+    let c = Cell::default();
+    assert!(!c.empty);
+    assert!(!c.skippable);
+    assert!(!c.omitted);
+    assert!(!c.skipped);
+    assert!(!c.thead_in_row);
+    assert!(!c.thead_in_column);
+    assert!(!c.has_intercol_before);
+    assert!(!c.has_intercol_after);
+  }
+
+  #[test]
+  fn cell_default_options_all_none() {
+    let c = Cell::default();
+    assert!(c.before.is_none());
+    assert!(c.after.is_none());
+    assert!(c.align.is_none());
+    assert!(c.width.is_none());
+    assert!(c.height.is_none());
+    assert!(c.depth.is_none());
+    assert!(c.cached_width.is_none());
+    assert!(c.cached_height.is_none());
+    assert!(c.cached_depth.is_none());
+    assert!(c.colspan.is_none());
+    assert!(c.colspanned.is_none());
+    assert!(c.rowspan.is_none());
+    assert!(c.rowspanned.is_none());
+    assert!(c.boxes.is_none());
+    assert!(c.cell_type.is_none());
+    assert!(c.border_left.is_none());
+    assert!(c.border_right.is_none());
+    assert!(c.border_top.is_none());
+    assert!(c.border_bottom.is_none());
+    assert!(c.backgroundcolor.is_none());
+  }
+
+  #[test]
+  fn cell_default_border_is_empty_string() {
+    let c = Cell::default();
+    assert_eq!(c.border, "");
+  }
+
+  #[test]
+  fn cell_border_at_reads_correct_side() {
+    let mut c = Cell::default();
+    c.border_left = Some(1);
+    c.border_right = Some(2);
+    c.border_top = Some(3);
+    c.border_bottom = Some(4);
+    assert_eq!(c.border_at(BorderSpec::Left), Some(1));
+    assert_eq!(c.border_at(BorderSpec::Right), Some(2));
+    assert_eq!(c.border_at(BorderSpec::Top), Some(3));
+    assert_eq!(c.border_at(BorderSpec::Bottom), Some(4));
+  }
+
+  #[test]
+  fn cell_border_at_none_by_default() {
+    let c = Cell::default();
+    assert_eq!(c.border_at(BorderSpec::Left), None);
+    assert_eq!(c.border_at(BorderSpec::Right), None);
+    assert_eq!(c.border_at(BorderSpec::Top), None);
+    assert_eq!(c.border_at(BorderSpec::Bottom), None);
+  }
+
+  #[test]
+  fn cell_partial_eq_defaults() {
+    // Default cells are equal.
+    let a = Cell::default();
+    let b = Cell::default();
+    assert_eq!(a, b);
+  }
+
+  #[test]
+  fn cell_partial_eq_distinguishes_flags() {
+    let mut a = Cell::default();
+    let b = Cell::default();
+    a.empty = true;
+    assert_ne!(a, b);
+  }
+}
