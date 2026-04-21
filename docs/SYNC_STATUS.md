@@ -108,12 +108,39 @@ Three failure classes in the session-128 7933-paper sweep, after the
    executing synchronously during the raw-TeX read. The
    pgfkeys load appears deferred to the next outer binding phase.
 
-   **The fix target**: `latexml_core::binding::content` (or wherever
-   raw-TeX `\input` is dispatched during `InputDefinitions` with
-   `noltxml=1`). The `\input` token needs to push a new mouth and
-   process its content *before* the enclosing file's next token.
-   This is a nested-input synchronization issue, not a missing CS
-   stub. Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
+   **Further narrowing (round-17 probe)**: changing
+   `read_x_token(Some(false), …)` → `Some(true)` in
+   `load_tex_definitions` did NOT resolve the symptom — test suite
+   still green (1098/1098), but `\pgfkeys` still errors before
+   pgfkeys.code.tex loads. This rules out the "outer-loop bails when
+   nested autoclose mouth drains" hypothesis.
+
+   The actual flow, verified by reading the code:
+   - `\input` DefMacro (`tex_file_io.rs:184`) calls `input()`
+   - `input()` (`binding/content.rs:684`) checks `INTERPRETING_DEFINITIONS`;
+     when set (i.e. inside a raw-TeX load), dispatches to
+     `input_definitions(...)` — the recursive synchronous path.
+   - `input_definitions` → `load_tex_definitions` which does its own
+     `reading_from_mouth` + read_x_token loop. Should drain pgfkeys
+     fully before returning. Log confirms pgfkeys.code.tex loading
+     banner DOES appear nested inside the pgfsys.code.tex block.
+
+   So the `\input` path is structurally correct — pgfkeys.code.tex IS
+   being loaded as a synchronous nested input of pgfsys.code.tex.
+   The `\pgfkeys` undefined error at pgfsys line 19 must therefore
+   fire *before* the nested \input at pgfsys line 15 runs. That
+   implies the `\ifdefined\pgfkeysloaded\else\input pgfkeys.code.tex\fi`
+   conditional at pgfsys lines 14-16 is taking the WRONG branch —
+   skipping the \input when it should be taking the else path.
+
+   Next step: instrument the `\ifdefined` conditional in
+   `latexml_package/src/engine/etex.rs` and the conditional
+   scan-ahead in the gullet to verify the scan correctly finds \else
+   and \fi when the condition is false, and to inspect whether the
+   `\pgfkeysloaded` token is erroneously getting a meaning before
+   \ifdefined probes it.
+
+   Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
    several other pgf/tikz-users currently failing similarly.
 
    Perl log: /tmp/1611_perl_log.txt (25.4 s, exit=0, 2 warnings).
