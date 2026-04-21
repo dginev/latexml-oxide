@@ -112,18 +112,21 @@ retired — the only entry kept as reference is the Perl-error-only exclusion:
 - [~] **1710.03688** — OOM kill at ~19 GB RSS during babel french.ldf
   loading. Triggered by `\bbl@exp@aux` undefined CS in modern babel
   internals. Likely a babel 3.x port gap.
-- [~] **1106.1389** — session-128 cortex_worker 100s-timeout / 16 GB RSS
-  in post-processing. Direct `latexml_oxide` converges in 3.16s
-  (0 errors). Root cause is `\addtocounter{equation}{-1}` +
-  `\begin{subequations}` inside `\begin{thm}[equation-numbering]` →
-  duplicate `xml:id`s (theorem and equationgroup both claim e.g.
-  `S5.E2`). **Perl reports the same 14 `Info:malformed:id
-  Duplicated attribute xml:id` warnings** but converges at a
-  reasonable wall-clock; Rust's libxml2 post-processing scan spins on
-  the duplicate-id validation cascade. So the **duplicate-id
-  generation is a shared Perl-parity bug** (record in
-  `KNOWN_PERL_ERRORS.md`), but the **O(n²) amplification in Rust
-  post-processing** is a Rust-specific follow-up.
+- [x] **1106.1389** — FIXED (session 128, commit `bab8beb53`):
+  `record_id_with_node` had a shadow-variable bug —
+  `let id = self.modify_id(…)` inside the `if let Some(prev)` block
+  re-bound `id` to the deduped value, but the new binding went out
+  of scope before the `idstore.insert(id, …)` / `id.to_string()`
+  return, so callers got the *original* id back and wrote actual
+  duplicate xml:ids to the DOM. libxml2's post-processing then
+  spent O(n²) validating the duplicates (100s timeout on 1106.1389,
+  also SIGABRT'd 5/6 sandbox DUPID papers: 1505.03876, 1506.09203,
+  1511.07586, 1707.01155, math9805021 — math9805021 is OOM,
+  unrelated). Fix: bind `final_id` outside the `if let`. Info count
+  now matches Perl (5), DOM has a single attribute per deduped id,
+  1106.1389 full-post conversion 100s → 4s. Snapshots for
+  declare/simplemath/split refreshed (prior .xml captured the
+  silent-dup DOM state from the shadow bug).
 
 **Test-suite refactor (round 17 — [x] DONE):** all 14 test files that
 used hand-maintained `latexml_test_single` lists migrated to one-line
