@@ -568,6 +568,20 @@ Remaining semantic-ambiguity hotspots (see
   currently breaks, and porting enough kernel primitives that the
   raw loading succeeds on its own merit.
 
+  **Known antipattern to avoid** (round-17 experiment):
+  widening the `dump_reader.rs` gate to admit `:`-named PA aliases
+  like `\tex_let:D PA \let` IN ISOLATION (without also admitting
+  `:`-style M entries and adjusting the `expl3_sty.rs`
+  short-circuit) regresses the 83_expl3 test into an infinite loop
+  / 60 s timeout. The mechanism: `\tex_let:D` gets let-aliased to
+  `\let` → `expl3.sty`'s own guard thinks expl3 is "loaded" →
+  skips raw `\input expl3-code.tex` → post-guard code hits
+  `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
+  `\keys_define:nn { sys }` which our gate still doesn't define
+  → undefined-CS recovery loop. PA widening and M widening must
+  land **together**, coordinated with the expl3_sty.rs
+  short-circuit logic.
+
 
 
 - [ ] **Rationalize pragma / semantics / grammar categories from first
