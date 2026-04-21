@@ -115,6 +115,20 @@ impl ArgWrap {
   pub fn is_some(&self) -> bool { !self.is_none() }
   pub fn is_none(&self) -> bool { matches!(self, ArgWrap::None) }
   pub fn is_tokens(&self) -> bool { matches!(self, ArgWrap::Tokens(_) | ArgWrap::Token(_)) }
+
+  /// Zero-alloc equivalent of `self.to_string() == target` for keyword
+  /// checks in DefMacro bodies. Forwards to `Token::with_str` /
+  /// `Tokens::eq_text` for the Token/Tokens variants (covering ~all
+  /// keyword-argument checks in practice); for other variants falls
+  /// back to `to_string() == target` since the Display impl allocates
+  /// anyway. See `Tokens::eq_text` for the walk semantics.
+  pub fn eq_text(&self, target: &str) -> bool {
+    match self {
+      ArgWrap::Tokens(tks) => tks.eq_text(target),
+      ArgWrap::Token(t) => t.with_str(|s| s == target),
+      other => other.to_string() == target,
+    }
+  }
   pub fn mut_tokens(&mut self) -> Option<&mut Tokens> {
     match self {
       ArgWrap::Tokens(tks) => Some(tks),

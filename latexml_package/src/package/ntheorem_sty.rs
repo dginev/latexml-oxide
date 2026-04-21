@@ -263,7 +263,7 @@ LoadDefinitions!({
     name, headfont, bodyfont, headstyle, swap, numbering
   )] {
     let name_str = name.to_string();
-    let swap_val = swap.to_string() == "S";
+    let swap_val = swap.eq_text("S");
     let symbol = LookupRegisterOrDefault!("\\thm@symbol");
     let symbol_tokens = match symbol {
       RegisterValue::Tokens(t) => t,

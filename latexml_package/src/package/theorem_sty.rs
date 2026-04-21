@@ -27,7 +27,7 @@ LoadDefinitions!({
   // \lx@theorem@newtheoremstyle{name}{bodyfont}{headstyle}{swap}
   DefPrimitive!("\\lx@theorem@newtheoremstyle{}{}{}{}", sub[(name, bodyfont, headstyle, swap)] {
     let name_str = name.to_string();
-    let swap_val = swap.to_string() == "S";
+    let swap_val = swap.eq_text("S");
     save_theorem_style(&name_str, vec![
       ("\\thm@bodyfont".into(), Stored::Tokens(bodyfont)),
       ("\\thm@headstyling".into(), Stored::Tokens(headstyle)),

@@ -173,6 +173,40 @@ impl Tokens {
   /// Number of contained Token entries
   pub fn len(&self) -> usize { self.0.len() }
 
+  /// Zero-alloc equivalent of `self.to_string() == target`. Walks the
+  /// contained tokens byte-by-byte, skipping COMMENT tokens (matching
+  /// `Display for Tokens`) and prefixing ARG tokens with `#` (matching
+  /// `Display for Token`). Returns `true` iff the rendered text exactly
+  /// equals `target`. Used by DefMacro bodies that check keyword
+  /// values like `true` / `false` / `swapnumber` without wanting to
+  /// allocate a fresh `String` per invocation.
+  pub fn eq_text(&self, target: &str) -> bool {
+    let mut remaining = target;
+    for t in &self.0 {
+      if t.code == crate::token::Catcode::COMMENT {
+        continue;
+      }
+      if t.code == crate::token::Catcode::ARG {
+        if !remaining.starts_with('#') {
+          return false;
+        }
+        remaining = &remaining[1..];
+      }
+      let ok = t.with_str(|text| {
+        if remaining.starts_with(text) {
+          remaining = &remaining[text.len()..];
+          true
+        } else {
+          false
+        }
+      });
+      if !ok {
+        return false;
+      }
+    }
+    remaining.is_empty()
+  }
+
   // Just a synonym for unlist in this reversion case
   pub fn revert(self) -> Vec<Token> { self.0 }
 

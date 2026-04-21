@@ -2600,8 +2600,7 @@ LoadDefinitions!({
 
   // texcl handler
   DefMacro!("\\lst@@texcl Until:\\end", sub [args] {
-    let val = args[0].to_string() == "true";
-    if val {
+    if args[0].eq_text("true") {
       state::assign_value("LST_CLASSES@comments@eval", Stored::Bool(true), None);
     }
     Tokens!()
@@ -2609,7 +2608,7 @@ LoadDefinitions!({
 
   // mathescape handler
   DefMacro!("\\lst@@mathescape Until:\\end", sub [args] {
-    if args[0].to_string() == "true" {
+    if args[0].eq_text("true") {
       state::assign_value("LST_DELIM@$@open", Stored::String(arena::pin("\\$")), None);
       state::assign_value("LST_DELIM@$@close", Stored::String(arena::pin("\\$")), None);
       state::assign_value("LST_DELIM@$@class", Stored::String(arena::pin("mathescape")), None);
@@ -2679,7 +2678,7 @@ LoadDefinitions!({
   // literate handler — parses {pattern}{replacement}length triples
   // Perl: UnshiftValue(LST_LITERATE => [ToString($pattern), $replacement, $star, $length])
   DefMacro!("\\lst@@literate OptionalMatch:* Until:\\end", sub [args] {
-    let protected = args[0].to_string() == "*";
+    let protected = args[0].eq_text("*");
     let toks = args[1].clone().owned_tokens().unwrap_or(Tokens!());
     let tokens: Vec<Token> = toks.unlist();
     let mut i = 0;
