@@ -30,9 +30,33 @@ LoadDefinitions!({
   DefMacro!("\\raggedleftmarginnote", "\\raggedleft");
   DefMacro!("\\raggedrightmarginnote", "\\raggedright");
 
-  // \marginnote: complex sub{} body — uses TokenizeInternal to build \marginpar call
-  // Stub: just forward to \marginpar with the main argument
-  DefMacro!("\\marginnote[]{}[]", "\\marginpar{\\mn@parboxrestore\\marginfont\\raggedrightmarginnote #2}");
+  // Perl marginnote.sty.ltxml L37-40: \marginnote[left]{right}[vshift]
+  // expands to \marginpar — with the left-margin text (#1) included as the
+  // optional [left] argument when present, and the vshift (#3) ignored.
+  // Prior Rust stub dropped #1 entirely; this port preserves the left branch.
+  DefMacro!("\\marginnote []{}[]", sub[(left, right, _vadjust)] {
+    let mut out: Vec<Token> = Vec::new();
+    out.push(T_CS!("\\marginpar"));
+    if let Some(l) = left {
+      // [\mn@parboxrestore\marginfont\raggedleftmarginnote <left>]
+      out.push(T_OTHER!("["));
+      out.push(T_CS!("\\mn@parboxrestore"));
+      out.push(T_CS!("\\marginfont"));
+      out.push(T_CS!("\\raggedleftmarginnote"));
+      out.push(T_SPACE!());
+      out.extend(l.unlist());
+      out.push(T_OTHER!("]"));
+    }
+    // {\mn@parboxrestore\marginfont\raggedrightmarginnote <right>}
+    out.push(T_BEGIN!());
+    out.push(T_CS!("\\mn@parboxrestore"));
+    out.push(T_CS!("\\marginfont"));
+    out.push(T_CS!("\\raggedrightmarginnote"));
+    out.push(T_SPACE!());
+    out.extend(right.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
 
   // Perl marginnote.sty.ltxml L42-46: \@mn@if@RTL dispatches at
   // expansion time — if \if@RTL is defined (LookupValue) AND currently
