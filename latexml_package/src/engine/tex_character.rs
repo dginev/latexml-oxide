@@ -329,3 +329,64 @@ pub fn unicode_accent(glyph: &str) -> Option<&'static AccentEntry> {
   }
   None
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn accent_by_standalone_grave_backtick() {
+    // U+0060 `GRAVE ACCENT` (standalone) matches the grave entry.
+    let entry = unicode_accent("`").expect("grave accent");
+    assert_eq!(entry.name, "grave");
+    assert_eq!(entry.combiner, '\u{0300}');
+    assert_eq!(entry.role, "OVERACCENT");
+  }
+
+  #[test]
+  fn accent_by_combiner_grave() {
+    // Lone combining grave U+0300 is recognized via the combiner field.
+    let entry = unicode_accent("\u{0300}").expect("combining grave");
+    assert_eq!(entry.name, "grave");
+  }
+
+  #[test]
+  fn accent_by_standalone_acute() {
+    let entry = unicode_accent("\u{00B4}").expect("acute standalone");
+    assert_eq!(entry.name, "acute");
+    assert_eq!(entry.role, "OVERACCENT");
+  }
+
+  #[test]
+  fn accent_hat_circumflex() {
+    let entry = unicode_accent("\u{02C6}").expect("modifier letter circumflex");
+    assert_eq!(entry.name, "hat");
+  }
+
+  #[test]
+  fn accent_below_role_is_underaccent() {
+    // Cedilla is a below-accent, mapped to UNDERACCENT role.
+    let cedilla = unicode_accent("\u{00B8}").expect("cedilla");
+    assert_eq!(cedilla.name, "cedilla");
+    assert_eq!(cedilla.role, "UNDERACCENT");
+    // Underbar '_' ditto.
+    let underbar = unicode_accent("_").expect("underbar");
+    assert_eq!(underbar.name, "underbar");
+    assert_eq!(underbar.role, "UNDERACCENT");
+  }
+
+  #[test]
+  fn accent_none_for_unknown_glyph() {
+    assert!(unicode_accent("x").is_none());
+    assert!(unicode_accent("").is_none());
+    assert!(unicode_accent("AB").is_none());
+  }
+
+  #[test]
+  fn accent_unwrapped_field_present() {
+    // Regression for the dtick entry which has a 2-codepoint unwrapped value.
+    let entry = unicode_accent("\u{02DD}").expect("double acute");
+    assert_eq!(entry.name, "dtick");
+    assert_eq!(entry.unwrapped, "\u{2032}\u{2032}");
+  }
+}
