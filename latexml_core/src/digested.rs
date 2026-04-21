@@ -572,3 +572,87 @@ impl Digested {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn digested_from_tokens_roundtrip() {
+    let ts = Tokens::new(vec![]);
+    let d: Digested = ts.into();
+    // Default variant is Postponed for raw Tokens.
+    match &*d.0 {
+      DigestedData::Postponed(_) => {},
+      other => panic!("expected Postponed, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_string_is_postponed_tokens() {
+    let d: Digested = "abc".to_string().into();
+    match &*d.0 {
+      DigestedData::Postponed(_) => {},
+      other => panic!("expected Postponed, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_tbox_is_tbox_variant() {
+    let tb = Tbox::default();
+    let d: Digested = tb.into();
+    match &*d.0 {
+      DigestedData::TBox(_) => {},
+      other => panic!("expected TBox, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_list_is_list_variant() {
+    let l = List::default();
+    let d: Digested = l.into();
+    match &*d.0 {
+      DigestedData::List(_) => {},
+      other => panic!("expected List, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_whatsit_is_whatsit_variant() {
+    let w = Whatsit::default();
+    let d: Digested = w.into();
+    match &*d.0 {
+      DigestedData::Whatsit(_) => {},
+      other => panic!("expected Whatsit, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_keyvals_is_keyvals_variant() {
+    let kv = KeyVals::default();
+    let d: Digested = kv.into();
+    match &*d.0 {
+      DigestedData::KeyVals(_) => {},
+      other => panic!("expected KeyVals, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_clone_shares_rc() {
+    // Digested is Rc-wrapped; clone should share the same underlying
+    // RefCell, not a deep copy.
+    let tb = Tbox::default();
+    let a: Digested = tb.into();
+    let b = a.clone();
+    // Rc strong count is at least 2 now.
+    assert!(Rc::strong_count(&a.0) >= 2);
+    assert!(Rc::strong_count(&b.0) >= 2);
+  }
+
+  #[test]
+  fn digested_ref_to_option_some() {
+    let d: Digested = Tbox::default().into();
+    let o: Option<Digested> = (&d).into();
+    assert!(o.is_some());
+  }
+}
