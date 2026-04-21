@@ -134,3 +134,40 @@ impl MathProcessor for XMath {
     self.is_secondary
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn xmath_new_has_default_name() {
+    let x = XMath::new();
+    assert_eq!(x.get_name(), "XMath");
+    assert!(!x.is_secondary);
+  }
+
+  #[test]
+  fn xmath_default_matches_new() {
+    let a = XMath::default();
+    let b = XMath::new();
+    assert_eq!(a.get_name(), b.get_name());
+    assert_eq!(a.is_secondary, b.is_secondary);
+  }
+
+  #[test]
+  fn xmath_raw_id_suffix() {
+    let x = XMath::new();
+    assert_eq!(x.raw_id_suffix(), ".xm");
+  }
+
+  #[test]
+  fn xmath_is_secondary_false_by_default() {
+    let x = XMath::new();
+    assert!(!x.is_secondary());
+  }
+
+  #[test]
+  fn xmath_mimetype_is_x_latexml() {
+    assert_eq!(XMATH_MIMETYPE, "application/x-latexml");
+  }
+}
