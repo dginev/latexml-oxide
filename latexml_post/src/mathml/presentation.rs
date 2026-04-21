@@ -1322,3 +1322,151 @@ pub fn clean_internal_attrs(node: &mut NodeData) {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::collections::HashMap;
+
+  #[test]
+  fn math_style_step_down_monotone_saturates_at_scriptscript() {
+    assert_eq!(MathStyle::Display.step_down(), MathStyle::Text);
+    assert_eq!(MathStyle::Text.step_down(), MathStyle::Script);
+    assert_eq!(MathStyle::Script.step_down(), MathStyle::ScriptScript);
+    assert_eq!(MathStyle::ScriptScript.step_down(), MathStyle::ScriptScript);
+  }
+
+  #[test]
+  fn math_style_script_step_collapses_display_and_text() {
+    assert_eq!(MathStyle::Display.script_step(), MathStyle::Script);
+    assert_eq!(MathStyle::Text.script_step(), MathStyle::Script);
+    assert_eq!(MathStyle::Script.script_step(), MathStyle::ScriptScript);
+    assert_eq!(MathStyle::ScriptScript.script_step(), MathStyle::ScriptScript);
+  }
+
+  #[test]
+  fn math_style_size_percent_matches_tex_tradition() {
+    assert_eq!(MathStyle::Display.size_percent(), "100%");
+    assert_eq!(MathStyle::Text.size_percent(), "100%");
+    assert_eq!(MathStyle::Script.size_percent(), "70%");
+    assert_eq!(MathStyle::ScriptScript.size_percent(), "50%");
+  }
+
+  #[test]
+  fn invisible_times_roundtrip() {
+    set_invisible_times(false);
+    assert!(!get_invisible_times());
+    set_invisible_times(true);
+    assert!(get_invisible_times());
+  }
+
+  #[test]
+  fn embellishing_role_matches_canonical_set() {
+    for r in [
+      "SUPERSCRIPTOP",
+      "SUBSCRIPTOP",
+      "OVERACCENT",
+      "UNDERACCENT",
+      "MODIFIER",
+      "MODIFIEROP",
+    ] {
+      assert!(is_embellishing_role(r), "{} should embellish", r);
+    }
+  }
+
+  #[test]
+  fn embellishing_role_rejects_others() {
+    for r in ["ADDOP", "MULOP", "ATOM", "UNKNOWN", ""] {
+      assert!(!is_embellishing_role(r), "{} should not embellish", r);
+    }
+  }
+
+  #[test]
+  fn default_token_content_maps_invisible_chars() {
+    assert_eq!(default_token_content("MULOP"), Some("\u{2062}"));
+    assert_eq!(default_token_content("ADDOP"), Some("\u{2064}"));
+    assert_eq!(default_token_content("PUNCT"), Some("\u{2063}"));
+  }
+
+  #[test]
+  fn default_token_content_none_for_other_roles() {
+    assert_eq!(default_token_content("ATOM"), None);
+    assert_eq!(default_token_content(""), None);
+    assert_eq!(default_token_content("RELOP"), None);
+  }
+
+  #[test]
+  fn clean_internal_attrs_removes_underscore_attrs() {
+    let mut node = NodeData::Element {
+      tag: "mrow".to_string(),
+      attributes: Some(HashMap::from([
+        ("_role".to_string(), "MULOP".to_string()),
+        ("_lspace".to_string(), "4".to_string()),
+        ("keep".to_string(), "yes".to_string()),
+      ])),
+      children: vec![],
+    };
+    clean_internal_attrs(&mut node);
+    if let NodeData::Element { attributes, .. } = &node {
+      let attrs = attributes.as_ref().expect("still has the non-internal attr");
+      assert_eq!(attrs.len(), 1);
+      assert_eq!(attrs.get("keep").map(String::as_str), Some("yes"));
+    } else {
+      panic!("expected element");
+    }
+  }
+
+  #[test]
+  fn clean_internal_attrs_unsets_attributes_when_empty() {
+    let mut node = NodeData::Element {
+      tag: "mrow".to_string(),
+      attributes: Some(HashMap::from([
+        ("_role".to_string(), "MULOP".to_string()),
+        ("_largeop".to_string(), "true".to_string()),
+      ])),
+      children: vec![],
+    };
+    clean_internal_attrs(&mut node);
+    if let NodeData::Element { attributes, .. } = &node {
+      // All attrs were internal → attributes becomes None.
+      assert!(attributes.is_none());
+    } else {
+      panic!("expected element");
+    }
+  }
+
+  #[test]
+  fn clean_internal_attrs_recurses_into_children() {
+    let mut node = NodeData::Element {
+      tag: "mrow".to_string(),
+      attributes: None,
+      children: vec![NodeData::Element {
+        tag: "mi".to_string(),
+        attributes: Some(HashMap::from([
+          ("_rspace".to_string(), "1".to_string()),
+        ])),
+        children: vec![],
+      }],
+    };
+    clean_internal_attrs(&mut node);
+    if let NodeData::Element { children, .. } = &node {
+      if let NodeData::Element { attributes, .. } = &children[0] {
+        assert!(attributes.is_none(), "recursion cleared child's only attr");
+      } else {
+        panic!("expected element child");
+      }
+    } else {
+      panic!("expected element root");
+    }
+  }
+
+  #[test]
+  fn clean_internal_attrs_ignores_text_nodes() {
+    let mut node = NodeData::Text("x".to_string());
+    clean_internal_attrs(&mut node);
+    match &node {
+      NodeData::Text(s) => assert_eq!(s, "x"),
+      _ => panic!("expected text untouched"),
+    }
+  }
+}
