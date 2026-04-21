@@ -109,3 +109,51 @@ Add `Pragma` rules that check mathematical conventions (e.g., consistency of var
 ---
 
 > **Adding new principles:** Number sequentially. Include: principle statement, **Why** (rationale), **Examples** (good vs bad code), **When to apply** (scope/triggers).
+
+---
+
+## Standing Performance Corpus
+
+The following papers form the regression corpus for engine / arena / gullet /
+marpa changes. Run with a direct idle-serial invocation (no `cortex_worker`,
+no parallel load):
+
+```bash
+/home/deyan/git/latexml-oxide/target/release/latexml_oxide \
+  --preload=ar5iv.sty \
+  --path=/home/deyan/git/ar5iv-bindings/bindings \
+  --dest=/tmp/out.html --timeout=60 <main.tex>
+```
+
+Papers live as zipped sources under `/home/deyan/data/10k_sandbox/<id>.zip`;
+`complex/si.tex` is in-tree at `latexml_oxide/tests/complex/si.tex`. The
+helper script `tools/run_perf_corpus.sh` unzips each into a tmpdir and
+records `exit` + wall-clock.
+
+### Round-17 baseline (2026-04-21)
+
+| paper          | main.tex                           | dt (s) | class / note                    |
+|----------------|------------------------------------|-------:|----------------------------------|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.67  | aa, birkmult (stub-guard fix)   |
+| 1011.1955      | 1011.1955.tex                      |  3.49  | amsart `\DeclareMathSymbol`     |
+| 1009.1431      | 1009.1431.tex                      |  2.11  | —                                |
+| 1008.4386      | genealogy_final_CPAM.tex           |  2.59  | —                                |
+| 0909.2656      | main.tex                           |  2.74  | —                                |
+| 0911.4739      | lhc7.tex                           |  5.04  | JHEP — over 3s                  |
+| 1005.1610      | OAM100507.tex                      |  7.38  | iopart — over 3s                |
+| 0803.0466      | IIpaper15.tex                      |  2.31  | aa                               |
+| complex/si.tex | si.tex                             |  2.06  | siunitx-heavy                    |
+
+### Regression trigger
+
+Any corpus entry drifting wall-clock **> +15%** from its last recorded
+baseline between commits is a regression signal. Record the new row in a
+dated sub-heading here (don't overwrite); keep the old baseline so the drift
+is visible in history.
+
+### Known outliers (as of round 17)
+
+- **0911.4739** and **1005.1610** exceed the old "all under 3s" claim from
+  the session 124 memory. Either workload drift (new markup or upstream
+  engine changes) or cold-bench sensitivity. Candidate papers for the next
+  perf investigation cycle.

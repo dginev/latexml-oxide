@@ -105,12 +105,18 @@ Three failure classes in the session-128 7933-paper sweep, after the
 
 ### D3. Performance corpus
 
-- [ ] Capture Tier A (~10 papers) + `complex/si.tex` as a standing perf
+- [x] Capture Tier A (~10 papers) + `complex/si.tex` as a standing perf
   corpus in `docs/PERFORMANCE.md`. Regression trigger: wall-clock drift
-  > 15% on any corpus entry between commits.
+  > 15% on any corpus entry between commits. Reproducer:
+  `tools/run_perf_corpus.sh` (idle-serial, no parallelism). Round-17
+  baseline is the dated table in `PERFORMANCE.md`.
+- [ ] **0911.4739** (5.04 s) and **1005.1610** (7.38 s) now exceed the
+  "all under 3s" claim from session-124 memory. Round-17 measurement on
+  the idle binary — not parallel-contention inflation. Investigate in
+  next perf cycle: profile each to identify the dominant hot band and
+  decide whether it's Marpa-bound, gullet-bound, or post-processing.
 
-Tier A/B/C slow-paper backlog is resolved (all <4s direct wall-clock after
-sessions 116–124). Specific slow-convergence follow-ups:
+Specific slow-convergence follow-ups:
 
 - [~] **1709.05096** — >90s wall under parallel load (digestion, not
   post-processing). `Info:undefined:… KV:vattach …` scanning pattern
