@@ -18,10 +18,28 @@ LoadDefinitions!({
 
   ProcessOptions!(*);
 
-  // Perl: DefMacro('\ifdraft', sub { T_CS(IfCondition('\if@draft') ? '\@firstoftwo' : '\@secondoftwo'); });
-  // Stub: these macros expand to \@firstoftwo or \@secondoftwo based on conditionals.
-  // For now, default to the "final" branch (\@secondoftwo) since that's the common case.
-  DefMacro!("\\ifdraft", "\\@secondoftwo");
-  DefMacro!("\\ifoptiondraft", "\\@secondoftwo");
-  DefMacro!("\\ifoptionfinal", "\\@secondoftwo");
+  // Perl ifdraft.sty.ltxml L21-31: runtime dispatch — each of these
+  // expands to \@firstoftwo or \@secondoftwo depending on whether the
+  // associated \if@… boolean is currently true.
+  DefMacro!("\\ifdraft", sub[_args] {
+    Ok(Tokens!(if if_condition(&T_CS!("\\if@draft"))?.unwrap_or(false) {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }))
+  });
+  DefMacro!("\\ifoptiondraft", sub[_args] {
+    Ok(Tokens!(if if_condition(&T_CS!("\\if@option@draft"))?.unwrap_or(false) {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }))
+  });
+  DefMacro!("\\ifoptionfinal", sub[_args] {
+    Ok(Tokens!(if if_condition(&T_CS!("\\if@option@final"))?.unwrap_or(false) {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }))
+  });
 });
