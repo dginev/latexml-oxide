@@ -131,16 +131,58 @@ Three failure classes in the session-128 7933-paper sweep, after the
   Use `LATEXML_POST_AUDIT=1 latexml_oxide --post …` to reproduce the
   per-phase breakdown on any paper.
 
-- [ ] **Parallelise Graphics phase.** 10-31 independent `convert`
-  subprocess calls run serially today (`latexml_post::graphics::Graphics::process`
-  for-loop over nodes). With enough CPU they could run in parallel
-  via `rayon::iter::par_iter()` or a dedicated thread pool sized to
-  `num_cpus` / conversion-heaviness. Projected win: ~4-6 s on
-  1005.1610 (currently ~6.6 s serial → ~1-1.5 s parallel at -j 8).
-  Non-trivial: the current loop mutates the DOM (`node.set_attribute`)
-  — parallel workers must stage results into a `Vec<(node_id, w, h,
-  imagesrc)>` and apply the mutations on the main thread. Also needs
-  a shared `resource_counter` (the `x1`, `x2` …  naming scheme).
+- [x] **Parallelise Graphics phase** — landed `aa3c7c1bb`. 3-phase
+  refactor (serial DOM read / parallel subprocess / serial DOM
+  write) via `std::thread::scope`, worker cap
+  `min(available_parallelism, 8)`. Measured: 1005.1610 Graphics
+  6614 → 1665 ms (4×), 0911.4739 4087 → 742 ms (5.5×). Full-pipeline
+  wall-clock −66% / −65% on the two outliers respectively.
+
+- [ ] **Vector-preserving PDF/EPS → SVG via inkscape/pdf2svg**
+  (tracks upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)).
+  Current Graphics phase always rasterises via ImageMagick `convert`
+  at density=150 — lossy for vector-authored PDFs (matplotlib /
+  tikzexternal / pgfplots output) and pathological on some inputs
+  (gs infinite loops / OOM; see arxiv:1804.00311, arxiv:1807.01606
+  referenced in the upstream thread — 5-11 minutes per PDF in the
+  worst cases). Proposed architecture, building on the round-17
+  parallel Graphics refactor:
+
+  **Trigger**: opt-in via `--graphics-svg` CLI flag (or the existing
+  `--graphicsmap=pdf.svg` if we port it). Default stays PNG for
+  compatibility.
+
+  **Detection**: classify each PDF/EPS source as "vector-dominant"
+  vs "raster-dominant" via a cheap probe — either `pdfimages -list`
+  from poppler-utils (counts embedded raster XObjects) or a small
+  in-process PDF parse (`lopdf` crate). Vector-dominant goes to SVG
+  path; raster-dominant stays with `convert` (raster→raster is fine).
+  Probe runs inside the same parallel worker as the conversion.
+
+  **Vector path**: shell out to `inkscape --export-type=svg
+  --export-plain-svg --export-filename=x1.svg source.pdf` with a
+  timeout (wrap in the existing parallel worker). On success emit
+  `imagesrc="x1.svg"` and derive width/height from SVG viewBox. On
+  failure fall back to `convert` (not an error).
+
+  **graphicx transforms**: the existing
+  `apply_graphicx_transforms` already returns scaled `(w, h)` —
+  those become the outer `width`/`height` attributes on the HTML
+  img/embed. Rotate/clip would need new per-format treatment; defer
+  to a later pass (document-level rotation is rare for
+  figure-bearing papers).
+
+  **Dependency policy**: inkscape and/or pdf2svg are large — make
+  them *optional runtime* (probe PATH at startup, silently fall back
+  to `convert` if missing). No Cargo feature flag needed if we keep
+  the probe cheap. Document the opt-in flag prominently so users
+  who care about vector preservation can enable it, and the default
+  behaviour is unchanged.
+
+  **Test corpus**: the referenced arxiv:1804.00311 (5-min rasterise)
+  and arxiv:1807.01606 (11-min × 15 PDFs) are the high-value
+  benchmarks — both timeout today; both should convert in seconds
+  via inkscape. Sample PDFs attached in issue #902 comments.
 
 Specific slow-convergence follow-ups:
 

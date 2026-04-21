@@ -144,6 +144,25 @@ records `exit` + wall-clock.
 | 0803.0466      | IIpaper15.tex                      |  2.31  | aa                               |
 | complex/si.tex | si.tex                             |  2.06  | siunitx-heavy                    |
 
+### Round-17 refresh (2026-04-21, after `aa3c7c1bb` graphics parallelism)
+
+| paper          | main.tex                           | dt (s) | Δ vs baseline |
+|----------------|------------------------------------|-------:|--------------:|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.69  |   +3% (noise) |
+| 1011.1955      | 1011.1955.tex                      |  3.49  |         flat  |
+| 1009.1431      | 1009.1431.tex                      |  2.11  |         flat  |
+| 1008.4386      | genealogy_final_CPAM.tex           |  2.69  |   +4% (noise) |
+| 0909.2656      | main.tex                           |  1.95  |          −29% |
+| 0911.4739      | lhc7.tex                           |  1.71  |          −66% |
+| 1005.1610      | OAM100507.tex                      |  2.57  |          −65% |
+| 0803.0466      | IIpaper15.tex                      |  1.35  |          −42% |
+| complex/si.tex | si.tex                             |  2.22  |   +8% (noise) |
+
+All Tier A papers now under 3.5 s — round-17 outliers resolved.
+Commit `aa3c7c1bb` parallelises the Graphics phase's `convert` subprocess
+fork-execs via `std::thread::scope` (no new dependency) with a worker
+cap of `min(available_parallelism, 8)`.
+
 ### Regression trigger
 
 Any corpus entry drifting wall-clock **> +15%** from its last recorded
