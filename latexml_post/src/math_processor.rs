@@ -268,3 +268,66 @@ fn maybe_set_math_image(math: &Node, conversion: &MathConversion) {
 pub fn find_top_level_math(doc: &PostDocument) -> Vec<Node> {
   doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn math_conversion_clone_preserves() {
+    let c = MathConversion {
+      processor_name: "test".to_string(),
+      mimetype: Some("application/mathml+xml".to_string()),
+      xml: None,
+      string: Some("x+y".to_string()),
+      src: None,
+      width: Some("5em".to_string()),
+      height: None,
+      depth: None,
+    };
+    let d = c.clone();
+    assert_eq!(d.processor_name, "test");
+    assert_eq!(d.mimetype.as_deref(), Some("application/mathml+xml"));
+    assert_eq!(d.string.as_deref(), Some("x+y"));
+    assert_eq!(d.width.as_deref(), Some("5em"));
+  }
+
+  #[test]
+  fn math_conversion_all_none_is_valid() {
+    // A MathConversion with nothing set is well-formed; it's just not
+    // useful output.
+    let c = MathConversion {
+      processor_name: "noop".to_string(),
+      mimetype: None,
+      xml: None,
+      string: None,
+      src: None,
+      width: None,
+      height: None,
+      depth: None,
+    };
+    assert!(c.mimetype.is_none());
+    assert!(c.xml.is_none());
+    assert!(c.string.is_none());
+    assert!(c.src.is_none());
+    assert!(c.width.is_none());
+    assert!(c.height.is_none());
+    assert!(c.depth.is_none());
+  }
+
+  #[test]
+  fn math_conversion_debug_is_non_empty() {
+    let c = MathConversion {
+      processor_name: "pmml".to_string(),
+      mimetype: None,
+      xml: None,
+      string: None,
+      src: None,
+      width: None,
+      height: None,
+      depth: None,
+    };
+    let s = format!("{c:?}");
+    assert!(s.contains("pmml"));
+  }
+}
