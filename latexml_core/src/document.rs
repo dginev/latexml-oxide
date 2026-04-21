@@ -2643,20 +2643,23 @@ impl Document {
     } else {
       None
     };
-    if let Some(prev) = prev_opt {
+    let final_id = if let Some(prev) = prev_opt {
       let badid = id;
-      let id = self.modify_id(id.to_owned());
+      let new_id = self.modify_id(id.to_owned());
       let message = s!(
         "Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
-        id,
+        new_id,
         self.document.node_to_string(node),
         badid,
         self.document.node_to_string(&prev)
       );
       Info!("malformed", "id", message);
-    }
-    self.idstore.insert(id.to_string(), node.clone());
-    id.to_string()
+      new_id
+    } else {
+      id.to_string()
+    };
+    self.idstore.insert(final_id.clone(), node.clone());
+    final_id
   }
 
   pub fn unrecord_id(&mut self, id: &str) { self.idstore.remove(id); }
