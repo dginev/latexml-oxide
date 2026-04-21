@@ -614,7 +614,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // finishes.
       if !state::has_meaning(&target_tok) {
         DEFERRED_ALIASES.with(|cell| {
-          cell.borrow_mut().push((cs_tok.clone(), target_tok));
+          cell.borrow_mut().push((cs_tok, target_tok));
         });
         return Ok(false);
       }
