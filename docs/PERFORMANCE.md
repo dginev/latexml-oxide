@@ -163,6 +163,38 @@ Commit `aa3c7c1bb` parallelises the Graphics phase's `convert` subprocess
 fork-execs via `std::thread::scope` (no new dependency) with a worker
 cap of `min(available_parallelism, 8)`.
 
+### Round-17 second refresh (2026-04-21, after .to_string sweep)
+
+Cumulative 61-site `arena::to_string` → `arena::with` / closure refactor
+across 21 files (commits `741809e6e` through `7a5433cd4`). The sweep
+targets wasteful `String` allocations whose resolved content was used
+for a single comparison, prefix check, or passed as `&str` — replacing
+each with a closure that resolves the interned SymStr in place.
+
+| paper          | main.tex                           | dt (s) | Δ vs prev |
+|----------------|------------------------------------|-------:|----------:|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.70  |     flat  |
+| 1011.1955      | 1011.1955.tex                      |  3.48  |     flat  |
+| 1009.1431      | 1009.1431.tex                      |  2.09  |     flat  |
+| 1008.4386      | genealogy_final_CPAM.tex           |  2.61  |      −3%  |
+| 0909.2656      | main.tex                           |  1.96  |     flat  |
+| 0911.4739      | lhc7.tex                           |  1.67  |      −2%  |
+| 1005.1610      | OAM100507.tex                      |  2.42  |      −6%  |
+| 0803.0466      | IIpaper15.tex                      |  1.25  |      −7%  |
+| complex/si.tex | si.tex                             |  2.03  |      −9%  |
+
+complex/si.tex is the gullet-bound workload where the arena churn
+matters most — consistent with the session 116-117 finding that
+arena-interner probes dominate. Tier A papers are math/figure-bound
+and benefit less per site, but the accumulated saving is still
+visible.
+
+Diminishing returns: further .to_string cleanup should target a
+callgrind-identified hot band, not a blanket sweep. Next perf work
+should pivot to Stored struct rationalisation (see SYNC_STATUS
+"Rationalize the Stored enum" long-horizon task) or Tokens
+deep-copy reduction.
+
 ### Regression trigger
 
 Any corpus entry drifting wall-clock **> +15%** from its last recorded
