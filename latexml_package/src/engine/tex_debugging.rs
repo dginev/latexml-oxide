@@ -92,7 +92,7 @@ LoadDefinitions!({
         if let Some(name) = name_opt {
           let at_key = s!("fontinfo_at_{}", cs_str);
           let at_info = state::with_value(&at_key, |v| match v {
-            Some(Stored::String(s)) => format!(" at {}", arena::to_string(*s)),
+            Some(Stored::String(s)) => arena::with(*s, |at| format!(" at {at}")),
             _ => String::new(),
           });
           meaning = format!("select font {}{}", name, at_info);
