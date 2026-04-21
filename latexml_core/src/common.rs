@@ -124,3 +124,82 @@ impl Default for Config {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn digestion_mode_display() {
+    assert_eq!(format!("{}", DigestionMode::TeX), "TeX");
+    assert_eq!(format!("{}", DigestionMode::LaTeX), "LaTeX");
+    assert_eq!(format!("{}", DigestionMode::AmSTeX), "AmSTeX");
+    assert_eq!(format!("{}", DigestionMode::BibTeX), "BibTeX");
+  }
+
+  #[test]
+  fn digestion_mode_extension() {
+    assert_eq!(DigestionMode::TeX.extension(), "tex");
+    assert_eq!(DigestionMode::LaTeX.extension(), "tex");
+    assert_eq!(DigestionMode::AmSTeX.extension(), "tex");
+    assert_eq!(DigestionMode::BibTeX.extension(), "bib");
+  }
+
+  #[test]
+  fn config_default_fields() {
+    let c = Config::default();
+    assert_eq!(c.verbosity, 1);
+    assert!(matches!(c.format, OutputFormat::XML));
+    assert!(matches!(c.whatsin, DataSize::Document));
+    assert!(matches!(c.whatsout, DataSize::Document));
+    assert!(c.preamble.is_none());
+    assert!(c.postamble.is_none());
+    assert!(matches!(c.mode, Some(DigestionMode::LaTeX)));
+    assert!(c.bindings_dispatch.is_none());
+    assert!(c.extra_bindings_dispatch.is_none());
+    assert!(c.preload.is_none());
+    assert!(c.search_paths.is_none());
+    assert!(c.include_comments.is_none());
+    assert!(c.nomathparse.is_none());
+  }
+
+  #[test]
+  fn config_clone_preserves_fields() {
+    let mut c = Config::default();
+    c.verbosity = 5;
+    c.preload = Some(vec!["ar5iv.sty".to_string()]);
+    let c2 = c.clone();
+    assert_eq!(c2.verbosity, 5);
+    assert_eq!(c2.preload.as_ref().unwrap(), &vec!["ar5iv.sty".to_string()]);
+  }
+
+  #[test]
+  fn input_format_variants() {
+    // Debug trait at minimum is derived; Clone too.
+    let _ = InputFormat::TeX;
+    let _ = InputFormat::Bib;
+    let cloned = InputFormat::TeX.clone();
+    assert!(matches!(cloned, InputFormat::TeX));
+  }
+
+  #[test]
+  fn output_format_variants() {
+    let _ = OutputFormat::TeX;
+    let _ = OutputFormat::Box;
+    let _ = OutputFormat::XML;
+    let _ = OutputFormat::HTML5;
+    let _ = OutputFormat::XHTML;
+    let cloned = OutputFormat::XML.clone();
+    assert!(matches!(cloned, OutputFormat::XML));
+  }
+
+  #[test]
+  fn data_size_variants() {
+    let _ = DataSize::Math;
+    let _ = DataSize::Fragment;
+    let _ = DataSize::Document;
+    let _ = DataSize::Archive;
+    let cloned = DataSize::Document.clone();
+    assert!(matches!(cloned, DataSize::Document));
+  }
+}
