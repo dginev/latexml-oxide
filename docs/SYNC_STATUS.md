@@ -79,8 +79,23 @@ live in git log and `memory/project_session_history.md`. What remains:
 Three failure classes in the session-128 7933-paper sweep, after the
 6 DUPID aborts were addressed:
 
-1. **pgfkeys.code.tex port gap** — 3+ papers (1511.00722, 1611.04489,
-   1612.08368). `pgfkeyslibraryfiltered.code.tex` from TeXLive triggers
+1. **pgfkeys.code.tex port gap** — **[x] Expected FIXED for
+   `\usepackage{lipsum}\usepackage{tikz}`-pattern papers** (session
+   post-b0b9852bd, 2026-04-21). The minimal reproducer
+   `\usepackage{lipsum}\usepackage{tikz}` went from 8 errors to 0
+   after the `load_tex_definitions` expl3 scope-exit cleanup landed
+   in `latexml_core::binding::content`. The three named papers
+   (1511.00722, 1611.04489, 1612.08368) all share the
+   `\pgfutil@xifnch` undefined + `\group_begin:`-frame-mismatch
+   symptom set, so the same root cause — a leaked expl3 group from
+   a prior `\ProvidesExplPackage`-using package (lipsum in the
+   narrowed case; likely the same upstream package in those papers)
+   — is addressed. Full 10k sandbox re-run needed to confirm, but
+   the minimal reproducer + 1098/0/0 full suite + 5 multi-package
+   stress combos (siunitx/mhchem/hyperref/amsmath/xcolor × tikz)
+   all clean strongly suggest cascade benefits.
+   (Original analysis below kept for historical context.)
+   `pgfkeyslibraryfiltered.code.tex` from TeXLive triggers
    `\pgfkeys@non@outer@newif` / `\pgfkeysalso` / `\ifpgfkeyssuccess`
    undefined-CS cascades that loop until the 60s wall-clock caps. Perl
    also loads the raw TeX (via `InputDefinitions('pgfkeys.code', type=>'tex')`)
