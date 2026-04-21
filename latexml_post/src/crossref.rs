@@ -822,3 +822,106 @@ fn text_content(nodes: &[NodeData]) -> String {
     NodeData::XmlNode(n) => n.get_content(),
   }).collect::<Vec<_>>().join("")
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_url_identical_paths_is_dot() {
+    assert_eq!(relative_url("a/b.html", "a/b.html"), ".");
+  }
+
+  #[test]
+  fn relative_url_same_dir() {
+    // Both live under a/, so target becomes simply the sibling filename.
+    assert_eq!(relative_url("a/other.html", "a/index.html"), "other.html");
+  }
+
+  #[test]
+  fn relative_url_sibling_dir() {
+    // From a/index.html to b/x.html: up once, then down.
+    assert_eq!(relative_url("b/x.html", "a/index.html"), "../b/x.html");
+  }
+
+  #[test]
+  fn relative_url_deeply_nested_base() {
+    // Up past each intermediate dir of the base, then into the new path.
+    assert_eq!(
+      relative_url("top/sibling.html", "top/deep/nested/page.html"),
+      "../../sibling.html"
+    );
+  }
+
+  #[test]
+  fn relative_url_same_prefix_different_file() {
+    assert_eq!(
+      relative_url("a/b/c/target.html", "a/b/c/source.html"),
+      "target.html"
+    );
+  }
+
+  #[test]
+  fn ref_fallbacks_typerefnum_goes_to_refnum() {
+    assert_eq!(ref_fallbacks("typerefnum"), &["refnum"]);
+  }
+
+  #[test]
+  fn ref_fallbacks_title_chain() {
+    assert_eq!(ref_fallbacks("title"), &["toccaption"]);
+    assert_eq!(ref_fallbacks("toctitle"), &["title", "toccaption"]);
+    assert_eq!(
+      ref_fallbacks("rawtoctitle"),
+      &["toctitle", "title", "toccaption"]
+    );
+    assert_eq!(ref_fallbacks("rawtitle"), &["title", "toccaption"]);
+  }
+
+  #[test]
+  fn ref_fallbacks_unknown_key_is_empty() {
+    let empty: &[&str] = &[];
+    assert_eq!(ref_fallbacks("nonexistent"), empty);
+    assert_eq!(ref_fallbacks(""), empty);
+  }
+
+  #[test]
+  fn text_content_flattens_text() {
+    let nodes = vec![
+      NodeData::Text("hello ".to_string()),
+      NodeData::Text("world".to_string()),
+    ];
+    assert_eq!(text_content(&nodes), "hello world");
+  }
+
+  #[test]
+  fn text_content_recurses_into_elements() {
+    let nodes = vec![NodeData::Element {
+      tag: "span".to_string(),
+      attributes: None,
+      children: vec![
+        NodeData::Text("inner ".to_string()),
+        NodeData::Text("text".to_string()),
+      ],
+    }];
+    assert_eq!(text_content(&nodes), "inner text");
+  }
+
+  #[test]
+  fn text_content_empty_list_is_empty_string() {
+    assert_eq!(text_content(&[]), "");
+  }
+
+  #[test]
+  fn text_content_mixed_text_and_nested_element() {
+    let nodes = vec![
+      NodeData::Text("outer ".to_string()),
+      NodeData::Element {
+        tag: "em".to_string(),
+        attributes: None,
+        children: vec![NodeData::Text("inner".to_string())],
+      },
+      NodeData::Text(" tail".to_string()),
+    ];
+    assert_eq!(text_content(&nodes), "outer inner tail");
+  }
+}
