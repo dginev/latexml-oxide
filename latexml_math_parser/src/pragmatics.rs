@@ -209,6 +209,23 @@ pub struct LetterCaseKey {
   pub case:        LetterCase,
 }
 
+/// Return true iff `op` is an invisible-times operator head, in either of the
+/// two forms the XM tree produces: `XM::Lexeme("…invisible_operator…")` (the
+/// Marpa lexeme form) or `XM::Token { role: "MULOP", meaning: "times" }`
+/// (the post-`apply_invisible_times` form). Helpers across this file need to
+/// match both — historically several sites matched only the Lexeme form and
+/// silently never fired on real parses.
+fn is_invisible_times_op(op: &XM) -> bool {
+  match op {
+    XM::Lexeme(oplexeme, _) => oplexeme.contains("invisible_operator"),
+    XM::Token(props, _) => {
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+    },
+    _ => false,
+  }
+}
+
 /// Extract the consistency key for the letter-blocks pragma.
 ///
 /// The pragmatics are only used for single-letter values with factor/function
@@ -306,19 +323,7 @@ where
   K: PartialEq,
 {
   if let XM::Apply(Operator(op), args, ..) = tree {
-    // Invisible times appears in the XM tree two ways (see
-    // pragma_functions_prefer_wider_absorption for the reference predicate):
-    // - Lexeme("…invisible_operator…") — Marpa's lexeme string
-    // - Token { role: MULOP, meaning: "times" } — post-apply_invisible_times
-    let is_invisible_times = match **op {
-      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
-      XM::Token(ref props, _) => {
-        props.meaning.as_deref() == Some("times")
-          && props.role.as_deref() == Some("MULOP")
-      },
-      _ => false,
-    };
-    if !is_invisible_times {
+    if !is_invisible_times_op(op) {
       return Ok(());
     }
     // Only fire when there are ≥3 letter operands. A 2-letter chain like
@@ -424,19 +429,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
   let XM::Apply(Operator(op), ref args, ..) = tree else {
     return Ok(());
   };
-  // Invisible times appears in the XM tree two ways (see
-  // pragma_functions_prefer_wider_absorption for the reference predicate):
-  // - Lexeme("…invisible_operator…") — Marpa's lexeme string
-  // - Token { role: MULOP, meaning: "times" } — post-apply_invisible_times
-  let is_invisible_times = match **op {
-    XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
-    XM::Token(ref props, _) => {
-      props.meaning.as_deref() == Some("times")
-        && props.role.as_deref() == Some("MULOP")
-    },
-    _ => false,
-  };
-  if !is_invisible_times {
+  if !is_invisible_times_op(op) {
     return Ok(());
   }
   let trees = args.trees();
@@ -597,17 +590,7 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
   let XM::Apply(Operator(op), ref args, ..) = tree else {
     return Ok(());
   };
-  // Invisible times appears in the XM tree two ways — accept both the Marpa
-  // Lexeme form and the apply_invisible_times-produced Token form.
-  let is_invisible_times = match **op {
-    XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
-    XM::Token(ref props, _) => {
-      props.meaning.as_deref() == Some("times")
-        && props.role.as_deref() == Some("MULOP")
-    },
-    _ => false,
-  };
-  if !is_invisible_times {
+  if !is_invisible_times_op(op) {
     return Ok(());
   }
   let trees = args.trees();
@@ -636,16 +619,7 @@ fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box
   let XM::Apply(Operator(op), ref args, ..) = tree else {
     return Ok(());
   };
-  // Invisible times appears in the XM tree two ways — accept both shapes.
-  let is_invisible_times = match **op {
-    XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
-    XM::Token(ref props, _) => {
-      props.meaning.as_deref() == Some("times")
-        && props.role.as_deref() == Some("MULOP")
-    },
-    _ => false,
-  };
-  if !is_invisible_times {
+  if !is_invisible_times_op(op) {
     return Ok(());
   }
   let arg_trees = args.trees();
@@ -817,15 +791,7 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
   // Only fires when RHS is a simple factor (Lexeme/Token/Wrap), NOT another
   // function application — chained functions like sin(πx)*cos(2πy) should stay separate.
   if let XM::Apply(Operator(op), ref args, ..) = tree {
-    let is_invisible_times = match **op {
-      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
-      XM::Token(ref props, _) => {
-        props.meaning.as_deref() == Some("times")
-          && props.role.as_deref() == Some("MULOP")
-      },
-      _ => false,
-    };
-    if is_invisible_times {
+    if is_invisible_times_op(op) {
       let trees = args.trees();
       if trees.len() == 2 {
         // LHS is a function application (Apply(function, arg))
@@ -869,15 +835,7 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
   // (not the last). The competing parse Apply(×, [f@(x), d@(x)]) is preferred.
   // This covers the pattern: ∫ f(x) \diffd x → f@(x) * diffd@(x), not f@(x)*d*x.
   if let XM::Apply(Operator(op), ref args, ..) = tree {
-    let is_invisible_times = match **op {
-      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
-      XM::Token(ref props, _) => {
-        props.meaning.as_deref() == Some("times")
-          && props.role.as_deref() == Some("MULOP")
-      },
-      _ => false,
-    };
-    if is_invisible_times {
+    if is_invisible_times_op(op) {
       let trees = args.trees();
       // Check non-terminal positions for bare OPFUNCTION/TRIGFUNCTION tokens.
       // Both types absorb bare arguments via prefix_apply. If they appear as
@@ -1182,19 +1140,17 @@ fn pragma_flatten_simple_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>
 /// Recursively check all subtrees for right-associative invisible-times chains.
 fn check_invisible_times_recursive(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, ..) = tree {
-    if let XM::Lexeme(ref oplexeme, _) = **op {
-      if oplexeme == "x.invisible_operator" {
-        let trees = args.trees();
-        if trees.len() == 2 {
-          let rhs = trees[1];
-          // Check if the RHS is itself an invisible-times application
-          if is_invisible_times_apply(rhs) && all_simple_identifiers(tree) {
-            return Err(
-              "Pruning right-associative invisible-times of simple identifier chain. \
-               Flat left-associative product is the only reasonable reading."
-                .into(),
-            );
-          }
+    if is_invisible_times_op(op) {
+      let trees = args.trees();
+      if trees.len() == 2 {
+        let rhs = trees[1];
+        // Check if the RHS is itself an invisible-times application
+        if is_invisible_times_apply(rhs) && all_simple_identifiers(tree) {
+          return Err(
+            "Pruning right-associative invisible-times of simple identifier chain. \
+             Flat left-associative product is the only reasonable reading."
+              .into(),
+          );
         }
       }
     }
@@ -1206,12 +1162,10 @@ fn check_invisible_times_recursive(tree: &XM) -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
-/// Check if a tree node is an invisible-times application
+/// Check if a tree node is an invisible-times application, in either operator form.
 fn is_invisible_times_apply(tree: &XM) -> bool {
   if let XM::Apply(Operator(op), ..) = tree {
-    if let XM::Lexeme(ref oplexeme, _) = **op {
-      return oplexeme == "x.invisible_operator";
-    }
+    return is_invisible_times_op(op);
   }
   false
 }
@@ -1226,11 +1180,12 @@ fn all_simple_identifiers(tree: &XM) -> bool {
         && (name.starts_with("UNKNOWN") || name.starts_with("ID") || name.starts_with("NUMBER"))
     },
     XM::Apply(Operator(op), ref args, ..) => {
+      // For invisible-times applications (either operator shape),
+      // check operator and all args
+      if is_invisible_times_op(op) {
+        return args.trees().iter().all(|a| all_simple_identifiers(a));
+      }
       if let XM::Lexeme(ref oplexeme, _) = **op {
-        // For invisible-times applications, check operator and all args
-        if oplexeme == "x.invisible_operator" {
-          return args.trees().iter().all(|a| all_simple_identifiers(a));
-        }
         // Scripted atoms (subscript/superscript of simple identifiers) are also simple
         if oplexeme.starts_with("SUBSCRIPTOP")
           || oplexeme.starts_with("SUPERSCRIPTOP")
@@ -1832,6 +1787,115 @@ mod tests {
     assert!(
       ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_ok(),
       "letter × letter must be preserved"
+    );
+  }
+
+  // ----- is_invisible_times_op helper -----
+
+  #[test]
+  fn is_invisible_times_op_accepts_lexeme_form() {
+    use crate::semantics::metadata::Meta;
+    let op = XM::Lexeme("x.invisible_operator".to_string(), Meta::default());
+    assert!(is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_accepts_token_form() {
+    use crate::semantics::metadata::Meta;
+    use crate::semantics::tree::XProps;
+    use std::borrow::Cow;
+    let props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_rejects_plus_token() {
+    use crate::semantics::metadata::Meta;
+    use crate::semantics::tree::XProps;
+    use std::borrow::Cow;
+    let props = XProps {
+      role: Some(Cow::Borrowed("ADDOP")),
+      meaning: Some(Cow::Borrowed("plus")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(!is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_rejects_unrelated_lexeme() {
+    use crate::semantics::metadata::Meta;
+    let op = XM::Lexeme("MULOP:plus".to_string(), Meta::default());
+    assert!(!is_invisible_times_op(&op));
+  }
+
+  // ----- pragma_flatten_simple_invisible_times, Token operator shape -----
+  //
+  // These exercise the shared helper fix: before the audit the three inner
+  // predicates (check_invisible_times_recursive, is_invisible_times_apply,
+  // all_simple_identifiers) matched only the Lexeme form, so the flatten
+  // rule silently never fired on post-apply_invisible_times trees.
+
+  fn nested_inv_times(letter_names: &[&str]) -> XM {
+    // Build a right-associative chain `a × (b × (c × d))` under the
+    // XM::Token{MULOP, times} operator shape.
+    use crate::semantics::metadata::Meta;
+    use crate::semantics::tree::{Args, Operator, XProps};
+    use std::borrow::Cow;
+
+    assert!(letter_names.len() >= 2, "need at least 2 operands");
+    let mut acc = XM::Lexeme(
+      (*letter_names.last().unwrap()).to_string(),
+      Meta::default(),
+    );
+    for name in letter_names.iter().rev().skip(1) {
+      let op_props = XProps {
+        role: Some(Cow::Borrowed("MULOP")),
+        meaning: Some(Cow::Borrowed("times")),
+        content: Some(Cow::Borrowed("\u{2062}")),
+        ..XProps::default()
+      };
+      let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
+      let args = Args(vec![
+        Some(XM::Lexeme((*name).to_string(), Meta::default())),
+        Some(acc),
+      ]);
+      acc = XM::Apply(op, args, XProps::default(), Meta::default());
+    }
+    acc
+  }
+
+  #[test]
+  fn flatten_simple_inv_times_prunes_right_assoc_on_token_op() {
+    // Right-associative chain `a × (b × c)` of three simple identifiers.
+    // The flatten pragma prefers the left-associative grouping and prunes
+    // this shape.
+    let tree = nested_inv_times(&[
+      "UNKNOWN:italic-a",
+      "UNKNOWN:italic-b",
+      "UNKNOWN:italic-c",
+    ]);
+    assert!(
+      ValidationPragmatics::FlattenSimpleInvisibleTimesChains.validate(&tree).is_err(),
+      "right-assoc simple-identifier chain (Token op) must be pruned"
+    );
+  }
+
+  #[test]
+  fn flatten_simple_inv_times_accepts_two_operand_chain() {
+    // Only 2 operands — no nested invisible-times RHS, nothing to flatten.
+    let tree = inv_times_pair(
+      Some(lexeme("UNKNOWN:italic-a")),
+      Some(lexeme("UNKNOWN:italic-b")),
+    );
+    assert!(
+      ValidationPragmatics::FlattenSimpleInvisibleTimesChains.validate(&tree).is_ok(),
+      "2-operand chain must pass untouched"
     );
   }
 }
