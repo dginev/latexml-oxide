@@ -136,3 +136,83 @@ fn test_namespace_registration() {
   doc.add_namespace("m", "http://www.w3.org/1998/Math/MathML");
   assert!(doc.namespaces.contains_key("m"), "m namespace should be registered after add");
 }
+
+/// Regression test for the vector-SVG graphics path (opt-in via
+/// `--graphics-svg-threshold-kb N`). Uses the cifar10 plot PDF from the
+/// upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
+/// thread — a 41 KB vector-authored matplotlib chart that's the canonical
+/// "inkscape preserves vectors better than ImageMagick" example.
+///
+/// Test behaviour:
+/// - If `inkscape` is missing from PATH, the test exits silently. This
+///   keeps the suite green on minimal runners; CI installs inkscape so
+///   the branch is covered on GH Actions.
+/// - If `inkscape` is present, exercise the Graphics processor with
+///   `svg_threshold_kb = 200` and assert the output is a real SVG file.
+#[test]
+fn test_vector_svg_graphics_path() {
+  if std::process::Command::new("inkscape")
+    .arg("--version")
+    .output()
+    .ok()
+    .filter(|o| o.status.success())
+    .is_none()
+  {
+    eprintln!("inkscape not installed; skipping vector-SVG regression test");
+    return;
+  }
+
+  let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/cifar10_vector.pdf");
+  assert!(
+    std::path::Path::new(fixture).exists(),
+    "fixture missing: {}",
+    fixture
+  );
+
+  let work = std::env::temp_dir().join(format!("latexml_svg_test_{}", std::process::id()));
+  std::fs::create_dir_all(&work).expect("mkdir work");
+  let src_copy = work.join("cifar10_vector.pdf");
+  std::fs::copy(fixture, &src_copy).expect("copy fixture");
+
+  let mut graphics = latexml_post::graphics::Graphics::new(None, true)
+    .with_svg_threshold_kb(200);
+
+  let xml = format!(
+    r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="cifar10_vector.pdf" candidates="{}"/>
+</document>"#,
+    src_copy.display()
+  );
+  let mut doc_opts = PostDocumentOptions::default();
+  doc_opts.destination = Some(work.join("out.html").display().to_string());
+  doc_opts.source_directory = Some(work.display().to_string());
+  let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
+
+  let nodes = graphics.to_process(&doc);
+  assert_eq!(nodes.len(), 1, "one graphics node expected");
+  let _out = graphics.process(doc, nodes).expect("graphics process");
+
+  let svg_path = work.join("cifar10_vector.svg");
+  assert!(
+    svg_path.exists(),
+    "expected SVG at {} — inkscape path should have fired for a 41 KB vector PDF",
+    svg_path.display()
+  );
+  let svg_bytes = std::fs::read(&svg_path).expect("read svg");
+  assert!(
+    svg_bytes.windows(4).any(|w| w == b"<svg"),
+    "SVG root element not found in output"
+  );
+  // Upper bound sanity — inkscape on a vector-authored plot produces tens
+  // of KB, not hundreds of MB. Raster-embedded PDFs blow up to 100+ MB —
+  // that's the case the file-size heuristic must exclude upstream.
+  assert!(
+    svg_bytes.len() < 2 * 1024 * 1024,
+    "SVG is {} bytes — vector-authored PDFs should yield <2 MB SVG",
+    svg_bytes.len()
+  );
+
+  // Cleanup.
+  let _ = std::fs::remove_dir_all(&work);
+}

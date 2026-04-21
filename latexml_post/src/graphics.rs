@@ -54,6 +54,11 @@ pub struct Graphics {
   graphics_types: Vec<String>,
   type_properties: HashMap<String, TypeProperties>,
   background: String,
+  /// Opt-in vector-SVG path for PDF graphics. When > 0, PDFs under this
+  /// many KB are first attempted via `inkscape`; fall back to ImageMagick
+  /// `convert` on failure or timeout. 0 disables the path entirely.
+  /// Tracks upstream brucemiller/LaTeXML#902.
+  svg_threshold_kb: u32,
 }
 
 impl Graphics {
@@ -130,7 +135,17 @@ impl Graphics {
       .collect(),
       type_properties,
       background: "#FFFFFF".to_string(),
+      svg_threshold_kb: 0,
     }
+  }
+
+  /// Enable the vector-SVG path for PDFs under `kb` KB. When `kb == 0`
+  /// (default), the SVG path is fully disabled and all PDFs go through
+  /// ImageMagick `convert`. The builder returns `self` so it composes with
+  /// `Graphics::new(...)`.
+  pub fn with_svg_threshold_kb(mut self, kb: u32) -> Self {
+    self.svg_threshold_kb = kb;
+    self
   }
 
   /// Find the graphics source file for a node.
@@ -446,6 +461,86 @@ impl Graphics {
     None
   }
 
+  /// Try to convert a PDF to plain SVG via `inkscape`, preserving vector
+  /// content. Returns `true` on success. Tracks upstream
+  /// brucemiller/LaTeXML#902.
+  ///
+  /// Caller decides when to attempt this — typically only for PDF sources
+  /// below a file-size threshold, because inkscape on raster-embedded PDFs
+  /// produces massive output (>100 MB) and can take 40+ seconds
+  /// (measured: Fade.pdf 1.7 MB → 46 s / 102 MB SVG vs `convert` 1.4 s /
+  /// 61 KB PNG).
+  ///
+  /// `page` is 1-based (graphicx convention); converted to 0-based for
+  /// inkscape's `--pdf-page`.
+  fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
+    let mut cmd = std::process::Command::new("inkscape");
+    cmd.arg("--export-type=svg")
+      .arg("--export-plain-svg")
+      .arg(format!("--export-filename={}", dest));
+    if let Some(p) = page {
+      cmd.arg(format!("--pdf-page={}", p.saturating_sub(1).max(0)));
+    }
+    cmd.arg(source);
+    match cmd.output() {
+      Ok(output) => output.status.success() && Path::new(dest).exists(),
+      Err(_) => false,
+    }
+  }
+
+  /// Parse SVG viewBox ("minX minY width height") and return (width, height).
+  /// Falls back to `width`/`height` root attributes if viewBox is missing.
+  /// Returns None on parse failure so callers can skip dimension attributes.
+  fn read_svg_dimensions(path: &str) -> Option<(u32, u32)> {
+    let content = std::fs::read_to_string(path).ok()?;
+    // Look at just the root <svg> opening tag (first ~1 KB is enough).
+    let head = &content[..content.len().min(2048)];
+    let svg_tag_end = head.find('>')?;
+    let root = &head[..=svg_tag_end];
+    let extract = |attr: &str| -> Option<String> {
+      let key = format!("{}=\"", attr);
+      let start = root.find(&key)? + key.len();
+      let rest = &root[start..];
+      let end = rest.find('"')?;
+      Some(rest[..end].to_string())
+    };
+    let parse_dim = |s: &str| -> Option<f64> {
+      let s = s.trim();
+      // Strip trailing unit if present (pt, px, mm, etc.)
+      let numeric_end = s.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+        .unwrap_or(s.len());
+      s[..numeric_end].parse::<f64>().ok()
+    };
+    if let Some(vb) = extract("viewBox") {
+      let parts: Vec<&str> = vb.split_whitespace().collect();
+      if parts.len() == 4 {
+        if let (Some(w), Some(h)) = (parse_dim(parts[2]), parse_dim(parts[3])) {
+          return Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32));
+        }
+      }
+    }
+    let w = extract("width").as_deref().and_then(parse_dim);
+    let h = extract("height").as_deref().and_then(parse_dim);
+    match (w, h) {
+      (Some(w), Some(h)) => Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32)),
+      _ => None,
+    }
+  }
+
+  /// Decide whether the vector-SVG path should be attempted for this PDF
+  /// source. File-size heuristic: small PDFs (< threshold KB) are nearly
+  /// always vector-authored plots; large PDFs typically contain embedded
+  /// rasters that inkscape re-renders as absurdly large SVG (empirical
+  /// measurement in round-17 — see upstream brucemiller/LaTeXML#902).
+  fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
+    if threshold_kb == 0 { return false; }
+    if !source.to_lowercase().ends_with(".pdf") { return false; }
+    match std::fs::metadata(source) {
+      Ok(md) => md.len() <= (threshold_kb as u64) * 1024,
+      Err(_) => false,
+    }
+  }
+
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
@@ -533,7 +628,12 @@ impl Processor for Graphics {
       NotFound { idx: usize, graphic: String },
       Copy { idx: usize, source: String, options: String },
       Convert { idx: usize, source: String, options: String, page: Option<u32>,
-                rel_dest: String, abs_dest_str: String },
+                rel_dest: String, abs_dest_str: String,
+                /// `Some((rel_svg, abs_svg_str))` when the worker should
+                /// first attempt the inkscape-SVG path and only fall back
+                /// to `convert` on failure. `None` means the classic
+                /// raster-only path.
+                svg_paths: Option<(String, String)> },
     }
     struct ConvertOutcome {
       idx: usize,
@@ -578,13 +678,29 @@ impl Processor for Graphics {
             .unwrap_or("image")
             .to_string()
         };
+        // Vector-SVG path: opt-in for small PDFs only. We prepare an
+        // alternate `.svg` destination path alongside the normal raster
+        // destination so the worker can try inkscape first, then fall
+        // back. The file-size heuristic gates this — see
+        // `should_try_svg_path`.
+        let try_svg = Self::should_try_svg_path(&source, self.svg_threshold_kb);
         let rel_dest = format!("{}.{}", dest_name, dest_type);
         let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
         if let Some(parent) = abs_dest.parent() {
           std::fs::create_dir_all(parent).ok();
         }
         let abs_dest_str = abs_dest.to_string_lossy().to_string();
-        plans.push(Plan::Convert { idx, source, options, page, rel_dest, abs_dest_str });
+        let svg_paths = if try_svg {
+          let rel_svg = format!("{}.svg", dest_name);
+          let abs_svg = PathBuf::from(&dest_dir).join(&rel_svg);
+          let abs_svg_str = abs_svg.to_string_lossy().to_string();
+          Some((rel_svg, abs_svg_str))
+        } else {
+          None
+        };
+        plans.push(Plan::Convert {
+          idx, source, options, page, rel_dest, abs_dest_str, svg_paths,
+        });
       } else {
         plans.push(Plan::Copy { idx, source, options });
       }
@@ -619,9 +735,33 @@ impl Processor for Graphics {
             loop {
               let i = next.fetch_add(1, Ordering::Relaxed);
               if i >= jobs.len() { break; }
-              let Plan::Convert { idx, source, options, page, rel_dest, abs_dest_str } = jobs[i]
+              let Plan::Convert {
+                idx, source, options, page, rel_dest, abs_dest_str, svg_paths,
+              } = jobs[i]
                 else { unreachable!() };
-              let outcome = if Self::convert_image(source, abs_dest_str, dpi, *page) {
+              // Try vector-SVG path first if requested for this source.
+              // On success, pick dimensions from the SVG viewBox.
+              let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
+                if Self::convert_image_svg(source, abs_svg, *page) {
+                  let raw_dims = Self::read_svg_dimensions(abs_svg);
+                  Some(ConvertOutcome {
+                    idx: *idx,
+                    imagesrc: Some(rel_svg.clone()),
+                    raw_dims,
+                    options: options.clone(),
+                  })
+                } else {
+                  log::warn!(
+                    "Graphics: inkscape SVG path failed for {}, falling back to convert", source
+                  );
+                  None
+                }
+              } else {
+                None
+              };
+              let outcome = if let Some(o) = svg_outcome {
+                o
+              } else if Self::convert_image(source, abs_dest_str, dpi, *page) {
                 ConvertOutcome {
                   idx: *idx,
                   imagesrc: Some(rel_dest.clone()),

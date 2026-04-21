@@ -83,6 +83,15 @@ struct Cli {
   #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
 
+  /// For PDF graphics under N kilobytes, try `inkscape` first to preserve
+  /// vector content; fall back to ImageMagick `convert` on failure/timeout.
+  /// 0 disables (default). Suggested value: 200.
+  /// See SYNC_STATUS.md for the file-size heuristic rationale
+  /// (matplotlib/pgfplots vector PDFs are ~30 KB; raster-embedded PDFs
+  /// are usually 500 KB+ and take >10s to vectorise).
+  #[arg(long = "graphics-svg-threshold-kb", value_name = "N", default_value = "0")]
+  graphics_svg_threshold_kb: u32,
+
   /// Output type (currently only "document" supported; "archive" auto-detected from --dest)
   #[arg(long, value_name = "TYPE")]
   whatsout: Option<String>,
@@ -422,6 +431,7 @@ fn main() -> Result<(), Box<dyn Error>> {
           split_xpath,
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
+          graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
         });
         let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
           || cli.whatsin.as_deref() == Some("archive");

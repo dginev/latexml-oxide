@@ -37,6 +37,21 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkp
                    texlive texlive-latex-extra texlive-science
 ```
 
+#### Optional: Vector-preserving PDF → SVG
+
+For the opt-in `--graphics-svg-threshold-kb N` flag (see
+[docs/SYNC_STATUS.md](docs/SYNC_STATUS.md) and upstream
+[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)):
+
+```
+$ sudo apt install inkscape
+```
+
+`inkscape` is used to convert small vector-authored PDFs into vector SVG
+instead of rasterising them via ImageMagick `convert`. The path is
+disabled by default; if the flag is enabled but inkscape is missing at
+runtime, the pipeline silently falls back to `convert`.
+
 ### Sample use
 
 1. Make sure the tests pass first, via

@@ -26,6 +26,10 @@ pub struct PostOptions<'a> {
   pub split_xpath: Option<String>,
   pub split_naming: Option<&'a str>,
   pub xslt_parameters: &'a [String],
+  /// If > 0, try `inkscape` for PDF graphics smaller than this many KB
+  /// (vector-preservation path). Fall back to ImageMagick `convert` on
+  /// failure or timeout. Tracks upstream brucemiller/LaTeXML#902.
+  pub graphics_svg_threshold_kb: u32,
 }
 
 /// Run the post-processing pipeline on XML output.
@@ -36,6 +40,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     pmml, cmml, keep_xmath, stylesheet, destination,
     source_directory, nodefaultresources, css_files, js_files, noinvisibletimes,
     mathtex, navigationtoc, split, ref split_xpath, split_naming, xslt_parameters,
+    graphics_svg_threshold_kb,
   } = *opts;
 
   let mut doc_opts = PostDocumentOptions::default();
@@ -121,7 +126,8 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 
   // Phase 2.5: Graphics
   let t_gfx = audit_start("Graphics");
-  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true);
+  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
+    .with_svg_threshold_kb(graphics_svg_threshold_kb);
   let graphics_nodes = graphics_proc.to_process(&doc);
   let doc = if !graphics_nodes.is_empty() {
     match graphics_proc.process(doc, graphics_nodes) {

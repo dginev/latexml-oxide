@@ -138,51 +138,50 @@ Three failure classes in the session-128 7933-paper sweep, after the
   6614 → 1665 ms (4×), 0911.4739 4087 → 742 ms (5.5×). Full-pipeline
   wall-clock −66% / −65% on the two outliers respectively.
 
-- [ ] **Vector-preserving PDF/EPS → SVG via inkscape/pdf2svg**
+- [~] **Vector-preserving PDF/EPS → SVG via inkscape/pdf2svg**
   (tracks upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)).
-  Current Graphics phase always rasterises via ImageMagick `convert`
-  at density=150 — lossy for vector-authored PDFs (matplotlib /
-  tikzexternal / pgfplots output) and pathological on some inputs
-  (gs infinite loops / OOM; see arxiv:1804.00311, arxiv:1807.01606
-  referenced in the upstream thread — 5-11 minutes per PDF in the
-  worst cases). Proposed architecture, building on the round-17
-  parallel Graphics refactor:
 
-  **Trigger**: opt-in via `--graphics-svg` CLI flag (or the existing
-  `--graphicsmap=pdf.svg` if we port it). Default stays PNG for
-  compatibility.
+  **Landed round 17** (opt-in, default off):
+  - `--graphics-svg-threshold-kb N` CLI flag on `latexml_oxide`
+  - `Graphics::with_svg_threshold_kb()` builder on the post processor
+  - `convert_image_svg` shells out to `inkscape --export-type=svg
+    --export-plain-svg` inside the round-17 parallel worker slot
+  - `read_svg_dimensions` parses the root `<svg viewBox="…">` for
+    width/height
+  - `should_try_svg_path` — file-size heuristic (< N KB, PDF only)
+  - Runtime falls back to ImageMagick `convert` when inkscape fails
+    / is missing (silent fallback; no hard dependency)
+  - README adds `inkscape` to the "Optional" apt install
+  - CI (`.github/workflows/CI.yml`) installs inkscape so the branch
+    is always covered on PRs
+  - `latexml_post/tests/fixtures/cifar10_vector.pdf` (41 KB,
+    matplotlib vector plot from issue #902) — the canonical test PDF
+  - New `test_vector_svg_graphics_path` integration test: runs the
+    Graphics processor on the fixture, asserts an `.svg` file is
+    emitted with a `<svg>` root and under 2 MB (silently skipped if
+    inkscape is absent — e.g. on bare dev laptops)
 
-  **Detection**: classify each PDF/EPS source as "vector-dominant"
-  vs "raster-dominant" via a cheap probe — either `pdfimages -list`
-  from poppler-utils (counts embedded raster XObjects) or a small
-  in-process PDF parse (`lopdf` crate). Vector-dominant goes to SVG
-  path; raster-dominant stays with `convert` (raster→raster is fine).
-  Probe runs inside the same parallel worker as the conversion.
+  **Empirical classification data (round 17)**:
+  - CEP.pdf (30 KB vector): inkscape 0.43 s / 519 KB SVG; convert
+    1.4 s / 61 KB PNG — SVG wins on fidelity, PNG on size
+  - cifar10_vector.pdf (41 KB vector): inkscape 0.21 s / 60 KB SVG;
+    convert 0.20 s / 149 KB PNG — SVG wins on both
+  - Fade.pdf (1.7 MB raster-disguised-vector): inkscape 46 s / 102 MB
+    (!!); convert 1.4 s / 61 KB — classic case the threshold must
+    exclude; the 200 KB threshold we suggest does
 
-  **Vector path**: shell out to `inkscape --export-type=svg
-  --export-plain-svg --export-filename=x1.svg source.pdf` with a
-  timeout (wrap in the existing parallel worker). On success emit
-  `imagesrc="x1.svg"` and derive width/height from SVG viewBox. On
-  failure fall back to `convert` (not an error).
+  **Still to do**:
+  - Timeout on the inkscape subprocess (to defend against
+    pathological small-PDF cases that might still be slow). Current
+    code just waits for it to finish.
+  - Port the 7 cases of pathological imagemagick PDFs documented in
+    issue #902 (arxiv:1804.00311, arxiv:1807.01606) as a perf
+    benchmark — inkscape should handle these without timing out.
+  - EPS support via the same path (inkscape can read EPS via
+    ghostscript; current `should_try_svg_path` only accepts `.pdf`).
+  - Consider pdf2svg as a cheaper fallback when inkscape is absent
+    but pdf2svg is available — smaller install, simpler flags.
 
-  **graphicx transforms**: the existing
-  `apply_graphicx_transforms` already returns scaled `(w, h)` —
-  those become the outer `width`/`height` attributes on the HTML
-  img/embed. Rotate/clip would need new per-format treatment; defer
-  to a later pass (document-level rotation is rare for
-  figure-bearing papers).
-
-  **Dependency policy**: inkscape and/or pdf2svg are large — make
-  them *optional runtime* (probe PATH at startup, silently fall back
-  to `convert` if missing). No Cargo feature flag needed if we keep
-  the probe cheap. Document the opt-in flag prominently so users
-  who care about vector preservation can enable it, and the default
-  behaviour is unchanged.
-
-  **Test corpus**: the referenced arxiv:1804.00311 (5-min rasterise)
-  and arxiv:1807.01606 (11-min × 15 PDFs) are the high-value
-  benchmarks — both timeout today; both should convert in seconds
-  via inkscape. Sample PDFs attached in issue #902 comments.
 
 Specific slow-convergence follow-ups:
 

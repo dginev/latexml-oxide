@@ -46,9 +46,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
+            imagemagick inkscape \
             texlive texlive-latex-extra texlive-science \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
             texlive-lang-cyrillic texlive-lang-european
+          # imagemagick = default PDF/EPS → PNG rasteriser.
+          # inkscape    = optional vector-SVG path (opt-in via
+          #               --graphics-svg-threshold-kb N on the CLI).
+          #               Runtime probes PATH and silently falls back to
+          #               `convert` if inkscape is absent, so missing it
+          #               wouldn't fail the suite — but CI covers both
+          #               paths so regressions in the SVG branch are
+          #               caught. See brucemiller/LaTeXML#902 + round-17
+          #               graphics parallelism notes.
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
