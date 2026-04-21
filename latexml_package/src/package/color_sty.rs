@@ -58,6 +58,81 @@ pub fn lookup_color(name: &str) -> String {
   lookup_color_obj(name).to_attribute()
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use latexml_core::common::color::Color;
+  use latexml_core::state::{set_state, State, StateOptions};
+
+  fn setup() {
+    // parse_color's name-lookup branch calls state::lookup_value;
+    // for the explicit-model branch it's unused but harmless to init.
+    set_state(State::new(StateOptions::default()));
+  }
+
+  #[test]
+  fn parse_color_rgb() {
+    setup();
+    assert_eq!(parse_color(Some("rgb"), "1,0,0"), Color::Rgb(1.0, 0.0, 0.0));
+    assert_eq!(parse_color(Some("rgb"), "0,1,0"), Color::Rgb(0.0, 1.0, 0.0));
+    assert_eq!(parse_color(Some("rgb"), "0,0,1"), Color::Rgb(0.0, 0.0, 1.0));
+  }
+
+  #[test]
+  fn parse_color_cmyk() {
+    setup();
+    assert_eq!(
+      parse_color(Some("cmyk"), "1,0,0,0"),
+      Color::Cmyk(1.0, 0.0, 0.0, 0.0)
+    );
+    assert_eq!(
+      parse_color(Some("cmyk"), "0,1,0,0"),
+      Color::Cmyk(0.0, 1.0, 0.0, 0.0)
+    );
+  }
+
+  #[test]
+  fn parse_color_gray() {
+    setup();
+    assert_eq!(parse_color(Some("gray"), "0.5"), Color::Gray(0.5));
+    assert_eq!(parse_color(Some("gray"), "0"), Color::Gray(0.0));
+    assert_eq!(parse_color(Some("gray"), "1"), Color::Gray(1.0));
+  }
+
+  #[test]
+  fn parse_color_strips_outer_braces() {
+    // Perl-style: `\color[rgb]{{1,0,0}}` arrives with extra braces.
+    setup();
+    assert_eq!(parse_color(Some("rgb"), "{1,0,0}"), Color::Rgb(1.0, 0.0, 0.0));
+    assert_eq!(parse_color(Some("rgb"), "  {1,0,0}  "), Color::Rgb(1.0, 0.0, 0.0));
+  }
+
+  #[test]
+  fn parse_color_model_case_insensitive() {
+    // Model is lower-cased before dispatch.
+    setup();
+    assert_eq!(parse_color(Some("RGB"), "1,0,0"), Color::Rgb(1.0, 0.0, 0.0));
+    assert_eq!(parse_color(Some("Rgb"), "0,1,0"), Color::Rgb(0.0, 1.0, 0.0));
+  }
+
+  #[test]
+  fn lookup_color_obj_empty_silently_returns_black() {
+    // Whitespace-only / empty names short-circuit to BLACK without error.
+    setup();
+    assert_eq!(lookup_color_obj(""), latexml_core::common::color::BLACK);
+    assert_eq!(lookup_color_obj("   "), latexml_core::common::color::BLACK);
+  }
+
+  #[test]
+  fn lookup_color_string_is_hex_attribute() {
+    // Unknown name → warn + BLACK; lookup_color returns the hex attribute.
+    setup();
+    let s = lookup_color("definitely_not_a_color_name");
+    // BLACK → #000000 hex attribute per Color::to_attribute.
+    assert_eq!(s, "#000000");
+  }
+}
+
 LoadDefinitions!({
   //======================================================================
   // Ignorable options (mostly drivers)
