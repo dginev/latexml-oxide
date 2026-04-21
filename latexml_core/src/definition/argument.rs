@@ -129,6 +129,16 @@ impl ArgWrap {
       other => other.to_string() == target,
     }
   }
+
+  /// Zero-alloc `self.to_string().starts_with(prefix)` for Tokens/Token
+  /// variants; falls back to full to_string for others.
+  pub fn starts_with_text(&self, prefix: &str) -> bool {
+    match self {
+      ArgWrap::Tokens(tks) => tks.starts_with_text(prefix),
+      ArgWrap::Token(t) => t.with_str(|s| s.starts_with(prefix)),
+      other => other.to_string().starts_with(prefix),
+    }
+  }
   pub fn mut_tokens(&mut self) -> Option<&mut Tokens> {
     match self {
       ArgWrap::Tokens(tks) => Some(tks),

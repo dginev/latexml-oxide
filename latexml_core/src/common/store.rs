@@ -557,6 +557,30 @@ impl PartialEq for Stored {
 unsafe impl Send for Stored {}
 unsafe impl Sync for Stored {}
 impl Stored {
+  /// Zero-alloc equivalent of `self.to_string() == target` for the two
+  /// string-carrying variants (`String`, `Tokens`). Falls back to
+  /// `to_string()` for everything else, where the Display impl allocates
+  /// anyway.
+  pub fn eq_text(&self, target: &str) -> bool {
+    match self {
+      Stored::String(s) => arena::with(*s, |v| v == target),
+      Stored::Tokens(t) => t.eq_text(target),
+      Stored::Token(t) => t.with_str(|v| v == target),
+      other => other.to_string() == target,
+    }
+  }
+
+  /// Zero-alloc `self.to_string().starts_with(prefix)` for the
+  /// string-carrying variants; falls back to `to_string()` for others.
+  pub fn starts_with_text(&self, prefix: &str) -> bool {
+    match self {
+      Stored::String(s) => arena::with(*s, |v| v.starts_with(prefix)),
+      Stored::Tokens(t) => t.starts_with_text(prefix),
+      Stored::Token(t) => t.with_str(|v| v.starts_with(prefix)),
+      other => other.to_string().starts_with(prefix),
+    }
+  }
+
   /// helper method that uses `ToString::to_string` to flatten a map with Stored values
   // TODO: Obviously a performance issue, find a way to unify the interfaces where string allocation
   // is completely avoided until serialization in the XML.

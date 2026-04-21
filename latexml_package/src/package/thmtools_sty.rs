@@ -57,7 +57,7 @@ LoadDefinitions!({
         saved.push(("\\thm@bodyfont".into(), Stored::Tokens(bodyfont.revert().unwrap_or_default())));
       }
       if let Some(headformat) = kv.as_ref().and_then(|k| k.get_value("headformat")) {
-        let swap = headformat.to_string() == "swapnumber";
+        let swap = headformat.eq_text("swapnumber");
         saved.push(("thm@swap".into(), Stored::Bool(swap)));
       }
       if !saved.is_empty() {
@@ -146,7 +146,7 @@ LoadDefinitions!({
       saved.push(("\\thm@bodyfont".into(), Stored::Tokens(bodyfont.revert().unwrap_or_default())));
     }
     if let Some(headformat) = kv.as_ref().and_then(|k| k.get_value("headformat")) {
-      let swap = headformat.to_string() == "swapnumber";
+      let swap = headformat.eq_text("swapnumber");
       saved.push(("thm@swap".into(), Stored::Bool(swap)));
     }
 

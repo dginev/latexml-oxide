@@ -173,6 +173,55 @@ impl Tokens {
   /// Number of contained Token entries
   pub fn len(&self) -> usize { self.0.len() }
 
+  /// Zero-alloc equivalent of `self.to_string().starts_with(prefix)`.
+  /// Walks tokens byte-by-byte into `prefix` using the same Display
+  /// semantics as `eq_text` (COMMENT skipped, ARG prefixed with `#`).
+  /// Returns `true` once the full prefix has been consumed, even if
+  /// more token text follows.
+  pub fn starts_with_text(&self, prefix: &str) -> bool {
+    let mut remaining = prefix;
+    for t in &self.0 {
+      if remaining.is_empty() {
+        return true;
+      }
+      if t.code == crate::token::Catcode::COMMENT {
+        continue;
+      }
+      if t.code == crate::token::Catcode::ARG {
+        if !remaining.starts_with('#') {
+          return false;
+        }
+        remaining = &remaining[1..];
+        if remaining.is_empty() {
+          return true;
+        }
+      }
+      let keep_going = t.with_str(|text| {
+        if text.is_empty() {
+          return true;
+        }
+        if remaining.starts_with(text) {
+          remaining = &remaining[text.len()..];
+          true
+        } else if text.starts_with(remaining) {
+          // This token's text extends past `prefix` — prefix matches
+          // and we're done.
+          remaining = "";
+          true
+        } else {
+          false
+        }
+      });
+      if !keep_going {
+        return false;
+      }
+      if remaining.is_empty() {
+        return true;
+      }
+    }
+    remaining.is_empty()
+  }
+
   /// Zero-alloc equivalent of `self.to_string() == target`. Walks the
   /// contained tokens byte-by-byte, skipping COMMENT tokens (matching
   /// `Display for Tokens`) and prefixing ARG tokens with `#` (matching

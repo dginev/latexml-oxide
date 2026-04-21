@@ -358,7 +358,7 @@ LoadDefinitions!({
             // the Stored::clone + full to_string we previously paid just
             // to compare against a single literal.
             let is_presentation = state::with_value("DUAL_BRANCH", |v| {
-              v.map(|s| s.to_string() == "presentation").unwrap_or(false)
+              v.map(|s| s.eq_text("presentation")).unwrap_or(false)
             });
             if is_presentation {
               match &pr {

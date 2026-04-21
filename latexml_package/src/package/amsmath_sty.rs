@@ -1000,7 +1000,7 @@ LoadDefinitions!({
   // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')
   DefConditional!("\\if@in@ams@align", {
     state::with_stacked_values_sym(pin!("current_environment"), |vals| {
-      vals.iter().any(|v| v.to_string().starts_with("align"))
+      vals.iter().any(|v| v.starts_with_text("align"))
     })
   });
   // Perl: \lx@ams@marksplitinalign — constructor that marks the current _Capture_

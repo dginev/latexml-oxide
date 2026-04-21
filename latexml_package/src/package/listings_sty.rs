@@ -452,7 +452,7 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
       word = format!("{pfx}{word}");
     }
     let key = s!("LST_WORDS@{word}@class");
-    let matches_class = state::with_value(&key, |v| v.map(|s| s.to_string() == class).unwrap_or(false));
+    let matches_class = state::with_value(&key, |v| v.map(|s| s.eq_text(class)).unwrap_or(false));
     if matches_class {
       state::assign_value(&key, Stored::None, None);
     }
@@ -479,7 +479,7 @@ fn lst_delete_delimiter_kind(kind: &str) {
       if open_key.is_empty() { continue; }
       let class_key = s!("LST_DELIM@{}@class", open_key);
       let class_starts = state::with_value(&class_key,
-        |v| v.map(|s| s.to_string().starts_with(kind)).unwrap_or(false));
+        |v| v.map(|s| s.starts_with_text(kind)).unwrap_or(false));
       if class_starts {
           // Remove delimiter entries
           state::assign_value(&class_key, Stored::default(), None);
