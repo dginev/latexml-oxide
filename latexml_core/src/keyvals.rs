@@ -939,3 +939,88 @@ impl From<KeyVals> for Result<Option<Digested>> {
     tmp.into()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn skip_missing_default_is_none() {
+    let s = SkipMissing::default();
+    assert_eq!(s, SkipMissing::None);
+  }
+
+  #[test]
+  fn skip_missing_variants_not_equal() {
+    assert_ne!(SkipMissing::None, SkipMissing::All);
+  }
+
+  #[test]
+  fn keyvals_config_default_all_empty() {
+    let c = KeyvalsConfig::default();
+    assert!(c.prefix.is_none());
+    assert!(c.keysets.is_empty());
+    assert!(!c.set_all);
+    assert!(!c.set_internals);
+    assert!(c.skip.is_empty());
+    assert_eq!(c.skip_missing, SkipMissing::None);
+    assert!(c.hook_missing.is_none());
+  }
+
+  #[test]
+  fn keyvals_default_prefix_and_anonymous_keyset() {
+    // Default KeyVals has prefix=KV, keysets=["_anonymous_"].
+    let kv = KeyVals::default();
+    assert_eq!(kv.prefix, "KV");
+    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+    assert!(!kv.set_all);
+    assert!(!kv.set_internals);
+  }
+
+  #[test]
+  fn keyvals_new_with_empty_keysets_defaults_to_anonymous() {
+    let kv = KeyVals::new(KeyvalsConfig::default());
+    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+  }
+
+  #[test]
+  fn keyvals_new_with_custom_keysets_preserved() {
+    let cfg = KeyvalsConfig {
+      keysets: vec!["tabular".to_string(), "array".to_string()],
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.keysets.len(), 2);
+    assert_eq!(kv.keysets[0], "tabular");
+  }
+
+  #[test]
+  fn keyvals_new_custom_prefix() {
+    let cfg = KeyvalsConfig {
+      prefix: Some("P".to_string()),
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.prefix, "P");
+  }
+
+  #[test]
+  fn keyvals_new_default_prefix_on_none() {
+    let cfg = KeyvalsConfig {
+      prefix: None,
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.prefix, "KV");
+  }
+
+  #[test]
+  fn keyvals_new_set_all_flag() {
+    let cfg = KeyvalsConfig {
+      set_all: true,
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert!(kv.set_all);
+  }
+}
