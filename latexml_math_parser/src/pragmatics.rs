@@ -1180,4 +1180,83 @@ mod tests {
     assert!(!name_is_functional_or_id("RELOP"));
     assert!(!name_is_functional_or_id("NUMBER"));
   }
+
+  // ----- _pragma_letter_case: case-of-first-char marker -----
+
+  #[test]
+  fn pragma_letter_case_lowercase_suffixes_l() {
+    // distill_lexeme("UNKNOWN:italic-x") → ("UNKNOWN:italic", "-", "x") → "l".
+    assert_eq!(_pragma_letter_case("UNKNOWN:italic-x"), "UNKNOWN:italic-l");
+    assert_eq!(_pragma_letter_case("FOO-y"), "FOO-l");
+  }
+
+  #[test]
+  fn pragma_letter_case_uppercase_suffixes_u() {
+    assert_eq!(_pragma_letter_case("UNKNOWN:italic-X"), "UNKNOWN:italic-U");
+    assert_eq!(_pragma_letter_case("FOO-Y"), "FOO-U");
+  }
+
+  #[test]
+  fn pragma_letter_case_colon_separator_path() {
+    // No dash, but a colon → distill splits at the rightmost colon.
+    assert_eq!(_pragma_letter_case("UNKNOWN:x"), "UNKNOWN:l");
+    assert_eq!(_pragma_letter_case("UNKNOWN:X"), "UNKNOWN:U");
+  }
+
+  #[test]
+  fn pragma_letter_case_bare_lexeme_drops_prefix() {
+    // No separator → distill returns ("", "", name), so prefix collapses.
+    assert_eq!(_pragma_letter_case("x"), "l");
+    assert_eq!(_pragma_letter_case("X"), "U");
+  }
+
+  // ----- _pragma_letter_case_flat: strips sub__ stacking marker -----
+
+  #[test]
+  fn pragma_letter_case_flat_strips_sub_marker() {
+    // The letter_case result "FOOsub__-l" should collapse sub__ away.
+    assert_eq!(_pragma_letter_case_flat("FOOsub__-l"), "FOO-l");
+  }
+
+  #[test]
+  fn pragma_letter_case_flat_no_sub_marker_is_identity() {
+    assert_eq!(_pragma_letter_case_flat("FOO-l"), "FOO-l");
+  }
+
+  // ----- _pragma_letter_blocks: maps 1-char lexeme to block marker -----
+
+  #[test]
+  fn pragma_letter_blocks_latin_block_a_to_e() {
+    // a-e live in the "ae" block. The pragma replaces the 1-char lexeme.
+    assert_eq!(_pragma_letter_blocks("FOO-a"), "FOO-ae");
+    assert_eq!(_pragma_letter_blocks("FOO-b"), "FOO-ae");
+    assert_eq!(_pragma_letter_blocks("FOO-e"), "FOO-ae");
+  }
+
+  #[test]
+  fn pragma_letter_blocks_latin_block_x_to_z() {
+    assert_eq!(_pragma_letter_blocks("FOO-x"), "FOO-xz");
+    assert_eq!(_pragma_letter_blocks("FOO-y"), "FOO-xz");
+    assert_eq!(_pragma_letter_blocks("FOO-z"), "FOO-xz");
+  }
+
+  #[test]
+  fn pragma_letter_blocks_uppercase_latin_blocks() {
+    assert_eq!(_pragma_letter_blocks("FOO-A"), "FOO-AE");
+    assert_eq!(_pragma_letter_blocks("FOO-F"), "FOO-FH");
+  }
+
+  #[test]
+  fn pragma_letter_blocks_multichar_lexeme_greek_name() {
+    // "alpha" → greek α → "αγ" block.
+    assert_eq!(_pragma_letter_blocks("FOO-alpha"), "FOO-αγ");
+    // Standalone greek letter without a block (e.g. δ/delta) stays as the name.
+    assert_eq!(_pragma_letter_blocks("FOO-delta"), "FOO-delta");
+  }
+
+  #[test]
+  fn pragma_letter_blocks_unmatched_multichar_is_identity() {
+    // Non-greek multichar lexeme passes through unchanged.
+    assert_eq!(_pragma_letter_blocks("FOO-identifier"), "FOO-identifier");
+  }
 }
