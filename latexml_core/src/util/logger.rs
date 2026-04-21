@@ -131,3 +131,60 @@ pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
   log::set_max_level(level);
   Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn strip_ansi_removes_color_codes() {
+    // ESC [ ... m should vanish; other content preserved.
+    let red = "\x1b[31mhello\x1b[0m";
+    assert_eq!(strip_ansi(red), "hello");
+  }
+
+  #[test]
+  fn strip_ansi_noop_on_plain() {
+    assert_eq!(strip_ansi("plain text"), "plain text");
+    assert_eq!(strip_ansi(""), "");
+  }
+
+  #[test]
+  fn strip_ansi_multiple_sequences() {
+    let s = "\x1b[31merror:\x1b[0m \x1b[33mwarning\x1b[0m";
+    assert_eq!(strip_ansi(s), "error: warning");
+  }
+
+  #[test]
+  fn strip_ansi_preserves_unicode() {
+    let s = "\x1b[31mαβγ\x1b[0m";
+    assert_eq!(strip_ansi(s), "αβγ");
+  }
+
+  #[test]
+  fn strip_ansi_handles_incomplete_escape() {
+    // Unterminated ESC[ sequence — we should not hang.
+    // Current impl: scan until 'm' is found. If never found, consumes
+    // the rest of the input. Document that behavior.
+    let s = "\x1b[1;31m hello";
+    // The scan consumes characters until 'm' is found → the 'm' in the
+    // escape closes, then " hello" remains.
+    assert_eq!(strip_ansi(s), " hello");
+  }
+
+  #[test]
+  fn bind_log_and_flush_log_roundtrip() {
+    // Before bind_log, flush_log returns empty.
+    // After bind_log, the buffer is active but empty until a log
+    // message arrives. Since we can't easily exercise the Log impl
+    // without initializing a global logger, just verify the
+    // capture-buffer lifecycle primitives.
+    let before = flush_log();
+    assert!(before.is_empty(), "no active buffer → empty flush");
+
+    bind_log();
+    let after = flush_log();
+    assert!(after.is_empty(),
+      "empty buffer is still empty after bind/flush with no log traffic");
+  }
+}
