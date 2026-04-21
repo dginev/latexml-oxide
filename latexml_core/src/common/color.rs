@@ -365,3 +365,117 @@ pub fn color_from_model_spec(model: &str, spec: &str) -> Color {
   let c = parse_components(spec);
   from_model_components(model, &c)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn eq_close(a: f64, b: f64) -> bool { (a - b).abs() < 1e-6 }
+
+  #[test]
+  fn model_names() {
+    assert_eq!(Color::Rgb(0.0, 0.0, 0.0).model(), "rgb");
+    assert_eq!(Color::Cmy(0.0, 0.0, 0.0).model(), "cmy");
+    assert_eq!(Color::Cmyk(0.0, 0.0, 0.0, 0.0).model(), "cmyk");
+    assert_eq!(Color::Hsb(0.0, 0.0, 0.0).model(), "hsb");
+    assert_eq!(Color::Gray(0.0).model(), "gray");
+  }
+
+  #[test]
+  fn components_match_variant() {
+    assert_eq!(Color::Rgb(0.1, 0.2, 0.3).components(), vec![0.1, 0.2, 0.3]);
+    assert_eq!(Color::Cmyk(0.1, 0.2, 0.3, 0.4).components(), vec![0.1, 0.2, 0.3, 0.4]);
+    assert_eq!(Color::Gray(0.5).components(), vec![0.5]);
+  }
+
+  #[test]
+  fn black_and_white_constants() {
+    assert_eq!(BLACK, Color::Rgb(0.0, 0.0, 0.0));
+    assert_eq!(WHITE, Color::Rgb(1.0, 1.0, 1.0));
+  }
+
+  #[test]
+  fn to_rgb_idempotent() {
+    let c = Color::Rgb(0.25, 0.5, 0.75);
+    assert_eq!(c.to_rgb(), c);
+  }
+
+  #[test]
+  fn rgb_cmy_invert_components() {
+    let cmy = Color::Cmy(0.25, 0.5, 0.75);
+    let rgb = cmy.to_rgb();
+    if let Color::Rgb(r, g, b) = rgb {
+      assert!(eq_close(r, 0.75) && eq_close(g, 0.5) && eq_close(b, 0.25),
+        "got {rgb:?}");
+    } else {
+      panic!("expected Rgb after cmy.to_rgb(), got {rgb:?}");
+    }
+  }
+
+  #[test]
+  fn complement_flips_rgb() {
+    let c = Color::Rgb(0.1, 0.2, 0.3);
+    let comp = c.complement();
+    if let Color::Rgb(r, g, b) = comp {
+      assert!(eq_close(r, 0.9) && eq_close(g, 0.8) && eq_close(b, 0.7),
+        "got {comp:?}");
+    } else {
+      panic!("Rgb complement should return Rgb");
+    }
+  }
+
+  #[test]
+  fn display_format_parenthesized() {
+    let c = Color::Rgb(0.5, 0.5, 0.5);
+    let s = format!("{c}");
+    assert!(s.starts_with("rgb(") && s.ends_with(')'),
+      "got {s:?}");
+  }
+
+  #[test]
+  fn from_model_components_rgb() {
+    let c = from_model_components("rgb", &[0.1, 0.2, 0.3]);
+    assert_eq!(c, Color::Rgb(0.1, 0.2, 0.3));
+  }
+
+  #[test]
+  fn from_model_components_gray_single() {
+    let c = from_model_components("gray", &[0.5]);
+    assert_eq!(c, Color::Gray(0.5));
+  }
+
+  #[test]
+  fn from_model_components_unknown_is_black() {
+    // Fallback: unknown model returns BLACK.
+    let c = from_model_components("nonesuch", &[1.0, 1.0, 1.0]);
+    assert_eq!(c, BLACK);
+  }
+
+  #[test]
+  fn from_model_components_insufficient_comps_is_black() {
+    // rgb needs 3 comps; giving 1 falls through to BLACK.
+    let c = from_model_components("rgb", &[0.5]);
+    assert_eq!(c, BLACK);
+  }
+
+  #[test]
+  fn color_from_model_spec_parses_braced() {
+    // Braces are stripped before parsing.
+    let c = color_from_model_spec("rgb", "{0.1, 0.2, 0.3}");
+    assert_eq!(c, Color::Rgb(0.1, 0.2, 0.3));
+  }
+
+  #[test]
+  fn color_from_model_spec_parses_spaces() {
+    // Spaces work as separators too.
+    let c = color_from_model_spec("rgb", "0.1 0.2 0.3");
+    assert_eq!(c, Color::Rgb(0.1, 0.2, 0.3));
+  }
+
+  #[test]
+  fn color_inequality_across_models() {
+    // rgb(0,0,0) ≠ cmyk(0,0,0,1) — different models never compare equal.
+    assert_ne!(BLACK, Color::Cmyk(0.0, 0.0, 0.0, 1.0));
+    assert_ne!(WHITE, Color::Gray(1.0));
+  }
+}
