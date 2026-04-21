@@ -268,9 +268,20 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       // body is either empty (43) or contains no CS tokens (303 more
       // — literal characters, digits, punctuation only). "No CS"
       // means no `16:` catcode marker in the comma-separated token
-      // list, so there's no expansion chain to cascade. Examples
-      // from step 3: `\__bitset_test_digits_end:` (body = " "),
-      // `\c_stop_token` (body = "15:s,11:t,11:o,11:p"), etc.
+      // list, so there's no expansion chain to cascade.
+      //
+      // Step 4 attempted to widen to include 1-CS bodies (120
+      // additional records), which regressed 83_expl3. The
+      // single-CS body references another `:`-named macro that
+      // isn't also dump-loaded — expanding the dump-loaded wrapper
+      // triggers the undefined-CS recovery path. Unlike the
+      // "admitting X when X was undefined" baseline, here we've
+      // DEFINED X to point at Y, making `\ifdefined\X` true —
+      // which shifts downstream code into branches that expect Y
+      // to be defined and hit the cascade. Lesson: cascade risk
+      // isn't zero the moment we admit any CS reference in the
+      // body. Admitting a full transitive closure (cs-set closed
+      // under body references) would work, but that's step 5+.
       let is_safe_colon_safe_e = name.contains(':')
         && data.starts_with("E\t")
         && {
