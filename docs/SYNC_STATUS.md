@@ -87,24 +87,37 @@ Three failure classes in the session-128 7933-paper sweep, after the
    but succeeds — divergence is in how our raw-TeX processor handles
    specific pgfkeys idioms, not a simple stub gap.
 
-   Round-17 diagnosis on 1611.04489: the conversion logs
-   `Error:unexpected:pgfmath.code.tex` / `pgfmath.sty` / `tikz.sty`
-   each failing with "Too many errors (> 1000)", and final "Conversion
-   complete" reports 91 undefined macros dominated by `\pgfkeys@*`
-   (`\pgfkeys`, `\pgfqkeys`, `\pgfkeys@try`, `\pgfkeys@stop`,
-   `\pgfkeyscurrentname`, `\pgfkeysdefargs`, …) and `\pgfmath@*`
-   internals. **Key observation**: Perl's
-   `pgfkeys.code.tex.ltxml` is 544 lines but its `__END__` pod marker
-   sits at line 33 — everything below is dead code. Perl therefore
-   does the same thing we do: pure `InputDefinitions('pgfkeys.code',
-   type => 'tex', noltxml => 1)` with no Rust-side fast-path
-   bindings. That means the divergence is **purely in the raw-TeX
-   reader's handling of pgfkeys idioms** — classic candidates:
-   `\pgfkeys@ifdef`, `\pgfkeys@remove@@@` path processing,
-   `\ifpgfkeys@deferred` conditionals, active-character tricks for
-   path separators. Needs a focused step-through comparing Rust vs
-   Perl `mouth`-level traces on the first diverging CS definition,
-   not a broad audit.
+   Round-17 diagnosis on 1611.04489 (commit `d6789258b` + round-17
+   deeper dive): Perl-vs-Rust log comparison pinpoints the root cause.
+
+   **First diverging event**: in Rust the error
+   `Error:undefined:\pgfkeys` fires **inside `pgfsys.code.tex`**
+   before `pgfkeys.code.tex` has finished loading. The file
+   `pgfsys.code.tex` itself (from TeXLive generic/pgf/systemlayer)
+   does a nested `\input pgfkeys.code.tex` at line 15, then uses
+   `\pgfkeys{/pgf/.is family}` at line 19.
+
+   **Perl handles this correctly**: the log shows
+   `pgfkeys.code.tex.ltxml` loads *during* pgfsys.code.tex processing
+   (nested `(Loading ...)(Processing ...)` blocks), so `\pgfkeys`
+   is defined by line 19. Both files complete in ~0.36 s.
+
+   **Rust mis-orders**: the log shows pgfsys.code.tex errors on
+   `\pgfkeys` first, then pgfkeys.code.tex loads AFTERWARDS — i.e.
+   the `\input pgfkeys.code.tex` at pgfsys.code.tex:15 isn't
+   executing synchronously during the raw-TeX read. The
+   pgfkeys load appears deferred to the next outer binding phase.
+
+   **The fix target**: `latexml_core::binding::content` (or wherever
+   raw-TeX `\input` is dispatched during `InputDefinitions` with
+   `noltxml=1`). The `\input` token needs to push a new mouth and
+   process its content *before* the enclosing file's next token.
+   This is a nested-input synchronization issue, not a missing CS
+   stub. Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
+   several other pgf/tikz-users currently failing similarly.
+
+   Perl log: /tmp/1611_perl_log.txt (25.4 s, exit=0, 2 warnings).
+   Rust log: /tmp/1611_rust_log.txt (60 s timeout, 1004 errors).
 2. **Math-parser pathological-ambiguity timeouts** — 2+ papers
    (1403.4135, 1407.5769). 500+-token formulas with 121 parse choices
    each, ~500ms per formula × hundreds of formulas = 60s timeout.
