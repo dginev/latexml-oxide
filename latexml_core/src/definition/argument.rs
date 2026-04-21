@@ -622,3 +622,87 @@ impl From<ArgWrap> for Template {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn argwrap_default_is_none() {
+    let a = ArgWrap::default();
+    assert!(a.is_none());
+    assert!(!a.is_some());
+  }
+
+  #[test]
+  fn argwrap_number_is_some() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert!(a.is_some());
+    assert!(!a.is_none());
+  }
+
+  #[test]
+  fn argwrap_is_tokens_for_token_and_tokens() {
+    let a = ArgWrap::Tokens(Tokens::new(vec![]));
+    assert!(a.is_tokens());
+    let b = ArgWrap::Token(Token::default());
+    assert!(b.is_tokens(),
+      "is_tokens is true for both Token and Tokens variants");
+    let c = ArgWrap::Number(Number::new(0));
+    assert!(!c.is_tokens());
+    let d = ArgWrap::None;
+    assert!(!d.is_tokens());
+  }
+
+  #[test]
+  fn argwrap_value_of_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert_eq!(a.value_of(), 42);
+  }
+
+  #[test]
+  fn argwrap_value_of_dimension() {
+    let a = ArgWrap::Dimension(Dimension::new(65536));
+    assert_eq!(a.value_of(), 65536);
+  }
+
+  #[test]
+  fn argwrap_value_f64_float() {
+    let a = ArgWrap::Float(Float(3.14));
+    assert!((a.value_f64() - 3.14).abs() < 1e-6);
+  }
+
+  #[test]
+  fn argwrap_display_none_is_the_word_None() {
+    // Discovered: ArgWrap::None's Display writes "None" (the variant
+    // name), not empty string. Documented here so future readers
+    // don't expect an empty string.
+    let a = ArgWrap::None;
+    assert_eq!(format!("{a}"), "None");
+  }
+
+  #[test]
+  fn argwrap_display_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert_eq!(format!("{a}"), "42");
+  }
+
+  #[test]
+  fn argwrap_try_to_number_from_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    let n = a.try_to_number().unwrap();
+    assert_eq!(n.value_of(), 42);
+  }
+
+  #[test]
+  fn argwrap_expect_number_from_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert_eq!(a.expect_number().value_of(), 42);
+  }
+
+  #[test]
+  fn argwrap_owned_tokens_from_none_is_none() {
+    let a = ArgWrap::None;
+    assert!(a.owned_tokens().is_none());
+  }
+}
