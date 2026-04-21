@@ -130,14 +130,28 @@ vendor-patch/upstream. Current direct `libxml::bindings::*` call sites:
   follow-up: identify the semantic cause of high `"text"`-node ref counts
   on dcpic diagrams (2000–8000 range).
 - [ ] **1605.08055 Finalizing-phase SIGSEGV** — 169 math formulae
-  parse cleanly, then SIGSEGV during `document.finalize()` (which runs
-  `prune_xmduals` + `finalize_rec`). Repro: 1.9 s wall from
-  `cortex_worker --standalone` or direct `latexml_oxide`; no Rust
-  backtrace (RUST_BACKTRACE=full shows none), so the crash is in
-  libxml2 C during a node-manipulation call. Likely another
-  XMDual-collapse UAF adjacent to the session-127 `replace_node`
-  text-merge fix. The only remaining exit=139 in the 7898-paper
-  sandbox re-sweep.
+  parse cleanly, then SIGSEGV during `document.finalize()` → 
+  `prune_xmduals` → `mark_xmnode_visibility` (confirmed via
+  eprintln instrumentation session-128). The crashing call is a
+  recursive `mark_xmnode_visibility_aux` on an `XMRef` whose
+  `lookup_id("S2.E15.m1.45.mf")` returns a **dangling idstore
+  entry** — the underlying libxml2 memory has been freed, so
+  `node.get_name()` returns "" and touching attributes on the
+  Node SIGSEGVs. The math parser already prints four
+  `Warn:expected:id Cannot find a node with xml:id='S2.E15.m1.4X'`
+  warnings (from `latexml_math_parser/src/parser.rs:1613`) before
+  Finalizing, confirming stale ids are sitting in idstore. A
+  defensive `get_parent().is_none()` check in the XMRef arm
+  doesn't help — `get_parent()` on freed memory returns a plausible
+  non-null parent pointer, so the guard passes and the subsequent
+  `has_attribute` SIGSEGVs. Real fix needs either (a) an idstore
+  purge pass before `mark_xmnode_visibility` (validate each
+  cached Node still has a path to the document root), or (b)
+  audit every place that unlinks a node with an xml:id to also
+  `unrecord_id` (like session 127 did for `replace_node`
+  text-merge). Only remaining exit=139 in the 7898-paper sandbox
+  re-sweep; non-trivial to fix without deeper idstore lifetime
+  work.
 
 ### Dump — deferred alias retry (session 128)
 
