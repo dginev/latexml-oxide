@@ -1,4 +1,6 @@
+use crate::engine::base_utilities::split_tokens;
 use crate::prelude::*;
+use crate::xmath_helpers::i_apply;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -6,10 +8,20 @@ LoadDefinitions!({
   // The premises can be separated by "&" (which is NOT being used for alignment!)
   DefMath!("\\lx@proof@logical@and", "\u{2003}", role => "ADDOP", meaning => "and");
 
-  // \lx@proof@split@and{}: complex sub{} body — splits tokens on T_ALIGN
-  // and wraps multiple clauses with I_apply(\lx@proof@logical@and, ...)
-  // Stub: just pass through the argument unchanged
-  DefMacro!("\\lx@proof@split@and{}", "#1");
+  // Perl proof.sty.ltxml L20-28: split the argument on T_ALIGN (`&`),
+  // which in proof.sty separates premises (not for column alignment).
+  // Single clause → pass through; multiple → wrap with I_apply around
+  // \lx@proof@logical@and so the semantic structure is an n-ary AND.
+  DefMacro!("\\lx@proof@split@and {}", sub[(tokens)] {
+    let clauses = split_tokens(tokens, vec![T_ALIGN!()]);
+    if clauses.is_empty() {
+      Ok(Tokens!())
+    } else if clauses.len() == 1 {
+      Ok(clauses.into_iter().next().unwrap())
+    } else {
+      Ok(i_apply(&[], Tokens!(T_CS!("\\lx@proof@logical@and")), clauses))
+    }
+  });
 
   // \lx@proof@stack{}{}{}{}:
   // An extremely contrived stack of premises and conclusion.
