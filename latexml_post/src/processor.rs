@@ -217,3 +217,68 @@ pub fn copy_foreign_attributes(target: &mut Node, source: &Node) {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn processor_options_default_is_empty() {
+    let o = ProcessorOptions::default();
+    assert!(o.resource_directory.is_none());
+    assert!(o.resource_prefix.is_none());
+  }
+
+  #[test]
+  fn processor_options_clone_preserves() {
+    let o = ProcessorOptions {
+      resource_directory: Some("/tmp".to_string()),
+      resource_prefix: Some("pre".to_string()),
+    };
+    let c = o.clone();
+    assert_eq!(c.resource_directory, Some("/tmp".to_string()));
+    assert_eq!(c.resource_prefix, Some("pre".to_string()));
+  }
+
+  #[test]
+  fn post_error_display_processing() {
+    let e = PostError::Processing("boom".to_string());
+    let s = format!("{e}");
+    assert!(s.contains("Post-processing error"));
+    assert!(s.contains("boom"));
+  }
+
+  #[test]
+  fn post_error_display_xml() {
+    let e = PostError::Xml("malformed".to_string());
+    let s = format!("{e}");
+    assert!(s.contains("XML error"));
+    assert!(s.contains("malformed"));
+  }
+
+  #[test]
+  fn post_error_from_io_error() {
+    let io = std::io::Error::new(std::io::ErrorKind::NotFound, "x");
+    let pe: PostError = io.into();
+    match pe {
+      PostError::Io(_) => {},
+      other => panic!("expected Io, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn post_error_display_io() {
+    let io = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+    let e = PostError::Io(io);
+    let s = format!("{e}");
+    assert!(s.contains("I/O error"));
+  }
+
+  #[test]
+  fn post_error_impls_std_error() {
+    // The blanket impl lets us box it as dyn Error.
+    fn take_err<E: std::error::Error>(_: &E) {}
+    let e = PostError::Processing("x".to_string());
+    take_err(&e);
+  }
+}
