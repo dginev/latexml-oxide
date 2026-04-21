@@ -1981,8 +1981,11 @@ fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) ->
   }
   // If whatsit has a recorded mathstyle property, adjust it too
   if let Some(Stored::String(ms)) = whatsit.properties.get("mathstyle") {
-    let ms_str = arena::to_string(*ms);
-    let newstyle = mathstyle_adjust(outerstyle, &ms_str);
+    // mathstyle_adjust takes &str and returns &'static str, so we can
+    // compute the adjusted style inside arena::with without allocating
+    // an owned String for the interned mathstyle. The &'static str
+    // escapes the closure cleanly.
+    let newstyle: &'static str = arena::with(*ms, |ms_str| mathstyle_adjust(outerstyle, ms_str));
     whatsit
       .properties
       .insert("mathstyle", Stored::String(arena::pin(newstyle)));

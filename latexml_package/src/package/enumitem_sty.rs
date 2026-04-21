@@ -216,7 +216,7 @@ fn merged_enumitem_keyvals(
             Stored::Tokens(t) => ArgWrap::Tokens(t),
             Stored::Number(n) => ArgWrap::Number(n),
             Stored::None => ArgWrap::None,
-            Stored::String(s) => ArgWrap::Tokens(mouth::tokenize_internal(&arena::to_string(s))),
+            Stored::String(s) => ArgWrap::Tokens(arena::with(s, mouth::tokenize_internal)),
             _ => ArgWrap::None,
           };
           hash.insert(key.to_string(), aw);

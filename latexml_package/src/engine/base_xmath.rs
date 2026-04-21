@@ -1657,8 +1657,8 @@ pub fn equationgroup_join_cols(
   let mut branch: Option<Node> = None;
   let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(equation));
   for mut cell in cells {
-    let qname_str = arena::to_string(document::get_node_qname(&cell));
-    if !qname_str.ends_with("_Capture_") {
+    let qname_sym = document::get_node_qname(&cell);
+    if !arena::with(qname_sym, |s| s.ends_with("_Capture_")) {
       continue;
     }
     if col.is_multiple_of(ncols) {
