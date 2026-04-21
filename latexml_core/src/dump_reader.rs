@@ -270,18 +270,14 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       // means no `16:` catcode marker in the comma-separated token
       // list, so there's no expansion chain to cascade.
       //
-      // Step 4 attempted to widen to include 1-CS bodies (120
-      // additional records), which regressed 83_expl3. The
-      // single-CS body references another `:`-named macro that
-      // isn't also dump-loaded — expanding the dump-loaded wrapper
-      // triggers the undefined-CS recovery path. Unlike the
-      // "admitting X when X was undefined" baseline, here we've
-      // DEFINED X to point at Y, making `\ifdefined\X` true —
-      // which shifts downstream code into branches that expect Y
-      // to be defined and hit the cascade. Lesson: cascade risk
-      // isn't zero the moment we admit any CS reference in the
-      // body. Admitting a full transitive closure (cs-set closed
-      // under body references) would work, but that's step 5+.
+      // Step 4 attempted 1-CS bodies, step 5 attempted whole-E
+      // admission. Both regressed 83_expl3 on `\ifdefined\X`
+      // branch mis-selection. The lesson: widening the E gate
+      // further requires porting the underlying kernel primitives
+      // (\hook_*, \group_*, \keys_*, etc.) so the bodies we admit
+      // execute correctly, not just parse. See the "Deep expl3 /
+      // LaTeX 3 kernel parity" long-horizon task — the dumper
+      // widening and the kernel port must advance together.
       let is_safe_colon_safe_e = name.contains(':')
         && data.starts_with("E\t")
         && {
@@ -291,7 +287,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
           let body_has_cs = body.starts_with("16:") || body.contains(",16:");
           nargs_zero && !body_has_cs
         };
-      // Backwards alias for step 2 comment reference.
+      // Backwards alias preserved.
       let is_safe_colon_empty_e = is_safe_colon_safe_e;
       if (is_at_internal || is_public_register || is_safe_let_alias
         || is_safe_colon_noncascade
