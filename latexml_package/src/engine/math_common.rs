@@ -695,13 +695,46 @@ LoadDefinitions!({
     }
   });
 
-  DefConstructor!("\\@@joinrel{}{}", sub[document,args] {
-    // Stub: just absorb both sides sequentially
+  // Perl math_common L388-404: absorb left+right; if the last 2 children
+  // include any XMTok, replace them with a single merged XMTok whose text
+  // is the concatenation and whose role is combined:
+  //   same role → that role
+  //   any ARROW → ARROW
+  //   otherwise → RELOP
+  DefConstructor!("\\@@joinrel{}{}", sub[document, args] {
     let left = args[0].as_ref().unwrap();
-    let right = &args[1].as_ref().unwrap();
-    document.absorb(left,None)?;
-    document.absorb(right,None)?;
-    // TODO: merge last 2 XMTok elements into a single joined token
+    let right = args[1].as_ref().unwrap();
+    document.absorb(left, None)?;
+    document.absorb(right, None)?;
+    let parent = document.get_node().clone();
+    let kids = parent.get_child_elements();
+    if kids.len() >= 2 {
+      let xmtok_sym = arena::pin_static("ltx:XMTok");
+      let mut n1 = kids[kids.len() - 2].clone();
+      let mut n2 = kids[kids.len() - 1].clone();
+      let qn1 = document::get_node_qname(&n1);
+      let qn2 = document::get_node_qname(&n2);
+      if qn1 == xmtok_sym || qn2 == xmtok_sym {
+        let role1 = n1.get_attribute("role").unwrap_or_default();
+        let role2 = n2.get_attribute("role").unwrap_or_default();
+        let merged_role = if role1 == role2 {
+          role1
+        } else if role1 == "ARROW" || role2 == "ARROW" {
+          "ARROW".to_string()
+        } else {
+          "RELOP".to_string()
+        };
+        let merged_text = format!("{}{}", n1.get_content(), n2.get_content());
+        n1.unlink();
+        n2.unlink();
+        let mut attrs = HashMap::default();
+        if !merged_role.is_empty() {
+          attrs.insert("role".to_string(), merged_role);
+        }
+        let mut tok = document.insert_element("ltx:XMTok", Vec::new(), Some(attrs))?;
+        let _ = tok.set_content(&merged_text);
+      }
+    }
     },
     reversion => "#1\\joinrel #2");
 
