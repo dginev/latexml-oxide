@@ -264,17 +264,24 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       //   load_meaning means any later raw-expl3 redefinition wins.
       let is_safe_colon_noncascade = name.contains(':')
         && (data.starts_with("N") || data.starts_with("T\t"));
-      let is_safe_colon_empty_e = name.contains(':')
+      // Step 2 & 3 combined: :-named E records with nargs=0 whose
+      // body is either empty (43) or contains no CS tokens (303 more
+      // — literal characters, digits, punctuation only). "No CS"
+      // means no `16:` catcode marker in the comma-separated token
+      // list, so there's no expansion chain to cascade. Examples
+      // from step 3: `\__bitset_test_digits_end:` (body = " "),
+      // `\c_stop_token` (body = "15:s,11:t,11:o,11:p"), etc.
+      let is_safe_colon_safe_e = name.contains(':')
         && data.starts_with("E\t")
         && {
-          // E record format: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO[\tV3]]
-          // Safe iff NARGS == "0" and TOKENS is empty. Use `split`
-          // (unlimited) so TOKENS is isolated as its own field rather
-          // than the tail of a splitn remainder.
           let eparts: Vec<&str> = data.split('\t').collect();
-          eparts.get(2).map(|s| *s == "0").unwrap_or(false)
-            && eparts.get(4).map(|s| s.is_empty()).unwrap_or(true)
+          let nargs_zero = eparts.get(2).map(|s| *s == "0").unwrap_or(false);
+          let body = eparts.get(4).copied().unwrap_or("");
+          let body_has_cs = body.starts_with("16:") || body.contains(",16:");
+          nargs_zero && !body_has_cs
         };
+      // Backwards alias for step 2 comment reference.
+      let is_safe_colon_empty_e = is_safe_colon_safe_e;
       if (is_at_internal || is_public_register || is_safe_let_alias
         || is_safe_colon_noncascade
         || is_safe_colon_empty_e)
