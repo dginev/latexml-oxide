@@ -522,3 +522,98 @@ fn oval_path(part: &str, x: f64, y: f64, w: f64, h: f64, r: f64) -> String {
     _ => format!("M {} {} L {} {}", x, y, x + w, y), // fallback
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn approx(a: f64, b: f64) -> bool {
+    (a - b).abs() < 1e-6
+  }
+
+  #[test]
+  fn to_px_pt_scales_by_dpi_over_72_27() {
+    // 72.27pt = 1 inch = DPI pixels.
+    assert!(approx(to_px("72.27pt"), DPI));
+    assert!(approx(to_px("0pt"), 0.0));
+  }
+
+  #[test]
+  fn to_px_px_is_identity() {
+    assert!(approx(to_px("42px"), 42.0));
+    assert!(approx(to_px("  3.5px "), 3.5));
+  }
+
+  #[test]
+  fn to_px_em_rough_x10() {
+    // Rough approximation per the code comment; lock it in.
+    assert!(approx(to_px("2em"), 20.0));
+  }
+
+  #[test]
+  fn to_px_bare_number_is_f64() {
+    assert!(approx(to_px("7"), 7.0));
+    assert!(approx(to_px("  -1.5 "), -1.5));
+  }
+
+  #[test]
+  fn to_px_unknown_unit_is_zero() {
+    // No known suffix and no leading number → parse fails → 0.0.
+    assert!(approx(to_px("xyz"), 0.0));
+  }
+
+  #[test]
+  fn parse_dim_takes_leading_numeric_prefix() {
+    assert!(approx(parse_dim("12.5pt"), 12.5));
+    assert!(approx(parse_dim("-3.0em"), -3.0));
+    assert!(approx(parse_dim("+7px"), 7.0));
+  }
+
+  #[test]
+  fn parse_dim_no_leading_number_is_zero() {
+    assert!(approx(parse_dim("pt"), 0.0));
+    assert!(approx(parse_dim(""), 0.0));
+  }
+
+  #[test]
+  fn explode_coord_splits_on_space_and_comma() {
+    assert_eq!(explode_coord("1 2 3"), vec![1.0, 2.0, 3.0]);
+    assert_eq!(explode_coord("1,2,3"), vec![1.0, 2.0, 3.0]);
+    assert_eq!(explode_coord("1, 2 3"), vec![1.0, 2.0, 3.0]);
+  }
+
+  #[test]
+  fn explode_coord_skips_empty_and_non_numeric() {
+    // Empty tokens are filtered; non-numeric tokens are filtered by `parse.ok()`.
+    assert_eq!(explode_coord(",, 4  5,,"), vec![4.0, 5.0]);
+    assert_eq!(explode_coord("1 abc 2"), vec![1.0, 2.0]);
+  }
+
+  #[test]
+  fn explode_coord_empty_input_is_empty() {
+    assert!(explode_coord("").is_empty());
+    assert!(explode_coord("   ").is_empty());
+  }
+
+  #[test]
+  fn oval_path_top_starts_and_ends_at_half_height() {
+    // For the 't' branch the path begins at (x, y-h/2) and ends at (x+w, y-h/2).
+    let s = oval_path("t", 10.0, 20.0, 100.0, 40.0, 5.0);
+    assert!(s.starts_with("M 10 0 "));     // y - h/2 = 20 - 20 = 0
+    assert!(s.ends_with(" 110 0"));         // x+w, y-h/2
+  }
+
+  #[test]
+  fn oval_path_bottom_traces_reverse_direction() {
+    // For the 'b' branch the path begins at (x+w, y-h/2) and ends at (x, y-h/2).
+    let s = oval_path("b", 10.0, 20.0, 100.0, 40.0, 5.0);
+    assert!(s.starts_with("M 110 0 "));
+    assert!(s.ends_with(" 10 0"));
+  }
+
+  #[test]
+  fn oval_path_unknown_part_uses_simple_line_fallback() {
+    let s = oval_path("?", 0.0, 0.0, 50.0, 10.0, 2.0);
+    assert_eq!(s, "M 0 0 L 50 0");
+  }
+}
