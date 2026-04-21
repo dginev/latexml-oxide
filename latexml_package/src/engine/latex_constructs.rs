@@ -6445,9 +6445,10 @@ LoadDefinitions!({
   // \usepackage{latexml} ... \iflatexml alternate\else page \pageref{label}\fi
   Let!("\\pageref", "\\ref");
 
-  // Perl: \@setref is from latex.ltx kernel. LaTeXML redefines \ref directly,
-  // so \@setref is normally bypassed. But some packages call it directly.
-  // Stub: if #1 is \relax (undefined ref), show "??"; otherwise apply #2 to #1.
+  // \@setref is from latex.ltx kernel. LaTeXML redefines \ref directly,
+  // so \@setref is normally bypassed — but some packages call it directly.
+  // The body below IS the latex.ltx kernel definition: if #1 is \relax
+  // (undefined ref), show "??"; otherwise apply #2 to #1 with a \null guard.
   RawTeX!("\\def\\@setref#1#2#3{\\ifx#1\\relax ??\\else\\expandafter#2#1\\null\\fi}");
 
   // ======================================================================
