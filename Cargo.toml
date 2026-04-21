@@ -12,3 +12,10 @@ resolver = "2"
 
 [profile.release]
 debug = true
+
+# Use the local vendored rust-libxml so high-level wrappers we need for
+# comment creation, parser init, etc. (added alongside latexml_oxide
+# round-17 work) can land without a crates.io release round-trip.
+# Upstream when the wrappers have been reviewed.
+[patch.crates-io]
+libxml = { path = "../rust-libxml" }

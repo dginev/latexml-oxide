@@ -117,7 +117,7 @@ impl Object for Document {
   }
 }
 
-/// Attachment policy for `Document::add_comment_ffi`. Kept module-local.
+/// Attachment policy for `Document::add_comment`. Kept module-local.
 enum Placement_ {
   AppendChild,
   PrevSibling,
@@ -1562,44 +1562,21 @@ impl Document {
     Ok(self.node.clone())
   }
 
-  /// Safety-contract'd FFI: create a libxml2 comment node and attach it to
-  /// `anchor` according to the supplied Placement. Called from
-  /// `insert_comment`. Isolated here so the unsafe block lives in exactly
-  /// one place with a reviewed contract.
-  ///
-  /// Safety:
-  /// - `doc_ptr` must be a valid, live libxml2 document pointer (we obtained
-  ///   it from a Rust-managed `XmlDocument` that has not been dropped).
-  /// - `anchor` must be a node in that document.
-  /// - The C string for the comment text is constructed with CString::new,
-  ///   which rejects embedded NULs; we pass the ptr while the CString is
-  ///   still alive.
-  /// - libxml2 takes ownership of `comment_ptr` after xmlAddChild /
-  ///   xmlAddPrevSibling, so we do not need to free it ourselves.
-  fn add_comment_ffi(
-    doc_ptr: *mut libxml::bindings::_xmlDoc,
-    anchor: &Node,
-    comment_text: &str,
-    placement: Placement_,
-  ) {
-    use std::ffi::CString;
-    let Ok(c_text) = CString::new(comment_text) else { return };
-    unsafe {
-      let comment_ptr = libxml::bindings::xmlNewDocComment(
-        doc_ptr,
-        c_text.as_ptr() as *const u8,
-      );
-      if comment_ptr.is_null() {
-        return;
-      }
-      match placement {
-        Placement_::AppendChild => {
-          libxml::bindings::xmlAddChild(anchor.node_ptr(), comment_ptr);
-        },
-        Placement_::PrevSibling => {
-          libxml::bindings::xmlAddPrevSibling(anchor.node_ptr(), comment_ptr);
-        },
-      }
+  /// Create a libxml2 comment node and attach it to `anchor` according to
+  /// the supplied Placement. Called from `insert_comment`. Thin wrapper
+  /// around the safe rust-libxml API (`Node::new_comment` +
+  /// `add_child`/`add_prev_sibling`) — earlier versions of this method
+  /// made direct FFI calls, which is now forbidden by the D3b policy.
+  fn add_comment(document: &XmlDoc, anchor: &Node, comment_text: &str, placement: Placement_) {
+    let Ok(mut comment) = Node::new_comment(comment_text, document) else { return };
+    let mut anchor = anchor.clone();
+    match placement {
+      Placement_::AppendChild => {
+        let _ = anchor.add_child(&mut comment);
+      },
+      Placement_::PrevSibling => {
+        let _ = anchor.add_prev_sibling(&mut comment);
+      },
     }
   }
 
@@ -1618,8 +1595,8 @@ impl Document {
     let comment_text = s!(" {} ", clean);
 
     if self.node.get_type() == Some(NodeType::DocumentNode) {
-      Self::add_comment_ffi(
-        self.document.doc_ptr(),
+      Self::add_comment(
+        &self.document,
         &self.node,
         &comment_text,
         Placement_::AppendChild,
@@ -1645,23 +1622,23 @@ impl Document {
           before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
 
         if before_is_comment {
-          Self::add_comment_ffi(
-            self.document.doc_ptr(),
+          Self::add_comment(
+            &self.document,
             &node,
             &comment_text,
             Placement_::AppendChild,
           );
         } else {
-          Self::add_comment_ffi(
-            self.document.doc_ptr(),
+          Self::add_comment(
+            &self.document,
             &prev_node,
             &comment_text,
             Placement_::PrevSibling,
           );
         }
       } else {
-        Self::add_comment_ffi(
-          self.document.doc_ptr(),
+        Self::add_comment(
+          &self.document,
           &node,
           &comment_text,
           Placement_::AppendChild,

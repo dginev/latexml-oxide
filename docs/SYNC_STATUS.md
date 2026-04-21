@@ -211,13 +211,28 @@ Specific slow-convergence follow-ups:
 
 **Policy:** no direct `libxml::bindings::*` FFI calls from latexml. When
 a safe API is missing, add it to `~/git/rust-libxml` and
-vendor-patch/upstream. Current direct `libxml::bindings::*` call sites:
-`latexml_core/src/lib.rs`, `latexml_core/src/document.rs` — 5 total.
+vendor-patch/upstream. **Zero direct FFI call sites remaining** as of
+round 17 commit (see below).
 
 - [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
 - [ ] Replace unsafe-over-FFI with safe wrappers where practical.
-- [ ] Migrate the remaining `libxml::bindings::*` callers to high-level
+- [x] Migrate the remaining `libxml::bindings::*` callers to high-level
   `rust-libxml` methods; upstream new methods as needed.
+  Landed round 17. Two wrappers pushed upstream to
+  `~/git/rust-libxml` branch `latexml-oxide-contributions` (commit
+  `db3a5fec`): `Node::new_comment(content, doc)` mirrors the
+  existing `Node::new_text` but wraps `xmlNewDocComment`; top-level
+  `libxml::init_parser()` is a Once-guarded wrapper for
+  `xmlInitParser`. latexml-oxide workspace
+  `Cargo.toml` gains a `[patch.crates-io] libxml = { path =
+  "../rust-libxml" }` entry so the wrappers are available without a
+  crates.io round-trip. `Document::add_comment_ffi` replaced by
+  `Document::add_comment` which composes `Node::new_comment` with
+  existing `add_child` / `add_prev_sibling`. `ensure_libxml_init`
+  now calls `libxml::init_parser()` instead of reaching into
+  `bindings::xmlInitParser` behind its own `Once`. Verified: zero
+  remaining `libxml::bindings::` references across latexml-oxide
+  src. 1098 tests, 0 fail.
 - [~] Rc `Can not mutably reference a shared Node "text"` cluster — guard
   raised to 8192 (diagnostic, not safety). dcpic cluster 0805.2376 /
   1007.2309 / 1108.3241 / 1204.5278 all converge now. Lower-priority
