@@ -145,6 +145,23 @@ Three failure classes in the session-128 7933-paper sweep, after the
    downstream symptoms of a broken group frame, not a raw-TeX
    \input or \ifdefined bug.
 
+   **Round-17 narrowing (session post-832710570)**: `\usepackage{X}
+   \usepackage{tikz}` for `X ∈ {expl3, xparse, l3keys2e}` each produces
+   **zero** `\group_begin:` frame errors. Only `\usepackage{lipsum}
+   \usepackage{tikz}` reproduces (8 Errors in 6037-line log, first at
+   pgfutil-common.tex L174 `\pgfutil@xifnch` undefined, immediately
+   followed by L175 `}` closing on a `\group_begin:` frame). So the
+   leak is **lipsum-specific**, not a broad expl3 machinery issue.
+   lipsum.sty L30 uses `\ProvidesExplPackage` (not `\ExplSyntaxOn`)
+   and has no trailing `\ExplSyntaxOff` — it relies on the
+   `ProvidesExplPackage` wrapper to pair `\group_begin:` /
+   `\group_end:` automatically at end-of-file. Our
+   `\ProvidesExplPackage` autoload chain (`tex.rs:112` → expl3) may
+   not be running that pairing. Next drill-down: locate the
+   `\ProvidesExplPackage` definition in Perl (TeX.pool.ltxml) vs Rust
+   (expl3_sty.rs / expl3-code.tex), compare the group-begin/end
+   wrapping semantics.
+
    **Fix target** is no longer `latexml_core::binding::content` but
    the expl3 binding in `latexml_package`: find which
    `\group_begin:` call is being stacked without its counterpart. A
