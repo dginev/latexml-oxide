@@ -30,8 +30,7 @@ LoadDefinitions!({
       // Insert properties from LONGTABLE_PROPERTIES
       if let Some(Stored::HashStored(ref map)) = lookup_value("LONGTABLE_PROPERTIES") {
         for (k, v) in map.iter() {
-          let key = arena::to_string(*k);
-          whatsit.set_property(&key, v.clone());
+          arena::with(*k, |key| whatsit.set_property(key, v.clone()));
         }
       }
       // Insert head captions (from \endfirsthead or \endhead)

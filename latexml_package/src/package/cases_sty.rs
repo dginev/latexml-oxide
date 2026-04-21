@@ -119,8 +119,7 @@ LoadDefinitions!({
     def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
     // Redefine \theequation@ID for xml:id generation (e.g. "S0.E3.\@equation@ID")
     let id_str = eqn_props.iter().find_map(|(k, v)| {
-      let ks = arena::to_string(*k);
-      if ks == "id" { Some(v.to_string()) } else { None }
+      if arena::with(*k, |ks| ks == "id") { Some(v.to_string()) } else { None }
     }).unwrap_or_default();
     if !id_str.is_empty() {
       let new_id_macro = format!("{}.\\@equation@ID", id_str);

@@ -1550,8 +1550,8 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
 /// The XMWrap content is a flat list of all cells, which the math parser
 /// will then parse as a regular expression.
 fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
-  let array_qname = arena::to_string(document::get_node_qname(&array));
-  if !array_qname.ends_with("XMArray") {
+  let array_qname_sym = document::get_node_qname(&array);
+  if !arena::with(array_qname_sym, |s| s.ends_with("XMArray")) {
     return Ok(());
   }
   let mut cells = extract_xm_array_cells(&array);
@@ -1637,8 +1637,8 @@ pub fn rearrange_ams_multirow(
   align_rules: &[(String, String)],
 ) -> Result<()> {
   use latexml_core::common::xml::element_nodes;
-  let array_qname = arena::to_string(document::get_node_qname(&array));
-  if !array_qname.ends_with("XMArray") {
+  let array_qname_sym = document::get_node_qname(&array);
+  if !arena::with(array_qname_sym, |s| s.ends_with("XMArray")) {
     return Ok(());
   }
   // Apply alignment rules to rows
