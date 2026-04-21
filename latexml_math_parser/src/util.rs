@@ -409,3 +409,87 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
   }
   Ok(refs)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn distill_lexeme_dash_separator() {
+    // Dash takes precedence over colon.
+    let (base, sep, lex) = distill_lexeme("UNKNOWN:italic-x");
+    assert_eq!(base, "UNKNOWN:italic");
+    assert_eq!(sep, "-");
+    assert_eq!(lex, "x");
+  }
+
+  #[test]
+  fn distill_lexeme_colon_only() {
+    let (base, sep, lex) = distill_lexeme("ROLE:foo");
+    assert_eq!(base, "ROLE");
+    assert_eq!(sep, ":");
+    assert_eq!(lex, "foo");
+  }
+
+  #[test]
+  fn distill_lexeme_no_separator() {
+    let (base, sep, lex) = distill_lexeme("bare");
+    assert_eq!(base, "");
+    assert_eq!(sep, "");
+    assert_eq!(lex, "bare");
+  }
+
+  #[test]
+  fn distill_lexeme_empty() {
+    let (base, sep, lex) = distill_lexeme("");
+    assert_eq!(base, "");
+    assert_eq!(sep, "");
+    assert_eq!(lex, "");
+  }
+
+  #[test]
+  fn distill_lexeme_trailing_dash() {
+    // Edge: last-dash splits after the last hyphen even when the tail is empty.
+    let (base, sep, lex) = distill_lexeme("foo-");
+    assert_eq!(base, "foo");
+    assert_eq!(sep, "-");
+    assert_eq!(lex, "");
+  }
+
+  #[test]
+  fn get_xmhint_spacing_mu_divides_by_1_8() {
+    assert!((get_xmhint_spacing("1.8mu") - 1.0).abs() < 1e-6);
+    assert!((get_xmhint_spacing("3.6mu") - 2.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_pt_passes_through() {
+    assert!((get_xmhint_spacing("1.667pt") - 1.667).abs() < 1e-6);
+    assert!((get_xmhint_spacing("10pt") - 10.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_em_times_ten() {
+    // em assumes 10pt font.
+    assert!((get_xmhint_spacing("0.5em") - 5.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_strips_plus_glue() {
+    // "2.77pt plus 2.77pt" extracts base "2.77pt".
+    assert!((get_xmhint_spacing("2.77pt plus 2.77pt") - 2.77).abs() < 1e-6);
+    assert!((get_xmhint_spacing("5pt minus 1pt") - 5.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_empty_is_zero() {
+    assert_eq!(get_xmhint_spacing(""), 0.0);
+    assert_eq!(get_xmhint_spacing("  "), 0.0);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_unknown_unit_is_zero() {
+    assert_eq!(get_xmhint_spacing("5cm"), 0.0);
+    assert_eq!(get_xmhint_spacing("garbage"), 0.0);
+  }
+}
