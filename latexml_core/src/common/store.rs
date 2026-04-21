@@ -581,6 +581,20 @@ impl Stored {
     }
   }
 
+  /// Zero-alloc `self.to_string().ends_with(suffix)` for the String /
+  /// Token variants (where the entire Display output equals the
+  /// interned text). For Tokens, we still walk into a small owned
+  /// String — ends_with requires anchoring at the tail and rolling
+  /// backward, which needs random access. Others fall back to
+  /// `to_string()` (cost paid anyway via the Display impl).
+  pub fn ends_with_text(&self, suffix: &str) -> bool {
+    match self {
+      Stored::String(s) => arena::with(*s, |v| v.ends_with(suffix)),
+      Stored::Token(t) => t.with_str(|v| v.ends_with(suffix)),
+      other => other.to_string().ends_with(suffix),
+    }
+  }
+
   /// helper method that uses `ToString::to_string` to flatten a map with Stored values
   // TODO: Obviously a performance issue, find a way to unify the interfaces where string allocation
   // is completely avoided until serialization in the XML.

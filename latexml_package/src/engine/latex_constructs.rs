@@ -225,14 +225,14 @@ pub fn tabular_bindings(
 ) -> Result<()> {
   for col in template.get_columns_mut() {
     if let Some(ref after) = col.after {
-      if after.unlist_ref().iter().any(|t| t.to_string().contains("intercol")) {
+      if after.unlist_ref().iter().any(|t| t.with_str(|s| s.contains("intercol"))) {
         col.has_intercol_after = true;
       }
     }
   }
   for col in template.get_repeated_mut() {
     if let Some(ref after) = col.after {
-      if after.unlist_ref().iter().any(|t| t.to_string().contains("intercol")) {
+      if after.unlist_ref().iter().any(|t| t.with_str(|s| s.contains("intercol"))) {
         col.has_intercol_after = true;
       }
     }
@@ -2641,7 +2641,7 @@ LoadDefinitions!({
     font=> { emph => true },
     alias => "\\emph",
     before_digest => {
-      if Expand!(T_CS!("\\f@shape")).to_string() == "it" {
+      if Expand!(T_CS!("\\f@shape")).eq_text("it") {
         DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("n")));
       } else {
         DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
@@ -4927,7 +4927,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@yargdef DefToken DefToken {}{}", sub[(cs, type_tok, nargs_toks, body)] {
     let nargs_str = nargs_toks.to_string();
     let nargs: usize = nargs_str.trim().parse().unwrap_or(0);
-    let has_optional = type_tok.to_string().contains("2")
+    let has_optional = type_tok.with_str(|s| s.contains("2"))
       || state::x_equals(&type_tok, &T_CS!("\\tw@"));
     let opt = if has_optional { Some(Tokens!()) } else { None };
     let macro_args = convert_latex_args(nargs, opt)?;

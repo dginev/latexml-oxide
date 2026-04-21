@@ -987,7 +987,7 @@ fn reset_options() -> Result<()> {
     Stored::VecDequeStored(VecDeque::new()),
     None,
   );
-  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.to_string() == "cls" {
+  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.eq_text("cls") {
     "\\OptionNotUsed"
   } else {
     "\\@unknownoptionerror"

@@ -195,7 +195,7 @@ LoadDefinitions!({
       let _ = gullet::skip_spaces();
       // Skip comma separator
       if let Some(tok) = gullet::read_token()? {
-        if tok.to_string() != "," {
+        if !tok.with_str(|s| s == ",") {
           gullet::unread_one(tok);
         }
       }
@@ -204,7 +204,7 @@ LoadDefinitions!({
       let _ = gullet::skip_spaces();
       // Skip closing )
       if let Some(tok) = gullet::read_token()? {
-        if tok.to_string() != ")" {
+        if !tok.with_str(|s| s == ")") {
           gullet::unread_one(tok);
         }
       }

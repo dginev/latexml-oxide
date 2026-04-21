@@ -1135,7 +1135,7 @@ fn lst_process_end_line(ctx: &mut LstContext) {
 fn lst_do_number(ctx: &LstContext, is_empty: bool) -> Tokens {
   let stepnumber = lst_get_number("stepnumber");
   let needs_number = state::lookup_value("LISTINGS_NEEDS_NUMBER")
-    .map(|v| v.to_string() == "true" || v.to_string() == "1")
+    .map(|v| v.eq_text("true") || v.eq_text("1"))
     .unwrap_or(false);
 
   let number_blank = lst_get_boolean("numberblanklines");

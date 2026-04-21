@@ -1150,7 +1150,7 @@ fn simplify_vertical_list(item: Digested) -> Digested {
       let list = l.borrow();
       // Check if the List's mode property indicates vertical
       list.properties.get("mode")
-        .map(|m| m.to_string().ends_with("vertical"))
+        .map(|m| m.ends_with_text("vertical"))
         .unwrap_or(false)
     },
     _ => false,
@@ -1177,13 +1177,13 @@ fn simplify_vertical_list(item: Digested) -> Digested {
     let child_is_vertical = match single.data() {
       DigestedData::List(l) => {
         l.borrow().properties.get("mode")
-          .map(|m| m.to_string().ends_with("vertical"))
+          .map(|m| m.ends_with_text("vertical"))
           .unwrap_or(false)
       },
       DigestedData::Whatsit(w) => {
         // Check whatsit's mode property (set by DefConstructor mode => "internal_vertical")
         w.borrow().get_property("mode")
-          .map(|m| m.to_string().ends_with("vertical"))
+          .map(|m| m.ends_with_text("vertical"))
           .unwrap_or(false)
       },
       _ => false,
