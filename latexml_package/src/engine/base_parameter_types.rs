@@ -985,6 +985,17 @@ LoadDefinitions!({
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
   });
+  // Perl: Base_ParameterTypes.pool.ltxml L586-593
+  DefParameterType!(ScriptscriptStyle,
+    sub[_inner, _extra] { gullet::read_arg(ExpansionLevel::Off) },
+  before_digest => {
+    bgroup();
+    MergeFont!(mathstyle => "scriptscript");
+  },
+  after_digest => { egroup()?; },
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+  });
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   DefParameterType!(InScriptStyle, sub[_inner, _extra] {
