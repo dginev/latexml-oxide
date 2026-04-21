@@ -2545,8 +2545,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lst@@@set@background", {
     if let Some(Stored::String(bg)) = state::lookup_value("LISTINGS_BACKGROUND") {
-      let bg_color = arena::to_string(bg);
-      if let Some(c) = latexml_core::common::color::Color::from_stored(&bg_color) {
+      if let Some(c) = arena::with(bg, latexml_core::common::color::Color::from_stored) {
         merge_font(Font { bg: Some(c), ..Font::default() });
       }
     }

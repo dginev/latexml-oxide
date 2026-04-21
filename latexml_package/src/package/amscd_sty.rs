@@ -26,8 +26,7 @@ LoadDefinitions!({
   // Implemented as a primitive that reads a token and unreads the appropriate CS.
   DefPrimitive!(T_CS!("\\cd@"), None, {
     let token = gullet::read_token()?.unwrap();
-    let token_text = arena::to_string(token.text);
-    let cs_name = format!("@{}", token_text);
+    let cs_name = token.with_str(|s| format!("@{s}"));
     gullet::unread(Tokens::from(T_CS!(&*cs_name)));
   });
 
@@ -66,10 +65,14 @@ LoadDefinitions!({
   DefConstructor!("\\lx@amscd@stack Undigested {} ScriptStyle ScriptStyle",
     sub[document, args, props] {
       // args: [0]=reversion(Undigested), [1]=op({}), [2]=over(ScriptStyle), [3]=under(ScriptStyle)
-      let scriptpos = props.get("scriptpos")
-        .and_then(|v| if let Stored::String(s) = v { Some(arena::to_string(*s)) } else { None })
-        .unwrap_or_default();
-      let scriptpos_attr = if scriptpos.is_empty() { None } else { Some(("scriptpos".to_string(), scriptpos)) };
+      // Probe scriptpos in place — only resolve to an owned String
+      // when the value is non-empty (most amscd cells have no override).
+      let scriptpos_attr = props.get("scriptpos").and_then(|v| match v {
+        Stored::String(s) if !arena::with(*s, |p| p.is_empty()) => {
+          Some(("scriptpos".to_string(), arena::to_string(*s)))
+        },
+        _ => None,
+      });
 
       let op = args.get(1).and_then(|a| a.as_ref());
       let over = args.get(2).and_then(|a| a.as_ref());
