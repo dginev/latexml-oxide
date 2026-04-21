@@ -594,30 +594,38 @@ fn pragma_higher_order_ids_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error
 /// A right-associative application h(f(x,y)) is instead.
 /// Prune it out if possible.
 fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
-    match **op {
-      XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
-        let trees = args.trees();
-        if trees.len() == 2 {
-          let lhs = trees[0];
-          let rhs = trees[1];
-          if let XM::Lexeme(ref lhs_name, _) = lhs.get_baseline() {
-            if let XM::Lexeme(ref rhs_name, _) = rhs.get_baseline() {
-              if name_is_functional_or_id(lhs_name) && name_is_functional(rhs_name) {
-                return Err(
-                  "Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to \
-                   right-associative readings"
-                    .into(),
-                );
-              }
-            }
-          }
+  let XM::Apply(Operator(op), ref args, ..) = tree else {
+    return Ok(());
+  };
+  // Invisible times appears in the XM tree two ways — accept both the Marpa
+  // Lexeme form and the apply_invisible_times-produced Token form.
+  let is_invisible_times = match **op {
+    XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+    XM::Token(ref props, _) => {
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+    },
+    _ => false,
+  };
+  if !is_invisible_times {
+    return Ok(());
+  }
+  let trees = args.trees();
+  if trees.len() == 2 {
+    let lhs = trees[0];
+    let rhs = trees[1];
+    if let XM::Lexeme(ref lhs_name, _) = lhs.get_baseline() {
+      if let XM::Lexeme(ref rhs_name, _) = rhs.get_baseline() {
+        if name_is_functional_or_id(lhs_name) && name_is_functional(rhs_name) {
+          return Err(
+            "Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to \
+             right-associative readings"
+              .into(),
+          );
         }
-      },
-      _ => {},
+      }
     }
   }
-
   Ok(())
 }
 
@@ -625,25 +633,31 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
 /// that they are to be multiplied Prune such parses. We have special rules for some notations, such
 /// as "dlmf_range".
 fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
-    match **op {
-      XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
-        let arg_trees = args.trees();
-        if arg_trees.len() == 2 {
-          if let Some(lhs) = arg_trees.first() {
-            if lhs.base_operator_name().starts_with("NUMBER") {
-              if let Some(rhs) = arg_trees.get(1) {
-                if rhs.base_operator_name().starts_with("NUMBER") {
-                  return Err(
-                    "pruning two adjacent NUMBERs that used an invisible operator".into(),
-                  );
-                }
-              }
-            }
+  let XM::Apply(Operator(op), ref args, ..) = tree else {
+    return Ok(());
+  };
+  // Invisible times appears in the XM tree two ways — accept both shapes.
+  let is_invisible_times = match **op {
+    XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+    XM::Token(ref props, _) => {
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+    },
+    _ => false,
+  };
+  if !is_invisible_times {
+    return Ok(());
+  }
+  let arg_trees = args.trees();
+  if arg_trees.len() == 2 {
+    if let Some(lhs) = arg_trees.first() {
+      if lhs.base_operator_name().starts_with("NUMBER") {
+        if let Some(rhs) = arg_trees.get(1) {
+          if rhs.base_operator_name().starts_with("NUMBER") {
+            return Err("pruning two adjacent NUMBERs that used an invisible operator".into());
           }
         }
-      },
-      _ => {},
+      }
     }
   }
   Ok(())
@@ -1699,6 +1713,125 @@ mod tests {
     assert!(
       ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
       "non-invisible-times operator must leave the pragma a no-op"
+    );
+  }
+
+  // ----- pragma_higher_order_invisible_ops_are_exceptions, Token op shape -----
+
+  fn lexeme(name: &str) -> XM {
+    use crate::semantics::metadata::Meta;
+    XM::Lexeme(name.to_string(), Meta::default())
+  }
+
+  #[test]
+  fn higher_order_pragma_prunes_functional_x_function_on_token_op() {
+    // `h f` where both are OPFUNCTION/TRIGFUNCTION → right-associative
+    // application is preferred, so prune the invisible-times reading.
+    let tree = inv_times_pair(
+      Some(lexeme("OPFUNCTION:italic-h")),
+      Some(lexeme("OPFUNCTION:italic-f")),
+    );
+    assert!(
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_err(),
+      "FUNCTION × FUNCTION under invisible times (Token shape) must be pruned"
+    );
+  }
+
+  #[test]
+  fn higher_order_pragma_prunes_unknown_x_unknown() {
+    // `xy` — both UNKNOWN lexemes pass `name_is_functional` (it recognises
+    // UNKNOWN:* as a potentially-functional letter head). Per the pragma's
+    // semantics, two adjacent functional/ID letters prefer the
+    // right-associative application parse, so the invisible-times one is
+    // pruned.
+    let tree = inv_times_pair(
+      Some(lexeme("UNKNOWN:italic-x")),
+      Some(lexeme("UNKNOWN:italic-y")),
+    );
+    assert!(
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_err(),
+      "UNKNOWN × UNKNOWN under invisible times must be pruned"
+    );
+  }
+
+  #[test]
+  fn higher_order_pragma_prunes_function_x_unknown() {
+    // `f x` — OPFUNCTION LHS, UNKNOWN RHS. Both satisfy `name_is_functional`,
+    // so the pragma prunes the invisible-times reading.
+    let tree = inv_times_pair(
+      Some(lexeme("OPFUNCTION:italic-f")),
+      Some(lexeme("UNKNOWN:italic-x")),
+    );
+    assert!(
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_err(),
+      "OPFUNCTION × UNKNOWN under invisible times must be pruned"
+    );
+  }
+
+  #[test]
+  fn higher_order_pragma_accepts_number_times_unknown() {
+    // `5 x` — NUMBER LHS breaks `name_is_functional_or_id`. Pragma no-op.
+    let tree = inv_times_pair(
+      Some(lexeme("NUMBER:italic-5")),
+      Some(lexeme("UNKNOWN:italic-x")),
+    );
+    assert!(
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_ok(),
+      "NUMBER × letter must be preserved (NUMBER is not functional)"
+    );
+  }
+
+  #[test]
+  fn higher_order_pragma_accepts_unknown_times_number() {
+    // `x 5` — NUMBER RHS fails `name_is_functional`. Pragma no-op.
+    let tree = inv_times_pair(
+      Some(lexeme("UNKNOWN:italic-x")),
+      Some(lexeme("NUMBER:italic-5")),
+    );
+    assert!(
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_ok(),
+      "letter × NUMBER must be preserved (NUMBER is not functional)"
+    );
+  }
+
+  // ----- pragma_adjacent_numbers_dont_use_invisible_times, Token op shape -----
+
+  #[test]
+  fn adjacent_numbers_pragma_prunes_number_pair_on_token_op() {
+    // `10 5` under invisible times → implausible, prune.
+    let tree = inv_times_pair(
+      Some(lexeme("NUMBER:italic-10")),
+      Some(lexeme("NUMBER:italic-5")),
+    );
+    assert!(
+      ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_err(),
+      "adjacent NUMBER × NUMBER under invisible times (Token shape) must be pruned"
+    );
+  }
+
+  #[test]
+  fn adjacent_numbers_pragma_accepts_number_times_letter() {
+    // `5 x` — legitimate coefficient × variable.
+    let tree = inv_times_pair(
+      Some(lexeme("NUMBER:italic-5")),
+      Some(lexeme("UNKNOWN:italic-x")),
+    );
+    assert!(
+      ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_ok(),
+      "NUMBER × letter must be preserved"
+    );
+  }
+
+  #[test]
+  fn adjacent_numbers_pragma_accepts_letter_pair() {
+    // `x y` — not numbers at all.
+    let tree = inv_times_pair(
+      Some(lexeme("UNKNOWN:italic-x")),
+      Some(lexeme("UNKNOWN:italic-y")),
+    );
+    assert!(
+      ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_ok(),
+      "letter × letter must be preserved"
     );
   }
 }
