@@ -99,3 +99,96 @@ pub fn trim_in_place(s: &mut String) {
   trim_end_in_place(s);
   trim_start_in_place(s);
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn extract_bracketed_parens_default() {
+    let mut s = "(abc)rest".to_string();
+    let out = extract_bracketed(&mut s, None).expect("well-formed parens");
+    assert_eq!(out, "abc");
+    assert_eq!(s, "rest");
+  }
+
+  #[test]
+  fn extract_bracketed_braces() {
+    let mut s = "{foo}tail".to_string();
+    let out = extract_bracketed(&mut s, Some(&Delimiter::Brace)).expect("braces");
+    assert_eq!(out, "foo");
+    assert_eq!(s, "tail");
+  }
+
+  #[test]
+  fn extract_bracketed_brackets() {
+    let mut s = "[opt]body".to_string();
+    let out = extract_bracketed(&mut s, Some(&Delimiter::Bracket)).expect("brackets");
+    assert_eq!(out, "opt");
+    assert_eq!(s, "body");
+  }
+
+  #[test]
+  fn extract_bracketed_nested() {
+    let mut s = "(a(b)c)rest".to_string();
+    let out = extract_bracketed(&mut s, None).expect("nested parens");
+    assert_eq!(out, "a(b)c");
+    assert_eq!(s, "rest");
+  }
+
+  #[test]
+  fn extract_bracketed_malformed_returns_none() {
+    let mut s = "(unclosed".to_string();
+    let out = extract_bracketed(&mut s, None);
+    assert!(out.is_none(), "unclosed bracket returns None");
+  }
+
+  #[test]
+  fn trim_end_in_place_strips_trailing_space() {
+    let mut s = "foo   ".to_string();
+    trim_end_in_place(&mut s);
+    assert_eq!(s, "foo");
+  }
+
+  #[test]
+  fn trim_end_in_place_preserves_leading() {
+    let mut s = "  foo  ".to_string();
+    trim_end_in_place(&mut s);
+    assert_eq!(s, "  foo");
+  }
+
+  #[test]
+  fn trim_start_in_place_strips_leading_space() {
+    let mut s = "   foo".to_string();
+    trim_start_in_place(&mut s);
+    assert_eq!(s, "foo");
+  }
+
+  #[test]
+  fn trim_start_in_place_preserves_trailing() {
+    let mut s = "  foo  ".to_string();
+    trim_start_in_place(&mut s);
+    assert_eq!(s, "foo  ");
+  }
+
+  #[test]
+  fn trim_in_place_strips_both_ends() {
+    let mut s = "  foo bar  ".to_string();
+    trim_in_place(&mut s);
+    assert_eq!(s, "foo bar");
+  }
+
+  #[test]
+  fn trim_in_place_empty_input() {
+    let mut s = "   ".to_string();
+    trim_in_place(&mut s);
+    assert_eq!(s, "");
+  }
+
+  #[test]
+  fn trim_in_place_no_whitespace() {
+    let mut s = "already_clean".to_string();
+    trim_in_place(&mut s);
+    assert_eq!(s, "already_clean");
+  }
+}
