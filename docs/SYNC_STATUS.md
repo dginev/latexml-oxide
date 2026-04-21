@@ -129,29 +129,20 @@ vendor-patch/upstream. Current direct `libxml::bindings::*` call sites:
   1007.2309 / 1108.3241 / 1204.5278 all converge now. Lower-priority
   follow-up: identify the semantic cause of high `"text"`-node ref counts
   on dcpic diagrams (2000–8000 range).
-- [ ] **1605.08055 Finalizing-phase SIGSEGV** — 169 math formulae
-  parse cleanly, then SIGSEGV during `document.finalize()` → 
-  `prune_xmduals` → `mark_xmnode_visibility` (confirmed via
-  eprintln instrumentation session-128). The crashing call is a
-  recursive `mark_xmnode_visibility_aux` on an `XMRef` whose
-  `lookup_id("S2.E15.m1.45.mf")` returns a **dangling idstore
-  entry** — the underlying libxml2 memory has been freed, so
-  `node.get_name()` returns "" and touching attributes on the
-  Node SIGSEGVs. The math parser already prints four
-  `Warn:expected:id Cannot find a node with xml:id='S2.E15.m1.4X'`
-  warnings (from `latexml_math_parser/src/parser.rs:1613`) before
-  Finalizing, confirming stale ids are sitting in idstore. A
-  defensive `get_parent().is_none()` check in the XMRef arm
-  doesn't help — `get_parent()` on freed memory returns a plausible
-  non-null parent pointer, so the guard passes and the subsequent
-  `has_attribute` SIGSEGVs. Real fix needs either (a) an idstore
-  purge pass before `mark_xmnode_visibility` (validate each
-  cached Node still has a path to the document root), or (b)
-  audit every place that unlinks a node with an xml:id to also
-  `unrecord_id` (like session 127 did for `replace_node`
-  text-merge). Only remaining exit=139 in the 7898-paper sandbox
-  re-sweep; non-trivial to fix without deeper idstore lifetime
-  work.
+- [x] **1605.08055 Finalizing-phase SIGSEGV** — FIXED (session
+  128, commit `337c1ef52`). Root cause was a dangling-Node entry
+  in `idstore`: upstream passes (math-parser `replace_tree`,
+  various `unbind_node()` sites) drop xml:id-bearing subtrees
+  without calling `unrecord_id`, so `mark_xmnode_visibility` later
+  dereferences a freed libxml2 `Node` when it recurses through an
+  `XMRef` whose idref resolves via the cache. Fix: new
+  `rebuild_idstore_from_dom()` (clear + fresh DOM walk) called at
+  the top of `finalize()` before `prune_xmduals`. 1605.08055:
+  SIGSEGV → exit=0 in 0.8 s. No regressions on adjacent papers.
+  The full audit of every unlink-without-unrecord path remains
+  open — this is a belt-and-suspenders fix that makes the
+  downstream passes robust to stale idstore entries regardless of
+  upstream behavior.
 
 ### Dump — deferred alias retry (session 128)
 
