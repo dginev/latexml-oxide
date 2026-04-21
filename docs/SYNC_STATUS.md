@@ -2,19 +2,25 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-19. **Open gaps & active TODOs only.** Completed work
+Updated 2026-04-20. **Open gaps & active TODOs only.** Completed work
 lives in git log and `memory/project_session_history.md`.
 
 **Test inventory:** 423 tests pass (0 failures, 0 ignored) via `cargo test --release --tests`.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
-**10k sandbox:** session-127 **1000-paper random sweep: 999/1000 =
-99.8% OK** (up from session-126 88.4%). Only 1 failure (1106.1389,
-digestion-phase 92s wall-clock timeout); **0 SIGSEGV, 0 panic, 0
-correctness regressions**. Previously-measured 500-paper subset was
-496/500 = 99.2%. Runner: `tools/benchmark_10k.sh`; tool:
-`cortex_worker --standalone --timeout 90`.
+**10k sandbox (session 128):** full 7933-paper sweep at 60s/6GB caps:
+**7863/7933 = 99.12% exit=0, 35 SIGABRT, 35 bash-pollution**. 6 of the
+35 aborts were DUPID-related (libxml2 "ID X already defined"); 5 of
+those now exit=0 after the `record_id_with_node` shadow-variable fix
+(1106.1389, 1505.03876, 1506.09203, 1511.07586, 1707.01155 —
+math9805021 remains as OOM, unrelated). The remaining ~30 aborts are
+3 distinct classes: `pgfkeys.code.tex.ltxml` not ported (undefined
+`\pgfkeysalso`/`\ifpgfkeyssuccess` loops — 1511.00722, 1611.04489,
+1612.08368), math-parser pathological-ambiguity timeouts (1403.4135,
+1407.5769 — 500+-token formulas), and preamble-heavy digestion
+timeouts. Runner: `tools/benchmark_10k.sh`; tool:
+`cortex_worker --standalone --timeout 60`.
 
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
 
