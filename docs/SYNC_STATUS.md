@@ -523,6 +523,65 @@ Remaining semantic-ambiguity hotspots (see
 
 ### Long-horizon — architectural rationalization
 
+- [ ] **Deep dumper-reader parity audit** (user directive round 17).
+  Parallel to the expl3 task below. Perl's `LaTeXML::Core::Dumper`
+  is 392 lines, single-dispatch, no special cases: each dump record
+  just calls `assign_internal($STATE, $table, $key, $value, 'global')`.
+  Our `dump_reader.rs` is 950 lines with three gates
+  (`is_at_internal`, `is_public_register`, `is_safe_let_alias`), a
+  deferred-alias retry pass, and explicit rejection of `:`-named
+  entries. The gap isn't in the data — both sides speak the same
+  tab-separated format. The gap is in the **runtime semantics
+  downstream of the reader**: every gate exists because enabling it
+  triggered a cascade (undefined-CS recovery loop, infinite expl3
+  expansion, etc.). Systematic path to parity:
+
+  **Step 1 — enumerate and classify the current gates**:
+  - `is_at_internal` — `@`-named CS, no `:` in key. Admits
+    `\@tabacckludge`-style aliases. Should always be safe.
+  - `is_public_register` — data starts with `R\t…` (CharDef /
+    Register). No hook/cascade risk; always safe.
+  - `is_safe_let_alias` — PA/MPA where neither key nor target
+    contains `:`. Recovers ~170 plain-LaTeX public aliases.
+  - Everything with `:` in the key — blocked. Includes ~8,914 M
+    entries and ~156 PA entries in our current latex.dump.txt.
+
+  **Step 2 — attempt narrow widenings, one class at a time**,
+  with the 83_expl3 test as the canary. Round-17 confirmed that
+  widening PA-with-colon-name-to-non-colon-target alone regresses
+  the test into an infinite loop because expl3.sty's own guards
+  misfire. PA and `:`-style M entries must be widened together,
+  and the expl3_sty.rs short-circuit must know about the new
+  coverage.
+
+  **Step 3 — for each regression, identify the specific runtime
+  feature missing in core/engine/package** and port it properly:
+  - If the symptom is "undefined CS" on a `:`-named expl3
+    primitive, port that primitive in `latexml_package/src/engine/`.
+  - If the symptom is a hook cascade, understand the hook
+    mechanism and port the hook primitives (`\hook_gput_code:nnn`,
+    `\hook_use:n`, etc.) natively.
+  - If the symptom is expansion looping, trace which forward-ref
+    closes the loop in Perl but not in Rust.
+
+  **Step 4 — when a gate is demonstrably not needed (all records
+  of that class load safely), remove it**. Target end state:
+  `dump_reader.rs` down to ~400 lines, no special gates, single
+  uniform dispatch matching Perl's streamlined pattern.
+
+  **Acceptance**:
+  1. `dump_reader.rs` line count halved (950 → ~400-500).
+  2. All three custom gates removed.
+  3. Deferred-alias retry pass no longer needed.
+  4. Full dump loads without error; every M/PA/C/LC/UC/SC/MC/DC
+     record round-trips cleanly.
+  5. Byte-identical latex.dump.txt consumption produces matching
+     state between Perl's `assign_internal` path and Rust's.
+
+  Tracks alongside the expl3 kernel parity task — the two share a
+  common root (faithful runtime semantics for everything the dump
+  can contain). Work here often directly unblocks work there.
+
 - [ ] **Deep expl3 / LaTeX 3 kernel parity** (round 17 directive,
   `58617b6b6` diagnostic). Goal: `\usepackage{lipsum}` — or any
   other expl3-first package — loads cleanly without error
