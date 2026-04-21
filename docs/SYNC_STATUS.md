@@ -108,12 +108,50 @@ Three failure classes in the session-128 7933-paper sweep, after the
    executing synchronously during the raw-TeX read. The
    pgfkeys load appears deferred to the next outer binding phase.
 
-   **Further narrowing (round-17 probe)**: changing
-   `read_x_token(Some(false), …)` → `Some(true)` in
-   `load_tex_definitions` did NOT resolve the symptom — test suite
-   still green (1098/1098), but `\pgfkeys` still errors before
-   pgfkeys.code.tex loads. This rules out the "outer-loop bails when
-   nested autoclose mouth drains" hypothesis.
+   **Refined diagnosis — bisected to an expl3-group-stack leak
+   (round-17 later probe)**:
+
+   A. Changing `read_x_token(Some(false), …)` → `Some(true)` in
+      `load_tex_definitions` didn't move the needle. Ruled out the
+      outer-loop-autoclose hypothesis.
+
+   B. Direct reproduction of `\documentclass{amsart} \usepackage{tikz}
+      \begin{document} done` — 0 errors. So `\usepackage{tikz}` *alone*
+      is fine.
+
+   C. 1611.04489's minimal preamble bisect:
+      `\usepackage{lipsum} \usepackage{tikz}` → **988 errors**.
+      `\usepackage{tikz}` alone → 0.
+
+   D. Looking at the log, the **first error** is NOT at `\pgfkeys`
+      — it's upstream, at the very start of `pgfutil-common.tex`:
+
+      ```
+      (Loading "pgfutil-common.tex" definitions...
+      Error:undefined:\pgfutil@xifnch …
+      Error:unexpected:} Attempt to close boxing group; current
+      frame is non-boxing group due to T_CS[\group_begin:]
+      ```
+
+      `\group_begin:` is an **expl3** primitive. An unmatched
+      `\group_begin:` — left over from the expl3 kernel / l3keys2e /
+      xparse load sequence — has corrupted the group-stack frame.
+      Every subsequent `{…}` in raw-TeX inputs mismatches, which
+      cascades into the \pgfkeys/\pgfmath undefined-CS storm.
+
+   **Root cause**: expl3 group-stack isn't balanced on load. The
+   l3keys2e / xparse / expl3.sty chain runs `\group_begin:` without a
+   matching `\group_end:` somewhere. The pgfkeys errors are
+   downstream symptoms of a broken group frame, not a raw-TeX
+   \input or \ifdefined bug.
+
+   **Fix target** is no longer `latexml_core::binding::content` but
+   the expl3 binding in `latexml_package`: find which
+   `\group_begin:` call is being stacked without its counterpart. A
+   good starting point is `engine/latex_dump.rs`, `engine/latex.rs`
+   (xparse / l3keys2e bindings), and the expl3-code.tex loader
+   setup. Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
+   any other expl3+tikz users.
 
    The actual flow, verified by reading the code:
    - `\input` DefMacro (`tex_file_io.rs:184`) calls `input()`
