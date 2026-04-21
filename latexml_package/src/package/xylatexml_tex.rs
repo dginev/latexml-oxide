@@ -547,14 +547,20 @@ LoadDefinitions!({
       let stretch_str = args.first().and_then(|a| a.as_ref())
         .map(|t| t.to_string()).unwrap_or_else(|| String::from("1"));
       let stretch: f64 = stretch_str.parse().unwrap_or(1.0);
-      // Apply tip style factors (Perl %xy_tips_factors)
-      let style = state::lookup_string("xy_tips_style");
-      let (lf, wf): (f64, f64) = match style.as_str() {
-        "cm" => (0.5, 1.7),
-        "eu" => (0.5, 1.5),
-        "lu" => (0.5, 0.5),
-        _ => (1.0, 1.0), // "xy" default
-      };
+      // Apply tip style factors (Perl %xy_tips_factors). Probe the state
+      // value in place — no need to allocate an owned String for a
+      // 2-3 char comparison against a small literal set.
+      let (lf, wf): (f64, f64) = state::with_value("xy_tips_style", |v| {
+        match v {
+          Some(Stored::String(s)) => arena::with(*s, |style| match style {
+            "cm" => (0.5, 1.7),
+            "eu" => (0.5, 1.5),
+            "lu" => (0.5, 0.5),
+            _ => (1.0, 1.0),
+          }),
+          _ => (1.0, 1.0),
+        }
+      });
       let (c, s) = xy_get_orientation();
       let l_px = dim_to_px(xy_reg_dim("\\xydashl@")) * lf;
       let w_px = dim_to_px(xy_reg_dim("\\xydashh@")) * wf * stretch;
@@ -658,8 +664,21 @@ LoadDefinitions!({
       let r = xy_reg_dim("\\R@");
       let r_px = dim_to_px(r);
       let xc_px = r_px;
-      let cd = state::lookup_string("xy_circle_dir");
-      if cd.is_empty() || cd == "0" {
+      // Probe xy_circle_dir in place: we need both an "is empty or 0"
+      // boolean (the full-circle path) and a parsed i64 (the arc path).
+      // Compute both from the interned SymStr without allocating an
+      // owned String.
+      let (cd_empty_or_zero, cd_val): (bool, i64) = state::with_value("xy_circle_dir", |v| {
+        match v {
+          Some(Stored::String(s)) => arena::with(*s, |cd| {
+            let empty_or_zero = cd.is_empty() || cd == "0";
+            let val: i64 = cd.parse().unwrap_or(0);
+            (empty_or_zero, val)
+          }),
+          _ => (true, 0),
+        }
+      });
+      if cd_empty_or_zero {
         // Full circle — Perl: width => 2*R@, height => R@, depth => R@
         let d = Dimension::new(r.value_of() * 2);
         stored_map!(
@@ -672,7 +691,6 @@ LoadDefinitions!({
         // Partial arc
         let d1 = xy_reg_num("\\count@@");
         let d2 = xy_reg_num("\\count@");
-        let cd_val: i64 = cd.parse().unwrap_or(0);
         let (a1, a2) = if cd_val > 0 {
           if d1 < d2 { ((d1 - 4) * 45, (d2 - 4) * 45) }
           else { ((d1 - 4) * 45, (d2 - 4 + 8) * 45) }
