@@ -145,19 +145,15 @@ fn end_enum_itemize(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
 
 /// Perl: store_enumitem_defaults($name, $kv) — enumitem.sty.ltxml L228-237
 fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
-  let mut keys: Vec<String> = Vec::new();
-
-  // Load existing keys — with_value avoids the Stored envelope clone
-  // when we only need the inner SymStr to stringify.
-  let keys_str = state::with_value(&s!("{name}@keys"), |v| match v {
-    Some(Stored::String(s)) => arena::to_string(*s),
-    _ => String::new(),
+  // Load existing keys directly inside the state/arena closure pair —
+  // the intermediate keys_str String is avoided; we split the interned
+  // &str and collect owned keys straight into the Vec.
+  let mut keys: Vec<String> = state::with_value(&s!("{name}@keys"), |v| match v {
+    Some(Stored::String(s)) => arena::with(*s, |ks| {
+      ks.split(',').filter(|k| !k.is_empty()).map(String::from).collect()
+    }),
+    _ => Vec::new(),
   });
-  for k in keys_str.split(',') {
-    if !k.is_empty() {
-      keys.push(k.to_string());
-    }
-  }
 
   for (key, val) in kv.get_pairs() {
     let val_key = s!("{name}@{key}");
@@ -201,14 +197,20 @@ fn merged_enumitem_keyvals(
     // with_value pulls the keys-string out of the Stored::String arm
     // without cloning the envelope; the per-key inner lookup still
     // needs to produce an owned ArgWrap, so we pay the clone there.
-    let keys_str = state::with_value(&s!("{def_name}@keys"), |v| match v {
-      Some(Stored::String(s)) => arena::to_string(*s),
-      _ => String::new(),
+    // Collect keys as owned Vec<String> inside state+arena closures
+    // so the split happens on the interned &str and the owned
+    // intermediary is smaller (Vec<String> of just the keys, not
+    // the whole comma-separated string plus allocs).
+    let keys: Vec<String> = state::with_value(&s!("{def_name}@keys"), |v| match v {
+      Some(Stored::String(s)) => arena::with(*s, |ks| {
+        ks.split(',').filter(|k| !k.is_empty()).map(String::from).collect()
+      }),
+      _ => Vec::new(),
     });
-    if keys_str.is_empty() {
+    if keys.is_empty() {
       continue;
     }
-    for key in keys_str.split(',') {
+    for key in &keys {
       if !key.is_empty() {
         let val_key = s!("{def_name}@{key}");
         if let Some(val) = state::lookup_value(&val_key) {
