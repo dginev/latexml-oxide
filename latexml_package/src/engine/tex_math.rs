@@ -1991,3 +1991,80 @@ fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) ->
     None
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn mathstyle_adjust_from_display_steps_down() {
+    assert_eq!(mathstyle_adjust("display", "display"), "text");
+    assert_eq!(mathstyle_adjust("display", "text"), "script");
+    assert_eq!(mathstyle_adjust("display", "script"), "script");
+    assert_eq!(mathstyle_adjust("display", "scriptscript"), "scriptscript");
+  }
+
+  #[test]
+  fn mathstyle_adjust_from_text_steps_further() {
+    assert_eq!(mathstyle_adjust("text", "display"), "text");
+    assert_eq!(mathstyle_adjust("text", "text"), "script");
+    // Observe: inner=script in text-outer collapses all the way to scriptscript.
+    assert_eq!(mathstyle_adjust("text", "script"), "scriptscript");
+    assert_eq!(mathstyle_adjust("text", "scriptscript"), "scriptscript");
+  }
+
+  #[test]
+  fn mathstyle_adjust_from_script_preserves_or_demotes() {
+    assert_eq!(mathstyle_adjust("script", "display"), "display");
+    assert_eq!(mathstyle_adjust("script", "text"), "text");
+    assert_eq!(mathstyle_adjust("script", "script"), "scriptscript");
+    assert_eq!(mathstyle_adjust("script", "scriptscript"), "scriptscript");
+  }
+
+  #[test]
+  fn mathstyle_adjust_from_scriptscript_saturates() {
+    assert_eq!(mathstyle_adjust("scriptscript", "display"), "display");
+    assert_eq!(mathstyle_adjust("scriptscript", "text"), "text");
+    assert_eq!(mathstyle_adjust("scriptscript", "script"), "scriptscript");
+    assert_eq!(mathstyle_adjust("scriptscript", "scriptscript"), "scriptscript");
+  }
+
+  #[test]
+  fn mathstyle_adjust_unknown_defaults_to_display() {
+    // Any unmapped pair falls back to "display".
+    assert_eq!(mathstyle_adjust("bogus", "display"), "display");
+    assert_eq!(mathstyle_adjust("display", "bogus"), "display");
+    assert_eq!(mathstyle_adjust("", ""), "display");
+  }
+
+  #[test]
+  fn script_name_re_matches_float_variants() {
+    assert!(SCRIPT_NAME_RE.is_match("\\lx@floating@subscript"));
+    assert!(SCRIPT_NAME_RE.is_match("\\lx@floating@superscript"));
+    assert!(SCRIPT_NAME_RE.is_match("\\lx@post@subscript"));
+    assert!(SCRIPT_NAME_RE.is_match("\\lx@post@superscript"));
+  }
+
+  #[test]
+  fn script_name_re_rejects_other_cs() {
+    assert!(!SCRIPT_NAME_RE.is_match("\\lx@float@subscript")); // not exactly "floating"
+    assert!(!SCRIPT_NAME_RE.is_match("\\lx@floating@unknown"));
+    assert!(!SCRIPT_NAME_RE.is_match("\\superscript"));
+    assert!(!SCRIPT_NAME_RE.is_match(""));
+  }
+
+  #[test]
+  fn script_name_re_extracts_variant_and_kind() {
+    let caps = SCRIPT_NAME_RE
+      .captures("\\lx@floating@superscript")
+      .expect("match");
+    assert_eq!(caps.get(1).unwrap().as_str(), "floating");
+    assert_eq!(caps.get(2).unwrap().as_str(), "superscript");
+
+    let caps = SCRIPT_NAME_RE
+      .captures("\\lx@post@subscript")
+      .expect("match");
+    assert_eq!(caps.get(1).unwrap().as_str(), "post");
+    assert_eq!(caps.get(2).unwrap().as_str(), "subscript");
+  }
+}
