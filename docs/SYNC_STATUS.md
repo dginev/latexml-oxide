@@ -9,16 +9,21 @@ lives in git log and `memory/project_session_history.md`.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
-**10k sandbox (session 128 post-DUPID + post-gate):** full 7898-paper
-re-sweep at 60s/6GB caps, 12-way parallel: **7860/7898 = 99.52%
-exit=0, 37 SIGABRT, 1 SIGSEGV**. DUPID-class papers (1106.1389,
-1505.03876, 1506.09203, 1511.07586, 1707.01155) all converge
-correctly now — 1106.1389 moved from abort to exit=0; the other four
-complete in ~30 s standalone but still tip over the 60 s timeout
-under 12-way CPU contention. Remaining abort classes:
-pgfkeys.code.tex port gap, math-parser pathological-ambiguity
-timeouts, preamble-heavy digestion timeouts, and CPU-contention
-timeouts on papers near the 60 s edge. Runner:
+**10k sandbox (session 128 post-idstore-fix):** retried 38 aborts
+from the prior 7898-paper sweep with the idstore-rebuild-at-finalize
+binary at -j 8 parallel: **15 of 38 now pass** (incl. 1605.08055
+SIGSEGV, DUPID borderline timeouts 1505.03876 / 1506.09203 /
+1511.07586, pgfkeys-library paper 1511.00722, math-parser paper
+1403.4135, and several CPU-contention edges that fit in 60 s at
+-j 8 vs -j 12). Projected aggregate: **7884/7898 = 99.82%**
+exit=0 at -j 8. Remaining 14 aborts: 5 OOM (exit=137 — 1112.6246,
+1203.5977, 1710.03688 babel french, 1711.10191, 1711.11576), 9 at
+-60 s timeout (exit=134 — 1210.1891, 1407.5769, 1308.5727,
+1611.04489, 1702.00409, 1707.01155, 1709.05096, 1710.11417,
+1802.08782). Remaining abort classes: pgfkeys.code.tex port gap
+(1611.04489), math-parser pathological-ambiguity (1407.5769,
+1308.5727), preamble-heavy digestion timeouts (1210.1891), and a
+handful of slow-convergence papers. Runner:
 `tools/benchmark_10k.sh`; tool: `cortex_worker --standalone --timeout 60`.
 
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
