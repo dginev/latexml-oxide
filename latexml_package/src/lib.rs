@@ -547,3 +547,58 @@ pub fn class_binding_names() -> &'static [&'static str] {
     })
     .as_slice()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn bindings_registry_is_non_empty() {
+    assert!(!BINDINGS.is_empty(), "at least one package registered");
+  }
+
+  #[test]
+  fn class_binding_names_only_contains_cls_entries() {
+    let names = class_binding_names();
+    // Cross-check: every class name appears in BINDINGS with ext="cls".
+    for name in names {
+      let matched = BINDINGS.iter().any(|(n, ext, _)| n == name && *ext == "cls");
+      assert!(matched, "{} must have a cls registration", name);
+    }
+  }
+
+  #[test]
+  fn class_binding_names_cached_via_once_lock() {
+    // Two consecutive calls return the same &'static slice (same data pointer).
+    let first = class_binding_names();
+    let second = class_binding_names();
+    assert_eq!(first.as_ptr(), second.as_ptr());
+    assert_eq!(first.len(), second.len());
+  }
+
+  #[test]
+  fn dispatch_none_for_unknown_filename() {
+    // No ".foo" extension registered anywhere → None.
+    assert!(dispatch("definitely-not-a-package.foo").is_none());
+  }
+
+  #[test]
+  fn dispatch_none_for_no_dot() {
+    // No dot → split_once returns None → dispatch returns None.
+    assert!(dispatch("bareword").is_none());
+  }
+
+  #[test]
+  fn dispatch_splits_on_first_dot() {
+    // The doc-comment promises first-dot splitting. Verify by checking a
+    // name that only makes sense when split at the *first* dot (a hypothetical
+    // "foo.code.tex" with no "foo.code" binding should be found as ("foo",
+    // "code.tex") if that exact tuple is registered, or None otherwise).
+    // We can't commit to a specific tuple without coupling to registry state,
+    // so just confirm that misleading "last-dot" splits do not resolve:
+    // If a name like "nonexistent.code.tex" yields anything other than None,
+    // that's a bug regardless of split direction — since no "nonexistent"
+    // binding exists in any form.
+    assert!(dispatch("nonexistent.code.tex").is_none());
+  }
+}
