@@ -50,8 +50,16 @@ LoadDefinitions!({
   DefMacro!("\\specialhead", "\\section*");
   DefMacro!("\\endspecialhead", "");
 
-  // Theorem environments — Perl L200-260 (use DigestUntil)
-  // Stubbed: DigestUntil is not fully ported
+  // Theorem environments — Perl L200-260 use
+  //   DefConstructor('\<kind> Undigested DigestUntil:\end<kind>', …)
+  // each with its own counter, title font, afterConstruct close, and
+  // title-name Digest. DigestUntil is now fully ported (27cc66b60);
+  // wiring these up to Perl-parity is still deferred because each
+  // needs a NewCounter('<kind>') declaration plus the title-font
+  // computation — risk of conflict with amsthm's theorem counter.
+  // Current stubs forward to the corresponding `theorem`/`definition`/
+  // etc. LaTeX environments, which produce valid ltx:theorem output
+  // but with a different counter namespace than native amsppt would.
   DefMacro!("\\proclaim", "\\begin{theorem}");
   DefMacro!("\\endproclaim", "\\end{theorem}");
   DefMacro!("\\definition", "\\begin{definition}");
