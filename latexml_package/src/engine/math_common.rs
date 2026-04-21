@@ -630,8 +630,15 @@ LoadDefinitions!({
       document.append_tree(&mut current, inner_children)?;
       document.close_element("ltx:XMApp")?;
     } else {
-      // For simple tokens, we'll modify the relevant content & attributes
-      // [children removed, id's presumably ignorable]
+      // For simple tokens, we'll modify the relevant content & attributes.
+      // The children are DISCARDED — they're dropped here by
+      // `unbind_node()` without being re-attached elsewhere. If any
+      // child has an xml:id, the idstore would carry a dangling Node
+      // reference past the eventual libxml2 free — the exact UAF class
+      // that caused the 1605.08055 Finalizing SIGSEGV. Unrecord first.
+      for child in thing.get_child_nodes() {
+        document.unrecord_node_ids(&child);
+      }
       for mut child in thing.get_child_nodes() {
         child.unbind_node();
       }

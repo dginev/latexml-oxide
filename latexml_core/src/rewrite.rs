@@ -1177,7 +1177,12 @@ fn restructure_scripts_in_dual(
           }
         }
 
-        // Replace the POSTSUBSCRIPT node with the new XMApp
+        // Replace the POSTSUBSCRIPT node with the new XMApp. The
+        // POSTSUBSCRIPT wrapper's own xml:id (if any) is dropped along
+        // with the node. We'd ideally `unrecord_id` here but this
+        // helper receives only the raw libxml Document, not our
+        // Document wrapper — the idstore-rebuild-at-finalize fix
+        // (session 128) covers the stale entry downstream.
         script_node.add_prev_sibling(&mut new_app)?;
         script_node.unlink();
 
