@@ -144,4 +144,54 @@ mod tests {
     assert_eq!(radix_roman(2000), "mm");
     assert_eq!(radix_roman(3999), "mmmcmxcix");
   }
+
+  #[test]
+  fn test_radix_alpha_upper() {
+    assert_eq!(radix_alpha_upper(1), "A");
+    assert_eq!(radix_alpha_upper(26), "Z");
+    assert_eq!(radix_alpha_upper(27), "AA");
+    assert_eq!(radix_alpha_upper(703), "AAA");
+  }
+
+  #[test]
+  fn test_radix_alpha_upper_vs_lower_case() {
+    // For all n > 0, upper version is lower version uppercased.
+    for n in 1..100 {
+      assert_eq!(radix_alpha_upper(n), radix_alpha(n).to_uppercase(),
+        "divergence at n={n}");
+    }
+  }
+
+  #[test]
+  fn test_radix_greek_basic() {
+    assert_eq!(radix_greek(1), "α");
+    assert_eq!(radix_greek(2), "β");
+    // 24th symbol is ω (the medial sigma was skipped).
+    assert_eq!(radix_greek(24), "ω");
+    // n=25 wraps: αα.
+    assert_eq!(radix_greek(25), "αα");
+  }
+
+  #[test]
+  fn test_radix_greek_upper_basic() {
+    assert_eq!(radix_greek_upper(1), "Α");
+    assert_eq!(radix_greek_upper(24), "Ω");
+    assert_eq!(radix_greek_upper(25), "ΑΑ");
+  }
+
+  #[test]
+  fn test_radix_roman_upper() {
+    assert_eq!(radix_roman_upper(1), "I");
+    assert_eq!(radix_roman_upper(4), "IV");
+    assert_eq!(radix_roman_upper(1999), "MCMXCIX");
+  }
+
+  #[test]
+  fn test_radix_alpha_zero_is_empty() {
+    // Zero produces empty; values > 0 always produce non-empty.
+    assert_eq!(radix_alpha(0), "");
+    assert_eq!(radix_alpha_upper(0), "");
+    assert_eq!(radix_greek(0), "");
+    assert_eq!(radix_roman(0), "");
+  }
 }
