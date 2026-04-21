@@ -56,6 +56,37 @@ pub fn load_from_str(content: &str) -> Result<usize, String> {
 thread_local! {
   static CURRENT_LOAD_CTX: std::cell::Cell<Option<(crate::common::arena::SymStr, u32)>> =
     const { std::cell::Cell::new(None) };
+  /// PA/MPA aliases whose target wasn't defined at dump-load time.
+  /// Populated by `load_meaning`'s PA arm, drained by
+  /// `flush_deferred_aliases()` after `_constructs` finishes.
+  static DEFERRED_ALIASES: std::cell::RefCell<Vec<(Token, Token)>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Replay any PA/MPA aliases that were deferred during dump load
+/// because their target was not yet defined. Call once after the
+/// post-dump definition pass (`_constructs`) has loaded.
+/// Returns `(applied, skipped)`.
+pub fn flush_deferred_aliases() -> (usize, usize) {
+  let pending: Vec<(Token, Token)> =
+    DEFERRED_ALIASES.with(|cell| std::mem::take(&mut *cell.borrow_mut()));
+  let mut applied = 0usize;
+  let mut skipped = 0usize;
+  for (cs_tok, target_tok) in pending {
+    // Add-only: don't override if the alias was resolved by a later
+    // compiled definition of the key itself.
+    if state::has_meaning(&cs_tok) {
+      skipped += 1;
+      continue;
+    }
+    if !state::has_meaning(&target_tok) {
+      skipped += 1;
+      continue;
+    }
+    state::let_i(&cs_tok, &target_tok, Some(Scope::Global));
+    applied += 1;
+  }
+  (applied, skipped)
 }
 
 fn current_dump_locator() -> crate::common::locator::Locator {
@@ -571,10 +602,16 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         text: arena::pin(&target_cs_raw),
         code: Catcode::CS,
       };
-      // Skip silently if the target isn't in bindings — rare and means
-      // the alias points at a CS only defined during raw-load that we
-      // also lost. The engine's undefined-CS handler will cope at runtime.
+      // Target not yet defined — defer the alias. Load order is
+      // `bootstrap → _base → dump → _constructs`, and some aliases
+      // (e.g. `\let\a=\@tabacckludge` from latex.ltx L10007) point
+      // at CSes defined in _constructs, which runs after the dump.
+      // `flush_deferred_aliases()` retries these after _constructs
+      // finishes.
       if !state::has_meaning(&target_tok) {
+        DEFERRED_ALIASES.with(|cell| {
+          cell.borrow_mut().push((cs_tok.clone(), target_tok));
+        });
         return Ok(false);
       }
       state::let_i(&cs_tok, &target_tok, Some(Scope::Global));

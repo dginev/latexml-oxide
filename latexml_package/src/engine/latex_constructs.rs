@@ -4879,14 +4879,14 @@ LoadDefinitions!({
   //======================================================================
 
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
-  // latex.ltx L10007 — `\let\a=\@tabacckludge`. The dump carries this
-  // as a PA record (`M \a PA \@tabacckludge`), but it can't be applied
-  // there: load order is `bootstrap → _base → dump → _constructs`, and
-  // `\@tabacckludge` itself is defined right above (in _constructs),
-  // so at dump-load time the PA's target is undefined and
-  // `load_meaning`'s target check returns Ok(false). Until we grow a
-  // deferred-alias retry pass, the alias stays hand-written here to
-  // match the latex.ltx source. Inside a `tabbing` environment,
+  // latex.ltx L10007 — `\let\a=\@tabacckludge`. The dump carries
+  // `\a` as an E record (the serializer captured
+  // `\@tabacckludge`'s body with a `\@changed@cmd` wrapper, not a
+  // pure Let-alias), which the outer M-gate rejects as a
+  // public-CS Expandable (expl3-cascade safety). Neither the
+  // PA/MPA gate relaxation nor the deferred-alias retry pass in
+  // `dump_reader.rs` applies, so we keep this alias hand-written
+  // to match latex.ltx source. Inside a `tabbing` environment,
   // tabbing_bindings() overrides this local to `\@tabbing@accent`.
   // Found in arxiv 1611.05395.
   Let!("\\a", "\\@tabacckludge");

@@ -57,4 +57,17 @@ LoadDefinitions!({
   }
 
   InnerPool!(latex_constructs);
+
+  // Retry any PA/MPA let-aliases whose target wasn't defined at
+  // dump-load time (they were queued rather than silently dropped).
+  // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`
+  // itself is defined in latex_constructs (which loads after the
+  // dump), so the alias has to wait until now.
+  let (applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+  if applied + skipped > 0 {
+    log::info!(
+      "[latex_dump] deferred aliases: {} applied, {} skipped",
+      applied, skipped
+    );
+  }
 });
