@@ -152,15 +152,32 @@ Three failure classes in the session-128 7933-paper sweep, after the
    pgfutil-common.tex L174 `\pgfutil@xifnch` undefined, immediately
    followed by L175 `}` closing on a `\group_begin:` frame). So the
    leak is **lipsum-specific**, not a broad expl3 machinery issue.
-   lipsum.sty L30 uses `\ProvidesExplPackage` (not `\ExplSyntaxOn`)
-   and has no trailing `\ExplSyntaxOff` — it relies on the
-   `ProvidesExplPackage` wrapper to pair `\group_begin:` /
-   `\group_end:` automatically at end-of-file. Our
-   `\ProvidesExplPackage` autoload chain (`tex.rs:112` → expl3) may
-   not be running that pairing. Next drill-down: locate the
-   `\ProvidesExplPackage` definition in Perl (TeX.pool.ltxml) vs Rust
-   (expl3_sty.rs / expl3-code.tex), compare the group-begin/end
-   wrapping semantics.
+
+   **Fix-hypothesis test (same session)**: injecting `\ExplSyntaxOff`
+   between lipsum and tikz clears the cascade (0 errors). Injecting
+   bare `\group_end:` leaves 1 error. So the missing action is
+   `\ExplSyntaxOff` specifically — which not only closes the group
+   but also restores catcodes. The underlying leak is that our raw
+   expl3-code.tex load defines `\ProvidesExplPackage` to push a
+   `\group_begin:` frame as part of `\ExplSyntaxOn`, but nothing
+   pairs `\ExplSyntaxOff` at end-of-file for lipsum.sty.
+
+   **Perl's upstream awareness**: Perl's TeX.pool.ltxml L44-47 comment
+   says "these auto-loads are not perfect — if triggered with a raw
+   .sty file, the expl3 support will 'expire' at the end of the
+   current scope, and e.g. `\ExplSyntaxOn` will once again be
+   undefined." So Perl knows this is a known edge-case. The
+   difference must be in how Perl vs Rust scope-exits a raw-.sty load
+   — Perl's `input_definitions` apparently popping leaked frames
+   automatically; ours not.
+
+   **Surgical fix target**: modify `input_definitions` /
+   `load_tex_definitions` in `latexml_core::binding::content` to
+   detect group-stack-depth-increase across a raw-.sty load and
+   auto-pop unclosed `\group_begin:` / `\begingroup` frames (with a
+   warning). Alternatively, register `\ExplSyntaxOff` as an
+   end-of-input hook whenever a raw-.sty load has `\ExplSyntaxOn` in
+   effect at file-end.
 
    **Fix target** is no longer `latexml_core::binding::content` but
    the expl3 binding in `latexml_package`: find which
