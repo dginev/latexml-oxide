@@ -191,3 +191,79 @@ impl From<List> for Result<Digested> {
     tmp.into()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn list_default_is_empty() {
+    let l = List::default();
+    assert!(l.is_empty());
+    assert_eq!(l.boxes.len(), 0);
+    assert_eq!(l.mode, None);
+    assert_eq!(l.font, None);
+  }
+
+  #[test]
+  fn list_new_from_empty_vec() {
+    let l = List::new(vec![]);
+    assert!(l.is_empty());
+    assert_eq!(l.boxes.len(), 0);
+  }
+
+  #[test]
+  fn list_display_empty_is_empty_string() {
+    let l = List::default();
+    assert_eq!(format!("{l}"), "");
+  }
+
+  #[test]
+  fn list_equality_same_empty() {
+    let a = List::default();
+    let b = List::default();
+    assert_eq!(a, b);
+  }
+
+  #[test]
+  fn list_stringify_wraps_in_brackets() {
+    let l = List::default();
+    let s = l.stringify();
+    assert!(s.starts_with("List["), "got {s:?}");
+    assert!(s.ends_with(']'));
+  }
+
+  #[test]
+  fn list_get_properties_empty_by_default() {
+    let l = List::default();
+    assert_eq!(l.get_properties().len(), 0);
+  }
+
+  #[test]
+  fn list_set_property_persists() {
+    let mut l = List::default();
+    l.set_property("testkey", Stored::Bool(true));
+    assert!(l.get_properties().contains_key("testkey"));
+  }
+
+  #[test]
+  fn list_revert_empty_is_empty_tokens() {
+    let l = List::default();
+    let t = l.revert().expect("empty list reverts cleanly");
+    assert_eq!(t.len(), 0);
+  }
+
+  #[test]
+  fn list_unlist_ref_returns_borrowed_boxes() {
+    let l = List::default();
+    let refs = l.unlist_ref();
+    assert_eq!(refs.len(), 0);
+  }
+
+  #[test]
+  fn list_get_font_default_none() {
+    let l = List::default();
+    let f = l.get_font().unwrap();
+    assert!(f.is_none());
+  }
+}
