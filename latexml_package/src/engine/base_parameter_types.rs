@@ -718,24 +718,26 @@ LoadDefinitions!({
   );
 
   // A variation: Digest until we encounter a given token!
-  // DefParameterType!(DigestUntil, sub[_inner, _untils] {
-  //     gullet::skip_spaces()?;
-  //     Ok(Tokens!())
-  //   },
-  //   // TODO: To implement this natively, we need "untils" i.e.
-  //   // "extra" passed into "predigest" as well.
-  //   predigest => {
-  //     todo!();
-  //     //   let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
-  //     //   stomach::digest_next_body(Some(until))?
-  //   //   my @list   = $state->getStomach->digestNextBody($until);
-  //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
-  //   //   List(@list, mode => ($ismath ? 'math' : 'text'));
-  //     ()
-  //   },
-  //   reversion => sub[args,_inner,_extra] {
-  //     Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
-  // );
+  // Perl: Base_ParameterTypes.pool.ltxml L384-394
+  DefParameterType!(DigestUntil, sub[_inner, _extra] {
+      gullet::skip_spaces()?;
+      Ok(Tokens!())
+    },
+    predigest => sub[_arg, extra] {
+      let ismath = state::lookup_bool_sym(pin!("IN_MATH"));
+      // Perl: ($until) = $until->unlist — first token of the extra Tokens.
+      let until = extra.first()
+        .and_then(|toks| toks.unlist_ref().first().cloned());
+      let mut list = stomach::digest_next_body(until)?;
+      list.retain(|tbox| !tbox.is_comment());
+      let mut digested = List::new(list);
+      digested.mode = if ismath { Some(TexMode::Math) } else { Some(TexMode::Text) };
+      digested
+    },
+    reversion => sub[args, _inner, _extra] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!()))
+    }
+  );
 
   // Reads until the current group has ended.
   // This is useful for environment-like constructs,

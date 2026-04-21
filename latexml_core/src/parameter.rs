@@ -21,7 +21,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
-pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
+pub type ReaderPredigestFn = dyn Fn(ArgWrap, &[Tokens]) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
 
@@ -412,7 +412,7 @@ impl Parameter {
       pre()?; // maybe pass extras?
     }
     let digested_value = if let Some(ref closure) = &self.predigest {
-      closure(value_arg)?
+      closure(value_arg, &self.extra)?
     } else {
       // Note: we have an open question for the type interface.
       //  What happens when a wrapped "None" value,

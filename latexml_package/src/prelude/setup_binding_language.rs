@@ -2410,6 +2410,12 @@ macro_rules! defi_opts {
       [reversion @ reversion!(_args, _inner, _extra, $body)]})
   };
   (@predigest (
+    sub[$whatsit:ident, $extra:ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [predigest @ predigest!($whatsit, $extra, $body)]})
+  };
+  (@predigest (
     sub[$whatsit:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*

@@ -216,9 +216,18 @@ macro_rules! reader {
 #[macro_export]
 macro_rules! predigest {
   ($arg:ident, $body:block) => {
-    Some(Rc::new(|$arg: ArgWrap| -> Result<Option<Digested>> {
-      $body.into_digested_option_result()
-    }))
+    Some(Rc::new(
+      |$arg: ArgWrap, _: &[Tokens]| -> Result<Option<Digested>> {
+        $body.into_digested_option_result()
+      },
+    ))
+  };
+  ($arg:ident, $extra:ident, $body:block) => {
+    Some(Rc::new(
+      |$arg: ArgWrap, $extra: &[Tokens]| -> Result<Option<Digested>> {
+        $body.into_digested_option_result()
+      },
+    ))
   };
 }
 
