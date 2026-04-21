@@ -516,89 +516,188 @@ impl Processor for Graphics {
     // Counter for generating unique resource names (like Perl's generateResourcePathname)
     let mut resource_counter: u32 = 0;
 
-    for node in &nodes {
-      let mut node_mut = node.clone();
+    // Two-phase plan so the slow per-image `convert` subprocess and
+    // `read_image_dimensions` calls can run in parallel without touching
+    // the libxml DOM off-thread.
+    //
+    // Phase 1 (serial): read each node's attributes, resolve source path,
+    // decide the conversion kind, and allocate resource-name counters.
+    //   - `Plan::NotFound` — apply fallback on the main thread later
+    //   - `Plan::Copy { .. }` — apply on the main thread later (cheap)
+    //   - `Plan::Convert { .. }` — independent; run in parallel.
+    // Phase 2 (parallel): run convert_image + read_image_dimensions for
+    // `Plan::Convert` entries. Produces `JobResult`s keyed by node index.
+    // Phase 3 (serial): apply DOM mutations on the main thread in original
+    // node order so attribute writes happen on the libxml-owning thread.
+    enum Plan {
+      NotFound { idx: usize, graphic: String },
+      Copy { idx: usize, source: String, options: String },
+      Convert { idx: usize, source: String, options: String, page: Option<u32>,
+                rel_dest: String, abs_dest_str: String },
+    }
+    struct ConvertOutcome {
+      idx: usize,
+      /// Path to write into `imagesrc`; `None` if both convert and copy-fallback failed.
+      imagesrc: Option<String>,
+      /// Raw (pre-transform) dimensions read from whichever file we ended up with.
+      raw_dims: Option<(u32, u32)>,
+      /// Options passed to transforms (captured once to avoid a DOM read off-thread).
+      options: String,
+    }
+
+    let mut plans: Vec<Plan> = Vec::with_capacity(n_to_process);
+    for (idx, node) in nodes.iter().enumerate() {
       let options = node.get_attribute("options").unwrap_or_default();
       let page = Self::parse_page_option(&options);
-      if let Some(source) = self.find_graphic_file(&doc, node, &search_paths) {
-        let src_ext = Path::new(&source)
-          .extension()
-          .and_then(|e| e.to_str())
-          .unwrap_or("")
-          .to_lowercase();
-        let props = self.type_properties.get(&src_ext).cloned();
-        let dest_type = props
-          .as_ref()
-          .and_then(|p| p.destination_type.as_ref())
-          .cloned()
-          .unwrap_or(src_ext.clone());
-        let needs_conversion = dest_type != src_ext;
-        // Perl: page option makes the transform non-trivial (image_graphicx_is_trivial)
-        let has_page = page.is_some();
-
-        // Helper: apply graphicx transforms to raw dimensions
-        let apply_transforms = |raw_dims: Option<(u32, u32)>| -> (Option<u32>, Option<u32>) {
-          match raw_dims {
-            Some((w, h)) if !options.is_empty() => {
-              let (tw, th) = Self::apply_graphicx_transforms(w, h, &options, effective_dpi);
-              (Some(tw), Some(th))
-            },
-            Some((w, h)) => (Some(w), Some(h)),
-            None => (None, None),
-          }
-        };
-
-        if needs_conversion || has_page {
-          // Need format conversion (e.g., PDF/EPS → PNG) or page extraction.
-          // When a page is specified, Perl generates a unique resource name (x1.png, x2.png, ...)
-          // via generateResourcePathname. We mimic this with a counter.
-          let dest_name = if has_page {
-            // Generate unique name like Perl's "x1", "x2", etc.
-            resource_counter += 1;
-            format!("x{}", resource_counter)
-          } else {
-            Path::new(&source)
-              .file_stem()
-              .and_then(|s| s.to_str())
-              .unwrap_or("image")
-              .to_string()
-          };
-          let rel_dest = format!("{}.{}", dest_name, dest_type);
-          let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
-          if let Some(parent) = abs_dest.parent() {
-            std::fs::create_dir_all(parent).ok();
-          }
-          let abs_dest_str = abs_dest.to_string_lossy().to_string();
-          if Self::convert_image(&source, &abs_dest_str, dpi, page) {
-            let (w, h) = apply_transforms(Self::read_image_dimensions(&abs_dest_str));
-            Self::set_graphic_src(&mut node_mut, &rel_dest, w, h);
-          } else {
-            log::warn!("Graphics: Failed to convert {} to {}", source, abs_dest_str);
-            if let Some(rel) = Self::copy_to_destination(&source, &source_dir, &dest_dir) {
-              let (w, h) = apply_transforms(Self::read_image_dimensions(&source));
-              Self::set_graphic_src(&mut node_mut, &rel, w, h);
-            }
-          }
+      let Some(source) = self.find_graphic_file(&doc, node, &search_paths) else {
+        let graphic = node.get_attribute("graphic").unwrap_or_else(|| "none".to_string());
+        plans.push(Plan::NotFound { idx, graphic });
+        continue;
+      };
+      let src_ext = Path::new(&source)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+      let props = self.type_properties.get(&src_ext).cloned();
+      let dest_type = props
+        .as_ref()
+        .and_then(|p| p.destination_type.as_ref())
+        .cloned()
+        .unwrap_or(src_ext.clone());
+      let needs_conversion = dest_type != src_ext;
+      let has_page = page.is_some();
+      if needs_conversion || has_page {
+        let dest_name = if has_page {
+          resource_counter += 1;
+          format!("x{}", resource_counter)
         } else {
-          // Trivial case: copy source to destination, read dimensions
-          if let Some(rel) = Self::copy_to_destination(&source, &source_dir, &dest_dir) {
-            let (w, h) = apply_transforms(Self::read_image_dimensions(&source));
+          Path::new(&source)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("image")
+            .to_string()
+        };
+        let rel_dest = format!("{}.{}", dest_name, dest_type);
+        let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
+        if let Some(parent) = abs_dest.parent() {
+          std::fs::create_dir_all(parent).ok();
+        }
+        let abs_dest_str = abs_dest.to_string_lossy().to_string();
+        plans.push(Plan::Convert { idx, source, options, page, rel_dest, abs_dest_str });
+      } else {
+        plans.push(Plan::Copy { idx, source, options });
+      }
+    }
+
+    // Phase 2: parallel conversions. Bounded worker count to avoid
+    // oversubscribing when many images are in flight. `convert` itself
+    // is single-threaded per invocation, so the ceiling is useful CPU
+    // parallelism — capped at a reasonable limit to avoid fork/memory
+    // storms with many-image papers.
+    let convert_count = plans.iter().filter(|p| matches!(p, Plan::Convert { .. })).count();
+    let worker_cap = std::thread::available_parallelism()
+      .map(|n| n.get())
+      .unwrap_or(4)
+      .min(8)
+      .max(1);
+    let n_workers = convert_count.min(worker_cap).max(1);
+    let source_dir_ref = source_dir.as_str();
+    let dest_dir_ref = dest_dir.as_str();
+    let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
+    if convert_count > 0 {
+      use std::sync::atomic::{AtomicUsize, Ordering};
+      use std::sync::Mutex;
+      let next = AtomicUsize::new(0);
+      let out = Mutex::new(Vec::<ConvertOutcome>::with_capacity(convert_count));
+      // Collect just the Convert entries into a fresh Vec so worker index
+      // access is O(1).
+      let jobs: Vec<&Plan> = plans.iter().filter(|p| matches!(p, Plan::Convert { .. })).collect();
+      std::thread::scope(|s| {
+        for _ in 0..n_workers {
+          s.spawn(|| {
+            loop {
+              let i = next.fetch_add(1, Ordering::Relaxed);
+              if i >= jobs.len() { break; }
+              let Plan::Convert { idx, source, options, page, rel_dest, abs_dest_str } = jobs[i]
+                else { unreachable!() };
+              let outcome = if Self::convert_image(source, abs_dest_str, dpi, *page) {
+                ConvertOutcome {
+                  idx: *idx,
+                  imagesrc: Some(rel_dest.clone()),
+                  raw_dims: Self::read_image_dimensions(abs_dest_str),
+                  options: options.clone(),
+                }
+              } else {
+                log::warn!("Graphics: Failed to convert {} to {}", source, abs_dest_str);
+                if let Some(rel) = Self::copy_to_destination(source, source_dir_ref, dest_dir_ref) {
+                  ConvertOutcome {
+                    idx: *idx,
+                    imagesrc: Some(rel),
+                    raw_dims: Self::read_image_dimensions(source),
+                    options: options.clone(),
+                  }
+                } else {
+                  ConvertOutcome { idx: *idx, imagesrc: None, raw_dims: None, options: options.clone() }
+                }
+              };
+              out.lock().unwrap().push(outcome);
+            }
+          });
+        }
+      });
+      outcomes = out.into_inner().unwrap();
+      outcomes.sort_by_key(|o| o.idx);
+    }
+    let mut outcome_iter = outcomes.into_iter().peekable();
+
+    // Phase 3: serial DOM mutations. Preserves original node order.
+    let apply_transforms = |options: &str, raw_dims: Option<(u32, u32)>|
+      -> (Option<u32>, Option<u32>) {
+      match raw_dims {
+        Some((w, h)) if !options.is_empty() => {
+          let (tw, th) = Self::apply_graphicx_transforms(w, h, options, effective_dpi);
+          (Some(tw), Some(th))
+        },
+        Some((w, h)) => (Some(w), Some(h)),
+        None => (None, None),
+      }
+    };
+    for plan in &plans {
+      match plan {
+        Plan::NotFound { idx, graphic } => {
+          log::warn!("Graphics: No source found for {}", graphic);
+          let mut node_mut = nodes[*idx].clone();
+          node_mut.set_attribute("imagesrc", graphic).ok();
+        },
+        Plan::Copy { idx, source, options } => {
+          let mut node_mut = nodes[*idx].clone();
+          if let Some(rel) = Self::copy_to_destination(source, &source_dir, &dest_dir) {
+            let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
             Self::set_graphic_src(&mut node_mut, &rel, w, h);
           } else {
-            let rel_path = Path::new(&source)
+            let rel_path = Path::new(source)
               .strip_prefix(&source_dir)
-              .unwrap_or(Path::new(&source));
+              .unwrap_or(Path::new(source));
             let rel_str = rel_path.to_string_lossy().to_string();
-            let (w, h) = apply_transforms(Self::read_image_dimensions(&source));
+            let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
             Self::set_graphic_src(&mut node_mut, &rel_str, w, h);
           }
-        }
-      } else {
-        let graphic = node
-          .get_attribute("graphic")
-          .unwrap_or_else(|| "none".to_string());
-        log::warn!("Graphics: No source found for {}", graphic);
-        node_mut.set_attribute("imagesrc", &graphic).ok();
+        },
+        Plan::Convert { idx, .. } => {
+          // Pull the matching outcome. Outcomes are sorted by idx and each
+          // Convert plan has a unique idx, so peek-and-consume is correct.
+          if let Some(out) = outcome_iter.peek() {
+            if out.idx == *idx {
+              let out = outcome_iter.next().unwrap();
+              let mut node_mut = nodes[*idx].clone();
+              if let Some(imagesrc) = out.imagesrc {
+                let (w, h) = apply_transforms(&out.options, out.raw_dims);
+                Self::set_graphic_src(&mut node_mut, &imagesrc, w, h);
+              }
+            }
+          }
+        },
       }
     }
 
