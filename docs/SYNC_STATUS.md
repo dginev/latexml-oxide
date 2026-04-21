@@ -202,6 +202,19 @@ Marpa-related >60% CPU.
 - [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
 - [ ] Enumerate grammar rules by parse-tree count contribution.
 - [ ] Document grammar ambiguity per category.
+- [ ] **Latent no-op pragmas**: 6+ sites in `pragmatics.rs` check
+  only `XM::Lexeme("x.invisible_operator", …)` for the invisible-times
+  operator head, but `apply_invisible_times` produces `XM::Token { role:
+  MULOP, meaning: "times" }`. The literal string `"x.invisible_operator"`
+  appears nowhere outside `pragmatics.rs`, so those pragmas
+  silently never fire on real parses. Session 128+ fixed
+  `pragma_consistency_via_key` (and `pragma_functions_prefer_wider_absorption`
+  already used the richer check). Remaining sites to audit:
+  `pragma_fenced_letters_are_function_arguments` (L424),
+  `pragma_adjacent_unfenced_scripts_dont_apply` (L590),
+  `pragma_adjacent_functions_dont_unify_into_op` (L621), plus 3
+  helper predicates at L1161/1190/1208/1243. Each needs accept-both-shapes
+  + test coverage to catch accidental regressions.
 
 Remaining semantic-ambiguity hotspots (see
 `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`; live audit via
