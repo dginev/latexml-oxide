@@ -33,7 +33,11 @@ impl MuDimension {
       // The numeric capture `-?\d*\.?\d*` can match empty (e.g. input
       // "mu"); Perl's fixpoint coerces "" → 0 via numeric context, so
       // unwrap_or(0.0) keeps parity.
-      let num: f64 = cap.get(1).map_or("", |m| m.as_str()).parse::<f64>().unwrap_or(0.0);
+      let num: f64 = cap
+        .get(1)
+        .map_or("", |m| m.as_str())
+        .parse::<f64>()
+        .unwrap_or(0.0);
       MuDimension(fixpoint(num, Some(UNITY_F64)))
     } else {
       // Perl parity: bad input coerces to 0.
@@ -67,7 +71,10 @@ mod tests {
 
   #[test]
   fn mudim_register_type_is_mudimension() {
-    assert_eq!(MuDimension::default().register_type(), RegisterType::MuDimension);
+    assert_eq!(
+      MuDimension::default().register_type(),
+      RegisterType::MuDimension
+    );
   }
 
   #[test]

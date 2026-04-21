@@ -200,16 +200,18 @@ mod tests {
     let (_doc, root) = build_tree();
     let a = element_nodes(&root)[0].clone();
     let next = get_next_element(&a).expect("a has a next element");
-    assert_eq!(next.get_name(), "b",
-      "<a> next element must be <b>, skipping the text node");
+    assert_eq!(
+      next.get_name(),
+      "b",
+      "<a> next element must be <b>, skipping the text node"
+    );
   }
 
   #[test]
   fn get_next_element_none_at_end() {
     let (_doc, root) = build_tree();
     let c = element_nodes(&root)[2].clone();
-    assert!(get_next_element(&c).is_none(),
-      "last element has no next");
+    assert!(get_next_element(&c).is_none(), "last element has no next");
   }
 
   #[test]
@@ -217,16 +219,18 @@ mod tests {
     let (_doc, root) = build_tree();
     let b = element_nodes(&root)[1].clone();
     let prev = get_prev_element(&b).expect("b has a prev element");
-    assert_eq!(prev.get_name(), "a",
-      "<b> prev element must be <a>, skipping text");
+    assert_eq!(
+      prev.get_name(),
+      "a",
+      "<b> prev element must be <a>, skipping text"
+    );
   }
 
   #[test]
   fn get_prev_element_none_at_start() {
     let (_doc, root) = build_tree();
     let a = element_nodes(&root)[0].clone();
-    assert!(get_prev_element(&a).is_none(),
-      "first element has no prev");
+    assert!(get_prev_element(&a).is_none(), "first element has no prev");
   }
 
   #[test]
@@ -246,7 +250,9 @@ mod tests {
   fn is_descendant_or_self_false_for_sibling() {
     let (_doc, root) = build_tree();
     let kids = element_nodes(&root);
-    assert!(!is_descendant_or_self(&kids[0], &kids[1]),
-      "a is not a descendant of b");
+    assert!(
+      !is_descendant_or_self(&kids[0], &kids[1]),
+      "a is not a descendant of b"
+    );
   }
 }

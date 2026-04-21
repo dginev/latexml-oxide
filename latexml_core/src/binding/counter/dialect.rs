@@ -62,8 +62,8 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   let clctr = s!("\\cl@{ctr}");
   let cunctr = s!("\\c@{unctr}");
   let clunctr = s!("\\cl@{unctr}");
-  // Perl Package.pm L660-672: Check if counter already defined. Skip register if already a Register.
-  // Warn if previously defined as something other than \relax.
+  // Perl Package.pm L660-672: Check if counter already defined. Skip register if already a
+  // Register. Warn if previously defined as something other than \relax.
   let cs_cctr = T_CS!(&cctr);
   let prev_defn = lookup_definition(&cs_cctr)?;
   if let Some(ref defn) = prev_defn {
@@ -74,7 +74,11 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       let relax_meaning = state::lookup_meaning(&T_RELAX!());
       let prev_meaning = state::lookup_meaning(&cs_cctr);
       if prev_meaning != relax_meaning {
-        Warn!("unexpected", &cctr, s!("Counter {} was already defined; redefining", cctr));
+        Warn!(
+          "unexpected",
+          &cctr,
+          s!("Counter {} was already defined; redefining", cctr)
+        );
       }
       def_register(
         cs_cctr,
@@ -433,7 +437,10 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
           T_CS!(s!("\\the{ctr}")),
           None,
           ExpansionBody::Tokens(Tokens::new(Explode!(&refnum))),
-          Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+          Some(ExpandableOptions {
+            scope: Some(Scope::Global),
+            ..Default::default()
+          }),
         );
       }
     }
@@ -446,7 +453,10 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
         T_CS!(s!("\\the{ctr}@ID")),
         None,
         ExpansionBody::Tokens(Tokens::new(Explode!(&id))),
-        Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..Default::default()
+        }),
       );
     }
     state::remove_value("PEEKED_LABEL"); // CONSUME the label
@@ -920,7 +930,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
-          }
+          },
           ('a', Catcode::LETTER) => {
             // \alph{enum$level}
             def_macro(
@@ -930,7 +940,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
-          }
+          },
           ('I', Catcode::LETTER) => {
             // \Roman{enum$level}
             def_macro(
@@ -940,7 +950,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
-          }
+          },
           ('i', Catcode::LETTER) => {
             // \roman{enum$level}
             def_macro(
@@ -950,7 +960,7 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
-          }
+          },
           ('1', Catcode::OTHER) => {
             // \arabic{enum$level}
             def_macro(
@@ -960,10 +970,10 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
               None,
             )?;
             out.push(T_CS!(s!("\\theenum{level_str}")));
-          }
+          },
           _ => {
             out.push(t);
-          }
+          },
         }
         i += 1;
       }

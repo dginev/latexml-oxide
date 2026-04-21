@@ -13,11 +13,11 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 use crate::gullet;
+use crate::pin;
 use crate::state::{lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
-use crate::pin;
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
@@ -92,7 +92,9 @@ impl Tbox {
     //         $properties{isSpace} = 1; }
     // Auto-mark all-whitespace text as isSpace (matches Perl Box() behavior)
     if !properties.contains_key("isSpace") && text != empty_sym {
-      let is_all_ws = arena::with(text, |s| !s.is_empty() && s.chars().all(|c| c.is_whitespace()));
+      let is_all_ws = arena::with(text, |s| {
+        !s.is_empty() && s.chars().all(|c| c.is_whitespace())
+      });
       if is_all_ws {
         properties.insert("isSpace", Stored::Bool(true));
       }
@@ -321,8 +323,10 @@ mod tests {
   fn tbox_partial_eq_same_text_same_font() {
     let a = Tbox::default();
     let b = Tbox::default();
-    assert_eq!(a, b,
-      "two default Tboxes have same text '' and same text_default font");
+    assert_eq!(
+      a, b,
+      "two default Tboxes have same text '' and same text_default font"
+    );
   }
 
   #[test]

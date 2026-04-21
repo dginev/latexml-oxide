@@ -7,7 +7,6 @@ pub mod def_parser;
 pub mod dimension;
 pub mod float;
 pub mod font;
-pub mod pair;
 pub mod glue;
 pub mod ligature;
 pub mod local_assignments;
@@ -19,6 +18,7 @@ pub mod muglue;
 pub mod number;
 pub mod numeric_ops;
 pub mod object;
+pub mod pair;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
@@ -82,8 +82,7 @@ pub type BindingDispatcher = Rc<dyn Fn(&str) -> Option<Result<()>>>;
 
 /// Perl: LABEL_MAPPING_HOOK => sub { ($label, $ctr, $norefnum) => ($refnum, $id) }
 /// Returns (optional refnum string, optional id string)
-pub type LabelMappingHook =
-  Rc<dyn Fn(&str, &str, bool) -> (Option<String>, Option<String>)>;
+pub type LabelMappingHook = Rc<dyn Fn(&str, &str, bool) -> (Option<String>, Option<String>)>;
 
 #[derive(Clone)]
 pub struct Config {

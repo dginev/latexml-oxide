@@ -42,9 +42,9 @@ pub struct ConstructorOptions {
   pub after_construct:  Vec<ConstructionClosure>,
 
   /// switch to horizontal mode before digesting (Perl: enterHorizontal => 1)
-  pub enter_horizontal:   bool,
+  pub enter_horizontal: bool,
   /// switch to vertical mode before digesting (Perl: leaveHorizontal => 1)
-  pub leave_horizontal:   bool,
+  pub leave_horizontal: bool,
 
   // environment-specific
   /// requires to be used in math mode
@@ -211,7 +211,11 @@ impl PartialEq for Constructor {
 
 impl fmt::Display for Constructor {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", <Self as Definition>::stringify_type(self, "Constructor"))
+    write!(
+      f,
+      "{}",
+      <Self as Definition>::stringify_type(self, "Constructor")
+    )
   }
 }
 impl Object for Constructor {
@@ -272,9 +276,11 @@ impl Definition for Constructor {
     // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
     properties.entry("mode").or_insert_with(|| {
       let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-      Stored::String(crate::common::arena::pin(
-        if mode.is_empty() { "restricted_horizontal" } else { &mode },
-      ))
+      Stored::String(crate::common::arena::pin(if mode.is_empty() {
+        "restricted_horizontal"
+      } else {
+        &mode
+      }))
     });
     // $properties{level}   = $stomach->getBoxingLevel;
 

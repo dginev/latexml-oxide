@@ -161,7 +161,9 @@ pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
     Some(Stored::Strings(v)) => v.to_vec(),
     _ => Vec::new(),
   });
-  if registry.is_empty() { return Vec::new(); }
+  if registry.is_empty() {
+    return Vec::new();
+  }
   let mut result = Vec::new();
   for sym in registry {
     // Resolve the interned qname once via a closure — the five
@@ -183,7 +185,13 @@ pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
       let default = keyval_get(qname, "default")
         .map(|s| s.to_string())
         .unwrap_or_else(|| "[none]".to_string());
-      KeyvalMeta { key, prefix, keyset, kind, default }
+      KeyvalMeta {
+        key,
+        prefix,
+        keyset,
+        kind,
+        default,
+      }
     });
     result.push(entry);
   }
@@ -251,7 +259,11 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   // store metadata for introspection (used by \xkvview)
   // only register when xkvview tracking is enabled
   if state::lookup_bool("XKVVIEW_TRACKING") {
-    keyval_set(&qname, "kind", Stored::Tokens(tokenize(kind.unwrap_or("ordinary"))));
+    keyval_set(
+      &qname,
+      "kind",
+      Stored::Tokens(tokenize(kind.unwrap_or("ordinary"))),
+    );
     keyval_set(&qname, "keyval_prefix", Stored::Tokens(tokenize(prefix)));
     keyval_set(&qname, "keyset", Stored::Tokens(tokenize(keyset)));
     keyval_set(&qname, "key_name", Stored::Tokens(tokenize(key)));
@@ -279,8 +291,10 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
         Warn!(
           "unexpected",
           "keyval",
-          s!("Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
-          taking only first")
+          s!(
+            "Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
+          taking only first"
+          )
         );
       }
       keyval_set(&qname, "type", paramlist.take_parameters().remove(0).into());
@@ -536,7 +550,11 @@ mod tests {
 
   #[test]
   fn keyval_new_custom_prefix() {
-    let kv = KeyVal::new(Some("custom".to_string()), "ks".to_string(), "k".to_string());
+    let kv = KeyVal::new(
+      Some("custom".to_string()),
+      "ks".to_string(),
+      "k".to_string(),
+    );
     assert_eq!(kv.prefix, "custom");
     assert_eq!(kv.keyset, "ks");
     assert_eq!(kv.key, "k");
@@ -551,7 +569,11 @@ mod tests {
 
   #[test]
   fn keyval_get_header_format() {
-    let kv = KeyVal::new(Some("P".to_string()), "set".to_string(), "width".to_string());
+    let kv = KeyVal::new(
+      Some("P".to_string()),
+      "set".to_string(),
+      "width".to_string(),
+    );
     assert_eq!(kv.get_header(), "P@set@width");
   }
 

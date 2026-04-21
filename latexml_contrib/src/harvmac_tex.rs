@@ -9,8 +9,11 @@ LoadDefinitions!({
   // (single-pass processing). arxiv 0711.4787 used to fail here.
   DefMacro!("\\listtoc", "");
   DefMacro!("\\writetoc", {
-    Warn!("expected", "TOC",
-      "harvmac.tex.ltxml has not yet implemented Table-of-contents");
+    Warn!(
+      "expected",
+      "TOC",
+      "harvmac.tex.ltxml has not yet implemented Table-of-contents"
+    );
     Vec::<Token>::new()
   });
 });

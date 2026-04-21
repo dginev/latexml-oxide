@@ -15,18 +15,17 @@
 //!
 //! # Design notes
 //!
-//! - Uses `Arc<AtomicBool>` for cancellation. Polling every 100 ms keeps the
-//!   cancellation latency low without burning CPU.
-//! - `Drop` on the `Watchdog` handle cancels the watchdog thread, so RAII
-//!   usage (`let _wd = Watchdog::new(secs)`) is sufficient.
-//! - We use `std::process::abort()` rather than `panic!` because panic may
-//!   unwind or be caught by a surrounding `catch_unwind`, which would defeat
-//!   the safety guarantee. `abort()` delivers `SIGABRT` and always terminates
-//!   the process.
-//! - The existing cooperative `stomach::check_timeout()` path is retained: on
-//!   most conversions it fires before the hard abort, giving callers a nice
-//!   `Err(Fatal)` with proper error propagation. The watchdog is a safety
-//!   net for the pathological cases where cooperative polling doesn't happen.
+//! - Uses `Arc<AtomicBool>` for cancellation. Polling every 100 ms keeps the cancellation latency
+//!   low without burning CPU.
+//! - `Drop` on the `Watchdog` handle cancels the watchdog thread, so RAII usage (`let _wd =
+//!   Watchdog::new(secs)`) is sufficient.
+//! - We use `std::process::abort()` rather than `panic!` because panic may unwind or be caught by a
+//!   surrounding `catch_unwind`, which would defeat the safety guarantee. `abort()` delivers
+//!   `SIGABRT` and always terminates the process.
+//! - The existing cooperative `stomach::check_timeout()` path is retained: on most conversions it
+//!   fires before the hard abort, giving callers a nice `Err(Fatal)` with proper error propagation.
+//!   The watchdog is a safety net for the pathological cases where cooperative polling doesn't
+//!   happen.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -96,8 +95,10 @@ mod tests {
   fn watchdog_zero_timeout_is_noop() {
     // timeout_secs=0 should NOT spawn a thread and NOT abort.
     let w = Watchdog::new(0);
-    assert!(!w.cancelled.load(Ordering::Relaxed),
-      "initial cancelled state is false");
+    assert!(
+      !w.cancelled.load(Ordering::Relaxed),
+      "initial cancelled state is false"
+    );
     // Dropping is safe — there's no live thread to interact with.
     drop(w);
   }
@@ -119,8 +120,10 @@ mod tests {
       // Grab a reference to the atomic so we can inspect post-drop.
       w.cancelled.clone()
     }; // w dropped here
-    assert!(cancelled_ref.load(Ordering::Relaxed),
-      "drop should set cancelled=true");
+    assert!(
+      cancelled_ref.load(Ordering::Relaxed),
+      "drop should set cancelled=true"
+    );
   }
 
   #[test]

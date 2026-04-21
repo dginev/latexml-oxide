@@ -522,8 +522,10 @@ mod tests {
   #[test]
   fn directory_returns_dir() {
     assert_eq!(directory("path/to/foo.tex"), "path/to");
-    assert!(directory("foo.tex").is_empty() || directory("foo.tex") == ".",
-      "relative-only filename: dir is empty or '.'");
+    assert!(
+      directory("foo.tex").is_empty() || directory("foo.tex") == ".",
+      "relative-only filename: dir is empty or '.'"
+    );
   }
 
   #[test]

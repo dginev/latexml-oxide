@@ -14,11 +14,11 @@ use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::gullet;
 use crate::mouth::Mouth;
+use crate::pin;
 use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::pin;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
@@ -46,34 +46,34 @@ static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
 #[derive(Clone)]
 pub struct Parameter {
-  pub novalue:       bool,
-  pub semiverbatim:  Option<Vec<char>>,
-  pub optional:      bool,
-  pub name:          SymStr,
-  pub spec:          SymStr,
-  pub extra:         Vec<Tokens>,
-  pub inner:         Option<Parameters>,
-  pub reader:        ReaderClosure,
-  pub predigest:     Option<ReaderPredigestClosure>,
-  pub reversion:     Option<ReversionClosure>,
+  pub novalue:            bool,
+  pub semiverbatim:       Option<Vec<char>>,
+  pub optional:           bool,
+  pub name:               SymStr,
+  pub spec:               SymStr,
+  pub extra:              Vec<Tokens>,
+  pub inner:              Option<Parameters>,
+  pub reader:             ReaderClosure,
+  pub predigest:          Option<ReaderPredigestClosure>,
+  pub reversion:          Option<ReversionClosure>,
   /// Reversion closure that operates on the original Digested argument.
   /// Takes precedence over `reversion` when the argument is a digested value.
   /// Perl equivalent: `reversion` option on DefParameterType with `undigested => 1`.
   pub digested_reversion: Option<DigestedReversionClosure>,
-  pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest:  Vec<DigestionClosure>,
+  pub before_digest:      Vec<BeforeDigestClosure>,
+  pub after_digest:       Vec<DigestionClosure>,
 }
 impl Default for Parameter {
   fn default() -> Self {
     Parameter {
-      novalue:       false,
-      semiverbatim:  None,
-      optional:      false,
-      name:          arena::pin_static("parameter_default"),
-      spec:          pin!(""),
-      extra:         Vec::new(),
-      inner:         None,
-      reader:        Rc::new(|_args, _extra| {
+      novalue:            false,
+      semiverbatim:       None,
+      optional:           false,
+      name:               arena::pin_static("parameter_default"),
+      spec:               pin!(""),
+      extra:              Vec::new(),
+      inner:              None,
+      reader:             Rc::new(|_args, _extra| {
         Warn!(
           "Parameter",
           "mock_reader",
@@ -81,11 +81,11 @@ impl Default for Parameter {
         );
         Ok(ArgWrap::None)
       }),
-      predigest:     None,
-      reversion:     None,
+      predigest:          None,
+      reversion:          None,
       digested_reversion: None,
-      before_digest: Vec::new(),
-      after_digest:  Vec::new(),
+      before_digest:      Vec::new(),
+      after_digest:       Vec::new(),
     }
   }
 }
@@ -256,7 +256,9 @@ impl Parameter {
           self.optional = true;
         }
         self.reversion.clone_from(&descriptor.reversion);
-        self.digested_reversion.clone_from(&descriptor.digested_reversion);
+        self
+          .digested_reversion
+          .clone_from(&descriptor.digested_reversion);
         self.before_digest.clone_from(&descriptor.before_digest);
         self.after_digest.clone_from(&descriptor.after_digest);
         self.predigest.clone_from(&descriptor.predigest);
@@ -272,15 +274,13 @@ impl Parameter {
       ),
     }
     // Last but not least, initialize any "inner" parameters
-    self.inner = self
-      .inner
-      .map(|inner_ps| match inner_ps.clone().init() {
-        Ok(ps) => ps,
-        Err(e) => {
-          log::warn!("inner parameter init failed: {e}");
-          inner_ps
-        }
-      });
+    self.inner = self.inner.map(|inner_ps| match inner_ps.clone().init() {
+      Ok(ps) => ps,
+      Err(e) => {
+        log::warn!("inner parameter init failed: {e}");
+        inner_ps
+      },
+    });
     Ok(self)
   }
 
@@ -331,7 +331,7 @@ impl Parameter {
           value = value.neutralize(semi_chars);
         }
         ArgWrap::Tokens(value)
-      }
+      },
       other => other,
     };
     self.revert_catcodes()?;

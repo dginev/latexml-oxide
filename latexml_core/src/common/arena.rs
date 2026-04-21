@@ -29,13 +29,12 @@ pub use data::{SymHashMap, SymStr};
 type Interner = StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>;
 
 #[thread_local]
-static ARENA: Lazy<RefCell<Interner>> =
-  Lazy::new(|| {
-    RefCell::new(StringInterner::with_capacity_and_hasher(
-      32_768,
-      BuildHasherDefault::<FxHasher>::default(),
-    ))
-  });
+static ARENA: Lazy<RefCell<Interner>> = Lazy::new(|| {
+  RefCell::new(StringInterner::with_capacity_and_hasher(
+    32_768,
+    BuildHasherDefault::<FxHasher>::default(),
+  ))
+});
 
 /// Cached raw pointer to the arena's inner interner, valid only while the
 /// outermost `with_arena_mut` holds its `RefMut` guard. Null when idle.
@@ -47,9 +46,7 @@ static ACTIVE: Cell<*mut Interner> = Cell::new(std::ptr::null_mut());
 /// reverse declaration order), ensuring no window where ACTIVE is stale.
 struct ArenaCleanup;
 impl Drop for ArenaCleanup {
-  fn drop(&mut self) {
-    ACTIVE.set(std::ptr::null_mut());
-  }
+  fn drop(&mut self) { ACTIVE.set(std::ptr::null_mut()); }
 }
 
 /// Execute `f` with mutable access to the interner.
@@ -124,9 +121,7 @@ macro_rules! pin {
 /// false-fired on dedup-heavy hot loops, and the distinct-symbol one
 /// added a per-call `arena.len()` read on a hot path (~350k calls
 /// per doc). Neither cost was paying for itself.
-pub fn pin<S: AsRef<str>>(text: S) -> SymStr {
-  with_arena_mut(|arena| arena.get_or_intern(text))
-}
+pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_or_intern(text)) }
 
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
 /// SymStr for the lifetime of the thread (arena is append-only, syms
@@ -137,7 +132,8 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr {
 /// (1.4% Ir per callgrind on siunitx-heavy fixtures). The fast path
 /// avoids `with_arena_mut` entirely for the common ASCII case.
 #[thread_local]
-static ASCII_CHAR_SYM: [std::cell::Cell<u32>; 128] = [const { std::cell::Cell::new(u32::MAX) }; 128];
+static ASCII_CHAR_SYM: [std::cell::Cell<u32>; 128] =
+  [const { std::cell::Cell::new(u32::MAX) }; 128];
 
 pub fn pin_char(c: char) -> SymStr {
   use string_interner::Symbol;
@@ -147,8 +143,7 @@ pub fn pin_char(c: char) -> SymStr {
     if cached != u32::MAX {
       // SAFETY: cached was produced by a prior successful `pin` below, so
       // the SymStr is valid for this arena.
-      return SymStr::try_from_usize(cached as usize)
-        .expect("invalid cached ASCII SymStr");
+      return SymStr::try_from_usize(cached as usize).expect("invalid cached ASCII SymStr");
     }
   }
   let sym = {
@@ -241,8 +236,7 @@ mod tests {
   fn pin_dedups_equal_strings() {
     let a = pin("arena_test_foo");
     let b = pin("arena_test_foo");
-    assert_eq!(a, b,
-      "equal strings must return the same SymStr");
+    assert_eq!(a, b, "equal strings must return the same SymStr");
   }
 
   #[test]
@@ -256,8 +250,7 @@ mod tests {
   fn pin_static_matches_pin() {
     let a = pin_static("arena_test_qux");
     let b = pin("arena_test_qux");
-    assert_eq!(a, b,
-      "pin_static and pin should intern to the same SymStr");
+    assert_eq!(a, b, "pin_static and pin should intern to the same SymStr");
   }
 
   #[test]
@@ -285,8 +278,7 @@ mod tests {
     let sym = pin_char('a');
     assert_eq!(to_string(sym), "a");
     let sym2 = pin_char('a');
-    assert_eq!(sym, sym2,
-      "ASCII char pin is cached");
+    assert_eq!(sym, sym2, "ASCII char pin is cached");
   }
 
   #[test]
@@ -318,7 +310,6 @@ mod tests {
     // intern to the same underlying symbol.
     let a = pin!("arena_test_literal");
     let b = pin!("arena_test_literal");
-    assert_eq!(a, b,
-      "same literal at different call sites → same SymStr");
+    assert_eq!(a, b, "same literal at different call sites → same SymStr");
   }
 }

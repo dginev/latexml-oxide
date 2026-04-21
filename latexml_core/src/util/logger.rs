@@ -13,14 +13,10 @@ static LOGGER: LatexmlLogger = LatexmlLogger;
 static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
 
 /// Start capturing log output into the buffer (Perl: bind_log).
-pub fn bind_log() {
-  *LOG_BUFFER.borrow_mut() = Some(String::new());
-}
+pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
 
 /// Flush and return the captured log output, stopping capture (Perl: flush_log).
-pub fn flush_log() -> String {
-  LOG_BUFFER.borrow_mut().take().unwrap_or_default()
-}
+pub fn flush_log() -> String { LOG_BUFFER.borrow_mut().take().unwrap_or_default() }
 
 /// Strip ANSI escape sequences from a string for log file output.
 fn strip_ansi(s: &str) -> String {
@@ -184,7 +180,9 @@ mod tests {
 
     bind_log();
     let after = flush_log();
-    assert!(after.is_empty(),
-      "empty buffer is still empty after bind/flush with no log traffic");
+    assert!(
+      after.is_empty(),
+      "empty buffer is still empty after bind/flush with no log traffic"
+    );
   }
 }

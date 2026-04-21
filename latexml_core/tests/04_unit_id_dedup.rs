@@ -34,29 +34,46 @@ fn set_attribute_xml_id_deduplicates_on_conflict() {
 
   // First set: accepted as-is.
   doc.set_attribute(&mut node1, "xml:id", "X").unwrap();
-  assert_eq!(node1.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").as_deref(), Some("X"),
-    "first node gets its requested id");
+  assert_eq!(
+    node1
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .as_deref(),
+    Some("X"),
+    "first node gets its requested id"
+  );
 
   // Second set on a DIFFERENT node with the SAME requested id:
   // record_id_with_node must deduplicate. Before bab8beb53 the
   // shadow-variable bug silently dropped the rename and BOTH nodes
   // ended up with xml:id=X (+ idstore pointing at node2 only).
   doc.set_attribute(&mut node2, "xml:id", "X").unwrap();
-  assert_ne!(node2.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").as_deref(), Some("X"),
-    "conflicting id must be deduplicated to a different value");
+  assert_ne!(
+    node2
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .as_deref(),
+    Some("X"),
+    "conflicting id must be deduplicated to a different value"
+  );
 
   // node1 keeps its original id.
-  assert_eq!(node1.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").as_deref(), Some("X"),
-    "non-conflicting node's id is untouched");
+  assert_eq!(
+    node1
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .as_deref(),
+    Some("X"),
+    "non-conflicting node's id is untouched"
+  );
 
   // idstore tracks BOTH nodes — the deduped id and the original.
-  assert!(doc.lookup_id("X").is_some(),
-    "original id still indexed");
-  let node2_id = node2.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").unwrap();
-  assert!(doc.lookup_id(&node2_id).is_some(),
-    "deduped id also indexed");
-  assert_ne!(node2_id, "X",
-    "deduped id must differ from original");
+  assert!(doc.lookup_id("X").is_some(), "original id still indexed");
+  let node2_id = node2
+    .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+    .unwrap();
+  assert!(
+    doc.lookup_id(&node2_id).is_some(),
+    "deduped id also indexed"
+  );
+  assert_ne!(node2_id, "X", "deduped id must differ from original");
 }
 
 #[test]
@@ -73,8 +90,13 @@ fn set_attribute_xml_id_idempotent_on_self() {
 
   doc.set_attribute(&mut node, "xml:id", "Y").unwrap();
   doc.set_attribute(&mut node, "xml:id", "Y").unwrap();
-  assert_eq!(node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").as_deref(), Some("Y"),
-    "re-setting same id on same node is a no-op");
+  assert_eq!(
+    node
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .as_deref(),
+    Some("Y"),
+    "re-setting same id on same node is a no-op"
+  );
 }
 
 #[test]
@@ -100,11 +122,19 @@ fn rebuild_idstore_finds_all_ids_post_dedup() {
 
   // The DOM has three distinct xml:ids after dedup. idstore should
   // index all three.
-  let id1 = n1.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").unwrap();
-  let id2 = n2.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").unwrap();
-  let id3 = n3.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").unwrap();
-  assert!(id1 != id2 && id1 != id3 && id2 != id3,
-    "three nodes must end up with distinct xml:ids after dedup; got {id1}, {id2}, {id3}");
+  let id1 = n1
+    .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+    .unwrap();
+  let id2 = n2
+    .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+    .unwrap();
+  let id3 = n3
+    .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+    .unwrap();
+  assert!(
+    id1 != id2 && id1 != id3 && id2 != id3,
+    "three nodes must end up with distinct xml:ids after dedup; got {id1}, {id2}, {id3}"
+  );
   assert!(doc.lookup_id(&id1).is_some());
   assert!(doc.lookup_id(&id2).is_some());
   assert!(doc.lookup_id(&id3).is_some());

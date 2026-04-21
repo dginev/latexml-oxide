@@ -168,8 +168,11 @@ mod tests {
   fn up_alpha_vs_alpha_case_only() {
     // For all n, up_alpha(n) should equal alpha(n).to_uppercase().
     for n in 0..60 {
-      assert_eq!(radix_up_alpha(n), radix_alpha(n).to_uppercase(),
-        "divergence at {n}");
+      assert_eq!(
+        radix_up_alpha(n),
+        radix_alpha(n).to_uppercase(),
+        "divergence at {n}"
+      );
     }
   }
 
@@ -177,7 +180,7 @@ mod tests {
   fn greek_basic() {
     assert_eq!(radix_greek(0), "");
     assert_eq!(radix_greek(1), "α");
-    assert_eq!(radix_greek(24), "ω");  // ω is the 24th (skip final-sigma)
+    assert_eq!(radix_greek(24), "ω"); // ω is the 24th (skip final-sigma)
     assert_eq!(radix_greek(25), "αα");
   }
 

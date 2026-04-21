@@ -97,8 +97,15 @@ impl BoxOps for List {
   }
 
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
-  fn compute_size(&self, mut options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
-    let font = self.font.as_ref().cloned().unwrap_or_else(Font::text_default);
+  fn compute_size(
+    &self,
+    mut options: HashMap<Stored>,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
+    let font = self
+      .font
+      .as_ref()
+      .cloned()
+      .unwrap_or_else(Font::text_default);
     // Perl: pass mode, vattach, and width from List properties through options
     // so that compute_boxes_size can determine layout mode
     //
@@ -111,9 +118,7 @@ impl BoxOps for List {
       if let Stored::String(s) = mode_str {
         options.insert("mode", Stored::String(*s));
       }
-    } else if self.properties.get("width").is_some()
-      && matches!(self.mode, Some(TexMode::Text))
-    {
+    } else if self.properties.get("width").is_some() && matches!(self.mode, Some(TexMode::Text)) {
       // Lists with width property set are from horizontal mode (paragraph layout)
       options.insert("mode", Stored::String(arena::pin_static("horizontal")));
     }

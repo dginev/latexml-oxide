@@ -3,8 +3,8 @@ use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::color::{self, Color};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, kround};
-use crate::state::*;
 use crate::common::store::Stored;
+use crate::state::*;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use once_cell::sync::Lazy;
 /// Note that this has evolved way beynond just "font",
@@ -22,8 +22,8 @@ use std::hash::{BuildHasher, Hash, Hasher};
 use std::rc::Rc;
 
 pub mod standard_metrics;
-use standard_metrics::{MetricData, STDMETRICS};
 use crate::pin;
+use standard_metrics::{MetricData, STDMETRICS};
 
 pub type Fontmap = Rc<[Option<char>]>;
 
@@ -201,9 +201,8 @@ static MATH_STYLE_STEP: Lazy<HashMap<&'static str, HashMap<&'static str, i32>>> 
   "script"=> raw_map!("display" => -2, "text" => -1, "script" => 0, "scriptscript" => 1),
   "scriptscript" => raw_map!("display" => -3, "text" => -2, "script" => -1, "scriptscript" => 0))
 });
-static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> =
-  Lazy::new(|| {
-    raw_map!(
+static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> = Lazy::new(|| {
+  raw_map!(
 "display" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
   0 => "display", 1 => "text", 2 => "script", 3 => "scriptscript"),
 "text" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
@@ -212,7 +211,7 @@ static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> 
   0 => "script", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"),
 "scriptscript" => raw_map!(-3 => "display", -2 => "text", -1 => "script",
   0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"))
-  });
+});
 
 /// Map Font (family, series, shape) to a TeX fontname (tfm).
 /// Returns `None` if the combo isn't recognized. Matching on a tuple
@@ -222,20 +221,20 @@ static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> 
 /// `METRIC_MAP.get(&format!(…))` pattern.
 fn lookup_metric_name(family: &str, series: &str, shape: &str) -> Option<&'static str> {
   match (family, series, shape) {
-    ("serif",      "medium", "upright")       => Some("cmr"),
-    ("serif",      "medium", "slanted")       => Some("cmsl"),
-    ("serif",      "medium", "italic")        => Some("cmti"),
-    ("serif",      "medium", "uprightitalic") => Some("cmu"),
-    ("serif",      "bold",   "upright")       => Some("cmbx"),
-    ("serif",      "medum",  "smallcaps")     => Some("cmcsc"), // typo preserved from Perl
-    ("sansserif",  "medium", "upright")       => Some("cmss"),
-    ("sansserif",  "medium", "italic")        => Some("cmssi"),
-    ("sansserif",  "bold",   "upright")       => Some("cmssbx"),
-    ("typewriter", "medium", "upright")       => Some("cmtt"),
-    ("typewriter", "medium", "slanted")       => Some("cmsltt"),
-    ("math",       "medium", "italic")        => Some("cmmi"),
-    ("math",       "medium", "upright")       => Some("cmr"),
-    ("math",       "bold",   "italic")        => Some("cmmib"),
+    ("serif", "medium", "upright") => Some("cmr"),
+    ("serif", "medium", "slanted") => Some("cmsl"),
+    ("serif", "medium", "italic") => Some("cmti"),
+    ("serif", "medium", "uprightitalic") => Some("cmu"),
+    ("serif", "bold", "upright") => Some("cmbx"),
+    ("serif", "medum", "smallcaps") => Some("cmcsc"), // typo preserved from Perl
+    ("sansserif", "medium", "upright") => Some("cmss"),
+    ("sansserif", "medium", "italic") => Some("cmssi"),
+    ("sansserif", "bold", "upright") => Some("cmssbx"),
+    ("typewriter", "medium", "upright") => Some("cmtt"),
+    ("typewriter", "medium", "slanted") => Some("cmsltt"),
+    ("math", "medium", "italic") => Some("cmmi"),
+    ("math", "medium", "upright") => Some("cmr"),
+    ("math", "bold", "italic") => Some("cmmib"),
     _ => None,
   }
 }
@@ -292,11 +291,7 @@ pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 
 /// Combine family/series/shape lookups into a single Font (Perl lookupTeXFont)
-pub fn lookup_tex_font(
-  fontname: &str,
-  seriescode: &str,
-  shapecode: &str,
-) -> Font {
+pub fn lookup_tex_font(fontname: &str, seriescode: &str, shapecode: &str) -> Font {
   let mut props = Font::default();
   if let Some(ffam) = lookup_font_family(fontname) {
     props = props.merge_ref(ffam);
@@ -344,7 +339,9 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
     }
   }
   // Ultimate fallback to "cmr"
-  STDMETRICS.get("cmr").expect("STDMETRICS must contain 'cmr'")
+  STDMETRICS
+    .get("cmr")
+    .expect("STDMETRICS must contain 'cmr'")
 }
 
 pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>) -> Option<Font> {
@@ -615,7 +612,10 @@ impl Font {
   /// Condensed string showing only non-default components.
   /// Perl: stringify
   pub fn stringify(&self) -> String {
-    let fam = self.family.as_deref().map(|f| if f == "math" { "serif" } else { f });
+    let fam = self
+      .family
+      .as_deref()
+      .map(|f| if f == "math" { "serif" } else { f });
     let mut parts: Vec<&str> = Vec::new();
     if let Some(f) = fam {
       if f != DEFFAMILY {
@@ -694,27 +694,30 @@ impl Font {
   /// Perl: makeConcrete
   pub fn make_concrete(&self, concrete: &Font) -> Self {
     Font {
-      family: self.family.clone().or_else(|| concrete.family.clone()),
-      series: self.series.clone().or_else(|| concrete.series.clone()),
-      shape: self.shape.clone().or_else(|| concrete.shape.clone()),
-      size: self.size.or(concrete.size),
-      color: self.color.or(concrete.color),
-      bg: self.bg.or(concrete.bg),
-      opacity: self.opacity.clone().or_else(|| concrete.opacity.clone()),
-      encoding: self.encoding.clone().or_else(|| concrete.encoding.clone()),
-      language: self.language.clone().or_else(|| concrete.language.clone()),
-      mathstyle: self.mathstyle.clone().or_else(|| concrete.mathstyle.clone()),
-      flags: Some(self.flags.unwrap_or(0) | concrete.flags.unwrap_or(0)),
+      family:        self.family.clone().or_else(|| concrete.family.clone()),
+      series:        self.series.clone().or_else(|| concrete.series.clone()),
+      shape:         self.shape.clone().or_else(|| concrete.shape.clone()),
+      size:          self.size.or(concrete.size),
+      color:         self.color.or(concrete.color),
+      bg:            self.bg.or(concrete.bg),
+      opacity:       self.opacity.clone().or_else(|| concrete.opacity.clone()),
+      encoding:      self.encoding.clone().or_else(|| concrete.encoding.clone()),
+      language:      self.language.clone().or_else(|| concrete.language.clone()),
+      mathstyle:     self
+        .mathstyle
+        .clone()
+        .or_else(|| concrete.mathstyle.clone()),
+      flags:         Some(self.flags.unwrap_or(0) | concrete.flags.unwrap_or(0)),
       mathstylestep: self.mathstylestep.or(concrete.mathstylestep),
-      name: self.name.clone().or_else(|| concrete.name.clone()),
-      emph: self.emph.or(concrete.emph),
-      scripted: self.scripted.or(concrete.scripted),
-      fraction: self.fraction.or(concrete.fraction),
-      forceseries: self.forceseries.or(concrete.forceseries),
-      forcefamily: self.forcefamily.or(concrete.forcefamily),
-      forceshape: self.forceshape.or(concrete.forceshape),
-      forcebold: self.forcebold.or(concrete.forcebold),
-      scale: self.scale.or(concrete.scale),
+      name:          self.name.clone().or_else(|| concrete.name.clone()),
+      emph:          self.emph.or(concrete.emph),
+      scripted:      self.scripted.or(concrete.scripted),
+      fraction:      self.fraction.or(concrete.fraction),
+      forceseries:   self.forceseries.or(concrete.forceseries),
+      forcefamily:   self.forcefamily.or(concrete.forcefamily),
+      forceshape:    self.forceshape.or(concrete.forceshape),
+      forcebold:     self.forcebold.or(concrete.forcebold),
+      scale:         self.scale.or(concrete.scale),
     }
   }
 
@@ -777,9 +780,7 @@ impl Font {
       .get_mathstyle()
       .map(|s| s.to_string())
       .unwrap_or_else(|| "text".to_string());
-    if bearing == 0
-      || (bearing < 0 && style != "display" && style != "text")
-    {
+    if bearing == 0 || (bearing < 0 && style != "display" && style != "text") {
       return 0.0;
     }
     // Look up the bearing register: 1=thinmuskip, 2=medmuskip, 3=thickmuskip
@@ -870,12 +871,16 @@ impl Font {
     let color = other.color.or(self.color);
     // Perl: $bg = $$self[5] if (!exists $options{background});
     // Only override bg if `other` actually specifies one
-    let bg = if other.bg.is_some() { other.bg } else { self.bg };
+    let bg = if other.bg.is_some() {
+      other.bg
+    } else {
+      self.bg
+    };
     let opacity = other.opacity.clone().or_else(|| self.opacity.clone());
     let encoding = other.encoding.clone().or_else(|| self.encoding.clone());
     let language = other.language.clone().or_else(|| self.language.clone());
     let mut mathstyle = other.mathstyle.clone().or_else(|| self.mathstyle.clone());
-    flags |= self.flags.unwrap_or(0) ;
+    flags |= self.flags.unwrap_or(0);
 
     // Dynamic adjustment directives
     if let Some(scale) = other.scale {
@@ -944,9 +949,21 @@ impl Font {
       emph: None,
       scripted: None,
       fraction: None,
-      forceseries: if flags & FLAG_FORCE_SERIES != 0 { Some(true) } else { None },
-      forcefamily: if flags & FLAG_FORCE_FAMILY != 0 { Some(true) } else { None },
-      forceshape: if flags & FLAG_FORCE_SHAPE != 0 { Some(true) } else { None },
+      forceseries: if flags & FLAG_FORCE_SERIES != 0 {
+        Some(true)
+      } else {
+        None
+      },
+      forcefamily: if flags & FLAG_FORCE_FAMILY != 0 {
+        Some(true)
+      } else {
+        None
+      },
+      forceshape: if flags & FLAG_FORCE_SHAPE != 0 {
+        Some(true)
+      } else {
+        None
+      },
       forcebold: None,
       scale: None,
     };
@@ -1034,8 +1051,14 @@ impl Font {
   pub fn distance(&self, other: &Font) -> i8 {
     let mut distance: i8 = 0;
     // Normalize "math" → "serif" for comparison (Perl lines 436-437)
-    let fam = self.family.as_deref().map(|f| if f == "math" { "serif" } else { f });
-    let ofam = other.family.as_deref().map(|f| if f == "math" { "serif" } else { f });
+    let fam = self
+      .family
+      .as_deref()
+      .map(|f| if f == "math" { "serif" } else { f });
+    let ofam = other
+      .family
+      .as_deref()
+      .map(|f| if f == "math" { "serif" } else { f });
     if is_diff_opt_str(fam, ofam) {
       distance += 1;
     }
@@ -1169,46 +1192,46 @@ impl Font {
       let effective_color = self.color.unwrap_or(DEFCOLOR);
       result.insert(
         "color".to_string(),
-        (
-          effective_color.to_attribute(),
-          Font { color: Some(effective_color), ..Font::default() },
-        ),
+        (effective_color.to_attribute(), Font {
+          color: Some(effective_color),
+          ..Font::default()
+        }),
       );
     }
     if is_diff_color(self.bg.as_ref(), other.bg.as_ref()) {
       result.insert(
         "backgroundcolor".to_string(),
-        (
-          self.bg.as_ref().unwrap().to_attribute(),
-          Font { bg: self.bg, ..Font::default() },
-        ),
+        (self.bg.as_ref().unwrap().to_attribute(), Font {
+          bg: self.bg,
+          ..Font::default()
+        }),
       );
     }
     if is_diff(self.opacity.as_ref(), other.opacity.as_ref()) {
       result.insert(
         "opacity".to_string(),
-        (
-          self.opacity.as_ref().unwrap().to_string(),
-          Font { opacity: self.opacity.clone(), ..Font::default() },
-        ),
+        (self.opacity.as_ref().unwrap().to_string(), Font {
+          opacity: self.opacity.clone(),
+          ..Font::default()
+        }),
       );
     }
     if is_diff(self.encoding.as_ref(), other.encoding.as_ref()) {
       result.insert(
         "encoding".to_string(),
-        (
-          self.encoding.as_ref().unwrap().to_string(),
-          Font { encoding: self.encoding.clone(), ..Font::default() },
-        ),
+        (self.encoding.as_ref().unwrap().to_string(), Font {
+          encoding: self.encoding.clone(),
+          ..Font::default()
+        }),
       );
     }
     if is_diff(self.language.as_ref(), other.language.as_ref()) {
       result.insert(
         "xml:lang".to_string(),
-        (
-          self.language.as_ref().unwrap().to_string(),
-          Font { language: self.language.clone(), ..Font::default() },
-        ),
+        (self.language.as_ref().unwrap().to_string(), Font {
+          language: self.language.clone(),
+          ..Font::default()
+        }),
       );
     }
     // Emph: (!$mstyle && $flags && ($flags & $FLAG_EMPH) && (!$oflags || !($oflags & $FLAG_EMPH))
@@ -1720,7 +1743,9 @@ fn is_diff_color(x: Option<&Color>, y: Option<&Color>) -> bool {
 fn is_diff_font_color(x: Option<&Color>, y: Option<&Color>) -> bool {
   let cx = x.unwrap_or(&DEFCOLOR);
   let cy = y.unwrap_or(&DEFCOLOR);
-  if cx == cy { return false; }
+  if cx == cy {
+    return false;
+  }
   cx.to_rgb() != cy.to_rgb()
 }
 
@@ -1741,13 +1766,20 @@ fn is_diff_font_color_ref(x: Option<&Color>, y: Option<&Color>) -> bool {
 /// Perl: match_font
 pub fn match_font(font1: &str, font2: &str) -> bool {
   // Build a regex from font1 where '*' components become wildcards
-  if let Some(inner) = font1.strip_prefix("Font[").and_then(|s| s.strip_suffix(']')) {
+  if let Some(inner) = font1
+    .strip_prefix("Font[")
+    .and_then(|s| s.strip_suffix(']'))
+  {
     let comps: Vec<&str> = inner.split(',').collect();
     let re_str = format!(
       "^Font\\[{}\\]$",
       comps
         .iter()
-        .map(|c| if *c == "*" { "[^,]+".to_string() } else { regex::escape(c) })
+        .map(|c| if *c == "*" {
+          "[^,]+".to_string()
+        } else {
+          regex::escape(c)
+        })
         .collect::<Vec<_>>()
         .join(",")
     );

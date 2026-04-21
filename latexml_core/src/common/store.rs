@@ -933,9 +933,7 @@ impl From<KeyVals> for Stored {
 }
 
 impl From<crate::alignment::template::Template> for Stored {
-  fn from(t: crate::alignment::template::Template) -> Stored {
-    Stored::Template(Rc::new(t))
-  }
+  fn from(t: crate::alignment::template::Template) -> Stored { Stored::Template(Rc::new(t)) }
 }
 
 impl From<Option<&Stored>> for Stored {

@@ -8,7 +8,8 @@ LoadDefinitions!({
   // Also defines \eqnarray, \yesnumber, \eqalign, \cases, \eqaligntwo via RawTeX.
   // These are complex alignment environments that would need runtime support.
   // For now, load the raw TeX definitions.
-  RawTeX!(r"\newif\if@defeqnsw \@defeqnswtrue
+  RawTeX!(
+    r"\newif\if@defeqnsw \@defeqnswtrue
 
 \def\yesnumber{\global\@eqnswtrue}
 
@@ -23,5 +24,6 @@ LoadDefinitions!({
 
 \def\cases{\left\{\,\vcenter\bgroup\normalbaselines\m@th \let\\=\@eqnacr
     \ialign\bgroup$##\hfil$&\quad##\hfil\crcr}
-\def\endcases{\crcr\egroup\egroup\right.}");
+\def\endcases{\crcr\egroup\egroup\right.}"
+  );
 });

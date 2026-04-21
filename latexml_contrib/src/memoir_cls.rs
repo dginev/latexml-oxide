@@ -1,8 +1,11 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "memoir.cls",
-    "memoir.cls is only minimally stubbed and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "memoir.cls",
+    "memoir.cls is only minimally stubbed and will not be interpreted raw."
+  );
   LoadClass!("OmniBus");
   RequirePackage!("iftex");
   RequirePackage!("array");

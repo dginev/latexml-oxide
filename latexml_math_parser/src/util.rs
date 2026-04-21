@@ -67,7 +67,9 @@ fn node_to_grammar_lexemes_ctx(
       // \xleftrightarrow[under]{over}) should be atomic terminals.
       // Extract the meaning from the inner ARROW/METARELOP child token.
       if role == "ARROW" || role == "METARELOP" {
-        let arrow_meaning = node.get_child_elements().into_iter()
+        let arrow_meaning = node
+          .get_child_elements()
+          .into_iter()
           .find(|ch| {
             let cr = ch.get_attribute("role");
             cr.as_deref() == Some("ARROW") || cr.as_deref() == Some("METARELOP")
@@ -101,7 +103,8 @@ fn node_to_grammar_lexemes_ctx(
         let is_script = matches!(role.as_str(), "POSTSUBSCRIPT" | "POSTSUPERSCRIPT");
         let ctx = last_was_bigop && is_script;
         let children = filter_hints(node.get_child_nodes());
-        let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes_ctx(&node, children, idx, ctx);
+        let (mut inner_lexes, mut inner_nodes) =
+          node_to_grammar_lexemes_ctx(&node, children, idx, ctx);
         for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
           lexemes.push(inner_lex);
           nodes.push(inner_node);
@@ -130,7 +133,10 @@ fn node_to_grammar_lexemes_ctx(
       }
       *idx += 1;
       // Track bigop tokens for bigop-specific script token emission
-      let is_bigop = matches!(role.as_str(), "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP");
+      let is_bigop = matches!(
+        role.as_str(),
+        "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP"
+      );
       last_was_bigop = is_bigop;
       // Normalize langle/rangle meaning for consistent grammar matching.
       // Do NOT remap to parentheses — langle_open/rangle_close tokens need
@@ -286,7 +292,11 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
         if let Some(Some(mut hint)) = last_hint_for.get(i).cloned() {
           let _ = hint.set_attribute("role", "PUNCT");
           // Clean width: round to integer if close, matching Perl format
-          let s_rounded = if (s - s.round()).abs() < 0.01 { s.round() } else { s };
+          let s_rounded = if (s - s.round()).abs() < 0.01 {
+            s.round()
+          } else {
+            s
+          };
           let width = format!("{}pt", s_rounded);
           let _ = hint.set_attribute("width", &width);
           // Remove extraneous attributes from the reused hint node
@@ -342,7 +352,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           Err(e) => {
             log::warn!("create_xmrefs: skipping lexeme with invalid node lookup: {e}");
             continue;
-          }
+          },
         };
 
         match node.get_attribute("xml:id") {
@@ -354,7 +364,8 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           None => {
             // Generate xml:id for this node so we can reference it
             document.generate_id(&mut node.clone(), "")?;
-            let generated_id = node.get_attribute("xml:id")
+            let generated_id = node
+              .get_attribute("xml:id")
               .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
               .or_else(|| node.get_attribute("id"));
             if let Some(id) = generated_id {

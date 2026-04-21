@@ -178,8 +178,10 @@ mod tests {
     for name in TagOptionName::all() {
       let p = name.is_prepend();
       let a = name.is_append();
-      assert!(p != a,
-        "variant classification should be exactly one of prepend/append");
+      assert!(
+        p != a,
+        "variant classification should be exactly one of prepend/append"
+      );
     }
   }
 

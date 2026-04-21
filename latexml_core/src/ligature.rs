@@ -60,18 +60,18 @@ mod tests {
   #[test]
   fn math_ligature_options_equality() {
     let a = MathLigatureOptions {
-      role: Some("ADDOP".into()),
-      name: None,
+      role:    Some("ADDOP".into()),
+      name:    None,
       meaning: Some("plus".into()),
     };
     let b = MathLigatureOptions {
-      role: Some("ADDOP".into()),
-      name: None,
+      role:    Some("ADDOP".into()),
+      name:    None,
       meaning: Some("plus".into()),
     };
     let c = MathLigatureOptions {
-      role: Some("RELOP".into()),  // differs
-      name: None,
+      role:    Some("RELOP".into()), // differs
+      name:    None,
       meaning: Some("plus".into()),
     };
     assert_eq!(a, b);
@@ -82,8 +82,8 @@ mod tests {
   fn math_ligature_sorted_each_fixed_order() {
     // Perl parity: output always ordered (meaning, name, role).
     let m = MathLigatureOptions {
-      role: Some("r".into()),
-      name: Some("n".into()),
+      role:    Some("r".into()),
+      name:    Some("n".into()),
       meaning: Some("m".into()),
     };
     let ordered = m.sorted_each();

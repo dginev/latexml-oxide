@@ -159,7 +159,11 @@ impl BoxOps for KeyVals {
     crate::common::dimension::Dimension,
   )> {
     use crate::common::dimension::Dimension;
-    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+    Ok((
+      Dimension::default(),
+      Dimension::default(),
+      Dimension::default(),
+    ))
   }
 }
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -252,7 +256,9 @@ impl KeyVals {
         }
         let all_joined = allkeysets.join(",");
         let is_new = SEEN_MISSING.with(|cell| {
-          cell.borrow_mut().insert((prefix.clone(), key.to_string(), all_joined.clone()))
+          cell
+            .borrow_mut()
+            .insert((prefix.clone(), key.to_string(), all_joined.clone()))
         });
         if is_new {
           Info!(
@@ -491,11 +497,7 @@ impl KeyVals {
             s!("'{key}' with prefix '{prefix}' not defined in '{keyset}'")
           );
         } else if matches!(keyval_get(&qname, "disabled"), Some(Stored::Bool(true))) {
-          Warn!(
-            "undefined",
-            "keyval",
-            s!("`{key}' has been disabled. ")
-          );
+          Warn!("undefined", "keyval", s!("`{key}' has been disabled. "));
         } else {
           // Define xkeyval internals per-key if needed
           if set_internals {

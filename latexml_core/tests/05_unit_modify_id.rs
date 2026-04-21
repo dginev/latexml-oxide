@@ -24,15 +24,21 @@ fn fresh_doc_with_node(id: &str) -> (Document, Node) {
 #[test]
 fn modify_id_passes_through_when_free() {
   let mut doc = Document::new();
-  assert_eq!(doc.modify_id("free_id".to_string()), "free_id",
-    "modify_id on a free id returns it unchanged");
+  assert_eq!(
+    doc.modify_id("free_id".to_string()),
+    "free_id",
+    "modify_id on a free id returns it unchanged"
+  );
 }
 
 #[test]
 fn modify_id_appends_alpha_suffix_on_collision() {
   let (mut doc, _) = fresh_doc_with_node("X");
-  assert_eq!(doc.modify_id("X".to_string()), "Xa",
-    "first collision gets 'a' suffix");
+  assert_eq!(
+    doc.modify_id("X".to_string()),
+    "Xa",
+    "first collision gets 'a' suffix"
+  );
 }
 
 #[test]
@@ -46,8 +52,11 @@ fn modify_id_progresses_through_alphabet() {
     root_mut.add_child(&mut n).unwrap();
     doc.set_attribute(&mut n, "xml:id", id).unwrap();
   }
-  assert_eq!(doc.modify_id("X".to_string()), "Xc",
-    "third collision gets 'c' suffix");
+  assert_eq!(
+    doc.modify_id("X".to_string()),
+    "Xc",
+    "third collision gets 'c' suffix"
+  );
 }
 
 #[test]
@@ -58,7 +67,9 @@ fn modify_id_no_state_contamination_between_calls() {
   let (mut doc, _) = fresh_doc_with_node("Y");
   let first = doc.modify_id("Y".to_string());
   let second = doc.modify_id("Y".to_string());
-  assert_eq!(first, second,
-    "modify_id is read-only over idstore; repeated calls are stable");
+  assert_eq!(
+    first, second,
+    "modify_id is read-only over idstore; repeated calls are stable"
+  );
   assert_eq!(first, "Ya");
 }

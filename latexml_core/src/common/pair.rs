@@ -1,13 +1,13 @@
 use std::fmt;
 
+use crate::Digested;
 use crate::common::error::Result;
 use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+use crate::token::Catcode;
 use crate::token::Token;
 use crate::tokens::Tokens;
-use crate::token::Catcode;
-use crate::Digested;
 
 /// A pair of numerical values, typically (x,y) coordinates.
 /// Perl: LaTeXML::Core::Pair
@@ -49,9 +49,7 @@ impl Object for Pair {
 }
 
 impl fmt::Display for Pair {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "({},{})", self.x, self.y)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "({},{})", self.x, self.y) }
 }
 
 #[cfg(test)]

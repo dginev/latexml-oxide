@@ -290,7 +290,9 @@ impl CurryConstraints {
   pub fn insert(&mut self, value: CurryConstraint) -> bool { self.0.insert(value.simplify()) }
   pub fn iter(&self) -> std::collections::hash_set::Iter<'_, CurryConstraint> { self.0.iter() }
 
-  pub fn drain(&mut self) -> std::collections::hash_set::Drain<'_, CurryConstraint> { self.0.drain() }
+  pub fn drain(&mut self) -> std::collections::hash_set::Drain<'_, CurryConstraint> {
+    self.0.drain()
+  }
 
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
 

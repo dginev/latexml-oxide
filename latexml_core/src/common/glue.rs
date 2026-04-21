@@ -210,12 +210,20 @@ impl NumericOps for Glue {
   fn smaller<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
     let other_val = other.value_of();
-    if self.skip <= other_val { self } else { Self::new(other_val) }
+    if self.skip <= other_val {
+      self
+    } else {
+      Self::new(other_val)
+    }
   }
   fn larger<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
     let other_val = other.value_of();
-    if self.skip >= other_val { self } else { Self::new(other_val) }
+    if self.skip >= other_val {
+      self
+    } else {
+      Self::new(other_val)
+    }
   }
 }
 
@@ -567,8 +575,11 @@ mod tests {
     // from(to_str(c)) == c for all variants.
     for code in [FillCode::Fil, FillCode::Fill, FillCode::Filll] {
       let s = code.to_str();
-      assert_eq!(FillCode::from(s), Some(code),
-        "roundtrip broke at {code:?} via {s:?}");
+      assert_eq!(
+        FillCode::from(s),
+        Some(code),
+        "roundtrip broke at {code:?} via {s:?}"
+      );
     }
   }
 
@@ -606,8 +617,17 @@ mod tests {
 
   #[test]
   fn glue_value_of_returns_skip() {
-    let g = Glue { skip: 1234, plus: Some(10), pfill: None, minus: None, mfill: None };
-    assert_eq!(g.value_of(), 1234,
-      "value_of returns the skip, not the stretch");
+    let g = Glue {
+      skip:  1234,
+      plus:  Some(10),
+      pfill: None,
+      minus: None,
+      mfill: None,
+    };
+    assert_eq!(
+      g.value_of(),
+      1234,
+      "value_of returns the skip, not the stretch"
+    );
   }
 }

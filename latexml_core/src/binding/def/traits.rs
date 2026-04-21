@@ -10,6 +10,7 @@ use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
@@ -19,7 +20,6 @@ use crate::state::{Scope, lookup_font};
 use crate::token::*;
 use crate::whatsit::Whatsit;
 use crate::*;
-use crate::common::store::Stored;
 
 /// Build sizing options from a Whatsit's properties, matching Perl's computeSizeStore behavior.
 /// Perl (Box.pm L267-271) adds width, height, depth, vattach, layout from properties to options
@@ -168,12 +168,12 @@ impl IntoOption<Option<SizingClosure>> for &str {
               if let Some(arg) = w.get_arg(*n) {
                 boxes.push(arg.clone());
               }
-            }
+            },
             SizerRef::Prop(name) => {
               if let Some(Stored::Digested(d)) = w.get_property(name).as_deref() {
                 boxes.push(d.clone());
               }
-            }
+            },
           }
         }
         if boxes.len() == 1 {
@@ -182,14 +182,17 @@ impl IntoOption<Option<SizingClosure>> for &str {
           let options = sizer_options_from_whatsit(w);
           boxes[0].compute_size(options)
         } else if boxes.is_empty() {
-          Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+          Ok((
+            Dimension::default(),
+            Dimension::default(),
+            Dimension::default(),
+          ))
         } else {
-          let font =
-            if let Some(Stored::Font(ref font)) = w.get_property("font").as_deref() {
-              font.clone()
-            } else {
-              lookup_font().unwrap()
-            };
+          let font = if let Some(Stored::Font(ref font)) = w.get_property("font").as_deref() {
+            font.clone()
+          } else {
+            lookup_font().unwrap()
+          };
           let options = sizer_options_from_whatsit(w);
           font.compute_boxes_size(&boxes, options)
         }

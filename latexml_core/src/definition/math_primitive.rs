@@ -67,8 +67,8 @@ pub struct MathPrimitiveOptions {
   pub reorder:                bool,
   pub dual:                   bool,
   pub mathstyle:              Option<String>,
-  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation time
-  /// Perl: mathstyle => \&doVariablesizeOp
+  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation
+  /// time Perl: mathstyle => \&doVariablesizeOp
   pub dynamic_mathstyle:      bool,
   pub scriptpos:              Option<String>,
   /// Dynamic scriptpos: compute "mid"/"post" based on current font mathstyle at invocation time
@@ -205,10 +205,16 @@ impl MathPrimitiveOptions {
       h.insert("mode", Stored::String(crate::common::arena::pin_static(m)));
     }
     if let Some(ms) = mathstyle_override {
-      h.insert("mathstyle", Stored::String(crate::common::arena::pin_static(ms)));
+      h.insert(
+        "mathstyle",
+        Stored::String(crate::common::arena::pin_static(ms)),
+      );
     }
     if let Some(sp) = scriptpos_override {
-      h.insert("scriptpos", Stored::String(crate::common::arena::pin_static(sp)));
+      h.insert(
+        "scriptpos",
+        Stored::String(crate::common::arena::pin_static(sp)),
+      );
     }
     h
   }
@@ -397,8 +403,10 @@ mod tests {
     let h = o.to_hash_stored();
     assert!(h.contains_key("meaning"));
     assert!(h.contains_key("name"));
-    assert!(!h.contains_key("role"),
-      "role=None shouldn't populate the hash");
+    assert!(
+      !h.contains_key("role"),
+      "role=None shouldn't populate the hash"
+    );
   }
 
   #[test]

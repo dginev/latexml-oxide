@@ -705,11 +705,17 @@ mod tests {
   use crate::common::arena;
 
   fn letter_tok(s: &str) -> Token {
-    Token { text: arena::pin(s), code: Catcode::LETTER }
+    Token {
+      text: arena::pin(s),
+      code: Catcode::LETTER,
+    }
   }
 
   fn comment_tok(s: &str) -> Token {
-    Token { text: arena::pin(s), code: Catcode::COMMENT }
+    Token {
+      text: arena::pin(s),
+      code: Catcode::COMMENT,
+    }
   }
 
   #[test]

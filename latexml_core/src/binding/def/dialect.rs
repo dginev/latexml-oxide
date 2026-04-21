@@ -6,7 +6,6 @@ use std::rc::Rc;
 use regex::Regex;
 
 // use crate::common::error::*;
-use crate::{BoxOps, Digested};
 use crate::binding::content::{merge_font, merge_font_ref};
 use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::IntoDigestedResult;
@@ -16,6 +15,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
 use crate::definition::expandable::{Expandable, ExpandableOptions};
@@ -31,7 +31,6 @@ use crate::definition::{
 use crate::document::Document;
 use crate::gullet;
 use crate::mouth;
-use crate::definition::argument::ArgWrap;
 use crate::parameter::{Parameter, Parameters};
 use crate::state::*;
 use crate::stomach::*;
@@ -39,6 +38,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::{BoxOps, Digested};
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "name",
@@ -349,10 +349,14 @@ pub fn def_primitive(
     before_digest_env.push(forbid_math_closure);
   }
   if needs_enter_horizontal {
-    before_digest_env.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_env.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_env.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   if let Some(ref mode) = mode {
     let mode_clone = mode.clone();
@@ -957,10 +961,14 @@ pub fn def_constructor(
     before_digest_closures.push(forbid_math_closure);
   }
   if needs_enter_horizontal {
-    before_digest_closures.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_closures.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_closures.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_closures.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   if let Some(ref mode) = mode {
     let mode_clone = mode.clone();
@@ -1090,10 +1098,14 @@ pub fn def_environment(
 
   before_digest_env.push(atbegin_hook_closure);
   if options.enter_horizontal {
-    before_digest_env.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_env.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_env.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   // Perl Package.pm line 1908: beginMode($mode, 1) — noframe=1 since bgroup already pushed
   if let Some(ref mode) = mode {
@@ -1280,12 +1292,18 @@ pub fn def_environment(
   // For the uncommon case opened by \csname env\endcsname
   // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
   let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
-  before_digest_bare.push(before_digest_simple!({ bgroup(); }));
+  before_digest_bare.push(before_digest_simple!({
+    bgroup();
+  }));
   if options.enter_horizontal {
-    before_digest_bare.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_bare.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_bare.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_bare.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   if let Some(ref bmode) = mode {
     let bmode = bmode.clone();

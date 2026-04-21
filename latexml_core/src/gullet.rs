@@ -8,7 +8,6 @@ use std::collections::VecDeque;
 
 use crate::alignment::Alignment;
 use crate::common::arena::{self, SymStr};
-use crate::common::store::Stored;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -19,6 +18,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::{NumericOps, UNITY, fixpoint};
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::state::*;
 use crate::{DigestedData, state};
 
@@ -35,23 +35,17 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 
 // Perl smuggles the unexpanded token inside \special_relax's slot [2].
 // Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
-use std::cell::Cell;
 use crate::pin;
+use std::cell::Cell;
 #[thread_local]
 static SPECIAL_RELAX_SMUGGLED: Cell<Option<Token>> = Cell::new(None);
 
 /// Store the unexpanded token smuggled inside \special_relax (Perl: $$special_relax[2])
-fn set_special_relax_smuggled(token: Token) {
-  SPECIAL_RELAX_SMUGGLED.set(Some(token));
-}
+fn set_special_relax_smuggled(token: Token) { SPECIAL_RELAX_SMUGGLED.set(Some(token)); }
 /// Retrieve (and clear) the smuggled token from the last \special_relax
-pub fn take_special_relax_smuggled() -> Option<Token> {
-  SPECIAL_RELAX_SMUGGLED.take()
-}
+pub fn take_special_relax_smuggled() -> Option<Token> { SPECIAL_RELAX_SMUGGLED.take() }
 /// Peek at the smuggled token without consuming it
-fn peek_special_relax_smuggled() -> Option<Token> {
-  SPECIAL_RELAX_SMUGGLED.get()
-}
+fn peek_special_relax_smuggled() -> Option<Token> { SPECIAL_RELAX_SMUGGLED.get() }
 /// Check if a token is \special_relax and its smuggled unexpanded token matches `target`
 fn special_relax_matches(token: &Token, target: &Token) -> bool {
   token.code == Catcode::CS
@@ -110,14 +104,16 @@ pub struct Gullet {
 }
 
 #[thread_local]
-pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet {
-  // Safety limit: prevents infinite loops from corrupted macro state.
-  // A typical LaTeX document with expl3 processes ~5M tokens. TikZ documents
-  // with complex figures can reach 30-80M tokens due to pgf's TeX-level math engine.
-  // Papers with 30+ tikzpictures (e.g., graph theory) need ~80M.
-  token_limit: Some(100_000_000),
-  ..Gullet::default()
-}));
+pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
+  RefCell::new(Gullet {
+    // Safety limit: prevents infinite loops from corrupted macro state.
+    // A typical LaTeX document with expl3 processes ~5M tokens. TikZ documents
+    // with complex figures can reach 30-80M tokens due to pgf's TeX-level math engine.
+    // Papers with 30+ tikzpictures (e.g., graph theory) need ~80M.
+    token_limit: Some(100_000_000),
+    ..Gullet::default()
+  })
+});
 
 macro_rules! gullet {
   () => {
@@ -139,9 +135,7 @@ pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
 }
 
 /// Set the pushback limit (maximum pushback stack size before fatal error).
-pub fn set_pushback_limit(limit: Option<usize>) {
-  gullet_mut!().pushback_limit = limit;
-}
+pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit = limit; }
 
 /// Restore the token limit and progress from a previous set_token_limit call.
 pub fn restore_token_limit(saved: (Option<usize>, usize)) {
@@ -584,43 +578,41 @@ pub fn read_x_token(
         NonExpandable,
         Invoke(std::rc::Rc<dyn crate::definition::Definition>),
       }
-      let outcome = state::with_meaning(&token, |defn_opt| {
-        match defn_opt {
-          Some(Stored::Token(t)) => Outcome::LetTo(*t),
-          Some(Stored::None) | None => Outcome::Undefined,
-          Some(other) => match other.to_definition() {
-            Some(defn) => {
-              if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
-                Outcome::NonExpandable
-              } else {
-                Outcome::Invoke(defn)
-              }
+      let outcome = state::with_meaning(&token, |defn_opt| match defn_opt {
+        Some(Stored::Token(t)) => Outcome::LetTo(*t),
+        Some(Stored::None) | None => Outcome::Undefined,
+        Some(other) => match other.to_definition() {
+          Some(defn) => {
+            if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
+              Outcome::NonExpandable
+            } else {
+              Outcome::Invoke(defn)
             }
-            None => Outcome::Undefined,
           },
-        }
+          None => Outcome::Undefined,
+        },
       });
       match outcome {
         Outcome::LetTo(let_token) => {
           return Ok(Some(if for_conditional { let_token } else { token }));
-        }
+        },
         Outcome::Undefined => {
           if token.get_catcode() == Catcode::CS {
             return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));
           }
-        }
+        },
         Outcome::NonExpandable => {
           return Ok(Some(token));
-        }
+        },
         Outcome::Invoke(defn) => {
           local_current_token(token);
           let invoked = defn.invoke(false)?;
           unread(invoked);
           expire_current_token();
           continue;
-        }
+        },
       }
     } else {
       // Perl Gullet.pm L421-422: track { and } at scan level for ALIGN_STATE
@@ -743,7 +735,10 @@ pub fn read_balanced(
       None => false,
       Some(token) => {
         token.get_catcode() == Catcode::BEGIN
-          || state::with_meaning(&token, |m| matches!(m, Some(Stored::Token(t)) if *t == T_BEGIN!()))
+          || state::with_meaning(
+            &token,
+            |m| matches!(m, Some(Stored::Token(t)) if *t == T_BEGIN!()),
+          )
       },
     };
     if !is_open {
@@ -838,9 +833,8 @@ pub fn read_balanced(
             // meaning exists at all (for the undefined-CS diagnostic
             // below) and (b) the Rc<dyn Definition> if it's a proper
             // definition — both are cheap (bool + Rc-clone).
-            let (has_meaning, defn_opt) = state::with_meaning(&token, |m| {
-              (m.is_some(), m.and_then(|s| s.to_definition()))
-            });
+            let (has_meaning, defn_opt) =
+              state::with_meaning(&token, |m| (m.is_some(), m.and_then(|s| s.to_definition())));
             if let Some(defn) = defn_opt {
               if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
                 local_current_token(token);
@@ -921,7 +915,10 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
     let mut matched = Vec::with_capacity(keyword.len());
     let mut ok = true;
     for expected in keyword.chars() {
-      let Some(tok) = read_x_token(Some(false), false, None)? else { ok = false; break };
+      let Some(tok) = read_x_token(Some(false), false, None)? else {
+        ok = false;
+        break;
+      };
       // Compare char-by-char against the token's text, case-insensitively.
       let eq = tok.with_str(|s| {
         let mut it = s.chars();
@@ -1071,16 +1068,12 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
   }
 }
 
-pub fn read_cs_name() -> Result<Token> {
-  read_cs_name_inner(false)
-}
+pub fn read_cs_name() -> Result<Token> { read_cs_name_inner(false) }
 
 /// Quiet version of read_cs_name — used by \ifcsname.
 /// In TeX, \ifcsname silently skips non-expandable CS tokens and returns the constructed name
 /// without emitting errors (unlike \csname which DOES emit errors).
-pub fn read_cs_name_quiet() -> Result<Token> {
-  read_cs_name_inner(true)
-}
+pub fn read_cs_name_quiet() -> Result<Token> { read_cs_name_inner(true) }
 
 fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
@@ -1098,7 +1091,8 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
           if lookup_definition(&token)?.is_some() {
             let message = s!(
               "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
-              token, cs
+              token,
+              cs
             );
             Error!("unexpected", token, message);
           } else {
@@ -1137,7 +1131,11 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
         // more mouths on the stack (TeX continues reading across input boundaries).
         let (autoclose, stack_len) = {
           let gullet = gullet!();
-          let ac = gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(false);
+          let ac = gullet
+            .runtime
+            .as_ref()
+            .map(|r| r.autoclose)
+            .unwrap_or(false);
           let sl = gullet.mouthstack.len();
           (ac, sl)
         };
@@ -1480,7 +1478,11 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         // parse failure rather than panicking with .expect().
         text.push_str(&read_digits(&DIGIT_RE, true)?);
         let n = text.parse::<i64>().unwrap_or_else(|_| {
-          if text.starts_with('-') { i64::MIN } else { i64::MAX }
+          if text.starts_with('-') {
+            i64::MIN
+          } else {
+            i64::MAX
+          }
         });
         Ok(Some(Number::new(n)))
       } else if token == T_OTHER!("'") {
@@ -1857,9 +1859,10 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
   }
   // Check for implicit space: CS/ACTIVE let to a space token
   if token.get_catcode() == Catcode::CS || token.get_catcode() == Catcode::ACTIVE {
-    return state::with_meaning(token, |m| {
-      matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::SPACE)
-    });
+    return state::with_meaning(
+      token,
+      |m| matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::SPACE),
+    );
   }
   false
 }
@@ -1868,7 +1871,11 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
 /// If `expanded` is true, acts like `<one optional space>` and expands tokens (readXToken).
 /// Perl: skip1Space($self, $expanded)
 pub fn skip_one_space(expanded: bool) -> Result<()> {
-  let token = if expanded { read_x_token(None, false, None)? } else { read_token()? };
+  let token = if expanded {
+    read_x_token(None, false, None)?
+  } else {
+    read_token()?
+  };
   if let Some(t) = token {
     if !is_space_or_implicit_space(&t) {
       unread_one(t);
@@ -2033,7 +2040,10 @@ where FnR: FnOnce() -> Result<R> {
     Err(e) => {
       // Force-close our mouth and any autoclosable mouths above it
       loop {
-        let current = gullet!().runtime.as_ref().map(|r| arena::pin(r.mouth.get_source()));
+        let current = gullet!()
+          .runtime
+          .as_ref()
+          .map(|r| arena::pin(r.mouth.get_source()));
         if current == Some(context_mouth_source) {
           close_mouth(true).ok();
           break;
@@ -2046,7 +2056,7 @@ where FnR: FnOnce() -> Result<R> {
       // Reset progress counter so subsequent processing isn't immediately killed
       gullet_mut!().progress = 0;
       return Err(e);
-    }
+    },
   };
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it.
   // Rate-limit the "mouth closed" error — when the gullet gets into a state
@@ -2058,15 +2068,9 @@ where FnR: FnOnce() -> Result<R> {
   thread_local! {
     static MOUTH_CLOSED_ERRORS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
   }
-  fn record_mouth_closed_error() {
-    MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1)));
-  }
-  fn should_emit_mouth_closed() -> bool {
-    MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10)
-  }
-  fn mouth_closed_budget_exhausted() -> bool {
-    MOUTH_CLOSED_ERRORS.with(|c| c.get() >= 50)
-  }
+  fn record_mouth_closed_error() { MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1))); }
+  fn should_emit_mouth_closed() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10) }
+  fn mouth_closed_budget_exhausted() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() >= 50) }
   loop {
     let mouth_source = gullet!()
       .runtime
@@ -2092,8 +2096,11 @@ where FnR: FnOnce() -> Result<R> {
       }
       record_mouth_closed_error();
       if mouth_closed_budget_exhausted() {
-        Fatal!(Stomach, Recursion,
-          "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent");
+        Fatal!(
+          Stomach,
+          Recursion,
+          "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent"
+        );
       }
       break;
     } else {
@@ -2115,13 +2122,18 @@ where FnR: FnOnce() -> Result<R> {
             "unexpected",
             "<closed>",
             "Mouth is unexpectedly already closed",
-            s!("Reading from {src}, but it has already been closed (found different non-closable mouth on top).")
+            s!(
+              "Reading from {src}, but it has already been closed (found different non-closable mouth on top)."
+            )
           );
         }
         record_mouth_closed_error();
         if mouth_closed_budget_exhausted() {
-          Fatal!(Stomach, Recursion,
-            "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent");
+          Fatal!(
+            Stomach,
+            Recursion,
+            "Too many unexpectedly-closed mouth errors (>50); gullet mouth-stack state is inconsistent"
+          );
         }
         break;
       }

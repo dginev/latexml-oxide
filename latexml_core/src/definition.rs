@@ -13,12 +13,12 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::definition::conditional::ConditionalType;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::definition::conditional::ConditionalType;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};

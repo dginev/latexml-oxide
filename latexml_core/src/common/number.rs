@@ -14,9 +14,7 @@ pub struct Number(pub i64);
 impl Object for Number {
   fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
   // Perl: beDigested returns $self (duck typing). In Rust, wrap as RegisterValue.
-  fn be_digested(self) -> Result<Digested> {
-    Ok(Digested::from(RegisterValue::Number(self)))
-  }
+  fn be_digested(self) -> Result<Digested> { Ok(Digested::from(RegisterValue::Number(self))) }
 }
 impl NumericOps for Number {
   fn new(number: i64) -> Self { Number(number) }
@@ -88,8 +86,11 @@ mod tests {
     // Perl-parity: non-numeric → 0 silently.
     assert_eq!(Number::from(String::from("abc")).value_of(), 0);
     assert_eq!(Number::from(String::from("")).value_of(), 0);
-    assert_eq!(Number::from(String::from("3.14")).value_of(), 0,
-      "float string doesn't parse as integer — coerces to 0");
+    assert_eq!(
+      Number::from(String::from("3.14")).value_of(),
+      0,
+      "float string doesn't parse as integer — coerces to 0"
+    );
   }
 
   #[test]
@@ -119,8 +120,14 @@ mod tests {
   #[test]
   fn number_from_catcode_matches_u8() {
     // From<Catcode> coerces to the catcode's u8 value.
-    assert_eq!(Number::from(Catcode::ESCAPE).value_of(), u8::from(Catcode::ESCAPE) as i64);
-    assert_eq!(Number::from(Catcode::LETTER).value_of(), u8::from(Catcode::LETTER) as i64);
+    assert_eq!(
+      Number::from(Catcode::ESCAPE).value_of(),
+      u8::from(Catcode::ESCAPE) as i64
+    );
+    assert_eq!(
+      Number::from(Catcode::LETTER).value_of(),
+      u8::from(Catcode::LETTER) as i64
+    );
   }
 
   // Note: the Number!() macro references `::latexml_core::...` and

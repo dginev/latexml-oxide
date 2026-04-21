@@ -45,9 +45,7 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
 }
 
 /// Returns true if log output is currently suppressed.
-pub fn is_log_output_suppressed() -> bool {
-  SUPPRESS_LOG_OUTPUT.get()
-}
+pub fn is_log_output_suppressed() -> bool { SUPPRESS_LOG_OUTPUT.get() }
 #[macro_export]
 macro_rules! report {
   () => {
@@ -110,8 +108,8 @@ pub fn initialize_report() {
 }
 
 /// Build a status message matching Perl's `getStatusMessage()`.
-/// Format: "N warnings; M errors; K fatal error; L undefined macros[\foo, \bar]; P missing files[x.sty]"
-/// Returns "No obvious problems" when no issues detected.
+/// Format: "N warnings; M errors; K fatal error; L undefined macros[\foo, \bar]; P missing
+/// files[x.sty]" Returns "No obvious problems" when no issues detected.
 pub fn get_status_message() -> String {
   let report = REPORT.borrow();
   let mut parts = Vec::new();
@@ -132,8 +130,11 @@ pub fn get_status_message() -> String {
   if report.fatal {
     parts.push("1 fatal error".to_string());
   }
-  let undef_keys: Vec<String> =
-    report.undefined.keys().map(|k| crate::common::arena::to_string(*k)).collect();
+  let undef_keys: Vec<String> = report
+    .undefined
+    .keys()
+    .map(|k| crate::common::arena::to_string(*k))
+    .collect();
   if !undef_keys.is_empty() {
     parts.push(format!(
       "{} undefined macro{}[{}]",
@@ -142,8 +143,11 @@ pub fn get_status_message() -> String {
       undef_keys.join(", ")
     ));
   }
-  let miss_keys: Vec<String> =
-    report.missing.keys().map(|k| crate::common::arena::to_string(*k)).collect();
+  let miss_keys: Vec<String> = report
+    .missing
+    .keys()
+    .map(|k| crate::common::arena::to_string(*k))
+    .collect();
   if !miss_keys.is_empty() {
     parts.push(format!(
       "{} missing file{}[{}]",
@@ -365,7 +369,8 @@ macro_rules! generate_message {
 macro_rules! Note {
   ($input:expr) => {
     if !$crate::common::error::is_log_output_suppressed()
-      && log::max_level() >= log::LevelFilter::Info {
+      && log::max_level() >= log::LevelFilter::Info
+    {
       let msg = $input;
       println_stderr!("{msg}");
     }
@@ -376,7 +381,8 @@ macro_rules! Note {
 macro_rules! NoteLog {
   ($input:expr) => {
     if !$crate::common::error::is_log_output_suppressed()
-      && log::max_level() >= log::LevelFilter::Debug {
+      && log::max_level() >= log::LevelFilter::Debug
+    {
       let msg = $input;
       println_stderr!("{msg}");
     }
@@ -508,9 +514,7 @@ impl Error {
 
 #[macro_export]
 macro_rules! unported {
-  () => {{
-    ::latexml_core::common::error::Error::todo()
-  }};
+  () => {{ ::latexml_core::common::error::Error::todo() }};
 }
 
 impl From<io::Error> for Error {
@@ -713,8 +717,10 @@ mod tests {
     note_status(LogStatus::Warning, None);
     note_status(LogStatus::Error, None);
     let m = get_status_message();
-    assert!(m.contains("2 warnings") && m.contains("1 error") && m.contains("; "),
-      "got {m:?}");
+    assert!(
+      m.contains("2 warnings") && m.contains("1 error") && m.contains("; "),
+      "got {m:?}"
+    );
   }
 
   #[test]

@@ -8,7 +8,6 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::{BindingDispatcher, LabelMappingHook};
 use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -20,6 +19,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
+use crate::common::{BindingDispatcher, LabelMappingHook};
 use crate::definition::Definition;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalType;
@@ -30,11 +30,11 @@ use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::gullet;
 use crate::mouth;
+use crate::pin;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
 use crate::{Digested, DigestedData};
-use crate::pin;
 
 // expose Perl-style local assignments from state
 pub use crate::common::local_assignments::*;
@@ -614,11 +614,11 @@ impl State {
         if let Some(current) = values.front() {
           let key_pair = (tname, *key);
           let changed = match snap.get(&key_pair) {
-            None => true,    // new entry
+            None => true, // new entry
             Some(prev) => {
               // Compare string representations (cheap approximation of Perl's dump-based diff)
               format!("{:?}", current) != format!("{:?}", prev)
-            }
+            },
           };
           if changed && is_serializable(current) {
             diff.push((tname, *key, current.clone()));
@@ -909,19 +909,19 @@ pub fn use_std_state() {
 }
 pub fn use_main_state() {
   match STATE_IN_USE.get() {
-      RotateState::Sty => {
-        let mut sty_state = sty_state_mut!();
-        let mut main_state = state_mut!();
-        std::mem::swap(&mut *sty_state, &mut *main_state);
-        STATE_IN_USE.set(RotateState::Main);
-      },
-      RotateState::Std => {
-        let mut std_state = std_state_mut!();
-        let mut main_state = state_mut!();
-        std::mem::swap(&mut *std_state, &mut *main_state);
-        STATE_IN_USE.set(RotateState::Main);
-      },
-      RotateState::Main => {},
+    RotateState::Sty => {
+      let mut sty_state = sty_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *sty_state, &mut *main_state);
+      STATE_IN_USE.set(RotateState::Main);
+    },
+    RotateState::Std => {
+      let mut std_state = std_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *std_state, &mut *main_state);
+      STATE_IN_USE.set(RotateState::Main);
+    },
+    RotateState::Main => {},
   };
 }
 
@@ -949,7 +949,11 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       if arena::with(*s, |txt| {
         txt == "Anonymous String" || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
       }) {
-        Info!("ignore", lock_key, s!("Ignoring redefinition of {lock_key}"));
+        Info!(
+          "ignore",
+          lock_key,
+          s!("Ignoring redefinition of {lock_key}")
+        );
       }
     }
   } else {
@@ -1420,7 +1424,10 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
 }
 /// Token-keyed variant of `lookup_register` — saves the per-call
 /// `T_CS!(&str)` pin for hot callers with a cached CS token.
-pub fn lookup_register_token(cs: &Token, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+pub fn lookup_register_token(
+  cs: &Token,
+  parameters: Vec<ArgWrap>,
+) -> Result<Option<RegisterValue>> {
   Ok(if let Some(defn) = lookup_definition(cs)? {
     if defn.is_register() {
       defn.value_of(parameters)
@@ -1827,13 +1834,13 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
       match lookup_meaning(&current) {
         Some(Stored::Token(next)) => {
           current = next; // follow chain
-        }
+        },
         Some(Stored::None) | None => break, // dead end — keep as Token
         Some(defn) => {
           // Found a real definition — use it directly
           meaning = defn;
           break;
-        }
+        },
       }
     }
   }
@@ -2031,13 +2038,7 @@ pub fn pop_frame() -> Result<()> {
 /// nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
-pub fn get_frame_depth() -> usize {
-  state!()
-    .undo
-    .iter()
-    .filter(|frame| !frame.locked)
-    .count()
-}
+pub fn get_frame_depth() -> usize { state!().undo.iter().filter(|frame| !frame.locked).count() }
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?
@@ -2251,9 +2252,8 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
   // set (e.g. pre-bootstrap unit conversion). Perl gets this via the
   // built-in default font; matching with a static fallback is cheaper
   // than forcing every caller to ensure a font frame exists.
-  let font_metric = |getter: fn(&Font) -> i64| -> f64 {
-    lookup_font().map(|f| getter(&f) as f64).unwrap_or(0.0)
-  };
+  let font_metric =
+    |getter: fn(&Font) -> i64| -> f64 { lookup_font().map(|f| getter(&f) as f64).unwrap_or(0.0) };
   match unit.as_str() {
     "em" => font_metric(|f| f.get_em_width()),
     "ex" => font_metric(|f| f.get_ex_height()),
@@ -2507,9 +2507,7 @@ pub fn add_class_binding_names(names: &'static [&'static str]) {
   state.class_binding_names.push(names);
 }
 
-pub fn get_label_mapping_hook() -> Option<LabelMappingHook> {
-  state!().label_mapping_hook.clone()
-}
+pub fn get_label_mapping_hook() -> Option<LabelMappingHook> { state!().label_mapping_hook.clone() }
 pub fn set_label_mapping_hook(hook: LabelMappingHook) {
   let mut state = state_mut!();
   state.label_mapping_hook = Some(hook);
@@ -2679,8 +2677,10 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Chars(_) | Strings(_) => true,
     // Expandable: serializable only if it has a Tokens body (not a Closure body)
     Expandable(exp) => {
-      matches!(exp.get_expansion(),
-        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None)
+      matches!(
+        exp.get_expansion(),
+        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None
+      )
     },
     // Register: serializable (stores value + type, no closures)
     Register(_) => true,
@@ -2742,7 +2742,9 @@ thread_local! {
 /// right after `latex_bootstrap` has loaded).
 pub fn stage_snapshot(name: &'static str) {
   let snap = take_snapshot();
-  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+  STAGED_SNAPSHOTS.with(|m| {
+    m.borrow_mut().insert(name, snap);
+  });
 }
 
 /// Stage an already-taken snapshot under a named key. Used by callers
@@ -2752,7 +2754,9 @@ pub fn stage_snapshot_value(
   name: &'static str,
   snap: std::collections::HashMap<(TableName, SymStr), Stored>,
 ) {
-  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+  STAGED_SNAPSHOTS.with(|m| {
+    m.borrow_mut().insert(name, snap);
+  });
 }
 
 /// Retrieve a previously staged snapshot, if present.

@@ -30,8 +30,8 @@ use self::normalize::*;
 use self::template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, TemplateConfig};
 use crate::common::arena::SymHashMap;
 use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::NumericOps;
 use crate::common::error::*;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::digested::Digested;
 use crate::document::{Document, get_node_qname, with_node_qname};
@@ -235,7 +235,10 @@ impl Alignment {
     } else {
       // Perl: Error then add fallback column with align=center
       Error!("unexpected", "&", "Extra alignment tab '&'");
-      let fallback = Cell { align: Some(Align::Center), ..Cell::default() };
+      let fallback = Cell {
+        align: Some(Align::Center),
+        ..Cell::default()
+      };
       current_row.add_column(fallback);
       Ok(current_row.get_column_mut(self.current_column))
     }
@@ -270,12 +273,9 @@ impl Alignment {
   }
 
   pub fn current_column(&mut self) -> Option<&mut Cell> {
-    self.current_row.and_then(|cw| {
-      self
-        .rows
-        .get_mut(cw)?
-        .get_column_mut(self.current_column)
-    })
+    self
+      .current_row
+      .and_then(|cw| self.rows.get_mut(cw)?.get_column_mut(self.current_column))
   }
 
   pub fn get_column(&mut self, n: usize) -> Option<&mut Cell> {
@@ -443,11 +443,13 @@ impl BoxOps for Alignment {
     &self,
     _options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+    Ok((
+      Dimension::default(),
+      Dimension::default(),
+      Dimension::default(),
+    ))
   }
-  fn get_font(&self) -> Result<Option<Cow<'_, crate::common::font::Font>>> {
-    Ok(None)
-  }
+  fn get_font(&self) -> Result<Option<Cow<'_, crate::common::font::Font>>> { Ok(None) }
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed("")) }
 
   fn compute_size_and_cache(
@@ -460,7 +462,9 @@ impl BoxOps for Alignment {
     let d = self.cached_depth.unwrap();
     // Store in properties so get_size()'s has_property("cached_width") check works
     self.properties.insert("cached_width", Stored::Dimension(w));
-    self.properties.insert("cached_height", Stored::Dimension(h));
+    self
+      .properties
+      .insert("cached_height", Stored::Dimension(h));
     self.properties.insert("cached_depth", Stored::Dimension(d));
     Ok((w, h, d))
   }
@@ -493,9 +497,20 @@ impl BoxOps for Alignment {
     if absorb_limit > 0 {
       let mut absorb_count = crate::state::lookup_int("absorb_count");
       absorb_count += 1;
-      crate::state::assign_value("absorb_count", absorb_count, Some(crate::state::Scope::Global));
+      crate::state::assign_value(
+        "absorb_count",
+        absorb_count,
+        Some(crate::state::Scope::Global),
+      );
       if absorb_count > absorb_limit {
-        fatal!(Timeout, Convert, s!("Whatsit absorb limit of {} exceeded, infinite loop?", absorb_limit));
+        fatal!(
+          Timeout,
+          Convert,
+          s!(
+            "Whatsit absorb limit of {} exceeded, infinite loop?",
+            absorb_limit
+          )
+        );
       }
     }
 
@@ -724,8 +739,8 @@ impl BoxOps for Alignment {
           // Perl wraps cell content in XMArg for math alignments, but NOT for _Capture_ columns
           // (_Capture_ is not in the schema, so Perl's openElement validation prevents XMArg there)
           let cur_qname = crate::document::get_node_qname(document.get_node());
-          let wrap_xmarg = ismath
-            && !crate::common::arena::with(cur_qname, |s| s.ends_with("_Capture_"));
+          let wrap_xmarg =
+            ismath && !crate::common::arena::with(cur_qname, |s| s.ends_with("_Capture_"));
           if wrap_xmarg {
             // Hacky!
             document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
@@ -789,7 +804,9 @@ impl BoxOps for Alignment {
           .findnodes("descendant::ltx:td[@thead]", Some(&node))
           .is_empty();
         // If requested && no cells are already marked as being thead, apply heuristic
-        let guess_headers = self.properties.get("guess_headers")
+        let guess_headers = self
+          .properties
+          .get("guess_headers")
           .map(|v| !matches!(v, Stored::Bool(false)))
           .unwrap_or(false);
         if guess_headers && !hashead {
@@ -952,8 +969,12 @@ fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
         return true;
       }
       // These are skippable by the left-scan in Perl's extractAlignmentColumn
-      if s == "\\vrule" || s == "\\relax" || s == "\\hfil" || s == "\\hfill"
-        || s == "\\hskip" || s == "\\lx@column@trimright"
+      if s == "\\vrule"
+        || s == "\\relax"
+        || s == "\\hfil"
+        || s == "\\hfill"
+        || s == "\\hskip"
+        || s == "\\lx@column@trimright"
       {
         continue;
       }
@@ -1160,7 +1181,8 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
           ColumnSpec::Unknown
         },
       );
-      // eprintln!("    cell: cell={}, class={:?}, border='{}'", col.cell.is_some(), col.content_class, col.border);
+      // eprintln!("    cell: cell={}, class={:?}, border='{}'", col.cell.is_some(),
+      // col.content_class, col.border);
       col.content_length = Some(if col.content_class == Some(ColumnSpec::Graphics) {
         1000
       } else if col.cell.is_some() {
@@ -1211,8 +1233,13 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   // Perl: copy characterizations (align/content_class/content_length) from rowspan/colspan cells
   // to the cells they span over. Deferred to avoid borrow conflicts across rows.
   #[allow(clippy::type_complexity)]
-  let mut rowspan_propagation: Vec<(usize, usize, Option<Align>, Option<ColumnSpec>, Option<usize>)> =
-    Vec::new();
+  let mut rowspan_propagation: Vec<(
+    usize,
+    usize,
+    Option<Align>,
+    Option<ColumnSpec>,
+    Option<usize>,
+  )> = Vec::new();
   // copy the characterizations to spanned cells
   for r in 0..alignment.rows.len() {
     let row = &mut alignment.rows[r];
@@ -1396,9 +1423,11 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   // are font-decoded equivalents of ASCII 0-9 in blackboard bold fonts. In Perl, these
   // appear as ASCII digits with font attributes; in Rust they're Unicode codepoints.
   // Exclude circled/enclosed numerals (❶❷❸ U+2776-, ①②③ U+2460-) which are symbols.
-  if !content.is_empty() && content.chars().all(|c| {
-    c.is_whitespace() || c.is_ascii_digit() || ('\u{1D7D8}'..='\u{1D7E1}').contains(&c)
-  }) {
+  if !content.is_empty()
+    && content
+      .chars()
+      .all(|c| c.is_whitespace() || c.is_ascii_digit() || ('\u{1D7D8}'..='\u{1D7E1}').contains(&c))
+  {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
     let mut nodes = xcell.get_child_nodes();
@@ -1505,7 +1534,9 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   } else {
     // Perl L1151: multi-class detection.
     // "tt" (all Text) → MultiText, mixed math+text → MathAltText
-    let all_text = inferred_classes.iter().all(|c| matches!(c, ColumnSpec::Text));
+    let all_text = inferred_classes
+      .iter()
+      .all(|c| matches!(c, ColumnSpec::Text));
     if all_text {
       ColumnSpec::MultiText
     } else {
@@ -1797,7 +1828,11 @@ fn alignment_skip_data(
   if i >= tab_lines_length {
     return 0;
   }
-  let _header_width = if !tablines.is_empty() { tablines[0].len() } else { 1 };
+  let _header_width = if !tablines.is_empty() {
+    tablines[0].len()
+  } else {
+    1
+  };
   let mut n = 1;
   while i + n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold {

@@ -35,14 +35,19 @@ impl Display for Meta {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     // Keep output terse — callers that need full detail should Debug-print.
     write!(f, "Meta(bump={},", self.bumplevel)?;
-    if self.wasfloat { write!(f, "float")?; }
+    if self.wasfloat {
+      write!(f, "float")?;
+    }
     write!(f, ")")
   }
 }
 
 impl Meta {
   pub fn with_bumplevel(level: u32) -> Self {
-    Meta { bumplevel: level, ..Meta::default() }
+    Meta {
+      bumplevel: level,
+      ..Meta::default()
+    }
   }
   pub fn bumplevel(&self) -> u32 { self.bumplevel }
   pub fn wasfloat(&self) -> bool { self.wasfloat }

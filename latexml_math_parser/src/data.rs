@@ -1,6 +1,6 @@
 use libxml::tree::{Node, NodeType};
-use std::cell::RefCell;
 use rustc_hash::FxHashMap;
+use std::cell::RefCell;
 
 // Thread-local idstore for XMRef resolution during math parsing.
 // Set by the parser before parsing, cleared after.
@@ -30,7 +30,10 @@ fn resolve_xmref(node: &Node) -> Option<Node> {
     if let Some(idref) = node.get_attribute("idref") {
       // Use idstore first (fast and reliable, matching Perl's $doc->lookupID)
       let store_result = MATH_IDSTORE.with(|cell| {
-        cell.borrow().as_ref().and_then(|store| store.get(&idref).cloned())
+        cell
+          .borrow()
+          .as_ref()
+          .and_then(|store| store.get(&idref).cloned())
       });
       if store_result.is_some() {
         return store_result;
@@ -84,7 +87,9 @@ pub fn get_grammatical_role(node: &Node) -> String {
         let children: Vec<_> = node.get_child_elements();
         let content_role = children.first().and_then(|c| c.get_attribute("role"));
         let pres_role = children.get(1).and_then(|p| p.get_attribute("role"));
-        content_role.or(pres_role).unwrap_or_else(|| "UNKNOWN".to_string())
+        content_role
+          .or(pres_role)
+          .unwrap_or_else(|| "UNKNOWN".to_string())
       } else {
         "ATOM".to_string()
       }
@@ -127,13 +132,9 @@ mod tests {
   use libxml::parser::Parser as XmlParser;
   use libxml::tree::Document;
 
-  fn parse(xml: &str) -> Document {
-    XmlParser::default().parse_string(xml).expect("parse xml")
-  }
+  fn parse(xml: &str) -> Document { XmlParser::default().parse_string(xml).expect("parse xml") }
 
-  fn root(doc: &Document) -> Node {
-    doc.get_root_element().expect("root element")
-  }
+  fn root(doc: &Document) -> Node { doc.get_root_element().expect("root element") }
 
   #[test]
   fn role_from_attribute_wins() {
@@ -163,9 +164,7 @@ mod tests {
 
   #[test]
   fn role_xmdual_falls_back_to_presentation_branch() {
-    let doc = parse(
-      r#"<XMDual><XMTok>c</XMTok><XMTok role="PRESROLE">p</XMTok></XMDual>"#,
-    );
+    let doc = parse(r#"<XMDual><XMTok>c</XMTok><XMTok role="PRESROLE">p</XMTok></XMDual>"#);
     assert_eq!(get_grammatical_role(&root(&doc)), "PRESROLE");
   }
 

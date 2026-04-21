@@ -4,7 +4,8 @@ LoadDefinitions!({
   LoadClass!("book");
   RequirePackage!("geometry");
   RequirePackage!("setspace");
-  RawTeX!(r"\newif\ifmargins@equal
+  RawTeX!(
+    r"\newif\ifmargins@equal
 \newlength{\margin@base}
 \newlength{\margin@offset}
 \setlength{\margin@offset}{0.5in}
@@ -37,5 +38,6 @@ LoadDefinitions!({
 \def\cleardoublepage{{\newpage\pagestyle{plain}\ocleardoublepage}}
 \newcommand{\headerstyle}[1]{\footnotesize\MakeUppercase{#1}}
 \setlength\abovecaptionskip{1ex}
-\setlength\belowcaptionskip{1ex}");
+\setlength\belowcaptionskip{1ex}"
+  );
 });

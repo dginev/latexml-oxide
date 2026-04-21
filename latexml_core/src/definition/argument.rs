@@ -670,8 +670,10 @@ mod tests {
     let a = ArgWrap::Tokens(Tokens::new(vec![]));
     assert!(a.is_tokens());
     let b = ArgWrap::Token(Token::default());
-    assert!(b.is_tokens(),
-      "is_tokens is true for both Token and Tokens variants");
+    assert!(
+      b.is_tokens(),
+      "is_tokens is true for both Token and Tokens variants"
+    );
     let c = ArgWrap::Number(Number::new(0));
     assert!(!c.is_tokens());
     let d = ArgWrap::None;

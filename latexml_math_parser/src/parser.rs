@@ -6,10 +6,10 @@ use std::borrow::Cow;
 use std::io::Cursor;
 
 use latexml_core::common::arena::{self, SymHashMap};
-use latexml_core::pin;
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
 use latexml_core::common::xml::*;
 use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
+use latexml_core::pin;
 use latexml_core::{Warn, fatal, map, s, static_map, sym_map};
 
 use crate::grammar::builder::init_grammar;
@@ -91,22 +91,22 @@ static IS_INFIX: Lazy<HashMap<String, usize>> = Lazy::new(|| {
 static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
 
 pub struct MathParser {
-  grammar:                ThinGrammar,
-  actions:                Actions,
-  builder:                TreeBuilder,
-  engine:                 Parser,
-  pub expert_pragmatics:  Vec<ValidationPragmatics>,
-  pub student_pragmatics: Vec<ValidationPragmatics>,
-  passed:                 SymHashMap<usize>,
-  failed:                 SymHashMap<usize>,
-  unknowns:               SymHashMap<usize>,
+  grammar:                   ThinGrammar,
+  actions:                   Actions,
+  builder:                   TreeBuilder,
+  engine:                    Parser,
+  pub expert_pragmatics:     Vec<ValidationPragmatics>,
+  pub student_pragmatics:    Vec<ValidationPragmatics>,
+  passed:                    SymHashMap<usize>,
+  failed:                    SymHashMap<usize>,
+  unknowns:                  SymHashMap<usize>,
   // punctuation: HashMap<String, usize>,
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
-  maybe_functions:        SymHashMap<usize>,
+  maybe_functions:           SymHashMap<usize>,
   /// XMath nodes that failed to parse (stored as hashable IDs for post-parse class marking)
-  pub failed_xmath_ids:   Vec<usize>,
-  n_parsed:               usize,
+  pub failed_xmath_ids:      Vec<usize>,
+  n_parsed:                  usize,
   /// Grammar tree count from the last successful parse (for \ltx@count@parses)
   pub last_parsetrees_count: usize,
   // strict: bool,
@@ -162,14 +162,12 @@ impl MathParser {
   /// Recovery ladder:
   /// 1. Clone `self.grammar` + trivial parse — cheap, common case.
   /// 2. Re-clone and retry once — covers transient marpa state hiccups.
-  /// 3. Full `init_grammar()` rebuild — expensive, but some grammar
-  ///    corruption patterns (observed on the `testscripts` regression
-  ///    fixture) only recover after a fresh precompute. The D5 "avoid
-  ///    init_grammar fallback" item turned out to describe the ideal,
-  ///    not the floor — legitimate callers still hit step 3.
-  /// 4. Log + keep previous engine. Subsequent `parse_math` /
-  ///    `recognizes` will fail gracefully (0 trees, no panic); better
-  ///    than crashing the whole conversion.
+  /// 3. Full `init_grammar()` rebuild — expensive, but some grammar corruption patterns (observed
+  ///    on the `testscripts` regression fixture) only recover after a fresh precompute. The D5
+  ///    "avoid init_grammar fallback" item turned out to describe the ideal, not the floor —
+  ///    legitimate callers still hit step 3.
+  /// 4. Log + keep previous engine. Subsequent `parse_math` / `recognizes` will fail gracefully (0
+  ///    trees, no panic); better than crashing the whole conversion.
   ///
   /// The previous implementation called `init_grammar().unwrap()` at
   /// step 3, which would panic on any Err. The round-17 change removes
@@ -197,7 +195,7 @@ impl MathParser {
           "math parser: init_grammar fallback failed ({}) — leaving engine in last known state",
           e
         );
-      }
+      },
     }
   }
 
@@ -216,7 +214,9 @@ impl MathParser {
 
   /// Test if the recognizer accepts a given input string (for unit testing).
   pub fn recognizes(&mut self, input: &str) -> bool {
-    let result = self.engine.run_recognizer(ByteScanner::new(Cursor::new(input)));
+    let result = self
+      .engine
+      .run_recognizer(ByteScanner::new(Cursor::new(input)));
     if result.is_err() {
       self.reset_engine();
     }
@@ -228,12 +228,15 @@ impl MathParser {
   /// and deduplication. Useful for detecting grammar ambiguity.
   /// Returns the count, or None if recognition fails.
   pub fn count_raw_trees(&mut self, input: &str) -> Option<usize> {
-    let parse_result = match self.engine.run_recognizer(ByteScanner::new(Cursor::new(input))) {
+    let parse_result = match self
+      .engine
+      .run_recognizer(ByteScanner::new(Cursor::new(input)))
+    {
       Ok(r) => r,
       Err(_) => {
         self.reset_engine();
         return None;
-      }
+      },
     };
     let mut count = 0usize;
     let max = 5000;
@@ -267,10 +270,8 @@ impl MathParser {
         if self.last_parsetrees_count > 0 {
           if let Some(mut math_parent) = math_ref.get_parent() {
             if math_parent.get_name() == "Math" {
-              let _ = math_parent.set_attribute(
-                "_parsetrees",
-                &self.last_parsetrees_count.to_string(),
-              );
+              let _ =
+                math_parent.set_attribute("_parsetrees", &self.last_parsetrees_count.to_string());
             }
           }
         }
@@ -283,13 +284,17 @@ impl MathParser {
       // eprintln!("KLUDGE_SCAN: {} XMath candidates", kludge_candidates.len());
       for xmath in kludge_candidates {
         // Use get_child_nodes + manual filter (get_child_elements may miss some nodes)
-        let child_elems: Vec<Node> = xmath.get_child_nodes().into_iter()
+        let child_elems: Vec<Node> = xmath
+          .get_child_nodes()
+          .into_iter()
           .filter(|n| n.get_type() == Some(NodeType::ElementNode))
           .collect();
         // Skip fully-parsed XMath: single XMDual/XMApp child means parsing succeeded.
         if child_elems.len() == 1 {
           let name = child_elems[0].get_name();
-          if name == "XMDual" || name == "XMApp" { continue; }
+          if name == "XMDual" || name == "XMApp" {
+            continue;
+          }
         }
         let has_direct_open = child_elems.iter().any(|ch| {
           let role = ch.get_attribute("role").unwrap_or_default();
@@ -335,12 +340,24 @@ impl MathParser {
         let children: Vec<Node> = xmapp.get_child_elements();
         if children.len() >= 2 {
           let op_role = children[0].get_attribute("role");
-          if matches!(op_role.as_deref(), Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")) {
+          if matches!(
+            op_role.as_deref(),
+            Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")
+          ) {
             if let Some(base_role) = children[1].get_attribute("role") {
-              if matches!(base_role.as_str(),
-                "MULOP" | "ADDOP" | "BINOP" | "RELOP" | "ARROW" | "METARELOP"
-                | "MODIFIER" | "MODIFIEROP" | "OPERATOR" | "DIFFOP")
-              {
+              if matches!(
+                base_role.as_str(),
+                "MULOP"
+                  | "ADDOP"
+                  | "BINOP"
+                  | "RELOP"
+                  | "ARROW"
+                  | "METARELOP"
+                  | "MODIFIER"
+                  | "MODIFIEROP"
+                  | "OPERATOR"
+                  | "DIFFOP"
+              ) {
                 let _ = xmapp.set_attribute("role", &base_role);
               }
             }
@@ -375,8 +392,10 @@ impl MathParser {
     // by parsing.
     static SCRIPT_RE: Lazy<Regex> =
       Lazy::new(|| Regex::new(r"^(?:PRE|POST|FLOAT)(?:SUB|SUPER)SCRIPT$").unwrap());
-    let apps = document
-      .findnodes("descendant-or-self::*[@xml:id and contains(@role,'SCRIPT')]", None);
+    let apps = document.findnodes(
+      "descendant-or-self::*[@xml:id and contains(@role,'SCRIPT')]",
+      None,
+    );
     for mut app in apps {
       let role = match app.get_attribute("role") {
         Some(r) => r,
@@ -464,9 +483,7 @@ impl MathParser {
 
   // ================================================================================
   /// Returns the number of XMath parse failures (for post-parse ltx_math_unparsed marking)
-  pub fn xmath_failures(&self) -> usize {
-    *self.failed.get_sym(pin!("ltx:XMath")).unwrap_or(&0)
-  }
+  pub fn xmath_failures(&self) -> usize { *self.failed.get_sym(pin!("ltx:XMath")).unwrap_or(&0) }
 
   pub fn clear(&mut self) {
     self.passed = sym_map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0);
@@ -573,7 +590,10 @@ impl MathParser {
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
       p.set_attribute("text", &text_form(&result, document))?;
-    } else if let Some(text) = p.get_attribute("tex").and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str())) {
+    } else if let Some(text) = p
+      .get_attribute("tex")
+      .and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str()))
+    {
       p.set_attribute("text", text)?;
     }
     Ok(())
@@ -749,11 +769,17 @@ impl MathParser {
   fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) {
     use crate::data::get_grammatical_role;
     let children: Vec<Node> = filter_hints(mathnode.get_child_nodes());
-    if children.is_empty() { return; }
+    if children.is_empty() {
+      return;
+    }
 
     // Build (node, role) pairs — matching Perl's @pairs.
-    let pairs: Vec<(Node, String)> = children.into_iter()
-      .map(|n| { let r = get_grammatical_role(&n); (n, r) })
+    let pairs: Vec<(Node, String)> = children
+      .into_iter()
+      .map(|n| {
+        let r = get_grammatical_role(&n);
+        (n, r)
+      })
       .collect();
 
     // Perl: @stack = ([], []) — extra empty level handles unmatched leading CLOSEs.
@@ -762,7 +788,10 @@ impl MathParser {
 
     while iter.peek().is_some() || stack.len() > 1 {
       let pair_opt = iter.next();
-      let role = pair_opt.as_ref().map(|(_, r)| r.as_str()).unwrap_or("CLOSE");
+      let role = pair_opt
+        .as_ref()
+        .map(|(_, r)| r.as_str())
+        .unwrap_or("CLOSE");
       match role {
         "OPEN" => {
           let pair = pair_opt.unwrap();
@@ -777,19 +806,22 @@ impl MathParser {
           let kludged = kludge_scripts_rec(row, document);
           // Wrap if > 1 node, give role FENCED
           let result = if kludged.len() > 1 {
-            let mut wrap = Node::new("XMWrap", None, document.get_document())
-              .unwrap();
+            let mut wrap = Node::new("XMWrap", None, document.get_document()).unwrap();
             for mut n in kludged {
               n.unlink_node();
               wrap.add_child(&mut n).ok();
             }
             (wrap, "FENCED".to_string())
           } else {
-            let node = kludged.into_iter().next().unwrap_or_else(
-              || Node::new_text("", &document.document).unwrap());
+            let node = kludged
+              .into_iter()
+              .next()
+              .unwrap_or_else(|| Node::new_text("", &document.document).unwrap());
             (node, "FENCED".to_string())
           };
-          if stack.is_empty() { stack.push(vec![]); }
+          if stack.is_empty() {
+            stack.push(vec![]);
+          }
           stack[0].push(result);
         },
         _ => {
@@ -871,9 +903,15 @@ impl MathParser {
     } else if content_nodes.len() == 1 {
       // single node with trailing punct: wrap in XMDual
       let result = content_nodes.remove(0);
-      Ok(Some(self.wrap_with_punct(result, punct_nodes, mathnode, document)?))
+      Ok(Some(self.wrap_with_punct(
+        result,
+        punct_nodes,
+        mathnode,
+        document,
+      )?))
     } else {
-      // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called above)
+      // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called
+      // above)
       let (lexemes, mut nodes) = node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
       if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document) {
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
@@ -892,7 +930,12 @@ impl MathParser {
         let result = element_nodes(mathnode).remove(0);
         //END reparent.
         if !punct_nodes.is_empty() {
-          Ok(Some(self.wrap_with_punct(result, punct_nodes, mathnode, document)?))
+          Ok(Some(self.wrap_with_punct(
+            result,
+            punct_nodes,
+            mathnode,
+            document,
+          )?))
         } else {
           Ok(Some(result))
         }
@@ -1040,17 +1083,29 @@ impl MathParser {
     if ok_trees + pruned_trees > 10 {
       log::warn!(
         "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
-        ok_trees + pruned_trees + deduped, ok_trees + deduped, pruned_trees, deduped, parses.len(), start.elapsed(),
+        ok_trees + pruned_trees + deduped,
+        ok_trees + deduped,
+        pruned_trees,
+        deduped,
+        parses.len(),
+        start.elapsed(),
         input.trim()
       );
     }
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
     // Useful for identifying grammar ambiguity hotspots across the test suite.
     // Usage: LATEXML_PARSE_AUDIT=1 cargo test --test 56_ams -- mathtools_test --nocapture
-    if std::env::var("LATEXML_PARSE_AUDIT").is_ok() && (ok_trees + pruned_trees > 1 || start.elapsed().as_millis() > 50) {
+    if std::env::var("LATEXML_PARSE_AUDIT").is_ok()
+      && (ok_trees + pruned_trees > 1 || start.elapsed().as_millis() > 50)
+    {
       eprintln!(
         "PARSE_AUDIT: {} trees ({} ok, {} pruned, {} dedup→{} unique) in {:?} | {}",
-        ok_trees + pruned_trees + deduped, ok_trees + deduped, pruned_trees, deduped, parses.len(), start.elapsed(),
+        ok_trees + pruned_trees + deduped,
+        ok_trees + deduped,
+        pruned_trees,
+        deduped,
+        parses.len(),
+        start.elapsed(),
         &input.trim().chars().take(200).collect::<String>()
       );
     }
@@ -1103,7 +1158,7 @@ impl MathParser {
       Err(_e) => {
         self.reset_engine();
         Ok(None)
-      }
+      },
     }
   }
 }
@@ -1117,13 +1172,14 @@ impl MathParser {
 /// Takes a list of (Node, role) pairs and attaches scripts to their bases:
 /// - POSTSUPERSCRIPT/POSTSUBSCRIPT → attach to preceding node
 /// - FLOATSUPERSCRIPT/FLOATSUBSCRIPT → pre-script on following node
-fn kludge_scripts_rec(
-  pairs: Vec<(Node, String)>,
-  document: &mut Document,
-) -> Vec<Node> {
+fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Vec<Node> {
   use crate::data::get_grammatical_role;
-  if pairs.is_empty() { return vec![]; }
-  if pairs.len() == 1 { return vec![pairs.into_iter().next().unwrap().0]; }
+  if pairs.is_empty() {
+    return vec![];
+  }
+  if pairs.len() == 1 {
+    return vec![pairs.into_iter().next().unwrap().0];
+  }
 
   let mut acc: Vec<Node> = Vec::new();
   let mut iter = pairs.into_iter();
@@ -1192,27 +1248,23 @@ fn kludge_scripts_rec(
   acc
 }
 
-fn is_float_script(role: &str) -> bool {
-  role == "FLOATSUPERSCRIPT" || role == "FLOATSUBSCRIPT"
-}
+fn is_float_script(role: &str) -> bool { role == "FLOATSUPERSCRIPT" || role == "FLOATSUBSCRIPT" }
 
-fn is_post_script(role: &str) -> bool {
-  role == "POSTSUPERSCRIPT" || role == "POSTSUBSCRIPT"
-}
+fn is_post_script(role: &str) -> bool { role == "POSTSUPERSCRIPT" || role == "POSTSUBSCRIPT" }
 
 /// Perl: NewScript (MathParser.pm L1597-1644)
 /// Creates XMApp(XMTok[role=SCRIPTOP, scriptpos=...], base, script_content).
-fn new_script_node(
-  base: Node,
-  script_pair: &(Node, String),
-  document: &mut Document,
-) -> Node {
+fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Document) -> Node {
   let (script_node, script_role) = script_pair;
 
   // Determine SUPER vs SUB from role
   let is_super = script_role.contains("SUPER");
   let is_float = script_role.starts_with("FLOAT");
-  let op_role = if is_super { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+  let op_role = if is_super {
+    "SUPERSCRIPTOP"
+  } else {
+    "SUBSCRIPTOP"
+  };
 
   // Extract scriptpos from base and script (Perl L1613-1635)
   // For XMApp bases, check the inner operator's scriptpos too
@@ -1230,15 +1282,29 @@ fn new_script_node(
 
   let (bx, bl) = parse_scriptpos_str(&rbase_sp);
   let (sx, sl) = parse_scriptpos_str(&script_sp);
-  let bl = if bl > 0 { bl } else if sl > 0 { sl } else { 1 };
+  let bl = if bl > 0 {
+    bl
+  } else if sl > 0 {
+    sl
+  } else {
+    1
+  };
   let sl = if sl > 0 { sl } else { bl };
-  let mut l = if sl > 0 { sl } else if bl > 0 { bl } else { 1 };
+  let mut l = if sl > 0 {
+    sl
+  } else if bl > 0 {
+    bl
+  } else {
+    1
+  };
 
   // Perl: if base was a float script, bump level
   if base.get_attribute("_wasfloat").is_some() {
     l += 1;
   } else if let Some(bump_str) = base.get_attribute("_bumplevel") {
-    if let Ok(bump) = bump_str.parse::<u32>() { l = bump; }
+    if let Ok(bump) = bump_str.parse::<u32>() {
+      l = bump;
+    }
   }
 
   // Perl L1632: position from base or script, defaulting to "post"
@@ -1293,7 +1359,9 @@ fn new_absent_node(document: &mut Document) -> Node {
 }
 
 fn parse_scriptpos_str(sp: &str) -> (&str, u32) {
-  if sp.is_empty() { return ("post", 0); }
+  if sp.is_empty() {
+    return ("post", 0);
+  }
   let pos_end = sp.find(|c: char| c.is_ascii_digit()).unwrap_or(sp.len());
   let pos = &sp[..pos_end];
   let level = sp[pos_end..].parse::<u32>().unwrap_or(0);
@@ -1364,9 +1432,7 @@ fn textrec(
   }
   struct _Dec;
   impl Drop for _Dec {
-    fn drop(&mut self) {
-      TEXTREC_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
-    }
+    fn drop(&mut self) { TEXTREC_DEPTH.with(|d| d.set(d.get().saturating_sub(1))); }
   }
   let _dec = _Dec;
 
@@ -1661,11 +1727,16 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
 /// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
 /// _pxmkey is used by parser-generated XMDual (apply_delimited) to avoid
 /// conflicting with base_xmath's \lx@dual afterConstruct resolver.
-fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Result<(), Box<dyn std::error::Error>> {
+fn resolve_xmkeys(
+  mathnode: &Node,
+  document: &mut Document,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
   // Resolve both _xmkey (from existing infrastructure) and _pxmkey (from parser)
   for attr_name in &["_xmkey", "_pxmkey"] {
     let refs = document.findnodes(
-      &format!("descendant::ltx:XMRef[@{}]", attr_name), Some(mathnode));
+      &format!("descendant::ltx:XMRef[@{}]", attr_name),
+      Some(mathnode),
+    );
     for mut ref_node in refs {
       let key = match ref_node.get_attribute(attr_name) {
         Some(k) => k,
@@ -1674,17 +1745,22 @@ fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Resu
       // Find the element with matching key (non-XMRef)
       // Note: not(self::ltx:XMRef) may fail with namespace prefix in nested
       // predicates (XPath bug). Use local-name() check instead.
-      let xpath = format!("descendant::*[@{}='{}'][not(local-name()='XMRef')]", attr_name, key);
+      let xpath = format!(
+        "descendant::*[@{}='{}'][not(local-name()='XMRef')]",
+        attr_name, key
+      );
       let targets = document.findnodes(&xpath, Some(mathnode));
       if let Some(mut target) = targets.into_iter().next() {
         // Ensure target has xml:id
-        let target_id = if let Some(id) = target.get_attribute("xml:id")
+        let target_id = if let Some(id) = target
+          .get_attribute("xml:id")
           .or_else(|| target.get_attribute("id"))
         {
           id
         } else {
           document.generate_id(&mut target, "")?;
-          target.get_attribute("xml:id")
+          target
+            .get_attribute("xml:id")
             .or_else(|| target.get_attribute("id"))
             .unwrap_or_default()
         };
@@ -1695,9 +1771,7 @@ fn resolve_xmkeys(mathnode: &Node, document: &mut Document) -> std::result::Resu
       let _ = ref_node.remove_attribute(attr_name);
     }
     // Clean up from non-ref elements
-    for mut node in document.findnodes(
-      &format!("descendant::*[@{}]", attr_name), Some(mathnode))
-    {
+    for mut node in document.findnodes(&format!("descendant::*[@{}]", attr_name), Some(mathnode)) {
       let _ = node.remove_attribute(attr_name);
     }
   }
@@ -1725,9 +1799,7 @@ mod tests {
   fn parse(xml: &str) -> libxml::tree::Document {
     XmlParser::default().parse_string(xml).expect("parse xml")
   }
-  fn root(doc: &libxml::tree::Document) -> Node {
-    doc.get_root_element().expect("root")
-  }
+  fn root(doc: &libxml::tree::Document) -> Node { doc.get_root_element().expect("root") }
 
   #[test]
   fn is_float_script_recognized() {

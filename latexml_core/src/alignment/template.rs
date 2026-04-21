@@ -493,18 +493,36 @@ mod tests {
   #[test]
   fn column_spec_difference_heuristic_self_is_zero() {
     // Like-to-like distances are 0 for each non-generic variant.
-    assert_eq!(ColumnSpec::Empty.difference_heuristic(&ColumnSpec::Empty), 0.0);
-    assert_eq!(ColumnSpec::Math.difference_heuristic(&ColumnSpec::Math), 0.0);
-    assert_eq!(ColumnSpec::Integer.difference_heuristic(&ColumnSpec::Integer), 0.0);
-    assert_eq!(ColumnSpec::Text.difference_heuristic(&ColumnSpec::Text), 0.0);
+    assert_eq!(
+      ColumnSpec::Empty.difference_heuristic(&ColumnSpec::Empty),
+      0.0
+    );
+    assert_eq!(
+      ColumnSpec::Math.difference_heuristic(&ColumnSpec::Math),
+      0.0
+    );
+    assert_eq!(
+      ColumnSpec::Integer.difference_heuristic(&ColumnSpec::Integer),
+      0.0
+    );
+    assert_eq!(
+      ColumnSpec::Text.difference_heuristic(&ColumnSpec::Text),
+      0.0
+    );
     assert_eq!(ColumnSpec::D.difference_heuristic(&ColumnSpec::D), 0.0);
-    assert_eq!(ColumnSpec::Graphics.difference_heuristic(&ColumnSpec::Graphics), 0.0);
+    assert_eq!(
+      ColumnSpec::Graphics.difference_heuristic(&ColumnSpec::Graphics),
+      0.0
+    );
   }
 
   #[test]
   fn column_spec_difference_heuristic_incompatible_is_large() {
     // Graphics vs anything else → 0.75 (Perl's "strong difference").
-    assert_eq!(ColumnSpec::Graphics.difference_heuristic(&ColumnSpec::Math), 0.75);
+    assert_eq!(
+      ColumnSpec::Graphics.difference_heuristic(&ColumnSpec::Math),
+      0.75
+    );
     assert_eq!(ColumnSpec::D.difference_heuristic(&ColumnSpec::Text), 0.75);
   }
 }

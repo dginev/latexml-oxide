@@ -40,8 +40,8 @@ pub struct Digested(Rc<DigestedData>);
 /// These are all kinds of data which we consider officially supported
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 #[allow(clippy::large_enum_variant)]
-// TODO: Investigate if the outer Rc<> wrap of Digested is enough to avoid performance penalties from having 
-//       the concrete structs in DigestedData vary a lot in size.
+// TODO: Investigate if the outer Rc<> wrap of Digested is enough to avoid performance penalties
+// from having       the concrete structs in DigestedData vary a lot in size.
 pub enum DigestedData {
   /// A TeX Box
   TBox(RefCell<Tbox>),
@@ -184,7 +184,9 @@ impl From<Whatsit> for Digested {
 }
 impl From<Alignment> for Digested {
   fn from(value: Alignment) -> Digested {
-    Digested(Rc::new(DigestedData::Alignment(Box::new(RefCell::new(value)))))
+    Digested(Rc::new(DigestedData::Alignment(Box::new(RefCell::new(
+      value,
+    )))))
   }
 }
 impl From<KeyVals> for Digested {
@@ -196,9 +198,7 @@ impl From<RegisterValue> for Digested {
   }
 }
 impl From<Comment> for Digested {
-  fn from(value: Comment) -> Digested {
-    Digested(Rc::new(DigestedData::Comment(value)))
-  }
+  fn from(value: Comment) -> Digested { Digested(Rc::new(DigestedData::Comment(value))) }
 }
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
@@ -422,7 +422,9 @@ impl BoxOps for Digested {
       KeyVals(ref kvs) => kvs.compute_size(options),
       Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
       Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Postponed(_) | RegisterValue(_) | Comment(_) => Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0))),
+      Postponed(_) | RegisterValue(_) | Comment(_) => {
+        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+      },
     }
   }
 }
@@ -498,19 +500,24 @@ impl Digested {
       Comment(_) => true,
       TBox(ref b) => {
         let b = b.borrow();
-        if b.get_property_bool("isEmpty") || b.get_property_bool("isSpace")
+        if b.get_property_bool("isEmpty")
+          || b.get_property_bool("isSpace")
           || b.get_property_bool("alignmentSkippable")
         {
           true
         } else {
           // Perl: getString, check if only whitespace
-          b.get_string().ok().map(|s| s.trim().is_empty()).unwrap_or(false)
+          b.get_string()
+            .ok()
+            .map(|s| s.trim().is_empty())
+            .unwrap_or(false)
         }
       },
       List(ref l) => l.borrow().boxes.iter().all(|d| d.is_skippable()),
       Whatsit(ref w) => {
         let w = w.borrow();
-        if w.get_property_bool("isEmpty") || w.get_property_bool("isSpace")
+        if w.get_property_bool("isEmpty")
+          || w.get_property_bool("isSpace")
           || w.get_property_bool("alignmentSkippable")
         {
           true

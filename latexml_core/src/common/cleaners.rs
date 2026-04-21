@@ -5,8 +5,8 @@ use crate::binding::def::dialect::{
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
-use unidecode::unidecode;
 use unicode_normalization::UnicodeNormalization;
+use unidecode::unidecode;
 
 static TRAILING_PUNCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\.,;]+$").unwrap());
 static NON_ALNUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9]").unwrap());
@@ -124,9 +124,7 @@ pub fn clean_bib_key(key: &str) -> String {
 
 /// Return the bibkey in a form to ACTUALLY lookup (Perl: NormalizeBibKey)
 /// Usually use clean_bib_key to preserve key in the original form (case)
-pub fn normalize_bib_key(key: &str) -> String {
-  clean_bib_key(key).to_lowercase()
-}
+pub fn normalize_bib_key(key: &str) -> String { clean_bib_key(key).to_lowercase() }
 
 /// Split comma-separated text into trimmed tokens (Perl: TrimmedCommaList)
 pub fn trimmed_comma_list(text: &str) -> Vec<String> {
@@ -258,8 +256,7 @@ mod tests {
     // normalize_bib_key should produce the same output for case variants.
     let a = normalize_bib_key("Author2020");
     let b = normalize_bib_key("AUTHOR2020");
-    assert_eq!(a, b,
-      "normalize_bib_key folds case (got {a:?} vs {b:?})");
+    assert_eq!(a, b, "normalize_bib_key folds case (got {a:?} vs {b:?})");
   }
 
   #[test]
@@ -274,8 +271,10 @@ mod tests {
     // retain empty tokens or drop them depending on the implementation;
     // just assert consistency with non-empty entries.
     let out = trimmed_comma_list(",a,,b,");
-    assert!(out.contains(&"a".to_string()) && out.contains(&"b".to_string()),
-      "got {out:?}");
+    assert!(
+      out.contains(&"a".to_string()) && out.contains(&"b".to_string()),
+      "got {out:?}"
+    );
   }
 
   #[test]

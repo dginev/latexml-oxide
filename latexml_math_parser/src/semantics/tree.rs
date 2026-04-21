@@ -26,38 +26,38 @@ pub struct Args(pub Vec<Option<XM>>);
 /// during grammatical processing
 pub struct XProps {
   /// text content of the node
-  pub content:   Option<Cow<'static, str>>,
+  pub content:           Option<Cow<'static, str>>,
   /// grammatical role used during math parsing
-  pub role:      Option<Cow<'static, str>>,
+  pub role:              Option<Cow<'static, str>>,
   /// conceptual meaning of a construct, used in disambiguation and Content output
-  pub meaning:   Option<Cow<'static, str>>,
+  pub meaning:           Option<Cow<'static, str>>,
   /// similar to `meaning`, but more fixed, usually associated with constants
-  pub name:      Option<Cow<'static, str>>,
+  pub name:              Option<Cow<'static, str>>,
   /// script position w.r.t to baseline
-  pub scriptpos: Option<Cow<'static, str>>,
+  pub scriptpos:         Option<Cow<'static, str>>,
   /// a unique identifier, in the `xml:id` sense
-  pub id:        Option<Cow<'static, str>>,
+  pub id:                Option<Cow<'static, str>>,
   /// a pointer to a different node, usually for `XMRef`
-  pub idref:     Option<Cow<'static, str>>,
+  pub idref:             Option<Cow<'static, str>>,
   /// an intermediate key to be fully realized as an id at a later time
-  pub xmkey:     Option<Cow<'static, str>>,
+  pub xmkey:             Option<Cow<'static, str>>,
   /// an optional subtree-specific Font
-  pub font:      Option<Font>,
+  pub font:              Option<Font>,
   /// usually associated with the internal `_font` attribute references
-  pub fontref:   Option<Cow<'static, str>>,
+  pub fontref:           Option<Cow<'static, str>>,
   /// stretchy attribute for delimiters (e.g. "false" to suppress MathML stretching)
-  pub stretchy:  Option<Cow<'static, str>>,
+  pub stretchy:          Option<Cow<'static, str>>,
   /// marker for UNKNOWN tokens that may be used as functions (set by MATHPARSER_SPECULATE)
   pub possible_function: Option<Cow<'static, str>>,
   /// math style (display, text, script, scriptscript) — preserved from constructor
-  pub mathstyle: Option<Cow<'static, str>>,
+  pub mathstyle:         Option<Cow<'static, str>>,
   /// fraction line thickness (e.g. "0pt" for binomial)
-  pub thickness: Option<Cow<'static, str>>,
+  pub thickness:         Option<Cow<'static, str>>,
   /// declaration id (from \lxDeclare)
-  pub decl_id:   Option<Cow<'static, str>>,
+  pub decl_id:           Option<Cow<'static, str>>,
   /// lpadding/rpadding from alignment spacing
-  pub lpadding:  Option<Cow<'static, str>>,
-  pub rpadding:  Option<Cow<'static, str>>,
+  pub lpadding:          Option<Cow<'static, str>>,
+  pub rpadding:          Option<Cow<'static, str>>,
 }
 /// Custom PartialEq: ignores `xmkey`, `id`, `idref`, and `scriptpos` which are
 /// bookkeeping/layout fields. Structurally identical parse trees that differ only
@@ -401,29 +401,31 @@ impl XM {
       XM::Apply(mut op, mut args, props, meta) => {
         // First, if we have a specialize directive, execute it:
         match into.specialize {
-          Some(ref directive) if directive == "embellish"
+          Some(ref directive)
+            if directive == "embellish"
             // Atoms with embellishments should get their curry levels renamed
             // to avoid conflicts with the same atoms *without* the embellishments
             // as often this technique is used to generate new unique names.
-            && args.0.len() <= 2 => {
-              if let Some(XM::Lexeme(_, arg_meta)) = &mut args.0[0] {
-                if let Some(CurryTerm::Var(ref mut curry_var)) = arg_meta.curry_level {
-                  let mut base_op = op.0.base_operator_name();
-                  // fish out a local name to use as an embellishment
-                  if let Some(last_colon_idx) = base_op.rfind(':') {
-                    base_op.replace_range(..=last_colon_idx, "");
-                  } else if let Some(last_dot_idx) = base_op.rfind('.') {
-                    base_op.replace_range(..=last_dot_idx, "");
-                  }
-                  if base_op.is_empty() {
-                    base_op = String::from("embellished");
-                  }
-                  curry_var.push('-');
-                  curry_var.push_str(&base_op);
+            && args.0.len() <= 2 =>
+          {
+            if let Some(XM::Lexeme(_, arg_meta)) = &mut args.0[0] {
+              if let Some(CurryTerm::Var(ref mut curry_var)) = arg_meta.curry_level {
+                let mut base_op = op.0.base_operator_name();
+                // fish out a local name to use as an embellishment
+                if let Some(last_colon_idx) = base_op.rfind(':') {
+                  base_op.replace_range(..=last_colon_idx, "");
+                } else if let Some(last_dot_idx) = base_op.rfind('.') {
+                  base_op.replace_range(..=last_dot_idx, "");
                 }
-                into.curry_level.clone_from(&arg_meta.curry_level)
+                if base_op.is_empty() {
+                  base_op = String::from("embellished");
+                }
+                curry_var.push('-');
+                curry_var.push_str(&base_op);
               }
-            },
+              into.curry_level.clone_from(&arg_meta.curry_level)
+            }
+          },
           _ => {},
         }
         // Next, we validate the constraints.
@@ -511,12 +513,20 @@ impl XM {
     match self {
       XM::Lexeme(name, meta) => {
         let fenced = meta.fenced.as_deref().unwrap_or("");
-        if fenced.is_empty() { name.to_string() } else { format!("{name}[{fenced}]") }
+        if fenced.is_empty() {
+          name.to_string()
+        } else {
+          format!("{name}[{fenced}]")
+        }
       },
       XM::Token(props, _) => {
         let role = props.role.as_deref().unwrap_or("?");
         let meaning = props.meaning.as_deref().unwrap_or("");
-        if meaning.is_empty() { role.to_string() } else { format!("{role}:{meaning}") }
+        if meaning.is_empty() {
+          role.to_string()
+        } else {
+          format!("{role}:{meaning}")
+        }
       },
       XM::Apply(op, args, ..) => {
         let op_str = op.0.text_summary();
@@ -722,7 +732,13 @@ impl XM {
   ) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       XM::Lexeme(content, _meta) => {
-        let id = content.split(':').next_back().unwrap().parse::<usize>().unwrap() - 1;
+        let id = content
+          .split(':')
+          .next_back()
+          .unwrap()
+          .parse::<usize>()
+          .unwrap()
+          - 1;
         let atom_node = &mut nodes[id];
         atom_node.unbind();
         Ok(atom_node.clone())
@@ -801,7 +817,11 @@ impl XM {
           // Use _pxmkey for parser-generated keys (pxm prefix) to avoid
           // conflicting with base_xmath's \lx@dual resolver.
           // Regular _xmkey for all other refs.
-          let attr_name = if xmkey.starts_with("pxm") { "_pxmkey" } else { "_xmkey" };
+          let attr_name = if xmkey.starts_with("pxm") {
+            "_pxmkey"
+          } else {
+            "_xmkey"
+          };
           document.set_attribute(&mut ref_node, attr_name, &xmkey)?;
         }
         Ok(ref_node)
@@ -819,7 +839,10 @@ impl XM {
           Info!(
             "math_parser",
             "choices",
-            format!("to_xmath handler discarded {} parse choices.", choices.len() - 1)
+            format!(
+              "to_xmath handler discarded {} parse choices.",
+              choices.len() - 1
+            )
           );
         }
         choices.remove(0).into_xmath(owner, nodes, document)
@@ -836,7 +859,7 @@ impl XM {
           None => Ok(None),
         };
       },
-      XM::Apply(ref op, _, _, _) => {
+      XM::Apply(ref op, ..) => {
         // Compound operator (e.g. composed_bigop): get meaning from the operator
         return op.0.get_token_meaning(nodes);
       },
@@ -941,9 +964,13 @@ pub(crate) fn lookup_lex_node<'a>(
     .map_err(|e| format!("malformed lex {lex:?}: {e}"))?
     .checked_sub(1)
     .ok_or_else(|| format!("lex idx 0 (expected 1-based) in {lex:?}"))?;
-  nodes
-    .get(node_idx)
-    .ok_or_else(|| format!("lex idx {node_idx} out of range (nodes.len={}) in {lex:?}", nodes.len()).into())
+  nodes.get(node_idx).ok_or_else(|| {
+    format!(
+      "lex idx {node_idx} out of range (nodes.len={}) in {lex:?}",
+      nodes.len()
+    )
+    .into()
+  })
 }
 
 fn aux_generate_indent(level: &[bool], is_base: bool) -> String {
@@ -990,7 +1017,12 @@ impl From<&Node> for XM {
         } else {
           XM::from(&children.remove(0))
         };
-        XM::Dual(Box::new(XM::from(&content)), Box::new(presentation), XProps::from(n), Meta::default())
+        XM::Dual(
+          Box::new(XM::from(&content)),
+          Box::new(presentation),
+          XProps::from(n),
+          Meta::default(),
+        )
       },
       "XMRef" => XM::Ref(XProps::from(n)),
       "XMWrap" => {
@@ -999,9 +1031,7 @@ impl From<&Node> for XM {
         XM::Wrap(inner_xm, XProps::from(n), Meta::default())
       },
       // Fallback for unhandled node types — treat as token preserving attributes
-      _other => {
-        XM::Token(XProps::from(n), Meta::default())
-      },
+      _other => XM::Token(XProps::from(n), Meta::default()),
     }
   }
 }

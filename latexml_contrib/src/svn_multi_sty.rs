@@ -1,8 +1,11 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "svn-multi.sty",
-    "svn-multi.sty is not implemented and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "svn-multi.sty",
+    "svn-multi.sty is not implemented and will not be interpreted raw."
+  );
   RequirePackage!("graphics");
   DefConditional!("\\ifsvnfilemodified");
   DefConditional!("\\ifsvnmodified");

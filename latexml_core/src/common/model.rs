@@ -650,7 +650,10 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
     return true;
   }
 
-  if child == pin!("_WildCard_") || child == pin!("#Comment") || child == pin!("#ProcessingInstruction") || child == pin!("#DTD")
+  if child == pin!("_WildCard_")
+    || child == pin!("#Comment")
+    || child == pin!("#ProcessingInstruction")
+    || child == pin!("#DTD")
   {
     return true;
   }

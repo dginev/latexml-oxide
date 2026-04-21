@@ -1,8 +1,11 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "currfile.sty",
-    "currfile.sty is only minimally stubbed and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "currfile.sty",
+    "currfile.sty is only minimally stubbed and will not be interpreted raw."
+  );
   DefMacro!("\\currfiledir", "");
   DefMacro!("\\currfilebase", "");
   DefMacro!("\\currfileext", "");

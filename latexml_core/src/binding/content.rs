@@ -9,7 +9,6 @@ use std::rc::Rc;
 use crate::common::arena;
 use crate::common::arena::SymStr;
 use crate::common::error::*;
-use crate::state::let_i;
 use crate::common::font::{Font, Fontmap};
 use crate::common::model;
 use crate::document::resource::*;
@@ -18,6 +17,7 @@ use crate::gullet;
 use crate::gullet::do_expand;
 use crate::mouth::{Mouth, MouthOptions};
 use crate::parameter::{Parameter, Parameters};
+use crate::state::let_i;
 use crate::state::*;
 use crate::stomach::*;
 use crate::token::*;
@@ -101,18 +101,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   if depth > MAX_INPUT_DEPTH {
     INPUT_DEPTH.with(|d| d.set(d.get() - 1));
     Fatal!(
-      Stomach, Recursion,
-      s!("Package loading depth exceeded {} (loading '{}').\
-        This usually means a missing binding causes infinite recursion.", MAX_INPUT_DEPTH, name)
+      Stomach,
+      Recursion,
+      s!(
+        "Package loading depth exceeded {} (loading '{}').\
+        This usually means a missing binding causes infinite recursion.",
+        MAX_INPUT_DEPTH,
+        name
+      )
     );
   }
 
   // Ensure depth cleanup on all exit paths via a guard
   struct InputDepthGuard;
   impl Drop for InputDepthGuard {
-    fn drop(&mut self) {
-      INPUT_DEPTH.with(|d| d.set(d.get() - 1));
-    }
+    fn drop(&mut self) { INPUT_DEPTH.with(|d| d.set(d.get() - 1)); }
   }
   let _guard = InputDepthGuard;
 
@@ -180,7 +183,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   };
   // Store the document class filename for xkeyval's isInClassFile check
   if as_type == "cls" && options.handleoptions {
-    assign_value("document_class_filename", filename.clone(), Some(Scope::Global));
+    assign_value(
+      "document_class_filename",
+      filename.clone(),
+      Some(Scope::Global),
+    );
   }
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
@@ -224,13 +231,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // "babel.sty" definitions...` trace. Now only the outermost frame
   // announces — tracked per-filename via a state-value marker.
   let banner_key = s!("__loading_banner__{filename}");
-  let this_frame_announces =
-    crate::state::with_value(&banner_key, |v| v.is_none());
+  let this_frame_announces = crate::state::with_value(&banner_key, |v| v.is_none());
   if this_frame_announces {
     note_begin(&s!("Loading {:?} definitions", filename));
-    crate::state::assign_value(
-      &banner_key, true, Some(crate::state::Scope::Global),
-    );
+    crate::state::assign_value(&banner_key, true, Some(crate::state::Scope::Global));
   }
   def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
@@ -261,7 +265,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // \@addtofilelist before reading the file, so \@filelist is available inside)
   if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
     digest(Tokens!(
-      T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
+      T_CS!("\\@addtofilelist"),
+      T_BEGIN!(),
+      Explode!(filename),
+      T_END!()
     ))?;
   }
 
@@ -272,7 +279,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     if this_frame_announces {
       note_end(&s!("Loading {:?} definitions", filename));
       crate::state::assign_value(
-        &banner_key, crate::common::store::Stored::None,
+        &banner_key,
+        crate::common::store::Stored::None,
         Some(crate::state::Scope::Global),
       );
     }
@@ -285,15 +293,23 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     false
   } else {
     match _load_binding(false, &filename, options.reloadable).and_then(|ext| {
-      if ext { Ok(true) } else { _load_binding(true, &filename, options.reloadable) }
+      if ext {
+        Ok(true)
+      } else {
+        _load_binding(true, &filename, options.reloadable)
+      }
     }) {
       Ok(v) => v,
       Err(e) => {
-        Error!("unexpected", &filename, s!("Error loading binding for '{}': {}", filename, e));
+        Error!(
+          "unexpected",
+          &filename,
+          s!("Error loading binding for '{}': {}", filename, e)
+        );
         // Mark as loaded even on error to prevent re-loading via raw path
         assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
         false
-      }
+      },
     }
   };
   let mut is_found_raw = false;
@@ -320,10 +336,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     //
     // Perl Package.pm FindFile search order (L2109-2139):
     //   1. .ltxml binding (handled above by load_binding/load_external_binding)
-    //   2. Raw TeX in search paths, BUT only if INTERPRETING_DEFINITIONS is true
-    //      (i.e. we're inside recursive loading from another raw TeX file)
-    //   3. FindFile_fallback — strip version suffixes, find generic .ltxml binding
-    //      (e.g. icml2024.sty → icml.sty.ltxml)
+    //   2. Raw TeX in search paths, BUT only if INTERPRETING_DEFINITIONS is true (i.e. we're inside
+    //      recursive loading from another raw TeX file)
+    //   3. FindFile_fallback — strip version suffixes, find generic .ltxml binding (e.g.
+    //      icml2024.sty → icml.sty.ltxml)
     //   4. Raw TeX in search paths (without INTERPRETING_DEFINITIONS gate)
     //   5. kpsewhich
     //
@@ -354,8 +370,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       found_raw
     } else if !options.noltxml {
       if let Some(fallback) = find_file_fallback(name, &as_type) {
-        Info!("fallback", name,
-          s!("Interpreted as versioned package, falling back to {fallback}"));
+        Info!(
+          "fallback",
+          name,
+          s!("Interpreted as versioned package, falling back to {fallback}")
+        );
         // Load the fallback binding — use reloadable since we already marked original as "loaded"
         let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
         let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
@@ -383,7 +402,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Perl Package.pm L2122-2125
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.notex && !interpreting
+    } else if !options.notex
+      && !interpreting
       && (options.reloadable || !lookup_bool(&s!("{filename}_loaded")))
     {
       find_file(
@@ -414,7 +434,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         if this_frame_announces {
           note_end(&s!("Loading {:?} definitions", filename));
           crate::state::assign_value(
-            &banner_key, crate::common::store::Stored::None,
+            &banner_key,
+            crate::common::store::Stored::None,
             Some(crate::state::Scope::Global),
           );
         }
@@ -423,9 +444,14 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // Mark as loaded even on failure — prevents retrying a missing file
       // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
       assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-      Warn!("missing_file", name,
-        s!("Can't find binding or file for '{filename}'. \
-          No dispatcher entry and no raw file found on disk."));
+      Warn!(
+        "missing_file",
+        name,
+        s!(
+          "Can't find binding or file for '{filename}'. \
+          No dispatcher entry and no raw file found on disk."
+        )
+      );
     }
   }
 
@@ -462,7 +488,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         T_CS!("\\@currname"),
         None,
         Tokens!(Explode!(prevname)),
-        Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..ExpandableOptions::default()
+        }),
       )?;
     }
     if !prevext.is_empty() {
@@ -476,7 +505,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           T_CS!("\\@currext"),
           None,
           Tokens!(Explode!(prevext)),
-          Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+          Some(ExpandableOptions {
+            scope: Some(Scope::Global),
+            ..ExpandableOptions::default()
+          }),
         )?;
       }
     }
@@ -485,7 +517,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   if this_frame_announces {
     note_end(&s!("Loading {:?} definitions", filename));
     crate::state::assign_value(
-      &banner_key, crate::common::store::Stored::None,
+      &banner_key,
+      crate::common::store::Stored::None,
       Some(crate::state::Scope::Global),
     );
   }
@@ -753,7 +786,12 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
-fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_letter: bool) -> Result<()> {
+fn load_tex_definitions(
+  request: &str,
+  pathname: &str,
+  reloadable: bool,
+  at_letter: bool,
+) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -806,7 +844,11 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
     Ok(())
   })?;
 
-  assign_value_sym(crate::pin!("INTERPRETING_DEFINITIONS"), was_interpreting, None);
+  assign_value_sym(
+    crate::pin!("INTERPRETING_DEFINITIONS"),
+    was_interpreting,
+    None,
+  );
   assign_value("INCLUDE_STYLES", was_including_styles, None);
   expire_state_unlocked();
   Ok(())
@@ -877,8 +919,14 @@ pub fn process_options(inorder: bool) -> Result<()> {
     let mut list = Vec::new();
     for item in vdq.iter() {
       match item {
-        Stored::String(s) => { list.push(*s); },
-        Stored::Strings(ss) => { for s in ss.iter() { list.push(*s); } },
+        Stored::String(s) => {
+          list.push(*s);
+        },
+        Stored::Strings(ss) => {
+          for s in ss.iter() {
+            list.push(*s);
+          }
+        },
         _ => {},
       }
     }
@@ -906,9 +954,8 @@ pub fn process_options(inorder: bool) -> Result<()> {
 
     for option in declared_options.iter() {
       match option {
-        Stored::String(content)
-          if cur_set.remove(content) || cls_set.remove(content) => {
-            execute_option_internal(*content)?;
+        Stored::String(content) if cur_set.remove(content) || cls_set.remove(content) => {
+          execute_option_internal(*content)?;
         },
         Stored::Strings(contents) => {
           for content in contents.iter() {
@@ -1099,7 +1146,9 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // Re-entrancy guard: require_package → input_definitions → maybe_require_dependencies
   // can recurse if a scanned dependency itself has no binding.
   thread_local! { static SCANNING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
-  if SCANNING.with(|s| s.get()) { return; }
+  if SCANNING.with(|s| s.get()) {
+    return;
+  }
   SCANNING.with(|s| s.set(true));
   struct ResetGuard;
   impl Drop for ResetGuard {
@@ -1108,30 +1157,43 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let _guard = ResetGuard;
 
   static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
-  static PKG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(
-    r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
-  ).unwrap());
-  static CLS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(
-    r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
-  ).unwrap());
+  static PKG_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}").unwrap()
+  });
+  static CLS_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}").unwrap());
 
   // Find the raw file on disk by searching in search paths
   let filename = s!("{}.{}", file, ext_type);
   let paths = get_search_paths();
-  let raw_path = paths.iter().find_map(|dir| {
-    let candidate = if dir.is_empty() {
-      filename.clone()
-    } else {
-      format!("{}/{}", dir, filename)
-    };
-    if std::path::Path::new(&candidate).exists() { Some(candidate) } else { None }
-  }).or_else(|| {
-    // Also try kpsewhich
-    crate::util::pathname::find(&filename, crate::util::pathname::PathnameFindOptions::default())
-  });
+  let raw_path = paths
+    .iter()
+    .find_map(|dir| {
+      let candidate = if dir.is_empty() {
+        filename.clone()
+      } else {
+        format!("{}/{}", dir, filename)
+      };
+      if std::path::Path::new(&candidate).exists() {
+        Some(candidate)
+      } else {
+        None
+      }
+    })
+    .or_else(|| {
+      // Also try kpsewhich
+      crate::util::pathname::find(
+        &filename,
+        crate::util::pathname::PathnameFindOptions::default(),
+      )
+    });
   let Some(path) = raw_path else { return };
   let Ok(code) = std::fs::read_to_string(&path) else {
-    Warn!("I/O", "read", s!("Couldn't open {} to scan dependencies", path));
+    Warn!(
+      "I/O",
+      "read",
+      s!("Couldn't open {} to scan dependencies", path)
+    );
     return;
   };
   // Strip comments (Perl L2776)
@@ -1140,15 +1202,19 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let mut packages: Vec<(String, Vec<String>)> = Vec::new();
   let mut seen = std::collections::HashSet::new();
   for cap in PKG_RE.captures_iter(&code) {
-    let opts: Vec<String> = cap.get(1)
-      .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
+    let opts: Vec<String> = cap
+      .get(1)
+      .map(|m| {
+        m.as_str()
+          .split(',')
+          .map(|s| s.trim().to_string())
+          .collect()
+      })
       .unwrap_or_default();
     for pkg in cap[2].split(',') {
       let pkg = pkg.trim().to_string();
       // Perl L2773: skip if binding already loaded
-      if !pkg.is_empty() && !seen.contains(&pkg)
-        && !lookup_bool(&s!("{pkg}.sty_found_loaded"))
-      {
+      if !pkg.is_empty() && !seen.contains(&pkg) && !lookup_bool(&s!("{pkg}.sty_found_loaded")) {
         seen.insert(pkg.clone());
         packages.push((pkg, opts.clone()));
       }
@@ -1157,17 +1223,28 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // For class files, also scan for \LoadClass (Perl L2781-2782)
   if ext_type == "cls" {
     for cap in CLS_RE.captures_iter(&code) {
-      let opts: Vec<String> = cap.get(1)
-        .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
+      let opts: Vec<String> = cap
+        .get(1)
+        .map(|m| {
+          m.as_str()
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect()
+        })
         .unwrap_or_default();
       let class = cap[2].trim().to_string();
       if !class.is_empty() {
         // Perl L2788: only load if we have a binding for it (notex => 1)
-        if find_file(&s!("{class}.cls"), Some(FindFileOptions {
-          notex: true,
-          ext_type: Some(Cow::Borrowed("cls")),
-          ..FindFileOptions::default()
-        })).is_some() || lookup_bool(&s!("{class}.cls_loaded"))
+        if find_file(
+          &s!("{class}.cls"),
+          Some(FindFileOptions {
+            notex: true,
+            ext_type: Some(Cow::Borrowed("cls")),
+            ..FindFileOptions::default()
+          }),
+        )
+        .is_some()
+          || lookup_bool(&s!("{class}.cls_loaded"))
         {
           let _ = load_class(&class, opts, Tokens::default());
         }
@@ -1175,9 +1252,19 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     }
   }
   if !packages.is_empty() {
-    Info!("dependencies", "dependencies",
-      s!("Loading dependencies for {}: {}", path,
-        packages.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>().join(",")));
+    Info!(
+      "dependencies",
+      "dependencies",
+      s!(
+        "Loading dependencies for {}: {}",
+        path,
+        packages
+          .iter()
+          .map(|(p, _)| p.as_str())
+          .collect::<Vec<_>>()
+          .join(",")
+      )
+    );
   }
   for (pkg, opts) in packages {
     // Only load if we have a binding (notex: true)
@@ -1255,45 +1342,54 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
   // Fall through to OmniBus only when nothing matches.
   if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
-    && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
-      note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
+    && name != "OmniBus"
+    && name != "article"
+    && !lookup_bool("OmniBus.cls_loaded")
+  {
+    note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
 
-      // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
-      //       my ($alternate) = grep { $class =~ /^\Q$_\E/ } @classes;
-      // Flatten across ALL registered binding crates (latexml_package +
-      // latexml_contrib + any future extensions) so contrib classes like
-      // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
-      let alternate = {
-        let all_slices = crate::state::get_class_binding_names();
-        let mut sorted: Vec<&str> = all_slices.iter()
-          .flat_map(|s| s.iter().copied())
-          .filter(|n| *n != "OmniBus" && *n != name)
-          .collect();
-        sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
-        sorted.into_iter().find(|candidate| name.starts_with(candidate))
-      };
+    // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
+    //       my ($alternate) = grep { $class =~ /^\Q$_\E/ } @classes;
+    // Flatten across ALL registered binding crates (latexml_package +
+    // latexml_contrib + any future extensions) so contrib classes like
+    // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
+    let alternate = {
+      let all_slices = crate::state::get_class_binding_names();
+      let mut sorted: Vec<&str> = all_slices
+        .iter()
+        .flat_map(|s| s.iter().copied())
+        .filter(|n| *n != "OmniBus" && *n != name)
+        .collect();
+      sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
+      sorted
+        .into_iter()
+        .find(|candidate| name.starts_with(candidate))
+    };
 
-      let target = alternate.unwrap_or("OmniBus");
-      Warn!("missing_file", name,
-        format!("Can't find binding for class {name} (using {target})"),
-        "Anticipate undefined macros or environments");
-      let loaded = input_definitions(target, InputDefinitionOptions {
-        extension: Some(Cow::Borrowed("cls")),
-        options: options.clone(),
-        after: after.clone(),
-        notex: true,
-        handleoptions: true,
-        noerror: true,
-        ..InputDefinitionOptions::default()
-      });
-      // Perl Package.pm L2715: after loading the alternate class binding, scan
-      // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
-      // alternate rarely covers all dependencies the renamed class adds.
-      if alternate.is_some() {
-        maybe_require_dependencies(name, "cls");
-      }
-      return loaded;
+    let target = alternate.unwrap_or("OmniBus");
+    Warn!(
+      "missing_file",
+      name,
+      format!("Can't find binding for class {name} (using {target})"),
+      "Anticipate undefined macros or environments"
+    );
+    let loaded = input_definitions(target, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("cls")),
+      options: options.clone(),
+      after: after.clone(),
+      notex: true,
+      handleoptions: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    });
+    // Perl Package.pm L2715: after loading the alternate class binding, scan
+    // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
+    // alternate rarely covers all dependencies the renamed class adds.
+    if alternate.is_some() {
+      maybe_require_dependencies(name, "cls");
     }
+    return loaded;
+  }
   result
 }
 
@@ -1517,18 +1613,22 @@ pub fn merge_font_ref(font: &Font) {
 
 /// Define a named color (Perl: DefColor).
 /// Stores as color_{name} and also defines \\color@{name} macro.
-pub fn def_color(name: &str, color: &crate::common::color::Color, scope: Option<Scope>) -> Result<()> {
+pub fn def_color(
+  name: &str,
+  color: &crate::common::color::Color,
+  scope: Option<Scope>,
+) -> Result<()> {
   use crate::common::color;
-  // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) && IfCondition(\ifglobalcolors)
-  // Guard with lookup first: xcolor may not be loaded (e.g. colordvi-only documents)
-  let effective_scope =
-    if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
-      && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
-    {
-      Some(Scope::Global)
-    } else {
-      scope
-    };
+  // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) &&
+  // IfCondition(\ifglobalcolors) Guard with lookup first: xcolor may not be loaded (e.g.
+  // colordvi-only documents)
+  let effective_scope = if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
+    && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
+  {
+    Some(Scope::Global)
+  } else {
+    scope
+  };
   // Store in state as "model c1 c2 ..."
   let stored = color.to_stored();
   assign_value(
@@ -1796,7 +1896,9 @@ pub fn font_decode(
   let font = font_opt.unwrap_or_else(|| lookup_font().unwrap());
   let encoding = match encoding_opt {
     Some(enc) => enc.to_string(),
-    None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
+    None => font
+      .get_encoding()
+      .map_or("OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
   // Check for family-specific map. Use with_value to avoid cloning the
@@ -1822,15 +1924,13 @@ pub fn font_decode(
 
 /// Decode a string using the fontmap for a given encoding (Perl: FontDecodeString).
 /// If `implicit` is true, codepoints missing from the map decode to themselves.
-pub fn font_decode_string(
-  string: &str,
-  encoding_opt: Option<&str>,
-  implicit: bool,
-) -> String {
+pub fn font_decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool) -> String {
   let font = lookup_font().unwrap();
   let encoding = match encoding_opt {
     Some(enc) => enc.to_string(),
-    None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
+    None => font
+      .get_encoding()
+      .map_or("OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
   // Check for family-specific map — same with_value motivation as above.

@@ -1,14 +1,18 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  // These don't really apply in latexml, as our linebreak considerations are much softer than PDF's.
+  // These don't really apply in latexml, as our linebreak considerations are much softer than
+  // PDF's.
   DefMacro!("\\BreakableBackslash", "\\textbackslash");
   DefMacro!("\\BreakableColon", ":");
   DefMacro!("\\BreakableHyphen", "-");
   DefMacro!("\\BreakablePeriod", ".");
   DefMacro!("\\BreakableSlash", "/");
   DefMacro!("\\BreakableUnderscore", "\\textunderscore");
-  DefMacro!("\\bshyp", "\\ifmmode\\backslash\\else\\BreakableBackslash\\fi");
+  DefMacro!(
+    "\\bshyp",
+    "\\ifmmode\\backslash\\else\\BreakableBackslash\\fi"
+  );
   DefMacro!("\\colonhyp", ":");
   DefMacro!("\\dothyp", ".");
   DefMacro!("\\fshyp", "/");

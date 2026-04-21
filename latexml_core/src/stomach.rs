@@ -13,7 +13,11 @@ thread_local! {
 /// Set a conversion timeout (seconds from now). 0 = no timeout.
 pub fn set_timeout(seconds: u64) {
   if seconds > 0 {
-    CONVERSION_DEADLINE.with(|d| d.set(Some(Instant::now() + std::time::Duration::from_secs(seconds))));
+    CONVERSION_DEADLINE.with(|d| {
+      d.set(Some(
+        Instant::now() + std::time::Duration::from_secs(seconds),
+      ))
+    });
   } else {
     CONVERSION_DEADLINE.with(|d| d.set(None));
   }
@@ -31,6 +35,7 @@ pub fn check_timeout() -> Result<()> {
   })
 }
 
+use crate::comment::Comment;
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::error::*;
@@ -39,17 +44,14 @@ use crate::common::font::Font;
 use crate::definition::Definition;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
+use crate::definition::register::RegisterValue;
 use crate::list::List;
 use crate::mouth::{Mouth, MouthOptions};
 use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::definition::register::RegisterValue;
-use crate::comment::Comment;
 use crate::{BoxOps, Digested, TexMode, gullet};
-
-
 
 static MAXSTACK: usize = 200;
 
@@ -98,7 +100,11 @@ pub fn initialize_stomach() {
     Some(Scope::Global),
   );
   assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-  assign_value_sym(crate::pin!("groupInitiator"), "Initialization", Some(Scope::Global));
+  assign_value_sym(
+    crate::pin!("groupInitiator"),
+    "Initialization",
+    Some(Scope::Global),
+  );
   // Setup default fonts.
   assign_value("font", Font::text_default(), Some(Scope::Global));
   assign_value("mathfont", Font::math_default(), Some(Scope::Global));
@@ -132,7 +138,11 @@ pub fn push_stack_frame(nobox: bool) {
   ); // ALWAYS bind this!
   assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
   assign_value_sym(crate::pin!("groupNonBoxing"), nobox, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value_sym(crate::pin!("groupInitiator"), current_token, Some(Scope::Local));
+  assign_value_sym(
+    crate::pin!("groupInitiator"),
+    current_token,
+    Some(Scope::Local),
+  );
   assign_value_sym(
     crate::pin!("groupInitiatorLocator"),
     gullet::get_locator(),
@@ -197,7 +207,10 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
 pub fn current_frame_message() -> String {
   let target = if is_value_bound("MODE", Some(0)) {
     // SET mode in CURRENT frame ?
-    Cow::Owned(s!("mode-switch to {}", crate::state::lookup_string_from_sym(crate::pin!("MODE"))))
+    Cow::Owned(s!(
+      "mode-switch to {}",
+      crate::state::lookup_string_from_sym(crate::pin!("MODE"))
+    ))
   } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // Current frame is a non-boxing group?
     Cow::Borrowed("non-boxing group")
@@ -270,7 +283,9 @@ pub fn endgroup() -> Result<()> {
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
       "unexpected",
-      get_current_token().map(|t| t.to_string()).unwrap_or_else(|| String::from("\\?")),
+      get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
         crate::state::lookup_string_from_sym(crate::pin!("MODE")),
@@ -281,7 +296,9 @@ pub fn endgroup() -> Result<()> {
     // or group was opened with \bgroup
     Error!(
       "unexpected",
-      get_current_token().map(|t| t.to_string()).unwrap_or_else(|| String::from("\\?")),
+      get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close non-boxing group; {}",
         current_frame_message()
@@ -331,7 +348,11 @@ pub fn set_mode(mode: &str) -> Result<()> {
       },
       ..Font::default()
     }));
-    assign_value("initial_math_font", Stored::Font(new_font.clone()), Some(Scope::Local));
+    assign_value(
+      "initial_math_font",
+      Stored::Font(new_font.clone()),
+      Some(Scope::Local),
+    );
     assign_font(new_font, Some(Scope::Local));
   } else {
     let curfont = lookup_font().unwrap();
@@ -370,9 +391,7 @@ fn bindable_mode(umode: &str) -> Option<&'static str> {
 /// appropriate for the mode.
 /// If `noframe` is true, skip pushing a stack frame (e.g. for \begin{document}).
 /// Perl: sub beginMode (Stomach.pm lines 474-517)
-pub fn begin_mode(mode: &str) -> Result<()> {
-  begin_mode_opt(mode, false)
-}
+pub fn begin_mode(mode: &str) -> Result<()> { begin_mode_opt(mode, false) }
 /// Like `begin_mode`, but with an explicit `noframe` option.
 /// When `noframe` is true, no stack frame is pushed (the caller already did bgroup).
 pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
@@ -387,7 +406,11 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // Display math gets \everydisplay, inline math gets \everymath (not both).
     if bound_mode.contains("math") {
       let is_display = bound_mode == "display_math";
-      let reg_name = if is_display { "\\everydisplay" } else { "\\everymath" };
+      let reg_name = if is_display {
+        "\\everydisplay"
+      } else {
+        "\\everymath"
+      };
       if let Some(RegisterValue::Tokens(toks)) = lookup_register(reg_name, Vec::new())? {
         let toks = toks.unlist();
         if !toks.is_empty() {
@@ -404,9 +427,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 /// End processing in `mode`; an error is signalled if `stomach` is not
 /// currently in `mode`.  This also ends a level of grouping.
 /// Perl: sub endMode (Stomach.pm lines 522-541)
-pub fn end_mode(mode: &str) -> Result<()> {
-  end_mode_opt(mode, false)
-}
+pub fn end_mode(mode: &str) -> Result<()> { end_mode_opt(mode, false) }
 /// Like `end_mode`, but with an explicit `noframe` option.
 /// When `noframe` is true, executeBeforeAfterGroup is run but the stack frame is not popped.
 pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
@@ -418,8 +439,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // inside an environment). When the bound value matches but isn't in the top frame's
     // undo table, treat it as valid — the mode system is about tracking what mode we're in.
     let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-    if current_bound != bound_mode
-    {
+    if current_bound != bound_mode {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?
       // Just log the error and return — faithful to Perl's endMode.
@@ -460,8 +480,11 @@ pub fn enter_horizontal() {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
-    Warn!("unexpected", "enterHorizontal",
-      s!("Unexpected mode '{}' for enterHorizontal", mode));
+    Warn!(
+      "unexpected",
+      "enterHorizontal",
+      s!("Unexpected mode '{}' for enterHorizontal", mode)
+    );
   }
   // else: already horizontal or math — fine
 }
@@ -871,8 +894,11 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
       },
       meaning => {
         // Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
-        Error!("misdefined", token,
-          s!("Unexpected object in Stomach: {:?}", meaning));
+        Error!(
+          "misdefined",
+          token,
+          s!("Unexpected object in Stomach: {:?}", meaning)
+        );
       },
     }
     // _token_guard drops here, auto-expiring current token

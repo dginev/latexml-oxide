@@ -32,7 +32,8 @@ impl Object for Float {
         // `pin` takes `AsRef<str>` — `&String` borrows cleanly without
         // an extra `.to_string()` clone that `into_pin` would force.
         crate::common::arena::pin(&s),
-        None, None,
+        None,
+        None,
         Tokens::new(ExplodeText!(&s)),
         crate::common::arena::SymHashMap::default(),
       )
@@ -129,8 +130,10 @@ mod tests {
   #[test]
   fn custom_float_format_precision() {
     let out = custom_float_format(0.123456789, false);
-    assert!(out.starts_with("0.12346") || out.starts_with("0.12345"),
-      "got {out:?}");
+    assert!(
+      out.starts_with("0.12346") || out.starts_with("0.12345"),
+      "got {out:?}"
+    );
   }
 
   #[test]

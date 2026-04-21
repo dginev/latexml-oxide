@@ -24,8 +24,14 @@ LoadDefinitions!({
   DefMacro!("\\changesauthorname", "Author");
   DefMacro!("\\changesanonymousname", "anonymous");
   DefMacro!("\\changesnochanges", "No changes.");
-  DefMacro!("\\changesnoloc", "List of changes is available after the next \\LaTeX\\ run.");
-  DefMacro!("\\changesnosoc", "Summary of changes is available after the next \\LaTeX\\ run.");
+  DefMacro!(
+    "\\changesnoloc",
+    "List of changes is available after the next \\LaTeX\\ run."
+  );
+  DefMacro!(
+    "\\changesnosoc",
+    "Summary of changes is available after the next \\LaTeX\\ run."
+  );
   Let!("\\cleaders", "\\leaders");
   DefMacro!("\\definechangesauthor[]{}", "");
   DefMacro!("\\listofchanges[]", "");

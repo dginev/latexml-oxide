@@ -1,8 +1,11 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "mdframed.sty",
-    "mdframed.sty is only minimally stubbed and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "mdframed.sty",
+    "mdframed.sty is only minimally stubbed and will not be interpreted raw."
+  );
   RequirePackage!("kvoptions");
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");

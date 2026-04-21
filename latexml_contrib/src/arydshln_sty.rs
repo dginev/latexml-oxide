@@ -1,8 +1,11 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "arydshln.sty",
-    "arydshln.sty is only minimally stubbed and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "arydshln.sty",
+    "arydshln.sty is only minimally stubbed and will not be interpreted raw."
+  );
   // TODO: Extend the internal Alignment machinery to facilitate a dashed bottom border directive
   Let!("\\hdashline", "\\hline");
   Let!("\\cdashline", "\\cline");

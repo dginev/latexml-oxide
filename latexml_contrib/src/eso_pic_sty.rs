@@ -21,5 +21,5 @@ LoadDefinitions!({
   DefMacro!("\\ClearShipoutPictureFG", "");
   DefMacro!("\\LenToUnit{}", "#1");
   DefMacro!("\\ProcessOptionsWithKV{}", "");
-  DefMacro!("\\gridSetup[]{}{}{}{}{}",  "");
+  DefMacro!("\\gridSetup[]{}{}{}{}{}", "");
 });

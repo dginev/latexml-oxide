@@ -120,7 +120,10 @@ impl Whatsit {
   /// Mutably borrow argument at 1-based index `n` (matching Perl's `$whatsit->getArg(n)`).
   /// Panics if n == 0 — use 1-based indexing.
   pub fn get_arg_mut(&mut self, n: usize) -> Option<&mut Digested> {
-    assert!(n > 0, "get_arg_mut() uses 1-based indexing (Perl convention). Use get_arg_mut(1) for the first argument.");
+    assert!(
+      n > 0,
+      "get_arg_mut() uses 1-based indexing (Perl convention). Use get_arg_mut(1) for the first argument."
+    );
     match self.args.get_mut(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,
@@ -144,12 +147,10 @@ impl Whatsit {
   pub fn set_body(&mut self, mut body: Vec<Digested>) {
     let trailer_opt = body.pop();
     // Perl: get mode from whatsit's own properties (not just isMath binary)
-    let mode_opt: Option<String> = self
-      .get_property("mode")
-      .and_then(|p| match &*p {
-        Stored::String(s) => Some(arena::to_string(*s)),
-        _ => None,
-      });
+    let mode_opt: Option<String> = self.get_property("mode").and_then(|p| match &*p {
+      Stored::String(s) => Some(arena::to_string(*s)),
+      _ => None,
+    });
     let mut list = List::new(body);
     // Set mode from whatsit's own mode property (Perl: $mode from $$self{properties}{mode})
     if let Some(ref mode_str) = mode_opt {
@@ -429,7 +430,10 @@ impl BoxOps for Whatsit {
 
   fn set_font(&mut self, font: Rc<Font>) { self.properties.insert("font", Stored::Font(font)); }
 
-  fn compute_size(&self, mut options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(
+    &self,
+    mut options: HashMap<Stored>,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
       sizer(self)
@@ -437,11 +441,17 @@ impl BoxOps for Whatsit {
       // Perl: when after_digest sets cached dimensions (e.g. image_graphicx_sizer),
       // compute_size should return them instead of falling through to body/args sum.
       let w = match self.get_property("cached_width").as_deref() {
-        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+        Some(Stored::Dimension(d)) => *d,
+        _ => Dimension::default(),
+      };
       let h = match self.get_property("cached_height").as_deref() {
-        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+        Some(Stored::Dimension(d)) => *d,
+        _ => Dimension::default(),
+      };
       let d = match self.get_property("cached_depth").as_deref() {
-        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+        Some(Stored::Dimension(d)) => *d,
+        _ => Dimension::default(),
+      };
       Ok((w, h, d))
     } else {
       // Nothing specified? use #body if any, else sum all box args

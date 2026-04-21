@@ -180,8 +180,7 @@ mod tests {
     // above 5 are clamped to 5.
     let a = round_to(1.12345, Some(5));
     let b = round_to(1.12345, Some(10));
-    assert_eq!(a, b,
-      "precision > 5 clamps to 5 (got {a} vs {b})");
+    assert_eq!(a, b, "precision > 5 clamps to 5 (got {a} vs {b})");
   }
 
   #[test]

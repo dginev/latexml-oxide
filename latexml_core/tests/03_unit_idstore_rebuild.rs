@@ -44,20 +44,28 @@ fn rebuild_idstore_clears_stale_entries() {
 
   // Now look up the orphan through idstore. lookup_id returns it —
   // but in production the orphan's libxml2 memory could be freed.
-  assert!(doc.lookup_id("orphan_id").is_some(),
-    "pre-rebuild: stale entry is in idstore");
+  assert!(
+    doc.lookup_id("orphan_id").is_some(),
+    "pre-rebuild: stale entry is in idstore"
+  );
 
   // Rebuild from DOM. The orphan is NOT in the DOM root, so the
   // rebuild should drop its entry. The attached-to-DOM entries
   // (a1, b1) should survive.
   doc.rebuild_idstore_from_dom().unwrap();
 
-  assert!(doc.lookup_id("orphan_id").is_none(),
-    "post-rebuild: stale entry purged");
-  assert!(doc.lookup_id("a1").is_some(),
-    "post-rebuild: live entry retained");
-  assert!(doc.lookup_id("b1").is_some(),
-    "post-rebuild: live entry retained");
+  assert!(
+    doc.lookup_id("orphan_id").is_none(),
+    "post-rebuild: stale entry purged"
+  );
+  assert!(
+    doc.lookup_id("a1").is_some(),
+    "post-rebuild: live entry retained"
+  );
+  assert!(
+    doc.lookup_id("b1").is_some(),
+    "post-rebuild: live entry retained"
+  );
 }
 
 #[test]

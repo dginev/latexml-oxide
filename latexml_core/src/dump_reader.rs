@@ -32,7 +32,6 @@ use crate::state::{self, Scope};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
-
 /// Load a Rust-native dump file into the current State.
 /// Returns the number of entries loaded.
 pub fn load_native_dump(path: &Path) -> Result<usize, String> {
@@ -138,7 +137,7 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
             &line[..line.len().min(80)]
           );
         }
-      }
+      },
     }
   }
 
@@ -193,16 +192,14 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // `\tex_let:D → \let`) remain gated off because enabling them
     // causes two failure modes, both observed in earlier experiments:
     //
-    //   - PA alone: `\tex_let:D` becomes let-aliased to `\let` via
-    //     the dump → `expl3.sty`'s own guard fires → raw
-    //     `\input expl3-code.tex` is skipped → post-guard code hits
-    //     `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
-    //     `\keys_define:nn { sys }`, which are `:`-style macros we
-    //     don't load → undefined-CS recovery loop (60 s timeout,
+    //   - PA alone: `\tex_let:D` becomes let-aliased to `\let` via the dump → `expl3.sty`'s own
+    //     guard fires → raw `\input expl3-code.tex` is skipped → post-guard code hits
+    //     `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`, `\keys_define:nn { sys }`,
+    //     which are `:`-style macros we don't load → undefined-CS recovery loop (60 s timeout,
     //     memory climbing, SIGTERM-by-watchdog).
     //
-    //   - PA + `:`-style M: the `:`-style bodies themselves trigger
-    //     the same pattern via cross-references.
+    //   - PA + `:`-style M: the `:`-style bodies themselves trigger the same pattern via
+    //     cross-references.
     //
     // Both must be unblocked TOGETHER, in coordination with
     // `expl3_sty.rs` short-circuiting its whole `load_definitions`
@@ -262,8 +259,8 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       //   guard tests `\tex_let:D` (a PA, not an E), so admitting
       //   bodyless E entries doesn't trip it. The add-only policy in
       //   load_meaning means any later raw-expl3 redefinition wins.
-      let is_safe_colon_noncascade = name.contains(':')
-        && (data.starts_with("N") || data.starts_with("T\t"));
+      let is_safe_colon_noncascade =
+        name.contains(':') && (data.starts_with("N") || data.starts_with("T\t"));
       // Step 2 & 3 combined: :-named E records with nargs=0 whose
       // body is either empty (43) or contains no CS tokens (303 more
       // — literal characters, digits, punctuation only). "No CS"
@@ -278,21 +275,23 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       // execute correctly, not just parse. See the "Deep expl3 /
       // LaTeX 3 kernel parity" long-horizon task — the dumper
       // widening and the kernel port must advance together.
-      let is_safe_colon_safe_e = name.contains(':')
-        && data.starts_with("E\t")
-        && {
-          let eparts: Vec<&str> = data.split('\t').collect();
-          let nargs_zero = eparts.get(2).map(|s| *s == "0").unwrap_or(false);
-          let body = eparts.get(4).copied().unwrap_or("");
-          let body_has_cs = body.starts_with("16:") || body.contains(",16:");
-          nargs_zero && !body_has_cs
-        };
+      let is_safe_colon_safe_e = name.contains(':') && data.starts_with("E\t") && {
+        let eparts: Vec<&str> = data.split('\t').collect();
+        let nargs_zero = eparts.get(2).map(|s| *s == "0").unwrap_or(false);
+        let body = eparts.get(4).copied().unwrap_or("");
+        let body_has_cs = body.starts_with("16:") || body.contains(",16:");
+        nargs_zero && !body_has_cs
+      };
       // Backwards alias preserved.
       let is_safe_colon_empty_e = is_safe_colon_safe_e;
-      if (is_at_internal || is_public_register || is_safe_let_alias
+      if (is_at_internal
+        || is_public_register
+        || is_safe_let_alias
         || is_safe_colon_noncascade
         || is_safe_colon_empty_e)
-        && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
+        && !data.contains("\\\\hook")
+        && !data.contains("16:\\hook")
+      {
         load_meaning(key, data)
       } else {
         Ok(false)
@@ -312,7 +311,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       } else {
         Ok(false)
       }
-    }
+    },
     // MC/DC: mathcodes and delcodes from the dump are corrupted by expl3
     // format initialization (e.g., mathcode('v')=618 maps to '|').
     // The engine sets correct math/delcodes. Skip.
@@ -344,11 +343,7 @@ const SKIP_VALUE_KEYS: &[&str] = &[
 ];
 
 /// V entry key prefixes to skip.
-const SKIP_VALUE_PREFIXES: &[&str] = &[
-  "input_file:",
-  "output_file:",
-  "texsys",
-];
+const SKIP_VALUE_PREFIXES: &[&str] = &["input_file:", "output_file:", "texsys"];
 
 /// V entry key substrings to skip.
 ///
@@ -357,13 +352,12 @@ const SKIP_VALUE_PREFIXES: &[&str] = &[
 /// hundreds of other raw-loaded files). But carrying them through into state
 /// at dump-load time blows up in practice:
 ///
-///  - Hyphenation `loadhyph-*.tex_loaded` flags make subsequent raw-loading of
-///    babel's language.def skip files that set `\l@<lang>` registers our
-///    engine then discovers aren't present, triggering a flood of error
-///    recovery that can consume gigabytes of RAM.
-///  - `expl3.ltx_loaded=1` plus `expl3.sty_loaded=` NOT being set means
-///    `\usepackage{expl3}` doesn't short-circuit AT the .sty layer, but the
-///    raw .ltx re-load now enters a stranger code path with partial flags.
+///  - Hyphenation `loadhyph-*.tex_loaded` flags make subsequent raw-loading of babel's language.def
+///    skip files that set `\l@<lang>` registers our engine then discovers aren't present,
+///    triggering a flood of error recovery that can consume gigabytes of RAM.
+///  - `expl3.ltx_loaded=1` plus `expl3.sty_loaded=` NOT being set means `\usepackage{expl3}`
+///    doesn't short-circuit AT the .sty layer, but the raw .ltx re-load now enters a stranger code
+///    path with partial flags.
 ///
 /// The proper fix, tracked as the "dump/_base mutual-exclusivity" item in
 /// SYNC_STATUS D0, is to have exactly ONE loading path (dump-cache or raw-load)
@@ -421,7 +415,7 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
         .parse()
         .map_err(|e| format!("Bad int: {}", e))?;
       Stored::Int(n)
-    }
+    },
     "S" => Stored::from(url_decode(parts.get(1).unwrap_or(&""))),
     "CH" => {
       let n: u16 = parts
@@ -430,7 +424,7 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
         .parse()
         .map_err(|e| format!("Bad charcode: {}", e))?;
       Stored::Charcode(n)
-    }
+    },
     "CC" => {
       let n: u8 = parts
         .get(1)
@@ -438,31 +432,33 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
         .parse()
         .map_err(|e| format!("Bad catcode: {}", e))?;
       Stored::Catcode(Catcode::from(n))
-    }
+    },
     "T" => {
       let tok = parse_token(parts.get(1).unwrap_or(&""))?;
       Stored::Token(tok)
-    }
+    },
     "TK" => {
       let toks = parse_token_list(parts.get(1).unwrap_or(&""))?;
       Stored::Tokens(Tokens::from(toks))
-    }
+    },
     "D" => {
-      let n: i64 = parts.get(1).unwrap_or(&"0").parse()
+      let n: i64 = parts
+        .get(1)
+        .unwrap_or(&"0")
+        .parse()
         .map_err(|e| format!("Bad dimension: {}", e))?;
       Stored::Dimension(crate::common::dimension::Dimension(n))
-    }
-    "G" => {
-      Stored::Glue(parse_glue(parts.get(1).unwrap_or(&"0"))?)
-    }
+    },
+    "G" => Stored::Glue(parse_glue(parts.get(1).unwrap_or(&"0"))?),
     "MD" => {
-      let n: i64 = parts.get(1).unwrap_or(&"0").parse()
+      let n: i64 = parts
+        .get(1)
+        .unwrap_or(&"0")
+        .parse()
         .map_err(|e| format!("Bad mudimension: {}", e))?;
       Stored::MuDimension(crate::common::mudimension::MuDimension(n))
-    }
-    "MG" => {
-      Stored::MuGlue(parse_muglue(parts.get(1).unwrap_or(&"0"))?)
-    }
+    },
+    "MG" => Stored::MuGlue(parse_muglue(parts.get(1).unwrap_or(&"0"))?),
     "VD" => return Ok(false), // Don't load empty VecDeque (runtime state)
     _ => return Ok(false),    // Unknown value type
   };
@@ -478,8 +474,8 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
 /// with the compiled engine's processing during normal LaTeX operation:
 /// - expl3 internals (contain `:`) — safe because `:` is OTHER under normal catcodes
 /// - Private LaTeX internals (contain `@`) — only invoked by other macros
-/// - Skip all "public" macros that could be invoked during normal expansion
-///   and might reference hooks/primitives not supported by our engine
+/// - Skip all "public" macros that could be invoked during normal expansion and might reference
+///   hooks/primitives not supported by our engine
 fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let cs_tok = Token {
     text: arena::pin(key),
@@ -511,9 +507,15 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let is_internal = name.contains(':') || name.contains('@');
   let is_public_register = data.starts_with("R\t");
   let is_public_let_alias = {
-    let rest_opt = data.strip_prefix("PA\t").or_else(|| data.strip_prefix("MPA\t"));
+    let rest_opt = data
+      .strip_prefix("PA\t")
+      .or_else(|| data.strip_prefix("MPA\t"));
     rest_opt.is_some_and(|rest| {
-      let target_raw = if rest.contains('%') { url_decode(rest) } else { rest.to_string() };
+      let target_raw = if rest.contains('%') {
+        url_decode(rest)
+      } else {
+        rest.to_string()
+      };
       !target_raw.trim_start_matches('\\').contains(':')
     })
   };
@@ -530,7 +532,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
     "N" => {
       // None meaning — skip (don't define as undefined)
       Ok(false)
-    }
+    },
     "E" => {
       // Expandable: E\tCSNAME\tNARGS\tFLAGS\tTOKENS[\tPROTO[\tV3_PARAMS]]
       //
@@ -556,7 +558,10 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let nargs: usize = eparts[1].parse().unwrap_or(0);
       let flags = eparts[2];
       let tok_data = eparts[3];
-      let proto_opt = eparts.get(4).map(|s| url_decode(s)).filter(|s| !s.is_empty());
+      let proto_opt = eparts
+        .get(4)
+        .map(|s| url_decode(s))
+        .filter(|s| !s.is_empty());
       let v3_opt = eparts.get(5).filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
@@ -596,14 +601,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
               let fallback = "{}".repeat(nargs);
               crate::common::def_parser::parse_parameters(&fallback, &cs_tok, true)
                 .map_err(|e| format!("Param parse fallback: {}", e))?
-            }
+            },
             Err(_) => None,
           },
           None if nargs > 0 => {
             let proto = "{}".repeat(nargs);
             crate::common::def_parser::parse_parameters(&proto, &cs_tok, true)
               .map_err(|e| format!("Param parse: {}", e))?
-          }
+          },
           None => None,
         }
       };
@@ -625,16 +630,16 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           exp.locator = current_dump_locator();
           state::install_definition(exp, Some(Scope::Global));
           Ok(true)
-        }
+        },
         Err(e) => Err(format!("Expandable creation failed: {}", e)),
       }
-    }
+    },
     "T" => {
       // Token meaning (let-assignment)
       let tok = parse_token(parts.get(1).unwrap_or(&""))?;
       state::assign_meaning(&cs_tok, tok, Some(Scope::Global));
       Ok(true)
-    }
+    },
     "PA" | "MPA" => {
       // Primitive alias: PA\t<target_cs> — the entry's meaning is an
       // Rc<Primitive> whose own cs is <target_cs>. If <target_cs> == key
@@ -667,7 +672,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       }
       state::let_i(&cs_tok, &target_tok, Some(Scope::Global));
       Ok(true)
-    }
+    },
     "R" => {
       // Register: R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
       // rparts[0] (internal CS name) is redundant with the outer key —
@@ -678,30 +683,41 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       }
       let rtype = rparts[1];
       let value_str = rparts[2];
-      let mathglyph = rparts.get(3).and_then(|s| s.parse::<u32>().ok()).and_then(char::from_u32);
+      let mathglyph = rparts
+        .get(3)
+        .and_then(|s| s.parse::<u32>().ok())
+        .and_then(char::from_u32);
 
-      use crate::definition::register::{Register, RegisterType, RegisterValue};
       use crate::common::number::Number;
+      use crate::definition::register::{Register, RegisterType, RegisterValue};
 
       let (reg_type, reg_value) = match rtype {
         "N" | "CD" => {
           let n: i64 = value_str.parse().unwrap_or(0);
-          let rt = if rtype == "CD" { RegisterType::CharDef } else { RegisterType::Number };
+          let rt = if rtype == "CD" {
+            RegisterType::CharDef
+          } else {
+            RegisterType::Number
+          };
           (rt, Some(RegisterValue::Number(Number::new(n))))
-        }
+        },
         "D" => {
           let n: i64 = value_str.parse().unwrap_or(0);
-          (RegisterType::Dimension, Some(RegisterValue::Dimension(
-            crate::common::dimension::Dimension(n))))
-        }
-        "G" => {
-          (RegisterType::Glue, Some(RegisterValue::Glue(
-            parse_glue(value_str)?)))
-        }
-        "MG" => {
-          (RegisterType::MuGlue, Some(RegisterValue::MuGlue(
-            parse_muglue(value_str)?)))
-        }
+          (
+            RegisterType::Dimension,
+            Some(RegisterValue::Dimension(
+              crate::common::dimension::Dimension(n),
+            )),
+          )
+        },
+        "G" => (
+          RegisterType::Glue,
+          Some(RegisterValue::Glue(parse_glue(value_str)?)),
+        ),
+        "MG" => (
+          RegisterType::MuGlue,
+          Some(RegisterValue::MuGlue(parse_muglue(value_str)?)),
+        ),
         "TK" => {
           // Token register: value is comma-separated token list, or "0" for empty
           let toks = if value_str == "0" || value_str.is_empty() {
@@ -709,9 +725,11 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           } else {
             parse_token_list(value_str)?
           };
-          (RegisterType::Tokens, Some(RegisterValue::Tokens(
-            Tokens::from(toks))))
-        }
+          (
+            RegisterType::Tokens,
+            Some(RegisterValue::Tokens(Tokens::from(toks))),
+          )
+        },
         _ => return Ok(false),
       };
 
@@ -725,7 +743,11 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         cs: cs_tok,
         register_type: reg_type,
         value: reg_value.clone(),
-        default: if matches!(reg_type, RegisterType::CharDef) { None } else { reg_value.clone() },
+        default: if matches!(reg_type, RegisterType::CharDef) {
+          None
+        } else {
+          reg_value.clone()
+        },
         mathglyph,
         locator: current_dump_locator(),
         ..Register::default()
@@ -739,7 +761,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       }
       state::install_definition(reg, Some(Scope::Global));
       Ok(true)
-    }
+    },
     _ => Ok(false),
   }
 }
@@ -759,7 +781,9 @@ fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
   if parts.len() < 2 || parts[0] != "CC" {
     return Err(format!("Bad catcode data: {}", data));
   }
-  let cc: u8 = parts[1].parse().map_err(|e| format!("Bad catcode value: {}", e))?;
+  let cc: u8 = parts[1]
+    .parse()
+    .map_err(|e| format!("Bad catcode value: {}", e))?;
   state::assign_catcode(ch, Catcode::from(cc), Some(Scope::Global));
   Ok(true)
 }
@@ -771,7 +795,9 @@ fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
   if parts.len() < 2 || parts[0] != "CH" {
     return Err(format!("Bad lccode data: {}", data));
   }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad lccode value: {}", e))?;
+  let val: u16 = parts[1]
+    .parse()
+    .map_err(|e| format!("Bad lccode value: {}", e))?;
   state::assign_lccode(ch, val, Some(Scope::Global));
   Ok(true)
 }
@@ -783,7 +809,9 @@ fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
   if parts.len() < 2 || parts[0] != "CH" {
     return Err(format!("Bad uccode data: {}", data));
   }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad uccode value: {}", e))?;
+  let val: u16 = parts[1]
+    .parse()
+    .map_err(|e| format!("Bad uccode value: {}", e))?;
   state::assign_uccode(ch, val, Some(Scope::Global));
   Ok(true)
 }
@@ -795,7 +823,9 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   if parts.len() < 2 || parts[0] != "CH" {
     return Err(format!("Bad sfcode data: {}", data));
   }
-  let val: u16 = parts[1].parse().map_err(|e| format!("Bad sfcode value: {}", e))?;
+  let val: u16 = parts[1]
+    .parse()
+    .map_err(|e| format!("Bad sfcode value: {}", e))?;
   state::assign_sfcode(ch, val, Some(Scope::Global));
   Ok(true)
 }
@@ -843,7 +873,9 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
 /// constructed via `Parameter::new(name, spec, Some(extras))`, which
 /// calls `init()` — the reader function is resolved against the live
 /// PARAMETER_TYPES table, mirroring the runtime path.
-pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::Parameters>, String> {
+pub(crate) fn parse_parameters_v3(
+  v3: &str,
+) -> Result<Option<crate::parameter::Parameters>, String> {
   if v3.is_empty() {
     return Ok(None);
   }
@@ -852,7 +884,10 @@ pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::P
     // <name>\x1f<spec>\x1f<flags>\x1f<extras>
     let fields: Vec<&str> = record.splitn(4, '\x1f').collect();
     if fields.len() != 4 {
-      return Err(format!("v3 Parameter record has {} fields, expected 4", fields.len()));
+      return Err(format!(
+        "v3 Parameter record has {} fields, expected 4",
+        fields.len()
+      ));
     }
     let name = url_decode(fields[0]);
     let spec = url_decode(fields[1]);
@@ -864,10 +899,7 @@ pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::P
     } else {
       extras_str
         .split('\x1d')
-        .map(|tok_list| {
-          parse_token_list(tok_list)
-            .map(crate::tokens::Tokens::new)
-        })
+        .map(|tok_list| parse_token_list(tok_list).map(crate::tokens::Tokens::new))
         .collect::<Result<Vec<_>, _>>()?
     };
 
@@ -885,7 +917,7 @@ pub(crate) fn parse_parameters_v3(v3: &str) -> Result<Option<crate::parameter::P
         _ => {
           // Unknown flag — ignore for forward compat; future flags
           // added to the writer shouldn't break older readers.
-        }
+        },
       }
     }
     params.push(param);
@@ -940,7 +972,13 @@ fn parse_glue(s: &str) -> Result<crate::common::glue::Glue, String> {
       minus = Some(rest.parse().map_err(|e| format!("Bad glue minus: {}", e))?);
     }
   }
-  Ok(Glue { skip, plus, pfill, minus, mfill })
+  Ok(Glue {
+    skip,
+    plus,
+    pfill,
+    minus,
+    mfill,
+  })
 }
 
 /// Parse a serialized MuGlue value (same format as Glue)
@@ -954,18 +992,34 @@ fn parse_muglue(s: &str) -> Result<crate::common::muglue::MuGlue, String> {
   let mut mfill = None;
   for (i, part) in s.split(',').enumerate() {
     if i == 0 {
-      skip = part.parse().map_err(|e| format!("Bad muglue skip: {}", e))?;
+      skip = part
+        .parse()
+        .map_err(|e| format!("Bad muglue skip: {}", e))?;
     } else if let Some(rest) = part.strip_prefix("pf") {
       pfill = FillCode::new(rest.parse::<usize>().unwrap_or(0));
     } else if let Some(rest) = part.strip_prefix('p') {
-      plus = Some(rest.parse().map_err(|e| format!("Bad muglue plus: {}", e))?);
+      plus = Some(
+        rest
+          .parse()
+          .map_err(|e| format!("Bad muglue plus: {}", e))?,
+      );
     } else if let Some(rest) = part.strip_prefix("mf") {
       mfill = FillCode::new(rest.parse::<usize>().unwrap_or(0));
     } else if let Some(rest) = part.strip_prefix('m') {
-      minus = Some(rest.parse().map_err(|e| format!("Bad muglue minus: {}", e))?);
+      minus = Some(
+        rest
+          .parse()
+          .map_err(|e| format!("Bad muglue minus: {}", e))?,
+      );
     }
   }
-  Ok(MuGlue { skip, plus, pfill, minus, mfill })
+  Ok(MuGlue {
+    skip,
+    plus,
+    pfill,
+    minus,
+    mfill,
+  })
 }
 
 #[cfg(test)]
@@ -977,7 +1031,11 @@ mod tests {
     // Test with inline tab-separated dump content (no external file dependency)
     let content = "V\tcount@\tI\t42\nM\t\\mymacro\tE\t\\mymacro\t1\t\t6:1,6:2\n";
     let count = load_from_str(content).unwrap();
-    assert!(count > 0, "Expected entries loaded from inline dump, got {}", count);
+    assert!(
+      count > 0,
+      "Expected entries loaded from inline dump, got {}",
+      count
+    );
   }
 
   #[test]

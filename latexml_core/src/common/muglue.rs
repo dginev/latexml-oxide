@@ -59,9 +59,7 @@ impl NumericOps for MuGlue {
   }
 }
 impl Object for MuGlue {
-  fn revert(&self) -> crate::Result<Tokens> {
-    Ok(Tokens::new(Explode!(self.to_string())))
-  }
+  fn revert(&self) -> crate::Result<Tokens> { Ok(Tokens::new(Explode!(self.to_string()))) }
 }
 
 impl MuGlue {
@@ -177,7 +175,13 @@ mod tests {
 
   #[test]
   fn muglue_value_of_returns_skip() {
-    let m = MuGlue { skip: 1234, plus: Some(10), pfill: None, minus: None, mfill: None };
+    let m = MuGlue {
+      skip:  1234,
+      plus:  Some(10),
+      pfill: None,
+      minus: None,
+      mfill: None,
+    };
     assert_eq!(m.value_of(), 1234);
   }
 
@@ -190,8 +194,8 @@ mod tests {
   #[test]
   fn muglue_negate_flips_all_components() {
     let m = MuGlue {
-      skip: 100,
-      plus: Some(10),
+      skip:  100,
+      plus:  Some(10),
       pfill: Some(FillCode::Fil),
       minus: Some(5),
       mfill: Some(FillCode::Fill),
@@ -209,8 +213,10 @@ mod tests {
   fn muglue_new_full_roundtrip() {
     let m = MuGlue::new_full(
       100,
-      Some(10), Some(FillCode::Fil),
-      Some(5), Some(FillCode::Fill),
+      Some(10),
+      Some(FillCode::Fil),
+      Some(5),
+      Some(FillCode::Fill),
     );
     assert_eq!(m.skip, 100);
     assert_eq!(m.plus, Some(10));
@@ -224,15 +230,35 @@ mod tests {
     // Display uses "mu" as the unit.
     let m = <MuGlue as NumericOps>::new(65536); // 1mu
     let out = format!("{m}");
-    assert!(out.contains("mu"),
-      "MuGlue display should include 'mu' unit; got {out:?}");
+    assert!(
+      out.contains("mu"),
+      "MuGlue display should include 'mu' unit; got {out:?}"
+    );
   }
 
   #[test]
   fn muglue_equality() {
-    let a = MuGlue { skip: 1, plus: None, pfill: None, minus: None, mfill: None };
-    let b = MuGlue { skip: 1, plus: None, pfill: None, minus: None, mfill: None };
-    let c = MuGlue { skip: 2, plus: None, pfill: None, minus: None, mfill: None };
+    let a = MuGlue {
+      skip:  1,
+      plus:  None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    };
+    let b = MuGlue {
+      skip:  1,
+      plus:  None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    };
+    let c = MuGlue {
+      skip:  2,
+      plus:  None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    };
     assert_eq!(a, b);
     assert_ne!(a, c);
   }
@@ -240,8 +266,8 @@ mod tests {
   #[test]
   fn muglue_double_negate_is_identity() {
     let m = MuGlue {
-      skip: 100,
-      plus: Some(10),
+      skip:  100,
+      plus:  Some(10),
       pfill: Some(FillCode::Fil),
       minus: Some(5),
       mfill: Some(FillCode::Fill),

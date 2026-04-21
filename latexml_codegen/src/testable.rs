@@ -36,7 +36,11 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
       // Rust identifiers cannot start with a digit; prepend `t_` for
       // tex filenames like `3d-cone.tex` that would otherwise produce
       // `3d_cone_test` (an invalid ident).
-      let fn_filename = if fn_filename.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+      let fn_filename = if fn_filename
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_digit())
+      {
         format!("t_{fn_filename}")
       } else {
         fn_filename

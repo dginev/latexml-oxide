@@ -51,24 +51,24 @@ pub mod rewrite;
 /// conversion
 #[macro_use]
 pub mod state;
-/// Writer for Rust-native kernel dump files
-pub mod dump_writer;
-/// Reader for Rust-native kernel dump files
-pub mod dump_reader;
 /// Code generator: dump file → compiled Rust module
 pub mod dump_codegen;
+/// Reader for Rust-native kernel dump files
+pub mod dump_reader;
+/// Writer for Rust-native kernel dump files
+pub mod dump_writer;
 /// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
 /// Gullet into Boxes
 #[macro_use]
 pub mod stomach;
-/// Main-level wall-clock watchdog that forcibly aborts the process after a deadline.
-/// Complements the cooperative `stomach::check_timeout` polling for native-code hotspots
-/// (Marpa, libxml2, libxslt) that don't return to the digestion loop.
-pub mod watchdog;
 /// A TeX-like digested Box
 pub mod tbox;
 /// Auxilary utilities that do not participate in the main conversion abstraction
 pub mod util;
+/// Main-level wall-clock watchdog that forcibly aborts the process after a deadline.
+/// Complements the cooperative `stomach::check_timeout` polling for native-code hotspots
+/// (Marpa, libxml2, libxslt) that don't return to the digestion loop.
+pub mod watchdog;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 
@@ -83,9 +83,7 @@ use std::rc::Rc;
 /// guarantee exactly-once initialisation even across threads.
 ///
 /// See: <https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/doc/threads.html>
-pub fn ensure_libxml_init() {
-  libxml::init_parser();
-}
+pub fn ensure_libxml_init() { libxml::init_parser(); }
 
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
@@ -181,9 +179,7 @@ pub trait BoxOps: Object {
   /// deprecated: get the map of named properties. This can not be usable as long as we have any
   /// data behind a RefCell wrapper.
   /// Use `with_properties` instead.
-  fn get_properties(&self) -> &HashMap<Stored> {
-    &NO_PROPERTIES
-  }
+  fn get_properties(&self) -> &HashMap<Stored> { &NO_PROPERTIES }
 
   /// execute a function using this object's named properties
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
@@ -250,7 +246,8 @@ pub trait BoxOps: Object {
   /// gets the associated font, if any
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>>;
   /// sets an associated font
-  fn set_font(&mut self, _font: Rc<Font>) { /* no-op for types without font */ }
+  fn set_font(&mut self, _font: Rc<Font>) { /* no-op for types without font */
+  }
   /// sets a "width" property, for sizing
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
 
@@ -366,13 +363,17 @@ pub trait BoxOps: Object {
           Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
           Some(Stored::MuGlue(g)) => {
             // Convert mu to pt: 1mu = font_size / 18
-            let fs = crate::state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+            let fs = crate::state::lookup_font()
+              .and_then(|f| f.get_size())
+              .unwrap_or(10.0);
             let mu_val = g.value_of() as f64;
             let pt_scaled = mu_val * fs / 18.0;
             Some(Dimension::new(pt_scaled as i64))
           },
           Some(Stored::MuDimension(d)) => {
-            let fs = crate::state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+            let fs = crate::state::lookup_font()
+              .and_then(|f| f.get_size())
+              .unwrap_or(10.0);
             let mu_val = d.value_of() as f64;
             let pt_scaled = mu_val * fs / 18.0;
             Some(Dimension::new(pt_scaled as i64))

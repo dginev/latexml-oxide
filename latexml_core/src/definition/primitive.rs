@@ -2,21 +2,21 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 
 use crate::Digested;
-use crate::common::arena::{SymHashMap};
-use crate::common::store::Stored;
+use crate::common::arena::SymHashMap;
 use crate::common::error::*;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
+use crate::pin;
 use crate::state::Scope;
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::pin;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {

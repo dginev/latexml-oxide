@@ -38,7 +38,11 @@ impl Hash for Color {
 impl fmt::Display for Color {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let model = self.model();
-    let comps: Vec<String> = self.components().iter().map(|c| format_component(*c)).collect();
+    let comps: Vec<String> = self
+      .components()
+      .iter()
+      .map(|c| format_component(*c))
+      .collect();
     write!(f, "{model}({})", comps.join(","))
   }
 }
@@ -98,9 +102,7 @@ impl Color {
     match self {
       Color::Cmy(..) => *self,
       Color::Rgb(r, g, b) => Color::Cmy(1.0 - r, 1.0 - g, 1.0 - b),
-      Color::Cmyk(c, m, y, k) => {
-        Color::Cmy((c + k).min(1.0), (m + k).min(1.0), (y + k).min(1.0))
-      },
+      Color::Cmyk(c, m, y, k) => Color::Cmy((c + k).min(1.0), (m + k).min(1.0), (y + k).min(1.0)),
       Color::Hsb(..) => self.to_rgb().to_cmy(),
       Color::Gray(g) => Color::Cmy(1.0 - g, 1.0 - g, 1.0 - g),
     }
@@ -132,10 +134,9 @@ impl Color {
       Color::Hsb(..) => *self,
       Color::Rgb(r, g, b) => {
         // Perl: rgb.pm Phi function + hsb dispatch
-        let i =
-          4 * (if *r >= *g { 1 } else { 0 })
-            + 2 * (if *g >= *b { 1 } else { 0 })
-            + (if *b >= *r { 1 } else { 0 });
+        let i = 4 * (if *r >= *g { 1 } else { 0 })
+          + 2 * (if *g >= *b { 1 } else { 0 })
+          + (if *b >= *r { 1 } else { 0 });
         match i {
           1 => phi(*b, *g, *r, 3.0, 1.0),
           2 => phi(*g, *r, *b, 1.0, 1.0),
@@ -159,9 +160,7 @@ impl Color {
       Color::Gray(..) => *self,
       Color::Rgb(r, g, b) => Color::Gray(0.3 * r + 0.59 * g + 0.11 * b),
       Color::Cmy(c, m, y) => Color::Gray(1.0 - (0.3 * c + 0.59 * m + 0.11 * y)),
-      Color::Cmyk(c, m, y, k) => {
-        Color::Gray(1.0 - (0.3 * c + 0.59 * m + 0.11 * y + k).min(1.0))
-      },
+      Color::Cmyk(c, m, y, k) => Color::Gray(1.0 - (0.3 * c + 0.59 * m + 0.11 * y + k).min(1.0)),
       Color::Hsb(..) => self.to_rgb().to_gray(),
     }
   }
@@ -240,7 +239,11 @@ impl Color {
     }
     let a = base.components();
     let b = other.components();
-    let mixed: Vec<f64> = a.iter().zip(b.iter()).map(|(ai, bi)| fraction * ai + (1.0 - fraction) * bi).collect();
+    let mixed: Vec<f64> = a
+      .iter()
+      .zip(b.iter())
+      .map(|(ai, bi)| fraction * ai + (1.0 - fraction) * bi)
+      .collect();
     from_model_components(base.model(), &mixed)
   }
 
@@ -262,7 +265,11 @@ impl Color {
   /// Multiply by component vector. Perl: $self->multiply(@m)
   pub fn multiply(&self, factors: &[f64]) -> Color {
     let comps = self.components();
-    let result: Vec<f64> = comps.iter().zip(factors.iter()).map(|(c, f)| c * f).collect();
+    let result: Vec<f64> = comps
+      .iter()
+      .zip(factors.iter())
+      .map(|(c, f)| c * f)
+      .collect();
     from_model_components(self.model(), &result)
   }
 
@@ -284,13 +291,21 @@ impl Color {
   pub fn rgb_components_string(&self) -> String {
     let rgb = self.to_rgb();
     let comps = rgb.components();
-    comps.iter().map(|c| format_component(*c)).collect::<Vec<_>>().join(",")
+    comps
+      .iter()
+      .map(|c| format_component(*c))
+      .collect::<Vec<_>>()
+      .join(",")
   }
 
   /// Encode for state storage: "model c1 c2 ..."
   pub fn to_stored(&self) -> String {
     let model = self.model();
-    let comps: Vec<String> = self.components().iter().map(|c| format_component(*c)).collect();
+    let comps: Vec<String> = self
+      .components()
+      .iter()
+      .map(|c| format_component(*c))
+      .collect();
     format!("{model} {}", comps.join(" "))
   }
 
@@ -301,7 +316,10 @@ impl Color {
       return None;
     }
     let model = parts[0];
-    let comps: Vec<f64> = parts[1..].iter().filter_map(|p| p.parse::<f64>().ok()).collect();
+    let comps: Vec<f64> = parts[1..]
+      .iter()
+      .filter_map(|p| p.parse::<f64>().ok())
+      .collect();
     Some(from_model_components(model, &comps))
   }
 }
@@ -337,12 +355,16 @@ fn parse_components(spec: &str) -> Vec<f64> {
   // contains a comma, split on comma first, then allow whitespace splits inside
   // each component so e.g. `153 153, 192` for {RGB}{153 153, 192} yields 3 values.
   if spec.contains(',') {
-    spec.split(',')
+    spec
+      .split(',')
       .flat_map(|s| s.split_whitespace())
       .filter_map(|s| s.trim().parse::<f64>().ok())
       .collect()
   } else {
-    spec.split_whitespace().filter_map(|s| s.parse::<f64>().ok()).collect()
+    spec
+      .split_whitespace()
+      .filter_map(|s| s.parse::<f64>().ok())
+      .collect()
   }
 }
 
@@ -384,7 +406,9 @@ mod tests {
   #[test]
   fn components_match_variant() {
     assert_eq!(Color::Rgb(0.1, 0.2, 0.3).components(), vec![0.1, 0.2, 0.3]);
-    assert_eq!(Color::Cmyk(0.1, 0.2, 0.3, 0.4).components(), vec![0.1, 0.2, 0.3, 0.4]);
+    assert_eq!(Color::Cmyk(0.1, 0.2, 0.3, 0.4).components(), vec![
+      0.1, 0.2, 0.3, 0.4
+    ]);
     assert_eq!(Color::Gray(0.5).components(), vec![0.5]);
   }
 
@@ -405,8 +429,10 @@ mod tests {
     let cmy = Color::Cmy(0.25, 0.5, 0.75);
     let rgb = cmy.to_rgb();
     if let Color::Rgb(r, g, b) = rgb {
-      assert!(eq_close(r, 0.75) && eq_close(g, 0.5) && eq_close(b, 0.25),
-        "got {rgb:?}");
+      assert!(
+        eq_close(r, 0.75) && eq_close(g, 0.5) && eq_close(b, 0.25),
+        "got {rgb:?}"
+      );
     } else {
       panic!("expected Rgb after cmy.to_rgb(), got {rgb:?}");
     }
@@ -417,8 +443,10 @@ mod tests {
     let c = Color::Rgb(0.1, 0.2, 0.3);
     let comp = c.complement();
     if let Color::Rgb(r, g, b) = comp {
-      assert!(eq_close(r, 0.9) && eq_close(g, 0.8) && eq_close(b, 0.7),
-        "got {comp:?}");
+      assert!(
+        eq_close(r, 0.9) && eq_close(g, 0.8) && eq_close(b, 0.7),
+        "got {comp:?}"
+      );
     } else {
       panic!("Rgb complement should return Rgb");
     }
@@ -428,8 +456,7 @@ mod tests {
   fn display_format_parenthesized() {
     let c = Color::Rgb(0.5, 0.5, 0.5);
     let s = format!("{c}");
-    assert!(s.starts_with("rgb(") && s.ends_with(')'),
-      "got {s:?}");
+    assert!(s.starts_with("rgb(") && s.ends_with(')'), "got {s:?}");
   }
 
   #[test]

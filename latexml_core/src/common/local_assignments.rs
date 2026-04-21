@@ -62,9 +62,7 @@ static LOCALIZED_VARS: Lazy<RefCell<Localized>> = Lazy::new(|| RefCell::new(Loca
 
 /// Reset all localized variables to their default state.
 /// Must be called between conversion runs to prevent state pollution.
-pub fn initialize_localized() {
-  *locals_mut!() = Localized::default();
-}
+pub fn initialize_localized() { *locals_mut!() = Localized::default(); }
 
 /// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
 pub fn set_ifframe(if_frame: Option<Rc<RefCell<IfFrame>>>) {
@@ -186,7 +184,11 @@ pub fn local_dual_branch_guard(mode: &'static str) -> LocalGuard {
 /// Push a localized align group count; returns guard that pops on drop.
 pub fn local_align_group_count_guard(v: i32) -> LocalGuard {
   local_align_group_count(v);
-  LocalGuard { expire: || { expire_align_group_count(); } }
+  LocalGuard {
+    expire: || {
+      expire_align_group_count();
+    },
+  }
 }
 
 /// Push a localized state unlocked flag; returns guard that pops on drop.
@@ -198,7 +200,11 @@ pub fn local_state_unlocked_guard(v: bool) -> LocalGuard {
 /// Push a localized reading alignment; returns guard that pops on drop.
 pub fn local_reading_alignment_guard(alignment: &Digested) -> LocalGuard {
   local_reading_alignment(alignment);
-  LocalGuard { expire: || { expire_reading_alignment(); } }
+  LocalGuard {
+    expire: || {
+      expire_reading_alignment();
+    },
+  }
 }
 
 // ============================================================

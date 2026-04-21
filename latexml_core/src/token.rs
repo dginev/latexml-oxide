@@ -929,8 +929,8 @@ mod tests {
     // Ensure every Catcode variant produces a non-empty name.
     use Catcode::*;
     for cc in [
-      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
-      IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
     ] {
       assert!(!cc.name().is_empty(), "{cc:?}.name() is empty");
     }
@@ -947,10 +947,15 @@ mod tests {
   #[test]
   fn catcode_short_name_starts_with_t_prefix() {
     use Catcode::*;
-    for cc in [ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
-               IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG] {
-      assert!(cc.short_name().starts_with("T_"),
-        "{cc:?}.short_name() = {} lacks T_ prefix", cc.short_name());
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
+      assert!(
+        cc.short_name().starts_with("T_"),
+        "{cc:?}.short_name() = {} lacks T_ prefix",
+        cc.short_name()
+      );
     }
   }
 
@@ -968,11 +973,15 @@ mod tests {
   fn is_primitive_checks() {
     use Catcode::*;
     // TeX primitives:
-    for cc in [ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE] {
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
+    ] {
       assert!(cc.is_primitive(), "{cc:?} should be primitive");
     }
     // Non-primitives:
-    for cc in [IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG] {
+    for cc in [
+      IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
       assert!(!cc.is_primitive(), "{cc:?} should not be primitive");
     }
   }
@@ -983,8 +992,9 @@ mod tests {
     for cc in [BEGIN, END, MATH, ALIGN, SUPER, SUB, ACTIVE, CS] {
       assert!(cc.is_executable(), "{cc:?} should be executable");
     }
-    for cc in [EOL, ESCAPE, PARAM, SPACE, IGNORE, LETTER, OTHER,
-               COMMENT, INVALID, MARKER, ARG] {
+    for cc in [
+      EOL, ESCAPE, PARAM, SPACE, IGNORE, LETTER, OTHER, COMMENT, INVALID, MARKER, ARG,
+    ] {
       assert!(!cc.is_executable(), "{cc:?} should not be executable");
     }
   }
@@ -1041,8 +1051,10 @@ mod tests {
     // From<Catcode> for u8 + From<u8> for Catcode should round-trip
     // (at least for the documented range 0..=18).
     use Catcode::*;
-    for cc in [ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
-               IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG] {
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
       let b: u8 = cc.into();
       let cc2: Catcode = b.into();
       assert_eq!(cc, cc2, "roundtrip broke for {cc:?} (u8={b})");

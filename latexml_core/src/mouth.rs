@@ -192,7 +192,11 @@ impl Mouth {
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
       options.source = Some(source.to_string());
       if options.shortsource.is_none() {
-        options.shortsource = Some(if ext.is_empty() { name } else { s!("{}.{}", name, ext) });
+        options.shortsource = Some(if ext.is_empty() {
+          name
+        } else {
+          s!("{}.{}", name, ext)
+        });
       }
       Mouth::new(source, Some(options))
     }
@@ -243,8 +247,14 @@ impl Mouth {
           fatal!(Mouth, MissingFile, s!("Can't find file {}", pathname));
         },
         Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
-          Error!("I/O", "unreadable", s!("File {} is not readable. Ignoring.", pathname), "", "",
-            self.get_location());
+          Error!(
+            "I/O",
+            "unreadable",
+            s!("File {} is not readable. Ignoring.", pathname),
+            "",
+            "",
+            self.get_location()
+          );
           return Ok(());
         },
         Err(e) => {
@@ -258,12 +268,22 @@ impl Mouth {
               let mut buf = [0u8; 512];
               if let Ok(n) = f.read(&mut buf) {
                 if n > 0 {
-                  let non_text = buf[..n].iter().filter(|&&b| b == 0 || (b < 0x20 && b != b'\n' && b != b'\r' && b != b'\t' && b != 0x1b)).count();
+                  let non_text = buf[..n]
+                    .iter()
+                    .filter(|&&b| {
+                      b == 0 || (b < 0x20 && b != b'\n' && b != b'\r' && b != b'\t' && b != 0x1b)
+                    })
+                    .count();
                   if non_text * 3 > n {
                     // High ratio of non-text bytes — likely binary
-                    Error!("invalid", "binary",
-                      s!("Input file {} appears to be binary. Ignoring.", pathname), "", "",
-                      self.get_location());
+                    Error!(
+                      "invalid",
+                      "binary",
+                      s!("Input file {} appears to be binary. Ignoring.", pathname),
+                      "",
+                      "",
+                      self.get_location()
+                    );
                     return Ok(());
                   }
                 }
@@ -275,8 +295,14 @@ impl Mouth {
       let f = match File::open(pathname) {
         Ok(f) => f,
         Err(e) => {
-          Error!("I/O", "open", s!("Can't open {} for reading: {}", pathname, e), "", "",
-            self.get_location());
+          Error!(
+            "I/O",
+            "open",
+            s!("Can't open {} for reading: {}", pathname, e),
+            "",
+            "",
+            self.get_location()
+          );
           return Err(e.into());
         },
       };
@@ -303,8 +329,16 @@ impl Mouth {
       } else {
         "Anonymous String"
       };
-      let kind = if self.fordefinitions { "definitions" } else { "content" };
-      let at_note = if self.fordefinitions && !self.at_letter { " w/@ other" } else { "" };
+      let kind = if self.fordefinitions {
+        "definitions"
+      } else {
+        "content"
+      };
+      let at_note = if self.fordefinitions && !self.at_letter {
+        " w/@ other"
+      } else {
+        ""
+      };
       Some(s!("Processing {}{} {}", kind, at_note, source))
     } else {
       None
@@ -507,7 +541,10 @@ impl Mouth {
       let mut cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
       // Possible convert ^^x
       // Perl: (cc == CC_SUPER) && (colno + 1 < nchars) && (ch == chars[colno])
-      if cc == Catcode::SUPER && self.colno + 1 < self.nchars && Some(&ch) == self.chars.get(self.colno) {
+      if cc == Catcode::SUPER
+        && self.colno + 1 < self.nchars
+        && Some(&ch) == self.chars.get(self.colno)
+      {
         let c1_opt = self.chars.get(self.colno + 1);
         let c2_opt = self.chars.get(self.colno + 2);
         let mut two_hex = false;
@@ -517,13 +554,8 @@ impl Mouth {
             // Perf: avoid per-char String alloc + regex match by using
             // direct ASCII class check. LOWERHEX_REGEX = ^[0-9a-f]$, i.e.
             // lowercase hex digits only.
-            let is_lowerhex = |c: char| -> bool {
-              matches!(c, '0'..='9' | 'a'..='f')
-            };
-            if (self.colno + 2 < self.nchars)
-              && is_lowerhex(*c1)
-              && is_lowerhex(*c2)
-            {
+            let is_lowerhex = |c: char| -> bool { matches!(c, '0'..='9' | 'a'..='f') };
+            if (self.colno + 2 < self.nchars) && is_lowerhex(*c1) && is_lowerhex(*c2) {
               // TODO: Maybe Result type warranted here?
               let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap();
               ch = hex as char;
@@ -661,7 +693,8 @@ impl Mouth {
           self.colno -= 1;
         }
         // Sneak a comment out, every so often.
-        if self.lineno.is_multiple_of(READLINE_PROGRESS_QUANTUM) && lookup_bool("INCLUDE_COMMENTS") {
+        if self.lineno.is_multiple_of(READLINE_PROGRESS_QUANTUM) && lookup_bool("INCLUDE_COMMENTS")
+        {
           // Perl T_COMMENT prepends '%' (Token.pm L81)
           return Some(T_COMMENT!(s!(
             "%**** {} Line {} ****",

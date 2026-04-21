@@ -158,11 +158,11 @@ impl ValidationPragmatics {
           self.validate_recursive(arg_subtree)?;
         }
       },
-      XM::Dual(ref content, ref pres, _, _) => {
+      XM::Dual(ref content, ref pres, ..) => {
         self.validate_recursive(content)?;
         self.validate_recursive(pres)?;
       },
-      XM::Wrap(ref items, _, _) => {
+      XM::Wrap(ref items, ..) => {
         for item in items.iter() {
           self.validate_recursive(item)?;
         }
@@ -219,8 +219,7 @@ fn is_invisible_times_op(op: &XM) -> bool {
   match op {
     XM::Lexeme(oplexeme, _) => oplexeme.contains("invisible_operator"),
     XM::Token(props, _) => {
-      props.meaning.as_deref() == Some("times")
-        && props.role.as_deref() == Some("MULOP")
+      props.meaning.as_deref() == Some("times") && props.role.as_deref() == Some("MULOP")
     },
     _ => false,
   }
@@ -340,8 +339,7 @@ where
           continue;
         }
         let (_base, _sep, lexeme) = distill_lexeme(name);
-        let is_letter = lexeme.chars().count() == 1
-          || greek_name_to_letter(lexeme).is_some();
+        let is_letter = lexeme.chars().count() == 1 || greek_name_to_letter(lexeme).is_some();
         if !is_letter {
           continue;
         }
@@ -408,8 +406,7 @@ fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>
       if let Some(ref fences) = atom_meta.fenced {
         if fences.as_str() == "parens" {
           return Err(
-            "pruning non-argument parenthetical atom, used as LHS of function application"
-              .into(),
+            "pruning non-argument parenthetical atom, used as LHS of function application".into(),
           );
         }
       }
@@ -417,8 +414,6 @@ fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>
   }
   Ok(())
 }
-
-
 
 fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Mathematical convention: `f(x)` reads as function application, not
@@ -739,16 +734,18 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
 fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Detect any script-op Apply where the first arg (base) is "absent".
   // This pattern means a standalone floating script that should be a pre-script.
-  if let XM::Apply(Operator(ref op), ref args, _, _) = tree {
+  if let XM::Apply(Operator(ref op), ref args, ..) = tree {
     if let XM::Token(ref props, _) = **op {
-      if props.role.as_deref().is_some_and(|r|
-        r == "SUBSCRIPTOP" || r == "SUPERSCRIPTOP")
+      if props
+        .role
+        .as_deref()
+        .is_some_and(|r| r == "SUBSCRIPTOP" || r == "SUPERSCRIPTOP")
       {
         // Check if base (first arg) is "absent" — standalone script
         if let Some(Some(XM::Token(ref base_props, _))) = args.0.first() {
           if base_props.meaning.as_deref() == Some("absent") {
             return Err(
-              "Prune: standalone floating script (base=absent) should attach as pre-script.".into()
+              "Prune: standalone floating script (base=absent) should attach as pre-script.".into(),
             );
           }
         }
@@ -773,7 +770,7 @@ fn pragma_no_bilateral_absent(tree: &XM) -> Result<(), Box<dyn Error>> {
         Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
       if first_absent && last_absent {
         return Err(
-          "Prune: bilateral absent (absent on both sides) is never valid notation.".into()
+          "Prune: bilateral absent (absent on both sides) is never valid notation.".into(),
         );
       }
     }
@@ -807,7 +804,7 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
             let rhs = trees[1];
             let rhs_is_simple = match rhs {
               XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-              XM::Apply(Operator(ref rhs_op), _, _, _) => {
+              XM::Apply(Operator(ref rhs_op), ..) => {
                 // Scripted factors (SUPERSCRIPTOP/SUBSCRIPTOP) are simple
                 let rhs_role = match &**rhs_op {
                   XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
@@ -822,7 +819,8 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
             if rhs_is_simple && rhs_meta.fenced.is_none() {
               return Err(
                 "Prune: function application followed by simple unfenced factor — \
-                 prefer wider absorption.".into()
+                 prefer wider absorption."
+                  .into(),
               );
             }
           }
@@ -876,19 +874,15 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
   // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     let is_mulop = match **op {
-      XM::Token(ref props, _) => {
-        props.role.as_deref() == Some("MULOP")
-      },
-      XM::Lexeme(ref lex, _) => {
-        lex.starts_with("MULOP") || lex.contains("invisible_operator")
-      },
+      XM::Token(ref props, _) => props.role.as_deref() == Some("MULOP"),
+      XM::Lexeme(ref lex, _) => lex.starts_with("MULOP") || lex.contains("invisible_operator"),
       _ => false,
     };
     if is_mulop {
       let trees = args.trees();
       if trees.len() == 2 {
         // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
-        if let XM::Apply(Operator(ref bigop_op), _, _, _) = trees[0] {
+        if let XM::Apply(Operator(ref bigop_op), ..) = trees[0] {
           let bigop_name = bigop_op.base_operator_name();
           let is_bigop = bigop_name.starts_with("BIGOP")
             || bigop_name.starts_with("SUMOP")
@@ -900,7 +894,7 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
             let rhs = trees[1];
             let rhs_is_simple = match rhs {
               XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-              XM::Apply(Operator(ref rhs_op), _, _, _) => {
+              XM::Apply(Operator(ref rhs_op), ..) => {
                 let rhs_role = match &**rhs_op {
                   XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
                   XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
@@ -946,7 +940,9 @@ fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
       // this parse used unary where binary was more appropriate.
       let trees = args.trees();
       for (i, arg) in trees.iter().enumerate() {
-        if i == 0 { continue; } // first arg can legitimately start with unary
+        if i == 0 {
+          continue;
+        } // first arg can legitimately start with unary
         if is_unary_addop_prefix(arg) {
           return Err("prefer_binary_addop: non-initial argument is unary ADDOP prefix".into());
         }
@@ -1199,9 +1195,11 @@ fn all_simple_identifiers(tree: &XM) -> bool {
     },
     XM::Token(ref props, _) => {
       // Token with UNKNOWN/ID/NUMBER role
-      props.role.as_deref().is_some_and(|r| {
-        r == "UNKNOWN" || r == "ID" || r == "NUMBER"
-      }) && props.meaning.as_deref() != Some("absent")
+      props
+        .role
+        .as_deref()
+        .is_some_and(|r| r == "UNKNOWN" || r == "ID" || r == "NUMBER")
+        && props.meaning.as_deref() != Some("absent")
     },
     _ => false,
   }
@@ -1275,8 +1273,11 @@ mod tests {
   fn greek_name_to_letter_unknown_returns_none() {
     assert_eq!(greek_name_to_letter("notgreek"), None);
     assert_eq!(greek_name_to_letter(""), None);
-    assert_eq!(greek_name_to_letter("ALPHA"), None,
-      "uppercase ALL-CAPS is not a recognized spelling");
+    assert_eq!(
+      greek_name_to_letter("ALPHA"),
+      None,
+      "uppercase ALL-CAPS is not a recognized spelling"
+    );
   }
 
   #[test]
@@ -1434,10 +1435,22 @@ mod tests {
   fn consistent_pragmas_accept_empty_tree() {
     use crate::semantics::metadata::Meta;
     let leaf = XM::Lexeme("UNKNOWN:italic-x".to_string(), Meta::default());
-    assert!(ValidationPragmatics::ConsistentLetterBlocks.validate(&leaf).is_ok());
+    assert!(
+      ValidationPragmatics::ConsistentLetterBlocks
+        .validate(&leaf)
+        .is_ok()
+    );
     assert!(ValidationPragmatics::ConsistentCase.validate(&leaf).is_ok());
-    assert!(ValidationPragmatics::ConsistentCaseFlat.validate(&leaf).is_ok());
-    assert!(ValidationPragmatics::ConsistentCaseFlatUnstyled.validate(&leaf).is_ok());
+    assert!(
+      ValidationPragmatics::ConsistentCaseFlat
+        .validate(&leaf)
+        .is_ok()
+    );
+    assert!(
+      ValidationPragmatics::ConsistentCaseFlatUnstyled
+        .validate(&leaf)
+        .is_ok()
+    );
   }
 
   // ----- end-to-end pruning behavior on real XM::Token operator shape -----
@@ -1469,7 +1482,9 @@ mod tests {
     // it — the 2-peer shape is ambiguous and must not be pruned.
     let tree = inv_times_chain(&["UNKNOWN:italic-A", "UNKNOWN:italic-x"]);
     assert!(
-      ValidationPragmatics::ConsistentLetterBlocks.validate(&tree).is_ok(),
+      ValidationPragmatics::ConsistentLetterBlocks
+        .validate(&tree)
+        .is_ok(),
       "2-letter invisible-times chain should be exempt from block-consistency"
     );
   }
@@ -1477,13 +1492,11 @@ mod tests {
   #[test]
   fn consistent_blocks_accepts_three_same_block_letters() {
     // `abc` — all a-e block. Accept.
-    let tree = inv_times_chain(&[
-      "UNKNOWN:italic-a",
-      "UNKNOWN:italic-b",
-      "UNKNOWN:italic-c",
-    ]);
+    let tree = inv_times_chain(&["UNKNOWN:italic-a", "UNKNOWN:italic-b", "UNKNOWN:italic-c"]);
     assert!(
-      ValidationPragmatics::ConsistentLetterBlocks.validate(&tree).is_ok(),
+      ValidationPragmatics::ConsistentLetterBlocks
+        .validate(&tree)
+        .is_ok(),
       "3 same-block letters should pass"
     );
   }
@@ -1491,37 +1504,29 @@ mod tests {
   #[test]
   fn consistent_blocks_rejects_three_mixed_block_letters() {
     // `abx` — a-e, a-e, x-z. The third letter breaks consistency → prune.
-    let tree = inv_times_chain(&[
-      "UNKNOWN:italic-a",
-      "UNKNOWN:italic-b",
-      "UNKNOWN:italic-x",
-    ]);
+    let tree = inv_times_chain(&["UNKNOWN:italic-a", "UNKNOWN:italic-b", "UNKNOWN:italic-x"]);
     assert!(
-      ValidationPragmatics::ConsistentLetterBlocks.validate(&tree).is_err(),
+      ValidationPragmatics::ConsistentLetterBlocks
+        .validate(&tree)
+        .is_err(),
       "3 mixed-block letters should be pruned"
     );
   }
 
   #[test]
   fn consistent_case_rejects_three_mixed_case_letters() {
-    let tree = inv_times_chain(&[
-      "UNKNOWN:italic-a",
-      "UNKNOWN:italic-b",
-      "UNKNOWN:italic-C",
-    ]);
+    let tree = inv_times_chain(&["UNKNOWN:italic-a", "UNKNOWN:italic-b", "UNKNOWN:italic-C"]);
     assert!(
-      ValidationPragmatics::ConsistentCase.validate(&tree).is_err(),
+      ValidationPragmatics::ConsistentCase
+        .validate(&tree)
+        .is_err(),
       "mixed case in 3-peer chain should be pruned"
     );
   }
 
   #[test]
   fn consistent_case_accepts_three_same_case_letters() {
-    let tree = inv_times_chain(&[
-      "UNKNOWN:italic-a",
-      "UNKNOWN:italic-b",
-      "UNKNOWN:italic-c",
-    ]);
+    let tree = inv_times_chain(&["UNKNOWN:italic-a", "UNKNOWN:italic-b", "UNKNOWN:italic-c"]);
     assert!(
       ValidationPragmatics::ConsistentCase.validate(&tree).is_ok(),
       "all-lower 3-peer chain should pass case consistency"
@@ -1567,7 +1572,9 @@ mod tests {
       Some(letter_lexeme("UNKNOWN:italic-x", None)),
     );
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_err(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_err(),
       "fenced LHS letter under invisible times (Token shape) must be pruned"
     );
   }
@@ -1581,7 +1588,9 @@ mod tests {
       Some(letter_lexeme("UNKNOWN:italic-x", Some("parens"))),
     );
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_err(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_err(),
       "fenced RHS letter under invisible times (Token shape) must be pruned"
     );
   }
@@ -1600,7 +1609,9 @@ mod tests {
       Some(letter_lexeme("NUMBER:italic-2", Some("parens"))),
     );
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_ok(),
       "fenced NUMBER RHS with fenced NUMBER LHS must be preserved"
     );
   }
@@ -1614,7 +1625,9 @@ mod tests {
       Some(letter_lexeme("NUMBER:italic-2", Some("parens"))),
     );
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_err(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_err(),
       "fenced NUMBER RHS with unfenced LHS must be pruned"
     );
   }
@@ -1627,7 +1640,9 @@ mod tests {
       Some(letter_lexeme("UNKNOWN:italic-x", None)),
     );
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_ok(),
       "neither-operand-fenced chain must pass untouched"
     );
   }
@@ -1641,7 +1656,9 @@ mod tests {
       Some(letter_lexeme("UNKNOWN:italic-x", None)),
     );
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_ok(),
       "fenced NUMBER LHS must be accepted (number × variable)"
     );
   }
@@ -1666,7 +1683,9 @@ mod tests {
     ]);
     let tree = XM::Apply(op, args, XProps::default(), Meta::default());
     assert!(
-      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+        .validate(&tree)
+        .is_ok(),
       "non-invisible-times operator must leave the pragma a no-op"
     );
   }
@@ -1687,7 +1706,9 @@ mod tests {
       Some(lexeme("OPFUNCTION:italic-f")),
     );
     assert!(
-      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_err(),
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions
+        .validate(&tree)
+        .is_err(),
       "FUNCTION × FUNCTION under invisible times (Token shape) must be pruned"
     );
   }
@@ -1704,7 +1725,9 @@ mod tests {
       Some(lexeme("UNKNOWN:italic-y")),
     );
     assert!(
-      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_err(),
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions
+        .validate(&tree)
+        .is_err(),
       "UNKNOWN × UNKNOWN under invisible times must be pruned"
     );
   }
@@ -1718,7 +1741,9 @@ mod tests {
       Some(lexeme("UNKNOWN:italic-x")),
     );
     assert!(
-      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_err(),
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions
+        .validate(&tree)
+        .is_err(),
       "OPFUNCTION × UNKNOWN under invisible times must be pruned"
     );
   }
@@ -1731,7 +1756,9 @@ mod tests {
       Some(lexeme("UNKNOWN:italic-x")),
     );
     assert!(
-      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_ok(),
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions
+        .validate(&tree)
+        .is_ok(),
       "NUMBER × letter must be preserved (NUMBER is not functional)"
     );
   }
@@ -1744,7 +1771,9 @@ mod tests {
       Some(lexeme("NUMBER:italic-5")),
     );
     assert!(
-      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions.validate(&tree).is_ok(),
+      ValidationPragmatics::HigherOrderInvisibleOpsAreExceptions
+        .validate(&tree)
+        .is_ok(),
       "letter × NUMBER must be preserved (NUMBER is not functional)"
     );
   }
@@ -1759,7 +1788,9 @@ mod tests {
       Some(lexeme("NUMBER:italic-5")),
     );
     assert!(
-      ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_err(),
+      ValidationPragmatics::AdjacentNumbersDontMultiply
+        .validate(&tree)
+        .is_err(),
       "adjacent NUMBER × NUMBER under invisible times (Token shape) must be pruned"
     );
   }
@@ -1772,7 +1803,9 @@ mod tests {
       Some(lexeme("UNKNOWN:italic-x")),
     );
     assert!(
-      ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_ok(),
+      ValidationPragmatics::AdjacentNumbersDontMultiply
+        .validate(&tree)
+        .is_ok(),
       "NUMBER × letter must be preserved"
     );
   }
@@ -1785,7 +1818,9 @@ mod tests {
       Some(lexeme("UNKNOWN:italic-y")),
     );
     assert!(
-      ValidationPragmatics::AdjacentNumbersDontMultiply.validate(&tree).is_ok(),
+      ValidationPragmatics::AdjacentNumbersDontMultiply
+        .validate(&tree)
+        .is_ok(),
       "letter × letter must be preserved"
     );
   }
@@ -1849,10 +1884,7 @@ mod tests {
     use std::borrow::Cow;
 
     assert!(letter_names.len() >= 2, "need at least 2 operands");
-    let mut acc = XM::Lexeme(
-      (*letter_names.last().unwrap()).to_string(),
-      Meta::default(),
-    );
+    let mut acc = XM::Lexeme((*letter_names.last().unwrap()).to_string(), Meta::default());
     for name in letter_names.iter().rev().skip(1) {
       let op_props = XProps {
         role: Some(Cow::Borrowed("MULOP")),
@@ -1875,13 +1907,11 @@ mod tests {
     // Right-associative chain `a × (b × c)` of three simple identifiers.
     // The flatten pragma prefers the left-associative grouping and prunes
     // this shape.
-    let tree = nested_inv_times(&[
-      "UNKNOWN:italic-a",
-      "UNKNOWN:italic-b",
-      "UNKNOWN:italic-c",
-    ]);
+    let tree = nested_inv_times(&["UNKNOWN:italic-a", "UNKNOWN:italic-b", "UNKNOWN:italic-c"]);
     assert!(
-      ValidationPragmatics::FlattenSimpleInvisibleTimesChains.validate(&tree).is_err(),
+      ValidationPragmatics::FlattenSimpleInvisibleTimesChains
+        .validate(&tree)
+        .is_err(),
       "right-assoc simple-identifier chain (Token op) must be pruned"
     );
   }
@@ -1894,7 +1924,9 @@ mod tests {
       Some(lexeme("UNKNOWN:italic-b")),
     );
     assert!(
-      ValidationPragmatics::FlattenSimpleInvisibleTimesChains.validate(&tree).is_ok(),
+      ValidationPragmatics::FlattenSimpleInvisibleTimesChains
+        .validate(&tree)
+        .is_ok(),
       "2-operand chain must pass untouched"
     );
   }

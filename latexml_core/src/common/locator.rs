@@ -229,8 +229,10 @@ mod tests {
   fn new_range_requires_same_source() {
     let a = Locator::new("a.tex", 1, 1, 0, 0);
     let b = Locator::new("b.tex", 5, 5, 0, 0);
-    assert!(Locator::new_range(a, b).is_none(),
-      "different sources must return None");
+    assert!(
+      Locator::new_range(a, b).is_none(),
+      "different sources must return None"
+    );
   }
 
   #[test]

@@ -4,8 +4,11 @@ LoadDefinitions!({
   RequirePackage!("pgfcore");
   RequirePackage!("amsmath");
   RequirePackage!("array");
-  Warn!("missing_file", "nicematrix.sty",
-    "nicematrix.sty is not implemented and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "nicematrix.sty",
+    "nicematrix.sty is not implemented and will not be interpreted raw."
+  );
   // TODO: Perl has a discard_env_body closure that reads and discards
   // environment bodies, emitting <ltx:ERROR> elements.
   // For now, stub all NiceMatrix environments with \relax end macros.

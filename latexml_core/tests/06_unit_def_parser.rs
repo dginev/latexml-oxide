@@ -10,14 +10,12 @@
 //! parameters unvalidated — validation requires a running State which these
 //! unit tests don't set up.
 
+use latexml_core::T_CS;
 use latexml_core::common::arena;
 use latexml_core::common::def_parser::{parse_parameters, parse_prototype};
-use latexml_core::state::{set_state, State, StateOptions};
-use latexml_core::T_CS;
+use latexml_core::state::{State, StateOptions, set_state};
 
-fn sym_str(s: latexml_core::common::arena::SymStr) -> String {
-  arena::to_string(s)
-}
+fn sym_str(s: latexml_core::common::arena::SymStr) -> String { arena::to_string(s) }
 
 fn setup() {
   // parse_prototype / parse_parameters use mouth::tokenize_internal
@@ -58,7 +56,10 @@ fn prototype_csname_rejects_braces_at_compile_time() {
   // init_flag=false → panics on brace-containing csname (see compile-time guard).
   let result =
     std::panic::catch_unwind(|| parse_prototype("\\csname begin{foo}\\endcsname", false));
-  assert!(result.is_err(), "compile-time csname with braces must panic");
+  assert!(
+    result.is_err(),
+    "compile-time csname with braces must panic"
+  );
 }
 
 #[test]
@@ -109,7 +110,9 @@ fn parse_parameters_optional() {
 fn parse_parameters_optional_with_default() {
   setup();
   let cs = T_CS!("\\foo");
-  let ps = parse_parameters("[Default:0]", &cs, false).unwrap().unwrap();
+  let ps = parse_parameters("[Default:0]", &cs, false)
+    .unwrap()
+    .unwrap();
   let params = ps.get_parameters();
   assert_eq!(params.len(), 1);
   assert_eq!(sym_str(params[0].name), "Optional");
@@ -131,7 +134,9 @@ fn parse_parameters_named_spec() {
 fn parse_parameters_multiple() {
   setup();
   let cs = T_CS!("\\foo");
-  let ps = parse_parameters("Number Number", &cs, false).unwrap().unwrap();
+  let ps = parse_parameters("Number Number", &cs, false)
+    .unwrap()
+    .unwrap();
   let params = ps.get_parameters();
   assert_eq!(params.len(), 2);
 }
@@ -179,5 +184,8 @@ fn parse_parameters_caps_at_max_steps() {
   let cs = T_CS!("\\foo");
   let proto = "{}".repeat(60);
   let result = parse_parameters(&proto, &cs, false);
-  assert!(result.is_err(), "over-MAX_STEPS prototype should return Err");
+  assert!(
+    result.is_err(),
+    "over-MAX_STEPS prototype should return Err"
+  );
 }

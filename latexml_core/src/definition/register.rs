@@ -494,12 +494,12 @@ impl Default for Register {
       register_type: RegisterType::Number,
       getter:        None,
       setter:        None,
-      readonly:       false,
-      value:          None,
-      mathglyph:      None,
-      role:           None,
-      chardef_props:  HashMap::default(),
-      default:        None,
+      readonly:      false,
+      value:         None,
+      mathglyph:     None,
+      role:          None,
+      chardef_props: HashMap::default(),
+      default:       None,
     }
   }
 }
@@ -620,7 +620,9 @@ impl Definition for Register {
               props.insert("mathstyle", Stored::String(arena::pin_static(val)));
             }
           },
-          _ => { props.insert_sym(*k, v.clone()); }
+          _ => {
+            props.insert_sym(*k, v.clone());
+          },
         }
       }
       return Ok(vec![Digested::from(
@@ -760,7 +762,7 @@ impl Register {
     value: Option<RegisterValue>,
     mathglyph: Option<char>,
     role: Option<SymStr>,
-    props: CharDefProps
+    props: CharDefProps,
   ) -> Self {
     let chardef_props = props.to_hashmap();
     Register {
@@ -787,13 +789,13 @@ impl Register {
 }
 
 pub struct CharDefProps {
-  pub meaning: Option<SymStr>,
+  pub meaning:        Option<SymStr>,
   // pub name: Option<SymStr>,  // chardef_name: synthesized at invoke time from CS name
-  pub stretchy: Option<SymStr>,
-  pub scriptpos: Option<SymStr>,
-  pub mathstyle: Option<SymStr>,
+  pub stretchy:       Option<SymStr>,
+  pub scriptpos:      Option<SymStr>,
+  pub mathstyle:      Option<SymStr>,
   pub need_scriptpos: bool,
-  pub need_mathstyle: bool
+  pub need_mathstyle: bool,
 }
 impl CharDefProps {
   fn to_hashmap(&self) -> HashMap<Stored> {
@@ -848,9 +850,12 @@ mod tests {
   fn register_type_self_equality() {
     // Each variant equals itself (except Any interactions).
     for rt in [
-      RegisterType::Number, RegisterType::Dimension,
-      RegisterType::MuDimension, RegisterType::Glue,
-      RegisterType::MuGlue, RegisterType::Token,
+      RegisterType::Number,
+      RegisterType::Dimension,
+      RegisterType::MuDimension,
+      RegisterType::Glue,
+      RegisterType::MuGlue,
+      RegisterType::Token,
       RegisterType::Tokens,
     ] {
       assert_eq!(rt, rt.clone(), "{rt:?}");

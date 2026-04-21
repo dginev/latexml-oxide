@@ -12,5 +12,7 @@ LoadDefinitions!({
   DefMacro!("\\swabdefault", "yswab");
   DefMacro!("\\frakdefault", "yfrak");
 
-  RawTeX!("\\DeclareTextFontCommand{\\textgoth}{\\gothfamily}\n\\DeclareTextFontCommand{\\textswab}{\\swabfamily}\n\\DeclareTextFontCommand{\\textfrak}{\\frakfamily}");
+  RawTeX!(
+    "\\DeclareTextFontCommand{\\textgoth}{\\gothfamily}\n\\DeclareTextFontCommand{\\textswab}{\\swabfamily}\n\\DeclareTextFontCommand{\\textfrak}{\\frakfamily}"
+  );
 });
