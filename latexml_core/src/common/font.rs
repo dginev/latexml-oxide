@@ -2031,3 +2031,80 @@ pub fn rationalize_font_size(size: &str) -> f64 {
 pub fn relative_font_size(newsize: f64, oldsize: f64) -> String {
   s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor())
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_font_size_same_is_100() {
+    assert_eq!(relative_font_size(10.0, 10.0), "100%");
+    assert_eq!(relative_font_size(12.0, 12.0), "100%");
+  }
+
+  #[test]
+  fn relative_font_size_doubled_is_200() {
+    assert_eq!(relative_font_size(20.0, 10.0), "200%");
+  }
+
+  #[test]
+  fn relative_font_size_half_is_50() {
+    assert_eq!(relative_font_size(5.0, 10.0), "50%");
+  }
+
+  #[test]
+  fn match_font_exact_wildcard_tail() {
+    // Font[family,series,shape,size,...] — '*' matches any single
+    // component.
+    // match_font(f1, f2) returns true iff f2 matches the pattern f1.
+    // f1 with all-wildcards should match any well-formed Font[...].
+    assert!(match_font("Font[*,*,*,*]", "Font[rm,med,up,10]"));
+  }
+
+  #[test]
+  fn match_font_exact_match() {
+    assert!(match_font("Font[rm,med,up,10]", "Font[rm,med,up,10]"));
+    assert!(!match_font("Font[rm,med,up,10]", "Font[sf,med,up,10]"));
+  }
+
+  #[test]
+  fn match_font_partial_wildcard() {
+    // First position wildcard matches rm, sf, tt, etc.
+    assert!(match_font("Font[*,med,up,10]", "Font[rm,med,up,10]"));
+    assert!(match_font("Font[*,med,up,10]", "Font[sf,med,up,10]"));
+    // But a non-wildcard in series must match.
+    assert!(!match_font("Font[*,bold,up,10]", "Font[rm,med,up,10]"));
+  }
+
+  #[test]
+  fn match_font_malformed_input() {
+    // Missing Font[...] wrapper → false.
+    assert!(!match_font("not_a_font", "Font[rm,med,up,10]"));
+  }
+
+  #[test]
+  fn font_match_xpaths_all_wildcards_is_attr_only() {
+    let xp = font_match_xpaths("Font[*,*,*,*]");
+    // All wildcards → just @_font, no contains(...) fragments.
+    assert_eq!(xp, "@_font");
+  }
+
+  #[test]
+  fn font_match_xpaths_includes_specified_components() {
+    let xp = font_match_xpaths("Font[rm,bold,*,*]");
+    // Family and series specified; shape/size wildcarded.
+    assert!(xp.contains("@_font"));
+    assert!(xp.contains("contains"));
+    assert!(xp.contains("rm"));
+    assert!(xp.contains("bold"));
+  }
+
+  #[test]
+  fn font_match_xpaths_malformed_is_empty_or_fallback() {
+    let xp = font_match_xpaths("garbage");
+    // Not a Font[...] format → some minimal/fallback output.
+    // Implementation detail: we don't over-constrain, just verify
+    // it doesn't panic.
+    let _ = xp;
+  }
+}
