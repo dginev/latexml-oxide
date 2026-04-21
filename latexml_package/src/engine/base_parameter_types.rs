@@ -386,6 +386,34 @@ LoadDefinitions!({
     }
   );
 
+  // Read verbatim, as if with LaTeX's \@sanitize; useful for \index (maybe others?)
+  // Perl: latex_constructs.pool.ltxml L4433-4451
+  DefParameterType!(SanitizedVerbatim, sub[_inner, _extra] {
+      gullet::read_until(&Tokens!(T_BEGIN!()))?;
+      // Deactivate the backslash to avoid activating command sequences.
+      // Chars switched to CC_OTHER by \@sanitize: ' ', '\\', '$', '&', '#',
+      // '^', '_', '%', '~'. Some are already in state's SPECIALS, so only
+      // adding the rest:
+      begin_semiverbatim(Some(&[' ', '\\', '%']));
+      let arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+      end_semiverbatim()?;
+      // Now that we have the semiverbatim tokens, retokenize.
+      // This may seem like wasted work, but it avoids very unfortunate error
+      // propagation in cases where the \index argument was malformed for one
+      // reason or another. The strangeness comes from the original TeX
+      // workflow requiring multiple conversion calls, alongside a call to the
+      // `makeidx` binary, which we don't do in latexml. This parameter type
+      // emulates one important aspect implied by those steps.
+      Ok(mouth::tokenize_internal(&arg.untex()))
+    },
+    reversion => sub[arg, _inner, _extra] {
+      let mut reverted = vec![T_BEGIN!()];
+      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.push(T_END!());
+      Ok(Tokens::new(reverted))
+    }
+  );
+
   // Read Verbatim, but allows expanding command sequences
   DefParameterType!(HyperVerbatim, sub[_inner, _extra] {
       gullet::read_until(&Tokens!(T_BEGIN!()))?;

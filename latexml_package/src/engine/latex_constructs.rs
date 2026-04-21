@@ -7016,8 +7016,11 @@ LoadDefinitions!({
     }
   );
 
-  // \index{phrases} — expand to \@index via process_index_phrases
-  DefMacro!("\\index {}", sub[(phrases)] {
+  // \index{phrases} — expand to \@index via process_index_phrases.
+  // Perl: latex_constructs.pool.ltxml L4454 uses the SanitizedVerbatim
+  // parameter type so that `\index{a_b}`, `\index{with spaces}`, etc. don't
+  // fail tokenization on chars that normally have non-OTHER catcodes.
+  DefMacro!("\\index SanitizedVerbatim", sub[(phrases)] {
     process_index_phrases(Tokens::new(phrases.revert()))
   });
 
