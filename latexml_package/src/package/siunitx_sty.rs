@@ -1762,7 +1762,7 @@ fn decode_unit_defn_from_encoded_sym(
 }
 
 /// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
-fn six_enable_unit_macros(overwrite: bool) {
+pub(crate) fn six_enable_unit_macros(overwrite: bool) {
   // with_value avoids the Stored::String envelope clone; we only need
   // the inner SymStr stringified for iteration.
   let names_str = state::with_value("siunitx_macro_names", |v| match v {
