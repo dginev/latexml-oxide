@@ -176,3 +176,28 @@ is visible in history.
   the session 124 memory. Either workload drift (new markup or upstream
   engine changes) or cold-bench sensitivity. Candidate papers for the next
   perf investigation cycle.
+
+### Validation: pathological-for-ImageMagick PDFs (issue #902)
+
+The vector-SVG graphics path (opt-in via `--graphics-svg-threshold-kb N`,
+round 17) is validated against `fig8.pdf` from
+[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
+(attached from arxiv:1807.01606), a 41 KB vector-authored PDF that
+`convert` rasterises absurdly slowly.
+
+End-to-end through `latexml_oxide --post` on a minimal 4-line document
+containing only `\includegraphics{fig8.pdf}`:
+
+| path                                | Graphics phase | total wall |
+|-------------------------------------|---------------:|-----------:|
+| default (ImageMagick `convert`)     |       32.4 s   |    32.4 s  |
+| `--graphics-svg-threshold-kb 200`   |       0.25 s   |     0.3 s  |
+| **speedup**                         |     **130×**   |   **111×** |
+
+arxiv:1807.01606 has 15 such PDFs; serial convert would be ~8 minutes
+(likely times out). Inkscape path: 15 × 0.25 s ≈ 4 s.
+
+Regression coverage: `test_vector_svg_pathological_convert_case` in
+`latexml_post/tests/integration.rs` asserts the inkscape path completes
+in <5 s on this fixture (silently skipped when inkscape is absent from
+PATH).

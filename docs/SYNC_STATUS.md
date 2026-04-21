@@ -177,14 +177,26 @@ Three failure classes in the session-128 7933-paper sweep, after the
     unit tests lock in the timeout/kill semantics, the file-size
     heuristic, and SVG viewBox parsing (also fixed a bug where the
     XML-prolog `?>` was mis-matched as the root-tag close).
-  - [ ] Port the 7 cases of pathological imagemagick PDFs documented
-    in issue #902 (arxiv:1804.00311, arxiv:1807.01606) as a perf
-    benchmark — inkscape should handle these without timing out.
-  - [ ] EPS support via the same path (inkscape can read EPS via
-    ghostscript; current `should_try_svg_path` only accepts `.pdf`).
+  - [x] Benchmark the pathological-convert PDFs from issue #902 —
+    landed with `fig8.pdf` fixture from arxiv:1807.01606 and a new
+    `test_vector_svg_pathological_convert_case` regression test.
+    Measured **130× speedup** end-to-end (32.4 s → 0.29 s via
+    inkscape on a minimal doc containing just
+    `\includegraphics{fig8.pdf}`). PERFORMANCE.md records the
+    validation table.
+  - [ ] EPS support via the same path. **Blocked upstream**:
+    Inkscape 1.x dropped direct EPS/PS reading (relied on
+    ghostscript glue that was removed). `inkscape source.eps`
+    reports "Failed to open". Workarounds would be either (a) pipe
+    through `epstopdf source.eps stage.pdf && inkscape stage.pdf`,
+    adding a conversion step + `epstopdf` dependency, or (b) try
+    `pstoedit` which can emit SVG directly from PS/EPS. Neither is
+    compelling given that EPS files are often already raster-wrapped
+    (EPSF-of-a-TIFF style). Leaving EPS on the ImageMagick raster
+    path for now.
   - [ ] Consider pdf2svg as a cheaper fallback when inkscape is
     absent but pdf2svg is available — smaller install, simpler
-    flags.
+    flags. (Not blocking; inkscape covers the use cases.)
 
 
 Specific slow-convergence follow-ups:
