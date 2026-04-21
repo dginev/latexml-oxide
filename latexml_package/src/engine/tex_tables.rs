@@ -1248,3 +1248,79 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   }
   result.into()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use latexml_core::state::{set_state, State, StateOptions};
+
+  fn setup() {
+    // T_CS!, T_MATH! need a thread-local State for string interning.
+    set_state(State::new(StateOptions::default()));
+  }
+
+  #[test]
+  fn before_cell_unlist_reorders_dollar_hfil() {
+    setup();
+    // `$ \hfil foo` → `\hfil $ foo`
+    let input = vec![T_MATH!(), T_CS!("\\hfil"), T_LETTER!("f")];
+    let got = before_cell_unlist(input);
+    assert_eq!(got, vec![T_CS!("\\hfil"), T_MATH!(), T_LETTER!("f")]);
+  }
+
+  #[test]
+  fn before_cell_unlist_no_hfil_after_dollar_is_identity() {
+    setup();
+    let input = vec![T_MATH!(), T_LETTER!("x")];
+    let got = before_cell_unlist(input.clone());
+    assert_eq!(got, input);
+  }
+
+  #[test]
+  fn before_cell_unlist_empty_stays_empty() {
+    setup();
+    assert!(before_cell_unlist(vec![]).is_empty());
+  }
+
+  #[test]
+  fn before_cell_unlist_hfil_without_dollar_is_identity() {
+    setup();
+    let input = vec![T_CS!("\\hfil"), T_LETTER!("x")];
+    let got = before_cell_unlist(input.clone());
+    assert_eq!(got, input);
+  }
+
+  #[test]
+  fn after_cell_unlist_reorders_hfil_dollar() {
+    setup();
+    // `foo \hfil $` → `foo $ \hfil`
+    let input = vec![T_LETTER!("f"), T_CS!("\\hfil"), T_MATH!()];
+    let got = after_cell_unlist(input);
+    assert_eq!(got, vec![T_LETTER!("f"), T_MATH!(), T_CS!("\\hfil")]);
+  }
+
+  #[test]
+  fn after_cell_unlist_no_hfil_before_trailing_dollar_is_identity() {
+    setup();
+    let input = vec![T_LETTER!("x"), T_MATH!()];
+    let got = after_cell_unlist(input.clone());
+    assert_eq!(got, input);
+  }
+
+  #[test]
+  fn after_cell_unlist_empty_stays_empty() {
+    setup();
+    assert!(after_cell_unlist(vec![]).is_empty());
+  }
+
+  #[test]
+  fn before_and_after_are_inverses_on_canonical_layout() {
+    // Running after then before on the "cell form" returns the "template form",
+    // and vice versa. Verify round-trip for the canonical 3-token pattern.
+    setup();
+    let template = vec![T_MATH!(), T_CS!("\\hfil"), T_LETTER!("x")];
+    let cell = before_cell_unlist(template.clone()); // \hfil $ x
+    let back = after_cell_unlist(cell); // $ \hfil x
+    assert_eq!(back, template);
+  }
+}
