@@ -41,3 +41,75 @@ impl MuDimension {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn mudim_default_is_zero() {
+    assert_eq!(MuDimension::default().value_of(), 0);
+  }
+
+  #[test]
+  fn mudim_new_builds_value() {
+    assert_eq!(MuDimension::new(65536).value_of(), 65536);
+    assert_eq!(MuDimension::new(0).value_of(), 0);
+    assert_eq!(MuDimension::new(-100).value_of(), -100);
+  }
+
+  #[test]
+  fn mudim_new_f64_rounds_knuthian() {
+    assert_eq!(MuDimension::new_f64(0.0).value_of(), 0);
+    assert_eq!(MuDimension::new_f64(1.0).value_of(), 1);
+    assert_eq!(MuDimension::new_f64(-1.0).value_of(), -1);
+  }
+
+  #[test]
+  fn mudim_register_type_is_mudimension() {
+    assert_eq!(MuDimension::default().register_type(), RegisterType::MuDimension);
+  }
+
+  #[test]
+  fn mudim_unit_is_mu() {
+    assert_eq!(MuDimension::default().unit(), Some("mu"));
+  }
+
+  #[test]
+  fn mudim_display_includes_mu_unit() {
+    let m = MuDimension::new(65536); // 1mu in scaled units
+    let out = format!("{m}");
+    assert!(out.ends_with("mu"), "got {out:?}");
+  }
+
+  #[test]
+  fn new_spec_parses_numeric_with_mu() {
+    // "1mu" parses as MuDimension(fixpoint(1.0, UNITY_F64)).
+    let m = MuDimension::new_spec("1mu");
+    assert_ne!(m.value_of(), 0, "1mu should not be zero");
+    // "0mu" is zero.
+    let m0 = MuDimension::new_spec("0mu");
+    assert_eq!(m0.value_of(), 0);
+  }
+
+  #[test]
+  fn new_spec_empty_numeric_part_is_zero() {
+    // "mu" (bare unit, no number) coerces to 0 via Perl-parity.
+    let m = MuDimension::new_spec("mu");
+    assert_eq!(m.value_of(), 0);
+  }
+
+  #[test]
+  fn new_spec_bad_input_is_zero() {
+    // Non-matching spec falls through to bare-number parse → 0 if that
+    // also fails.
+    let m = MuDimension::new_spec("not a number");
+    assert_eq!(m.value_of(), 0);
+  }
+
+  #[test]
+  fn mudim_equality() {
+    assert_eq!(MuDimension::new(100), MuDimension::new(100));
+    assert_ne!(MuDimension::new(100), MuDimension::new(101));
+  }
+}
