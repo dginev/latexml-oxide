@@ -295,7 +295,22 @@ round 17 commit (see below).
 - [ ] Audit `.to_string()` (~1900 sites) — replace with `&str` / interned symbols where the value goes into `HashMap<String,String>`.
 - [ ] Audit `String::from("...")` literals for interned conversions.
 - [ ] Replace `HashMap<String,String>` with `SymHashMap<SymStr>` in hot paths.
-- [ ] Audit `.clone()` in `document.rs` (~73), `latex_constructs.rs` (~73), `font.rs` (~39).
+- [~] Audit `.clone()` in `document.rs` (~73), `latex_constructs.rs` (~73), `font.rs` (~39).
+  **Audit finding (round 17)**: the raw clone counts are misleading.
+  - `font.rs` (~39): almost all clones are on
+    `Option<Cow<'static, str>>` fields whose common-case variant is
+    `Cow::Borrowed("serif")`-style static-literal pointers (3 pointer
+    reads, no heap). The `.clone().or_else(|| other.clone())` pattern
+    in `make_concrete` / `merge_ref` looks redundant but costs
+    exactly one real clone either way.
+  - `document.rs` (~71): dominated by `self.node.clone()` patterns
+    (24+ sites). `libxml::tree::Node` is `Rc<RefCell<_Node>>` so
+    `.clone()` is an Rc refcount bump, not a DOM copy.
+  Real optimisation would require consuming-self API overloads and
+  an Rc-vs-Arc refcount audit — both invasive. Deferred as
+  low-ROI. The D4 allocation-hotspot work should instead chase
+  `.to_string()` on interner symbols and `Tokens` deep-copies —
+  those are where the real heap churn is.
 - [ ] Review `Tokens` cloning — pass `&Tokens` or `Cow` for read-only iteration.
 - [ ] Profile math parser RAM independently (Marpa chart, forest).
 - [ ] Investigate shared read-only engine state across processes (mmap dump).
