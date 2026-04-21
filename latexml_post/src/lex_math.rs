@@ -74,3 +74,40 @@ impl MathProcessor for LexMath {
     self.is_secondary
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn lex_math_new_has_default_name() {
+    let lm = LexMath::new();
+    assert_eq!(lm.get_name(), "LexMath");
+    assert!(!lm.is_secondary);
+  }
+
+  #[test]
+  fn lex_math_default_matches_new() {
+    let a = LexMath::default();
+    let b = LexMath::new();
+    assert_eq!(a.get_name(), b.get_name());
+    assert_eq!(a.is_secondary, b.is_secondary);
+  }
+
+  #[test]
+  fn lex_math_raw_id_suffix() {
+    let lm = LexMath::new();
+    assert_eq!(lm.raw_id_suffix(), ".lm");
+  }
+
+  #[test]
+  fn lex_math_is_secondary_false_by_default() {
+    let lm = LexMath::new();
+    assert!(!lm.is_secondary());
+  }
+
+  #[test]
+  fn lex_mimetype_is_llamapun() {
+    assert_eq!(LEX_MIMETYPE, "application/x-llamapun");
+  }
+}

@@ -74,3 +74,40 @@ impl MathProcessor for TeXMath {
     self.is_secondary
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn tex_math_new_has_default_name() {
+    let tm = TeXMath::new();
+    assert_eq!(tm.get_name(), "TeXMath");
+    assert!(!tm.is_secondary);
+  }
+
+  #[test]
+  fn tex_math_default_matches_new() {
+    let a = TeXMath::default();
+    let b = TeXMath::new();
+    assert_eq!(a.get_name(), b.get_name());
+    assert_eq!(a.is_secondary, b.is_secondary);
+  }
+
+  #[test]
+  fn tex_math_raw_id_suffix() {
+    let tm = TeXMath::new();
+    assert_eq!(tm.raw_id_suffix(), ".tm");
+  }
+
+  #[test]
+  fn tex_math_is_secondary_false_by_default() {
+    let tm = TeXMath::new();
+    assert!(!tm.is_secondary());
+  }
+
+  #[test]
+  fn tex_mimetype_is_application_x_tex() {
+    assert_eq!(TEX_MIMETYPE, "application/x-tex");
+  }
+}
