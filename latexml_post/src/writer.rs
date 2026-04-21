@@ -22,10 +22,10 @@ pub enum OutputFormat {
 ///
 /// Port of `LaTeXML::Post::Writer`.
 pub struct Writer {
-  name: String,
-  format: OutputFormat,
+  name:         String,
+  format:       OutputFormat,
   omit_doctype: bool,
-  is_html: bool,
+  is_html:      bool,
 }
 
 impl Writer {
@@ -40,9 +40,7 @@ impl Writer {
 }
 
 impl Processor for Writer {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     match doc.get_document_element() {
@@ -68,7 +66,7 @@ impl Processor for Writer {
     let serialized = if self.is_html {
       doc.get_document().to_string_with_options(SaveOptions {
         as_html: true,
-        format:  true,
+        format: true,
         ..SaveOptions::default()
       })
     } else {
@@ -125,7 +123,7 @@ mod tests {
     // Copy trait: move-after-use still works.
     let a = OutputFormat::Xml;
     let b = a;
-    let _ = a;   // still usable due to Copy
+    let _ = a; // still usable due to Copy
     assert_eq!(a, b);
   }
 

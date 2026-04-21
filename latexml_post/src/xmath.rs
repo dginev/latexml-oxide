@@ -10,7 +10,7 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
 
-use crate::document::{element_children_iter, NodeData, PostDocument};
+use crate::document::{NodeData, PostDocument, element_children_iter};
 use crate::math_processor::{MathConversion, MathProcessor};
 use crate::processor::{ProcessResult, Processor};
 
@@ -20,37 +20,31 @@ const XMATH_MIMETYPE: &str = "application/x-latexml";
 ///
 /// Port of `LaTeXML::Post::XMath`.
 pub struct XMath {
-  name: String,
+  name:         String,
   is_secondary: bool,
 }
 
 impl Default for XMath {
-    fn default() -> Self {
-        Self::new()
-    }
+  fn default() -> Self { Self::new() }
 }
 
 impl XMath {
   pub fn new() -> Self {
     XMath {
-      name: "XMath".to_string(),
+      name:         "XMath".to_string(),
       is_secondary: false,
     }
   }
 }
 
 impl Processor for XMath {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
   }
 
-  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
-    Ok(vec![doc])
-  }
+  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult { Ok(vec![doc]) }
 }
 
 impl MathProcessor for XMath {
@@ -112,27 +106,23 @@ impl MathProcessor for XMath {
 
     MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(XMATH_MIMETYPE.to_string()),
-      xml: Some(NodeData::Element {
-        tag: "_Fragment_".to_string(),
+      mimetype:       Some(XMATH_MIMETYPE.to_string()),
+      xml:            Some(NodeData::Element {
+        tag:        "_Fragment_".to_string(),
         attributes: None,
-        children: alt_children,
+        children:   alt_children,
       }),
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     }
   }
 
-  fn raw_id_suffix(&self) -> &str {
-    ".xm"
-  }
+  fn raw_id_suffix(&self) -> &str { ".xm" }
 
-  fn is_secondary(&self) -> bool {
-    self.is_secondary
-  }
+  fn is_secondary(&self) -> bool { self.is_secondary }
 }
 
 #[cfg(test)]

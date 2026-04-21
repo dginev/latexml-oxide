@@ -20,21 +20,21 @@ const MIME_TYPES: &[(&str, &str)] = &[
 ///
 /// Port of `LaTeXML::Post::MathImages`.
 pub struct MathImages {
-  name: String,
-  is_secondary: bool,
+  name:               String,
+  is_secondary:       bool,
   resource_directory: String,
-  resource_prefix: String,
-  image_type: String,
+  resource_prefix:    String,
+  image_type:         String,
 }
 
 impl MathImages {
   pub fn new(image_type: &str) -> Self {
     MathImages {
-      name: "MathImages".to_string(),
-      is_secondary: false,
+      name:               "MathImages".to_string(),
+      is_secondary:       false,
       resource_directory: "mi".to_string(),
-      resource_prefix: "mi".to_string(),
-      image_type: image_type.to_string(),
+      resource_prefix:    "mi".to_string(),
+      image_type:         image_type.to_string(),
     }
   }
 
@@ -48,7 +48,11 @@ impl MathImages {
       .unwrap_or_else(|| "INLINE".to_string());
     let mut tex = node.get_attribute("tex")?;
     let display = if tex.trim_start().starts_with("\\displaystyle") {
-      tex = tex.trim_start().strip_prefix("\\displaystyle")?.trim_start().to_string();
+      tex = tex
+        .trim_start()
+        .strip_prefix("\\displaystyle")?
+        .trim_start()
+        .to_string();
       "DISPLAY"
     } else {
       &mode
@@ -61,25 +65,15 @@ impl MathImages {
 }
 
 impl Processor for MathImages {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
-  fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
-    doc.findnodes("//ltx:Math")
-  }
+  fn to_process(&self, doc: &PostDocument) -> Vec<Node> { doc.findnodes("//ltx:Math") }
 
-  fn resource_directory(&self) -> Option<&str> {
-    Some(&self.resource_directory)
-  }
+  fn resource_directory(&self) -> Option<&str> { Some(&self.resource_directory) }
 
-  fn resource_prefix(&self) -> Option<&str> {
-    Some(&self.resource_prefix)
-  }
+  fn resource_prefix(&self) -> Option<&str> { Some(&self.resource_prefix) }
 
-  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
-    Ok(vec![doc])
-  }
+  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult { Ok(vec![doc]) }
 }
 
 impl MathProcessor for MathImages {
@@ -112,23 +106,19 @@ impl MathProcessor for MathImages {
     log::warn!("MathImages: no cached image for '{}'", key);
     Some(MathConversion {
       processor_name: self.name.clone(),
-      mimetype: None,
-      xml: None,
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     })
   }
 
-  fn raw_id_suffix(&self) -> &str {
-    ".mi"
-  }
+  fn raw_id_suffix(&self) -> &str { ".mi" }
 
-  fn is_secondary(&self) -> bool {
-    self.is_secondary
-  }
+  fn is_secondary(&self) -> bool { self.is_secondary }
 
   fn preprocess(&self, _doc: &PostDocument, nodes: &[Node]) {
     log::info!("MathImages: would generate {} images", nodes.len());

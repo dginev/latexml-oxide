@@ -8,7 +8,7 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::document::{get_xml_id, NodeData, PostDocument};
+use crate::document::{NodeData, PostDocument, get_xml_id};
 use crate::processor::{ProcessResult, Processor};
 
 /// Page naming strategy for split documents.
@@ -38,13 +38,13 @@ struct PageEntry {
 ///
 /// Port of `LaTeXML::Post::Split`.
 pub struct Split {
-  name: String,
+  name:                 String,
   /// XPath expression to find elements that become pages.
-  split_xpath: String,
+  split_xpath:          String,
   /// Naming strategy for page files.
-  split_naming: SplitNaming,
+  split_naming:         SplitNaming,
   /// Whether to suppress navigation links.
-  no_navigation: bool,
+  no_navigation:        bool,
   /// Counter for unnamed pages.
   unnamed_page_counter: u32,
 }
@@ -61,9 +61,7 @@ impl Split {
   }
 
   /// Get the nodes that will become separate pages.
-  fn get_pages(&self, doc: &PostDocument) -> Vec<Node> {
-    doc.findnodes(&self.split_xpath)
-  }
+  fn get_pages(&self, doc: &PostDocument) -> Vec<Node> { doc.findnodes(&self.split_xpath) }
 
   /// Generate a name for an unnamed page.
   fn generate_unnamed_page_name(&mut self) -> String {
@@ -107,7 +105,7 @@ impl Split {
       let entry = PageEntry {
         node:     page,
         id:       page_id,
-        upid:    current_id,
+        upid:     current_id,
         name:     String::new(),
         children: Vec::new(),
         document: None,
@@ -201,7 +199,7 @@ impl Split {
         None => {
           entries.remove(0);
           continue;
-        }
+        },
       };
 
       // Remove page & ALL following siblings (backwards).
@@ -215,7 +213,7 @@ impl Split {
             if sib == entries[0].node {
               break;
             }
-          }
+          },
           None => break,
         }
       }
@@ -224,10 +222,7 @@ impl Split {
       let mut toc: Vec<NodeData> = Vec::new();
 
       // Process a sequence of adjacent pages that share the same parent.
-      while !entries.is_empty()
-        && !removed.is_empty()
-        && entries[0].node == removed[0]
-      {
+      while !entries.is_empty() && !removed.is_empty() && entries[0].node == removed[0] {
         let mut entry = entries.remove(0);
         let page = entry.node.clone();
 
@@ -247,12 +242,12 @@ impl Split {
           toc_attrs.insert("idref".to_string(), id);
           toc_attrs.insert("show".to_string(), "toctitle".to_string());
           let tocentry = NodeData::Element {
-            tag: "ltx:tocentry".to_string(),
+            tag:        "ltx:tocentry".to_string(),
             attributes: None,
-            children: vec![NodeData::Element {
-              tag: "ltx:ref".to_string(),
+            children:   vec![NodeData::Element {
+              tag:        "ltx:ref".to_string(),
               attributes: Some(toc_attrs),
-              children: vec![],
+              children:   vec![],
             }],
           };
           toc.push(tocentry);
@@ -280,12 +275,12 @@ impl Split {
           let mut toclist_attrs = HashMap::new();
           toclist_attrs.insert("class".to_string(), format!("ltx_toclist_{}", parent_type));
           let toc_node = NodeData::Element {
-            tag: "ltx:TOC".to_string(),
+            tag:        "ltx:TOC".to_string(),
             attributes: None,
-            children: vec![NodeData::Element {
-              tag: "ltx:toclist".to_string(),
+            children:   vec![NodeData::Element {
+              tag:        "ltx:toclist".to_string(),
               attributes: Some(toclist_attrs),
-              children: toc,
+              children:   toc,
             }],
           };
           let mut parent_mut = parent.clone();
@@ -308,8 +303,10 @@ impl Split {
   fn add_navigation(entry: &mut PageEntry, nav_nodes: &[Node]) {
     if let Some(ref mut doc) = entry.document {
       if let Some(mut root) = doc.get_document_element() {
-        let nav_data: Vec<NodeData> =
-          nav_nodes.iter().map(|n| NodeData::XmlNode(n.clone())).collect();
+        let nav_data: Vec<NodeData> = nav_nodes
+          .iter()
+          .map(|n| NodeData::XmlNode(n.clone()))
+          .collect();
         doc.add_nodes(&mut root, &nav_data);
       }
     }
@@ -394,7 +391,7 @@ impl Split {
           }
         }
         recursive
-      }
+      },
       _ => false,
     };
 
@@ -410,7 +407,11 @@ impl Split {
       .unwrap_or(".");
 
     // Normalize empty parent_dir to "."
-    let parent_dir = if parent_dir.is_empty() { "." } else { parent_dir };
+    let parent_dir = if parent_dir.is_empty() {
+      "."
+    } else {
+      parent_dir
+    };
 
     if as_dir {
       format!("{}/{}/index.{}", parent_dir, name, ext)
@@ -421,9 +422,7 @@ impl Split {
 }
 
 impl Processor for Split {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     let root = match nodes.into_iter().next() {
@@ -492,8 +491,10 @@ impl Processor for Split {
       // Also add nav to child docs
       for child_doc in &mut child_docs {
         if let Some(mut root) = child_doc.get_document_element() {
-          let nav_data: Vec<NodeData> =
-            nav_nodes.iter().map(|n| NodeData::XmlNode(n.clone())).collect();
+          let nav_data: Vec<NodeData> = nav_nodes
+            .iter()
+            .map(|n| NodeData::XmlNode(n.clone()))
+            .collect();
           child_doc.add_nodes(&mut root, &nav_data);
         }
       }

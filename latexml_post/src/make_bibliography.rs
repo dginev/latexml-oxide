@@ -18,7 +18,7 @@ use libxml::tree::Node;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use crate::document::{PostDocument, PostDocumentOptions, NodeData};
+use crate::document::{NodeData, PostDocument, PostDocumentOptions};
 use crate::object_db::ObjectDB;
 use crate::processor::{ProcessResult, Processor};
 use crate::radix::radix_alpha;
@@ -39,38 +39,42 @@ pub enum CitationStyle {
 /// Port of the `%entries` hash entries in `getBibEntries`.
 #[derive(Debug)]
 struct BibEntryData {
-  bib_key: String,
-  cited_key: Option<String>,
-  sort_key: String,
-  initial: String,
-  author_year: String,
-  suffix: Option<String>,
+  bib_key:       String,
+  cited_key:     Option<String>,
+  sort_key:      String,
+  initial:       String,
+  author_year:   String,
+  suffix:        Option<String>,
   /// Author names for display (short form: "Smith et al").
   authors_short: String,
   /// Full author names.
-  authors_full: String,
+  authors_full:  String,
   /// Sort-form of author names.
-  sort_names: String,
-  year: String,
-  title: String,
+  sort_names:    String,
+  year:          String,
+  title:         String,
   /// BibTeX type (article, book, inproceedings, etc.).
-  entry_type: String,
+  entry_type:    String,
   /// Reference style (number within bibliography).
-  number: u32,
+  number:        u32,
   /// IDs that cite this entry (from outside bibliography).
-  referrers: HashSet<String>,
+  referrers:     HashSet<String>,
   /// Bib keys that cite this entry (from other bib entries).
-  bibreferrers: HashSet<String>,
+  bibreferrers:  HashSet<String>,
   /// Keys cited from within this entry.
-  citations: Vec<String>,
+  citations:     Vec<String>,
   /// The bibentry XML node (from .bib.xml), if available.
-  bibentry: Option<Node>,
+  bibentry:      Option<Node>,
 }
 
 impl BibEntryData {
   /// Get the normalized bibliography type for CSS class.
   fn bib_type(&self) -> &str {
-    if self.entry_type.is_empty() { "misc" } else { &self.entry_type }
+    if self.entry_type.is_empty() {
+      "misc"
+    } else {
+      &self.entry_type
+    }
   }
 
   /// Get the canonical format type (for FMT_SPEC mapping).
@@ -79,10 +83,13 @@ impl BibEntryData {
   fn format_type(&self) -> &str {
     match self.entry_type.as_str() {
       "article" => "article",
-      "book" | "periodical" | "collection" | "proceedings"
-      | "manual" | "misc" | "unpublished" | "booklet" => "book",
-      "incollection" | "collection.article" | "proceedings.article"
-      | "inproceedings" | "inbook" => "incollection",
+      "book" | "periodical" | "collection" | "proceedings" | "manual" | "misc" | "unpublished"
+      | "booklet" => "book",
+      "incollection"
+      | "collection.article"
+      | "proceedings.article"
+      | "inproceedings"
+      | "inbook" => "incollection",
       "report" | "techreport" => "report",
       "thesis" | "mastersthesis" | "phdthesis" => "thesis",
       "website" | "online" => "website",
@@ -96,9 +103,9 @@ impl BibEntryData {
 ///
 /// Port of `LaTeXML::Post::MakeBibliography`.
 pub struct MakeBibliography {
-  name: String,
-  pub db: ObjectDB,
-  split: bool,
+  name:           String,
+  pub db:         ObjectDB,
+  split:          bool,
   bibliographies: Vec<String>,
 }
 
@@ -106,14 +113,13 @@ impl MakeBibliography {
   pub fn new(db: ObjectDB, split: bool) -> Self {
     MakeBibliography {
       name: "MakeBibliography".to_string(),
-      db, split,
+      db,
+      split,
       bibliographies: Vec::new(),
     }
   }
 
-  pub fn set_bibliographies(&mut self, bibs: Vec<String>) {
-    self.bibliographies = bibs;
-  }
+  pub fn set_bibliographies(&mut self, bibs: Vec<String>) { self.bibliographies = bibs; }
 
   /// Load bibliography source documents.
   ///
@@ -131,10 +137,9 @@ impl MakeBibliography {
     } else {
       // Otherwise, read from the bibliography element's files attribute
       if let Some(bibnode) = doc.findnode("//ltx:bibliography") {
-        let files = bibnode.get_attribute("files")
-          .or_else(|| {
-            bibnode.get_parent().and_then(|p| p.get_attribute("files"))
-          });
+        let files = bibnode
+          .get_attribute("files")
+          .or_else(|| bibnode.get_parent().and_then(|p| p.get_attribute("files")));
         if let Some(f) = files {
           from_bibliography = true;
           bibnames = f.split(',').map(|s| s.trim().to_string()).collect();
@@ -155,7 +160,10 @@ impl MakeBibliography {
             source_directory: Some(".".to_string()),
             ..PostDocumentOptions::default()
           }) {
-            Ok(bibdoc) => { bibs.push(bibdoc); loaded = true; }
+            Ok(bibdoc) => {
+              bibs.push(bibdoc);
+              loaded = true;
+            },
             Err(e) => log::warn!("Failed to load bibliography '{}': {}", bib, e),
           }
         }
@@ -178,7 +186,10 @@ impl MakeBibliography {
             source_directory: Some(".".to_string()),
             ..PostDocumentOptions::default()
           }) {
-            Ok(bibdoc) => { bibs.push(bibdoc); loaded = true; }
+            Ok(bibdoc) => {
+              bibs.push(bibdoc);
+              loaded = true;
+            },
             Err(e) => log::warn!("Failed to load bibliography '{}': {}", path, e),
           }
         }
@@ -193,7 +204,10 @@ impl MakeBibliography {
         };
         if let Some(bib_path) = find_file(&bib_file, search_paths) {
           match convert_bib_file_to_xml(&bib_path) {
-            Ok(bibdoc) => { bibs.push(bibdoc); loaded = true; }
+            Ok(bibdoc) => {
+              bibs.push(bibdoc);
+              loaded = true;
+            },
             Err(e) => log::warn!("Failed to convert bibliography '{}': {}", bib_path, e),
           }
         }
@@ -219,7 +233,9 @@ impl MakeBibliography {
     doc: &PostDocument,
     bib_node: &Node,
   ) -> (HashMap<String, BibEntryData>, Vec<PostDocument>) {
-    let lists_str = bib_node.get_attribute("lists").unwrap_or_else(|| "bibliography".to_string());
+    let lists_str = bib_node
+      .get_attribute("lists")
+      .unwrap_or_else(|| "bibliography".to_string());
     let lists: Vec<&str> = lists_str.split_whitespace().collect();
 
     // Step 1: Scan bibliography source documents for ltx:bibentry elements.
@@ -236,7 +252,8 @@ impl MakeBibliography {
         };
         let lc_key = bibkey.to_lowercase();
         // Extract citations from within this bibentry
-        let citations: Vec<String> = bibdoc.findnodes_at(".//@bibrefs", Some(&bibentry))
+        let citations: Vec<String> = bibdoc
+          .findnodes_at(".//@bibrefs", Some(&bibentry))
           .iter()
           .filter_map(|n| {
             let val = n.get_content();
@@ -272,21 +289,30 @@ impl MakeBibliography {
 
     // Step 2: Collect all cited bibliography keys from BIBLABEL entries in ObjectDB.
     // Note referrers (from outside the bibliography).
-    let cite_star = lists.iter().any(|list| {
-      self.db.lookup(&format!("BIBLABEL:{}:*", list)).is_some()
-    });
+    let cite_star = lists
+      .iter()
+      .any(|list| self.db.lookup(&format!("BIBLABEL:{}:*", list)).is_some());
 
     let mut queue: Vec<String> = Vec::new();
     for db_key in self.db.get_keys() {
-      if !db_key.starts_with("BIBLABEL:") { continue; }
+      if !db_key.starts_with("BIBLABEL:") {
+        continue;
+      }
       let parts: Vec<&str> = db_key.splitn(3, ':').collect();
-      if parts.len() < 3 { continue; }
+      if parts.len() < 3 {
+        continue;
+      }
       let (list, bibkey) = (parts[1], parts[2]);
-      if !lists.contains(&list) { continue; }
+      if !lists.contains(&list) {
+        continue;
+      }
 
       let lc_key = bibkey.to_lowercase();
       if let Some(bentry) = self.db.lookup(db_key) {
-        let has_refs = bentry.get_value("referrers").map(|v| v.is_truthy()).unwrap_or(false);
+        let has_refs = bentry
+          .get_value("referrers")
+          .map(|v| v.is_truthy())
+          .unwrap_or(false);
         if has_refs {
           // Filter referrers: walk up parent chain, skip if inside ltx:bibitem
           if let Some(crate::object_db::Value::Hash(refs)) = bentry.get_value("referrers") {
@@ -313,31 +339,37 @@ impl MakeBibliography {
                     }
                   }
                 }
-                let entry = entries.entry(lc_key.clone()).or_insert_with(|| BibEntryData {
-                  bib_key: bibkey.to_string(),
-                  cited_key: None,
-                  sort_key: String::new(),
-                  initial: String::new(),
-                  author_year: String::new(),
-                  suffix: None,
-                  authors_short: String::new(),
-                  authors_full: String::new(),
-                  sort_names: String::new(),
-                  year: String::new(),
-                  title: String::new(),
-                  entry_type: String::new(),
-                  number: 0,
-                  referrers: HashSet::new(),
-                  bibreferrers: HashSet::new(),
-                  citations: Vec::new(),
-                  bibentry: None,
-                });
+                let entry = entries
+                  .entry(lc_key.clone())
+                  .or_insert_with(|| BibEntryData {
+                    bib_key:       bibkey.to_string(),
+                    cited_key:     None,
+                    sort_key:      String::new(),
+                    initial:       String::new(),
+                    author_year:   String::new(),
+                    suffix:        None,
+                    authors_short: String::new(),
+                    authors_full:  String::new(),
+                    sort_names:    String::new(),
+                    year:          String::new(),
+                    title:         String::new(),
+                    entry_type:    String::new(),
+                    number:        0,
+                    referrers:     HashSet::new(),
+                    bibreferrers:  HashSet::new(),
+                    citations:     Vec::new(),
+                    bibentry:      None,
+                  });
                 entry.cited_key = Some(bibkey.to_string());
                 entry.referrers.insert(ref_id.clone());
               }
             }
           }
-          if entries.get(&lc_key).map(|e| !e.referrers.is_empty()).unwrap_or(false) {
+          if entries
+            .get(&lc_key)
+            .map(|e| !e.referrers.is_empty())
+            .unwrap_or(false)
+          {
             queue.push(bibkey.to_string());
           }
         } else if cite_star {
@@ -353,7 +385,9 @@ impl MakeBibliography {
     let mut missing_keys: Vec<String> = Vec::new();
 
     while let Some(bibkey) = queue.pop() {
-      if seen.contains(&bibkey) || bibkey == "*" { continue; }
+      if seen.contains(&bibkey) || bibkey == "*" {
+        continue;
+      }
       seen.insert(bibkey.clone());
       let lc_key = bibkey.to_lowercase();
 
@@ -366,9 +400,16 @@ impl MakeBibliography {
 
           let names_for_sort = if sort_names.is_empty() {
             // Try bib-key or bib-title as fallback
-            if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry).into_iter().next() {
+            if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+              .into_iter()
+              .next()
+            {
               key_node.get_content()
-            } else if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next() {
+            } else if let Some(title_node) =
+              PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+                .into_iter()
+                .next()
+            {
               title_node.get_content()
             } else {
               bibkey.clone()
@@ -378,20 +419,27 @@ impl MakeBibliography {
           };
 
           // Year
-          let date_content = PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry).into_iter().next()
-            .map(|n| n.get_content())
-            .unwrap_or_default();
+          let date_content =
+            PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry)
+              .into_iter()
+              .next()
+              .map(|n| n.get_content())
+              .unwrap_or_default();
           let year = extract_four_digit_year(&date_content);
           entry.year = year.clone();
 
           // Title
-          let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next()
+          let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+            .into_iter()
+            .next()
             .map(|n| n.get_content())
             .unwrap_or_default();
           entry.title = title.clone();
 
           // Type
-          let entry_type = bibentry.get_attribute("type").unwrap_or_else(|| "misc".to_string());
+          let entry_type = bibentry
+            .get_attribute("type")
+            .unwrap_or_else(|| "misc".to_string());
           entry.entry_type = entry_type;
 
           // Author+year for suffix detection
@@ -399,8 +447,7 @@ impl MakeBibliography {
           entry.initial = PostDocument::initial(&names_for_sort, true);
 
           // Sort key
-          let sort_key = format!("{}.{}.{}.{}",
-            names_for_sort, year, title, bibkey).to_lowercase();
+          let sort_key = format!("{}.{}.{}.{}", names_for_sort, year, title, bibkey).to_lowercase();
           entry.sort_key = sort_key.clone();
 
           // Enqueue transitive citations
@@ -414,24 +461,38 @@ impl MakeBibliography {
           let id = self.find_bib_id(&bibkey, &lists);
           if let Some(id) = id {
             let id_key = format!("ID:{}", id);
-            let authors = self.db.lookup(&id_key)
+            let authors = self
+              .db
+              .lookup(&id_key)
               .and_then(|e| e.get_value("authors").map(|v| v.to_string()))
               .unwrap_or_default();
-            let full_authors = self.db.lookup(&id_key)
+            let full_authors = self
+              .db
+              .lookup(&id_key)
               .and_then(|e| e.get_value("fullauthors").map(|v| v.to_string()))
               .unwrap_or_else(|| authors.clone());
-            let year = self.db.lookup(&id_key)
+            let year = self
+              .db
+              .lookup(&id_key)
               .and_then(|e| e.get_value("year").map(|v| v.to_string()))
               .unwrap_or_default();
-            let title = self.db.lookup(&id_key)
+            let title = self
+              .db
+              .lookup(&id_key)
               .and_then(|e| e.get_value("title").map(|v| v.to_string()))
               .unwrap_or_default();
-            let entry_type = self.db.lookup(&id_key)
+            let entry_type = self
+              .db
+              .lookup(&id_key)
               .and_then(|e| e.get_value("type").map(|v| v.to_string()))
               .unwrap_or_else(|| "misc".to_string());
 
             let year_short = extract_four_digit_year(&year);
-            let names = if authors.is_empty() { bibkey.clone() } else { authors.clone() };
+            let names = if authors.is_empty() {
+              bibkey.clone()
+            } else {
+              authors.clone()
+            };
             let author_year = format!("{}.{}", names, year_short);
             let initial = PostDocument::initial(&names, true);
             let sort_key = format!("{}.{}.{}.{}", names, year_short, title, bibkey).to_lowercase();
@@ -463,7 +524,8 @@ impl MakeBibliography {
 
     // Step 4: Note bibreferrers — for each included entry's citations,
     // mark the cited entry as having this entry as a bibreferrer.
-    let citations_map: Vec<(String, Vec<String>)> = included.values()
+    let citations_map: Vec<(String, Vec<String>)> = included
+      .values()
       .map(|e| (e.bib_key.clone(), e.citations.clone()))
       .collect();
     for (bibkey, citations) in &citations_map {
@@ -501,7 +563,8 @@ impl MakeBibliography {
               prev.suffix = Some(radix_alpha(1));
             }
           }
-          let prev_counter = included.get(&prev_key)
+          let prev_counter = included
+            .get(&prev_key)
             .and_then(|p| p.suffix.as_ref())
             .map(|s| suffix_to_counter(s))
             .unwrap_or(1);
@@ -567,15 +630,16 @@ impl MakeBibliography {
 
     let mut sorted_keys: Vec<&String> = entries.keys().collect();
     sorted_keys.sort();
-    let items: Vec<NodeData> = sorted_keys.iter()
+    let items: Vec<NodeData> = sorted_keys
+      .iter()
       .filter_map(|key| entries.get(*key))
       .map(|entry| self.format_bib_entry(doc, bib_id, entry, style))
       .collect();
 
     NodeData::Element {
-      tag: "ltx:biblist".to_string(),
+      tag:        "ltx:biblist".to_string(),
       attributes: Some(HashMap::from([("xml:id".to_string(), id)])),
-      children: items,
+      children:   items,
     }
   }
 
@@ -611,12 +675,12 @@ impl MakeBibliography {
 
     // Number tag
     tags.push(NodeData::Element {
-      tag: "ltx:tag".to_string(),
+      tag:        "ltx:tag".to_string(),
       attributes: Some(HashMap::from([
         ("role".to_string(), "number".to_string()),
         ("class".to_string(), "ltx_bib_number".to_string()),
       ])),
-      children: vec![NodeData::Text(entry.number.to_string())],
+      children:   vec![NodeData::Text(entry.number.to_string())],
     });
 
     // Authors/fullauthors tags — extracted from bibentry XML if available
@@ -635,16 +699,16 @@ impl MakeBibliography {
     match effective_style {
       CitationStyle::Numbers => {
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "refnum".to_string()),
             ("class".to_string(), "ltx_bib_key".to_string()),
             ("open".to_string(), "[".to_string()),
             ("close".to_string(), "]".to_string()),
           ])),
-          children: vec![NodeData::Text(entry.number.to_string())],
+          children:   vec![NodeData::Text(entry.number.to_string())],
         });
-      }
+      },
       CitationStyle::Alpha => {
         // AY-style: abbreviation from author names + 2-digit year
         let aa = self.make_alpha_label(doc, entry);
@@ -655,16 +719,16 @@ impl MakeBibliography {
         };
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "refnum".to_string()),
             ("class".to_string(), "ltx_bib_abbrv".to_string()),
             ("open".to_string(), "[".to_string()),
             ("close".to_string(), "]".to_string()),
           ])),
-          children: vec![NodeData::Text(format!("{}{}{}", aa, yy, suffix))],
+          children:   vec![NodeData::Text(format!("{}{}{}", aa, yy, suffix))],
         });
-      }
+      },
       CitationStyle::AuthorYear => {
         // Author-Year style: "Author (Year)" — skip first block (redundant)
         skip_first_block = true;
@@ -684,21 +748,21 @@ impl MakeBibliography {
           refnum_children.push(NodeData::Text(format!(" ({})", year_text)));
         }
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "refnum".to_string()),
             ("class".to_string(), "ltx_bib_author-year".to_string()),
           ])),
-          children: refnum_children,
+          children:   refnum_children,
         });
-      }
+      },
     }
 
     if !tags.is_empty() {
       children.push(NodeData::Element {
-        tag: "ltx:tags".to_string(),
+        tag:        "ltx:tags".to_string(),
         attributes: None,
-        children: tags,
+        children:   tags,
       });
     }
 
@@ -712,24 +776,31 @@ impl MakeBibliography {
     sorted_referrers.sort();
     for ref_id in &sorted_referrers {
       citedby.push(NodeData::Element {
-        tag: "ltx:ref".to_string(),
+        tag:        "ltx:ref".to_string(),
         attributes: Some(HashMap::from([
           ("idref".to_string(), ref_id.to_string()),
           ("show".to_string(), "typerefnum".to_string()),
         ])),
-        children: vec![],
+        children:   vec![],
       });
     }
     if !entry.bibreferrers.is_empty() {
       let mut sorted_bibrefs: Vec<&String> = entry.bibreferrers.iter().collect();
       sorted_bibrefs.sort();
       citedby.push(NodeData::Element {
-        tag: "ltx:bibref".to_string(),
+        tag:        "ltx:bibref".to_string(),
         attributes: Some(HashMap::from([
-          ("bibrefs".to_string(), sorted_bibrefs.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(",")),
+          (
+            "bibrefs".to_string(),
+            sorted_bibrefs
+              .iter()
+              .map(|s| s.as_str())
+              .collect::<Vec<_>>()
+              .join(","),
+          ),
           ("show".to_string(), "refnum".to_string()),
         ])),
-        children: vec![],
+        children:   vec![],
       });
     }
     if !citedby.is_empty() {
@@ -741,9 +812,12 @@ impl MakeBibliography {
       block_children.extend(conjoined);
       block_children.push(NodeData::Text(".".to_string()));
       children.push(NodeData::Element {
-        tag: "ltx:bibblock".to_string(),
-        attributes: Some(HashMap::from([("class".to_string(), "ltx_bib_cited".to_string())])),
-        children: block_children,
+        tag:        "ltx:bibblock".to_string(),
+        attributes: Some(HashMap::from([(
+          "class".to_string(),
+          "ltx_bib_cited".to_string(),
+        )])),
+        children:   block_children,
       });
     }
 
@@ -775,11 +849,10 @@ impl MakeBibliography {
 
     if let Some(ref bibentry) = entry.bibentry {
       // Author surnames from bibentry XML
-      let mut surnames: Vec<Node> = doc.findnodes_at(
-        "ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
+      let mut surnames: Vec<Node> =
+        doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
       if surnames.is_empty() {
-        surnames = doc.findnodes_at(
-          "ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
+        surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
       }
 
       if surnames.len() > 2 {
@@ -787,19 +860,19 @@ impl MakeBibliography {
         // Short: first author + et al.
         let first_text = surnames[0].get_content();
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
-          children: vec![
-            NodeData::Text(first_text),
-            NodeData::Element {
-              tag: "ltx:text".to_string(),
-              attributes: Some(HashMap::from([("class".to_string(), "ltx_bib_etal".to_string())])),
-              children: vec![NodeData::Text(" et al.".to_string())],
-            },
-          ],
+          children:   vec![NodeData::Text(first_text), NodeData::Element {
+            tag:        "ltx:text".to_string(),
+            attributes: Some(HashMap::from([(
+              "class".to_string(),
+              "ltx_bib_etal".to_string(),
+            )])),
+            children:   vec![NodeData::Text(" et al.".to_string())],
+          }],
         });
         // Full: all names
         let mut full_children: Vec<NodeData> = Vec::new();
@@ -812,22 +885,22 @@ impl MakeBibliography {
           full_children.push(NodeData::Text(surname.get_content()));
         }
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "fullauthors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
-          children: full_children,
+          children:   full_children,
         });
       } else if surnames.len() == 2 {
         has_names = true;
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
-          children: vec![
+          children:   vec![
             NodeData::Text(surnames[0].get_content()),
             NodeData::Text(" and ".to_string()),
             NodeData::Text(surnames[1].get_content()),
@@ -836,65 +909,78 @@ impl MakeBibliography {
       } else if !surnames.is_empty() {
         has_names = true;
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
-          children: vec![NodeData::Text(surnames[0].get_content())],
+          children:   vec![NodeData::Text(surnames[0].get_content())],
         });
       }
 
       // Key tag
-      if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry).into_iter().next() {
+      if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+        .into_iter()
+        .next()
+      {
         has_key = true;
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "key".to_string()),
             ("class".to_string(), "ltx_bib_key".to_string()),
           ])),
-          children: vec![NodeData::Text(key_node.get_content())],
+          children:   vec![NodeData::Text(key_node.get_content())],
         });
       }
 
       // Year tag
-      if let Some(date_node) = PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry).into_iter().next() {
+      if let Some(date_node) =
+        PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry)
+          .into_iter()
+          .next()
+      {
         has_year = true;
         let year_text = extract_four_digit_year(&date_node.get_content());
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "year".to_string()),
             ("class".to_string(), "ltx_bib_year".to_string()),
           ])),
-          children: vec![NodeData::Text(format!("{}{}", year_text, suffix))],
+          children:   vec![NodeData::Text(format!("{}{}", year_text, suffix))],
         });
       }
 
       // Type tag
-      if let Some(type_node) = PostDocument::findnodes_foreign("ltx:bib-type", bibentry).into_iter().next() {
+      if let Some(type_node) = PostDocument::findnodes_foreign("ltx:bib-type", bibentry)
+        .into_iter()
+        .next()
+      {
         has_typetag = true;
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "bibtype".to_string()),
             ("class".to_string(), "ltx_bib_type".to_string()),
           ])),
-          children: vec![NodeData::Text(type_node.get_content())],
+          children:   vec![NodeData::Text(type_node.get_content())],
         });
       }
 
       // Title tag
-      if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next() {
+      if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+        .into_iter()
+        .next()
+      {
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "title".to_string()),
             ("class".to_string(), "ltx_bib_title".to_string()),
           ])),
-          children: vec![NodeData::Text(title_node.get_content())],
+          children:   vec![NodeData::Text(title_node.get_content())],
         });
       }
     } else {
@@ -902,21 +988,21 @@ impl MakeBibliography {
       if !entry.authors_short.is_empty() {
         has_names = true;
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
-          children: vec![NodeData::Text(entry.authors_short.clone())],
+          children:   vec![NodeData::Text(entry.authors_short.clone())],
         });
         if entry.authors_full != entry.authors_short {
           tags.push(NodeData::Element {
-            tag: "ltx:tag".to_string(),
+            tag:        "ltx:tag".to_string(),
             attributes: Some(HashMap::from([
               ("role".to_string(), "fullauthors".to_string()),
               ("class".to_string(), "ltx_bib_author".to_string()),
             ])),
-            children: vec![NodeData::Text(entry.authors_full.clone())],
+            children:   vec![NodeData::Text(entry.authors_full.clone())],
           });
         }
       }
@@ -924,22 +1010,22 @@ impl MakeBibliography {
         has_year = true;
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "year".to_string()),
             ("class".to_string(), "ltx_bib_year".to_string()),
           ])),
-          children: vec![NodeData::Text(format!("{}{}", entry.year, suffix))],
+          children:   vec![NodeData::Text(format!("{}{}", entry.year, suffix))],
         });
       }
       if !entry.title.is_empty() {
         tags.push(NodeData::Element {
-          tag: "ltx:tag".to_string(),
+          tag:        "ltx:tag".to_string(),
           attributes: Some(HashMap::from([
             ("role".to_string(), "title".to_string()),
             ("class".to_string(), "ltx_bib_title".to_string()),
           ])),
-          children: vec![NodeData::Text(entry.title.clone())],
+          children:   vec![NodeData::Text(entry.title.clone())],
         });
       }
     }
@@ -952,14 +1038,14 @@ impl MakeBibliography {
   /// Port of the alpha refnum logic in `formatBibEntry`.
   fn make_alpha_label(&self, doc: &PostDocument, entry: &BibEntryData) -> String {
     if let Some(ref bibentry) = entry.bibentry {
-      let mut surnames: Vec<Node> = doc.findnodes_at(
-        "ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
+      let mut surnames: Vec<Node> =
+        doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
       if surnames.is_empty() {
-        surnames = doc.findnodes_at(
-          "ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
+        surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
       }
       if surnames.len() > 1 {
-        let mut aa: String = surnames.iter()
+        let mut aa: String = surnames
+          .iter()
           .map(|n| n.get_content().chars().next().unwrap_or('?').to_string())
           .collect();
         if aa.len() > 3 {
@@ -970,18 +1056,30 @@ impl MakeBibliography {
         let text = surnames[0].get_content();
         text.chars().take(3).collect::<String>().to_uppercase()
       } else {
-        entry.bib_key.chars().take(3).collect::<String>().to_uppercase()
+        entry
+          .bib_key
+          .chars()
+          .take(3)
+          .collect::<String>()
+          .to_uppercase()
       }
     } else {
       // Fallback: use author short name
       if !entry.authors_short.is_empty() {
-        entry.authors_short.split_whitespace()
+        entry
+          .authors_short
+          .split_whitespace()
           .filter_map(|w| w.chars().next())
           .map(|c| c.to_uppercase().to_string())
           .collect::<Vec<_>>()
           .join("")
       } else {
-        entry.bib_key.chars().take(3).collect::<String>().to_uppercase()
+        entry
+          .bib_key
+          .chars()
+          .take(3)
+          .collect::<String>()
+          .to_uppercase()
       }
     }
   }
@@ -1000,7 +1098,9 @@ impl MakeBibliography {
     let mut blocks = Vec::new();
 
     for (i, block_spec) in block_specs.iter().enumerate() {
-      if skip_first && i == 0 { continue; }
+      if skip_first && i == 0 {
+        continue;
+      }
 
       let mut items: Vec<NodeData> = Vec::new();
       for field_spec in block_spec {
@@ -1022,9 +1122,13 @@ impl MakeBibliography {
         // Check condition
         if field_spec.xpath != "true" {
           if negated {
-            if nodes_found { continue; }
+            if nodes_found {
+              continue;
+            }
           } else {
-            if !nodes_found { continue; }
+            if !nodes_found {
+              continue;
+            }
           }
         }
 
@@ -1051,11 +1155,12 @@ impl MakeBibliography {
           };
           if !content.is_empty() {
             items.push(NodeData::Element {
-              tag: "ltx:text".to_string(),
-              attributes: Some(HashMap::from([
-                ("class".to_string(), format!("ltx_bib_{}", field_spec.class)),
-              ])),
-              children: content,
+              tag:        "ltx:text".to_string(),
+              attributes: Some(HashMap::from([(
+                "class".to_string(),
+                format!("ltx_bib_{}", field_spec.class),
+              )])),
+              children:   content,
             });
           }
         }
@@ -1075,17 +1180,19 @@ impl MakeBibliography {
       // Note block
       if !PostDocument::findnodes_foreign("ltx:bib-note", bibentry).is_empty() {
         let notes = PostDocument::findnodes_foreign("ltx:bib-note", bibentry);
-        let content: Vec<NodeData> = notes.iter()
+        let content: Vec<NodeData> = notes
+          .iter()
           .map(|n| NodeData::Text(n.get_content()))
           .collect();
         if !content.is_empty() {
           let mut items = vec![NodeData::Text("Note: ".to_string())];
           items.push(NodeData::Element {
-            tag: "ltx:text".to_string(),
-            attributes: Some(HashMap::from([
-              ("class".to_string(), "ltx_bib_note".to_string()),
-            ])),
-            children: content,
+            tag:        "ltx:text".to_string(),
+            attributes: Some(HashMap::from([(
+              "class".to_string(),
+              "ltx_bib_note".to_string(),
+            )])),
+            children:   content,
           });
           blocks.push(make_bibblock("", &items));
         }
@@ -1098,11 +1205,12 @@ impl MakeBibliography {
         if !link_items.is_empty() {
           let mut items = vec![NodeData::Text("External Links: ".to_string())];
           items.push(NodeData::Element {
-            tag: "ltx:text".to_string(),
-            attributes: Some(HashMap::from([
-              ("class".to_string(), "ltx_bib_links".to_string()),
-            ])),
-            children: link_items,
+            tag:        "ltx:text".to_string(),
+            attributes: Some(HashMap::from([(
+              "class".to_string(),
+              "ltx_bib_links".to_string(),
+            )])),
+            children:   link_items,
           });
           blocks.push(make_bibblock("", &items));
         }
@@ -1116,9 +1224,7 @@ impl MakeBibliography {
 impl Processor for MakeBibliography {
   fn get_name(&self) -> &str { &self.name }
 
-  fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
-    doc.findnodes("//ltx:bibliography")
-  }
+  fn to_process(&self, doc: &PostDocument) -> Vec<Node> { doc.findnodes("//ltx:bibliography") }
 
   fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     for bib in &nodes {
@@ -1128,7 +1234,9 @@ impl Processor for MakeBibliography {
       }
 
       // Read citation style from element attributes
-      let citestyle_str = bib.get_attribute("citestyle").unwrap_or_else(|| "numbers".to_string());
+      let citestyle_str = bib
+        .get_attribute("citestyle")
+        .unwrap_or_else(|| "numbers".to_string());
       let style = match citestyle_str.as_str() {
         "AY" | "authoryear" | "author-year" => CitationStyle::AuthorYear,
         "alpha" | "Alpha" => CitationStyle::Alpha,
@@ -1142,21 +1250,30 @@ impl Processor for MakeBibliography {
         continue;
       }
 
-      let bib_id = bib.get_attribute("xml:id")
-        .or_else(|| doc.get_document_element().and_then(|r| r.get_attribute("xml:id")))
+      let bib_id = bib
+        .get_attribute("xml:id")
+        .or_else(|| {
+          doc
+            .get_document_element()
+            .and_then(|r| r.get_attribute("xml:id"))
+        })
         .unwrap_or_else(|| "bib".to_string());
 
       if self.split {
         // Split by initial letter
         let mut by_initial: HashMap<String, HashMap<String, &BibEntryData>> = HashMap::new();
         for (key, entry) in &entries {
-          by_initial.entry(entry.initial.clone()).or_default().insert(key.clone(), entry);
+          by_initial
+            .entry(entry.initial.clone())
+            .or_default()
+            .insert(key.clone(), entry);
         }
         let mut initials: Vec<&String> = by_initial.keys().collect();
         initials.sort();
         for initial in initials {
           // Build a subset HashMap for this initial
-          let subset: HashMap<String, BibEntryData> = by_initial[initial].iter()
+          let subset: HashMap<String, BibEntryData> = by_initial[initial]
+            .iter()
             .map(|(k, e)| (k.clone(), clone_entry(e)))
             .collect();
           let biblist = self.make_bibliography_list(&doc, &bib_id, Some(initial), &subset, &style);
@@ -1174,7 +1291,9 @@ impl Processor for MakeBibliography {
       // Register formatted bibitems in ObjectDB so CrossRef can resolve citations.
       // Port of Perl's approach where bibitems are registered during Scan,
       // but here we must register them after MakeBibliography creates them.
-      let lists_str = bib.get_attribute("lists").unwrap_or_else(|| "bibliography".to_string());
+      let lists_str = bib
+        .get_attribute("lists")
+        .unwrap_or_else(|| "bibliography".to_string());
       for entry in entries.values() {
         let cited_key = entry.cited_key.as_deref().unwrap_or(&entry.bib_key);
         // Compute the same ID as format_bib_entry
@@ -1193,9 +1312,10 @@ impl Processor for MakeBibliography {
         // Register BIBLABEL:{list}:{key} → id
         for list in lists_str.split_whitespace() {
           let label_key = format!("BIBLABEL:{}:{}", list, cited_key);
-          self.db.register(&label_key, vec![
-            ("id", crate::object_db::Value::from(bibitem_id.as_str())),
-          ]);
+          self.db.register(&label_key, vec![(
+            "id",
+            crate::object_db::Value::from(bibitem_id.as_str()),
+          )]);
         }
 
         // Register ID:{id} with type, location, and number for CrossRef URL generation
@@ -1204,7 +1324,10 @@ impl Processor for MakeBibliography {
           ("type", crate::object_db::Value::from("ltx:bibitem")),
           ("location", crate::object_db::Value::from(location.as_str())),
           ("fragid", crate::object_db::Value::from(bibitem_id.as_str())),
-          ("number", crate::object_db::Value::from(entry.number.to_string().as_str())),
+          (
+            "number",
+            crate::object_db::Value::from(entry.number.to_string().as_str()),
+          ),
         ]);
       }
     }
@@ -1217,20 +1340,23 @@ impl Processor for MakeBibliography {
 
     // Remove empty biblists
     let biblists = doc.findnodes("//ltx:biblist");
-    let empty_lists: Vec<Node> = biblists.into_iter()
+    let empty_lists: Vec<Node> = biblists
+      .into_iter()
       .filter(|n| {
-        n.get_first_child().map(|c| {
-          let mut has_element = false;
-          let mut current = Some(c);
-          while let Some(ref node) = current {
-            if node.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-              has_element = true;
-              break;
+        n.get_first_child()
+          .map(|c| {
+            let mut has_element = false;
+            let mut current = Some(c);
+            while let Some(ref node) = current {
+              if node.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+                has_element = true;
+                break;
+              }
+              current = node.get_next_sibling();
             }
-            current = node.get_next_sibling();
-          }
-          !has_element
-        }).unwrap_or(true)
+            !has_element
+          })
+          .unwrap_or(true)
       })
       .collect();
     if !empty_lists.is_empty() {
@@ -1252,17 +1378,17 @@ impl Processor for MakeBibliography {
 #[derive(Clone)]
 struct FieldSpec {
   /// XPath expression (or "true" for unconditional). Prefix "!" for negation.
-  xpath: &'static str,
+  xpath:     &'static str,
   /// Punctuation to insert before this field (if preceding content exists).
-  punct: &'static str,
+  punct:     &'static str,
   /// Text prefix.
-  pre: &'static str,
+  pre:       &'static str,
   /// CSS class (without ltx_bib_ prefix).
-  class: &'static str,
+  class:     &'static str,
   /// Formatter function name.
   formatter: Formatter,
   /// Text suffix.
-  post: &'static str,
+  post:      &'static str,
 }
 
 #[derive(Clone, Copy)]
@@ -1285,171 +1411,796 @@ enum Formatter {
 /// Get the FMT_SPEC block specifications for a bibliography type.
 fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
   let meta_block: Vec<Vec<FieldSpec>> = vec![
-    vec![FieldSpec { xpath: "ltx:bib-note", punct: "", pre: "Note: ", class: "note", formatter: Formatter::Any, post: "" }],
-    vec![FieldSpec { xpath: "ltx:bib-links | ltx:bib-review | ltx:bib-identifier | ltx:bib-url",
-      punct: "", pre: "External Links: ", class: "links", formatter: Formatter::Links, post: "" }],
+    vec![FieldSpec {
+      xpath:     "ltx:bib-note",
+      punct:     "",
+      pre:       "Note: ",
+      class:     "note",
+      formatter: Formatter::Any,
+      post:      "",
+    }],
+    vec![FieldSpec {
+      xpath:     "ltx:bib-links | ltx:bib-review | ltx:bib-identifier | ltx:bib-url",
+      punct:     "",
+      pre:       "External Links: ",
+      class:     "links",
+      formatter: Formatter::Links,
+      post:      "",
+    }],
   ];
 
   let mut blocks = match format_type {
     "article" => vec![
       // Block 1: authors + year
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
       ],
       // Block 2: title
-      vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Title, post: "." },
-      ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Title,
+        post:      ".",
+      }],
       // Block 3: journal details
       vec![
-        FieldSpec { xpath: "ltx:bib-part[@role='part']", punct: "", pre: "", class: "part", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-related/ltx:bib-title", punct: ", ", pre: "", class: "journal", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='volume']", punct: " ", pre: "", class: "volume", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='number']", punct: " ", pre: "(", class: "number", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "ltx:bib-status", punct: ", ", pre: "(", class: "status", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "ltx:bib-part[@role='pages']", punct: ", ", pre: "", class: "pages", formatter: Formatter::Pages, post: "" },
-        FieldSpec { xpath: "ltx:bib-language", punct: " ", pre: "(", class: "language", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='part']",
+          punct:     "",
+          pre:       "",
+          class:     "part",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-title",
+          punct:     ", ",
+          pre:       "",
+          class:     "journal",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='volume']",
+          punct:     " ",
+          pre:       "",
+          class:     "volume",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='number']",
+          punct:     " ",
+          pre:       "(",
+          class:     "number",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-status",
+          punct:     ", ",
+          pre:       "(",
+          class:     "status",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='pages']",
+          punct:     ", ",
+          pre:       "",
+          class:     "pages",
+          formatter: Formatter::Pages,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-language",
+          punct:     " ",
+          pre:       "(",
+          class:     "language",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     "book" => vec![
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-name[@role='editor']", punct: "", pre: "", class: "editor", formatter: Formatter::EditorsA, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='editor']",
+          punct:     "",
+          pre:       "",
+          class:     "editor",
+          formatter: Formatter::EditorsA,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
       ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Title,
+        post:      ".",
+      }],
       vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Title, post: "." },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-type", punct: "", pre: "", class: "type", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-edition", punct: ", ", pre: "", class: "edition", formatter: Formatter::Edition, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='series']", punct: ", ", pre: "", class: "series", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='volume']", punct: ", ", pre: "Vol. ", class: "volume", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='part']", punct: ", ", pre: "Part ", class: "part", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-publisher", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-organization", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-place", punct: ", ", pre: "", class: "place", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-status", punct: " ", pre: "(", class: "status", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "ltx:bib-language", punct: " ", pre: "(", class: "language", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-type",
+          punct:     "",
+          pre:       "",
+          class:     "type",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-edition",
+          punct:     ", ",
+          pre:       "",
+          class:     "edition",
+          formatter: Formatter::Edition,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='series']",
+          punct:     ", ",
+          pre:       "",
+          class:     "series",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='volume']",
+          punct:     ", ",
+          pre:       "Vol. ",
+          class:     "volume",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='part']",
+          punct:     ", ",
+          pre:       "Part ",
+          class:     "part",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-publisher",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-organization",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       "",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-status",
+          punct:     " ",
+          pre:       "(",
+          class:     "status",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-language",
+          punct:     " ",
+          pre:       "(",
+          class:     "language",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     "incollection" => vec![
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
+      ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Title,
+        post:      ".",
+      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-type",
+          punct:     "",
+          pre:       "",
+          class:     "type",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@bibrefs]",
+          punct:     " ",
+          pre:       "See ",
+          class:     "crossref",
+          formatter: Formatter::CrossRef,
+          post:      ",",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-title",
+          punct:     " ",
+          pre:       "In ",
+          class:     "inbook",
+          formatter: Formatter::Title,
+          post:      ",",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-name[@role='editor']",
+          punct:     " ",
+          pre:       " ",
+          class:     "editor",
+          formatter: Formatter::EditorsA,
+          post:      ",",
+        },
       ],
       vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Title, post: "." },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-type", punct: "", pre: "", class: "type", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-related[@bibrefs]", punct: " ", pre: "See ", class: "crossref", formatter: Formatter::CrossRef, post: "," },
-        FieldSpec { xpath: "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-title",
-          punct: " ", pre: "In ", class: "inbook", formatter: Formatter::Title, post: "," },
-        FieldSpec { xpath: "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-name[@role='editor']",
-          punct: " ", pre: " ", class: "editor", formatter: Formatter::EditorsA, post: "," },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-edition", punct: "", pre: "", class: "edition", formatter: Formatter::Edition, post: "" },
-        FieldSpec { xpath: "ltx:bib-name[@role='editor']", punct: ", ", pre: "", class: "editor", formatter: Formatter::EditorsB, post: "" },
-        FieldSpec { xpath: "ltx:bib-related/ltx:bib-part[@role='series']", punct: ", ", pre: "", class: "series", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-related/ltx:bib-part[@role='volume']", punct: ", ", pre: "Vol. ", class: "volume", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-related/ltx:bib-part[@role='part']", punct: ", ", pre: "Part ", class: "part", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-publisher", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-organization", punct: ", ", pre: "", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-place", punct: ", ", pre: "", class: "place", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='pages']", punct: ", ", pre: "", class: "pages", formatter: Formatter::Pages, post: "" },
-        FieldSpec { xpath: "ltx:bib-status", punct: " ", pre: "(", class: "status", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "ltx:bib-language", punct: " ", pre: "(", class: "language", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-edition",
+          punct:     "",
+          pre:       "",
+          class:     "edition",
+          formatter: Formatter::Edition,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='editor']",
+          punct:     ", ",
+          pre:       "",
+          class:     "editor",
+          formatter: Formatter::EditorsB,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-part[@role='series']",
+          punct:     ", ",
+          pre:       "",
+          class:     "series",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-part[@role='volume']",
+          punct:     ", ",
+          pre:       "Vol. ",
+          class:     "volume",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-part[@role='part']",
+          punct:     ", ",
+          pre:       "Part ",
+          class:     "part",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-publisher",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-organization",
+          punct:     ", ",
+          pre:       "",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       "",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='pages']",
+          punct:     ", ",
+          pre:       "",
+          class:     "pages",
+          formatter: Formatter::Pages,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-status",
+          punct:     " ",
+          pre:       "(",
+          class:     "status",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-language",
+          punct:     " ",
+          pre:       "(",
+          class:     "language",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     "report" => vec![
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-name[@role='editor']", punct: "", pre: "", class: "editor", formatter: Formatter::EditorsA, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='editor']",
+          punct:     "",
+          pre:       "",
+          class:     "editor",
+          formatter: Formatter::EditorsA,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
       ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Title,
+        post:      ".",
+      }],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-type",
+        punct:     "",
+        pre:       "",
+        class:     "type",
+        formatter: Formatter::Any,
+        post:      "",
+      }],
       vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Title, post: "." },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-type", punct: "", pre: "", class: "type", formatter: Formatter::Any, post: "" },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-part[@role='number']", punct: "", pre: "Technical Report ", class: "number", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='series']", punct: ", ", pre: "", class: "series", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='volume']", punct: ", ", pre: "Vol. ", class: "volume", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='part']", punct: ", ", pre: "Part ", class: "part", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-publisher", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-organization", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-place", punct: ", ", pre: " ", class: "place", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-status", punct: ", ", pre: "(", class: "status", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "ltx:bib-language", punct: " ", pre: "(", class: "language", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='number']",
+          punct:     "",
+          pre:       "Technical Report ",
+          class:     "number",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='series']",
+          punct:     ", ",
+          pre:       "",
+          class:     "series",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='volume']",
+          punct:     ", ",
+          pre:       "Vol. ",
+          class:     "volume",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='part']",
+          punct:     ", ",
+          pre:       "Part ",
+          class:     "part",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-publisher",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-organization",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       " ",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-status",
+          punct:     ", ",
+          pre:       "(",
+          class:     "status",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-language",
+          punct:     " ",
+          pre:       "(",
+          class:     "language",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     "thesis" => vec![
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-name[@role='editor']", punct: "", pre: "", class: "editor", formatter: Formatter::EditorsA, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='editor']",
+          punct:     "",
+          pre:       "",
+          class:     "editor",
+          formatter: Formatter::EditorsA,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
       ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Title,
+        post:      ".",
+      }],
       vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Title, post: "." },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-type", punct: " ", pre: "", class: "type", formatter: Formatter::ThesisType, post: "" },
-        FieldSpec { xpath: "ltx:bib-part[@role='part']", punct: ", ", pre: "Part ", class: "part", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-publisher", punct: ", ", pre: "", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-organization", punct: ", ", pre: "", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-place", punct: ", ", pre: "", class: "place", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-status", punct: ", ", pre: "(", class: "status", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "ltx:bib-language", punct: ", ", pre: "(", class: "language", formatter: Formatter::Any, post: ")" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-type",
+          punct:     " ",
+          pre:       "",
+          class:     "type",
+          formatter: Formatter::ThesisType,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-part[@role='part']",
+          punct:     ", ",
+          pre:       "Part ",
+          class:     "part",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-publisher",
+          punct:     ", ",
+          pre:       "",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-organization",
+          punct:     ", ",
+          pre:       "",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       "",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-status",
+          punct:     ", ",
+          pre:       "(",
+          class:     "status",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-language",
+          punct:     ", ",
+          pre:       "(",
+          class:     "language",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     "website" => vec![
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-name[@role='editor']", punct: "", pre: "", class: "editor", formatter: Formatter::EditorsA, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-type", punct: "", pre: "", class: "type", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "! ltx:bib-type", punct: "", pre: "", class: "type", formatter: Formatter::None, post: "(Website)" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='editor']",
+          punct:     "",
+          pre:       "",
+          class:     "editor",
+          formatter: Formatter::EditorsA,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-type",
+          punct:     "",
+          pre:       "",
+          class:     "type",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "! ltx:bib-type",
+          punct:     "",
+          pre:       "",
+          class:     "type",
+          formatter: Formatter::None,
+          post:      "(Website)",
+        },
       ],
       vec![
-        FieldSpec { xpath: "ltx:bib-organization", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-place", punct: ", ", pre: "", class: "place", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-organization",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       "",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     "software" => vec![
       vec![
-        FieldSpec { xpath: "ltx:bib-key", punct: "", pre: "", class: "key", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-type", punct: "", pre: "", class: "type", formatter: Formatter::Type, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-key",
+          punct:     "",
+          pre:       "",
+          class:     "key",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-type",
+          punct:     "",
+          pre:       "",
+          class:     "type",
+          formatter: Formatter::Type,
+          post:      "",
+        },
       ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Any,
+        post:      "",
+      }],
       vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Any, post: "" },
-      ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-organization", punct: ", ", pre: " ", class: "publisher", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "ltx:bib-place", punct: ", ", pre: "", class: "place", formatter: Formatter::Any, post: "" },
-        FieldSpec { xpath: "true", punct: ".", pre: "", class: "", formatter: Formatter::None, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-organization",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       "",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "true",
+          punct:     ".",
+          pre:       "",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
       ],
     ],
     _ => vec![
       // Default: same as book
       vec![
-        FieldSpec { xpath: "ltx:bib-name[@role='author']", punct: "", pre: "", class: "author", formatter: Formatter::Authors, post: "" },
-        FieldSpec { xpath: "ltx:bib-date[@role='publication']", punct: "", pre: "", class: "year", formatter: Formatter::Year, post: "" },
+        FieldSpec {
+          xpath:     "ltx:bib-name[@role='author']",
+          punct:     "",
+          pre:       "",
+          class:     "author",
+          formatter: Formatter::Authors,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-date[@role='publication']",
+          punct:     "",
+          pre:       "",
+          class:     "year",
+          formatter: Formatter::Year,
+          post:      "",
+        },
       ],
-      vec![
-        FieldSpec { xpath: "ltx:bib-title", punct: "", pre: "", class: "title", formatter: Formatter::Title, post: "." },
-      ],
+      vec![FieldSpec {
+        xpath:     "ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "title",
+        formatter: Formatter::Title,
+        post:      ".",
+      }],
     ],
   };
   blocks.extend(meta_block);
@@ -1464,28 +2215,28 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
 /// Port of the various `do_*` functions.
 fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> Vec<NodeData> {
   match formatter {
-    Formatter::Any => {
-      nodes.iter().map(|n| NodeData::Text(n.get_content())).collect()
-    }
-    Formatter::Authors => {
-      format_author_nodes(doc, nodes)
-    }
+    Formatter::Any => nodes
+      .iter()
+      .map(|n| NodeData::Text(n.get_content()))
+      .collect(),
+    Formatter::Authors => format_author_nodes(doc, nodes),
     Formatter::EditorsA => {
       let mut result = format_author_nodes(doc, nodes);
       let suffix = if nodes.len() > 1 { " (Eds.)" } else { " (Ed.)" };
       result.push(NodeData::Text(suffix.to_string()));
       result
-    }
+    },
     Formatter::EditorsB => {
       let mut result = vec![NodeData::Text("(".to_string())];
       result.extend(format_author_nodes(doc, nodes));
       let suffix = if nodes.len() > 1 { " Eds.)" } else { " Ed.)" };
       result.push(NodeData::Text(suffix.to_string()));
       result
-    }
+    },
     Formatter::Year => {
       let suffix = ""; // Suffix is handled elsewhere
-      let content: Vec<NodeData> = nodes.iter()
+      let content: Vec<NodeData> = nodes
+        .iter()
         .map(|n| {
           let text = n.get_content();
           let year = extract_four_digit_year(&text);
@@ -1496,57 +2247,59 @@ fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> 
       result.extend(content);
       result.push(NodeData::Text(format!("{})", suffix)));
       result
-    }
+    },
     Formatter::Type => {
-      let content: Vec<NodeData> = nodes.iter()
+      let content: Vec<NodeData> = nodes
+        .iter()
         .map(|n| NodeData::Text(n.get_content()))
         .collect();
       let mut result = vec![NodeData::Text("(".to_string())];
       result.extend(content);
       result.push(NodeData::Text(")".to_string()));
       result
-    }
-    Formatter::Title => {
-      nodes.iter().map(|n| NodeData::Text(n.get_content())).collect()
-    }
-    Formatter::ThesisType => {
-      nodes.iter().map(|n| NodeData::Text(n.get_content())).collect()
-    }
+    },
+    Formatter::Title => nodes
+      .iter()
+      .map(|n| NodeData::Text(n.get_content()))
+      .collect(),
+    Formatter::ThesisType => nodes
+      .iter()
+      .map(|n| NodeData::Text(n.get_content()))
+      .collect(),
     Formatter::Edition => {
-      let mut result: Vec<NodeData> = nodes.iter()
+      let mut result: Vec<NodeData> = nodes
+        .iter()
         .map(|n| NodeData::Text(n.get_content()))
         .collect();
       result.push(NodeData::Text(" edition".to_string()));
       result
-    }
+    },
     Formatter::Pages => {
       let mut result = vec![NodeData::Text("pp.\u{00A0}".to_string())]; // Non-breaking space
       result.extend(nodes.iter().map(|n| NodeData::Text(n.get_content())));
       result
-    }
+    },
     Formatter::CrossRef => {
       // Port of do_crossref
       if let Some(node) = nodes.first() {
         if let Some(bibrefs) = node.get_attribute("bibrefs") {
           return vec![NodeData::Element {
-            tag: "ltx:cite".to_string(),
+            tag:        "ltx:cite".to_string(),
             attributes: None,
-            children: vec![NodeData::Element {
-              tag: "ltx:bibref".to_string(),
+            children:   vec![NodeData::Element {
+              tag:        "ltx:bibref".to_string(),
               attributes: Some(HashMap::from([
                 ("bibrefs".to_string(), bibrefs),
                 ("show".to_string(), "title, author".to_string()),
               ])),
-              children: vec![],
+              children:   vec![],
             }],
           }];
         }
       }
       Vec::new()
-    }
-    Formatter::Links => {
-      format_links(doc, nodes)
-    }
+    },
+    Formatter::Links => format_links(doc, nodes),
     Formatter::None => Vec::new(),
   }
 }
@@ -1559,7 +2312,8 @@ fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData
   let mut names: Vec<Node> = name_nodes.to_vec();
 
   // Check for "others" sentinel (et al.)
-  let etal = names.last()
+  let etal = names
+    .last()
     .map(|n| n.get_content().trim() == "others")
     .unwrap_or(false);
   if etal {
@@ -1576,9 +2330,13 @@ fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData
       }
     }
     // Format single name: initials + surname
-    if let Some(givenname) = PostDocument::findnodes_foreign("ltx:givenname", name).into_iter().next() {
+    if let Some(givenname) = PostDocument::findnodes_foreign("ltx:givenname", name)
+      .into_iter()
+      .next()
+    {
       let given_text = givenname.get_content();
-      let initials: String = given_text.split_whitespace()
+      let initials: String = given_text
+        .split_whitespace()
         .map(|word| {
           if word.ends_with('.') {
             format!("{} ", word)
@@ -1591,7 +2349,10 @@ fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData
         .collect();
       result.push(NodeData::Text(initials));
     }
-    if let Some(surname) = PostDocument::findnodes_foreign("ltx:surname", name).into_iter().next() {
+    if let Some(surname) = PostDocument::findnodes_foreign("ltx:surname", name)
+      .into_iter()
+      .next()
+    {
       result.push(NodeData::Text(surname.get_content()));
     }
   }
@@ -1599,9 +2360,12 @@ fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData
   if etal {
     result.push(NodeData::Text(sep.to_string()));
     result.push(NodeData::Element {
-      tag: "ltx:text".to_string(),
-      attributes: Some(HashMap::from([("class".to_string(), "ltx_bib_etal".to_string())])),
-      children: vec![NodeData::Text("et al.".to_string())],
+      tag:        "ltx:text".to_string(),
+      attributes: Some(HashMap::from([(
+        "class".to_string(),
+        "ltx_bib_etal".to_string(),
+      )])),
+      children:   vec![NodeData::Text("et al.".to_string())],
     });
   }
 
@@ -1624,45 +2388,47 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
       "ltx:bib-identifier" | "ltx:bib-review" => {
         if let Some(href) = href {
           links.push(NodeData::Element {
-            tag: "ltx:ref".to_string(),
+            tag:        "ltx:ref".to_string(),
             attributes: Some(HashMap::from([
               ("href".to_string(), href),
               ("class".to_string(), format!("{} ltx_bib_external", scheme)),
             ])),
-            children: vec![NodeData::Text(content_text)],
+            children:   vec![NodeData::Text(content_text)],
           });
         } else {
           links.push(NodeData::Element {
-            tag: "ltx:text".to_string(),
-            attributes: Some(HashMap::from([
-              ("class".to_string(), format!("{} ltx_bib_external", scheme)),
-            ])),
-            children: vec![NodeData::Text(content_text)],
+            tag:        "ltx:text".to_string(),
+            attributes: Some(HashMap::from([(
+              "class".to_string(),
+              format!("{} ltx_bib_external", scheme),
+            )])),
+            children:   vec![NodeData::Text(content_text)],
           });
         }
-      }
+      },
       "ltx:bib-links" => {
         links.push(NodeData::Element {
-          tag: "ltx:text".to_string(),
-          attributes: Some(HashMap::from([
-            ("class".to_string(), "ltx_bib_external".to_string()),
-          ])),
-          children: vec![NodeData::Text(content_text)],
+          tag:        "ltx:text".to_string(),
+          attributes: Some(HashMap::from([(
+            "class".to_string(),
+            "ltx_bib_external".to_string(),
+          )])),
+          children:   vec![NodeData::Text(content_text)],
         });
-      }
+      },
       "ltx:bib-url" => {
         if let Some(href) = href {
           links.push(NodeData::Element {
-            tag: "ltx:ref".to_string(),
+            tag:        "ltx:ref".to_string(),
             attributes: Some(HashMap::from([
               ("href".to_string(), href),
               ("class".to_string(), "ltx_bib_external".to_string()),
             ])),
-            children: vec![NodeData::Text(content_text)],
+            children:   vec![NodeData::Text(content_text)],
           });
         }
-      }
-      _ => {}
+      },
+      _ => {},
     }
   }
 
@@ -1689,19 +2455,26 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
 /// Port of the name extraction logic in `getBibEntries`.
 /// Returns (sort_names, short_names, full_names).
 fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String) {
-  let mut name_nodes: Vec<Node> = PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
+  let mut name_nodes: Vec<Node> =
+    PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
   if name_nodes.is_empty() {
     name_nodes = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
   }
 
   if name_nodes.is_empty() {
     // Try bib-key
-    if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry).into_iter().next() {
+    if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+      .into_iter()
+      .next()
+    {
       let text = key_node.get_content();
       return (text.clone(), text.clone(), text);
     }
     // Try bib-title
-    if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry).into_iter().next() {
+    if let Some(title_node) = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+      .into_iter()
+      .next()
+    {
       let text = title_node.get_content();
       return (text.clone(), text.clone(), text);
     }
@@ -1709,14 +2482,21 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
   }
 
   // Sort names: "Surname Givenname" for each
-  let sort_names: String = name_nodes.iter()
+  let sort_names: String = name_nodes
+    .iter()
     .map(|n| get_name_text(doc, n))
     .collect::<Vec<_>>()
     .join(" ");
 
   // Short names: surnames only, with "et al" for >2
-  let surnames: Vec<String> = name_nodes.iter()
-    .filter_map(|n| PostDocument::findnodes_foreign("ltx:surname", n).into_iter().next().map(|s| s.get_content()))
+  let surnames: Vec<String> = name_nodes
+    .iter()
+    .filter_map(|n| {
+      PostDocument::findnodes_foreign("ltx:surname", n)
+        .into_iter()
+        .next()
+        .map(|s| s.get_content())
+    })
     .collect();
 
   let short_names = if surnames.len() > 2 {
@@ -1738,9 +2518,13 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
 /// Port of `getNameText`.
 fn get_name_text(_doc: &PostDocument, namenode: &Node) -> String {
   let surname = PostDocument::findnodes_foreign("ltx:surname", namenode)
-    .into_iter().next().map(|n| n.get_content());
+    .into_iter()
+    .next()
+    .map(|n| n.get_content());
   let givenname = PostDocument::findnodes_foreign("ltx:givenname", namenode)
-    .into_iter().next().map(|n| n.get_content());
+    .into_iter()
+    .next()
+    .map(|n| n.get_content());
   match (surname, givenname) {
     (Some(s), Some(g)) => format!("{} {}", s, g),
     (Some(s), None) => s,
@@ -1752,7 +2536,10 @@ fn get_name_text(_doc: &PostDocument, namenode: &Node) -> String {
 /// Extract a 4-digit year from a date string.
 fn extract_four_digit_year(text: &str) -> String {
   if let Some(start) = text.find(|c: char| c.is_ascii_digit()) {
-    let digits: String = text[start..].chars().take_while(|c| c.is_ascii_digit()).collect();
+    let digits: String = text[start..]
+      .chars()
+      .take_while(|c| c.is_ascii_digit())
+      .collect();
     if digits.len() >= 4 {
       return digits[..4].to_string();
     }
@@ -1788,13 +2575,13 @@ fn get_metadata_content(xpath: &str, entry: &BibEntryData) -> Vec<NodeData> {
   match xpath {
     s if s.contains("bib-name[@role='author']") && !entry.authors_full.is_empty() => {
       vec![NodeData::Text(format_authors_text(&entry.authors_full))]
-    }
+    },
     s if s.contains("bib-date[@role='publication']") && !entry.year.is_empty() => {
       vec![NodeData::Text(entry.year.clone())]
-    }
+    },
     s if s.contains("bib-title") && !entry.title.is_empty() => {
       vec![NodeData::Text(entry.title.clone())]
-    }
+    },
     _ => Vec::new(),
   }
 }
@@ -1803,12 +2590,19 @@ fn get_metadata_content(xpath: &str, entry: &BibEntryData) -> Vec<NodeData> {
 fn format_authors_text(authors: &str) -> String {
   let names: Vec<&str> = authors.split(" and ").collect();
   let n = names.len();
-  if n == 0 { return authors.to_string(); }
+  if n == 0 {
+    return authors.to_string();
+  }
 
   let has_etal = names.last().map(|n| n.trim() == "others").unwrap_or(false);
-  let real_names: Vec<&str> = if has_etal { names[..n - 1].to_vec() } else { names };
+  let real_names: Vec<&str> = if has_etal {
+    names[..n - 1].to_vec()
+  } else {
+    names
+  };
 
-  let formatted: Vec<String> = real_names.iter()
+  let formatted: Vec<String> = real_names
+    .iter()
     .map(|name| format_single_name(name.trim()))
     .collect();
 
@@ -1836,7 +2630,8 @@ fn format_authors_text(authors: &str) -> String {
 fn format_single_name(name: &str) -> String {
   if let Some((surname, given)) = name.split_once(',') {
     let surname = surname.trim();
-    let initials: String = given.split_whitespace()
+    let initials: String = given
+      .split_whitespace()
       .map(|word| {
         if word.ends_with('.') {
           format!("{} ", word)
@@ -1856,23 +2651,23 @@ fn format_single_name(name: &str) -> String {
 /// Clone a BibEntryData (for split operation).
 fn clone_entry(e: &BibEntryData) -> BibEntryData {
   BibEntryData {
-    bib_key: e.bib_key.clone(),
-    cited_key: e.cited_key.clone(),
-    sort_key: e.sort_key.clone(),
-    initial: e.initial.clone(),
-    author_year: e.author_year.clone(),
-    suffix: e.suffix.clone(),
+    bib_key:       e.bib_key.clone(),
+    cited_key:     e.cited_key.clone(),
+    sort_key:      e.sort_key.clone(),
+    initial:       e.initial.clone(),
+    author_year:   e.author_year.clone(),
+    suffix:        e.suffix.clone(),
     authors_short: e.authors_short.clone(),
-    authors_full: e.authors_full.clone(),
-    sort_names: e.sort_names.clone(),
-    year: e.year.clone(),
-    title: e.title.clone(),
-    entry_type: e.entry_type.clone(),
-    number: e.number,
-    referrers: e.referrers.clone(),
-    bibreferrers: e.bibreferrers.clone(),
-    citations: e.citations.clone(),
-    bibentry: e.bibentry.clone(),
+    authors_full:  e.authors_full.clone(),
+    sort_names:    e.sort_names.clone(),
+    year:          e.year.clone(),
+    title:         e.title.clone(),
+    entry_type:    e.entry_type.clone(),
+    number:        e.number,
+    referrers:     e.referrers.clone(),
+    bibreferrers:  e.bibreferrers.clone(),
+    citations:     e.citations.clone(),
+    bibentry:      e.bibentry.clone(),
   }
 }
 
@@ -1884,9 +2679,9 @@ fn make_bibblock(class: &str, content: &[NodeData]) -> NodeData {
     attrs.insert("class".to_string(), class.to_string());
   }
   NodeData::Element {
-    tag: "ltx:bibblock".to_string(),
+    tag:        "ltx:bibblock".to_string(),
     attributes: Some(attrs),
-    children: content.to_vec(),
+    children:   content.to_vec(),
   }
 }
 
@@ -1911,8 +2706,8 @@ fn find_file(name: &str, search_paths: &[String]) -> Option<String> {
 /// A parsed BibTeX entry.
 struct BibEntry {
   entry_type: String,
-  key: String,
-  fields: Vec<(String, String)>,
+  key:        String,
+  fields:     Vec<(String, String)>,
 }
 
 /// Parse a raw `.bib` file into BibTeX entries.
@@ -1927,26 +2722,40 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
 
   while i < len {
     // Skip to next @
-    if chars[i] != '@' { i += 1; continue; }
+    if chars[i] != '@' {
+      i += 1;
+      continue;
+    }
     i += 1; // skip @
 
     // Read entry type
     let type_start = i;
-    while i < len && chars[i].is_alphanumeric() { i += 1; }
-    let entry_type = chars[type_start..i].iter().collect::<String>().to_lowercase();
+    while i < len && chars[i].is_alphanumeric() {
+      i += 1;
+    }
+    let entry_type = chars[type_start..i]
+      .iter()
+      .collect::<String>()
+      .to_lowercase();
 
     // Skip @string, @preamble, @comment
     if entry_type == "string" || entry_type == "preamble" || entry_type == "comment" {
       // Skip to matching brace
-      while i < len && chars[i] != '{' && chars[i] != '(' { i += 1; }
+      while i < len && chars[i] != '{' && chars[i] != '(' {
+        i += 1;
+      }
       if i < len {
         i += 1;
         let open = if chars[i - 1] == '{' { '{' } else { '(' };
         let close = if open == '{' { '}' } else { ')' };
         let mut depth = 1;
         while i < len && depth > 0 {
-          if chars[i] == open { depth += 1; }
-          if chars[i] == close { depth -= 1; }
+          if chars[i] == open {
+            depth += 1;
+          }
+          if chars[i] == close {
+            depth -= 1;
+          }
           i += 1;
         }
       }
@@ -1954,43 +2763,70 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
     }
 
     // Skip whitespace
-    while i < len && chars[i].is_whitespace() { i += 1; }
+    while i < len && chars[i].is_whitespace() {
+      i += 1;
+    }
 
     // Opening brace or paren
-    if i >= len || (chars[i] != '{' && chars[i] != '(') { continue; }
+    if i >= len || (chars[i] != '{' && chars[i] != '(') {
+      continue;
+    }
     let close_ch = if chars[i] == '{' { '}' } else { ')' };
     i += 1;
 
     // Skip whitespace
-    while i < len && chars[i].is_whitespace() { i += 1; }
+    while i < len && chars[i].is_whitespace() {
+      i += 1;
+    }
 
     // Read citation key (until comma or whitespace)
     let key_start = i;
     while i < len && chars[i] != ',' && chars[i] != close_ch && !chars[i].is_whitespace() {
       i += 1;
     }
-    let key = chars[key_start..i].iter().collect::<String>().trim().to_string();
+    let key = chars[key_start..i]
+      .iter()
+      .collect::<String>()
+      .trim()
+      .to_string();
 
     // Skip to comma
-    while i < len && chars[i] != ',' && chars[i] != close_ch { i += 1; }
-    if i < len && chars[i] == ',' { i += 1; }
+    while i < len && chars[i] != ',' && chars[i] != close_ch {
+      i += 1;
+    }
+    if i < len && chars[i] == ',' {
+      i += 1;
+    }
 
     // Read fields
     let mut fields = Vec::new();
     loop {
       // Skip whitespace and commas
-      while i < len && (chars[i].is_whitespace() || chars[i] == ',') { i += 1; }
-      if i >= len || chars[i] == close_ch { break; }
+      while i < len && (chars[i].is_whitespace() || chars[i] == ',') {
+        i += 1;
+      }
+      if i >= len || chars[i] == close_ch {
+        break;
+      }
 
       // Read field name
       let fname_start = i;
-      while i < len && chars[i] != '=' && !chars[i].is_whitespace()
-        && chars[i] != close_ch { i += 1; }
-      let fname = chars[fname_start..i].iter().collect::<String>().trim().to_lowercase();
+      while i < len && chars[i] != '=' && !chars[i].is_whitespace() && chars[i] != close_ch {
+        i += 1;
+      }
+      let fname = chars[fname_start..i]
+        .iter()
+        .collect::<String>()
+        .trim()
+        .to_lowercase();
 
       // Skip whitespace and =
-      while i < len && (chars[i].is_whitespace() || chars[i] == '=') { i += 1; }
-      if i >= len || chars[i] == close_ch { break; }
+      while i < len && (chars[i].is_whitespace() || chars[i] == '=') {
+        i += 1;
+      }
+      if i >= len || chars[i] == close_ch {
+        break;
+      }
 
       // Read field value
       let value = read_bib_value(&chars, &mut i, close_ch);
@@ -1999,12 +2835,18 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
       }
 
       // Skip trailing comma
-      while i < len && chars[i].is_whitespace() { i += 1; }
-      if i < len && chars[i] == ',' { i += 1; }
+      while i < len && chars[i].is_whitespace() {
+        i += 1;
+      }
+      if i < len && chars[i] == ',' {
+        i += 1;
+      }
     }
 
     // Skip closing brace
-    if i < len && chars[i] == close_ch { i += 1; }
+    if i < len && chars[i] == close_ch {
+      i += 1;
+    }
 
     if !key.is_empty() {
       entries.push(BibEntry { entry_type, key, fields });
@@ -2020,18 +2862,26 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
   let mut result = String::new();
 
   loop {
-    while *i < len && chars[*i].is_whitespace() { *i += 1; }
-    if *i >= len { break; }
+    while *i < len && chars[*i].is_whitespace() {
+      *i += 1;
+    }
+    if *i >= len {
+      break;
+    }
 
     if chars[*i] == '{' {
       // Braced value — handle nested braces
       *i += 1;
       let mut depth = 1;
       while *i < len && depth > 0 {
-        if chars[*i] == '{' { depth += 1; }
-        else if chars[*i] == '}' {
+        if chars[*i] == '{' {
+          depth += 1;
+        } else if chars[*i] == '}' {
           depth -= 1;
-          if depth == 0 { *i += 1; break; }
+          if depth == 0 {
+            *i += 1;
+            break;
+          }
         }
         result.push(chars[*i]);
         *i += 1;
@@ -2045,8 +2895,15 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
           *i += 1;
           let mut depth = 1;
           while *i < len && depth > 0 {
-            if chars[*i] == '{' { depth += 1; }
-            else if chars[*i] == '}' { depth -= 1; if depth == 0 { *i += 1; break; } }
+            if chars[*i] == '{' {
+              depth += 1;
+            } else if chars[*i] == '}' {
+              depth -= 1;
+              if depth == 0 {
+                *i += 1;
+                break;
+              }
+            }
             result.push(chars[*i]);
             *i += 1;
           }
@@ -2055,7 +2912,9 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
           *i += 1;
         }
       }
-      if *i < len && chars[*i] == '"' { *i += 1; }
+      if *i < len && chars[*i] == '"' {
+        *i += 1;
+      }
     } else if chars[*i].is_alphanumeric() {
       // Bare word or number
       while *i < len && (chars[*i].is_alphanumeric() || chars[*i] == '-' || chars[*i] == '_') {
@@ -2067,7 +2926,9 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
     }
 
     // Check for # concatenation
-    while *i < len && chars[*i].is_whitespace() { *i += 1; }
+    while *i < len && chars[*i].is_whitespace() {
+      *i += 1;
+    }
     if *i < len && chars[*i] == '#' {
       *i += 1;
       continue;
@@ -2098,7 +2959,9 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
   let parts: Vec<&str> = authors_str.split(" and ").collect();
   for part in parts {
     let part = part.trim();
-    if part.is_empty() { continue; }
+    if part.is_empty() {
+      continue;
+    }
     let clean = strip_braces(part);
     if let Some((surname, given)) = clean.split_once(',') {
       result.push((surname.trim().to_string(), given.trim().to_string()));
@@ -2107,7 +2970,7 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
       let words: Vec<&str> = clean.split_whitespace().collect();
       if words.len() >= 2 {
         let surname = words.last().unwrap().to_string();
-        let given = words[..words.len()-1].join(" ");
+        let given = words[..words.len() - 1].join(" ");
         result.push((surname, given));
       } else if words.len() == 1 {
         result.push((words[0].to_string(), String::new()));
@@ -2126,12 +2989,16 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
     .map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?;
 
   let entries = parse_bibtex(&content);
-  log::info!("Parsed {} BibTeX entries from '{}'", entries.len(), bib_path);
+  log::info!(
+    "Parsed {} BibTeX entries from '{}'",
+    entries.len(),
+    bib_path
+  );
 
   // Build XML document with ltx:bibentry elements
   let mut xml = String::from(
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-     <bibliography xmlns=\"http://dlmf.nist.gov/LaTeXML\">\n"
+     <bibliography xmlns=\"http://dlmf.nist.gov/LaTeXML\">\n",
   );
 
   for entry in &entries {
@@ -2149,81 +3016,118 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
           let authors = parse_bib_authors(value);
           for (surname, given) in authors {
             xml.push_str("    <bib-name role=\"author\">");
-            xml.push_str(&format!("<surname>{}</surname>", xml_escape(&strip_braces(&surname))));
+            xml.push_str(&format!(
+              "<surname>{}</surname>",
+              xml_escape(&strip_braces(&surname))
+            ));
             if !given.is_empty() {
-              xml.push_str(&format!("<givenname>{}</givenname>", xml_escape(&strip_braces(&given))));
+              xml.push_str(&format!(
+                "<givenname>{}</givenname>",
+                xml_escape(&strip_braces(&given))
+              ));
             }
             xml.push_str("</bib-name>\n");
           }
-        }
+        },
         "editor" => {
           let editors = parse_bib_authors(value);
           for (surname, given) in editors {
             xml.push_str("    <bib-name role=\"editor\">");
-            xml.push_str(&format!("<surname>{}</surname>", xml_escape(&strip_braces(&surname))));
+            xml.push_str(&format!(
+              "<surname>{}</surname>",
+              xml_escape(&strip_braces(&surname))
+            ));
             if !given.is_empty() {
-              xml.push_str(&format!("<givenname>{}</givenname>", xml_escape(&strip_braces(&given))));
+              xml.push_str(&format!(
+                "<givenname>{}</givenname>",
+                xml_escape(&strip_braces(&given))
+              ));
             }
             xml.push_str("</bib-name>\n");
           }
-        }
+        },
         "title" => {
-          xml.push_str(&format!("    <bib-title>{}</bib-title>\n", xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-title>{}</bib-title>\n",
+            xml_escape(&clean)
+          ));
+        },
         "year" => {
-          xml.push_str(&format!("    <bib-date role=\"publication\">{}</bib-date>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-date role=\"publication\">{}</bib-date>\n",
+            xml_escape(&clean)
+          ));
+        },
         "journal" | "journaltitle" => {
           xml.push_str(&format!(
             "    <bib-related type=\"journal\"><bib-title>{}</bib-title></bib-related>\n",
-            xml_escape(&clean)));
-        }
+            xml_escape(&clean)
+          ));
+        },
         "booktitle" => {
           xml.push_str(&format!(
             "    <bib-related type=\"book\"><bib-title>{}</bib-title></bib-related>\n",
-            xml_escape(&clean)));
-        }
+            xml_escape(&clean)
+          ));
+        },
         "volume" => {
-          xml.push_str(&format!("    <bib-part role=\"volume\">{}</bib-part>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-part role=\"volume\">{}</bib-part>\n",
+            xml_escape(&clean)
+          ));
+        },
         "number" | "issue" => {
-          xml.push_str(&format!("    <bib-part role=\"number\">{}</bib-part>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-part role=\"number\">{}</bib-part>\n",
+            xml_escape(&clean)
+          ));
+        },
         "pages" => {
           let pages_clean = clean.replace("--", "\u{2013}");
-          xml.push_str(&format!("    <bib-part role=\"pages\">{}</bib-part>\n",
-            xml_escape(&pages_clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-part role=\"pages\">{}</bib-part>\n",
+            xml_escape(&pages_clean)
+          ));
+        },
         "doi" => {
-          xml.push_str(&format!("    <bib-identifier scheme=\"doi\">{}</bib-identifier>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-identifier scheme=\"doi\">{}</bib-identifier>\n",
+            xml_escape(&clean)
+          ));
+        },
         "url" => {
           xml.push_str(&format!(
             "    <bib-url href=\"{}\">{}</bib-url>\n",
-            xml_escape(&clean), xml_escape(&clean)));
-        }
+            xml_escape(&clean),
+            xml_escape(&clean)
+          ));
+        },
         "isbn" => {
-          xml.push_str(&format!("    <bib-identifier scheme=\"isbn\">{}</bib-identifier>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-identifier scheme=\"isbn\">{}</bib-identifier>\n",
+            xml_escape(&clean)
+          ));
+        },
         "issn" => {
-          xml.push_str(&format!("    <bib-identifier scheme=\"issn\">{}</bib-identifier>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-identifier scheme=\"issn\">{}</bib-identifier>\n",
+            xml_escape(&clean)
+          ));
+        },
         "publisher" => {
-          xml.push_str(&format!("    <bib-publisher>{}</bib-publisher>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-publisher>{}</bib-publisher>\n",
+            xml_escape(&clean)
+          ));
+        },
         "note" => {
-          xml.push_str(&format!("    <bib-note>{}</bib-note>\n",
-            xml_escape(&clean)));
-        }
+          xml.push_str(&format!(
+            "    <bib-note>{}</bib-note>\n",
+            xml_escape(&clean)
+          ));
+        },
         // Remaining fields: skip or log
-        _ => {}
+        _ => {},
       }
     }
 
@@ -2253,7 +3157,10 @@ mod tests {
   #[test]
   fn test_extract_four_digit_year() {
     assert_eq!(extract_four_digit_year("2024"), "2024");
-    assert_eq!(extract_four_digit_year("Published in 2024, January"), "2024");
+    assert_eq!(
+      extract_four_digit_year("Published in 2024, January"),
+      "2024"
+    );
     assert_eq!(extract_four_digit_year("99"), "99");
     assert_eq!(extract_four_digit_year(""), "");
   }
@@ -2277,17 +3184,34 @@ mod tests {
   #[test]
   fn test_format_authors_text() {
     assert_eq!(format_authors_text("Smith"), "Smith");
-    assert_eq!(format_authors_text("Smith, John and Doe, Jane"), "J. Smith and J. Doe");
-    assert_eq!(format_authors_text("Smith, J. and Doe, J. and Roe, R."),
-      "J. Smith, J. Doe, and R. Roe");
+    assert_eq!(
+      format_authors_text("Smith, John and Doe, Jane"),
+      "J. Smith and J. Doe"
+    );
+    assert_eq!(
+      format_authors_text("Smith, J. and Doe, J. and Roe, R."),
+      "J. Smith, J. Doe, and R. Roe"
+    );
   }
 
   #[test]
   fn test_fmt_spec_coverage() {
     // Ensure all format types produce non-empty specs
-    for fmt in &["article", "book", "incollection", "report", "thesis", "website", "software"] {
+    for fmt in &[
+      "article",
+      "book",
+      "incollection",
+      "report",
+      "thesis",
+      "website",
+      "software",
+    ] {
       let specs = get_fmt_spec(fmt);
-      assert!(!specs.is_empty(), "FMT_SPEC for '{}' should not be empty", fmt);
+      assert!(
+        !specs.is_empty(),
+        "FMT_SPEC for '{}' should not be empty",
+        fmt
+      );
     }
   }
 }

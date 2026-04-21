@@ -19,19 +19,19 @@ pub struct MathConversion {
   /// The processor that produced this conversion.
   pub processor_name: String,
   /// MIME type of the conversion (e.g., "application/mathml+xml").
-  pub mimetype: Option<String>,
+  pub mimetype:       Option<String>,
   /// The converted XML (as a NodeData tree).
-  pub xml: Option<NodeData>,
+  pub xml:            Option<NodeData>,
   /// String representation (for non-XML formats).
-  pub string: Option<String>,
+  pub string:         Option<String>,
   /// Image source path (for image-based conversions).
-  pub src: Option<String>,
+  pub src:            Option<String>,
   /// Image width.
-  pub width: Option<String>,
+  pub width:          Option<String>,
   /// Image height.
-  pub height: Option<String>,
+  pub height:         Option<String>,
   /// Image depth (baseline offset).
-  pub depth: Option<String>,
+  pub depth:          Option<String>,
 }
 
 /// Abstract base trait for math-processing post-processors.
@@ -78,14 +78,10 @@ pub trait MathProcessor: Processor {
   /// Primary format returns empty string; secondaries return their suffix.
   ///
   /// Port of `MathProcessor::rawIDSuffix`.
-  fn raw_id_suffix(&self) -> &str {
-    ""
-  }
+  fn raw_id_suffix(&self) -> &str { "" }
 
   /// Whether this processor is a secondary (parallel) processor.
-  fn is_secondary(&self) -> bool {
-    false
-  }
+  fn is_secondary(&self) -> bool { false }
 
   /// ID suffix: empty for primary, raw_id_suffix for secondary.
   ///
@@ -102,9 +98,7 @@ pub trait MathProcessor: Processor {
   /// Default: always true.
   ///
   /// Port of `MathProcessor::canConvert`.
-  fn can_convert(&self, _doc: &PostDocument, _math: &Node) -> bool {
-    true
-  }
+  fn can_convert(&self, _doc: &PostDocument, _math: &Node) -> bool { true }
 
   /// Optional preprocessing before conversion begins.
   ///
@@ -114,12 +108,7 @@ pub trait MathProcessor: Processor {
   /// Wrap the converted XML in the appropriate outer element (e.g., `m:math`).
   ///
   /// Port of `MathProcessor::outerWrapper`.
-  fn outer_wrapper(
-    &self,
-    _doc: &PostDocument,
-    _xmath: &Node,
-    conversion: NodeData,
-  ) -> NodeData {
+  fn outer_wrapper(&self, _doc: &PostDocument, _xmath: &Node, conversion: NodeData) -> NodeData {
     conversion
   }
 }
@@ -167,18 +156,28 @@ pub fn process_math(
   let mut max_ns: u128 = 0;
   let mut max_idx: usize = 0;
   for (i, math) in maths.into_iter().rev().enumerate() {
-    let t0 = if audit { Some(std::time::Instant::now()) } else { None };
+    let t0 = if audit {
+      Some(std::time::Instant::now())
+    } else {
+      None
+    };
     process_math_node(processor, doc, &math, keep_xmath)?;
     if let Some(t0) = t0 {
       let ns = t0.elapsed().as_nanos();
       total_ns += ns;
-      if ns > max_ns { max_ns = ns; max_idx = i; }
+      if ns > max_ns {
+        max_ns = ns;
+        max_idx = i;
+      }
     }
   }
   if audit {
     log::info!(
       "POST_AUDIT: {} math nodes in {}ms (max {}µs at index {})",
-      n, total_ns / 1_000_000, max_ns / 1_000, max_idx
+      n,
+      total_ns / 1_000_000,
+      max_ns / 1_000,
+      max_idx
     );
   }
 
@@ -207,16 +206,17 @@ fn process_math_node(
   };
 
   // Convert
-  let mut conversion = processor.convert_node(doc, &xmath)
+  let mut conversion = processor
+    .convert_node(doc, &xmath)
     .unwrap_or(MathConversion {
       processor_name: processor.get_name().to_string(),
-      mimetype: None,
-      xml: None,
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     });
 
   // Apply outer wrapper if we got XML
@@ -226,12 +226,12 @@ fn process_math_node(
     // Wrap string in ltx:text
     let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
     conversion.xml = Some(NodeData::Element {
-      tag: "ltx:text".to_string(),
+      tag:        "ltx:text".to_string(),
       attributes: Some(HashMap::from([(
         "class".to_string(),
         format!("ltx_math_{}", mimetype),
       )])),
-      children: vec![NodeData::Text(string.clone())],
+      children:   vec![NodeData::Text(string.clone())],
     });
   }
 
@@ -295,13 +295,13 @@ mod tests {
   fn math_conversion_clone_preserves() {
     let c = MathConversion {
       processor_name: "test".to_string(),
-      mimetype: Some("application/mathml+xml".to_string()),
-      xml: None,
-      string: Some("x+y".to_string()),
-      src: None,
-      width: Some("5em".to_string()),
-      height: None,
-      depth: None,
+      mimetype:       Some("application/mathml+xml".to_string()),
+      xml:            None,
+      string:         Some("x+y".to_string()),
+      src:            None,
+      width:          Some("5em".to_string()),
+      height:         None,
+      depth:          None,
     };
     let d = c.clone();
     assert_eq!(d.processor_name, "test");
@@ -316,13 +316,13 @@ mod tests {
     // useful output.
     let c = MathConversion {
       processor_name: "noop".to_string(),
-      mimetype: None,
-      xml: None,
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     };
     assert!(c.mimetype.is_none());
     assert!(c.xml.is_none());
@@ -337,13 +337,13 @@ mod tests {
   fn math_conversion_debug_is_non_empty() {
     let c = MathConversion {
       processor_name: "pmml".to_string(),
-      mimetype: None,
-      xml: None,
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     };
     let s = format!("{c:?}");
     assert!(s.contains("pmml"));

@@ -12,11 +12,11 @@ use crate::processor::{ProcessResult, Processor};
 ///
 /// Port of `LaTeXML::Post::PictureImages`.
 pub struct PictureImages {
-  name: String,
+  name:               String,
   resource_directory: String,
-  resource_prefix: String,
-  use_dvipng: bool,
-  empty_only: bool,
+  resource_prefix:    String,
+  use_dvipng:         bool,
+  empty_only:         bool,
 }
 
 impl PictureImages {
@@ -49,9 +49,7 @@ impl PictureImages {
 }
 
 impl Processor for PictureImages {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     let nodes = doc.findnodes("//ltx:picture");
@@ -65,13 +63,9 @@ impl Processor for PictureImages {
     }
   }
 
-  fn resource_directory(&self) -> Option<&str> {
-    Some(&self.resource_directory)
-  }
+  fn resource_directory(&self) -> Option<&str> { Some(&self.resource_directory) }
 
-  fn resource_prefix(&self) -> Option<&str> {
-    Some(&self.resource_prefix)
-  }
+  fn resource_prefix(&self) -> Option<&str> { Some(&self.resource_prefix) }
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     log::info!(

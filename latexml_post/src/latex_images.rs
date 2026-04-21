@@ -19,7 +19,7 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 
 use crate::document::PostDocument;
-use crate::processor::{find_documentclass_and_packages, PostError, ProcessResult, Processor};
+use crate::processor::{PostError, ProcessResult, Processor, find_documentclass_and_packages};
 
 /// DVI-to-image conversion method.
 #[derive(Debug, Clone)]
@@ -36,9 +36,9 @@ pub enum DviMethod {
 #[derive(Debug)]
 struct ImageEntry {
   /// The TeX source fragment.
-  tex: String,
+  tex:   String,
   /// Cache key.
-  key: String,
+  key:   String,
   /// Nodes that reference this image.
   nodes: Vec<Node>,
   /// Desired destination paths.
@@ -49,26 +49,22 @@ struct ImageEntry {
 ///
 /// Port of `LaTeXML::Post::LaTeXImages`.
 pub struct LaTeXImages {
-  name: String,
+  name:               String,
   resource_directory: String,
-  resource_prefix: String,
-  image_type: String,
-  dvi_method: DviMethod,
-  magnification: f64,
-  max_width: u32,
-  dpi: u32,
-  background: String,
-  padding: u32,
-  clipping_fudge: u32,
-  clipping_rule: f64,
+  resource_prefix:    String,
+  image_type:         String,
+  dvi_method:         DviMethod,
+  magnification:      f64,
+  max_width:          u32,
+  dpi:                u32,
+  background:         String,
+  padding:            u32,
+  clipping_fudge:     u32,
+  clipping_rule:      f64,
 }
 
 impl LaTeXImages {
-  pub fn new(
-    resource_directory: &str,
-    resource_prefix: &str,
-    image_type: &str,
-  ) -> Self {
+  pub fn new(resource_directory: &str, resource_prefix: &str, image_type: &str) -> Self {
     let dvi_method = match image_type {
       "svg" => DviMethod::DviSvgm,
       "png" => DviMethod::DviPng,
@@ -99,7 +95,12 @@ impl LaTeXImages {
     let mut style = String::new();
 
     // Save leading math style
-    for prefix in &["\\displaystyle", "\\textstyle", "\\scriptstyle", "\\scriptscriptstyle"] {
+    for prefix in &[
+      "\\displaystyle",
+      "\\textstyle",
+      "\\scriptstyle",
+      "\\scriptscriptstyle",
+    ] {
       if let Some(rest) = s.trim_start().strip_prefix(prefix) {
         style = prefix.to_string();
         s = rest.to_string();
@@ -128,13 +129,7 @@ impl LaTeXImages {
   /// Set the image attributes on a node.
   ///
   /// Port of `LaTeXImages::setTeXImage`.
-  pub fn set_tex_image(
-    node: &mut Node,
-    path: &str,
-    width: u32,
-    height: u32,
-    depth: Option<u32>,
-  ) {
+  pub fn set_tex_image(node: &mut Node, path: &str, width: u32, height: u32, depth: Option<u32>) {
     node.set_attribute("imagesrc", path).ok();
     node.set_attribute("imagewidth", &width.to_string()).ok();
     node.set_attribute("imageheight", &height.to_string()).ok();
@@ -166,8 +161,8 @@ impl LaTeXImages {
 
       let key = format!("{}:{}:{}", self.name, self.image_type, tex);
       let entry = table.entry(key.clone()).or_insert_with(|| ImageEntry {
-        tex: tex.clone(),
-        key: key.clone(),
+        tex:   tex.clone(),
+        key:   key.clone(),
         nodes: Vec::new(),
         dests: Vec::new(),
       });
@@ -192,7 +187,9 @@ impl LaTeXImages {
 
     log::info!(
       "LaTeXImages: {} total, {} unique, {} pending",
-      n_total, n_unique, pending.len()
+      n_total,
+      n_unique,
+      pending.len()
     );
 
     if !pending.is_empty() {
@@ -201,11 +198,18 @@ impl LaTeXImages {
       let tex_body = self.generate_tex_document(
         &preamble,
         &body_prefix,
-        &pending.iter().map(|k| table[k].tex.as_str()).collect::<Vec<_>>(),
+        &pending
+          .iter()
+          .map(|k| table[k].tex.as_str())
+          .collect::<Vec<_>>(),
       );
 
-      log::info!("LaTeXImages: generated LaTeX document ({} bytes)", tex_body.len());
-      log::debug!("Would run: latex + {} to produce {} images",
+      log::info!(
+        "LaTeXImages: generated LaTeX document ({} bytes)",
+        tex_body.len()
+      );
+      log::debug!(
+        "Would run: latex + {} to produce {} images",
         match self.dvi_method {
           DviMethod::DviPng => "dvipng",
           DviMethod::DviSvgm => "dvisvgm",
@@ -246,7 +250,11 @@ impl LaTeXImages {
     let class = &class_info.name;
     let class_options = &class_info.options;
     let oldstyle = class_info.oldstyle.is_some();
-    let document_command = if oldstyle { "\\documentstyle" } else { "\\documentclass" };
+    let document_command = if oldstyle {
+      "\\documentstyle"
+    } else {
+      "\\documentclass"
+    };
 
     let mut pkg_lines = String::new();
     for pkg in &packages {
@@ -319,7 +327,8 @@ impl LaTeXImages {
        \\def\\@@bibref#1#2#3#4{}\n\
        \\renewcommand{\\cite}[2][]{}\n\
        \\title{}\\date{}\n\
-       \\makeatother\n".to_string();
+       \\makeatother\n"
+      .to_string();
 
     (preamble, body_prefix)
   }
@@ -356,10 +365,7 @@ impl LaTeXImages {
         "dvipng -bg Transparent -T tight -q -D{} -o imgx-%03d.png",
         dpi
       ),
-      DviMethod::Dvips => format!(
-        "dvips -q -S1 -i -E -j0 -x{} -o imgx",
-        mag
-      ),
+      DviMethod::Dvips => format!("dvips -q -S1 -i -E -j0 -x{} -o imgx", mag),
     }
   }
 
@@ -370,8 +376,9 @@ impl LaTeXImages {
   /// Returns a vector indexed by image number: (width_pt, height_pt, depth_pt).
   pub fn parse_log_dimensions(log_content: &str) -> Vec<Option<(f64, f64, f64)>> {
     let re = regex::Regex::new(
-      r"^\s*LXIMAGE\s+(\d+)\s*=\s*([\+\-\d\.]+)pt\s*x\s*([\+\-\d\.]+)pt\s*\+\s*([\+\-\d\.]+)pt\s*$"
-    ).unwrap();
+      r"^\s*LXIMAGE\s+(\d+)\s*=\s*([\+\-\d\.]+)pt\s*x\s*([\+\-\d\.]+)pt\s*\+\s*([\+\-\d\.]+)pt\s*$",
+    )
+    .unwrap();
 
     let mut dimensions: Vec<Option<(f64, f64, f64)>> = Vec::new();
 
@@ -422,9 +429,7 @@ impl LaTeXImages {
   }
 
   /// Convert TeX points to pixels at the configured DPI and magnification.
-  pub fn pt_to_pixels(&self, pt: f64) -> f64 {
-    pt * self.magnification * self.dpi as f64 / 72.27
-  }
+  pub fn pt_to_pixels(&self, pt: f64) -> f64 { pt * self.magnification * self.dpi as f64 / 72.27 }
 
   /// Check whether this processor has the needed external tools.
   ///
@@ -453,7 +458,10 @@ impl LaTeXImages {
       .output()
       .is_ok();
     if !dvi_available {
-      log::error!("No {} command found; image generation will be skipped", dvi_cmd);
+      log::error!(
+        "No {} command found; image generation will be skipped",
+        dvi_cmd
+      );
       return false;
     }
     true
@@ -467,11 +475,7 @@ impl LaTeXImages {
   /// For dvisvgm output (SVG): already in final format.
   ///
   /// Returns (width, height) in pixels, or None on failure.
-  pub fn convert_image(
-    &self,
-    src: &str,
-    dest: &str,
-  ) -> Option<(u32, u32)> {
+  pub fn convert_image(&self, src: &str, dest: &str) -> Option<(u32, u32)> {
     match self.dvi_method {
       DviMethod::DviSvgm => {
         // SVG: just copy
@@ -481,7 +485,7 @@ impl LaTeXImages {
         }
         // SVG dimensions from file would need XML parsing
         Some((0, 0))
-      }
+      },
       DviMethod::DviPng => {
         // PNG: already cropped by dvipng -T tight
         if let Err(e) = std::fs::copy(src, dest) {
@@ -490,7 +494,7 @@ impl LaTeXImages {
         }
         // Would read PNG dimensions from file header
         Some((0, 0))
-      }
+      },
       DviMethod::Dvips => {
         // EPS: needs ImageMagick conversion
         // Would run: convert -density DPI -trim src dest
@@ -499,28 +503,20 @@ impl LaTeXImages {
         let fudge = (self.clipping_fudge as f64 + self.clipping_rule).round() as u32;
         log::debug!("  Shave: {}px from each edge", fudge);
         Some((0, 0))
-      }
+      },
     }
   }
 
   /// Compute pixels-per-point for dimension conversions.
-  pub fn pixels_per_pt(&self) -> f64 {
-    self.magnification * self.dpi as f64 / 72.27
-  }
+  pub fn pixels_per_pt(&self) -> f64 { self.magnification * self.dpi as f64 / 72.27 }
 }
 
 impl Processor for LaTeXImages {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
-  fn resource_directory(&self) -> Option<&str> {
-    Some(&self.resource_directory)
-  }
+  fn resource_directory(&self) -> Option<&str> { Some(&self.resource_directory) }
 
-  fn resource_prefix(&self) -> Option<&str> {
-    Some(&self.resource_prefix)
-  }
+  fn resource_prefix(&self) -> Option<&str> { Some(&self.resource_prefix) }
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     log::info!("LaTeXImages: {} nodes to process", nodes.len());

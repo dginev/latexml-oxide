@@ -15,7 +15,7 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
 
-use crate::document::{element_children, NodeData, PostDocument};
+use crate::document::{NodeData, PostDocument, element_children};
 
 /// Well-known meaning → Content MathML element mappings.
 ///
@@ -162,9 +162,7 @@ fn meaning_to_cmml_element(meaning: &str) -> Option<&'static str> {
 /// Convert an XMath tree to Content MathML.
 ///
 /// Port of `MathML::Content::convertNode` + `cmml_top`.
-pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData {
-  cmml_contents(doc, xmath)
-}
+pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData { cmml_contents(doc, xmath) }
 
 /// Convert the contents of a node (which normally has a single child).
 ///
@@ -204,10 +202,8 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
       } else {
         cmml_error("empty-dual")
       }
-    }
-    "ltx:XMWrap" | "ltx:XMArg" => {
-      cmml_contents(doc, node)
-    }
+    },
+    "ltx:XMWrap" | "ltx:XMArg" => cmml_contents(doc, node),
     "ltx:XMApp" => {
       // Check if XMApp has a meaning (token-like application)
       if let Some(meaning) = node.get_attribute("meaning") {
@@ -239,76 +235,101 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
 
       // Special meanings with dedicated structure
       match meaning.as_str() {
-        "square-root" if !args.is_empty() => {
-          NodeData::Element {
-            tag: "m:apply".to_string(),
-            attributes: None,
-            children: vec![
-              NodeData::Element { tag: "m:root".to_string(), attributes: None, children: vec![] },
-              cmml(doc, &args[0]),
-            ],
-          }
-        }
-        "nth-root" if args.len() >= 2 => {
-          NodeData::Element {
-            tag: "m:apply".to_string(),
-            attributes: None,
-            children: vec![
-              NodeData::Element { tag: "m:root".to_string(), attributes: None, children: vec![] },
-              NodeData::Element {
-                tag: "m:degree".to_string(),
-                attributes: None,
-                children: vec![cmml(doc, &args[1])],
-              },
-              cmml(doc, &args[0]),
-            ],
-          }
-        }
+        "square-root" if !args.is_empty() => NodeData::Element {
+          tag:        "m:apply".to_string(),
+          attributes: None,
+          children:   vec![
+            NodeData::Element {
+              tag:        "m:root".to_string(),
+              attributes: None,
+              children:   vec![],
+            },
+            cmml(doc, &args[0]),
+          ],
+        },
+        "nth-root" if args.len() >= 2 => NodeData::Element {
+          tag:        "m:apply".to_string(),
+          attributes: None,
+          children:   vec![
+            NodeData::Element {
+              tag:        "m:root".to_string(),
+              attributes: None,
+              children:   vec![],
+            },
+            NodeData::Element {
+              tag:        "m:degree".to_string(),
+              attributes: None,
+              children:   vec![cmml(doc, &args[1])],
+            },
+            cmml(doc, &args[0]),
+          ],
+        },
         "set" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
-          NodeData::Element { tag: "m:set".to_string(), attributes: None, children: items }
-        }
+          NodeData::Element {
+            tag:        "m:set".to_string(),
+            attributes: None,
+            children:   items,
+          }
+        },
         "list" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
-          NodeData::Element { tag: "m:list".to_string(), attributes: None, children: items }
-        }
+          NodeData::Element {
+            tag:        "m:list".to_string(),
+            attributes: None,
+            children:   items,
+          }
+        },
         "vector" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
-          NodeData::Element { tag: "m:vector".to_string(), attributes: None, children: items }
-        }
+          NodeData::Element {
+            tag:        "m:vector".to_string(),
+            attributes: None,
+            children:   items,
+          }
+        },
         // Interval types
         "open-interval" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
-            tag: "m:interval".to_string(),
+            tag:        "m:interval".to_string(),
             attributes: Some(HashMap::from([("closure".to_string(), "open".to_string())])),
-            children: items,
+            children:   items,
           }
-        }
+        },
         "closed-interval" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
-            tag: "m:interval".to_string(),
-            attributes: Some(HashMap::from([("closure".to_string(), "closed".to_string())])),
-            children: items,
+            tag:        "m:interval".to_string(),
+            attributes: Some(HashMap::from([(
+              "closure".to_string(),
+              "closed".to_string(),
+            )])),
+            children:   items,
           }
-        }
+        },
         "closed-open-interval" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
-            tag: "m:interval".to_string(),
-            attributes: Some(HashMap::from([("closure".to_string(), "closed-open".to_string())])),
-            children: items,
+            tag:        "m:interval".to_string(),
+            attributes: Some(HashMap::from([(
+              "closure".to_string(),
+              "closed-open".to_string(),
+            )])),
+            children:   items,
           }
-        }
+        },
         "open-closed-interval" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
-            tag: "m:interval".to_string(),
-            attributes: Some(HashMap::from([("closure".to_string(), "open-closed".to_string())])),
-            children: items,
+            tag:        "m:interval".to_string(),
+            attributes: Some(HashMap::from([(
+              "closure".to_string(),
+              "open-closed".to_string(),
+            )])),
+            children:   items,
           }
-        }
+        },
         // Complement operations: reverse argument order
         "contains" | "superset-of" | "superset-of-or-equals" | "superset-of-and-not-equals" => {
           let cmml_op = match meaning.as_str() {
@@ -319,77 +340,116 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
           };
           let mut reversed_args: Vec<NodeData> = args.iter().rev().map(|a| cmml(doc, a)).collect();
           reversed_args.insert(0, NodeData::Element {
-            tag: cmml_op.to_string(), attributes: None, children: vec![],
+            tag:        cmml_op.to_string(),
+            attributes: None,
+            children:   vec![],
           });
-          NodeData::Element { tag: "m:apply".to_string(), attributes: None, children: reversed_args }
-        }
+          NodeData::Element {
+            tag:        "m:apply".to_string(),
+            attributes: None,
+            children:   reversed_args,
+          }
+        },
         // Not-contains: not(in(reversed))
         "not-contains" => {
           let mut reversed_args: Vec<NodeData> = args.iter().rev().map(|a| cmml(doc, a)).collect();
           reversed_args.insert(0, NodeData::Element {
-            tag: "m:notin".to_string(), attributes: None, children: vec![],
+            tag:        "m:notin".to_string(),
+            attributes: None,
+            children:   vec![],
           });
-          NodeData::Element { tag: "m:apply".to_string(), attributes: None, children: reversed_args }
-        }
+          NodeData::Element {
+            tag:        "m:apply".to_string(),
+            attributes: None,
+            children:   reversed_args,
+          }
+        },
         // Not-approximately-equals: not(approx(args))
         "not-approximately-equals" => {
           let inner_args: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           let mut apply_children = vec![NodeData::Element {
-            tag: "m:approx".to_string(), attributes: None, children: vec![],
+            tag:        "m:approx".to_string(),
+            attributes: None,
+            children:   vec![],
           }];
           apply_children.extend(inner_args);
           NodeData::Element {
-            tag: "m:apply".to_string(), attributes: None,
-            children: vec![
-              NodeData::Element { tag: "m:not".to_string(), attributes: None, children: vec![] },
-              NodeData::Element { tag: "m:apply".to_string(), attributes: None, children: apply_children },
+            tag:        "m:apply".to_string(),
+            attributes: None,
+            children:   vec![
+              NodeData::Element {
+                tag:        "m:not".to_string(),
+                attributes: None,
+                children:   vec![],
+              },
+              NodeData::Element {
+                tag:        "m:apply".to_string(),
+                attributes: None,
+                children:   apply_children,
+              },
             ],
           }
-        }
+        },
         // Hack for definite integrals with explicit limits
-        "hack-definite-integral" if args.len() >= 4 => {
-          NodeData::Element {
-            tag: "m:apply".to_string(), attributes: None,
-            children: vec![
-              NodeData::Element { tag: "m:int".to_string(), attributes: None, children: vec![] },
-              NodeData::Element { tag: "m:bvar".to_string(), attributes: None,
-                children: vec![cmml(doc, &args[3])] },
-              NodeData::Element { tag: "m:lowlimit".to_string(), attributes: None,
-                children: vec![cmml(doc, &args[0])] },
-              NodeData::Element { tag: "m:uplimit".to_string(), attributes: None,
-                children: vec![cmml(doc, &args[1])] },
-              cmml(doc, &args[2]),
-            ],
-          }
-        }
+        "hack-definite-integral" if args.len() >= 4 => NodeData::Element {
+          tag:        "m:apply".to_string(),
+          attributes: None,
+          children:   vec![
+            NodeData::Element {
+              tag:        "m:int".to_string(),
+              attributes: None,
+              children:   vec![],
+            },
+            NodeData::Element {
+              tag:        "m:bvar".to_string(),
+              attributes: None,
+              children:   vec![cmml(doc, &args[3])],
+            },
+            NodeData::Element {
+              tag:        "m:lowlimit".to_string(),
+              attributes: None,
+              children:   vec![cmml(doc, &args[0])],
+            },
+            NodeData::Element {
+              tag:        "m:uplimit".to_string(),
+              attributes: None,
+              children:   vec![cmml(doc, &args[1])],
+            },
+            cmml(doc, &args[2]),
+          ],
+        },
         // Formulae: sequence of expressions
         "formulae" => {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           let mut children = vec![NodeData::Element {
-            tag: "m:csymbol".to_string(),
+            tag:        "m:csymbol".to_string(),
             attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
-            children: vec![NodeData::Text("formulae-sequence".to_string())],
+            children:   vec![NodeData::Text("formulae-sequence".to_string())],
           }];
           children.extend(items);
-          NodeData::Element { tag: "m:apply".to_string(), attributes: None, children }
-        }
+          NodeData::Element {
+            tag: "m:apply".to_string(),
+            attributes: None,
+            children,
+          }
+        },
         _ => {
           // Generic application: <m:apply> op args... </m:apply>
           let mut apply_children = vec![cmml(doc, op)];
           apply_children.extend(args.iter().map(|a| cmml(doc, a)));
           NodeData::Element {
-            tag: "m:apply".to_string(),
+            tag:        "m:apply".to_string(),
             attributes: None,
-            children: apply_children,
+            children:   apply_children,
           }
-        }
+        },
       }
-    }
+    },
     "ltx:XMTok" => cmml_leaf(doc, node),
     "ltx:XMHint" => {
       // Hints are ignored in Content MathML
       NodeData::Text(String::new())
-    }
+    },
     "ltx:XMArray" => cmml_array(doc, node),
     "ltx:XMText" => cmml_decorated_symbol(doc, node),
     _ => cmml_decorated_symbol(doc, node),
@@ -407,36 +467,40 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
     // Known meaning → check for dedicated MathML element
     if let Some(element_name) = meaning_to_cmml_element(m) {
       return NodeData::Element {
-        tag: element_name.to_string(),
+        tag:        element_name.to_string(),
         attributes: None,
-        children: vec![],
+        children:   vec![],
       };
     }
 
     // Has omcd → csymbol with cd
     if let Some(cd) = node.get_attribute("omcd") {
       return NodeData::Element {
-        tag: "m:csymbol".to_string(),
+        tag:        "m:csymbol".to_string(),
         attributes: Some(HashMap::from([("cd".to_string(), cd)])),
-        children: vec![NodeData::Text(m.clone())],
+        children:   vec![NodeData::Text(m.clone())],
       };
     }
 
     // Number with meaning
     if role == "NUMBER" {
-      let cn_type = if m.parse::<i64>().is_ok() { "integer" } else { "float" };
+      let cn_type = if m.parse::<i64>().is_ok() {
+        "integer"
+      } else {
+        "float"
+      };
       return NodeData::Element {
-        tag: "m:cn".to_string(),
+        tag:        "m:cn".to_string(),
         attributes: Some(HashMap::from([("type".to_string(), cn_type.to_string())])),
-        children: vec![NodeData::Text(m.clone())],
+        children:   vec![NodeData::Text(m.clone())],
       };
     }
 
     // Default: csymbol with latexml cd
     return NodeData::Element {
-      tag: "m:csymbol".to_string(),
+      tag:        "m:csymbol".to_string(),
       attributes: Some(HashMap::from([("cd".to_string(), "latexml".to_string())])),
-      children: vec![NodeData::Text(m.clone())],
+      children:   vec![NodeData::Text(m.clone())],
     };
   }
 
@@ -444,36 +508,42 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
   let content = node.get_content();
   match role.as_str() {
     "NUMBER" => {
-      let cn_type = if content.parse::<i64>().is_ok() { "integer" } else { "float" };
+      let cn_type = if content.parse::<i64>().is_ok() {
+        "integer"
+      } else {
+        "float"
+      };
       NodeData::Element {
-        tag: "m:cn".to_string(),
+        tag:        "m:cn".to_string(),
         attributes: Some(HashMap::from([("type".to_string(), cn_type.to_string())])),
-        children: vec![NodeData::Text(content)],
+        children:   vec![NodeData::Text(content)],
       }
-    }
+    },
     "SUPERSCRIPTOP" => NodeData::Element {
-      tag: "m:csymbol".to_string(),
+      tag:        "m:csymbol".to_string(),
       attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
-      children: vec![NodeData::Text("superscript".to_string())],
+      children:   vec![NodeData::Text("superscript".to_string())],
     },
     "SUBSCRIPTOP" => NodeData::Element {
-      tag: "m:csymbol".to_string(),
+      tag:        "m:csymbol".to_string(),
       attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
-      children: vec![NodeData::Text("subscript".to_string())],
+      children:   vec![NodeData::Text("subscript".to_string())],
     },
     _ => {
       // Variable / identifier
       let name = if content.is_empty() {
-        node.get_attribute("name").unwrap_or_else(|| "?".to_string())
+        node
+          .get_attribute("name")
+          .unwrap_or_else(|| "?".to_string())
       } else {
         content
       };
       NodeData::Element {
-        tag: "m:ci".to_string(),
+        tag:        "m:ci".to_string(),
         attributes: None,
-        children: vec![NodeData::Text(name)],
+        children:   vec![NodeData::Text(name)],
       }
-    }
+    },
   }
 }
 
@@ -481,15 +551,15 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
 fn cmml_token_by_meaning(meaning: &str, _node: &Node) -> NodeData {
   if let Some(element_name) = meaning_to_cmml_element(meaning) {
     NodeData::Element {
-      tag: element_name.to_string(),
+      tag:        element_name.to_string(),
       attributes: None,
-      children: vec![],
+      children:   vec![],
     }
   } else {
     NodeData::Element {
-      tag: "m:csymbol".to_string(),
+      tag:        "m:csymbol".to_string(),
       attributes: Some(HashMap::from([("cd".to_string(), "latexml".to_string())])),
-      children: vec![NodeData::Text(meaning.to_string())],
+      children:   vec![NodeData::Text(meaning.to_string())],
     }
   }
 }
@@ -500,9 +570,9 @@ fn cmml_token_by_meaning(meaning: &str, _node: &Node) -> NodeData {
 fn cmml_decorated_symbol(_doc: &PostDocument, node: &Node) -> NodeData {
   let content = node.get_content();
   NodeData::Element {
-    tag: "m:ci".to_string(),
+    tag:        "m:ci".to_string(),
     attributes: None,
-    children: vec![NodeData::Text(content)],
+    children:   vec![NodeData::Text(content)],
   }
 }
 
@@ -528,25 +598,25 @@ fn cmml_array(doc: &PostDocument, node: &Node) -> NodeData {
         otherwises.push(cmml_contents(doc, &items[0]));
       } else {
         pieces.push(NodeData::Element {
-          tag: "m:piece".to_string(),
+          tag:        "m:piece".to_string(),
           attributes: None,
-          children: vec![cmml_contents(doc, &items[0]), cmml_contents(doc, &items[1])],
+          children:   vec![cmml_contents(doc, &items[0]), cmml_contents(doc, &items[1])],
         });
       }
     }
 
     if let Some(ow) = otherwises.into_iter().next() {
       pieces.push(NodeData::Element {
-        tag: "m:otherwise".to_string(),
+        tag:        "m:otherwise".to_string(),
         attributes: None,
-        children: vec![ow],
+        children:   vec![ow],
       });
     }
 
     NodeData::Element {
-      tag: "m:piecewise".to_string(),
+      tag:        "m:piecewise".to_string(),
       attributes: None,
-      children: pieces,
+      children:   pieces,
     }
   } else {
     // Generic array → matrix-like structure
@@ -557,15 +627,15 @@ fn cmml_array(doc: &PostDocument, node: &Node) -> NodeData {
         .map(|cell| cmml_contents(doc, cell))
         .collect();
       rows.push(NodeData::Element {
-        tag: "m:matrixrow".to_string(),
+        tag:        "m:matrixrow".to_string(),
         attributes: None,
-        children: cells,
+        children:   cells,
       });
     }
     NodeData::Element {
-      tag: "m:matrix".to_string(),
+      tag:        "m:matrix".to_string(),
       attributes: None,
-      children: rows,
+      children:   rows,
     }
   }
 }
@@ -575,18 +645,18 @@ fn cmml_array(doc: &PostDocument, node: &Node) -> NodeData {
 /// Port of `cmml_unparsed`.
 fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
   let mut results = vec![NodeData::Element {
-    tag: "m:csymbol".to_string(),
+    tag:        "m:csymbol".to_string(),
     attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
-    children: vec![NodeData::Text("fragments".to_string())],
+    children:   vec![NodeData::Text("fragments".to_string())],
   }];
 
   for node in nodes {
     let tag = doc.get_qname(node).unwrap_or_default();
     if tag == "ltx:XMTok" && node.get_attribute("role").as_deref() == Some("UNKNOWN") {
       results.push(NodeData::Element {
-        tag: "m:csymbol".to_string(),
+        tag:        "m:csymbol".to_string(),
         attributes: Some(HashMap::from([("cd".to_string(), "unknown".to_string())])),
-        children: vec![NodeData::Text(node.get_content())],
+        children:   vec![NodeData::Text(node.get_content())],
       });
     } else {
       results.push(cmml(doc, node));
@@ -594,21 +664,21 @@ fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
   }
 
   NodeData::Element {
-    tag: "m:cerror".to_string(),
+    tag:        "m:cerror".to_string(),
     attributes: None,
-    children: results,
+    children:   results,
   }
 }
 
 /// Create a Content MathML error element.
 fn cmml_error(symbol: &str) -> NodeData {
   NodeData::Element {
-    tag: "m:cerror".to_string(),
+    tag:        "m:cerror".to_string(),
     attributes: None,
-    children: vec![NodeData::Element {
-      tag: "m:csymbol".to_string(),
+    children:   vec![NodeData::Element {
+      tag:        "m:csymbol".to_string(),
       attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
-      children: vec![NodeData::Text(symbol.to_string())],
+      children:   vec![NodeData::Text(symbol.to_string())],
     }],
   }
 }

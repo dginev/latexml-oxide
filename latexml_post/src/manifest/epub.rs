@@ -10,7 +10,6 @@
 use std::fs;
 use std::path::Path;
 
-
 /// EPUB 3.2 container.xml content.
 const CONTAINER_XML: &str = r#"<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -46,14 +45,14 @@ fn core_media_type(ext: &str) -> &'static str {
 ///
 /// Port of `LaTeXML::Post::Manifest::Epub`.
 pub struct EpubManifest {
-  site_directory: String,
+  site_directory:    String,
   unique_identifier: Option<String>,
 }
 
 impl EpubManifest {
   pub fn new(site_directory: &str) -> Self {
     EpubManifest {
-      site_directory: site_directory.to_string(),
+      site_directory:    site_directory.to_string(),
       unique_identifier: None,
     }
   }
@@ -61,7 +60,12 @@ impl EpubManifest {
   /// Initialize the EPUB directory structure.
   ///
   /// Port of `Epub::initialize`.
-  pub fn initialize(&mut self, _title: &str, _authors: &[String], _language: &str) -> Result<(), String> {
+  pub fn initialize(
+    &mut self,
+    _title: &str,
+    _authors: &[String],
+    _language: &str,
+  ) -> Result<(), String> {
     let dir = &self.site_directory;
 
     // 1. Create mimetype file
@@ -71,15 +75,13 @@ impl EpubManifest {
 
     // 2. Create META-INF/container.xml
     let meta_inf = format!("{}/META-INF", dir);
-    fs::create_dir_all(&meta_inf)
-      .map_err(|e| format!("Couldn't create META-INF: {}", e))?;
+    fs::create_dir_all(&meta_inf).map_err(|e| format!("Couldn't create META-INF: {}", e))?;
     fs::write(format!("{}/container.xml", meta_inf), CONTAINER_XML)
       .map_err(|e| format!("Couldn't write container.xml: {}", e))?;
 
     // 3. Create OPS directory
     let ops_dir = format!("{}/OPS", dir);
-    fs::create_dir_all(&ops_dir)
-      .map_err(|e| format!("Couldn't create OPS: {}", e))?;
+    fs::create_dir_all(&ops_dir).map_err(|e| format!("Couldn't create OPS: {}", e))?;
 
     // Generate a UUID for the publication
     self.unique_identifier = Some(format!("urn:uuid:{}", generate_uuid()));
@@ -90,7 +92,13 @@ impl EpubManifest {
   /// Add a document to the EPUB spine.
   ///
   /// Port of `Epub::process` per-document loop.
-  pub fn add_document(&self, destination: &str, has_math: bool, has_svg: bool, has_nav: bool) -> SpineEntry {
+  pub fn add_document(
+    &self,
+    destination: &str,
+    has_math: bool,
+    has_svg: bool,
+    has_nav: bool,
+  ) -> SpineEntry {
     let path = Path::new(destination);
     let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("doc");
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("xhtml");
@@ -108,10 +116,14 @@ impl EpubManifest {
     }
 
     SpineEntry {
-      id: item_id,
-      href: format!("{}.{}", name, ext),
+      id:         item_id,
+      href:       format!("{}.{}", name, ext),
       media_type: "application/xhtml+xml".to_string(),
-      properties: if properties.is_empty() { None } else { Some(properties.join(" ")) },
+      properties: if properties.is_empty() {
+        None
+      } else {
+        Some(properties.join(" "))
+      },
     }
   }
 
@@ -126,7 +138,10 @@ impl EpubManifest {
     spine: &[SpineEntry],
     resources: &[ResourceEntry],
   ) -> String {
-    let uid = self.unique_identifier.as_deref().unwrap_or("urn:uuid:00000000-0000-0000-0000-000000000000");
+    let uid = self
+      .unique_identifier
+      .as_deref()
+      .unwrap_or("urn:uuid:00000000-0000-0000-0000-000000000000");
     let now = chrono_like_now();
 
     let mut xml = String::new();
@@ -137,11 +152,20 @@ impl EpubManifest {
     xml.push_str("  <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
     xml.push_str(&format!("    <dc:title>{}</dc:title>\n", escape_xml(title)));
     for author in authors {
-      xml.push_str(&format!("    <dc:creator>{}</dc:creator>\n", escape_xml(author)));
+      xml.push_str(&format!(
+        "    <dc:creator>{}</dc:creator>\n",
+        escape_xml(author)
+      ));
     }
     xml.push_str(&format!("    <dc:language>{}</dc:language>\n", language));
-    xml.push_str(&format!("    <meta property=\"dcterms:modified\">{}</meta>\n", now));
-    xml.push_str(&format!("    <dc:identifier id=\"pub-id\">{}</dc:identifier>\n", uid));
+    xml.push_str(&format!(
+      "    <meta property=\"dcterms:modified\">{}</meta>\n",
+      now
+    ));
+    xml.push_str(&format!(
+      "    <dc:identifier id=\"pub-id\">{}</dc:identifier>\n",
+      uid
+    ));
     xml.push_str("  </metadata>\n");
 
     // Manifest
@@ -179,8 +203,8 @@ impl EpubManifest {
 /// An entry in the EPUB spine (content document).
 #[derive(Debug)]
 pub struct SpineEntry {
-  pub id: String,
-  pub href: String,
+  pub id:         String,
+  pub href:       String,
   pub media_type: String,
   pub properties: Option<String>,
 }
@@ -188,8 +212,8 @@ pub struct SpineEntry {
 /// A resource entry (CSS, images, fonts).
 #[derive(Debug)]
 pub struct ResourceEntry {
-  pub id: String,
-  pub href: String,
+  pub id:         String,
+  pub href:       String,
   pub media_type: String,
 }
 
@@ -220,17 +244,31 @@ fn generate_uuid() -> String {
   let mut state = seed as u64;
   let mut bytes = [0u8; 16];
   for b in &mut bytes {
-    state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    state = state
+      .wrapping_mul(6364136223846793005)
+      .wrapping_add(1442695040888963407);
     *b = (state >> 33) as u8;
   }
   bytes[6] = (bytes[6] & 0x0F) | 0x40; // version 4
   bytes[8] = (bytes[8] & 0x3F) | 0x80; // variant 1
   format!(
     "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-    bytes[0], bytes[1], bytes[2], bytes[3],
-    bytes[4], bytes[5], bytes[6], bytes[7],
-    bytes[8], bytes[9], bytes[10], bytes[11],
-    bytes[12], bytes[13], bytes[14], bytes[15]
+    bytes[0],
+    bytes[1],
+    bytes[2],
+    bytes[3],
+    bytes[4],
+    bytes[5],
+    bytes[6],
+    bytes[7],
+    bytes[8],
+    bytes[9],
+    bytes[10],
+    bytes[11],
+    bytes[12],
+    bytes[13],
+    bytes[14],
+    bytes[15]
   )
 }
 

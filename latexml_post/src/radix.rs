@@ -7,17 +7,15 @@ const LOWER: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
 const UPPER: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 const GREEK_LOWER: &[char] = &[
-  '\u{03B1}', '\u{03B2}', '\u{03B3}', '\u{03B4}', '\u{03B5}', '\u{03B6}',
-  '\u{03B7}', '\u{03B8}', '\u{03B9}', '\u{03BA}', '\u{03BB}', '\u{03BC}',
-  '\u{03BD}', '\u{03BE}', '\u{03BF}', '\u{03C0}', '\u{03C1}', '\u{03C3}',
-  '\u{03C4}', '\u{03C5}', '\u{03C6}', '\u{03C7}', '\u{03C8}', '\u{03C9}',
+  '\u{03B1}', '\u{03B2}', '\u{03B3}', '\u{03B4}', '\u{03B5}', '\u{03B6}', '\u{03B7}', '\u{03B8}',
+  '\u{03B9}', '\u{03BA}', '\u{03BB}', '\u{03BC}', '\u{03BD}', '\u{03BE}', '\u{03BF}', '\u{03C0}',
+  '\u{03C1}', '\u{03C3}', '\u{03C4}', '\u{03C5}', '\u{03C6}', '\u{03C7}', '\u{03C8}', '\u{03C9}',
 ];
 
 const GREEK_UPPER: &[char] = &[
-  '\u{0391}', '\u{0392}', '\u{0393}', '\u{0394}', '\u{0395}', '\u{0396}',
-  '\u{0397}', '\u{0398}', '\u{0399}', '\u{039A}', '\u{039B}', '\u{039C}',
-  '\u{039D}', '\u{039E}', '\u{039F}', '\u{03A0}', '\u{03A1}', '\u{03A3}',
-  '\u{03A4}', '\u{03A5}', '\u{03A6}', '\u{03A7}', '\u{03A8}', '\u{03A9}',
+  '\u{0391}', '\u{0392}', '\u{0393}', '\u{0394}', '\u{0395}', '\u{0396}', '\u{0397}', '\u{0398}',
+  '\u{0399}', '\u{039A}', '\u{039B}', '\u{039C}', '\u{039D}', '\u{039E}', '\u{039F}', '\u{03A0}',
+  '\u{03A1}', '\u{03A3}', '\u{03A4}', '\u{03A5}', '\u{03A6}', '\u{03A7}', '\u{03A8}', '\u{03A9}',
 ];
 
 /// Generic radix formatting: convert a 1-based number into a string
@@ -48,24 +46,16 @@ fn radix_format_bytes(mut number: u32, symbols: &[u8]) -> String {
 }
 
 /// Convert number to lowercase latin letters: 1→a, 2→b, ..., 26→z, 27→aa, ...
-pub fn radix_alpha(n: u32) -> String {
-  radix_format_bytes(n, LOWER)
-}
+pub fn radix_alpha(n: u32) -> String { radix_format_bytes(n, LOWER) }
 
 /// Convert number to uppercase latin letters: 1→A, 2→B, ..., 26→Z, 27→AA, ...
-pub fn radix_alpha_upper(n: u32) -> String {
-  radix_format_bytes(n, UPPER)
-}
+pub fn radix_alpha_upper(n: u32) -> String { radix_format_bytes(n, UPPER) }
 
 /// Convert number to lowercase greek letters.
-pub fn radix_greek(n: u32) -> String {
-  radix_format_chars(n, GREEK_LOWER)
-}
+pub fn radix_greek(n: u32) -> String { radix_format_chars(n, GREEK_LOWER) }
 
 /// Convert number to uppercase greek letters.
-pub fn radix_greek_upper(n: u32) -> String {
-  radix_format_chars(n, GREEK_UPPER)
-}
+pub fn radix_greek_upper(n: u32) -> String { radix_format_chars(n, GREEK_UPPER) }
 
 /// Convert number to lowercase roman numerals.
 pub fn radix_roman(mut n: u32) -> String {
@@ -111,9 +101,7 @@ pub fn radix_roman(mut n: u32) -> String {
 }
 
 /// Convert number to uppercase roman numerals.
-pub fn radix_roman_upper(n: u32) -> String {
-  radix_roman(n).to_uppercase()
-}
+pub fn radix_roman_upper(n: u32) -> String { radix_roman(n).to_uppercase() }
 
 #[cfg(test)]
 mod tests {
@@ -157,8 +145,11 @@ mod tests {
   fn test_radix_alpha_upper_vs_lower_case() {
     // For all n > 0, upper version is lower version uppercased.
     for n in 1..100 {
-      assert_eq!(radix_alpha_upper(n), radix_alpha(n).to_uppercase(),
-        "divergence at n={n}");
+      assert_eq!(
+        radix_alpha_upper(n),
+        radix_alpha(n).to_uppercase(),
+        "divergence at n={n}"
+      );
     }
   }
 

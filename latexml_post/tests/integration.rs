@@ -3,11 +3,11 @@
 //! These tests exercise the full post-processing chain on realistic
 //! LaTeXML XML documents.
 
+use latexml_post::Post;
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::object_db::ObjectDB;
 use latexml_post::processor::Processor;
 use latexml_post::scan::Scan;
-use latexml_post::Post;
 
 const SIMPLE_DOC: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <?latexml class="article" options="onecolumn"?>
@@ -60,7 +60,10 @@ fn test_scan_simple_document() {
   assert_eq!(docs.len(), 1);
 
   // Verify the ObjectDB was populated
-  assert!(scanner.db.lookup("SITE_ROOT").is_some(), "SITE_ROOT should be registered");
+  assert!(
+    scanner.db.lookup("SITE_ROOT").is_some(),
+    "SITE_ROOT should be registered"
+  );
 }
 
 #[test]
@@ -125,16 +128,25 @@ fn test_processing_instructions() {
   // which requires the PI to be a child of the document or root element.
   // If PIs are outside the root element, XPath from the document root finds them.
   // Test that the search paths include "." as fallback (always added).
-  assert!(doc.searchpaths.contains(&".".to_string()), "Searchpaths should include '.'");
+  assert!(
+    doc.searchpaths.contains(&".".to_string()),
+    "Searchpaths should include '.'"
+  );
 }
 
 #[test]
 fn test_namespace_registration() {
   let mut doc = PostDocument::new_from_string(SIMPLE_DOC, PostDocumentOptions::default()).unwrap();
-  assert!(doc.namespaces.contains_key("ltx"), "ltx namespace should be registered");
+  assert!(
+    doc.namespaces.contains_key("ltx"),
+    "ltx namespace should be registered"
+  );
 
   doc.add_namespace("m", "http://www.w3.org/1998/Math/MathML");
-  assert!(doc.namespaces.contains_key("m"), "m namespace should be registered after add");
+  assert!(
+    doc.namespaces.contains_key("m"),
+    "m namespace should be registered after add"
+  );
 }
 
 /// Regression test for the vector-SVG graphics path (opt-in via
@@ -144,11 +156,10 @@ fn test_namespace_registration() {
 /// "inkscape preserves vectors better than ImageMagick" example.
 ///
 /// Test behaviour:
-/// - If `inkscape` is missing from PATH, the test exits silently. This
-///   keeps the suite green on minimal runners; CI installs inkscape so
-///   the branch is covered on GH Actions.
-/// - If `inkscape` is present, exercise the Graphics processor with
-///   `svg_threshold_kb = 200` and assert the output is a real SVG file.
+/// - If `inkscape` is missing from PATH, the test exits silently. This keeps the suite green on
+///   minimal runners; CI installs inkscape so the branch is covered on GH Actions.
+/// - If `inkscape` is present, exercise the Graphics processor with `svg_threshold_kb = 200` and
+///   assert the output is a real SVG file.
 #[test]
 fn test_vector_svg_graphics_path() {
   if std::process::Command::new("inkscape")
@@ -162,7 +173,10 @@ fn test_vector_svg_graphics_path() {
     return;
   }
 
-  let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/cifar10_vector.pdf");
+  let fixture = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/cifar10_vector.pdf"
+  );
   assert!(
     std::path::Path::new(fixture).exists(),
     "fixture missing: {}",
@@ -174,8 +188,7 @@ fn test_vector_svg_graphics_path() {
   let src_copy = work.join("cifar10_vector.pdf");
   std::fs::copy(fixture, &src_copy).expect("copy fixture");
 
-  let mut graphics = latexml_post::graphics::Graphics::new(None, true)
-    .with_svg_threshold_kb(200);
+  let mut graphics = latexml_post::graphics::Graphics::new(None, true).with_svg_threshold_kb(200);
 
   let xml = format!(
     r#"<?xml version="1.0"?>
@@ -241,7 +254,10 @@ fn test_vector_svg_pathological_convert_case() {
     return;
   }
 
-  let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/pathological_vector.pdf");
+  let fixture = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/pathological_vector.pdf"
+  );
   assert!(
     std::path::Path::new(fixture).exists(),
     "fixture missing: {}",
@@ -253,8 +269,7 @@ fn test_vector_svg_pathological_convert_case() {
   let src_copy = work.join("pathological_vector.pdf");
   std::fs::copy(fixture, &src_copy).expect("copy fixture");
 
-  let mut graphics = latexml_post::graphics::Graphics::new(None, true)
-    .with_svg_threshold_kb(200);
+  let mut graphics = latexml_post::graphics::Graphics::new(None, true).with_svg_threshold_kb(200);
 
   let xml = format!(
     r#"<?xml version="1.0"?>

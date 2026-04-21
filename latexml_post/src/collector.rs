@@ -17,21 +17,21 @@ use crate::processor::{ProcessResult, Processor};
 /// Port of `LaTeXML::Post::Collector`.
 /// Subclasses (MakeIndex, MakeBibliography) implement the actual `process` method.
 pub struct Collector {
-  name: String,
+  name:               String,
   resource_directory: Option<String>,
-  resource_prefix: Option<String>,
+  resource_prefix:    Option<String>,
   /// Optional scanner to rescan generated content.
   /// In Perl: `$$self{scanner}->process($doc, $$self{scanner}->toProcess($doc))`
-  has_scanner: bool,
+  has_scanner:        bool,
 }
 
 impl Collector {
   pub fn new(name: &str) -> Self {
     Collector {
-      name: name.to_string(),
+      name:               name.to_string(),
       resource_directory: None,
-      resource_prefix: None,
-      has_scanner: false,
+      resource_prefix:    None,
+      has_scanner:        false,
     }
   }
 
@@ -63,52 +63,65 @@ pub fn make_sub_collection_documents(
     return vec![];
   }
 
-  let _root_tag = doc.get_qname(root).unwrap_or_else(|| "ltx:index".to_string());
+  let _root_tag = doc
+    .get_qname(root)
+    .unwrap_or_else(|| "ltx:index".to_string());
   let root_id = root.get_attribute("xml:id").unwrap_or_default();
 
   // Build (id, initial) pairs for each sub-collection
-  let ids: Vec<(String, &str)> = initials.iter().enumerate().map(|(i, init)| {
-    if i == 0 {
-      (root_id.clone(), init.as_str())
-    } else {
-      (format!("{}.{}", root_id, init), init.as_str())
-    }
-  }).collect();
+  let ids: Vec<(String, &str)> = initials
+    .iter()
+    .enumerate()
+    .map(|(i, init)| {
+      if i == 0 {
+        (root_id.clone(), init.as_str())
+      } else {
+        (format!("{}.{}", root_id, init), init.as_str())
+      }
+    })
+    .collect();
 
   // For the first sub-collection, fill the main document's root element
   if let Some(first_init) = initials.first() {
     if let Some(data) = collections.get(*first_init) {
       // Build TOC linking all sub-collections
-      let toc_entries: Vec<NodeData> = ids.iter().enumerate().map(|(i, (id, init))| {
-        if i == 0 {
-          NodeData::Element {
-            tag: "ltx:tocentry".to_string(),
-            attributes: None,
-            children: vec![NodeData::Text(init.to_string())],
+      let toc_entries: Vec<NodeData> = ids
+        .iter()
+        .enumerate()
+        .map(|(i, (id, init))| {
+          if i == 0 {
+            NodeData::Element {
+              tag:        "ltx:tocentry".to_string(),
+              attributes: None,
+              children:   vec![NodeData::Text(init.to_string())],
+            }
+          } else {
+            NodeData::Element {
+              tag:        "ltx:tocentry".to_string(),
+              attributes: None,
+              children:   vec![NodeData::Element {
+                tag:        "ltx:ref".to_string(),
+                attributes: Some(HashMap::from([
+                  ("idref".to_string(), id.clone()),
+                  ("show".to_string(), "refnum".to_string()),
+                ])),
+                children:   vec![NodeData::Text(init.to_string())],
+              }],
+            }
           }
-        } else {
-          NodeData::Element {
-            tag: "ltx:tocentry".to_string(),
-            attributes: None,
-            children: vec![NodeData::Element {
-              tag: "ltx:ref".to_string(),
-              attributes: Some(HashMap::from([
-                ("idref".to_string(), id.clone()),
-                ("show".to_string(), "refnum".to_string()),
-              ])),
-              children: vec![NodeData::Text(init.to_string())],
-            }],
-          }
-        }
-      }).collect();
+        })
+        .collect();
 
       let toc = NodeData::Element {
-        tag: "ltx:TOC".to_string(),
-        attributes: Some(HashMap::from([("format".to_string(), "veryshort".to_string())])),
-        children: vec![NodeData::Element {
-          tag: "ltx:toclist".to_string(),
+        tag:        "ltx:TOC".to_string(),
+        attributes: Some(HashMap::from([(
+          "format".to_string(),
+          "veryshort".to_string(),
+        )])),
+        children:   vec![NodeData::Element {
+          tag:        "ltx:toclist".to_string(),
           attributes: None,
-          children: toc_entries,
+          children:   toc_entries,
         }],
       };
 
@@ -156,9 +169,7 @@ pub fn get_page_name(doc: &PostDocument, initial: &str) -> String {
 }
 
 impl Processor for Collector {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     log::warn!("Abstract Collector::process called");
@@ -235,14 +246,8 @@ mod tests {
     let mut doc = doc_with_dest(None);
     let root = doc.get_document_element().expect("root");
     let mut collections: HashMap<String, Vec<NodeData>> = HashMap::new();
-    collections.insert(
-      "A".to_string(),
-      vec![NodeData::Text("entry-a".to_string())],
-    );
-    collections.insert(
-      "B".to_string(),
-      vec![NodeData::Text("entry-b".to_string())],
-    );
+    collections.insert("A".to_string(), vec![NodeData::Text("entry-a".to_string())]);
+    collections.insert("B".to_string(), vec![NodeData::Text("entry-b".to_string())]);
     let result = make_sub_collection_documents(&mut doc, &root, &collections);
     assert!(result.is_empty());
   }

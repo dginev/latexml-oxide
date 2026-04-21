@@ -16,28 +16,28 @@ use crate::processor::{ProcessResult, Processor};
 #[derive(Debug, Clone)]
 pub struct TypeProperties {
   pub destination_type: Option<String>,
-  pub transparent: bool,
-  pub prescale: bool,
-  pub ncolors: Option<String>,
-  pub quality: Option<u32>,
-  pub unit: String,
-  pub raster: Option<bool>,
-  pub autocrop: bool,
-  pub desirability: u32,
+  pub transparent:      bool,
+  pub prescale:         bool,
+  pub ncolors:          Option<String>,
+  pub quality:          Option<u32>,
+  pub unit:             String,
+  pub raster:           Option<bool>,
+  pub autocrop:         bool,
+  pub desirability:     u32,
 }
 
 impl Default for TypeProperties {
   fn default() -> Self {
     TypeProperties {
       destination_type: None,
-      transparent: false,
-      prescale: false,
-      ncolors: None,
-      quality: None,
-      unit: "pixel".to_string(),
-      raster: None,
-      autocrop: false,
-      desirability: 0,
+      transparent:      false,
+      prescale:         false,
+      ncolors:          None,
+      quality:          None,
+      unit:             "pixel".to_string(),
+      raster:           None,
+      autocrop:         false,
+      desirability:     0,
     }
   }
 }
@@ -46,14 +46,14 @@ impl Default for TypeProperties {
 ///
 /// Port of `LaTeXML::Post::Graphics`.
 pub struct Graphics {
-  name: String,
-  dpi: Option<u32>,
-  magnify: f64,
-  zoomout: f64,
-  trivial_scaling: bool,
-  graphics_types: Vec<String>,
-  type_properties: HashMap<String, TypeProperties>,
-  background: String,
+  name:             String,
+  dpi:              Option<u32>,
+  magnify:          f64,
+  zoomout:          f64,
+  trivial_scaling:  bool,
+  graphics_types:   Vec<String>,
+  type_properties:  HashMap<String, TypeProperties>,
+  background:       String,
   /// Opt-in vector-SVG path for PDF graphics. When > 0, PDFs under this
   /// many KB are first attempted via `inkscape`; fall back to ImageMagick
   /// `convert` on failure or timeout. 0 disables the path entirely.
@@ -67,59 +67,44 @@ impl Graphics {
 
     // Default type properties matching Perl
     for ext in &["ai", "pdf", "ps", "eps"] {
-      type_properties.insert(
-        ext.to_string(),
-        TypeProperties {
-          destination_type: Some("png".to_string()),
-          transparent: true,
-          prescale: true,
-          ncolors: Some("400%".to_string()),
-          quality: Some(90),
-          unit: "point".to_string(),
-          ..Default::default()
-        },
-      );
-    }
-    for ext in &["jpg", "jpeg"] {
-      type_properties.insert(
-        ext.to_string(),
-        TypeProperties {
-          destination_type: Some(ext.to_string()),
-          ncolors: Some("400%".to_string()),
-          unit: "pixel".to_string(),
-          ..Default::default()
-        },
-      );
-    }
-    type_properties.insert(
-      "gif".to_string(),
-      TypeProperties {
-        destination_type: Some("gif".to_string()),
-        transparent: true,
-        ncolors: Some("400%".to_string()),
-        unit: "pixel".to_string(),
-        ..Default::default()
-      },
-    );
-    type_properties.insert(
-      "png".to_string(),
-      TypeProperties {
+      type_properties.insert(ext.to_string(), TypeProperties {
         destination_type: Some("png".to_string()),
         transparent: true,
+        prescale: true,
+        ncolors: Some("400%".to_string()),
+        quality: Some(90),
+        unit: "point".to_string(),
+        ..Default::default()
+      });
+    }
+    for ext in &["jpg", "jpeg"] {
+      type_properties.insert(ext.to_string(), TypeProperties {
+        destination_type: Some(ext.to_string()),
         ncolors: Some("400%".to_string()),
         unit: "pixel".to_string(),
         ..Default::default()
-      },
-    );
-    type_properties.insert(
-      "svg".to_string(),
-      TypeProperties {
-        destination_type: Some("svg".to_string()),
-        raster: Some(false),
-        desirability: 11,
-        ..Default::default()
-      },
-    );
+      });
+    }
+    type_properties.insert("gif".to_string(), TypeProperties {
+      destination_type: Some("gif".to_string()),
+      transparent: true,
+      ncolors: Some("400%".to_string()),
+      unit: "pixel".to_string(),
+      ..Default::default()
+    });
+    type_properties.insert("png".to_string(), TypeProperties {
+      destination_type: Some("png".to_string()),
+      transparent: true,
+      ncolors: Some("400%".to_string()),
+      unit: "pixel".to_string(),
+      ..Default::default()
+    });
+    type_properties.insert("svg".to_string(), TypeProperties {
+      destination_type: Some("svg".to_string()),
+      raster: Some(false),
+      desirability: 11,
+      ..Default::default()
+    });
 
     Graphics {
       name: "Graphics".to_string(),
@@ -128,7 +113,16 @@ impl Graphics {
       zoomout: 1.0,
       trivial_scaling,
       graphics_types: vec![
-        "svg", "png", "gif", "jpg", "jpeg", "eps", "ps", "postscript", "ai", "pdf",
+        "svg",
+        "png",
+        "gif",
+        "jpg",
+        "jpeg",
+        "eps",
+        "ps",
+        "postscript",
+        "ai",
+        "pdf",
       ]
       .into_iter()
       .map(String::from)
@@ -175,7 +169,11 @@ impl Graphics {
         } else {
           search_paths.iter().find_map(|sp| {
             let candidate = format!("{}/{}", sp, path);
-            if Path::new(&candidate).exists() { Some(candidate) } else { None }
+            if Path::new(&candidate).exists() {
+              Some(candidate)
+            } else {
+              None
+            }
           })
         };
         if let Some(resolved_path) = resolved {
@@ -313,15 +311,16 @@ impl Graphics {
   /// Checks both direct PI (`<?latexml DPI="100"?>`) and
   /// latexml.sty package options (`<?latexml package="latexml" options="magnify=1.2"?>`).
   fn get_parameter(&self, doc: &PostDocument, param: &str) -> Option<f64> {
-    let direct_re = regex::Regex::new(
-      &format!(r#"^\s*{}\s*=\s*[\"']?([\d.]+)[\"']?\s*$"#, regex::escape(param))
-    ).ok()?;
-    let options_re = regex::Regex::new(
-      r#"package\s*=\s*[\"']latexml[\"'].*options\s*=\s*[\"'](.*?)[\"']"#
-    ).ok()?;
-    let param_in_options_re = regex::Regex::new(
-      &format!(r#"\b{}\s*=\s*([\d.]+)"#, regex::escape(param))
-    ).ok()?;
+    let direct_re = regex::Regex::new(&format!(
+      r#"^\s*{}\s*=\s*[\"']?([\d.]+)[\"']?\s*$"#,
+      regex::escape(param)
+    ))
+    .ok()?;
+    let options_re =
+      regex::Regex::new(r#"package\s*=\s*[\"']latexml[\"'].*options\s*=\s*[\"'](.*?)[\"']"#)
+        .ok()?;
+    let param_in_options_re =
+      regex::Regex::new(&format!(r#"\b{}\s*=\s*([\d.]+)"#, regex::escape(param))).ok()?;
 
     for pi in doc.findnodes(".//processing-instruction('latexml')") {
       let text = pi.get_content();
@@ -350,9 +349,7 @@ impl Graphics {
   /// Port of Perl's `getTransform` + `image_graphicx_trivial`.
   ///
   /// Handles: scale=N, width=Npt, height=Npt, keepaspectratio
-  fn apply_graphicx_transforms(
-    raw_w: u32, raw_h: u32, options: &str, dpi: u32,
-  ) -> (u32, u32) {
+  fn apply_graphicx_transforms(raw_w: u32, raw_h: u32, options: &str, dpi: u32) -> (u32, u32) {
     let dppt = dpi as f64 / 72.27; // dots per point
     let mut w = raw_w as f64;
     let mut h = raw_h as f64;
@@ -369,7 +366,9 @@ impl Graphics {
         let key = key.trim();
         let val = val.trim();
         match key {
-          "scale" => { scale = val.parse::<f64>().ok(); },
+          "scale" => {
+            scale = val.parse::<f64>().ok();
+          },
           "width" => {
             // Parse dimension: "345.0pt" or "345pt" or bare number
             let val = val.trim_end_matches("pt").trim_end_matches("px");
@@ -414,17 +413,11 @@ impl Graphics {
 
   /// Copy a source image to the destination directory, preserving relative paths.
   /// Returns the destination path (relative to dest_dir).
-  fn copy_to_destination(
-    source: &str,
-    source_dir: &str,
-    dest_dir: &str,
-  ) -> Option<String> {
+  fn copy_to_destination(source: &str, source_dir: &str, dest_dir: &str) -> Option<String> {
     // Compute relative path of source from source_dir
     let source_path = Path::new(source);
     let source_base = Path::new(source_dir);
-    let rel_path = source_path
-      .strip_prefix(source_base)
-      .unwrap_or(source_path);
+    let rel_path = source_path.strip_prefix(source_base).unwrap_or(source_path);
 
     // Build absolute destination path
     let abs_dest = PathBuf::from(dest_dir).join(rel_path);
@@ -483,7 +476,8 @@ impl Graphics {
   /// on Fade.pdf-class inputs.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
     let mut cmd = std::process::Command::new("inkscape");
-    cmd.arg("--export-type=svg")
+    cmd
+      .arg("--export-type=svg")
       .arg("--export-plain-svg")
       .arg(format!("--export-filename={}", dest));
     if let Some(p) = page {
@@ -494,11 +488,15 @@ impl Graphics {
     match Self::run_with_timeout(cmd, timeout) {
       Some(status) => status.success() && Path::new(dest).exists(),
       None => {
-        log::warn!("Graphics: inkscape SVG conversion for {} exceeded {} s — killed", source, timeout.as_secs());
+        log::warn!(
+          "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
+          source,
+          timeout.as_secs()
+        );
         // Best-effort cleanup of a partial output.
         let _ = std::fs::remove_file(dest);
         false
-      }
+      },
     }
   }
 
@@ -523,7 +521,8 @@ impl Graphics {
     timeout: std::time::Duration,
   ) -> Option<std::process::ExitStatus> {
     // Redirect stdio so a slow inkscape doesn't block on a full pipe.
-    cmd.stdout(std::process::Stdio::null())
+    cmd
+      .stdout(std::process::Stdio::null())
       .stderr(std::process::Stdio::null());
     let mut child = cmd.spawn().ok()?;
     let start = std::time::Instant::now();
@@ -537,12 +536,12 @@ impl Graphics {
             return None;
           }
           std::thread::sleep(std::time::Duration::from_millis(50));
-        }
+        },
         Err(_) => {
           let _ = child.kill();
           let _ = child.wait();
           return None;
-        }
+        },
       }
     }
   }
@@ -571,7 +570,8 @@ impl Graphics {
     let parse_dim = |s: &str| -> Option<f64> {
       let s = s.trim();
       // Strip trailing unit if present (pt, px, mm, etc.)
-      let numeric_end = s.find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+      let numeric_end = s
+        .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
         .unwrap_or(s.len());
       s[..numeric_end].parse::<f64>().ok()
     };
@@ -597,8 +597,12 @@ impl Graphics {
   /// rasters that inkscape re-renders as absurdly large SVG (empirical
   /// measurement in round-17 — see upstream brucemiller/LaTeXML#902).
   fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
-    if threshold_kb == 0 { return false; }
-    if !source.to_lowercase().ends_with(".pdf") { return false; }
+    if threshold_kb == 0 {
+      return false;
+    }
+    if !source.to_lowercase().ends_with(".pdf") {
+      return false;
+    }
     match std::fs::metadata(source) {
       Ok(md) => md.len() <= (threshold_kb as u64) * 1024,
       Err(_) => false,
@@ -639,9 +643,7 @@ impl Graphics {
 }
 
 impl Processor for Graphics {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:graphics[not(@imagesrc)]")
@@ -662,7 +664,8 @@ impl Processor for Graphics {
 
     let dest_dir = doc.get_destination_directory().unwrap_or(".").to_string();
     // Read DPI/magnify/zoomout from processing instructions (set by latexml.sty)
-    let dpi = self.get_parameter(&doc, "DPI")
+    let dpi = self
+      .get_parameter(&doc, "DPI")
       .map(|v| v as u32)
       .or(self.dpi)
       .unwrap_or(100);
@@ -689,24 +692,37 @@ impl Processor for Graphics {
     // Phase 3 (serial): apply DOM mutations on the main thread in original
     // node order so attribute writes happen on the libxml-owning thread.
     enum Plan {
-      NotFound { idx: usize, graphic: String },
-      Copy { idx: usize, source: String, options: String },
-      Convert { idx: usize, source: String, options: String, page: Option<u32>,
-                rel_dest: String, abs_dest_str: String,
-                /// `Some((rel_svg, abs_svg_str))` when the worker should
-                /// first attempt the inkscape-SVG path and only fall back
-                /// to `convert` on failure. `None` means the classic
-                /// raster-only path.
-                svg_paths: Option<(String, String)> },
+      NotFound {
+        idx:     usize,
+        graphic: String,
+      },
+      Copy {
+        idx:     usize,
+        source:  String,
+        options: String,
+      },
+      Convert {
+        idx:          usize,
+        source:       String,
+        options:      String,
+        page:         Option<u32>,
+        rel_dest:     String,
+        abs_dest_str: String,
+        /// `Some((rel_svg, abs_svg_str))` when the worker should
+        /// first attempt the inkscape-SVG path and only fall back
+        /// to `convert` on failure. `None` means the classic
+        /// raster-only path.
+        svg_paths:    Option<(String, String)>,
+      },
     }
     struct ConvertOutcome {
-      idx: usize,
+      idx:      usize,
       /// Path to write into `imagesrc`; `None` if both convert and copy-fallback failed.
       imagesrc: Option<String>,
       /// Raw (pre-transform) dimensions read from whichever file we ended up with.
       raw_dims: Option<(u32, u32)>,
       /// Options passed to transforms (captured once to avoid a DOM read off-thread).
-      options: String,
+      options:  String,
     }
 
     let mut plans: Vec<Plan> = Vec::with_capacity(n_to_process);
@@ -714,7 +730,9 @@ impl Processor for Graphics {
       let options = node.get_attribute("options").unwrap_or_default();
       let page = Self::parse_page_option(&options);
       let Some(source) = self.find_graphic_file(&doc, node, &search_paths) else {
-        let graphic = node.get_attribute("graphic").unwrap_or_else(|| "none".to_string());
+        let graphic = node
+          .get_attribute("graphic")
+          .unwrap_or_else(|| "none".to_string());
         plans.push(Plan::NotFound { idx, graphic });
         continue;
       };
@@ -763,7 +781,13 @@ impl Processor for Graphics {
           None
         };
         plans.push(Plan::Convert {
-          idx, source, options, page, rel_dest, abs_dest_str, svg_paths,
+          idx,
+          source,
+          options,
+          page,
+          rel_dest,
+          abs_dest_str,
+          svg_paths,
         });
       } else {
         plans.push(Plan::Copy { idx, source, options });
@@ -775,7 +799,10 @@ impl Processor for Graphics {
     // is single-threaded per invocation, so the ceiling is useful CPU
     // parallelism — capped at a reasonable limit to avoid fork/memory
     // storms with many-image papers.
-    let convert_count = plans.iter().filter(|p| matches!(p, Plan::Convert { .. })).count();
+    let convert_count = plans
+      .iter()
+      .filter(|p| matches!(p, Plan::Convert { .. }))
+      .count();
     let worker_cap = std::thread::available_parallelism()
       .map(|n| n.get())
       .unwrap_or(4)
@@ -786,23 +813,36 @@ impl Processor for Graphics {
     let dest_dir_ref = dest_dir.as_str();
     let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
     if convert_count > 0 {
-      use std::sync::atomic::{AtomicUsize, Ordering};
       use std::sync::Mutex;
+      use std::sync::atomic::{AtomicUsize, Ordering};
       let next = AtomicUsize::new(0);
       let out = Mutex::new(Vec::<ConvertOutcome>::with_capacity(convert_count));
       // Collect just the Convert entries into a fresh Vec so worker index
       // access is O(1).
-      let jobs: Vec<&Plan> = plans.iter().filter(|p| matches!(p, Plan::Convert { .. })).collect();
+      let jobs: Vec<&Plan> = plans
+        .iter()
+        .filter(|p| matches!(p, Plan::Convert { .. }))
+        .collect();
       std::thread::scope(|s| {
         for _ in 0..n_workers {
           s.spawn(|| {
             loop {
               let i = next.fetch_add(1, Ordering::Relaxed);
-              if i >= jobs.len() { break; }
+              if i >= jobs.len() {
+                break;
+              }
               let Plan::Convert {
-                idx, source, options, page, rel_dest, abs_dest_str, svg_paths,
+                idx,
+                source,
+                options,
+                page,
+                rel_dest,
+                abs_dest_str,
+                svg_paths,
               } = jobs[i]
-                else { unreachable!() };
+              else {
+                unreachable!()
+              };
               // Try vector-SVG path first if requested for this source.
               // On success, pick dimensions from the SVG viewBox.
               let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
@@ -816,7 +856,8 @@ impl Processor for Graphics {
                   })
                 } else {
                   log::warn!(
-                    "Graphics: inkscape SVG path failed for {}, falling back to convert", source
+                    "Graphics: inkscape SVG path failed for {}, falling back to convert",
+                    source
                   );
                   None
                 }
@@ -827,22 +868,27 @@ impl Processor for Graphics {
                 o
               } else if Self::convert_image(source, abs_dest_str, dpi, *page) {
                 ConvertOutcome {
-                  idx: *idx,
+                  idx:      *idx,
                   imagesrc: Some(rel_dest.clone()),
                   raw_dims: Self::read_image_dimensions(abs_dest_str),
-                  options: options.clone(),
+                  options:  options.clone(),
                 }
               } else {
                 log::warn!("Graphics: Failed to convert {} to {}", source, abs_dest_str);
                 if let Some(rel) = Self::copy_to_destination(source, source_dir_ref, dest_dir_ref) {
                   ConvertOutcome {
-                    idx: *idx,
+                    idx:      *idx,
                     imagesrc: Some(rel),
                     raw_dims: Self::read_image_dimensions(source),
-                    options: options.clone(),
+                    options:  options.clone(),
                   }
                 } else {
-                  ConvertOutcome { idx: *idx, imagesrc: None, raw_dims: None, options: options.clone() }
+                  ConvertOutcome {
+                    idx:      *idx,
+                    imagesrc: None,
+                    raw_dims: None,
+                    options:  options.clone(),
+                  }
                 }
               };
               out.lock().unwrap().push(outcome);
@@ -856,17 +902,17 @@ impl Processor for Graphics {
     let mut outcome_iter = outcomes.into_iter().peekable();
 
     // Phase 3: serial DOM mutations. Preserves original node order.
-    let apply_transforms = |options: &str, raw_dims: Option<(u32, u32)>|
-      -> (Option<u32>, Option<u32>) {
-      match raw_dims {
-        Some((w, h)) if !options.is_empty() => {
-          let (tw, th) = Self::apply_graphicx_transforms(w, h, options, effective_dpi);
-          (Some(tw), Some(th))
-        },
-        Some((w, h)) => (Some(w), Some(h)),
-        None => (None, None),
-      }
-    };
+    let apply_transforms =
+      |options: &str, raw_dims: Option<(u32, u32)>| -> (Option<u32>, Option<u32>) {
+        match raw_dims {
+          Some((w, h)) if !options.is_empty() => {
+            let (tw, th) = Self::apply_graphicx_transforms(w, h, options, effective_dpi);
+            (Some(tw), Some(th))
+          },
+          Some((w, h)) => (Some(w), Some(h)),
+          None => (None, None),
+        }
+      };
     for plan in &plans {
       match plan {
         Plan::NotFound { idx, graphic } => {
@@ -928,7 +974,10 @@ mod tests {
     cmd.arg("10");
     let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_millis(200));
     let elapsed = start.elapsed();
-    assert!(result.is_none(), "run_with_timeout should return None on kill");
+    assert!(
+      result.is_none(),
+      "run_with_timeout should return None on kill"
+    );
     // We expect around 200 ms (+ ≤ 50 ms poll interval + SIGKILL reap
     // overhead). Give it 2 s of slack for CI noise.
     assert!(
@@ -969,11 +1018,20 @@ mod tests {
     std::fs::write(&png, vec![0u8; 10 * 1024]).unwrap(); // PNG, irrelevant size
 
     // threshold = 0 → always false.
-    assert!(!Graphics::should_try_svg_path(small_pdf.to_str().unwrap(), 0));
+    assert!(!Graphics::should_try_svg_path(
+      small_pdf.to_str().unwrap(),
+      0
+    ));
     // Under threshold → true.
-    assert!(Graphics::should_try_svg_path(small_pdf.to_str().unwrap(), 200));
+    assert!(Graphics::should_try_svg_path(
+      small_pdf.to_str().unwrap(),
+      200
+    ));
     // Over threshold → false.
-    assert!(!Graphics::should_try_svg_path(big_pdf.to_str().unwrap(), 200));
+    assert!(!Graphics::should_try_svg_path(
+      big_pdf.to_str().unwrap(),
+      200
+    ));
     // Non-PDF → always false even under threshold.
     assert!(!Graphics::should_try_svg_path(png.to_str().unwrap(), 200));
     // Missing file → false, not panic.
@@ -992,7 +1050,8 @@ mod tests {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="10cm" height="7.5cm">
   <rect width="640" height="480" fill="black"/>
 </svg>"#,
-    ).unwrap();
+    )
+    .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
     assert_eq!(dims, (640, 480));
     std::fs::remove_file(&tmp).ok();
@@ -1007,7 +1066,8 @@ mod tests {
       r#"<svg xmlns="http://www.w3.org/2000/svg" width="123.7pt" height="99.4pt">
   <rect/>
 </svg>"#,
-    ).unwrap();
+    )
+    .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
     assert_eq!(dims, (124, 99));
     std::fs::remove_file(&tmp).ok();
