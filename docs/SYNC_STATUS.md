@@ -523,6 +523,83 @@ Remaining semantic-ambiguity hotspots (see
 
 ### Long-horizon — architectural rationalization
 
+- [ ] **Kernel-first discipline for dumper widening** (user directive,
+  round 17). Cross-links the dumper audit and the expl3 kernel
+  parity tasks. Each failed staircase step in the dumper widening
+  is a signal that a specific runtime primitive is missing:
+
+  - Step 4 (1-CS body E records) regressed because the referenced
+    CS targets — often `\hook_*`, `\__regex_*`, `\__cmd_*` — are
+    not defined by our engine, so the admitted wrapper cascades
+    on expansion.
+  - Step 5 (all :-named E) regressed for the same root cause at
+    scale.
+
+  **Discipline going forward**: every dumper widening step that
+  fails must be paired with a targeted Rust port in
+  `latexml_package/src/engine/` (or `latexml_core/` if truly
+  kernel-level) of the underlying primitive family. The dumper
+  and the engine advance together — the dumper can't admit
+  records whose bodies call primitives the engine doesn't execute.
+
+  Immediate primitive candidates from step 4/5 body analysis:
+  - `\hook_gput_code:nnn`, `\hook_use:n`, `\hook_new:n` (l3hooks)
+  - `\group_begin:`, `\group_end:` (already aliased to
+    `\begingroup`/`\endgroup` via PA, but blocked from the dump
+    under the `:`-key gate — see the "Known antipattern" below
+    for why they can't be admitted solo)
+  - `\exp_args:N*` family (expansion control)
+  - `\__kernel_*` internals used by the kernel setup
+  - `\cs_new_eq:NN`, `\cs_gset_protected:Npn`, etc. (cs-aliasing
+    and definition primitives)
+
+  Targeted port suggestion: start with the `\hook_*` family (the
+  l3hooks package) — it's small, self-contained, and blocks the
+  largest downstream cohort (anything that uses
+  `\__hook_code_gset:nn` / `\__hook_use:*` in its body).
+
+- [ ] **Dump writer ↔ reader simplicity audit** (user directive,
+  round 17). Separate question from widening: are both the Rust
+  writer and reader as simple and universal as the Perl
+  equivalents?
+
+  Current state:
+  - Rust writer (`dump_writer.rs`, 525 lines): emits tab-separated
+    records from `(TableName, SymStr, Stored)` tuples. Schema
+    documented in the file header (M/E, M/PA, M/T, M/R, M/N, V,
+    C, LC/UC/SC/MC/DC). All state types covered.
+  - Rust reader (`dump_reader.rs`, 950 lines): text parser with
+    gates, deferred-alias retry pass, type dispatch.
+  - Perl writer+reader (`LaTeXML::Core::Dumper.pm`, 392 lines):
+    emits **Perl source code**. The dump is a `.pl` file that's
+    `require`-d. Each record becomes one sub call — `I(defn)`,
+    `V(key, value)`, `Lt(key, target)`, `N(...)`, etc. No parser,
+    no gates. Writer and reader share one object model with the
+    runtime.
+
+  Coverage parity exists. **Conceptual simplicity parity doesn't.**
+  Perl's dump is "code, not data"; ours is "data, not code". The
+  data choice forces a reader with gates because the reader can't
+  execute what it can't safely parse.
+
+  **Proposed direction** (to evaluate):
+  - Option A — keep text format but tighten semantics so the reader
+    becomes a flat dispatch table with no gates. Each record's
+    safety is the writer's responsibility (don't emit what can't
+    load); the reader just applies each record to the state.
+  - Option B — swap the text format for generated Rust source
+    (compiled via build.rs into a kernel_dump.rs module). Zero
+    runtime parsing, structural typing of records. Mirrors Perl's
+    code-not-data philosophy; downside is dump regen requires a
+    build.
+  - Option C — hybrid: keep text for arxiv-sandbox dumps (portable
+    across developer machines), compile to Rust for the kernel
+    dump that's embedded in the binary.
+
+  Cross-ref: the Deep Dumper-Reader Parity task below focuses on
+  runtime behavior (which records load cleanly); this task focuses
+  on architectural simplicity of the pair itself.
+
 - [ ] **Deep dumper-reader parity audit** (user directive round 17).
   Parallel to the expl3 task below. Perl's `LaTeXML::Core::Dumper`
   is 392 lines, single-dispatch, no special cases: each dump record
