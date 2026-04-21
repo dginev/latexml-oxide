@@ -1461,4 +1461,92 @@ mod tests {
     assert!(ValidationPragmatics::ConsistentCaseFlat.validate(&leaf).is_ok());
     assert!(ValidationPragmatics::ConsistentCaseFlatUnstyled.validate(&leaf).is_ok());
   }
+
+  // ----- end-to-end pruning behavior on real XM::Token operator shape -----
+
+  fn inv_times_chain(letter_names: &[&str]) -> XM {
+    use crate::semantics::metadata::Meta;
+    use crate::semantics::tree::{Args, Operator, XProps};
+    use std::borrow::Cow;
+
+    let op_props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      content: Some(Cow::Borrowed("\u{2062}")),
+      ..XProps::default()
+    };
+    let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
+    let args = Args(
+      letter_names
+        .iter()
+        .map(|n| Some(XM::Lexeme((*n).to_string(), Meta::default())))
+        .collect(),
+    );
+    XM::Apply(op, args, XProps::default(), Meta::default())
+  }
+
+  #[test]
+  fn consistent_blocks_accepts_two_letter_coefficient_variable() {
+    // `Ax` legitimately mixes blocks (A-E × x-z). The ≥3-peer gate exempts
+    // it — the 2-peer shape is ambiguous and must not be pruned.
+    let tree = inv_times_chain(&["UNKNOWN:italic-A", "UNKNOWN:italic-x"]);
+    assert!(
+      ValidationPragmatics::ConsistentLetterBlocks.validate(&tree).is_ok(),
+      "2-letter invisible-times chain should be exempt from block-consistency"
+    );
+  }
+
+  #[test]
+  fn consistent_blocks_accepts_three_same_block_letters() {
+    // `abc` — all a-e block. Accept.
+    let tree = inv_times_chain(&[
+      "UNKNOWN:italic-a",
+      "UNKNOWN:italic-b",
+      "UNKNOWN:italic-c",
+    ]);
+    assert!(
+      ValidationPragmatics::ConsistentLetterBlocks.validate(&tree).is_ok(),
+      "3 same-block letters should pass"
+    );
+  }
+
+  #[test]
+  fn consistent_blocks_rejects_three_mixed_block_letters() {
+    // `abx` — a-e, a-e, x-z. The third letter breaks consistency → prune.
+    let tree = inv_times_chain(&[
+      "UNKNOWN:italic-a",
+      "UNKNOWN:italic-b",
+      "UNKNOWN:italic-x",
+    ]);
+    assert!(
+      ValidationPragmatics::ConsistentLetterBlocks.validate(&tree).is_err(),
+      "3 mixed-block letters should be pruned"
+    );
+  }
+
+  #[test]
+  fn consistent_case_rejects_three_mixed_case_letters() {
+    let tree = inv_times_chain(&[
+      "UNKNOWN:italic-a",
+      "UNKNOWN:italic-b",
+      "UNKNOWN:italic-C",
+    ]);
+    assert!(
+      ValidationPragmatics::ConsistentCase.validate(&tree).is_err(),
+      "mixed case in 3-peer chain should be pruned"
+    );
+  }
+
+  #[test]
+  fn consistent_case_accepts_three_same_case_letters() {
+    let tree = inv_times_chain(&[
+      "UNKNOWN:italic-a",
+      "UNKNOWN:italic-b",
+      "UNKNOWN:italic-c",
+    ]);
+    assert!(
+      ValidationPragmatics::ConsistentCase.validate(&tree).is_ok(),
+      "all-lower 3-peer chain should pass case consistency"
+    );
+  }
 }
