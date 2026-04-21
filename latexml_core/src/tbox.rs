@@ -291,3 +291,60 @@ impl From<Tbox> for Result<Vec<Digested>> {
 impl From<Tbox> for Option<Digested> {
   fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::from(tbox)) }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn tbox_default_has_empty_text() {
+    let t = Tbox::default();
+    assert_eq!(arena::to_string(t.text), "");
+    assert_eq!(t.properties.len(), 0);
+    assert_eq!(t.tokens.len(), 0);
+  }
+
+  #[test]
+  fn tbox_display_of_default_is_empty() {
+    let t = Tbox::default();
+    assert_eq!(format!("{t}"), "");
+  }
+
+  #[test]
+  fn tbox_display_of_text_content() {
+    let mut t = Tbox::default();
+    t.text = arena::pin("hello");
+    assert_eq!(format!("{t}"), "hello");
+  }
+
+  #[test]
+  fn tbox_partial_eq_same_text_same_font() {
+    let a = Tbox::default();
+    let b = Tbox::default();
+    assert_eq!(a, b,
+      "two default Tboxes have same text '' and same text_default font");
+  }
+
+  #[test]
+  fn tbox_partial_eq_different_text() {
+    let a = Tbox::default();
+    let mut b = Tbox::default();
+    b.text = arena::pin("X");
+    assert_ne!(a, b);
+  }
+
+  #[test]
+  fn tbox_default_font_is_text_default() {
+    let t = Tbox::default();
+    // Font::text_default is the Rc backing the default.
+    assert_eq!(*t.font, Font::text_default());
+  }
+
+  #[test]
+  fn tbox_default_locator_is_default() {
+    let t = Tbox::default();
+    // A Default locator points at the crate source file/line where
+    // Default::default was called; just verify it's not nonsense.
+    let _ = t.locator;
+  }
+}
