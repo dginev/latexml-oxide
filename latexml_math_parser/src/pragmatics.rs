@@ -132,6 +132,10 @@ impl ValidationPragmatics {
       PreferBinaryAddop => pragma_prefer_binary_addop(tree),
       FlattenSimpleInvisibleTimesChains => pragma_flatten_simple_invisible_times(tree),
       RelopsAreOutermost => pragma_relops_are_outermost(tree),
+      ConsistentLetterBlocks => pragma_consistent_letter_blocks(tree),
+      ConsistentCase => pragma_consistent_letter_case(tree),
+      ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
+      ConsistentCaseFlatUnstyled => pragma_consistent_letter_case_flat_unstyled(tree),
       // TODO: implement
       _ => Ok(()),
     }
@@ -169,56 +173,100 @@ impl ValidationPragmatics {
   }
 }
 
-/// Validate a pragmatic class, as indicated by a string name,
-///   against a context dictionary of known objects updating the dictionary when needed
+/// Letter case, as recognized by the case-consistency pragmas.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LetterCase {
+  Upper,
+  Lower,
+}
+
+/// Pragmatic block a single-letter lexeme belongs to. Used by the
+/// letter-block consistency pragma to check that peer operands in an
+/// invisible-times chain come from the same block.
 ///
-/// The pragmatics are only used for single-letter values with factor/function role,
-///   relying on common conventions in mathematical syntax:
+/// `Latin(a, e)` / `Greek(α, γ)` encode the block's endpoints, mirroring the
+/// literal block range in the source map. `Standalone(name)` is the fallback
+/// for lexemes that don't map to a block (non-block Greek like δ/ϵ/ω, plus
+/// multi-char identifiers that aren't recognized Greek names).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LetterBlock {
+  Latin(char, char),
+  Greek(char, char),
+  Standalone(String),
+}
+
+/// Typed consistency key for the letter-blocks pragma.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LetterBlocksKey {
+  pub role_prefix: String,
+  pub block:       LetterBlock,
+}
+
+/// Typed consistency key for the letter-case pragmas.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LetterCaseKey {
+  pub role_prefix: String,
+  pub case:        LetterCase,
+}
+
+/// Extract the consistency key for the letter-blocks pragma.
 ///
-/// The two main alphabets are separated into letter blocks, each block
-///   required to coordinate to the same xarith type where each separate style of a letter
-///   (italic/bold;Uppercase/lowercase) stands for a separate pragmatic block.
+/// The pragmatics are only used for single-letter values with factor/function
+/// role, relying on common conventions in mathematical syntax. The two main
+/// alphabets are separated into letter blocks, each block required to
+/// coordinate to the same xarith type where each separate style of a letter
+/// (italic/bold;Uppercase/lowercase) stands for a separate pragmatic block.
 ///
-/// For example in "Ax^2 + Bx + C" we can obtain a single parse where A,B,C are coefficients
-fn _pragma_letter_blocks(name: &str) -> String {
+/// For example in "Ax^2 + Bx + C" we can obtain a single parse where A, B, C
+/// are coefficients (same block) and x is the variable (different block).
+fn _pragma_letter_blocks(name: &str) -> LetterBlocksKey {
   let (base, sep, lexeme) = distill_lexeme(name);
-  let lexeme_pragmatic = if lexeme.len() == 1 {
+  let role_prefix = format!("{base}{sep}");
+  let block = if lexeme.chars().count() == 1 {
     let letter = lexeme.chars().next().unwrap();
-    match _PRAGMATIC_BLOCK_MAP.get(&letter) {
-      Some(block) => block,
-      None => lexeme,
-    }
+    _PRAGMATIC_BLOCK_MAP
+      .get(&letter)
+      .cloned()
+      .unwrap_or_else(|| LetterBlock::Standalone(lexeme.to_owned()))
   } else if let Some(greek_letter) = greek_name_to_letter(lexeme) {
-    match _PRAGMATIC_BLOCK_MAP.get(&greek_letter) {
-      Some(block_name) => block_name,
-      None => lexeme,
-    }
+    _PRAGMATIC_BLOCK_MAP
+      .get(&greek_letter)
+      .cloned()
+      .unwrap_or_else(|| LetterBlock::Standalone(lexeme.to_owned()))
   } else {
-    lexeme
+    LetterBlock::Standalone(lexeme.to_owned())
   };
-  base.to_owned() + sep + lexeme_pragmatic
+  LetterBlocksKey { role_prefix, block }
 }
 
-/// Validate a pragmatic class, indicated by the case of a named lexeme
-///
-/// For example in SUx
-fn _pragma_letter_case(name: &str) -> String {
+/// Extract the consistency key for the letter-case pragma. For example in
+/// "SUx" the key is Lower.
+fn _pragma_letter_case(name: &str) -> LetterCaseKey {
   let (base, sep, lexeme) = distill_lexeme(name);
-  let lexeme_pragmatic = if lexeme.chars().next().unwrap().is_uppercase() {
-    "U"
-  } else {
-    "l"
+  let role_prefix = format!("{base}{sep}");
+  let case = match lexeme.chars().next() {
+    Some(c) if c.is_uppercase() => LetterCase::Upper,
+    _ => LetterCase::Lower,
   };
-  base.to_owned() + sep + lexeme_pragmatic
+  LetterCaseKey { role_prefix, case }
 }
 
-/// Validate a pragmatic class, indicated by the case of a named lexeme
-/// ALSO disregarding any scripted guards
-/// (i.e. scripted lexemes must coordinate with unscripted ones)
-/// For example in "R S_2"
-fn _pragma_letter_case_flat(name: &str) -> String { _pragma_letter_case(name).replace("sub__", "") }
+/// Variant of `_pragma_letter_case` that disregards scripted guards
+/// (i.e. scripted lexemes must coordinate with unscripted ones).
+/// For example in "R S_2" R and S_2 should both decide the same case.
+fn _pragma_letter_case_flat(name: &str) -> LetterCaseKey {
+  let key = _pragma_letter_case(name);
+  LetterCaseKey {
+    role_prefix: key.role_prefix.replace("sub__", ""),
+    case:        key.case,
+  }
+}
 
-fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
+/// Variant of `_pragma_letter_case_flat` that also drops style annotations
+/// before the final separator, so italic/bold/upright letters compare as the
+/// same style class.
+fn _pragma_letter_case_flat_unstyled(name: &str) -> LetterCaseKey {
+  // Normalize "ROLE:style-x" → "ROLE:x" so the style annotation drops.
   let unstyled_name = match name.rfind('-') {
     Some(position) => {
       let (base, trailer) = name.split_at(position);
@@ -234,6 +282,91 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
     None => name.to_owned(),
   };
   _pragma_letter_case_flat(&unstyled_name)
+}
+
+/// Gather a canonical "consistency key" for each single-letter operand of an
+/// invisible-times `Apply`, run the caller's key-extractor on the lexeme name,
+/// and reject if any two peer keys differ. Shared backbone for the four
+/// Consistent* pragmas.
+///
+/// Only fires on `Apply(invisible_operator, …)` — the operator denotes
+/// "juxtaposition" where mathematical convention says peer letters play the
+/// same role (all coefficients, or all variables). Explicit operators
+/// (`a + A`, `a = A`) have their own conventions and are out of scope here.
+///
+/// A "letter operand" is a fenceless `XM::Lexeme` whose distilled lexeme is
+/// either a single char or a Greek name (via `greek_name_to_letter`). Other
+/// operand shapes (numbers, sub-applications, fenced groups) are skipped.
+fn pragma_consistency_via_key<K>(
+  tree: &XM,
+  key_of: fn(&str) -> K,
+  diagnostic: &str,
+) -> Result<(), Box<dyn Error>>
+where
+  K: PartialEq,
+{
+  if let XM::Apply(Operator(op), args, ..) = tree {
+    if let XM::Lexeme(ref oplexeme, _) = **op {
+      if oplexeme != "x.invisible_operator" {
+        return Ok(());
+      }
+    } else {
+      return Ok(());
+    }
+    let mut first_key: Option<K> = None;
+    for tree_arg in args.trees() {
+      if let XM::Lexeme(ref name, ref meta) = *tree_arg {
+        if meta.fenced.is_some() {
+          continue;
+        }
+        let (_base, _sep, lexeme) = distill_lexeme(name);
+        let is_letter = lexeme.chars().count() == 1
+          || greek_name_to_letter(lexeme).is_some();
+        if !is_letter {
+          continue;
+        }
+        let key = key_of(name);
+        match first_key {
+          None => first_key = Some(key),
+          Some(ref k) if *k == key => {},
+          Some(_) => return Err(diagnostic.into()),
+        }
+      }
+    }
+  }
+  Ok(())
+}
+
+fn pragma_consistent_letter_blocks(tree: &XM) -> Result<(), Box<dyn Error>> {
+  pragma_consistency_via_key(
+    tree,
+    _pragma_letter_blocks,
+    "pruning parse: invisible-times peers span inconsistent letter blocks",
+  )
+}
+
+fn pragma_consistent_letter_case(tree: &XM) -> Result<(), Box<dyn Error>> {
+  pragma_consistency_via_key(
+    tree,
+    _pragma_letter_case,
+    "pruning parse: invisible-times peers mix letter case",
+  )
+}
+
+fn pragma_consistent_letter_case_flat(tree: &XM) -> Result<(), Box<dyn Error>> {
+  pragma_consistency_via_key(
+    tree,
+    _pragma_letter_case_flat,
+    "pruning parse: invisible-times peers mix letter case (flat)",
+  )
+}
+
+fn pragma_consistent_letter_case_flat_unstyled(tree: &XM) -> Result<(), Box<dyn Error>> {
+  pragma_consistency_via_key(
+    tree,
+    _pragma_letter_case_flat_unstyled,
+    "pruning parse: invisible-times peers mix letter case (flat, unstyled)",
+  )
 }
 
 fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>> {
@@ -924,11 +1057,10 @@ pub fn name_is_functional_or_id(name: &str) -> bool {
   name.starts_with("ID") || name_is_functional(name)
 }
 
-static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, String>> = Lazy::new(|| {
-  // generally, we can observe that the latin alphabet shares "intent"
-  // in blocks of 3 letter in mathematics,
-  // as a fast-and-loose rule of thumb. a-e is an exception as
-  // a rather stable 5 letter block with shared utility.
+static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, LetterBlock>> = Lazy::new(|| {
+  // Generally, we can observe that the latin alphabet shares "intent"
+  // in blocks of 3 letters in mathematics, as a fast-and-loose rule of thumb.
+  // a-e is an exception as a rather stable 5-letter block with shared utility.
   let mut map = HashMap::default();
   // |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
   let latin_blocks = [
@@ -962,21 +1094,21 @@ static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, String>> = Lazy::new(|| {
     ('Φ', 'Ψ'),
   ];
   for (start, end) in latin_blocks.iter() {
-    let mark = format!("{start}{end}");
+    let lower = LetterBlock::Latin(*start, *end);
+    for c_u8 in (*start as u8)..=(*end as u8) {
+      map.insert(c_u8.into(), lower.clone());
+    }
     let up_start = start.to_ascii_uppercase();
     let up_end = end.to_ascii_uppercase();
-    for c_u8 in (*start as u8)..=(*end as u8) {
-      map.insert(c_u8.into(), mark.clone());
-    }
-    let up_mark = format!("{up_start}{up_end}");
+    let upper = LetterBlock::Latin(up_start, up_end);
     for c_u8 in (up_start as u8)..=(up_end as u8) {
-      map.insert(c_u8.into(), up_mark.clone());
+      map.insert(c_u8.into(), upper.clone());
     }
   }
   for (start, end) in greek_blocks.iter().chain(up_greek_blocks.iter()) {
-    let mark = format!("{start}{end}");
+    let block = LetterBlock::Greek(*start, *end);
     for c_u32 in (*start as u32)..=(*end as u32) {
-      map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
+      map.insert(std::char::from_u32(c_u32).unwrap(), block.clone());
     }
   }
   map
@@ -1181,82 +1313,124 @@ mod tests {
     assert!(!name_is_functional_or_id("NUMBER"));
   }
 
-  // ----- _pragma_letter_case: case-of-first-char marker -----
+  // ----- _pragma_letter_case: Lower/Upper on first char -----
 
   #[test]
-  fn pragma_letter_case_lowercase_suffixes_l() {
-    // distill_lexeme("UNKNOWN:italic-x") → ("UNKNOWN:italic", "-", "x") → "l".
-    assert_eq!(_pragma_letter_case("UNKNOWN:italic-x"), "UNKNOWN:italic-l");
-    assert_eq!(_pragma_letter_case("FOO-y"), "FOO-l");
+  fn pragma_letter_case_lowercase() {
+    let k = _pragma_letter_case("UNKNOWN:italic-x");
+    assert_eq!(k.role_prefix, "UNKNOWN:italic-");
+    assert_eq!(k.case, LetterCase::Lower);
+    assert_eq!(_pragma_letter_case("FOO-y").case, LetterCase::Lower);
   }
 
   #[test]
-  fn pragma_letter_case_uppercase_suffixes_u() {
-    assert_eq!(_pragma_letter_case("UNKNOWN:italic-X"), "UNKNOWN:italic-U");
-    assert_eq!(_pragma_letter_case("FOO-Y"), "FOO-U");
+  fn pragma_letter_case_uppercase() {
+    let k = _pragma_letter_case("UNKNOWN:italic-X");
+    assert_eq!(k.role_prefix, "UNKNOWN:italic-");
+    assert_eq!(k.case, LetterCase::Upper);
+    assert_eq!(_pragma_letter_case("FOO-Y").case, LetterCase::Upper);
   }
 
   #[test]
   fn pragma_letter_case_colon_separator_path() {
     // No dash, but a colon → distill splits at the rightmost colon.
-    assert_eq!(_pragma_letter_case("UNKNOWN:x"), "UNKNOWN:l");
-    assert_eq!(_pragma_letter_case("UNKNOWN:X"), "UNKNOWN:U");
+    let lo = _pragma_letter_case("UNKNOWN:x");
+    assert_eq!(lo.role_prefix, "UNKNOWN:");
+    assert_eq!(lo.case, LetterCase::Lower);
+    assert_eq!(_pragma_letter_case("UNKNOWN:X").case, LetterCase::Upper);
   }
 
   #[test]
-  fn pragma_letter_case_bare_lexeme_drops_prefix() {
-    // No separator → distill returns ("", "", name), so prefix collapses.
-    assert_eq!(_pragma_letter_case("x"), "l");
-    assert_eq!(_pragma_letter_case("X"), "U");
+  fn pragma_letter_case_bare_lexeme_has_empty_prefix() {
+    // No separator → distill returns ("", "", name).
+    let k = _pragma_letter_case("x");
+    assert_eq!(k.role_prefix, "");
+    assert_eq!(k.case, LetterCase::Lower);
+    assert_eq!(_pragma_letter_case("X").case, LetterCase::Upper);
   }
 
   // ----- _pragma_letter_case_flat: strips sub__ stacking marker -----
 
   #[test]
   fn pragma_letter_case_flat_strips_sub_marker() {
-    // The letter_case result "FOOsub__-l" should collapse sub__ away.
-    assert_eq!(_pragma_letter_case_flat("FOOsub__-l"), "FOO-l");
+    // Prefix has sub__ removed so scripted and unscripted peers compare equal.
+    let k = _pragma_letter_case_flat("FOOsub__-l");
+    assert_eq!(k.role_prefix, "FOO-");
+    assert_eq!(k.case, LetterCase::Lower);
   }
 
   #[test]
   fn pragma_letter_case_flat_no_sub_marker_is_identity() {
-    assert_eq!(_pragma_letter_case_flat("FOO-l"), "FOO-l");
+    let k = _pragma_letter_case_flat("FOO-l");
+    assert_eq!(k.role_prefix, "FOO-");
+    assert_eq!(k.case, LetterCase::Lower);
   }
 
-  // ----- _pragma_letter_blocks: maps 1-char lexeme to block marker -----
+  // ----- _pragma_letter_blocks: typed LetterBlock variant per lexeme -----
 
   #[test]
   fn pragma_letter_blocks_latin_block_a_to_e() {
-    // a-e live in the "ae" block. The pragma replaces the 1-char lexeme.
-    assert_eq!(_pragma_letter_blocks("FOO-a"), "FOO-ae");
-    assert_eq!(_pragma_letter_blocks("FOO-b"), "FOO-ae");
-    assert_eq!(_pragma_letter_blocks("FOO-e"), "FOO-ae");
+    for ch in ['a', 'b', 'c', 'd', 'e'] {
+      let k = _pragma_letter_blocks(&format!("FOO-{ch}"));
+      assert_eq!(k.role_prefix, "FOO-");
+      assert_eq!(k.block, LetterBlock::Latin('a', 'e'));
+    }
   }
 
   #[test]
   fn pragma_letter_blocks_latin_block_x_to_z() {
-    assert_eq!(_pragma_letter_blocks("FOO-x"), "FOO-xz");
-    assert_eq!(_pragma_letter_blocks("FOO-y"), "FOO-xz");
-    assert_eq!(_pragma_letter_blocks("FOO-z"), "FOO-xz");
+    for ch in ['x', 'y', 'z'] {
+      let k = _pragma_letter_blocks(&format!("FOO-{ch}"));
+      assert_eq!(k.block, LetterBlock::Latin('x', 'z'));
+    }
   }
 
   #[test]
   fn pragma_letter_blocks_uppercase_latin_blocks() {
-    assert_eq!(_pragma_letter_blocks("FOO-A"), "FOO-AE");
-    assert_eq!(_pragma_letter_blocks("FOO-F"), "FOO-FH");
+    assert_eq!(
+      _pragma_letter_blocks("FOO-A").block,
+      LetterBlock::Latin('A', 'E'),
+    );
+    assert_eq!(
+      _pragma_letter_blocks("FOO-F").block,
+      LetterBlock::Latin('F', 'H'),
+    );
   }
 
   #[test]
-  fn pragma_letter_blocks_multichar_lexeme_greek_name() {
-    // "alpha" → greek α → "αγ" block.
-    assert_eq!(_pragma_letter_blocks("FOO-alpha"), "FOO-αγ");
-    // Standalone greek letter without a block (e.g. δ/delta) stays as the name.
-    assert_eq!(_pragma_letter_blocks("FOO-delta"), "FOO-delta");
+  fn pragma_letter_blocks_multichar_greek_name_maps_to_block() {
+    // "alpha" → U+03B1, lands in the α-γ block.
+    let k = _pragma_letter_blocks("FOO-alpha");
+    assert_eq!(k.block, LetterBlock::Greek('α', 'γ'));
   }
 
   #[test]
-  fn pragma_letter_blocks_unmatched_multichar_is_identity() {
-    // Non-greek multichar lexeme passes through unchanged.
-    assert_eq!(_pragma_letter_blocks("FOO-identifier"), "FOO-identifier");
+  fn pragma_letter_blocks_standalone_greek_falls_back_to_name() {
+    // δ/delta is outside any Greek block → Standalone carries the spelt name.
+    let k = _pragma_letter_blocks("FOO-delta");
+    assert_eq!(k.block, LetterBlock::Standalone("delta".into()));
+  }
+
+  #[test]
+  fn pragma_letter_blocks_unmatched_multichar_is_standalone() {
+    let k = _pragma_letter_blocks("FOO-identifier");
+    assert_eq!(k.block, LetterBlock::Standalone("identifier".into()));
+  }
+
+  // ----- end-to-end Consistent* prune behavior via validate() -----
+  //
+  // Smoke-test the wiring: the pragmas return Ok on an operator-only tree and
+  // never panic on shapes they don't recognize. Tree-shape round-trips for
+  // the prune-on-mismatch case are covered by the full math-parser test
+  // suite; here we just lock the fall-through path.
+
+  #[test]
+  fn consistent_pragmas_accept_empty_tree() {
+    use crate::semantics::metadata::Meta;
+    let leaf = XM::Lexeme("UNKNOWN:italic-x".to_string(), Meta::default());
+    assert!(ValidationPragmatics::ConsistentLetterBlocks.validate(&leaf).is_ok());
+    assert!(ValidationPragmatics::ConsistentCase.validate(&leaf).is_ok());
+    assert!(ValidationPragmatics::ConsistentCaseFlat.validate(&leaf).is_ok());
+    assert!(ValidationPragmatics::ConsistentCaseFlatUnstyled.validate(&leaf).is_ok());
   }
 }
