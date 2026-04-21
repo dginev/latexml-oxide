@@ -328,13 +328,16 @@ The preceding theorem got xml:id e.g. `S5.E2` (via the shared equation counter);
 the following subequations' equationgroup, after the `\addtocounter{-1}`,
 tries to use the same number and claims `S5.E2` as well.
 
-**Minimal trigger:** arxiv 1106.1389 (14 duplicate-id warnings in Perl).
+**Minimal trigger:** arxiv 1106.1389 (5 duplicate-id Info warnings in both
+Perl and Rust post-fix; Perl reports 14 sites but dedups them correctly too).
 
-**Impact in Perl:** non-fatal (Info-level warnings only) — Perl's post-processing
-continues and emits a valid-enough HTML.
+**Impact in Perl:** non-fatal (Info-level warnings only) — `modifyID` appends
+`a`, `b`, … suffixes so the DOM ends up with unique xml:ids.
 
-**Impact in Rust:** same duplicate-id generation, but Rust's libxml2 validation
-layer spins on the duplicate-id resolution during post-processing scan, causing
-a 100s+ wall-clock time and 16 GB RSS where Perl completes in a few seconds.
-That O(n²) amplification in libxml2 is a Rust-specific follow-up (noted in
-`SYNC_STATUS.md`); the underlying duplicate-id generation is upstream Perl behavior.
+**Impact in Rust (post-session-128 fix):** matches Perl — same 5 Info warnings,
+same deduped DOM. Prior to session 128, `record_id_with_node` had a shadow-
+variable bug (`let id = self.modify_id(…)` scoped to the `if let Some(prev)`
+block only) that caused the deduped id to be silently dropped; the caller
+wrote the original id to DOM and libxml2 validation subsequently spun
+O(n²) on the actual duplicates (100s timeout / 16 GB RSS on 1106.1389).
+Fixed in commit `bab8beb53`: extract `final_id` outside the `if let`.
