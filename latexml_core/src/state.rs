@@ -2526,6 +2526,14 @@ pub fn search_paths_push_front(path: String) {
   let mut state = state_mut!();
   state.search_paths.push_front(path);
 }
+/// Replace the entire search_paths list (Perl: `AssignValue(SEARCHPATHS => [...])`).
+pub fn set_search_paths(paths: Vec<String>) {
+  let mut state = state_mut!();
+  state.search_paths.clear();
+  for p in paths {
+    state.search_paths.push_back(p);
+  }
+}
 pub fn has_search_paths() -> bool { !state!().search_paths.is_empty() }
 /// Mirror Perl's `LookupValue('GRAPHICSPATHS')` — a list value that all
 /// `\graphicspath`, `\svgpath`, initial source-directory prepends, and
