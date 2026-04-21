@@ -234,8 +234,8 @@ impl BoxOps for Tbox {
           let mut found = false;
           loop {
             let qname = crate::document::get_node_qname(&node);
-            let name = arena::to_string(qname);
-            if name.contains("XM") || name.contains("Math") {
+            let hit = arena::with(qname, |s| s.contains("XM") || s.contains("Math"));
+            if hit {
               found = true;
               break;
             }

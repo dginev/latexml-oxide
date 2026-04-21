@@ -48,7 +48,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\lx@applyaccent DefToken Token Token {}",
   sub[(accent, combiningchar, standalonechar, letter)] {
-    let combiningchar = combiningchar.to_string().chars().next().unwrap();
+    let combiningchar = combiningchar.with_str(|s| s.chars().next()).unwrap();
     let standalonechar = standalonechar.to_string();
     apply_accent(letter.clone(), combiningchar, &standalonechar, Some(
       Tokens!(T_CS!(accent.to_string()),T_BEGIN!(),letter,T_END!())))
