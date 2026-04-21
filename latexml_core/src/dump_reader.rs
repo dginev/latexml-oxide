@@ -73,12 +73,16 @@ pub fn flush_deferred_aliases() -> (usize, usize) {
   let mut applied = 0usize;
   let mut skipped = 0usize;
   for (cs_tok, target_tok) in pending {
-    // Add-only: don't override if the alias was resolved by a later
-    // compiled definition of the key itself.
+    // Add-only: if compiled definitions since dump-load have defined
+    // the key themselves, don't override.
     if state::has_meaning(&cs_tok) {
       skipped += 1;
       continue;
     }
+    // Target still undefined — the alias's target must be defined
+    // in some source we never load (e.g. expl3 intarrays that the
+    // short-circuit skips). Leave the key undefined; the engine's
+    // undefined-CS handler will cope at runtime.
     if !state::has_meaning(&target_tok) {
       skipped += 1;
       continue;
