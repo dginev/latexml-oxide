@@ -679,20 +679,41 @@ LoadDefinitions!({
   DefMath!("\\relbar", None, "-", role => "RELOP"); // ???
   DefMath!("\\Relbar", None, "=", role => "RELOP"); // ???
 
-  // \joinrel is \mathrel{\mkern-3\mu}
-  // Ah, but the Effect is to join 2 "relations" into one!
-  // Perl: \joinrel joins 2 relations (e.g. \longrightarrow = \relbar\joinrel\rightarrow)
-  // It pops left, digests right, then creates @@joinrel whatsit.
-  // Stub: just read and discard the glue (the \mkern-3mu from \joinrel's definition),
-  // then let the next token be digested normally.
+  // \joinrel is \mathrel{\mkern-3\mu} — but the effect is to join two
+  // "relations" into one. Perl math_common L368-386.
   DefPrimitive!("\\joinrel", {
     gullet::skip_spaces()?;
-    // Pop left item, read right item, but for now just return left unchanged
-    if let Some(left) = pop_box_list() {
-      vec![left]
-    } else {
-      Vec::new()
+    let Some(left) = pop_box_list() else {
+      // Nothing there? no-op
+      return Ok(Vec::new());
+    };
+    // Read tokens, invoke each, until an invocation returns a non-empty
+    // digested list. That list's first item is the "right" operand;
+    // anything after becomes trailing content.
+    let mut stuff: Vec<Digested> = Vec::new();
+    while let Some(tok) = gullet::read_x_token(None, false, None)? {
+      stuff = stomach::invoke_token(&tok)?;
+      if !stuff.is_empty() {
+        break;
+      }
     }
+    if stuff.is_empty() {
+      return Ok(Vec::new());
+    }
+    let right = stuff.remove(0);
+    let mut properties = stored_map!("isMath" => true);
+    if let Some(font) = right.get_font()? {
+      properties.insert("font", font.into());
+    }
+    let whatsit = Whatsit {
+      definition: lookup_definition(&T_CS!("\\@@joinrel"))?.unwrap(),
+      args: vec![Some(left), Some(right)],
+      properties,
+      locator: gullet::get_locator(),
+      ..Whatsit::default()
+    };
+    stuff.push(Digested::from(whatsit));
+    stuff
   });
 
   // Perl math_common L388-404: absorb left+right; if the last 2 children
