@@ -331,3 +331,45 @@ fn om_error(msg: &str) -> NodeData {
     ],
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn openmath_new_has_default_name() {
+    let o = OpenMath::new();
+    assert_eq!(o.get_name(), "OpenMath");
+    assert!(!o.is_secondary);
+    assert!(!o.hack_plane1);
+    assert!(o.plane1, "plane1 defaults to true");
+  }
+
+  #[test]
+  fn openmath_default_matches_new() {
+    let a = OpenMath::default();
+    let b = OpenMath::new();
+    assert_eq!(a.get_name(), b.get_name());
+    assert_eq!(a.is_secondary, b.is_secondary);
+    assert_eq!(a.plane1, b.plane1);
+    assert_eq!(a.hack_plane1, b.hack_plane1);
+  }
+
+  #[test]
+  fn openmath_raw_id_suffix() {
+    let o = OpenMath::new();
+    assert_eq!(o.raw_id_suffix(), ".om");
+  }
+
+  #[test]
+  fn openmath_is_secondary_false_by_default() {
+    let o = OpenMath::new();
+    assert!(!o.is_secondary());
+  }
+
+  #[test]
+  fn om_constants() {
+    assert_eq!(OM_URI, "http://www.openmath.org/OpenMath");
+    assert_eq!(OM_MIMETYPE, "application/openmath+xml");
+  }
+}
