@@ -421,62 +421,71 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
   // ambiguous forest; this pragma chooses the mathematically-consistent one
   // unconditionally. MATHPARSER_SPECULATE has no role here — the decision is
   // a pragmatic preference, not a grammar switch.
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
-    match **op {
-      XM::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
-        if let Some(top_lhs) = args.trees().first() {
-          if let Some(ref fences) = top_lhs.get_meta().fenced {
-            if fences.as_str() == "parens" {
-              if let XM::Lexeme(lhs_name, _) = top_lhs.get_baseline() {
-                if !lhs_name.starts_with("NUMBER") {
-                  return Err(
-                    "pruning non-argument parenthetical atom, used as LHS of invisible times"
-                      .into(),
-                  );
-                }
-              }
-            }
-          }
+  let XM::Apply(Operator(op), ref args, ..) = tree else {
+    return Ok(());
+  };
+  // Invisible times appears in the XM tree two ways (see
+  // pragma_functions_prefer_wider_absorption for the reference predicate):
+  // - Lexeme("…invisible_operator…") — Marpa's lexeme string
+  // - Token { role: MULOP, meaning: "times" } — post-apply_invisible_times
+  let is_invisible_times = match **op {
+    XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+    XM::Token(ref props, _) => {
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+    },
+    _ => false,
+  };
+  if !is_invisible_times {
+    return Ok(());
+  }
+  let trees = args.trees();
+  let Some(top_lhs) = trees.first() else {
+    return Ok(());
+  };
+  if let Some(ref fences) = top_lhs.get_meta().fenced {
+    if fences.as_str() == "parens" {
+      if let XM::Lexeme(lhs_name, _) = top_lhs.get_baseline() {
+        if !lhs_name.starts_with("NUMBER") {
+          return Err(
+            "pruning non-argument parenthetical atom, used as LHS of invisible times".into(),
+          );
+        }
+      }
+    }
+  }
 
-          // Slightly tricky check -- the top RHS needs to be fenced, but we care about the
-          // "baseline" content being a variable - disregarding scripts.
-          if let Some(top_rhs) = args.trees().get(1) {
-            if let XM::Lexeme(rhs_name, _) = top_rhs.get_baseline() {
-              if let Some(ref fences) = top_rhs.get_meta().fenced {
-                if fences.as_str() == "parens" {
-                  // if the RHS is a number, prune unless the LHS is fenced (things like cycle
-                  // notation)
-                  if !rhs_name.starts_with("NUMBER") {
-                    return Err(
-                      "pruning non-argument parenthetical atom, used as RHS of invisible times"
-                        .into(),
-                    );
-                  } else {
-                    match args.trees().first() {
-                      Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
-                        return Err(
-                          "pruning non-argument parenthetical NUMBER, used as RHS of invisible \
-                           times"
-                            .into(),
-                        );
-                      },
-                      Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
-                        return Err(
-                          "pruning non-argument parenthetical NUMBER, used as RHS of invisible \
-                           times"
-                            .into(),
-                        );
-                      },
-                      _ => {},
-                    }
-                  }
-                }
-              }
+  // Slightly tricky check -- the top RHS needs to be fenced, but we care about the
+  // "baseline" content being a variable - disregarding scripts.
+  if let Some(top_rhs) = trees.get(1) {
+    if let XM::Lexeme(rhs_name, _) = top_rhs.get_baseline() {
+      if let Some(ref fences) = top_rhs.get_meta().fenced {
+        if fences.as_str() == "parens" {
+          // if the RHS is a number, prune unless the LHS is fenced (things like cycle
+          // notation)
+          if !rhs_name.starts_with("NUMBER") {
+            return Err(
+              "pruning non-argument parenthetical atom, used as RHS of invisible times".into(),
+            );
+          } else {
+            match trees.first() {
+              Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
+                return Err(
+                  "pruning non-argument parenthetical NUMBER, used as RHS of invisible times"
+                    .into(),
+                );
+              },
+              Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
+                return Err(
+                  "pruning non-argument parenthetical NUMBER, used as RHS of invisible times"
+                    .into(),
+                );
+              },
+              _ => {},
             }
           }
         }
-      },
-      _ => {},
+      }
     }
   }
   Ok(())
@@ -1547,6 +1556,149 @@ mod tests {
     assert!(
       ValidationPragmatics::ConsistentCase.validate(&tree).is_ok(),
       "all-lower 3-peer chain should pass case consistency"
+    );
+  }
+
+  // ----- pragma_fenced_letters_are_function_arguments, Token operator shape -----
+  //
+  // These exercise the session-128+ audit fix: the pragma now recognises the
+  // invisible-times operator in both its Marpa Lexeme form and the
+  // `apply_invisible_times`-produced Token form. Prior to the fix the pragma
+  // silently never fired — these tests lock in the active pruning behaviour.
+
+  fn inv_times_pair(lhs: Option<XM>, rhs: Option<XM>) -> XM {
+    use crate::semantics::metadata::Meta;
+    use crate::semantics::tree::{Args, Operator, XProps};
+    use std::borrow::Cow;
+
+    let op_props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      content: Some(Cow::Borrowed("\u{2062}")),
+      ..XProps::default()
+    };
+    let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
+    let args = Args(vec![lhs, rhs]);
+    XM::Apply(op, args, XProps::default(), Meta::default())
+  }
+
+  fn letter_lexeme(name: &str, fenced: Option<&str>) -> XM {
+    use crate::semantics::metadata::Meta;
+    let mut meta = Meta::default();
+    meta.fenced = fenced.map(|s| s.to_string());
+    XM::Lexeme(name.to_string(), meta)
+  }
+
+  #[test]
+  fn fenced_letters_pragma_prunes_fenced_lhs_letter_on_token_op() {
+    // `(f)(x)` with invisible-times Token operator:
+    // LHS is fenced letter → prune (LHS is not an argument).
+    let tree = inv_times_pair(
+      Some(letter_lexeme("UNKNOWN:italic-f", Some("parens"))),
+      Some(letter_lexeme("UNKNOWN:italic-x", None)),
+    );
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_err(),
+      "fenced LHS letter under invisible times (Token shape) must be pruned"
+    );
+  }
+
+  #[test]
+  fn fenced_letters_pragma_prunes_fenced_rhs_letter_on_token_op() {
+    // `f(x)` with invisible-times Token operator, RHS fenced letter → prune
+    // (the function-application parse wins over multiplication by `(x)`).
+    let tree = inv_times_pair(
+      Some(letter_lexeme("UNKNOWN:italic-f", None)),
+      Some(letter_lexeme("UNKNOWN:italic-x", Some("parens"))),
+    );
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_err(),
+      "fenced RHS letter under invisible times (Token shape) must be pruned"
+    );
+  }
+
+  #[test]
+  fn fenced_letters_pragma_accepts_fenced_number_rhs_with_fenced_number_lhs() {
+    // The "cycle-notation preserve" branch inside the RHS check only fires
+    // when the LHS did NOT already trip the earlier fenced-letter-LHS prune.
+    // That means the LHS must either be unfenced or itself NUMBER. This case
+    // exercises the fenced-NUMBER LHS path — unusual but valid given the
+    // original Perl contract. The branch matches `Some(XM::Lexeme(_, m))
+    // if m.fenced.is_none()` / `Some(XM::Apply(_, _, _, m)) if m.fenced.is_none()`
+    // and returns Err; otherwise falls through to Ok.
+    let tree = inv_times_pair(
+      Some(letter_lexeme("NUMBER:italic-5", Some("parens"))),
+      Some(letter_lexeme("NUMBER:italic-2", Some("parens"))),
+    );
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      "fenced NUMBER RHS with fenced NUMBER LHS must be preserved"
+    );
+  }
+
+  #[test]
+  fn fenced_letters_pragma_prunes_fenced_number_rhs_with_unfenced_lhs() {
+    // `x(2)` — unfenced variable LHS, fenced NUMBER RHS → prune.
+    // The parse is likely function-application rather than `x × 2`.
+    let tree = inv_times_pair(
+      Some(letter_lexeme("UNKNOWN:italic-x", None)),
+      Some(letter_lexeme("NUMBER:italic-2", Some("parens"))),
+    );
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_err(),
+      "fenced NUMBER RHS with unfenced LHS must be pruned"
+    );
+  }
+
+  #[test]
+  fn fenced_letters_pragma_accepts_unfenced_pair() {
+    // `fx` — neither operand fenced → pragma is a no-op (returns Ok).
+    let tree = inv_times_pair(
+      Some(letter_lexeme("UNKNOWN:italic-f", None)),
+      Some(letter_lexeme("UNKNOWN:italic-x", None)),
+    );
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      "neither-operand-fenced chain must pass untouched"
+    );
+  }
+
+  #[test]
+  fn fenced_letters_pragma_accepts_fenced_lhs_number() {
+    // LHS is a NUMBER in parens, e.g. `(2)x` — the NUMBER branch in the
+    // LHS check is explicitly exempted (the guard is `!starts_with("NUMBER")`).
+    let tree = inv_times_pair(
+      Some(letter_lexeme("NUMBER:italic-2", Some("parens"))),
+      Some(letter_lexeme("UNKNOWN:italic-x", None)),
+    );
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      "fenced NUMBER LHS must be accepted (number × variable)"
+    );
+  }
+
+  #[test]
+  fn fenced_letters_pragma_noop_when_operator_not_invisible_times() {
+    // Apply with a random Token operator — the pragma must not fire.
+    use crate::semantics::metadata::Meta;
+    use crate::semantics::tree::{Args, Operator, XProps};
+    use std::borrow::Cow;
+
+    let op_props = XProps {
+      role: Some(Cow::Borrowed("ADDOP")),
+      meaning: Some(Cow::Borrowed("plus")),
+      content: Some(Cow::Borrowed("+")),
+      ..XProps::default()
+    };
+    let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
+    let args = Args(vec![
+      Some(letter_lexeme("UNKNOWN:italic-f", Some("parens"))),
+      Some(letter_lexeme("UNKNOWN:italic-x", Some("parens"))),
+    ]);
+    let tree = XM::Apply(op, args, XProps::default(), Meta::default());
+    assert!(
+      ValidationPragmatics::FencedLettersAreFunctionArguments.validate(&tree).is_ok(),
+      "non-invisible-times operator must leave the pragma a no-op"
     );
   }
 }
