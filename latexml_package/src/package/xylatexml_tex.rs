@@ -738,7 +738,10 @@ LoadDefinitions!({
       let x1 = xy_reg_dim("\\X@c"); let y1 = xy_reg_dim("\\Y@c");
       let lc = xy_reg_dim("\\L@c"); let uc = xy_reg_dim("\\U@c");
       let rc = xy_reg_dim("\\R@c"); let dc = xy_reg_dim("\\D@c");
-      let mult: i32 = state::lookup_string("xy_multiplicity").parse().unwrap_or(1);
+      let mult: i32 = state::with_value("xy_multiplicity", |v| match v {
+        Some(Stored::String(s)) => arena::with(*s, |m| m.parse().unwrap_or(1)),
+        _ => 1,
+      });
       let mut path = String::new();
       // Main curve (for odd multiplicity)
       if mult % 2 == 1 {
@@ -1335,9 +1338,13 @@ LoadDefinitions!({
     }
   });
   DefPrimitive!("\\UseTips", {
-    let pending = state::lookup_string("xy_tips_pending_style");
-    let style = if pending.is_empty() { "xy" } else { &pending };
-    state::assign_value("xy_tips_style", Stored::String(arena::pin(style)), None);
+    // Probe xy_tips_pending_style in place and just re-pin the SymStr
+    // on xy_tips_style when present — no owned String needed.
+    let sym = state::with_value("xy_tips_pending_style", |v| match v {
+      Some(Stored::String(s)) if !arena::with(*s, |p| p.is_empty()) => *s,
+      _ => arena::pin("xy"),
+    });
+    state::assign_value("xy_tips_style", Stored::String(sym), None);
   });
   DefPrimitive!("\\NoTips", {
     state::assign_value("xy_tips_style", Stored::String(arena::pin("xy")), None);
