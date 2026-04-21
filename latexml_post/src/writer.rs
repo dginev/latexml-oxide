@@ -102,3 +102,53 @@ impl Processor for Writer {
     Ok(vec![doc])
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn output_format_variants() {
+    let _ = OutputFormat::Xml;
+    let _ = OutputFormat::Html;
+  }
+
+  #[test]
+  fn output_format_partial_eq() {
+    assert_eq!(OutputFormat::Xml, OutputFormat::Xml);
+    assert_ne!(OutputFormat::Xml, OutputFormat::Html);
+    assert_eq!(OutputFormat::Html, OutputFormat::Html);
+  }
+
+  #[test]
+  fn output_format_copy_clone() {
+    // Copy trait: move-after-use still works.
+    let a = OutputFormat::Xml;
+    let b = a;
+    let _ = a;   // still usable due to Copy
+    assert_eq!(a, b);
+  }
+
+  #[test]
+  fn writer_new_default_format_xml() {
+    let w = Writer::new(None, false, false);
+    assert_eq!(w.get_name(), "Writer");
+    assert_eq!(w.format, OutputFormat::Xml);
+    assert!(!w.omit_doctype);
+    assert!(!w.is_html);
+  }
+
+  #[test]
+  fn writer_new_explicit_format() {
+    let w = Writer::new(Some(OutputFormat::Html), true, true);
+    assert_eq!(w.format, OutputFormat::Html);
+    assert!(w.omit_doctype);
+    assert!(w.is_html);
+  }
+
+  #[test]
+  fn writer_get_name_is_writer() {
+    let w = Writer::new(None, false, false);
+    assert_eq!(w.get_name(), "Writer");
+  }
+}
