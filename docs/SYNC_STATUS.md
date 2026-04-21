@@ -202,20 +202,25 @@ Marpa-related >60% CPU.
 - [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
 - [ ] Enumerate grammar rules by parse-tree count contribution.
 - [ ] Document grammar ambiguity per category.
-- [~] **Latent no-op pragmas**: 6+ sites in `pragmatics.rs` check
-  only `XM::Lexeme("x.invisible_operator", …)` for the invisible-times
-  operator head, but `apply_invisible_times` produces `XM::Token { role:
-  MULOP, meaning: "times" }`. The literal string `"x.invisible_operator"`
-  appears nowhere outside `pragmatics.rs`, so those pragmas
-  silently never fire on real parses. Session 128+ fixed
+- [~] **Latent no-op pragmas**: multiple sites in `pragmatics.rs`
+  check only `XM::Lexeme("x.invisible_operator", …)` for the
+  invisible-times operator head, but `apply_invisible_times` produces
+  `XM::Token { role: MULOP, meaning: "times" }`. Session 128+ fixed
   `pragma_consistency_via_key` (and `pragma_functions_prefer_wider_absorption`
-  already used the richer check). `pragma_fenced_letters_are_function_arguments`
-  (formerly L424) fixed in `b786d85d4` with 7 Token-shape unit tests.
-  Remaining sites to audit:
-  `pragma_adjacent_unfenced_scripts_dont_apply` (L590),
-  `pragma_adjacent_functions_dont_unify_into_op` (L621), plus 3
-  helper predicates at L1161/1190/1208/1243. Each needs accept-both-shapes
-  + test coverage to catch accidental regressions.
+  already used the richer check).
+  **Landed in round 17** (`b786d85d4`, `c0c0720b6`):
+  - `pragma_fenced_letters_are_function_arguments` — 7 Token-shape tests
+  - `pragma_higher_order_invisible_ops_are_exceptions` — 4 tests
+  - `pragma_adjacent_numbers_dont_use_invisible_times` — 3 tests
+
+  Remaining sites (all `pragma_flatten_simple_invisible_times` helpers):
+  `check_invisible_times_recursive` (~L1160 inner match),
+  `is_invisible_times_apply` (~L1190), `all_simple_identifiers` (~L1210).
+  Also the MULOP-contains-RELOP check at ~L1245 uses
+  `name == "x.invisible_operator"` as a fallback — fine to leave since the
+  primary `name.starts_with("MULOP")` predicate already fires on the
+  role-carrying Token shape, but the Lexeme-form branch is dead code.
+  Each remaining site needs accept-both-shapes + test coverage.
 
 Remaining semantic-ambiguity hotspots (see
 `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`; live audit via
