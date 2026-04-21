@@ -103,8 +103,7 @@ fn lookup_xcolor(name: &str) -> Color {
     // Current color
     return match state::lookup_value("color_.") {
       Some(Stored::String(sym)) => {
-        let stored_str = arena::to_string(sym);
-        Color::from_stored(&stored_str).unwrap_or(BLACK)
+        arena::with(sym, |s| Color::from_stored(s)).unwrap_or(BLACK)
       },
       _ => BLACK,
     };
@@ -174,12 +173,13 @@ fn decode_color(expression: &str) -> Color {
 
   // Apply blend from state
   let full_mix = if let Some(Stored::String(blend_sym)) = state::lookup_value("color_blend") {
-    let blend = arena::to_string(blend_sym);
-    if !blend.is_empty() {
-      format!("{}{}", mix_part, blend)
-    } else {
-      mix_part.to_string()
-    }
+    arena::with(blend_sym, |blend| {
+      if !blend.is_empty() {
+        format!("{}{}", mix_part, blend)
+      } else {
+        mix_part.to_string()
+      }
+    })
   } else {
     mix_part.to_string()
   };
@@ -752,8 +752,7 @@ LoadDefinitions!({
   // \set@color
   DefPrimitive!("\\set@color", {
     if let Some(Stored::String(sym)) = state::lookup_value("color_.") {
-      let stored_str = arena::to_string(sym);
-      if let Some(color) = Color::from_stored(&stored_str) {
+      if let Some(color) = arena::with(sym, |s| Color::from_stored(s)) {
         if state::lookup_bool_sym(pin!("inPreamble")) {
           assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
         }
@@ -795,8 +794,7 @@ LoadDefinitions!({
     let new_blend = if star.is_some() {
       // Starred: append to existing blend
       if let Some(Stored::String(old_sym)) = state::lookup_value("color_blend") {
-        let old = arena::to_string(old_sym);
-        format!("{old}{mix_str}")
+        arena::with(old_sym, |old| format!("{old}{mix_str}"))
       } else {
         mix_str
       }
@@ -850,7 +848,7 @@ LoadDefinitions!({
     if let (Some(Stored::String(b_sym)), Some(Stored::String(m_sym))) =
       (state::lookup_value(&base_key), state::lookup_value(&method_key))
     {
-      let base = Color::from_stored(&arena::to_string(b_sym)).unwrap_or(BLACK);
+      let base = arena::with(b_sym, Color::from_stored).unwrap_or(BLACK);
       let method = arena::to_string(m_sym);
 
       // For "last" method, we need the delta color
@@ -866,18 +864,18 @@ LoadDefinitions!({
         "step" => {
           // delta is the step itself
           if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
-            Color::from_stored(&arena::to_string(d_sym)).unwrap_or(BLACK)
+            arena::with(d_sym, Color::from_stored).unwrap_or(BLACK)
           } else { BLACK }
         },
         "grad" => {
           if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
-            Color::from_stored(&arena::to_string(d_sym)).unwrap_or(BLACK).scale(1.0 / div)
+            arena::with(d_sym, Color::from_stored).unwrap_or(BLACK).scale(1.0 / div)
           } else { BLACK }
         },
         "last" => {
           // For "last": step = (last - base) / div
           if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
-            let last = Color::from_stored(&arena::to_string(d_sym)).unwrap_or(BLACK);
+            let last = arena::with(d_sym, Color::from_stored).unwrap_or(BLACK);
             let base_comps = base.components();
             let last_comps = last.components();
             let step_comps: Vec<f64> = base_comps.iter().zip(last_comps.iter())
