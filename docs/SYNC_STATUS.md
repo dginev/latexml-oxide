@@ -2,10 +2,10 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-20. **Open gaps & active TODOs only.** Completed work
+Updated 2026-04-21. **Open gaps & active TODOs only.** Completed work
 lives in git log and `memory/project_session_history.md`.
 
-**Test inventory:** 423 tests pass (0 failures, 0 ignored) via `cargo test --release --tests`.
+**Test inventory:** 1098 tests pass (0 failures, 0 ignored) via `cargo test --release --tests` across 44 binaries.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
@@ -42,7 +42,7 @@ handful of slow-convergence papers. Runner:
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| base_parameter_types.rs | MINOR | `DirectoryList`/`CommaList`: no Array type in Rust (ported to `{d1}{d2}...` token-stream encoding); parameterized `CommaList:Type` form still unported |
+| base_parameter_types.rs | MINOR | `DirectoryList`/`CommaList` ported (token-stream encoding since Rust has no Array type). `DigestUntil` and `SanitizedVerbatim` landed 2026-04-21. Parameterized `CommaList:Type` form still unported (no Perl users). |
 | tex_box.rs | MINOR | Minor box dimension edge cases |
 | tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics |
 | tex_tables.rs | MINOR | Minor: padding CSS classes (XSLT concern) |
