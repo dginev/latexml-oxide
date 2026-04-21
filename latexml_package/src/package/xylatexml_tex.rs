@@ -130,8 +130,11 @@ fn xy_emit_path(document: &mut Document, props: &latexml_core::common::arena::Sy
   };
   let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
   if let Some(Stored::String(d)) = props.get("xy_dashes") {
-    let dashes = arena::to_string(*d);
-    if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+    // Avoid allocating the owned dashes string when it's empty (the
+    // common "no dash pattern" case, fires on every solid xy line).
+    if !arena::with(*d, |s| s.is_empty()) {
+      attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+    }
   }
   svg_empty_element(document, "svg:path", attrs)
 }
@@ -145,8 +148,9 @@ fn xy_emit_circle(document: &mut Document, props: &latexml_core::common::arena::
   let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
   let mut attrs = string_map!("cx" => cx, "cy" => cy, "r" => r, "stroke" => stroke, "fill" => fill);
   if let Some(Stored::String(d)) = props.get("xy_dashes") {
-    let dashes = arena::to_string(*d);
-    if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+    if !arena::with(*d, |s| s.is_empty()) {
+      attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+    }
   }
   svg_empty_element(document, "svg:circle", attrs)
 }
@@ -906,8 +910,9 @@ LoadDefinitions!({
       let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
       let mut attrs = string_map!("cx" => cx, "cy" => cy, "rx" => rx, "ry" => ry, "stroke" => stroke, "fill" => fill);
       if let Some(Stored::String(d)) = props.get("xy_dashes") {
-        let dashes = arena::to_string(*d);
-        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+        if !arena::with(*d, |s| s.is_empty()) {
+          attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+        }
       }
       svg_empty_element(document, "svg:ellipse", attrs)?;
     },
@@ -991,8 +996,9 @@ LoadDefinitions!({
       let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
       let mut attrs = string_map!("cx" => cx, "cy" => cy, "rx" => rx, "ry" => ry, "stroke" => stroke, "fill" => fill);
       if let Some(Stored::String(d)) = props.get("xy_dashes") {
-        let dashes = arena::to_string(*d);
-        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+        if !arena::with(*d, |s| s.is_empty()) {
+          attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+        }
       }
       svg_empty_element(document, "svg:ellipse", attrs)?;
     },
@@ -1368,8 +1374,9 @@ LoadDefinitions!({
       };
       let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
       if let Some(Stored::String(d)) = props.get("xy_dashes") {
-        let dashes = arena::to_string(*d);
-        if !dashes.is_empty() { attrs.insert(String::from("stroke-dasharray"), dashes); }
+        if !arena::with(*d, |s| s.is_empty()) {
+          attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+        }
       }
       // Stroke styling attributes (Perl L963-964)
       if let Some(Stored::String(s)) = props.get("xy_thickness") {
