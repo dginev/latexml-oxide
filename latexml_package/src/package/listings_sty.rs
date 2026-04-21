@@ -1387,7 +1387,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           let excludeslash_key = s!("LST_CLASSES@{classname}@excludeslash");
           let has_excludeslash = match state::lookup_value(&excludeslash_key) {
             Some(Stored::Bool(true)) => true,
-            Some(Stored::String(s)) => arena::to_string(s) == "true",
+            Some(Stored::String(s)) => arena::with(s, |v| v == "true"),
             _ => false,
           };
           if has_excludeslash

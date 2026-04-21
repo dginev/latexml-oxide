@@ -20,7 +20,7 @@ LoadDefinitions!({
     // If we are not within an algorithm environment, step the counter for its id's
     let in_algorithm = state::with_stacked_values_sym(pin!("current_environment"), |vals| {
       vals.iter().any(|v| {
-        matches!(v, Stored::String(s) if arena::to_string(*s) == "algorithm")
+        matches!(v, Stored::String(s) if arena::with(*s, |v| v == "algorithm"))
       })
     });
     if !in_algorithm {

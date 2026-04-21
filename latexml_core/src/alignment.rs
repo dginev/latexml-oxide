@@ -725,7 +725,7 @@ impl BoxOps for Alignment {
           // (_Capture_ is not in the schema, so Perl's openElement validation prevents XMArg there)
           let cur_qname = crate::document::get_node_qname(document.get_node());
           let wrap_xmarg = ismath
-            && !crate::common::arena::to_string(cur_qname).ends_with("_Capture_");
+            && !crate::common::arena::with(cur_qname, |s| s.ends_with("_Capture_"));
           if wrap_xmarg {
             // Hacky!
             document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
