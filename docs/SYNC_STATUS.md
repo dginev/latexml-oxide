@@ -153,6 +153,35 @@ Three failure classes in the session-128 7933-paper sweep, after the
    setup. Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
    any other expl3+tikz users.
 
+   **User directive (round 17)**: "We want deep and exhaustive parity
+   with the LaTeX 3 kernel support (and naturally we accept
+   improvements over perl, where possible). Do not take shortcuts,
+   we want lipsum to load natively and cleanly." This upgrades the
+   pgfkeys repair from a tactical bug fix to a strategic expl3
+   kernel audit. Scope:
+   - `expl3_sty.rs` currently gates loading behind `dump_has_expl3`
+     and uses `SUPPRESS_UNDEFINED_ERRORS` + `SUPPRESS_UNEXPECTED_ERRORS`
+     to mask forward references in expl3-code.tex. The error
+     suppression itself is a shortcut — a genuine expl3 port
+     shouldn't need it.
+   - Catcode-restoration safety-nets in `expl3_sty.rs`,
+     `xparse_sty.rs`, `l3keys2e_sty.rs` are also shortcuts — the raw
+     files' own `\ExplSyntaxOff` should work. If they don't, the
+     cause is our catcode-group-scoping.
+   - The known PA-alias gate in `dump_reader.rs` blocks every
+     `:`-named alias including trivial `\group_begin: PA \begingroup`
+     — safe enough in isolation, but reflects that we don't trust
+     post-dump expl3 state.
+   - A proper port processes expl3-code.tex (~36K lines) cleanly
+     end-to-end, all forward references resolve naturally, catcode
+     regime restores itself via `\ExplSyntaxOff`, and subsequent
+     `.sty` loads (lipsum, xparse, l3keys2e, ...) compose without
+     leaving stack frame or catcode residue.
+
+   This is now a tracked long-horizon deliverable: **deep expl3
+   kernel parity** — see new entry under "Long-horizon —
+   architectural rationalization" below.
+
    The actual flow, verified by reading the code:
    - `\input` DefMacro (`tex_file_io.rs:184`) calls `input()`
    - `input()` (`binding/content.rs:684`) checks `INTERPRETING_DEFINITIONS`;
@@ -493,6 +522,53 @@ Remaining semantic-ambiguity hotspots (see
 4. `a|a|+b|b|+c|c|` VERTBAR — 53 / 10 unique
 
 ### Long-horizon — architectural rationalization
+
+- [ ] **Deep expl3 / LaTeX 3 kernel parity** (round 17 directive,
+  `58617b6b6` diagnostic). Goal: `\usepackage{lipsum}` — or any
+  other expl3-first package — loads cleanly without error
+  suppression, catcode safety-nets, or dump-loader gate
+  exceptions. Subsequent package loads (tikz, etc.) should
+  compose cleanly.
+
+  **Evidence of current gaps**:
+  - `expl3_sty.rs` sets `SUPPRESS_UNDEFINED_ERRORS`,
+    `SUPPRESS_UNEXPECTED_ERRORS`, and `set_suppress_log_output`
+    around the raw `expl3-code.tex` load. Forward-ref errors are
+    being swallowed rather than avoided.
+  - `expl3_sty.rs`, `xparse_sty.rs`, `l3keys2e_sty.rs` all have
+    catcode restoration safety-nets after raw-file loading (space,
+    underscore, at, colon). If `\ExplSyntaxOff` worked correctly
+    these wouldn't be needed.
+  - `dump_reader.rs` blocks every `:`-named PA alias from loading,
+    even trivial ones like `\group_begin: PA \begingroup` — reflects
+    low trust in the downstream expl3 machinery.
+  - 1611.04489's failure cascade (`\group_begin:` on the stack
+    persisting through pgfutil-common.tex) is a *symptom* of the
+    partial port, not an isolated pgfkeys bug.
+
+  **Acceptance criteria**:
+  1. `\usepackage{lipsum}` loads with 0 errors, 0 warnings,
+     without the SUPPRESS_* flags or catcode safety-nets.
+  2. `\usepackage{lipsum}\usepackage{tikz}` loads both cleanly
+     and neither leaves state residue.
+  3. `dump_reader.rs` gate can admit `:`-named aliases that point
+     at safe targets (trivial primitives, not expl3 hooks) without
+     the current "both-non-colon" guard.
+  4. arxiv:1611.04489 / 1511.00722 / 1612.08368 convert with the
+     sandbox-expected error profile (which matches Perl's — for
+     1611.04489 that's 2 warnings, exit=0, 25 s).
+  5. Broader sandbox: any paper currently aborting with `\pgfkeys`
+     / `\pgfmath` undefined-CS cascades recovers. Session 128
+     counted these collectively as one of the three dominant
+     remaining abort classes (~8 papers in the 14-abort
+     residual).
+
+  Deferred — deep work. Requires a careful expl3-code.tex
+  run-through, identifying each forward-ref / hook / cascade that
+  currently breaks, and porting enough kernel primitives that the
+  raw loading succeeds on its own merit.
+
+
 
 - [ ] **Rationalize pragma / semantics / grammar categories from first
   principles.** Observation from round 17: many of the recently-added
