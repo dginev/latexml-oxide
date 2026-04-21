@@ -81,12 +81,16 @@ fn foreign_object_check(document: &Document) -> Option<Node> {
   let mut node_opt = Some(document.get_node().clone());
   while let Some(node) = node_opt {
     let qname = document::get_node_qname(&node);
-    let qname_str = arena::to_string(qname);
-    if qname_str == "svg:svg" {
-      return None;
-    }
-    if qname_str == "svg:foreignObject" {
-      return Some(node);
+    enum Probe { Svg, ForeignObject, Other }
+    let probe = arena::with(qname, |s| match s {
+      "svg:svg" => Probe::Svg,
+      "svg:foreignObject" => Probe::ForeignObject,
+      _ => Probe::Other,
+    });
+    match probe {
+      Probe::Svg => return None,
+      Probe::ForeignObject => return Some(node),
+      Probe::Other => {},
     }
     node_opt = node.get_parent();
   }
@@ -294,8 +298,8 @@ LoadDefinitions!({
     sub[document, _args, props] {
       let current = document.get_node().clone();
       let current_qname = document::get_node_qname(&current);
-      let current_qname_str = arena::to_string(current_qname);
-      if current_qname_str.starts_with("svg:") {
+      let is_in_svg = arena::with(current_qname, |s| s.starts_with("svg:"));
+      if is_in_svg {
         // Already in SVG — just open a nested svg:g
         let minx = match props.get("minx") {
           Some(Stored::Float(f)) => f.0, _ => 0.0
@@ -350,11 +354,12 @@ LoadDefinitions!({
         document.open_element("svg:svg", Some(svg_attrs), None)?;
         // Perl L89: style => $props{style} (baseline vertical-align)
         if let Some(Stored::String(style)) = props.get("style") {
-          let s = arena::to_string(*style);
-          if !s.is_empty() {
-            let svg_node = document.get_node_mut();
-            let _ = svg_node.set_attribute("style", &s);
-          }
+          arena::with(*style, |s| {
+            if !s.is_empty() {
+              let svg_node = document.get_node_mut();
+              let _ = svg_node.set_attribute("style", s);
+            }
+          });
         }
 
         // Perl L91-92: x0=-(0+minx), y0=pxheight+miny
@@ -734,8 +739,8 @@ LoadDefinitions!({
     sub[document, args, _props] {
       let current = document.get_node().clone();
       let qname = document::get_node_qname(&current);
-      let qname_str = arena::to_string(qname);
-      if qname_str.starts_with("ltx:") {
+      let is_ltx = arena::with(qname, |s| s.starts_with("ltx:"));
+      if is_ltx {
         document.open_element("svg:svg", Some(string_map!(
           "_autoopened" => "1".to_string(),
           "_autoclose" => "1".to_string()
