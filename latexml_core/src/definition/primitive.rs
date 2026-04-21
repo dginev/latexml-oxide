@@ -179,3 +179,101 @@ impl Definition for Primitive {
     // self.nargs = Some(nargs);
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::common::arena;
+
+  #[test]
+  fn primitive_default_fields() {
+    let p = Primitive::default();
+    assert_eq!(arena::to_string(p.cs.text), "Primitive");
+    assert!(p.paramlist.is_none());
+    assert!(p.replacement.is_none());
+    assert!(p.alias.is_none());
+    assert!(p.before_digest.is_empty());
+    assert!(p.after_digest.is_empty());
+    assert!(p.nargs.is_none());
+    assert!(p.reversion.is_none());
+    assert!(!p.is_prefix);
+  }
+
+  #[test]
+  fn primitive_partial_eq_by_cs() {
+    // PartialEq compares by cs only — Perl parity (closures can't
+    // be structurally compared).
+    // Primitive doesn't derive Debug, so assert_eq! / assert_ne!
+    // can't format it on failure — use plain equality checks.
+    let mut a = Primitive::default();
+    let mut b = Primitive::default();
+    a.cs = T_CS!("\\foo");
+    b.cs = T_CS!("\\foo");
+    assert!(a == b, "same cs should compare equal");
+    b.cs = T_CS!("\\bar");
+    assert!(!(a == b), "different cs should not be equal");
+  }
+
+  #[test]
+  fn primitive_is_prefix_reflects_field() {
+    let mut p = Primitive::default();
+    assert!(!p.is_prefix());
+    p.is_prefix = true;
+    assert!(p.is_prefix());
+  }
+
+  #[test]
+  fn primitive_get_num_args_zero_without_params() {
+    let p = Primitive::default();
+    assert_eq!(p.get_num_args(), 0);
+  }
+
+  #[test]
+  fn primitive_get_num_args_uses_nargs_override() {
+    // If nargs is explicitly set, it takes precedence over paramlist.
+    let mut p = Primitive::default();
+    p.nargs = Some(3);
+    assert_eq!(p.get_num_args(), 3);
+  }
+
+  #[test]
+  fn primitive_before_digest_ref_returns_some_empty() {
+    let p = Primitive::default();
+    let bd = p.before_digest().expect("Some(&Vec)");
+    assert!(bd.is_empty());
+  }
+
+  #[test]
+  fn primitive_after_digest_ref_returns_some_empty() {
+    let p = Primitive::default();
+    let ad = p.after_digest().expect("Some(&Vec)");
+    assert!(ad.is_empty());
+  }
+
+  #[test]
+  fn primitive_get_parameters_none_by_default() {
+    let p = Primitive::default();
+    assert!(p.get_parameters().is_none());
+  }
+
+  #[test]
+  fn primitive_options_default_all_false() {
+    let o = PrimitiveOptions::default();
+    assert!(!o.bounded);
+    assert!(!o.is_prefix);
+    assert!(!o.require_math);
+    assert!(!o.forbid_math);
+    assert!(!o.robust);
+    assert!(!o.locked);
+    assert!(!o.enter_horizontal);
+    assert!(!o.leave_horizontal);
+    assert!(o.nargs.is_none());
+    assert!(o.scope.is_none());
+    assert!(o.font.is_none());
+    assert!(o.mode.is_none());
+    assert!(o.alias.is_none());
+    assert!(o.before_digest.is_empty());
+    assert!(o.after_digest.is_empty());
+    assert!(o.reversion.is_none());
+  }
+}
