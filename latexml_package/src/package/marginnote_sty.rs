@@ -34,9 +34,15 @@ LoadDefinitions!({
   // Stub: just forward to \marginpar with the main argument
   DefMacro!("\\marginnote[]{}[]", "\\marginpar{\\mn@parboxrestore\\marginfont\\raggedrightmarginnote #2}");
 
-  // \@mn@if@RTL: complex sub{} body — checks RTL mode
-  // Stub: always pick LTR path (\@secondoftwo)
-  DefMacro!("\\@mn@if@RTL", "\\@secondoftwo");
+  // Perl marginnote.sty.ltxml L42-46: \@mn@if@RTL dispatches at
+  // expansion time — if \if@RTL is defined (LookupValue) AND currently
+  // true (IfCondition), return \@firstoftwo; otherwise \@secondoftwo.
+  DefMacro!("\\@mn@if@RTL", sub[_args] {
+    let rtl_cs = T_CS!("\\if@RTL");
+    let is_rtl = lookup_definition(&rtl_cs)?.is_some()
+      && if_condition(&rtl_cs)?.unwrap_or(false);
+    Ok(Tokens!(if is_rtl { T_CS!("\\@firstoftwo") } else { T_CS!("\\@secondoftwo") }))
+  });
 
   // stubs that could do something but do not
   DefRegister!("\\marginnotevadjust" => Dimension!("0pt"));
