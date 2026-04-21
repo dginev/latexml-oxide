@@ -144,6 +144,15 @@ vendor-patch/upstream. Current direct `libxml::bindings::*` call sites:
   `rebuild_idstore_from_dom()` (clear + fresh DOM walk) called at
   the top of `finalize()` before `prune_xmduals`. 1605.08055:
   SIGSEGV → exit=0 in 0.8 s. No regressions on adjacent papers.
+  **Do NOT also call `rebuild_idstore_from_dom` at the start of
+  the Rewriting phase** — tried in session 128, broke split_test.
+  When the DOM has duplicate xml:ids (rare but possible during
+  math-parse), `findnodes` visits in document order so the
+  FIRST-OCCURRENCE node wins the cache entry, but the prior
+  idstore state may have had the LAST-OCCURRENCE node — which
+  some rewrites depend on. Finalize is late enough that those
+  rewrites have already fired, so the rebuild there is safe; at
+  Rewriting entry it isn't.
   The full audit of every unlink-without-unrecord path remains
   open — this is a belt-and-suspenders fix that makes the
   downstream passes robust to stale idstore entries regardless of
