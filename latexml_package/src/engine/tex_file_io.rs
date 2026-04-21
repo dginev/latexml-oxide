@@ -12,12 +12,19 @@ LoadDefinitions!({
   // Technically LaTeX, but Package also does file bookkeeping
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
   Let!("\\@currname", "\\lx@empty");
-  Let!("\\@currext",  "\\lx@empty");
-  DefMacro!("\\lx@pushfilename",
-    r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}");
-  DefMacro!("\\lx@popfilename", r"\expandafter\lx@p@pfilename\@currnamestack\@nil");
-  DefMacro!("\\lx@p@pfilename {}{}{} Until:\\@nil",
-    r"\gdef\@currname{#1}\gdef\@currext{#2}\catcode`\@#3\relax\gdef\@currnamestack{#4}");
+  Let!("\\@currext", "\\lx@empty");
+  DefMacro!(
+    "\\lx@pushfilename",
+    r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"
+  );
+  DefMacro!(
+    "\\lx@popfilename",
+    r"\expandafter\lx@p@pfilename\@currnamestack\@nil"
+  );
+  DefMacro!(
+    "\\lx@p@pfilename {}{}{} Until:\\@nil",
+    r"\gdef\@currname{#1}\gdef\@currext{#2}\catcode`\@#3\relax\gdef\@currnamestack{#4}"
+  );
 
   //======================================================================
   // Low-level input
@@ -261,7 +268,8 @@ LoadDefinitions!({
   DefKeyVal!("SpecialPS", "vscale", "");
   // Simplified: just include the graphic without complex sizer logic
   // Perl uses \lx@special@graphics; we also support the \ltx@ deprecated form
-  DefConstructor!("\\lx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim",
+  DefConstructor!(
+    "\\lx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim",
     "<ltx:graphics graphic='#2'/>"
   );
   Let!("\\ltx@special@graphics", "\\lx@special@graphics");

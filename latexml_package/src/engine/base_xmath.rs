@@ -4,7 +4,6 @@
 use crate::prelude::*;
 use std::collections::hash_map::Entry;
 
-
 static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   static_map!("negthinspace" => "", "thinspace" => "\u{2009}",
     "medspace" => "\u{2005}", "thickspace" => "\u{2004}", "space" => " ")
@@ -22,9 +21,7 @@ fn xmath_copy_keyvals(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
   // Use get_hash_digested() since after digestion values are in cached_hash_digested
   let pairs: Vec<(String, String)> = if let Some(arg1) = whatsit.get_arg(1) {
     match arg1.data() {
-      DigestedData::KeyVals(ref kv) => {
-        kv.get_hash_digested().into_iter().collect()
-      }
+      DigestedData::KeyVals(ref kv) => kv.get_hash_digested().into_iter().collect(),
       _ => Vec::new(),
     }
   } else {
@@ -128,59 +125,59 @@ LoadDefinitions!({
 
   // Superscript with optional keyvals (operator_meaning, etc.)
   DefConstructor!("\\lx@superscript OptionalKeyVals:XMath {} InScriptStyle",
-    "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'><ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/><ltx:XMArg>#2</ltx:XMArg><ltx:XMArg rule='Superscript'>#3</ltx:XMArg></ltx:XMApp>",
-    after_digest => sub[whatsit] {
-      xmath_copy_keyvals(whatsit)?;
-      // Compute scriptpos = "post" + script_level
-      let scriptpos = s!("post{}", stomach::get_script_level());
-      whatsit.set_property("scriptpos", Stored::from(scriptpos));
-      Ok(Vec::new()) },
-    reversion => sub[_whatsit, args] {
-      // Always wrap base in braces (bump=1)
-      let base = &args[1];
-      let sup = &args[2];
-      let base_rev = match base { Some(inner) => inner.revert()?, None => Tokens!() };
-      let sup_rev = match sup { Some(inner) => inner.revert()?, None => Tokens!() };
-      if sup_rev.is_empty() {
-        Ok(base_rev)
-      } else {
-        let mut tks = vec![T_BEGIN!()];
-        tks.extend(base_rev.unlist());
-        tks.push(T_END!());
-        tks.push(T_SUPER!());
-        tks.push(T_BEGIN!());
-        tks.extend(sup_rev.unlist());
-        tks.push(T_END!());
-        Ok(Tokens::new(tks))
-      }});
+  "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'><ltx:XMTok role='SUPERSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/><ltx:XMArg>#2</ltx:XMArg><ltx:XMArg rule='Superscript'>#3</ltx:XMArg></ltx:XMApp>",
+  after_digest => sub[whatsit] {
+    xmath_copy_keyvals(whatsit)?;
+    // Compute scriptpos = "post" + script_level
+    let scriptpos = s!("post{}", stomach::get_script_level());
+    whatsit.set_property("scriptpos", Stored::from(scriptpos));
+    Ok(Vec::new()) },
+  reversion => sub[_whatsit, args] {
+    // Always wrap base in braces (bump=1)
+    let base = &args[1];
+    let sup = &args[2];
+    let base_rev = match base { Some(inner) => inner.revert()?, None => Tokens!() };
+    let sup_rev = match sup { Some(inner) => inner.revert()?, None => Tokens!() };
+    if sup_rev.is_empty() {
+      Ok(base_rev)
+    } else {
+      let mut tks = vec![T_BEGIN!()];
+      tks.extend(base_rev.unlist());
+      tks.push(T_END!());
+      tks.push(T_SUPER!());
+      tks.push(T_BEGIN!());
+      tks.extend(sup_rev.unlist());
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
+    }});
 
   // Subscript with optional keyvals (operator_meaning, etc.)
   DefConstructor!("\\lx@subscript OptionalKeyVals:XMath {} InScriptStyle",
-    "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'><ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/><ltx:XMArg>#2</ltx:XMArg><ltx:XMArg rule='Subscript'>#3</ltx:XMArg></ltx:XMApp>",
-    after_digest => sub[whatsit] {
-      xmath_copy_keyvals(whatsit)?;
-      // Compute scriptpos = "post" + script_level
-      let scriptpos = s!("post{}", stomach::get_script_level());
-      whatsit.set_property("scriptpos", Stored::from(scriptpos));
-      Ok(Vec::new()) },
-    reversion => sub[_whatsit, args] {
-      // Always wrap base in braces (bump=1)
-      let base = &args[1];
-      let sub_arg = &args[2];
-      let base_rev = match base { Some(inner) => inner.revert()?, None => Tokens!() };
-      let sub_rev = match sub_arg { Some(inner) => inner.revert()?, None => Tokens!() };
-      if sub_rev.is_empty() {
-        Ok(base_rev)
-      } else {
-        let mut tks = vec![T_BEGIN!()];
-        tks.extend(base_rev.unlist());
-        tks.push(T_END!());
-        tks.push(T_SUB!());
-        tks.push(T_BEGIN!());
-        tks.extend(sub_rev.unlist());
-        tks.push(T_END!());
-        Ok(Tokens::new(tks))
-      }});
+  "<ltx:XMApp role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'><ltx:XMTok role='SUBSCRIPTOP' meaning='#operator_meaning' omcd='#operator_omcd' scriptpos='#scriptpos'/><ltx:XMArg>#2</ltx:XMArg><ltx:XMArg rule='Subscript'>#3</ltx:XMArg></ltx:XMApp>",
+  after_digest => sub[whatsit] {
+    xmath_copy_keyvals(whatsit)?;
+    // Compute scriptpos = "post" + script_level
+    let scriptpos = s!("post{}", stomach::get_script_level());
+    whatsit.set_property("scriptpos", Stored::from(scriptpos));
+    Ok(Vec::new()) },
+  reversion => sub[_whatsit, args] {
+    // Always wrap base in braces (bump=1)
+    let base = &args[1];
+    let sub_arg = &args[2];
+    let base_rev = match base { Some(inner) => inner.revert()?, None => Tokens!() };
+    let sub_rev = match sub_arg { Some(inner) => inner.revert()?, None => Tokens!() };
+    if sub_rev.is_empty() {
+      Ok(base_rev)
+    } else {
+      let mut tks = vec![T_BEGIN!()];
+      tks.extend(base_rev.unlist());
+      tks.push(T_END!());
+      tks.push(T_SUB!());
+      tks.push(T_BEGIN!());
+      tks.extend(sub_rev.unlist());
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
+    }});
 
   // # Ignore $kv for the moment?????
   // sub I_subscript {
@@ -1337,21 +1334,15 @@ LoadDefinitions!({
       }
     }
   );
-
 });
 
 /// Helper: get first child element node
-fn first_child_element(node: &Node) -> Option<Node> {
-  node.get_child_elements().into_iter().next()
-}
+fn first_child_element(node: &Node) -> Option<Node> { node.get_child_elements().into_iter().next() }
 
 /// Perl: openMathFork (Base_XMath.pool.ltxml L780-786)
 /// Creates a MathFork structure with two branches: main (semantic) and presentation.
 /// Returns (mainfork_math_node, branch_node).
-pub fn open_math_fork(
-  document: &mut Document,
-  equation: &mut Node,
-) -> Result<(Node, Node)> {
+pub fn open_math_fork(document: &mut Document, equation: &mut Node) -> Result<(Node, Node)> {
   let mut fork = document.open_element_at(equation, "ltx:MathFork", None, None)?;
   let mut mainfork = document.open_element_at(&mut fork, "ltx:Math", None, None)?;
   let _xmath = document.open_element_at(&mut mainfork, "ltx:XMath", None, None)?;
@@ -1570,11 +1561,14 @@ pub fn add_column_to_math_fork(
 /// Collect all xml:id values from a subtree by DOM walking.
 fn collect_xml_ids(node: &Node, ids: &mut Vec<String>) {
   // Try all possible attribute forms for xml:id
-  let id = node.get_attribute("xml:id")
+  let id = node
+    .get_attribute("xml:id")
     .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
     .or_else(|| {
       // Fallback: scan attributes for anything named "id" or "xml:id"
-      node.get_attributes().into_iter()
+      node
+        .get_attributes()
+        .into_iter()
         .find(|(k, _)| k == "id" || k == "xml:id")
         .map(|(_, v)| v)
     });
@@ -1611,7 +1605,9 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // (XPath namespace handling may miss xml:id attributes)
   let mut all_ids: Vec<String> = Vec::new();
   collect_xml_ids(root, &mut all_ids);
-  if all_ids.is_empty() { return; }
+  if all_ids.is_empty() {
+    return;
+  }
   // Build a reverse lookup: for each id, map its base forms to the actual id
   // E.g., "Ch0.E16.m2.1" could be the actual id for what was originally "Ch0.E16.m1.1"
   // We use a simpler approach: map by the TRAILING number(s) after the last dot
@@ -1631,7 +1627,9 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   for mut xmref in xmrefs {
     if let Some(idref) = xmref.get_attribute("idref") {
       // Check if idref points to an existing id in the subtree
-      if all_ids.contains(&idref) { continue; }
+      if all_ids.contains(&idref) {
+        continue;
+      }
       // Try to find the matching id by suffix
       if let Some(dot_pos) = idref.rfind('.') {
         let suffix = &idref[dot_pos..];
@@ -1705,7 +1703,8 @@ pub fn equationgroup_join_rows(
         None => l,
       });
     }
-    if let Some(eq_id) = eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+    if let Some(eq_id) = eq
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
       .or_else(|| eq.get_attribute("xml:id"))
     {
       id = Some(eq_id);
@@ -1733,19 +1732,25 @@ pub fn equationgroup_join_rows(
   // only count cells from the equation that provides the target ID.
   // This prevents inflation from rows that belong to different equation contexts.
   let has_different_ids = equations.len() > 1 && {
-    let ids: Vec<_> = equations.iter().filter_map(|eq|
-      eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
-        .or_else(|| eq.get_attribute("xml:id"))
-    ).collect();
+    let ids: Vec<_> = equations
+      .iter()
+      .filter_map(|eq| {
+        eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+          .or_else(|| eq.get_attribute("xml:id"))
+      })
+      .collect();
     ids.len() > 1 || (ids.len() == 1 && equations.len() > 1)
   };
   let mut cell_count = 0;
   for eq in equations.iter() {
     if has_different_ids {
       // Multi-row with different IDs: only count cells with Math from the target equation
-      let eq_id = eq.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      let eq_id = eq
+        .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
         .or_else(|| eq.get_attribute("xml:id"));
-      if eq_id != id { continue; }
+      if eq_id != id {
+        continue;
+      }
       // Count only cells that contain Math elements (empty cells don't consume IDs)
       let captures = document.findnodes("ltx:_Capture_", Some(eq));
       for cap in &captures {
@@ -1885,7 +1890,10 @@ mod tests {
     collect_xmrefs(&root, &mut refs);
     // Must have idref attribute AND be named XMRef.
     assert_eq!(refs.len(), 2);
-    let idrefs: Vec<String> = refs.iter().map(|r| r.get_attribute("idref").unwrap()).collect();
+    let idrefs: Vec<String> = refs
+      .iter()
+      .map(|r| r.get_attribute("idref").unwrap())
+      .collect();
     assert_eq!(idrefs, vec!["a1", "b1"]);
   }
 

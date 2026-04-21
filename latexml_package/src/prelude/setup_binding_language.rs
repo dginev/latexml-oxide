@@ -1488,7 +1488,11 @@ macro_rules! DefKeyVal {
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {{
     // TODO: explicit $options with prefix logic — for now ignore options and use default prefix
-    log::warn!("DefKeyVal with explicit options not fully ported, ignoring options for {}/{}", $keyset, $key);
+    log::warn!(
+      "DefKeyVal with explicit options not fully ported, ignoring options for {}/{}",
+      $keyset,
+      $key
+    );
     ::latexml_core::keyval::define(KeyvalConfig {
       prefix: "KV",
       keyset: $keyset,
@@ -1577,8 +1581,9 @@ macro_rules! MuGlue {
   ($spec:expr) => {{ MuGlue::new_spec($spec, None, None, None, None) }};
 }
 
-/// Register document namespaces. Replaces the old `DocType!` macro (DTD not supported in Rust port).
-/// The root element, public ID, and system ID arguments are accepted for compatibility but ignored.
+/// Register document namespaces. Replaces the old `DocType!` macro (DTD not supported in Rust
+/// port). The root element, public ID, and system ID arguments are accepted for compatibility but
+/// ignored.
 #[macro_export]
 macro_rules! RegisterDocumentNamespaces {
   ($rootelement:expr, $pubid:expr, $sysid:expr) => {
@@ -1672,7 +1677,8 @@ macro_rules! AddToMacro {
       Some(defn) if !defn.is_expandable() => {
         let message = s!("{} is not an expandable control sequence", $cs);
         let message2 = "Ignoring addition";
-        Warn!("unexpected", $cs, message, message2); },
+        Warn!("unexpected", $cs, message, message2);
+      },
       Some(defn) => {
         let mut expansion = match defn.get_expansion() {
           // the .clone() call is again avoidable with a careful refactor via e.g. using
@@ -1701,7 +1707,7 @@ macro_rules! AddToMacro {
             ..ExpandableOptions::default()
           }),
         )?;
-      }
+      },
     }
   }};
 }

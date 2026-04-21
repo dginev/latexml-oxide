@@ -13,17 +13,24 @@ fn rdf_attributes_from_digested(kv: &Digested) -> HashMap<String, String> {
           if let DigestedData::Whatsit(ref w) = *d.data() {
             let cs = w.borrow().get_definition().get_cs_name().to_string();
             cs == "\\ref" || cs == "\\ref "
-          } else { false }
+          } else {
+            false
+          }
         });
         if is_ref {
           // Extract label from \ref's second argument (the label text)
           if let Some(ref d) = digested_opt {
             if let DigestedData::Whatsit(ref w) = *d.data() {
-              let label = w.borrow().get_arg(2)
+              let label = w
+                .borrow()
+                .get_arg(2)
                 .map(|a| s!("LABEL:{}", a.to_string()))
-                .unwrap_or_else(|| w.borrow().get_arg(1)
-                  .map(|a| s!("LABEL:{}", a.to_string()))
-                  .unwrap_or_default());
+                .unwrap_or_else(|| {
+                  w.borrow()
+                    .get_arg(1)
+                    .map(|a| s!("LABEL:{}", a.to_string()))
+                    .unwrap_or_default()
+                });
               attrs.insert(s!("{}labelref", key), label);
               continue;
             }
@@ -63,7 +70,7 @@ fn rdf_attributes_from_argwrap(arg: &ArgWrap) -> HashMap<String, String> {
       } else {
         HashMap::default()
       }
-    }
+    },
   }
 }
 
@@ -91,7 +98,7 @@ fn process_rdf_key_value(key: &str, val: &ArgWrap, attrs: &mut HashMap<String, S
       attrs.insert(s!("{}idref", key), val_str[1..].to_string());
     } else if val_str.starts_with("\\ref{") && val_str.ends_with('}') {
       // Preamble fallback: \ref{label} as string → labelref
-      let label = &val_str[5..val_str.len()-1];
+      let label = &val_str[5..val_str.len() - 1];
       attrs.insert(s!("{}labelref", key), s!("LABEL:{}", label));
     } else {
       attrs.insert(key.to_string(), val_str);
@@ -110,7 +117,8 @@ fn extract_ref_label(d: &Digested) -> Option<String> {
     let wb = w.borrow();
     let cs = wb.get_definition().get_cs_name().to_string();
     if cs == "\\ref" || cs == "\\ref " {
-      let label = wb.get_arg(2)
+      let label = wb
+        .get_arg(2)
         .map(|a| s!("LABEL:{}", a.to_string()))
         .or_else(|| wb.get_arg(1).map(|a| s!("LABEL:{}", a.to_string())))
         .unwrap_or_default();
@@ -249,8 +257,10 @@ LoadDefinitions!({
   );
 
   Let!("\\lxRDF", "\\lxRDF@preamble");
-  let _ = state::push_value("@at@begin@document",
-    Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")));
+  let _ = state::push_value(
+    "@at@begin@document",
+    Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")),
+  );
 
   // Add prefix= attribute when document opens
   Tag!("ltx:document", after_open => sub[_document, node] {

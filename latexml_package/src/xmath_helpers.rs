@@ -163,9 +163,8 @@ pub fn i_dual(
   // Assemble: \lx@dual[options]{content}{presentation}
   // Pre-size: \lx@dual + [opts] + {content} + {presentation}.
   let opt_len = optional.as_ref().map(|o| o.len() + 2).unwrap_or(0);
-  let mut tks: Vec<Token> = Vec::with_capacity(
-    1 + opt_len + 2 + content_subst.len() + 2 + wrapped_pres.len(),
-  );
+  let mut tks: Vec<Token> =
+    Vec::with_capacity(1 + opt_len + 2 + content_subst.len() + 2 + wrapped_pres.len());
   tks.push(T_CS!("\\lx@dual"));
   if let Some(opts) = optional {
     tks.push(T_OTHER!("["));
@@ -211,7 +210,9 @@ pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
   // Pre-size: \lx@apply + keyvals + 6 wrap-structure tokens for op
   // + per-arg (3 structure + arg.len()) + args list wrap (2).
   let args_total: usize = args.iter().map(|a| a.len() + 3).sum();
-  let kv_total: usize = if kv.is_empty() { 0 } else {
+  let kv_total: usize = if kv.is_empty() {
+    0
+  } else {
     kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
   };
   let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 6 + op.len() + 2 + args_total);
@@ -241,7 +242,9 @@ pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
 
 /// Perl: I_symbol(kv, text) — generates `\lx@symbol[kv]{text}`.
 pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
-  let kv_total: usize = if kv.is_empty() { 0 } else {
+  let kv_total: usize = if kv.is_empty() {
+    0
+  } else {
     kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
   };
   let text_len = text.as_ref().map(|t| t.len()).unwrap_or(0);
@@ -261,7 +264,9 @@ pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
 
 /// Perl: I_superscript(kv, base, script) — generates `\lx@superscript[kv]{base}{script}`.
 pub fn i_superscript(kv: &[(&str, Tokens)], base: Tokens, script: Tokens) -> Tokens {
-  let kv_total: usize = if kv.is_empty() { 0 } else {
+  let kv_total: usize = if kv.is_empty() {
+    0
+  } else {
     kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
   };
   let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 4 + base.len() + script.len());
@@ -302,8 +307,10 @@ mod tests {
     let tks = i_xmarg("X.1", arg);
     let unlisted = tks.unlist();
     // Should have \lx@xmarg { X.1 } { }.
-    assert!(unlisted.len() >= 5,
-      "should have at least 5 tokens: cs + {{ + id + }} + {{ + }}");
+    assert!(
+      unlisted.len() >= 5,
+      "should have at least 5 tokens: cs + {{ + id + }} + {{ + }}"
+    );
     assert_eq!(unlisted[0].code, Catcode::CS);
   }
 
@@ -347,6 +354,6 @@ mod tests {
     let out = i_keyvals(&[]);
     // Empty input → no tokens (or just minimal scaffold).
     // Exact behavior depends on the impl; just assert it's well-formed.
-    let _ = out.len();  // doesn't panic
+    let _ = out.len(); // doesn't panic
   }
 }

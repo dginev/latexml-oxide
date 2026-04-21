@@ -88,7 +88,8 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@endash", {
     Tbox::new(
       arena::pin_static("\u{2013}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\lx@endash")),
       SymHashMap::default(),
     )
@@ -96,7 +97,8 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@emdash", {
     Tbox::new(
       arena::pin_static("\u{2014}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\lx@emdash")),
       SymHashMap::default(),
     )
@@ -105,7 +107,8 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@NBSP", {
     Tbox::new(
       arena::pin_static("\u{00A0}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_ACTIVE!('~')),
       stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
     )
@@ -113,13 +116,16 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@nobreakspace", {
     Tbox::new(
       arena::pin_static("\u{00A0}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\lx@nobreakspace")),
       stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
     )
   });
 
-  DefConditional!("\\if@in@preamble", { state::lookup_bool_sym(pin!("inPreamble")) });
+  DefConditional!("\\if@in@preamble", {
+    state::lookup_bool_sym(pin!("inPreamble"))
+  });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -319,53 +325,53 @@ LoadDefinitions!({
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
-    after_digest => {
-      // Perl: digest @at@begin@maketitle tokens (which runs \@add@to@frontmatter@now
-      // for each deferred frontmatter entry, populating the frontmatter hash)
-      // with_value walks the VecDeque in-place so we don't pay for a
-      // full Stored::clone (each inner Tokens would Rc-bump again).
-      let all_tokens = state::with_value("@at@begin@maketitle", |v| {
-        if let Some(Stored::VecDequeStored(tks_list)) = v {
-          let mut acc = Vec::new();
-          for stored_item in tks_list.iter() {
-            if let Stored::Tokens(ref tks) = stored_item {
-              acc.extend(tks.unlist_ref().iter().copied());
-            }
+  after_digest => {
+    // Perl: digest @at@begin@maketitle tokens (which runs \@add@to@frontmatter@now
+    // for each deferred frontmatter entry, populating the frontmatter hash)
+    // with_value walks the VecDeque in-place so we don't pay for a
+    // full Stored::clone (each inner Tokens would Rc-bump again).
+    let all_tokens = state::with_value("@at@begin@maketitle", |v| {
+      if let Some(Stored::VecDequeStored(tks_list)) = v {
+        let mut acc = Vec::new();
+        for stored_item in tks_list.iter() {
+          if let Stored::Tokens(ref tks) = stored_item {
+            acc.extend(tks.unlist_ref().iter().copied());
           }
-          acc
-        } else {
-          Vec::new()
         }
-      });
-      if !all_tokens.is_empty() {
-        let _ = stomach::digest(Tokens::new(all_tokens));
+        acc
+      } else {
+        Vec::new()
       }
-      state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
-      state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
     });
+    if !all_tokens.is_empty() {
+      let _ = stomach::digest(Tokens::new(all_tokens));
+    }
+    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
+    state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+  });
 
   // Fallback: if \maketitle wasn't used, this still triggers frontmatter placement.
   // Perl: processes @at@begin@maketitle tokens.
   DefPrimitive!("\\lx@frontmatter@fallback", None,
-    after_digest => {
-      let all_tokens = state::with_value("@at@begin@maketitle", |v| {
-        if let Some(Stored::VecDequeStored(tks_list)) = v {
-          let mut acc = Vec::new();
-          for stored_item in tks_list.iter() {
-            if let Stored::Tokens(ref tks) = stored_item {
-              acc.extend(tks.unlist_ref().iter().copied());
-            }
+  after_digest => {
+    let all_tokens = state::with_value("@at@begin@maketitle", |v| {
+      if let Some(Stored::VecDequeStored(tks_list)) = v {
+        let mut acc = Vec::new();
+        for stored_item in tks_list.iter() {
+          if let Stored::Tokens(ref tks) = stored_item {
+            acc.extend(tks.unlist_ref().iter().copied());
           }
-          acc
-        } else {
-          Vec::new()
         }
-      });
-      if !all_tokens.is_empty() {
-        let _ = stomach::digest(Tokens::new(all_tokens));
+        acc
+      } else {
+        Vec::new()
       }
-      state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
     });
+    if !all_tokens.is_empty() {
+      let _ = stomach::digest(Tokens::new(all_tokens));
+    }
+    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
+  });
 
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
@@ -664,8 +670,10 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
   }
-  let frontmatter_elements_set: HashSet<String> =
-    FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+  let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS
+    .iter()
+    .map(ToString::to_string)
+    .collect();
 
   // Collect the frontmatter hash keys via with_value — we only need the
   // key set here; the full HashTagData clone previously happened just
@@ -681,10 +689,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   }
 
   // If doc ONLY has abstract as frontmatter, defer until abstract's document location
-  if set_keys.len() == 1
-    && set_keys[0] == "ltx:abstract"
-    && !lookup_bool("frontmatter_deferred")
-  {
+  if set_keys.len() == 1 && set_keys[0] == "ltx:abstract" && !lookup_bool("frontmatter_deferred") {
     state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
     return Ok(());
   }
@@ -708,8 +713,10 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     .filter(|key| !frontmatter_elements_set.contains(key.as_str()))
     .map(ToString::to_string)
     .collect();
-  let mut all_keys: Vec<String> =
-    FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+  let mut all_keys: Vec<String> = FRONTMATTER_ELEMENTS
+    .iter()
+    .map(ToString::to_string)
+    .collect();
   all_keys.extend(custom_keys);
 
   for key in &all_keys {
@@ -976,8 +983,6 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {
   })
 }
 
-
-
 /// Stomach-level counterpart to `read_box_contents`.
 ///
 /// Perl: readBoxContents calls $stomach->beginMode($mode), then reads/digests tokens
@@ -1020,7 +1025,8 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
     // Check the condition BEFORE endMode pops the frame.
     let post_mode = state::lookup_string_from_sym(pin!("MODE"));
     let bound_mode = state::lookup_string_from_sym(pin!("BOUND_MODE"));
-    if post_mode == "horizontal" && bound_mode.ends_with("vertical")
+    if post_mode == "horizontal"
+      && bound_mode.ends_with("vertical")
       && has_only_simple_horizontal_content(&item)
     {
       repack_horizontal_in_list(&mut item);
@@ -1053,11 +1059,15 @@ fn has_only_simple_horizontal_content(item: &Digested) -> bool {
   if let DigestedData::List(l) = item.data() {
     let list = l.borrow();
     // Filter out empty items
-    let non_empty: Vec<_> = list.boxes.iter()
+    let non_empty: Vec<_> = list
+      .boxes
+      .iter()
       .filter(|b| !b.get_property_bool("isEmpty"))
       .collect();
     // If all non-empty items are TBoxes or Comments, it's simple horizontal content
-    non_empty.iter().all(|b| matches!(b.data(), DigestedData::TBox(_) | DigestedData::Comment(_)))
+    non_empty
+      .iter()
+      .all(|b| matches!(b.data(), DigestedData::TBox(_) | DigestedData::Comment(_)))
   } else {
     false
   }
@@ -1081,12 +1091,11 @@ fn repack_horizontal_in_list(item: &mut Digested) {
     let mut keep = false;
 
     for child in children {
-      let child_mode = child.get_property("mode")
+      let child_mode = child
+        .get_property("mode")
         .map(|v| v.to_string())
         .unwrap_or_else(|| "horizontal".to_string());
-      if child_mode == "horizontal"
-        || child_mode == "restricted_horizontal"
-        || child_mode == "math"
+      if child_mode == "horizontal" || child_mode == "restricted_horizontal" || child_mode == "math"
       {
         // Perl: $keep = 1 if ($mode ne 'horizontal') || !$item->getProperty('isSpace');
         if child_mode != "horizontal" || !child.get_property_bool("isSpace") {
@@ -1149,7 +1158,9 @@ fn simplify_vertical_list(item: Digested) -> Digested {
     DigestedData::List(l) => {
       let list = l.borrow();
       // Check if the List's mode property indicates vertical
-      list.properties.get("mode")
+      list
+        .properties
+        .get("mode")
         .map(|m| m.ends_with_text("vertical"))
         .unwrap_or(false)
     },
@@ -1163,7 +1174,9 @@ fn simplify_vertical_list(item: Digested) -> Digested {
   let non_empty: Vec<Digested> = match item.data() {
     DigestedData::List(l) => {
       let list = l.borrow();
-      list.boxes.iter()
+      list
+        .boxes
+        .iter()
         .filter(|b| !b.get_property_bool("isEmpty"))
         .cloned()
         .collect()
@@ -1175,14 +1188,16 @@ fn simplify_vertical_list(item: Digested) -> Digested {
   if non_empty.len() == 1 {
     let single = &non_empty[0];
     let child_is_vertical = match single.data() {
-      DigestedData::List(l) => {
-        l.borrow().properties.get("mode")
-          .map(|m| m.ends_with_text("vertical"))
-          .unwrap_or(false)
-      },
+      DigestedData::List(l) => l
+        .borrow()
+        .properties
+        .get("mode")
+        .map(|m| m.ends_with_text("vertical"))
+        .unwrap_or(false),
       DigestedData::Whatsit(w) => {
         // Check whatsit's mode property (set by DefConstructor mode => "internal_vertical")
-        w.borrow().get_property("mode")
+        w.borrow()
+          .get_property("mode")
           .map(|m| m.ends_with_text("vertical"))
           .unwrap_or(false)
       },
@@ -1202,12 +1217,18 @@ pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
     // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
     // uses a stack-buffer encode_utf8 and skips the per-char
     // `c.to_string()` heap alloc the previous version did.
-    let mut tokens: Vec<Token> = keyword.chars()
-      .map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER })
+    let mut tokens: Vec<Token> = keyword
+      .chars()
+      .map(|c| Token {
+        text: arena::pin_char(c),
+        code: Catcode::OTHER,
+      })
       .collect();
     let val_str = value.to_attribute();
-    tokens.extend(val_str.chars()
-      .map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }));
+    tokens.extend(val_str.chars().map(|c| Token {
+      text: arena::pin_char(c),
+      code: Catcode::OTHER,
+    }));
     tokens
   } else {
     Vec::new()
@@ -1285,9 +1306,15 @@ pub fn insert_block(
   let mut block_attr = block_attr;
   if is_svg {
     if let Some(width_str) = block_attr.get("width").cloned() {
-      if let Some(pt_val) = width_str.strip_suffix("pt").and_then(|s| s.parse::<f64>().ok()) {
+      if let Some(pt_val) = width_str
+        .strip_suffix("pt")
+        .and_then(|s| s.parse::<f64>().ok())
+      {
         // Convert pt to em using content's font em width
-        let em_width = contents.get_font().ok().flatten()
+        let em_width = contents
+          .get_font()
+          .ok()
+          .flatten()
           .map(|f| f.get_em_width())
           .unwrap_or((10.0 * 65536.0) as i64);
         let em_val = (pt_val * 65536.0) / em_width as f64;
@@ -1466,8 +1493,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
       .collect();
     let mut texts: Vec<Node> = vec![];
     for xmnode in xmath_children {
-      let is_hint =
-        document::with_node_qname(&xmnode, |qname| qname == "ltx:XMHint");
+      let is_hint = document::with_node_qname(&xmnode, |qname| qname == "ltx:XMHint");
       if is_hint {
         // Convert XMHint width to spacing characters
         if let Some(width_str) = xmnode.get_attribute("width") {
@@ -1483,7 +1509,9 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
             if base_dim_str.ends_with("mu") {
               let mu_str = base_dim_str.trim_end_matches("mu").trim();
               mu_str.parse::<f64>().ok().map(|mu_val| {
-                let fs = state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+                let fs = state::lookup_font()
+                  .and_then(|f| f.get_size())
+                  .unwrap_or(10.0);
                 Dimension::from_str(&format!("{}pt", mu_val * fs / 18.0)).unwrap_or_default()
               })
             } else {
@@ -1658,11 +1686,12 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
       // Perl: Equals($t, $delim) checks meaning via lookupMeaning.
       // So \And (let to \and) matches \and as delimiter.
       if delims.iter().any(|d| {
-        d == &t || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
-          let meaning_t = state::lookup_definition(&t).ok().flatten();
-          let meaning_d = state::lookup_definition(d).ok().flatten();
-          meaning_t.is_some() && meaning_t == meaning_d
-        })
+        d == &t
+          || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
+            let meaning_t = state::lookup_definition(&t).ok().flatten();
+            let meaning_d = state::lookup_definition(d).ok().flatten();
+            meaning_t.is_some() && meaning_t == meaning_d
+          })
       }) {
         items.push(Tokens::new(std::mem::take(&mut toks)));
       } else if t == T_BEGIN!() {

@@ -10,9 +10,7 @@ thread_local! {
   static INTARRAYS: RefCell<HashMap<String, Vec<i64>>> = RefCell::new(HashMap::new());
 }
 
-fn intarray_key(token: &Token, index: i64) -> String {
-  s!("__intarray_{}_{}", token, index)
-}
+fn intarray_key(token: &Token, index: i64) -> String { s!("__intarray_{}_{}", token, index) }
 
 /// Read an intarray identifier: \__intarray:w <Number>
 fn read_intarray_key() -> Result<String> {
@@ -34,9 +32,7 @@ fn read_intarray_key() -> Result<String> {
 }
 
 fn with_intarray<F, R>(key: &str, f: F) -> R
-where
-  F: FnOnce(&mut Vec<i64>) -> R,
-{
+where F: FnOnce(&mut Vec<i64>) -> R {
   INTARRAYS.with(|arrays| {
     let mut arrays = arrays.borrow_mut();
     let arr = arrays.entry(key.to_string()).or_default();

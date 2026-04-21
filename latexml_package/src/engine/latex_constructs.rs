@@ -42,11 +42,7 @@ pub fn begin_appendices(counter: &str) {
     &T_CS!(&the_ctr_id),
     Some(Scope::Global),
   );
-  state::let_i(
-    &T_CS!("\\lx@save@appendix"),
-    &cs_ctr,
-    Some(Scope::Global),
-  );
+  state::let_i(&T_CS!("\\lx@save@appendix"), &cs_ctr, Some(Scope::Global));
   state::let_i(
     &T_CS!("\\lx@save@@appendix"),
     &T_CS!("\\@appendix"),
@@ -57,9 +53,16 @@ pub fn begin_appendices(counter: &str) {
     "ltx:appendix",
     Some(s!("ltx:{counter}")),
   );
-  let has_chapter = lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some();
+  let has_chapter = lookup_definition(&T_CS!("\\c@chapter"))
+    .ok()
+    .flatten()
+    .is_some();
   if has_chapter && counter != "chapter" {
-    let _ = new_counter(counter, "chapter", Some(NewDefault!(NewCounterOptions, idprefix => "A")));
+    let _ = new_counter(
+      counter,
+      "chapter",
+      Some(NewDefault!(NewCounterOptions, idprefix => "A")),
+    );
     let expansion: String = s!("\\thechapter.\\Alph{{{counter}}}");
     let _ = def_macro(
       T_CS!(the_ctr),
@@ -68,7 +71,11 @@ pub fn begin_appendices(counter: &str) {
       Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))),
     );
   } else {
-    let _ = new_counter(counter, "document", Some(NewDefault!(NewCounterOptions, idprefix => "A")));
+    let _ = new_counter(
+      counter,
+      "document",
+      Some(NewDefault!(NewCounterOptions, idprefix => "A")),
+    );
     let expansion: String = s!("\\Alph{{{counter}}}");
     let _ = def_macro(
       T_CS!(the_ctr),
@@ -85,7 +92,11 @@ pub fn begin_appendices(counter: &str) {
   );
   state::assign_mapping("counter_for_type", "appendix", Some(counter.to_string()));
   state::let_i(&cs_ctr, &T_CS!("\\@@appendix"), Some(Scope::Global));
-  state::let_i(&T_CS!("\\@appendix"), &T_CS!("\\relax"), Some(Scope::Global));
+  state::let_i(
+    &T_CS!("\\@appendix"),
+    &T_CS!("\\relax"),
+    Some(Scope::Global),
+  );
 }
 
 pub fn end_appendices() {
@@ -225,14 +236,22 @@ pub fn tabular_bindings(
 ) -> Result<()> {
   for col in template.get_columns_mut() {
     if let Some(ref after) = col.after {
-      if after.unlist_ref().iter().any(|t| t.with_str(|s| s.contains("intercol"))) {
+      if after
+        .unlist_ref()
+        .iter()
+        .any(|t| t.with_str(|s| s.contains("intercol")))
+      {
         col.has_intercol_after = true;
       }
     }
   }
   for col in template.get_repeated_mut() {
     if let Some(ref after) = col.after {
-      if after.unlist_ref().iter().any(|t| t.with_str(|s| s.contains("intercol"))) {
+      if after
+        .unlist_ref()
+        .iter()
+        .any(|t| t.with_str(|s| s.contains("intercol")))
+      {
         col.has_intercol_after = true;
       }
     }
@@ -327,7 +346,11 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
         }
       });
       let changed = tok.with_str(|s| s != new_str.as_str());
-      let new_tok = if changed { Token::new(new_str, cc) } else { tok };
+      let new_tok = if changed {
+        Token::new(new_str, cc)
+      } else {
+        tok
+      };
       result.push(new_tok);
       if req_case == "sentence" || req_case == "title" {
         is_upper = false;
@@ -354,9 +377,14 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           result.push(T_BEGIN!());
           result.extend(arg.unlist());
           result.push(T_END!());
-        } else if let Some(changed) =
-          lookup_mapping(if is_upper { "text_uppercase" } else { "text_lowercase" }, &next_key)
-        {
+        } else if let Some(changed) = lookup_mapping(
+          if is_upper {
+            "text_uppercase"
+          } else {
+            "text_lowercase"
+          },
+          &next_key,
+        ) {
           if let Stored::Token(changed_tok) = changed {
             result.push(changed_tok);
           } else {
@@ -528,9 +556,16 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
 pub fn prepare_equation_counter(options: SymHashMap<Stored>) {
   // Guard: ensure the equation counter exists — normally created by article.cls,
   // but standalone classes (jpsj2, appolb, etc.) may not define it.
-  if lookup_definition(&T_CS!("\\theequation@ID")).ok().flatten().is_none() {
-    let _ = new_counter("equation", "section",
-      Some(NewDefault!(NewCounterOptions, idprefix => "E")));
+  if lookup_definition(&T_CS!("\\theequation@ID"))
+    .ok()
+    .flatten()
+    .is_none()
+  {
+    let _ = new_counter(
+      "equation",
+      "section",
+      Some(NewDefault!(NewCounterOptions, idprefix => "E")),
+    );
   }
   state::assign_value(
     "EQUATION_NUMBERING",
@@ -549,7 +584,10 @@ pub fn before_equation() -> Result<()> {
       has_preset = numbering.contains_key("preset");
       match numbering.get("counter") {
         Some(Stored::String(v)) => arena::to_string(*v),
-        Some(other) => { log::warn!("eq counter should be stored as string, was instead: {other:?}"); String::from("equation") },
+        Some(other) => {
+          log::warn!("eq counter should be stored as string, was instead: {other:?}");
+          String::from("equation")
+        },
         _ => String::from("equation"),
       }
     } else {
@@ -585,7 +623,12 @@ pub fn before_equation() -> Result<()> {
 }
 pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   // Phase 1: Gather all needed data from state (immutable borrows only)
-  enum EqAction { Retract, Postset, TagsUpdate, None }
+  enum EqAction {
+    Retract,
+    Postset,
+    TagsUpdate,
+    None,
+  }
   let mut action = EqAction::None;
   let mut is_aligned = false;
   let mut is_numbered_for_postset = false;
@@ -593,8 +636,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   with_value("EQUATION_NUMBERING", |eq_num_opt| {
     if let Some(Stored::HashStored(ref numbering)) = eq_num_opt {
       is_aligned = matches!(numbering.get("aligned"), Some(&Stored::Bool(true)));
-      is_numbered_for_postset =
-        matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
+      is_numbered_for_postset = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       with_value("EQUATIONROW_TAGS", |tags_opt| {
         if let Some(Stored::HashStored(ref tags)) = tags_opt {
           ctr = tags
@@ -640,12 +682,10 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
       );
     },
     EqAction::TagsUpdate => {
-      let invoked_tags = build_invocation(
-        T_CS!("\\lx@make@tags"),
-        vec![Some(Tokens::new(Explode!(ctr)))],
-      )?;
-      let stored_tags_update =
-        Stored::Digested(stomach::digest(invoked_tags)?);
+      let invoked_tags = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens::new(
+        Explode!(ctr),
+      ))])?;
+      let stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)?);
       with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
         if let Some(Stored::HashStored(ref mut tags)) = tags_opt {
           tags.insert("tags", stored_tags_update);
@@ -688,34 +728,34 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
 /// Perl: latex_constructs.pool.ltxml lines 2025-2035
 fn retract_equation() {
   // Phase 1: Gather data (immutable borrows)
-  let (ctr, is_preset, is_numbered) =
-    with_value("EQUATION_NUMBERING", |eq_num_opt| {
-      let numbering = match eq_num_opt {
-        Some(Stored::HashStored(n)) => n,
-        _ => return (String::from("equation"), false, false),
+  let (ctr, is_preset, is_numbered) = with_value("EQUATION_NUMBERING", |eq_num_opt| {
+    let numbering = match eq_num_opt {
+      Some(Stored::HashStored(n)) => n,
+      _ => return (String::from("equation"), false, false),
+    };
+    let is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
+    with_value("EQUATIONROW_TAGS", |tags_opt| {
+      let tags = match tags_opt {
+        Some(Stored::HashStored(t)) => t,
+        _ => return (String::from("equation"), false, is_numbered),
       };
-      let is_numbered =
-        matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
-      with_value("EQUATIONROW_TAGS", |tags_opt| {
-        let tags = match tags_opt {
-          Some(Stored::HashStored(t)) => t,
-          _ => return (String::from("equation"), false, is_numbered),
-        };
-        let ctr = tags
-          .get("counter")
-          .map_or_else(|| numbering.get("counter"), Some)
-          .map(ToString::to_string)
-          .unwrap_or_else(|| String::from("equation"));
-        let is_preset =
-          matches!(tags.get("preset"), Some(&Stored::Bool(true)));
-        (ctr, is_preset, is_numbered)
-      })
-    });
+      let ctr = tags
+        .get("counter")
+        .map_or_else(|| numbering.get("counter"), Some)
+        .map(ToString::to_string)
+        .unwrap_or_else(|| String::from("equation"));
+      let is_preset = matches!(tags.get("preset"), Some(&Stored::Bool(true)));
+      (ctr, is_preset, is_numbered)
+    })
+  });
   // Phase 2: Mutate state (borrows released)
   if is_preset {
     // counter (or ID counter) was stepped, so decrement it.
-    let counter_name =
-      if is_numbered { ctr.clone() } else { s!("UN{}", ctr) };
+    let counter_name = if is_numbered {
+      ctr.clone()
+    } else {
+      s!("UN{}", ctr)
+    };
     let _ = add_to_counter(&counter_name, Number::new(-1));
   }
   if let Ok(mut new_tags) = ref_step_id(&ctr) {
@@ -739,7 +779,9 @@ pub fn eqnarray_bindings() -> Result<()> {
   // Perl: 3-column template: col1=right, col2=center, col3=left
   let col1 = Cell {
     before: Some(Tokens::new(vec![
-      T_CS!("\\hfil"), T_MATH!(), T_CS!("\\displaystyle"),
+      T_CS!("\\hfil"),
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
     ])),
     after: Some(Tokens::new(vec![T_MATH!()])),
     empty: true,
@@ -747,16 +789,16 @@ pub fn eqnarray_bindings() -> Result<()> {
   };
   let col2 = Cell {
     before: Some(Tokens::new(vec![
-      T_CS!("\\hfil"), T_MATH!(), T_CS!("\\displaystyle"),
+      T_CS!("\\hfil"),
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
     ])),
     after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
     empty: true,
     ..Cell::default()
   };
   let col3 = Cell {
-    before: Some(Tokens::new(vec![
-      T_MATH!(), T_CS!("\\displaystyle"),
-    ])),
+    before: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\displaystyle")])),
     after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
     empty: true,
     ..Cell::default()
@@ -800,11 +842,9 @@ pub fn eqnarray_bindings() -> Result<()> {
       }
       // Extract tags (Digested) before converting to string props
       let tags_digested = props.remove("tags");
-      let str_props: HashMap<String, String> = props.into_iter()
-        .map(|(k, v)| (k, v.to_string()))
-        .collect();
-      document
-        .open_element("ltx:equation", Some(str_props), None)?;
+      let str_props: HashMap<String, String> =
+        props.into_iter().map(|(k, v)| (k, v.to_string())).collect();
+      document.open_element("ltx:equation", Some(str_props), None)?;
       // If we have digested tags, absorb them into the opened element
       if let Some(Stored::Digested(d)) = tags_digested {
         document.absorb(&d, None)?;
@@ -826,16 +866,8 @@ pub fn eqnarray_bindings() -> Result<()> {
   // NOTE: Perl's eqnarrayBindings does NOT set Let(T_MATH, '\lx@dollar@in@mathmode').
   // eqnarray creates the alignment directly (not through alignmentBindings),
   // so the $ tokens in its template use \lx@dollar@default — same as amsRearrangeableBindings.
-  state::let_i(
-    &T_CS!("\\\\"),
-    &T_CS!("\\lx@alignment@newline"),
-    None,
-  );
-  state::let_i(
-    &T_CS!("\\lx@intercol"),
-    &T_CS!("\\lx@math@intercol"),
-    None,
-  );
+  state::let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
+  state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
   state::let_i(
     &T_CS!("\\lx@alignment@row@before"),
     &T_CS!("\\eqnarray@row@before"),
@@ -848,36 +880,25 @@ pub fn eqnarray_bindings() -> Result<()> {
   );
   // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
   // Save the original \label as \lx@eqnarray@save@label
-  state::let_i(
-    &T_CS!("\\lx@eqnarray@save@label"),
-    &T_CS!("\\label"),
-    None,
-  );
+  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), None);
   // Perl: Let('\label', '\lx@eqnarray@label');
   // Redirect \label to the noalign version so it runs at the equation (row) level
-  state::let_i(
-    &T_CS!("\\label"),
-    &T_CS!("\\lx@eqnarray@label"),
-    None,
-  );
+  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   Ok(())
 }
 
 /// Perl: rearrangeEqnarray (latex_constructs.pool.ltxml L2356-2445)
 /// Analyzes column patterns in eqnarray and rearranges into MathFork structures.
-fn rearrange_eqnarray(
-  document: &mut Document,
-  equationgroup: &mut Node,
-) -> Result<()> {
+fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Result<()> {
   use crate::engine::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
 
   struct EqRow {
-    node: Node,
-    cols: Vec<Node>,
-    has_l: bool,
-    has_m: bool,
-    has_r: bool,
-    numbered: bool,
+    node:      Node,
+    cols:      Vec<Node>,
+    has_l:     bool,
+    has_m:     bool,
+    has_r:     bool,
+    numbered:  bool,
     _labelled: bool,
   }
 
@@ -886,9 +907,15 @@ fn rearrange_eqnarray(
   let equation_nodes: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
   for rownode in equation_nodes {
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&rownode));
-    let has_l = cells.first().is_some_and(|c| !c.get_child_nodes().is_empty());
-    let has_m = cells.get(1).is_some_and(|c| !c.get_child_nodes().is_empty());
-    let has_r = cells.get(2).is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_l = cells
+      .first()
+      .is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_m = cells
+      .get(1)
+      .is_some_and(|c| !c.get_child_nodes().is_empty());
+    let has_r = cells
+      .get(2)
+      .is_some_and(|c| !c.get_child_nodes().is_empty());
     let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
     let labelled = rownode.get_attribute("label").is_some();
     rows.push(EqRow {
@@ -911,7 +938,13 @@ fn rearrange_eqnarray(
     || (n_l == 0 && n_m > 0 && n_r == 0)
     || (n_l == 0 && n_m == 0 && n_r > 0)
   {
-    let keepcol = if n_l > 0 { 0 } else if n_m > 0 { 1 } else { 2 };
+    let keepcol = if n_l > 0 {
+      0
+    } else if n_m > 0 {
+      1
+    } else {
+      2
+    };
     // Remove empty columns (in reverse order to preserve indices)
     for c in (0..3).rev() {
       if c == keepcol {
@@ -926,11 +959,16 @@ fn rearrange_eqnarray(
     }
     // Check if any column begins with a RELOP → join rows
     let begins_with_relop = rows.iter().any(|row| {
-      row.cols.get(keepcol).and_then(|c| {
-        c.get_child_elements().into_iter().next().and_then(|first| {
-          first.get_attribute("role").map(|r| r == "RELOP")
+      row
+        .cols
+        .get(keepcol)
+        .and_then(|c| {
+          c.get_child_elements()
+            .into_iter()
+            .next()
+            .and_then(|first| first.get_attribute("role").map(|r| r == "RELOP"))
         })
-      }).unwrap_or(false)
+        .unwrap_or(false)
     });
 
     if begins_with_relop {
@@ -994,7 +1032,11 @@ fn rearrange_eqnarray(
 }
 
 fn clean_class_name(name: &str) -> String {
-  name.trim().chars().filter(|c| c.is_alphanumeric()).collect()
+  name
+    .trim()
+    .chars()
+    .filter(|c| c.is_alphanumeric())
+    .collect()
 }
 
 fn stored_string_list(keys: &[&str]) -> Stored {
@@ -1012,12 +1054,12 @@ fn init_savable_theorem_parameters(keys: Vec<&str>) {
 
 pub fn get_savable_keys() -> Vec<String> {
   match state::lookup_value("SAVABLE_THEOREM_PARAMETERS") {
-    Some(Stored::VecDequeStored(keys)) => {
-      keys.iter().map(|k| k.to_string()).collect()
-    },
+    Some(Stored::VecDequeStored(keys)) => keys.iter().map(|k| k.to_string()).collect(),
     _ => vec![
-      "\\thm@bodyfont".into(), "\\thm@headpunct".into(),
-      "\\thm@styling".into(), "\\thm@headstyling".into(),
+      "\\thm@bodyfont".into(),
+      "\\thm@headpunct".into(),
+      "\\thm@styling".into(),
+      "\\thm@headstyling".into(),
       "thm@swap".into(),
     ],
   }
@@ -1062,12 +1104,7 @@ pub fn use_theorem_style(name: &str) {
             // any `\lx@…` names re-tokenize as single CS (not `\lx`+`@…`).
             _ => mouth::tokenize_internal(&val.to_string()),
           };
-          let _ = state::assign_register(
-            &key,
-            RegisterValue::Tokens(tokens),
-            None,
-            vec![],
-          );
+          let _ = state::assign_register(&key, RegisterValue::Tokens(tokens), None, vec![]);
         } else {
           state::assign_value(&key, val, None);
         }
@@ -1108,7 +1145,9 @@ pub fn define_new_theorem(
     None
   };
 
-  let counter = otherthmset_str.clone().unwrap_or_else(|| thmset_str.clone());
+  let counter = otherthmset_str
+    .clone()
+    .unwrap_or_else(|| thmset_str.clone());
   let counter = counter.replace(' ', ".");
 
   // If counter != thmset, record mapping
@@ -1124,7 +1163,11 @@ pub fn define_new_theorem(
 
   let numbering = {
     let reg = LookupRegister!("\\thm@numbering");
-    if let RegisterValue::Tokens(t) = reg { t.to_string() } else { "\\arabic".into() }
+    if let RegisterValue::Tokens(t) = reg {
+      t.to_string()
+    } else {
+      "\\arabic".into()
+    }
   };
 
   let is_starred = is_starred || numbering.is_empty();
@@ -1235,9 +1278,7 @@ pub fn define_new_theorem(
   let format_cs_token = T_CS!(&format_title_cs);
   if !headformatter_tokens.is_empty() {
     // amsthm-style head formatter
-    let mut fmt_toks = vec![
-      T_CS!("\\the"), T_CS!("\\thm@headfont"),
-    ];
+    let mut fmt_toks = vec![T_CS!("\\the"), T_CS!("\\thm@headfont")];
     fmt_toks.extend(headformatter_tokens.unlist());
     fmt_toks.push(T_BEGIN!());
     if has_type {
@@ -1285,9 +1326,7 @@ pub fn define_new_theorem(
   let inlist_val = s!("thm {listname}");
   let class_val = s!("ltx_theorem_{classname}");
   let compiled_replacement: Option<ReplacementClosure> = Some(Rc::new(
-    move |document: &mut Document,
-          _args: &Vec<Option<Digested>>,
-          props: &SymHashMap<Stored>| {
+    move |document: &mut Document, _args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
       let mut av_props: HashMap<String, String> = HashMap::default();
       if let Some(stored) = props.get("id") {
         av_props.insert("xml:id".into(), stored.to_string());
@@ -1297,9 +1336,8 @@ pub fn define_new_theorem(
       let this_font_opt = match props.get("font") {
         Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
         Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) =>
-          Some(Cow::Owned(code(None)?)),
-        _ => None
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None)?)),
+        _ => None,
       };
       if let Some(this_font) = this_font_opt {
         document.open_element("ltx:theorem", Some(av_props), Some(&this_font))?;
@@ -1322,9 +1360,8 @@ pub fn define_new_theorem(
       let title_font_opt = match props.get("titlefont") {
         Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
         Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) =>
-          Some(Cow::Owned(code(None)?)),
-        _ => None
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None)?)),
+        _ => None,
       };
       if let Some(title_font) = title_font_opt {
         document.open_element("ltx:title", Some(title_av), Some(&title_font))?;
@@ -1346,7 +1383,8 @@ pub fn define_new_theorem(
         }
       }
       Ok(())
-    }));
+    },
+  ));
 
   // `thmset_for_before` is for the before_digest closure; clone needed
   // because `thmset_str` is moved into `thmset_for_tags` below.
@@ -1358,10 +1396,11 @@ pub fn define_new_theorem(
   let is_starred_for_props = is_starred;
   let has_type_for_props = has_type;
 
-  let mut options = ConstructorOptions { 
-    mode: Some("internal_vertical".into()), 
-    scope: Some(Scope::Global), 
-    ..Default::default() };
+  let mut options = ConstructorOptions {
+    mode: Some("internal_vertical".into()),
+    scope: Some(Scope::Global),
+    ..Default::default()
+  };
 
   // before_digest
   let before_digest_closure: BeforeDigestClosure = Rc::new(move || {
@@ -1377,9 +1416,7 @@ pub fn define_new_theorem(
     let name_str = name_opt
       .map(|n| n.revert().map(|t| t.to_string()).unwrap_or_default())
       .unwrap_or_default();
-    let digest_str = s!(
-      "\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}"
-    );
+    let digest_str = s!("\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}");
     let digested = stomach::digest(mouth::tokenize_internal(&digest_str))?;
     Ok(vec![digested])
   });
@@ -1387,7 +1424,9 @@ pub fn define_new_theorem(
 
   // before_digest_end
   let before_digest_end_closure: BeforeDigestClosure = Rc::new(move || {
-    let digested = stomach::digest(mouth::tokenize_internal("\\thm@doendmark\\the\\thm@postwork"))?;
+    let digested = stomach::digest(mouth::tokenize_internal(
+      "\\thm@doendmark\\the\\thm@postwork",
+    ))?;
     Ok(vec![digested])
   });
   options.before_digest_end.push(before_digest_end_closure);
@@ -1482,15 +1521,22 @@ pub fn before_float(float_type: &str, preincrement: Option<&str>) {
 /// Extended version with `double` flag for `*` variants (span both columns).
 pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) {
   def_macro(
-    T_CS!("\\@captype"), None,
+    T_CS!("\\@captype"),
+    None,
     Tokens::new(ExplodeText!(float_type)),
     None,
-  ).ok();
+  )
+  .ok();
   // Perl #2775: rebind \\ to \lx@newline in floats to prevent
   // alignment-token early-return when floats are inside tabulars.
   Let!("\\\\", "\\lx@newline");
-  // Perl: AssignRegister('\hsize' => LookupDimension($options{double} ? '\textwidth' : '\columnwidth'));
-  let dim_name = if double { "\\textwidth" } else { "\\columnwidth" };
+  // Perl: AssignRegister('\hsize' => LookupDimension($options{double} ? '\textwidth' :
+  // '\columnwidth'));
+  let dim_name = if double {
+    "\\textwidth"
+  } else {
+    "\\columnwidth"
+  };
   let dim_val = state::lookup_dimension(dim_name).unwrap_or_default();
   state::assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
   // Perl: if (my $main = $options{preincrement}) {
@@ -1522,7 +1568,11 @@ pub fn after_float(whatsit: &mut Whatsit) {
   let prekey = s!("PREINCREMENTED_{captype}");
   state::remove_value(&prekey);
   rescue_caption_counters(&captype, whatsit);
-  state::assign_value("LAST_FLOATTYPE", Stored::String(arena::pin(&captype)), Some(Scope::Global));
+  state::assign_value(
+    "LAST_FLOATTYPE",
+    Stored::String(arena::pin(&captype)),
+    Some(Scope::Global),
+  );
 }
 /// Simplified version of Perl's arrange_panels_and_breaks().
 /// When a figure/table/float has 2+ child figure/table/float elements (panels),
@@ -1593,10 +1643,21 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
     let is_standalone = |p: &libxml::tree::Node| -> bool {
       let qname = latexml_core::document::get_node_qname(p);
       arena::with(qname, |name| {
-        matches!(name,
-          "ltx:p" | "ltx:listing" | "ltx:math" | "ltx:itemize" | "ltx:enumerate"
-          | "ltx:quote" | "ltx:theorem" | "ltx:proof" | "ltx:description"
-          | "ltx:equation" | "ltx:equationgroup" | "ltx:verbatim")
+        matches!(
+          name,
+          "ltx:p"
+            | "ltx:listing"
+            | "ltx:math"
+            | "ltx:itemize"
+            | "ltx:enumerate"
+            | "ltx:quote"
+            | "ltx:theorem"
+            | "ltx:proof"
+            | "ltx:description"
+            | "ltx:equation"
+            | "ltx:equationgroup"
+            | "ltx:verbatim"
+        )
       })
     };
     for panel in &mut panels {
@@ -1609,8 +1670,7 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
     for i in 0..panels.len().saturating_sub(1) {
       if is_standalone(&panels[i]) || is_standalone(&panels[i + 1]) {
         let ns = panels[i].get_namespace();
-        let mut break_node =
-          libxml::tree::Node::new("break", ns, document.get_document()).unwrap();
+        let mut break_node = libxml::tree::Node::new("break", ns, document.get_document()).unwrap();
         let _ = break_node.set_attribute("class", "ltx_break");
         panels[i].add_next_sibling(&mut break_node)?;
       }
@@ -1639,9 +1699,13 @@ fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Re
   }
   let mut inner = inners.into_iter().next().unwrap();
   // Check captions: collapse only if they don't BOTH have captions
-  let outer_has_caption = float.get_child_elements().iter()
+  let outer_has_caption = float
+    .get_child_elements()
+    .iter()
     .any(|c| latexml_core::document::get_node_qname(c) == caption_qname);
-  let inner_has_caption = inner.get_child_elements().iter()
+  let inner_has_caption = inner
+    .get_child_elements()
+    .iter()
     .any(|c| latexml_core::document::get_node_qname(c) == caption_qname);
   if outer_has_caption && inner_has_caption {
     return Ok(());
@@ -1656,7 +1720,8 @@ fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Re
   }
   // If inner has caption, promote inner's xml:id to outer
   if inner_has_caption {
-    let inner_id = inner.get_attribute("xml:id")
+    let inner_id = inner
+      .get_attribute("xml:id")
       .or_else(|| inner.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"));
     if let Some(id) = inner_id {
       // Unrecord the outer's old ID and remove the attribute before setting the new one
@@ -1683,7 +1748,10 @@ fn tabbing_bindings() -> Result<()> {
   // Template: repeated column with before=\lx@text@intercol, after=\hfil\lx@text@intercol
   let col = Cell {
     before: Some(Tokens::new(vec![T_CS!("\\lx@text@intercol")])),
-    after: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\lx@text@intercol")])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\hfil"),
+      T_CS!("\\lx@text@intercol"),
+    ])),
     empty: true,
     ..Cell::default()
   };
@@ -1696,31 +1764,30 @@ fn tabbing_bindings() -> Result<()> {
   xml_attrs.insert(String::from("class"), String::from("ltx_tabbing"));
 
   let alignment = Alignment::new(AlignmentConfig {
-    template: Some(template),
-    open_container: Rc::new(|document, props| {
+    template:        Some(template),
+    open_container:  Rc::new(|document, props| {
       document
         .open_element("ltx:tabular", Some(props), None)
         .map(Option::Some)
     }),
     close_container: Rc::new(|document| document.close_element("ltx:tabular")),
-    open_row: Rc::new(|document, props| {
-      let str_props: HashMap<String, String> = props.into_iter()
-        .map(|(k, v)| (k, v.to_string()))
-        .collect();
+    open_row:        Rc::new(|document, props| {
+      let str_props: HashMap<String, String> =
+        props.into_iter().map(|(k, v)| (k, v.to_string())).collect();
       document
         .open_element("ltx:tr", Some(str_props), None)
         .and(Ok(()))
     }),
-    close_row: Rc::new(|document| document.close_element("ltx:tr")),
-    open_column: Rc::new(|document, props| {
+    close_row:       Rc::new(|document| document.close_element("ltx:tr")),
+    open_column:     Rc::new(|document, props| {
       document
         .open_element("ltx:td", Some(props), None)
         .map(Option::Some)
     }),
-    close_column: Rc::new(|document| document.close_element("ltx:td")),
-    is_math: false,
-    properties: SymHashMap::default(),
-    xml_attributes: xml_attrs,
+    close_column:    Rc::new(|document| document.close_element("ltx:td")),
+    is_math:         false,
+    properties:      SymHashMap::default(),
+    xml_attributes:  xml_attrs,
   });
   assign_alignment(alignment, None);
 
@@ -1827,14 +1894,21 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
         let mut tokens = expansion_toks.clone().unlist();
         if !tokens.is_empty() {
           let bibunitmap: &[(&str, &str)] = &[
-            ("\\part", "ltx:part"), ("\\chapter", "ltx:chapter"),
-            ("\\section", "ltx:section"), ("\\subsection", "ltx:subsection"),
-            ("\\subsubsection", "ltx:subsubsection"), ("\\paragraph", "ltx:paragraph"),
+            ("\\part", "ltx:part"),
+            ("\\chapter", "ltx:chapter"),
+            ("\\section", "ltx:section"),
+            ("\\subsection", "ltx:subsection"),
+            ("\\subsubsection", "ltx:subsubsection"),
+            ("\\paragraph", "ltx:paragraph"),
             ("\\subparagraph", "ltx:subparagraph"),
           ];
           let first_cs = tokens.remove(0).to_string();
           if let Some((_, unit)) = bibunitmap.iter().find(|(cs, _)| *cs == first_cs) {
-            state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(arena::pin(unit)));
+            state::assign_mapping(
+              "BACKMATTER_ELEMENT",
+              "ltx:bibliography",
+              Some(arena::pin(unit)),
+            );
             // Strip * if present
             if !tokens.is_empty() && tokens[0].text == pin!("*") {
               tokens.remove(0);
@@ -1889,13 +1963,13 @@ fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
 // Perl: $BIBSTYLES hash — maps bib style names to (citestyle, sort) pairs
 fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
   match style {
-    "plain"    => Some(("numbers", "true")),
-    "unsrt"    => Some(("numbers", "false")),
-    "alpha"    => Some(("AY",      "true")),
-    "abbrv"    => Some(("numbers", "true")),
+    "plain" => Some(("numbers", "true")),
+    "unsrt" => Some(("numbers", "false")),
+    "alpha" => Some(("AY", "true")),
+    "abbrv" => Some(("numbers", "true")),
     "plainnat" => Some(("numbers", "true")),
     "unsrtnat" => Some(("numbers", "false")),
-    "alphanat" => Some(("AY",      "true")),
+    "alphanat" => Some(("AY", "true")),
     "abbrvnat" => Some(("numbers", "true")),
     _ => None,
   }
@@ -1964,7 +2038,11 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   }
   // Add terminal ! if not present
   let mut toks = token_list;
-  if toks.last().map(|t| t.with_str(|s| s != "!")).unwrap_or(true) {
+  if toks
+    .last()
+    .map(|t| t.with_str(|s| s != "!"))
+    .unwrap_or(true)
+  {
     toks.push(T_OTHER!("!"));
   }
   let mut expansion: Vec<Token> = Vec::new();
@@ -1982,14 +2060,22 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       i += 1;
     } else if s == "@" {
       // Sort key: everything before @ is the sort key
-      while phrase.last().map(|t| t.with_str(|s| s.trim().is_empty())).unwrap_or(false) {
+      while phrase
+        .last()
+        .map(|t| t.with_str(|s| s.trim().is_empty()))
+        .unwrap_or(false)
+      {
         phrase.pop();
       }
       sortas = phrase;
       phrase = Vec::new();
     } else if s == "!" || s == "|" {
       // End of phrase
-      while phrase.last().map(|t| t.with_str(|s| s.trim().is_empty())).unwrap_or(false) {
+      while phrase
+        .last()
+        .map(|t| t.with_str(|s| s.trim().is_empty()))
+        .unwrap_or(false)
+      {
         phrase.pop();
       }
       if !phrase.is_empty() {
@@ -2006,11 +2092,19 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       sortas.clear();
       if s == "|" {
         // Collect remaining tokens as style/see/seealso
-        if i < toks.len() && toks.last().map(|t| t.with_str(|s| s == "!")).unwrap_or(false) {
+        if i < toks.len()
+          && toks
+            .last()
+            .map(|t| t.with_str(|s| s == "!"))
+            .unwrap_or(false)
+        {
           // Remove terminal ! stopbit
           toks.pop();
         }
-        let extra: String = toks[i..].iter().map(|t| t.with_str(|s| s.to_string())).collect();
+        let extra: String = toks[i..]
+          .iter()
+          .map(|t| t.with_str(|s| s.to_string()))
+          .collect();
         if extra.starts_with("see{") || extra.starts_with("see {") {
           // \@indexsee{content}
           // Skip "see{", collect until "}"
@@ -2072,7 +2166,13 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
 fn px_value(pt: f64) -> f64 {
   // DPI default is 100 in LaTeXML (state::lookupValue('DPI') || 100)
   let dpi = state::lookup_value("DPI")
-    .and_then(|v| if let Stored::Number(n) = v { Some(n.0 as f64) } else { None })
+    .and_then(|v| {
+      if let Stored::Number(n) = v {
+        Some(n.0 as f64)
+      } else {
+        None
+      }
+    })
     .unwrap_or(100.0);
   // Round to 2 decimal places (Perl default precision)
   (pt * dpi / 72.27 * 100.0).round() / 100.0
@@ -2090,26 +2190,79 @@ fn fmt_px(v: f64) -> String {
 /// Maps single chars (0-9, a-z, A-Z) and numbers 10-20 to their circled Unicode equivalents.
 fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
   let ch = match text {
-    "0" => '\u{24EA}', "1" => '\u{2460}', "2" => '\u{2461}', "3" => '\u{2462}',
-    "4" => '\u{2463}', "5" => '\u{2464}', "6" => '\u{2465}', "7" => '\u{2466}',
-    "8" => '\u{2467}', "9" => '\u{2468}', "10" => '\u{2469}', "11" => '\u{246A}',
-    "12" => '\u{246B}', "13" => '\u{246C}', "14" => '\u{246D}', "15" => '\u{246E}',
-    "16" => '\u{246F}', "17" => '\u{2470}', "18" => '\u{2471}', "19" => '\u{2472}',
+    "0" => '\u{24EA}',
+    "1" => '\u{2460}',
+    "2" => '\u{2461}',
+    "3" => '\u{2462}',
+    "4" => '\u{2463}',
+    "5" => '\u{2464}',
+    "6" => '\u{2465}',
+    "7" => '\u{2466}',
+    "8" => '\u{2467}',
+    "9" => '\u{2468}',
+    "10" => '\u{2469}',
+    "11" => '\u{246A}',
+    "12" => '\u{246B}',
+    "13" => '\u{246C}',
+    "14" => '\u{246D}',
+    "15" => '\u{246E}',
+    "16" => '\u{246F}',
+    "17" => '\u{2470}',
+    "18" => '\u{2471}',
+    "19" => '\u{2472}',
     "20" => '\u{2473}',
-    "a" => '\u{24D0}', "b" => '\u{24D1}', "c" => '\u{24D2}', "d" => '\u{24D3}',
-    "e" => '\u{24D4}', "f" => '\u{24D5}', "g" => '\u{24D6}', "h" => '\u{24D7}',
-    "i" => '\u{24D8}', "j" => '\u{24D9}', "k" => '\u{24DA}', "l" => '\u{24DB}',
-    "m" => '\u{24DC}', "n" => '\u{24DD}', "o" => '\u{24DE}', "p" => '\u{24DF}',
-    "q" => '\u{24E0}', "r" => '\u{24E1}', "s" => '\u{24E2}', "t" => '\u{24E3}',
-    "u" => '\u{24E4}', "v" => '\u{24E5}', "w" => '\u{24E6}', "x" => '\u{24E7}',
-    "y" => '\u{24E8}', "z" => '\u{24E9}',
-    "A" => '\u{24B6}', "B" => '\u{24B7}', "C" => '\u{24B8}', "D" => '\u{24B9}',
-    "E" => '\u{24BA}', "F" => '\u{24BB}', "G" => '\u{24BC}', "H" => '\u{24BD}',
-    "I" => '\u{24BE}', "J" => '\u{24BF}', "K" => '\u{24C0}', "L" => '\u{24C1}',
-    "M" => '\u{24C2}', "N" => '\u{24C3}', "O" => '\u{24C4}', "P" => '\u{24C5}',
-    "Q" => '\u{24C6}', "R" => '\u{24C7}', "S" => '\u{24C8}', "T" => '\u{24C9}',
-    "U" => '\u{24CA}', "V" => '\u{24CB}', "W" => '\u{24CC}', "X" => '\u{24CD}',
-    "Y" => '\u{24CE}', "Z" => '\u{24CF}',
+    "a" => '\u{24D0}',
+    "b" => '\u{24D1}',
+    "c" => '\u{24D2}',
+    "d" => '\u{24D3}',
+    "e" => '\u{24D4}',
+    "f" => '\u{24D5}',
+    "g" => '\u{24D6}',
+    "h" => '\u{24D7}',
+    "i" => '\u{24D8}',
+    "j" => '\u{24D9}',
+    "k" => '\u{24DA}',
+    "l" => '\u{24DB}',
+    "m" => '\u{24DC}',
+    "n" => '\u{24DD}',
+    "o" => '\u{24DE}',
+    "p" => '\u{24DF}',
+    "q" => '\u{24E0}',
+    "r" => '\u{24E1}',
+    "s" => '\u{24E2}',
+    "t" => '\u{24E3}',
+    "u" => '\u{24E4}',
+    "v" => '\u{24E5}',
+    "w" => '\u{24E6}',
+    "x" => '\u{24E7}',
+    "y" => '\u{24E8}',
+    "z" => '\u{24E9}',
+    "A" => '\u{24B6}',
+    "B" => '\u{24B7}',
+    "C" => '\u{24B8}',
+    "D" => '\u{24B9}',
+    "E" => '\u{24BA}',
+    "F" => '\u{24BB}',
+    "G" => '\u{24BC}',
+    "H" => '\u{24BD}',
+    "I" => '\u{24BE}',
+    "J" => '\u{24BF}',
+    "K" => '\u{24C0}',
+    "L" => '\u{24C1}',
+    "M" => '\u{24C2}',
+    "N" => '\u{24C3}',
+    "O" => '\u{24C4}',
+    "P" => '\u{24C5}',
+    "Q" => '\u{24C6}',
+    "R" => '\u{24C7}',
+    "S" => '\u{24C8}',
+    "T" => '\u{24C9}',
+    "U" => '\u{24CA}',
+    "V" => '\u{24CB}',
+    "W" => '\u{24CC}',
+    "X" => '\u{24CD}',
+    "Y" => '\u{24CE}',
+    "Z" => '\u{24CF}',
     _ => return None,
   };
   Some(ch.to_string())
@@ -2498,6 +2651,13 @@ LoadDefinitions!({
     // \@begindocumenthook. This fires hooks registered via \AtBeginDocument
     // when expl3 has redefined it to use \AddToHook{begindocument}{...}.
     // Includes babel's \lx@babel@activate@mainlang.
+    //
+    // NOTE: this is a Rust-only deviation from Perl (Perl does not fire a
+    // begindocument hook dispatch), but it's load-bearing because our raw
+    // expl3-code.tex load path *does* define `\hook_use:n` and enqueues
+    // real hook code against it. Keep until the kernel-parity direction
+    // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
+    // natively with storage. See SYNC_STATUS.md "l3hooks parity".
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);
     }

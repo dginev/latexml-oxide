@@ -26,7 +26,12 @@ LoadDefinitions!({
   // Perl: AddToMacro('\@tabular@row@after', '\lx@hidden@noalign{\@clearrowcolor}');
   {
     let cs = T_CS!("\\@tabular@row@after");
-    let tokens = Tokens!(T_CS!("\\lx@hidden@noalign"), T_BEGIN!(), T_CS!("\\@clearrowcolor"), T_END!());
+    let tokens = Tokens!(
+      T_CS!("\\lx@hidden@noalign"),
+      T_BEGIN!(),
+      T_CS!("\\@clearrowcolor"),
+      T_END!()
+    );
     AddToMacro!(cs, tokens);
   }
   // Perl: AddToMacro('\@tabular@column@before', '\@userowcolor');
@@ -61,27 +66,33 @@ LoadDefinitions!({
   // \columncolor[model]{color}[left_overhang][right_overhang]
   // The overhang args are layout-only (ignored by LaTeXML) but must be consumed.
   RawTeX!(r"\def\columncolor{\@ifnextchar[\lx@columncolor@ii{\lx@columncolor@ii[]}}");
-  RawTeX!(r"\long\def\lx@columncolor@ii[#1]#2{%
+  RawTeX!(
+    r"\long\def\lx@columncolor@ii[#1]#2{%
     \if@@rowcolored\else
       \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
       \@setcellcolor
     \fi
     \@ifnextchar[{\lx@gobble@optopt}{}%
-  }");
+  }"
+  );
   // Consume up to two optional arguments (overhang params)
   RawTeX!(r"\def\lx@gobble@optopt[#1]{\@ifnextchar[{\lx@gobble@opt}{}}");
   RawTeX!(r"\def\lx@gobble@opt[#1]{}");
 
   RawTeX!(r"\def\cellcolor{\@ifnextchar[\lx@cellcolor@ii{\lx@cellcolor@ii[]}}");
-  RawTeX!(r"\long\def\lx@cellcolor@ii[#1]#2{%
+  RawTeX!(
+    r"\long\def\lx@cellcolor@ii[#1]#2{%
     \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
-    \@setcellcolor}");
+    \@setcellcolor}"
+  );
 
   RawTeX!(r"\def\rowcolor{\@ifnextchar[\lx@rowcolor@ii{\lx@rowcolor@ii[]}}");
-  RawTeX!(r"\long\def\lx@rowcolor@ii[#1]#2{%
+  RawTeX!(
+    r"\long\def\lx@rowcolor@ii[#1]#2{%
     \lx@hidden@noalign{%
       \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
-      \@setrowcolor}}");
+      \@setrowcolor}}"
+  );
 
   // \@setrowcolor — Perl: DefConstructor('\@setrowcolor', sub { ... },
   //   afterDigest => sub { ... }, properties => { alignmentSkippable => 1 }, alias => '');

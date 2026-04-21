@@ -11,7 +11,10 @@ LoadDefinitions!({
 
   ProcessOptions!();
 
-  DefMacro!("\\EUR{}", r"{\if@EURleft\euro\,\fi#1\if@EURleft\else\,\euro\fi}");
+  DefMacro!(
+    "\\EUR{}",
+    r"{\if@EURleft\euro\,\fi#1\if@EURleft\else\,\euro\fi}"
+  );
 
   DefMacro!("\\officialeuro", None, "\u{20AC}");
   Let!("\\euro", "\\officialeuro");

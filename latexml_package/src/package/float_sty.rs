@@ -87,16 +87,16 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
   let isplain = style.starts_with("plain");
   let fnum_cs = s!("\\fnum@font@{ftype}");
   let fnum_body = if isplain { "\\rmfamily" } else { "\\bfseries" };
-  def_macro(T_CS!(fnum_cs), None, mouth::tokenize_internal(fnum_body), None)?;
+  def_macro(
+    T_CS!(fnum_cs),
+    None,
+    mouth::tokenize_internal(fnum_body),
+    None,
+  )?;
 
   // DefMacroI('\ext@'.$type, ..., $auxext)
   let ext_cs = s!("\\ext@{ftype}");
-  def_macro(
-    T_CS!(ext_cs),
-    None,
-    Tokens::new(ExplodeText!(auxext)),
-    None,
-  )?;
+  def_macro(T_CS!(ext_cs), None, Tokens::new(ExplodeText!(auxext)), None)?;
 
   // Create the float environment and starred variant
   let class = s!("ltx_float_{ftype}");
@@ -161,8 +161,10 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   let env_cs = T_CS!(s!("\\begin{{{name}}}"));
   let paramlist = parse_parameters("[]", &env_cs, true)?;
 
-  let mut options = ConstructorOptions { mode: Some("internal_vertical".into()), 
-    ..Default::default() };
+  let mut options = ConstructorOptions {
+    mode: Some("internal_vertical".into()),
+    ..Default::default()
+  };
 
   // before_digest: beforeFloat($type)
   let bt = base_type.clone();
@@ -213,7 +215,7 @@ fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
             break;
           }
         }
-      }
+      },
       "boxed" => {
         // inner frame: rectangle on first non-caption child
         for child in float_node.get_child_elements() {
@@ -224,8 +226,8 @@ fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
             break;
           }
         }
-      }
-      _ => {} // plain, plaintop — no framing
+      },
+      _ => {}, // plain, plaintop — no framing
     }
   }
   Ok(())

@@ -17,7 +17,6 @@ pub use latexml_core::alignment::{Alignment, AlignmentConfig};
 pub use latexml_core::common::LabelMappingHook;
 pub use latexml_core::common::arena;
 pub use latexml_core::common::arena::*;
-pub use latexml_core::pin;
 pub use latexml_core::common::cleaners::*;
 pub use latexml_core::common::def_parser::{parse_parameters, parse_prototype};
 pub use latexml_core::common::dimension::Dimension;
@@ -40,7 +39,7 @@ pub use latexml_core::definition::constructor::ConstructorOptions;
 pub use latexml_core::definition::expandable::{Expandable, ExpandableOptions};
 pub use latexml_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 pub use latexml_core::definition::primitive::{Primitive, PrimitiveOptions};
-pub use latexml_core::definition::register::{Register, RegisterType, RegisterValue, CharDefProps};
+pub use latexml_core::definition::register::{CharDefProps, Register, RegisterType, RegisterValue};
 pub use latexml_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
   ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveBody, PrimitiveClosure,
@@ -58,6 +57,7 @@ pub use latexml_core::list::List;
 pub use latexml_core::mouth;
 pub use latexml_core::mouth::{Mouth, MouthOptions};
 pub use latexml_core::parameter::{Parameter, Parameters, ReaderClosure, ReversionClosure};
+pub use latexml_core::pin;
 pub use latexml_core::rewrite::{Rewrite, RewriteOptions};
 pub use latexml_core::state::*;
 pub use latexml_core::stomach::*;
@@ -91,8 +91,8 @@ pub mod setup_binding_language;
 // Export the package-level API
 pub use crate::engine::base_utilities::*;
 pub use crate::engine::latex_constructs::{
-  begin_appendices, end_appendices, make_note_tags, only_preamble,
-  relocate_footnote, start_appendices, tabular_bindings,
+  begin_appendices, end_appendices, make_note_tags, only_preamble, relocate_footnote,
+  start_appendices, tabular_bindings,
 };
 pub use crate::package::*;
 

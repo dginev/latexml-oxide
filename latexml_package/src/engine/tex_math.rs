@@ -2,8 +2,8 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use crate::prelude::*;
 use crate::engine::tex_character;
+use crate::prelude::*;
 use latexml_core::common::font::standard_metrics::STDMETRICS;
 use latexml_core::common::mathchar::decode_math_char;
 
@@ -21,14 +21,21 @@ fn merge_limits(pos: &str) {
       // first non-digit from the end, slice off the tail — skips the
       // chars.rev.take_while.collect.into_iter.rev.collect two-Vec
       // round-trip the previous code did.
-      let prev = b.get_property("scriptpos").map(|v| v.to_string()).unwrap_or_default();
+      let prev = b
+        .get_property("scriptpos")
+        .map(|v| v.to_string())
+        .unwrap_or_default();
       let digit_start = prev
         .bytes()
         .rposition(|c| !c.is_ascii_digit())
         .map(|i| i + 1)
         .unwrap_or(0);
       let level_str: &str = &prev[digit_start..];
-      let level = if level_str.is_empty() { &default_level } else { level_str };
+      let level = if level_str.is_empty() {
+        &default_level
+      } else {
+        level_str
+      };
       b.set_property("scriptpos", format!("{pos}{level}"));
       // Perl: last unless IsEmpty($box) || IsScript($box)
       // Continue past empty boxes AND script boxes
@@ -172,7 +179,10 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         if let Some(bsp) = b.get_property("scriptpos") {
           let bsp_str = bsp.to_string();
           if !bsp_str.is_empty() {
-            let base_prefix: String = bsp_str.chars().take_while(|c| !c.is_ascii_digit()).collect();
+            let base_prefix: String = bsp_str
+              .chars()
+              .take_while(|c| !c.is_ascii_digit())
+              .collect();
             let sl = get_script_level();
             properties.insert("scriptpos", Stored::from(format!("{base_prefix}{sl}")));
           }
@@ -239,10 +249,7 @@ pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
 ///   h = numerator.total_height + d
 ///
 /// Used by `\lx@generalized@over`, `\over`, `\atop`, `\above*` etc.
-pub fn frac_sizer(
-  top: &Digested,
-  bottom: &Digested,
-) -> Result<(Dimension, Dimension, Dimension)> {
+pub fn frac_sizer(top: &Digested, bottom: &Digested) -> Result<(Dimension, Dimension, Dimension)> {
   let (tw, th, td, ..) = top.clone().get_size(None)?;
   let (bw, bh, bd, ..) = bottom.clone().get_size(None)?;
   // width: max of top and bottom widths
@@ -316,10 +323,7 @@ fn script_sizer(
         }
       })
     };
-    lookup(&cmsy_name)
-      .or_else(|| lookup("cmsy"))
-      .unwrap_or(0.0)
-      * base_font_size
+    lookup(&cmsy_name).or_else(|| lookup("cmsy")).unwrap_or(0.0) * base_font_size
   };
   let xheight = get_font_dimen(5);
   let inferred_pos = if let Some(Stored::Digested(ref base)) = base_opt {
@@ -330,8 +334,15 @@ fn script_sizer(
     if base_pos.is_empty() {
       Cow::Borrowed("post")
     } else {
-      let stripped: String = base_pos.chars().take_while(|c| !c.is_ascii_digit()).collect();
-      Cow::Owned(if stripped.is_empty() { base_pos } else { stripped })
+      let stripped: String = base_pos
+        .chars()
+        .take_while(|c| !c.is_ascii_digit())
+        .collect();
+      Cow::Owned(if stripped.is_empty() {
+        base_pos
+      } else {
+        stripped
+      })
     }
   } else {
     Cow::Borrowed("post")
@@ -360,12 +371,11 @@ fn script_sizer(
     ws += scriptspace;
     w = (ws - wp).max(0.0);
     if op == "SUPERSCRIPT" {
-      let supshift = get_font_dimen(
-        match mathstyle.as_str() {
-          "display" => 13,
-          "scriptscript" => 15,
-          _ => 14,
-        });
+      let supshift = get_font_dimen(match mathstyle.as_str() {
+        "display" => 13,
+        "scriptscript" => 15,
+        _ => 14,
+      });
       h = hb.max(hs + (ds + xheight / 4.0).max(supshift));
     } else {
       let subshift = get_font_dimen(16);
@@ -728,17 +738,17 @@ LoadDefinitions!({
   // Reader uses with_value to avoid a Stored::clone on the
   // Int/Number cases (both Copy). Hot during math-mode font switches.
   DefRegister!("\\fam", Number!(-1),
-    getter => {
-      let fam = state::with_value("fontfamily", |v| match v {
-        Some(Stored::Int(i)) => *i,
-        Some(Stored::Number(n)) => n.0,
-        _ => -1,
-      });
-      Some(RegisterValue::Number(Number::new(fam)))
-    },
-    setter => sub[value, scope, _args] {
-      state::assign_value("fontfamily", Stored::from(value.value_of()), scope);
+  getter => {
+    let fam = state::with_value("fontfamily", |v| match v {
+      Some(Stored::Int(i)) => *i,
+      Some(Stored::Number(n)) => n.0,
+      _ => -1,
     });
+    Some(RegisterValue::Number(Number::new(fam)))
+  },
+  setter => sub[value, scope, _args] {
+    state::assign_value("fontfamily", Stored::from(value.value_of()), scope);
+  });
 
   //======================================================================
   // TeX-level grammatical roles
@@ -1387,18 +1397,24 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\above Dimension",
-    "\\lx@generalized@over{\\above #1}{meaning=divide,thickness=#1}");
-  DefMacro!("\\abovewithdelims Token Token Dimension",
-    "\\lx@generalized@over{\\abovewithdelims #1 #2 #3}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide,thickness=#3}");
-  DefMacro!("\\atop",
-    "\\lx@generalized@over{\\atop}{thickness=0pt}");
-  DefMacro!("\\atopwithdelims Token Token",
-    "\\lx@generalized@over{\\atopwithdelims #1 #2}{thickness=0pt,left={\\lx@left#1},right={\\lx@right#2}}");
-  DefMacro!("\\over",
-    "\\lx@generalized@over{\\over}{meaning=divide}");
-  DefMacro!("\\overwithdelims Token Token",
-    "\\lx@generalized@over{\\overwithdelims #1 #2}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide}");
+  DefMacro!(
+    "\\above Dimension",
+    "\\lx@generalized@over{\\above #1}{meaning=divide,thickness=#1}"
+  );
+  DefMacro!(
+    "\\abovewithdelims Token Token Dimension",
+    "\\lx@generalized@over{\\abovewithdelims #1 #2 #3}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide,thickness=#3}"
+  );
+  DefMacro!("\\atop", "\\lx@generalized@over{\\atop}{thickness=0pt}");
+  DefMacro!(
+    "\\atopwithdelims Token Token",
+    "\\lx@generalized@over{\\atopwithdelims #1 #2}{thickness=0pt,left={\\lx@left#1},right={\\lx@right#2}}"
+  );
+  DefMacro!("\\over", "\\lx@generalized@over{\\over}{meaning=divide}");
+  DefMacro!(
+    "\\overwithdelims Token Token",
+    "\\lx@generalized@over{\\overwithdelims #1 #2}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide}"
+  );
 
   //======================================================================
   //
@@ -1962,11 +1978,7 @@ fn adjust_mathstyle_internal(outerstyle: &str, tbox: &mut Tbox) {
 /// Adjust a Whatsit's font mathstyle, returning the new style if it had a mathstyle property
 fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) -> Option<String> {
   if let Some(Stored::Font(ref font)) = whatsit.properties.get("font") {
-    let origstyle = font
-      .mathstyle
-      .as_deref()
-      .unwrap_or("display")
-      .to_string();
+    let origstyle = font.mathstyle.as_deref().unwrap_or("display").to_string();
     let newstyle = mathstyle_adjust(outerstyle, &origstyle);
     if newstyle != origstyle {
       let merge_font = Font {
@@ -2029,7 +2041,10 @@ mod tests {
     assert_eq!(mathstyle_adjust("scriptscript", "display"), "display");
     assert_eq!(mathstyle_adjust("scriptscript", "text"), "text");
     assert_eq!(mathstyle_adjust("scriptscript", "script"), "scriptscript");
-    assert_eq!(mathstyle_adjust("scriptscript", "scriptscript"), "scriptscript");
+    assert_eq!(
+      mathstyle_adjust("scriptscript", "scriptscript"),
+      "scriptscript"
+    );
   }
 
   #[test]

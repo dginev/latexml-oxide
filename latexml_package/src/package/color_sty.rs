@@ -54,15 +54,13 @@ pub fn lookup_color_obj(name: &str) -> Color {
 
 /// Look up a named color from state. Returns hex string.
 /// Perl: LookupColor($name) in Package.pm
-pub fn lookup_color(name: &str) -> String {
-  lookup_color_obj(name).to_attribute()
-}
+pub fn lookup_color(name: &str) -> String { lookup_color_obj(name).to_attribute() }
 
 #[cfg(test)]
 mod tests {
   use super::*;
   use latexml_core::common::color::Color;
-  use latexml_core::state::{set_state, State, StateOptions};
+  use latexml_core::state::{State, StateOptions, set_state};
 
   fn setup() {
     // parse_color's name-lookup branch calls state::lookup_value;
@@ -103,8 +101,14 @@ mod tests {
   fn parse_color_strips_outer_braces() {
     // Perl-style: `\color[rgb]{{1,0,0}}` arrives with extra braces.
     setup();
-    assert_eq!(parse_color(Some("rgb"), "{1,0,0}"), Color::Rgb(1.0, 0.0, 0.0));
-    assert_eq!(parse_color(Some("rgb"), "  {1,0,0}  "), Color::Rgb(1.0, 0.0, 0.0));
+    assert_eq!(
+      parse_color(Some("rgb"), "{1,0,0}"),
+      Color::Rgb(1.0, 0.0, 0.0)
+    );
+    assert_eq!(
+      parse_color(Some("rgb"), "  {1,0,0}  "),
+      Color::Rgb(1.0, 0.0, 0.0)
+    );
   }
 
   #[test]
@@ -137,9 +141,27 @@ LoadDefinitions!({
   //======================================================================
   // Ignorable options (mostly drivers)
   for option in &[
-    "monochrome", "debugshow", "dvipdf", "dvipdfm", "dvipdfmx", "pdftex", "xetex",
-    "dvipsone", "dviwindo", "emtex", "dviwin", "textures", "pctexps", "pctexwin",
-    "pctexhp", "pctex32", "truetex", "tcidvi", "vtex", "nodvipsnames", "usenames",
+    "monochrome",
+    "debugshow",
+    "dvipdf",
+    "dvipdfm",
+    "dvipdfmx",
+    "pdftex",
+    "xetex",
+    "dvipsone",
+    "dviwindo",
+    "emtex",
+    "dviwin",
+    "textures",
+    "pctexps",
+    "pctexwin",
+    "pctexhp",
+    "pctex32",
+    "truetex",
+    "tcidvi",
+    "vtex",
+    "nodvipsnames",
+    "usenames",
   ] {
     DeclareOption!(option, None);
   }
@@ -233,10 +255,16 @@ LoadDefinitions!({
   });
 
   // \textcolor[model]{spec}{text}
-  DefMacro!("\\textcolor[]{}{}", "{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}");
+  DefMacro!(
+    "\\textcolor[]{}{}",
+    "{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
+  );
 
   // \colorbox[model]{spec}{text}
-  DefMacro!("\\colorbox[]{}{}", "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}");
+  DefMacro!(
+    "\\colorbox[]{}{}",
+    "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
+  );
 
   // \fcolorbox[model]{framespec}{bgspec}{text}
   DefConstructor!("\\fcolorbox[]{}{} Undigested",

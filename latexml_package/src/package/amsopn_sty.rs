@@ -32,15 +32,15 @@ LoadDefinitions!({
 
   // \operatorname*{text}
   DefConstructor!("\\operatorname OptionalMatch:* {}",
-    "<ltx:XMWrap role='#role' scriptpos='#scriptpos'>#2</ltx:XMWrap>",
-    bounded => true, require_math => true,
-    font => { family => "serif", series => "medium", shape => "upright" },
-    properties => sub[args] {
-      let starred = args[0].is_some();
-      let role = if starred { "OPERATOR" } else { "OPFUNCTION" };
-      let scriptpos = if starred { "mid" } else { "post" };
-      Ok(stored_map!("role" => role, "scriptpos" => scriptpos))
-    });
+  "<ltx:XMWrap role='#role' scriptpos='#scriptpos'>#2</ltx:XMWrap>",
+  bounded => true, require_math => true,
+  font => { family => "serif", series => "medium", shape => "upright" },
+  properties => sub[args] {
+    let starred = args[0].is_some();
+    let role = if starred { "OPERATOR" } else { "OPFUNCTION" };
+    let scriptpos = if starred { "mid" } else { "post" };
+    Ok(stored_map!("role" => role, "scriptpos" => scriptpos))
+  });
 
   DefConstructor!("\\operatornamewithlimits {}",
     "<ltx:XMWrap role='OPERATOR' scriptpos='mid'>#1</ltx:XMWrap>",
@@ -65,5 +65,8 @@ LoadDefinitions!({
 
   DefMacro!("\\nolimits@", "\\nolimits");
   DefMacro!("\\nmlimits@", "\\displaylimits");
-  DefMacro!("\\qopname{}{}{}", "\\mathop{#3}\\csname n#2limits@\\endcsname");
+  DefMacro!(
+    "\\qopname{}{}{}",
+    "\\mathop{#3}\\csname n#2limits@\\endcsname"
+  );
 });

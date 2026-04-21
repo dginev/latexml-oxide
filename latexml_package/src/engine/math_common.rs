@@ -110,7 +110,11 @@ fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<(
     if let Some(entry) = first_char.and_then(|c| DELIM_CHAR_MAP.get(&c)) {
       // Role: only change if explicitly requested (non-empty role)
       if !role.is_empty() {
-        let new_role = if role == "OPEN" { entry.left_role } else { entry.right_role };
+        let new_role = if role == "OPEN" {
+          entry.left_role
+        } else {
+          entry.right_role
+        };
         let current_role = delim.get_attribute("role");
         match current_role.as_deref() {
           None | Some("OPEN") | Some("MIDDLE") | Some("CLOSE") | Some("VERTBAR") => {

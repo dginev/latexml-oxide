@@ -68,14 +68,14 @@ LoadDefinitions!({
   // ataribox — special: colored text (White on Black background)
   // Perl: font => { color => White, background => Black }, bounded => 1
   DefPrimitive!("\\ataribox", "\u{26CB}",
-    bounded => true, font => sub[_f] {
-      use latexml_core::common::color;
-      Ok(Font {
-        color: Some(color::WHITE),
-        bg: Some(color::BLACK),
-        ..Font::default()
-      })
-    });
+  bounded => true, font => sub[_f] {
+    use latexml_core::common::color;
+    Ok(Font {
+      color: Some(color::WHITE),
+      bg: Some(color::BLACK),
+      ..Font::default()
+    })
+  });
   DefPrimitive!("\\cent", "\u{00A2}");
   DefPrimitive!("\\permil", "\u{2030}");
   DefPrimitive!("\\brokenvert", "\u{00A6}");
@@ -179,8 +179,17 @@ LoadDefinitions!({
   // APL modifiers
   DefPrimitive!("\\text@tilde", "\u{007E}");
   DefPrimitive!("\\text@circ", "\u{2218}");
-  DefMacro!("\\APLnot{}", "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-0.8em}{\\text@tilde}}");
-  DefMacro!("\\APLvert{}", "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-1em}{|}}");
-  DefMacro!("\\APLcirc{}", "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-0.66em}{\\text@circ}}");
+  DefMacro!(
+    "\\APLnot{}",
+    "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-0.8em}{\\text@tilde}}"
+  );
+  DefMacro!(
+    "\\APLvert{}",
+    "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-1em}{|}}"
+  );
+  DefMacro!(
+    "\\APLcirc{}",
+    "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-0.66em}{\\text@circ}}"
+  );
   DefMacro!("\\APLminus", "\\raise 0.5ex \\hbox{-}");
 });

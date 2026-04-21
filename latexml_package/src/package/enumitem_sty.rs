@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use latexml_core::common::arena::SymHashMap;
-use latexml_core::definition::argument::ArgWrap;
 use latexml_core::definition::PropertiesClosure;
+use latexml_core::definition::argument::ArgWrap;
 use latexml_core::document::Document;
 
 /// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112
@@ -41,7 +41,10 @@ fn begin_enum_itemize(
   }
 
   // label / label* — Perl L94-101
-  let label_toks = hash.get("label").or_else(|| hash.get("label*")).and_then(argwrap_to_tokens);
+  let label_toks = hash
+    .get("label")
+    .or_else(|| hash.get("label*"))
+    .and_then(argwrap_to_tokens);
   if let Some(ref label) = label_toks {
     let llabel = replace_star(label, &T_OTHER!(&usecounter));
     let llabel = if hash.contains_key("label*") && level > 1 {
@@ -77,7 +80,11 @@ fn begin_enum_itemize(
   }
 
   // font / format — Perl L110-111
-  if let Some(font_toks) = hash.get("font").or_else(|| hash.get("format")).and_then(argwrap_to_tokens) {
+  if let Some(font_toks) = hash
+    .get("font")
+    .or_else(|| hash.get("format"))
+    .and_then(argwrap_to_tokens)
+  {
     def_macro(T_CS!(s!("\\fnum@font@{usecounter}")), None, font_toks, None)?;
   }
 
@@ -85,7 +92,9 @@ fn begin_enum_itemize(
   let mut opts = BeginItemizeOptions::default();
   if let Some(aw) = hash.get("start") {
     match aw {
-      ArgWrap::Number(n) => { opts.start = Some(*n); },
+      ArgWrap::Number(n) => {
+        opts.start = Some(*n);
+      },
       ArgWrap::Tokens(toks) => {
         // start may arrive as a token string "12", parse it
         let s = toks.to_string().trim().to_string();
@@ -150,7 +159,10 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
   // &str and collect owned keys straight into the Vec.
   let mut keys: Vec<String> = state::with_value(&s!("{name}@keys"), |v| match v {
     Some(Stored::String(s)) => arena::with(*s, |ks| {
-      ks.split(',').filter(|k| !k.is_empty()).map(String::from).collect()
+      ks.split(',')
+        .filter(|k| !k.is_empty())
+        .map(String::from)
+        .collect()
     }),
     _ => Vec::new(),
   });
@@ -160,13 +172,17 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
     match val {
       ArgWrap::Tokens(t) => {
         state::assign_value(&val_key, Stored::Tokens(t.clone()), Some(Scope::Global));
-      }
+      },
       ArgWrap::None => {
         state::assign_value(&val_key, Stored::None, Some(Scope::Global));
-      }
+      },
       _ => {
-        state::assign_value(&val_key, Stored::String(arena::pin(val.to_string())), Some(Scope::Global));
-      }
+        state::assign_value(
+          &val_key,
+          Stored::String(arena::pin(val.to_string())),
+          Some(Scope::Global),
+        );
+      },
     }
     if !keys.contains(key) {
       keys.push(key.clone());
@@ -203,7 +219,10 @@ fn merged_enumitem_keyvals(
     // the whole comma-separated string plus allocs).
     let keys: Vec<String> = state::with_value(&s!("{def_name}@keys"), |v| match v {
       Some(Stored::String(s)) => arena::with(*s, |ks| {
-        ks.split(',').filter(|k| !k.is_empty()).map(String::from).collect()
+        ks.split(',')
+          .filter(|k| !k.is_empty())
+          .map(String::from)
+          .collect()
       }),
       _ => Vec::new(),
     });
@@ -311,17 +330,17 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
     Ok(Vec::new())
   });
 
-  let after_digest_body: DigestionClosure = Rc::new(|whatsit: &mut Whatsit| {
-    end_enum_itemize(whatsit)
-  });
+  let after_digest_body: DigestionClosure =
+    Rc::new(|whatsit: &mut Whatsit| end_enum_itemize(whatsit));
 
-  let options = ConstructorOptions { 
-    mode: Some("internal_vertical".into()), 
+  let options = ConstructorOptions {
+    mode: Some("internal_vertical".into()),
     locked: true,
     properties,
     before_digest_end: vec![before_digest_end],
     after_digest_body: vec![after_digest_body],
-    ..Default::default() };
+    ..Default::default()
+  };
   def_environment(listname.to_string(), paramlist, Some(replacement), options);
   Ok(())
 }

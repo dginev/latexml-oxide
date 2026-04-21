@@ -55,11 +55,13 @@ fn read_term(expr_type: &str) -> Result<RegisterValue> {
   while let Some(op) = gullet::read_keyword(&["*", "/"])? {
     let factor2 = read_value("Number")?;
     factor = match factor2 {
-      CalcValue::Flt(f) => {
-        apply_float_op(&factor, &op, f)
-      },
+      CalcValue::Flt(f) => apply_float_op(&factor, &op, f),
       CalcValue::Reg(rv) => {
-        if op == "*" { factor.multiply(rv) } else { factor.divide(rv) }
+        if op == "*" {
+          factor.multiply(rv)
+        } else {
+          factor.divide(rv)
+        }
       },
     };
   }
@@ -245,29 +247,39 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   if peek == T_CS!("\\widthof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let width = box_result.get_width(None)?.unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let width = box_result
+      .get_width(None)?
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(width));
   }
   // \heightof{...}
   if peek == T_CS!("\\heightof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let height = box_result.get_height().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let height = box_result
+      .get_height()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height));
   }
   // \depthof{...}
   if peek == T_CS!("\\depthof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let depth = box_result.get_depth().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let depth = box_result
+      .get_depth()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(depth));
   }
   // \totalheightof{...}
   if peek == T_CS!("\\totalheightof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let height = box_result.get_height().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
-    let depth = box_result.get_depth().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let height = box_result
+      .get_height()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let depth = box_result
+      .get_depth()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height.add(depth)));
   }
   // \real{<decimal>} — returns a Float factor for multiplication
@@ -316,7 +328,9 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // Else: literal value — put back token and read normally
   gullet::unread_one(peek);
   if expr_type == "Number" {
-    Ok(CalcValue::Reg(RegisterValue::Number(gullet::read_number()?)))
+    Ok(CalcValue::Reg(
+      RegisterValue::Number(gullet::read_number()?),
+    ))
   } else {
     Ok(CalcValue::Reg(RegisterValue::Glue(gullet::read_glue()?)))
   }

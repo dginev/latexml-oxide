@@ -4,10 +4,16 @@ use crate::prelude::*;
 fn set_citation_style(pairs: &[(&str, &str)]) {
   for (key, _value) in pairs {
     match *key {
-      "authoryear" => { assign_value("CITE_STYLE", arena::pin("authoryear"), None); },
-      "numbers"    => { assign_value("CITE_STYLE", arena::pin("numbers"), None); },
-      "super"      => { assign_value("CITE_STYLE", arena::pin("super"), None); },
-      "round"      => {
+      "authoryear" => {
+        assign_value("CITE_STYLE", arena::pin("authoryear"), None);
+      },
+      "numbers" => {
+        assign_value("CITE_STYLE", arena::pin("numbers"), None);
+      },
+      "super" => {
+        assign_value("CITE_STYLE", arena::pin("super"), None);
+      },
+      "round" => {
         assign_value("CITE_OPEN", Stored::Token(T_OTHER!("(")), None);
         assign_value("CITE_CLOSE", Stored::Token(T_OTHER!(")")), None);
       },
@@ -31,7 +37,7 @@ fn set_citation_style(pairs: &[(&str, &str)]) {
       },
       _ => {
         assign_value("CITE_STYLE", arena::pin("authoryear"), None);
-      }
+      },
     }
   }
 }
@@ -44,29 +50,22 @@ fn is_some_and_nonempty(opt: &Option<Tokens>) -> bool {
 }
 
 // Helper: get CITE_STYLE as string
-fn cite_style() -> String {
-  state::lookup_string("CITE_STYLE")
-}
+fn cite_style() -> String { state::lookup_string("CITE_STYLE") }
 
-fn cite_open() -> Tokens {
-  state::lookup_tokens("CITE_OPEN").unwrap_or(NO_TOKENS)
-}
-fn cite_close() -> Tokens {
-  state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS)
-}
-fn cite_ns() -> Tokens {
-  state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS)
-}
-fn cite_ay() -> Tokens {
-  state::lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS)
-}
+fn cite_open() -> Tokens { state::lookup_tokens("CITE_OPEN").unwrap_or(NO_TOKENS) }
+fn cite_close() -> Tokens { state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS) }
+fn cite_ns() -> Tokens { state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS) }
+fn cite_ay() -> Tokens { state::lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS) }
 
 // Helper: handle the [pre][post] optional arg swap (if !post { pre,post = undef,pre })
 fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, Option<Tokens>) {
   if !is_some_and_nonempty(&post) {
     (None, pre.filter(|t| !t.is_empty()))
   } else {
-    (pre.filter(|t| !t.is_empty()), post.filter(|t| !t.is_empty()))
+    (
+      pre.filter(|t| !t.is_empty()),
+      post.filter(|t| !t.is_empty()),
+    )
   }
 }
 
@@ -722,20 +721,28 @@ LoadDefinitions!({
   DefMacro!("\\bibstyle@copernicus", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   Let!("\\bibstyle@egu", "\\bibstyle@copernicus");
   Let!("\\bibstyle@egs", "\\bibstyle@copernicus");
-  DefMacro!("\\bibstyle@agsm",
-    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}");
-  DefMacro!("\\bibstyle@kluwer",
-    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}");
-  DefMacro!("\\bibstyle@dcu",
-    "\\bibpunct{(}{)}{;}{a}{;}{,}\\gdef\\harvardand{and}");
+  DefMacro!(
+    "\\bibstyle@agsm",
+    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}"
+  );
+  DefMacro!(
+    "\\bibstyle@kluwer",
+    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}"
+  );
+  DefMacro!(
+    "\\bibstyle@dcu",
+    "\\bibpunct{(}{)}{;}{a}{;}{,}\\gdef\\harvardand{and}"
+  );
   DefMacro!("\\bibstyle@aa", "\\bibpunct{(}{)}{;}{a}{}{,}");
   DefMacro!("\\bibstyle@pass", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   DefMacro!("\\bibstyle@anngeo", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   DefMacro!("\\bibstyle@nlinproc", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   DefMacro!("\\bibstyle@cospar", "\\bibpunct{/}{/}{,}{n}{}{}");
   DefMacro!("\\bibstyle@esa", "\\bibpunct{(Ref.~}{)}{,}{n}{}{}");
-  DefMacro!("\\bibstyle@nature",
-    "\\bibpunct{}{}{,}{s}{}{\\textsuperscript{,}}");
+  DefMacro!(
+    "\\bibstyle@nature",
+    "\\bibpunct{}{}{,}{s}{}{\\textsuperscript{,}}"
+  );
   DefMacro!("\\bibstyle@plain", "\\bibpunct{[}{]}{,}{n}{}{,}");
   Let!("\\bibstyle@alpha", "\\bibstyle@plain");
   Let!("\\bibstyle@abbrv", "\\bibstyle@plain");
@@ -943,29 +950,39 @@ LoadDefinitions!({
   Let!("\\bibitem", "\\lx@nat@bibitem");
 
   // RawTeX for citeauthoryear, astroncite, citename, harvarditem, NAT@ifcmd etc.
-  RawTeX!("\\def\\citeauthoryear#1#2#3(@)(@)\\@nil#4{%
+  RawTeX!(
+    "\\def\\citeauthoryear#1#2#3(@)(@)\\@nil#4{%
 \\if\\relax#3\\relax%
 \\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}\\else%
-\\NAT@wrout{\\the@bibitem}{#3}{#2}{#1}{#4}\\fi}");
+\\NAT@wrout{\\the@bibitem}{#3}{#2}{#1}{#4}\\fi}"
+  );
   RawTeX!("\\let\\natbib@citeauthoryear\\citeauthoryear");
-  RawTeX!("\\def\\astroncite#1#2(@)(@)\\@nil#3{%
-\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#3}}");
+  RawTeX!(
+    "\\def\\astroncite#1#2(@)(@)\\@nil#3{%
+\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#3}}"
+  );
   RawTeX!("\\let\\natbib@astroncite\\astroncite");
-  RawTeX!("\\def\\citename#1#2(@)(@)\\@nil#3{%
-\\expandafter\\NAT@apalk#1#2, \\@nil{#3}}");
+  RawTeX!(
+    "\\def\\citename#1#2(@)(@)\\@nil#3{%
+\\expandafter\\NAT@apalk#1#2, \\@nil{#3}}"
+  );
   RawTeX!("\\let\\natbib@citename\\citename");
-  RawTeX!("\\newcommand\\harvarditem[4][]{%
-\\if\\relax#1\\relax\\bibitem[#2(#3)]{#4}\\else\\bibitem[#1(#3)#2]{#4}\\fi}");
-  RawTeX!("\\def\\NAT@apalk#1, #2, #3\\@nil#4{%
-\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}}");
+  RawTeX!(
+    "\\newcommand\\harvarditem[4][]{%
+\\if\\relax#1\\relax\\bibitem[#2(#3)]{#4}\\else\\bibitem[#1(#3)#2]{#4}\\fi}"
+  );
+  RawTeX!(
+    "\\def\\NAT@apalk#1, #2, #3\\@nil#4{%
+\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}}"
+  );
 
   // \reset@natbib@cites
   DefPrimitive!("\\reset@natbib@cites", None,
-    after_digest => {
-      Let!("\\citeauthoryear", "\\natbib@citeauthoryear");
-      Let!("\\astroncite", "\\natbib@astroncite");
-      Let!("\\citename", "\\natbib@citename");
-    });
+  after_digest => {
+    Let!("\\citeauthoryear", "\\natbib@citeauthoryear");
+    Let!("\\astroncite", "\\natbib@astroncite");
+    Let!("\\citename", "\\natbib@citename");
+  });
 
   // \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd
   DefMacro!("\\@lbibitem[]{}",
@@ -974,15 +991,15 @@ LoadDefinitions!({
 
   // \@@lbibitem — constructor opening the bibitem element
   DefConstructor!("\\@@lbibitem Semiverbatim",
-    "<ltx:bibitem key='#key' xml:id='#id'>",
-    after_digest => sub[whatsit] {
-      let key_str = whatsit.get_arg(1).map(|a| {
-        clean_bib_key(&a.to_string())
-      }).unwrap_or_default();
-      let id = Digest!(T_CS!("\\the@bibitem@ID"))?.to_string();
-      whatsit.set_property("key", key_str);
-      whatsit.set_property("id", id);
-    });
+  "<ltx:bibitem key='#key' xml:id='#id'>",
+  after_digest => sub[whatsit] {
+    let key_str = whatsit.get_arg(1).map(|a| {
+      clean_bib_key(&a.to_string())
+    }).unwrap_or_default();
+    let id = Digest!(T_CS!("\\the@bibitem@ID"))?.to_string();
+    whatsit.set_property("key", key_str);
+    whatsit.set_property("id", id);
+  });
 
   //======================================================================
   // Misc macros
@@ -1033,13 +1050,21 @@ fn nat_peel_arg(mut tokens: Vec<Token>) -> (Option<Tokens>, Vec<Token>) {
   while let Some(t) = tokens.first().cloned() {
     tokens.remove(0);
     let cc = t.get_catcode();
-    if cc == Catcode::BEGIN { level += 1; }
+    if cc == Catcode::BEGIN {
+      level += 1;
+    }
     if cc == Catcode::END {
       level -= 1;
-      if level == 0 { break; }
+      if level == 0 {
+        break;
+      }
     }
     arg.push(t);
   }
-  let result = if arg.is_empty() { None } else { Some(Tokens::new(arg)) };
+  let result = if arg.is_empty() {
+    None
+  } else {
+    Some(Tokens::new(arg))
+  };
   (result, tokens)
 }

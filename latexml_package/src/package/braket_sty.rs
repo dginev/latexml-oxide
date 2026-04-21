@@ -91,8 +91,11 @@ fn split_braket_parts(arg: Tokens) -> Vec<Tokens> {
   let mut current: Vec<Token> = Vec::new();
   let mut depth: i32 = 0;
   for t in arg.unlist() {
-    if t.get_catcode() == Catcode::BEGIN { depth += 1; }
-    else if t.get_catcode() == Catcode::END { depth -= 1; }
+    if t.get_catcode() == Catcode::BEGIN {
+      depth += 1;
+    } else if t.get_catcode() == Catcode::END {
+      depth -= 1;
+    }
     if depth == 0 && t == vbar {
       result.push(Tokens::new(std::mem::take(&mut current)));
     } else {
@@ -134,36 +137,53 @@ fn build_invocation(cs: impl AsRef<str>, args: &[Tokens]) -> Tokens {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use latexml_core::state::{set_state, State, StateOptions};
+  use latexml_core::state::{State, StateOptions, set_state};
 
-  fn setup() {
-    set_state(State::new(StateOptions::default()));
-  }
+  fn setup() { set_state(State::new(StateOptions::default())); }
 
-  fn toks(tok_vec: Vec<Token>) -> Tokens {
-    Tokens::new(tok_vec)
-  }
+  fn toks(tok_vec: Vec<Token>) -> Tokens { Tokens::new(tok_vec) }
 
   // ----- pick_braket_cs -----
 
   #[test]
   fn pick_braket_cs_one_part_uses_bare_prefix() {
-    assert_eq!(pick_braket_cs("\\lx@braket@", 1), ("\\lx@braket@".to_string(), 1));
-    assert_eq!(pick_braket_cs("\\lx@braket@", 0), ("\\lx@braket@".to_string(), 1));
+    assert_eq!(
+      pick_braket_cs("\\lx@braket@", 1),
+      ("\\lx@braket@".to_string(), 1)
+    );
+    assert_eq!(
+      pick_braket_cs("\\lx@braket@", 0),
+      ("\\lx@braket@".to_string(), 1)
+    );
   }
 
   #[test]
   fn pick_braket_cs_two_parts_uses_v_suffix() {
-    assert_eq!(pick_braket_cs("\\lx@braket@", 2), ("\\lx@braket@V".to_string(), 2));
-    assert_eq!(pick_braket_cs("\\lx@Braket@", 2), ("\\lx@Braket@V".to_string(), 2));
+    assert_eq!(
+      pick_braket_cs("\\lx@braket@", 2),
+      ("\\lx@braket@V".to_string(), 2)
+    );
+    assert_eq!(
+      pick_braket_cs("\\lx@Braket@", 2),
+      ("\\lx@Braket@V".to_string(), 2)
+    );
   }
 
   #[test]
   fn pick_braket_cs_three_or_more_uses_vv_suffix() {
-    assert_eq!(pick_braket_cs("\\lx@braket@", 3), ("\\lx@braket@VV".to_string(), 3));
+    assert_eq!(
+      pick_braket_cs("\\lx@braket@", 3),
+      ("\\lx@braket@VV".to_string(), 3)
+    );
     // Extra parts collapse down to the 3-part variant.
-    assert_eq!(pick_braket_cs("\\lx@braket@", 4), ("\\lx@braket@VV".to_string(), 3));
-    assert_eq!(pick_braket_cs("\\lx@braket@", 5), ("\\lx@braket@VV".to_string(), 3));
+    assert_eq!(
+      pick_braket_cs("\\lx@braket@", 4),
+      ("\\lx@braket@VV".to_string(), 3)
+    );
+    assert_eq!(
+      pick_braket_cs("\\lx@braket@", 5),
+      ("\\lx@braket@VV".to_string(), 3)
+    );
   }
 
   // ----- split_braket_parts -----

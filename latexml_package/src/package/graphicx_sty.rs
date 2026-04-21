@@ -22,14 +22,22 @@ pub fn image_candidates(path: &str) -> String {
   let mut candidates: Vec<String> = Vec::new();
   let path_obj = Path::new(path);
   let has_extension = path_obj.extension().is_some();
-  let source_path = if source_dir.is_empty() { None } else { Some(PathBuf::from(&source_dir)) };
+  let source_path = if source_dir.is_empty() {
+    None
+  } else {
+    Some(PathBuf::from(&source_dir))
+  };
 
   for dir in &search_dirs {
     let base = PathBuf::from(dir).join(path);
     if has_extension {
       if base.exists() {
         let rel = match &source_path {
-          Some(sp) => base.strip_prefix(sp).unwrap_or(&base).to_string_lossy().to_string(),
+          Some(sp) => base
+            .strip_prefix(sp)
+            .unwrap_or(&base)
+            .to_string_lossy()
+            .to_string(),
           None => base.to_string_lossy().to_string(),
         };
         candidates.push(rel);
@@ -37,7 +45,10 @@ pub fn image_candidates(path: &str) -> String {
     } else {
       // Search for path with any extension
       let parent = base.parent().unwrap_or(Path::new("."));
-      let stem = base.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+      let stem = base
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
       if let Ok(entries) = std::fs::read_dir(parent) {
         for entry in entries.flatten() {
           let fname = entry.file_name().to_string_lossy().to_string();
@@ -45,7 +56,11 @@ pub fn image_candidates(path: &str) -> String {
             if fname[..dot_pos] == stem {
               let full = entry.path();
               let rel = match &source_path {
-                Some(sp) => full.strip_prefix(sp).unwrap_or(&full).to_string_lossy().to_string(),
+                Some(sp) => full
+                  .strip_prefix(sp)
+                  .unwrap_or(&full)
+                  .to_string_lossy()
+                  .to_string(),
                 None => full.to_string_lossy().to_string(),
               };
               candidates.push(rel);
@@ -85,10 +100,14 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 
   let dpi_val = state::lookup_int("DPI");
   let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 }; // Perl: our $DPI = 100
-  let candidates = whatsit.get_property("candidates")
-    .map(|c| c.to_string()).unwrap_or_default();
-  let options = whatsit.get_property("options")
-    .map(|c| c.to_string()).unwrap_or_default();
+  let candidates = whatsit
+    .get_property("candidates")
+    .map(|c| c.to_string())
+    .unwrap_or_default();
+  let options = whatsit
+    .get_property("options")
+    .map(|c| c.to_string())
+    .unwrap_or_default();
 
   // Try to read actual image dimensions from file
   let mut img_w: f64 = 0.0;
@@ -96,7 +115,9 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   let source_dir = state::lookup_string("SOURCEDIRECTORY");
   for candidate in candidates.split(',') {
     let candidate = candidate.trim();
-    if candidate.is_empty() { continue; }
+    if candidate.is_empty() {
+      continue;
+    }
     let full_path = if Path::new(candidate).is_absolute() {
       PathBuf::from(candidate)
     } else if !source_dir.is_empty() {
@@ -111,7 +132,9 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
     }
   }
 
-  if img_w <= 0.0 || img_h <= 0.0 { return; }
+  if img_w <= 0.0 || img_h <= 0.0 {
+    return;
+  }
 
   // Apply graphicx options (height, width, scale, keepaspectratio)
   // Perl: image_graphicx_size applies parsed transformations
@@ -173,16 +196,26 @@ fn image_graphicx_sizer(whatsit: &mut Whatsit) {
           }
         },
         (Some(tw), None) => {
-          if w > 0.0 { h = h * tw / w; w = tw; }
+          if w > 0.0 {
+            h = h * tw / w;
+            w = tw;
+          }
         },
         (None, Some(th)) => {
-          if h > 0.0 { w = w * th / h; h = th; }
+          if h > 0.0 {
+            w = w * th / h;
+            h = th;
+          }
         },
         (None, None) => {},
       }
     } else {
-      if let Some(tw) = target_w { w = tw; }
-      if let Some(th) = target_h { h = th; }
+      if let Some(tw) = target_w {
+        w = tw;
+      }
+      if let Some(th) = target_h {
+        h = th;
+      }
     }
   }
   // Perl: ceil pixel dimensions after applying transforms
@@ -223,7 +256,9 @@ fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
     file.read_to_end(&mut data).ok()?;
     let mut i = 2;
     while i + 9 < data.len() {
-      if data[i] != 0xFF { break; }
+      if data[i] != 0xFF {
+        break;
+      }
       let marker = data[i + 1];
       // SOF markers: 0xC0-0xCF (except 0xC4 DHT, 0xC8 JPG, 0xCC DAC)
       if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
@@ -242,7 +277,8 @@ fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
   // read the first ~8KB since BoundingBox can be deferred (`(atend)` form
   // is also valid but would require scanning the tail; skip that).
   if (header[0] == b'%' && (header[1] == b'!' || header[1] == b'%'))
-    || (header.starts_with(b"\xc5\xd0\xd3\xc6"))  // EPS with binary preview header
+    || (header.starts_with(b"\xc5\xd0\xd3\xc6"))
+  // EPS with binary preview header
   {
     let mut data = header.to_vec();
     // Read up to 32KB — BoundingBox typically in first few hundred bytes
@@ -253,7 +289,9 @@ fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
     // little-endian is offset to the PostScript section. Skip to it.
     let text_start = if data.starts_with(b"\xc5\xd0\xd3\xc6") && data.len() >= 8 {
       u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize
-    } else { 0 };
+    } else {
+      0
+    };
     let text = std::str::from_utf8(data.get(text_start..)?).ok()?;
     // Prefer HiResBoundingBox (float) over BoundingBox (int).
     let mut found: Option<(f64, f64, f64, f64)> = None;
@@ -261,15 +299,22 @@ fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
       let trimmed = line.trim_start();
       let rest = if let Some(r) = trimmed.strip_prefix("%%HiResBoundingBox:") {
         // HiRes wins — take and stop searching.
-        parse_bbox(r).inspect(|&b| { found = Some(b); })
-      } else if found.is_none() {
-        trimmed.strip_prefix("%%BoundingBox:").and_then(parse_bbox).inspect(|&b| {
+        parse_bbox(r).inspect(|&b| {
           found = Some(b);
         })
+      } else if found.is_none() {
+        trimmed
+          .strip_prefix("%%BoundingBox:")
+          .and_then(parse_bbox)
+          .inspect(|&b| {
+            found = Some(b);
+          })
       } else {
         None
       };
-      if rest.is_some() && trimmed.starts_with("%%HiResBoundingBox:") { break; }
+      if rest.is_some() && trimmed.starts_with("%%HiResBoundingBox:") {
+        break;
+      }
     }
     if let Some((llx, lly, urx, ury)) = found {
       let w = (urx - llx).max(0.0);
@@ -313,18 +358,18 @@ LoadDefinitions!({
   // Perl: graphicx.sty.ltxml doesn't need this because .ltxml bindings prevent
   // raw TeX loading entirely.
   DefConstructor!("\\rotatebox OptionalKeyVals:Grot {Float} {}",
-    "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
-      if let Some(body) = whatsit.get_arg(3) {
-        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
-          for (k, v) in props {
-            whatsit.set_property(k, v);
-          }
+  "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+  mode => "restricted_horizontal", enter_horizontal => true,
+  after_digest => sub[whatsit] {
+    let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+    if let Some(body) = whatsit.get_arg(3) {
+      if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
+        for (k, v) in props {
+          whatsit.set_property(k, v);
         }
       }
-    });
+    }
+  });
 
   // Internal macros for graphicx sizing
   DefMacro!("\\Gin@ewidth", "");

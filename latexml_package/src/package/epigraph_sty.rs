@@ -1,7 +1,8 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-  TeX!(r#"""
+  TeX!(
+    r#"""
 \newlength{\beforeepigraphskip}
   \setlength{\beforeepigraphskip}{.5\baselineskip}
 \newlength{\afterepigraphskip}
@@ -14,7 +15,8 @@ LoadDefinitions!({
 \newcommand{\epigraphflush}{flushright}
 \newcommand{\textflush}{flushleft}
 \newcommand{\sourceflush}{flushright}
-"""#);
+"""#
+  );
 
   DefConstructor!("\\epigraph{}{}",
     "<ltx:quote class='ltx_epigraph #epigraphflush' cssstyle='#qwidth #qalign'>\

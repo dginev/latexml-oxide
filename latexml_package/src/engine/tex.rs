@@ -59,10 +59,10 @@ LoadDefinitions!({
   InnerPool!(base_deprecated);
 
   // Perl: LoadFormat('plain') — loads bootstrap → base → dump → constructs
-  InnerPool!(plain_bootstrap);       // Perl: plain_bootstrap.pool.ltxml
-  InnerPool!(plain_base);            // Perl: plain_base.pool.ltxml
+  InnerPool!(plain_bootstrap); // Perl: plain_bootstrap.pool.ltxml
+  InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
   // plain_dump: not loaded separately — plain.ltx state is subsumed by latex dump
-  InnerPool!(plain_constructs);      // Perl: plain_constructs.pool.ltxml → math_common
+  InnerPool!(plain_constructs); // Perl: plain_constructs.pool.ltxml → math_common
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Perl: TeX.pool.ltxml — remaining definitions

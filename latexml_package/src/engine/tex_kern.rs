@@ -168,48 +168,48 @@ LoadDefinitions!({
   // Template: ?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)
   //                    (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)
   DefConstructor!("\\raise Dimension MoveableBox",
-    sub[document, args, props] {
-      let svg = in_svg(document);
-      let mut attrs = string_map!("_noautoclose" => "1");
-      let node = if svg {
-        let transform = match props.get("transform") {
-          Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
-        };
-        if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
-        document.open_element("svg:g", Some(attrs), None)?
-      } else {
-        let y_attr = match props.get("y") {
-          Some(Stored::Dimension(d)) => d.to_attribute(), _ => String::new()
-        };
-        if !y_attr.is_empty() { attrs.insert(String::from("yoffset"), y_attr); }
-        document.open_element("ltx:text", Some(attrs), None)?
+  sub[document, args, props] {
+    let svg = in_svg(document);
+    let mut attrs = string_map!("_noautoclose" => "1");
+    let node = if svg {
+      let transform = match props.get("transform") {
+        Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
       };
-      if let Some(Some(content)) = args.get(1) {
-        document.absorb(content, None)?;
-      }
-      document.maybe_close_node(&node)?;
-    },
-    // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); }
-    // Adjusts reported height/depth by the raise amount so \ht/\dp reflect the shift.
-    sizer => sub[whatsit] {
-      let y_val = whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0);
-      if let Some(content) = whatsit.get_arg(2) {
-        let (w, h, d) = content.compute_size(Default::default())?;
-        let new_h = Dimension::new((h.value_of() + y_val).max(0));
-        let new_d = Dimension::new((d.value_of() - y_val).max(0));
-        Ok((w, new_h, new_d))
-      } else {
-        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
-      }
-    },
-    enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
-      let ypx       = y.px_value(None);
-      let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
-      whatsit.set_property("y", y);
-      whatsit.set_property("transform", transform);
-    });
+      if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
+      document.open_element("svg:g", Some(attrs), None)?
+    } else {
+      let y_attr = match props.get("y") {
+        Some(Stored::Dimension(d)) => d.to_attribute(), _ => String::new()
+      };
+      if !y_attr.is_empty() { attrs.insert(String::from("yoffset"), y_attr); }
+      document.open_element("ltx:text", Some(attrs), None)?
+    };
+    if let Some(Some(content)) = args.get(1) {
+      document.absorb(content, None)?;
+    }
+    document.maybe_close_node(&node)?;
+  },
+  // Perl: sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); }
+  // Adjusts reported height/depth by the raise amount so \ht/\dp reflect the shift.
+  sizer => sub[whatsit] {
+    let y_val = whatsit.get_arg(1).map(|a| a.value_of()).unwrap_or(0);
+    if let Some(content) = whatsit.get_arg(2) {
+      let (w, h, d) = content.compute_size(Default::default())?;
+      let new_h = Dimension::new((h.value_of() + y_val).max(0));
+      let new_d = Dimension::new((d.value_of() - y_val).max(0));
+      Ok((w, new_h, new_d))
+    } else {
+      Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+    }
+  },
+  enter_horizontal => true,
+  after_digest => sub[whatsit] {
+    let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
+    let ypx       = y.px_value(None);
+    let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
+    whatsit.set_property("y", y);
+    whatsit.set_property("transform", transform);
+  });
 
   //======================================================================
   // Moving Horizontally

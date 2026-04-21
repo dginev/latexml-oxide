@@ -180,7 +180,7 @@ LoadDefinitions!({
       }
     }
   );
-  DefRegister!("\\defaultskewchar",   Number!(-1));
+  DefRegister!("\\defaultskewchar", Number!(-1));
   DefRegister!("\\defaulthyphenchar", Number!(45)); // ord('-') = 45
 
   // Not sure what this should be...
@@ -245,9 +245,10 @@ LoadDefinitions!({
     '\u{0335}', '!', '\u{201D}', '#', '$', '%', '&', '\u{2019}', '(', ')', '*', '+', ',', '-', '.',
     '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}',
     '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
-    'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\u{201C}', ']', '\u{02C6}', '\u{02D9}', '\u{2018}',
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-    't', 'u', 'v', 'w', 'x', 'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{02DC}', '\u{00A8}'
+    'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\u{201C}', ']', '\u{02C6}', '\u{02D9}',
+    '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+    'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}',
+    '\u{02DC}', '\u{00A8}'
   ]); // TODO: do we really need '\u{00A0}'\x{0335} as a single entry?
 
   DeclareFontMap!(
@@ -356,8 +357,13 @@ LoadDefinitions!({
 
   let cal_font = Font {
     family: Some(std::borrow::Cow::Borrowed("caligraphic")),
-    ..Default::default() };
-  latexml_core::state::assign_value("OMS_uppercase_mathstyle", latexml_core::state::Stored::Font(std::rc::Rc::new(cal_font)), Some(latexml_core::state::Scope::Global));
+    ..Default::default()
+  };
+  latexml_core::state::assign_value(
+    "OMS_uppercase_mathstyle",
+    latexml_core::state::Stored::Font(std::rc::Rc::new(cal_font)),
+    Some(latexml_core::state::Scope::Global),
+  );
 
   #[rustfmt::skip]
   DeclareFontMap!(

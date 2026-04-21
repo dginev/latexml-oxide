@@ -76,11 +76,17 @@ fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
   fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
     d.with_properties(|props| {
       let w = match props.get("cached_width").or_else(|| props.get("width")) {
-        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+        Some(Stored::Dimension(d)) => *d,
+        _ => Dimension::default(),
+      };
       let h = match props.get("cached_height").or_else(|| props.get("height")) {
-        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+        Some(Stored::Dimension(d)) => *d,
+        _ => Dimension::default(),
+      };
       let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
-        Some(Stored::Dimension(d)) => *d, _ => Dimension::default() };
+        Some(Stored::Dimension(d)) => *d,
+        _ => Dimension::default(),
+      };
       (w, h, d)
     })
   }
@@ -101,7 +107,11 @@ fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
         max_h = max_h.max(ch.value_of());
         max_d = max_d.max(cd.value_of());
       }
-      return (Dimension::new(total_w), Dimension::new(max_h), Dimension::new(max_d));
+      return (
+        Dimension::new(total_w),
+        Dimension::new(max_h),
+        Dimension::new(max_d),
+      );
     }
   }
   dims
@@ -114,14 +124,24 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
 
   // Collapsible SVG group attributes (Perl L193-197)
   const COLLAPSIBLE: &[&str] = &[
-    "fill", "fill-rule", "fill-opacity",
-    "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit",
-    "stroke-dasharray", "stroke-dashoffset", "stroke-opacity",
+    "fill",
+    "fill-rule",
+    "fill-opacity",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-miterlimit",
+    "stroke-dasharray",
+    "stroke-dashoffset",
+    "stroke-opacity",
     "color",
   ];
 
   // Record public (non-internal) attributes on this node
-  let nodeattr: HashMap<String, String> = node.get_attributes().into_iter()
+  let nodeattr: HashMap<String, String> = node
+    .get_attributes()
+    .into_iter()
     .filter(|(k, _)| !k.starts_with('_'))
     .collect();
   // Perl L208: skip if clip-path is set
@@ -129,9 +149,7 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
     return Ok(());
   }
 
-  let is_svg_g = |n: &Node| -> bool {
-    document::with_node_qname(n, |q| q == "svg:g")
-  };
+  let is_svg_g = |n: &Node| -> bool { document::with_node_qname(n, |q| q == "svg:g") };
 
   // Step 1: Remove empty svg:g children (Perl L211-214)
   let mut children = element_nodes(node);
@@ -155,7 +173,8 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
     let c = &children[0];
     let mut nmasked = 0;
     for (key, _val) in c.get_attributes() {
-      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key) {
+      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key)
+      {
         nmasked += 1;
       }
     }
@@ -174,7 +193,8 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
     let c = children.last().unwrap();
     let mut nmasked = 0;
     for (key, _val) in c.get_attributes() {
-      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key) {
+      if !key.starts_with('_') && COLLAPSIBLE.contains(&key.as_str()) && nodeattr.contains_key(&key)
+      {
         nmasked += 1;
       }
     }
@@ -398,8 +418,10 @@ LoadDefinitions!({
   });
   // Perl: DefConstructor('\lx@text@nounicode DefToken',
   //   "<ltx:text _no_autoclose='true' class='ltx_nounicode'>#1</ltx:text>", ...);
-  DefConstructor!("\\lx@text@nounicode DefToken",
-    "<ltx:text class='ltx_nounicode'>#1</ltx:text>");
+  DefConstructor!(
+    "\\lx@text@nounicode DefToken",
+    "<ltx:text class='ltx_nounicode'>#1</ltx:text>"
+  );
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box creation commands
@@ -963,8 +985,8 @@ LoadDefinitions!({
   DefRegister!("\\hfuzz", Dimension!("0.1pt"));
   DefRegister!("\\vfuzz", Dimension!("0.1pt"));
   DefRegister!("\\overfullrule", Dimension!("5pt"));
-  DefRegister!("\\badness", Number::new(0), readonly => true);  // Perl: readonly
-  DefRegister!("\\hbadness", Number!(1000));   // Perl: NOT readonly (writable threshold)
+  DefRegister!("\\badness", Number::new(0), readonly => true); // Perl: readonly
+  DefRegister!("\\hbadness", Number!(1000)); // Perl: NOT readonly (writable threshold)
   DefRegister!("\\vbadness", Number!(1000));
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

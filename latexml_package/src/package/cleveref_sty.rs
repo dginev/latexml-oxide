@@ -160,7 +160,11 @@ fn cref_type(ctype: &str) -> String {
 /// Perl: crefMulti($starred, $labels, $showtype, $capitalized)
 /// Generates tokens for \cref{label1,label2,...}
 fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) -> Result<Tokens> {
-  let label_list: Vec<&str> = labels.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+  let label_list: Vec<&str> = labels
+    .split(',')
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+    .collect();
   let star = if starred { "*" } else { "" };
 
   if label_list.len() < 2 {
@@ -169,7 +173,11 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
     // We use {} parameter, so ~ (ACTIVE) expands to space.
     // Fix: embed catcode-12 ~ directly in show string by using \lx@tilde
     let show = if showtype {
-      if capitalized { "creftypecap\\lx@tilde refnum" } else { "creftype\\lx@tilde refnum" }
+      if capitalized {
+        "creftypecap\\lx@tilde refnum"
+      } else {
+        "creftype\\lx@tilde refnum"
+      }
     } else {
       "refnum"
     };
@@ -179,7 +187,11 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
   } else {
     // Multiple references
     let show = if showtype {
-      if capitalized { "creftypepluralcap\\lx@tilde refnum" } else { "creftypeplural\\lx@tilde refnum" }
+      if capitalized {
+        "creftypepluralcap\\lx@tilde refnum"
+      } else {
+        "creftypeplural\\lx@tilde refnum"
+      }
     } else {
       "refnum"
     };
@@ -189,13 +201,21 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
 
     if label_list.len() == 2 {
       // Pair: use \crefpairconjunction
-      parts.push(s!("\\crefpairconjunction\\lx@cref{star}{{refnum}}{{{}}}", label_list[1]));
+      parts.push(s!(
+        "\\crefpairconjunction\\lx@cref{star}{{refnum}}{{{}}}",
+        label_list[1]
+      ));
     } else {
       // Multiple: use \crefmiddleconjunction for all but last, \creflastconjunction for last
-      for label in &label_list[1..label_list.len()-1] {
-        parts.push(s!("\\crefmiddleconjunction\\lx@cref{star}{{refnum}}{{{label}}}"));
+      for label in &label_list[1..label_list.len() - 1] {
+        parts.push(s!(
+          "\\crefmiddleconjunction\\lx@cref{star}{{refnum}}{{{label}}}"
+        ));
       }
-      parts.push(s!("\\creflastconjunction\\lx@cref{star}{{refnum}}{{{}}}", label_list.last().unwrap()));
+      parts.push(s!(
+        "\\creflastconjunction\\lx@cref{star}{{refnum}}{{{}}}",
+        label_list.last().unwrap()
+      ));
     }
     let expansion = parts.join("");
     Ok(mouth::tokenize_internal(&expansion))

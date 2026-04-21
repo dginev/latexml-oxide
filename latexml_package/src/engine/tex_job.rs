@@ -33,8 +33,12 @@ LoadDefinitions!({
       DateTime::from_timestamp(epoch, 0)
         .map(|utc| utc.with_timezone(&Local))
         .unwrap_or_else(Local::now)
-    } else { Local::now() }
-  } else { Local::now() };
+    } else {
+      Local::now()
+    }
+  } else {
+    Local::now()
+  };
   AssignValue!("\\day", Number!(dt.day()), Scope::Global);
   AssignValue!("\\month", Number!(dt.month()), Scope::Global);
   AssignValue!("\\year", Number!(dt.year()), Scope::Global);

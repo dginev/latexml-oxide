@@ -3,7 +3,10 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("amsgen");
 
-  DefMacro!("\\CD", "\\lx@ams@CD{name=CD,datameaning=commutative-diagram}");
+  DefMacro!(
+    "\\CD",
+    "\\lx@ams@CD{name=CD,datameaning=commutative-diagram}"
+  );
   DefMacro!(
     "\\lx@ams@CD RequiredKeyVals:lx@GEN",
     "\\lx@gen@matrix@bindings{#1}\\lx@ams@CD@bindings\\lx@ams@matrix@{#1}\\lx@begin@alignment"
@@ -33,29 +36,55 @@ LoadDefinitions!({
   // Horizontal connectors
   // Perl: DefMacroI(T_CS('@>'), 'Until:> Until:>',
   //   '\lx@hidden@align\lx@amscd@stack{>}{\lx@amscd@rightarrow}{#1}{#2}\lx@hidden@align');
-  DefMacro!(T_CS!("@>"), "Until:> Until:>",
-    "\\lx@hidden@align\\lx@amscd@stack{>}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@)"), "Until:) Until:)",
-    "\\lx@hidden@align\\lx@amscd@stack{)}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@<"), "Until:< Until:<",
-    "\\lx@hidden@align\\lx@amscd@stack{<}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@("), "Until:( Until:(",
-    "\\lx@hidden@align\\lx@amscd@stack{(}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@="), None,
-    "\\lx@hidden@align\\lx@amscd@equals\\lx@hidden@align");
+  DefMacro!(
+    T_CS!("@>"),
+    "Until:> Until:>",
+    "\\lx@hidden@align\\lx@amscd@stack{>}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@)"),
+    "Until:) Until:)",
+    "\\lx@hidden@align\\lx@amscd@stack{)}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@<"),
+    "Until:< Until:<",
+    "\\lx@hidden@align\\lx@amscd@stack{<}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@("),
+    "Until:( Until:(",
+    "\\lx@hidden@align\\lx@amscd@stack{(}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@="),
+    None,
+    "\\lx@hidden@align\\lx@amscd@equals\\lx@hidden@align"
+  );
 
   // Vertical connectors
-  DefMacro!(T_CS!("@A"), "Until:A Until:A",
-    "\\lx@amscd@adjacent{A}{\\Big\\uparrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align");
-  DefMacro!(T_CS!("@V"), "Until:V Until:V",
-    "\\lx@amscd@adjacent{V}{\\Big\\downarrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align");
+  DefMacro!(
+    T_CS!("@A"),
+    "Until:A Until:A",
+    "\\lx@amscd@adjacent{A}{\\Big\\uparrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@V"),
+    "Until:V Until:V",
+    "\\lx@amscd@adjacent{V}{\\Big\\downarrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align"
+  );
 
-  DefMacro!(T_CS!("@|"), None,
-    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align");
-  DefMacro!(T_CS!("@\\vert"), None,
-    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align");
-  DefMacro!(T_CS!("@."), None,
-    "\\lx@hidden@align\\lx@hidden@align");
+  DefMacro!(
+    T_CS!("@|"),
+    None,
+    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@\\vert"),
+    None,
+    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align"
+  );
+  DefMacro!(T_CS!("@."), None, "\\lx@hidden@align\\lx@hidden@align");
 
   DefRegister!("\\minaw@" => Dimension!("11.111pt"));
 
@@ -186,7 +215,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@leftarrow"), None, {
     Tbox::new(
       arena::pin_static("\u{2190}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\leftarrow")),
       stored_map!(
         "role" => "ARROW",
@@ -201,7 +231,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@rightarrow"), None, {
     Tbox::new(
       arena::pin_static("\u{2192}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\rightarrow")),
       stored_map!(
         "role" => "ARROW",
@@ -216,7 +247,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@leftrightarrow"), None, {
     Tbox::new(
       arena::pin_static("\u{2194}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\leftrightarrow")),
       stored_map!(
         "role" => "ARROW",
@@ -231,7 +263,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@equals"), None, {
     Tbox::new(
       arena::pin_static("="),
-      None, None,
+      None,
+      None,
       Tokens!(T_OTHER!("=")),
       stored_map!(
         "role" => "ARROW",

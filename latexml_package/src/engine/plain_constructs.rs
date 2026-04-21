@@ -30,7 +30,6 @@ fn align_line(document: &mut Document, line: &[Option<Digested>], alignment: &st
   Ok(())
 }
 
-
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L18

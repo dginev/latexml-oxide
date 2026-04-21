@@ -192,13 +192,13 @@ LoadDefinitions!({
        _props: &arena::SymHashMap<Stored>| {
         // pdfkey -> (property, object_attr)
         let pdfkey_property: &[(&str, &str, &str)] = &[
-          ("pdfauthor",      "dcterms:creator",  "content"),
-          ("pdfkeywords",    "dcterms:subject",  "content"),
-          ("pdflang",        "dcterms:language",  "content"),
-          ("pdfsubject",     "dcterms:subject",  "content"),
-          ("pdftitle",       "dcterms:title",    "content"),
-          ("pdfcopyright",   "dcterms:rights",   "content"),
-          ("pdflicenseurl",  "cc:licence",       "resource"),
+          ("pdfauthor", "dcterms:creator", "content"),
+          ("pdfkeywords", "dcterms:subject", "content"),
+          ("pdflang", "dcterms:language", "content"),
+          ("pdfsubject", "dcterms:subject", "content"),
+          ("pdftitle", "dcterms:title", "content"),
+          ("pdfcopyright", "dcterms:rights", "content"),
+          ("pdflicenseurl", "cc:licence", "resource"),
         ];
 
         let mut root = match document.document.get_root_element() {
@@ -212,15 +212,14 @@ LoadDefinitions!({
         keys.sort();
         for key_str in &keys {
           if let Some((_, property, object_attr)) =
-            pdfkey_property.iter().find(|(k, _, _)| k == key_str)
+            pdfkey_property.iter().find(|(k, ..)| k == key_str)
           {
             if let Some(value) = state::lookup_mapping("Hyperref_options", key_str) {
               let value_str = value.to_string();
               let mut attrs = HashMap::default();
               attrs.insert("property".to_string(), property.to_string());
               attrs.insert(object_attr.to_string(), value_str);
-              let mut node =
-                document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
+              let mut node = document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
               // Must set about="" directly — setAttribute omits empty attributes
               node.set_attribute("about", "")?;
               document.close_element_at(&mut node)?;
@@ -315,67 +314,67 @@ LoadDefinitions!({
   DefMacro!("\\hyperref", "\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv");
   // Perl L211-215: 2 argument form \hyperref[label]{text}
   DefConstructor!("\\hyperref@@ii OptionalSemiverbatim {}",
-    "<ltx:ref labelref='#label'>#2</ltx:ref>",
-    bounded => true, enter_horizontal => true,
-    properties => sub[args] {
-      let label = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
-    });
+  "<ltx:ref labelref='#label'>#2</ltx:ref>",
+  bounded => true, enter_horizontal => true,
+  properties => sub[args] {
+    let label = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
+  });
   // Perl L217-222: 4 argument form \hyperref{url}{category}{name}{text}
   DefConstructor!("\\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim",
-    "<ltx:ref href='#href'>#4</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let base_url = state::lookup_string("BASE_URL");
-      let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let fragment = clean_id(&format!("{}.{}", cat, name));
-      let href = if base_url.is_empty() {
-        format!("#{}", fragment)
-      } else {
-        format!("{}#{}", base_url, fragment)
-      };
-      Ok(stored_map!("href" => href))
-    });
+  "<ltx:ref href='#href'>#4</ltx:ref>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let base_url = state::lookup_string("BASE_URL");
+    let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let fragment = clean_id(&format!("{}.{}", cat, name));
+    let href = if base_url.is_empty() {
+      format!("#{}", fragment)
+    } else {
+      format!("{}#{}", base_url, fragment)
+    };
+    Ok(stored_map!("href" => href))
+  });
 
   // Perl L224-226: \htmlref{text}{label}
   DefConstructor!("\\htmlref Semiverbatim Semiverbatim",
-    "<ltx:ref labelref='#label'>#1</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let label = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
-    });
+  "<ltx:ref labelref='#label'>#1</ltx:ref>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let label = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
+  });
 
   // Perl L228-230: \hyperlink{name}{text}
   DefConstructor!("\\hyperlink Semiverbatim {}",
-    "<ltx:ref idref='#id'>#2</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => clean_id(&name)))
-    });
+  "<ltx:ref idref='#id'>#2</ltx:ref>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => clean_id(&name)))
+  });
   DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
 
   // Perl L252-254: \hyperdef{category}{name}{text}
   // TODO: afterConstruct => \&localized_anchor (wraps content in ltx:anchor)
   // For now, just output text with xml:id on a wrapper.
   DefConstructor!("\\hyperdef Semiverbatim Semiverbatim Semiverbatim",
-    "<ltx:text xml:id='#id'>#3</ltx:text>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
-    });
+  "<ltx:text xml:id='#id'>#3</ltx:text>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
+  });
   // Perl L256-258: \hypertarget{name}{text}
   DefConstructor!("\\hypertarget Semiverbatim {}",
-    "<ltx:text xml:id='#id'>#2</ltx:text>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => clean_id(&name)))
-    });
+  "<ltx:text xml:id='#id'>#2</ltx:text>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => clean_id(&name)))
+  });
 
   // # Should create an anchor with automatically chosen name;
   // # But it's to be used where LaTeXML already would have created an anchor & link...

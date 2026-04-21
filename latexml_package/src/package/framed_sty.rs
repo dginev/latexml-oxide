@@ -263,16 +263,22 @@ LoadDefinitions!({
       Ok(stored_map!("framecolor" => framecolor, "backgroundcolor" => bg))
     }
   );
-  DefMacro!("\\@titledframe@title{}",
-    "\\@@titledframe@title{{\\fboxsep8pt\\fboxrule2pt\\pagecolor{TFFrameColor}\\textcolor{TFTitleColor} {#1}}}");
-  DefConstructor!("\\@@titledframe@title{}",
-    "<ltx:text cssstyle='display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt'>#1</ltx:text>");
+  DefMacro!(
+    "\\@titledframe@title{}",
+    "\\@@titledframe@title{{\\fboxsep8pt\\fboxrule2pt\\pagecolor{TFFrameColor}\\textcolor{TFTitleColor} {#1}}}"
+  );
+  DefConstructor!(
+    "\\@@titledframe@title{}",
+    "<ltx:text cssstyle='display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt'>#1</ltx:text>"
+  );
 
   //======================================================================
   // Customization macros
   // Perl: framed.sty.ltxml lines 126-130
-  DefMacro!("\\FrameCommand",
-    "\\setlength\\fboxrule{\\FrameRule}\\setlength\\fboxsep{\\FrameSep}\\fbox");
+  DefMacro!(
+    "\\FrameCommand",
+    "\\setlength\\fboxrule{\\FrameRule}\\setlength\\fboxsep{\\FrameSep}\\fbox"
+  );
   DefMacro!("\\FirstFrameCommand", "\\FrameCommand");
   DefMacro!("\\MidFrameCommand", "\\FrameCommand");
   DefMacro!("\\LastFrameCommand", "\\FrameCommand");

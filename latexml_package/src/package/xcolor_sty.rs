@@ -1,23 +1,35 @@
-use crate::prelude::*;
 use crate::package::color_sty::lookup_color_obj;
-use latexml_core::common::color::{BLACK, WHITE, Color, color_from_model_spec, from_model_components};
+use crate::prelude::*;
+use latexml_core::common::color::{
+  BLACK, Color, WHITE, color_from_model_spec, from_model_components,
+};
 
 /// Perl: sub delta { my ($v, $n) = @_; ($v <= ($n+1)/2 ? $v/($n+1) : ($v+1)/($n+1)) }
 fn delta(v: f64, n: f64) -> f64 {
-  if v <= (n + 1.0) / 2.0 { v / (n + 1.0) } else { (v + 1.0) / (n + 1.0) }
+  if v <= (n + 1.0) / 2.0 {
+    v / (n + 1.0)
+  } else {
+    (v + 1.0) / (n + 1.0)
+  }
 }
 
 /// Perl: sub fixedpt { int($value*10000+0.5)/10000 }
-fn fixedpt(value: f64) -> f64 {
-  (value * 10000.0 + 0.5).floor() / 10000.0
-}
+fn fixedpt(value: f64) -> f64 { (value * 10000.0 + 0.5).floor() / 10000.0 }
 
 /// Perl: sub rangeReduction — perverse rotation of value back into [0..1]
 fn range_reduction(value: f64) -> f64 {
   if value > 1.0 {
-    if value > 1.00001 { value - (value as i64) as f64 } else { 1.0 }
+    if value > 1.00001 {
+      value - (value as i64) as f64
+    } else {
+      1.0
+    }
   } else if value < 0.0 {
-    if value < -0.0001 { value - (value as i64) as f64 + 1.0 } else { 0.0 }
+    if value < -0.0001 {
+      value - (value as i64) as f64 + 1.0
+    } else {
+      0.0
+    }
   } else {
     value
   }
@@ -36,16 +48,19 @@ fn convert_extended_to_core(model: &str, spec: &str) -> Color {
 }
 
 fn convert_ext_model(model: &str, spec: &str) -> Color {
-  let comps: Vec<f64> = spec.split(|c: char| c == ',' || c.is_whitespace())
+  let comps: Vec<f64> = spec
+    .split(|c: char| c == ',' || c.is_whitespace())
     .filter(|s| !s.is_empty())
     .filter_map(|s| s.trim().parse::<f64>().ok())
     .collect();
   match model {
     "RGB" => {
       let l = 255.0; // default \rangeRGB
-      Color::Rgb(delta(comps.first().copied().unwrap_or(0.0), l),
-                 delta(comps.get(1).copied().unwrap_or(0.0), l),
-                 delta(comps.get(2).copied().unwrap_or(0.0), l))
+      Color::Rgb(
+        delta(comps.first().copied().unwrap_or(0.0), l),
+        delta(comps.get(1).copied().unwrap_or(0.0), l),
+        delta(comps.get(2).copied().unwrap_or(0.0), l),
+      )
     },
     "HTML" => {
       // RRGGBB hex string
@@ -54,22 +69,30 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
         let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
         let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
         let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
-        Color::Rgb(delta(r as f64, 255.0), delta(g as f64, 255.0), delta(b as f64, 255.0))
+        Color::Rgb(
+          delta(r as f64, 255.0),
+          delta(g as f64, 255.0),
+          delta(b as f64, 255.0),
+        )
       } else {
         BLACK
       }
     },
     "Hsb" => {
       let h_range = 360.0; // default \rangeHsb
-      Color::Hsb(comps.first().copied().unwrap_or(0.0) / h_range,
-                 comps.get(1).copied().unwrap_or(0.0),
-                 comps.get(2).copied().unwrap_or(0.0))
+      Color::Hsb(
+        comps.first().copied().unwrap_or(0.0) / h_range,
+        comps.get(1).copied().unwrap_or(0.0),
+        comps.get(2).copied().unwrap_or(0.0),
+      )
     },
     "HSB" => {
       let m = 240.0;
-      Color::Hsb(delta(comps.first().copied().unwrap_or(0.0), m),
-                 delta(comps.get(1).copied().unwrap_or(0.0), m),
-                 delta(comps.get(2).copied().unwrap_or(0.0), m))
+      Color::Hsb(
+        delta(comps.first().copied().unwrap_or(0.0), m),
+        delta(comps.get(1).copied().unwrap_or(0.0), m),
+        delta(comps.get(2).copied().unwrap_or(0.0), m),
+      )
     },
     "Gray" => {
       let n = 15.0;
@@ -79,15 +102,26 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
       let lambda = comps.first().copied().unwrap_or(500.0);
       let h;
       let bb;
-      if lambda < 440.0 { h = 4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0); }
-      else if lambda < 490.0 { h = 4.0 - ((lambda - 440.0) / 50.0).clamp(0.0, 1.0); }
-      else if lambda < 510.0 { h = 2.0 + ((lambda - 510.0) / (-20.0)).clamp(0.0, 1.0); }
-      else if lambda < 580.0 { h = 2.0 - ((lambda - 510.0) / 70.0).clamp(0.0, 1.0); }
-      else if lambda < 645.0 { h = ((lambda - 645.0) / (-65.0)).clamp(0.0, 1.0); }
-      else { h = 0.0; }
-      if lambda < 420.0 { bb = (0.3 + 0.7 * (lambda - 380.0) / 40.0).clamp(0.0, 1.0); }
-      else if lambda < 700.0 { bb = 1.0; }
-      else { bb = (0.3 + 0.7 * (lambda - 780.0) / (-80.0)).clamp(0.0, 1.0); }
+      if lambda < 440.0 {
+        h = 4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0);
+      } else if lambda < 490.0 {
+        h = 4.0 - ((lambda - 440.0) / 50.0).clamp(0.0, 1.0);
+      } else if lambda < 510.0 {
+        h = 2.0 + ((lambda - 510.0) / (-20.0)).clamp(0.0, 1.0);
+      } else if lambda < 580.0 {
+        h = 2.0 - ((lambda - 510.0) / 70.0).clamp(0.0, 1.0);
+      } else if lambda < 645.0 {
+        h = ((lambda - 645.0) / (-65.0)).clamp(0.0, 1.0);
+      } else {
+        h = 0.0;
+      }
+      if lambda < 420.0 {
+        bb = (0.3 + 0.7 * (lambda - 380.0) / 40.0).clamp(0.0, 1.0);
+      } else if lambda < 700.0 {
+        bb = 1.0;
+      } else {
+        bb = (0.3 + 0.7 * (lambda - 780.0) / (-80.0)).clamp(0.0, 1.0);
+      }
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
     _ => color_from_model_spec(model, spec),
@@ -102,9 +136,7 @@ fn lookup_xcolor(name: &str) -> Color {
   if name == "." {
     // Current color
     return match state::lookup_value("color_.") {
-      Some(Stored::String(sym)) => {
-        arena::with(sym, |s| Color::from_stored(s)).unwrap_or(BLACK)
-      },
+      Some(Stored::String(sym)) => arena::with(sym, |s| Color::from_stored(s)).unwrap_or(BLACK),
       _ => BLACK,
     };
   }
@@ -132,13 +164,16 @@ fn decode_color(expression: &str) -> Color {
     let before_colon = &expression[..colon_pos];
     // Check if before colon is a core model (possibly with ,div)
     let (model_part, div_part) = if let Some(comma_pos) = before_colon.find(',') {
-      (&before_colon[..comma_pos], before_colon[comma_pos+1..].trim())
+      (
+        &before_colon[..comma_pos],
+        before_colon[comma_pos + 1..].trim(),
+      )
     } else {
       (before_colon, "")
     };
     let model_trimmed = model_part.trim();
     if matches!(model_trimmed, "rgb" | "cmy" | "cmyk" | "hsb" | "gray") {
-      let exprs_str = &expression[colon_pos+1..];
+      let exprs_str = &expression[colon_pos + 1..];
       return decode_extended_color(model_trimmed, div_part, exprs_str);
     }
   }
@@ -248,10 +283,18 @@ fn apply_mix_expr(mut color: Color, mix_str: &str) -> Color {
       break;
     }
     // Skip the ! before the name
-    let after_bang = if let Some(stripped) = rest.strip_prefix('!') { stripped } else { rest };
+    let after_bang = if let Some(stripped) = rest.strip_prefix('!') {
+      stripped
+    } else {
+      rest
+    };
     // Read the name (up to next !)
     let (name, next_rest) = split_at_bang(after_bang);
-    let other = if name.is_empty() { WHITE } else { lookup_xcolor(name) };
+    let other = if name.is_empty() {
+      WHITE
+    } else {
+      lookup_xcolor(name)
+    };
     color = color.mix(&other, pct.clamp(0.0, 100.0) / 100.0);
     remaining = next_rest;
   }
@@ -274,14 +317,20 @@ fn decode_extended_color(model: &str, div_str: &str, exprs_str: &str) -> Color {
 
   for part in exprs_str.split(';') {
     let part = part.trim();
-    if part.is_empty() { continue; }
+    if part.is_empty() {
+      continue;
+    }
     // Split at last comma to get (expr, dec)
     if let Some(comma_pos) = part.rfind(',') {
       let expr_part = part[..comma_pos].trim();
-      let dec_str = part[comma_pos+1..].trim().replace("--", "");
-      if dec_str.is_empty() || dec_str == "." { continue; }
+      let dec_str = part[comma_pos + 1..].trim().replace("--", "");
+      if dec_str.is_empty() || dec_str == "." {
+        continue;
+      }
       let dec: f64 = dec_str.parse().unwrap_or(0.0);
-      if dec == 0.0 { continue; }
+      if dec == 0.0 {
+        continue;
+      }
       dectot += dec;
       palette.push((decode_color(expr_part), dec));
     }
@@ -293,7 +342,9 @@ fn decode_extended_color(model: &str, div_str: &str, exprs_str: &str) -> Color {
     dectot
   };
 
-  if div == 0.0 { return color; }
+  if div == 0.0 {
+    return color;
+  }
 
   for (c, dec) in &palette {
     let converted = c.convert(model);
@@ -320,7 +371,11 @@ fn apply_func_expr(mut color: Color, func_str: &str) -> Color {
       let is_twheel = func == "twheel";
       // Convert to hsb (internal [0,1] range)
       let hsb = color.to_hsb();
-      let (h, s, b_val) = if let Color::Hsb(h, s, b) = hsb { (h, s, b) } else { (0.0, 0.0, 0.0) };
+      let (h, s, b_val) = if let Color::Hsb(h, s, b) = hsb {
+        (h, s, b)
+      } else {
+        (0.0, 0.0, 0.0)
+      };
       let h_range = 360.0; // \rangeHsb default
       let circle = if let Some(f) = full { h_range / f } else { 1.0 };
       // Perl: Color($model, $h_scaled + $angle * $circle, $s, $b)
@@ -348,8 +403,12 @@ fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
   // Piecewise linear map: tHsb→hsb breakpoints (x→y)
   // Perl: "60,30;120,60;180,120;210,180;240,240" + ";360,360"
   let breakpoints: &[(f64, f64)] = &[
-    (60.0, 30.0), (120.0, 60.0), (180.0, 120.0),
-    (210.0, 180.0), (240.0, 240.0), (h_range, h_range),
+    (60.0, 30.0),
+    (120.0, 60.0),
+    (180.0, 120.0),
+    (210.0, 180.0),
+    (240.0, 240.0),
+    (h_range, h_range),
   ];
   let (mut x0, mut y0) = (0.0, 0.0);
   for &(xn, yn) in breakpoints {
@@ -366,14 +425,17 @@ fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
 fn step_color_series(name: &str, n: usize) {
   let color_key = s!("color_{name}");
   let step_key = s!("color_series_{name}_step");
-  if let (Some(Stored::String(c_sym)), Some(Stored::String(s_sym))) =
-    (state::lookup_value(&color_key), state::lookup_value(&step_key))
-  {
+  if let (Some(Stored::String(c_sym)), Some(Stored::String(s_sym))) = (
+    state::lookup_value(&color_key),
+    state::lookup_value(&step_key),
+  ) {
     let color = Color::from_stored(&arena::to_string(c_sym)).unwrap_or(BLACK);
     let step = Color::from_stored(&arena::to_string(s_sym)).unwrap_or(BLACK);
     let comps = color.components();
     let step_comps = step.components();
-    let new_comps: Vec<f64> = comps.iter().zip(step_comps.iter())
+    let new_comps: Vec<f64> = comps
+      .iter()
+      .zip(step_comps.iter())
       .map(|(c, s)| range_reduction(c + n as f64 * s))
       .collect();
     let new_color = from_model_components(color.model(), &new_comps);
@@ -385,14 +447,17 @@ fn step_color_series(name: &str, n: usize) {
 fn index_color_series(name: &str, p: usize) -> Color {
   let base_key = s!("color_series_{name}_base");
   let step_key = s!("color_series_{name}_step");
-  if let (Some(Stored::String(b_sym)), Some(Stored::String(s_sym))) =
-    (state::lookup_value(&base_key), state::lookup_value(&step_key))
-  {
+  if let (Some(Stored::String(b_sym)), Some(Stored::String(s_sym))) = (
+    state::lookup_value(&base_key),
+    state::lookup_value(&step_key),
+  ) {
     let base = Color::from_stored(&arena::to_string(b_sym)).unwrap_or(BLACK);
     let step = Color::from_stored(&arena::to_string(s_sym)).unwrap_or(BLACK);
     let comps = base.components();
     let step_comps = step.components();
-    let new_comps: Vec<f64> = comps.iter().zip(step_comps.iter())
+    let new_comps: Vec<f64> = comps
+      .iter()
+      .zip(step_comps.iter())
       .map(|(c, s)| range_reduction(c + p as f64 * s))
       .collect();
     from_model_components(base.model(), &new_comps)
@@ -412,7 +477,7 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
       // Check for tomodel prefix: "tomodel:model/model/..."
       let (effective_tomodel, models_str) = if let Some(colon_pos) = models_str.find(':') {
         let tm = &models_str[..colon_pos];
-        (Some(tm.to_string()), &models_str[colon_pos+1..])
+        (Some(tm.to_string()), &models_str[colon_pos + 1..])
       } else {
         (tomodel.map(|s| s.to_string()), models_str)
       };
@@ -424,7 +489,10 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
       }
       // Choose first model (target model matching is TODO)
       let model = model_list[0].trim();
-      let spec = spec_list[0].trim().trim_matches(|c| c == '{' || c == '}').trim();
+      let spec = spec_list[0]
+        .trim()
+        .trim_matches(|c| c == '{' || c == '}')
+        .trim();
       let mut c = if model == "named" {
         lookup_color_obj(spec)
       } else {
@@ -1432,15 +1500,19 @@ LoadDefinitions!({
 fn define_colors_impl(id_pairs: &str, if_undef: bool) -> Result<()> {
   for pair in id_pairs.split(',') {
     let pair = pair.trim();
-    if pair.is_empty() { continue; }
+    if pair.is_empty() {
+      continue;
+    }
     let (name, from) = if let Some(eq_pos) = pair.find('=') {
-      (pair[..eq_pos].trim(), pair[eq_pos+1..].trim())
+      (pair[..eq_pos].trim(), pair[eq_pos + 1..].trim())
     } else {
       (pair, pair)
     };
     if if_undef {
       let key = s!("color_{name}");
-      if state::with_value(&key, |v| v.is_some()) { continue; }
+      if state::with_value(&key, |v| v.is_some()) {
+        continue;
+      }
     }
     let from_key = s!("color_{from}");
     if let Some(stored) = state::lookup_value(&from_key) {

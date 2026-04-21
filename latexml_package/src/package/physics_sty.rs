@@ -30,9 +30,7 @@ fn phys_read_size() -> Result<(bool, Option<Token>)> {
   }
   if let Some(ref t) = pending {
     let s = t.to_string();
-    if s.starts_with('\\')
-      && (s == "\\big" || s == "\\Big" || s == "\\bigg" || s == "\\Bigg")
-    {
+    if s.starts_with('\\') && (s == "\\big" || s == "\\Big" || s == "\\bigg" || s == "\\Bigg") {
       size_tok = Some(*t);
       pending = gullet::read_token()?;
     }

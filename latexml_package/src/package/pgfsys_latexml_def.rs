@@ -26,7 +26,10 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
   let new_path = if points.is_empty() {
     operation.to_string()
   } else {
-    let pts: Vec<String> = points.iter().map(|p| format!("{}", dim_to_px(*p))).collect();
+    let pts: Vec<String> = points
+      .iter()
+      .map(|p| format!("{}", dim_to_px(*p)))
+      .collect();
     format!("{} {}", operation, pts.join(" "))
   };
   let current = state::lookup_string("pgf_SVGpath");
@@ -35,7 +38,11 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
   } else {
     format!("{} {}", current, new_path)
   };
-  state::assign_value("pgf_SVGpath", Stored::String(arena::pin(&combined)), Scope::Global);
+  state::assign_value(
+    "pgf_SVGpath",
+    Stored::String(arena::pin(&combined)),
+    Scope::Global,
+  );
 }
 
 /// Look up a pgf register as a Dimension
@@ -59,14 +66,18 @@ fn channel_to_u8(v: f64) -> u8 {
 /// Perl: Color('rgb', r, g, b)->toHex → "#RRGGBB"
 /// Returns tokens (not a string) because # must be catcode OTHER, not PARAMETER.
 fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
-  let hex = format!("{:02X}{:02X}{:02X}", channel_to_u8(r), channel_to_u8(g), channel_to_u8(b));
+  let hex = format!(
+    "{:02X}{:02X}{:02X}",
+    channel_to_u8(r),
+    channel_to_u8(g),
+    channel_to_u8(b)
+  );
   // Perl uses Explode() which creates catcode-12 (OTHER) tokens.
   // '#' as catcode OTHER, then hex digits as catcode OTHER.
   let mut tokens = vec![T_OTHER!("#")];
   tokens.extend(mouth::tokenize_internal(&hex).unlist());
   tokens
 }
-
 
 // Perl L149-157: DefParameterType('SVGMoveableBox', ...)
 // Defined in Perl but never used as a parameter type anywhere in the codebase.
@@ -81,7 +92,11 @@ fn foreign_object_check(document: &Document) -> Option<Node> {
   let mut node_opt = Some(document.get_node().clone());
   while let Some(node) = node_opt {
     let qname = document::get_node_qname(&node);
-    enum Probe { Svg, ForeignObject, Other }
+    enum Probe {
+      Svg,
+      ForeignObject,
+      Other,
+    }
     let probe = arena::with(qname, |s| match s {
       "svg:svg" => Probe::Svg,
       "svg:foreignObject" => Probe::ForeignObject,
@@ -146,14 +161,26 @@ fn tikz_alignment_bindings(
       attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
       // Perl: transform="matrix(1 0 0 -1 x y)" — flips Y-axis (pgf Y=up, SVG Y=down)
       // y = (h + d) - rowdepths[-1]  (baseline of last row)
-      let h: f64 = attrs.remove("cheight").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-      let d: f64 = attrs.remove("cdepth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-      let _w: f64 = attrs.remove("cwidth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let h: f64 = attrs
+        .remove("cheight")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+      let d: f64 = attrs
+        .remove("cdepth")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+      let _w: f64 = attrs
+        .remove("cwidth")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
       let y = h + d;
-      attrs.entry("transform".to_string())
+      attrs
+        .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
       attrs.insert("_scopebegin".to_string(), "1".to_string());
-      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+      document
+        .open_element("svg:g", Some(attrs), None)
+        .map(Option::Some)
     }),
     // Perl L971-973: closeTikzAlignmentElement
     close_container: Rc::new(|document| document.close_element("svg:g")),
@@ -170,11 +197,34 @@ fn tikz_alignment_bindings(
       attrs.insert("class".to_string(), class);
       attrs.insert("_scopebegin".to_string(), "1".to_string());
       // Perl: transform="matrix(1 0 0 1 0 yy)" where yy = y + cheight
-      let y = props.get("y").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
-      let h = props.get("cheight").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
+      let y = props
+        .get("y")
+        .and_then(|v| {
+          if let Stored::Dimension(d) = v {
+            Some(d.px_value(None))
+          } else {
+            None
+          }
+        })
+        .unwrap_or(0.0);
+      let h = props
+        .get("cheight")
+        .and_then(|v| {
+          if let Stored::Dimension(d) = v {
+            Some(d.px_value(None))
+          } else {
+            None
+          }
+        })
+        .unwrap_or(0.0);
       let yy = y + h;
-      attrs.insert("transform".to_string(), format!("matrix(1 0 0 1 0 {})", fmt_px(yy)));
-      document.open_element("svg:g", Some(attrs), None).and(Ok(()))
+      attrs.insert(
+        "transform".to_string(),
+        format!("matrix(1 0 0 1 0 {})", fmt_px(yy)),
+      );
+      document
+        .open_element("svg:g", Some(attrs), None)
+        .and(Ok(()))
     }),
     close_row: Rc::new(|document| document.close_element("svg:g")),
     // Perl L991-1009: openTikzAlignmentCol — creates cell <svg:g> with X-position and Y-flip
@@ -190,13 +240,24 @@ fn tikz_alignment_bindings(
       attrs.insert("class".to_string(), class);
       attrs.insert("_scopebegin".to_string(), "1".to_string());
       // Perl: transform="matrix(1 0 0 -1 x 0)" — flip Y and position at column x
-      let x: f64 = attrs.remove("x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-      let _y: f64 = attrs.remove("y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let x: f64 = attrs
+        .remove("x")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+      let _y: f64 = attrs
+        .remove("y")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
       // Remove dimension props that shouldn't become XML attributes
-      attrs.remove("cwidth"); attrs.remove("cheight"); attrs.remove("cdepth");
-      attrs.entry("transform".to_string())
+      attrs.remove("cwidth");
+      attrs.remove("cheight");
+      attrs.remove("cdepth");
+      attrs
+        .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 {} 0)", fmt_px(x)));
-      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+      document
+        .open_element("svg:g", Some(attrs), None)
+        .map(Option::Some)
     }),
     close_column: Rc::new(|document| document.close_element("svg:g")),
     is_math,

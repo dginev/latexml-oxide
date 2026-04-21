@@ -67,7 +67,8 @@ LoadDefinitions!({
   if applied + skipped > 0 {
     log::info!(
       "[latex_dump] deferred aliases: {} applied, {} skipped",
-      applied, skipped
+      applied,
+      skipped
     );
   }
 });

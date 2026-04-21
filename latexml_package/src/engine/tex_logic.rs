@@ -98,7 +98,10 @@ LoadDefinitions!({
   });
   DefConditional!("\\ifinner", {
     let mode = state::lookup_string_from_sym(pin!("MODE"));
-    matches!(mode.as_str(), "restricted_horizontal" | "internal_vertical" | "math")
+    matches!(
+      mode.as_str(),
+      "restricted_horizontal" | "internal_vertical" | "math"
+    )
   });
   // Perl: LookupValue('MODE') =~ /math$/
   DefConditional!("\\ifmmode", {

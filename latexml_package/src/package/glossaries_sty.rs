@@ -172,18 +172,30 @@ fn gls_plural_text(key: &str) -> String {
       s!("{longpl} ({shortpl})")
     } else {
       let plural = glo_lookup(key, "plural");
-      if !plural.is_empty() { plural } else { glo_lookup(key, "name") + "s" }
+      if !plural.is_empty() {
+        plural
+      } else {
+        glo_lookup(key, "name") + "s"
+      }
     }
   } else if is_acronym {
     let shortpl = glo_lookup(key, "shortplural");
-    if !shortpl.is_empty() { shortpl } else { glo_lookup(key, "short") + "s" }
+    if !shortpl.is_empty() {
+      shortpl
+    } else {
+      glo_lookup(key, "short") + "s"
+    }
   } else {
     let plural = glo_lookup(key, "plural");
     if !plural.is_empty() {
       plural
     } else {
       let text = glo_lookup(key, "text");
-      if !text.is_empty() { text + "s" } else { glo_lookup(key, "name") + "s" }
+      if !text.is_empty() {
+        text + "s"
+      } else {
+        glo_lookup(key, "name") + "s"
+      }
     }
   };
 
@@ -507,7 +519,11 @@ LoadDefinitions!({
     let gls_closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = gls_text(&key);
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -525,7 +541,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = capitalize_first(&gls_text(&key));
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -538,7 +558,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = gls_plural_text(&key);
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -551,7 +575,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = capitalize_first(&gls_plural_text(&key));
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -564,7 +592,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let symbol = glo_lookup(&key, "symbol");
       Ok(gls_ref_tokens(&list, &key, &symbol))
     });

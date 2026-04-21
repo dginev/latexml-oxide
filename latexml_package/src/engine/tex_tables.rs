@@ -206,70 +206,70 @@ LoadDefinitions!({
 
   // Perl TeX_Tables L159-184: \halign BoxSpecification
   DefConstructor!("\\halign BoxSpecification", "#alignment",
-    reversion => sub[whatsit, _args] {
-      let mut tks = vec![T_CS!("\\halign")];
-      if let Some(spec) = whatsit.get_arg(1) {
-        tks.extend(spec.revert()?.unlist());
+  reversion => sub[whatsit, _args] {
+    let mut tks = vec![T_CS!("\\halign")];
+    if let Some(spec) = whatsit.get_arg(1) {
+      tks.extend(spec.revert()?.unlist());
+    }
+    tks.push(T_BEGIN!());
+    if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
+      tks.extend_from_slice(template_tks.unlist_ref());
+    }
+    tks.push(T_CS!("\\cr"));
+    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+      if let DigestedData::Alignment(data) = alignment_d.data() {
+        tks.extend(data.borrow().revert()?.unlist());
       }
-      tks.push(T_BEGIN!());
-      if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
-        tks.extend_from_slice(template_tks.unlist_ref());
-      }
-      tks.push(T_CS!("\\cr"));
-      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
-        if let DigestedData::Alignment(data) = alignment_d.data() {
-          tks.extend(data.borrow().revert()?.unlist());
-        }
-      }
-      tks.push(T_END!());
-      Ok(Tokens::new(tks))
-    },
-    bounded => true,
-    leave_horizontal => true,
-    sizer => sub[whatsit] {
-      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
-        let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
-        Ok((w, h, d))
+    }
+    tks.push(T_END!());
+    Ok(Tokens::new(tks))
+  },
+  bounded => true,
+  leave_horizontal => true,
+  sizer => sub[whatsit] {
+    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+      let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
+      Ok((w, h, d))
+    } else {
+      Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+    }
+  },
+  before_construct => sub[document, _whatsit] {
+    document.maybe_close_element("ltx:p")?;
+  },
+  after_digest => sub[whatsit] {
+    whatsit.set_property("mode", Stored::from("internal_vertical"));
+    begin_mode("restricted_horizontal")?;
+    let template = parse_halign_template(whatsit)?;
+    // Get width from BoxSpecification 'to' key
+    let width_attr: Option<String> = {
+      let spec = whatsit.get_arg(1);
+      if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+        Some(w.to_attribute())
       } else {
-        Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+        None
       }
-    },
-    before_construct => sub[document, _whatsit] {
-      document.maybe_close_element("ltx:p")?;
-    },
-    after_digest => sub[whatsit] {
-      whatsit.set_property("mode", Stored::from("internal_vertical"));
-      begin_mode("restricted_horizontal")?;
-      let template = parse_halign_template(whatsit)?;
-      // Get width from BoxSpecification 'to' key
-      let width_attr: Option<String> = {
-        let spec = whatsit.get_arg(1);
-        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
-          Some(w.to_attribute())
-        } else {
-          None
+    };
+    let mut xml_attrs = HashMap::default();
+    if let Some(w) = width_attr {
+      xml_attrs.insert(String::from("width"), w);
+    }
+    alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
+    // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
+    // tabular). with_value avoids the Stored::clone on the Digested
+    // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
+    // still works fine through the borrow.
+    state::with_value("Alignment", |v| {
+      if let Some(Stored::Digested(ref d)) = v {
+        if let latexml_core::digested::DigestedData::Alignment(ref alignment) = d.data() {
+          alignment.borrow_mut().is_halign = true;
         }
-      };
-      let mut xml_attrs = HashMap::default();
-      if let Some(w) = width_attr {
-        xml_attrs.insert(String::from("width"), w);
       }
-      alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
-      // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
-      // tabular). with_value avoids the Stored::clone on the Digested
-      // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
-      // still works fine through the borrow.
-      state::with_value("Alignment", |v| {
-        if let Some(Stored::Digested(ref d)) = v {
-          if let latexml_core::digested::DigestedData::Alignment(ref alignment) = d.data() {
-            alignment.borrow_mut().is_halign = true;
-          }
-        }
-      });
-      digest_alignment_body(whatsit)?;
-      end_mode("restricted_horizontal")?;
-      decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
     });
+    digest_alignment_body(whatsit)?;
+    end_mode("restricted_horizontal")?;
+    decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+  });
 
   DefMacro!("\\lx@alignment@row@before", None);
   DefMacro!("\\lx@alignment@row@after", None);
@@ -569,9 +569,8 @@ pub fn alignment_bindings(
     }),
     close_container: Rc::new(|document| document.close_element(container)),
     open_row: Rc::new(|document, props| {
-      let str_props: HashMap<String, String> = props.into_iter()
-        .map(|(k, v)| (k, v.to_string()))
-        .collect();
+      let str_props: HashMap<String, String> =
+        props.into_iter().map(|(k, v)| (k, v.to_string())).collect();
       document
         .open_element(rowtype, Some(str_props), None)
         .and(Ok(()))
@@ -643,11 +642,12 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
     }
     lastwascr = false;
     // Perl L319-320: $next->defined_as(T_END) — recognizes \egroup as alignment end
-    let next_is_end = next.as_ref().map(|t| t.defined_as(&T_END!())).unwrap_or(false)
+    let next_is_end = next
+      .as_ref()
+      .map(|t| t.defined_as(&T_END!()))
+      .unwrap_or(false)
       || next == Some(T_CS!("\\lx@close@alignment"));
-    if (vtype.is_none() || vtype.as_ref().unwrap().is_empty())
-      && (next.is_none() || next_is_end)
-    {
+    if (vtype.is_none() || vtype.as_ref().unwrap().is_empty()) && (next.is_none() || next_is_end) {
       // End of alignment
       alignment_cell.borrow_mut().end_row()?;
       break;
@@ -748,7 +748,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if
     // $LaTeXML::DEBUG{halign};
     // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end
-    let last_is_end = last_token.as_ref().map(|t| t.defined_as(&T_END!())).unwrap_or(false)
+    let last_is_end = last_token
+      .as_ref()
+      .map(|t| t.defined_as(&T_END!()))
+      .unwrap_or(false)
       || last_token == Some(T_CS!("\\lx@close@alignment"));
     if last_token.is_none() || last_is_end {
       expire_local_box_list();
@@ -866,7 +869,7 @@ pub fn extract_alignment_column(
       Some(c) => c,
       None => {
         return Ok(Digested::default());
-      }
+      },
     };
     initial_align = colspec.align.clone().unwrap_or(Align::Left);
     tabskip_clone = colspec.tabskip;
@@ -875,12 +878,20 @@ pub fn extract_alignment_column(
     has_before_fill = colspec
       .before
       .as_ref()
-      .map(|b| b.unlist_ref().iter().any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill")))
+      .map(|b| {
+        b.unlist_ref()
+          .iter()
+          .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
+      })
       .unwrap_or(false);
     has_after_fill = colspec
       .after
       .as_ref()
-      .map(|a| a.unlist_ref().iter().any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill")))
+      .map(|a| {
+        a.unlist_ref()
+          .iter()
+          .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
+      })
       .unwrap_or(false);
   } // colspec borrow dropped
 
@@ -938,7 +949,8 @@ pub fn extract_alignment_column(
         }
       },
       _ if front_box.get_property("isSpace").is_some()
-        && front_box.get_property("isVerticalSpace").is_none() => {
+        && front_box.get_property("isVerticalSpace").is_none() =>
+      {
         lspaces.push(front_box);
       },
       item
@@ -973,7 +985,8 @@ pub fn extract_alignment_column(
         rspaces.clear(); // Perl L508: discard spacing after rule
       },
       _ if last_box.get_property("isSpace").is_some()
-        && last_box.get_property("isVerticalSpace").is_none() => {
+        && last_box.get_property("isVerticalSpace").is_none() =>
+      {
         rspaces.insert(0, last_box);
       },
       item
@@ -1100,7 +1113,11 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
 pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let t = gullet::read_non_space()?;
   // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup
-  if !t.as_ref().map(|t| t.defined_as(&T_BEGIN!())).unwrap_or(false) {
+  if !t
+    .as_ref()
+    .map(|t| t.defined_as(&T_BEGIN!()))
+    .unwrap_or(false)
+  {
     Error!("expected", "\\bgroup", "Missing \\halign box");
     // Put back the token we consumed so it can be handled elsewhere
     if let Some(tok) = t {
@@ -1139,10 +1156,7 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       // Found the template's column slot
       before = false;
       tokens.push(t);
-    } else if cc == Catcode::ALIGN
-      || t == T_CS!("\\cr")
-      || t == T_CS!("\\crcr")
-    {
+    } else if cc == Catcode::ALIGN || t == T_CS!("\\cr") || t == T_CS!("\\crcr") {
       // End the column
       if before {
         // Leading & means repeated columns
@@ -1252,7 +1266,7 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use latexml_core::state::{set_state, State, StateOptions};
+  use latexml_core::state::{State, StateOptions, set_state};
 
   fn setup() {
     // T_CS!, T_MATH! need a thread-local State for string interning.

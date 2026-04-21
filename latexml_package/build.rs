@@ -4,8 +4,8 @@
 //! the dump at compile time (old behavior). Instead, at runtime it reads the
 //! dump from disk, searching several locations in order:
 //!
-//!   0. `$LATEXML_NODUMP` — if set, skip entirely (matches Perl `Package.pm`
-//!      `LoadFormat` behavior: `if (!$ENV{LATEXML_NODUMP} && FindFile(...))`).
+//!   0. `$LATEXML_NODUMP` — if set, skip entirely (matches Perl `Package.pm` `LoadFormat` behavior:
+//!      `if (!$ENV{LATEXML_NODUMP} && FindFile(...))`).
 //!   1. `$LATEXML_DUMP_PATH` (explicit override, full path to latex.dump.txt)
 //!   2. `$LATEXML_DUMP_DIR/latex.dump.txt` (directory override)
 //!   3. `<exe_dir>/../resources/dumps/latex.dump.txt` (installed layout)
@@ -14,12 +14,12 @@
 //!
 //! This decouples the dump from the binary:
 //!
-//! - The build never fails because the dump is missing — we just log at info
-//!   and fall through to in-engine defaults.
-//! - Regenerating the dump (`latexml_oxide --init=latex.ltx`) does **not**
-//!   require a rebuild. Re-run tests / converts directly.
-//! - Tests and CI can call `tools/make_formats.sh` (or run `--init`) before
-//!   the test phase to guarantee a fresh dump against the ambient texlive.
+//! - The build never fails because the dump is missing — we just log at info and fall through to
+//!   in-engine defaults.
+//! - Regenerating the dump (`latexml_oxide --init=latex.ltx`) does **not** require a rebuild.
+//!   Re-run tests / converts directly.
+//! - Tests and CI can call `tools/make_formats.sh` (or run `--init`) before the test phase to
+//!   guarantee a fresh dump against the ambient texlive.
 //!
 //! Rationale: Perl's workflow is `make formats` → tests. Embedding the dump
 //! via `include_str!` locked us into a two-compile chicken-egg and froze the

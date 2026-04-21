@@ -31,7 +31,9 @@ fn xy_reg_num(name: &str) -> i64 {
 
 /// Helper: read a macro's expansion as a string
 fn macro_string(cs: &str) -> String {
-  gullet::do_expand(T_CS!(cs)).map(|t| t.to_string()).unwrap_or_default()
+  gullet::do_expand(T_CS!(cs))
+    .map(|t| t.to_string())
+    .unwrap_or_default()
 }
 
 /// Helper: read a macro's raw definition body (no expansion).
@@ -41,7 +43,9 @@ fn macro_string(cs: &str) -> String {
 /// that must not be re-invoked: expanding them while deciphering the curve style
 /// re-enters the curve pipeline and loops without bound.
 fn macro_body(cs: &str) -> String {
-  let Ok(Some(defn)) = state::lookup_definition(&T_CS!(cs)) else { return String::new() };
+  let Ok(Some(defn)) = state::lookup_definition(&T_CS!(cs)) else {
+    return String::new();
+  };
   match defn.get_expansion() {
     Some(ExpansionBody::Tokens(tks)) => tks.to_string(),
     _ => String::new(),
@@ -69,19 +73,31 @@ fn xy_stroke_color() -> String {
 /// Helper: get stroke/fill attributes from state
 fn xy_fill_stroke() -> (String, String) {
   let color = xy_stroke_color();
-  let stroke = if state::lookup_bool("xy_stroke") { color.clone() } else { String::from("none") };
-  let fill = if state::lookup_bool("xy_fill") { color } else { String::from("none") };
+  let stroke = if state::lookup_bool("xy_stroke") {
+    color.clone()
+  } else {
+    String::from("none")
+  };
+  let fill = if state::lookup_bool("xy_fill") {
+    color
+  } else {
+    String::from("none")
+  };
   (stroke, fill)
 }
 
 /// Helper: build an SVG path string from mixed items
 /// Perl: xy_packpath — joins strings and Dimension->pxValue
 fn xy_packpath(parts: &[XyPathPart]) -> String {
-  parts.iter().map(|p| match p {
-    XyPathPart::Cmd(s) => s.to_string(),
-    XyPathPart::Dim(d) => format!("{}", dim_to_px(*d)),
-    XyPathPart::Px(v) => format!("{}", v),
-  }).collect::<Vec<_>>().join(" ")
+  parts
+    .iter()
+    .map(|p| match p {
+      XyPathPart::Cmd(s) => s.to_string(),
+      XyPathPart::Dim(d) => format!("{}", dim_to_px(*d)),
+      XyPathPart::Px(v) => format!("{}", v),
+    })
+    .collect::<Vec<_>>()
+    .join(" ")
 }
 
 enum XyPathPart {
@@ -96,7 +112,11 @@ enum XyPathPart {
 /// Helper: insert an empty SVG element with attributes
 /// Uses floatToElement to find the right insertion point (matching Perl's "^" prefix).
 /// This ensures SVG elements like svg:path go into svg:g, not ltx:text.
-fn svg_empty_element(document: &mut Document, tag: &str, attrs: HashMap<String, String>) -> Result<()> {
+fn svg_empty_element(
+  document: &mut Document,
+  tag: &str,
+  attrs: HashMap<String, String>,
+) -> Result<()> {
   let savenode = document.float_to_element(tag, false)?;
   document.open_element(tag, Some(attrs), None)?;
   document.close_element(tag)?;
@@ -115,7 +135,10 @@ fn xy_capture_stroke_fill() -> (String, String, String) {
 }
 
 /// Helper: read SVG path attributes from props at construction time and emit element.
-fn xy_emit_path(document: &mut Document, props: &latexml_core::common::arena::SymHashMap<Stored>) -> Result<()> {
+fn xy_emit_path(
+  document: &mut Document,
+  props: &latexml_core::common::arena::SymHashMap<Stored>,
+) -> Result<()> {
   let path = match props.get("xy_path") {
     Some(Stored::String(s)) => arena::to_string(*s),
     _ => return Ok(()), // no path → skip
@@ -140,12 +163,30 @@ fn xy_emit_path(document: &mut Document, props: &latexml_core::common::arena::Sy
 }
 
 /// Helper: emit SVG circle from props.
-fn xy_emit_circle(document: &mut Document, props: &latexml_core::common::arena::SymHashMap<Stored>) -> Result<()> {
-  let cx = match props.get("xy_cx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-  let cy = match props.get("xy_cy") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-  let r = match props.get("xy_r") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-  let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
-  let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
+fn xy_emit_circle(
+  document: &mut Document,
+  props: &latexml_core::common::arena::SymHashMap<Stored>,
+) -> Result<()> {
+  let cx = match props.get("xy_cx") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("0"),
+  };
+  let cy = match props.get("xy_cy") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("0"),
+  };
+  let r = match props.get("xy_r") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("0"),
+  };
+  let stroke = match props.get("xy_stroke") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("#000000"),
+  };
+  let fill = match props.get("xy_fill") {
+    Some(Stored::String(s)) => arena::to_string(*s),
+    _ => String::from("none"),
+  };
   let mut attrs = string_map!("cx" => cx, "cy" => cy, "r" => r, "stroke" => stroke, "fill" => fill);
   if let Some(Stored::String(d)) = props.get("xy_dashes") {
     if !arena::with(*d, |s| s.is_empty()) {
@@ -158,7 +199,11 @@ fn xy_emit_circle(document: &mut Document, props: &latexml_core::common::arena::
 /// Helper: format a float for SVG output, rounding to 2 decimal places
 fn fmt2(v: f64) -> String {
   let r = (v * 100.0).round() / 100.0;
-  if r == 0.0 { String::from("0") } else { format!("{}", r) }
+  if r == 0.0 {
+    String::from("0")
+  } else {
+    format!("{}", r)
+  }
 }
 
 #[rustfmt::skip]

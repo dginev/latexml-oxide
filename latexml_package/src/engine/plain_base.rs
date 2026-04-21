@@ -14,18 +14,30 @@ LoadDefinitions!({
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   {
     for digit in 0..10 {
-      assign_mathcode((b'0' + digit) as char, 0x7030 + (digit as u16), Some(Scope::Global));
+      assign_mathcode(
+        (b'0' + digit) as char,
+        0x7030 + (digit as u16),
+        Some(Scope::Global),
+      );
     }
     for letter in b'A'..=b'Z' {
       //FYI: 0x20 == 32
       assign_lccode(letter, letter + 32, Some(Scope::Global));
       assign_uccode(letter, letter, Some(Scope::Global));
-      assign_mathcode(letter as char, 0x7100 + (letter as u16), Some(Scope::Global));
+      assign_mathcode(
+        letter as char,
+        0x7100 + (letter as u16),
+        Some(Scope::Global),
+      );
       assign_sfcode(letter as char, 999u16, Some(Scope::Global));
 
       assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
       assign_uccode(letter + 32, letter, Some(Scope::Global));
-      assign_mathcode((letter + 32) as char, 0x7100 + ((letter + 32) as u16), Some(Scope::Global));
+      assign_mathcode(
+        (letter + 32) as char,
+        0x7100 + ((letter + 32) as u16),
+        Some(Scope::Global),
+      );
     }
   }
   DefRegister!("\\magnification", Number!(1000));
@@ -127,14 +139,14 @@ LoadDefinitions!({
     r"\@@oalign{\lx@begin@alignment#1\lx@end@alignment}"
   );
   DefConstructor!("\\@@oalign{}", "#1",
-    reversion => "\\oalign{#1}", bounded => true, mode => "text",
-    before_digest => sub {
-      use crate::engine::tex_tables::alignment_bindings;
-      use latexml_core::alignment::parse_alignment_template;
-      if let Ok(template) = parse_alignment_template("l") {
-        alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
-      }
-    });
+  reversion => "\\oalign{#1}", bounded => true, mode => "text",
+  before_digest => sub {
+    use crate::engine::tex_tables::alignment_bindings;
+    use latexml_core::alignment::parse_alignment_template;
+    if let Ok(template) = parse_alignment_template("l") {
+      alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
+    }
+  });
 
   // Lines lie on top of each other.
   DefMacro!(
@@ -142,14 +154,14 @@ LoadDefinitions!({
     r"\@@ooalign{\lx@begin@alignment#1\lx@end@alignment}"
   );
   DefConstructor!("\\@@ooalign{}", "#1",
-    reversion => "\\ooalign{#1}", bounded => true, mode => "text",
-    before_digest => sub {
-      use crate::engine::tex_tables::alignment_bindings;
-      use latexml_core::alignment::parse_alignment_template;
-      if let Ok(template) = parse_alignment_template("l") {
-        alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
-      }
-    });
+  reversion => "\\ooalign{#1}", bounded => true, mode => "text",
+  before_digest => sub {
+    use crate::engine::tex_tables::alignment_bindings;
+    use latexml_core::alignment::parse_alignment_template;
+    if let Ok(template) = parse_alignment_template("l") {
+      alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
+    }
+  });
 
   DefConstructor!(
     "\\buildrel Until:\\over {}",
@@ -519,7 +531,9 @@ LoadDefinitions!({
   // Math spacing: medspace, thickspace, and negatives — Perl latex_constructs L2510-2525
   DefPrimitive!("\\medspace", {
     Tbox::new(
-      pin!(""), None, None,
+      pin!(""),
+      None,
+      None,
       Tokens!(T_CS!("\\medspace")),
       stored_map!("name" => "medspace", "width" => Dimension::from_str("0.22222em")?,
         "isSpace"=>true),
@@ -527,7 +541,9 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\negmedspace", {
     Tbox::new(
-      pin!(""), None, None,
+      pin!(""),
+      None,
+      None,
       Tokens!(T_CS!("\\negmedspace")),
       stored_map!("name" => "negmedspace", "width" => Dimension::from_str("-0.22222em")?,
         "isSpace"=>true),
@@ -535,7 +551,9 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\thickspace", {
     Tbox::new(
-      arena::pin_static("\u{2004}"), None, None,
+      arena::pin_static("\u{2004}"),
+      None,
+      None,
       Tokens!(T_CS!("\\thickspace")),
       stored_map!("name" => "thickspace", "width" => Dimension::from_str("0.27778em")?,
         "isSpace"=>true),
@@ -543,7 +561,9 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\negthickspace", {
     Tbox::new(
-      arena::pin_static("\u{2004}"), None, None,
+      arena::pin_static("\u{2004}"),
+      None,
+      None,
       Tokens!(T_CS!("\\negthickspace")),
       stored_map!("name" => "negthickspace", "width" => Dimension::from_str("-0.27778em")?,
         "isSpace"=>true),
@@ -562,8 +582,12 @@ LoadDefinitions!({
   DefPrimitive!("\\topglue", None);
   // Perl: DefMacroI('\nointerlineskip',undef,'\prevdepth-1000\p@');
   DefMacro!("\\nointerlineskip", r"\prevdepth-1000\p@");
-  // Perl: DefMacroI('\offinterlineskip',undef, '\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen');
-  DefMacro!("\\offinterlineskip", r"\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen");
+  // Perl: DefMacroI('\offinterlineskip',undef, '\baselineskip-1000\p@\lineskip\z@
+  // \lineskiplimit\maxdimen');
+  DefMacro!(
+    "\\offinterlineskip",
+    r"\baselineskip-1000\p@\lineskip\z@ \lineskiplimit\maxdimen"
+  );
 
   DefMacro!("\\smallskip", "\\vskip\\smallskipamount");
   DefMacro!("\\medskip", "\\vskip\\medskipamount");
@@ -628,7 +652,6 @@ LoadDefinitions!({
     "\\narrower",
     r"\advance\leftskip by\parindent\advance\rightskip by\parindent"
   );
-
 
   //======================================================================
   // TeX Book, Appendix B. p. 356
@@ -736,4 +759,3 @@ LoadDefinitions!({
     forbid_math => true);
 });
 // non_typewriter/non_typewriter_t1 moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L338-344)
-
