@@ -306,14 +306,29 @@ where
   K: PartialEq,
 {
   if let XM::Apply(Operator(op), args, ..) = tree {
-    if let XM::Lexeme(ref oplexeme, _) = **op {
-      if oplexeme != "x.invisible_operator" {
-        return Ok(());
-      }
-    } else {
+    // Invisible times appears in the XM tree two ways (see
+    // pragma_functions_prefer_wider_absorption for the reference predicate):
+    // - Lexeme("…invisible_operator…") — Marpa's lexeme string
+    // - Token { role: MULOP, meaning: "times" } — post-apply_invisible_times
+    let is_invisible_times = match **op {
+      XM::Lexeme(ref oplexeme, _) => oplexeme.contains("invisible_operator"),
+      XM::Token(ref props, _) => {
+        props.meaning.as_deref() == Some("times")
+          && props.role.as_deref() == Some("MULOP")
+      },
+      _ => false,
+    };
+    if !is_invisible_times {
       return Ok(());
     }
+    // Only fire when there are ≥3 letter operands. A 2-letter chain like
+    // `Ax` is the canonical "coefficient × variable" shape and legitimately
+    // crosses letter blocks (A-E × x-z); rejecting it would prune the right
+    // parse. 3+ operands is where consistency is much more likely than
+    // accidental block-crossing.
     let mut first_key: Option<K> = None;
+    let mut letter_count = 0usize;
+    let mut keys: Vec<K> = Vec::new();
     for tree_arg in args.trees() {
       if let XM::Lexeme(ref name, ref meta) = *tree_arg {
         if meta.fenced.is_some() {
@@ -325,11 +340,24 @@ where
         if !is_letter {
           continue;
         }
+        letter_count += 1;
         let key = key_of(name);
-        match first_key {
-          None => first_key = Some(key),
-          Some(ref k) if *k == key => {},
-          Some(_) => return Err(diagnostic.into()),
+        if first_key.is_none() {
+          first_key = Some(key);
+        } else {
+          keys.push(key);
+        }
+      }
+    }
+    // ≥3 letters required — see comment above on the 2-letter
+    // `Ax`-style coefficient×variable exemption.
+    if letter_count < 3 {
+      return Ok(());
+    }
+    if let Some(ref first) = first_key {
+      for k in &keys {
+        if k != first {
+          return Err(diagnostic.into());
         }
       }
     }
