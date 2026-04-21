@@ -130,3 +130,146 @@ fn build_invocation(cs: impl AsRef<str>, args: &[Tokens]) -> Tokens {
   }
   Tokens::new(out)
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use latexml_core::state::{set_state, State, StateOptions};
+
+  fn setup() {
+    set_state(State::new(StateOptions::default()));
+  }
+
+  fn toks(tok_vec: Vec<Token>) -> Tokens {
+    Tokens::new(tok_vec)
+  }
+
+  // ----- pick_braket_cs -----
+
+  #[test]
+  fn pick_braket_cs_one_part_uses_bare_prefix() {
+    assert_eq!(pick_braket_cs("\\lx@braket@", 1), ("\\lx@braket@".to_string(), 1));
+    assert_eq!(pick_braket_cs("\\lx@braket@", 0), ("\\lx@braket@".to_string(), 1));
+  }
+
+  #[test]
+  fn pick_braket_cs_two_parts_uses_v_suffix() {
+    assert_eq!(pick_braket_cs("\\lx@braket@", 2), ("\\lx@braket@V".to_string(), 2));
+    assert_eq!(pick_braket_cs("\\lx@Braket@", 2), ("\\lx@Braket@V".to_string(), 2));
+  }
+
+  #[test]
+  fn pick_braket_cs_three_or_more_uses_vv_suffix() {
+    assert_eq!(pick_braket_cs("\\lx@braket@", 3), ("\\lx@braket@VV".to_string(), 3));
+    // Extra parts collapse down to the 3-part variant.
+    assert_eq!(pick_braket_cs("\\lx@braket@", 4), ("\\lx@braket@VV".to_string(), 3));
+    assert_eq!(pick_braket_cs("\\lx@braket@", 5), ("\\lx@braket@VV".to_string(), 3));
+  }
+
+  // ----- split_braket_parts -----
+
+  #[test]
+  fn split_braket_parts_no_bar_returns_one_part() {
+    setup();
+    let arg = toks(vec![T_LETTER!("a"), T_LETTER!("b")]);
+    let parts = split_braket_parts(arg);
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].len(), 2);
+  }
+
+  #[test]
+  fn split_braket_parts_single_bar_splits_in_two() {
+    setup();
+    let arg = toks(vec![T_LETTER!("a"), T_OTHER!("|"), T_LETTER!("b")]);
+    let parts = split_braket_parts(arg);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].len(), 1);
+    assert_eq!(parts[1].len(), 1);
+  }
+
+  #[test]
+  fn split_braket_parts_two_bars_splits_in_three() {
+    setup();
+    let arg = toks(vec![
+      T_LETTER!("a"),
+      T_OTHER!("|"),
+      T_LETTER!("b"),
+      T_OTHER!("|"),
+      T_LETTER!("c"),
+    ]);
+    let parts = split_braket_parts(arg);
+    assert_eq!(parts.len(), 3);
+  }
+
+  #[test]
+  fn split_braket_parts_respects_nested_braces() {
+    setup();
+    // `a{b|c}d` is one part — the inner | is inside `{…}`.
+    let arg = toks(vec![
+      T_LETTER!("a"),
+      T_BEGIN!(),
+      T_LETTER!("b"),
+      T_OTHER!("|"),
+      T_LETTER!("c"),
+      T_END!(),
+      T_LETTER!("d"),
+    ]);
+    let parts = split_braket_parts(arg);
+    assert_eq!(parts.len(), 1, "| inside braces must stay in current part");
+  }
+
+  #[test]
+  fn split_braket_parts_empty_input_returns_one_empty_part() {
+    setup();
+    let parts = split_braket_parts(toks(vec![]));
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].len(), 0);
+  }
+
+  #[test]
+  fn split_braket_parts_leading_bar_gives_empty_head() {
+    setup();
+    let arg = toks(vec![T_OTHER!("|"), T_LETTER!("a")]);
+    let parts = split_braket_parts(arg);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].len(), 0);
+    assert_eq!(parts[1].len(), 1);
+  }
+
+  #[test]
+  fn split_braket_parts_trailing_bar_gives_empty_tail() {
+    setup();
+    let arg = toks(vec![T_LETTER!("a"), T_OTHER!("|")]);
+    let parts = split_braket_parts(arg);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].len(), 1);
+    assert_eq!(parts[1].len(), 0);
+  }
+
+  // ----- build_invocation -----
+
+  #[test]
+  fn build_invocation_wraps_each_arg_in_braces() {
+    setup();
+    let a = toks(vec![T_LETTER!("a")]);
+    let b = toks(vec![T_LETTER!("b")]);
+    let result = build_invocation("\\lx@braket@V", &[a, b]);
+    // Expected: \cs { a } { b }  → 7 tokens
+    let list = result.unlist();
+    assert_eq!(list.len(), 7);
+    assert_eq!(list[0], T_CS!("\\lx@braket@V"));
+    assert_eq!(list[1], T_BEGIN!());
+    assert_eq!(list[2], T_LETTER!("a"));
+    assert_eq!(list[3], T_END!());
+    assert_eq!(list[4], T_BEGIN!());
+    assert_eq!(list[5], T_LETTER!("b"));
+    assert_eq!(list[6], T_END!());
+  }
+
+  #[test]
+  fn build_invocation_no_args_is_just_cs() {
+    setup();
+    let result = build_invocation("\\foo", &[]);
+    assert_eq!(result.unlist(), vec![T_CS!("\\foo")]);
+  }
+}
