@@ -179,6 +179,14 @@ Three failure classes in the session-128 7933-paper sweep, after the
    end-of-input hook whenever a raw-.sty load has `\ExplSyntaxOn` in
    effect at file-end.
 
+   **[x] Landed**: `load_tex_definitions` in
+   `latexml_core::binding::content` now digests `\ExplSyntaxOff` at
+   end-of-file when (a) `_` catcode is LETTER (expl3 active),
+   (b) `\ExplSyntaxOff` is defined, and (c) the file is not expl3 /
+   xparse / l3keys2e / expl3-code (those legitimately leave expl3
+   active for the caller). Clears the `lipsum+tikz` cascade from 8
+   errors → 0. Full suite: 1098 passed, 0 failed, 0 ignored.
+
    **Fix target** is no longer `latexml_core::binding::content` but
    the expl3 binding in `latexml_package`: find which
    `\group_begin:` call is being stacked without its counterpart. A

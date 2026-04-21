@@ -844,6 +844,32 @@ fn load_tex_definitions(
     Ok(())
   })?;
 
+  // Expl3 scope-exit cleanup: if a raw .sty load activated expl3 catcodes
+  // via `\ProvidesExplPackage` or explicit `\ExplSyntaxOn` and forgot to
+  // pair it with `\ExplSyntaxOff` (e.g. lipsum.sty, which relies on an
+  // `\AtEndOfPackage`-style hook the autoload chain doesn't register),
+  // digest `\ExplSyntaxOff` now so the pending `\group_begin:` frame pops
+  // and catcodes restore before the next package loads.
+  //
+  // Perl's `TeX.pool.ltxml` L44-47 acknowledges this as a known edge-
+  // case of the `\ProvidesExplPackage` autoload pattern.
+  //
+  // Skip expl3 / xparse / l3keys2e / expl3-code — those legitimately
+  // leave expl3 active for their callers.
+  {
+    let (_, base, _ext) = pathname::split(pathname);
+    let is_expl3_core = matches!(
+      base.as_str(),
+      "expl3" | "xparse" | "l3keys2e" | "expl3-code"
+    );
+    if !is_expl3_core
+      && lookup_catcode('_') == Some(Catcode::LETTER)
+      && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
+    {
+      let _ = invoke_token(&T_CS!("\\ExplSyntaxOff"));
+    }
+  }
+
   assign_value_sym(
     crate::pin!("INTERPRETING_DEFINITIONS"),
     was_interpreting,
