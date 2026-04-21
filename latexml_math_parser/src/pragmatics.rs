@@ -1111,3 +1111,73 @@ fn is_fenced(tree: &XM) -> bool {
     _ => false,
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn greek_name_to_letter_lowercase() {
+    assert_eq!(greek_name_to_letter("alpha"), Some('α'));
+    assert_eq!(greek_name_to_letter("beta"), Some('β'));
+    assert_eq!(greek_name_to_letter("omega"), Some('ω'));
+    assert_eq!(greek_name_to_letter("phi"), Some('ϕ'));
+    assert_eq!(greek_name_to_letter("epsilon"), Some('ϵ'));
+  }
+
+  #[test]
+  fn greek_name_to_letter_uppercase() {
+    assert_eq!(greek_name_to_letter("Alpha"), Some('Α'));
+    assert_eq!(greek_name_to_letter("Omega"), Some('Ω'));
+    assert_eq!(greek_name_to_letter("Delta"), Some('Δ'));
+    assert_eq!(greek_name_to_letter("Sigma"), Some('Σ'));
+  }
+
+  #[test]
+  fn greek_name_to_letter_unknown_returns_none() {
+    assert_eq!(greek_name_to_letter("notgreek"), None);
+    assert_eq!(greek_name_to_letter(""), None);
+    assert_eq!(greek_name_to_letter("ALPHA"), None,
+      "uppercase ALL-CAPS is not a recognized spelling");
+  }
+
+  #[test]
+  fn greek_name_to_letter_case_sensitive() {
+    // "Alpha" (title case) is uppercase Α; "alpha" (lowercase) is α;
+    // "ALPHA" is not recognized at all.
+    assert_ne!(greek_name_to_letter("alpha"), greek_name_to_letter("Alpha"));
+  }
+
+  #[test]
+  fn name_is_functional_prefixes() {
+    assert!(name_is_functional("FUNCTION"));
+    assert!(name_is_functional("FUNCTION:sin"));
+    assert!(name_is_functional("OPFUNCTION"));
+    assert!(name_is_functional("OPFUNCTION:ln"));
+    assert!(name_is_functional("TRIGFUNCTION"));
+    assert!(name_is_functional("TRIGFUNCTION:cos"));
+    assert!(name_is_functional("UNKNOWN"));
+    assert!(name_is_functional("UNKNOWN:foo"));
+  }
+
+  #[test]
+  fn name_is_functional_rejects_others() {
+    assert!(!name_is_functional("RELOP"));
+    assert!(!name_is_functional("NUMBER"));
+    assert!(!name_is_functional("ID:x"));
+    assert!(!name_is_functional("function")); // lowercase doesn't match
+    assert!(!name_is_functional(""));
+  }
+
+  #[test]
+  fn name_is_functional_or_id_includes_id() {
+    assert!(name_is_functional_or_id("ID"));
+    assert!(name_is_functional_or_id("ID:x"));
+    // And still accepts what name_is_functional accepts.
+    assert!(name_is_functional_or_id("FUNCTION"));
+    assert!(name_is_functional_or_id("UNKNOWN"));
+    // But not non-ID, non-functional.
+    assert!(!name_is_functional_or_id("RELOP"));
+    assert!(!name_is_functional_or_id("NUMBER"));
+  }
+}
