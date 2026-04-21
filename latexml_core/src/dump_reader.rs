@@ -244,7 +244,20 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
           && !name.contains(':')
           && !target_raw.trim_start_matches('\\').contains(':')
       };
-      if (is_at_internal || is_public_register || is_safe_let_alias)
+      // Round 17 — deep dumper parity first step: admit `:`-named N
+      // (None) and T (Token) records. These can't cascade —
+      //   • N returns Ok(false) immediately in load_meaning (no-op).
+      //   • T calls a single assign_meaning() with a Token value
+      //     already parsed from the dump; no expansion / hook chain.
+      // Baseline: 44 colon-N + 14 colon-T records in the current
+      // latex.dump.txt. Canary: 83_expl3 test (where the
+      // earlier PA-widening experiment infinite-looped). If N+T
+      // alone pass, we've trimmed the gate-exclusion set from
+      // {E, R, PA, N, T} down to {E, R, PA}.
+      let is_safe_colon_noncascade = name.contains(':')
+        && (data.starts_with("N") || data.starts_with("T\t"));
+      if (is_at_internal || is_public_register || is_safe_let_alias
+        || is_safe_colon_noncascade)
         && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(key, data)
       } else {
