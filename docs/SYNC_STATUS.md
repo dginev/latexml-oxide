@@ -9,11 +9,16 @@ lives in git log and `memory/project_session_history.md`.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
-**10k sandbox (session 128):** full 7933-paper sweep at 60s/6GB caps:
-**7863/7933 = 99.12% exit=0, 35 SIGABRT, 35 bash-pollution**. A
-re-sweep with the session-128 `record_id_with_node` fix is in flight
-(task `b4l4rp7z6`); the 6 DUPID-related aborts from the prior sweep
-are expected to drop to 1 (math9805021 OOM). Runner:
+**10k sandbox (session 128 post-DUPID + post-gate):** full 7898-paper
+re-sweep at 60s/6GB caps, 12-way parallel: **7860/7898 = 99.52%
+exit=0, 37 SIGABRT, 1 SIGSEGV**. DUPID-class papers (1106.1389,
+1505.03876, 1506.09203, 1511.07586, 1707.01155) all converge
+correctly now — 1106.1389 moved from abort to exit=0; the other four
+complete in ~30 s standalone but still tip over the 60 s timeout
+under 12-way CPU contention. Remaining abort classes:
+pgfkeys.code.tex port gap, math-parser pathological-ambiguity
+timeouts, preamble-heavy digestion timeouts, and CPU-contention
+timeouts on papers near the 60 s edge. Runner:
 `tools/benchmark_10k.sh`; tool: `cortex_worker --standalone --timeout 60`.
 
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
