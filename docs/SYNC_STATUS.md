@@ -202,25 +202,29 @@ Marpa-related >60% CPU.
 - [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
 - [ ] Enumerate grammar rules by parse-tree count contribution.
 - [ ] Document grammar ambiguity per category.
-- [~] **Latent no-op pragmas**: multiple sites in `pragmatics.rs`
-  check only `XM::Lexeme("x.invisible_operator", …)` for the
-  invisible-times operator head, but `apply_invisible_times` produces
-  `XM::Token { role: MULOP, meaning: "times" }`. Session 128+ fixed
-  `pragma_consistency_via_key` (and `pragma_functions_prefer_wider_absorption`
-  already used the richer check).
-  **Landed in round 17** (`b786d85d4`, `c0c0720b6`):
-  - `pragma_fenced_letters_are_function_arguments` — 7 Token-shape tests
-  - `pragma_higher_order_invisible_ops_are_exceptions` — 4 tests
-  - `pragma_adjacent_numbers_dont_use_invisible_times` — 3 tests
+- [x] **Latent no-op pragmas — audit complete (round 17)**. Seven sites
+  in `pragmatics.rs` previously matched only `XM::Lexeme("x.invisible_operator", …)`
+  for the invisible-times operator head, but `apply_invisible_times`
+  produces `XM::Token { role: MULOP, meaning: "times" }`, so they
+  silently never fired on real parses.
 
-  Remaining sites (all `pragma_flatten_simple_invisible_times` helpers):
-  `check_invisible_times_recursive` (~L1160 inner match),
-  `is_invisible_times_apply` (~L1190), `all_simple_identifiers` (~L1210).
-  Also the MULOP-contains-RELOP check at ~L1245 uses
-  `name == "x.invisible_operator"` as a fallback — fine to leave since the
-  primary `name.starts_with("MULOP")` predicate already fires on the
-  role-carrying Token shape, but the Lexeme-form branch is dead code.
-  Each remaining site needs accept-both-shapes + test coverage.
+  Landed:
+  - `pragma_consistency_via_key` (session 128, `dfc0f263a`)
+  - `pragma_fenced_letters_are_function_arguments` (`b786d85d4`) — 7 tests
+  - `pragma_higher_order_invisible_ops_are_exceptions` (`c0c0720b6`) — 4 tests
+  - `pragma_adjacent_numbers_dont_use_invisible_times` (`c0c0720b6`) — 3 tests
+  - `check_invisible_times_recursive`, `is_invisible_times_apply`,
+    `all_simple_identifiers` (`282870c9d`) — 6 tests; also extracted
+    module-private `is_invisible_times_op` helper and DRY-replaced
+    four earlier inlined match blocks (incl. both
+    `pragma_functions_prefer_wider_absorption` sites).
+
+  The MULOP-contains-RELOP check in `pragma_relops_are_outermost` at
+  ~L1240 still has a `name == "x.invisible_operator"` OR-fallback, but
+  the primary `name.starts_with("MULOP")` predicate already fires on
+  the Token shape via `base_operator_name()`, so that branch is
+  harmless dead code — left in place. Full workspace: 1090 tests, 0
+  fail, 0 ignored.
 
 Remaining semantic-ambiguity hotspots (see
 `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`; live audit via
