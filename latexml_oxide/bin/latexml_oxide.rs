@@ -89,7 +89,11 @@ struct Cli {
   /// See SYNC_STATUS.md for the file-size heuristic rationale
   /// (matplotlib/pgfplots vector PDFs are ~30 KB; raster-embedded PDFs
   /// are usually 500 KB+ and take >10s to vectorise).
-  #[arg(long = "graphics-svg-threshold-kb", value_name = "N", default_value = "0")]
+  #[arg(
+    long = "graphics-svg-threshold-kb",
+    value_name = "N",
+    default_value = "0"
+  )]
   graphics_svg_threshold_kb: u32,
 
   /// Output type (currently only "document" supported; "archive" auto-detected from --dest)
@@ -203,7 +207,13 @@ fn main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
   // Initialize logger with verbosity level
-  let verbosity: i32 = if cli.quiet { -1 } else if cli.verbose { 1 } else { 0 };
+  let verbosity: i32 = if cli.quiet {
+    -1
+  } else if cli.verbose {
+    1
+  } else {
+    0
+  };
   let log_level = match verbosity {
     v if v < 0 => log::LevelFilter::Warn,
     0 => log::LevelFilter::Info,
@@ -218,11 +228,11 @@ fn main() -> Result<(), Box<dyn Error>> {
       Ok(count) => {
         eprintln!("Codegen complete: {} entries → {}", count, output);
         process::exit(0);
-      }
+      },
       Err(e) => {
         eprintln!("Codegen failed: {}", e);
         process::exit(1);
-      }
+      },
     }
   }
 
@@ -237,7 +247,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       None => {
         eprintln!("Error: no source file specified. Use: latexml_oxide [OPTIONS] <SOURCE>");
         process::exit(1);
-      }
+      },
     }
   };
   let target = cli.dest.clone();
@@ -246,15 +256,17 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut path_flags = cli.search_paths.clone();
   let _archive_tempdir; // hold tempdir alive for the duration of processing
   let is_archive_mode = cli.whatsin.as_deref() == Some("archive")
-    || source.ends_with(".tar.gz") || source.ends_with(".tgz")
-    || source.ends_with(".zip") || source.ends_with(".tar");
+    || source.ends_with(".tar.gz")
+    || source.ends_with(".tgz")
+    || source.ends_with(".zip")
+    || source.ends_with(".tar");
   let source = if is_archive_mode {
     let (tempdir, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
       Err(e) => {
         eprintln!("Failed to unpack archive '{}': {}", source, e);
         process::exit(1);
-      }
+      },
     };
     let dir_str = tempdir.path().to_string_lossy().to_string();
     path_flags.push(dir_str);
@@ -266,8 +278,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   };
 
   // --whatsin=directory: auto-detect from trailing / or explicit flag
-  let is_directory_mode =
-    cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
+  let is_directory_mode = cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
   let source = if is_directory_mode {
     let dir_path = std::path::Path::new(&source);
     if let Ok(abs_source) = std::fs::canonicalize(dir_path) {
@@ -281,30 +292,38 @@ fn main() -> Result<(), Box<dyn Error>> {
       Err(e) => {
         eprintln!("Failed to find main .tex file in '{}': {}", source, e);
         process::exit(1);
-      }
+      },
     }
   } else {
     source
   };
 
   // Prepare converter
-  let preload = if cli.preload_files.is_empty() { None } else { Some(cli.preload_files.clone()) };
-  let search_paths = if path_flags.is_empty() { None } else { Some(path_flags) };
+  let preload = if cli.preload_files.is_empty() {
+    None
+  } else {
+    Some(cli.preload_files.clone())
+  };
+  let search_paths = if path_flags.is_empty() {
+    None
+  } else {
+    Some(path_flags)
+  };
 
   let opts = Config {
     verbosity,
-    format:                  OutputFormat::HTML5,
-    whatsin:                 DataSize::Document,
-    whatsout:                DataSize::Document,
-    preamble:                cli.preamble.clone(),
-    postamble:               cli.postamble.clone(),
-    mode:                    None,
-    bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
+    format: OutputFormat::HTML5,
+    whatsin: DataSize::Document,
+    whatsout: DataSize::Document,
+    preamble: cli.preamble.clone(),
+    postamble: cli.postamble.clone(),
+    mode: None,
+    bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     preload,
     search_paths,
-    include_comments:        if cli.nocomments { Some(false) } else { None },
-    nomathparse:             if cli.nomathparse { Some(true) } else { None },
+    include_comments: if cli.nocomments { Some(false) } else { None },
+    nomathparse: if cli.nomathparse { Some(true) } else { None },
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
@@ -317,20 +336,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Set BIB_CONFIG to ['bbl'] — skip BibTeX, use pre-existing .bbl file
     latexml_core::state::assign_value(
       "BIB_CONFIG",
-      latexml_core::common::store::Stored::Strings(std::rc::Rc::new([latexml_core::common::arena::pin("bbl")])),
+      latexml_core::common::store::Stored::Strings(std::rc::Rc::new([
+        latexml_core::common::arena::pin("bbl"),
+      ])),
       Some(latexml_core::state::Scope::Global),
     );
   }
   if cli.nonumbersections {
     latexml_core::state::assign_value(
-      "no_number_sections", true,
+      "no_number_sections",
+      true,
       Some(latexml_core::state::Scope::Global),
     );
   }
   // Perl Core.pm L48: DOCUMENTID value
   if let Some(ref docid) = cli.documentid {
     latexml_core::state::assign_value(
-      "DOCUMENTID", latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
+      "DOCUMENTID",
+      latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
       Some(latexml_core::state::Scope::Global),
     );
   }
@@ -342,7 +365,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       Err(e) => {
         eprintln!("Format dump failed: {}", e);
         process::exit(1);
-      }
+      },
     }
   } else {
     // Normal mode: convert document
@@ -367,39 +390,52 @@ fn main() -> Result<(), Box<dyn Error>> {
       // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
       let inferred_format: Option<String> = cli.format.clone().or_else(|| {
         target.as_ref().and_then(|dest| {
-          Path::new(dest).extension().and_then(|ext| ext.to_str()).map(|ext| {
-            match ext.to_lowercase().as_str() {
-              "html" | "htm" => "html5".to_string(),   // Perl L435: html → html5
-              "xhtml" => "xhtml".to_string(),
-              "xml" => "xml".to_string(),
-              "zip" => "html5".to_string(),             // Perl L431: zip → html5
-              "epub" | "mobi" => "epub".to_string(),
-              other => other.to_string(),
-            }
-          })
+          Path::new(dest)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| {
+              match ext.to_lowercase().as_str() {
+                "html" | "htm" => "html5".to_string(), // Perl L435: html → html5
+                "xhtml" => "xhtml".to_string(),
+                "xml" => "xml".to_string(),
+                "zip" => "html5".to_string(), // Perl L431: zip → html5
+                "epub" | "mobi" => "epub".to_string(),
+                other => other.to_string(),
+              }
+            })
         })
       });
 
       // Auto-select stylesheet from format (Perl Config.pm L543-551)
-      let effective_stylesheet = cli.stylesheet.clone().or_else(|| {
-        match inferred_format.as_deref() {
-          Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl".to_string()),
-          Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string()),
-          Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
-          _ => None,
-        }
-      });
+      let effective_stylesheet =
+        cli
+          .stylesheet
+          .clone()
+          .or_else(|| match inferred_format.as_deref() {
+            Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl".to_string()),
+            Some("html") | Some("xhtml") => {
+              Some("resources/XSLT/LaTeXML-all-xhtml.xsl".to_string())
+            },
+            Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl".to_string()),
+            _ => None,
+          });
 
       // Auto-enable post-processing when dest implies HTML (Perl Config.pm L448-455)
-      let is_html_format = matches!(inferred_format.as_deref(),
-        Some("html5") | Some("html") | Some("xhtml") | Some("epub") | Some("epub3"));
-      let do_post = cli.post || cli.pmml || cli.cmml
-        || effective_stylesheet.is_some() || is_html_format
-        || cli.split || cli.splitat.is_some();
+      let is_html_format = matches!(
+        inferred_format.as_deref(),
+        Some("html5") | Some("html") | Some("xhtml") | Some("epub") | Some("epub3")
+      );
+      let do_post = cli.post
+        || cli.pmml
+        || cli.cmml
+        || effective_stylesheet.is_some()
+        || is_html_format
+        || cli.split
+        || cli.splitat.is_some();
 
       // Build split XPath from --splitat
-      let split_enabled = cli.split || cli.splitat.is_some()
-        || cli.splitnaming.is_some() || cli.splitpath.is_some();
+      let split_enabled =
+        cli.split || cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some();
       let split_xpath = if split_enabled {
         cli.splitpath.clone().or_else(|| {
           let splitat = cli.splitat.as_deref().unwrap_or("section");
@@ -441,7 +477,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             let zip_dest = if target_path.ends_with(".zip") {
               target_path.clone()
             } else {
-              format!("{}.zip", target_path.trim_end_matches(".html").trim_end_matches(".xml"))
+              format!(
+                "{}.zip",
+                target_path
+                  .trim_end_matches(".html")
+                  .trim_end_matches(".xml")
+              )
             };
             ensure_parent_dir(&zip_dest);
             pack_output_zip(&zip_dest, &output, &response.log, &response.status)?;
@@ -511,7 +552,9 @@ fn make_splitpaths(splitat: &str) -> String {
   };
   let back = ["bibliography", "appendix", "index"];
   let mut paths = Vec::new();
-  let all_units: Vec<&str> = std::iter::once(splitat).chain(ancestors.iter().copied()).collect();
+  let all_units: Vec<&str> = std::iter::once(splitat)
+    .chain(ancestors.iter().copied())
+    .collect();
   for unit in &all_units {
     paths.push(format!("//ltx:{}", unit));
     for b in &back {
@@ -655,25 +698,24 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   static RE_TEXINFO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\input texinfo").unwrap());
   static RE_AUTOINCLUDE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-include").unwrap());
   static RE_FORMAT_HINT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
-  static RE_DOCCLASS: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
-  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap());
-  static RE_INPUT_INCLUDE: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
-  static RE_END_BYE: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
-  static RE_END_BYE2: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
-  static RE_MAC_TEX: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
+  static RE_DOCCLASS: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
+  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap()
+  });
+  static RE_INPUT_INCLUDE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
+  static RE_END_BYE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_END_BYE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_MAC_TEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
   static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
-  static RE_BIBTEX: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
-  static RE_UUENCODE: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
-  static RE_WITHDRAWN: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"paper deliberately replaced by what little").unwrap());
+  static RE_BIBTEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
+  static RE_UUENCODE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
+  static RE_WITHDRAWN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
   static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
@@ -681,9 +723,13 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   let mut vetoed: Vec<PathBuf> = Vec::new();
 
   for tex_file in &tex_files {
-    if !tex_file.exists() { continue; }
+    if !tex_file.exists() {
+      continue;
+    }
     // Use lossy read — TeX files may contain Latin-1 or other non-UTF8 bytes
-    let Ok(raw) = std::fs::read(tex_file) else { continue };
+    let Ok(raw) = std::fs::read(tex_file) else {
+      continue;
+    };
     let content = String::from_utf8_lossy(&raw);
     let mut maybe_tex = false;
     let mut maybe_tex_priority = false;
@@ -693,12 +739,14 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     for (lineno, raw_line) in content.lines().enumerate() {
       let lineno1 = lineno + 1; // 1-based like Perl's $.
       // Perl L117-120: early-line checks (first 10-12 lines)
-      if lineno1 <= 10 && (RE_AUTOIGNORE.is_match(raw_line)
-        || RE_TEXINFO.is_match(raw_line)
-        || RE_AUTOINCLUDE.is_match(raw_line))
+      if lineno1 <= 10
+        && (RE_AUTOIGNORE.is_match(raw_line)
+          || RE_TEXINFO.is_match(raw_line)
+          || RE_AUTOINCLUDE.is_match(raw_line))
       {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if lineno1 <= 12 {
         if let Some(cap) = RE_FORMAT_HINT.captures(raw_line) {
@@ -708,15 +756,21 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           } else {
             likelihood.insert(tex_file.clone(), 1.0);
           }
-          determined = true; break;
+          determined = true;
+          break;
         }
       }
       // Perl L128: strip comments for subsequent checks
-      let line = if let Some(pos) = raw_line.find('%') { &raw_line[..pos] } else { raw_line };
+      let line = if let Some(pos) = raw_line.find('%') {
+        &raw_line[..pos]
+      } else {
+        raw_line
+      };
 
       if RE_DOCCLASS.is_match(line) {
         likelihood.insert(tex_file.clone(), 3.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_MAYBE_TEX.is_match(line) {
         maybe_tex = true;
@@ -727,7 +781,8 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         let mut vetoed_name = cap[1].to_string();
         if RE_AMSTEX.is_match(&vetoed_name) {
           likelihood.insert(tex_file.clone(), 2.0);
-          determined = true; break;
+          determined = true;
+          break;
         }
         if !vetoed_name.contains('.') {
           vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
@@ -736,19 +791,27 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         let base_dir = tex_file.parent().unwrap_or(dir);
         vetoed.push(base_dir.join(&vetoed_name));
       }
-      if RE_END_BYE.is_match(line) { maybe_tex_priority = true; }
-      if RE_END_BYE2.is_match(line) { maybe_tex_priority2 = true; }
+      if RE_END_BYE.is_match(line) {
+        maybe_tex_priority = true;
+      }
+      if RE_END_BYE2.is_match(line) {
+        maybe_tex_priority2 = true;
+      }
       if RE_MAC_TEX.is_match(line) {
         likelihood.insert(tex_file.clone(), 1.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_METAFONT.is_match(line) {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
-      if RE_BIBTEX.is_match(raw_line) { // check raw_line (before comment stripping)
+      if RE_BIBTEX.is_match(raw_line) {
+        // check raw_line (before comment stripping)
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_UUENCODE.is_match(raw_line) {
         if maybe_tex_priority {
@@ -758,19 +821,26 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         } else {
           likelihood.insert(tex_file.clone(), 0.0);
         }
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_WITHDRAWN.is_match(line) {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
     }
     // Perl L169-177: if not determined by any pattern
     if !determined {
-      let score = if maybe_tex_priority { 2.0 }
-        else if maybe_tex_priority2 { 1.5 }
-        else if maybe_tex { 1.0 }
-        else { 0.0 };
+      let score = if maybe_tex_priority {
+        2.0
+      } else if maybe_tex_priority2 {
+        1.5
+      } else if maybe_tex {
+        1.0
+      } else {
+        0.0
+      };
       likelihood.insert(tex_file.clone(), score);
     }
   }
@@ -781,7 +851,8 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   }
 
   // Perl L184-185: filter to score > 0, sort by score descending
-  let mut candidates: Vec<PathBuf> = likelihood.keys()
+  let mut candidates: Vec<PathBuf> = likelihood
+    .keys()
     .filter(|f| likelihood[*f] > 0.0)
     .cloned()
     .collect();
@@ -797,23 +868,27 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Perl L190-196: Heuristic 1 — prefer shallowest path (fewest '/' components)
   if candidates.len() > 1 {
-    let min_depth = candidates.iter()
+    let min_depth = candidates
+      .iter()
       .map(|f| f.strip_prefix(dir).unwrap_or(f).components().count())
-      .min().unwrap_or(0);
+      .min()
+      .unwrap_or(0);
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
   // Perl L198-200: Heuristic 2 — prefer files with PDF-like \includegraphics
   if candidates.len() > 1 {
-    let pdf_candidates: Vec<PathBuf> = candidates.iter()
+    let pdf_candidates: Vec<PathBuf> = candidates
+      .iter()
       .filter(|f| {
         std::fs::read(f).ok().is_some_and(|raw| {
           let c = String::from_utf8_lossy(&raw);
-          c.contains("\\includegraphics") &&
-          (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+          c.contains("\\includegraphics")
+            && (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
         })
       })
-      .cloned().collect();
+      .cloned()
+      .collect();
     if !pdf_candidates.is_empty() {
       candidates = pdf_candidates;
     }
@@ -821,9 +896,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Perl L202-204: Heuristic 3 — prefer files with a matching .bbl file
   if candidates.len() > 1 {
-    let bbl_candidates: Vec<PathBuf> = candidates.iter()
+    let bbl_candidates: Vec<PathBuf> = candidates
+      .iter()
       .filter(|f| f.with_extension("bbl").exists())
-      .cloned().collect();
+      .cloned()
+      .collect();
     if !bbl_candidates.is_empty() {
       candidates = bbl_candidates;
     }
@@ -831,12 +908,16 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Perl L208-210: Heuristic 4 — prefer common main file names
   if candidates.len() > 1 {
-    let common: Vec<PathBuf> = candidates.iter()
-      .filter(|f| f.file_name().is_some_and(|n| {
-        let n = n.to_str().unwrap_or("");
-        n == "main.tex" || n == "ms.tex" || n == "paper.tex"
-      }))
-      .cloned().collect();
+    let common: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| {
+        f.file_name().is_some_and(|n| {
+          let n = n.to_str().unwrap_or("");
+          n == "main.tex" || n == "ms.tex" || n == "paper.tex"
+        })
+      })
+      .cloned()
+      .collect();
     if !common.is_empty() {
       candidates = common;
     }
@@ -864,7 +945,9 @@ fn parse_readme_json(dir: &Path) -> Option<String> {
 
   // Split by '}' to get individual objects, look for toplevel ones
   for obj_str in arr.split('}') {
-    if !obj_str.contains("\"toplevel\"") { continue; }
+    if !obj_str.contains("\"toplevel\"") {
+      continue;
+    }
     // Extract filename from this object
     if let Some(fn_pos) = obj_str.find("\"filename\"") {
       let after_key = &obj_str[fn_pos + 10..];
@@ -899,8 +982,7 @@ fn pack_output_zip(
   use zip::write::SimpleFileOptions;
   let file = File::create(zip_path)?;
   let mut zip = zip::ZipWriter::new(file);
-  let options = SimpleFileOptions::default()
-    .compression_method(zip::CompressionMethod::Deflated);
+  let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
   // Derive output filename from zip name: paper.zip → paper.html
   let stem = Path::new(zip_path)

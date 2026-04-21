@@ -14,8 +14,8 @@
 
 use std::path::Path;
 
-use latexml_core::binding::content::input_definitions;
 use latexml_core::binding::content::InputDefinitionOptions;
+use latexml_core::binding::content::input_definitions;
 use latexml_core::state;
 
 use crate::converter::Converter;
@@ -47,7 +47,10 @@ pub fn dump_format(
   let snap = state::take_snapshot();
   state::stage_snapshot_value("bootstrap", snap.clone());
   let snap_size = snap.len();
-  eprintln!("[ini_tex] Pre-dump snapshot: {} entries (staged as \"bootstrap\")", snap_size);
+  eprintln!(
+    "[ini_tex] Pre-dump snapshot: {} entries (staged as \"bootstrap\")",
+    snap_size
+  );
 
   // Step 1b (D0 d.1): surgically load ONLY latex_base.rs after the
   // snapshot so its _base-only CSes (\@tempa/b/c, \@currbox, \xpt and
@@ -81,14 +84,15 @@ pub fn dump_format(
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
 
   // Use the full filename with extension for proper file resolution
-  let load_name = if ext.is_empty() { name.clone() } else { format!("{}.{}", name, ext) };
-  let result = input_definitions(
-    &load_name,
-    InputDefinitionOptions {
-      noltxml: true,
-      ..InputDefinitionOptions::default()
-    },
-  );
+  let load_name = if ext.is_empty() {
+    name.clone()
+  } else {
+    format!("{}.{}", name, ext)
+  };
+  let result = input_definitions(&load_name, InputDefinitionOptions {
+    noltxml: true,
+    ..InputDefinitionOptions::default()
+  });
   if let Err(e) = result {
     eprintln!("[ini_tex] Warning during loading: {}", e);
   }
@@ -123,7 +127,7 @@ pub fn dump_format(
       std::fs::create_dir_all(dump_dir)
         .map_err(|e| format!("Failed to create {}: {}", dump_dir, e))?;
       (format!("{}/{}", dump_dir, dump_name), true)
-    }
+    },
   };
 
   if is_text_dump {
@@ -140,7 +144,10 @@ pub fn dump_format(
     let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
     let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(&dest))?;
     let _ = std::fs::remove_file(&tmp);
-    eprintln!("[ini_tex] Generated {} Rust definitions to {}", rs_count, dest);
+    eprintln!(
+      "[ini_tex] Generated {} Rust definitions to {}",
+      rs_count, dest
+    );
     eprintln!("Format dump complete: {} entries written", rs_count);
     Ok(rs_count)
   }
@@ -150,10 +157,8 @@ pub fn dump_format(
 /// Reads the text dump and produces a .rs file with direct state assignment calls.
 pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, String> {
   eprintln!("[ini_tex] Generating Rust module from {}", dump_path);
-  let count = latexml_core::dump_codegen::generate_rs(
-    Path::new(dump_path),
-    Path::new(output_path),
-  )?;
+  let count =
+    latexml_core::dump_codegen::generate_rs(Path::new(dump_path), Path::new(output_path))?;
   eprintln!("[ini_tex] Generated {} entries to {}", count, output_path);
   Ok(count)
 }

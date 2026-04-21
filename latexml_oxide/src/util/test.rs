@@ -61,8 +61,8 @@ pub fn init_logger() {
 /// Tests where Perl LaTeXML also produces Error/Warn messages.
 /// ONLY add tests here if verified that Perl `bin/latexml` emits errors on the same input.
 const KNOWN_ERROR_TESTS: &[&str] = &[
-  "io",                     // Perl: 2 errors (mode-switch egroup from \readnext)
-  "figure_mixed_content",   // Perl: 1 error (ltx:theorem not allowed in ltx:figure)
+  "io",                   // Perl: 2 errors (mode-switch egroup from \readnext)
+  "figure_mixed_content", // Perl: 1 error (ltx:theorem not allowed in ltx:figure)
 ];
 
 pub fn latexml_test_single(
@@ -191,7 +191,7 @@ fn process_xmlfile<'a>(xml_path: &'a str, _name: &'a str) -> Vec<String> {
         lines.pop();
       }
       lines
-    }
+    },
   }
 }
 fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
@@ -202,10 +202,12 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
     eprintln!("Saved actual XML to {path}");
     // Also save using libxml's built-in serializer for comparison
     let path2 = format!("/tmp/latexml_actual_{name}_libxml.xml");
-    let libxml_str = doc.document.to_string_with_options(libxml::tree::SaveOptions {
-      format: true,
-      ..libxml::tree::SaveOptions::default()
-    });
+    let libxml_str = doc
+      .document
+      .to_string_with_options(libxml::tree::SaveOptions {
+        format: true,
+        ..libxml::tree::SaveOptions::default()
+      });
     std::fs::write(&path2, &libxml_str).ok();
     eprintln!("Saved libxml XML to {path2}");
   }

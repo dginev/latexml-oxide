@@ -23,4 +23,8 @@ use std::rc::Rc;
 
 use latexml::tex_tests;
 
-tex_tests!("tests/graphics", None, Some(Rc::new(latexml_contrib::dispatch)));
+tex_tests!(
+  "tests/graphics",
+  None,
+  Some(Rc::new(latexml_contrib::dispatch))
+);

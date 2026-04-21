@@ -10,22 +10,22 @@ use latexml_post::processor::Processor;
 
 /// Options for the post-processing pipeline.
 pub struct PostOptions<'a> {
-  pub pmml: bool,
-  pub cmml: bool,
-  pub keep_xmath: bool,
-  pub stylesheet: Option<&'a str>,
-  pub destination: Option<&'a str>,
-  pub source_directory: Option<&'a str>,
-  pub nodefaultresources: bool,
-  pub css_files: &'a [String],
-  pub js_files: &'a [String],
-  pub noinvisibletimes: bool,
-  pub mathtex: bool,
-  pub navigationtoc: Option<&'a str>,
-  pub split: bool,
-  pub split_xpath: Option<String>,
-  pub split_naming: Option<&'a str>,
-  pub xslt_parameters: &'a [String],
+  pub pmml:                      bool,
+  pub cmml:                      bool,
+  pub keep_xmath:                bool,
+  pub stylesheet:                Option<&'a str>,
+  pub destination:               Option<&'a str>,
+  pub source_directory:          Option<&'a str>,
+  pub nodefaultresources:        bool,
+  pub css_files:                 &'a [String],
+  pub js_files:                  &'a [String],
+  pub noinvisibletimes:          bool,
+  pub mathtex:                   bool,
+  pub navigationtoc:             Option<&'a str>,
+  pub split:                     bool,
+  pub split_xpath:               Option<String>,
+  pub split_naming:              Option<&'a str>,
+  pub xslt_parameters:           &'a [String],
   /// If > 0, try `inkscape` for PDF graphics smaller than this many KB
   /// (vector-preservation path). Fall back to ImageMagick `convert` on
   /// failure or timeout. Tracks upstream brucemiller/LaTeXML#902.
@@ -37,9 +37,22 @@ pub struct PostOptions<'a> {
 /// Executes: Scan → MakeBibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups.
 pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let PostOptions {
-    pmml, cmml, keep_xmath, stylesheet, destination,
-    source_directory, nodefaultresources, css_files, js_files, noinvisibletimes,
-    mathtex, navigationtoc, split, ref split_xpath, split_naming, xslt_parameters,
+    pmml,
+    cmml,
+    keep_xmath,
+    stylesheet,
+    destination,
+    source_directory,
+    nodefaultresources,
+    css_files,
+    js_files,
+    noinvisibletimes,
+    mathtex,
+    navigationtoc,
+    split,
+    ref split_xpath,
+    split_naming,
+    xslt_parameters,
     graphics_svg_threshold_kb,
   } = *opts;
 
@@ -55,7 +68,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   }
   let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
   let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {
-    if audit { Some((name.to_string(), std::time::Instant::now())) } else { None }
+    if audit {
+      Some((name.to_string(), std::time::Instant::now()))
+    } else {
+      None
+    }
   };
   let audit_end = |started: Option<(String, std::time::Instant)>| {
     if let Some((name, t0)) = started {
@@ -70,7 +87,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Err(e) => {
       eprintln!("Post-processing: failed to parse XML: {}", e);
       return xml.to_string();
-    }
+    },
   };
   audit_end(t_parse);
 
@@ -84,7 +101,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Err(e) => {
       eprintln!("Post-processing: Scan failed: {}", e);
       return xml.to_string();
-    }
+    },
   };
   audit_end(t_scan);
 
@@ -99,7 +116,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       Err(e) => {
         eprintln!("Post-processing: MakeBibliography failed: {}", e);
         return xml.to_string();
-      }
+      },
     }
   } else {
     doc
@@ -109,18 +126,15 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // Phase 2: CrossRef
   let t_xref = audit_start("CrossRef");
   let db = bibmaker.db;
-  let mut crossref = latexml_post::crossref::CrossRef::new(
-    db,
-    latexml_post::crossref::UrlStyle::File,
-    true,
-  );
+  let mut crossref =
+    latexml_post::crossref::CrossRef::new(db, latexml_post::crossref::UrlStyle::File, true);
   let xref_nodes = crossref.to_process(&doc);
   let doc = match crossref.process(doc, xref_nodes) {
     Ok(mut docs) => docs.remove(0),
     Err(e) => {
       eprintln!("Post-processing: CrossRef failed: {}", e);
       return xml.to_string();
-    }
+    },
   };
   audit_end(t_xref);
 
@@ -135,7 +149,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       Err(e) => {
         eprintln!("Post-processing: Graphics failed: {}", e);
         return xml.to_string();
-      }
+      },
     }
   } else {
     doc
@@ -170,7 +184,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         Some(other) => {
           eprintln!("Unknown splitnaming '{}', using 'id'", other);
           latexml_post::split::SplitNaming::Id
-        }
+        },
       };
       let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
       let split_nodes = splitter.to_process(&doc);
@@ -180,11 +194,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
             eprintln!("Split into {} documents", docs.len());
           }
           docs.remove(0)
-        }
+        },
         Err(e) => {
           eprintln!("Post-processing: Split failed: {}", e);
           return xml.to_string();
-        }
+        },
       }
     } else {
       doc
@@ -218,7 +232,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   if let Some(xsl_path) = stylesheet {
     let mut searchpaths = vec![".".to_string()];
     if let Ok(exe) = std::env::current_exe() {
-      if let Some(project_root) = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
+      if let Some(project_root) = exe
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+      {
         searchpaths.insert(0, project_root.display().to_string());
       }
     }
@@ -281,9 +299,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
           r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
         )
         .unwrap();
-        let mut output = void_selfclose_re
-          .replace_all(&output, "<$1$2>")
-          .to_string();
+        let mut output = void_selfclose_re.replace_all(&output, "<$1$2>").to_string();
         // Phase G: inject SVG fragments into empty ltx_picture spans
         if !svg_fragments.is_empty() {
           for (pic_id, svg_html) in &svg_fragments {
@@ -294,12 +310,14 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
               regex::escape(pic_id)
             );
             if let Ok(re) = regex::Regex::new(&pattern) {
-              output = re.replace(&output, |caps: &regex::Captures| {
-                format!(
-                  r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
-                  pic_id, &caps[1], svg_html
-                )
-              }).to_string();
+              output = re
+                .replace(&output, |caps: &regex::Captures| {
+                  format!(
+                    r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
+                    pic_id, &caps[1], svg_html
+                  )
+                })
+                .to_string();
             }
           }
         }
@@ -307,11 +325,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       } else {
         output
       }
-    }
+    },
     Err(e) => {
       eprintln!("Post-processing failed: {}", e);
       xml.to_string()
-    }
+    },
   }
 }
 
@@ -325,9 +343,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
   let mut fragments = Vec::new();
   // Match <picture ... xml:id="ID" ... width="W" height="H" ...>CONTENT</picture>
-  let picture_re = regex::Regex::new(
-    r#"(?s)<picture([^>]*)>(.*?)</picture>"#
-  ).unwrap();
+  let picture_re = regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap();
   let id_re = regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap();
   let width_re = regex::Regex::new(r#"width="([^"]+)""#).unwrap();
   let height_re = regex::Regex::new(r#"height="([^"]+)""#).unwrap();
@@ -335,7 +351,10 @@ fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
   for pic_caps in picture_re.captures_iter(xml) {
     let attrs = &pic_caps[1];
     let content = &pic_caps[2];
-    let id = id_re.captures(attrs).map(|c| c[1].to_string()).unwrap_or_default();
+    let id = id_re
+      .captures(attrs)
+      .map(|c| c[1].to_string())
+      .unwrap_or_default();
     let width = width_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
     let height = height_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
 
@@ -452,7 +471,10 @@ fn convert_picture_children_to_svg(content: &str) -> String {
       let coords: Vec<&str> = points.split_whitespace().collect();
       if coords.len() >= 4 {
         // SVG cubic bezier: M x0,y0 C x1,y1 x2,y2 x3,y3
-        let d = format!("M {} C {} {} {}", coords[0], coords[1], coords[2], coords[3]);
+        let d = format!(
+          "M {} C {} {} {}",
+          coords[0], coords[1], coords[2], coords[3]
+        );
         svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
       } else if coords.len() >= 3 {
         // Quadratic bezier: M x0,y0 Q x1,y1 x2,y2
@@ -478,13 +500,17 @@ fn convert_picture_children_to_svg(content: &str) -> String {
 
   // Also handle direct children not inside <g> (e.g. top-level <bezier>, <line>)
   // These appear directly inside <picture> without a <g> wrapper
-  let direct_bezier_re = regex::Regex::new(r#"(?m)^\s*<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
+  let direct_bezier_re =
+    regex::Regex::new(r#"(?m)^\s*<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
   for bez_caps in direct_bezier_re.captures_iter(content) {
     let points = &bez_caps[1];
     let rest = &bez_caps[2];
     let coords: Vec<&str> = points.split_whitespace().collect();
     if coords.len() >= 4 {
-      let d = format!("M {} C {} {} {}", coords[0], coords[1], coords[2], coords[3]);
+      let d = format!(
+        "M {} C {} {} {}",
+        coords[0], coords[1], coords[2], coords[3]
+      );
       svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
     } else if coords.len() >= 3 {
       let d = format!("M {} Q {} {}", coords[0], coords[1], coords[2]);

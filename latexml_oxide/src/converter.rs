@@ -35,11 +35,11 @@ pub struct Converter {
 impl Converter {
   pub fn from_config(opts: Config) -> Converter {
     let core = Core::new(CoreOptions {
-      verbosity:        Some(opts.verbosity),
+      verbosity: Some(opts.verbosity),
       include_comments: opts.include_comments.or(Some(false)),
-      preload:          opts.preload.clone(),
-      search_paths:     opts.search_paths.clone(),
-      nomathparse:      opts.nomathparse,
+      preload: opts.preload.clone(),
+      search_paths: opts.search_paths.clone(),
+      nomathparse: opts.nomathparse,
       ..CoreOptions::default()
     });
     Converter {
@@ -79,12 +79,8 @@ impl Converter {
     Ok(())
   }
 
-  pub fn bind_log(&mut self) {
-    latexml_core::util::logger::bind_log();
-  }
-  pub fn flush_log(&mut self) -> String {
-    latexml_core::util::logger::flush_log()
-  }
+  pub fn bind_log(&mut self) { latexml_core::util::logger::bind_log(); }
+  pub fn flush_log(&mut self) -> String { latexml_core::util::logger::flush_log() }
 
   pub fn convert(mut self, source: String) -> ConversionResponse {
     // 1 Prepare for conversion
@@ -197,9 +193,13 @@ impl Converter {
         // the beginning of the document is valid but an error occurs midway.
         match self.core.digest_internal() {
           Ok(salvaged) if !salvaged.is_empty().unwrap_or(true) => {
-            Info!("recovery", "digest", "Salvaged partial output after fatal error");
+            Info!(
+              "recovery",
+              "digest",
+              "Salvaged partial output after fatal error"
+            );
             salvaged
-          }
+          },
           _ => Digested::from(List::new(Vec::new())),
         }
       },
