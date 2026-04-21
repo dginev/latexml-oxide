@@ -520,3 +520,96 @@ pub fn decode_math_char_for_stomach(
     properties,
   ))))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn math_class_role_table_has_expected_values() {
+    // The Perl %mathclass mapping: 0,7 (ord, variable — no role);
+    // 1=BIGOP, 2=BINOP, 3=RELOP, 4=OPEN, 5=CLOSE, 6=PUNCT.
+    assert_eq!(MATH_CLASS_ROLE[0], "");
+    assert_eq!(MATH_CLASS_ROLE[1], "BIGOP");
+    assert_eq!(MATH_CLASS_ROLE[2], "BINOP");
+    assert_eq!(MATH_CLASS_ROLE[3], "RELOP");
+    assert_eq!(MATH_CLASS_ROLE[4], "OPEN");
+    assert_eq!(MATH_CLASS_ROLE[5], "CLOSE");
+    assert_eq!(MATH_CLASS_ROLE[6], "PUNCT");
+    assert_eq!(MATH_CLASS_ROLE[7], "");
+  }
+
+  #[test]
+  fn unicode_math_properties_digits() {
+    let p = unicode_math_properties('5').expect("digits should resolve");
+    assert_eq!(p.role.as_deref(), Some("NUMBER"));
+    assert_eq!(p.meaning.as_deref(), Some("5"));
+  }
+
+  #[test]
+  fn unicode_math_properties_basic_relops() {
+    let eq = unicode_math_properties('=').unwrap();
+    assert_eq!(eq.role.as_deref(), Some("RELOP"));
+    assert_eq!(eq.meaning.as_deref(), Some("equals"));
+    let lt = unicode_math_properties('<').unwrap();
+    assert_eq!(lt.role.as_deref(), Some("RELOP"));
+    assert_eq!(lt.meaning.as_deref(), Some("less-than"));
+  }
+
+  #[test]
+  fn unicode_math_properties_basic_addops() {
+    let plus = unicode_math_properties('+').unwrap();
+    assert_eq!(plus.role.as_deref(), Some("ADDOP"));
+    assert_eq!(plus.meaning.as_deref(), Some("plus"));
+    let minus = unicode_math_properties('-').unwrap();
+    assert_eq!(minus.role.as_deref(), Some("ADDOP"));
+    assert_eq!(minus.meaning.as_deref(), Some("minus"));
+  }
+
+  #[test]
+  fn unicode_math_properties_openclose() {
+    // Paired delimiters get OPEN/CLOSE with stretchy="false".
+    for (c, role) in [('(', "OPEN"), (')', "CLOSE"),
+                      ('[', "OPEN"), (']', "CLOSE"),
+                      ('{', "OPEN"), ('}', "CLOSE")] {
+      let p = unicode_math_properties(c).unwrap();
+      assert_eq!(p.role.as_deref(), Some(role), "{c}");
+      assert_eq!(p.stretchy.as_deref(), Some("false"), "{c} stretchy");
+    }
+  }
+
+  #[test]
+  fn unicode_math_properties_punct() {
+    let comma = unicode_math_properties(',').unwrap();
+    assert_eq!(comma.role.as_deref(), Some("PUNCT"));
+    let semi = unicode_math_properties(';').unwrap();
+    assert_eq!(semi.role.as_deref(), Some("PUNCT"));
+  }
+
+  #[test]
+  fn into_props_map_only_includes_set_fields() {
+    // A mostly-empty MathCharProps should produce an empty map —
+    // into_props_map skips None fields.
+    let p = MathCharProps {
+      role: Some("RELOP".into()),
+      meaning: Some("equals".into()),
+      name: None, stretchy: None,
+      need_scriptpos: false, need_mathstyle: false,
+      scriptpos: None, mathstyle: None,
+      reversion: None, font: None, glyph: None,
+    };
+    let m = p.into_props_map();
+    assert_eq!(m.len(), 2, "only role and meaning should populate");
+    assert!(m.contains_key("role"));
+    assert!(m.contains_key("meaning"));
+    assert!(!m.contains_key("name"));
+    assert!(!m.contains_key("stretchy"));
+  }
+
+  #[test]
+  fn into_props_map_empty_when_all_none() {
+    let p = MathCharProps::default();
+    let m = p.into_props_map();
+    assert_eq!(m.len(), 0);
+  }
+}
