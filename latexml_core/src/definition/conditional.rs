@@ -432,3 +432,78 @@ impl Conditional {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn conditional_type_from_str_known_variants() {
+    assert_eq!(ConditionalType::from("\\if"), ConditionalType::If);
+    assert_eq!(ConditionalType::from("\\unless"), ConditionalType::Unless);
+    assert_eq!(ConditionalType::from("\\else"), ConditionalType::Else);
+    assert_eq!(ConditionalType::from("\\or"), ConditionalType::Or);
+    assert_eq!(ConditionalType::from("\\fi"), ConditionalType::Fi);
+  }
+
+  #[test]
+  fn conditional_type_from_str_unknown_falls_back_to_if() {
+    // The match's default arm is `_ => If`, not Unknown — that's a
+    // surprising but documented behavior in the source. Lock it in.
+    assert_eq!(ConditionalType::from("\\foo"), ConditionalType::If);
+    assert_eq!(ConditionalType::from(""), ConditionalType::If);
+  }
+
+  #[test]
+  fn conditional_type_equality() {
+    assert_eq!(ConditionalType::If, ConditionalType::If);
+    assert_ne!(ConditionalType::If, ConditionalType::Else);
+  }
+
+  #[test]
+  fn conditional_default_fields() {
+    let c = Conditional::default();
+    assert!(c.paramlist.is_none());
+    assert!(c.test.is_none());
+    assert_eq!(c.conditional_type, ConditionalType::Unknown);
+    assert!(c.skipper.is_none());
+  }
+
+  #[test]
+  fn conditional_partial_eq_by_cs() {
+    // PartialEq ignores conditional_type, skipper etc., compares by cs.
+    let a = Conditional::default();
+    let b = Conditional::default();
+    assert!(a == b, "defaults have same cs");
+  }
+
+  #[test]
+  fn conditional_is_expandable() {
+    let c = Conditional::default();
+    assert!(c.is_expandable());
+    // Conditionals are NOT definitions (they're expandable machinery).
+    // Actually the default Object::is_definition returns false; the
+    // trait default applies here.
+  }
+
+  #[test]
+  fn conditional_display_is_cs_text() {
+    let c = Conditional::default();
+    let s = format!("{c}");
+    assert_eq!(s, "Conditional");
+  }
+
+  #[test]
+  fn conditional_get_parameters_none_by_default() {
+    let c = Conditional::default();
+    assert!(c.get_parameters().is_none());
+  }
+
+  #[test]
+  fn conditional_options_default_all_none() {
+    let o = ConditionalOptions::default();
+    assert!(o.scope.is_none());
+    assert!(o.locked.is_none());
+    assert!(o.skipper.is_none());
+  }
+}
