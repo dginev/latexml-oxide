@@ -615,3 +615,102 @@ impl ToTokens for Token {
     });
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::common::arena;
+
+  fn letter_tok(s: &str) -> Token {
+    Token { text: arena::pin(s), code: Catcode::LETTER }
+  }
+
+  fn comment_tok(s: &str) -> Token {
+    Token { text: arena::pin(s), code: Catcode::COMMENT }
+  }
+
+  #[test]
+  fn empty_tokens_len_zero() {
+    let t = Tokens::new(vec![]);
+    assert_eq!(t.len(), 0);
+    assert!(t.is_empty());
+  }
+
+  #[test]
+  fn tokens_new_preserves_order() {
+    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    assert_eq!(t.len(), 3);
+    let list = t.unlist();
+    let texts: Vec<String> = list.iter().map(|t| arena::to_string(t.text)).collect();
+    assert_eq!(texts, vec!["a", "b", "c"]);
+  }
+
+  #[test]
+  fn tokens_unlist_ref_does_not_consume() {
+    let t = Tokens::new(vec![letter_tok("a")]);
+    let r = t.unlist_ref();
+    assert_eq!(r.len(), 1);
+    // t is still usable after unlist_ref.
+    assert_eq!(t.len(), 1);
+  }
+
+  #[test]
+  fn tokens_stringify_format() {
+    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b")]);
+    let s = t.stringify();
+    assert!(s.starts_with("Tokens["), "got {s:?}");
+    assert!(s.ends_with(']'));
+    assert!(s.contains("a"));
+    assert!(s.contains("b"));
+  }
+
+  #[test]
+  fn tokens_equals_ignores_comments_and_markers() {
+    // equals() filters out COMMENT and MARKER tokens before comparing.
+    let a = Tokens::new(vec![letter_tok("x"), comment_tok("%"), letter_tok("y")]);
+    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    assert!(a.equals(b), "comments should be ignored in equals()");
+  }
+
+  #[test]
+  fn tokens_equals_different_content() {
+    let a = Tokens::new(vec![letter_tok("x")]);
+    let b = Tokens::new(vec![letter_tok("y")]);
+    assert!(!a.equals(b));
+  }
+
+  #[test]
+  fn tokens_equals_different_lengths() {
+    let a = Tokens::new(vec![letter_tok("x")]);
+    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    assert!(!a.equals(b));
+  }
+
+  #[test]
+  fn tokens_equals_both_empty() {
+    let a = Tokens::new(vec![]);
+    let b = Tokens::new(vec![]);
+    assert!(a.equals(b));
+  }
+
+  #[test]
+  fn tokens_unwrap_self_identity() {
+    let t = Tokens::new(vec![letter_tok("x")]);
+    assert_eq!(t.unwrap().len(), 1);
+  }
+
+  #[test]
+  fn tokens_revert_returns_vec() {
+    let t = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let v = t.revert();
+    assert_eq!(v.len(), 2);
+  }
+
+  #[test]
+  fn tokens_display_joins_content() {
+    // Display on Tokens concatenates each token's Display.
+    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    let s = format!("{t}");
+    assert_eq!(s, "abc");
+  }
+}
