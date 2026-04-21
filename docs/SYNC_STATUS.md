@@ -523,6 +523,55 @@ Remaining semantic-ambiguity hotspots (see
 
 ### Long-horizon — architectural rationalization
 
+- [ ] **l3hooks minimal native port** — first concrete target of
+  the kernel-first discipline. Primitives (all from lthooks.dtx /
+  LaTeX 2020+ kernel):
+
+  1. `\hook_new:n{name}` — declare a hook. Minimal form: no-op
+     (storage is created lazily when the first code is added).
+  2. `\hook_gput_code:nnn{name}{label}{code}` — append `code` to
+     the hook named `name`, tagged with `label`. Minimal form:
+     push `code` onto a state-level list keyed `@l3hook:{name}`,
+     ignore `label` (no ordering rules).
+  3. `\hook_use:n{name}` — digest the hook's stored code in
+     insertion order. Minimal form: `state::with_vecdeque` pattern
+     — iterate tokens, digest each.
+  4. `\hook_if_exist:nTF{name}{true}{false}` — conditional on the
+     existence of any code for `name`.
+
+  **Storage model**: follow the existing `@at@begin@document`
+  pattern (see `latex_constructs.rs` L2448-2503) — use
+  `state::push_value("@l3hook:{name}", ...)`, dual-purpose keyed
+  so that the existing `\AtBeginDocument` path (which reads
+  `@at@begin@document` directly) can coexist with the hook path.
+
+  **New file**: `latexml_package/src/engine/latex_lthooks.rs`,
+  wired into `engine.rs` alongside `latex_base.rs`. Loaded from
+  `latex.rs` after `latex_base` and before `latex_dump`.
+
+  **Test**: a new `tests/latex/lthooks.tex` regression fixture
+  that round-trips `\hook_new:n` + `\hook_gput_code:nnn` +
+  `\hook_use:n`, plus the existing `83_expl3` canary.
+
+  **Impact on dumper widening**: with `\hook_*:n` defined natively,
+  the dumper staircase can retry step 4 (1-CS body) and step 5
+  (whole-E) — the dominant cascade trigger (bodies calling
+  `\__hook_code_gset_aux:nnn`) will then resolve to the native
+  primitive instead of an undefined-CS error. That's the empirical
+  test of whether hooks alone are the bottleneck or other kernel
+  families (e.g. `\exp_args:N*`, `\__cmd_*`) also need porting.
+
+  Acceptance:
+  1. New lthooks.rs file + engine wiring landed.
+  2. 83_expl3 still passes (no regression).
+  3. `lookup_definition(&T_CS!("\\hook_use:n")).is_some()` returns
+     true after latex engine setup, so the
+     `latex_constructs.rs:2501` gate fires `\hook_use:n{begindocument}`
+     for modern LaTeX docs.
+  4. A widening retry of step 5 shows the 83_expl3 failure time
+     reduce or the error count change — proving the hook port
+     moved the needle (even if the canary still fails overall).
+
 - [ ] **Kernel-first discipline for dumper widening** (user directive,
   round 17). Cross-links the dumper audit and the expl3 kernel
   parity tasks. Each failed staircase step in the dumper widening
