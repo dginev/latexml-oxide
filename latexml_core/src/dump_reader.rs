@@ -183,7 +183,33 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       // plain-TeX math chardefs like `\ldotp`, `\cdotp`, `\intop` to load
       // without opening the door to public Expandable bodies.
       let is_public_register = data.starts_with("R\t");
-      if (is_at_internal || is_public_register)
+      // Safe additional gate: Let-alias records (`PA\t<target>` or
+      // `MPA\t<target>`) where NEITHER the key NOR the target is an
+      // expl3 `:`-style identifier. These replay `\let <key> <target>`
+      // at load time — the target must be an existing (Rc<Primitive>)
+      // binding, so there's no body cascade, and without `:` in either
+      // name we can't trip the expl3 short-circuit hazard the main
+      // gate guards against. Recovers plain-LaTeX public aliases like
+      // `\let\a=\@tabacckludge` (latex.ltx L10007) that previously
+      // required hand-written `Let!(...)` in `latex_constructs.rs`.
+      let is_safe_let_alias = {
+        let (prefix, rest) = if let Some(r) = data.strip_prefix("PA\t") {
+          ("PA", r)
+        } else if let Some(r) = data.strip_prefix("MPA\t") {
+          ("MPA", r)
+        } else {
+          ("", "")
+        };
+        let target_raw = if rest.contains('%') {
+          url_decode(rest)
+        } else {
+          rest.to_string()
+        };
+        !prefix.is_empty()
+          && !name.contains(':')
+          && !target_raw.trim_start_matches('\\').contains(':')
+      };
+      if (is_at_internal || is_public_register || is_safe_let_alias)
         && !data.contains("\\\\hook") && !data.contains("16:\\hook") {
         load_meaning(key, data)
       } else {

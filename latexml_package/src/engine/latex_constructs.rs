@@ -4879,15 +4879,12 @@ LoadDefinitions!({
   //======================================================================
 
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
-  // latex.ltx L10007: `\let\a=\@tabacckludge` — the globally-visible
-  // alias used for accent-composition inside arguments (e.g. `\'{\a i}`
-  // to produce í via the `\'` table). Perl-parity: the dump already
-  // has `M \a E \@tabacckludge`, but our dump gate skips public-CS
-  // Meanings without `:` or `@` in the name (expl3-cascade safety),
-  // so `\a` never got defined. Rebind explicitly here. Inside a
-  // `tabbing` environment, tabbing_bindings() overrides this local
-  // to `\@tabbing@accent`. Found in arxiv 1611.05395.
-  Let!("\\a", "\\@tabacckludge");
+  // latex.ltx L10007 — `\let\a=\@tabacckludge`. Recovered from the
+  // dump's Let-alias record now that `dump_reader.rs`'s M gate admits
+  // public PA/MPA aliases whose key and target are both non-expl3
+  // (no `:`). Inside a `tabbing` environment, tabbing_bindings()
+  // overrides this local to `\@tabbing@accent`. Found in arxiv
+  // 1611.05395.
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star,cs_token,nargs,opt,body)] {
