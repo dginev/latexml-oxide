@@ -443,3 +443,85 @@ fn cyclic_permute<T: Clone>(items: &[T]) -> Vec<Vec<T>> {
     perm
   }).collect()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn initial_letter_ascii_uppercases() {
+    assert_eq!(initial_letter("alpha"), "A");
+    assert_eq!(initial_letter("Zebra"), "Z");
+  }
+
+  #[test]
+  fn initial_letter_skips_leading_whitespace() {
+    assert_eq!(initial_letter("  beta"), "B");
+  }
+
+  #[test]
+  fn initial_letter_nfd_decomposes_accents() {
+    // NFD decomposes 'É' (U+00C9) into 'E' + combining accent — the first
+    // char is then ASCII 'E'.
+    assert_eq!(initial_letter("Éclair"), "E");
+    assert_eq!(initial_letter("über"), "U");
+  }
+
+  #[test]
+  fn initial_letter_non_alpha_is_star() {
+    assert_eq!(initial_letter("123abc"), "*");
+    assert_eq!(initial_letter("#hash"), "*");
+    assert_eq!(initial_letter(""), "*");
+    assert_eq!(initial_letter("   "), "*");
+  }
+
+  #[test]
+  fn get_index_key_id_strips_non_alphanumeric() {
+    assert_eq!(get_index_key_id("Foo Bar!"), "FooBar");
+    assert_eq!(get_index_key_id("abc-123"), "abc123");
+  }
+
+  #[test]
+  fn get_index_key_id_nfd_drops_combining_marks() {
+    // 'é' → 'e' + combining accent; combining mark isn't ASCII alphanumeric,
+    // so it's dropped, leaving just "e".
+    assert_eq!(get_index_key_id("é"), "e");
+    assert_eq!(get_index_key_id("Éclair"), "Eclair");
+  }
+
+  #[test]
+  fn get_index_key_id_empty_input() {
+    assert_eq!(get_index_key_id(""), "");
+    assert_eq!(get_index_key_id("!!!"), "");
+  }
+
+  #[test]
+  fn cyclic_permute_empty_returns_single_empty() {
+    let empty: Vec<i32> = vec![];
+    assert_eq!(cyclic_permute::<i32>(&empty), vec![Vec::<i32>::new()]);
+  }
+
+  #[test]
+  fn cyclic_permute_single_element_returns_itself() {
+    assert_eq!(cyclic_permute(&[42]), vec![vec![42]]);
+  }
+
+  #[test]
+  fn cyclic_permute_three_element_rotations() {
+    let result = cyclic_permute(&["a", "b", "c"]);
+    assert_eq!(result, vec![
+      vec!["a", "b", "c"],
+      vec!["b", "c", "a"],
+      vec!["c", "a", "b"],
+    ]);
+  }
+
+  #[test]
+  fn cyclic_permute_count_equals_input_len() {
+    let result = cyclic_permute(&[1, 2, 3, 4, 5]);
+    assert_eq!(result.len(), 5);
+    for perm in &result {
+      assert_eq!(perm.len(), 5);
+    }
+  }
+}
