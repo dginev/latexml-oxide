@@ -215,7 +215,18 @@ vendor-patch/upstream. **Zero direct FFI call sites remaining** as of
 round 17 commit (see below).
 
 - [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
-- [ ] Replace unsafe-over-FFI with safe wrappers where practical.
+- [x] Replace unsafe-over-FFI with safe wrappers where practical.
+  Landed round 17. The last raw `extern "C" { fn exsltRegisterAll();
+  } unsafe { … }` block in `latexml_post::xslt` was moved upstream to
+  `~/git/rust-libxslt` (branch `latexml-oxide-contributions`, commit
+  `a61d0c43`): new `pub fn exsltRegisterAll();` binding + `build.rs`
+  linkage for libexslt + safe top-level `libxslt::register_exslt()`
+  Once-guarded wrapper. `[patch.crates-io]` entry added for libxslt
+  alongside the existing libxml patch. Verified: zero remaining
+  `unsafe { … }` blocks across `latexml_post` and `latexml_oxide`
+  crates. Core still has `unsafe` in `arena.rs` (resolve_unchecked),
+  `store.rs`/`state.rs`/`error.rs` (Send/Sync impls) — those are
+  intentional internal invariants, not FFI.
 - [x] Migrate the remaining `libxml::bindings::*` callers to high-level
   `rust-libxml` methods; upstream new methods as needed.
   Landed round 17. Two wrappers pushed upstream to

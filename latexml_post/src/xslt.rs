@@ -12,13 +12,6 @@ use std::path::Path;
 use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
 
-// EXSLT registration — needed for str:tokenize, math:*, etc. used in LaTeXML stylesheets.
-// The rust-libxslt crate doesn't yet expose this.
-// TODO: Add exsltRegisterAll() to the rust-libxslt crate.
-extern "C" {
-  fn exsltRegisterAll();
-}
-
 /// Resource type information.
 struct ResourceInfo {
   extension: &'static str,
@@ -189,12 +182,10 @@ impl Processor for XSLT {
       }
     }
 
-    // Register EXSLT extension functions (str:tokenize, etc.)
-    // SAFETY: libxslt C function with no inputs; modifies global function
-    // registry. Safe to call multiple times (libxslt guards against this
-    // internally). Must be called before any xsltApplyStylesheet.
-    // TODO: Move to rust-libxslt crate (L3)
-    unsafe { exsltRegisterAll(); }
+    // Register EXSLT extension functions (str:tokenize, math:*, etc.)
+    // used by LaTeXML stylesheets. Safe-wrapped upstream in
+    // rust-libxslt — `register_exslt()` is Once-guarded.
+    libxslt::register_exslt();
 
     // Parse the stylesheet using the libxslt crate
     let mut stylesheet = libxslt::parser::parse_file(&stylesheet_path)

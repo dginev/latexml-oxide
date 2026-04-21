@@ -19,3 +19,4 @@ debug = true
 # Upstream when the wrappers have been reviewed.
 [patch.crates-io]
 libxml = { path = "../rust-libxml" }
+libxslt = { path = "../rust-libxslt" }
