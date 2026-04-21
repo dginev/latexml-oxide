@@ -235,6 +235,45 @@ Remaining semantic-ambiguity hotspots (see
 3. `FGHa` OPFUNCTION cascade — 87 / 9 unique (genuine math ambiguity)
 4. `a|a|+b|b|+c|c|` VERTBAR — 53 / 10 unique
 
+### Long-horizon — architectural rationalization
+
+- [ ] **Rationalize pragma / semantics / grammar categories from first
+  principles.** Observation from round 17: many of the recently-added
+  pragmas (ConsistentLetterBlocks, AdjacentNumbersDontMultiply,
+  FencedLettersAreFunctionArguments, HigherOrderInvisibleOpsAreExceptions,
+  FlattenSimpleInvisibleTimesChains, …) are downstream *guards* that
+  correct for grammar over-expression — they exist because the Marpa
+  grammar admits parses that would not even be theoretically
+  reachable under a better-factored categorical hierarchy of
+  mathematical notation. `xy` as "function application vs
+  multiplication of two bare letters", `(x)` as "fenced expression vs
+  single-arg call", `f × f` as a flat binary product etc. are not
+  genuine mathematical ambiguities — they are artefacts of conflating
+  role-bearing categories (operator, function, coefficient, variable)
+  at the same lexical surface.
+
+  Near-term (done): enable the pragmas that already encode the correct
+  preferences so the forest is narrowed before post-processing.
+
+  Long-term: sit down with `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md` and
+  redraw the boundary between (a) what the grammar produces, (b) what
+  semantic enrichment (role, fences, NUMBER/ID/OPERATOR distinctions)
+  adds, and (c) what pragmas legitimately prune. The goal is to push
+  work *earlier*: if a phenomenon can be made unreachable by a
+  sharper category (e.g. "bare letters cannot be operators unless
+  lexically marked as such"), the pragma that guards against it
+  becomes obsolete and can be deleted. Pragmas should only remain for
+  *genuine* semantic ambiguities that notation cannot disambiguate
+  — the four remaining hotspots listed above are candidates
+  (`\sin[XY]`, `tr ρ`, `FGHa`, `a|a|+b|b|+c|c|`).
+
+  Deliverable: a design doc (probably extending
+  `MATH_GRAMMAR_FIRST_PRINCIPLES.md`) that classifies every current
+  pragma into {obsolete under redesign, still needed for genuine
+  ambiguity, still needed as engineering compromise}, with a migration
+  plan for each. Not scheduled — tracked here so the categorical
+  rethink isn't forgotten when the near-term pragma list stabilises.
+
 ### Other structural follow-ups
 
 - [ ] **Dump Let-alias preservation.** Perl serialises
