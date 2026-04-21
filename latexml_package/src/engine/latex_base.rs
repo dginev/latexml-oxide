@@ -613,6 +613,13 @@ LoadDefinitions!({
   // latex_constructs.pool.ltxml L5765-5766. Relocated there 2026-04-18.
 
   // L3 hook stubs — Perl latex_base L829-855
+  // Perl L829: DefMacroI(T_CS('\hook_gput_code:nnn'), '{}{}{}', '');
+  // Use the `DefMacroI`-style branch (`$cs:expr, $parameters:literal,
+  // $expansion:literal`) via `T_CS!` so the CS name is built as a single
+  // pre-tokenized Token — bypassing the string-prototype tokenizer which
+  // would otherwise split on `_` (SUB) and `:` (OTHER) under default
+  // catcodes.
+  DefMacro!(T_CS!("\\hook_gput_code:nnn"), "{}{}{}", "");
   DefMacro!("\\NewHook{}", None);
   DefMacro!("\\NewReversedHook{}", None);
   DefMacro!("\\NewMirroredHookPair{}{}", None);

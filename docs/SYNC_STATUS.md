@@ -523,54 +523,46 @@ Remaining semantic-ambiguity hotspots (see
 
 ### Long-horizon — architectural rationalization
 
-- [ ] **l3hooks minimal native port** — first concrete target of
-  the kernel-first discipline. Primitives (all from lthooks.dtx /
-  LaTeX 2020+ kernel):
+- [x] **l3hooks — Perl-parity stub port** (round 17, landed
+  this session). Discovered: Perl LaTeXML's entire l3hooks support
+  is a block of **no-op stubs** in `latex_base.pool.ltxml` L829-855
+  that absorb expl3 hook-API syntax and expand to nothing. There is
+  no hook storage, no `\hook_use:n` dispatch, no ordering engine.
+  The prior SYNC_STATUS plan for a "minimal native port" with
+  `state::push_value` storage was **Rust-side speculation**, not
+  parity.
 
-  1. `\hook_new:n{name}` — declare a hook. Minimal form: no-op
-     (storage is created lazily when the first code is added).
-  2. `\hook_gput_code:nnn{name}{label}{code}` — append `code` to
-     the hook named `name`, tagged with `label`. Minimal form:
-     push `code` onto a state-level list keyed `@l3hook:{name}`,
-     ignore `label` (no ordering rules).
-  3. `\hook_use:n{name}` — digest the hook's stored code in
-     insertion order. Minimal form: `state::with_vecdeque` pattern
-     — iterate tokens, digest each.
-  4. `\hook_if_exist:nTF{name}{true}{false}` — conditional on the
-     existence of any code for `name`.
+  Landed (Perl-parity):
+  1. Added `\hook_gput_code:nnn{}{}{}` as a no-op `DefMacro!` in
+     `latex_base.rs` (Perl L829, was missing). This was the one
+     true gap in our hook stub block. Used the `DefMacroI`-style
+     branch `DefMacro!(T_CS!("\\hook_gput_code:nnn"), "{}{}{}", "")`
+     so the CS name is pre-tokenized as one unit — the string-
+     prototype branch would otherwise split on `:` (OTHER) and `_`
+     (SUB) under default catcodes and produce `\hook` + garbage.
 
-  **Storage model**: follow the existing `@at@begin@document`
-  pattern (see `latex_constructs.rs` L2448-2503) — use
-  `state::push_value("@l3hook:{name}", ...)`, dual-purpose keyed
-  so that the existing `\AtBeginDocument` path (which reads
-  `@at@begin@document` directly) can coexist with the hook path.
+  **Gate kept (pragmatic deviation, not removed)**: the
+  `latex_constructs.rs:2501` `\hook_use:n{begindocument}` dispatch
+  is a Rust-only compensator for a different deviation — our raw
+  `expl3-code.tex` load path (active when the dump doesn't short-
+  circuit it) really does define `\hook_use:n` and enqueues hook
+  code against it. Perl doesn't load that file, so doesn't need
+  the dispatch. We keep the gate with a comment noting the
+  deviation; removing it would silently regress the raw-load path.
 
-  **New file**: `latexml_package/src/engine/latex_lthooks.rs`,
-  wired into `engine.rs` alongside `latex_base.rs`. Loaded from
-  `latex.rs` after `latex_base` and before `latex_dump`.
+  Canary: `83_expl3` passes 2/2 in 0.00s. Full
+  `cargo test --release --tests` reports **1098 passed, 0 failed,
+  0 ignored** across 44 binaries.
 
-  **Test**: a new `tests/latex/lthooks.tex` regression fixture
-  that round-trips `\hook_new:n` + `\hook_gput_code:nnn` +
-  `\hook_use:n`, plus the existing `83_expl3` canary.
+  **Load-bearing consequence for the dumper staircase**: with the
+  `\hook_gput_code:nnn` no-op stub in place, PA/MPA/E records in
+  the dump whose bodies reference it now resolve cleanly (arg-
+  swallow) instead of undefined-CS'ing. Retrying the dumper
+  step-4/5 widening with this stub in place is the next diagnostic
+  action.
 
-  **Impact on dumper widening**: with `\hook_*:n` defined natively,
-  the dumper staircase can retry step 4 (1-CS body) and step 5
-  (whole-E) — the dominant cascade trigger (bodies calling
-  `\__hook_code_gset_aux:nnn`) will then resolve to the native
-  primitive instead of an undefined-CS error. That's the empirical
-  test of whether hooks alone are the bottleneck or other kernel
-  families (e.g. `\exp_args:N*`, `\__cmd_*`) also need porting.
-
-  Acceptance:
-  1. New lthooks.rs file + engine wiring landed.
-  2. 83_expl3 still passes (no regression).
-  3. `lookup_definition(&T_CS!("\\hook_use:n")).is_some()` returns
-     true after latex engine setup, so the
-     `latex_constructs.rs:2501` gate fires `\hook_use:n{begindocument}`
-     for modern LaTeX docs.
-  4. A widening retry of step 5 shows the 83_expl3 failure time
-     reduce or the error count change — proving the hook port
-     moved the needle (even if the canary still fails overall).
+  See also: "Future-facing / not-wired" section below for the
+  native-storage port that was deferred.
 
 - [ ] **Kernel-first discipline for dumper widening** (user directive,
   round 17). Cross-links the dumper audit and the expl3 kernel
@@ -592,7 +584,9 @@ Remaining semantic-ambiguity hotspots (see
   records whose bodies call primitives the engine doesn't execute.
 
   Immediate primitive candidates from step 4/5 body analysis:
-  - `\hook_gput_code:nnn`, `\hook_use:n`, `\hook_new:n` (l3hooks)
+  - ~~`\hook_*:n` family~~ — **resolved via Perl-parity stubs**,
+    see the completed l3hooks entry above. Not a native port;
+    Perl itself doesn't emulate hook storage.
   - `\group_begin:`, `\group_end:` (already aliased to
     `\begingroup`/`\endgroup` via PA, but blocked from the dump
     under the `:`-key gate — see the "Known antipattern" below
@@ -602,10 +596,12 @@ Remaining semantic-ambiguity hotspots (see
   - `\cs_new_eq:NN`, `\cs_gset_protected:Npn`, etc. (cs-aliasing
     and definition primitives)
 
-  Targeted port suggestion: start with the `\hook_*` family (the
-  l3hooks package) — it's small, self-contained, and blocks the
-  largest downstream cohort (anything that uses
-  `\__hook_code_gset:nn` / `\__hook_use:*` in its body).
+  Targeted port suggestion: after the hook-stub parity fix, retry
+  the step-4/5 widening to re-profile which primitive family now
+  dominates the cascade. The hook fix is expected to unblock a
+  large fraction of PA/MPA records whose bodies called
+  `\hook_gput_code:nnn`; what remains should point to the next
+  family to port.
 
 - [ ] **Dump writer ↔ reader simplicity audit** (user directive,
   round 17). Separate question from widening: are both the Rust
@@ -858,6 +854,46 @@ Remaining semantic-ambiguity hotspots (see
   `latex_constructs.rs`. Proper fix: new `L <cs> <target>` record type
   with a narrow loader gate. Would recover `\filecontents`, `\fbox`,
   `\itshape`, `\ae`, `\shipout`, etc. wholesale.
+
+### Future-facing / not-wired exploration
+
+The following designs are **intentionally kept out of the active
+engine wiring** — they describe beyond-Perl directions worth
+revisiting once the parity baseline is cleaner. Not loaded, not
+referenced by any compiled code path.
+
+- [ ] **Native l3hook storage** (post-parity beyond-Perl direction).
+  Perl's bindings handle l3hooks as no-op stubs (see the completed
+  "l3hooks — Perl-parity stub port" entry above). A richer Rust
+  implementation would actually store hook code per name, fire it at
+  `\hook_use:n{…}`, and let `\AtBeginDocument` / `\AtEndDocument` /
+  `\AtBeginEnvironment` route through it. Sketch:
+
+  1. `\hook_new:n{name}` — declare a hook (lazy: first `gput` creates).
+  2. `\hook_gput_code:nnn{name}{label}{code}` — `state::push_value("@l3hook:{name}", code)`.
+  3. `\hook_use:n{name}` — `state::with_vecdeque` + digest each.
+  4. `\hook_if_exist:nTF{name}{T}{F}`.
+  5. Parallel: `\AddToHook` → maps to `\hook_gput_code:nnn`, etc.
+
+  **Why not now**: Perl doesn't do this, so adopting it inside the
+  core engine risks divergent render output whenever a package
+  registers code into a hook that Perl silently drops. Any pursuit
+  should be behind a feature flag (e.g. `LATEXML_OXIDE_L3_HOOKS`)
+  and validated with a dedicated test corpus, not the parity test
+  suite.
+
+  **Placement when pursued**: a new standalone crate or a
+  `latexml_package/src/engine/latex_lthooks.rs` module behind a
+  `#[cfg(feature = "l3hooks")]` flag. Engine wiring must NOT be
+  added to the default path.
+
+  **Prerequisites before any of this is reasonable**:
+  - Dumper staircase complete / dump_reader simplified (this
+    unblocks the ambient test surface).
+  - A purpose-built hook test corpus with Perl/Rust A/B parity to
+    show the cases where "store and fire" changes output vs
+    "silently drop" — and confirm the changes are always
+    improvements, never regressions.
 
 ---
 
