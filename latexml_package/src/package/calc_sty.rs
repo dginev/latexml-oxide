@@ -111,6 +111,123 @@ fn apply_float_op(val: &RegisterValue, op: &str, f: f64) -> RegisterValue {
   }
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use latexml_core::common::glue::Glue;
+  use latexml_core::common::numeric_ops::NumericOps;
+
+  #[test]
+  fn apply_float_op_number_multiply() {
+    let n = RegisterValue::Number(Number::new(10));
+    let result = apply_float_op(&n, "*", 2.5);
+    match result {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 25),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_number_divide() {
+    let n = RegisterValue::Number(Number::new(100));
+    let result = apply_float_op(&n, "/", 4.0);
+    match result {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 25),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_divide_by_zero_is_identity_divisor() {
+    // Guard: division by zero uses divisor=1 → returns the original value.
+    let n = RegisterValue::Number(Number::new(42));
+    let result = apply_float_op(&n, "/", 0.0);
+    match result {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 42),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_dimension_multiply() {
+    let d = RegisterValue::Dimension(Dimension::new(1000));
+    let result = apply_float_op(&d, "*", 0.5);
+    match result {
+      RegisterValue::Dimension(v) => assert_eq!(v.value_of(), 500),
+      other => panic!("expected Dimension, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_glue_multiply_scales_all_components() {
+    let g = RegisterValue::Glue(Glue {
+      skip:  100,
+      plus:  Some(10),
+      pfill: None,
+      minus: Some(5),
+      mfill: None,
+    });
+    let result = apply_float_op(&g, "*", 3.0);
+    match result {
+      RegisterValue::Glue(v) => {
+        assert_eq!(v.skip, 300);
+        assert_eq!(v.plus, Some(30));
+        assert_eq!(v.minus, Some(15));
+      },
+      other => panic!("expected Glue, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_glue_divide_scales_all_components() {
+    let g = RegisterValue::Glue(Glue {
+      skip:  600,
+      plus:  Some(60),
+      pfill: None,
+      minus: Some(30),
+      mfill: None,
+    });
+    let result = apply_float_op(&g, "/", 2.0);
+    match result {
+      RegisterValue::Glue(v) => {
+        assert_eq!(v.skip, 300);
+        assert_eq!(v.plus, Some(30));
+        assert_eq!(v.minus, Some(15));
+      },
+      other => panic!("expected Glue, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_glue_preserves_none_components() {
+    let g = RegisterValue::Glue(Glue {
+      skip:  100,
+      plus:  None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    });
+    let result = apply_float_op(&g, "*", 2.0);
+    match result {
+      RegisterValue::Glue(v) => {
+        assert_eq!(v.skip, 200);
+        assert!(v.plus.is_none());
+        assert!(v.minus.is_none());
+      },
+      other => panic!("expected Glue, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_unsupported_variant_is_identity() {
+    // Anything not Number / Dimension / Glue hits the `_ => val.clone()` arm.
+    let muglue = RegisterValue::MuGlue(Default::default());
+    let result = apply_float_op(&muglue, "*", 3.14);
+    // Muglue clones through untouched.
+    assert_eq!(result, muglue);
+  }
+}
+
 fn read_value(expr_type: &str) -> Result<CalcValue> {
   gullet::skip_spaces()?;
   let peek = gullet::read_x_token(None, false, None)?;
