@@ -129,6 +129,28 @@ vendor-patch/upstream. Current direct `libxml::bindings::*` call sites:
   1007.2309 / 1108.3241 / 1204.5278 all converge now. Lower-priority
   follow-up: identify the semantic cause of high `"text"`-node ref counts
   on dcpic diagrams (2000–8000 range).
+- [ ] **1605.08055 Finalizing-phase SIGSEGV** — 169 math formulae
+  parse cleanly, then SIGSEGV during `document.finalize()` (which runs
+  `prune_xmduals` + `finalize_rec`). Repro: 1.9 s wall from
+  `cortex_worker --standalone` or direct `latexml_oxide`; no Rust
+  backtrace (RUST_BACKTRACE=full shows none), so the crash is in
+  libxml2 C during a node-manipulation call. Likely another
+  XMDual-collapse UAF adjacent to the session-127 `replace_node`
+  text-merge fix. The only remaining exit=139 in the 7898-paper
+  sandbox re-sweep.
+
+### Dump — deferred alias retry (session 128)
+
+- [ ] `\a → \@tabacckludge` — still hand-written `Let!` in
+  `latex_constructs.rs`. The dump serializer captured `\a` as an
+  Expandable `E` record (with `\@changed@cmd`-wrapped body), not a
+  PA let-alias, so the deferred-alias retry pass added in
+  `91c82d5a4` doesn't help. Either (a) teach the serializer to
+  detect "let-aliases preserved under _constructs" and emit them as
+  PA records, or (b) widen the outer M-gate to admit E records whose
+  body is a specific safe `\@changed@cmd` pattern. Deferred for now
+  — the hand-written `Let!` mirrors latex.ltx L10007 exactly and
+  has no behavioral downside.
 
 ### D4. Performance — parallel scaling & allocations
 
