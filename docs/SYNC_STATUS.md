@@ -86,6 +86,25 @@ Three failure classes in the session-128 7933-paper sweep, after the
    also loads the raw TeX (via `InputDefinitions('pgfkeys.code', type=>'tex')`)
    but succeeds — divergence is in how our raw-TeX processor handles
    specific pgfkeys idioms, not a simple stub gap.
+
+   Round-17 diagnosis on 1611.04489: the conversion logs
+   `Error:unexpected:pgfmath.code.tex` / `pgfmath.sty` / `tikz.sty`
+   each failing with "Too many errors (> 1000)", and final "Conversion
+   complete" reports 91 undefined macros dominated by `\pgfkeys@*`
+   (`\pgfkeys`, `\pgfqkeys`, `\pgfkeys@try`, `\pgfkeys@stop`,
+   `\pgfkeyscurrentname`, `\pgfkeysdefargs`, …) and `\pgfmath@*`
+   internals. **Key observation**: Perl's
+   `pgfkeys.code.tex.ltxml` is 544 lines but its `__END__` pod marker
+   sits at line 33 — everything below is dead code. Perl therefore
+   does the same thing we do: pure `InputDefinitions('pgfkeys.code',
+   type => 'tex', noltxml => 1)` with no Rust-side fast-path
+   bindings. That means the divergence is **purely in the raw-TeX
+   reader's handling of pgfkeys idioms** — classic candidates:
+   `\pgfkeys@ifdef`, `\pgfkeys@remove@@@` path processing,
+   `\ifpgfkeys@deferred` conditionals, active-character tricks for
+   path separators. Needs a focused step-through comparing Rust vs
+   Perl `mouth`-level traces on the first diverging CS definition,
+   not a broad audit.
 2. **Math-parser pathological-ambiguity timeouts** — 2+ papers
    (1403.4135, 1407.5769). 500+-token formulas with 121 parse choices
    each, ~500ms per formula × hundreds of formulas = 60s timeout.
@@ -292,7 +311,24 @@ round 17 commit (see below).
 76.8s (29% per-worker efficiency). 14-core/20-thread machine. Peak RSS
 570 MB/process.
 
-- [ ] Audit `.to_string()` (~1900 sites) — replace with `&str` / interned symbols where the value goes into `HashMap<String,String>`.
+- [~] Audit `.to_string()` (~1900 sites) — replace with `&str` /
+  interned symbols where the value goes into `HashMap<String,String>`.
+  **61 sites converted round 17** (commits `741809e6e` through
+  `7a5433cd4`), across 21 files spanning core, math parser, package
+  engine, and individual packages (amsmath, xcolor, listings,
+  enumitem, thmtools, xy, pgfsys, amscd, hyperref, fontenc, etc.).
+  Key tooling added to the core:
+  - `Tokens::eq_text` / `Tokens::starts_with_text`
+  - `ArgWrap::eq_text` / `ArgWrap::starts_with_text`
+  - `Stored::eq_text` / `Stored::starts_with_text` / `Stored::ends_with_text`
+  - `state::graphics_paths_contains` (zero-alloc membership)
+  Measured payoff (PERFORMANCE.md round-17 second refresh):
+  complex/si.tex −9%, several Tier A papers −2-7%, others flat.
+  Remaining sites are dominated by `Vec<String>` collections, format!
+  results, and other legitimate owned-allocations. Further cleanup
+  should be callgrind-guided, not blanket. **Pivoting** — next
+  perf work should target Stored-enum rationalisation (separate
+  long-horizon task) or Tokens deep-copy reduction.
 - [ ] Audit `String::from("...")` literals for interned conversions.
 - [ ] Replace `HashMap<String,String>` with `SymHashMap<SymStr>` in hot paths.
 - [~] Audit `.clone()` in `document.rs` (~73), `latex_constructs.rs` (~73), `font.rs` (~39).
