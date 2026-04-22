@@ -362,8 +362,15 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       }
     } else if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
       if let Some(next_tok) = gullet::read_token()? {
-        let next_key = next_tok.with_str(|s| s.trim_end().to_string());
-        if lookup_mapping("text_case_exclude", &next_key).is_some() {
+        // Perl: $cs->getString (full CS name). Munged-robust CSes carry a
+        // trailing space — canonicalise to NO trailing space for the
+        // exclude lookup (matches \AddToNoCaseChangeList storage format),
+        // and to "CS + trailing space" for the case-mapping lookup
+        // (matches `\lx@prepare@case@mapping` storage format, which is
+        // `$lower->getString . ' '` in Perl).
+        let next_key_bare = next_tok.with_str(|s| s.trim_end().to_string());
+        let next_key_case = format!("{} ", next_key_bare);
+        if lookup_mapping("text_case_exclude", &next_key_bare).is_some() {
           let opt = gullet::read_optional(None)?;
           let arg = gullet::read_arg(ExpansionLevel::Off)?;
           result.push(tok);
@@ -383,7 +390,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           } else {
             "text_lowercase"
           },
-          &next_key,
+          &next_key_case,
         ) {
           if let Stored::Token(changed_tok) = changed {
             result.push(changed_tok);
@@ -5432,50 +5439,31 @@ LoadDefinitions!({
   DefPrimitive!("\\tencirc", None, font => { family => "lcircle10" });
   DefPrimitive!("\\tencircw", None, font => { family => "lcirclew10" });
 
-  // At least all things on uclclist need to be macros
-  DefMacro!("\\lx@utf@OE", None, "\u{0152}", alias => "\\OE"); // LATIN CAPITAL LIGATURE OE
-  DefMacro!("\\lx@utf@oe", None, "\u{0153}", alias => "\\oe"); // LATIN SMALL LIGATURE OE
-  DefMacro!("\\lx@utf@AE", None, "\u{00C6}", alias => "\\AE"); // LATIN CAPITAL LETTER AE
-  DefMacro!("\\lx@utf@ae", None, "\u{00E6}", alias => "\\ae"); // LATIN SMALL LETTER AE
-
-  // LATIN CAPITAL LETTER A WITH RING ABOVE
-  DefMacro!("\\lx@utf@AA", None, "\u{00C5}", alias => "\\AA");
-
-  // LATIN SMALL LETTER A WITH RING ABOVE
-  DefMacro!("\\lx@utf@aa", None, "\u{00E5}", alias => "\\aa");
-  DefMacro!("\\lx@utf@O",  None, "\u{00D8}", alias => "\\O"); // LATIN CAPITAL LETTER O WITH STROKE
-  DefMacro!("\\lx@utf@o",  None, "\u{00F8}", alias => "\\o"); // LATIN SMALL LETTER O WITH STROKE
-  DefMacro!("\\lx@utf@L",  None, "\u{0141}", alias => "\\L"); // LATIN CAPITAL LETTER L WITH STROKE
-  DefMacro!("\\lx@utf@l",  None, "\u{0142}", alias => "\\l"); // LATIN SMALL LETTER L WITH STROKE
-  DefMacro!("\\lx@utf@ss", None, "\u{00DF}", alias => "\\ss"); // LATIN SMALL LETTER SHARP S
-  DefMacro!("\\lx@utf@dh", None, "\u{00f0}", alias => "\\dh"); // eth
-  DefMacro!("\\lx@utf@DH", None, "\u{00d0}", alias => "\\DH"); // Eth (looks same as \DJ!)
-  DefMacro!("\\lx@utf@dj", None, "\u{0111}", alias => "\\dj"); // d with stroke
-  DefMacro!("\\lx@utf@DJ", None, "\u{0110}", alias => "\\DJ"); // D with stroke (looks sames as \DH!)
-  DefMacro!("\\lx@utf@ng", None, "\u{014B}", alias => "\\ng");
-  DefMacro!("\\lx@utf@NG", None, "\u{014A}", alias => "\\NG");
-  DefMacro!("\\lx@utf@th", None, "\u{00FE}", alias => "\\th");
-  DefMacro!("\\lx@utf@TH", None, "\u{00DE}", alias => "\\TH");
-  DefMacro!("\\OE", None, "\\lx@utf@OE");
-  DefMacro!("\\oe", None, "\\lx@utf@oe");
-  DefMacro!("\\AE", None, "\\lx@utf@AE");
-  DefMacro!("\\ae", None, "\\lx@utf@ae");
-  DefMacro!("\\ae", None, "\\lx@utf@ae");
-  DefMacro!("\\AA", None, "\\lx@utf@AA");
-  DefMacro!("\\aa", None, "\\lx@utf@aa");
-  DefMacro!("\\O", None, "\\lx@utf@O");
-  DefMacro!("\\o", None, "\\lx@utf@o");
-  DefMacro!("\\L", None, "\\lx@utf@L");
-  DefMacro!("\\l", None, "\\lx@utf@l");
-  DefMacro!("\\ss", None, "\\lx@utf@ss");
-  DefMacro!("\\dh", None, "\\lx@utf@dh"); // in latex?
-  DefMacro!("\\DH", None, "\\lx@utf@DH");
-  DefMacro!("\\dj", None, "\\lx@utf@dj");
-  DefMacro!("\\DJ", None, "\\lx@utf@DJ");
-  DefMacro!("\\ng", None, "\\lx@utf@ng");
-  DefMacro!("\\NG", None, "\\lx@utf@NG");
-  DefMacro!("\\th", None, "\\lx@utf@th");
-  DefMacro!("\\TH", None, "\\lx@utf@TH");
+  // Perl latex_constructs.pool.ltxml L2814-2832: uclclist members are
+  // DefPrimitiveI(..., robust=>1) — Expandable wrapper expanding to
+  // `\protect <cs-munged>` (Rust `def_robust_cs`), with the munged CS
+  // as the primitive emitting the Unicode char. `\MakeUppercase`'s
+  // case-mapping pipeline reads `\protect <cs>` pairs; see
+  // `lx_read_and_change_case` protect-branch + `\lx@prepare@case@mapping`.
+  DefPrimitive!("\\OE", "\u{0152}", robust => true); // LATIN CAPITAL LIGATURE OE
+  DefPrimitive!("\\oe", "\u{0153}", robust => true); // LATIN SMALL LIGATURE OE
+  DefPrimitive!("\\AE", "\u{00C6}", robust => true); // LATIN CAPITAL LETTER AE
+  DefPrimitive!("\\ae", "\u{00E6}", robust => true); // LATIN SMALL LETTER AE
+  DefPrimitive!("\\AA", "\u{00C5}", robust => true); // LATIN CAPITAL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\aa", "\u{00E5}", robust => true); // LATIN SMALL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\O",  "\u{00D8}", robust => true); // LATIN CAPITAL LETTER O WITH STROKE
+  DefPrimitive!("\\o",  "\u{00F8}", robust => true); // LATIN SMALL LETTER O WITH STROKE
+  DefPrimitive!("\\L",  "\u{0141}", robust => true); // LATIN CAPITAL LETTER L WITH STROKE
+  DefPrimitive!("\\l",  "\u{0142}", robust => true); // LATIN SMALL LETTER L WITH STROKE
+  DefPrimitive!("\\ss", "\u{00DF}", robust => true); // LATIN SMALL LETTER SHARP S
+  DefPrimitive!("\\dh", "\u{00F0}", robust => true); // eth
+  DefPrimitive!("\\DH", "\u{00D0}", robust => true); // Eth (looks same as \DJ!)
+  DefPrimitive!("\\dj", "\u{0111}", robust => true); // d with stroke
+  DefPrimitive!("\\DJ", "\u{0110}", robust => true); // D with stroke (looks same as \DH!)
+  DefPrimitive!("\\ng", "\u{014B}", robust => true);
+  DefPrimitive!("\\NG", "\u{014A}", robust => true);
+  DefPrimitive!("\\th", "\u{00FE}", robust => true);
+  DefPrimitive!("\\TH", "\u{00DE}", robust => true);
 
 
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
@@ -7651,10 +7639,31 @@ LoadDefinitions!({
   DefRegister!("\\@halfwidth" => Dimension!("0.2pt"));
 
   // \thinlines / \thicklines — set \@wholewidth register
-  DefMacro!("\\thinlines", "\\@wholewidth 0.4pt\\relax");
-  DefMacro!("\\thicklines", "\\@wholewidth 0.8pt\\relax");
+  // Perl L4928-4929: DefPrimitiveI — assigns \@wholewidth register directly at
+  // stomach level (not via TeX-level expansion). Faithful port.
+  DefPrimitive!("\\thinlines", {
+    state::assign_register(
+      "\\@wholewidth",
+      latexml_core::definition::register::RegisterValue::Dimension(Dimension!("0.4pt")),
+      None,
+      vec![],
+    )?;
+  });
+  DefPrimitive!("\\thicklines", {
+    state::assign_register(
+      "\\@wholewidth",
+      latexml_core::definition::register::RegisterValue::Dimension(Dimension!("0.8pt")),
+      None,
+      vec![],
+    )?;
+  });
   DefMacro!("\\linethickness{}", "\\@wholewidth #1\\relax");
-  DefMacro!("\\arrowlength{}", None);
+  // Perl L4933: DefPrimitive('\arrowlength{Dimension}', sub { AssignValue('arrowlength', $_[1]); });
+  // Stores the dimension under state key `arrowlength` for later lookup
+  // by the picture drawing routines (see Perl L4978-4979).
+  DefPrimitive!("\\arrowlength {Dimension}", sub[(length)] {
+    state::assign_value("arrowlength", Stored::Dimension(length), None);
+  });
   DefMacro!("\\qbeziermax", "500");
   // Perl: \bezier — LaTeX 2.09 compat alias for \qbezier with different syntax
   DefMacro!("\\bezier Until:(", "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi");
@@ -8532,8 +8541,22 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@prepare@case@mapping", {
     assign_mapping("text_uppercase", "\\i ", Some(T_LETTER!("I")));
     assign_mapping("text_uppercase", "\\j ", Some(T_LETTER!("J")));
-    let pairs_tokens = Expand!(Tokens!(T_CS!("\\@uclclist")));
-    let pairs: Vec<Token> = pairs_tokens.unlist();
+    // Perl (latex_constructs.pool L5546-5550):
+    //   my @pairs = $STATE->lookupDefinition(T_CS('\@uclclist'))
+    //                     ->getExpansion->unlist;
+    // — reads the RAW expansion body, NOT further expanded. Critical when
+    // the pair members (\ae, \oe, ...) are robust-wrapped: deep-expanding
+    // would unfold each to `\protect <cs-munged>`, shifting pair indices
+    // and mis-registering the case mapping.
+    let pairs: Vec<Token> = match lookup_definition_stored(&T_CS!("\\@uclclist"))? {
+      Some(Stored::Expandable(exp)) => match exp.get_expansion() {
+        Some(latexml_core::definition::ExpansionBody::Tokens(tks)) => {
+          tks.clone().unlist()
+        },
+        _ => Vec::new(),
+      },
+      _ => Vec::new(),
+    };
     let mut i = 0;
     while i + 1 < pairs.len() {
       let lower = pairs[i];
@@ -8756,7 +8779,8 @@ LoadDefinitions!({
   );
 
   // Sundry
-  DefMacro!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
+  // Perl latex_constructs.pool L5771: DefPrimitiveI('\textprime', undef, UTF(0xB4))
+  DefPrimitive!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
   DefMacro!("\\fileversion", "");

@@ -23,10 +23,12 @@ LoadDefinitions!({
 
   //======================================================================
   // Perl: plain_bootstrap.pool.ltxml L37-40
-  // Use LaTeXML's conditional machinery
-  DefMacro!("\\newif DefToken", sub[(cs)] {
-    def_conditional(cs, None, None, ConditionalOptions::default())
-  });
+  //   DefPrimitive('\newif DefToken', sub { DefConditionalI($cs, undef); }, locked => 1);
+  // Use LaTeXML's conditional machinery. State side-effect → DefPrimitive
+  // (stomach level), not DefMacro (expansion level).
+  DefPrimitive!("\\newif DefToken", sub[(cs)] {
+    def_conditional(cs, None, None, ConditionalOptions::default())?;
+  }, locked => true);
 
   //======================================================================
   // Perl: plain_bootstrap.pool.ltxml L43
