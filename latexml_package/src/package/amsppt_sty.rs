@@ -74,7 +74,27 @@ LoadDefinitions!({
   // Section structure — Perl L170-200
   DefMacro!("\\heading", "\\section*");
   DefMacro!("\\endheading", "");
-  DefMacro!("\\subheading", "\\subsection*");
+  // Perl amsppt.sty.ltxml L133-141: \subheading dispatches on next token.
+  // `\subheading{title}` → \subheading@onearg{title}
+  // `\subheading title \endsubheading` → \subheading@env (Until:\endsubheading)
+  // Both helpers expand to `\subhead{title}\endsubhead` in Perl; Rust lacks
+  // a separate \subhead binding, so route both through `\subsection*{title}`
+  // (the existing Rust target). `locked=>true` matches Perl L138 — guards
+  // against downstream \renewcommand resetting the dispatch.
+  DefMacro!("\\subheading", sub[_args] {
+    let next = gullet::read_token()?;
+    if let Some(t) = next {
+      gullet::unread(Tokens!(t.clone()));
+      if t.get_catcode() == Catcode::BEGIN {
+        return Ok(Tokens!(T_CS!("\\subheading@onearg")));
+      }
+    }
+    Ok(Tokens!(T_CS!("\\subheading@env")))
+  }, locked => true);
+  DefMacro!("\\subheading@onearg{}", "\\subsection*{#1}");
+  DefMacro!("\\subheading@env Until:\\endsubheading", "\\subsection*{#1}");
+  // Kept defined as a no-op for stray-use safety; \subheading@env consumes
+  // the trailing \endsubheading inline so this binding usually doesn't fire.
   DefMacro!("\\endsubheading", "");
   DefMacro!("\\specialhead", "\\section*");
   DefMacro!("\\endspecialhead", "");
