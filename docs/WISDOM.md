@@ -1038,215 +1038,115 @@ applies to any package binding where the audit shows `Perl=DefMacroI
 
 ## 41. Math-mode Def*-kind mismatches are usually structural, not parity bugs
 
-**Context:** The Def*-parity audit (`tools/audit_def_parity.py`) flags
-several math-mode CSes where Perl's kind differs from Rust's:
+**Context.** The Def*-parity audit (`tools/audit_def_parity.py`) flags
+math-mode CSes whose Rust kind differs from Perl's. Most are structural
+adaptations for missing Rust ParameterTypes, not parity bugs.
 
-| CS | Perl | Rust | What's actually going on |
-|----|------|------|--------------------------|
-| `\mathchar` | `DefPrimitive('\mathchar Number', sub { … decodeMathChar … Box(…) })` | `DefConstructor("\\mathchar Number", "<ltx:XMTok …>#glyph</ltx:XMTok>", after_digest => …)` | Rust emits `<ltx:XMTok>` directly at construction time via the template; Perl emits a Box carrying role/meaning/glyph properties that the post-processor promotes to XMTok. Rust is more direct. |
-| `\left` | `DefConstructor('\left TeXDelimiter', "#1", afterDigest, afterConstruct)` | `DefMacro!("\\left XToken", sub { … if delim == "\\delimiter" { decode_math_char … unread tokens } … })` | Perl's `TeXDelimiter` parameter type auto-invokes the delimiter token. Rust doesn't have a `TeXDelimiter` parameter type yet, so it reads as `XToken` and manually handles the `\delimiter<Number>` subcase via explicit decoding in the macro body. |
-| `\lx@right` | (same as `\left`, DefConstructor + TeXDelimiter) | same structural adaptation as `\left` | Ditto. |
+**The four intentional/blocked cases:**
+
+| CS | Perl | Rust | Root cause |
+|----|------|------|------------|
+| `\mathchar` | `DefPrimitive('\mathchar Number', …decodeMathChar…Box)` | `DefConstructor("\\mathchar Number", "<ltx:XMTok …>", after_digest => …)` | Rust emits `<ltx:XMTok>` directly; Perl emits a Box the post-processor promotes. Rust is the more precise shape — kind-flip would regress output. |
+| `\left` / `\lx@right` | `DefConstructor('\left TeXDelimiter', "#1", …)` | `DefMacro!("\\left XToken", sub { …manual \delimiter<Number> handling… })` | Rust's `TeXDelimiter` ParameterType is incomplete — see detailed plan below. Current DefMacro workaround at `tex_math.rs:836` peels `\delimiter` + reads number + decodes glyph manually. |
+| picture primitives (`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier`) | `DefPrimitive('\\line Pair:Number {Float}', …)` | `DefMacro!` unpacking `Match:( Until:, Until:) {Float}` into 3 args + forwarding to `\lx@pic@XXX{}{}{}` DefConstructor | Rust lacks `Pair:Number` as a ParameterType. Same functional parity, different factoring. |
+| amsmath `\aligned` / `\alignedat` | `DefConstructor('\aligned alignsafeOptional {}', …)` | `DefPrimitive!` with explicit `local_align_group_count(1000000)` + manual `gullet::read_optional` + unread | Rust lacks `alignsafeOptional`. Plain `[]` would trip handle_template's `&`-interception inside nested alignments. See `amsmath_sty.rs:1168`. |
 
 **Wisdom:** do NOT flip these to Perl-matching kinds naively. Each is
-load-bearing:
-- `\mathchar` — kind-flip loses direct XMTok emission; reverts to
-  Box-then-promote model which depends on post-processor symmetry with
-  Perl that isn't guaranteed.
-- `\left` / `\lx@right` — kind-flip requires a **`TeXDelimiter`
-  parameter type port** as prerequisite. Without that, the DefConstructor
-  form can't be expressed in Rust.
+load-bearing. The proper path to parity for any of them goes through
+porting the missing ParameterType first, then migrating the call sites.
 
-**Proper path to parity** (per CS):
-- `\mathchar`: either (a) document as intentional-divergence Rust improvement
-  and close the audit entry, or (b) rework Rust's math parser / post-processor
-  to match Perl's Box-promotion exactly, then flip the kind.
-- `\left`/`\lx@right`: port `TeXDelimiter` as a ParameterType first.
+### ParameterType port candidates (ROI-ordered)
 
-**Same split pattern also applies to the LaTeX picture primitives**
-(`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier`). Perl's
-`Pair:Number` parameter type reads two `(x,y)`-style coordinate pairs
-as a single argument; Rust doesn't have `Pair:Number` as a
-ParameterType either. The Rust port splits each primitive into a
-top-level DefMacro that unpacks `Match:( Until:, Until:) {Float}` into
-three primitive arguments and forwards to a helper
-`\lx@pic@XXX{}{}{}` DefConstructor that does the actual SVG emission.
-Same functional parity, different factoring. The audit flags the
-top-level DefMacro kind but misses the dispatch chain.
-
-**And to amsmath `\aligned` / `\alignedat`.** Perl uses
-`alignsafeOptional` parameter type that reads `[t]/[b]` while being
-safe against alignment-character (`&`) interception inside nested
-`\begin{aligned}` / `\begin{align}` contexts. Rust lacks
-`alignsafeOptional`; plain `[]` would trip handle_template's
-`&`-interception. Workaround: DefPrimitive with explicit
-`local_align_group_count(1000000)` + manual `gullet::read_optional`
-+ `expire_align_group_count` + token-unread. See comment block at
-`amsmath_sty.rs:1168`. Audit flags `DefMacro↔DefPrimitive`; root
-cause is again missing ParameterType.
-
-**Candidates for a future ParameterType port** that would collapse
-the cluster back to audit-clean DefMacro/DefConstructor forms:
-`TeXDelimiter`, `Pair:Number`, `alignsafeOptional`. Each is a
-bounded infrastructure investment; any single one would eliminate
-~2-5 DP audit entries while simplifying the binding code.
-
-**ROI quantification (verified 2026-04-22):** Perl's `Engine/` alone
-has **23 call sites** using these three ParameterTypes combined
+Engine/ alone has **23 call sites** using these three ParameterTypes
 (grep `Pair:Number|PairList|TeXDelimiter|alignsafeOptional`). Package
-bindings add more (revsymb 8, amsmath 2, picture 5, etc.). Rough
-priority ordering:
-- **TeXDelimiter** — tex_math `\left`/`\lx@right` (2) + revsymb
-  `\biglb`/`\bigrb`/`\Biglb`/etc. (8) + others = **10+ entries**.
-  Highest ROI.
-- **Pair:Number** (+ `PairList`) — picture primitives `\line`/
-  `\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier` (5) + engine call
-  sites = ~5-10 entries. Medium ROI.
-- **alignsafeOptional** — amsmath `\aligned`/`\alignedat` (2) +
-  possibly others = **2-4 entries**. Lowest ROI but also simplest
-  to port (just reads `[…]` with alignment-safe wrapping).
+bindings add more.
 
-The port itself involves adding a `DefParameterType!(<Name>, sub {…})`
-entry in `base_parameter_types.rs` that reads + digests the argument
-per Perl's implementation. Each port simultaneously simplifies the
-affected binding files (replacing DefMacro+DefPrimitive chains with
-single DefConstructor calls) and cleans the DP audit.
+- **TeXDelimiter** — 10+ entries (tex_math `\left`/`\lx@right` 2,
+  revsymb `\biglb`/`\bigrb`/`\Biglb`/… 8, plus others). Highest ROI.
+  Already partially exists at `base_parameter_types.rs:693` (per Perl
+  PR#2596) — enhancement needed, not new port. Plan below.
+- **Pair:Number** (+ `PairList`) — 5-10 entries (picture primitives
+  + engine call sites). Medium ROI.
+- **alignsafeOptional** — 2-4 entries (amsmath `\aligned`/`\alignedat`).
+  Lowest ROI but simplest port (reads `[…]` with alignment-safe
+  wrapping).
 
-**Correction (2026-04-22 re-verification):** Rust **already has a
-`TeXDelimiter` ParameterType** at `base_parameter_types.rs:693` (per
-Perl PR#2596). It's used successfully by `math_common.rs:962-964` for
-`\big`/`\Big`/`\bigg`/`\Bigg`. BUT: the current impl reads
-`gullet::read_arg(ExpansionLevel::Partial)` — i.e. it requires a
-**braced** argument. That works for `\big{x}` but fails for `\left(` /
-`\biglb[` / etc. which pass unbraced single tokens. Hence `\left` /
-`\lx@right` / revsymb's `\biglb` family all fall back to DefMacro
-workarounds that bypass the ParameterType.
+### TeXDelimiter enhancement plan (current truth, cycle 64 verified)
 
-The actual work is therefore **enhance** the existing TeXDelimiter
-(not create a new one). Missing vs Perl's `TeX_Math.pool.ltxml:709`:
-1. `stomach::invoke_token` pre-digestion + `undigested => 1`.
-   Primary blocker per `tex_math.rs:833-835` comment: without
-   invoke_token, `\left\delimiter<Number>` / `\right\delimiter<Number>`
-   leaves the number dangling (Rust workaround at `tex_math.rs:838-847`
-   manually peels `\delimiter` + reads number + decodes glyph).
-2. `.` → `\lx@delimiterdot` replacement for `\left.` idiom.
-3. `{...}`-unwrap when the FIRST token is `{` (for `\big{x}` — lower-
-   priority since read_arg already handles this via the normal brace-
-   removal path).
+**Rust already has `TeXDelimiter`** at `base_parameter_types.rs:693`
+and it's used successfully by `\big`/`\Big`/`\bigg`/`\Bigg` at
+`math_common.rs:962-964`. The current implementation uses
+`gullet::read_arg(ExpansionLevel::Partial)` (braced arg). The `\left` /
+`\lx@right` / revsymb `\biglb` family bypass it via DefMacro because
+the reader differs from Perl's in two dimensions:
 
-NOTE: `read_arg` already accepts unbraced single tokens, so
-"unbraced single tokens" is NOT a blocker — my earlier WISDOM
-entry overstated the missing-branches list. The real one-branch
-gap is #1 (invoke_token + undigested flag).
+**Dimension 1 — reader shape (3 branches missing vs Perl
+`TeX_Math.pool.ltxml:709`):**
+```perl
+$gullet->skipFiller;
+my $token = $gullet->readXToken(0);               # single X-token, not read_arg
+if ($token && $token->getCatcode == CC_BEGIN) {   # BEGIN-unwrap once
+  $gullet->unread($gullet->readBalanced(1));
+  $gullet->skipFiller;
+  $token = $gullet->readXToken(0); }
+$token = T_CS('\lx@delimiterdot') if !defined($token) || ToString($token) eq '.';
+my ($delim) = $STATE->getStomach->invokeToken($token);  # ← see dim 2
+return $delim;
+```
+All three branches need porting (single-X-token read, BEGIN-unwrap,
+`.`/undef → `\lx@delimiterdot`).
 
-**Prerequisites verified:** `stomach::invoke_token` (stomach.rs:776),
-`gullet::skip_filler` (gullet.rs:1203), `\lx@delimiterdot`
-(tex_math.rs:1184) all exist. Port is purely base_parameter_types.rs
-work + migrating affected call sites.
+**Dimension 2 — `undigested => 1` is architectural, not a macro flag.**
 
-**Concrete TeXDelimiter enhancement plan** (highest-ROI candidate, ~10+ entries):
+- `ArgWrap` (`latexml_core/src/definition/argument.rs:24`) has no
+  `Digested` variant.
+- `Parameter` (`latexml_core/src/parameter.rs:48`) has no
+  `undigested: bool` flag.
+- The existing `digested_reversion` hook on Parameter fires only on a
+  code path that reader-produced Digested values never currently reach.
 
-1. Perl reference: `TeX_Math.pool.ltxml:709` —
-   ```perl
-   DefParameterType('TeXDelimiter', sub {
-     my ($gullet) = @_;
-     $gullet->skipFiller;                           # spaces + \relax
-     my $token = $gullet->readXToken(0);            # may be undef
-     if ($token && $token->getCatcode == CC_BEGIN) {# {...}-unwrap once
-       $gullet->unread($gullet->readBalanced(1));
-       $gullet->skipFiller;
-       $token = $gullet->readXToken(0); }
-     $token = T_CS('\lx@delimiterdot') if !defined($token) || ToString($token) eq '.';
-     my ($delim) = $STATE->getStomach->invokeToken($token);
-     return $delim; },
-     undigested => 1,
-     reversion  => sub { Revert($_[0]); });
-   ```
+Closing this is the real blocker for `\left\delimiter<Number>`:
+without `invoke_token` being called from the reader, `\delimiter`'s
+number-reading primitive never consumes the following `<Number>`, so
+it dangles — which is exactly what `tex_math.rs:836`'s DefMacro
+workaround manually peels back. To add `undigested` semantics, either:
+- **(a)** extend `ArgWrap` with a `Digested(Box<Digested>)` variant +
+  plumb through `be_digested` as identity when already Digested
+  (cross-cutting across every arg-pipeline site), OR
+- **(b)** add `Parameter.undigested: bool` + a bypass-re-digestion
+  branch in the digestion-of-args phase (less invasive).
 
-2. Rust add to `latexml_package/src/engine/base_parameter_types.rs`:
-   ```rust
-   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
-     gullet::skip_filler()?;
-     let mut token = gullet::read_x_token(...)?;
-     if let Some(ref t) = token {
-       if t.catcode() == Catcode::BEGIN {
-         let balanced = gullet::read_balanced(...)?;
-         gullet::unread(balanced.unlist());
-         gullet::skip_filler()?;
-         token = gullet::read_x_token(...)?;
-       }
-     }
-     let tok = match token.map(|t| t.to_string().as_str()) {
-       None | Some(".") => T_CS!("\\lx@delimiterdot"),
-       _ => token.unwrap(),
-     };
-     let digested = stomach::invoke_token(&tok)?;
-     digested  // already digested; ParameterType flag = undigested=true
-   }, undigested => true, reversion => sub[d] { d.revert() });
-   ```
-   (Pseudocode — verify exact signatures against existing entries like
-   `base_parameter_types.rs:135 XToken`.)
+**Scope: one full dedicated session touching latexml_core.** Partial
+progress via reader-only port (3 branches without `invoke_token`) is
+possible but closes ZERO DP audit entries — the call-site migrations
+need BOTH reader and `undigested` to work, since `\left\delimiter<num>`
+still breaks without the digested path. Cycle 64 verified this.
 
-3. Also port `\lx@delimiterdot` (`TeX_Math.pool.ltxml:729`) — a
-   DefConstructor emitting `<ltx:XMHint/>` with `hint=1`. Already exists
-   in Rust? Grep first.
+**Prerequisites (confirmed exist):** `stomach::invoke_token`
+(`stomach.rs:776`), `gullet::skip_filler` (`gullet.rs:1203`),
+`gullet::read_x_token` (`gullet.rs:503`), `gullet::read_balanced`
+(`gullet.rs:716`), `\lx@delimiterdot` (`tex_math.rs:1184`).
 
-4. Migrate call sites to use the new ParameterType:
-   - `tex_math.rs:836` `\left` — drop the DefMacro+DefPrimitive split,
-     replace with `DefConstructor!("\\left TeXDelimiter", "#1", …)`
-     mirroring Perl L773.
-   - `tex_math.rs:1192` `\lx@right` — same.
-   - `revsymb_sty.rs:14-21` 8 `\biglb`/`\bigrb`/… — replace each DefMacro
-     with `DefConstructor('\biglb TeXDelimiter', '#1', …)` mirroring Perl.
+**Call sites to migrate once architecture is in place:**
+- `tex_math.rs:836` `\left` — replace DefMacro+manual peel with
+  `DefConstructor!("\\left TeXDelimiter", "#1", …)`.
+- `tex_math.rs:1192` `\lx@right` — same.
+- `revsymb_sty.rs:14-21` 8 `\biglb`/`\bigrb`/`\Biglb`/`\Bigrb`/
+  `\bigglb`/`\biggrb`/`\Bigglb`/`\Biggrb` — each becomes
+  `DefConstructor('\X TeXDelimiter', '#1', …)`.
 
-5. Full test run after each migration. Expected: 1097/0/0 tests green,
-   DP audit shows 10+ entries cleared.
+**Expected outcome:** 1097/0/0 tests green, DP audit shows 10+ entries
+cleared, `tex_math.rs:836` workaround removed, revsymb `\biglb` family
+collapses back to audit-clean DefConstructor form.
 
-Estimated scope: one DefParameterType entry (+ helpers if stomach::
-invoke_token doesn't already exist) + 10 call-site migrations +
-verification. Single dedicated 2-4h session.
+### Broader takeaway
 
-**Cycle 64 correction (2026-04-22).** Verified against actual Rust
-sources — the above estimate was too optimistic on TWO axes:
-
-- **Reader is 3 branches, not 1.** Perl does single-X-token read
-  (not `read_arg`), BEGIN-unwrap, AND `.`→`\lx@delimiterdot` (plus
-  an `undef`→delimiterdot fall-through). All three need porting.
-- **`undigested=>1` is architectural.** `latexml_core::definition::
-  argument::ArgWrap` has no `Digested` variant and `parameter::
-  Parameter` has no `undigested: bool` flag. The existing
-  `digested_reversion: Option<DigestedReversionClosure>` hook on
-  Parameter only fires in a code path that never currently handles
-  a reader-produced Digested. Adding `undigested` semantics means
-  either (a) extending `ArgWrap` with a `Digested(Box<Digested>)`
-  variant and teaching every arg-pipeline site to preserve it
-  across `be_digested` (cross-cutting), OR (b) adding an
-  `undigested: bool` to `Parameter` plus a branch in the
-  digestion-of-args phase that bypasses re-digestion when set.
-  Either approach touches latexml_core.
-
-**Revised scope: one full session (not 30-60 min):**
-1. Pick (b) — less invasive. Add `Parameter.undigested: bool` +
-   `ArgWrap::Digested(Box<Digested>)` variant, plumb through
-   `be_digested` (identity when already Digested).
-2. Enhance base_parameter_types.rs TeXDelimiter reader to do all
-   3 branches + `invoke_token`, wrap result in `ArgWrap::Digested`.
-3. Migrate call sites (10+), run tests.
-
-For this cycle, cheaper incremental progress is possible: port ONLY
-the reader's 3 branches (read_x_token, BEGIN unwrap, `.` replacement),
-leave invoke_token as the remaining gap. That fixes reversion
-for `\big\langle`-style cases but NOT `\big\delimiter<num>`-style
-(the `<num>` still leaks into the output stream).
-
-Reader-only partial fix = ~30 min per cycle; architectural
-`undigested` piece = separate session. Do NOT conflate the two.
-
-**Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
-fraction to be structural adaptations (mode-splits, direct XML emission,
-parameter-type gaps), not parity bugs. Read the Perl body first; if the
-Rust shape is more precise or solves a missing-feature gap, the mismatch
-is likely intentional and belongs in OXIDIZED_DESIGN.md rather than a
-fix queue.
+For a Def*-kind mismatch audit, expect a sizable fraction to be
+structural adaptations (mode-splits, direct XML emission,
+parameter-type gaps), not parity bugs. Read the Perl body first; if
+the Rust shape is more precise or solves a missing-feature gap, the
+mismatch is likely intentional and belongs in OXIDIZED_DESIGN.md
+rather than a fix queue.
 
 ## 42. AmSPPT DefConstructor→DefMacro "shim" pattern
 
