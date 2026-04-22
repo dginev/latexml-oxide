@@ -270,9 +270,13 @@ macro_rules! DefConditional(
   }};
 );
 
+/// Small helper used by TypedMacro / TypedPrimitive / … to fix the
+/// array size at compile time. Exported so downstream crates
+/// (`latexml_contrib`) can expand the typed-`sub[(…)]` syntax too.
+#[macro_export]
 macro_rules! count {
   () => (0usize);
-  ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
+  ( $x:tt $($xs:tt)* ) => (1usize + $crate::count!($($xs)*));
 }
 
 #[macro_export]
@@ -284,7 +288,7 @@ macro_rules! TypedConditional {
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let closure : ConditionalClosure =  Rc::new(
     move |args: Vec<ArgWrap>| {
-      let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
+      let [$($var),*] : [_; $crate::count!($($var)*)] = args.try_into().unwrap();
       $(
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
@@ -441,7 +445,7 @@ macro_rules! TypedPrimitive {
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let replacement_closure =  PrimitiveBody::Closure(Rc::new(
     move |args: Vec<ArgWrap>| {
-      let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
+      let [$($var),*] : [_; $crate::count!($($var)*)] = args.try_into().unwrap();
       $(
         // TODO: How do we fine-tune the match body based on whether we have an Infallible try_into?
         #[allow(warnings)]
@@ -1202,7 +1206,7 @@ macro_rules! TypedMacro {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
+        let [$($var),*] : [_; $crate::count!($($var)*)] = args.try_into().unwrap();
         $(
           // TODO: How do we fine-tune the match body based on whether we have an Infallible try_into?
           #[allow(warnings)]
@@ -1404,7 +1408,7 @@ macro_rules! TypedColumntype {
       $body:block $($input:tt)*) => {{
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
+        let [$($var),*] : [_; $crate::count!($($var)*)] = args.try_into().unwrap();
         $(
           // TODO: How do we fine-tune the match body based on whether we have an Infallible try_into?
           #[allow(warnings)]
