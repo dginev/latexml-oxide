@@ -99,6 +99,25 @@ LoadDefinitions!({
   NewCounter!("algorithm");
   DefMacro!("\\thealgorithm", "\\arabic{algorithm}");
   DefMacro!("\\algorithmname", "Algorithm");
+  // Perl L96-102: {algorithm} env. Was unported — \begin{algorithm}
+  // hit an undefined-env error in any Elsevier paper. Rendered as a
+  // <ltx:theorem> with class ltx_theorem_algorithm + float
+  // numbering. Closing tag elided in the template; before/after
+  // float hooks attach number/id; after_construct closes the
+  // ltx:theorem at paragraph boundary (matches Perl's
+  // maybeCloseElement).
+  DefEnvironment!("{algorithm}",
+    "<ltx:theorem xml:id='#id' class='ltx_theorem_algorithm'>#tags#body</ltx:theorem>",
+    mode => "internal_vertical",
+    before_digest => {
+      use crate::engine::latex_constructs::before_float;
+      before_float("algorithm", None);
+    },
+    after_digest => sub[whatsit] {
+      use crate::engine::latex_constructs::after_float;
+      after_float(whatsit);
+    }
+  );
 
   // Perl L104: \pf proof environment
   RawTeX!("\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}[\\proofname]}{\\end{@proof}}}{}");
