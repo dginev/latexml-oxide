@@ -36,55 +36,10 @@ babel_support_sty.rs:94	guilsinglleft	perl=DefPrimitiveI(L39)	rust=DefMacro
 babel_support_sty.rs:95	guilsinglright	perl=DefPrimitiveI(L40)	rust=DefMacro
 babel_support_sty.rs:96	guillemotleft	perl=DefPrimitiveI(L41)	rust=DefMacro
 babel_support_sty.rs:97	guillemotright	perl=DefPrimitiveI(L42)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L25)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L26)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L27)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L28)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L29)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L30)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L32)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L34)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L35)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L36)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L37)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L38)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L39)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L40)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L41)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L42)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L43)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L44)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L45)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L46)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L47)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L48)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L50)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L52)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L53)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L54)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L55)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L57)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L58)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L59)	rust=DefMacro
-caption_sty.rs:97	caption	perl=DefKeyVal(L60)	rust=DefMacro
 caption_sty.rs:47	captionsetup	perl=DefMacro(L62)	rust=DefPrimitive
 colordvi_sty.rs:7	DefineNamedColor	perl=DefMacro(L20)	rust=DefPrimitive
 dcolumn_sty.rs:49	lx@unactivate	perl=DefMacro(L30)	rust=DefPrimitive
 deluxetable_sty.rs:29	set@deluxetable@template	perl=DefMacro(L40)	rust=DefPrimitive
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L18)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L19)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L20)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L21)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L22)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L23)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L24)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L25)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L26)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L27)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L28)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L29)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L30)	rust=DefMacro
-diagbox_sty.rs:28	diagbox	perl=DefKeyVal(L31)	rust=DefMacro
 elsart_support_sty.rs:183	note	perl=DefMacro(L172)	rust=DefConstructor
 enumitem_sty.rs:521	restartlist	perl=DefMacro(L128)	rust=DefPrimitive
 graphics_sty.rs:363	Gscale@div	perl=DefPrimitive(L329)	rust=DefMacro
@@ -123,8 +78,6 @@ numprint_sty.rs:31	ltx@text@number	perl=DefConstructor(L48)	rust=DefMacro
 pgfcircutils_tex.rs:8	pgf@circ@stripdecimals	perl=DefMacro(L24)	rust=DefPrimitive
 pgfsys_latexml_def.rs:581	pgfsys@moveto	perl=DefConstructor(L242)	rust=DefPrimitive
 pgfsys_latexml_def.rs:584	pgfsys@lineto	perl=DefConstructor(L247)	rust=DefPrimitive
-# Summary (package): 445 pairs scanned, 232 kind mismatches, 8 missing rust files
-
 pgfsys_latexml_def.rs:587	pgfsys@curveto	perl=DefConstructor(L253)	rust=DefPrimitive
 pgfsys_latexml_def.rs:591	pgfsys@rect	perl=DefConstructor(L260)	rust=DefPrimitive
 pgfsys_latexml_def.rs:599	pgfsys@closepath	perl=DefConstructor(L274)	rust=DefPrimitive
@@ -159,6 +112,8 @@ physics_sty.rs:1156	matrixelement	perl=DefMacro(L558)	rust=DefPrimitive
 physics_sty.rs:1207	identitymatrix	perl=DefMacro(L590)	rust=DefPrimitive
 physics_sty.rs:1221	xmatrix	perl=DefMacro(L600)	rust=DefPrimitive
 physics_sty.rs:1239	paulimatrix	perl=DefMacro(L623)	rust=DefPrimitive
+# Summary (package): 446 pairs scanned, 187 kind mismatches, 7 missing rust files
+
 physics_sty.rs:1256	diagonalmatrix	perl=DefMacro(L636)	rust=DefPrimitive
 physics_sty.rs:1278	antidiagonalmatrix	perl=DefMacro(L655)	rust=DefPrimitive
 physics_sty.rs:1301	lx@physics@mat	perl=DefMacro(L677)	rust=DefPrimitive
