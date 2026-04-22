@@ -123,7 +123,12 @@ LoadDefinitions!({
   DefMacro!("\\ref", "\\bibitem");
   DefMacro!("\\endref", "");
   DefMacro!("\\by", "");
-  DefMacro!("\\bysame", "");
+  // Perl L464: \bysame → \by  --- (three hyphens, with the leading
+  // \by bibfield marker). In Rust \by currently expands to empty, so
+  // the practical effect is just the em-dash triple (---). Prior Rust
+  // dropped it entirely; restore the Perl expansion for faithful
+  // "by the same author" rendering.
+  DefMacro!("\\bysame", "\\by ---");
   DefMacro!("\\paper", "\\textit");
   DefMacro!("\\paperinfo{}", "#1");
   DefMacro!("\\jour{}", "\\textit{#1}");
