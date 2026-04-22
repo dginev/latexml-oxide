@@ -23,13 +23,18 @@ LoadDefinitions!({
     mode => "internal_vertical",
     before_digest => {
       use crate::engine::latex_constructs::before_float;
-      before_float("algorithm", None);
+      // Perl L73-86: mirror full beforeDigest sequence.
+      DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
+      DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
       Let!("\\par", "\\lx@algo@par");
+      Let!("\\parbox", "\\lx@algo@parbox");
       Let!("\\\\", "\\lx@algo@par");
+      Let!("\\strut", "\\lx@algo@strut");
       // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
       // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
       DefMacro!("\\BlankLine", "\\lx@algo@par");
       DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
+      before_float("algorithm", None);
     },
     after_digest => sub[whatsit] {
       use crate::engine::latex_constructs::after_float;
