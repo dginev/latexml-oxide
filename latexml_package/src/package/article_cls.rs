@@ -115,6 +115,11 @@ LoadDefinitions!( {
 
   DefMacro!("\\refname", "References");
 
+  // Perl L100: article uses section-level bibliography in backmatter.
+  // Rust was missing this mapping, so the chapterbib/bibunits/sectionbib
+  // tweak chain had an empty baseline to modify.
+  AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
+
   Tag!("ltx:appendix", auto_close => true);
   DefMacro!("\\appendix", "\\@appendix");
 
