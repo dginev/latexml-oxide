@@ -24,6 +24,37 @@ LoadDefinitions!({
     AssignValue!("CITE_UNIT"       => Stored::None, Some(Scope::Global));
   });
 
+  // Perl L35-45: override \include so each included chapter file gets
+  // its own CHAPTERBIB_UNIT / CITE_UNIT stamp (derived from the file
+  // basename). Without this override chapterbib's per-chapter
+  // bibliography never activated — every \cite resolved against a
+  // single global unit.
+  DefPrimitive!("\\include{}", sub[(path)] {
+    let path_str = Expand!(path).to_string();
+    let table = state::lookup_value("including@only");
+    let should_include = match &table {
+      None => true,
+      Some(Stored::HashString(map)) => map.contains_key(&path_str),
+      _ => true,
+    };
+    if should_include {
+      let name = std::path::Path::new(&path_str)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&path_str)
+        .to_string();
+      let cite_unit = if state::lookup_value("CITE_UNIT_GLOBAL").is_some() {
+        format!("bibliography {}", name)
+      } else {
+        name.clone()
+      };
+      AssignValue!("CHAPTERBIB_UNIT" => Stored::from(name), Some(Scope::Global));
+      AssignValue!("CITE_UNIT"       => Stored::from(cite_unit), Some(Scope::Global));
+      gullet::unread_one(T_CS!("\\lx@cb@reset"));
+      Input!(&path_str);
+    }
+  });
+
   // Perl L47: expose the current chapterbib unit name as a token
   // stream. The Perl uses a zero-arg `DefMacro(.., sub { Explode(…) })`
   // closure; the Rust binding language doesn't yet have a typed
