@@ -122,10 +122,17 @@ LoadDefinitions!({
   DefMacro!("\\ulap{}", "#1");
   DefMacro!("\\dlap{}", "#1");
 
-  TeX!(r#"""
+  // Perl deluxetable.sty.ltxml L144-151 `AtBeginDocument` block. The
+  // deferred timing matters for `\pt@width\textwidth`: at binding-load
+  // \textwidth hasn't been sized by article.cls yet, so copying it here
+  // yields the default 0pt. The \@empty lets and \pt@headfrac def are
+  // order-insensitive but keep them together with the width init so the
+  // block matches Perl one-for-one.
+  RawTeX!(r"\AtBeginDocument{%
 \let\tblnote@list\@empty
 \let\pt@caption\@empty
 \let\pt@head\@empty
 \let\pt@tail\@empty
-"""#);
+\pt@width\textwidth
+\def\pt@headfrac{.1}}");
 });
