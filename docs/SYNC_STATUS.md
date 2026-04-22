@@ -149,6 +149,28 @@ Three failure classes in the session-128 7898-paper sweep:
    digesting `\ExplSyntaxOff` at EOF when a raw-.sty load left
    expl3 active (`b0b9852bd`). Expected to clear 1511.00722 /
    1611.04489 / 1612.08368 on next 10k sweep.
+
+   **Residual on 1611.04489 (MEMORY cycle 60 post-cec5c36a7):** 19
+   errors from 8 undefined expl3 kernel IOW-family CSes
+   (`\__kernel_iow_with:Nnn`, `\iow_wrap:nenN`, `\iow_term:n`,
+   `\l_file_search_path_seq`, `\iow_wrap:nnnN`,
+   `\__file_name_expand_end:`, `\__kernel_file_name_sanitize:n`).
+   Critical-assessment of this cluster: Perl LaTeXML has **zero
+   stubs** for these CSes (exhaustive grep); Perl relies on the raw
+   `expl3-code.tex` load. Rust's `resources/dumps/latex.dump.txt`
+   **does** contain 272 IOW-related entries — but all are blocked
+   from loading by `dump_reader.rs`'s `:`-key gate (see Long-horizon
+   "Deep dumper-reader parity audit"; the gate blocks ~8,914 M-kind
+   and ~156 PA-kind entries). So this is specifically a dump_reader
+   gate-widening problem, NOT a missing-dump-coverage or
+   missing-engine-port problem. The fix path is whichever lands
+   first: (i) the "Kernel-first discipline for dumper widening"
+   long-horizon item (port the primitives needed so the `:`-gate
+   can safely widen) or (ii) the "Deep expl3 kernel parity" item
+   (make raw expl3-code.tex load cleanly so the dump short-circuit
+   isn't needed). A naive stub-8-macros fix would be a Rust-only
+   divergence from both paths.
+
    Deeper cleanup tracked in "Deep expl3 kernel parity" under
    Long-horizon — goal: no `SUPPRESS_*_ERRORS`, no catcode safety-
    nets, no EOF-injection workaround. Per user round-17 directive:
