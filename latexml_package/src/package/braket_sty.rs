@@ -164,7 +164,7 @@ mod tests {
   }
 
   #[test]
-  fn split_braket_arg_single_vbar_yields_V_code() {
+  fn split_braket_arg_single_vbar_yields_v_code() {
     setup();
     let arg = toks(vec![T_LETTER!("a"), T_OTHER!("|"), T_LETTER!("b")]);
     let (codes, parts) = split_braket_arg(arg, 2);
@@ -173,7 +173,7 @@ mod tests {
   }
 
   #[test]
-  fn split_braket_arg_dbar_cs_yields_D_code() {
+  fn split_braket_arg_dbar_cs_yields_d_code() {
     setup();
     let arg = toks(vec![T_LETTER!("a"), T_CS!("\\|"), T_LETTER!("b")]);
     let (codes, parts) = split_braket_arg(arg, 2);
@@ -182,7 +182,7 @@ mod tests {
   }
 
   #[test]
-  fn split_braket_arg_double_pipe_yields_D_code() {
+  fn split_braket_arg_double_pipe_yields_d_code() {
     setup();
     // `||` at top level → single D split, not two V splits
     let arg = toks(vec![
