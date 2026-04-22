@@ -8,9 +8,12 @@ LoadDefinitions!({
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
       let dir = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
+      // Perl wrapfig.sty.ltxml L29/L43: `eq 'r'` / `eq 'l'` — exact
+      // case-sensitive match. Prior Rust also matched `R`/`L` (uppercase);
+      // drop per feedback_case_folding_parity.
       let float_val = match dir.trim() {
-        "r" | "R" => "right",
-        "l" | "L" => "left",
+        "r" => "right",
+        "l" => "left",
         _ => "",
       };
       if !float_val.is_empty() {
@@ -26,9 +29,12 @@ LoadDefinitions!({
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
       let dir = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
+      // Perl wrapfig.sty.ltxml L29/L43: `eq 'r'` / `eq 'l'` — exact
+      // case-sensitive match. Prior Rust also matched `R`/`L` (uppercase);
+      // drop per feedback_case_folding_parity.
       let float_val = match dir.trim() {
-        "r" | "R" => "right",
-        "l" | "L" => "left",
+        "r" => "right",
+        "l" => "left",
         _ => "",
       };
       if !float_val.is_empty() {
