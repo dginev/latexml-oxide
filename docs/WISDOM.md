@@ -1065,7 +1065,28 @@ Rust shape is more precise or solves a missing-feature gap, the mismatch
 is likely intentional and belongs in OXIDIZED_DESIGN.md rather than a
 fix queue.
 
-## 42. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
+## 42. AmSPPT DefConstructor→DefMacro "shim" pattern
+
+**Context:** Perl's `amsppt.sty.ltxml` ports Plain AMS-TeX typesetting
+primitives with full XML-structured DefConstructor definitions —
+e.g. `DefConstructor('\specialhead Until:\endspecialhead',
+"<ltx:chapter inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>", bounded=>1, properties=>…)`.
+
+Rust's `amsppt_sty.rs` instead provides **LaTeX-equivalent aliases**:
+`DefMacro!("\\specialhead", "\\section*")`, and similar for
+`\proclaim`, `\definition`, `\remark`, `\example`, `\demo`, `\roster`,
+`\footnote`, etc. (10+ DP audit mismatches from this pattern).
+
+**Wisdom:** amsppt is Plain AMS-TeX (pre-LaTeX); Rust pragmatically
+reuses LaTeX's section/environment machinery via aliases rather than
+reimplementing the XML-structuring DefConstructors. For arXiv content
+(where amsppt is rare), "close enough to LaTeX" output is acceptable
+and the full port isn't justified by usage frequency. Do NOT kind-
+flip these entries — the flip alone loses semantic content; the flip
+plus porting bodies is a multi-day effort justified only by
+documented amsppt-in-arXiv evidence.
+
+## 43. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
 
 **Context:** Perl LaTeXML treats l3hooks as a block of no-op stubs
 (`latex_base.pool.ltxml` L829-855) — no hook storage, no dispatch, no
