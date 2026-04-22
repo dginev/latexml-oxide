@@ -294,9 +294,19 @@ round 17 commit (see below).
 - [~] Rc `Can not mutably reference a shared Node "text"` — guard raised
   to 8192 (diagnostic). dcpic cluster converges. Follow-up: identify
   semantic cause of high "text"-node refcounts (2000–8000) on dcpic.
-- [ ] **Optional refinement**: downgrade `rebuild_idstore_from_dom`
-  belt-and-suspenders fallback at `finalize()` entry to a debug-only
-  consistency probe, now that all audited paths are consistent.
+- [ ] **~~Optional refinement~~ BLOCKED: do NOT downgrade
+  `rebuild_idstore_from_dom` at `finalize()` entry.** Cycle 71
+  critical-assessment: the inline comment at `document.rs:244-253`
+  documents the rebuild as load-bearing — math-parser `replace_tree`
+  and various `unbind_node()` sites still drop XMRef-target nodes
+  without `unrecord_id`, leaving dangling idstore entries that
+  SIGSEGV in `mark_xmnode_visibility` (observed on arxiv 1605.08055
+  in the 10k sandbox). Cycles 52-57's D3b migrations did NOT touch
+  those specific sites. Unblock prerequisite: audit+migrate
+  `math_parser::replace_tree` and remaining raw `unbind_node()`
+  sites to call `record_node_ids` / `safe_unlink` — or verify the
+  1605.08055 SIGSEGV is no longer reproducible. Only then is the
+  fallback safe to downgrade to a debug-only probe.
 
 ### Dump — deferred alias retry (session 128)
 
