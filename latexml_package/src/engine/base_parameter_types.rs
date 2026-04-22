@@ -688,18 +688,23 @@ LoadDefinitions!({
   // BEWARE: This is NOT a shorthand for a simple digested {}!
 
   // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
-  // Reads like {} (balanced group) for correct math digestion, but reverts WITHOUT braces.
-  // Also: unwraps one level of braces, replaces "." with \lx@delimiterdot hint.
+  // Reads a balanced {}-arg via read_arg, reverts WITHOUT braces.
   //
   // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/WISDOM.md #41
-  // for the concrete enhancement plan. Current impl works for \big/\Big/
-  // \bigg/\Bigg (math_common.rs:962-964) where the arg is typically
-  // braced, but \left/\lx@right/revsymb's \biglb family use DefMacro
-  // workarounds because this doesn't handle: (a) unbraced single tokens
-  // via readXToken, (b) `{...}`-unwrap when FIRST token is BEGIN,
-  // (c) `.` → \lx@delimiterdot replacement, (d) invoke_token pre-digestion
-  // for \delimiter<Number>. Each of those is a ~5-10-line branch in this
-  // function; porting collapses ~10 DP audit entries.
+  // for the full enhancement plan. Current impl works for
+  // \big/\Big/\bigg/\Bigg (math_common.rs:962-964) but \left/\lx@right
+  // plus revsymb's \biglb family fall back to DefMacro workarounds.
+  //
+  // Gap has two dimensions:
+  //   - Reader shape (3 branches missing): single-X-token read instead
+  //     of read_arg, BEGIN-unwrap-and-re-read, `.`/undef →
+  //     \lx@delimiterdot substitution.
+  //   - Architectural `undigested=>1`: ArgWrap has no Digested variant
+  //     and Parameter has no `undigested: bool` flag; closing this
+  //     needs latexml_core changes. Required for \left\delimiter<num>.
+  //
+  // Reader-only partial port closes ZERO DP audit entries because the
+  // call-site migrations need BOTH dimensions — don't commit half.
   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
     gullet::skip_filler()?;
     gullet::read_arg(ExpansionLevel::Partial)
