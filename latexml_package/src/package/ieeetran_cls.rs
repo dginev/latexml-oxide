@@ -174,8 +174,24 @@ LoadDefinitions!({
   Let!("\\pubidadjcol", "\\IEEEpubidadjcol");
   Let!("\\specialpapernotice", "\\IEEEspecialpapernotice");
 
-  // Keywords environment aliases
-  DefMacro!("\\keywords", "\\@IEEEkeywords");
+  // Keywords environment aliases — Perl L406-414
+  // Perl dispatches on whether the next token is a brace:
+  //   \keywords{foo}  → \keywords@onearg{foo}
+  //   \keywords … \endkeywords (env form) → \@IEEEkeywords
+  // Rust was hardcoding the env-start path, so braced `\keywords{foo}`
+  // never reached the one-arg expansion.
+  DefMacro!("\\keywords", sub[_args] {
+    let next = gullet::read_token()?;
+    if let Some(t) = next {
+      gullet::unread(Tokens!(t.clone()));
+      if t.get_catcode() == Catcode::BEGIN {
+        return Ok(Tokens!(T_CS!("\\keywords@onearg")));
+      }
+    }
+    Ok(Tokens!(T_CS!("\\@IEEEkeywords")))
+  }, locked => true);
+  DefMacro!("\\keywords@onearg{}",
+    "\\@IEEEkeywords #1 \\@endIEEEkeywords");
   DefMacro!("\\endkeywords", "\\@endIEEEkeywords");
 
   // Legacy IED list aliases
