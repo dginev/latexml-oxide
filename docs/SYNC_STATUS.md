@@ -53,6 +53,23 @@ handful of slow-convergence papers. Runner:
 
 **2026-04-21 stub-to-parity sweep** (build-only cadence per user 2026-04-21): 18 commits landing real bodies on packages where Rust previously had no-op or partial stubs — `\@@joinrel` XMTok-merge + `\joinrel` primitive, tabular→XMArray math-mode, `\block` DigestUntil, `\ifdraft`/`\ifoptiondraft`/`\ifoptionfinal`, `\@mn@if@RTL`, `\lx@proof@split@and` + `\infer`/`\deduce` I_dual, siunits unit-macro enablement, `\marginnote` two-arg branch, `\lx@set@path`/`\lx@append@path` + `state::set_search_paths`, standalone.sty's `\@standalone@documentclass` + `\@standalone@start@input`. Full-suite green throughout (1098/0/0).
 
+**2026-04-21 continuation (10 commits, batch cadence 8-12 per build):**
+amsppt runup (~70 more registers/macros total across `\qed`/`\ltx@qed`,
+identity metadata, head-toks, skip registers, theorem-env names/fonts,
+roster/layout), `\scalefont Float` primitive, `count!` macro export so
+contrib can use typed `sub[(…)]` closures, psfrag `{psfrags}` +
+pstricks_support extras (16 CSes: color shorthands, coord-mode no-ops,
+rotations, `\degrees`/`\radians`), equations_sty `{eqalignno}`/`{eqalignno*}`
+envs with equation-counter hooks, ucs `\unichar` hex→UTF-8, fancybox
+`mode => internal_vertical` restoration, chapterbib `sectionbib`
+AssignMapping + `\lx@cb@reset`/`\lx@cb@unitname`/`\bibliography` override
++ `{cbunit}` env with AtomicU64 counter, mdframed restore
+`<ltx:inline-block framed='rectangle'>` wrapper, attachfile forward to
+`\lx@` variants + 4 new constructors, shared `discard_env_body`
+helper wired into `{diagram}`/`{forest}`/NiceMatrix family (20 envs,
+all emitting `<ltx:ERROR>{kind}</ltx:ERROR>` and consuming body via
+bgroup/read_until/egroup).
+
 ## Tikz — Known Diffs (vs Perl output)
 
 1. foreignObject transform Y / width/height
