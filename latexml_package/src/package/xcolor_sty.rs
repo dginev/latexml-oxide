@@ -1110,10 +1110,16 @@ LoadDefinitions!({
     Ok(())
   });
 
-  // \fcolorbox — xcolor version with ParseXColor
+  // \fcolorbox — xcolor version with ParseXColor.
+  // Perl xcolor.sty.ltxml has `mode=>'internal_vertical',
+  // enterHorizontal=>1`. enter_horizontal triggers an implicit
+  // horizontal-mode entry when invoked from the document's outer
+  // vertical mode (e.g. `\fcolorbox{red}{yellow}{important}` between
+  // paragraphs at top level), so the framed <ltx:text> opens inside
+  // a paragraph instead of as a stray block-level child.
   DefConstructor!("\\fcolorbox[]{}{} Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
-    mode => "internal_vertical",
+    mode => "internal_vertical", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
       let fspec_str = whatsit.get_arg(2).map(|f| f.to_string()).unwrap_or_default();
