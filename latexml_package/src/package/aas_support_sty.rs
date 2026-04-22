@@ -1,3 +1,4 @@
+use crate::engine::latex_constructs::{after_float, before_float_ex};
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -109,13 +110,26 @@ LoadDefinitions!({
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
   DefMacro!("\\gridline{}", "");
 
-  // Plate environments — Perl L179-201
+  // Plate environments — Perl aas_support.sty.ltxml L179-201.
+  // Each variant calls beforeFloat (sets \@captype, rebinds \\ → \lx@newline,
+  // assigns \hsize) and afterFloat (closes the float scope, sets the
+  // float number / id). The starred variant additionally passes
+  // `double => 1` so \hsize gets \textwidth instead of \columnwidth
+  // (two-column-spanning plate). Without these hooks, the Rust port
+  // emits an empty <ltx:float> shell that loses caption/number metadata
+  // and uses single-column box geometry even in the * variant.
+  // Template additionally needs `inlist='#inlist' ?#1(placement='#1')`
+  // to match the floats produced by \newfloat-style envs (acmart, rotating).
   DefEnvironment!("{plate}[]",
-    "<ltx:float xml:id='#id' class='ltx_float_plate'>#tags#body</ltx:float>",
+    "<ltx:float xml:id='#id' inlist='#inlist' ?#1(placement='#1') class='ltx_float_plate'>#tags#body</ltx:float>",
+    before_digest => { before_float_ex("plate", None, false); },
+    after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
   DefEnvironment!("{plate*}[]",
-    "<ltx:float xml:id='#id' class='ltx_float_plate'>#tags#body</ltx:float>",
+    "<ltx:float xml:id='#id' inlist='#inlist' ?#1(placement='#1') class='ltx_float_plate'>#tags#body</ltx:float>",
+    before_digest => { before_float_ex("plate", None, true); },
+    after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
 
