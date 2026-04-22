@@ -21,11 +21,24 @@ LoadDefinitions!({
     out
   });
 
-  // \inst{number} — generates institutemark + emailmark contacts — Perl L49-54
+  // \inst{number} — generates institutemark + emailmark contacts — Perl L49-54.
+  // Perl L53-54: \inst{} splits the arg by comma so \inst{1,2} issues two
+  // \@inst{1}\@inst{2}. Prior Rust just passed the raw arg through as a
+  // single \@inst, so multi-institute refs collapsed into one mark.
   DefConstructor!("\\@@@inst{}",
     "^<ltx:contact role='institutemark' _mark='#1'>#1</ltx:contact><ltx:contact role='emailmark' _mark='#1'>#1</ltx:contact>");
   DefMacro!("\\@inst{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@inst{#1}}");
-  DefMacro!("\\inst{}", "\\@inst{#1}");
+  DefMacro!("\\inst{}", sub[(numbers)] {
+    let parts = split_tokens(numbers, vec![T_OTHER!(",")]);
+    let mut out = Vec::new();
+    for part in parts {
+      out.push(T_CS!("\\@inst"));
+      out.push(T_BEGIN!());
+      out.extend(part.unlist());
+      out.push(T_END!());
+    }
+    out
+  });
 
   // \and variants — Perl L56-60
   Let!("\\at", "\\and");
@@ -45,13 +58,36 @@ LoadDefinitions!({
   DefMacro!("\\@new@institute XUntil:\\@end@institute", "\\if.#1.\\else\\@add@institute{#1}\\fi");
   Let!("\\@end@institute", "\\relax");
 
-  // Email inside institute — Perl L73-77
+  // Email inside institute — Perl L73-77. name comes from \emailname,
+  // mark from the current \theinst counter value. Prior Rust dropped both
+  // attributes, so the post-pass that pairs emails to authors had nothing
+  // to match against.
   DefMacro!("\\emailname", "E-mail");
-  DefConstructor!("\\@in@inst@email{}", "<ltx:note role='email'>#1</ltx:note>");
+  DefConstructor!("\\@in@inst@email{}",
+    "<ltx:note role='email' name='#name' mark='#mark'>#1</ltx:note>",
+    properties => sub[_args] {
+      let name = stomach::digest(T_CS!("\\emailname"))
+        .map(|d| d.to_string()).unwrap_or_default();
+      let mark = gullet::do_expand(T_CS!("\\theinst"))
+        .map(|t| t.to_string()).unwrap_or_default();
+      Ok(stored_map!("name" => name, "mark" => mark))
+    });
 
-  // Institute note — Perl L80-83
-  DefConstructor!("\\@add@institute{}", "<ltx:note role='institutetext'>#1</ltx:note>",
-    bounded => true);
+  // Institute note — Perl L80-83. mark property enables the post-pass that
+  // relocates institute text into the matching ltx:creator by _mark. Also
+  // flips `inPreamble` → 0 since institutes get digested inside \author
+  // blocks that were otherwise in-preamble.
+  DefConstructor!("\\@add@institute{}",
+    "<ltx:note role='institutetext' mark='#mark'>#1</ltx:note>",
+    bounded => true,
+    before_digest => {
+      state::assign_value("inPreamble", false, None);
+    },
+    properties => sub[_args] {
+      let mark = gullet::do_expand(T_CS!("\\theinst"))
+        .map(|t| t.to_string()).unwrap_or_default();
+      Ok(stored_map!("mark" => mark))
+    });
 
   // Note: Perl has Tag('ltx:note', afterClose => \&relocateInstitute) which
   // does DOM surgery to move institute text into the matching ltx:creator.
