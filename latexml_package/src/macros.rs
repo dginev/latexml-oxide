@@ -152,6 +152,14 @@ macro_rules! parameter_rust_type {
   (XGeneralText) => {Tokens};
   (Semiverbatim) => {Tokens};
   (SanitizedVerbatim) => {Tokens};
+  (Verbatim) => {Tokens};
+  (HyperVerbatim) => {Tokens};
+  (Digested) => {Tokens};
+  (DigestedBody) => {Tokens};
+  (DigestUntil) => {Tokens};
+  (BalancedParen) => {Option<Tokens>};
+  (TeXDelimiter) => {Tokens};
+  (MoveableBox) => {Option<Tokens>};
   (Until) => {Tokens};
   (UntilBrace) => {Tokens};
   (TeXFileName) => {Tokens};
