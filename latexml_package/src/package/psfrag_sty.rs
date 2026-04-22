@@ -34,4 +34,8 @@ LoadDefinitions!({
   DefMacro!("\\psfragrescanon", "");
   DefMacro!("\\psfragdebugon", "");
   DefMacro!("\\psfragdebugoff", "");
+
+  // Perl psfrag.sty.ltxml L149: DefEnvironment('{psfrags}', '#body').
+  // Pure grouping, no content transform. Previously unported.
+  DefEnvironment!("{psfrags}", "#body");
 });

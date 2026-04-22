@@ -74,6 +74,42 @@ LoadDefinitions!({
   // named colors) so that `\blue`, `\red`, etc. in figure/node text resolve
   // to a `\color{…}` call. Arxiv 1107.3732 uses `\node[…]{\blue{\small …}}`
   // inside `\tikzpicture`; without these, `\blue` is undefined and errors.
+  // Extra length registers — Perl L411-419.
+  DefRegister!("\\psframesep" => Dimension!("3pt"));
+  DefRegister!("\\pslabelsep" => Dimension!("5pt"));
+  DefRegister!("\\psdotsize"  => Dimension!("2pt"));
+  DefRegister!("\\psrunit"    => Dimension!("1cm"));
+
+  // Color definition shorthands — Perl L570-573.
+  DefMacro!("\\newgray{}{}",      "\\definecolor{#1}{gray}{#2}");
+  DefMacro!("\\newrgbcolor{}{}",  "\\definecolor{#1}{rgb}{#2}");
+  DefMacro!("\\newhsbcolor{}{}",  "\\definecolor{#1}{hsb}{#2}");
+  DefMacro!("\\newcmykcolor{}{}", "\\definecolor{#1}{cmyk}{#2}");
+
+  // Length helpers — Perl L650-651: Let to \setlength / \addtolength.
+  Let!("\\pssetlength",   "\\setlength");
+  Let!("\\psaddtolength", "\\addtolength");
+
+  // Coordinate-mode no-ops — Perl L1037-1039. No effect in LaTeXML.
+  DefMacro!("\\SpecialCoor", "");
+  DefMacro!("\\NormalCoor",  "");
+  DefMacro!("\\PSTricksOff", "");
+
+  // Rotation constructors — Perl L1002-1006. Produce <ltx:g> wrappers
+  // with SVG-style rotate() transforms.
+  DefConstructor!(
+    "\\rotateleft{}",
+    "<ltx:g transform='rotate(90)'>#1</ltx:g>"
+  );
+  DefConstructor!(
+    "\\rotateright{}",
+    "<ltx:g transform='rotate(-90)'>#1</ltx:g>"
+  );
+  DefConstructor!(
+    "\\rotatedown{}",
+    "<ltx:g transform='rotate(180)'>#1</ltx:g>"
+  );
+
   DefMacro!("\\black", "\\color{black}");
   DefMacro!("\\darkgray", "\\color{darkgray}");
   DefMacro!("\\gray", "\\color{gray}");
