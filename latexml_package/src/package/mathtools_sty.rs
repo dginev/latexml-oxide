@@ -597,13 +597,21 @@ LoadDefinitions!({
     "\\lx@ams@cases{name=cases*,meaning=cases,left=\\lx@left\\{,style=\\textstyle,conditionmode=text}");
   DefMacro!("\\csname endcases*\\endcsname", "\\lx@end@ams@cases");
 
-  // TODO: Make this actually shift the equation
+  // Perl mathtools.sty.ltxml L638 defines \MoveEqLeft as bare T_ALIGN —
+  // i.e. the tokenizer-level `&` alignment tab. The string `"&"` below
+  // tokenizes to the same alignment tab under the math catcode regime
+  // where this macro is invoked. Perl's corresponding TODO note
+  // (shift-the-equation layout) is inherited.
   DefMacro!("\\MoveEqLeft[]", "&");
 
-  // TODO: Properly implement \Aboxed
+  // Perl mathtools.sty.ltxml L641 also ships `\Aboxed` as a passthrough
+  // `#1` and flags a proper-implementation TODO. The Rust binding matches
+  // — any improvement belongs upstream (layout/frame rendering).
   DefMacro!("\\Aboxed{}", "#1");
 
-  // TODO: Make these actually do something
+  // Perl mathtools.sty.ltxml L644-645 defines both `\ArrowBetweenLines` and
+  // its star form as empty tokens. The Rust `None` gives the same empty
+  // expansion. Upstream Perl also flags the "make it do something" TODO.
   DefMacro!("\\ArrowBetweenLines[]", None);
   DefMacro!("\\csname ArrowBetweenLines*\\endcsname[]", None);
   DefMacro!("\\vdotswithin{}",

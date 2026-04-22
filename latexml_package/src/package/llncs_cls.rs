@@ -87,10 +87,9 @@ LoadDefinitions!({
   DefMacro!("\\thechapter", "\\arabic{chapter}");
   DefMacro!("\\chaptermark{}", "");
 
-  // TODO: \spnewtheorem — complex theorem definition system with capfont/bodyfont.
-  // Perl defines it as a DefMacro closure that calls NewCounter, DefMacroI,
-  // DefEnvironmentI with style-dependent title formatting and swap support.
-  // For now, use RawTeX to define theorem environments via the raw TeX definitions.
+  // Theorem-family \xxxname definitions. The \spnewtheorem primitive itself
+  // is ported further below (L133+) via define_new_theorem; capfont/bodyfont
+  // are ignored per Perl precedent since visual styling isn't modeled.
   RawTeX!(r#"\def\theoremname{Theorem}
 \def\claimname{Claim}
 \def\proofname{Proof}

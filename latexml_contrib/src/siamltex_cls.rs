@@ -11,12 +11,19 @@ LoadDefinitions!({
 \newtheorem{definition}[theorem]{Definition}"
   );
   Let!("\\Appendix", "\\appendix");
-  // TODO: Perl has classification_tokens_for_env sub and DefEnvironment for
-  // {AMS}, {AM}, {PII} that emit ltx:classification elements.
-  // Stubbed as empty environments for now.
-  DefEnvironment!("{AMS}", "#body");
-  DefEnvironment!("{AM}", "#body");
-  DefEnvironment!("{PII}", "#body");
+  // Perl siamltex.cls.ltxml L27-40: `classification_tokens_for_env` unreads
+  // `\@add@frontmatter{ltx:classification}[scheme=<TYPE>]{body}` on the
+  // gullet via `afterDigestBody`. The direct-XML form below follows the
+  // mn2e_support {keywords} precedent (latexml_package::mn2e_support_sty
+  // L47-48) and produces the same `<ltx:classification>` output where the
+  // document builder picks it up. Simpler than the Whatsit round-trip but
+  // preserves the scheme attribute and body content.
+  DefEnvironment!("{AMS}",
+    "<ltx:classification scheme='AMS'>#body</ltx:classification>");
+  DefEnvironment!("{AM}",
+    "<ltx:classification scheme='AM'>#body</ltx:classification>");
+  DefEnvironment!("{PII}",
+    "<ltx:classification scheme='PII'>#body</ltx:classification>");
   DefMacro!(T_CS!("\\begin{romannum}"), None, "\\begin{enumerate}");
   DefMacro!(T_CS!("\\end{romannum}"), None, "\\end{enumerate}");
   DefMacro!(T_CS!("\\begin{remunerate}"), None, "\\begin{enumerate}");
