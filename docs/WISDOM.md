@@ -1021,6 +1021,21 @@ If the Def*-parity audit flags these, the right resolution is to
 record them as an intentional divergence in OXIDIZED_DESIGN.md, not
 to kind-flip.
 
+**Same direct-emission improvement in texvc_sty.rs (30 entries).**
+Perl `texvc.sty.ltxml` defines MediaWiki's math subset as simple
+expansion aliases: `DefMacroI('\N', undef, '\mathbb{N}')`,
+`DefMacroI('\darr', undef, '\downarrow')`, etc. Rust redefines these
+as direct DefMath emissions with explicit semantic markup:
+`DefMath!("\\N", None, "\u{2115}", role => "ID", meaning =>
+"natural-numbers")`. Both produce the same visible math symbol
+(ℕ, ↓, etc.), but Rust's version carries `role`/`meaning`
+attributes that Perl's alias-chain loses by the time it reaches
+MathML output. All 30 texvc DP mismatches fit this shape — do NOT
+kind-flip; the Rust version is strictly more informative for
+accessibility/semantic consumers of the XML. Same categorization
+applies to any package binding where the audit shows `Perl=DefMacroI
+→ Rust=DefMath` for a symbol-alias CS.
+
 ## 41. Math-mode Def*-kind mismatches are usually structural, not parity bugs
 
 **Context:** The Def*-parity audit (`tools/audit_def_parity.py`) flags
