@@ -107,7 +107,20 @@ LoadDefinitions!({
   DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,
     font => { forcebold => true }, locked => true);
   DefConstructor!("\\pmb{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
-  DefMacro!("\\eqnum{}", "");
+  // Perl revtex4_support.sty.ltxml L172:
+  //   DefMacro('\eqnum {}',
+  //     '\lx@equation@settag{\edef\theequation{#2}\lx@make@tags{equation}}',
+  //     locked => 1);
+  // The Perl body has a known bug — `#2` is out-of-range for a 1-arg macro
+  // (KNOWN_PERL_ERRORS.md #15) — so it always tags the equation with the
+  // counter default and silently drops the user-supplied label. Rust's
+  // empty body is semantically equivalent to Perl's broken effect (same
+  // dropped-label outcome) without re-implementing the buggy `#2` lookup.
+  // The `locked=>true` flag is independent of the body and IS load-bearing:
+  // it prevents a downstream class (revtex3_support? a sibling APS .cls?)
+  // from `\renewcommand`-ing \eqnum into something that re-introduces a
+  // tag-conflict. Match Perl on the lock.
+  DefMacro!("\\eqnum{}", "", locked => true);
   DefMacro!("\\mathletters", "");
   DefMacro!("\\endmathletters", "");
 
