@@ -63,7 +63,13 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
 
-  // \ContinuedFloat — Perl L87-92
-  // Decrements the parent counter and restores the sub-counter save value
-  DefMacro!("\\ContinuedFloat", "\\addtocounter{\\@captype}{\\m@ne}");
+  // \ContinuedFloat — Perl L98-102
+  // Perl decrements the parent counter AND restores the sub-counter from
+  // sub<captype>@save. Prior Rust only decremented the parent, leaving
+  // the sub-counter at whatever value the prior float ended on, so a
+  // \ContinuedFloat followed by a \subfloat would keep counting from the
+  // stale sub index instead of rewinding.
+  RawTeX!(r"\def\lx@subfig@continue@restore#1{\setcounter{sub#1}{\value{sub#1@save}}}");
+  DefMacro!("\\ContinuedFloat",
+    r"\addtocounter{\@captype}{\m@ne}\expandafter\lx@subfig@continue@restore\expandafter{\@captype}");
 });
