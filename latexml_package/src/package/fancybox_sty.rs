@@ -22,9 +22,21 @@ LoadDefinitions!({
     "<ltx:text cssstyle='border:2px solid black;border-radius:5px;'>#1</ltx:text>",
     mode => "internal_vertical");
 
-  // {Sbox} environment: saves its body for later use by \TheSbox
-  // Perl stores the body via afterDigestBody + AssignValue/LookupValue.
-  // For now, we approximate: {Sbox} is a no-op environment and \TheSbox is empty.
-  DefEnvironment!("{Sbox}", "");
-  DefMacro!("\\TheSbox", None);
+  // Perl fancybox.sty.ltxml L38-46: {Sbox} stashes its digested body
+  // globally under the `Sbox` state value; \TheSbox pops it and
+  // replays the stored content in place. Prior Rust stub was an empty
+  // env + no-op macro, so `\sbox{…}{foo}\TheSbox` lost `foo`.
+  DefEnvironment!("{Sbox}", "",
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        state::assign_value("Sbox", Stored::Digested(body), Some(Scope::Global));
+      }
+    });
+  DefPrimitive!("\\TheSbox", {
+    let stashed = state::lookup_value("Sbox");
+    state::assign_value("Sbox", Stored::None, Some(Scope::Global));
+    if let Some(Stored::Digested(body)) = stashed {
+      return Ok(vec![body]);
+    }
+  });
 });
