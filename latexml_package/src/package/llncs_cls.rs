@@ -141,7 +141,15 @@ LoadDefinitions!({
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
 
   //======================================================================
-  // Blackboard bold letters
+  // Blackboard bold letters.
+  //
+  // Perl: DefPrimitiveI('\bbbc', undef, "\x{2102}") etc. — DefPrimitive with
+  // literal glyph body. Rust uses DefConstructor with inline-literal template
+  // + enter_horizontal => true for explicit horizontal-mode entry. Functionally
+  // equivalent (both emit ℂ, ℕ, ℝ, etc.). The DP audit flags 13 of these as
+  // DefPrimitiveI↔DefConstructor structural mismatches — kind-flip is not
+  // needed; Rust's DefConstructor is the idiomatic shape for literal-glyph
+  // output with mode-entry semantics.
   DefConstructor!("\\bbbc",   "\u{2102}",   enter_horizontal => true);
   DefConstructor!("\\bbbf",   "\u{1D53D}",  enter_horizontal => true);
   DefConstructor!("\\bbbh",   "\u{210D}",   enter_horizontal => true);
