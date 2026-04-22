@@ -63,13 +63,31 @@ LoadDefinitions!({
   // Frontmatter
   DefMacro!("\\layoutstyle{}", "");
 
-  // keywords: address, altaddress, email
-  // Perl: DefMacro('\author{} RequiredKeyVals', sub { ... complex Perl ... });
-  // Simplified: define \author with keyvals support
-  // The Perl version extracts address, altaddress, email from keyvals
-  // and wraps them in \lx@author / \lx@contact invocations.
-  // For now, provide the basic author definition.
-  DefMacro!("\\author{} RequiredKeyVals", "\\lx@author{#1}");
+  // Perl aipproc.cls.ltxml L74-84: \author{name} RequiredKeyVals — the
+  // keyvals carry address / altaddress / email, and the Perl sub wraps
+  // each present key in `\lx@contact{key}{value}`. Prior Rust version
+  // used the bare stub "\\lx@author{#1}" that silently dropped all keys.
+  DefMacro!("\\author{} RequiredKeyVals", sub[(author, kv)] {
+    let mut out: Vec<Token> = Vec::new();
+    // \lx@author{author}
+    out.push(T_CS!("\\lx@author"));
+    out.push(T_BEGIN!());
+    out.extend(author.unlist_ref().iter().cloned());
+    out.push(T_END!());
+    for field in ["address", "altaddress", "email"] {
+      if let Some(val) = kv.get_value(field) {
+        // \lx@contact{field}{value}
+        out.push(T_CS!("\\lx@contact"));
+        out.push(T_BEGIN!());
+        out.extend(ExplodeText!(field));
+        out.push(T_END!());
+        out.push(T_BEGIN!());
+        out.extend(val.revert()?.unlist());
+        out.push(T_END!());
+      }
+    }
+    Ok(Tokens::new(out))
+  });
 
   DefMacro!("\\keywordsname", "Keywords");
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordsname}]{#1}");
