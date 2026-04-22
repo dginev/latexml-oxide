@@ -934,12 +934,18 @@ design assertion.
 ## 36. `rebuild_idstore_from_dom()` timing: finalize-only, not Rewriting-entry
 
 **Context:** The post-processor's `idstore` maps `xml:id` → libxml2
-`Node`. Upstream passes (math-parser `replace_tree`, various
-`unbind_node()` sites) sometimes drop xml:id-bearing subtrees without
-calling `unrecord_id`, leaving dangling-Node entries. Later passes can
-dereference these and SIGSEGV (originally seen on arxiv:1605.08055;
-fixed in `337c1ef52` by adding `rebuild_idstore_from_dom()` at
-`finalize()` entry before `prune_xmduals`).
+`Node`. Historically, upstream passes (math-parser `replace_tree`,
+various `unbind_node()` sites) dropped xml:id-bearing subtrees
+without calling `unrecord_id`, leaving dangling-Node entries that
+later passes could dereference and SIGSEGV (originally seen on
+arxiv:1605.08055; fixed in `337c1ef52` by adding
+`rebuild_idstore_from_dom()` at `finalize()` entry before
+`prune_xmduals`). Cycle 72 audited the specific call sites
+(parser.rs:456/639/690/856, rewrite.rs:522) and confirmed they
+now all have proper `unrecord_node_ids` / `remove_node` cascade
+coverage — so the rebuild at finalize is belt-and-suspenders
+pending 10k-sandbox re-verification on 1605.08055 (see
+SYNC_STATUS.md D3b [~] entry).
 
 **Wisdom:** do NOT also call `rebuild_idstore_from_dom` at the start
 of the Rewriting phase. Tried in session 128, broke `split_test`.
