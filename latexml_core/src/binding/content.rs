@@ -1706,7 +1706,12 @@ pub fn digest_literal<T: Into<Tokens>>(stuff: T) -> Result<Digested> {
   // valid changes of state!)
   begin_mode("text")?;
 
-  let font = lookup_font().unwrap(); // TODO: raise error if font missing
+  // Fall back to the global text default if no font is currently assigned —
+  // avoids a panic at this hot path (called from e.g. RefStepID / label
+  // digestion) when the state's "font" slot hasn't been initialised. Matches
+  // the same fallback `assign_value("font", Font::text_default(), …)` that
+  // stomach::init uses at startup.
+  let font = lookup_font().unwrap_or_else(|| Rc::new(crate::common::font::Font::text_default()));
   assign_font(
     Rc::new(font.merge(fontmap!(encoding => "ASCII"))),
     Some(Scope::Local),
