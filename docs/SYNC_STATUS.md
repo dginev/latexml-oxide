@@ -29,12 +29,12 @@ abort, prevents an observed warning cascade, or tightens a diff vs
 Perl's output on a specific paper.
 
 **24-hour sprint cadence.** Recurring `continue SYNC_STATUS` cron
-enqueues an autonomous work tick roughly every 15 minutes (see
-`CronList` / `memory/project_24h_sprint.md`). Each tick should: pick
-one unchecked `[ ]` from this doc or the Perl source, do ≤1 commit,
-verify with `cargo check --workspace` + (when small) `cargo test
---release --tests`, update memory. If blocked, document the blocker in
-the file's inline comment and move on — don't idle a cycle polling.
+enqueues an autonomous work tick every 5 minutes (see `CronList` /
+`memory/project_24h_sprint.md`). Each tick should: pick one unchecked
+`[ ]` from this doc or the Perl source, do ≤1 commit, verify with
+`cargo check --workspace` + (when small) `cargo test --release
+--tests`, update memory. If blocked, document the blocker in the
+file's inline comment and move on — don't idle a cycle polling.
 
 Updated 2026-04-22. **Open gaps & active TODOs only.** Completed work
 lives in git log and `memory/project_session_history.md`.
