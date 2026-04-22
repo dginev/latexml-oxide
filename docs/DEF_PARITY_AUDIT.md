@@ -191,7 +191,7 @@ updated after every batch (status column).
 | B2 | `latex_constructs.rs` env family — `DefMacro → DefEnvironment` | 4 | pending | `{abstract}`, 3 more at L2126-2130 |
 | B3 | `latex_constructs.rs` picture primitives (`line vector oval qbezier bezier`) — DefConstructor→DefMacro reversal | 5 | pending | need to preserve XML element emission |
 | B4 | `plain_base.rs` single-char primitives (`# & % $` + `mit`) — DefPrimitive→DefMacro reversal | 6 | pending | low-risk single-char |
-| B5 | `latex_constructs.rs` `\end \g@addto@macro \vspace \textprime \arrowlength \DeclareTextSymbolDefault \thinlines \thicklines` — misc | ~9 | partial (4/9) | ✅ \textprime, \thinlines, \thicklines, \arrowlength; pending \end/\g@addto@macro/\vspace/\DeclareTextSymbolDefault |
+| B5 | `latex_constructs.rs` `\end \g@addto@macro \vspace \textprime \arrowlength \DeclareTextSymbolDefault \thinlines \thicklines \not@math@alphabet` — misc | ~10 | partial (6/10) | ✅ \textprime, \thinlines, \thicklines, \arrowlength, \g@addto@macro (DefPrimitive→DefMacro with Tokens!() empty return), \not@math@alphabet (DefPrimitive→DefMacro None stub); `\vspace` intentional divergence (stubbed due to moderncv \vskip break, see inline comment); pending `\end`/\DeclareTextSymbolDefault |
 | B6 | `tex_math.rs` `\left \right \mathchar` | 3 | pending | math-mode constructors |
 | B7 | `base_xmath.rs` `\lx@cases@condition` + end | 2 | pending | |
 | B8 | `plain_bootstrap.rs` `\newif` | 1 | ✅ done | DefMacro→DefPrimitive, 1097/0 tests |

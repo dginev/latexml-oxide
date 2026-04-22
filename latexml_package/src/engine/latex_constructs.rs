@@ -3562,8 +3562,15 @@ LoadDefinitions!({
     r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}"
   );
 
-  DefPrimitive!("\\g@addto@macro DefToken {}", sub[(target, content)] {
+  // Perl L962: DefMacro('\g@addto@macro DefToken {}', sub { AddToMacro(...) });
+  // The state mutation fires during gullet expansion, not stomach-level
+  // digestion — so \g@addto@macro takes effect immediately when the
+  // expansion chain reaches it (needed for \edef / \AtBeginDocument
+  // callers that rely on the hook-macro state being visible during
+  // subsequent expansion in the same batch).
+  DefMacro!("\\g@addto@macro DefToken {}", sub[(target, content)] {
     AddToMacro!(target, content);
+    Ok(Tokens!())
   });
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 
@@ -8205,7 +8212,11 @@ LoadDefinitions!({
   // For fonts not allowed in math!!!
   // Perl L5226: \not@math@alphabet@@ checks if we're in math mode
   // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
-  DefPrimitive!("\\not@math@alphabet{}{}", "");
+  // Perl L5349: DefMacro('\not@math@alphabet{}{}', ...) — conditional error
+  // message in math mode, no-op otherwise. Rust keeps the no-op stub but
+  // matches the Perl kind (DefMacro — expansion-time, same as the
+  // invocation sites `\mdseries`/`\bfseries` which expand it inline).
+  DefMacro!("\\not@math@alphabet{}{}", None);
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
     if state::lookup_bool_sym(pin!("IN_MATH")) {
       let c = c.to_string();
