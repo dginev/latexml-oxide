@@ -554,8 +554,8 @@ LoadDefinitions!({
   //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
   DefPrimitive!("\\cal", {
     if state::lookup_bool_sym(pin!("IN_MATH")) {
-      merge_font(fontmap!(family => "caligraphic", series => "medium",
-        shape => "upright", encoding => "OMS"));
+      MergeFont!(family => "caligraphic", series => "medium",
+        shape => "upright", encoding => "OMS");
     }
     Tbox::new(arena::pin_static(""), None, None, Tokens::from(T_CS!("\\cal")),
       SymHashMap::default())

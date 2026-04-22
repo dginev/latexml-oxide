@@ -405,10 +405,16 @@ LoadDefinitions!({
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
 
-  // Perl: \mit is \fam\itfam (plain.tex); LaTeXML doesn't override it.
-  // In math mode, the default font is already italic, so \mit is effectively a no-op.
-  // Use empty alias so the reversion is empty (Perl's \mit expands as a TeX assignment, no Box).
-  DefMacro!("\\mit", None);
+  // Perl plain_base.pool.ltxml L371 (shadowed L369's declarative form):
+  //   DefPrimitiveI('\mit', undef, sub {
+  //     if (LookupValue('IN_MATH')) {
+  //       MergeFont(family => 'math', shape => 'italic'); }
+  //     return; });
+  DefPrimitive!("\\mit", {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
+      MergeFont!(family => "math", shape => "italic");
+    }
+  });
 
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);
