@@ -261,7 +261,13 @@ LoadDefinitions!({
   DefMacro!("\\norm", "\\lx@physics@fenced{\\norm}{norm}{}{\\|}{\\|}");
   Let!("\\abs", "\\absolutevalue");
 
-  // Perl: \evaluated — fenced arg, then read sub/superscript limits
+  // Perl: \evaluated — fenced arg, then read sub/superscript limits.
+  // Perl kind: DefMacro with gullet-level sub body returning I_dual(...).
+  // Rust kind: DefPrimitive with imperative stomach-level body — same
+  // structured XMDual output, parsed at digest time instead of expansion
+  // time. Practical difference (expansion inside \edef) is negligible for
+  // physics notation. DP audit flags this as DefMacro↔DefPrimitive; it is
+  // a structural pattern, not a parity bug — see docs/WISDOM.md #41.
   DefPrimitive!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
