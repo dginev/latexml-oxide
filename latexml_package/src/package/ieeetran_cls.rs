@@ -126,11 +126,19 @@ LoadDefinitions!({
   DefMacro!("\\IEEEyessubnumber OptionalMatch:*", "");
   DefMacro!("\\IEEEnosubnumber OptionalMatch:*", "");
 
-  // Column types (Perl L308-314) — DefColumnType not yet ported, skip
+  // Column types (Perl L308-314): L/C/R add \hfil-before/after hooks.
+  // Rust engine's `Cell` template doesn't auto-derive align= from
+  // \hfil tokens, so a literal port produces center-defaulted cells —
+  // IEEE.xml's current snapshot captures Rust's prior
+  // fallthrough behavior (where L/C resolved through an accidental
+  // inversion). A faithful port needs explicit `align: Left/Center/Right`
+  // on the Cell and a matching snapshot refresh; deferred.
 
   Let!("\\appendices", "\\appendix");
 
-  // Bibliography style — AssignMapping not yet ported, skip
+  // Bibliography style — Perl IEEEtran doesn't touch bibliography
+  // beyond the (commented-out) bstctlcite documentation at L442. Stale
+  // "AssignMapping not yet ported" note removed; nothing to port here.
 
   // IED list stubs (Perl L340-347)
   DefMacro!("\\IEEEsetlabelwidth{}", "\\settowidth{\\labelwidth}{#1}");
