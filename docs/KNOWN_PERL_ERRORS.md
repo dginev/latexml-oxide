@@ -361,3 +361,32 @@ handler instead of the registered no-op.
 Both are no-ops in either form, so the practical impact is only
 log-order: Perl's log says "gennarrow is unknown, using default",
 Rust's says "gennarrow matched option, processed".
+
+---
+
+## 15. `revtex4_support.sty.ltxml` `\eqnum` body references `#2` with only one parameter
+
+**Perl source:** `LaTeXML/Package/revtex4_support.sty.ltxml` L172
+
+```perl
+DefMacro('\eqnum {}', '\lx@equation@settag{\edef\theequation{#2}\lx@make@tags{equation}}',
+  locked => 1);
+```
+
+**Root cause:** The signature `\eqnum {}` declares one required argument
+(`#1`), but the expansion references `#2`. `#2` is out of range and
+substitutes undefined/empty — so the `\edef` assigns an empty string to
+`\theequation`, and `\lx@make@tags{equation}` then emits whatever
+`\theequation` was before the body fired (likely the counter default).
+
+**Impact:** `\eqnum{foo}` in revtex4 docs always tags the equation with
+the counter value, never with the user-supplied label. Intended was
+probably `#1`.
+
+**Perl status:** Still present. Unfixed upstream.
+
+**Rust behavior:** `revtex4_support_sty.rs` defines `\eqnum{}` → `""`
+(silently drops the label). Semantically equivalent to Perl's buggy
+`#2`-is-empty behavior — both lose the user label. A faithful "fix
+Perl's typo" port using `#1` would be a deliberate divergence from
+upstream.
