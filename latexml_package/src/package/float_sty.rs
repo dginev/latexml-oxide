@@ -108,11 +108,16 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
 }
 
 fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
-  use crate::engine::latex_constructs::{after_float, before_float};
+  use crate::engine::latex_constructs::{after_float, before_float_ex};
 
   let class_val = class.to_string();
   // Extract the base type for before_float (remove trailing *)
   let base_type = name.trim_end_matches('*').to_string();
+  // Perl float.sty.ltxml L70: starred variant calls beforeFloat with
+  // `double => 1` so \hsize gets \textwidth (spans both columns) rather
+  // than \columnwidth (single column). The detect-by-name-suffix mirrors
+  // the DefEnvironmentI("$type*", ...) branch in Perl's \newfloat.
+  let is_double = name.ends_with('*');
   let style_str = style.to_string();
 
   let replacement: ReplacementClosure = Rc::new({
@@ -166,10 +171,10 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
     ..Default::default()
   };
 
-  // before_digest: beforeFloat($type)
+  // before_digest: beforeFloat($type [, double => 1])
   let bt = base_type.clone();
   let before_closure: BeforeDigestClosure = Rc::new(move || {
-    before_float(&bt, None);
+    before_float_ex(&bt, None, is_double);
     Ok(Vec::new())
   });
   options.before_digest.push(before_closure);
