@@ -56,13 +56,20 @@ below) + raw-TeX / expl3 kernel parity (D1-D2 + Long-horizon). Recent
 completed landings in git log; this file tracks open work only.
 
 **Upstream Perl sync** (audited 2026-04-22 through commit `fdc8bf91`):
-Rust current with all 12+ recent upstream commits reviewed. Explicit
-"Perl #NNNN" parity comments live at `keyval.rs:326` (#2777),
-`stomach.rs:699` (#2775), `math_common.rs:927` (#2762), and others.
-Only narrow gap found this audit: `pstricks.tex.ltxml`'s two-step
-load (raw tex + support overlay) — ported in `92b9b0d5c`. All prior
-6 commits spot-checked in memory cycle 59 (48ad18db, d81e955b,
-e6db0871, 50f0061d, acaab773, 4eb681c0) remain ported.
+Rust current with **all 14 recent upstream commits** reviewed. Only
+narrow gap found: `pstricks.tex.ltxml`'s two-step load — ported in
+`92b9b0d5c`. Audit scope this session: fdc8bf91 (pstricks/KeyVal),
+8a5cd306 (hyperref etoolbox), 70508320 (alignment-token #2775),
+7119a535 (Dumper spec — N/A, Rust uses url-encoding), 3a89a24d
+(Lrgroup U+27EE/27EF #2762), 3b027351 (siunitx separators #2751),
+285bb02b (iflimit deny-list #2771), dfeeb1b8 (pgfNumber double
+negation #2711), 21eeedf5 (ePub lang #2665), 3875cd64 (bibconfig
+KV #2683), 5082b034 (CI-only). Prior 6 spot-checked in memory
+cycle 59 (48ad18db, d81e955b, e6db0871, 50f0061d, acaab773,
+4eb681c0). Explicit "Perl #NNNN" parity breadcrumbs live in
+`keyval.rs:326`, `stomach.rs:699`, `math_common.rs:927`, and other
+targeted call sites — the right primary audit path for future sync
+checks is grep for "Perl #" first, then diff the uncovered ranges.
 
 ## Tikz — Known Diffs (vs Perl output)
 
