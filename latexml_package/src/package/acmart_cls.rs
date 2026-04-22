@@ -97,30 +97,39 @@ LoadDefinitions!({
   DefMacro!("\\email [] Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#2}}");
 
   DefMacro!("\\orcid Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@orcid{\\@@orcid{#1}}}");
+  // Perl acmart.cls.ltxml has `mode=>'restricted_horizontal',
+  // enterHorizontal=>1` on \@@orcid and all eight affiliation
+  // constructors. enter_horizontal triggers an implicit horizontal-mode
+  // entry when invoked between paragraphs (vertical mode), so these
+  // text-shaped <ltx:text> wrappers don't get emitted as block-level
+  // children of the section root with no enclosing <ltx:p>. Same
+  // class as cancel_sty cycle 86 / hyperref cycle 87.
   DefConstructor!("\\@@orcid{}",
     "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
-    mode => "restricted_horizontal"
+    mode => "restricted_horizontal", enter_horizontal => true
   );
   DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
 
   //======================================================================
-  // Internal structure to affiliation
+  // Internal structure to affiliation — Perl uses enterHorizontal=>1
+  // on each so each `\institution{...}` etc. between paragraphs of an
+  // \affiliation block opens a paragraph instead of a stray block.
   DefConstructor!("\\position{}", "<ltx:text class='ltx_affiliation_position' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\institution{}", "<ltx:text class='ltx_affiliation_institution' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\department{}", "<ltx:text class='ltx_affiliation_department' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\streetaddress{}", "<ltx:text class='ltx_affiliation_streetaddress' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\city{}", "<ltx:text class='ltx_affiliation_city' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\state{}", "<ltx:text class='ltx_affiliation_state' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\postcode{}", "<ltx:text class='ltx_affiliation_postcode' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\country{}", "<ltx:text class='ltx_affiliation_country' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
 
   //======================================================================
   // Ignorable stuff
