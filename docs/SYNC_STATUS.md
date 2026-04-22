@@ -416,7 +416,20 @@ a safe API is missing, add it to `~/git/rust-libxml` and
 vendor-patch/upstream. **Zero direct FFI call sites remaining** as of
 round 17 commit (see below).
 
-- [ ] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
+- [x] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
+  Landed round 17 cycles 51–58. `Document::safe_unlink` guardian
+  primitive (`faa821012`) + 4 real hazards migrated across 4 commits
+  (`478df9736` rewrite restructure_scripts_in_dual, `679b5827b`
+  kludge_fences re-record, `d204282cc` relocate_footnote_aux,
+  `8e6f4bbc8` rearrange_eqnarray/collapse_float, `070daebb1`
+  close_math_fork/eq-loop, `df9fba807` \@@joinrel/authblk) +
+  exhaustive audit classifying every remaining raw unlink site as
+  safe-by-pattern (save-and-reparent, text-only, prior
+  unrecord_node_ids, or routed through guarded
+  document.remove_node/replace_node). `rebuild_idstore_from_dom`
+  belt-and-suspenders fallback at `finalize()` entry retained —
+  downgrading to debug-only probe is an optional future refinement
+  (separate from this work item).
 - [x] Replace unsafe-over-FFI with safe wrappers where practical.
   Landed round 17. The last raw `extern "C" { fn exsltRegisterAll();
   } unsafe { … }` block in `latexml_post::xslt` was moved upstream to
