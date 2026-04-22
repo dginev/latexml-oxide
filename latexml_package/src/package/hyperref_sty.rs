@@ -282,9 +282,13 @@ LoadDefinitions!({
   // RE-define from url w
   DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true);
 
+  // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
+  // present. enter_horizontal => true was missing in the Rust port —
+  // a `\url{...}` between paragraphs at top level opened <ltx:ref>
+  // outside any <ltx:p>, producing invalid block-level structure.
   DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    bounded   => true,
+    bounded   => true, enter_horizontal => true,
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
@@ -295,20 +299,22 @@ LoadDefinitions!({
     },
     sizer     => "#5",
     reversion => "#1#2#4#3");
-  // \nolinkurl{url}
+  // \nolinkurl{url} — Perl L197-199: enterHorizontal=>1
   DefConstructor!(
     "\\nolinkurl Semiverbatim",
-    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>"
+    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>",
+    enter_horizontal => true
   );
 
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
   AssignValue!("BASE_URL" => url.to_string()); });
 
-  // \hyperimage{imageurl}{text}
+  // \hyperimage{imageurl}{text} — Perl L205-207: enterHorizontal=>1
   DefConstructor!(
     "\\hyperimage Semiverbatim {}",
-    "<ltx:graphic graphic='#1' description='#2'/>"
+    "<ltx:graphic graphic='#1' description='#2'/>",
+    enter_horizontal => true
   );
 
   DefMacro!("\\hyperref", "\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv");
