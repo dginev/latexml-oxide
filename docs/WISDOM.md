@@ -1047,6 +1047,17 @@ load-bearing:
   to match Perl's Box-promotion exactly, then flip the kind.
 - `\left`/`\lx@right`: port `TeXDelimiter` as a ParameterType first.
 
+**Same split pattern also applies to the LaTeX picture primitives**
+(`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier`). Perl's
+`Pair:Number` parameter type reads two `(x,y)`-style coordinate pairs
+as a single argument; Rust doesn't have `Pair:Number` as a
+ParameterType either. The Rust port splits each primitive into a
+top-level DefMacro that unpacks `Match:( Until:, Until:) {Float}` into
+three primitive arguments and forwards to a helper
+`\lx@pic@XXX{}{}{}` DefConstructor that does the actual SVG emission.
+Same functional parity, different factoring. The audit flags the
+top-level DefMacro kind but misses the dispatch chain.
+
 **Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
 fraction to be structural adaptations (mode-splits, direct XML emission,
 parameter-type gaps), not parity bugs. Read the Perl body first; if the

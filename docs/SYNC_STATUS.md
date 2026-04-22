@@ -101,11 +101,14 @@ Def* only (prior regex caught nested calls inside `beforeDigest => sub
 {…}` blocks, producing false positives like `\abstract`).
 
 **Remaining 14 engine mismatches** (fresh audit; by file/shape):
-- `latex_constructs.rs` (7): picture primitives `\line`/`\vector`/
-  `\oval`/`\qbezier`/`\lx@pic@bezier` (5 — DefConstructor↔DefMacro
-  reversal, needs SVG emission), `\tabular` DefKeyVal, `\vspace`
-  DefMacro (**blocked — see WISDOM #38**; naive kind-flip regresses
-  `moderncv/cs_cv.tex` test via Rust `\vskip` horizontal-mode
+- `latex_constructs.rs` (7): 5 picture primitives `\line`/`\vector`/
+  `\oval`/`\qbezier`/`\lx@pic@bezier` (**blocked — see WISDOM #41**;
+  Rust splits each into a top-level DefMacro that unpacks `Pair:Number`
+  into primitive args + forwards to `\lx@pic@XXX{}{}{}` DefConstructor;
+  audit only sees the DefMacro layer. Proper kind-flip needs
+  `Pair:Number` as a ParameterType first.) `\tabular` DefKeyVal.
+  `\vspace` DefMacro (**blocked — see WISDOM #38**; naive kind-flip
+  regresses `moderncv/cs_cv.tex` via Rust `\vskip` horizontal-mode
   paragraph-break asymmetry).
 - `plain_base.rs` (4): `#`/`&`/`%`/`$` — **blocked / intentional, see
   WISDOM #40**. Rust uses `\ifmmode` → `\lx@text@…`/`\lx@math@…` split
@@ -117,15 +120,18 @@ Def* only (prior regex caught nested calls inside `beforeDigest => sub
   DefMacro workarounds for the missing `TeXDelimiter` parameter type
   (structural gap to port first).
 
-**Truly actionable remaining (6 items):** picture primitives
-(`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier` — 5 sites,
-DefMacro→DefConstructor, needs SVG emission), `\tabular`
-(DefMacro→DefKeyVal, needs DefKeyVal! machinery).
+**Truly actionable remaining (1 item):** `\tabular`
+(DefMacro→DefKeyVal, needs real `DefKeyVal!` macro port).
 
 **Blocked / intentional (documented in WISDOM):** `\vspace` (#38),
 `$/#/&/%` special chars (#40), math-mode `\mathchar`/`\left`/`\lx@right`
-(#41). 8 of 14 engine mismatches belong here — they are structural
-adaptations or Rust improvements, not parity bugs.
++ picture primitives cluster (#41). **13 of 14 engine mismatches**
+belong here — they are structural adaptations (missing `TeXDelimiter`
+/ `Pair:Number` parameter types, 2-layer DefMacro+DefConstructor
+factoring), Rust improvements (mode-split, direct XML emission), or
+load-bearing bug workarounds (\vspace shielding \vskip paragraph-break).
+The DP audit as a kind-flip work queue is essentially closed; the
+remaining structural items need larger dedicated investigations.
 
 **Package (232 mismatches, batches P1–P9):** deferred until engine is
 clean. Top files: caption_sty.rs (32), texvc_sty.rs (30),
