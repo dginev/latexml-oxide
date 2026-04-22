@@ -1170,7 +1170,7 @@ pub fn set_attributes_wild(
   // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
   // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have
   // XMWrap, we do the POSTSUBSCRIPT→SUBSCRIPTOP conversion here instead.
-  restructure_scripts_in_dual(&dual_node, doc)?;
+  restructure_scripts_in_dual(&dual_node, document)?;
 
   mark_seen_rec(&dual_node);
   Ok(())
@@ -1184,7 +1184,11 @@ pub fn set_attributes_wild(
 ///
 /// This matches Perl where the math parser's kludge_scripts processes
 /// the XMWrap presentation arm and restructures scripts.
-fn restructure_scripts_in_dual(dual: &Node, doc: &libxml::tree::document::Document) -> Result<()> {
+fn restructure_scripts_in_dual(dual: &Node, document: &mut crate::document::Document) -> Result<()> {
+  // Clone the XmlDoc handle (Rc-cheap) so the &mut Document isn't
+  // borrowed across Node::new(…, &doc) calls — we need the mut borrow
+  // live at `document.safe_unlink(script_node)` below.
+  let doc = document.get_document().clone();
   // Iterate over presentation children (skip first child = content arm)
   let children: Vec<Node> = dual
     .get_child_nodes()
@@ -1213,9 +1217,9 @@ fn restructure_scripts_in_dual(dual: &Node, doc: &libxml::tree::document::Docume
         };
 
         // Create new XMApp to hold the restructured script
-        let mut new_app = Node::new("XMApp", None, doc)?;
+        let mut new_app = Node::new("XMApp", None, &doc)?;
         // Create SUBSCRIPTOP/SUPERSCRIPTOP token (Perl uses "post1" scriptpos)
-        let mut scriptop_tok = Node::new("XMTok", None, doc)?;
+        let mut scriptop_tok = Node::new("XMTok", None, &doc)?;
         let _ = scriptop_tok.set_attribute("role", scriptop);
         let _ = scriptop_tok.set_attribute("scriptpos", "post1");
         new_app.add_child(&mut scriptop_tok)?;
@@ -1255,13 +1259,14 @@ fn restructure_scripts_in_dual(dual: &Node, doc: &libxml::tree::document::Docume
         }
 
         // Replace the POSTSUBSCRIPT node with the new XMApp. The
-        // POSTSUBSCRIPT wrapper's own xml:id (if any) is dropped along
-        // with the node. We'd ideally `unrecord_id` here but this
-        // helper receives only the raw libxml Document, not our
-        // Document wrapper — the idstore-rebuild-at-finalize fix
-        // (session 128) covers the stale entry downstream.
+        // POSTSUBSCRIPT wrapper's own xml:id (if any) is now unrecorded
+        // proactively via `safe_unlink`, so the idstore no longer leaks
+        // a dangling entry that `mark_xmnode_visibility` could later
+        // deref via XMRef lookup. SYNC_STATUS.md D3b migration (replaces
+        // the session-128 rebuild-at-finalize workaround with a
+        // source-level guardian for this specific call path).
         script_node.add_prev_sibling(&mut new_app)?;
-        script_node.unlink();
+        document.safe_unlink(script_node);
 
         i += 2; // Skip both base and script
         continue;
