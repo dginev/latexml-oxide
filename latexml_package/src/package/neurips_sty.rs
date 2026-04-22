@@ -22,7 +22,12 @@ LoadDefinitions!({
   DefMacro!("\\bottomfraction",                        "");
   DefMacro!("\\patchAmsMathEnvironmentForLineno",      "");
   DefMacro!("\\patchBothAmsMathEnvironmentsForLineno", "");
-  DefMacro!("\\subsubsubsection", "\\@startsection{subsubsubsection}{4}{}{}{}{}");
+  // Perl L37: DefMacroI('\subsubsubsection', …, locked => 1). The lock
+  // prevents well-meaning user-level \renewcommand{\subsubsubsection}{…}
+  // from clobbering the @startsection trampoline.
+  DefMacro!("\\subsubsubsection",
+    "\\@startsection{subsubsubsection}{4}{}{}{}{}",
+    locked => true);
   DefMacro!("\\textfraction", "");
   DefMacro!("\\topfraction",  "");
   DefMacro!("\\@neuripsordinal",  "36th");
@@ -34,8 +39,13 @@ LoadDefinitions!({
   DefMacro!("\\answerNA[]",   "\\textcolor{gray}{[N/A] #1}");
   DefMacro!("\\answerTODO[]", "\\textcolor{red}{\\bf [TODO]}");
 
-  // {ack} environment — Perl L51-52
-  DefEnvironment!("{ack}", "#body");
+  // {ack} environment — Perl L51-52 unreads `\acksection` before the body
+  // digests so the "Acknowledgments and Disclosure of Funding" title
+  // header fires without the author having to write it. Without the
+  // unread, `\begin{ack}…\end{ack}` produces a bare body block with no
+  // heading.
+  DefEnvironment!("{ack}", "#body",
+    before_digest => { gullet::unread_one(T_CS!("\\acksection")); });
 
   // {hide} environment — Perl L59
   DefEnvironment!("{hide}", "");

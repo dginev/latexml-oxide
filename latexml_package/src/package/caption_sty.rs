@@ -106,8 +106,26 @@ LoadDefinitions!({
   );
   DefMacro!("\\@scaption{}", "\\@@caption{#1}");
 
-  // \captionof — fake a caption in any context
-  DefMacro!("\\maybe@@generic@caption", "\\@@generic@caption");
+  // \captionof — fake a caption in any context.
+  //
+  // Perl caption.sty.ltxml L110-115 routes through the `CAPTION_type` state
+  // value set by `\captionsetup{type=…}`: when the author has declared a
+  // float type, `\maybe@@generic@caption` expands to `\@captionof{type}`
+  // so the caption digests inside the proper environment; otherwise it
+  // falls through to `\@@generic@caption`. Rust previously hardcoded the
+  // fallback, silently dropping the captionsetup type.
+  DefMacro!("\\maybe@@generic@caption", sub[_args] {
+    if let Some(Stored::String(t)) = state::lookup_value("CAPTION_type") {
+      let ty = arena::with(t, |s| s.to_string());
+      if !ty.is_empty() {
+        let mut out = vec![T_CS!("\\@captionof"), T_BEGIN!()];
+        out.extend(ExplodeText!(&ty));
+        out.push(T_END!());
+        return Ok(Tokens::new(out));
+      }
+    }
+    Ok(Tokens!(T_CS!("\\@@generic@caption")))
+  });
   DefMacro!("\\captionof", "\\@ifstar{\\@scaptionof}{\\@captionof}");
   DefMacro!("\\@captionof{}[]{}", r"\@ifnext\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}");
   DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#4}}");
