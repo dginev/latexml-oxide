@@ -39,26 +39,19 @@ LoadDefinitions!({
   DefKeyVal!("caption", "name", "", "");
   DefKeyVal!("caption", "type", "", "");
 
-  // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key} in state
-  DefPrimitive!("\\captionsetup[]{}", sub[(_ignore, kv)] {
-    // Parse the braced argument as key=value pairs and store each
-    let kv_str = kv.to_string();
-    for pair in kv_str.split(',') {
-      let pair = pair.trim();
-      if pair.is_empty() { continue; }
-      let (key, value) = if let Some(eq_pos) = pair.find('=') {
-        (pair[..eq_pos].trim(), pair[eq_pos+1..].trim())
-      } else {
-        (pair, "true")
-      };
-      if !key.is_empty() {
-        let state_key = s!("CAPTION_{}", key);
-        state::assign_value(
-          &state_key,
-          Stored::String(arena::pin(value)),
-          None,
-        );
-      }
+  // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key}
+  // in state. Perl uses `RequiredKeyVals:caption` so brace-nested and
+  // quoted values parse correctly; the prior Rust version accepted
+  // `{}` and manually split on `,`, which mis-parsed values containing
+  // commas inside braces (e.g. `font={normal,bold}`).
+  DefPrimitive!("\\captionsetup[] RequiredKeyVals:caption", sub[(_ignore, kv)] {
+    for (key, value) in kv.get_pairs() {
+      let state_key = s!("CAPTION_{key}");
+      state::assign_value(
+        &state_key,
+        Stored::String(arena::pin(&value.to_string())),
+        None,
+      );
     }
   });
   DefMacro!("\\DeclareCaptionStyle{}[]{}", "");
