@@ -12,9 +12,14 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("inst_support");
 
-  // Author — Perl L32-34
+  // Author — Perl L32-34 carries `locked => 1`. The JHEP style overloads
+  // \author to always record institute marks and feed through
+  // \lx@author. Without the lock, latex.ltx \author (from article.cls)
+  // or a user-side \newcommand\author can replace our institute-tagging
+  // path and lose the [mark]-parsing branch.
   DefMacro!("\\author[]{}",
-    "\\ifx.#1.\\else\\@institutemark{#1}\\fi\\def\\@author{#2}\\lx@author{#2}");
+    "\\ifx.#1.\\else\\@institutemark{#1}\\fi\\def\\@author{#2}\\lx@author{#2}",
+    locked => true);
 
   // Affiliation — Perl L36-38
   DefConstructor!("\\affiliation[]{}",
