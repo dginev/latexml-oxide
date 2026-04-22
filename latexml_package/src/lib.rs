@@ -220,6 +220,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amstext", "sty", package::amstext_sty::load_definitions),
   ("amsopn", "sty", package::amsopn_sty::load_definitions),
   ("amstex", "sty", package::amstex_sty::load_definitions),
+  ("amstex", "tex", package::amstex_tex::load_definitions),
   ("amsxtra", "sty", package::amsxtra_sty::load_definitions),
   ("empheq", "sty", package::empheq_sty::load_definitions),
   ("fancybox", "sty", package::fancybox_sty::load_definitions),

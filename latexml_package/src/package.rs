@@ -1,6 +1,7 @@
 pub mod algorithm2e_sty;
 pub mod algorithmic_sty;
 pub mod amstex_sty;
+pub mod amstex_tex;
 pub mod applemac_def;
 pub mod cp852_def;
 pub mod csquotes_def;
