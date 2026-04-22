@@ -972,7 +972,33 @@ The audit of every site in `latexml_core` / `latexml_post` /
 `latexml_math_parser` is complete (round-17 cycles 51–58); new drops
 should use the guardian by default.
 
-## 38. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
+## 38. `\vspace` kept as no-op stub; faithful port triggers moderncv paragraph-break regression
+
+**Context:** Perl `latex_constructs.pool.ltxml` L4692 defines
+`DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');` — a pure
+token-replacement macro. Rust `latex_constructs.rs:7206` instead has
+`DefPrimitive!("\\vspace OptionalMatch:* {}", None)` (empty body,
+silently drops the argument).
+
+**Why the divergence:** a prior port attempted the faithful DefMacro
+wiring and regressed the `moderncv/cs_cv.tex` test — `\vskip` in Rust
+digested as vertical-mode glue triggered an implicit `\par` when
+encountered in horizontal mode, breaking paragraphs that moderncv
+intended to keep intact. Perl's `\vskip` binding apparently produces
+a Whatsit without the paragraph-break side effect.
+
+**Wisdom:** **do NOT** flip `\vspace` to Perl-matching DefMacro as a
+naive Def*-parity fix. The kind swap is load-bearing — it hides a
+deeper asymmetry in Rust's `\vskip` horizontal-mode handling. The
+proper path to parity is:
+1. Port `\vskip` so its horizontal-mode digestion matches Perl (no
+   auto-\par).
+2. Then restore `\vspace` to `DefMacro!('\\vspace OptionalMatch:* {}', '\\vskip #2\\relax')`.
+
+Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
+regression tests before landing. Without step 1, step 2 breaks moderncv.
+
+## 39. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
 
 **Context:** Perl LaTeXML treats l3hooks as a block of no-op stubs
 (`latex_base.pool.ltxml` L829-855) — no hook storage, no dispatch, no

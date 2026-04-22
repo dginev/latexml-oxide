@@ -84,32 +84,31 @@ live in git log and `memory/project_session_history.md`. What remains:
 `Def*!` kinds pair-by-pair. Baselines tracked in `docs/def_parity_*.tsv`;
 batch plan + per-batch progress in `docs/DEF_PARITY_AUDIT.md`.
 
-**Progress (2026-04-22):** engine 52 → 19, package 234 → 232 (minor
-false-positive cleanup), contrib 0 (clean). 6 commits on
-`claude-round-17`: `e967af9c7`..`e075c4987`. 1097/0/0 throughout.
+**Progress (2026-04-22):** engine 52 → 15, package 232, contrib 0.
+9 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
++ MergeFont! multi-key), `d7422914c` (\lx@cases@condition DefConstructor
+with captureBody).
 
-**Remaining 19 engine mismatches** (by file, with shape):
-- `latex_constructs.rs` (11): picture primitives (`\line`/`\vector`/
-  `\oval`/`\qbezier`/`\bezier`/`\lx@pic@bezier`, 6) — DefConstructor↔DefMacro
-  reversal; `\tabular` DefKeyVal; `\abstract` DefEnvironmentI; + 3
-  small.
-- `plain_base.rs` (6): `#`/`&`/`%`/`$` mode-aware Box emission + `\mit`.
-- `tex_math.rs` (3): `\left`/`\right`/`\mathchar`.
-- `base_xmath.rs` (2): `\lx@cases@condition` / `@end@condition` —
-  DefConstructorI → DefPrimitive.
-- `tex_fonts.rs` (1): `DefLigature` (Rust-only kind; likely intentional
-  divergence — mark explicitly).
+**Remaining 15 engine mismatches** (fresh audit; by file/shape):
+- `latex_constructs.rs` (8): picture primitives `\line`/`\vector`/
+  `\oval`/`\qbezier`/`\lx@pic@bezier` (5 — DefConstructor↔DefMacro
+  reversal, needs SVG emission), `\abstract` DefEnvironmentI,
+  `\tabular` DefKeyVal, `\vspace` DefMacro (**blocked — see WISDOM
+  #38**; naive kind-flip regresses `moderncv/cs_cv.tex` test via Rust
+  `\vskip` horizontal-mode paragraph-break asymmetry).
+- `plain_base.rs` (4): `#`/`&`/`%`/`$` — all mode-aware Box emission,
+  needs closure-based stomach-level dispatch.
+- `tex_math.rs` (3): `\mathchar` (Perl DefPrimitive → Rust
+  DefConstructor), `\left`, `\lx@right` (Perl DefConstructor → Rust
+  DefMacro; math-mode emission shape difference).
 
-**Next actionable step:** `plain_base.rs \mit` — simplest remaining
-item (Perl `DefPrimitiveI(..., requireMath=>1, font=>{family=>italic})`
-is a standard font-primitive shape that Rust `DefPrimitive!` already
-supports — see `DefPrimitive!("\\OMX", None, font => { family => "cmex10" })`
-at `latex_constructs.rs:5429`).
+**Next actionable step** (simplest remaining, carefully pick a safe
+flip): investigate `plain_base.rs $/#/&/%` cluster — these are TeX
+catcode-active characters with mode-aware semantics. Reading Perl's
+`Plain_Base.pool.ltxml` L70-76 bodies first is mandatory before any
+kind swap.
 
-**After that:** `base_xmath.rs \lx@cases@condition` / `@end@condition`
-(2-line DefConstructorI ports), then tackle the larger clusters
-(picture primitives need SVG emission; `plain_base.rs` mode-dispatch
-needs closure; `tex_math.rs` needs math-mode constructors).
+**Blocked** (document-and-defer): `\vspace` per WISDOM #38.
 
 **Package (232 mismatches, batches P1–P9):** deferred until engine is
 clean. Top files: caption_sty.rs (32), texvc_sty.rs (30),
