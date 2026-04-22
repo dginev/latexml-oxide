@@ -374,6 +374,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("multido", "sty", package::multido_sty::load_definitions),
   ("multirow", "sty", package::multirow_sty::load_definitions),
   ("newfloat", "sty", package::newfloat_sty::load_definitions),
+  ("applemac", "def", package::applemac_def::load_definitions),
   ("latin10", "def", package::latin10_def::load_definitions),
   ("t1enc", "sty", package::t1enc_sty::load_definitions),
   ("t1enc", "def", package::t1enc_def::load_definitions),

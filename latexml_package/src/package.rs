@@ -1,6 +1,7 @@
 pub mod algorithm2e_sty;
 pub mod algorithmic_sty;
 pub mod amstex_sty;
+pub mod applemac_def;
 // Supported package bindings
 pub mod a0poster_cls;
 pub mod a0size_sty;
