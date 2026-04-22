@@ -332,6 +332,7 @@ pub mod pst_grad_sty;
 pub mod pst_node_sty;
 pub mod pstricks_sty;
 pub mod pstricks_support_sty;
+pub mod pstricks_tex;
 pub mod pxfonts_sty;
 pub mod pzd_fontmap;
 pub mod quantumarticle_cls;

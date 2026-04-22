@@ -540,12 +540,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aipcheck", "tex", package::aipcheck_tex::load_definitions),
   // Perl: epsf.tex.ltxml just does `RequirePackage('epsf')`.
   ("epsf", "tex", package::epsf_sty::load_definitions),
-  // Perl: pstricks.tex.ltxml just does `RequirePackage('pstricks_support')`.
-  (
-    "pstricks",
-    "tex",
-    package::pstricks_support_sty::load_definitions,
-  ),
+  // Perl (post-#2777 / fdc8bf91): pstricks.tex.ltxml now does
+  // `InputDefinitions('pstricks', type=>'tex', noltxml=>1)` + then
+  // `RequirePackage('pstricks_support')`. See pstricks_tex.rs.
+  ("pstricks", "tex", package::pstricks_tex::load_definitions),
   // Perl: xypic.tex.ltxml does InputDefinitions('xy', type=>'tex') + RawTeX('\xyoption{v2}').
   // Rust xypic_sty does `RequirePackage!("xy", options=["v2"])`, which is equivalent.
   ("xypic", "tex", package::xypic_sty::load_definitions),
