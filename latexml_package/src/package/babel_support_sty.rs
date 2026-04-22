@@ -75,7 +75,13 @@ pub fn babel_language_to_iso(lang: &str) -> Option<&'static str> {
 #[rustfmt::skip]
 LoadDefinitions!({
   // Unicode quote characters (Perl L24-42)
-  // DefPrimitiveI in Perl outputs literal text — use DefMacro here
+  //
+  // Perl: DefPrimitiveI('\ij', undef, "ij") etc. — DefPrimitive with literal
+  // string body, emits a Box. Rust uses DefMacro with string body which
+  // expands and re-tokenizes into character tokens. Both produce the same
+  // HTML output; for these simple language-shortcut/digraph CSes the DP
+  // audit flags 15 structural DefPrimitiveI↔DefMacro mismatches that are
+  // intentional — DefMacro is idiomatic Rust for plain-text CS aliases.
   DefMacro!("\\ij", "ij");
   DefMacro!("\\IJ", "IJ");
 
