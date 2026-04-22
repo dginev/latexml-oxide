@@ -1058,6 +1058,23 @@ three primitive arguments and forwards to a helper
 Same functional parity, different factoring. The audit flags the
 top-level DefMacro kind but misses the dispatch chain.
 
+**And to amsmath `\aligned` / `\alignedat`.** Perl uses
+`alignsafeOptional` parameter type that reads `[t]/[b]` while being
+safe against alignment-character (`&`) interception inside nested
+`\begin{aligned}` / `\begin{align}` contexts. Rust lacks
+`alignsafeOptional`; plain `[]` would trip handle_template's
+`&`-interception. Workaround: DefPrimitive with explicit
+`local_align_group_count(1000000)` + manual `gullet::read_optional`
++ `expire_align_group_count` + token-unread. See comment block at
+`amsmath_sty.rs:1168`. Audit flags `DefMacro↔DefPrimitive`; root
+cause is again missing ParameterType.
+
+**Candidates for a future ParameterType port** that would collapse
+the cluster back to audit-clean DefMacro/DefConstructor forms:
+`TeXDelimiter`, `Pair:Number`, `alignsafeOptional`. Each is a
+bounded infrastructure investment; any single one would eliminate
+~2-5 DP audit entries while simplifying the binding code.
+
 **Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
 fraction to be structural adaptations (mode-splits, direct XML emission,
 parameter-type gaps), not parity bugs. Read the Perl body first; if the
