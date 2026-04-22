@@ -150,15 +150,35 @@ LoadDefinitions!({
   DefMacro!("\\IEEEiedlabeljustifyl", "");
   DefMacro!("\\IEEEiedlabeljustifyr", "");
 
-  // IEEEitemize/enumerate/description (Perl L351-366)
+  // IEEEitemize/enumerate/description (Perl IEEEtran.cls.ltxml L351-366).
+  // Each env:
+  //   - runs `beginItemize('<kind>', '<counter>')` via properties
+  //     closure — registers the nested list level, resets counters,
+  //     and wires the itemize/enumerate counter-label machinery.
+  //   - digests `\par` on close so trailing text in the last item
+  //     closes its <ltx:item> cleanly instead of leaking whitespace.
+  //   - locks against further redefinition (matches Perl `locked=>1`).
+  // {IEEEdescription} additionally re-`\let`s `\makelabel` to
+  // `\descriptionlabel` at env start (Perl L363), mirroring LaTeX's
+  // core description-env plumbing.
   DefEnvironment!("{IEEEitemize}[]",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    properties => sub[_args] { BeginItemize!("itemize", "@item") },
+    before_digest_end => { Digest!("\\par") },
+    locked => true,
     mode => "internal_vertical");
   DefEnvironment!("{IEEEenumerate}[]",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+    properties => sub[_args] { BeginItemize!("enumerate", "enum") },
+    before_digest_end => { Digest!("\\par") },
+    locked => true,
     mode => "internal_vertical");
   DefEnvironment!("{IEEEdescription}[]",
     "<ltx:description xml:id='#id'>#body</ltx:description>",
+    before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
+    properties => sub[_args] { BeginItemize!("description", "@desc") },
+    before_digest_end => { Digest!("\\par") },
+    locked => true,
     mode => "internal_vertical");
 
   // String macros (Perl L383-395)
