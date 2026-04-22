@@ -3,6 +3,7 @@ pub mod algorithmic_sty;
 pub mod amstex_sty;
 pub mod applemac_def;
 pub mod cp852_def;
+pub mod csquotes_def;
 pub mod t5enc_def;
 // Supported package bindings
 pub mod a0poster_cls;

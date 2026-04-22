@@ -376,6 +376,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("newfloat", "sty", package::newfloat_sty::load_definitions),
   ("applemac", "def", package::applemac_def::load_definitions),
   ("cp852", "def", package::cp852_def::load_definitions),
+  ("csquotes", "def", package::csquotes_def::load_definitions),
   ("latin10", "def", package::latin10_def::load_definitions),
   ("t5enc", "def", package::t5enc_def::load_definitions),
   ("t1enc", "sty", package::t1enc_sty::load_definitions),
