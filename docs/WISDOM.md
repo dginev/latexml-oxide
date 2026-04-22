@@ -1123,10 +1123,20 @@ workarounds that bypass the ParameterType.
 
 The actual work is therefore **enhance** the existing TeXDelimiter
 (not create a new one). Missing vs Perl's `TeX_Math.pool.ltxml:709`:
-1. `readXToken(0)` path for unbraced single tokens.
-2. `{...}`-unwrap when the FIRST token is `{` (for `\big{x}` idiom).
-3. `.` → `\lx@delimiterdot` replacement.
-4. `stomach::invoke_token` pre-digestion + `undigested => 1`.
+1. `stomach::invoke_token` pre-digestion + `undigested => 1`.
+   Primary blocker per `tex_math.rs:833-835` comment: without
+   invoke_token, `\left\delimiter<Number>` / `\right\delimiter<Number>`
+   leaves the number dangling (Rust workaround at `tex_math.rs:838-847`
+   manually peels `\delimiter` + reads number + decodes glyph).
+2. `.` → `\lx@delimiterdot` replacement for `\left.` idiom.
+3. `{...}`-unwrap when the FIRST token is `{` (for `\big{x}` — lower-
+   priority since read_arg already handles this via the normal brace-
+   removal path).
+
+NOTE: `read_arg` already accepts unbraced single tokens, so
+"unbraced single tokens" is NOT a blocker — my earlier WISDOM
+entry overstated the missing-branches list. The real one-branch
+gap is #1 (invoke_token + undigested flag).
 
 **Prerequisites verified:** `stomach::invoke_token` (stomach.rs:776),
 `gullet::skip_filler` (gullet.rs:1203), `\lx@delimiterdot`
