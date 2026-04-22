@@ -223,10 +223,11 @@ impl LatexmlWorker {
       noinvisibletimes:   self.profile.noinvisibletimes,
       mathtex:            self.profile.mathtex,
       navigationtoc:      None,
-      split:              false,
-      split_xpath:        None,
-      split_naming:       None,
-      xslt_parameters:    &[],
+      split:                     false,
+      split_xpath:               None,
+      split_naming:              None,
+      xslt_parameters:           &[],
+      graphics_svg_threshold_kb: 0,
     });
 
     // 6. Get log and status (Perl: status line is last line of log)
