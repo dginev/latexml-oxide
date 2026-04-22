@@ -15,6 +15,8 @@ LoadDefinitions!({
     "titlepage", "notitlepage", "groupedaddress", "unsortedaddress", "runinaddress",
     "superscriptaddress", "byrevtex", "floatfix", "nofloatfix", "ltxgridinfo",
     "outputdebug", "raggedfooter", "newabstract", "oldabstract",
+    // Perl L29: `endfloats*` (starred) alongside `endfloats`.
+    "endfloats*",
     // sub-styles
     "aps", "pra", "prb", "prc", "prd", "pre", "prl", "prstab", "rmp",
     "osa", "osameet", "opex", "tops", "josa",
@@ -33,8 +35,10 @@ LoadDefinitions!({
     DeclareOption!(&s!("no{pkg}"), None);
   }
 
-  // Perl L47-49: osajnl defines \ocis -> \pacs
+  // Perl L47-49: osajnl also pushes `graphics` onto the load list
+  // and defines \ocis -> \pacs. Prior Rust skipped the graphics load.
   DeclareOption!("osajnl", {
+    RequirePackage!("graphics");
     DefMacro!("\\ocis", "\\pacs");
   });
 
