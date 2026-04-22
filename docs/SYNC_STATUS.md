@@ -51,6 +51,8 @@ handful of slow-convergence papers. Runner:
 
 **Unported:** `AmSTeX.pool.ltxml` (112 defs, ~30%, Plain TeX rare); `BibTeX.pool.ltxml` (956 defs, 0%, skipped via `--nobibtex`).
 
+**2026-04-21 stub-to-parity sweep** (build-only cadence per user 2026-04-21): 18 commits landing real bodies on packages where Rust previously had no-op or partial stubs — `\@@joinrel` XMTok-merge + `\joinrel` primitive, tabular→XMArray math-mode, `\block` DigestUntil, `\ifdraft`/`\ifoptiondraft`/`\ifoptionfinal`, `\@mn@if@RTL`, `\lx@proof@split@and` + `\infer`/`\deduce` I_dual, siunits unit-macro enablement, `\marginnote` two-arg branch, `\lx@set@path`/`\lx@append@path` + `state::set_search_paths`, standalone.sty's `\@standalone@documentclass` + `\@standalone@start@input`. Full-suite green throughout (1098/0/0).
+
 ## Tikz — Known Diffs (vs Perl output)
 
 1. foreignObject transform Y / width/height
