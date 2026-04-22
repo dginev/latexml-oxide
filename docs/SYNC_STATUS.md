@@ -96,8 +96,10 @@ with captureBody).
   `\tabular` DefKeyVal, `\vspace` DefMacro (**blocked — see WISDOM
   #38**; naive kind-flip regresses `moderncv/cs_cv.tex` test via Rust
   `\vskip` horizontal-mode paragraph-break asymmetry).
-- `plain_base.rs` (4): `#`/`&`/`%`/`$` — all mode-aware Box emission,
-  needs closure-based stomach-level dispatch.
+- `plain_base.rs` (4): `#`/`&`/`%`/`$` — **blocked / intentional, see
+  WISDOM #40**. Rust uses `\ifmmode` → `\lx@text@…`/`\lx@math@…` split
+  which is more precise than Perl's single-Box approach; kind-flip
+  would regress math-mode output.
 - `tex_math.rs` (3): `\mathchar` (Perl DefPrimitive → Rust
   DefConstructor), `\left`, `\lx@right` (Perl DefConstructor → Rust
   DefMacro; math-mode emission shape difference).

@@ -998,7 +998,30 @@ proper path to parity is:
 Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
 regression tests before landing. Without step 1, step 2 breaks moderncv.
 
-## 39. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
+## 40. `\#`/`\&`/`\%`/`\$` Def*-kind mismatch is intentional mode-split
+
+**Context:** Perl `plain_base.pool.ltxml` L70-76 defines each as a
+single `DefPrimitive` with a sub body that emits `Box('#', undef,
+undef, T_CS('\#'), role => '…', meaning => '…')` and similar. The Box
+carries role/meaning that double as text-mode and math-mode markers,
+converted downstream by the math parser / post-processor.
+
+Rust `plain_base.rs:62-68` instead uses `DefMacro` with `\ifmmode`
+dispatch into mode-specific helpers: `\lx@text@hash` (DefPrimitive
+emitting a text Box) and `\lx@math@hash` (DefMath emitting an XMath
+token directly).
+
+**Wisdom:** do NOT "fix" this Def*-kind mismatch by collapsing to a
+single Perl-matching DefPrimitive. The Rust split is a genuine
+semantic improvement — it emits proper XMath tokens in math mode at
+stomach level, rather than relying on post-processing to promote a
+text Box into a math token. Reverting loses mode-precision.
+
+If the Def*-parity audit flags these, the right resolution is to
+record them as an intentional divergence in OXIDIZED_DESIGN.md, not
+to kind-flip.
+
+## 41. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
 
 **Context:** Perl LaTeXML treats l3hooks as a block of no-op stubs
 (`latex_base.pool.ltxml` L829-855) — no hook storage, no dispatch, no
