@@ -1013,9 +1013,13 @@ LoadDefinitions!({
   DefMacro!("\\harvardyearright", { cite_close() });
   DefMacro!("\\harvardand", "and");
 
+  // Perl natbib.sty.ltxml has `enterHorizontal=>1` on \harvardurl —
+  // same vertical-mode-leak class as hyperref's \url constructors.
+  // Without it, `\harvardurl{...}` between paragraphs at top level
+  // emits <ltx:ref> outside any <ltx:p>.
   DefConstructor!("\\harvardurl Semiverbatim",
     "<ltx:ref href='#href'>#1</ltx:ref>",
-    mode => "text",
+    mode => "text", enter_horizontal => true,
     properties => sub[args] {
       unpack_opt_ref!(args => url_opt);
       let href = url_opt.as_ref().map_or(String::new(), |u| u.to_string());

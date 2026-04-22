@@ -30,8 +30,15 @@ LoadDefinitions!({
   // Use \ifmmode guard: skip wrapping in math mode (ltx:text invalid inside XMath).
   DefMacro!("\\ltx@text@number{}",
     "\\ifmmode#1\\else\\ltx@text@number@wrap{#1}\\fi");
+  // Perl numprint.sty.ltxml has `enterHorizontal => 1` on
+  // \ltx@text@number — Rust ifmmode-guards through to
+  // \ltx@text@number@wrap, so the flag belongs on the wrap
+  // constructor. Without it, a `\numprint{42}` between paragraphs
+  // (text mode, vertical context) emits the number-class <ltx:text>
+  // as a stray block-level child.
   DefConstructor!("\\ltx@text@number@wrap{}",
-    "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>");
+    "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>",
+    enter_horizontal => true);
   DefMacro!("\\ltx@math@numprint@{}",
     "\\ltx@math@@numprint@{#1}{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@math@numprint@@{}{}",

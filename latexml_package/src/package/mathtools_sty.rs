@@ -46,8 +46,12 @@ LoadDefinitions!({
   // 3.1
   //======================================================================
 
-  // Perl: enterHorizontal => 1 — not supported in template form, but #1 pass-through is fine
-  DefConstructor!("\\mathmbox{}", "#1");
+  // Perl mathtools.sty.ltxml has `enterHorizontal=>1`. The previous
+  // comment claimed enter_horizontal "not supported in template form"
+  // but that's no longer the case — DefConstructor! macro accepts the
+  // flag with bare-template body (see cycle 91 xcolor \fcolorbox,
+  // cycle 88 acmart affiliation fields, etc.). Match Perl on the flag.
+  DefConstructor!("\\mathmbox{}", "#1", enter_horizontal => true);
 
   // \mathllap — zero-width math overlap (left): xoffset = -width
   DefConstructor!("\\mathllap[]{}",
