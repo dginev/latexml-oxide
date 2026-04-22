@@ -12,8 +12,12 @@ LoadDefinitions!({
     after_digest => {
       let mut nlines = 0;
       gullet::read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+      // Perl comment.sty.ltxml L30 matches `/^\s*\Q$endmark\E\s*$/` —
+      // the end line may carry leading/trailing whitespace. Strict
+      // equality missed indented `  \end{comment}  `, stranding the
+      // excluded block consumption.
       while let Some(line) = gullet::read_raw_line() {
-        if line == end_mark {
+        if line.trim() == end_mark {
           break;
         }
         nlines += 1;
