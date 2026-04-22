@@ -47,10 +47,15 @@ LoadDefinitions!({
   //======================================================================
   // Acronyms in the Text
 
-  // \lx@acronym{acronym}{listname}{showform}
+  // \lx@acronym{acronym}{listname}{showform}.
+  // Perl acronym.sty.ltxml has `enterHorizontal=>1`. Same vertical-
+  // mode-leak class as hyperref \url cycle 87 / xcolor \fcolorbox
+  // cycle 91: a bare `\ac{ABC}` between paragraphs at top level
+  // emits <ltx:glossaryref> outside any <ltx:p>, producing a
+  // structurally invalid block-level glossaryref node.
   DefConstructor!("\\lx@acronym Undigested {}{}{}",
     "<ltx:glossaryref key='#2' inlist='#3' show='#4'/>",
-    mode => "text",
+    mode => "text", enter_horizontal => true,
     reversion => "#1{#2}"
   );
 
