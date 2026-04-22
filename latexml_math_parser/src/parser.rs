@@ -859,6 +859,14 @@ impl MathParser {
       node.unlink_node();
       mathnode.add_child(&mut node).ok();
     }
+    // D3b: the replacements re-parented above may carry xml:id attrs
+    // whose idstore entries were cleared by the `unrecord_node_ids`
+    // above (which walked mathnode's state before the replacements
+    // were re-inserted). Re-record so `lookup_id` on any
+    // math-generated id resolves — otherwise finalize()'s
+    // `rebuild_idstore_from_dom` is the only recovery path and
+    // downstream XMRef lookups can SIGSEGV via stale cache.
+    let _ = document.record_node_ids(mathnode);
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
