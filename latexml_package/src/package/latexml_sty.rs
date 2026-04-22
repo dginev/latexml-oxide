@@ -690,8 +690,14 @@ LoadDefinitions!({
   DefPrimitive!("\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath", sub[(cs, nargs, opt, presentation, params_opt)] {
     let cs_name = cs.to_string();
     let n = nargs.value_of() as usize;
-    // Extract semantic properties from keyvals
-    let mut opts = MathPrimitiveOptions::default();
+    // Extract semantic properties from keyvals.
+    // Perl L368 always sets `revert_as => 'context'` so source-export
+    // emits the user-defined CS rather than expanding the presentation
+    // template (matches the convention for user-defined math macros).
+    let mut opts = MathPrimitiveOptions {
+      revert_as: Some(std::borrow::Cow::Borrowed("context")),
+      ..Default::default()
+    };
     if let Some(kv) = params_opt.as_ref() {
       if let Some(v) = kv.get_value("name") { opts.name = Some(v.to_string()); }
       if let Some(v) = kv.get_value("meaning") { opts.meaning = Some(v.to_string()); }
@@ -699,6 +705,10 @@ LoadDefinitions!({
       if let Some(v) = kv.get_value("cd") { opts.omcd = Some(v.to_string()); }
       if let Some(v) = kv.get_value("alias") { opts.alias = Some(v.to_string()); }
     }
+    // Perl also extracts `scope` / detects `tag`/`description` keyvals to allocate
+    // a decl_id and Digest a follow-up `\@lxDefMathDeclare` invocation. Neither is
+    // wired through the Rust DefPrimitive shim yet — needs `next_declaration_id`
+    // helper + the \@lxDefMathDeclare constructor port. Track separately.
     // Build parameter spec for n args
     use latexml_core::common::def_parser::parse_parameters;
     let params = if n > 0 {
