@@ -253,4 +253,8 @@ LoadDefinitions!({
   DefRegister!("\\indentii"            => Dimension::new(0));
   DefMacro!("\\linespacing Number", "");
   DefMacro!("\\endquotes", "");
+
+  // Perl amsppt.sty.ltxml L497: \smc (smallcaps) — plain-TeX font
+  // switch used in AMSTeX running heads and bib entries.
+  DefPrimitive!("\\smc", None, font => { shape => "smallcaps" });
 });
