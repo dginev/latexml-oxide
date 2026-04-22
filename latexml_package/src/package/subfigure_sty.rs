@@ -125,6 +125,5 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); });
 
   // Perl: DefMacro('\subref OptionalMatch:* Semiverbatim', '\ref{#2}');
-  // Note: OptionalMatch:* blocked by codegen star bug — use simple form
-  DefMacro!("\\subref Semiverbatim", "\\ref{#1}");
+  DefMacro!("\\subref OptionalMatch:* Semiverbatim", "\\ref{#2}");
 });
