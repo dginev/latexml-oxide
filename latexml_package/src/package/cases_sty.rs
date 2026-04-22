@@ -119,13 +119,22 @@ LoadDefinitions!({
     numcases_bindings(lhs)?;
   });
 
+  // Perl cases.sty.ltxml L41/L44/L51/L54 all carry `locked => 1`: the
+  // raw cases.sty is loaded alongside our binding for layout fidelity
+  // and tries to redefine \numcases / \endnumcases / \subnumcases /
+  // \endsubnumcases over our alignment trampolines. The lock keeps
+  // our versions in place.
   DefMacro!("\\numcases{}",
-    "\\@numcases@bindings{#1}\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS");
-  DefMacro!("\\endnumcases", "\\lx@end@alignment\\end@numcases");
+    "\\@numcases@bindings{#1}\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS",
+    locked => true);
+  DefMacro!("\\endnumcases", "\\lx@end@alignment\\end@numcases",
+    locked => true);
 
   DefMacro!("\\subnumcases{}",
-    "\\@numcases@bindings{#1}\\lx@numcases@subnumbering@begin\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS");
-  DefMacro!("\\endsubnumcases", "\\lx@end@alignment\\end@numcases\\lx@numcases@subnumbering@end");
+    "\\@numcases@bindings{#1}\\lx@numcases@subnumbering@begin\\@@numcases\\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\\lx@begin@alignment\\@numcases@LHS",
+    locked => true);
+  DefMacro!("\\endsubnumcases", "\\lx@end@alignment\\end@numcases\\lx@numcases@subnumbering@end",
+    locked => true);
 
   // Sub-numbering: step parent equation, save counter, reset, redefine \theequation
   // Perl: cases.sty.ltxml L57-64
