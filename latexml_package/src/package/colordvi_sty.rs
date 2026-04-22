@@ -29,12 +29,17 @@ LoadDefinitions!({
     // `\lx@colordvi@setcolor` primitive below, which looks up the
     // previously-stored named color from the color registry and merges it
     // into the current font — no `\color` needed.
+    // Perl L28-29: scope => 'global' on both \text<name> and \<name>.
+    // Without it, named-color macros defined while colordvi loads inside
+    // a TeX group (e.g. via \input nested under \begingroup) would
+    // disappear at group close. Use \global\def to match Perl's global
+    // scope semantics — the bare \def fallback is local by default.
     let text_def = s!(
-      "\\expandafter\\def\\csname text{}\\endcsname{{\\lx@colordvi@setcolor{{{}}}}}",
+      "\\global\\expandafter\\def\\csname text{}\\endcsname{{\\lx@colordvi@setcolor{{{}}}}}",
       name_str, name_str
     );
     let name_def = s!(
-      "\\expandafter\\def\\csname {}\\endcsname#1{{{{\\csname text{}\\endcsname #1}}}}",
+      "\\global\\expandafter\\def\\csname {}\\endcsname#1{{{{\\csname text{}\\endcsname #1}}}}",
       name_str, name_str
     );
     for def_str in [&text_def, &name_def] {
