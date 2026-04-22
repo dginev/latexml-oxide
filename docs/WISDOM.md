@@ -1205,6 +1205,42 @@ Estimated scope: one DefParameterType entry (+ helpers if stomach::
 invoke_token doesn't already exist) + 10 call-site migrations +
 verification. Single dedicated 2-4h session.
 
+**Cycle 64 correction (2026-04-22).** Verified against actual Rust
+sources — the above estimate was too optimistic on TWO axes:
+
+- **Reader is 3 branches, not 1.** Perl does single-X-token read
+  (not `read_arg`), BEGIN-unwrap, AND `.`→`\lx@delimiterdot` (plus
+  an `undef`→delimiterdot fall-through). All three need porting.
+- **`undigested=>1` is architectural.** `latexml_core::definition::
+  argument::ArgWrap` has no `Digested` variant and `parameter::
+  Parameter` has no `undigested: bool` flag. The existing
+  `digested_reversion: Option<DigestedReversionClosure>` hook on
+  Parameter only fires in a code path that never currently handles
+  a reader-produced Digested. Adding `undigested` semantics means
+  either (a) extending `ArgWrap` with a `Digested(Box<Digested>)`
+  variant and teaching every arg-pipeline site to preserve it
+  across `be_digested` (cross-cutting), OR (b) adding an
+  `undigested: bool` to `Parameter` plus a branch in the
+  digestion-of-args phase that bypasses re-digestion when set.
+  Either approach touches latexml_core.
+
+**Revised scope: one full session (not 30-60 min):**
+1. Pick (b) — less invasive. Add `Parameter.undigested: bool` +
+   `ArgWrap::Digested(Box<Digested>)` variant, plumb through
+   `be_digested` (identity when already Digested).
+2. Enhance base_parameter_types.rs TeXDelimiter reader to do all
+   3 branches + `invoke_token`, wrap result in `ArgWrap::Digested`.
+3. Migrate call sites (10+), run tests.
+
+For this cycle, cheaper incremental progress is possible: port ONLY
+the reader's 3 branches (read_x_token, BEGIN unwrap, `.` replacement),
+leave invoke_token as the remaining gap. That fixes reversion
+for `\big\langle`-style cases but NOT `\big\delimiter<num>`-style
+(the `<num>` still leaks into the output stream).
+
+Reader-only partial fix = ~30 min per cycle; architectural
+`undigested` piece = separate session. Do NOT conflate the two.
+
 **Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
 fraction to be structural adaptations (mode-splits, direct XML emission,
 parameter-type gaps), not parity bugs. Read the Perl body first; if the
