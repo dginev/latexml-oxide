@@ -341,3 +341,23 @@ block only) that caused the deduped id to be silently dropped; the caller
 wrote the original id to DOM and libxml2 validation subsequently spun
 O(n²) on the actual duplicates (100s timeout / 16 GB RSS on 1106.1389).
 Fixed in commit `bab8beb53`: extract `final_id` outside the `if let`.
+
+## 14. `eurosym.sty.ltxml` declares `gennorrow` option (typo for `gennarrow`)
+
+**File:** `lib/LaTeXML/Package/eurosym.sty.ltxml` L28.
+
+Perl:
+```perl
+DeclareOption('gennorrow', undef);
+```
+
+Upstream eurosym.sty uses `gennarrow` (narrow variant of the generic
+euro symbol). The Perl declaration is a typo — any user writing
+`\usepackage[gennarrow]{eurosym}` falls through to the default option
+handler instead of the registered no-op.
+
+**Rust behavior:** the Rust port (eurosym_sty.rs) declares both
+`gennarrow` (for correct user input) and `gennorrow` (Perl-parity).
+Both are no-ops in either form, so the practical impact is only
+log-order: Perl's log says "gennarrow is unknown, using default",
+Rust's says "gennarrow matched option, processed".
