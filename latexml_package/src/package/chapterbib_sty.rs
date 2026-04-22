@@ -40,4 +40,32 @@ LoadDefinitions!({
     }
   });
   DefMacro!("\\lx@cb@unitname", "\\lx@cb@do@unitname");
+
+  // Perl L59-60: chapterbib's override of \\bibliography. Branches on
+  // \\lx@ifusebbl so that either the .bbl file gets \\input-ed, or
+  // \\lx@bibliography receives the current chapter unit name as the
+  // optional "per-unit" tag.
+  DefMacro!(
+    "\\bibliography Semiverbatim",
+    "\\lx@ifusebbl{#1}{\\input{\\jobname.bbl}}\
+     {\\lx@bibliography[\\lx@cb@unitname]{#1}}"
+  );
+
+  // Perl L49-57: {cbunit} environment auto-bumps a `chapbibN` unit
+  // per occurrence — same effect as unitbib's bibunit. Using a
+  // static atomic counter here matches `our $cbunits = 0` in Perl.
+  use std::sync::atomic::{AtomicU64, Ordering};
+  static CBUNITS: AtomicU64 = AtomicU64::new(0);
+  DefEnvironment!("{cbunit}", "#body",
+    after_digest_begin => {
+      let n = CBUNITS.fetch_add(1, Ordering::SeqCst) + 1;
+      let unit = format!("chapbib{}", n);
+      let cite_unit = if lookup_value("CITE_UNIT_GLOBAL").is_some() {
+        format!("bibliography {}", unit)
+      } else {
+        unit.clone()
+      };
+      AssignValue!("CHAPTERBIB_UNIT" => Stored::from(unit), Some(Scope::Global));
+      AssignValue!("CITE_UNIT"       => Stored::from(cite_unit), Some(Scope::Global));
+    });
 });
