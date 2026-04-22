@@ -1976,7 +1976,7 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
 }
 
 // Perl: setBibstyle($style) — set BIBSTYLE, CITE_STYLE, CITE_SORT
-fn set_bibstyle(style: &str) {
+pub fn set_bibstyle(style: &str) {
   assign_value("BIBSTYLE", arena::pin(style), None);
   if let Some((cs, so)) = lookup_bibstyle_params(style) {
     assign_value("CITE_STYLE", arena::pin(cs), None);
