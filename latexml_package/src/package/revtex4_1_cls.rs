@@ -8,7 +8,12 @@ LoadDefinitions!({
     "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom",
     "tightenlines", "lengthcheck", "eqsecnum", "secnumarabic",
-    "fleqn", "floats", "endfloats", "titlepage", "notitlepage",
+    "fleqn", "floats", "endfloats",
+    // Perl L29 also declares the starred `endfloats*`; Rust was missing it
+    // so `\documentclass[endfloats*]{revtex4-1}` fell through to the article
+    // option passthrough.
+    "endfloats*",
+    "titlepage", "notitlepage",
     "groupedaddress", "unsortedaddress", "runinaddress",
     "superscriptaddress", "byrevtex", "floatfix", "nofloatfix",
     "ltxgridinfo", "outputdebug", "raggedfooter",
