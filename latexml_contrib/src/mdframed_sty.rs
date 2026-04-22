@@ -19,7 +19,14 @@ LoadDefinitions!({
   DefMacro!("\\mdfsetup{}", "");
   DefMacro!("\\mdfdefinestyle{}{}", "");
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // TODO: Perl has DefEnvironment for {mdframed}[] with inline-block framed="rectangle"
-  // and framecolor from current font color. Stubbed as empty for now.
-  DefEnvironment!("{mdframed}[]", "#body");
+  // Perl ar5iv-bindings/mdframed.sty.ltxml L31-34: wrap body in an
+  // inline-block with framed="rectangle" and framecolor from the
+  // current font. Rust port drops the framecolor properties closure —
+  // font color plumbing is available but not exposed in DefEnvironment
+  // properties closures yet — so the body renders as an
+  // unbordered-color rectangle rather than a transparent inline block.
+  DefEnvironment!(
+    "{mdframed}[]",
+    "<ltx:inline-block framed='rectangle' _noautoclose='1'>#body</ltx:inline-block>"
+  );
 });
