@@ -2,6 +2,27 @@
 //! Perl: pgfsys-latexml.def.ltxml (1022 lines)
 //!
 //! Port of the SVG drawing primitives that make pgf/tikz produce SVG output.
+//!
+//! ## Def*-kind divergence from Perl (audit-flagged, intentional)
+//!
+//! The DP audit flags ~16 `\pgfsys@moveto`/`@lineto`/`@curveto`/`@rect`/etc.
+//! entries as Perl=DefConstructor↔Rust=DefPrimitive. Both are functionally
+//! equivalent:
+//!
+//! - **Perl** uses `DefConstructor('\pgfsys@moveto{Dimension}{Dimension}', '',
+//!   ...)` with an **empty XML template** — the `afterDigest` callback pushes
+//!   path-data state (e.g. `M x y`) onto an accumulating list. The SVG
+//!   `<svg:path d="…">` is emitted later by a flush primitive like
+//!   `\pgfsys@stroke` / `\pgfsys@fill`.
+//! - **Rust** uses `DefPrimitive!(..., sub[(x, y)] { ... })` that does the
+//!   same state accumulation imperatively.
+//!
+//! Same path-buffering architecture, different `Def*` surface. The Rust
+//! DefPrimitive shape is more natural for the imperative state-mutation
+//! pattern; Perl's DefConstructor-with-empty-template is idiomatic Perl for
+//! "this CS doesn't produce local XML, but has post-digest state effects".
+//! Do NOT kind-flip these to DefConstructor — the Perl empty-template
+//! idiom doesn't map cleanly to Rust's DefConstructor! macro semantics.
 use crate::prelude::*;
 
 /// Helper: convert dimension to px value, rounded to 2 decimal places
