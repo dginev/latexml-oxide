@@ -952,8 +952,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       }
       for row in rows.iter() {
         if let Some(col) = row.cols.get(c) {
-          let mut col_clone = col.clone();
-          col_clone.unlink_node();
+          document.safe_unlink(col.clone());
         }
       }
     }
@@ -1010,8 +1009,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     }
 
     if class == "remove" {
-      let mut node = row.node.clone();
-      node.unlink_node();
+      document.safe_unlink(row.node.clone());
     } else if class == "new" || class == "odd" {
       numbered = row.numbered;
       eqs.push(vec![row.node.clone()]);
@@ -1697,7 +1695,7 @@ fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Re
   if inners.len() != 1 {
     return Ok(());
   }
-  let mut inner = inners.into_iter().next().unwrap();
+  let inner = inners.into_iter().next().unwrap();
   // Check captions: collapse only if they don't BOTH have captions
   let outer_has_caption = float
     .get_child_elements()
@@ -1739,7 +1737,7 @@ fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Re
     child.unlink_node();
     float.add_child(&mut child).ok();
   }
-  inner.unlink_node();
+  document.safe_unlink(inner);
   Ok(())
 }
 
