@@ -294,19 +294,31 @@ round 17 commit (see below).
 - [~] Rc `Can not mutably reference a shared Node "text"` — guard raised
   to 8192 (diagnostic). dcpic cluster converges. Follow-up: identify
   semantic cause of high "text"-node refcounts (2000–8000) on dcpic.
-- [ ] **~~Optional refinement~~ BLOCKED: do NOT downgrade
-  `rebuild_idstore_from_dom` at `finalize()` entry.** Cycle 71
-  critical-assessment: the inline comment at `document.rs:244-253`
-  documents the rebuild as load-bearing — math-parser `replace_tree`
-  and various `unbind_node()` sites still drop XMRef-target nodes
-  without `unrecord_id`, leaving dangling idstore entries that
-  SIGSEGV in `mark_xmnode_visibility` (observed on arxiv 1605.08055
-  in the 10k sandbox). Cycles 52-57's D3b migrations did NOT touch
-  those specific sites. Unblock prerequisite: audit+migrate
-  `math_parser::replace_tree` and remaining raw `unbind_node()`
-  sites to call `record_node_ids` / `safe_unlink` — or verify the
-  1605.08055 SIGSEGV is no longer reproducible. Only then is the
-  fallback safe to downgrade to a debug-only probe.
+- [~] **Optional refinement (ready to verify, not yet
+  executed)**: downgrade `rebuild_idstore_from_dom` at `finalize()`
+  entry to a debug-only probe. Cycle 72 audit of the 5 call sites
+  the inline comment at `document.rs:244-253` worried about:
+  - `math_parser/parser.rs:456` (`replace_tree`): SAFE —
+    `replace_tree` calls `remove_node` which cascades `unrecord_id`
+    via `remove_node_aux` (`document.rs:3189-3211`).
+  - `math_parser/parser.rs:639` (`unbind_node` loop): SAFE —
+    preceded by `unrecord_node_ids(el_node)` at L633-635.
+  - `math_parser/parser.rs:690` (`replace_tree`): SAFE — same
+    mechanism as :456.
+  - `math_parser/parser.rs:856` (`unbind_node` loop): SAFE —
+    preceded by `unrecord_node_ids(mathnode)` at L854.
+  - `rewrite.rs:522` (`unbind_node` loop): SAFE — `replaced` Vec
+    walks `unrecord_node_ids` at L539-541 before the closure
+    invocation at L546.
+
+  So document.rs:244-253's hazard comment is **outdated**; all
+  referenced call sites now have proper ID-bookkeeping guards.
+  The remaining blocker is empirical: reproduce (or verify no-
+  longer-reproducible) the 1605.08055 SIGSEGV with the fallback
+  downgraded. That requires a 10k-sandbox run — not cheap per
+  cycle. Leaving as `[~]` (audited, not yet verified).
+  Lesson: the inline code comment should also be updated when the
+  verification lands.
 
 ### Dump — deferred alias retry (session 128)
 
