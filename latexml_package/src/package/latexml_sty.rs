@@ -716,10 +716,18 @@ LoadDefinitions!({
     }
   );
 
-  // Perl latexml.sty L109-111
+  // Perl latexml.sty L109-116: acronym shortcuts. Prior Rust stopped at
+  // \XML / \SGML / \HTML — the remaining \XHTML / \XSLT / \CSS / \MathML
+  // / \OpenMath were missing, so documents using them hit undefined-CS
+  // errors.
   DefMacro!("\\XML", "\\textsc{xml}");
   DefMacro!("\\SGML", "\\textsc{sgml}");
   DefMacro!("\\HTML", "\\textsc{html}");
+  DefMacro!("\\XHTML", "\\textsc{xhtml}");
+  DefMacro!("\\XSLT", "\\textsc{xslt}");
+  DefMacro!("\\CSS", "\\textsc{css}");
+  DefMacro!("\\MathML", "\\texttt{MathML}");
+  DefMacro!("\\OpenMath", "\\texttt{OpenMath}");
 
   // Diagnostic constructor: emits a marker that gets filled with the Marpa parse tree count
   // for the preceding formula, after math parsing completes.
