@@ -1090,6 +1090,27 @@ the cluster back to audit-clean DefMacro/DefConstructor forms:
 bounded infrastructure investment; any single one would eliminate
 ~2-5 DP audit entries while simplifying the binding code.
 
+**ROI quantification (verified 2026-04-22):** Perl's `Engine/` alone
+has **23 call sites** using these three ParameterTypes combined
+(grep `Pair:Number|PairList|TeXDelimiter|alignsafeOptional`). Package
+bindings add more (revsymb 8, amsmath 2, picture 5, etc.). Rough
+priority ordering:
+- **TeXDelimiter** — tex_math `\left`/`\lx@right` (2) + revsymb
+  `\biglb`/`\bigrb`/`\Biglb`/etc. (8) + others = **10+ entries**.
+  Highest ROI.
+- **Pair:Number** (+ `PairList`) — picture primitives `\line`/
+  `\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier` (5) + engine call
+  sites = ~5-10 entries. Medium ROI.
+- **alignsafeOptional** — amsmath `\aligned`/`\alignedat` (2) +
+  possibly others = **2-4 entries**. Lowest ROI but also simplest
+  to port (just reads `[…]` with alignment-safe wrapping).
+
+The port itself involves adding a `DefParameterType!(<Name>, sub {…})`
+entry in `base_parameter_types.rs` that reads + digests the argument
+per Perl's implementation. Each port simultaneously simplifies the
+affected binding files (replacing DefMacro+DefPrimitive chains with
+single DefConstructor calls) and cleans the DP audit.
+
 **Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
 fraction to be structural adaptations (mode-splits, direct XML emission,
 parameter-type gaps), not parity bugs. Read the Perl body first; if the
