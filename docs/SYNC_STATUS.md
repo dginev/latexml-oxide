@@ -475,6 +475,40 @@ round 17 commit (see below).
   downstream passes robust to stale idstore entries regardless of
   upstream behavior.
 
+  **Round-17 audit pass (cycles 51–54, 2026-04-22).** `safe_unlink`
+  primitive landed (`faa821012`): if node is an element, unrecord
+  its xml:id + recurse via `remove_node_aux` before calling
+  `unlink`. Two real hazards migrated: `restructure_scripts_in_dual`
+  POSTSUBSCRIPT-wrapper drop in `rewrite.rs:1264` (`478df9736`), and
+  `kludge_fences` replacement-loop in `parser.rs:858-867` now
+  re-records after reparent (`679b5827b`). Remaining call sites
+  surveyed this pass — all benign by pattern:
+  - save-and-reparent (node `unlink`ed then immediately
+    `add_child`/`add_prev_sibling`): `compact_xmdual_apply`
+    (document.rs L3010/3018), `gc.unlink()` in the text-unwrap path
+    (document.rs L1850), both `\cases` afterConstruct branches
+    (base_xmath.rs L1249, L1328), `parse_rec` XMath replacement
+    (parser.rs L924-935) — `append_tree` re-creates via
+    `open_element_at` which re-registers xml:ids.
+  - prior `unrecord_id` or `unrecord_node_ids`: `prune_empty_para`
+    (helpers.rs L51), math-parser XMath replacement (parser.rs
+    L633-639).
+  - text/non-element nodes only: `\cases` empty-cell whitespace
+    strip (base_xmath.rs L1198).
+  - guarded through `document.remove_node`: various sites.
+  - uses `document.replace_node` (already guarded): base_utilities
+    L1547/1611/1684, crossref.rs L746, svg.rs L485.
+  Not yet audited this pass: `latex_constructs.rs` (6 sites),
+  `base_xmath.rs` additional (L1479, L1502, L1727, L1777), `math_common.rs`
+  L647/749/750, `authblk_sty.rs` L132, `post/make_bibliography.rs`
+  L584, `post/document.rs` L888/919, `post/split.rs` L211,
+  `post/xslt.rs` L167, `math_parser/util.rs` L271,
+  `math_parser/semantics/tree.rs` L918, `math_parser/parser.rs`
+  L811/892/906/975/1350-1356. Future cycles should complete these
+  buckets or, once all real hazards are known, consider removing
+  the `rebuild_idstore_from_dom` fallback (replacing with a
+  debug-only consistency assert).
+
 ### Dump — deferred alias retry (session 128)
 
 - [ ] `\a → \@tabacckludge` — still hand-written `Let!` in
