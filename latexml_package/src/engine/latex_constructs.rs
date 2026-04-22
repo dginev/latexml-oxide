@@ -208,13 +208,13 @@ fn relocate_footnote_aux(
   marknote: &mut Node,
   textnote: &mut Node,
 ) -> Result<()> {
-  textnote.unlink();
   document.append_clone(marknote, textnote.get_child_nodes())?;
   document.set_attribute(marknote, "role", notetype)?;
   if let Some(labels) = textnote.get_attribute("labels") {
     document.generate_id(marknote, "")?;
     document.set_attribute(marknote, "labels", &labels)?;
   }
+  document.safe_unlink(textnote.clone());
   Ok(())
 }
 
