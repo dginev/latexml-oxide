@@ -208,4 +208,49 @@ LoadDefinitions!({
   DefMacro!("\\keyformat{}", "#1");
   DefMacro!("\\refbreaks", "");
   DefMacro!("\\defaultreftexts", "");
+
+  // Head-toks and head-skip registers — Perl L44-45, L151-158. Token
+  // registers for running-head content; eight length/glue registers
+  // controlling head spacing. All default to zero — amsppt uses them
+  // to drive its plain-format page layout, which LaTeXML ignores but
+  // user code may still `\the...` or `\setlength` them.
+  DefRegister!("\\leftheadtoks"        => Tokens!());
+  DefRegister!("\\rightheadtoks"       => Tokens!());
+  DefRegister!("\\aboveheadskip"       => Glue::new(0));
+  DefRegister!("\\belowheadskip"       => Dimension::new(0));
+  DefRegister!("\\abovespecialheadskip" => Glue::new(0));
+  DefRegister!("\\subheadskip"         => Glue::new(0));
+  DefRegister!("\\subsubheadskip"      => Glue::new(0));
+  DefRegister!("\\headlineheight"      => Dimension::new(0));
+  DefRegister!("\\headlinespace"       => Dimension::new(0));
+  DefRegister!("\\dropfoliodepth"      => Dimension::new(0));
+  DefMacro!("\\widestnumber Token {}", "");
+  DefMacro!("\\nofrillscheck{}", "");
+  DefMacro!("\\toc Until:\\endtoc", "");
+  Let!("\\endtoc", "\\relax");
+
+  // Theorem-env skip registers and name/font overrides — Perl L178-232.
+  // The full DefConstructor bodies for \proclaim / \definition etc. still
+  // need NewCounter+title infrastructure to match, but the register /
+  // macro stubs are safe to land now so users can `\def\proclaimfont{…}`.
+  DefRegister!("\\preproclaimskip"     => Glue::new(0));
+  DefRegister!("\\postproclaimskip"    => Glue::new(0));
+  DefMacro!("\\proclaimfont", "\\it");
+  DefRegister!("\\remarkskip"          => Glue::new(0));
+  DefRegister!("\\postdemoskip"        => Glue::new(0));
+  DefRegister!("\\predefinitionskip"   => Glue::new(0));
+  DefRegister!("\\postdefinitionskip"  => Glue::new(0));
+  DefMacro!("\\definitionfont", "\\rm");
+  DefMacro!("\\definitionname", "Definition");
+  DefMacro!("\\remarkfont", "\\rm");
+  DefMacro!("\\remarkname", "Remark");
+  DefMacro!("\\demonstrationname", "Demonstration");
+
+  // Roster / layout — Perl L246, L265-270.
+  DefRegister!("\\rosteritemwd"        => Dimension::new(0));
+  DefRegister!("\\pagenumwd"           => Dimension::new(0));
+  DefRegister!("\\indenti"             => Dimension::new(0));
+  DefRegister!("\\indentii"            => Dimension::new(0));
+  DefMacro!("\\linespacing Number", "");
+  DefMacro!("\\endquotes", "");
 });
