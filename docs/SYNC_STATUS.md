@@ -171,6 +171,19 @@ Three failure classes in the session-128 7898-paper sweep:
    isn't needed). A naive stub-8-macros fix would be a Rust-only
    divergence from both paths.
 
+   **Narrow IOW-only widening probed, confirmed infeasible
+   (2026-04-22):** sampled the 8 IOW/file records — all have `16:`
+   CS-token markers in their bodies (`\iow_wrap:nnnN` body has ~25
+   `\group_begin:`/`\cs_set:Npe`/`\int_set:Nn` tokens; even the
+   simplest `\l_file_search_path_seq → E \c_empty_seq … 16:\s__seq`
+   has 1 CS). None fit the existing `is_safe_colon_safe_e`
+   predicate's `!body_has_cs` requirement; re-admitting them falls
+   on the cascade-risk path Step 4/5 widening already regressed on
+   (see `dump_reader.rs:270-277`). Narrow hand-crafted rules (e.g.
+   "1-CS body where CS is a known-safe seq-struct marker") are
+   plausible but hacky; proper parity still requires the coupled
+   dumper/kernel investment.
+
    Deeper cleanup tracked in "Deep expl3 kernel parity" under
    Long-horizon — goal: no `SUPPRESS_*_ERRORS`, no catcode safety-
    nets, no EOF-injection workaround. Per user round-17 directive:
