@@ -150,6 +150,15 @@ LoadDefinitions!({
   DefMacro!("\\issue{}", "no. #1");
   DefMacro!("\\miscnote{}", "#1");
 
+  // Perl L478, L480, L484: plain-text bib-entry keyword stubs referenced
+  // by the formatted \@fill@bibitem body. Even though Rust's amsppt
+  // doesn't ship the full \@bibfield infrastructure, authors sometimes
+  // invoke these directly in hand-rolled `\ref ... \endref` bibliography
+  // entries.
+  DefMacro!("\\voltext",   "vol.");
+  DefMacro!("\\issuetext", "no.");
+  DefMacro!("\\pagestext", "pp.");
+
   // Miscellaneous — Perl L480-500
   DefMacro!("\\nologo", "");
   DefMacro!("\\NoBlackBoxes", "");
