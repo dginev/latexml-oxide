@@ -432,7 +432,11 @@ LoadDefinitions!({
       ..PrimitiveOptions::default()
     },
   )?;
-  DefMacro!("\\dots", r"\ifmmode\lx@math@dots\else\lx@ldots\fi", scope => Some(Scope::Global));
+  // Perl amsmath.sty.ltxml L860 passes `robust => 1` so \dots survives
+  // \write/\edef expansion — the math/text dispatch stays frozen rather
+  // than being pre-resolved against the wrong mode.
+  DefMacro!("\\dots", r"\ifmmode\lx@math@dots\else\lx@ldots\fi",
+    scope => Some(Scope::Global), robust => true);
 
   //======================================================================
   // Section 4.9 Extensible arrows
@@ -1259,10 +1263,12 @@ LoadDefinitions!({
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
 
-  // Perl: amsmath.sty.ltxml L882-896
+  // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
+  // dispatch frozen under \write/\edef (moving formulas in toc etc.).
   DefMacro!(
     "\\boxed{}",
-    "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi"
+    "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi",
+    robust => true
   );
   DefConstructor!("\\boxed@math{}",
     "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
