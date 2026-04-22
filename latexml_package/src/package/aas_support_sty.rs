@@ -139,8 +139,26 @@ LoadDefinitions!({
     enter_horizontal => true);
   DefMacro!("\\facilities{}", "\\@add@frontmatter{ltx:note}[role=facilities]{#1}");
 
-  // 2.11 Appendices
+  // 2.11 Appendices — Perl aas_support.sty.ltxml L247-249
   DefMacro!("\\appendix", "\\@appendix");
+  // `\@appendix` starts section-numbered appendices, then re-scopes the
+  // equation counter to reset within each appendix section. Perl uses
+  // `scope => 'global'` on the `\theequation` redefinition so the new
+  // numbering format outlives the current group — in Rust we pass
+  // Some(Scope::Global) to def_macro for the same effect. The appendix
+  // numbering is `\thesection\arabic{equation}` (no separator) — matches
+  // AAS journal style, distinct from Rust's `\eqsecnum` macro L369 which
+  // uses a dash separator.
+  DefPrimitive!("\\@appendix", {
+    start_appendices("section");
+    new_counter("equation", "section", None)?;
+    def_macro(
+      T_CS!("\\theequation"),
+      None,
+      mouth::tokenize_internal("\\thesection\\arabic{equation}"),
+      Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+    )?;
+  });
 
   // 2.12 Equations
   DefMacro!("\\mathletters", "\\lx@equationgroup@subnumbering@begin");
