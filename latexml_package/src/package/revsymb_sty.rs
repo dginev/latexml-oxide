@@ -9,8 +9,14 @@ LoadDefinitions!({
     font => {family => "blackboard", series => "medium", shape => "upright"});
   DefMacro!("\\Bbb{}", "\\mathbb{#1}");
 
-  // Bold delimiter constructors — stubbed as simple pass-through
-  // (Perl uses augment_delimiter_properties which is internal to plain.rs)
+  // Bold delimiter constructors — stubbed as simple pass-through.
+  // Perl: DefConstructor('\biglb TeXDelimiter', '#1', ...) uses the
+  // TeXDelimiter parameter type that Rust doesn't have yet (see WISDOM #41).
+  // All 8 \biglb/\bigrb/\Biglb/\Bigrb/\bigglb/\biggrb/\Bigglb/\Biggrb
+  // entries are DefConstructor↔DefMacro DP mismatches from this root cause;
+  // porting TeXDelimiter as a ParameterType would collapse them back to
+  // audit-clean shape. Current forwarding to \mathopen/\mathclose + \big/\Big
+  // preserves the visible delimiter rendering.
   DefMacro!("\\biglb", "\\mathopen\\big");
   DefMacro!("\\bigrb", "\\mathclose\\big");
   DefMacro!("\\Biglb", "\\mathopen\\Big");
