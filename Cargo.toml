@@ -13,10 +13,9 @@ resolver = "2"
 [profile.release]
 debug = true
 
-# Use the local vendored rust-libxml so high-level wrappers we need for
-# comment creation, parser init, etc. (added alongside latexml_oxide
-# round-17 work) can land without a crates.io release round-trip.
-# Upstream when the wrappers have been reviewed.
+# Pin to upstream rust-libxml at the commit that includes the high-level
+# wrappers (comment creation, parser init, etc.) added alongside
+# latexml_oxide round-17 work. Switched from local path to upstream so CI
+# builds can resolve dependencies without a local checkout.
 [patch.crates-io]
-libxml = { path = "../rust-libxml" }
-libxslt = { path = "../rust-libxslt" }
+libxml = { git = "https://github.com/KWARC/rust-libxml", rev = "bfcb5b2f216b6fdb11c041ed0213c6902e0387c4" }

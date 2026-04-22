@@ -198,9 +198,10 @@ impl Processor for XSLT {
       .map(|(k, v)| (k.as_str(), v.as_str()))
       .collect();
 
-    // Apply the transformation
+    // Apply the transformation — libxslt 0.1.3 (post-KWARC upstream bump)
+    // takes the source Document by value rather than by reference.
     let result_doc = stylesheet
-      .transform(&transform_doc, params)
+      .transform(transform_doc, params)
       .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))?;
 
     // Serialize as XML (not as_html). The as_html serializer in libxml2 drops
