@@ -174,8 +174,17 @@ LoadDefinitions!({
   //======================================================================
   // Acknowledgements
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
-  // Simplified: inline the name directly. TODO: properties with digest_to_string
-  DefConstructor!("\\acks", "<ltx:acknowledgements name='Acknowledgements'>");
+  // Perl L167-168 ships properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))) }
+  // so a user `\renewcommand{\acknowledgmentsname}{Danksagung}` localizes the
+  // attribute. Rust previously hard-coded "Acknowledgements", ignoring any
+  // override. Use DigestIf! pattern (same as listings_sty:2060) to resolve
+  // dynamically. Inline `<ltx:acknowledgements name='#name'>` template
+  // matches the Perl form.
+  DefConstructor!("\\acks", "<ltx:acknowledgements name='#name'>",
+    properties => {
+      let name_toks = DigestIf!(T_CS!("\\acknowledgmentsname"))?;
+      stored_map!("name" => name_toks)
+    });
   DefConstructor!("\\endacks", "</ltx:acknowledgements>");
   DefMacro!("\\grantsponsor Semiverbatim {} Semiverbatim", "Sponsor #2 \\url{#3}");
   DefMacro!("\\grantnum OptionalSemiverbatim Semiverbatim {}", "Grant \\##3");
