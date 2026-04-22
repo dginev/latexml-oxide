@@ -211,18 +211,18 @@ impl LatexmlWorker {
 
     // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
     let html = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
-      pmml:               self.profile.pmml,
-      cmml:               true, // CorTeX produces both pmml and cmml
-      keep_xmath:         false,
-      stylesheet:         Some("resources/XSLT/LaTeXML-html5.xsl"),
-      destination:        Some(&dest_html_str),
-      source_directory:   Some(&source_dir),
-      nodefaultresources: self.profile.nodefaultresources,
-      css_files:          &[],
-      js_files:           &[],
-      noinvisibletimes:   self.profile.noinvisibletimes,
-      mathtex:            self.profile.mathtex,
-      navigationtoc:      None,
+      pmml:                      self.profile.pmml,
+      cmml:                      true, // CorTeX produces both pmml and cmml
+      keep_xmath:                false,
+      stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
+      destination:               Some(&dest_html_str),
+      source_directory:          Some(&source_dir),
+      nodefaultresources:        self.profile.nodefaultresources,
+      css_files:                 &[],
+      js_files:                  &[],
+      noinvisibletimes:          self.profile.noinvisibletimes,
+      mathtex:                   self.profile.mathtex,
+      navigationtoc:             None,
       split:                     false,
       split_xpath:               None,
       split_naming:              None,

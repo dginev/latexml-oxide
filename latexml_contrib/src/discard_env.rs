@@ -47,18 +47,17 @@ pub fn discard_env_body(kind: &str, source: &str) -> latexml_core::common::error
   });
   if first_time {
     let obj = format!("{{{}}}", kind);
-    let msg = format!("{} has no support in {}, this is a stub binding.", kind, source);
+    let msg = format!(
+      "{} has no support in {}, this is a stub binding.",
+      kind, source
+    );
     Error!("undefined", &obj, msg);
   }
   let end_delim = Tokens!(T_CS!("\\end"));
   loop {
     let _upto_end = gullet::read_until(&end_delim)?;
     let _drop_open = gullet::read_token()?;
-    let env = gullet::read_balanced(
-      latexml_core::gullet::ExpansionLevel::Off,
-      false,
-      true,
-    )?;
+    let env = gullet::read_balanced(latexml_core::gullet::ExpansionLevel::Off, false, true)?;
     if env.to_string() == kind {
       break;
     }

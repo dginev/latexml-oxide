@@ -9,13 +9,12 @@
 //! entries as Perl=DefConstructor↔Rust=DefPrimitive. Both are functionally
 //! equivalent:
 //!
-//! - **Perl** uses `DefConstructor('\pgfsys@moveto{Dimension}{Dimension}', '',
-//!   ...)` with an **empty XML template** — the `afterDigest` callback pushes
-//!   path-data state (e.g. `M x y`) onto an accumulating list. The SVG
-//!   `<svg:path d="…">` is emitted later by a flush primitive like
+//! - **Perl** uses `DefConstructor('\pgfsys@moveto{Dimension}{Dimension}', '', ...)` with an
+//!   **empty XML template** — the `afterDigest` callback pushes path-data state (e.g. `M x y`) onto
+//!   an accumulating list. The SVG `<svg:path d="…">` is emitted later by a flush primitive like
 //!   `\pgfsys@stroke` / `\pgfsys@fill`.
-//! - **Rust** uses `DefPrimitive!(..., sub[(x, y)] { ... })` that does the
-//!   same state accumulation imperatively.
+//! - **Rust** uses `DefPrimitive!(..., sub[(x, y)] { ... })` that does the same state accumulation
+//!   imperatively.
 //!
 //! Same path-buffering architecture, different `Def*` surface. The Rust
 //! DefPrimitive shape is more natural for the imperative state-mutation

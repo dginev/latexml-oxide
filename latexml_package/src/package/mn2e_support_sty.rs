@@ -5,15 +5,12 @@
 //!
 //! 9 DP audit entries across a mixed kind distribution — most share
 //! structural patterns documented elsewhere:
-//! - 4 DefPrimitiveI↔DefMacro for literal-text astronomy symbols
-//!   (\sun ☉, \degr °, \arcmin ′, \arcsec ″) — same Rust-idiom pattern
-//!   as babel_support_sty.rs.
-//! - 3 DefMath↔DefMacro for math shortcuts (\la, \ga, \getsto) — Rust
-//!   uses DefMacro aliases to existing LaTeX math CSes, matching the
-//!   LaTeX-shim approach in amsppt_sty.rs (WISDOM #42).
-//! - 2 outliers (\mn@boldsymbol DefMacro↔DefConstructor, \bsp
-//!   DefConstructor↔DefMacro) for local formatting — structural
-//!   adaptations, no parity bug.
+//! - 4 DefPrimitiveI↔DefMacro for literal-text astronomy symbols (\sun ☉, \degr °, \arcmin ′,
+//!   \arcsec ″) — same Rust-idiom pattern as babel_support_sty.rs.
+//! - 3 DefMath↔DefMacro for math shortcuts (\la, \ga, \getsto) — Rust uses DefMacro aliases to
+//!   existing LaTeX math CSes, matching the LaTeX-shim approach in amsppt_sty.rs (WISDOM #42).
+//! - 2 outliers (\mn@boldsymbol DefMacro↔DefConstructor, \bsp DefConstructor↔DefMacro) for local
+//!   formatting — structural adaptations, no parity bug.
 use crate::prelude::*;
 
 #[rustfmt::skip]

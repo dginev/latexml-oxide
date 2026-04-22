@@ -1055,8 +1055,8 @@ macro_rules! DigestIf {
 /// Supports three forms, all mirroring Perl `MergeFont(...)`:
 /// - `MergeFont!(font_expr)` — pass a pre-built `Font` (or fontmap) expression.
 /// - `MergeFont!(family => "typewriter")` — single `key => value`.
-/// - `MergeFont!(family => "math", shape => "italic")` — multi-key, faithful to
-///   Perl's `MergeFont(family => 'math', shape => 'italic')`.
+/// - `MergeFont!(family => "math", shape => "italic")` — multi-key, faithful to Perl's
+///   `MergeFont(family => 'math', shape => 'italic')`.
 #[macro_export]
 macro_rules! MergeFont {
   ($kv:expr) => {

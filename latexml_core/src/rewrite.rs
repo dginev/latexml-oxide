@@ -1184,7 +1184,10 @@ pub fn set_attributes_wild(
 ///
 /// This matches Perl where the math parser's kludge_scripts processes
 /// the XMWrap presentation arm and restructures scripts.
-fn restructure_scripts_in_dual(dual: &Node, document: &mut crate::document::Document) -> Result<()> {
+fn restructure_scripts_in_dual(
+  dual: &Node,
+  document: &mut crate::document::Document,
+) -> Result<()> {
   // Clone the XmlDoc handle (Rc-cheap) so the &mut Document isn't
   // borrowed across Node::new(…, &doc) calls — we need the mut borrow
   // live at `document.safe_unlink(script_node)` below.

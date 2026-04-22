@@ -33,7 +33,8 @@ LoadDefinitions!({
   // → `\begin{foo}`/`\begin{foo*}` expand to `\begin{lstlisting}` (since
   // listings is the Perl-chosen substrate on L30). `\newmintedfile` binds
   // either the given optional macro or `\<lang>file` to `\inputminted`.
-  RawTeX!(r#"\def\newmint#1#2{\expandafter\def\csname #1\endcsname{\verb}}
+  RawTeX!(
+    r#"\def\newmint#1#2{\expandafter\def\csname #1\endcsname{\verb}}
 \def\newmintinline#1#2{\expandafter\def\csname #1inline\endcsname{\verb}}
 \def\newminted#1#2{%
   \expandafter\def\csname #1\endcsname{\begin{lstlisting}}%
@@ -43,7 +44,8 @@ LoadDefinitions!({
 \def\newmintedfile{\@ifnextchar[\lx@minted@nmf@opt\lx@minted@nmf@noopt}
 \def\lx@minted@nmf@opt[#1]#2{\let#1\inputminted}
 \def\lx@minted@nmf@noopt#1{\expandafter\let\csname #1file\endcsname\inputminted}
-"#);
+"#
+  );
   DefMacro!("\\setminted[]{}", "");
   DefMacro!("\\setmintedinline[]{}", "");
   DefMacro!("\\usemintedstyle[]{}", "");

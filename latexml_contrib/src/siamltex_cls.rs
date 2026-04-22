@@ -18,12 +18,18 @@ LoadDefinitions!({
   // L47-48) and produces the same `<ltx:classification>` output where the
   // document builder picks it up. Simpler than the Whatsit round-trip but
   // preserves the scheme attribute and body content.
-  DefEnvironment!("{AMS}",
-    "<ltx:classification scheme='AMS'>#body</ltx:classification>");
-  DefEnvironment!("{AM}",
-    "<ltx:classification scheme='AM'>#body</ltx:classification>");
-  DefEnvironment!("{PII}",
-    "<ltx:classification scheme='PII'>#body</ltx:classification>");
+  DefEnvironment!(
+    "{AMS}",
+    "<ltx:classification scheme='AMS'>#body</ltx:classification>"
+  );
+  DefEnvironment!(
+    "{AM}",
+    "<ltx:classification scheme='AM'>#body</ltx:classification>"
+  );
+  DefEnvironment!(
+    "{PII}",
+    "<ltx:classification scheme='PII'>#body</ltx:classification>"
+  );
   DefMacro!(T_CS!("\\begin{romannum}"), None, "\\begin{enumerate}");
   DefMacro!(T_CS!("\\end{romannum}"), None, "\\end{enumerate}");
   DefMacro!(T_CS!("\\begin{remunerate}"), None, "\\begin{enumerate}");

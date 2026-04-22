@@ -9,8 +9,8 @@ use latexml_core::common::error::*;
 // =======================
 //
 // I. Add your custom binding definition as a module delcaration here
-pub mod discard_env;
 pub mod apackage_sty;
+pub mod discard_env;
 pub mod filelistclass_cls;
 pub mod myclass_cls;
 pub mod mykeyval_sty;
