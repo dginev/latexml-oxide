@@ -9,38 +9,67 @@ LoadDefinitions!({
   // amsppt loads the AmSTeX pool — Perl L27
   // AmSTeX pool is partially ported (~30%)
 
-  // Frontmatter — Perl L32-80
+  // Frontmatter — Perl L32-80. Original (pre-LaTeX) AMSPPT syntax uses
+  // `\title Foo \endtitle` (tokens terminated by `\endtitle`, not a
+  // `{…}` group). Prior Rust stubbed these as naked DefMacro expanding
+  // to `\@add@frontmatter{ltx:X}`, which only works when the user writes
+  // `\title{Foo}` (LaTeX-ish form). Switch to the `Until:\endX` delimiter
+  // form the Perl port uses, with the `\endX` `Let`-ed to `\relax`.
   DefMacro!("\\makeheadline", "");
   DefMacro!("\\makefootline", "");
-  DefMacro!("\\title", "\\@add@frontmatter{ltx:title}");
-  DefMacro!("\\endtitle", "");
-  DefMacro!("\\author", "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname}");
-  DefMacro!("\\endauthor", "");
+  DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
+  Let!("\\endtitle", "\\relax");
+  DefMacro!("\\author Until:\\endauthor",
+    "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#1}}");
+  Let!("\\endauthor", "\\relax");
 
   // Affiliations and contacts — Perl L85-130
   DefConstructor!("\\@@@affil{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affil", "\\@add@to@frontmatter{ltx:creator}{\\@@@affil}");
-  DefMacro!("\\endaffil", "");
+  DefMacro!("\\affil Until:\\endaffil",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@affil{#1}}");
+  Let!("\\endaffil", "\\relax");
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\address", "\\@add@to@frontmatter{ltx:creator}{\\@@@address}");
-  DefMacro!("\\endaddress", "");
+  DefMacro!("\\address Until:\\endaddress",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
+  Let!("\\endaddress", "\\relax");
   DefConstructor!("\\@@@curraddr{}", "^ <ltx:contact role='current_address'>#1</ltx:contact>");
-  DefMacro!("\\curraddr", "\\@add@to@frontmatter{ltx:creator}{\\@@@curraddr}");
-  DefMacro!("\\endcurraddr", "");
+  DefMacro!("\\curraddr Until:\\endcurraddr",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@curraddr{#1}}");
+  Let!("\\endcurraddr", "\\relax");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email", "\\@add@to@frontmatter{ltx:creator}{\\@@@email}");
-  DefMacro!("\\endemail", "");
+  DefMacro!("\\email Until:\\endemail",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+  Let!("\\endemail", "\\relax");
   DefConstructor!("\\@@@urladdr{}", "^ <ltx:contact role='url'>#1</ltx:contact>");
-  DefMacro!("\\urladdr", "\\@add@to@frontmatter{ltx:creator}{\\@@@urladdr}");
-  DefMacro!("\\endurladdr", "");
+  DefMacro!("\\urladdr Until:\\endurladdr",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@urladdr{#1}}");
+  Let!("\\endurladdr", "\\relax");
 
-  // Abstract and classification — Perl L135-165
-  DefMacro!("\\abstract", "\\@add@frontmatter{ltx:abstract}");
-  DefMacro!("\\endabstract", "");
-  DefMacro!("\\keywords", "\\@add@frontmatter{ltx:keywords}");
-  DefMacro!("\\endkeywords", "");
-  DefMacro!("\\subjclass", "\\@add@frontmatter{ltx:classification}[scheme=MSC]");
-  DefMacro!("\\endsubjclass", "");
+  // Perl amsppt.sty.ltxml L72-75: thanks/date/dedicatory/translator —
+  // previously absent in Rust.
+  DefMacro!("\\thanks Until:\\endthanks",
+    "\\@add@frontmatter{ltx:note}[role=support]{#1}");
+  Let!("\\endthanks", "\\relax");
+  DefMacro!("\\date Until:\\enddate",
+    "\\@add@frontmatter{ltx:date}[role=creation]{#1}");
+  Let!("\\enddate", "\\relax");
+  DefMacro!("\\dedicatory Until:\\enddedicatory",
+    "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
+  Let!("\\enddedicatory", "\\relax");
+  DefMacro!("\\translator Until:\\endtranslator",
+    "\\@add@frontmatter{ltx:creator}[role=translator]{\\@personname{#1}}");
+  Let!("\\endtranslator", "\\relax");
+
+  // Abstract and classification — Perl L76-79.
+  DefMacro!("\\keywords Until:\\endkeywords",
+    "\\@add@frontmatter{ltx:keywords}{#1}");
+  Let!("\\endkeywords", "\\relax");
+  DefMacro!("\\subjclass Until:\\endsubjclass",
+    "\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}");
+  Let!("\\endsubjclass", "\\relax");
+  DefMacro!("\\abstract Until:\\endabstract",
+    "\\@add@frontmatter{ltx:abstract}{#1}");
+  Let!("\\endabstract", "\\relax");
 
   // Section structure — Perl L170-200
   DefMacro!("\\heading", "\\section*");
