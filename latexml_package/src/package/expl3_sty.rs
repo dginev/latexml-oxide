@@ -71,6 +71,21 @@ LoadDefinitions!({
   raw_tex(r"\cs_gset:Npn \__kernel_file_name_sanitize:n #1 {#1}")?;
   // \__file_quark_if_nil:nTF — conditional test for \q__file_nil
   raw_tex(r"\__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF }")?;
+  // l3file IOW family fixups — these don't survive raw-load with
+  // SUPPRESS_UNDEFINED_ERRORS either. Faithful LaTeXML-mode stubs
+  // (all writes-to-terminal suppressed; wraps skip the wrap-and-measure
+  // machinery and just invoke the callback on the raw text).
+  // Perl: naturally defined by expl3-code.tex L12033/12058/12132+variant,
+  //       L12457 (\__file_name_expand_end: end-marker). See cycle 60 of
+  //       10k_sandbox match; paper 1611.04489 surfaces these via the
+  //       msg / file-input paths.
+  raw_tex(concat!(
+    r"\cs_gset_protected:Npn \__kernel_iow_with:Nnn #1#2#3 {#3}",
+    r"\cs_gset_protected:Npn \iow_term:n #1 {}",
+    r"\cs_gset_protected:Npn \iow_wrap:nnnN #1#2#3#4 {#3 #4 {#1}}",
+    r"\cs_gset_protected:Npn \iow_wrap:nenN #1#2#3#4 {#3 #4 {#1}}",
+    r"\cs_gset:Npn \__file_name_expand_end: {}",
+  ))?;
   // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run properly.
   // Check both space and underscore catcodes — packages using \ProvidesExplPackage
   // may restore space but leave underscore as LETTER if the restoration is group-local.
