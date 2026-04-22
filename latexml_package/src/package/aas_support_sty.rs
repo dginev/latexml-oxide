@@ -319,15 +319,26 @@ LoadDefinitions!({
   DefPrimitive!("\\arcsec", "\u{2033}");
   DefMacro!("\\nodata", " ~$\\cdots$~ ");
 
-  // Perl L491: \aas@@fstack constructor — formats astronomical unit superscripts
+  // Perl L491-498: \aas@@fstack constructor — formats astronomical unit
+  // superscripts. Perl computes scriptpos dynamically as
+  // "mid" . $stomach->getScriptLevel — the trailing digit signals
+  // SUPERSCRIPTOP nesting depth (0 at top level, 1 inside a script,
+  // etc.). Rust previously hard-coded 'mid1', breaking nested usage.
+  // Also pickled `font => { shape => 'upright' }` (Perl L498) — the
+  // raised symbol is upright by convention regardless of the
+  // surrounding italic math font.
   DefConstructor!("\\aas@@fstack Undigested {}",
     "<ltx:XMApp role='POSTFIX'>\
-       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='mid1'/>\
+       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/>\
        <ltx:XMTok>.</ltx:XMTok>\
        <ltx:XMWrap>#2</ltx:XMWrap>\
      </ltx:XMApp>",
     bounded => true,
-    reversion => "#1"
+    font => { shape => "upright" },
+    reversion => "#1",
+    properties => sub[_args] {
+      Ok(stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())))
+    }
   );
 
   DefMacro!("\\fd", "\\ensuremath{\\@fd}");
