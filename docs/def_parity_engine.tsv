@@ -4,49 +4,21 @@ tex_fonts.rs:442		perl=DefPrimitiveI(L162)	rust=DefLigature
 tex_math.rs:593	mathchar	perl=DefPrimitive(L572)	rust=DefConstructor
 tex_math.rs:1192	lx@right	perl=DefConstructor(L765)	rust=DefMacro
 tex_math.rs:836	left	perl=DefConstructor(L773)	rust=DefMacro
-latex_constructs.rs:7421	end	perl=DefMacro(L215)	rust=DefPrimitive
-latex_constructs.rs:3558	g@addto@macro	perl=DefMacro(L962)	rust=DefPrimitive
-latex_constructs.rs:3894	abstract	perl=DefEnvironmentI(L1232)	rust=DefMacro
-latex_constructs.rs:7682		perl=DefMacro(L2126)	rust=DefEnvironment
-latex_constructs.rs:7682		perl=DefMacro(L2128)	rust=DefEnvironment
-latex_constructs.rs:7682		perl=DefMacro(L2129)	rust=DefEnvironment
-latex_constructs.rs:7682		perl=DefMacro(L2130)	rust=DefEnvironment
-latex_constructs.rs:5205	DeclareTextSymbolDefault	perl=DefPrimitive(L2683)	rust=DefMacro
-latex_constructs.rs:5459	OE	perl=DefPrimitiveI(L2814)	rust=DefMacro
-latex_constructs.rs:5460	oe	perl=DefPrimitiveI(L2815)	rust=DefMacro
-latex_constructs.rs:5461	AE	perl=DefPrimitiveI(L2816)	rust=DefMacro
-latex_constructs.rs:5463	ae	perl=DefPrimitiveI(L2817)	rust=DefMacro
-latex_constructs.rs:5464	AA	perl=DefPrimitiveI(L2818)	rust=DefMacro
-latex_constructs.rs:5465	aa	perl=DefPrimitiveI(L2819)	rust=DefMacro
-latex_constructs.rs:5466	O	perl=DefPrimitiveI(L2820)	rust=DefMacro
-latex_constructs.rs:5467	o	perl=DefPrimitiveI(L2821)	rust=DefMacro
-latex_constructs.rs:5468	L	perl=DefPrimitiveI(L2822)	rust=DefMacro
-latex_constructs.rs:5469	l	perl=DefPrimitiveI(L2823)	rust=DefMacro
-latex_constructs.rs:5470	ss	perl=DefPrimitiveI(L2824)	rust=DefMacro
-latex_constructs.rs:5471	dh	perl=DefPrimitiveI(L2825)	rust=DefMacro
-latex_constructs.rs:5472	DH	perl=DefPrimitiveI(L2826)	rust=DefMacro
-latex_constructs.rs:5473	dj	perl=DefPrimitiveI(L2827)	rust=DefMacro
-latex_constructs.rs:5474	DJ	perl=DefPrimitiveI(L2828)	rust=DefMacro
-latex_constructs.rs:5475	ng	perl=DefPrimitiveI(L2829)	rust=DefMacro
-latex_constructs.rs:5476	NG	perl=DefPrimitiveI(L2830)	rust=DefMacro
-latex_constructs.rs:5477	th	perl=DefPrimitiveI(L2831)	rust=DefMacro
-latex_constructs.rs:5478	TH	perl=DefPrimitiveI(L2832)	rust=DefMacro
+latex_constructs.rs:3908	abstract	perl=DefEnvironmentI(L1232)	rust=DefMacro
+latex_constructs.rs:7703		perl=DefMacro(L2126)	rust=DefEnvironment
+latex_constructs.rs:7703		perl=DefMacro(L2128)	rust=DefEnvironment
+latex_constructs.rs:7703		perl=DefMacro(L2129)	rust=DefEnvironment
+latex_constructs.rs:7703		perl=DefMacro(L2130)	rust=DefEnvironment
 latex_constructs.rs:6193	tabular	perl=DefKeyVal(L3705)	rust=DefMacro
 latex_constructs.rs:7206	vspace	perl=DefMacro(L4692)	rust=DefPrimitive
-latex_constructs.rs:7654	thinlines	perl=DefPrimitiveI(L4928)	rust=DefMacro
-latex_constructs.rs:7655	thicklines	perl=DefPrimitiveI(L4929)	rust=DefMacro
-latex_constructs.rs:7657	arrowlength	perl=DefPrimitive(L4933)	rust=DefMacro
-latex_constructs.rs:7775	line	perl=DefConstructor(L5043)	rust=DefMacro
-latex_constructs.rs:7808	vector	perl=DefConstructor(L5048)	rust=DefMacro
-latex_constructs.rs:7870	oval	perl=DefConstructor(L5060)	rust=DefMacro
-latex_constructs.rs:7912	qbezier	perl=DefConstructor(L5077)	rust=DefMacro
-latex_constructs.rs:7661	lx@pic@bezier	perl=DefConstructor(L5085)	rust=DefMacro
-latex_constructs.rs:8199	not@math@alphabet	perl=DefMacro(L5349)	rust=DefPrimitive
-latex_constructs.rs:8759	textprime	perl=DefPrimitiveI(L5771)	rust=DefMacro
+latex_constructs.rs:7796	line	perl=DefConstructor(L5043)	rust=DefMacro
+latex_constructs.rs:7829	vector	perl=DefConstructor(L5048)	rust=DefMacro
+latex_constructs.rs:7891	oval	perl=DefConstructor(L5060)	rust=DefMacro
+latex_constructs.rs:7933	qbezier	perl=DefConstructor(L5077)	rust=DefMacro
+latex_constructs.rs:7682	lx@pic@bezier	perl=DefConstructor(L5085)	rust=DefMacro
 plain_base.rs:62	#	perl=DefPrimitive(L70)	rust=DefMacro
 plain_base.rs:63	&	perl=DefPrimitive(L72)	rust=DefMacro
 plain_base.rs:64	%	perl=DefPrimitive(L74)	rust=DefMacro
 plain_base.rs:68	$	perl=DefPrimitive(L76)	rust=DefMacro
 plain_base.rs:411	mit	perl=DefPrimitiveI(L368)	rust=DefMacro
 plain_base.rs:411	mit	perl=DefPrimitiveI(L370)	rust=DefMacro
-plain_bootstrap.rs:27	newif	perl=DefPrimitive(L37)	rust=DefMacro

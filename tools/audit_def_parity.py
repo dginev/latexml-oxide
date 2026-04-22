@@ -74,10 +74,41 @@ def scan_perl(path: Path):
     out.append((cs_head, kind, lineno))
   return out
 
+def strip_rust_line_comments(text: str) -> str:
+  """Replace `//` line comments (and `///` doc comments) with blank of same length
+  so line numbers stay stable but Def*! occurrences inside comments don't match."""
+  out = []
+  for line in text.splitlines(keepends=True):
+    # Find `//` outside of string literals. Cheap heuristic: only consider
+    # `//` that is not preceded by an open `"` on the same line.
+    i = 0
+    in_str = False
+    in_raw = False
+    cut = None
+    while i < len(line):
+      c = line[i]
+      if not in_str and c == '/' and i + 1 < len(line) and line[i + 1] == '/':
+        cut = i
+        break
+      if not in_str and c == '"':
+        in_str = True
+      elif in_str and c == '"' and (i == 0 or line[i - 1] != '\\'):
+        in_str = False
+      i += 1
+    if cut is not None:
+      # Keep any trailing newline to preserve line count.
+      tail = line[cut:].rstrip('\n').rstrip('\r')
+      suffix = line[cut + len(tail):]
+      out.append(line[:cut] + ' ' * len(tail) + suffix)
+    else:
+      out.append(line)
+  return ''.join(out)
+
 def scan_rust(path: Path):
   """Return list of (cs, kind, lineno)."""
   out = []
-  text = path.read_text(encoding="utf-8", errors="replace")
+  raw = path.read_text(encoding="utf-8", errors="replace")
+  text = strip_rust_line_comments(raw)
   for m in RUST_DEF_RE.finditer(text):
     kind, cs = m.group(1), m.group(2)
     # Rust string is r"\foo" or "\\foo"; unescape the first '\\' → '\'.
