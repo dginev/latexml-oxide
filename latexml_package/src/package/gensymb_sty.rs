@@ -2,11 +2,18 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  DefMacro!("\\degree",     "\\ifmmode\\lx@math@degree\\else\\lx@text@degree\\fi");
-  DefMacro!("\\celcius",    "\\ifmmode\\lx@math@celcius\\else\\lx@text@celcius\\fi");
-  DefMacro!("\\perthousand","\\ifmmode\\lx@math@perthou\\else\\lx@text@perthou\\fi");
-  DefMacro!("\\ohm",        "\\ifmmode\\lx@math@ohm\\else\\lx@text@ohm\\fi");
-  DefMacro!("\\micro",      "\\ifmmode\\lx@math@micro\\else\\lx@text@micro\\fi");
+  // Perl gensymb.sty.ltxml L19-23 passes `protected => 1` so these CSes
+  // don't expand under \edef/\write contexts. Rust was missing the flag.
+  DefMacro!("\\degree",     None, "\\ifmmode\\lx@math@degree\\else\\lx@text@degree\\fi",
+    protected => true);
+  DefMacro!("\\celcius",    None, "\\ifmmode\\lx@math@celcius\\else\\lx@text@celcius\\fi",
+    protected => true);
+  DefMacro!("\\perthousand", None, "\\ifmmode\\lx@math@perthou\\else\\lx@text@perthou\\fi",
+    protected => true);
+  DefMacro!("\\ohm",        None, "\\ifmmode\\lx@math@ohm\\else\\lx@text@ohm\\fi",
+    protected => true);
+  DefMacro!("\\micro",      None, "\\ifmmode\\lx@math@micro\\else\\lx@text@micro\\fi",
+    protected => true);
 
   DefPrimitive!("\\lx@text@degree",  "\u{00B0}",
     bounded => true, font => { encoding => "TS1" });
