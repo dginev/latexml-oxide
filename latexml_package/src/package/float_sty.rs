@@ -202,7 +202,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
 }
 
 /// Perl: addFloatFrames (float.sty.ltxml L76-85)
-fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
+pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
   let caption_qname = arena::pin_static("ltx:caption");
   let toccaption_qname = arena::pin_static("ltx:toccaption");
   let node = document.get_node();

@@ -38,7 +38,25 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] {
       use crate::engine::latex_constructs::after_float;
+      // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
+      // whatsit so afterConstruct's addFloatFrames draws the rectangle.
+      // Without this, algorithm2e's [boxed] / [boxruled] options silently
+      // dropped their frame instructions in Rust.
+      if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
+        if style_tokens.to_string().contains("box") {
+          whatsit.set_property("frame", Stored::from("boxed"));
+        }
+      }
       after_float(whatsit);
+    },
+    // Perl L92: afterConstruct => addFloatFrames($_[0], $_[1]->getProperty('frame'))
+    // Pulls the frame from properties (set above for boxed/boxruled options)
+    // and dispatches to float_sty's add_float_frames helper.
+    after_construct => sub[document, whatsit] {
+      let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
+      if !style.is_empty() {
+        crate::package::float_sty::add_float_frames(document, &style)?;
+      }
     }
   );
   // {algorithm*}, {algorithm2e}, {algorithm2e*} — same as {algorithm} — Perl L63
