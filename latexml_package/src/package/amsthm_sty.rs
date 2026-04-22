@@ -136,10 +136,14 @@ LoadDefinitions!({
     }
   });
 
-  // QED symbol
+  // QED symbol — Perl amsthm.sty.ltxml has `enterHorizontal => 1`.
+  // Without it, a bare \qed at end of proof in vertical mode emits the
+  // U+220E text node outside any <ltx:p>, producing structurally
+  // invalid bare text in a vertical-mode container.
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
     reversion => "\\qed"
   );
   Let!("\\mathqed",    "\\qed");

@@ -216,9 +216,13 @@ LoadDefinitions!({
   );
 
   //======================================================================
+  // QED — Perl sv_support.sty.ltxml has `enterHorizontal=>1` (matches
+  // amsthm L141). Without it, `\qed` at end of proof in vertical mode
+  // emits the U+220E text node outside any <ltx:p>.
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
     reversion => "\\qed");
   Let!("\\smartqed", "\\qed");
   Let!("\\squareforqed", "\\qed");
