@@ -69,6 +69,13 @@ def scan_perl(path: Path):
   text = path.read_text(encoding="utf-8", errors="replace")
   for m in PERL_DEF_RE.finditer(text):
     kind, cs = m.group(1), m.group(2)
+    # Perl `DefKeyVal('KEYSET', 'KEY', 'type', …)` passes a keyset name as
+    # its first string arg, NOT a CS. Skip — otherwise the audit conflates
+    # the keyset with a Rust `\<keyset>` DefMacro of the same bare name
+    # (e.g. Perl `DefKeyVal('tabular', 'width', …)` vs Rust
+    # `DefMacro!("\\tabular[]{}", …)`).
+    if kind == "DefKeyVal" and not cs.startswith("\\"):
+      continue
     # CS may include the leading '\'; strip it for comparison.
     if cs.startswith("\\"):
       cs = cs[1:]

@@ -1,9 +1,8 @@
 
-# Summary (engine): 32 pairs scanned, 14 kind mismatches, 4 missing rust files
+# Summary (engine): 32 pairs scanned, 13 kind mismatches, 4 missing rust files
 tex_math.rs:593	mathchar	perl=DefPrimitive(L573)	rust=DefConstructor
 tex_math.rs:1192	lx@right	perl=DefConstructor(L766)	rust=DefMacro
 tex_math.rs:836	left	perl=DefConstructor(L773)	rust=DefMacro
-latex_constructs.rs:6193	tabular	perl=DefKeyVal(L3705)	rust=DefMacro
 latex_constructs.rs:7206	vspace	perl=DefMacro(L4693)	rust=DefPrimitive
 latex_constructs.rs:7796	line	perl=DefConstructor(L5044)	rust=DefMacro
 latex_constructs.rs:7829	vector	perl=DefConstructor(L5048)	rust=DefMacro

@@ -127,24 +127,31 @@ Def* only (prior regex caught nested calls inside `beforeDigest => sub
   DefMacro workarounds for the missing `TeXDelimiter` parameter type
   (structural gap to port first).
 
-**Truly actionable remaining (1 item):** `\tabular`
-(DefMacro→DefKeyVal, needs real `DefKeyVal!` macro port).
+**Truly actionable remaining (0 items):** the prior `\tabular` flag was
+a third class of audit false-positive — Perl `DefKeyVal('tabular',
+'width', 'Dimension')` registers a KV key under the keyset named
+"tabular"; the first arg is NOT a CS. Perl's actual `\tabular` CS
+definition is a `DefMacro` (at `latex_constructs.pool.ltxml:3722`),
+matching Rust's `DefMacro!("\\tabular[]{}", …)` exactly. Audit tool
+updated to skip `DefKeyVal` entries whose first arg isn't `\`-prefixed.
 
 **Blocked / intentional (documented in WISDOM):** `\vspace` (#38),
 `$/#/&/%` special chars (#40), math-mode `\mathchar`/`\left`/`\lx@right`
-+ picture primitives cluster (#41). **13 of 14 engine mismatches**
-belong here — they are structural adaptations (missing `TeXDelimiter`
-/ `Pair:Number` parameter types, 2-layer DefMacro+DefConstructor
++ picture primitives cluster (#41). **All 13 engine mismatches**
+belong here — structural adaptations (missing `TeXDelimiter` /
+`Pair:Number` parameter types, 2-layer DefMacro+DefConstructor
 factoring), Rust improvements (mode-split, direct XML emission), or
 load-bearing bug workarounds (\vspace shielding \vskip paragraph-break).
-The DP audit as a kind-flip work queue is essentially closed; the
-remaining structural items need larger dedicated investigations.
+**The DP audit for engine is fully triaged** — no kind-flip work
+remains actionable.
 
-**Package (232 mismatches, batches P1–P9):** deferred until engine is
-clean. Top files: caption_sty.rs (32), texvc_sty.rs (30),
-physics_sty.rs (22), pgfsys_latexml_def.rs (17), llncs_cls.rs (15),
-babel_support_sty.rs (15). P8 cross-file (45 `DefKeyVal→DefMacro`)
-requires a real `DefKeyVal!` port.
+**Package (187 mismatches after DefKeyVal fix — was 232; 45 false
+positives eliminated):** triage status TBD. Top files: caption_sty.rs,
+texvc_sty.rs, physics_sty.rs, pgfsys_latexml_def.rs, llncs_cls.rs,
+babel_support_sty.rs. Many entries likely share the same structural
+patterns documented in WISDOM #41 (missing param types, mode-splits)
+and the DefKeyVal keyset-name conflation that the tool fix just
+cleared from engine.
 
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
