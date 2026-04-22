@@ -36,8 +36,18 @@ LoadDefinitions!( {
     "twocolumn",
     r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"
   );
-  // Perl: openbib, leqno, fleqn options
-  DeclareOption!("openbib", None);
+  // Perl article.cls.ltxml L34-35: `openbib` injects an inline CSS
+  // resource that switches bib blocks from flow to display layout.
+  // Port via require_resource on an anonymous Resource (no name, so the
+  // `<ltx:resource>` carries only mimetype + inline content).
+  DeclareOption!("openbib", {
+    use latexml_core::document::resource::Resource;
+    require_resource(Resource {
+      mimetype: "text/css".into(),
+      content:  ".ltx_bibblock{display:block;}".into(),
+      ..Resource::default()
+    });
+  });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
 
