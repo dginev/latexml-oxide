@@ -19,9 +19,26 @@ LoadDefinitions!({
   DefMacro!("\\ProvideDirectory{}", "");
   DefMacro!("\\TestAppExists{}", "");
   DefConditional!("\\ifAppExists");
-  // TODO: Perl has complex \inputminted closure that reads file contents
-  // and wraps in \begin{minted}...\end{minted}. Stubbed for now.
-  DefMacro!("\\inputminted[]{}{}", "");
+  // \inputminted[opts]{language}{filename} — Perl L43-53 reads the
+  // referenced file via FindFile + Mouth->readRawLine, then wraps the
+  // contents in \begin{minted}{language}...\end{minted}. The Rust
+  // \begin{minted} short-circuits to \begin{lstlisting} (via the
+  // listings substrate chosen on Perl L30), so we wrap the contents
+  // accordingly. Missing files silently produce an empty listing —
+  // matches the Perl branch where FindFile returns undef.
+  use latexml_core::binding::content::find_file;
+  DefMacro!("\\inputminted[]{}{}", sub[(_opts, _lang, file_arg)] {
+    let file_str = file_arg.to_string();
+    let mut tokens: Vec<Token> = Vec::new();
+    tokens.push(T_CS!("\\begin{lstlisting}"));
+    if let Some(path) = find_file(&file_str, None) {
+      if let Ok(contents) = std::fs::read_to_string(&path) {
+        tokens.extend(Explode!(&contents));
+      }
+    }
+    tokens.push(T_CS!("\\end{lstlisting}"));
+    Ok(Tokens::new(tokens))
+  });
   DefMacro!("\\listoflistings", "");
   DefMacro!("\\listingscaption", "Listing");
   DefMacro!("\\listoflistingscaption", "List of listings");
