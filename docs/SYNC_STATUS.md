@@ -145,13 +145,44 @@ load-bearing bug workarounds (\vspace shielding \vskip paragraph-break).
 **The DP audit for engine is fully triaged** — no kind-flip work
 remains actionable.
 
-**Package (187 mismatches after DefKeyVal fix — was 232; 45 false
-positives eliminated):** triage status TBD. Top files: caption_sty.rs,
-texvc_sty.rs, physics_sty.rs, pgfsys_latexml_def.rs, llncs_cls.rs,
-babel_support_sty.rs. Many entries likely share the same structural
-patterns documented in WISDOM #41 (missing param types, mode-splits)
-and the DefKeyVal keyset-name conflation that the tool fix just
-cleared from engine.
+**Package (187 mismatches after DefKeyVal fix).** Pattern-based
+triage across 11 clusters classifies **139 of 187 entries (74%) as
+structural/intentional**:
+
+| File | # | Pattern | Classification |
+|---|---|---|---|
+| texvc_sty | 30 | DefMacroI↔DefMath alias→direct-XMath | WISDOM #40 |
+| physics_sty | 22 | DefMacro(sub)↔DefPrimitive(imperative) | WISDOM #41 + inline at `:265` |
+| pgfsys_latexml_def | 17 | DefConstructor-empty-template↔DefPrimitive-state | top-of-file comment |
+| babel_support_sty | 15 | DefPrimitiveI-literal↔DefMacro-text-alias | inline comment |
+| llncs_cls \bbbX | 13 | DefPrimitiveI-glyph↔DefConstructor-template | inline at `:143` |
+| svmult_cls \bbbX | 13 | same as llncs | cross-ref inline |
+| amsppt_sty | 10 | DefConstructor-XML↔DefMacro-LaTeX-shim | WISDOM #42 |
+| mn2e_support_sty | 9 | mixed (astronomy symbols) | top-of-file comment |
+| revsymb_sty | 8 | DefConstructor-TeXDelimiter↔DefMacro | WISDOM #41 + inline at `:12` |
+| amsmath_sty | 2 | alignsafeOptional workaround | WISDOM #41 |
+
+**Remaining 48 entries (long tail, files with ≤4 DP flags each).**
+Kind distribution shows **every pattern already catalogued**:
+- 20 DefMacro↔DefPrimitive → same gullet-sub↔stomach-imperative as physics (WISDOM #41)
+- 12 DefConstructor↔DefMacro → likely TeXDelimiter / other ParameterType workarounds (WISDOM #41)
+- 9 DefPrimitive↔DefMacro → babel_support literal-text pattern
+- 2 DefPrimitiveI↔DefMacro → babel_support pattern
+- 2 DefMacro↔DefConstructor → direct-XML emission (WISDOM #40)
+- 2 DefMacroI↔DefPrimitive → minor structural
+- 1 DefConstructor↔DefPrimitive → pgfsys empty-template pattern
+
+**Methodology for future per-file long-tail triage:** start with the
+file's `Perl→Rust` kind pair (via `awk '{sub(/\(L[0-9]+\)/,"",$3); print
+$3"\t"$4}' docs/def_parity_package.tsv | uniq -c`). If the pair matches
+one of the 11 catalogued patterns above, it's structural — add a 2-3
+line cross-ref breadcrumb and move on. Only dig deep when the kind pair
+is new, or when the Perl body contains state-mutating logic that the
+Rust body visibly omits.
+
+**Top-3 ParameterType ports (would close ~20 package entries)** —
+`TeXDelimiter` (10+ entries), `Pair:Number` (5+ entries),
+`alignsafeOptional` (2+ entries). Catalogued in WISDOM #41.
 
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
