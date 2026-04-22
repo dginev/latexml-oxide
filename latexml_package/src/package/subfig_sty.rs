@@ -5,9 +5,16 @@ LoadDefinitions!({
   // Perl: subfig.sty.ltxml — 118 lines
   // Subfigure/subtable support with counter management
 
-  // Perl L28: \refstepcounter@noreset — steps counter without resetting subcounters
-  // (simplified: just step the counter normally since we don't track reset chains)
-  DefMacro!("\\refstepcounter@noreset{}", "\\refstepcounter{#1}");
+  // Perl L26-27: \refstepcounter@noreset passes noreset=1 to RefStepCounter,
+  // which steps the counter but skips the usual subcounter reset. Rust
+  // previously aliased it to plain \refstepcounter (which DOES reset
+  // subcounters), so a \subfloat inside an uncaptioned float temporarily
+  // stepping the parent counter would zero out the subcounter the next
+  // \subfloat was trying to increment.
+  DefPrimitive!("\\refstepcounter@noreset{}", sub[(cs)] {
+    let cs_expanded = Expand!(cs).to_string();
+    RefStepCounter!(&cs_expanded, true)?;
+  });
 
   // Perl L31-32: \newsubfloat — creates subfloat machinery for a float type
   // We pre-define figure/table; generic \newsubfloat is a stub
@@ -47,9 +54,13 @@ LoadDefinitions!({
   DefMacro!("\\p@subfigure", "\\thefigure");
   DefMacro!("\\p@subtable", "\\thetable");
 
-  // \lx@subfloat@figure — Perl L45-60
+  // \lx@subfloat@figure — Perl L45-60. Perl's afterDigest on the inner
+  // environment copies the final subfigure counter into subfigure@save so
+  // \ContinuedFloat can restore it. Rust embeds `\setcounter{subfigure@save}
+  // {\value{subfigure}}` at the end of the expansion; runs at the same
+  // moment (after caption digests, so sub counter is final).
   DefMacro!("\\lx@subfloat@figure[][]{}",
-    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#3\\caption{#1}\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi");
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#3\\caption{#1}\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
   DefEnvironment!("{lx@subfloat@@figure}",
     "^ <ltx:figure xml:id='#id'>#tags#body</ltx:figure>",
     mode => "internal_vertical"
@@ -57,7 +68,7 @@ LoadDefinitions!({
 
   // \lx@subfloat@table — Perl L45-60 (table variant)
   DefMacro!("\\lx@subfloat@table[][]{}",
-    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#3\\caption{#1}\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi");
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#3\\caption{#1}\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefEnvironment!("{lx@subfloat@@table}",
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
     mode => "internal_vertical"
