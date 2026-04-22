@@ -509,6 +509,24 @@ round 17 commit (see below).
   the `rebuild_idstore_from_dom` fallback (replacing with a
   debug-only consistency assert).
 
+  **Backlog audit completion (cycles 55–58).** Every enumerated site
+  in the backlog is now audited and either migrated or confirmed
+  safe-by-pattern. Migrations landed: `d204282cc`
+  (relocate_footnote_aux — textnote leak), `8e6f4bbc8` (3 sites in
+  rearrange_eqnarray + collapse_float), `070daebb1` (close_math_fork
+  empty-branch + rearrange_eqnarray eq-loop), `df9fba807`
+  (\@@joinrel merge + authblk affil stash). Audited-safe: all
+  `post/*` sites (idcache either handled above the unlink or the
+  node type can't carry xml:id), `math_parser/parser.rs`
+  L811/892/906/975/1350-1356 (save-and-reparent or save-and-return
+  patterns), `math_parser/util.rs` L271 (XMHint is ephemeral, no
+  xml:id), `math_parser/semantics/tree.rs` L918 (save-and-reparent),
+  `base_xmath` L1502/L1727, `latex_constructs` L211/1630.
+  Remaining follow-up: the `rebuild_idstore_from_dom` fallback at
+  `finalize()` entry still runs as belt-and-suspenders, but with
+  all audited paths consistent, a future cycle could downgrade it to
+  a debug-only consistency probe.
+
 ### Dump — deferred alias retry (session 128)
 
 - [ ] `\a → \@tabacckludge` — still hand-written `Let!` in
