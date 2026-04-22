@@ -22,14 +22,29 @@ LoadDefinitions!({
   DefMacro!("\\bodytext{}", "");
   DefMacro!("\\htmlbody",   "");
 
-  // Hyperref variants — Perl L45-56
-  DefConstructor!("\\hyperrefdef{}{}{} Semiverbatim", "<ltx:ref>#1</ltx:ref>");
+  // Hyperref variants — Perl L45-51
+  // Perl emits labelref='#label' on ltx:ref and pulls label from arg 4
+  // via CleanLabel. Rust stub was `<ltx:ref>#1</ltx:ref>` — the ref
+  // was emitted but without a label, so prior the link was inert.
+  DefConstructor!("\\hyperrefdef{}{}{} Semiverbatim",
+    "<ltx:ref labelref='#label'>#1</ltx:ref>",
+    properties => sub[args] {
+      let label_arg = args[3].as_ref().map(ToString::to_string).unwrap_or_default();
+      Ok(stored_map!("label" => clean_label(&label_arg, None)))
+    });
   Let!("\\hyperrefhyper", "\\hyperrefdef");
   Let!("\\hyperrefpagedef", "\\hyperrefdef");
   Let!("\\hyperrefnoref", "\\hyperrefdef");
   Let!("\\hyperrefhtml", "\\hyperrefdef");
-  DefMacro!("\\hypercite[]{}{}{} Semiverbatim", "");
-  DefMacro!("\\htmlcite{}{}", "");
+
+  // Perl L53-56: \hypercite[pre]{key1}{key2}[post] Semiverbatim
+  // emits an <ltx:cite> with a nested <ltx:bibref>, including optional
+  // prefix/suffix phrases. Prior Rust stub was DefMacro!("","") which
+  // silently swallowed all content.
+  DefConstructor!("\\hypercite[]{}{}[] Semiverbatim",
+    "<ltx:cite>#4 <ltx:bibref bibrefs='#5'>?#2(<ltx:bibrefphrase>#2</ltx:bibrefphrase>)</ltx:bibref> #1</ltx:cite>",
+    enter_horizontal => true);
+  DefMacro!("\\htmlcite{}{}", "\\hypercite{#1}{}{#2}");
 
   // Image/border — Perl L57-61
   DefMacro!("\\htmlimage{}", "");
