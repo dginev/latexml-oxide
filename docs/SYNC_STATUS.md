@@ -55,6 +55,15 @@ Active round-17 workstreams: Def*-parity audit (see "DP" section
 below) + raw-TeX / expl3 kernel parity (D1-D2 + Long-horizon). Recent
 completed landings in git log; this file tracks open work only.
 
+**Upstream Perl sync** (audited 2026-04-22 through commit `fdc8bf91`):
+Rust current with all 12+ recent upstream commits reviewed. Explicit
+"Perl #NNNN" parity comments live at `keyval.rs:326` (#2777),
+`stomach.rs:699` (#2775), `math_common.rs:927` (#2762), and others.
+Only narrow gap found this audit: `pstricks.tex.ltxml`'s two-step
+load (raw tex + support overlay) — ported in `92b9b0d5c`. All prior
+6 commits spot-checked in memory cycle 59 (48ad18db, d81e955b,
+e6db0871, 50f0061d, acaab773, 4eb681c0) remain ported.
+
 ## Tikz — Known Diffs (vs Perl output)
 
 1. foreignObject transform Y / width/height
