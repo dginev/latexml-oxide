@@ -1472,11 +1472,13 @@ pub fn close_math_fork(
     document.close_element_at(&mut last_mf)?;
   }
   // Check if branch came up empty (only 1 child = just the Math)
-  let mut fork = branch.get_parent().unwrap();
+  let fork = branch.get_parent().unwrap();
   let branches: Vec<Node> = fork.get_child_nodes();
   if branches.len() == 1 {
-    // Whoops, came up empty! Remove the fork
-    fork.unlink_node();
+    // Whoops, came up empty! Remove the fork (recursively unrecord any
+    // xml:ids in the dropped subtree — the lone surviving child may be
+    // a Math whose descendants were populated via append_clone).
+    document.safe_unlink(fork);
   }
   Ok(())
 }
@@ -1774,6 +1776,17 @@ pub fn equationgroup_join_rows(
   let (mut mainfork, mut branch_node) = open_math_fork(document, &mut equation)?;
   for eq in equations {
     let mut eq = eq;
+    // D3b: unrecord eq's own xml:id before detaching so idstore doesn't
+    // retain a dangling entry pointing to a soon-to-be-dropped node.
+    // (Descendant ids remain recorded; append_clone inside
+    // add_column_to_math_fork relies on modify_id suffixing for clones
+    // of cell children.)
+    if let Some(eq_id) = eq
+      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .or_else(|| eq.get_attribute("xml:id"))
+    {
+      document.unrecord_id(&eq_id);
+    }
     eq.unlink_node();
     let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
     // Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
