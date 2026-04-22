@@ -1,5 +1,20 @@
 use crate::prelude::*;
 
+/// Perl floatfig.sty.ltxml L37-39: same direction-from-arg logic as
+/// floatflt — `v`/`r` prefix → right, else left.
+fn floatfig_float_direction(whatsit: &Whatsit) -> &'static str {
+  let pos_arg = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+  let pos_arg = pos_arg.trim().to_string();
+  let pos = if !pos_arg.is_empty() {
+    pos_arg
+  } else if let Some(Stored::String(sym)) = state::lookup_value("floatfltpos") {
+    arena::with(sym, |s| s.to_string())
+  } else {
+    "v".to_string()
+  };
+  if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: floatfig.sty.ltxml — floating figures (restricted floatflt)
@@ -18,11 +33,12 @@ LoadDefinitions!({
   // after_float's `digest(\@captype)` would error. See floatflt_sty.rs
   // commit 2b57844c4 for details.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
-    "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
+    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags #body</ltx:figure>",
     before_digest => {
       crate::engine::latex_constructs::before_float("figure", None);
     },
     after_digest => sub[whatsit] {
+      whatsit.set_property("float", floatfig_float_direction(whatsit));
       crate::engine::latex_constructs::after_float(whatsit);
     });
 

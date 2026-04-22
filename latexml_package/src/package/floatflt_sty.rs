@@ -1,5 +1,22 @@
 use crate::prelude::*;
 
+/// Perl floatflt.sty.ltxml L40-42: float direction from optional arg or
+/// `floatfltpos` state: `v` / `r` prefix → right, else left. Prior Rust
+/// hardcoded `float='right'`, ignoring both the option and `[l]` / `[p]`
+/// optional-arg forms.
+fn floatflt_float_direction(whatsit: &Whatsit) -> &'static str {
+  let pos_arg = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+  let pos_arg = pos_arg.trim().to_string();
+  let pos = if !pos_arg.is_empty() {
+    pos_arg
+  } else if let Some(Stored::String(sym)) = state::lookup_value("floatfltpos") {
+    arena::with(sym, |s| s.to_string())
+  } else {
+    "v".to_string()
+  };
+  if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   state::assign_value("floatfltpos", Stored::from("v"), None);
@@ -14,19 +31,21 @@ LoadDefinitions!({
   // is not defined" (sandbox paper 0810.1610). The engine's `{figure}` /
   // `{table}` envs use `after_digest` for this reason; match them.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
-    "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
+    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags #body</ltx:figure>",
     before_digest => {
       crate::engine::latex_constructs::before_float("figure", None);
     },
     after_digest => sub[whatsit] {
+      whatsit.set_property("float", floatflt_float_direction(whatsit));
       crate::engine::latex_constructs::after_float(whatsit);
     });
   DefEnvironment!("{floatingtable}[]{Dimension}",
-    "<ltx:table xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:table>",
+    "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags #body</ltx:table>",
     before_digest => {
       crate::engine::latex_constructs::before_float("table", None);
     },
     after_digest => sub[whatsit] {
+      whatsit.set_property("float", floatflt_float_direction(whatsit));
       crate::engine::latex_constructs::after_float(whatsit);
     });
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
