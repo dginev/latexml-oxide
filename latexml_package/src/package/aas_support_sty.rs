@@ -360,12 +360,16 @@ LoadDefinitions!({
   DefMacro!("\\threequarters", "\\ifmmode\\case{3}{4}\\else\\text@threequarters\\fi");
   DefPrimitive!("\\text@threequarters", "\u{00BE}");
 
-  // Photometric bands — Perl L529-533
-  DefPrimitive!("\\ubvr", "UBVR");
-  DefPrimitive!("\\ub", "U\u{2000}B");
-  DefPrimitive!("\\bv", "B\u{2000}V");
-  DefPrimitive!("\\vr", "V\u{2000}R");
-  DefPrimitive!("\\ur", "U\u{2000}R");
+  // Photometric bands — Perl aas_support.sty.ltxml L529-533. Each takes
+  // `bounded => 1, font => { shape => 'italic' }` so the italicization
+  // applies only to the band glyph and not to surrounding text — without
+  // bounded, an `\ubvr` mid-paragraph would italicize all subsequent text
+  // until the next font reset. Match Perl on both flags.
+  DefPrimitive!("\\ubvr", "UBVR", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\ub", "U\u{2000}B", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\bv", "B\u{2000}V", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\vr", "V\u{2000}R", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\ur", "U\u{2000}R", bounded => true, font => { shape => "italic" });
 
   // amssymb aliases
   RequirePackage!("latexsym");
