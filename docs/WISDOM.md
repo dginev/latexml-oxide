@@ -1111,6 +1111,68 @@ per Perl's implementation. Each port simultaneously simplifies the
 affected binding files (replacing DefMacro+DefPrimitive chains with
 single DefConstructor calls) and cleans the DP audit.
 
+**Concrete TeXDelimiter port plan** (highest-ROI candidate, ~10+ entries):
+
+1. Perl reference: `TeX_Math.pool.ltxml:709` —
+   ```perl
+   DefParameterType('TeXDelimiter', sub {
+     my ($gullet) = @_;
+     $gullet->skipFiller;                           # spaces + \relax
+     my $token = $gullet->readXToken(0);            # may be undef
+     if ($token && $token->getCatcode == CC_BEGIN) {# {...}-unwrap once
+       $gullet->unread($gullet->readBalanced(1));
+       $gullet->skipFiller;
+       $token = $gullet->readXToken(0); }
+     $token = T_CS('\lx@delimiterdot') if !defined($token) || ToString($token) eq '.';
+     my ($delim) = $STATE->getStomach->invokeToken($token);
+     return $delim; },
+     undigested => 1,
+     reversion  => sub { Revert($_[0]); });
+   ```
+
+2. Rust add to `latexml_package/src/engine/base_parameter_types.rs`:
+   ```rust
+   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
+     gullet::skip_filler()?;
+     let mut token = gullet::read_x_token(...)?;
+     if let Some(ref t) = token {
+       if t.catcode() == Catcode::BEGIN {
+         let balanced = gullet::read_balanced(...)?;
+         gullet::unread(balanced.unlist());
+         gullet::skip_filler()?;
+         token = gullet::read_x_token(...)?;
+       }
+     }
+     let tok = match token.map(|t| t.to_string().as_str()) {
+       None | Some(".") => T_CS!("\\lx@delimiterdot"),
+       _ => token.unwrap(),
+     };
+     let digested = stomach::invoke_token(&tok)?;
+     digested  // already digested; ParameterType flag = undigested=true
+   }, undigested => true, reversion => sub[d] { d.revert() });
+   ```
+   (Pseudocode — verify exact signatures against existing entries like
+   `base_parameter_types.rs:135 XToken`.)
+
+3. Also port `\lx@delimiterdot` (`TeX_Math.pool.ltxml:729`) — a
+   DefConstructor emitting `<ltx:XMHint/>` with `hint=1`. Already exists
+   in Rust? Grep first.
+
+4. Migrate call sites to use the new ParameterType:
+   - `tex_math.rs:836` `\left` — drop the DefMacro+DefPrimitive split,
+     replace with `DefConstructor!("\\left TeXDelimiter", "#1", …)`
+     mirroring Perl L773.
+   - `tex_math.rs:1192` `\lx@right` — same.
+   - `revsymb_sty.rs:14-21` 8 `\biglb`/`\bigrb`/… — replace each DefMacro
+     with `DefConstructor('\biglb TeXDelimiter', '#1', …)` mirroring Perl.
+
+5. Full test run after each migration. Expected: 1097/0/0 tests green,
+   DP audit shows 10+ entries cleared.
+
+Estimated scope: one DefParameterType entry (+ helpers if stomach::
+invoke_token doesn't already exist) + 10 call-site migrations +
+verification. Single dedicated 2-4h session.
+
 **Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
 fraction to be structural adaptations (mode-splits, direct XML emission,
 parameter-type gaps), not parity bugs. Read the Perl body first; if the
