@@ -113,19 +113,30 @@ LoadDefinitions!({
   DefMacro!("\\NormalCoor",  "");
   DefMacro!("\\PSTricksOff", "");
 
-  // Rotation constructors — Perl L1002-1006. Produce <ltx:g> wrappers
-  // with SVG-style rotate() transforms.
+  // Rotation constructors — Perl pstricks_support.sty.ltxml L1002-1006.
+  // Produce <ltx:g> SVG-rotate wrappers. `bounded => 1` matches Perl —
+  // restricts the body's group scope so subsequent text outside the
+  // rotate doesn't inherit the wrapper's font/color side effects.
+  // (Perl additionally calls `ackTransform('rotate(...)')` in
+  // beforeDigest to compose the rotation onto the
+  // `_psActiveTransform` state used downstream by ps-coordinate math
+  // — that piece needs the Transform/_psActiveTransform infrastructure
+  // which doesn't yet exist on the Rust side; deferred. See
+  // pstricks_support.sty.ltxml `sub ackTransform`.)
   DefConstructor!(
     "\\rotateleft{}",
-    "<ltx:g transform='rotate(90)'>#1</ltx:g>"
+    "<ltx:g transform='rotate(90)'>#1</ltx:g>",
+    bounded => true
   );
   DefConstructor!(
     "\\rotateright{}",
-    "<ltx:g transform='rotate(-90)'>#1</ltx:g>"
+    "<ltx:g transform='rotate(-90)'>#1</ltx:g>",
+    bounded => true
   );
   DefConstructor!(
     "\\rotatedown{}",
-    "<ltx:g transform='rotate(180)'>#1</ltx:g>"
+    "<ltx:g transform='rotate(180)'>#1</ltx:g>",
+    bounded => true
   );
 
   DefMacro!("\\black", "\\color{black}");
