@@ -396,11 +396,23 @@ LoadDefinitions!({
   Let!("\\pb", "\\poissonbracket");
 
   //======================================================================
-  // Vector Notation
-  // Perl: \vectorbold uses OptionalMatch:* {} — we skip the star for now
-  DefMacro!("\\vectorbold{}", r"\lx@wrap[role=ID]{\mathbf{#1}}");
-  DefMacro!("\\vectorarrow{}", r"\lx@wrap[role=ID]{\overrightarrow{\mathbf{#1}}}");
-  DefMacro!("\\vectorunit{}", r"\lx@wrap[role=ID]{\hat{\mathbf{#1}}}");
+  // Vector Notation — Perl L228-237.
+  // \lx@physics@mathbfit produces bold-italic-serif via Font merge with
+  // forcebold; bounded scopes the font to the wrapped expression so it
+  // doesn't leak into surrounding math, requireMath errors outside math.
+  DefConstructor!("\\lx@physics@mathbfit{}", "#1",
+    bounded => true, require_math => true,
+    font => { shape => "italic", family => "serif", series => "bold", forcebold => true },
+    reversion => "{\\bf\\it#1}");
+  // Star variant (\vb*, \va*, \vu*) routes through \lx@physics@mathbfit
+  // for italic-bold; bare form uses upright \mathbf. \ifx.#1. tests an
+  // empty (no-star) optional-match.
+  DefMacro!("\\vectorbold OptionalMatch:* {}",
+    r"\lx@wrap[role=ID]{\ifx.#1.\mathbf{#2}\else\lx@physics@mathbfit{#2}\fi}");
+  DefMacro!("\\vectorarrow OptionalMatch:* {}",
+    r"\lx@wrap[role=ID]{\lx@math@overrightarrow{\ifx.#1.\mathbf{#2}\else\lx@physics@mathbfit{#2}\fi}}");
+  DefMacro!("\\vectorunit OptionalMatch:* {}",
+    r"\lx@wrap[role=ID]{\hat{\ifx.#1.\mathbf{#2}\else\lx@physics@mathbfit{#2}\fi}}");
   Let!("\\vb", "\\vectorbold");
   Let!("\\va", "\\vectorarrow");
   Let!("\\vu", "\\vectorunit");
