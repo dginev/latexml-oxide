@@ -4,10 +4,18 @@ use crate::prelude::*;
 // substitutions to collapse `++`/`--`/`+-`/`-+` prefixes before parsing.
 fn relsize_normalize_sign(input: &str) -> String {
   let s = input.trim();
-  if let Some(rest) = s.strip_prefix("++") { return rest.to_string(); }
-  if let Some(rest) = s.strip_prefix("--") { return rest.to_string(); }
-  if let Some(rest) = s.strip_prefix("+-") { return format!("-{}", rest); }
-  if let Some(rest) = s.strip_prefix("-+") { return format!("-{}", rest); }
+  if let Some(rest) = s.strip_prefix("++") {
+    return rest.to_string();
+  }
+  if let Some(rest) = s.strip_prefix("--") {
+    return rest.to_string();
+  }
+  if let Some(rest) = s.strip_prefix("+-") {
+    return format!("-{}", rest);
+  }
+  if let Some(rest) = s.strip_prefix("-+") {
+    return format!("-{}", rest);
+  }
   s.to_string()
 }
 

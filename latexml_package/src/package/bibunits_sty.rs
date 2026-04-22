@@ -95,27 +95,27 @@ LoadDefinitions!({
   // didn't step counters nor switch the bib style — nested bibliographies
   // all shared the global CITE_UNIT and original BIBSTYLE.
   DefEnvironment!("{bibunit}[]", "#body",
-    after_digest_begin => sub[whatsit] {
-      let arg_style = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
-      let arg_style = arg_style.trim().to_string();
-      let style = if !arg_style.is_empty() {
-        arg_style
-      } else {
-        gullet::do_expand(T_CS!("\\bu@bibstyle")).map(|t| t.to_string()).unwrap_or_default()
-      };
-      if !style.is_empty() {
-        crate::engine::latex_constructs::set_bibstyle(&style);
-      }
-      // startBibunit() equivalent: step counter + set CITE_UNIT.
-      Digest!("\\global\\advance\\@bibunitauxcnt1")?;
-      let unit = Digest!("\\bu@unitname")?.to_string();
-      let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
-        s!("bibliography {unit}")
-      } else {
-        unit
-      };
-      assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
-    });
+  after_digest_begin => sub[whatsit] {
+    let arg_style = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+    let arg_style = arg_style.trim().to_string();
+    let style = if !arg_style.is_empty() {
+      arg_style
+    } else {
+      gullet::do_expand(T_CS!("\\bu@bibstyle")).map(|t| t.to_string()).unwrap_or_default()
+    };
+    if !style.is_empty() {
+      crate::engine::latex_constructs::set_bibstyle(&style);
+    }
+    // startBibunit() equivalent: step counter + set CITE_UNIT.
+    Digest!("\\global\\advance\\@bibunitauxcnt1")?;
+    let unit = Digest!("\\bu@unitname")?.to_string();
+    let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
+      s!("bibliography {unit}")
+    } else {
+      unit
+    };
+    assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
+  });
 
   DefMacro!(
     "\\putbib[]",

@@ -5,11 +5,11 @@ use crate::prelude::*;
 // primitives reference a single source of truth.
 fn titlesec_shape_class(shape: &str) -> Option<&'static str> {
   match shape {
-    "runin"       => Some("ltx_runin"),
-    "frame"       => Some("ltx_framed ltx_framed_rectangle"),
+    "runin" => Some("ltx_runin"),
+    "frame" => Some("ltx_framed ltx_framed_rectangle"),
     "rightmargin" => Some("ltx_align_right"),
-    "leftmargin"  => Some("ltx_align_left"),
-    _             => None,
+    "leftmargin" => Some("ltx_align_left"),
+    _ => None,
   }
 }
 

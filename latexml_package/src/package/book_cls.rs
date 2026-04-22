@@ -37,7 +37,7 @@ LoadDefinitions!({
     use latexml_core::document::resource::Resource;
     require_resource(Resource {
       mimetype: "text/css".into(),
-      content:  ".ltx_bibblock{display:block;}".into(),
+      content: ".ltx_bibblock{display:block;}".into(),
       ..Resource::default()
     });
   });

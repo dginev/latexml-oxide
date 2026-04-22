@@ -6,11 +6,11 @@ use crate::prelude::*;
 /// lookup key.
 fn attachfile_icon(name: &str) -> &'static str {
   match name {
-    "pushpin"   => "\u{1F4CC}",
+    "pushpin" => "\u{1F4CC}",
     "paperclip" => "\u{1F4CE}",
-    "tag"       => "\u{1F3F7}",
-    "graph"     => "\u{1F4CA}",
-    _           => "\u{1F4CC}",  // Perl default: pushpin fallback
+    "tag" => "\u{1F3F7}",
+    "graph" => "\u{1F4CA}",
+    _ => "\u{1F4CC}", // Perl default: pushpin fallback
   }
 }
 

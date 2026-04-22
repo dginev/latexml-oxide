@@ -6,7 +6,10 @@ use latexml_core::definition::register::RegisterValue;
 /// hardcoded `float='right'`, ignoring both the option and `[l]` / `[p]`
 /// optional-arg forms.
 fn floatflt_float_direction(whatsit: &Whatsit) -> &'static str {
-  let pos_arg = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+  let pos_arg = whatsit
+    .get_arg(1)
+    .map(|a| a.to_string())
+    .unwrap_or_default();
   let pos_arg = pos_arg.trim().to_string();
   let pos = if !pos_arg.is_empty() {
     pos_arg
@@ -15,19 +18,30 @@ fn floatflt_float_direction(whatsit: &Whatsit) -> &'static str {
   } else {
     "v".to_string()
   };
-  if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" }
+  if pos.starts_with('v') || pos.starts_with('r') {
+    "right"
+  } else {
+    "left"
+  }
 }
 
 /// Perl `toPercent($_[2])` — 100 * dimen / \textwidth, formatted as "NN%".
 /// Called on the mandatory Dimension arg to populate the `width` attribute.
 fn floatflt_pct_width(whatsit: &Whatsit) -> String {
-  let dim_arg = whatsit.get_arg(2).map(|a| a.to_attribute()).unwrap_or_default();
-  let Ok(dim) = Dimension::from_str(&dim_arg) else { return String::new(); };
+  let dim_arg = whatsit
+    .get_arg(2)
+    .map(|a| a.to_attribute())
+    .unwrap_or_default();
+  let Ok(dim) = Dimension::from_str(&dim_arg) else {
+    return String::new();
+  };
   let tw = match state::lookup_register("\\textwidth", Vec::new()) {
     Ok(Some(RegisterValue::Dimension(d))) => d.value_of(),
     _ => return String::new(),
   };
-  if tw == 0 { return String::new(); }
+  if tw == 0 {
+    return String::new();
+  }
   let pct = (100 * dim.value_of()) / tw;
   s!("{pct}%")
 }
