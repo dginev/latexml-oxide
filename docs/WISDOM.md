@@ -1021,7 +1021,40 @@ If the Def*-parity audit flags these, the right resolution is to
 record them as an intentional divergence in OXIDIZED_DESIGN.md, not
 to kind-flip.
 
-## 41. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
+## 41. Math-mode Def*-kind mismatches are usually structural, not parity bugs
+
+**Context:** The Def*-parity audit (`tools/audit_def_parity.py`) flags
+several math-mode CSes where Perl's kind differs from Rust's:
+
+| CS | Perl | Rust | What's actually going on |
+|----|------|------|--------------------------|
+| `\mathchar` | `DefPrimitive('\mathchar Number', sub { … decodeMathChar … Box(…) })` | `DefConstructor("\\mathchar Number", "<ltx:XMTok …>#glyph</ltx:XMTok>", after_digest => …)` | Rust emits `<ltx:XMTok>` directly at construction time via the template; Perl emits a Box carrying role/meaning/glyph properties that the post-processor promotes to XMTok. Rust is more direct. |
+| `\left` | `DefConstructor('\left TeXDelimiter', "#1", afterDigest, afterConstruct)` | `DefMacro!("\\left XToken", sub { … if delim == "\\delimiter" { decode_math_char … unread tokens } … })` | Perl's `TeXDelimiter` parameter type auto-invokes the delimiter token. Rust doesn't have a `TeXDelimiter` parameter type yet, so it reads as `XToken` and manually handles the `\delimiter<Number>` subcase via explicit decoding in the macro body. |
+| `\lx@right` | (same as `\left`, DefConstructor + TeXDelimiter) | same structural adaptation as `\left` | Ditto. |
+
+**Wisdom:** do NOT flip these to Perl-matching kinds naively. Each is
+load-bearing:
+- `\mathchar` — kind-flip loses direct XMTok emission; reverts to
+  Box-then-promote model which depends on post-processor symmetry with
+  Perl that isn't guaranteed.
+- `\left` / `\lx@right` — kind-flip requires a **`TeXDelimiter`
+  parameter type port** as prerequisite. Without that, the DefConstructor
+  form can't be expressed in Rust.
+
+**Proper path to parity** (per CS):
+- `\mathchar`: either (a) document as intentional-divergence Rust improvement
+  and close the audit entry, or (b) rework Rust's math parser / post-processor
+  to match Perl's Box-promotion exactly, then flip the kind.
+- `\left`/`\lx@right`: port `TeXDelimiter` as a ParameterType first.
+
+**Broader takeaway:** of a Def*-kind mismatch audit, expect a sizable
+fraction to be structural adaptations (mode-splits, direct XML emission,
+parameter-type gaps), not parity bugs. Read the Perl body first; if the
+Rust shape is more precise or solves a missing-feature gap, the mismatch
+is likely intentional and belongs in OXIDIZED_DESIGN.md rather than a
+fix queue.
+
+## 42. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
 
 **Context:** Perl LaTeXML treats l3hooks as a block of no-op stubs
 (`latex_base.pool.ltxml` L829-855) — no hook storage, no dispatch, no

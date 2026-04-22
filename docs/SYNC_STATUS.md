@@ -100,17 +100,22 @@ with captureBody).
   WISDOM #40**. Rust uses `\ifmmode` → `\lx@text@…`/`\lx@math@…` split
   which is more precise than Perl's single-Box approach; kind-flip
   would regress math-mode output.
-- `tex_math.rs` (3): `\mathchar` (Perl DefPrimitive → Rust
-  DefConstructor), `\left`, `\lx@right` (Perl DefConstructor → Rust
-  DefMacro; math-mode emission shape difference).
+- `tex_math.rs` (3): `\mathchar`, `\left`, `\lx@right` — **blocked /
+  intentional, see WISDOM #41**. `\mathchar` uses direct `<ltx:XMTok>`
+  emission (Rust precision improvement); `\left`/`\lx@right` are
+  DefMacro workarounds for the missing `TeXDelimiter` parameter type
+  (structural gap to port first).
 
-**Next actionable step** (simplest remaining, carefully pick a safe
-flip): investigate `plain_base.rs $/#/&/%` cluster — these are TeX
-catcode-active characters with mode-aware semantics. Reading Perl's
-`Plain_Base.pool.ltxml` L70-76 bodies first is mandatory before any
-kind swap.
+**Truly actionable remaining (7 items):** picture primitives
+(`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier` — 5 sites,
+DefMacro→DefConstructor, needs SVG emission), `\abstract`
+(DefMacro→DefEnvironmentI, needs env port), `\tabular`
+(DefMacro→DefKeyVal, needs DefKeyVal! machinery).
 
-**Blocked** (document-and-defer): `\vspace` per WISDOM #38.
+**Blocked / intentional (documented in WISDOM):** `\vspace` (#38),
+`$/#/&/%` special chars (#40), math-mode `\mathchar`/`\left`/`\lx@right`
+(#41). 8 of 15 engine mismatches belong here — they are structural
+adaptations or Rust improvements, not parity bugs.
 
 **Package (232 mismatches, batches P1–P9):** deferred until engine is
 clean. Top files: caption_sty.rs (32), texvc_sty.rs (30),
