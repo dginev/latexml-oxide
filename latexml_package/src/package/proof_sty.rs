@@ -25,13 +25,31 @@ LoadDefinitions!({
 
   // \lx@proof@stack{}{}{}{}:
   // An extremely contrived stack of premises and conclusion.
-  // Args are $top, $middle (if any), $bottom, $sidelabel (if any)
+  // Args are $top, $middle (if any), $bottom, $sidelabel (if any).
+  // Perl L44-49 after_digest compares top/bot widths; if top is wider,
+  // stretches bot (the bars whatsit) to match. Without this, the bars
+  // over the conclusion are only as wide as the conclusion itself.
   DefConstructor!("\\lx@proof@stack{}{}{}{}",
-    "<ltx:XMArray vattach='bottom'><ltx:XMRow><ltx:XMCell>#1</ltx:XMCell>?#4(<ltx:XMCell rowspan='3'>#4</ltx:XMCell>)()</ltx:XMRow>?#2(<ltx:XMRow><ltx:XMCell>#2</ltx:XMCell></ltx:XMRow>)()<ltx:XMRow><ltx:XMCell>#3</ltx:XMCell></ltx:XMRow></ltx:XMArray>");
+    "<ltx:XMArray vattach='bottom'><ltx:XMRow><ltx:XMCell>#1</ltx:XMCell>?#4(<ltx:XMCell rowspan='3'>#4</ltx:XMCell>)()</ltx:XMRow>?#2(<ltx:XMRow><ltx:XMCell>#2</ltx:XMCell></ltx:XMRow>)()<ltx:XMRow><ltx:XMCell>#3</ltx:XMCell></ltx:XMRow></ltx:XMArray>",
+    after_digest => sub[whatsit] {
+      let top_w = whatsit.get_arg(1).and_then(|a| a.clone().get_width(None).ok().flatten());
+      let bot_w = whatsit.get_arg(3).and_then(|a| a.clone().get_width(None).ok().flatten());
+      if let (Some(latexml_core::definition::register::RegisterValue::Dimension(tw)),
+              Some(latexml_core::definition::register::RegisterValue::Dimension(bw))) = (top_w, bot_w) {
+        if tw.value_of() > bw.value_of() {
+          if let Some(bot) = whatsit.get_arg_mut(3) {
+            bot.set_property("stretchto", Stored::from(
+              latexml_core::definition::register::RegisterValue::Dimension(tw)
+            ));
+          }
+        }
+      }
+    });
 
-  // Put 1 or 2 bars over the conclusion (possibly stretched)
+  // Perl L52-57 emits `width='#stretchto'` on the XMWrap so the bars
+  // stretch to the width stashed by \lx@proof@stack's after_digest.
   DefConstructor!("\\lx@proof@bars OptionalMatch:= {}",
-    "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>\u{203E}</ltx:XMTok>?#1(<ltx:XMApp><ltx:XMTok role='OVERACCENT'>\u{203E}</ltx:XMTok>)()<ltx:XMWrap>#2</ltx:XMWrap>?#1(</ltx:XMApp>)()</ltx:XMApp>");
+    "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>\u{203E}</ltx:XMTok>?#1(<ltx:XMApp><ltx:XMTok role='OVERACCENT'>\u{203E}</ltx:XMTok>)()<ltx:XMWrap width='#stretchto'>#2</ltx:XMWrap>?#1(</ltx:XMApp>)()</ltx:XMApp>");
 
   // Perl proof.sty.ltxml L60-71: \infer (* or =) [label] {lower}{uppers}
   // builds an XMDual — content branch records
