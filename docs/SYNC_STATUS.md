@@ -84,18 +84,20 @@ live in git log and `memory/project_session_history.md`. What remains:
 `Def*!` kinds pair-by-pair. Baselines tracked in `docs/def_parity_*.tsv`;
 batch plan + per-batch progress in `docs/DEF_PARITY_AUDIT.md`.
 
-**Progress (2026-04-22):** engine 52 → 15, package 232, contrib 0.
-9 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
+**Progress (2026-04-22):** engine 52 → 14, package 232, contrib 0.
+10 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
 + MergeFont! multi-key), `d7422914c` (\lx@cases@condition DefConstructor
-with captureBody).
+with captureBody), audit tool now anchors on 0-indent top-level Perl
+Def* only (prior regex caught nested calls inside `beforeDigest => sub
+{…}` blocks, producing false positives like `\abstract`).
 
-**Remaining 15 engine mismatches** (fresh audit; by file/shape):
-- `latex_constructs.rs` (8): picture primitives `\line`/`\vector`/
+**Remaining 14 engine mismatches** (fresh audit; by file/shape):
+- `latex_constructs.rs` (7): picture primitives `\line`/`\vector`/
   `\oval`/`\qbezier`/`\lx@pic@bezier` (5 — DefConstructor↔DefMacro
-  reversal, needs SVG emission), `\abstract` DefEnvironmentI,
-  `\tabular` DefKeyVal, `\vspace` DefMacro (**blocked — see WISDOM
-  #38**; naive kind-flip regresses `moderncv/cs_cv.tex` test via Rust
-  `\vskip` horizontal-mode paragraph-break asymmetry).
+  reversal, needs SVG emission), `\tabular` DefKeyVal, `\vspace`
+  DefMacro (**blocked — see WISDOM #38**; naive kind-flip regresses
+  `moderncv/cs_cv.tex` test via Rust `\vskip` horizontal-mode
+  paragraph-break asymmetry).
 - `plain_base.rs` (4): `#`/`&`/`%`/`$` — **blocked / intentional, see
   WISDOM #40**. Rust uses `\ifmmode` → `\lx@text@…`/`\lx@math@…` split
   which is more precise than Perl's single-Box approach; kind-flip
@@ -106,15 +108,14 @@ with captureBody).
   DefMacro workarounds for the missing `TeXDelimiter` parameter type
   (structural gap to port first).
 
-**Truly actionable remaining (7 items):** picture primitives
+**Truly actionable remaining (6 items):** picture primitives
 (`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier` — 5 sites,
-DefMacro→DefConstructor, needs SVG emission), `\abstract`
-(DefMacro→DefEnvironmentI, needs env port), `\tabular`
+DefMacro→DefConstructor, needs SVG emission), `\tabular`
 (DefMacro→DefKeyVal, needs DefKeyVal! machinery).
 
 **Blocked / intentional (documented in WISDOM):** `\vspace` (#38),
 `$/#/&/%` special chars (#40), math-mode `\mathchar`/`\left`/`\lx@right`
-(#41). 8 of 15 engine mismatches belong here — they are structural
+(#41). 8 of 14 engine mismatches belong here — they are structural
 adaptations or Rust improvements, not parity bugs.
 
 **Package (232 mismatches, batches P1–P9):** deferred until engine is

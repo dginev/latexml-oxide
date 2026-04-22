@@ -47,8 +47,12 @@ KIND_MAP = {
   "DefPrimitiveIf":    "DefPrimitiveIf",
 }
 
+# Match only top-level Perl Def* calls. Perl LaTeXML uses 0-indent for top-level
+# definitions; nested Def* calls inside `beforeDigest => sub { … DefEnvironmentI(…) }`
+# or similar sub bodies are indented 4+ spaces and should not be counted as parity
+# targets (they install conditional/scoped definitions at runtime, not at load time).
 PERL_DEF_RE = re.compile(
-  r"^\s*(Def[A-Z][A-Za-z]+)\s*\(\s*['\"]([^'\"]+)['\"]",
+  r"^(Def[A-Z][A-Za-z]+)\s*\(\s*['\"]([^'\"]+)['\"]",
   re.MULTILINE,
 )
 RUST_DEF_RE = re.compile(

@@ -1,19 +1,16 @@
-base_xmath.rs:1087	lx@cases@condition	perl=DefConstructorI(L694)	rust=DefPrimitive
-base_xmath.rs:1090	lx@cases@end@condition	perl=DefConstructorI(L698)	rust=DefPrimitive
-tex_math.rs:593	mathchar	perl=DefPrimitive(L572)	rust=DefConstructor
-tex_math.rs:1192	lx@right	perl=DefConstructor(L765)	rust=DefMacro
+
+# Summary (engine): 32 pairs scanned, 14 kind mismatches, 4 missing rust files
+tex_math.rs:593	mathchar	perl=DefPrimitive(L573)	rust=DefConstructor
+tex_math.rs:1192	lx@right	perl=DefConstructor(L766)	rust=DefMacro
 tex_math.rs:836	left	perl=DefConstructor(L773)	rust=DefMacro
-latex_constructs.rs:3908	abstract	perl=DefEnvironmentI(L1232)	rust=DefMacro
 latex_constructs.rs:6193	tabular	perl=DefKeyVal(L3705)	rust=DefMacro
-latex_constructs.rs:7206	vspace	perl=DefMacro(L4692)	rust=DefPrimitive
-latex_constructs.rs:7796	line	perl=DefConstructor(L5043)	rust=DefMacro
+latex_constructs.rs:7206	vspace	perl=DefMacro(L4693)	rust=DefPrimitive
+latex_constructs.rs:7796	line	perl=DefConstructor(L5044)	rust=DefMacro
 latex_constructs.rs:7829	vector	perl=DefConstructor(L5048)	rust=DefMacro
-latex_constructs.rs:7891	oval	perl=DefConstructor(L5060)	rust=DefMacro
-latex_constructs.rs:7933	qbezier	perl=DefConstructor(L5077)	rust=DefMacro
+latex_constructs.rs:7891	oval	perl=DefConstructor(L5061)	rust=DefMacro
+latex_constructs.rs:7933	qbezier	perl=DefConstructor(L5078)	rust=DefMacro
 latex_constructs.rs:7682	lx@pic@bezier	perl=DefConstructor(L5085)	rust=DefMacro
 plain_base.rs:62	#	perl=DefPrimitive(L70)	rust=DefMacro
 plain_base.rs:63	&	perl=DefPrimitive(L72)	rust=DefMacro
 plain_base.rs:64	%	perl=DefPrimitive(L74)	rust=DefMacro
 plain_base.rs:68	$	perl=DefPrimitive(L76)	rust=DefMacro
-plain_base.rs:411	mit	perl=DefPrimitiveI(L368)	rust=DefMacro
-plain_base.rs:411	mit	perl=DefPrimitiveI(L370)	rust=DefMacro
