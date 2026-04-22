@@ -2,8 +2,18 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Perl emulateapj.sty.ltxml L25-39: capture `\fig` before loading aastex
+  // (which may redefine it) and reinstate the pre-existing definition
+  // afterwards. Comment in Perl: "collides in arXiv:astro-ph/0002091".
+  // Use lookup_definition_stored so the handle round-trips through
+  // install_definition's `Into<Stored>` bound.
+  let saved_fig = state::lookup_definition_stored(&T_CS!("\\fig")).ok().flatten();
   RequirePackage!("aastex");
   RequirePackage!("epsf");
+  if let Some(def) = saved_fig {
+    state::install_definition(def, Some(Scope::Global));
+    AssignValue!("\\fig:locked" => 1i64, Some(Scope::Global));
+  }
   DefMacro!("\\LongTables", "");
   Let!("\\BeginEnvironment", "\\begin");
   Let!("\\EndEnvironment",   "\\end");
