@@ -990,7 +990,7 @@ mod tests {
   /// Fast-completing child returns its real exit status, not a kill.
   #[test]
   fn run_with_timeout_returns_status_for_fast_child() {
-    let mut cmd = std::process::Command::new("true");
+    let cmd = std::process::Command::new("true");
     let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
     let status = result.expect("expected clean exit");
     assert!(status.success(), "`true` should exit successfully");

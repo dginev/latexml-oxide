@@ -699,10 +699,11 @@ mod tests {
   }
 
   #[test]
+  #[allow(non_snake_case)]
   fn argwrap_display_none_is_the_word_None() {
     // Discovered: ArgWrap::None's Display writes "None" (the variant
-    // name), not empty string. Documented here so future readers
-    // don't expect an empty string.
+    // name), not empty string. Capital-N in fn name preserves the
+    // literal distinction — don't "fix" to lowercase.
     let a = ArgWrap::None;
     assert_eq!(format!("{a}"), "None");
   }
