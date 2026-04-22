@@ -420,6 +420,19 @@ LoadDefinitions!({
   DefKeyVal!("Declare", "label", "");
   DefKeyVal!("Declare", "trace", "");
 
+  // \lxFcn / \lxID / \lxPunct — math-mode role hints (Perl latexml.sty.ltxml).
+  // Wrap the argument in <ltx:XMWrap role='...'> so the math grammar
+  // treats it as the named role for that occurrence only. `requireMath`
+  // forces math context (errors if invoked outside math); `reversion =>
+  // '#1'` round-trips just the body (no role wrapper) to TeX; `alias =>
+  // ''` suppresses the constructor name in the reversion path.
+  DefConstructor!("\\lxFcn{}", "<ltx:XMWrap role='FUNCTION'>#1</ltx:XMWrap>",
+    require_math => true, reversion => "#1", alias => "");
+  DefConstructor!("\\lxID{}", "<ltx:XMWrap role='ID'>#1</ltx:XMWrap>",
+    require_math => true, reversion => "#1", alias => "");
+  DefConstructor!("\\lxPunct{}", "<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>",
+    require_math => true, reversion => "#1", alias => "");
+
   // \lxDeclare — declare semantic roles for math tokens
   // Perl: latexml.sty.ltxml lines 462-568
   // Creates <declare> elements and rewrite rules for math token annotation.
