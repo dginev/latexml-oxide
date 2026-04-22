@@ -90,6 +90,24 @@ LoadDefinitions!({
   Let!("\\pssetlength",   "\\setlength");
   Let!("\\psaddtolength", "\\addtolength");
 
+  // Angle units — Perl L653-654. Sets `\degrees` state to 360 (default)
+  // or to \degrees{angle}-provided value; \radians flips to 2π. The
+  // angle value is stored via AssignValue and consulted by pstricks's
+  // coord readers. Taken as-is from Perl.
+  // `[Float]` would map to a non-typed Tokens under the current prelude;
+  // Perl uses the raw string value as-is, so keep the argument as
+  // Optional tokens and parse at use time.
+  DefPrimitive!("\\degrees []", sub[(angle)] {
+    let v = angle
+      .as_ref()
+      .and_then(|t| t.to_string().trim().parse::<f64>().ok())
+      .unwrap_or(360.0);
+    AssignValue!("\\degrees" => Stored::from(v), None);
+  });
+  DefPrimitive!("\\radians", {
+    AssignValue!("\\degrees" => Stored::from(std::f64::consts::TAU), None);
+  });
+
   // Coordinate-mode no-ops — Perl L1037-1039. No effect in LaTeXML.
   DefMacro!("\\SpecialCoor", "");
   DefMacro!("\\NormalCoor",  "");
