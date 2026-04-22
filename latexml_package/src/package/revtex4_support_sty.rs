@@ -138,9 +138,20 @@ LoadDefinitions!({
     locked => true
   );
 
-  // 10. Tables — Perl L215-245
+  // 10. Tables — Perl revtex4_support.sty.ltxml L215-245.
+  // {quasitable} re-Lets tabular → longtable inside its body so that
+  // an embedded \begin{tabular}...\end{tabular} actually digests as
+  // \longtable (which can break across pages). Without these Lets,
+  // a quasitable degrades to a plain tabular and loses page-break
+  // capability — the entire reason the env exists.
   DefEnvironment!("{ruledtabular}", "#body");
-  DefEnvironment!("{quasitable}", "#body");
+  DefEnvironment!("{quasitable}", "#body",
+    before_digest => {
+      Let!(T_CS!("\\begin{tabular}"), T_CS!("\\begin{longtable}"));
+      Let!(T_CS!("\\end{tabular}"), T_CS!("\\end{longtable}"));
+      Let!("\\tabular", "\\longtable");
+      Let!("\\endtabular", "\\endlongtable");
+    });
   DefMacro!("\\squeezetable", "");
   DefMacro!("\\toprule", "\\hline\\hline");
   DefMacro!("\\colrule", "\\hline");
