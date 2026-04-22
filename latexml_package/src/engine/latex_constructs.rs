@@ -5216,7 +5216,12 @@ LoadDefinitions!({
 
   // hmmm... what needs doing here; basically it means use this encoding as the default for the
   // symbol
-  DefMacro!("\\DeclareTextSymbolDefault DefToken {}", None);
+  // Perl L2683: DefPrimitive('\DeclareTextSymbolDefault DefToken {}', sub { DefMacroI(...) })
+  // Kind-parity stub — Perl performs a DefMacroI side-effect registering a
+  // `\?<cs>` → `\<encoding><cs>` alias. Current Rust engine doesn't rely on
+  // that alias, so body stays None; matches Perl's stomach-level
+  // invocation kind.
+  DefPrimitive!("\\DeclareTextSymbolDefault DefToken {}", None);
 
   //------------------------------------------------------------
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
