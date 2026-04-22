@@ -11,9 +11,12 @@ LoadDefinitions!({
   DefConstructor!("\\lx@orcidlink{}{}",
     "<ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'>#2</ltx:ref>");
 
-  // but avoid \ifstrempty (etoolbox)
+  // Perl orcidlink.sty.ltxml L29 passes `robust => 1` so \orcidlinkX
+  // survives \write/\edef contexts (e.g. being rendered inside PDF
+  // metadata or saved footnote text). Rust was missing the flag.
   DefMacro!("\\orcidlinkX{}{}{}",
-    "\\lx@orcidlink{#2}{\\ifx&#1&\\else#1\\,\\fi\\orcidlogo\\ifx&#3&\\else\\,#3\\fi}");
+    "\\lx@orcidlink{#2}{\\ifx&#1&\\else#1\\,\\fi\\orcidlogo\\ifx&#3&\\else\\,#3\\fi}",
+    robust => true);
 
   // Default, Full, Compact and Inline versions
   DefMacro!("\\orcidlink{}",    "\\orcidlinkX{}{#1}{}");
