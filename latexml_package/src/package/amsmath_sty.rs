@@ -1258,10 +1258,16 @@ LoadDefinitions!({
     )?;
   });
 
-  // Section 3.11.2 Cross references to equation numbers
+  // Section 3.11.2 Cross references to equation numbers.
+  // Perl amsmath.sty.ltxml has `mode=>'restricted_horizontal',
+  // enterHorizontal=>1`. enter_horizontal triggers an implicit
+  // horizontal-mode entry when invoked from vertical mode (e.g. when
+  // \eqref is the first token in a paragraph), opening <ltx:p>
+  // before the parenthesized ref instead of emitting bare text in
+  // vertical mode.
   DefConstructor!("\\eqref Semiverbatim",
     "(<ltx:ref labelref='#label' _force_font='true'/>)",
-    mode => "restricted_horizontal",
+    mode => "restricted_horizontal", enter_horizontal => true,
     properties => sub[args] {
       unpack_opt_ref!(args => label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
