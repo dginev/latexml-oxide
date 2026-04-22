@@ -1081,15 +1081,25 @@ LoadDefinitions!({
   //  left  : TeX code for left of cases
   //  right  : TeX code for right
 
-  // Perl: \lx@cases@condition — switches to text mode for condition column
-  // The captureBody mechanism wraps content in <ltx:XMText>.
-  // Simplified: just switch mode, let the constructor template handle XMText.
-  DefPrimitive!("\\lx@cases@condition", sub[_args] {
-    let _ = begin_mode("restricted_horizontal");
-  });
-  DefPrimitive!("\\lx@cases@end@condition", sub[_args] {
-    let _ = end_mode("restricted_horizontal");
-  });
+  // Perl Base_XMath.pool.ltxml L695-699:
+  //   DefConstructorI('\lx@cases@condition', undef,
+  //     "<ltx:XMText>#body</ltx:XMText>",
+  //     alias => '', beforeDigest => sub { $_[0]->beginMode('restricted_horizontal'); },
+  //     captureBody => 1);
+  //   DefConstructorI('\lx@cases@end@condition', undef, "", alias => '',
+  //     beforeDigest => sub { $_[0]->endMode('restricted_horizontal'); });
+  // Mirrors \lx@begin@inmath@text / \lx@end@inmath@text pattern at
+  // tex_math.rs:501-510 — begin/end restricted-horizontal spanning the
+  // captured body, emitting <ltx:XMText> wrapper around it.
+  DefConstructor!("\\lx@cases@condition",
+    "<ltx:XMText>#body</ltx:XMText>",
+    alias => "",
+    before_digest => sub { begin_mode("restricted_horizontal")?; },
+    capture_body => true
+  );
+  DefConstructor!("\\lx@cases@end@condition", "",
+    alias => "",
+    before_digest => sub { end_mode("restricted_horizontal")?; });
 
   // Perl: Base_XMath.pool.ltxml line 701
   DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
