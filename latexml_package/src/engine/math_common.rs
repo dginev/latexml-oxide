@@ -731,8 +731,8 @@ LoadDefinitions!({
     let kids = parent.get_child_elements();
     if kids.len() >= 2 {
       let xmtok_sym = arena::pin_static("ltx:XMTok");
-      let mut n1 = kids[kids.len() - 2].clone();
-      let mut n2 = kids[kids.len() - 1].clone();
+      let n1 = kids[kids.len() - 2].clone();
+      let n2 = kids[kids.len() - 1].clone();
       let qn1 = document::get_node_qname(&n1);
       let qn2 = document::get_node_qname(&n2);
       if qn1 == xmtok_sym || qn2 == xmtok_sym {
@@ -746,8 +746,8 @@ LoadDefinitions!({
           "RELOP".to_string()
         };
         let merged_text = format!("{}{}", n1.get_content(), n2.get_content());
-        n1.unlink();
-        n2.unlink();
+        document.safe_unlink(n1);
+        document.safe_unlink(n2);
         let mut attrs = HashMap::default();
         if !merged_role.is_empty() {
           attrs.insert("role".to_string(), merged_role);

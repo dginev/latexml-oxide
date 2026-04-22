@@ -145,5 +145,14 @@ fn authblk_relocate_affil(document: &mut Document) -> Result<()> {
     }
   }
 
+  // D3b: affil_nodes were unlinked above and never reattached — the
+  // detached subtrees would leave dangling idstore entries when the
+  // HashMap drops them. append_clone has now consumed the originals'
+  // ids via modify_id suffix mapping, so it's safe to recursively
+  // unrecord.
+  for (_, affil_node) in mark_to_affil.into_iter() {
+    document.unrecord_node_ids(&affil_node);
+  }
+
   Ok(())
 }
