@@ -116,13 +116,19 @@ LoadDefinitions!({
     cancel_color_properties(whatsit)?;
   });
 
-  // Text mode constructors
+  // Text mode constructors. Perl cancel.sty.ltxml uses
+  //   mode => 'restricted_horizontal', enterHorizontal => 1
+  // on each — `enter_horizontal=>true` triggers an implicit \indent /
+  // paragraph start when `\cancel{text}` appears in vertical mode
+  // (e.g. between paragraphs at top level). Without it, the
+  // <ltx:del> opens before the enclosing <ltx:p>, producing invalid
+  // structure (vertical-mode block-level del with no paragraph parent).
   DefConstructor!("\\@@text@cancel{}",
   "<ltx:del class='downdiagonalstrike' ?#cancelcolor(color='#cancelcolor')()>\
     <ltx:text _noautoclose='1' _force_font='#forcefont' ?#innercolor(color='#innercolor')()>#1</ltx:text>\
   </ltx:del>",
   alias => "\\cancel",
-  mode => "text",
+  mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
     cancel_color_properties(whatsit)?;
   });
@@ -132,7 +138,7 @@ LoadDefinitions!({
     <ltx:text _noautoclose='1' _force_font='#forcefont' ?#innercolor(color='#innercolor')()>#1</ltx:text>\
   </ltx:del>",
   alias => "\\bcancel",
-  mode => "text",
+  mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
     cancel_color_properties(whatsit)?;
   });
@@ -142,7 +148,7 @@ LoadDefinitions!({
     <ltx:text _noautoclose='1' _force_font='#forcefont' ?#innercolor(color='#innercolor')()>#1</ltx:text>\
   </ltx:del>",
   alias => "\\xcancel",
-  mode => "text",
+  mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
     cancel_color_properties(whatsit)?;
   });
