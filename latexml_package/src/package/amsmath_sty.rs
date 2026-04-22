@@ -677,10 +677,13 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml line 85
   Let!("\\notag", "\\nonumber");
 
-  // Perl: amsmath.sty.ltxml lines 87-91
+  // Perl: amsmath.sty.ltxml lines 87-91 (locked=>1 prevents `\tag` from
+  // being redefined by downstream classes/packages — protects the
+  // star-variant `\let\fnum@equation\relax` formatting-off semantics).
   DefMacro!(
     "\\tag OptionalMatch:* {}",
-    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}"
+    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}",
+    locked => true
   );
 
   // Perl: amsmath.sty.ltxml line 100
@@ -1212,9 +1215,12 @@ LoadDefinitions!({
   DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
-  // subequations environment
-  DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin");
-  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
+  // subequations environment — Perl amsmath.sty.ltxml L757-758 locks
+  // both macros so raw TeX or sibling packages can't clobber the
+  // subnumbering begin/end markers that the alignment machinery
+  // relies on for nested-equation numbering.
+  DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin", locked => true);
+  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end", locked => true);
 
   DefMacro!("\\DOTSB", None);
   DefMacro!("\\DOTSI", None);
