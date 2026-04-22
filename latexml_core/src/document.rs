@@ -242,15 +242,18 @@ impl Document {
   // ancestors. It removes the `helper' attributes that store fonts, source
   // box, etc.
   pub fn finalize(&mut self) -> Result<()> {
-    // Rebuild idstore from current DOM before prune_xmduals. Upstream
-    // passes (math-parser `replace_tree`, various `unbind_node()`
-    // sites) can drop XMRef-target nodes without calling unrecord_id,
-    // leaving dangling entries in `idstore`. `mark_xmnode_visibility`
-    // dereferences lookup_id results as it recurses through XMRef
-    // nodes, which SIGSEGVs on those stale entries (observed on
-    // arxiv 1605.08055 in the 10k sandbox). A fresh DOM walk drops
-    // all such dangling entries; duplicates already in DOM are
-    // resolved with modify_id via record_node_ids' existing logic.
+    // Belt-and-suspenders idstore rebuild before prune_xmduals.
+    // Originally guarded a SIGSEGV on arxiv 1605.08055 where
+    // `mark_xmnode_visibility` dereferenced dangling lookup_id
+    // entries while recursing through XMRef nodes. Cycle 72 audited
+    // the 5 hazard call sites the earlier comment listed (math-parser
+    // `replace_tree` at parser.rs:456/690, `unbind_node` loops at
+    // parser.rs:639/856 and rewrite.rs:522); all 5 now have proper
+    // unrecord_node_ids / remove_node-cascade coverage. The rebuild
+    // call is retained as a safety net pending empirical
+    // 10k-sandbox verification on 1605.08055 — see SYNC_STATUS.md
+    // D3b [~] entry. A fresh DOM walk drops any surviving dangling
+    // entries; duplicates in DOM get modify_id via record_node_ids.
     self.rebuild_idstore_from_dom()?;
     self.prune_xmduals()?;
     if let Some(mut root) = self.document.get_root_element() {
@@ -2728,13 +2731,17 @@ impl Document {
   }
 
   /// Discard the in-memory `idstore` cache and rebuild it from the
-  /// current DOM state. Use before operations that trust every
-  /// `lookup_id` result (e.g. `mark_xmnode_visibility`, which
-  /// recurses into XMRef targets) so that no dangling cache entries
-  /// remain — some upstream paths (math parser `replace_tree`,
-  /// certain `unbind_node()` sites) drop nodes without calling
-  /// `unrecord_id` / `unrecord_node_ids`, and accessing a freed
-  /// libxml2 Node via the stale cache SIGSEGVs.
+  /// current DOM state. Historically guarded the 1605.08055 SIGSEGV
+  /// where `mark_xmnode_visibility` dereferenced dangling lookup_id
+  /// entries while recursing through XMRef targets.
+  ///
+  /// As of cycle 72, the 5 call sites that previously dropped nodes
+  /// without unrecord_id — math-parser `replace_tree` at
+  /// parser.rs:456/690 (cascades via remove_node) and `unbind_node`
+  /// loops at parser.rs:639/856 + rewrite.rs:522 (all have
+  /// preceding unrecord_node_ids guards) — are ID-safe. This rebuild
+  /// is retained as a belt-and-suspenders probe until the
+  /// 1605.08055 verification per SYNC_STATUS.md D3b lands.
   ///
   /// The rebuild is a DOM walk, so live id uniqueness is restored
   /// alongside — duplicates already in DOM are resolved with
