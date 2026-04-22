@@ -209,6 +209,13 @@ LoadDefinitions!({
   DefMacro!("\\refbreaks", "");
   DefMacro!("\\defaultreftexts", "");
 
+  // Perl L335: \cite for plain-AMSTeX documents.
+  // amsppt is a plain-TeX style, so the latex cite machinery isn't
+  // loaded; this DefConstructor provides the minimal cite→bibref
+  // surface that \Refs/\bibitem pair against.
+  DefConstructor!("\\cite Semiverbatim",
+    "<ltx:cite>[<ltx:bibref show='refnum' bibrefs='#1'/>]</ltx:cite>");
+
   // Head-toks and head-skip registers — Perl L44-45, L151-158. Token
   // registers for running-head content; eight length/glue registers
   // controlling head spacing. All default to zero — amsppt uses them
