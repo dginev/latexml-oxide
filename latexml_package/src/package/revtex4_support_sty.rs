@@ -94,12 +94,18 @@ LoadDefinitions!({
   // 6. Math — Perl L159-176
   Let!("\\case", "\\frac");
   Let!("\\slantfrac", "\\frac");
+  // Perl L161-162 passes `locked => 1` so RevTeX's \text isn't silently
+  // replaced by amsmath's \text (which would miss the restricted_hmode
+  // treatment RevTeX relies on for inline-text-in-math spacing).
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", locked => true);
 
   // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171
   DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
-  DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  // Perl L166-168: `locked => 1` keeps \bbox bold-wrapped even when a
+  // user or co-loaded package redefines it.
+  DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,
+    font => { forcebold => true }, locked => true);
   DefConstructor!("\\pmb{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
   DefMacro!("\\eqnum{}", "");
   DefMacro!("\\mathletters", "");
