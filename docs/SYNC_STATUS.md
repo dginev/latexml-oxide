@@ -299,6 +299,22 @@ round 17 commit (see below).
   long-horizon task) or Tokens deep-copy reduction.
 - [ ] Audit `String::from("...")` literals for interned conversions.
 - [ ] Replace `HashMap<String,String>` with `SymHashMap<SymStr>` in hot paths.
+  **Scoping (2026-04-22):** 66 `HashMap<String,String>` + 6
+  `HashMap<String,Stored>` + 0 `HashMap<String,Tokens>` = 72 total
+  call sites. Top-5 files by density: document.rs (11; mostly
+  `Option<HashMap<String,String>>` function-parameter attribute maps
+  — public API surface, invasive to migrate), amsmath_sty.rs (7),
+  store.rs (7), alignment.rs (6), latex_constructs.rs (5). The
+  document.rs cluster is dominated by per-call one-shot attribute
+  maps passed to `add_element`-style constructors; migrating would
+  require pre-interning each caller's keys and may not pay off if
+  the intern-lookup cost exceeds the saved `String` allocations for
+  ephemeral per-element maps. Higher ROI target is the
+  `HashMap<String,Stored>` variant (6 sites — long-lived state
+  tables in store.rs) where a key-type-only migration to
+  `SymHashMap<Stored>` keeps the API surface narrow. Dedicated
+  multi-hour session needed; not appropriate for short cron
+  fires.
 - [~] Audit `.clone()` in `document.rs` (~73), `latex_constructs.rs` (~73), `font.rs` (~39).
   **Audit finding (round 17)**: the raw clone counts are misleading.
   - `font.rs` (~39): almost all clones are on
