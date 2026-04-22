@@ -690,6 +690,16 @@ LoadDefinitions!({
   // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
   // Reads like {} (balanced group) for correct math digestion, but reverts WITHOUT braces.
   // Also: unwraps one level of braces, replaces "." with \lx@delimiterdot hint.
+  //
+  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/WISDOM.md #41
+  // for the concrete enhancement plan. Current impl works for \big/\Big/
+  // \bigg/\Bigg (math_common.rs:962-964) where the arg is typically
+  // braced, but \left/\lx@right/revsymb's \biglb family use DefMacro
+  // workarounds because this doesn't handle: (a) unbraced single tokens
+  // via readXToken, (b) `{...}`-unwrap when FIRST token is BEGIN,
+  // (c) `.` → \lx@delimiterdot replacement, (d) invoke_token pre-digestion
+  // for \delimiter<Number>. Each of those is a ~5-10-line branch in this
+  // function; porting collapses ~10 DP audit entries.
   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
     gullet::skip_filler()?;
     gullet::read_arg(ExpansionLevel::Partial)
