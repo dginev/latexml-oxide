@@ -57,8 +57,12 @@ LoadDefinitions!({
   DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
   DefMath!("\\varXi",      "\u{039E}", font => { shape => "italic" });
 
-  // Blackboard bold letters
+  // Blackboard bold letters (identical \bbbX cluster to llncs_cls.rs).
   // Perl: DefPrimitiveI('\bbbc', undef, "\x{2102}");
+  // DP audit flags 13 DefPrimitiveI↔DefConstructor mismatches here as
+  // structural pattern — see llncs_cls.rs for the shared rationale
+  // (Rust's DefConstructor is the idiomatic shape for literal-glyph
+  // output with explicit horizontal-mode entry).
   DefConstructor!("\\bbbc",   "\u{2102}",   enter_horizontal => true);
   DefConstructor!("\\bbbf",   "\u{1D53D}",  enter_horizontal => true);
   DefConstructor!("\\bbbh",   "\u{210D}",   enter_horizontal => true);
