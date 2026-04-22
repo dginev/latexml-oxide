@@ -70,6 +70,11 @@ def scan_perl(path: Path):
       cs = cs[1:]
     # Keep only the head CS name (up to first whitespace/[{(<>/).
     cs_head = re.split(r"[\s\[\]{}()<>/]", cs, 1)[0]
+    # Skip entries whose cs_head is empty — Perl `\[`, `\]`, `\(`, `\)` and
+    # Rust `DefEnvironment!("{envname}...")` both collapse to "" under this
+    # splitter, producing spurious matches between unrelated entries.
+    if not cs_head:
+      continue
     lineno = text[: m.start()].count("\n") + 1
     out.append((cs_head, kind, lineno))
   return out

@@ -1,14 +1,9 @@
 base_xmath.rs:1087	lx@cases@condition	perl=DefConstructorI(L694)	rust=DefPrimitive
 base_xmath.rs:1090	lx@cases@end@condition	perl=DefConstructorI(L698)	rust=DefPrimitive
-tex_fonts.rs:442		perl=DefPrimitiveI(L162)	rust=DefLigature
 tex_math.rs:593	mathchar	perl=DefPrimitive(L572)	rust=DefConstructor
 tex_math.rs:1192	lx@right	perl=DefConstructor(L765)	rust=DefMacro
 tex_math.rs:836	left	perl=DefConstructor(L773)	rust=DefMacro
 latex_constructs.rs:3908	abstract	perl=DefEnvironmentI(L1232)	rust=DefMacro
-latex_constructs.rs:7703		perl=DefMacro(L2126)	rust=DefEnvironment
-latex_constructs.rs:7703		perl=DefMacro(L2128)	rust=DefEnvironment
-latex_constructs.rs:7703		perl=DefMacro(L2129)	rust=DefEnvironment
-latex_constructs.rs:7703		perl=DefMacro(L2130)	rust=DefEnvironment
 latex_constructs.rs:6193	tabular	perl=DefKeyVal(L3705)	rust=DefMacro
 latex_constructs.rs:7206	vspace	perl=DefMacro(L4692)	rust=DefPrimitive
 latex_constructs.rs:7796	line	perl=DefConstructor(L5043)	rust=DefMacro

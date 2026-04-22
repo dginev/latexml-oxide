@@ -176,8 +176,6 @@ revsymb_sty.rs:18	bigglb	perl=DefConstructor(L43)	rust=DefMacro
 revsymb_sty.rs:19	biggrb	perl=DefConstructor(L46)	rust=DefMacro
 revsymb_sty.rs:20	Bigglb	perl=DefConstructor(L49)	rust=DefMacro
 revsymb_sty.rs:21	Biggrb	perl=DefConstructor(L52)	rust=DefMacro
-revtex3_support_sty.rs:72		perl=DefEnvironment(L63)	rust=DefConstructor
-revtex3_support_sty.rs:72		perl=DefEnvironment(L77)	rust=DefConstructor
 siunitx_sty.rs:1922	lx@six@unitobject	perl=DefMacro(L1212)	rust=DefPrimitive
 siunitx_sty.rs:1923	lx@six@unitobject@arg	perl=DefMacro(L1218)	rust=DefPrimitive
 subfig_sty.rs:21	newsubfloat	perl=DefPrimitive(L30)	rust=DefMacro
