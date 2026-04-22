@@ -930,3 +930,60 @@ continues; our port used to abort the whole conversion.
 "should never", "has no reason to fail", or "TODO: handle malformed
 values here", treat it as a parity gap to investigate, not a
 design assertion.
+
+## 36. `rebuild_idstore_from_dom()` timing: finalize-only, not Rewriting-entry
+
+**Context:** The post-processor's `idstore` maps `xml:id` → libxml2
+`Node`. Upstream passes (math-parser `replace_tree`, various
+`unbind_node()` sites) sometimes drop xml:id-bearing subtrees without
+calling `unrecord_id`, leaving dangling-Node entries. Later passes can
+dereference these and SIGSEGV (originally seen on arxiv:1605.08055;
+fixed in `337c1ef52` by adding `rebuild_idstore_from_dom()` at
+`finalize()` entry before `prune_xmduals`).
+
+**Wisdom:** do NOT also call `rebuild_idstore_from_dom` at the start
+of the Rewriting phase. Tried in session 128, broke `split_test`.
+When the DOM has duplicate xml:ids (rare but possible during
+math-parse), `findnodes` visits in document order so the FIRST-
+OCCURRENCE node wins the cache entry, but the prior idstore state may
+have had the LAST-OCCURRENCE node — which some rewrites depend on.
+Finalize is late enough that those rewrites have already fired, so
+the rebuild there is safe; at Rewriting-entry it isn't.
+
+## 37. `Document::safe_unlink` is mandatory for node drops
+
+**Context:** `libxml::tree::Node::unlink()` detaches a node from its
+parent but leaves any xml:id entries in the post-processor's idstore
+pointing at the now-orphaned subtree. Subsequent `dref_by_id` calls
+return nodes that may have been freed, producing SIGSEGV.
+
+**Wisdom:** every raw `node.unlink()` site in latexml-oxide must route
+through `Document::safe_unlink` unless one of these safe patterns
+applies:
+- **save-and-reparent** (`unlink` then immediately `add_child` /
+  `add_prev_sibling` / `append_tree`) — the id survives the move.
+- prior `unrecord_node_ids(node)` walk.
+- text / non-element nodes only (no xml:id possible).
+- routed through guarded `document.remove_node` / `document.replace_node`.
+
+`safe_unlink` is the id-cache-invalidating wrapper: recurse via
+`remove_node_aux` to `unrecord_id` the subtree, then call `unlink`.
+The audit of every site in `latexml_core` / `latexml_post` /
+`latexml_math_parser` is complete (round-17 cycles 51–58); new drops
+should use the guardian by default.
+
+## 38. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
+
+**Context:** Perl LaTeXML treats l3hooks as a block of no-op stubs
+(`latex_base.pool.ltxml` L829-855) — no hook storage, no dispatch, no
+ordering engine. `\hook_use:n` in Perl is a no-op that swallows its
+argument.
+
+**Wisdom:** the `latex_constructs.rs:2501` `\hook_use:n{begindocument}`
+dispatch is NOT a parity gap — it is a Rust-only compensator for our
+raw `expl3-code.tex` load path (active when the dump doesn't short-
+circuit it). That path really does define `\hook_use:n` and enqueues
+hook code against it; Perl doesn't load `expl3-code.tex` so doesn't
+need the dispatch. Keep the gate; removing it silently regresses
+the raw-load path. Any future "clean up expl3 support" pass must
+preserve this compensator or replace the raw-load path first.

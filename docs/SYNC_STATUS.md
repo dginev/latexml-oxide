@@ -2,10 +2,10 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-Updated 2026-04-21. **Open gaps & active TODOs only.** Completed work
+Updated 2026-04-22. **Open gaps & active TODOs only.** Completed work
 lives in git log and `memory/project_session_history.md`.
 
-**Test inventory:** 1098 tests pass (0 failures, 0 ignored) via `cargo test --release --tests` across 44 binaries.
+**Test inventory:** 1097 tests pass (0 failures, 0 ignored) via `cargo test --release --tests` across 44 binaries.
 
 **arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
 
@@ -51,24 +51,9 @@ handful of slow-convergence papers. Runner:
 
 **Unported:** `AmSTeX.pool.ltxml` (112 defs, ~30%, Plain TeX rare); `BibTeX.pool.ltxml` (956 defs, 0%, skipped via `--nobibtex`).
 
-**2026-04-21 stub-to-parity sweep** (build-only cadence per user 2026-04-21): 18 commits landing real bodies on packages where Rust previously had no-op or partial stubs — `\@@joinrel` XMTok-merge + `\joinrel` primitive, tabular→XMArray math-mode, `\block` DigestUntil, `\ifdraft`/`\ifoptiondraft`/`\ifoptionfinal`, `\@mn@if@RTL`, `\lx@proof@split@and` + `\infer`/`\deduce` I_dual, siunits unit-macro enablement, `\marginnote` two-arg branch, `\lx@set@path`/`\lx@append@path` + `state::set_search_paths`, standalone.sty's `\@standalone@documentclass` + `\@standalone@start@input`. Full-suite green throughout (1098/0/0).
-
-**2026-04-21 continuation (10 commits, batch cadence 8-12 per build):**
-amsppt runup (~70 more registers/macros total across `\qed`/`\ltx@qed`,
-identity metadata, head-toks, skip registers, theorem-env names/fonts,
-roster/layout), `\scalefont Float` primitive, `count!` macro export so
-contrib can use typed `sub[(…)]` closures, psfrag `{psfrags}` +
-pstricks_support extras (16 CSes: color shorthands, coord-mode no-ops,
-rotations, `\degrees`/`\radians`), equations_sty `{eqalignno}`/`{eqalignno*}`
-envs with equation-counter hooks, ucs `\unichar` hex→UTF-8, fancybox
-`mode => internal_vertical` restoration, chapterbib `sectionbib`
-AssignMapping + `\lx@cb@reset`/`\lx@cb@unitname`/`\bibliography` override
-+ `{cbunit}` env with AtomicU64 counter, mdframed restore
-`<ltx:inline-block framed='rectangle'>` wrapper, attachfile forward to
-`\lx@` variants + 4 new constructors, shared `discard_env_body`
-helper wired into `{diagram}`/`{forest}`/NiceMatrix family (20 envs,
-all emitting `<ltx:ERROR>{kind}</ltx:ERROR>` and consuming body via
-bgroup/read_until/egroup).
+Active round-17 workstreams: Def*-parity audit (see "DP" section
+below) + raw-TeX / expl3 kernel parity (D1-D2 + Long-horizon). Recent
+completed landings in git log; this file tracks open work only.
 
 ## Tikz — Known Diffs (vs Perl output)
 
@@ -93,299 +78,85 @@ Phase D0 (2k-sandbox, 84/84) and the test-suite refactor (round 17) are
 closed out; per-paper narration and session diaries for sessions ≤128
 live in git log and `memory/project_session_history.md`. What remains:
 
+### DP. Def*-parity audit (round 17, in progress)
+
+**Tool:** `tools/audit_def_parity.py` — compares Perl `Def*` vs Rust
+`Def*!` kinds pair-by-pair. Baselines tracked in `docs/def_parity_*.tsv`;
+batch plan + per-batch progress in `docs/DEF_PARITY_AUDIT.md`.
+
+**Progress (2026-04-22):** engine 52 → 19, package 234 → 232 (minor
+false-positive cleanup), contrib 0 (clean). 6 commits on
+`claude-round-17`: `e967af9c7`..`e075c4987`. 1097/0/0 throughout.
+
+**Remaining 19 engine mismatches** (by file, with shape):
+- `latex_constructs.rs` (11): picture primitives (`\line`/`\vector`/
+  `\oval`/`\qbezier`/`\bezier`/`\lx@pic@bezier`, 6) — DefConstructor↔DefMacro
+  reversal; `\tabular` DefKeyVal; `\abstract` DefEnvironmentI; + 3
+  small.
+- `plain_base.rs` (6): `#`/`&`/`%`/`$` mode-aware Box emission + `\mit`.
+- `tex_math.rs` (3): `\left`/`\right`/`\mathchar`.
+- `base_xmath.rs` (2): `\lx@cases@condition` / `@end@condition` —
+  DefConstructorI → DefPrimitive.
+- `tex_fonts.rs` (1): `DefLigature` (Rust-only kind; likely intentional
+  divergence — mark explicitly).
+
+**Next actionable step:** `plain_base.rs \mit` — simplest remaining
+item (Perl `DefPrimitiveI(..., requireMath=>1, font=>{family=>italic})`
+is a standard font-primitive shape that Rust `DefPrimitive!` already
+supports — see `DefPrimitive!("\\OMX", None, font => { family => "cmex10" })`
+at `latex_constructs.rs:5429`).
+
+**After that:** `base_xmath.rs \lx@cases@condition` / `@end@condition`
+(2-line DefConstructorI ports), then tackle the larger clusters
+(picture primitives need SVG emission; `plain_base.rs` mode-dispatch
+needs closure; `tex_math.rs` needs math-mode constructors).
+
+**Package (232 mismatches, batches P1–P9):** deferred until engine is
+clean. Top files: caption_sty.rs (32), texvc_sty.rs (30),
+physics_sty.rs (22), pgfsys_latexml_def.rs (17), llncs_cls.rs (15),
+babel_support_sty.rs (15). P8 cross-file (45 `DefKeyVal→DefMacro`)
+requires a real `DefKeyVal!` port.
+
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
-Three failure classes in the session-128 7933-paper sweep, after the
-6 DUPID aborts were addressed:
+Three failure classes in the session-128 7898-paper sweep:
 
-1. **pgfkeys.code.tex port gap** — **[x] Expected FIXED for
-   `\usepackage{lipsum}\usepackage{tikz}`-pattern papers** (session
-   post-b0b9852bd, 2026-04-21). The minimal reproducer
-   `\usepackage{lipsum}\usepackage{tikz}` went from 8 errors to 0
-   after the `load_tex_definitions` expl3 scope-exit cleanup landed
-   in `latexml_core::binding::content`. The three named papers
-   (1511.00722, 1611.04489, 1612.08368) all share the
-   `\pgfutil@xifnch` undefined + `\group_begin:`-frame-mismatch
-   symptom set, so the same root cause — a leaked expl3 group from
-   a prior `\ProvidesExplPackage`-using package (lipsum in the
-   narrowed case; likely the same upstream package in those papers)
-   — is addressed. Full 10k sandbox re-run needed to confirm, but
-   the minimal reproducer + 1098/0/0 full suite + 5 multi-package
-   stress combos (siunitx/mhchem/hyperref/amsmath/xcolor × tikz)
-   all clean strongly suggest cascade benefits.
-   (Original analysis below kept for historical context.)
-   `pgfkeyslibraryfiltered.code.tex` from TeXLive triggers
-   `\pgfkeys@non@outer@newif` / `\pgfkeysalso` / `\ifpgfkeyssuccess`
-   undefined-CS cascades that loop until the 60s wall-clock caps. Perl
-   also loads the raw TeX (via `InputDefinitions('pgfkeys.code', type=>'tex')`)
-   but succeeds — divergence is in how our raw-TeX processor handles
-   specific pgfkeys idioms, not a simple stub gap.
+1. **pgfkeys / raw-TeX expl3-group leaks.** The
+   `\usepackage{lipsum}\usepackage{tikz}` minimal reproducer went
+   from 988 errors to 0 after `load_tex_definitions` started
+   digesting `\ExplSyntaxOff` at EOF when a raw-.sty load left
+   expl3 active (`b0b9852bd`). Expected to clear 1511.00722 /
+   1611.04489 / 1612.08368 on next 10k sweep.
+   Deeper cleanup tracked in "Deep expl3 kernel parity" under
+   Long-horizon — goal: no `SUPPRESS_*_ERRORS`, no catcode safety-
+   nets, no EOF-injection workaround. Per user round-17 directive:
+   "we want lipsum to load natively and cleanly."
+2. **Math-parser pathological-ambiguity timeouts** — 1403.4135,
+   1407.5769. 500+-token formulas × 121 parse choices × ~500 ms
+   each hits the 60 s wall.
+3. **Preamble-heavy digestion timeouts** — e.g. 1210.1891 (hyperref
+   → etoolbox → kvoptions → nameref chain).
 
-   Round-17 diagnosis on 1611.04489 (commit `d6789258b` + round-17
-   deeper dive): Perl-vs-Rust log comparison pinpoints the root cause.
-
-   **First diverging event**: in Rust the error
-   `Error:undefined:\pgfkeys` fires **inside `pgfsys.code.tex`**
-   before `pgfkeys.code.tex` has finished loading. The file
-   `pgfsys.code.tex` itself (from TeXLive generic/pgf/systemlayer)
-   does a nested `\input pgfkeys.code.tex` at line 15, then uses
-   `\pgfkeys{/pgf/.is family}` at line 19.
-
-   **Perl handles this correctly**: the log shows
-   `pgfkeys.code.tex.ltxml` loads *during* pgfsys.code.tex processing
-   (nested `(Loading ...)(Processing ...)` blocks), so `\pgfkeys`
-   is defined by line 19. Both files complete in ~0.36 s.
-
-   **Rust mis-orders**: the log shows pgfsys.code.tex errors on
-   `\pgfkeys` first, then pgfkeys.code.tex loads AFTERWARDS — i.e.
-   the `\input pgfkeys.code.tex` at pgfsys.code.tex:15 isn't
-   executing synchronously during the raw-TeX read. The
-   pgfkeys load appears deferred to the next outer binding phase.
-
-   **Refined diagnosis — bisected to an expl3-group-stack leak
-   (round-17 later probe)**:
-
-   A. Changing `read_x_token(Some(false), …)` → `Some(true)` in
-      `load_tex_definitions` didn't move the needle. Ruled out the
-      outer-loop-autoclose hypothesis.
-
-   B. Direct reproduction of `\documentclass{amsart} \usepackage{tikz}
-      \begin{document} done` — 0 errors. So `\usepackage{tikz}` *alone*
-      is fine.
-
-   C. 1611.04489's minimal preamble bisect:
-      `\usepackage{lipsum} \usepackage{tikz}` → **988 errors**.
-      `\usepackage{tikz}` alone → 0.
-
-   D. Looking at the log, the **first error** is NOT at `\pgfkeys`
-      — it's upstream, at the very start of `pgfutil-common.tex`:
-
-      ```
-      (Loading "pgfutil-common.tex" definitions...
-      Error:undefined:\pgfutil@xifnch …
-      Error:unexpected:} Attempt to close boxing group; current
-      frame is non-boxing group due to T_CS[\group_begin:]
-      ```
-
-      `\group_begin:` is an **expl3** primitive. An unmatched
-      `\group_begin:` — left over from the expl3 kernel / l3keys2e /
-      xparse load sequence — has corrupted the group-stack frame.
-      Every subsequent `{…}` in raw-TeX inputs mismatches, which
-      cascades into the \pgfkeys/\pgfmath undefined-CS storm.
-
-   **Root cause**: expl3 group-stack isn't balanced on load. The
-   l3keys2e / xparse / expl3.sty chain runs `\group_begin:` without a
-   matching `\group_end:` somewhere. The pgfkeys errors are
-   downstream symptoms of a broken group frame, not a raw-TeX
-   \input or \ifdefined bug.
-
-   **Round-17 narrowing (session post-832710570)**: `\usepackage{X}
-   \usepackage{tikz}` for `X ∈ {expl3, xparse, l3keys2e}` each produces
-   **zero** `\group_begin:` frame errors. Only `\usepackage{lipsum}
-   \usepackage{tikz}` reproduces (8 Errors in 6037-line log, first at
-   pgfutil-common.tex L174 `\pgfutil@xifnch` undefined, immediately
-   followed by L175 `}` closing on a `\group_begin:` frame). So the
-   leak is **lipsum-specific**, not a broad expl3 machinery issue.
-
-   **Fix-hypothesis test (same session)**: injecting `\ExplSyntaxOff`
-   between lipsum and tikz clears the cascade (0 errors). Injecting
-   bare `\group_end:` leaves 1 error. So the missing action is
-   `\ExplSyntaxOff` specifically — which not only closes the group
-   but also restores catcodes. The underlying leak is that our raw
-   expl3-code.tex load defines `\ProvidesExplPackage` to push a
-   `\group_begin:` frame as part of `\ExplSyntaxOn`, but nothing
-   pairs `\ExplSyntaxOff` at end-of-file for lipsum.sty.
-
-   **Perl's upstream awareness**: Perl's TeX.pool.ltxml L44-47 comment
-   says "these auto-loads are not perfect — if triggered with a raw
-   .sty file, the expl3 support will 'expire' at the end of the
-   current scope, and e.g. `\ExplSyntaxOn` will once again be
-   undefined." So Perl knows this is a known edge-case. The
-   difference must be in how Perl vs Rust scope-exits a raw-.sty load
-   — Perl's `input_definitions` apparently popping leaked frames
-   automatically; ours not.
-
-   **Surgical fix target**: modify `input_definitions` /
-   `load_tex_definitions` in `latexml_core::binding::content` to
-   detect group-stack-depth-increase across a raw-.sty load and
-   auto-pop unclosed `\group_begin:` / `\begingroup` frames (with a
-   warning). Alternatively, register `\ExplSyntaxOff` as an
-   end-of-input hook whenever a raw-.sty load has `\ExplSyntaxOn` in
-   effect at file-end.
-
-   **[x] Landed**: `load_tex_definitions` in
-   `latexml_core::binding::content` now digests `\ExplSyntaxOff` at
-   end-of-file when (a) `_` catcode is LETTER (expl3 active),
-   (b) `\ExplSyntaxOff` is defined, and (c) the file is not expl3 /
-   xparse / l3keys2e / expl3-code (those legitimately leave expl3
-   active for the caller). Clears the `lipsum+tikz` cascade from 8
-   errors → 0. Full suite: 1098 passed, 0 failed, 0 ignored.
-
-   **Fix target** is no longer `latexml_core::binding::content` but
-   the expl3 binding in `latexml_package`: find which
-   `\group_begin:` call is being stacked without its counterpart. A
-   good starting point is `engine/latex_dump.rs`, `engine/latex.rs`
-   (xparse / l3keys2e bindings), and the expl3-code.tex loader
-   setup. Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
-   any other expl3+tikz users.
-
-   **User directive (round 17)**: "We want deep and exhaustive parity
-   with the LaTeX 3 kernel support (and naturally we accept
-   improvements over perl, where possible). Do not take shortcuts,
-   we want lipsum to load natively and cleanly." This upgrades the
-   pgfkeys repair from a tactical bug fix to a strategic expl3
-   kernel audit. Scope:
-   - `expl3_sty.rs` currently gates loading behind `dump_has_expl3`
-     and uses `SUPPRESS_UNDEFINED_ERRORS` + `SUPPRESS_UNEXPECTED_ERRORS`
-     to mask forward references in expl3-code.tex. The error
-     suppression itself is a shortcut — a genuine expl3 port
-     shouldn't need it.
-   - Catcode-restoration safety-nets in `expl3_sty.rs`,
-     `xparse_sty.rs`, `l3keys2e_sty.rs` are also shortcuts — the raw
-     files' own `\ExplSyntaxOff` should work. If they don't, the
-     cause is our catcode-group-scoping.
-   - The known PA-alias gate in `dump_reader.rs` blocks every
-     `:`-named alias including trivial `\group_begin: PA \begingroup`
-     — safe enough in isolation, but reflects that we don't trust
-     post-dump expl3 state.
-   - A proper port processes expl3-code.tex (~36K lines) cleanly
-     end-to-end, all forward references resolve naturally, catcode
-     regime restores itself via `\ExplSyntaxOff`, and subsequent
-     `.sty` loads (lipsum, xparse, l3keys2e, ...) compose without
-     leaving stack frame or catcode residue.
-
-   This is now a tracked long-horizon deliverable: **deep expl3
-   kernel parity** — see new entry under "Long-horizon —
-   architectural rationalization" below.
-
-   The actual flow, verified by reading the code:
-   - `\input` DefMacro (`tex_file_io.rs:184`) calls `input()`
-   - `input()` (`binding/content.rs:684`) checks `INTERPRETING_DEFINITIONS`;
-     when set (i.e. inside a raw-TeX load), dispatches to
-     `input_definitions(...)` — the recursive synchronous path.
-   - `input_definitions` → `load_tex_definitions` which does its own
-     `reading_from_mouth` + read_x_token loop. Should drain pgfkeys
-     fully before returning. Log confirms pgfkeys.code.tex loading
-     banner DOES appear nested inside the pgfsys.code.tex block.
-
-   So the `\input` path is structurally correct — pgfkeys.code.tex IS
-   being loaded as a synchronous nested input of pgfsys.code.tex.
-   The `\pgfkeys` undefined error at pgfsys line 19 must therefore
-   fire *before* the nested \input at pgfsys line 15 runs. That
-   implies the `\ifdefined\pgfkeysloaded\else\input pgfkeys.code.tex\fi`
-   conditional at pgfsys lines 14-16 is taking the WRONG branch —
-   skipping the \input when it should be taking the else path.
-
-   Next step: instrument the `\ifdefined` conditional in
-   `latexml_package/src/engine/etex.rs` and the conditional
-   scan-ahead in the gullet to verify the scan correctly finds \else
-   and \fi when the condition is false, and to inspect whether the
-   `\pgfkeysloaded` token is erroneously getting a meaning before
-   \ifdefined probes it.
-
-   Clears 3+ papers (1511.00722, 1611.04489, 1612.08368) and
-   several other pgf/tikz-users currently failing similarly.
-
-   Perl log: /tmp/1611_perl_log.txt (25.4 s, exit=0, 2 warnings).
-   Rust log: /tmp/1611_rust_log.txt (60 s timeout, 1004 errors).
-2. **Math-parser pathological-ambiguity timeouts** — 2+ papers
-   (1403.4135, 1407.5769). 500+-token formulas with 121 parse choices
-   each, ~500ms per formula × hundreds of formulas = 60s timeout.
-3. **Preamble-heavy digestion timeouts** — e.g. 1210.1891 stuck at
-   hyperref → etoolbox → kvoptions → nameref chain load.
-
-[ ] **Per-paper diagnosis method:**
-1. Run Perl `latexml` with matching `--preload=ar5iv.sty --path=...`; capture log + error count.
-2. If Perl errors with the *same* CS → shared document bug, skip.
-3. Otherwise apply `wisdom_upstream_error_attribution`: the divergence is
-   earlier than the named symptom. Trace `.sty`/`.cls` conditional /
-   option / flag / deferred-hook machinery to find the branch Perl takes
-   that Rust doesn't.
-4. Ensure 423 tests still pass; mark the entry `[x]` with a one-line note.
-5. Re-run 12-way parallel sweep after every landed fix to catch cascaded
-   benefits and regressions.
+[ ] **Per-paper diagnosis method.** Run Perl with the same
+`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` flags;
+if Perl errors on the same CS it's a shared bug (skip). Otherwise
+the divergence is upstream of the named symptom — trace `.sty`/
+`.cls` option/hook machinery. Keep 1097/0 green throughout.
 
 ### D3. Performance corpus
 
-- [x] Capture Tier A (~10 papers) + `complex/si.tex` as a standing perf
-  corpus in `docs/PERFORMANCE.md`. Regression trigger: wall-clock drift
-  > 15% on any corpus entry between commits. Reproducer:
-  `tools/run_perf_corpus.sh` (idle-serial, no parallelism). Round-17
-  baseline is the dated table in `PERFORMANCE.md`.
-- [x] **0911.4739** (5.04 s) and **1005.1610** (7.38 s) Tier A
-  outliers — **root-caused**: both are Graphics-phase bound (PDF/EPS
-  → PNG conversion via the external `convert` CLI from ImageMagick).
-  Round-17 per-phase audit with a new `LATEXML_POST_AUDIT=1` env
-  flag (commit `8df9c7b53`):
-
-  | paper     | Graphics | MathML | XSLT | Scan | total post |
-  |-----------|---------:|-------:|-----:|-----:|-----------:|
-  | 1005.1610 | 6614 ms  |  23 ms | 76ms | 30ms |     ~6.8 s |
-  | 0911.4739 | 4087 ms  |  29 ms |130ms | 40ms |     ~4.3 s |
-
-  1005.1610 has 10 PDF figures totalling ~7.5 MB; 0911.4739 has 31
-  mixed EPS/PDF. Each `convert` subprocess fork-execs ImageMagick,
-  rasterises the PDF at density=150, and writes PNG. At 132-660 ms
-  per image this is intrinsic rasterisation cost, not a Rust perf
-  problem. MathML::Presentation itself is 15-29 ms total across
-  365-771 nodes — trivial.
-
-  Use `LATEXML_POST_AUDIT=1 latexml_oxide --post …` to reproduce the
-  per-phase breakdown on any paper.
-
-- [x] **Parallelise Graphics phase** — landed `aa3c7c1bb`. 3-phase
-  refactor (serial DOM read / parallel subprocess / serial DOM
-  write) via `std::thread::scope`, worker cap
-  `min(available_parallelism, 8)`. Measured: 1005.1610 Graphics
-  6614 → 1665 ms (4×), 0911.4739 4087 → 742 ms (5.5×). Full-pipeline
-  wall-clock −66% / −65% on the two outliers respectively.
+Tier A corpus + per-phase audit (`LATEXML_POST_AUDIT=1`) + parallel
+Graphics worker landed round 17. Details in `PERFORMANCE.md`. Reproducer:
+`tools/run_perf_corpus.sh`. See commits `8df9c7b53` (audit flag),
+`aa3c7c1bb` (parallel graphics — 4-5.5× on image-heavy Tier A papers).
 
 - [~] **Vector-preserving PDF/EPS → SVG via inkscape/pdf2svg**
   (tracks upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)).
-
-  **Landed round 17** (opt-in, default off):
-  - `--graphics-svg-threshold-kb N` CLI flag on `latexml_oxide`
-  - `Graphics::with_svg_threshold_kb()` builder on the post processor
-  - `convert_image_svg` shells out to `inkscape --export-type=svg
-    --export-plain-svg` inside the round-17 parallel worker slot
-  - `read_svg_dimensions` parses the root `<svg viewBox="…">` for
-    width/height
-  - `should_try_svg_path` — file-size heuristic (< N KB, PDF only)
-  - Runtime falls back to ImageMagick `convert` when inkscape fails
-    / is missing (silent fallback; no hard dependency)
-  - README adds `inkscape` to the "Optional" apt install
-  - CI (`.github/workflows/CI.yml`) installs inkscape so the branch
-    is always covered on PRs
-  - `latexml_post/tests/fixtures/cifar10_vector.pdf` (41 KB,
-    matplotlib vector plot from issue #902) — the canonical test PDF
-  - New `test_vector_svg_graphics_path` integration test: runs the
-    Graphics processor on the fixture, asserts an `.svg` file is
-    emitted with a `<svg>` root and under 2 MB (silently skipped if
-    inkscape is absent — e.g. on bare dev laptops)
-
-  **Empirical classification data (round 17)**:
-  - CEP.pdf (30 KB vector): inkscape 0.43 s / 519 KB SVG; convert
-    1.4 s / 61 KB PNG — SVG wins on fidelity, PNG on size
-  - cifar10_vector.pdf (41 KB vector): inkscape 0.21 s / 60 KB SVG;
-    convert 0.20 s / 149 KB PNG — SVG wins on both
-  - Fade.pdf (1.7 MB raster-disguised-vector): inkscape 46 s / 102 MB
-    (!!); convert 1.4 s / 61 KB — classic case the threshold must
-    exclude; the 200 KB threshold we suggest does
-
-  **Still to do**:
-  - [x] Timeout on the inkscape subprocess — landed. Default 15 s
-    (overridable via `LATEXML_INKSCAPE_TIMEOUT_SECS`). Rust-side
-    spawn + poll + SIGKILL in `Graphics::run_with_timeout`; 6 new
-    unit tests lock in the timeout/kill semantics, the file-size
-    heuristic, and SVG viewBox parsing (also fixed a bug where the
-    XML-prolog `?>` was mis-matched as the root-tag close).
-  - [x] Benchmark the pathological-convert PDFs from issue #902 —
-    landed with `fig8.pdf` fixture from arxiv:1807.01606 and a new
-    `test_vector_svg_pathological_convert_case` regression test.
-    Measured **130× speedup** end-to-end (32.4 s → 0.29 s via
-    inkscape on a minimal doc containing just
-    `\includegraphics{fig8.pdf}`). PERFORMANCE.md records the
-    validation table.
+  Opt-in via `--graphics-svg-threshold-kb N` on `latexml_oxide`. Runtime
+  falls back to ImageMagick `convert` when inkscape fails / is missing.
+  Timeout: 15 s default, `LATEXML_INKSCAPE_TIMEOUT_SECS`. Benchmarked
+  130× speedup on `fig8.pdf` (issue #902). CI installs inkscape.
+  PERFORMANCE.md has the validation table. Remaining:
   - [ ] EPS support via the same path. **Blocked upstream**:
     Inkscape 1.x dropped direct EPS/PS reading (relied on
     ghostscript glue that was removed). `inkscape source.eps`
@@ -416,129 +187,14 @@ a safe API is missing, add it to `~/git/rust-libxml` and
 vendor-patch/upstream. **Zero direct FFI call sites remaining** as of
 round 17 commit (see below).
 
-- [x] Route libxml node lifetimes through guardian forbidding unlink without cache invalidation.
-  Landed round 17 cycles 51–58. `Document::safe_unlink` guardian
-  primitive (`faa821012`) + 4 real hazards migrated across 4 commits
-  (`478df9736` rewrite restructure_scripts_in_dual, `679b5827b`
-  kludge_fences re-record, `d204282cc` relocate_footnote_aux,
-  `8e6f4bbc8` rearrange_eqnarray/collapse_float, `070daebb1`
-  close_math_fork/eq-loop, `df9fba807` \@@joinrel/authblk) +
-  exhaustive audit classifying every remaining raw unlink site as
-  safe-by-pattern (save-and-reparent, text-only, prior
-  unrecord_node_ids, or routed through guarded
-  document.remove_node/replace_node). `rebuild_idstore_from_dom`
-  belt-and-suspenders fallback at `finalize()` entry retained —
-  downgrading to debug-only probe is an optional future refinement
-  (separate from this work item).
-- [x] Replace unsafe-over-FFI with safe wrappers where practical.
-  Landed round 17. The last raw `extern "C" { fn exsltRegisterAll();
-  } unsafe { … }` block in `latexml_post::xslt` was moved upstream to
-  `~/git/rust-libxslt` (branch `latexml-oxide-contributions`, commit
-  `a61d0c43`): new `pub fn exsltRegisterAll();` binding + `build.rs`
-  linkage for libexslt + safe top-level `libxslt::register_exslt()`
-  Once-guarded wrapper. `[patch.crates-io]` entry added for libxslt
-  alongside the existing libxml patch. Verified: zero remaining
-  `unsafe { … }` blocks across `latexml_post` and `latexml_oxide`
-  crates. Core still has `unsafe` in `arena.rs` (resolve_unchecked),
-  `store.rs`/`state.rs`/`error.rs` (Send/Sync impls) — those are
-  intentional internal invariants, not FFI.
-- [x] Migrate the remaining `libxml::bindings::*` callers to high-level
-  `rust-libxml` methods; upstream new methods as needed.
-  Landed round 17. Two wrappers pushed upstream to
-  `~/git/rust-libxml` branch `latexml-oxide-contributions` (commit
-  `db3a5fec`): `Node::new_comment(content, doc)` mirrors the
-  existing `Node::new_text` but wraps `xmlNewDocComment`; top-level
-  `libxml::init_parser()` is a Once-guarded wrapper for
-  `xmlInitParser`. latexml-oxide workspace
-  `Cargo.toml` gains a `[patch.crates-io] libxml = { path =
-  "../rust-libxml" }` entry so the wrappers are available without a
-  crates.io round-trip. `Document::add_comment_ffi` replaced by
-  `Document::add_comment` which composes `Node::new_comment` with
-  existing `add_child` / `add_prev_sibling`. `ensure_libxml_init`
-  now calls `libxml::init_parser()` instead of reaching into
-  `bindings::xmlInitParser` behind its own `Once`. Verified: zero
-  remaining `libxml::bindings::` references across latexml-oxide
-  src. 1098 tests, 0 fail.
-- [~] Rc `Can not mutably reference a shared Node "text"` cluster — guard
-  raised to 8192 (diagnostic, not safety). dcpic cluster 0805.2376 /
-  1007.2309 / 1108.3241 / 1204.5278 all converge now. Lower-priority
-  follow-up: identify the semantic cause of high `"text"`-node ref counts
-  on dcpic diagrams (2000–8000 range).
-- [x] **1605.08055 Finalizing-phase SIGSEGV** — FIXED (session
-  128, commit `337c1ef52`). Root cause was a dangling-Node entry
-  in `idstore`: upstream passes (math-parser `replace_tree`,
-  various `unbind_node()` sites) drop xml:id-bearing subtrees
-  without calling `unrecord_id`, so `mark_xmnode_visibility` later
-  dereferences a freed libxml2 `Node` when it recurses through an
-  `XMRef` whose idref resolves via the cache. Fix: new
-  `rebuild_idstore_from_dom()` (clear + fresh DOM walk) called at
-  the top of `finalize()` before `prune_xmduals`. 1605.08055:
-  SIGSEGV → exit=0 in 0.8 s. No regressions on adjacent papers.
-  **Do NOT also call `rebuild_idstore_from_dom` at the start of
-  the Rewriting phase** — tried in session 128, broke split_test.
-  When the DOM has duplicate xml:ids (rare but possible during
-  math-parse), `findnodes` visits in document order so the
-  FIRST-OCCURRENCE node wins the cache entry, but the prior
-  idstore state may have had the LAST-OCCURRENCE node — which
-  some rewrites depend on. Finalize is late enough that those
-  rewrites have already fired, so the rebuild there is safe; at
-  Rewriting entry it isn't.
-  The full audit of every unlink-without-unrecord path remains
-  open — this is a belt-and-suspenders fix that makes the
-  downstream passes robust to stale idstore entries regardless of
-  upstream behavior.
+(Prior lifetime caveats moved to WISDOM.md #36–37.)
 
-  **Round-17 audit pass (cycles 51–54, 2026-04-22).** `safe_unlink`
-  primitive landed (`faa821012`): if node is an element, unrecord
-  its xml:id + recurse via `remove_node_aux` before calling
-  `unlink`. Two real hazards migrated: `restructure_scripts_in_dual`
-  POSTSUBSCRIPT-wrapper drop in `rewrite.rs:1264` (`478df9736`), and
-  `kludge_fences` replacement-loop in `parser.rs:858-867` now
-  re-records after reparent (`679b5827b`). Remaining call sites
-  surveyed this pass — all benign by pattern:
-  - save-and-reparent (node `unlink`ed then immediately
-    `add_child`/`add_prev_sibling`): `compact_xmdual_apply`
-    (document.rs L3010/3018), `gc.unlink()` in the text-unwrap path
-    (document.rs L1850), both `\cases` afterConstruct branches
-    (base_xmath.rs L1249, L1328), `parse_rec` XMath replacement
-    (parser.rs L924-935) — `append_tree` re-creates via
-    `open_element_at` which re-registers xml:ids.
-  - prior `unrecord_id` or `unrecord_node_ids`: `prune_empty_para`
-    (helpers.rs L51), math-parser XMath replacement (parser.rs
-    L633-639).
-  - text/non-element nodes only: `\cases` empty-cell whitespace
-    strip (base_xmath.rs L1198).
-  - guarded through `document.remove_node`: various sites.
-  - uses `document.replace_node` (already guarded): base_utilities
-    L1547/1611/1684, crossref.rs L746, svg.rs L485.
-  Not yet audited this pass: `latex_constructs.rs` (6 sites),
-  `base_xmath.rs` additional (L1479, L1502, L1727, L1777), `math_common.rs`
-  L647/749/750, `authblk_sty.rs` L132, `post/make_bibliography.rs`
-  L584, `post/document.rs` L888/919, `post/split.rs` L211,
-  `post/xslt.rs` L167, `math_parser/util.rs` L271,
-  `math_parser/semantics/tree.rs` L918, `math_parser/parser.rs`
-  L811/892/906/975/1350-1356. Future cycles should complete these
-  buckets or, once all real hazards are known, consider removing
-  the `rebuild_idstore_from_dom` fallback (replacing with a
-  debug-only consistency assert).
-
-  **Backlog audit completion (cycles 55–58).** Every enumerated site
-  in the backlog is now audited and either migrated or confirmed
-  safe-by-pattern. Migrations landed: `d204282cc`
-  (relocate_footnote_aux — textnote leak), `8e6f4bbc8` (3 sites in
-  rearrange_eqnarray + collapse_float), `070daebb1` (close_math_fork
-  empty-branch + rearrange_eqnarray eq-loop), `df9fba807`
-  (\@@joinrel merge + authblk affil stash). Audited-safe: all
-  `post/*` sites (idcache either handled above the unlink or the
-  node type can't carry xml:id), `math_parser/parser.rs`
-  L811/892/906/975/1350-1356 (save-and-reparent or save-and-return
-  patterns), `math_parser/util.rs` L271 (XMHint is ephemeral, no
-  xml:id), `math_parser/semantics/tree.rs` L918 (save-and-reparent),
-  `base_xmath` L1502/L1727, `latex_constructs` L211/1630.
-  Remaining follow-up: the `rebuild_idstore_from_dom` fallback at
-  `finalize()` entry still runs as belt-and-suspenders, but with
-  all audited paths consistent, a future cycle could downgrade it to
-  a debug-only consistency probe.
+- [~] Rc `Can not mutably reference a shared Node "text"` — guard raised
+  to 8192 (diagnostic). dcpic cluster converges. Follow-up: identify
+  semantic cause of high "text"-node refcounts (2000–8000) on dcpic.
+- [ ] **Optional refinement**: downgrade `rebuild_idstore_from_dom`
+  belt-and-suspenders fallback at `finalize()` entry to a debug-only
+  consistency probe, now that all audited paths are consistent.
 
 ### Dump — deferred alias retry (session 128)
 
@@ -629,30 +285,6 @@ Marpa-related >60% CPU.
 - [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
 - [ ] Enumerate grammar rules by parse-tree count contribution.
 - [ ] Document grammar ambiguity per category.
-- [x] **Latent no-op pragmas — audit complete (round 17)**. Seven sites
-  in `pragmatics.rs` previously matched only `XM::Lexeme("x.invisible_operator", …)`
-  for the invisible-times operator head, but `apply_invisible_times`
-  produces `XM::Token { role: MULOP, meaning: "times" }`, so they
-  silently never fired on real parses.
-
-  Landed:
-  - `pragma_consistency_via_key` (session 128, `dfc0f263a`)
-  - `pragma_fenced_letters_are_function_arguments` (`b786d85d4`) — 7 tests
-  - `pragma_higher_order_invisible_ops_are_exceptions` (`c0c0720b6`) — 4 tests
-  - `pragma_adjacent_numbers_dont_use_invisible_times` (`c0c0720b6`) — 3 tests
-  - `check_invisible_times_recursive`, `is_invisible_times_apply`,
-    `all_simple_identifiers` (`282870c9d`) — 6 tests; also extracted
-    module-private `is_invisible_times_op` helper and DRY-replaced
-    four earlier inlined match blocks (incl. both
-    `pragma_functions_prefer_wider_absorption` sites).
-
-  The MULOP-contains-RELOP check in `pragma_relops_are_outermost` at
-  ~L1240 still has a `name == "x.invisible_operator"` OR-fallback, but
-  the primary `name.starts_with("MULOP")` predicate already fires on
-  the Token shape via `base_operator_name()`, so that branch is
-  harmless dead code — left in place. Full workspace: 1090 tests, 0
-  fail, 0 ignored.
-
 Remaining semantic-ambiguity hotspots (see
 `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`; live audit via
 `LATEXML_PARSE_AUDIT=1`):
@@ -664,46 +296,7 @@ Remaining semantic-ambiguity hotspots (see
 
 ### Long-horizon — architectural rationalization
 
-- [x] **l3hooks — Perl-parity stub port** (round 17, landed
-  this session). Discovered: Perl LaTeXML's entire l3hooks support
-  is a block of **no-op stubs** in `latex_base.pool.ltxml` L829-855
-  that absorb expl3 hook-API syntax and expand to nothing. There is
-  no hook storage, no `\hook_use:n` dispatch, no ordering engine.
-  The prior SYNC_STATUS plan for a "minimal native port" with
-  `state::push_value` storage was **Rust-side speculation**, not
-  parity.
-
-  Landed (Perl-parity):
-  1. Added `\hook_gput_code:nnn{}{}{}` as a no-op `DefMacro!` in
-     `latex_base.rs` (Perl L829, was missing). This was the one
-     true gap in our hook stub block. Used the `DefMacroI`-style
-     branch `DefMacro!(T_CS!("\\hook_gput_code:nnn"), "{}{}{}", "")`
-     so the CS name is pre-tokenized as one unit — the string-
-     prototype branch would otherwise split on `:` (OTHER) and `_`
-     (SUB) under default catcodes and produce `\hook` + garbage.
-
-  **Gate kept (pragmatic deviation, not removed)**: the
-  `latex_constructs.rs:2501` `\hook_use:n{begindocument}` dispatch
-  is a Rust-only compensator for a different deviation — our raw
-  `expl3-code.tex` load path (active when the dump doesn't short-
-  circuit it) really does define `\hook_use:n` and enqueues hook
-  code against it. Perl doesn't load that file, so doesn't need
-  the dispatch. We keep the gate with a comment noting the
-  deviation; removing it would silently regress the raw-load path.
-
-  Canary: `83_expl3` passes 2/2 in 0.00s. Full
-  `cargo test --release --tests` reports **1098 passed, 0 failed,
-  0 ignored** across 44 binaries.
-
-  **Load-bearing consequence for the dumper staircase**: with the
-  `\hook_gput_code:nnn` no-op stub in place, PA/MPA/E records in
-  the dump whose bodies reference it now resolve cleanly (arg-
-  swallow) instead of undefined-CS'ing. Retrying the dumper
-  step-4/5 widening with this stub in place is the next diagnostic
-  action.
-
-  See also: "Future-facing / not-wired" section below for the
-  native-storage port that was deferred.
+(l3hooks Perl-parity stub caveat moved to WISDOM.md #38.)
 
 - [ ] **Kernel-first discipline for dumper widening** (user directive,
   round 17). Cross-links the dumper audit and the expl3 kernel
