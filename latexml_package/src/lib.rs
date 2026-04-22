@@ -766,6 +766,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("euscript", "sty", package::euscript_sty::load_definitions),
   ("expl3", "lua", package::expl3_lua::load_definitions),
   ("expl3", "sty", package::expl3_sty::load_definitions),
+  ("expl3", "ltx", package::expl3_ltx::load_definitions),
   ("fixme", "sty", package::fixme_sty::load_definitions),
   ("fleqn", "sty", package::fleqn_sty::load_definitions),
   ("flowchart", "sty", package::flowchart_sty::load_definitions),

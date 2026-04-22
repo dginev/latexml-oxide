@@ -152,6 +152,7 @@ pub mod eulervm_sty;
 pub mod eurosym_sty;
 pub mod euscript_sty;
 pub mod expl3_lua;
+pub mod expl3_ltx;
 pub mod expl3_sty;
 pub mod exscale_sty;
 pub mod fancybox_sty;
