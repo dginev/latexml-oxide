@@ -150,4 +150,62 @@ LoadDefinitions!({
   DefMacro!("\\NoBlackBoxes", "");
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
+
+  // Identity / version metadata — Perl amsppt.sty.ltxml L29-35.
+  DefMacro!("\\filename", "amsppt.sty");
+  DefMacro!("\\fileversion", "2.1h");
+  DefMacro!("\\filedate", "1997/02/02");
+  DefMacro!("\\fileversiontest", "\\fileversion\\space(\\filedate)");
+  DefMacro!("\\styname", "AMSPPT");
+  DefMacro!("\\styversion", "\\fileversion");
+  DefMacro!("\\plainend", "\\end");
+
+  // Page-layout no-ops — Perl L40-52. Running-head tokens + page-contents
+  // are TeX plain-format hooks with no LaTeXML analogue; swallow their
+  // args.
+  DefMacro!("\\leftheadline", "");
+  DefMacro!("\\rightheadline", "");
+  DefMacro!("\\leftheadtext{}", "");
+  DefMacro!("\\rightheadtext{}", "");
+  Let!("\\flheadline", "\\hfil");
+  Let!("\\frheadline", "\\hfil");
+  DefMacro!("\\headmark{}", "");
+  DefMacro!("\\pagecontents", "");
+  DefMacro!("\\cvolyear{}", "");
+  DefMacro!("\\issueinfo{}{}{}{}", "");
+  DefMacro!("\\NoRunningHeads", "");
+  DefMacro!("\\Monograph", "");
+
+  // Per-field "pre" hooks — Perl L90-95. No-ops; user can `\def` to override.
+  Let!("\\pretitle", "\\relax");
+  Let!("\\preauthor", "\\relax");
+  Let!("\\preaffil", "\\relax");
+  Let!("\\predate", "\\relax");
+  Let!("\\preabstract", "\\relax");
+  Let!("\\prepaper", "\\relax");
+
+  // AMS Fonts + QED — Perl L320-330. `\rom` drops its arg into rm.
+  // `\qed` emits `\ltx@qed`, which is isMath-aware (end-of-proof symbol).
+  // `\tildechar` is the amsppt literal `~` in typewriter (bibliography
+  // key separator).
+  DefMacro!("\\rom{}", "{\\rm #1}");
+  DefMacro!("\\PSAMSFonts", "");
+  RawTeX!("\\newif\\ifPSAMSFonts\\PSAMSFontstrue");
+  DefMacro!("\\qed", "\\ltx@qed");
+  DefConstructor!(
+    "\\ltx@qed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    reversion => "\\qed"
+  );
+  DefMacro!("\\tildechar", "\\texttt{\\textasciitilde}");
+  DefMacro!("\\breakcheck", "");
+  DefMacro!("\\usualspace", " ");
+
+  // References section — Perl L333, L361-365.
+  DefMacro!("\\Refsname", "References");
+  DefRegister!("\\refindentwd" => Dimension::new(0));
+  DefMacro!("\\refstyle{}", "");
+  DefMacro!("\\keyformat{}", "#1");
+  DefMacro!("\\refbreaks", "");
+  DefMacro!("\\defaultreftexts", "");
 });
