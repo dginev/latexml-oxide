@@ -1111,7 +1111,29 @@ per Perl's implementation. Each port simultaneously simplifies the
 affected binding files (replacing DefMacro+DefPrimitive chains with
 single DefConstructor calls) and cleans the DP audit.
 
-**Concrete TeXDelimiter port plan** (highest-ROI candidate, ~10+ entries):
+**Correction (2026-04-22 re-verification):** Rust **already has a
+`TeXDelimiter` ParameterType** at `base_parameter_types.rs:693` (per
+Perl PR#2596). It's used successfully by `math_common.rs:962-964` for
+`\big`/`\Big`/`\bigg`/`\Bigg`. BUT: the current impl reads
+`gullet::read_arg(ExpansionLevel::Partial)` — i.e. it requires a
+**braced** argument. That works for `\big{x}` but fails for `\left(` /
+`\biglb[` / etc. which pass unbraced single tokens. Hence `\left` /
+`\lx@right` / revsymb's `\biglb` family all fall back to DefMacro
+workarounds that bypass the ParameterType.
+
+The actual work is therefore **enhance** the existing TeXDelimiter
+(not create a new one). Missing vs Perl's `TeX_Math.pool.ltxml:709`:
+1. `readXToken(0)` path for unbraced single tokens.
+2. `{...}`-unwrap when the FIRST token is `{` (for `\big{x}` idiom).
+3. `.` → `\lx@delimiterdot` replacement.
+4. `stomach::invoke_token` pre-digestion + `undigested => 1`.
+
+**Prerequisites verified:** `stomach::invoke_token` (stomach.rs:776),
+`gullet::skip_filler` (gullet.rs:1203), `\lx@delimiterdot`
+(tex_math.rs:1184) all exist. Port is purely base_parameter_types.rs
+work + migrating affected call sites.
+
+**Concrete TeXDelimiter enhancement plan** (highest-ROI candidate, ~10+ entries):
 
 1. Perl reference: `TeX_Math.pool.ltxml:709` —
    ```perl
