@@ -2682,6 +2682,30 @@ impl Document {
 
   pub fn unrecord_id(&mut self, id: &str) { self.idstore.remove(id); }
 
+  /// Guardian-safe unlink: walk `node`'s subtree invalidating every `xml:id`
+  /// idstore entry, then detach it from its parent. Use this in preference
+  /// to a raw `node.unlink()` anywhere the node *might* carry an `xml:id`
+  /// (subtree reshuffles in math-parser, post-processing cleanup, etc.),
+  /// to prevent the dangling-Node class of bug that produced the 1605.08055
+  /// Finalizing-phase SIGSEGV (see SYNC_STATUS.md D3b).
+  ///
+  /// This is the unlink-only half of `remove_node` — it does **not** adjust
+  /// `self.node` / the insertion point, which is correct for callers that
+  /// intend to re-parent the unlinked subtree elsewhere (the common case).
+  /// Callers that want the insertion-point bookkeeping should use
+  /// `remove_node` instead.
+  pub fn safe_unlink(&mut self, mut node: Node) {
+    if node.get_type() == Some(NodeType::ElementNode) {
+      if let Some(id) = node.get_attribute_ns("id", XML_NS) {
+        self.unrecord_id(&id);
+      }
+      for child in node.get_child_nodes() {
+        self.remove_node_aux(child);
+      }
+    }
+    node.unlink();
+  }
+
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
   pub fn record_node_ids(&mut self, node: &Node) -> Result<()> {
     for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
