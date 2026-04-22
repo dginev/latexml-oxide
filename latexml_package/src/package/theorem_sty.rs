@@ -50,8 +50,11 @@ LoadDefinitions!({
   RawTeX!(r"\lx@theorem@newtheoremstyle{margin}{\slshape}{\lx@makerunin\lx@makeoutdent}{S}");
   RawTeX!(r"\lx@theorem@newtheoremstyle{marginbreak}{\slshape}{\lx@makeoutdent}{S}");
   RawTeX!(r"\lx@theorem@newtheoremstyle{changebreak}{\slshape}{}{S}");
-  // Redefine so we get correct parameters recorded
-  RawTeX!(r"\lx@theorem@newtheoremstyle{definition}{}{\lx@makerunin}{N}");
-  RawTeX!(r"\lx@theorem@newtheoremstyle{remark}{}{\lx@makerunin}{N}");
+  // Redefine so we get correct parameters recorded. Perl passes
+  // `\normalfont` as the 4th (swap) arg — ToString(\normalfont) != 'S',
+  // so swap resolves to false, same as 'N'. We mirror Perl's literals.
+  // Also: Perl's `remark` style uses EMPTY headstyle (no \lx@makerunin).
+  RawTeX!(r"\lx@theorem@newtheoremstyle{definition}{}{\lx@makerunin}{\normalfont}");
+  RawTeX!(r"\lx@theorem@newtheoremstyle{remark}{}{}{\normalfont}");
   RawTeX!(r"\th@plain");
 });
