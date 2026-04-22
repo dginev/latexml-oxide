@@ -4,7 +4,9 @@ LoadDefinitions!({
   RequirePackage!("ifthen");
   RequirePackage!("eso-pic");
   RequirePackage!("fancyheadings");
-  // INCOMPLETE IMPLEMENTATION — just a no-op stub avoiding pointless errors
+  // Perl-parity stubs: every \svn* CS is a `Tokens()` no-op in
+  // ar5iv-bindings/svninfo.sty.ltxml L23-44 (matching upstream SVN
+  // keyword placeholders that have no print-time equivalent in LaTeXML).
   DefMacro!("\\svnInfo SkipSpaces Match:$ Until:$", "");
   DefMacro!("\\svnKeyword SkipSpaces Match:$ Until:$", "");
   DefMacro!("\\svnId", "");

@@ -5,7 +5,10 @@ LoadDefinitions!({
   RequirePackage!("psfig");
   RequirePackage!("epsf");
   RequirePackage!("epsfig");
-  // INCOMPLETE IMPLEMENTATION
+  // Perl-parity stubs: every macro below mirrors
+  // ar5iv-bindings/ws-p8-50x6-00.cls.ltxml L22-47 one-for-one. "INCOMPLETE"
+  // label was inaccurate — Perl's own support is identical journal-abbrev
+  // forwarding, not a richer port.
   DefMacro!("\\Journal{}{}{}{}", "{#1} {\\bf #2}, #3 (#4)");
   DefMacro!("\\NCA", "\\em Nuovo Cimento");
   DefMacro!("\\NIM", "\\em Nucl. Instrum. Methods");
