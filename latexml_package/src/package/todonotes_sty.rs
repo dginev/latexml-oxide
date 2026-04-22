@@ -20,7 +20,11 @@ LoadDefinitions!({
   DefMacro!("\\setuptodonotes{}",  None);
 
   DeclareOption!("disable", {
-    DefMacro!("\\todo[]{}", None);
+    // Perl todonotes.sty.ltxml L22-23: `disable` replaces \todo with
+    // an empty macro and locks it so that subsequent \renewcommand
+    // \todo from user code or further loads can't re-enable the todo
+    // notes. Without the lock the suppression silently un-applies.
+    DefMacro!("\\todo[]{}", None, locked => true);
   });
 
   ProcessOptions!();
