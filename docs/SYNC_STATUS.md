@@ -2,6 +2,40 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
+## Mission (2026-04-22)
+
+**Exhaustively translate Perl LaTeXML into idiomatic, faithful Rust so
+that `~/data/10k_sandbox/` converts cleanly end-to-end via
+`cortex_worker`.** Success has two halves, which must advance together:
+
+1. **Source-level parity.** Every `Def*` in `LaTeXML/` and every
+   `ar5iv-bindings/bindings/*.ltxml` has a corresponding Rust port with
+   the same signature, body, mode hooks, and digest hooks. Stubs marked
+   "TODO: not ported" are technical debt, not a destination. When the
+   Perl source uses `beforeDigest`, `afterDigest`, `leaveHorizontal`,
+   `locked`, `code => sub {…}`, a keyval callback, a `DefColumnType`,
+   etc., the Rust port reproduces each one. "Works well enough" is not
+   the standard — semantic parity is.
+2. **10k-sandbox cleanliness.** Baseline (session 128): 7884/7898 = 99.82%
+   clean under `-j 8 --timeout 60`. Remaining 14 aborts are concrete
+   targets (5 OOM, 9 timeout) with known first causes (math-parser
+   ambiguity, babel french, pgfkeys raw TeX, preamble-heavy digestion).
+   Each port landed above should be validated — or at least re-sampled —
+   against the affected papers.
+
+The 10k sandbox is the truth that pins the porting work to real-world
+documents. Don't port in a vacuum; pick the gap whose closure clears an
+abort, prevents an observed warning cascade, or tightens a diff vs
+Perl's output on a specific paper.
+
+**24-hour sprint cadence.** Recurring `continue SYNC_STATUS` cron
+enqueues an autonomous work tick roughly every 15 minutes (see
+`CronList` / `memory/project_24h_sprint.md`). Each tick should: pick
+one unchecked `[ ]` from this doc or the Perl source, do ≤1 commit,
+verify with `cargo check --workspace` + (when small) `cargo test
+--release --tests`, update memory. If blocked, document the blocker in
+the file's inline comment and move on — don't idle a cycle polling.
+
 Updated 2026-04-22. **Open gaps & active TODOs only.** Completed work
 lives in git log and `memory/project_session_history.md`.
 
