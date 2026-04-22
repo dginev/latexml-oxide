@@ -434,9 +434,18 @@ LoadDefinitions!({
       let mut saw_w = false;
       let mut saw_h = false;
       let mut has_keepaspectratio = false;
+      // Perl extracts `alt` separately as a semantic property — it
+      // becomes the `description` attribute via after_construct, not
+      // a graphics option. Skip it from the options-string loop so it
+      // doesn't end up double-emitted as `alt=foo` inside `options=`.
+      let mut alt_value: Option<String> = None;
       if let Some(ref kv_digested) = args[1] {
         if let DigestedData::KeyVals(ref kv) = kv_digested.data() {
           for (key, value) in kv.get_pairs() {
+            if key == "alt" {
+              alt_value = Some(value.to_string());
+              continue;
+            }
             if key.ends_with("width") { saw_w = true; }
             if key.ends_with("height") { saw_h = true; }
             if key == "keepaspectratio" { has_keepaspectratio = true; }
@@ -451,12 +460,28 @@ LoadDefinitions!({
         options_vec.push(s!("keepaspectratio=true"));
       }
       let options = options_vec.join(",");
-      Ok(stored_map!("path" => path, "candidates" => candidates, "options" => options))
+      let mut props = stored_map!("path" => path, "candidates" => candidates, "options" => options);
+      if let Some(alt) = alt_value {
+        props.insert("alt", Stored::from(alt));
+      }
+      Ok(props)
     },
     after_digest => sub[whatsit] {
       // Perl: sizer => \&image_graphicx_sizer
       // Compute box dimensions from image file + graphicx options
       image_graphicx_sizer(whatsit);
+    },
+    // Perl L57-62: emit `description` attribute from `alt` keyval EVEN IF
+    // the value is the empty string (the constructor template's
+    // shorthand `?#alt(description='#alt')` would skip empty strings,
+    // so do it explicitly via after_construct on the just-emitted node).
+    after_construct => sub[document, whatsit] {
+      if let Some(alt) = whatsit.get_property("alt") {
+        let alt_str = alt.to_string();
+        if let Some(mut last_child) = document.get_node().get_last_child() {
+          document.set_attribute(&mut last_child, "description", &alt_str)?;
+        }
+      }
     }
   );
 });
