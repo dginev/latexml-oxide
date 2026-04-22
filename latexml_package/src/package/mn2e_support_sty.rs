@@ -215,6 +215,19 @@ LoadDefinitions!({
   // Table/proof — Perl L174-192
   DefMacro!("\\contcaption", "\\caption{continued}");
   DefMacro!("\\proofname", "Proof");
+  // Perl L177-181 ships {proof} with afterConstruct =>
+  // maybeCloseElement('ltx:proof'). Rust doesn't expose
+  // maybe_close_element from a DefEnvironment after_construct hook
+  // ergonomically, so we use the equivalent full-template form
+  // (matches elsart_support_sty.rs proof env), which already
+  // includes the </ltx:proof> close so no after_construct hook is
+  // needed. Title comes from Digest(\proofname) in Perl; we resolve
+  // it through stored_map directly since \proofname always expands
+  // to "Proof" in this package.
+  DefEnvironment!("{proof}",
+    "<ltx:proof><ltx:title font='italic' _force_font='true' class='ltx_runin'>#title</ltx:title>#body</ltx:proof>",
+    properties => { stored_map!("title" => Stored::from("Proof")) }
+  );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 
   DefMacro!("\\loadboldmathitalic", "");
