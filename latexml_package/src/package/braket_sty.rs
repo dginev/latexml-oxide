@@ -6,34 +6,41 @@ LoadDefinitions!({
   DefMath!("\\Bra{}", "\\left\\langle#1\\right|", meaning => "bra");
   DefMath!("\\ket{}", "|#1\\rangle",           meaning => "ket");
   DefMath!("\\Ket{}", "\\left|#1\\right\\rangle", meaning => "ket");
-  DefMath!("\\lx@braket@{}", "\\langle#1\\rangle", meaning => "expectation");
-  DefMath!("\\lx@Braket@{}", "\\left\\langle#1\\right\\rangle", meaning => "expectation");
-  // Perl #2340: reversions use user-facing \braket/\Braket with | separators
+  // Perl: alias => '\braket' / '\Braket' makes the no-separator variants
+  // round-trip to source as `\braket{x}` rather than `\lx@braket@{x}`.
+  // Without it, source-export of `\braket{x}` reified into the internal CS.
+  DefMath!("\\lx@braket@{}", "\\langle#1\\rangle",
+    meaning => "expectation", alias => "\\braket");
+  DefMath!("\\lx@Braket@{}", "\\left\\langle#1\\right\\rangle",
+    meaning => "expectation", alias => "\\Braket");
+  // Perl L77-88: V/D variants pair an explicit reversion template with
+  // alias => '\braket' / '\Braket'. Reversion takes priority for source
+  // recovery, but alias is what shows up in MathML / annotations.
   DefMath!("\\lx@braket@V{}{}", "\\langle#1\\,|\\,#2\\rangle",
-    meaning => "inner-product", reversion => "\\braket{#1|#2}");
+    meaning => "inner-product", alias => "\\braket", reversion => "\\braket{#1|#2}");
   DefMath!("\\lx@braket@D{}{}", "\\langle#1\\,\\|\\,#2\\rangle",
-    meaning => "inner-product", reversion => "\\braket{#1\\|#2}");
+    meaning => "inner-product", alias => "\\braket", reversion => "\\braket{#1\\|#2}");
   DefMath!("\\lx@Braket@V{}{}", "\\left\\langle#1\\,\\middle|\\,#2\\right\\rangle",
-    meaning => "inner-product", reversion => "\\Braket{#1|#2}");
+    meaning => "inner-product", alias => "\\Braket", reversion => "\\Braket{#1|#2}");
   DefMath!("\\lx@Braket@D{}{}", "\\left\\langle#1\\,\\middle\\|\\,#2\\right\\rangle",
-    meaning => "inner-product", reversion => "\\Braket{#1\\|#2}");
+    meaning => "inner-product", alias => "\\Braket", reversion => "\\Braket{#1\\|#2}");
   // All braket variants (Perl L90-114)
   DefMath!("\\lx@braket@VV{}{}{}", "\\langle#1\\,|#2\\,|\\,#3\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\braket{#1|#2|#3}");
+    meaning => "quantum-operator-product", alias => "\\braket", reversion => "\\braket{#1|#2|#3}");
   DefMath!("\\lx@braket@VD{}{}{}", "\\langle#1\\,|\\,#2\\,\\|\\,#3\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\braket{#1|#2\\|#3}");
+    meaning => "quantum-operator-product", alias => "\\braket", reversion => "\\braket{#1|#2\\|#3}");
   DefMath!("\\lx@braket@DV{}{}{}", "\\langle#1\\,\\|\\,#2\\,|\\,#3\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\braket{#1\\|#2|#3}");
+    meaning => "quantum-operator-product", alias => "\\braket", reversion => "\\braket{#1\\|#2|#3}");
   DefMath!("\\lx@braket@DD{}{}{}", "\\langle#1\\,\\|\\,#2\\,\\|\\,#3\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\braket{#1\\|#2\\|#3}");
+    meaning => "quantum-operator-product", alias => "\\braket", reversion => "\\braket{#1\\|#2\\|#3}");
   DefMath!("\\lx@Braket@VV{}{}{}", "\\left\\langle#1\\,\\middle|\\,#2\\,\\middle|\\,#3\\right\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\Braket{#1|#2|#3}");
+    meaning => "quantum-operator-product", alias => "\\Braket", reversion => "\\Braket{#1|#2|#3}");
   DefMath!("\\lx@Braket@VD{}{}{}", "\\left\\langle#1\\,\\middle|\\,#2\\,\\middle\\|\\,#3\\right\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\Braket{#1|#2\\|#3}");
+    meaning => "quantum-operator-product", alias => "\\Braket", reversion => "\\Braket{#1|#2\\|#3}");
   DefMath!("\\lx@Braket@DV{}{}{}", "\\left\\langle#1\\,\\middle\\|\\,#2\\,\\middle|\\,#3\\right\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\Braket{#1\\|#2|#3}");
+    meaning => "quantum-operator-product", alias => "\\Braket", reversion => "\\Braket{#1\\|#2|#3}");
   DefMath!("\\lx@Braket@DD{}{}{}", "\\left\\langle#1\\,\\middle\\|\\,#2\\,\\middle\\|\\,#3\\right\\rangle",
-    meaning => "quantum-operator-product", reversion => "\\Braket{#1\\|#2\\|#3}");
+    meaning => "quantum-operator-product", alias => "\\Braket", reversion => "\\Braket{#1\\|#2\\|#3}");
 
   // \braket — splits argument on | bars to dispatch to V/D variants — Perl L57-66.
   //
@@ -56,13 +63,14 @@ LoadDefinitions!({
     Ok(build_invocation(&cs, &parts))
   });
 
-  // Set notation (Perl L117-146)
-  DefMath!("\\lx@set@{}", "\\{#1\\}", meaning => "set");
-  DefMath!("\\lx@Set@{}", "\\left\\{#1\\right\\}", meaning => "set");
-  DefMath!("\\lx@set@V{}{}", "\\{#1\\;|\\;#2\\}", meaning => "set");
-  DefMath!("\\lx@set@D{}{}", "\\{#1\\;\\|\\;#2\\}", meaning => "set");
-  DefMath!("\\lx@Set@V{}{}", "\\left\\{#1\\;\\middle|\\;#2\\right\\}", meaning => "set");
-  DefMath!("\\lx@Set@D{}{}", "\\left\\{#1\\;\\middle\\|\\;#2\\right\\}", meaning => "set");
+  // Set notation (Perl L117-146) — alias matches Perl so the helper CSes
+  // round-trip as `\set` / `\Set` rather than `\lx@set@…`.
+  DefMath!("\\lx@set@{}", "\\{#1\\}", meaning => "set", alias => "\\set");
+  DefMath!("\\lx@Set@{}", "\\left\\{#1\\right\\}", meaning => "set", alias => "\\Set");
+  DefMath!("\\lx@set@V{}{}", "\\{#1\\;|\\;#2\\}", meaning => "set", alias => "\\set");
+  DefMath!("\\lx@set@D{}{}", "\\{#1\\;\\|\\;#2\\}", meaning => "set", alias => "\\set");
+  DefMath!("\\lx@Set@V{}{}", "\\left\\{#1\\;\\middle|\\;#2\\right\\}", meaning => "set", alias => "\\Set");
+  DefMath!("\\lx@Set@D{}{}", "\\left\\{#1\\;\\middle\\|\\;#2\\right\\}", meaning => "set", alias => "\\Set");
   // \set/\Set — Perl L117-126 also splits via splitBraketArg (maxbars=1).
   // So `\set{x\|y}` dispatches to `\lx@set@D`, not `\lx@set@V`, preserving
   // the double-bar meaning in the set-builder notation.
