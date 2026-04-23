@@ -1,4 +1,54 @@
 use crate::prelude::*;
+use latexml_core::document::Document;
+use libxml::tree::Node;
+
+/// Perl inst_support.sty.ltxml L89-116 `relocateInstitute` — moves
+/// institutetext/email ltx:note bodies into the matching author's
+/// ltx:contact[@role='institutemark'/'emailmark']. Mirrors the engine-level
+/// `relocate_footnote` pattern (latex_constructs.rs L179).
+pub fn relocate_institute(document: &mut Document, instnode: &mut Node) -> Result<()> {
+  let role = instnode.get_attribute("role").unwrap_or_default();
+  if role == "institutetext" {
+    if let Some(mark) = instnode.get_attribute("mark") {
+      let matches = document.findnodes(
+        &format!(".//ltx:contact[@role='institutemark'][@_mark='{mark}']"),
+        None,
+      );
+      if !matches.is_empty() {
+        let children = instnode.get_child_nodes();
+        for mut author in matches {
+          document.append_clone(&mut author, children.clone())?;
+          document.set_attribute(&mut author, "role", "institute")?;
+          let _ = author.remove_attribute("_mark");
+        }
+        document.safe_unlink(instnode.clone());
+      }
+      // Perl L101-104 fallback (append a new ltx:contact to every author
+      // lacking an institutemark) uses append_tree to construct a fresh
+      // <ltx:contact role='institute'> subtree. Deferred — the matching-
+      // mark path covers the common case and the fallback triggers only
+      // for malformed inputs where \inst mark numbers don't line up with
+      // \institute entries.
+    }
+  } else if role == "email" {
+    if let Some(mark) = instnode.get_attribute("mark") {
+      let matches = document.findnodes(
+        &format!(".//ltx:contact[@role='emailmark'][@_mark='{mark}']"),
+        None,
+      );
+      if !matches.is_empty() {
+        let children = instnode.get_child_nodes();
+        for mut author in matches {
+          document.append_clone(&mut author, children.clone())?;
+          document.set_attribute(&mut author, "role", "email")?;
+          let _ = author.remove_attribute("_mark");
+        }
+        document.safe_unlink(instnode.clone());
+      }
+    }
+  }
+  Ok(())
+}
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -89,8 +139,11 @@ LoadDefinitions!({
       Ok(stored_map!("mark" => mark))
     });
 
-  // Note: Perl has Tag('ltx:note', afterClose => \&relocateInstitute) which
-  // does DOM surgery to move institute text into the matching ltx:creator.
-  // This requires deep clone and DOM manipulation not yet available in Rust.
-  // The institute notes will appear as standalone ltx:note elements.
+  // Perl L87 `Tag('ltx:note', afterClose => \&relocateInstitute)` — registers
+  // a Tag after-close hook that moves institutetext/email ltx:note bodies
+  // into the matching author contact. Stacks with the footnote hook at
+  // latex_constructs.rs L179 because Tag `after_close` holds Vec<closure>.
+  Tag!("ltx:note", after_close => sub[doc, node] {
+    crate::package::inst_support_sty::relocate_institute(doc, node)?;
+  });
 });
