@@ -252,6 +252,9 @@ LoadDefinitions!({
   });
 
   // \lxRDF — body version (create <ltx:rdf> element)
+  // Perl lxRDFa.sty.ltxml L197-210 sets `alias => '\lxRDF'` so that a
+  // \lxRDF{...} body-form invocation reverts to the user-facing `\lxRDF`
+  // in the tex= attribute rather than the internal `\lxRDF@body` variant.
   DefConstructor!("\\lxRDF@body[] RequiredKeyVals:RDFa",
     sub[document, args, _props] {
       let savenode = document.float_to_element("ltx:rdf", false);
@@ -271,7 +274,8 @@ LoadDefinitions!({
         document.close_element("ltx:rdf")?;
         document.set_node(save);
       }
-    }
+    },
+    alias => "\\lxRDF"
   );
 
   Let!("\\lxRDF", "\\lxRDF@preamble");
