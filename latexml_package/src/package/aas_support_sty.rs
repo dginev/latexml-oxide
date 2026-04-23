@@ -204,11 +204,40 @@ LoadDefinitions!({
   DefMacro!("\\markcite{}", "");
   RequirePackage!("natbib");
 
-  // References environment — Perl L283-293
-  DefConstructor!("\\references",
-    "<ltx:bibliography xml:id='#id'><ltx:biblist>");
-  DefConstructor!("\\endreferences",
-    "</ltx:biblist></ltx:bibliography>");
+  // Perl aas_support.sty.ltxml:283-291:
+  //   DefConstructor('\references',
+  //     "<ltx:bibliography xml:id='#id' ... ><ltx:title>#title</ltx:title><ltx:biblist>",
+  //     afterDigest => sub { beginBibliography($_[1]); });
+  //   DefConstructor('\endreferences', sub { maybeCloseElement biblist/bibliography; });
+  //
+  // Without `afterDigest => beginBibliography`, Rust's \bibitem fires
+  // unguarded: the open `<ltx:biblist>` child-admission rules don't take
+  // effect (beginBibliography installs them), so `\bibitem` ends up
+  // absorbed by whatever the current element is — `<ltx:section>`,
+  // `<ltx:para>`, `<ltx:text>`, `<ltx:XMath>` in the 4 failing 10k-sandbox
+  // papers (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
+  // nucl-th0010030) → "malformed:ltx:bibitem isn't allowed in <ltx:X>".
+  //
+  // Matching revtex4_support_sty.rs:146-159's pattern for its own
+  // `\references` (which already calls begin_bibliography). The Perl
+  // attribute set (bibstyle/citestyle/sort/title) is richer than what
+  // the Rust template currently emits — that's a separate enhancement;
+  // landing the afterDigest hook alone is what closes the 4-paper
+  // malformed:ltx:bibitem cluster.
+  DefConstructor!(
+    "\\references",
+    "<ltx:bibliography xml:id='#id'><ltx:biblist>",
+    after_digest => sub[whatsit] {
+      crate::engine::latex_constructs::begin_bibliography(whatsit)?;
+    }
+  );
+  DefConstructor!(
+    "\\endreferences",
+    sub[document, _whatsit, _props] {
+      document.maybe_close_element("ltx:biblist")?;
+      document.maybe_close_element("ltx:bibliography")?;
+    }
+  );
   Let!("\\reference", "\\bibitem");
 
   RequirePackage!("graphicx");
