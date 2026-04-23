@@ -37,7 +37,6 @@ dcolumn_sty.rs:56	lx@unactivate	perl=DefMacro(L30)	rust=DefPrimitive
 deluxetable_sty.rs:36	set@deluxetable@template	perl=DefMacro(L40)	rust=DefPrimitive
 elsart_support_sty.rs:234	note	perl=DefMacro(L172)	rust=DefConstructor
 enumitem_sty.rs:521	restartlist	perl=DefMacro(L128)	rust=DefPrimitive
-graphics_sty.rs:412	Gscale@div	perl=DefPrimitive(L329)	rust=DefMacro
 llncs_cls.rs:65	toctitle	perl=DefRegister(L73)	rust=DefMacro
 llncs_cls.rs:132	spnewtheorem	perl=DefMacro(L101)	rust=DefPrimitive
 llncs_cls.rs:153	bbbc	perl=DefPrimitiveI(L196)	rust=DefConstructor

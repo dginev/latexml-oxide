@@ -407,9 +407,20 @@ LoadDefinitions!({
   // Perl: DefMacro('\Gin@i [][]{}', '');
   DefMacro!("\\Gin@i[][]{}", "");
 
-  // Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub { ... })
-  // \Gscale@div{\cs}{\dima}{\dimb} : \cs = \dima / \dimb
-  DefMacro!("\\Gscale@div{}{}{}", "");
+  // Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub {
+  //   my $n = $num->valueOf; my $d = $denom->valueOf;
+  //   DefMacro($cs, Tokens(Explode(($n == 0 ? 1 : $n / $d)))); });
+  // \Gscale@div{\cs}{\dima}{\dimb} : \cs = \dima / \dimb.
+  // Port matches the multido_sty \multido@step@d pattern (DefToken {Dimension}
+  // arg + runtime DefMacro! install). Perl's `$n / $d` is a Perl scalar
+  // division so we cast to f64; mirror the "0 divisor → 1" guard.
+  DefPrimitive!("\\Gscale@div DefToken {Dimension} {Dimension}",
+    sub[(cs, num, denom)] {
+    let n = num.value_of() as f64;
+    let d = denom.value_of() as f64;
+    let ratio = if n == 0.0 { 1.0 } else { n / d };
+    DefMacro!(cs, None, Tokens!(Explode!(format!("{ratio}"))));
+  });
 
   // Perl: \set@color defined elsewhere but referenced by graphics
   // Provide a no-op fallback if not already defined
