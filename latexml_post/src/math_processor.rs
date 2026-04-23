@@ -239,7 +239,21 @@ fn process_math_node(
     // Mark XMath IDs as reusable (it will be removed)
     doc.preremove_nodes(&[xmath.clone()]);
     // Remove XMath from the Math element
-    doc.remove_nodes(&[xmath]);
+    doc.remove_nodes(&[xmath.clone()]);
+    // XMath is now unlinked from its parent. The `xmath` local holds an
+    // Rc to libxml's _Node; letting it drop would fire xmlFreeNode on
+    // a subtree that still shares namespace / prop allocations with the
+    // enclosing Document. When xmlFreeDoc later walks the doc, it
+    // double-frees and SIGSEGVs inside xmlFreeNodeList/xmlFreeProp.
+    //
+    // Mirrors the PostDocument::drop workaround for idcache entries
+    // (document.rs:84-113). `xmlFreeDoc` remains the sole owner of the
+    // underlying libxml allocations; the per-Rc control block (~24
+    // bytes) leaks until process exit.
+    //
+    // Reproducer (cycle 236): `$X$` with ar5iv preload → SIGSEGV in
+    // PMML pass without this forget. See docs/known_crashes/README.md.
+    std::mem::forget(xmath);
   }
 
   // Remove blank text nodes from Math

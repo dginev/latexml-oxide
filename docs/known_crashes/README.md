@@ -38,17 +38,54 @@ target/release/latexmlpost_oxide --dest=/tmp/repro/out.html /tmp/repro/out.xml
 # ^ SIGSEGV every time
 ```
 
-**Next steps to investigate:**
-1. Run under `valgrind --track-origins=yes` or Miri if build supports
-   it — the teardown signature matches the documented libxml UAF
-   family (WISDOM #36-37 + wisdom_lazy_xmlnode_ref.md + the
-   replace_node / idstore / node_clone UAFs).
-2. Binary-search the XML body to find which element subtree triggers
-   the drop crash. The full 5900-line `<document>` is too big; try
-   halving iteratively after wrapping in a valid `<document>` stub.
-3. Check whether shrinking below the arena threshold (e.g. <1 MB
-   XML) makes the crash disappear — would point to `finalize()` /
-   idstore rebuild ordering.
+**Cycle 236 bisection — 4-line `.tex` minimal repro:**
+
+```tex
+\documentclass[12pt]{article}
+\begin{document}
+Hello $X$.
+\end{document}
+```
+
+Crash: `latexmlpost_oxide --dest=/tmp/min.html /tmp/min.xml` → SIGSEGV
+(exit 139), reliably.
+
+Required ingredients (all necessary):
+- `--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` during
+  the core conversion. Without ar5iv, no crash.
+- Any inline math (`$X$`, `$(0,2)$`, `${\mathbb P}^1$`, etc.) that
+  produces a real XMTok child inside XMath. `${\mathbb P}$` (single
+  XMTok, no script) crashes too; plain `hello world` with no math
+  does not.
+- The `xml:id` attribute on the XMath subtree (ar5iv sets nested
+  xml:id like `p1.m1.1`). Stripping `xml:id` from the `<XMath>`
+  wrapper makes the crash disappear. Stripping `_ID_counter__`
+  alone does NOT help.
+
+Workaround: `latexmlpost_oxide --keepXMath ...` exits cleanly — the
+PMML-conversion code path is the culprit; preserving the XMath tree
+skips it.
+
+**Perl behavior on the same minimal `.tex`:** exit 0, produces
+proper `<math id="p1.1.m1" ...><mi>X</mi></math>`. The
+`ltx_markedasmath` rewrite (TeX_Math.pool.ltxml:190 `cleanup_Math`
+afterClose hook) fires only when the XMath child set is
+XMText/XMHint/single-PUNCT/PERIOD — not for a real `XMTok role="UNKNOWN"`.
+So Perl keeps the math; the Rust crash is in the Rust-specific PMML
+path's handling of `xml:id` on the XMath/XMTok nodes.
+
+**Next steps:**
+1. Read `latexml_post/src/mathml/presentation.rs::convert_to_pmml`
+   and trace how xml:id is carried from `<XMath>` into the emitted
+   `<m:math>` tree. Likely a `fragid → xml:id` remap (see mod.rs
+   :1296-1306 which drops xml:id for XMText; presentation path may
+   be doing the opposite and creating a dangling reference).
+2. Run under `valgrind --track-origins=yes` with the 4-line repro to
+   pinpoint the UAF address. The XML is tiny (15 lines) so the trace
+   should be readable.
+3. Compare against Perl's MathML::Presentation which copies xml:id
+   onto the m:math element as `id=` — the Rust port may be doing
+   this while also freeing the source libxml Node prematurely.
 
 **Status:** not a conversion regression. Core `latexml_oxide` converts
 cleanly; only `latexmlpost_oxide` crashes. 1/512 failure rate on the

@@ -1,0 +1,23 @@
+% Minimal reproducer for the 0705.0790 crash narrowed to 4 lines of .tex.
+% Trigger: ar5iv.sty preload + any inline math — results in latexmlpost_oxide
+% SIGSEGV during PMML (Presentation MathML) conversion.
+%
+% Bisection result (cycle 236):
+%   Removing xml:id from the <XMath> subtree of the latexml-produced XML
+%   makes the crash disappear, while removing _ID_counter__ alone does NOT.
+%   => The bug is in the PMML code path's handling of <XMath>/<XMTok>
+%      descendants that carry xml:id attributes.
+%
+% Reproduction:
+%   target/release/latexml_oxide --preload=ar5iv.sty \
+%     --path=$HOME/git/ar5iv-bindings/bindings \
+%     --dest=/tmp/min.xml docs/known_crashes/min_xmath_xmlid.tex
+%   target/release/latexmlpost_oxide --dest=/tmp/min.html /tmp/min.xml
+%   # ^ SIGSEGV (exit 139) every time
+%
+% Workaround: `--keepXMath` preserves the XMath tree and skips PMML conversion,
+% exits cleanly.
+\documentclass[12pt]{article}
+\begin{document}
+Hello $X$.
+\end{document}
