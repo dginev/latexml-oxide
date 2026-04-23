@@ -592,20 +592,31 @@ impl CrossRef {
   }
 
   fn fill_in_frags(&self, doc: &PostDocument) {
-    for node in &doc.findnodes("//*[@xml:id]") {
-      // NOTE: get_attribute("xml:id") may not work in all libxml2 builds;
-      // get_property("id") is more reliable for xml: namespace attributes.
-      // TODO: Fix in rust-libxml — get_attribute should handle xml: prefix.
-      let id = node
-        .get_attribute("xml:id")
-        .or_else(|| node.get_property("id"));
-      if let Some(id) = id {
-        if let Some(entry) = self.db.lookup(&format!("ID:{}", id)) {
-          if let Some(fragid) = entry.get_string("fragid") {
-            let mut n = node.clone();
-            n.set_attribute("fragid", fragid).ok();
-          }
-        }
+    // Invert loop: iterate DB entries (~1K on arXiv:0705.0790) and look up
+    // each node via the idcache, instead of iterating every xml:id-bearing
+    // node in the DOM (60K+ on math-heavy papers, ~98% of which map to
+    // XM* descendants with no DB entry). This avoids the XPath `//*[@xml:id]`
+    // result-set clone and 60K hashmap misses per paper.
+    //
+    // Correctness: fragids are only assigned to nodes that have a DB entry;
+    // the old DOM-iteration variant early-exited on `lookup` miss for every
+    // non-DB node, so the outputs match exactly.
+    for key in self.db.get_keys() {
+      let id = match key.strip_prefix("ID:") {
+        Some(rest) => rest,
+        None => continue,
+      };
+      let entry = match self.db.lookup(key) {
+        Some(e) => e,
+        None => continue,
+      };
+      let fragid = match entry.get_string("fragid") {
+        Some(f) => f,
+        None => continue,
+      };
+      if let Some(node) = doc.find_node_by_id(id) {
+        let mut n = node.clone();
+        n.set_attribute("fragid", fragid).ok();
       }
     }
   }
