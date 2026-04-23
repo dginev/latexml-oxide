@@ -326,7 +326,8 @@ LoadDefinitions!({
   // Object names — Perl L357-360
   //======================================================================
 
-  DefMacro!("\\object{}", "#1");
+  DefConstructor!("\\object Semiverbatim",
+    "<ltx:text class='ltx_ast_objectname'>#1</ltx:text>");
   DefMacro!("\\listofobjects", "");
   DefMacro!("\\listobjectname", "List of Objects");
 
