@@ -1317,3 +1317,87 @@ See commits `8fb8bf569`, `d79d1a2e4` for concrete examples.
 **Don't over-apply:** theorem/spnewtheorem counters delegate to
 `define_new_theorem` which builds `idprefix => "Thm{name}"` itself;
 those bindings show as "deficits" in counted grep but aren't.
+
+## #47 `rust-libxml` `Node::clone` is Rc refcount bump; `_Node::drop` may call `xmlFreeNode`
+
+**Finding (cycle 236, 2026-04-23):** `latexmlpost_oxide` was SIGSEGVing
+on `$X$` plus an ar5iv preload. Root cause: the `rust-libxml`
+crate models `Node` as `Rc<RefCell<_Node>>`. When a `_Node` is dropped
+with `unlinked == true`, the `Drop` impl calls `xmlFreeNode` on the
+raw pointer. For nodes that are conceptually *doc-owned* (still
+reachable via the document tree, or still referenced by the idcache /
+objectDB) but temporarily held in a local `Node` handle, letting the
+local drop fire invokes `xmlFreeNode` on memory that `xmlFreeDoc` will
+free again at program end → UAF.
+
+**Symptom shape:** segfault at process teardown or at the drop of a
+post-processing phase's working set — not during the XML emission
+itself. The stdout XML/HTML reaches disk before the crash fires.
+
+**Fix pattern:** the `DocOwnedNode` RAII wrapper
+(`latexml_post/src/doc_owned_node.rs`) holds a `ManuallyDrop<Node>`
+that never runs the inner drop. Use it at exactly the sites where a
+`Node` handle is extracted and then dropped, but the underlying
+libxml2 allocation must remain live for the Doc to free:
+- `PostDocument::drop` idcache teardown
+- `math_processor::process_math_node` after `preremove_nodes` +
+  `remove_nodes` of the xmath subtree
+
+**What *not* to do:** scattered `mem::forget(node.clone())` ad-hoc.
+That works but masks intent and leaks the wrapper-level Rc counts on
+every call path. The RAII wrapper has one construction site, makes
+ownership explicit at the type level, and is what
+`safe_unlink`-adjacent reasoning should live under.
+
+**Upstream fix path:** expose `_Node::set_linked()` from rust-libxml so
+callers can toggle the "I own the allocation" flag without going
+through `ManuallyDrop`. Until then `DocOwnedNode` is the local
+workaround.
+
+**Related:** WISDOM #37 `Document::safe_unlink` is mandatory; this
+entry is the complement — unlinking is not always safe when the Doc
+still has the node under management.
+
+**Reproducer:** `docs/known_crashes/min_xmath_xmlid.tex` plus
+`--preload=ar5iv.sty` triggers the old crash on 5/5 runs with the
+pre-fix binary.
+
+## #48 Scan/default_handler's Perl→Rust size asymmetry demands a `<Math>`-skip
+
+**Finding (cycle 239, 2026-04-23):** `latexml_post::scan::Scan` was
+registering every XMTok/XMApp/XMRef/XMWrap/XMDual inside `<Math>` into
+the ObjectDB, making Scan dominate post-processing wall time for
+math-heavy papers (arXiv:0705.0790: 11.4 s of 17.8 s total, 65K nodes
+registered, ~98% of which have no downstream use).
+
+**Why it's a *Rust-specific* problem:** Perl LaTeXML's core does not
+emit `xml:id` on XM* nodes at all. Its `Scan::default_handler`
+short-circuits on `$id` being undef, so the inner-math tree is
+effectively skipped. The Rust port via ar5iv's `_ID_counter__` pattern
+*does* emit xml:id on every descendant (needed for XMRef idref
+resolution inside the math tree), so the literal Perl port of
+`default_handler` dutifully processes every one.
+
+**Fix shape (commit `0bc04e3eb`):** add an explicit `ltx:Math` branch
+in the dispatch that registers the outer Math element's id and then
+*returns without `scan_children`*. XMRef still resolves because
+`PostDocument::idcache` is built at parse time (not via Scan) and
+retains every xml:id. Only the ObjectDB entries for XM* descendants
+are skipped, which is correct because cross-reference / index /
+bibliography don't target math-internal ids.
+
+**Secondary cleanup in `default_handler`:** move `collect_common`
+*inside* the `if id.is_some()` — previously it ran for every node,
+built a `ScannedProps`, and discarded it on id miss. Pure perf.
+
+**When this is an intentional divergence from Perl and when not:** the
+Math handler is *structurally Rust-specific* — Perl has nothing
+to port. Note it in the code comment as a divergence, not a bug.
+The `collect_common`-guard is a literal Perl parity improvement
+(mirrors Perl Scan.pm L272-283).
+
+**Don't over-apply:** other subtrees *may* legitimately carry
+downstream-needed xml:ids (e.g. `ltx:figure`, `ltx:note`); those are
+handled by their own dispatch branches and already register properly.
+The Math skip is load-bearing specifically because XM* descendants are
+an ar5iv-preload artifact.
