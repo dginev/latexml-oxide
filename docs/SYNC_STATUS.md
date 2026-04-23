@@ -157,6 +157,26 @@ accented-letter `DefPrimitiveI(...,robust=>1)` entries (`\OE`/`\oe`/
 case-mapping-pipeline rewrite catalogued in `docs/DEF_PARITY_AUDIT.md`
 B1 — three coordinated changes are required (see B1 design).
 
+**`protected => 1` sweep (2026-04-23).** All 32 Perl occurrences audited
+(package: gensymb×5, etoolbox×7, siunitx×2, expl3.lua×6; engine:
+latex_constructs×11 — `\text{md,bf,rm,sf,tt,up,sl,it,normal,em}` family,
+math_common×2 — `\{`/`\}`, plain_constructs×1 — `\,`, TeX_Character×1 via
+`DefAccent`). Ported or structurally adapted, no code gaps. Engine
+`latex_constructs` `\textmd`/etc. and math_common `\{`/`\}` carry
+`protected => true`; `\,` carries `protected => true` at
+`plain_constructs.rs:297`. `DefAccent!` in `setup_binding_language.rs:899`
+is adapted: Rust macro-expands the accent CS to
+`\lx@applyaccent ...` (DefPrimitive) with `protected: true` on the
+gullet-level wrapper — #44 structural divergence, observationally
+equivalent under `\edef`. siunitx's `\lx@six@unitobject` is adapted
+(literal-parser dispatch, empty DefPrimitive stub). All etoolbox
+`\newrobustcmd`/`\patchcmd`/`\ifdefprotected`/`\etb@ifpattern` entries
+threaded with `protected => true` in `etoolbox_sty.rs`. gensymb
+`\degree`/`\celcius`/`\perthousand`/`\ohm`/`\micro` threaded with
+`protected => true` in `gensymb_sty.rs`. expl3 `protected` calls in
+lua-side are stubbed (expl3 scope-exit short-circuit blocks direct
+porting).
+
 **Progress (2026-04-22):** engine 52 → 14, package 232, contrib 0.
 10 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
 + MergeFont! multi-key), `d7422914c` (\lx@cases@condition DefConstructor
