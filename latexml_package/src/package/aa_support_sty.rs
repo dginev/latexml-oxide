@@ -13,7 +13,17 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
-  DeclareOption!("openbib", None);
+  // Perl aa_support.sty.ltxml L35-36: openbib injects inline CSS rendering
+  // bib blocks as display blocks. Prior Rust stub silently dropped the CSS
+  // resource — port the require_resource pattern from book_cls.rs L33-43.
+  DeclareOption!("openbib", {
+    use latexml_core::document::resource::Resource;
+    require_resource(Resource {
+      mimetype: "text/css".into(),
+      content: ".ltx_bibblock{display:block;}".into(),
+      ..Resource::default()
+    });
+  });
   DeclareOption!("cm", { RequirePackage!("textcomp"); });
   DeclareOption!("bibnumber", { RequirePackage!("natbib"); });
   DeclareOption!("bibauthoryear", { RequirePackage!("natbib"); });
