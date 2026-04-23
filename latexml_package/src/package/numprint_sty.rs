@@ -44,12 +44,18 @@ LoadDefinitions!({
   DefMacro!("\\ltx@math@numprint@@{}{}",
     "\\ltx@math@@numprint@@{#1}{#2}{\\ltx@mark@units{#1}}{\\ltx@orig@numprint[#1]{#2}}");
 
-  // Math constructors (Perl L59-76)
+  // Math constructors (Perl L59-76). Perl sets
+  //   reversion => '\numprint{#1}' / '\numprint[#1]{#2}'
+  // so that the internal CS round-trips to the user-facing `\numprint`
+  // form in `tex=` attributes. Without them, reversion would emit the
+  // private `\ltx@math@@numprint@` name — breaking any consumer that
+  // reconstructs LaTeX source from the XML (UnTeX, math export).
   DefConstructor!("\\ltx@math@@numprint@ {} {}",
     "<ltx:XMDual>\
        <ltx:XMTok meaning='#value' role='NUMBER'>#value</ltx:XMTok>\
        <ltx:XMWrap>#2</ltx:XMWrap>\
      </ltx:XMDual>",
+    reversion => "\\numprint{#1}",
     properties => sub[args] {
       let value = args.first().and_then(|a| a.as_ref())
         .map(|a| a.to_string()).unwrap_or_default();
@@ -64,6 +70,7 @@ LoadDefinitions!({
        </ltx:XMApp>\
        <ltx:XMWrap>#4</ltx:XMWrap>\
      </ltx:XMDual>",
+    reversion => "\\numprint[#1]{#2}",
     properties => sub[args] {
       let value = args.get(1).and_then(|a| a.as_ref())
         .map(|a| a.to_string()).unwrap_or_default();
