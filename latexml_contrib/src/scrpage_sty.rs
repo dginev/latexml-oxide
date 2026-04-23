@@ -4,9 +4,12 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   // Perl ar5iv-bindings/scrpage.sty.ltxml — KOMA Script page layout.
   // scrpage.sty is page-layout only; since LaTeXML targets HTML/MathML
-  // where page layout is irrelevant, all 99 macros are stubbed to
+  // where page layout is irrelevant, all 102 directives are stubbed to
   // either empty tokens, static length strings, or simple passthroughs.
-  // Generated from Perl via /tmp/gen_scrpage.pl.
+  // Generated from Perl via /tmp/gen_scrpage.pl; hand-added the three
+  // non-DefMacro directives missed by the generator
+  // (DefConditional \if@autooneside Perl L65, DefConditional \if@chapter
+  // Perl L86, Let \headmark \relax Perl L91).
   DefMacro!("\\scr@headabove@linethickness", "0pt");
   DefMacro!("\\scr@headbelow@linethickness", "0pt");
   DefMacro!("\\scr@footabove@linethickness", "0pt");
@@ -21,7 +24,10 @@ LoadDefinitions!({
   DefMacro!("\\scrplain@footbelow@linelength", "0pt");
   DefMacro!("\\KOMAScript", "\\textsf{KOMA Script}");
   DefMacro!("\\hfline@adjust", "1");
+  DefConditional!("\\if@autooneside");
   DefMacro!("\\scr@nouppercase", "");
+  DefConditional!("\\if@chapter");
+  Let!("\\headmark", "\\relax");
   DefMacro!("\\pagemark", "\\thepage");
   DefMacro!("\\defpagestyle OptionalMatch:* {}{}{}", "");
   DefMacro!("\\@defpagestyle[]{}{}{}", "");
