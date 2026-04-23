@@ -98,8 +98,8 @@ fn current_dump_locator() -> crate::common::locator::Locator {
       source,
       from_line: lineno,
       to_line: lineno,
-      from_column: 0,
-      to_column: 0,
+      from_column: 1,
+      to_column: 1,
     }
   } else {
     crate::common::locator::Locator::default()

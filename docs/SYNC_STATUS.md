@@ -185,6 +185,13 @@ Queued for future work (large-scope commits): pstricks_support
 refactor fdc8bf91 (2100 lines moved into new support file),
 `inline_math` → `math` systemic rename 2b1ff6df (7 files), color
 variables for inline styles c2370ac3 (post-processing + XSLT).
+Follow-up (cycle 243): Locator 1-indexed columns #2671 synced —
+`dump_reader::current_dump_locator` now uses `from_column=1,
+to_column=1` (was `0,0`) to match Perl `LoadFormat` locator; Mouth
+already emitted `col+1` since before. Verified already-synced:
+Relation ParameterType #2778 (`base_parameter_types.rs:148`), Dumper
+spec double-escape #2753 (Rust uses url-encode not backslash-escape,
+bug does not apply).
 
 **`protected => 1` sweep (2026-04-23).** All 32 Perl occurrences audited
 (package: gensymb×5, etoolbox×7, siunitx×2, expl3.lua×6; engine:
