@@ -873,6 +873,21 @@ LoadDefinitions!({
   DefMacro!("\\LaTeXMLfullversion",
     "\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)");
 
+  // Perl latexml.sty.ltxml L227-230: \lxRef{label}{text} — like hyperref's
+  // \hyperref but straightforward. Emits <ltx:ref labelref='label'>text</ref>
+  // with enter_horizontal so a bare \lxRef between paragraphs doesn't
+  // leak out of <ltx:p> (same mode-leak class as hyperref \url cycle 87).
+  // CleanLabel normalizes the label for the labelref attribute.
+  DefConstructor!("\\lxRef Semiverbatim {}",
+    "<ltx:ref labelref='#label'>#2</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      unpack_opt_ref!(args => label_opt);
+      let label = label_opt.as_ref().unwrap().to_string();
+      Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
+    }
+  );
+
   // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
   // document's xml:id via a plain TeX `\def` of the internal
   // \thedocument@ID command that \begin{document}'s constructor
