@@ -110,6 +110,14 @@ LoadDefinitions!({
   DefKeyVal!("BiblatexAuthor", "familyi", "");
 
   // Perl L270+ \name / \field / \list / etc. — stubs.
+  // DP-audit kind flip on `\field` / `\strng` (Perl DefPrimitive → Rust
+  // DefMacro) is observational: Perl bodies stash `{field → value}` into
+  // the `biblatex_entry` state hash, which is consumed at L134 to emit
+  // `<ltx:bibitem>`. Rust doesn't port the entry-assembly pipeline
+  // (bib post-processing handled by bibtex path), so the stub-empty
+  // DefMacro is semantically equivalent to a no-op DefPrimitive —
+  // WISDOM #44 (gullet-sub↔stomach-imperative); elevate to DefPrimitive
+  // only if a downstream consumer of `biblatex_entry` is ported.
   DefMacro!("\\name{}{}{}", "", locked => true);
   DefMacro!("\\field{}{}", "", locked => true);
   DefMacro!("\\list{}{}{}", "", locked => true);

@@ -1,2 +1,4 @@
-
-# Summary (contrib): 80 pairs scanned, 0 kind mismatches, 7 missing rust files
+biblatex_sty.rs:114	field	perl=DefPrimitive(L355)	rust=DefMacro
+biblatex_sty.rs:116	strng	perl=DefPrimitive(L360)	rust=DefMacro
+catchfile_sty.rs:18	CatchFileDef	perl=DefMacro(L12)	rust=DefPrimitive
+catchfile_sty.rs:19	CatchFileEdef	perl=DefMacro(L17)	rust=DefPrimitive

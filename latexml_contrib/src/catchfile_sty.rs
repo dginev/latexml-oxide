@@ -10,6 +10,13 @@ LoadDefinitions!({
   // def_macro(target, contents) inside the DefPrimitive closure, which
   // is awkward because the file path is typically runtime-unavailable
   // in test fixtures.
+  //
+  // DP-audit kind flip (Perl DefMacro → Rust DefPrimitive) is a
+  // deliberate structural adaptation: a no-op stub is more naturally
+  // expressed as DefPrimitive-None than as DefMacro-empty-body because
+  // the Perl body is a closure (not a template expansion). WISDOM #44
+  // in reverse — gullet-level no-op vs stomach-level no-op; both
+  // observationally equivalent when the body is inert.
   Warn!(
     "missing_file",
     "catchfile.sty",
