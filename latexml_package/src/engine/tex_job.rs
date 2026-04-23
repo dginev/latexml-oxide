@@ -119,7 +119,19 @@ LoadDefinitions!({
     }
     result = Tokens!(result, T_BEGIN!(), class_tks, T_END!());
 
-    // After class loads, try each option as a package (Perl \compat@loadpackages)
+    // After class loads, try each option as a package (Perl \compat@loadpackages
+    // in latex_constructs.pool.ltxml:137-154).
+    //
+    // Perl path: `if (FindFile($option, type=>'sty')) { RequirePackage($option); }`.
+    // Perl's FindFile internally consults FindFile_fallback, which strips
+    // version suffixes (aaspp4 → aaspp, icml2024 → icml, etc.). We mirror that
+    // here by calling `find_file(opt.sty)` directly, and falling back to
+    // `find_file_fallback(opt, "sty")` when the raw name doesn't resolve.
+    // Previously we wrapped this in TeX-level `\IfFileExists{opt.sty}{…}{}`,
+    // which only checks the raw filesystem via kpsewhich — no fallback, so
+    // `\documentstyle[aaspp4]{article}` never loaded aaspp.sty.ltxml and left
+    // \affil/\altaffilmark/… undefined across 49 astronomy papers in the 10k
+    // sandbox (see docs/SANDBOX_TRIAGE.md Class A).
     if let Some(opts) = options_opt {
       let opts_str = opts.to_string();
       for opt in opts_str.split(',') {
@@ -131,11 +143,19 @@ LoadDefinitions!({
           || opt == "preprint" || opt == "tighten" || opt == "manuscript" {
           continue;
         }
+        let sty_name = format!("{opt}.sty");
+        let has_direct = latexml_core::binding::content::find_file(
+          &sty_name, None).is_some();
+        let has_fallback = if has_direct {
+          false
+        } else {
+          latexml_core::binding::content::find_file_fallback(opt, "sty").is_some()
+        };
+        if !has_direct && !has_fallback {
+          continue;
+        }
         result = Tokens!(result,
-          T_CS!("\\IfFileExists"),
-          T_BEGIN!(), Explode!(format!("{opt}.sty")), T_END!(),
-          T_BEGIN!(), T_CS!("\\RequirePackage"), T_BEGIN!(), Explode!(opt), T_END!(), T_END!(),
-          T_BEGIN!(), T_END!()
+          T_CS!("\\RequirePackage"), T_BEGIN!(), Explode!(opt), T_END!()
         );
       }
     }

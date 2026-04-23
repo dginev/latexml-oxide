@@ -1520,7 +1520,7 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
 /// Perl Package.pm L2141-2210: FindFile_fallback
 /// Strip version/arxiv suffixes from package names to find existing bindings.
 /// Returns the fallback filename (with extension) if found.
-fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
+pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   use regex::Regex;
   // Suffixes with separator (Perl @find_fallback_suffixes)
   let suffix_rx = Regex::new(
