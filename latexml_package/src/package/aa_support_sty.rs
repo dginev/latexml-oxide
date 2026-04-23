@@ -213,6 +213,16 @@ LoadDefinitions!({
   DefMacro!("\\vec{}", "\\ensuremath{\\mathbf{#1}}");
   DefMacro!("\\tens{}", "\\ensuremath{\\mathsf{#1}}");
 
+  // Perl aa_support.sty.ltxml L241/L243: expose the internal \@vec and
+  // \@tens DefMath entries that Perl's \vec / \tens would otherwise
+  // forward to (`\vec → \ensuremath{\@vec{#1}}`). Rust short-circuits via
+  // `\mathbf` / `\mathsf` above, but author code that writes `\@vec{}`
+  // or `\@tens{}` directly (or third-party bindings that Let-alias to
+  // them) hit undefined-CS without these. Add as additive DefMaths; the
+  // `\vec`/`\tens` entry points above keep their current output shape.
+  DefMath!("\\@vec{}",  "#1",            role => "ID", font => { forcebold => true });
+  DefMath!("\\@tens{}", "\\mathsf{#1}",  role => "ID");
+
   // \ion{symbol}{ionization} — Perl L247
   DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}");
 
