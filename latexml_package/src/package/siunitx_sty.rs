@@ -1886,10 +1886,12 @@ LoadDefinitions!({
   DefMath!("\\SIUnitSymbolMicro", None, "\u{00B5}");
 
   //======================================================================
-  // \lx@unit constructor
+  // \lx@unit constructor — Perl siunitx.sty.ltxml L1009: `requireMath => 1`
+  // forces the wrapper into math mode when invoked in text context, so the
+  // inner XMWrap lands inside an <ltx:Math> subtree as Perl expects.
   DefConstructor!("\\lx@unit{}{}",
     "<ltx:XMWrap role='ID' meaning='#1' class='ltx_unit'>#2</ltx:XMWrap>",
-    reversion => "#2");
+    require_math => true, reversion => "#2");
 
   //======================================================================
   // Arc overlays
