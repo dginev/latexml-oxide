@@ -5,7 +5,6 @@ amsmath_sty.rs:1187	aligned	perl=DefMacro(L614)	rust=DefPrimitive
 amsmath_sty.rs:1201	alignedat	perl=DefMacro(L617)	rust=DefPrimitive
 amsmath_sty.rs:387	hdotsfor	perl=DefMacro(L844)	rust=DefPrimitive
 amsmath_sty.rs:1399	cfrac	perl=DefMacro(L1102)	rust=DefConstructor
-amsppt_sty.rs:113	specialhead	perl=DefConstructor(L87)	rust=DefMacro
 amsppt_sty.rs:113	specialhead	perl=DefConstructor(L112)	rust=DefMacro
 amsppt_sty.rs:83	head	perl=DefConstructor(L119)	rust=DefMacro
 amsppt_sty.rs:115	subhead	perl=DefConstructor(L126)	rust=DefMacro
@@ -33,7 +32,6 @@ babel_support_sty.rs:100	guilsinglleft	perl=DefPrimitiveI(L39)	rust=DefMacro
 babel_support_sty.rs:101	guilsinglright	perl=DefPrimitiveI(L40)	rust=DefMacro
 babel_support_sty.rs:102	guillemotleft	perl=DefPrimitiveI(L41)	rust=DefMacro
 babel_support_sty.rs:103	guillemotright	perl=DefPrimitiveI(L42)	rust=DefMacro
-caption_sty.rs:47	captionsetup	perl=DefMacro(L62)	rust=DefPrimitive
 colordvi_sty.rs:14	DefineNamedColor	perl=DefMacro(L20)	rust=DefPrimitive
 dcolumn_sty.rs:56	lx@unactivate	perl=DefMacro(L30)	rust=DefPrimitive
 deluxetable_sty.rs:36	set@deluxetable@template	perl=DefMacro(L40)	rust=DefPrimitive
@@ -56,8 +54,6 @@ llncs_cls.rs:163	bbbs	perl=DefPrimitiveI(L206)	rust=DefConstructor
 llncs_cls.rs:164	bbbt	perl=DefPrimitiveI(L207)	rust=DefConstructor
 llncs_cls.rs:165	bbbz	perl=DefPrimitiveI(L208)	rust=DefConstructor
 makecell_sty.rs:17	lx@makecell@head	perl=DefMacroI(L24)	rust=DefPrimitive
-marvosym_sty.rs:10	fax	perl=DefMacro(L29)	rust=DefPrimitive
-marvosym_sty.rs:327	StrikingThrough	perl=DefMacro(L302)	rust=DefPrimitive
 mathtools_sty.rs:106	adjustlimits	perl=DefConstructor(L180)	rust=DefMacro
 mathtools_sty.rs:962	newgathered	perl=DefMacro(L817)	rust=DefPrimitive
 mn2e_support_sty.rs:129	mn@boldsymbol	perl=DefConstructor(L66)	rust=DefMacro
@@ -112,9 +108,9 @@ physics_sty.rs:1303	antidiagonalmatrix	perl=DefMacro(L655)	rust=DefPrimitive
 physics_sty.rs:1326	lx@physics@mat	perl=DefMacro(L677)	rust=DefPrimitive
 psfrag_sty.rs:37	psfragscanon	perl=DefConstructor(L57)	rust=DefPrimitive
 psfrag_sty.rs:40	psfragscanoff	perl=DefConstructor(L61)	rust=DefPrimitive
-pspicture_sty.rs:13	Line	perl=DefConstructor(L18)	rust=DefMacro
-pspicture_sty.rs:14	Vector	perl=DefConstructor(L22)	rust=DefMacro
-pspicture_sty.rs:15	Curve	perl=DefConstructor(L26)	rust=DefMacro
+pspicture_sty.rs:18	Line	perl=DefConstructor(L18)	rust=DefMacro
+pspicture_sty.rs:19	Vector	perl=DefConstructor(L22)	rust=DefMacro
+pspicture_sty.rs:20	Curve	perl=DefConstructor(L26)	rust=DefMacro
 pst_node_sty.rs:27	rnode	perl=DefConstructor(L168)	rust=DefMacro
 pst_node_sty.rs:29	pnode	perl=DefConstructor(L186)	rust=DefMacro
 pstricks_support_sty.rs:22	psset	perl=DefConstructor(L622)	rust=DefMacro
@@ -144,6 +140,7 @@ svmult_cls.rs:76	bbbr	perl=DefPrimitiveI(L77)	rust=DefConstructor
 svmult_cls.rs:77	bbbs	perl=DefPrimitiveI(L78)	rust=DefConstructor
 svmult_cls.rs:78	bbbt	perl=DefPrimitiveI(L79)	rust=DefConstructor
 svmult_cls.rs:79	bbbz	perl=DefPrimitiveI(L80)	rust=DefConstructor
+texvc_sty.rs:94	varcoppa	perl=DefMacroI(L180)	rust=DefMath
 texvc_sty.rs:50	darr	perl=DefMacroI(L122)	rust=DefMath
 texvc_sty.rs:56	Darr	perl=DefMacroI(L124)	rust=DefMath
 texvc_sty.rs:51	uarr	perl=DefMacroI(L127)	rust=DefMath
@@ -173,10 +170,8 @@ texvc_sty.rs:44	sdot	perl=DefMacroI(L173)	rust=DefMath
 texvc_sty.rs:45	sub	perl=DefMacroI(L176)	rust=DefMath
 texvc_sty.rs:47	sube	perl=DefMacroI(L177)	rust=DefMath
 texvc_sty.rs:46	supe	perl=DefMacroI(L178)	rust=DefMath
-texvc_sty.rs:94	varcoppa	perl=DefMacroI(L180)	rust=DefMath
 titlesec_sty.rs:38	lx@titleformat@star	perl=DefMacro(L30)	rust=DefPrimitive
 titlesec_sty.rs:57	lx@titleformat	perl=DefMacro(L42)	rust=DefPrimitive
-wasysym_sty.rs:100	varhexstar	perl=DefMacroI(L108)	rust=DefPrimitive
 xcolor_sty.rs:604	xglobal	perl=DefMacro(L388)	rust=DefPrimitive
 xcolor_sty.rs:648	providecolor	perl=DefMacro(L418)	rust=DefPrimitive
 xspace_sty.rs:14	xspace	perl=DefMacro(L29)	rust=DefPrimitive

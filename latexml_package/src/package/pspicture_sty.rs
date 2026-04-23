@@ -10,6 +10,11 @@ LoadDefinitions!({
   // Until those picture helpers land, at least consume the Pair argument
   // so author code like `\Line(10,20)` doesn't leak "(10,20)" into the
   // surrounding text after expansion.
+  //
+  // DP-audit kind flip (DefConstructor → DefMacro ×3) is the Pair/picture
+  // cluster blocked on missing picProperties/picScale helpers — WISDOM #41
+  // (same pattern as latex_constructs `\line`/`\vector`/`\oval` engine
+  // entries). Kind-flip remains contingent on porting the helpers first.
   DefMacro!("\\Line Pair", "");
   DefMacro!("\\Vector Pair", "");
   DefMacro!("\\Curve Pair {}", "");

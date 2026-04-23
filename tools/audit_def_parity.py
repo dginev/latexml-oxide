@@ -205,6 +205,19 @@ def pair_files(perl_root: Path, rust_roots, rel_filter=None):
 def audit_pair(name: str, perl_file: Path, rust_file: Path):
   perl_defs = scan_perl(perl_file)
   rust_defs = scan_rust(rust_file)
+  # TeX semantics: last definition wins. If a CS appears multiple times
+  # on either side with different kinds (e.g. Perl `DefMacro('\fax', ...)`
+  # immediately overridden by `DefPrimitive('\fax', ...)` — the
+  # `\lx@nounicode` fallback pattern in marvosym), the audit must compare
+  # the final kind. Otherwise the tool flags every such override as a
+  # false-positive mismatch.
+  def last_wins(defs):
+    last = {}
+    for cs, kind, lineno in defs:
+      last[cs] = (kind, lineno)
+    return [(cs, k, ln) for cs, (k, ln) in last.items()]
+  perl_defs = last_wins(perl_defs)
+  rust_defs = last_wins(rust_defs)
   rust_map = {cs: (kind, lineno) for (cs, kind, lineno) in rust_defs}
   mismatches = []
   missing = []
