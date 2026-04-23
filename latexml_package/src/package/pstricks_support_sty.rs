@@ -77,8 +77,15 @@ LoadDefinitions!({
 
   // Custom object and clip — Perl L1000-1057
   DefMacro!("\\pscustom[]", "");
-  DefMacro!("\\psclip[]", "");
-  DefMacro!("\\endpsclip", "");
+  // Perl pstricks_support.sty.ltxml L996:
+  //   DefEnvironment('{psclip} {}',
+  //     '<ltx:clip> <ltx:clippath> #1 </ltx:clippath> #body </ltx:clip>');
+  // Prior Rust stubbed both \psclip and \endpsclip to empty DefMacro,
+  // losing the <ltx:clip>/<ltx:clippath> wrapping structure entirely.
+  // Port as DefEnvironment matching Perl's signature and template.
+  // (ltx:clip + ltx:clippath are declared in picture.rnc schema.)
+  DefEnvironment!("{psclip}{}",
+    "<ltx:clip><ltx:clippath>#1</ltx:clippath>#body</ltx:clip>");
 
   // Arrow tips
   DefMacro!("\\psoverlay{}", "");
