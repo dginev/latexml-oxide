@@ -1,6 +1,25 @@
 # Known Rust-side crashes reproducible with small/medium .tex inputs
 
-## 0705.0790 — `latexmlpost_oxide` SIGSEGV (cycle 236, 2026-04-23)
+## RESOLVED: 0705.0790 — SIGSEGV **fixed in cycle 236** (commit `18c9640ee`, RAII wrapper in `9a5aa401c`)
+
+**Resolution:** `DocOwnedNode` RAII wrapper (`latexml_post/src/doc_owned_node.rs`)
+suppresses the `_Node::drop` → `xmlFreeNode` path for unlinked-but-doc-owned
+nodes. Applied at two call sites: `PostDocument::drop` idcache teardown and
+`math_processor::process_math_node` when detaching the xmath subtree.
+Scan/crossref perf wins followed in cycles 239/241 (`0bc04e3eb`, `22adfc355`).
+
+**Post-fix verification:**
+- 3/3 minimal `$X$`+ar5iv repros exit cleanly.
+- arXiv:0705.0790 cortex_worker --standalone: 6.88s (was >60s abort).
+- 512-paper sandbox slice: 512/512 OK (no timeouts).
+- 9/9 latexml_post unit tests pass.
+
+The original investigation notes are retained below as a reproducer
+template for any future UAF that surfaces with similar drop-order symptoms.
+
+---
+
+## 0705.0790 — `latexmlpost_oxide` SIGSEGV (cycle 236, 2026-04-23) — HISTORICAL
 
 **Paper:** hep-th supergravity, 315 KB .tex, ~5900 line `<document>` XML
 after conversion.
