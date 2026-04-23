@@ -6776,8 +6776,10 @@ LoadDefinitions!({
   AssignValue!("CITE_YY_SEPARATOR", T_OTHER!(","));
   AssignValue!("CITE_NOTE_SEPARATOR", T_OTHER!(","));
 
+  // Perl latex_constructs.pool.ltxml L4239-4241: DefConstructor('\@@cite []{}', ...,
+  //   alias => '\cite', mode => 'restricted_horizontal', enterHorizontal => 1)
   DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
-    mode => "text");
+    alias => "\\cite", mode => "text", enter_horizontal => true);
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
