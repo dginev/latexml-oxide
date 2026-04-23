@@ -8,6 +8,14 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsfonts");
   RequirePackage!("amssymb");
+  // Perl L34, L36, L37: texvc also depends on xcolor (with dvipsnames+usenames),
+  // eurosym, cancel. Without these, MediaWiki/Wikipedia documents using texvc
+  // hit undefined-CS for `\color{...}` (xcolor), `\euro` (eurosym), and
+  // `\cancel{...}` (cancel) — a real warning cascade in arxiv corpus papers
+  // that consume MediaWiki-flavored math.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "usenames".to_string()]);
+  RequirePackage!("eurosym");
+  RequirePackage!("cancel");
 
   // Math operators (Perl L39-55)
   DefMath!("\\sgn", None, "sgn", role => "OPFUNCTION", meaning => "sign");
