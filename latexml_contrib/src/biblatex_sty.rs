@@ -114,8 +114,15 @@ LoadDefinitions!({
   DefMacro!("\\field{}{}", "", locked => true);
   DefMacro!("\\list{}{}{}", "", locked => true);
   DefMacro!("\\strng{}{}", "", locked => true);
-  DefMacro!("\\true", "", locked => true);
-  DefMacro!("\\false", "", locked => true);
+  // Perl ar5iv-bindings/biblatex.sty.ltxml L641-645: define `\blx@bbl@booltrue`
+  // and `\blx@bbl@boolfalse` as internal no-ops, then AtBeginDocument only
+  // let `\true` / `\false` to them if the caller hasn't already defined
+  // those names (document 1811.01740 conflicts with unconditional binding).
+  // Prior Rust port unconditionally bound `\true` / `\false` at load time,
+  // clobbering any preamble-level redefinition from another package.
+  DefMacro!("\\blx@bbl@booltrue{}",  "\\relax", locked => true);
+  DefMacro!("\\blx@bbl@boolfalse{}", "\\relax", locked => true);
+  RawTeX!(r"\AtBeginDocument{\@ifundefined{true}{\let\true\blx@bbl@booltrue}{}\@ifundefined{false}{\let\false\blx@bbl@boolfalse}{}}");
   DefMacro!("\\keyw{}", "", locked => true);
   DefMacro!("\\range{}{}", "", locked => true);
   DefMacro!("\\lbibitem[]{}{}", "", locked => true);
