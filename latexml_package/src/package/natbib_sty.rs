@@ -36,7 +36,15 @@ fn set_citation_style(pairs: &[(&str, &str)]) {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(",")), None);
       },
       _ => {
+        // Perl natbib.sty.ltxml #2633 (8960af9a, 2025-08-27 "Tone down unknown
+        // citation style to Info"): unknown style falls back to authoryear
+        // and emits Info (downgraded from Warn).
         assign_value("CITE_STYLE", arena::pin("authoryear"), None);
+        Info!(
+          "unexpected",
+          *key,
+          &s!("Unexpected Citation Style keyword '{}' using authoryear", key)
+        );
       },
     }
   }
