@@ -842,6 +842,21 @@ LoadDefinitions!({
     }
   );
 
+  // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
+  // document's xml:id via a plain TeX `\def` of the internal
+  // \thedocument@ID command that \begin{document}'s constructor
+  // consults for its `id` property.
+  DefMacro!("\\lxDocumentID{}", "\\def\\thedocument@ID{#1}");
+
+  // Perl latexml.sty.ltxml L148: \LXMID{id}{math} associates an
+  // identifier with the given math expression. Thin wrapper around
+  // the internal \lx@xmarg constructor already emitted elsewhere.
+  DefMacro!("\\LXMID{}{}", "\\lx@xmarg{#1}{#2}");
+
+  // Perl latexml.sty.ltxml L153: \LXMRef{id} refers to the math
+  // expression associated with id. Thin wrapper around \lx@xmref.
+  DefMacro!("\\LXMRef{}", "\\lx@xmref{#1}");
+
   // Perl latexml.sty L109-116: acronym shortcuts. Prior Rust stopped at
   // \XML / \SGML / \HTML — the remaining \XHTML / \XSLT / \CSS / \MathML
   // / \OpenMath were missing, so documents using them hit undefined-CS
