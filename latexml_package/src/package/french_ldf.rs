@@ -88,8 +88,17 @@ LoadDefinitions!({
   DefMacro!("\\at", "@");
   DefMacro!("\\boi", "\\textbackslash");
 
-  // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml L30)
-  DefMacro!("\\nombre{}", "\\numprint{#1}");
+  // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml
+  // L29-30 is:
+  //   Let('\ltx@orig@nombre', '\nombre');
+  //   DefMacro('\nombre{}',
+  //     '\@ifpackageloaded{numprint}{\numprint{#1}}{\ltx@orig@nombre{#1}}');
+  //
+  // Rust skips the raw frenchb.ldf load, so there is no original \nombre
+  // to fall back to. If numprint isn't loaded we pass the argument
+  // through as-is (preserving Perl's numprint branch, falling back to
+  // a reasonable identity rather than an undefined-CS).
+  DefMacro!("\\nombre{}", "\\@ifpackageloaded{numprint}{\\numprint{#1}}{#1}");
 
   // French active-punctuation dispatch primitives for :;!? (frenchb.ldf's
   // \extrasfrench inserts a thin space before these chars). The catcode
