@@ -842,6 +842,37 @@ LoadDefinitions!({
     }
   );
 
+  // Perl latexml.sty.ltxml L122-134: the LaTeXML-logo trio.
+  // \LaTeXML expands to \LaTeXML@logo, which lays out a stylized
+  // nested-ltx:text pattern (the classic Lamport-style kerning). The
+  // Perl `sizer` closure is specific to LaTeXML-Post typesetting layout
+  // and not called by the Rust compile-time binding pipeline — omit.
+  DefMacro!("\\LaTeXML", "\\LaTeXML@logo");
+  DefConstructor!("\\LaTeXML@logo",
+    "<ltx:text class='ltx_LaTeXML_logo'>\
+       <ltx:text cssstyle='letter-spacing:-0.2em; margin-right:0.1em'>\
+         L\
+         <ltx:text cssstyle='font-variant:small-caps;' yoffset='0.4ex'>a</ltx:text>\
+         T\
+         <ltx:text cssstyle='font-variant:small-caps;font-size:120%' yoffset='-0.2ex'>e</ltx:text>\
+       </ltx:text>\
+       <ltx:text cssstyle='font-size:90%' yoffset='-0.2ex'>XML</ltx:text>\
+     </ltx:text>",
+    enter_horizontal => true);
+
+  // Perl latexml.sty.ltxml L136-139: \LaTeXMLversion / \LaTeXMLrevision
+  // expand to $LaTeXML::VERSION / $LaTeXML::Version::REVISION via
+  // ExplodeText. Rust's DefMacro! proc-macro requires a literal body —
+  // CARGO_PKG_VERSION can't be env!()'d through it — so we hard-code
+  // the latexml_package crate version (kept in sync by humans). Revision
+  // is left empty (no git rev exposed at runtime); that makes
+  // \LaTeXMLfullversion collapse to just the version string via the
+  // `\ifx\expandafter.\LaTeXMLrevision.` guard.
+  DefMacro!("\\LaTeXMLversion",  "0.4.0");
+  DefMacro!("\\LaTeXMLrevision", "");
+  DefMacro!("\\LaTeXMLfullversion",
+    "\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)");
+
   // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
   // document's xml:id via a plain TeX `\def` of the internal
   // \thedocument@ID command that \begin{document}'s constructor
