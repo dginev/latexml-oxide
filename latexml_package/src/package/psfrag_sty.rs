@@ -17,9 +17,19 @@ LoadDefinitions!({
   DefPrimitive!("\\psfrag OptionalMatch:* Semiverbatim [][][][]{}", None);
   DefConstructor!("\\lx@delayed@psfrag OptionalMatch:* Semiverbatim [][][][]{}", "");
 
-  // Scan control — Perl L56-60
-  DefMacro!("\\psfragscanon", "");
-  DefMacro!("\\psfragscanoff", "");
+  // Scan control — Perl L57-64.
+  // Perl DefConstructor(...afterDigest {save_psfrag(cs); AssignValue(psfrag_scan=>0/1)});
+  // Rust implements the state toggle (psfrag_scan int). save_psfrag()
+  // would append to saved_psfragments, but the Rust \includegraphics
+  // hook doesn't consult that list yet (see the L24-28 TODO note), so
+  // skipping it is not observable. When that hook lands, extend these
+  // to also append the CS invocation to saved_psfragments.
+  DefPrimitive!("\\psfragscanon", {
+    AssignValue!("psfrag_scan" => 1i32);
+  });
+  DefPrimitive!("\\psfragscanoff", {
+    AssignValue!("psfrag_scan" => 0i32);
+  });
 
   // The Perl version hooks into \includegraphics and \epsfbox to check
   // if the image is an EPS that needs psfrag processing, and if so,
