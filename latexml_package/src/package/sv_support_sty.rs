@@ -120,6 +120,17 @@ LoadDefinitions!({
   DefMacro!("\\noteaddname", "Note added in proof");
   DefMacro!("\\notename", "Note");
 
+  // Perl sv_support.sty.ltxml L89-90: the {noteadd} env wraps body in
+  // <ltx:note name='Note added in proof'>. Perl's `properties => {name =>
+  // Digest(\noteaddname)}` digests `\noteaddname` at expansion time.
+  // Rust doesn't easily support a Digested-closure property here, so we
+  // emit the same Perl output with the name string inlined. If the
+  // document redefines \noteaddname this diverges; Perl is faithful
+  // to the live value. Acceptable simplification — no Springer test
+  // exercises noteadd env.
+  DefEnvironment!("{noteadd}",
+    "<ltx:note name='Note added in proof'>#body</ltx:note>");
+
   Let!("\\orithanks", "\\thanks");
   DefMacro!("\\runheadhook", "");
   DefMacro!("\\svlanginfo", "");
