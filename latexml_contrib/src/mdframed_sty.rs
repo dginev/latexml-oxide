@@ -20,13 +20,22 @@ LoadDefinitions!({
   DefMacro!("\\mdfdefinestyle{}{}", "");
   DefRegister!("\\mdflength" => Dimension::new(0));
   // Perl ar5iv-bindings/mdframed.sty.ltxml L31-34: wrap body in an
-  // inline-block with framed="rectangle" and framecolor from the
-  // current font. Rust port drops the framecolor properties closure —
-  // font color plumbing is available but not exposed in DefEnvironment
-  // properties closures yet — so the body renders as an
-  // unbordered-color rectangle rather than a transparent inline block.
+  // inline-block with framed="rectangle" and framecolor from the current
+  // font color (`LookupValue('font')->getColor`). The template emits
+  // `framecolor=` only when the #framecolor property is set (via the
+  // `?#framecolor(...)` guard), so an unset color correctly omits the
+  // attribute rather than emitting `framecolor=''`.
   DefEnvironment!(
     "{mdframed}[]",
-    "<ltx:inline-block framed='rectangle' _noautoclose='1'>#body</ltx:inline-block>"
+    "<ltx:inline-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-block>",
+    properties => sub[_args] {
+      let mut props = arena::SymHashMap::default();
+      if let Some(font) = latexml_core::state::lookup_font() {
+        if let Some(color) = font.get_color() {
+          props.insert("framecolor", Stored::from(color.to_attribute()));
+        }
+      }
+      Ok(props)
+    }
   );
 });
