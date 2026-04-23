@@ -1390,4 +1390,17 @@ LoadDefinitions!({
   DefMacro!("\\faYoutube[]", "\\faIcon[#1]{youtube}");
   DefMacro!("\\faYoutubeSquare[]", "\\faIcon[#1]{youtube-square}");
   DefMacro!("\\faZhihu[]", "\\faIcon[#1]{zhihu}");
+
+  // Perl fontawesome5.sty.ltxml — `Match:N` variants for icons whose names
+  // end in a digit (html5, ns8, page4, typo3, css3, draft2digital). The
+  // cycle-126 generator matched only the plain `\\faXxx[]` form, so these
+  // 6 digit-suffix icons were skipped. Perl uses `Match:<lit>` to consume
+  // a literal match after the CS (e.g. `\faHtml5` splits as `\faHtml` +
+  // `5`, the `5` being absorbed by the `Match:5` token).
+  DefMacro!("\\faHtml Match:5",         "\\faIcon[#1]{html5}");
+  DefMacro!("\\faNs Match:8",           "\\faIcon[#1]{ns8}");
+  DefMacro!("\\faPage Match:4",         "\\faIcon[#1]{page4}");
+  DefMacro!("\\faTypo Match:3",         "\\faIcon[#1]{typo3}");
+  DefMacro!("\\faDraft Match:2digital", "\\faIcon[#1]{draft2digital}");
+  DefMacro!("\\faCss Match:3 OptionalMatch:*", "\\faIcon[#1]{css3}");
 });
