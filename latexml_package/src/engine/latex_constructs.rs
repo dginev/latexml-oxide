@@ -2800,9 +2800,12 @@ LoadDefinitions!({
 
   // Use fonts (w/ special flag) to propogate emphasis as a font change,
   // but preserve it's "emph"-ness.
+  // Perl latex_constructs.pool.ltxml L401-408: mode => 'restricted_horizontal',
+  //   enterHorizontal => 1, font => { emph => 1 }, alias => '\emph', beforeDigest => {...}.
   DefConstructor!("\\emph{}", "<ltx:emph _force_font='1'>#1",
     mode => "text",
     bounded        => true,
+    enter_horizontal => true,
     font=> { emph => true },
     alias => "\\emph",
     before_digest => {
