@@ -430,5 +430,5 @@ semantically correct. A faithful port of Perl's buggy `#1` would
 silently lose note content; the Rust port deliberately diverges by
 indexing the content correctly. The sibling `elsart_support_core.sty`
 `\collab OptionalMatch:* {}` → `\author{#1}` exhibits the same
-pattern and is likewise affected; Rust `\collab` port (if any)
-should index `#2`.
+pattern; `elsart_support_core_sty.rs` L135 likewise deliberately uses
+`#2` so the author name reaches `\author` (fix cycle 172).
