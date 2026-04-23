@@ -400,9 +400,17 @@ LoadDefinitions!({
   // Redefine \includegraphics to dispatch based on bracket syntax:
   // If a second [] follows, use the old graphics.sty-style \@includegraphics,
   // otherwise use the graphicx keyval-style \@includegraphicx.
+  //
+  // Perl graphicx.sty.ltxml:50 tags this DefMacro with `scope => 'global'`
+  // so a `\usepackage{graphicx}` issued inside an enclosing group still
+  // wins over graphics.sty's \includegraphics after the group closes.
+  // Normal preamble loading is group-free so the default-local scope works
+  // the same way there, but unusual loading contexts (e.g. nested
+  // `\begingroup`) rely on the global flag. Port via `scope => Global`.
   DefMacro!(
     "\\includegraphics OptionalMatch:* []",
-    "\\@ifnextchar[{\\@includegraphics#1[#2]}{\\@includegraphicx#1[#2]}"
+    "\\@ifnextchar[{\\@includegraphics#1[#2]}{\\@includegraphicx#1[#2]}",
+    scope => Some(Scope::Global)
   );
 
   // The graphicx-style \includegraphics with keyval options.
