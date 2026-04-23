@@ -213,10 +213,21 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // Sidebar — Perl L200-202
+  // Sidebar — Perl L200-210
   DefMacro!("\\sidebarname", "Sidebar");
   DefMacro!("\\fnum@sidebar", "\\sidebarname\\nobreakspace\\thesidebar");
   DefMacro!("\\format@title@sidebar{}", "\\lx@tag{\\fnum@sidebar: }#1");
+
+  // Perl L204-210: the {sidebar} env wraps body in <ltx:sidebar>. The
+  // Perl signature is `{}{} Undigested [] {}` — title, bio, id, mark.
+  // Rust previously had no sidebar env defined so ACM papers using
+  // `\begin{sidebar}{title}...\end{sidebar}` hit undefined-env.
+  // Simplified template (Perl has the title / creator fields
+  // commented out too, so #body is the practical payload). The
+  // optional labels/id attributes resolve via LaTeXML's normal
+  // xml:id/labels machinery on DefEnvironment bodies.
+  DefEnvironment!("{sidebar}{} Undigested [] {}",
+    "<ltx:sidebar xml:id='#id'>#body</ltx:sidebar>");
 
   //======================================================================
   // Theorem styles via RawTeX
