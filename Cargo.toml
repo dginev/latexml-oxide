@@ -11,5 +11,28 @@ members = [
 resolver = "2"
 
 [profile.release]
-debug = true
+# Previously `debug = true` bundled full DWARF (locals + types) into
+# every optimized binary, which:
+#   * bloated each release exe to ~400 MB (most of which is debug
+#     sections the runtime never touches),
+#   * added minutes of codegen + linker time per build (rustc has to
+#     emit + hash type graphs; the linker has to stream .debug_* into
+#     the final object).
+# `line-tables-only` keeps enough DWARF for panic backtraces and
+# `perf record` symbolication — what we actually use debug info for
+# during local work — while dropping the expensive type/variable
+# metadata. `split-debuginfo = "unpacked"` moves those tables out of
+# the binary into sibling .dwo/.dwp files so the linker's output step
+# doesn't rewrite megabytes of debug sections on every relink.
+# Runtime performance is unaffected: debug info isn't executed.
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+# Incremental release caches per-CGU artifacts between `cargo build`
+# invocations. On a single-file edit within our workspace, the
+# majority of the ~300-crate dep graph is reused verbatim. opt-level
+# still applies to every CGU either way, so runtime performance is
+# unchanged. CI rebuilds cold with a warmed Swatinem cache and the env
+# var `CARGO_INCREMENTAL=0` in CI.yml overrides this setting for the
+# runners — so this setting only affects local iterative dev.
+incremental = true
 
