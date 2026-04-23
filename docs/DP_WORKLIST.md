@@ -40,13 +40,13 @@ Cluster B (long tail, ≤4 flags each — per-cycle triage):
 - [ ] pstricks_support_sty.rs (2) — `\psset`, `\@@@ackscale`
 - [ ] pst_node_sty.rs (2) — `\rnode`, `\pnode`
 - [ ] psfrag_sty.rs (2) — `\psfragscanon`, `\psfragscanoff`
-- [ ] xspace_sty.rs (1) — `\xspace` (already has WISDOM #44 comment; verify)
-- [ ] wasysym_sty.rs (1) — cleared by last-wins dedup; verify
-- [ ] sv_support_sty.rs (1) — `\spnewtheorem`
-- [ ] subfig_sty.rs (1) — `\newsubfloat`
+- [x] xspace_sty.rs (1) — WISDOM #44 breadcrumb at `:10` (verified cycle 232)
+- [x] wasysym_sty.rs (1) — cleared by last-wins dedup (cycle 230)
+- [x] sv_support_sty.rs (1) — WISDOM #44 breadcrumb added cycle 232
+- [x] subfig_sty.rs (1) — DP-flag note in inline comment (verified cycle 232)
 - [ ] numprint_sty.rs (1) — `\ltx@text@number`
 - [ ] multirow_sty.rs (1) — `\multirow`
-- [ ] makecell_sty.rs (1) — `\lx@makecell@head` (already has WISDOM #44; verify)
+- [x] makecell_sty.rs (1) — WISDOM #44 breadcrumb at `:7` (verified cycle 232)
 - [ ] jhep_cls.rs (1) — `\hash`
 - [ ] colordvi_sty.rs (1) — `\DefineNamedColor`
 - [ ] dcolumn_sty.rs (1) — `\lx@unactivate`

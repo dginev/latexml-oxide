@@ -172,6 +172,10 @@ LoadDefinitions!({
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
   // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
+  // DP-flag: Perl DefMacro (sub body), Rust DefPrimitive — WISDOM #44.
+  // Safe: `\spnewtheorem` is a preamble-level declaration, never observed
+  // through `\edef`/`\ifx`/`\expandafter` (verified 2026-04-23 across
+  // LaTeXML/lib + ar5iv-bindings).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
     crate::engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
