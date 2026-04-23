@@ -1,0 +1,44 @@
+#!/bin/bash
+# Run the Rust test suite (or a single -p/--test selector) against
+# ~/data/texlive2023 instead of the system /usr/local/texlive/2025.
+#
+# Purpose: reproduce the CI Ubuntu-24.04 texlive-2023 environment locally
+# so that texlive-version-sensitive tests (e.g. 50_structure::IEEE_test,
+# which depends on IEEEtran.cls packaging differences across TL releases)
+# can be validated without waiting on CI.
+#
+# Usage:
+#   tools/test_with_tl2023.sh                        # full cargo test --release --tests --workspace
+#   tools/test_with_tl2023.sh -p latexml --test 50_structure IEEE_test
+#
+# See docs/SYNC_STATUS.md §"Upstream Perl sync audit" for the CI texlive
+# evidence (texlive-binaries 2023.20230311.66589 on Ubuntu noble).
+
+set -euo pipefail
+
+TL2023_ROOT="${HOME}/data/texlive2023"
+TL2023_BIN="${TL2023_ROOT}/bin/x86_64-linux"
+
+if [ ! -x "${TL2023_BIN}/kpsewhich" ]; then
+  echo "error: TL2023 install not found at ${TL2023_BIN}" >&2
+  echo "       run install-tl with profile at ~/data/tl2023-setup/profile.txt first" >&2
+  exit 2
+fi
+
+# Front-load the TL2023 bin so kpsewhich/latex/pdflatex resolve to 2023
+# binaries; core rust-libxml / system libs unchanged.
+export PATH="${TL2023_BIN}:${PATH}"
+
+# Announce what we're using so the test output is self-documenting.
+echo "=== Running with TL2023 ==="
+kpsewhich --version | head -1
+kpsewhich IEEEtran.cls
+echo "==========================="
+echo
+
+# Regenerate the kernel dump against TL2023 before the test, otherwise
+# cargo test will use the stale dump built with TL2025.
+cd "$(dirname "$0")/.."
+./tools/make_formats.sh
+
+exec cargo test --release --tests "$@" -- --test-threads=1
