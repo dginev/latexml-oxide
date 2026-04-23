@@ -63,6 +63,7 @@ pub mod hepnames_sty;
 pub mod hepparticles_sty;
 pub mod hobby_code_tex;
 pub mod hyphenat_sty;
+pub mod ifdraft_sty;
 pub mod jpc_sty;
 pub mod kotexutf_sty;
 pub mod l3draw_sty;
@@ -180,6 +181,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("emlines", "sty", emlines_sty::load_definitions),
   ("hobby", "code.tex", hobby_code_tex::load_definitions),
   ("hyphenat", "sty", hyphenat_sty::load_definitions),
+  ("ifdraft", "sty", ifdraft_sty::load_definitions),
   ("l3draw", "sty", l3draw_sty::load_definitions),
   ("lettrine", "sty", lettrine_sty::load_definitions),
   ("libertine", "sty", libertine_sty::load_definitions),
