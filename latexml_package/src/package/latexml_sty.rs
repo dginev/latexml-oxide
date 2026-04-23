@@ -439,6 +439,29 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
+  // Perl latexml.sty.ltxml L236-238: \lxRequireResource[options]{name}
+  // adds a document resource (CSS/JS/…). Perl invocation:
+  //   RequireResource(ToString(path), ($kv ? $kv->getHash : ()))
+  // where the kv hash can carry `type` (mime-type) and `media`. Rust's
+  // require_resource takes a `Resource{name, mimetype, media, content}`;
+  // the infra lives in latexml_core::binding::content.
+  DefPrimitive!("\\lxRequireResource OptionalKeyVals {}", sub[(kv, path)] {
+    let name = path.to_string();
+    let mimetype = kv.as_ref()
+      .and_then(|k| k.get_value("type"))
+      .map(|v| v.to_string())
+      .unwrap_or_default();
+    let media = kv.as_ref()
+      .and_then(|k| k.get_value("media"))
+      .map(|v| v.to_string())
+      .unwrap_or_default();
+    latexml_core::binding::content::require_resource(
+      latexml_core::document::resource::Resource {
+        name, mimetype, media, content: String::new(),
+      });
+    Ok(Vec::new())
+  });
+
   // Perl latexml.sty.ltxml L166-167: \lxAddClass{class} adds a CSS class
   // to the current element. Rust had this CS completely missing, so
   // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
