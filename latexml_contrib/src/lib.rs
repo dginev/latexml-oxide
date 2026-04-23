@@ -87,6 +87,7 @@ pub mod needspace_sty;
 pub mod nicematrix_sty;
 pub mod oldgerm_sty;
 pub mod pb_diagram_sty;
+pub mod phyzzx_plus;
 pub mod pinlabel_sty;
 pub mod program_sty;
 pub mod pst_plot_sty;
@@ -167,6 +168,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ltluatex", "tex", ltluatex_tex::load_definitions),
   ("luatexbase", "sty", luatexbase_sty::load_definitions),
   ("needspace", "sty", needspace_sty::load_definitions),
+  ("phyzzx", "plus", phyzzx_plus::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
   ("scrpage", "sty", scrpage_sty::load_definitions),
