@@ -1334,6 +1334,23 @@ pub fn require_resource(mut resource: Resource) {
   // }
 }
 
+/// Perl: `LoadClass($name, withoptions => 1)` — load a class passing the
+/// caller's class options through to the child. Reads `class_options` from
+/// state (populated by the outer `\documentclass` invocation) and forwards
+/// those as the child's options list, matching Perl Package.pm LoadClass's
+/// `withoptions` branch.
+pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
+  let class_opts = lookup_vecdeque("class_options").unwrap_or_default();
+  let options: Vec<String> = class_opts
+    .iter()
+    .filter_map(|item| match item {
+      Stored::String(s) => Some(arena::to_string(*s)),
+      _ => None,
+    })
+    .collect();
+  load_class(name, options, after)
+}
+
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
   // Perl Package.pm LoadClass: $options{notex}=1 unless LookupValue('INCLUDE_CLASSES').
   // Defaults to NOT loading raw .cls. Only .cls.ltxml bindings are considered;
