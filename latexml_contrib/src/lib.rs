@@ -42,6 +42,7 @@ pub mod cjk_sty;
 pub mod cjkutf8_sty;
 pub mod cmcal_sty;
 pub mod commath_sty;
+pub mod crckapb_sty;
 pub mod currfile_sty;
 pub mod czjphys_cls;
 pub mod datetime2_sty;
@@ -143,6 +144,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("capt-of", "sty", capt_of_sty::load_definitions),
   ("chngpage", "sty", chngpage_sty::load_definitions),
   ("commath", "sty", commath_sty::load_definitions),
+  ("crckapb", "sty", crckapb_sty::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
