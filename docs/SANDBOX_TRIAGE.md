@@ -152,9 +152,22 @@ The local dev environment drifts from CI's apt-installed TeXLive 2023.
 `tools/test_with_tl2023.sh` runs the Rust tests under `~/data/texlive2023/`
 to reproduce CI behavior (documented in that file's commit).
 
+## Measured delta — Class A fix v2 (commits `bac419975` + `363218cbb`)
+
+Local re-triage (against the pushed binary at `363218cbb`):
+
+| Sample | ok "No obvious problems" | still conversion_error | notes |
+|---|---|---|---|
+| 22 `\affil`-undefined papers | **16 (73%)** | 6 | primary Class A targets |
+| First 100 conversion_error papers (lexical-ID order) | 1 | 99 | mostly non-astroph, Class A doesn't apply |
+
+So Class A v2 converts **16 of 22 astro-ph papers from "lots of errors" → fully clean**. The remaining 6 still have *some* errors (fewer than pre-fix, but not zero); the residual errors are non-aas macros that need per-macro or per-package work (e.g. custom `\def` sequences, one-off author macros, or secondary pkg gaps like `\topmatter`/AMS Plain-TeX).
+
+The global first-100 sample confirms that Class A was narrowly targeted at `\documentstyle[aa*]{article}` papers — most early-sandbox papers use `\documentclass{article}` directly without aastex-family options, so the fix doesn't apply. Next-class attacks should target **the error categories still dominant in the non-astroph cohort** (Class D `malformed:ltx:`, Class G missing-modern-package).
+
 ## Open tasks — checklist
 
-- [ ] Class A: aaspp4.sty → aas_support auto-load (~49 papers)
+- [x] Class A v2: `\documentstyle[opt]{class}` routes `opt` through `\RequirePackage` unconditionally — `require_package`'s internal fallback chain (binding → .ltxml → raw .sty → versioned-fallback → kpsewhich) does the resolution. 16/22 `\affil` papers cleared. Commits `bac419975`, `363218cbb`. Step 2 scaffolding (`\compat@loadpackages` primitive) landed at `8a27d2426`; step 3 (full DefConstructor rewrite) deferred as a faithfulness refactor with no paper-count delta.
 - [ ] Class B: pgfmath empty-arg `\ifdim` guard (~2 papers)
 - [ ] Class C: babel-french `\bbl@exp@aux` stub (~2 papers)
 - [ ] Class D: 45 `malformed:ltx:` triage, one-by-one
