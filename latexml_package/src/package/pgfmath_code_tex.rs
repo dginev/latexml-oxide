@@ -1287,6 +1287,23 @@ LoadDefinitions!({
   DefMacro!("\\pgfmath@calc@heightof{}", "height(\"#1\")");
   DefMacro!("\\pgfmath@calc@depthof{}", "depth(\"#1\")");
 
+  // Perl pgfmath.code.tex.ltxml L321-327: inside pgfmathparse, seven calc
+  // package CSes are Let'd to the pgfmath@calc@* internals each time the
+  // parser runs. Rust's pgfmathparse is a native function, so we can't
+  // re-bind them per-call. Register the aliases at package-load time so
+  // users who call `\real{3.14}` or `\widthof{\hbox{foo}}` outside a
+  // pgfmathparse context still resolve the CS. If calc.sty is loaded
+  // first, pgfmath intentionally shadows its copies — matching Perl's
+  // "last definition wins" runtime semantics (calc's `\real` would be
+  // replaced on the first pgfmathparse call anyway).
+  Let!("\\real",     "\\pgfmath@calc@real");
+  Let!("\\minof",    "\\pgfmath@calc@minof");
+  Let!("\\maxof",    "\\pgfmath@calc@maxof");
+  Let!("\\ratio",    "\\pgfmath@calc@ratio");
+  Let!("\\widthof",  "\\pgfmath@calc@widthof");
+  Let!("\\heightof", "\\pgfmath@calc@heightof");
+  Let!("\\depthof",  "\\pgfmath@calc@depthof");
+
   // ==================== pgfmathparse override ====================
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
