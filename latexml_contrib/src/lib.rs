@@ -55,6 +55,7 @@ pub mod emlines_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
 pub mod forest_sty;
+pub mod fontawesome_sty;
 pub mod fp_sty;
 pub mod fullname_sty;
 pub mod glyphtounicode_tex;
@@ -144,6 +145,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
+  ("fontawesome", "sty", fontawesome_sty::load_definitions),
   ("fp", "sty", fp_sty::load_definitions),
   ("fullname", "sty", fullname_sty::load_definitions),
   (
