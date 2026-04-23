@@ -175,7 +175,15 @@ LoadDefinitions!({
   // uses a dash separator.
   DefPrimitive!("\\@appendix", {
     start_appendices("section");
-    new_counter("equation", "section", None)?;
+    // Perl L248 passes `idprefix => 'E'` so appendix equations get
+    // xml:ids like `S1.E2`. Without the prefix, Rust falls back to the
+    // default (empty) and collides with body-equation ids once the
+    // document reaches its second appendix.
+    new_counter(
+      "equation",
+      "section",
+      Some(NewCounterOptions { idprefix: "E", ..Default::default() }),
+    )?;
     def_macro(
       T_CS!("\\theequation"),
       None,
