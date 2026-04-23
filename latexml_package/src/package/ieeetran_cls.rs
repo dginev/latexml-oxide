@@ -241,11 +241,14 @@ LoadDefinitions!({
     "\\@IEEEkeywords #1 \\@endIEEEkeywords");
   DefMacro!("\\endkeywords", "\\@endIEEEkeywords");
 
-  // Legacy IED list aliases
+  // Legacy IED list aliases — Perl IEEEtran.cls.ltxml L417-423
   Let!("\\labelindent", "\\IEEElabelindent");
   Let!("\\calcleftmargin", "\\IEEEcalcleftmargin");
   Let!("\\setlabelwidth", "\\IEEEsetlabelwidth");
   Let!("\\usemathlabelsep", "\\IEEEusemathlabelsep");
+  Let!("\\iedlabeljustifyc", "\\IEEEiedlabeljustifyc");
+  Let!("\\iedlabeljustifyl", "\\IEEEiedlabeljustifyl");
+  Let!("\\iedlabeljustifyr", "\\IEEEiedlabeljustifyr");
 
   // QED/proof aliases
   Let!("\\QED", "\\IEEEQED");
