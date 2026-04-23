@@ -912,7 +912,6 @@ LoadDefinitions!({
   DefMacro!("\\csname endspreadlines\\endcsname", "\\endgroup");
 
   // 4.5 — lgathered / rgathered
-  // TODO: @@lgathered/@@rgathered have complex afterDigest/afterConstruct — simplified
   DefMacro!("\\lgathered[]",
     "\\@ams@multirow@bindings{name=lgathered,vattach=#1}\\@@lgathered\\lx@begin@alignment");
   DefMacro!("\\endlgathered", "\\lx@end@alignment\\@end@gathered");
@@ -921,13 +920,22 @@ LoadDefinitions!({
     "\\@ams@multirow@bindings{name=rgathered,vattach=#1}\\@@rgathered\\lx@begin@alignment");
   DefMacro!("\\endrgathered", "\\lx@end@alignment\\@end@gathered");
 
-  // Perl: DefConstructor('\@@lgathered DigestedBody', ...)
-  // Perl: afterDigest sets MULTIROW_ALIGNMENT_RULE { default => 'left' }
-  // afterConstruct calls rearrangeAMSMultirow
+  // Perl mathtools.sty.ltxml L39-49: \@@lgathered / \@@rgathered.
+  //   afterDigest: setProperty MULTIROW_ALIGNMENT_RULE {default=>'left'/right}
+  //                and setBody(getArg(1)->unlist, undef)
+  //   afterConstruct: rearrangeAMSMultirow on lastChild.
+  // The setBody call is load-bearing for `tex=` attribute generation —
+  // Rust previously omitted it, leaving the body empty for reversion
+  // (parallels amsmath_sty multline port at L988-997). Added to match.
   DefConstructor!("\\@@lgathered DigestedBody", "#1",
     before_digest => { bgroup(); },
     after_digest => sub[whatsit] {
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("left"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default()); // sentinel popped by set_body
+        whatsit.set_body(body);
+      }
     },
     reversion => "\\begin{lgathered}#1\\end{lgathered}",
     after_construct => sub[document, whatsit] {
@@ -940,6 +948,11 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     after_digest => sub[whatsit] {
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("right"));
+      if let Some(arg) = whatsit.get_arg(1) {
+        let mut body = arg.unlist();
+        body.push(Digested::default()); // sentinel popped by set_body
+        whatsit.set_body(body);
+      }
     },
     reversion => "\\begin{rgathered}#1\\end{rgathered}",
     after_construct => sub[document, whatsit] {
