@@ -351,6 +351,13 @@ LoadDefinitions!({
     }
   );
 
+  // Perl aas_support.sty.ltxml L499: \aas@fstack{sym} — user-facing wrapper
+  // around \aas@@fstack that enforces math mode via \ensuremath. This is the
+  // CS other aastex-family bindings invoke when composing astronomical-unit
+  // stacks; the Rust port had only the internal \aas@@fstack DefConstructor,
+  // so direct consumers of \aas@fstack hit undefined-CS.
+  DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");
+
   DefMacro!("\\fd", "\\ensuremath{\\@fd}");
   DefMacro!("\\fh", "\\ensuremath{\\@fh}");
   DefMacro!("\\fm", "\\ensuremath{\\@fm}");
