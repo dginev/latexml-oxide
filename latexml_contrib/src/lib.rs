@@ -31,6 +31,7 @@ pub mod arxbj_cls;
 pub mod arydshln_sty;
 pub mod atableau_sty;
 pub mod axessibility_sty;
+pub mod biblatex_sty;
 pub mod breqn_sty;
 pub mod bussproofs_sty;
 pub mod capt_of_sty;
@@ -181,6 +182,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tipa", "sty", tipa_sty::load_definitions),
   ("tlp", "cls", tlp_cls::load_definitions),
   ("axessibility", "sty", axessibility_sty::load_definitions),
+  ("biblatex", "sty", biblatex_sty::load_definitions),
   ("breqn", "sty", breqn_sty::load_definitions),
   ("catchfile", "sty", catchfile_sty::load_definitions),
   ("changepage", "sty", changepage_sty::load_definitions),
