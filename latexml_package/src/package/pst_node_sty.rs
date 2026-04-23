@@ -67,6 +67,17 @@ LoadDefinitions!({
   DefMacro!("\\Mput OptionalMatch:* {}", "#1");
   DefMacro!("\\Rput OptionalMatch:* []{}{}", "#3");
 
+  // Perl pst-node.sty.ltxml L504-538: \Aput / \Bput — capitalized node-label
+  // macros. Perl signature is `OptionalMatch:* []` and the full path forwards
+  // through \Aput@start + \put@end label-put infrastructure (computeLabelPos,
+  // finishLabelPut, _psActiveTransform). Rust lacks that graphics pipeline —
+  // pst-node is stubbed DVI-only. Match the Perl signature exactly and
+  // expand to empty; any label written after (`\Aput[sep]{text}`) is
+  // emitted by normal expansion, matching the drop-args-pass-through
+  // behavior of sibling stubs \aput/\bput.
+  DefMacro!("\\Aput OptionalMatch:* []", "");
+  DefMacro!("\\Bput OptionalMatch:* []", "");
+
   // Box macros — Perl L460-520
   DefMacro!("\\psmatrix", "");
   DefMacro!("\\endpsmatrix", "");
