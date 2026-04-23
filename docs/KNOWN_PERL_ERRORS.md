@@ -390,3 +390,45 @@ probably `#1`.
 `#2`-is-empty behavior — both lose the user label. A faithful "fix
 Perl's typo" port using `#1` would be a deliberate divergence from
 upstream.
+
+---
+
+## 16. `aipproc.cls.ltxml` `\tablenote` body references `#1` (star flag) instead of `#2` (content)
+
+**Perl source:** `LaTeXML/Package/aipproc.cls.ltxml` L101
+
+```perl
+DefMacro('\tablenote OptionalMatch:* {}', '\footnote{#1}');
+```
+
+**Root cause:** The signature `OptionalMatch:* {}` occupies two
+positional slots — `#1` is the star flag (literal `*` or undef),
+`#2` is the required `{}` content. The body expands `\footnote{#1}`
+which passes the *star marker* (or empty) to `\footnote`, silently
+dropping the user's note content. The same file on L100 uses
+`\tablehead{}{}{}{}` → `\multicolumn{#1}{#2}{\parbox{#3}{#4}}` where
+the #N indexing is correct — so this is a localized typo.
+
+**Confirming convention:** other ltxml files using the same signature
+index content at `#2`. For example, `physics.sty.ltxml` L356:
+
+```perl
+DefMacro('\qqtext OptionalMatch:* {}', '\mbox{\ifx.#1.\quad\fi#2\quad}');
+```
+
+Here `#1` is explicitly tested as the star flag (`\ifx.#1.`) and `#2`
+is the content, proving the star occupies slot 1.
+
+**Impact:** `\tablenote{note}` in aipproc conference papers expands to
+`\footnote{}` (empty footnote) instead of `\footnote{note}`. The note
+body is lost; only the footnote marker remains.
+
+**Perl status:** Still present. Unfixed upstream.
+
+**Rust behavior:** `aipproc_cls.rs` L115 uses `\footnote{#2}` —
+semantically correct. A faithful port of Perl's buggy `#1` would
+silently lose note content; the Rust port deliberately diverges by
+indexing the content correctly. The sibling `elsart_support_core.sty`
+`\collab OptionalMatch:* {}` → `\author{#1}` exhibits the same
+pattern and is likewise affected; Rust `\collab` port (if any)
+should index `#2`.
