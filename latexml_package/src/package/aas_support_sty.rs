@@ -257,6 +257,32 @@ LoadDefinitions!({
   // Hidden column environment — Perl L374
   DefEnvironment!("{eatone}", "");
 
+  // Perl aas_support.sty.ltxml L373-389: hidden-column types `h` and `B`.
+  // Both wrap contents in \eatone (swallowed), producing a zero-width
+  // sentinel cell. Perl L385-389 adds `B` with a TODO to "break table
+  // eventually" — we match Perl's current behavior (identical to `h`).
+  // The more complex `D` and `d` decimal-alignment column types (Perl
+  // L349-356) use SplitTokens token-shuffling for dot alignment; deferred
+  // pending a DefColumnType-friendly token-splitter helper.
+  DefColumnType!("h", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
+        after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+  DefColumnType!("B", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
+        after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+
   DefMacro!("\\phn", "\\phantom{0}");
   DefMacro!("\\phd", "\\phantom{.}");
   DefMacro!("\\phs", "\\phantom{+}");
