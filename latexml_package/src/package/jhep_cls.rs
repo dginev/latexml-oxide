@@ -59,7 +59,11 @@ LoadDefinitions!({
   // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
   Tag!("ltx:acknowledgements", auto_close => true);
 
-  // Perl L67-76: Misc macros
+  // Perl L67-76: Misc macros.
+  // \hash: Perl `DefPrimitiveI('\hash', undef, '#')` emits "#" text.
+  // Rust delegates to `\#` — observationally equivalent (both yield "#").
+  // DP-flag: DefPrimitive → DefMacro, WISDOM #44; safe as `\hash` is a
+  // user-facing text macro, never `\edef`-observed in JHEP documents.
   DefMacro!("\\hash", "\\#");
   DefMacro!("\\secstyle", "\\bfseries");
   DefMacro!("\\militarytime", "\\time");

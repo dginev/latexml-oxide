@@ -15,7 +15,13 @@ LoadDefinitions!({
   // Core coordinate/dimension readers — Perl L30-120 (complex Perl closures)
   // Stubbed: ReadPSDimension, ReadPSCoord, ReadPSAngle
 
-  // Transform management — Perl L130-200
+  // Transform management — Perl L130-200. `\psset` / `\@@@ackscale` are
+  // Perl DefConstructor / DefPrimitive — the Rust stubs are DefMacro
+  // drops because the full body needs PSDim*/PSAngle/PSOrigin parameter
+  // types that aren't ported (see WISDOM #41 — TeXDelimiter / Pair /
+  // PSDim are all structural parameter-type gaps). DP-audit flags both
+  // entries; safe until the parameter types land (no \edef site
+  // observes these CSes; pstricks use is stomach-time invocation).
   DefMacro!("\\pst@object{}", "#1");
   DefMacro!("\\use@par", "");
   DefMacro!("\\addto@par{}", "");

@@ -23,7 +23,13 @@ LoadDefinitions!({
     DefKeyVal!("pstricks", key, "");
   }
 
-  // Node definition macros — Perl L30-120
+  // Node definition macros — Perl L30-120. `\rnode` / `\pnode` etc. are
+  // Perl DefConstructor with coordinate-reading closures; Rust stubs them
+  // as DefMacro passthrough of the content (#3). DP-audit flags the kind
+  // flip. Structural — pst-node nodes need coordinate+position readers
+  // (same PSDim/PSAngle family as pstricks_support, WISDOM #41 parameter
+  // gap). Rust's passthrough preserves the label text in output; the
+  // geometric node-graph is simply not emitted. Not an `\edef` site.
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
   DefMacro!("\\pnode[]", "");
