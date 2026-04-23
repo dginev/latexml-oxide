@@ -621,17 +621,24 @@ LoadDefinitions!({
   // \texorpdfstring{TeXString}{PDFstring}
   DefMacro!("\\texorpdfstring{}{}", "#1");
 
-  // if (!IsDefined(T_CS("\\pdfstringdefPreHook"))) {
-  //   Let('\pdfstringdefPreHook', '\@empty'); }
-  // if (!IsDefined(T_CS("\\pdfstringdefPostHook"))) {
-  //   Let('\pdfstringdefPostHook', '\@gobble'); }
+  // Perl hyperref.sty.ltxml L413-416: guard against redefinition, then Let
+  // the pdfstringdef hooks to sensible no-ops. Rust always defines them
+  // because no package-level binding currently claims these CSes.
+  Let!("\\pdfstringdefPreHook", "\\@empty");
+  Let!("\\pdfstringdefPostHook", "\\@gobble");
 
   //======================================================================
   // 4.2 Utility macros
-  // \hypercalcbp{dimen}
-  // DefMacro('\hypercalcbp{Dimension}', sub {
-  //     my ($gullet, $dimen) = @_;
-  //     Explode($dimen->valueOf / $state->convertUnit('bp')); });
+  // Perl L420-423: \hypercalcbp{dimen} — convert a dimension to its
+  // value in big points (bp). Perl: Explode($dimen->valueOf / convertUnit('bp')).
+  // In Rust, Dimension::value_of returns sp (scaled points); state::convert_unit("bp")
+  // returns sp/bp. Their quotient is the bp value. Explode tokenizes the stringified
+  // float into character tokens.
+  DefMacro!("\\hypercalcbp {Dimension}", sub[(dimen)] {
+    let sp = dimen.value_of() as f64;
+    let bp = sp / state::convert_unit("bp");
+    Ok(Tokens::new(Explode!(format!("{}", bp))))
+  });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 5 Acrobat-specific behaviour
