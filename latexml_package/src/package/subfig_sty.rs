@@ -17,8 +17,14 @@ LoadDefinitions!({
     RefStepCounter!(&cs_expanded, true)?;
   });
 
-  // Perl L31-32: \newsubfloat — creates subfloat machinery for a float type
-  // We pre-define figure/table; generic \newsubfloat is a stub
+  // Perl L31-32: \newsubfloat — creates subfloat machinery for a float type.
+  // DP-flag (Perl DefPrimitive → Rust DefMacro): deliberate stub. Perl's
+  // closure runs NewCounter('sub' . $name, ...) + DefMacroI(...) + Let(...)
+  // dynamically for the caller-provided float name — full port requires
+  // document-time counter/CS creation. figure/table cases are pre-baked
+  // below (`\lx@subfloat@figure` / `\lx@subfloat@table`); caller-defined
+  // floats silently get no subcaption machinery until the dynamic path
+  // lands. Triaged under SYNC_STATUS DP long-tail (structural / known gap).
   DefMacro!("\\newsubfloat[]{}", "");
 
   // \subfloat — Perl L69-79
