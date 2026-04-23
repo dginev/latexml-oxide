@@ -240,6 +240,16 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
 }
 
 LoadDefinitions!({
+  // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
+  // two well-known boolean knobs to the document author. Both state keys
+  // (GENERATE_IDS, INCLUDE_COMMENTS) are read elsewhere in Rust (document.rs
+  // L459 and mouth.rs L358/L696/L889 respectively), so the options were
+  // functional but unreachable until wired here.
+  DeclareOption!("ids",        { AssignValue!("GENERATE_IDS"     => true,  Scope::Global); });
+  DeclareOption!("noids",      { AssignValue!("GENERATE_IDS"     => false, Scope::Global); });
+  DeclareOption!("comments",   { AssignValue!("INCLUDE_COMMENTS" => true,  Scope::Global); });
+  DeclareOption!("nocomments", { AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global); });
+
   // 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
   // (bibtex will not be ran). 'bibtex' is the default (try bib, fall back to bbl).
   DeclareOption!("bibtex", {
