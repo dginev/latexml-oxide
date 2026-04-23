@@ -136,6 +136,24 @@ fn set_rdf_attrs_on_node(node: &mut Node, attrs: &HashMap<String, String>) {
 }
 
 LoadDefinitions!({
+  // Perl lxRDFa.sty.ltxml L20-26 + L28: `labels` option overrides \label
+  // and \lx@longtable@label to also emit a dcterms:alternative RDFa
+  // triple alongside the original \label. Rust omitted the option, so
+  // `\usepackage[labels]{lxRDFa}` silently didn't tag labels. Ported as
+  // Perl-equivalent DeclareOption + ProcessOptions. The expansion uses
+  // \lxRDFa which is defined later in the same load block — LaTeXML
+  // expands options lazily (at document time, not at package-load
+  // time), so forward-reference is fine.
+  DeclareOption!("labels", {
+    Let!("\\lxRDF@original@label",             "\\label");
+    Let!("\\lxRDF@originallx@longtable@label", "\\lx@longtable@label");
+    DefMacro!("\\label Semiverbatim",
+      "\\lxRDF@original@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}");
+    DefMacro!("\\lx@longtable@label Semiverbatim",
+      "\\lxRDF@originallx@longtable@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}");
+  });
+  ProcessOptions!();
+
   // DefKeyVal for the RDFa keyval family
   DefKeyVal!("RDFa", "about", "Semiverbatim");
   DefKeyVal!("RDFa", "resource", "Semiverbatim");
