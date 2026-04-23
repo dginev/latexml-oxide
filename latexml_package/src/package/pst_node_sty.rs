@@ -8,6 +8,21 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("pstricks");
 
+  // Perl pst-node.sty.ltxml L91-107: register node-connection keyvals on
+  // the shared `pstricks` keyval group. Perl types PSAngle / PSDimension /
+  // PSDimDim / Float aren't currently registered Rust types; register with
+  // the untyped placeholder ("") since Rust pst-node stubs all connection
+  // commands to no-ops (DVI-only), so no consumer actually coerces these.
+  // Documents that switch on the key-presence (`\@ifundefined{KV@pstricks@
+  // angle@default}`) get the right answer.
+  for key in ["angle", "angleA", "angleB",
+              "arcangle", "arcangleA", "arcangleB",
+              "nodesep", "nodesepA", "nodesepB",
+              "offset", "arm", "armA", "armB",
+              "ncurv", "loopsize", "radius", "framesize"] {
+    DefKeyVal!("pstricks", key, "");
+  }
+
   // Node definition macros — Perl L30-120
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
