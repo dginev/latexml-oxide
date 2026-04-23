@@ -261,8 +261,12 @@ LoadDefinitions!({
   DefKeyVal!("LTXML", "bibconfig", "Semiverbatim");
 
   // Perl L63-86: Image scaling options — saved as processing instructions
-  // via \lx@save@parameter at \begin{document} time.
-  DefKeyVal!("LTXML", "DPI", "Number");
+  // via \lx@save@parameter at \begin{document} time. Perl's user-facing
+  // keyval name is lowercase `dpi` but the internal PI is uppercase `DPI`
+  // (Perl: `$STATE->assignValue(DPI => ...)`). Keep the keyval name
+  // lowercase to match Perl user-facing — the uppercase `DPI` mismatch
+  // meant `\usepackage[dpi=144]{latexml}` silently missed the keyval.
+  DefKeyVal!("LTXML", "dpi", "Number");
   DefKeyVal!("LTXML", "magnify", "Number");
   DefKeyVal!("LTXML", "upsample", "Number");
   DefKeyVal!("LTXML", "zoomout", "Number");
@@ -384,17 +388,23 @@ LoadDefinitions!({
     }
   }
 
-  // Save image scaling parameters as processing instructions
+  // Save image scaling parameters as processing instructions.
   // Perl: DefKeyVal with code => AtBeginDocument(\lx@save@parameter{key}{value})
-  // These PIs are read by the Graphics post-processor.
-  for param_name in &["DPI", "magnify", "upsample", "zoomout"] {
-    let key = s!("KV@LTXML@{}", param_name);
+  // Perl stores state under uppercase `DPI` but the keyval is lowercase
+  // `dpi`, so lookup uses the keyval (user-facing) name, and the PI emits
+  // under the uppercase Perl-internal convention for DPI only.
+  for (kv_name, pi_name) in &[
+    ("dpi", "DPI"),
+    ("magnify", "magnify"),
+    ("upsample", "upsample"),
+    ("zoomout", "zoomout"),
+  ] {
+    let key = s!("KV@LTXML@{}", kv_name);
     if let Some(v) = state::lookup_value(&key) {
       let val = v.to_string().trim().to_string();
       if !val.is_empty() {
-        // Store for PI emission at document construction time
         state::assign_value(
-          &s!("PI@latexml@{}", param_name),
+          &s!("PI@latexml@{}", pi_name),
           Stored::String(arena::pin(&val)),
           Some(Scope::Global),
         );
