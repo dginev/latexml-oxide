@@ -3711,12 +3711,18 @@ LoadDefinitions!({
     r"\def\@date{#1}\
 \@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
+  // Perl latex_constructs.pool.ltxml L1062-1064: DefConstructor('\person@thanks{}', ...,
+  //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
-    alias => "\\thanks", mode => "text");
+    alias => "\\thanks", mode => "text", enter_horizontal => true);
+  // Perl L1065-1067: DefConstructor('\@personname{}', ...,
+  //   beforeDigest => { Let('\thanks', '\person@thanks') },
+  //   mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
     before_digest => { Let!("\\thanks", "\\person@thanks"); },
     bounded => true,
-    mode => "text"
+    mode => "text",
+    enter_horizontal => true
   );
 
   // Sanitize person names for (obvious) punctuation abuse at start+end
