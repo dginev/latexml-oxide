@@ -117,4 +117,17 @@ LoadDefinitions!({
   // docs/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the
   // content) to match the documented sibling convention from physics.sty.
   DefMacro!("\\tablenote OptionalMatch:* {}", "\\footnote{#2}");
+
+  // Perl aipproc.cls.ltxml does NOT define \references — Perl behaves
+  // lossy-silent for `\begin{references}…\bibitem` under aipproc
+  // (drops the whole bibliography, reports "No obvious problems").
+  // Rust's stricter validator surfaces Error:malformed:ltx:bibitem
+  // "…isn't allowed in <ltx:section>". Rust-over-Perl improvement:
+  // alias to the thebibliography machinery so the content is
+  // preserved. Fixes 4 papers in SANDBOX_TRIAGE Class D bibitem-aipproc
+  // cluster (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
+  // nucl-th0010030). See also the mirror alias in aipproc_sty.rs.
+  DefMacro!("\\references", "\\thebibliography{}");
+  Let!("\\endreferences", "\\endthebibliography");
+  Let!("\\reference", "\\bibitem");
 });
