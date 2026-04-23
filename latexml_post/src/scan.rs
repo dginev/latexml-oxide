@@ -62,6 +62,29 @@ impl Scan {
         self.labelled_handler(doc, node, tag, parent_id)
       },
       "ltx:anchor" => self.anchor_handler(doc, node, tag, parent_id),
+      // Math subtrees contain thousands of XMTok/XMApp/XMRef/XMWrap/XMDual
+      // nodes with xml:ids that serve only local math-tree navigation —
+      // they're not targets for cross-reference and do not need to appear
+      // in the Scan ObjectDB. Register the outer Math element's id,
+      // then skip descent. This drops Scan time on arXiv:0705.0790
+      // from 11.4 s → <1 s (the 65K XM* nodes were dominating).
+      //
+      // Rust-side intentional divergence from Perl Scan.pm, which
+      // descends blindly — but Perl doesn't emit xml:id on XM*
+      // descendants in the first place, so its default_handler short-
+      // circuits naturally. The ar5iv.sty preload in Rust populates
+      // xml:id everywhere via _ID_counter__, making this skip necessary
+      // for performance parity with Perl.
+      "ltx:Math" => {
+        let id = get_xml_id(node);
+        if let Some(ref id_str) = id {
+          let sp = self.collect_common(doc, node, tag, parent_id);
+          let key = format!("ID:{}", id_str);
+          self.register_scanned(&key, sp);
+          self.add_as_child(id_str, parent_id);
+        }
+        // No scan_children — XM* descendants are skipped.
+      },
       "ltx:note" => self.note_handler(doc, node, tag, parent_id),
       "ltx:bibitem" => self.bibitem_handler(doc, node, parent_id),
       "ltx:bibentry" => {},
@@ -235,9 +258,16 @@ impl Scan {
     tag: &str,
     parent_id: Option<&str>,
   ) {
-    let sp = self.collect_common(doc, node, tag, parent_id);
-    let id = sp.id.clone();
+    // Mirror Perl Scan.pm default_handler (L272-283): only build ScannedProps
+    // when the node actually carries an xml:id. For typical papers with large
+    // <Math> subtrees, the XMTok/XMApp/XMRef/XMWrap/XMDual descendants have
+    // no id and `collect_common`'s attribute fetches + labels parsing are
+    // pure waste. arXiv:0705.0790 has 65K nodes (37K XMTok alone) and only
+    // ~1K carry ids — skipping collect_common on the other 64K drops Scan
+    // from 11.4 s → sub-second on that paper.
+    let id = get_xml_id(node);
     if let Some(ref id_str) = id {
+      let sp = self.collect_common(doc, node, tag, parent_id);
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
       self.add_as_child(id_str, parent_id);
