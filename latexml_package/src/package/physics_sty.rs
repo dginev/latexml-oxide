@@ -1241,7 +1241,11 @@ LoadDefinitions!({
 
   DefMacro!("\\zeromatrix{}{}", "\\xmatrix{0}{#1}{#2}");
 
-  DefMath!("\\lx@physics@iunit", None, "\\mathit{i}", meaning => "imaginary-unit");
+  // Perl physics.sty.ltxml L622: `alias => 'i'` — reversion emits `i` rather
+  // than the internal `\lx@physics@iunit` CS name. Without it, MathML `name=`
+  // and `tex=` attributes leak the private helper name to downstream consumers.
+  DefMath!("\\lx@physics@iunit", None, "\\mathit{i}",
+    meaning => "imaginary-unit", alias => "i");
   DefPrimitive!("\\paulimatrix{}", sub[(n)] {
     let n_val: usize = n.to_string().parse().unwrap_or(0);
     let tks = match n_val {
