@@ -142,6 +142,15 @@ LoadDefinitions!({
 
   // Bibliography — Perl L117-175
   DefEnvironment!("{subbibitems}", "#body");
+
+  // Perl elsart_support.sty.ltxml L120: `{cv*}` env wraps its body in a
+  // <ltx:section class='ltx_cv'> with auto-title "Curriculum Vitae".
+  // Used in Elsevier journal submissions that include author CVs as a
+  // tail section. Rust had only the non-env `\cv` DefMacro below;
+  // `\begin{cv*}...\end{cv*}` hit undefined-env.
+  DefEnvironment!("{cv*}",
+    "<ltx:section class='ltx_cv'><ltx:title>Curriculum Vitae</ltx:title>#body</ltx:section>");
+
   DefMacro!("\\cv", "");
   DefMacro!("\\biboptions{}", "");
   DefMacro!("\\bibliographystyle{}", "");
