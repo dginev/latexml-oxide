@@ -157,6 +157,26 @@ accented-letter `DefPrimitiveI(...,robust=>1)` entries (`\OE`/`\oe`/
 case-mapping-pipeline rewrite catalogued in `docs/DEF_PARITY_AUDIT.md`
 B1 — three coordinated changes are required (see B1 design).
 
+**Perl upstream sync audit (2026-04-23, cycles 214-216).** Surveyed
+25+ recent LaTeXML Perl commits (Jan 2025 - Mar 2026) for Rust-side
+parity. Fixed this sprint: `aas_support \aas@@fstack sizer => #2`
+(commit 4868a9a2f, Perl 98f6e5de), natbib unknown-citation-style
+`Info` diagnostic (5836935f5, Perl 8960af9a). Already synced on
+Rust side (verified): siunitx list separators #2751, hyperref
+iftex/etoolbox deps #2736, aastex_cls revtex4-default #2698,
+orcidlink tikz dep #2681, marvosym `\Yinyang` alias #2688, grffile
+graphicx dep #2699, amssymb `\backsimeq` U+22CD #2633, amsmath
+`\overunderset` #2687, underscore.sty `\textunderscore` refactor
+#2704, pgfmath double-negation guard #2711, xcolor DecodeColor
+unresolvable-name diagnostic #2697, latexml.sty bibconfig #2683,
+iftex.sty texpad/hint conditionals #2484, natbib `\bibsep` glue
+#2489, TeX_Math `\fam`-as-Number #2772, TeX_FileIO `\read` extra-}
+discard guard + runaway-definition Error #(pre-2025 unchecked).
+Queued for future work (large-scope commits): pstricks_support
+refactor fdc8bf91 (2100 lines moved into new support file),
+`inline_math` → `math` systemic rename 2b1ff6df (7 files), color
+variables for inline styles c2370ac3 (post-processing + XSLT).
+
 **`protected => 1` sweep (2026-04-23).** All 32 Perl occurrences audited
 (package: gensymb×5, etoolbox×7, siunitx×2, expl3.lua×6; engine:
 latex_constructs×11 — `\text{md,bf,rm,sf,tt,up,sl,it,normal,em}` family,
