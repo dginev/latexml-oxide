@@ -5,6 +5,13 @@ LoadDefinitions!({
   // Perl: multirow.sty.ltxml
 
   DefPrimitive!("\\multirowsetup", None);
+  // \multirow: structural split into DefMacro wrapper + internal DefPrimitive
+  // setup (WISDOM #41 2-layer pattern). Perl's single DefPrimitive digests
+  // all args; Rust separates the alignment-cell state mutation (primitive,
+  // below) from the \hbox-wrapped content flow (DefMacro at :52). The
+  // split lets content flow naturally through alignment cell boxes and
+  // enables the text-mode \hbox wrap used by 1004.2626 Table 6.
+  //
   // \lx@multirow@setup: internal primitive that sets rowspan/vattach on current cell.
   // Separated from content so that content flows naturally through alignment cell boxes.
   DefPrimitive!("\\lx@multirow@setup{Float}[]{}", sub[(nrows, attachment, _width)] {

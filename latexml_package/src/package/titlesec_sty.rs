@@ -28,6 +28,8 @@ LoadDefinitions!({
   // Users writing \titleformat*{\section}{\bfseries} get a working
   // override instead of a silent drop. Strip leading backslash from
   // the command name per Perl L32.
+  // Perl kind is DefMacro with sub body that installs a macro via
+  // DefMacroI — Rust DefPrimitive matches idiomatically (WISDOM #41).
   DefPrimitive!("\\lx@titleformat@star {}{}", sub[(cmd, format)] {
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);

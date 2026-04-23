@@ -595,7 +595,9 @@ LoadDefinitions!({
      \\providecolors\\providecolorset\\blendcolors\\maskcolors");
 
   // Perl: DefMacro('\xglobal Token', sub { check if token in xglobal@list; if yes set xglobal@;
-  //   else emit \global token })
+  //   else emit \global token }).
+  // DefMacro-sub-imperative ≡ DefPrimitive (WISDOM #41) — token-stream
+  // variant (gullet::unread_one reinjects the peeked token).
   DefPrimitive!("\\xglobal Token", sub[(token)] {
     // Check if token is one of the color-defining commands
     const COLOR_CMDS: &[&str] = &[
@@ -635,7 +637,11 @@ LoadDefinitions!({
   Let!("\\preparecolor", "\\definecolor");
   Let!("\\xdefinecolor", "\\definecolor");
 
-  // \providecolor[type]{name}{model_list}{spec_list}
+  // \providecolor[type]{name}{model_list}{spec_list}.
+  // Perl's DefMacro routes through \XC@providecolor[#1]{#2}[\colornameprefix]
+  // {#3}{#4}, a 2-layer alias that ultimately calls the providecolor
+  // primitive. Rust collapses directly to the primitive (WISDOM #40 —
+  // direct-call simplification of an expand-to-alias indirection).
   DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
     let name_str = do_expand(name)?.to_string();
     let key = s!("color_{name_str}");
