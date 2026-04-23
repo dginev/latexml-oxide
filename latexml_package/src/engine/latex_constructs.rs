@@ -6806,9 +6806,11 @@ LoadDefinitions!({
     alias => "\\cite", mode => "text", enter_horizontal => true);
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
+  // Perl latex_constructs.pool.ltxml L4244-4251: enterHorizontal => 1.
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
     "<ltx:bibref show='#1' bibrefs='#bibrefs' inlist='#bibunit' separator='#separator'
       yyseparator='#yyseparator'>#3#4</ltx:bibref>",
+    enter_horizontal => true,
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
       Ok(stored_map!("bibrefs" => clean_bib_key(&keys.to_string()),
@@ -6826,7 +6828,9 @@ LoadDefinitions!({
   );
 
   // Simple container for any phrases used in the bibref
-  DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
+  // Perl latex_constructs.pool.ltxml L4254-4255: enterHorizontal => 1.
+  DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>",
+    mode => "text", enter_horizontal => true);
 
   DefMacro!("\\cite[] Semiverbatim", sub[(post_opt, keys)] {
     // let style = state::lookup_tokens("CITE_STYLE").unwrap_or(NO_TOKENS);
