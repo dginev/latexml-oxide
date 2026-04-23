@@ -89,21 +89,30 @@ Active round-17 workstreams: Def*-parity audit (see "DP" section
 below) + raw-TeX / expl3 kernel parity (D1-D2 + Long-horizon). Recent
 completed landings in git log; this file tracks open work only.
 
-**Upstream Perl sync** (audited 2026-04-22 through commit `fdc8bf91`):
-Rust current with **all 14 recent upstream commits** reviewed. Only
+**Upstream Perl sync** (audited 2026-04-23 through commit `fdc8bf91`):
+Rust current with **all 19 recent upstream commits** reviewed. Only
 narrow gap found: `pstricks.tex.ltxml`'s two-step load — ported in
-`92b9b0d5c`. Audit scope this session: fdc8bf91 (pstricks/KeyVal),
-8a5cd306 (hyperref etoolbox), 70508320 (alignment-token #2775),
-7119a535 (Dumper spec — N/A, Rust uses url-encoding), 3a89a24d
-(Lrgroup U+27EE/27EF #2762), 3b027351 (siunitx separators #2751),
-285bb02b (iflimit deny-list #2771), dfeeb1b8 (pgfNumber double
-negation #2711), 21eeedf5 (ePub lang #2665), 3875cd64 (bibconfig
-KV #2683), 5082b034 (CI-only). Prior 6 spot-checked in memory
-cycle 59 (48ad18db, d81e955b, e6db0871, 50f0061d, acaab773,
-4eb681c0). Explicit "Perl #NNNN" parity breadcrumbs live in
-`keyval.rs:326`, `stomach.rs:699`, `math_common.rs:927`, and other
-targeted call sites — the right primary audit path for future sync
-checks is grep for "Perl #" first, then diff the uncovered ranges.
+`92b9b0d5c`. Audit scope: fdc8bf91 (pstricks/KeyVal), 8a5cd306
+(hyperref etoolbox), 70508320 (alignment-token #2775 — boxing-depth
+guard at `stomach.rs:703`), 7119a535 (Dumper spec — N/A, Rust uses
+url-encoding), 3a89a24d (Lrgroup U+27EE/27EF #2762 — `math_common.rs:937`),
+3b027351 (siunitx separators #2751), 285bb02b (iflimit deny-list #2771),
+dfeeb1b8 (pgfNumber double negation #2711 — `pgfmath_code_tex.rs:122`),
+21eeedf5 (ePub lang #2665), 3875cd64 (bibconfig KV #2683), 5082b034
+(CI-only), 48ad18db (Relation parameter — `tex_logic.rs:56`), d3084fc4
+(lx@ams@matrix@ → Base_XMath — `base_xmath.rs:977`), ab237405 (base→cls
+register moves — article_cls.rs:70, book_cls.rs:62, report_cls.rs:62),
+d4febb30 (DecodeColor error — `color_sty.rs:45`), 3c7b20db (UnTeX in
+patchcmd — `etoolbox_sty.rs:1287`), 7399c5a7 (Newlines CC_OTHER fix —
+`token.rs:572`, `tex_debugging.rs:116`), b5ea6f39 (subfloat sync),
+d1ac68ff (tableref trailing-brace — `deluxetable_sty.rs:117`),
+9557409d (bbox locked — `revtex4_support_sty.rs:115`). Prior 6
+spot-checked in memory cycle 59 (48ad18db [now verified], d81e955b,
+e6db0871, 50f0061d, acaab773, 4eb681c0). Explicit "Perl #NNNN" parity
+breadcrumbs live in `keyval.rs:326`, `stomach.rs:699`, `math_common.rs:927`,
+and other targeted call sites — the right primary audit path for
+future sync checks is grep for "Perl #" first, then diff the uncovered
+ranges.
 
 ## Tikz — Known Diffs (vs Perl output)
 
