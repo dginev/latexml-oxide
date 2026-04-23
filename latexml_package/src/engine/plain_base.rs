@@ -414,11 +414,16 @@ LoadDefinitions!({
   //     if (LookupValue('IN_MATH')) {
   //       MergeFont(family => 'math', shape => 'italic'); }
   //     return; });
+  // Perl plain_base.pool.ltxml L369: DefPrimitiveI('\mit', undef, undef,
+  //   requireMath => 1, font => { family => 'italic' });
+  // (the current Perl shape requires math AND sets a font option, no closure).
+  // Rust simplification: use closure + guarded MergeFont, but we still need
+  // require_math => true to match Perl's "error when used outside math" check.
   DefPrimitive!("\\mit", {
     if state::lookup_bool_sym(pin!("IN_MATH")) {
       MergeFont!(family => "math", shape => "italic");
     }
-  });
+  }, require_math => true);
 
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);
