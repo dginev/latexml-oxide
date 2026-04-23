@@ -6209,6 +6209,8 @@ LoadDefinitions!({
   DefPrimitive!("\\@end@tabular", {
     egroup()?;
   });
+  // Perl latex_constructs.pool.ltxml L3735-3746: mode => 'restricted_horizontal',
+  //   enterHorizontal => 1.
   DefConstructor!("\\@@tabular[] Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
@@ -6226,17 +6228,21 @@ LoadDefinitions!({
       }
     },
     locked => true,
-    mode   => "text");
+    mode   => "text",
+    enter_horizontal => true);
 
   DefMacro!("\\csname tabular*\\endcsname{Dimension}[]{}",
     r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\lx@begin@alignment");
   DefMacro!("\\csname endtabular*\\endcsname",
     r"\lx@end@alignment\@end@tabular@");
+  // Perl latex_constructs.pool.ltxml L3753-3757: mode => 'restricted_horizontal',
+  //   enterHorizontal => 1.
   DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
     "#4",
     before_digest => { bgroup(); },
     reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*}",
-    mode         => "text");
+    mode         => "text",
+    enter_horizontal => true);
   DefPrimitive!("\\@end@tabular@", {
     egroup()?;
   });
