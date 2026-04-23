@@ -70,8 +70,33 @@ LoadDefinitions!({
       Ok(stored_map!("value" => value))
     });
 
-  // Unit marking (Perl L99-111): simplified — just absorb content
-  DefConstructor!("\\ltx@mark@units{}", "#1", reversion => "#1");
+  // Unit marking — Perl L99-111. Absorb the units arg, then walk the
+  // newly-added child elements and add `class='ltx_unit'` to those that
+  // are XMTok-like with role missing or in {ID, UNKNOWN, FLOATSUPERSCRIPT}.
+  // Snapshot child count before/after the absorb to identify what's new
+  // (Perl uses absorb's return-value list of nodes, which Rust's
+  // absorb()->Result<()> doesn't expose). Pattern matches the
+  // accents_sty findnodes/last_child trick adapted for sibling iteration.
+  DefConstructor!("\\ltx@mark@units{}", sub[document, args, _props] {
+    let units = args[0].as_ref();
+    let parent = document.get_node().clone();
+    let before_children = parent.get_child_elements();
+    let before_count = before_children.len();
+    if let Some(u) = units {
+      document.absorb(u, None)?;
+    }
+    let after_children = parent.get_child_elements();
+    for mut child in after_children.into_iter().skip(before_count) {
+      let role = child.get_attribute("role").unwrap_or_default();
+      let role_ok = role.is_empty()
+        || role == "ID"
+        || role == "UNKNOWN"
+        || role == "FLOATSUPERSCRIPT";
+      if role_ok {
+        document.add_class(&mut child, "ltx_unit")?;
+      }
+    }
+  }, reversion => "#1");
 
   // Sign symbols (Perl L79-84)
   DefPrimitive!("\\ltx@text@plus", "+");
