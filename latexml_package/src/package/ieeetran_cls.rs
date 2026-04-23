@@ -154,11 +154,76 @@ LoadDefinitions!({
   DefMacro!("\\IEEEeqnarraydefcol{}{}{}", "");
   DefMacro!("\\IEEEeqnarraydefcolsep{}{}", "");
 
-  // IEEEnonumber/yesnumber stubs
-  DefMacro!("\\IEEEnonumber OptionalMatch:*", "\\nonumber");
-  DefMacro!("\\IEEEyesnumber OptionalMatch:*", "");
-  DefMacro!("\\IEEEyessubnumber OptionalMatch:*", "");
-  DefMacro!("\\IEEEnosubnumber OptionalMatch:*", "");
+  // IEEEnonumber/yesnumber/sub-numbering — Perl L252-294.
+  // Flip EQUATION_NUMBERING (starred form) or EQUATIONROW_TAGS (unstarred)
+  // retract/noretract/counter keys to match Perl's in-place hash mutation
+  // of LookupValue-returned refs. Previous Rust port was a DefMacro stub
+  // that aliased to \nonumber (or was empty) and lost the row-tag
+  // retraction entirely.
+  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
+    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
+    with_value_mut(key, |v| {
+      if let Some(Stored::HashStored(ref mut m)) = v {
+        m.insert("retract", Stored::Bool(true));
+        m.remove("counter");
+      }
+    });
+    Ok(())
+  });
+  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
+    // Perl: if EQUATION_NUMBERING.counter == 'subequation', step the equation counter
+    let subeq = with_value("EQUATION_NUMBERING", |v| {
+      if let Some(Stored::HashStored(ref m)) = v {
+        matches!(m.get("counter"),
+          Some(Stored::String(s)) if arena::to_string(*s) == "subequation")
+      } else { false }
+    });
+    if subeq {
+      RefStepCounter!("equation", false)?;
+    }
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |v| {
+        if let Some(Stored::HashStored(ref mut m)) = v {
+          m.insert("retract", Stored::Bool(false));
+          m.remove("counter");
+        }
+      });
+    } else {
+      with_value_mut("EQUATIONROW_TAGS", |v| {
+        if let Some(Stored::HashStored(ref mut m)) = v {
+          m.insert("noretract", Stored::Bool(true));
+          m.remove("counter");
+        }
+      });
+    }
+    Ok(())
+  });
+  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
+    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
+    with_value_mut(key, |v| {
+      if let Some(Stored::HashStored(ref mut m)) = v {
+        m.insert("counter", Stored::String(pin!("subequation")));
+      }
+    });
+    let preset = with_value("EQUATION_NUMBERING", |v| {
+      matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
+    }) || with_value("EQUATIONROW_TAGS", |v| {
+      matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
+    });
+    if preset {
+      RefStepCounter!("subequation", false)?;
+    }
+    Ok(())
+  });
+  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
+    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
+    with_value_mut(key, |v| {
+      if let Some(Stored::HashStored(ref mut m)) = v {
+        m.insert("counter", Stored::String(pin!("equation")));
+      }
+    });
+    Ok(())
+  });
 
   // Column types (Perl L308-314): L/C/R add \hfil-before/after hooks.
   // Rust engine's `Cell` template doesn't auto-derive align= from
