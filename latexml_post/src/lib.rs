@@ -26,6 +26,7 @@
 //! - [`radix`] — Radix utilities for ID generation (a,b,...,z,aa,ab,...)
 
 // Core infrastructure
+pub mod doc_owned_node;
 pub mod document;
 pub mod math_processor;
 pub mod object_db;

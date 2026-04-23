@@ -99,16 +99,18 @@ impl Drop for PostDocument {
   ///      `unlinked=true` fires `xmlFreeNode` on already-freed
   ///      memory → SIGSEGV inside `xmlFreeNodeList`.
   ///
-  /// Fix: `mem::forget` the idcache entries before Rust's auto-drop
-  /// sequence runs. `xmlFreeDoc` remains the sole owner of the C
-  /// node memory. The per-entry Rc control block leaks (~24 bytes)
-  /// — bounded by per-document idcache size and reclaimed at process
-  /// exit. Proper fix is a pub setter for the `unlinked` flag
-  /// upstream, which would let us call `set_linked()` before drop
-  /// instead of forgetting.
+  /// Fix: hand each idcache entry to `DocOwnedNode` (see
+  /// `crate::doc_owned_node`), which suppresses the inner Rc's Drop
+  /// so `xmlFreeNode` never fires on already-freed memory.
+  /// `xmlFreeDoc` remains the sole owner of the C node memory.
+  /// Per-entry Rc control block leaks (~24 B) — bounded by
+  /// per-document idcache size and reclaimed at process exit.
+  /// Proper upstream fix: a public `set_linked()` setter on the
+  /// `libxml` crate's `Node`, which would let us relink before drop
+  /// rather than leaking.
   fn drop(&mut self) {
     for (_, node) in std::mem::take(&mut self.idcache) {
-      std::mem::forget(node);
+      let _kept = crate::doc_owned_node::DocOwnedNode::new(node);
     }
   }
 }
