@@ -116,14 +116,59 @@ Undefined macro from the expl3-style babel-french hook system.
 a new `french_ldf.rs`).
 **Fix:** stub `\bbl@exp@aux` to a no-op or proper expansion.
 
-### Class D: **45 `malformed:ltx:` Rust emitter bugs**
+### Class D: **45-63 `malformed:ltx:` Rust emitter bugs**
 
 These are **actual Rust bugs** producing invalid document structure.
-Per-paper triage needed — most frequent malformations are:
-- `malformed:ltx:bibitem` (3+) — bibitem children with wrong tag
-- `malformed:ltx:section` (1) — section structure break
+Cycle-level investigation reveals three sub-patterns:
 
-**Approach:** pick one at a time, minimize reproducer, fix the emitter.
+- **bibitem-without-bibliography-parent (4 papers)**: `astro-ph9711070`,
+  `cond-mat0109365`, `nucl-ex9706010`, `nucl-th0010030`. All use
+  `\documentstyle{aipproc}` with `\begin{references}...\bibitem`.
+  Neither Perl's `aipproc.sty.ltxml` nor the Rust port defines
+  `\references`; it is interpreted as an undefined-env, then `\bibitem`
+  fires outside a bibliography. **Perl's behaviour is lossy-silent** —
+  it drops the whole bibliography (Perl out.xml has 0 bibitem elements)
+  and reports "No obvious problems." Rust surfaces the malformation as
+  an Error. Both are imperfect — classification update: these 4 papers
+  are **Perl-error-free-but-lossy**, not a Rust regression.
+  Fix candidate: add `\references` → `\thebibliography` alias in
+  `aipproc_sty.rs` so Rust produces *better* output than Perl. That's
+  a Rust-over-Perl improvement, not a parity fix.
+- **nested-env-close-failure (~15 papers)**: `1608.04650` exemplar —
+  15 `\begin{Proof}` without matching `\end{Proof}`. Rust emits
+  "Closing tag ltx:document whose open descendents do not auto-close".
+  Perl's behaviour: untested. Likely a Rust-specific stack cleanup
+  issue in environment close.
+- **section/bibliography-inside-table (~2 papers)**: `1602.03151`.
+  Rust allows `\section` and `\begin{thebibliography}` inside `<ltx:table>`
+  when input has malformed `\end{tabular}` ordering. Needs auto-close
+  hooks on `ltx:table` similar to `ltx:bibliography` (line 2988 in
+  `latex_constructs.rs`) — but the earlier attempt there noted that
+  marking itemize/enumerate as `auto_close=>true` broke test cases.
+  Requires careful work.
+
+**Cycle 2026-04-23 aas_support follow-up**: `aas_support_sty.rs:208`
+had a missing `afterDigest => beginBibliography` hook, which was added
+in commit `127852558`. No direct paper-count delta (the 22 `\affil`
+papers don't use `\references`), but the fix matches Perl faithfully.
+
+### Class B: **pgfmath `\ifdim` empty-arg infinite-loop (2 papers)**
+
+Investigation notes: the `\ifdim` recursion isn't in
+`pgfmath_code_tex.rs` directly. The root trigger is a **PGF Math
+Error** emitting `Package PGF Math Error: Sorry...floating point
+number ''`, followed by a Warn:expected:<number>, then the
+downstream error-handler re-expanding tokens and hitting `\ifdim`
+with an empty operand → "treated as zero" → same loop → 603 MB
+allocation. Three potential fix sites:
+
+1. Intercept PGF Math Error (`\GenericError`) and short-circuit on
+   empty input before it cascades.
+2. Cap `\ifdim` recursion depth like `if_limit` for conditionals.
+3. Add an `absorb_count` analogue for `\ifdim`-class macros.
+
+None is a single-site surgical fix. Deferred to a dedicated
+investigation session.
 
 ### Class E: **Math-parser ambiguity timeouts** (~3 papers)
 
