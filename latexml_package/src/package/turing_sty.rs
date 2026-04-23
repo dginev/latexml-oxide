@@ -95,18 +95,37 @@ LoadDefinitions!({
   // Perl L110-125: the two display DefConstructors. Perl uses
   // `framed => 'underline'` and `'rectangle'` attributes, which produce
   // <ltx:text framed='underline'>…</ltx:text> / `'rectangle'` wrappers.
-  // Previous Rust used cssstyle — switch to the faithful `framed`
-  // attribute form. Perl's afterDigest substitutes `\hbox{ }` when the
-  // arg is empty; skipped here pending setArgs-from-closure support.
+  // Perl's afterDigest substitutes `\hbox{ }` when the first arg is
+  // empty so the frame rectangle/underline has minimum width.
   DefConstructor!(
     "\\spec {}",
     "<ltx:text framed='underline'>#1</ltx:text>",
-    enter_horizontal => true
+    enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let arg_empty = whatsit.get_arg(1)
+        .map(|a| a.to_string().is_empty())
+        .unwrap_or(true);
+      if arg_empty {
+        let hbox = stomach::digest(mouth::tokenize_internal("\\hbox{ }"))?;
+        whatsit.set_args(vec![Some(hbox)]);
+      }
+      Ok(Vec::new())
+    }
   );
   DefConstructor!(
     "\\speca {}",
     "<ltx:text framed='rectangle'>#1 </ltx:text>",
-    enter_horizontal => true
+    enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      let arg_empty = whatsit.get_arg(1)
+        .map(|a| a.to_string().is_empty())
+        .unwrap_or(true);
+      if arg_empty {
+        let hbox = stomach::digest(mouth::tokenize_internal("\\hbox{ }"))?;
+        whatsit.set_args(vec![Some(hbox)]);
+      }
+      Ok(Vec::new())
+    }
   );
 
   // Perl L127-218: the post-RawTeX block defining \showtm, \mkleft,
