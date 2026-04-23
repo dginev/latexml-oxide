@@ -2327,50 +2327,67 @@ LoadDefinitions!({
     }
   });
 
-  // DefConstructor('\documentstyle OptionalSemiverbatim SkipSpaces Semiverbatim []',
-  //   "<?latexml class='#2' ?#1(options='#1') oldstyle='true'?>",
-  //   beforeDigest => sub {
-  //     Info('unexpected', '\documentstyle', $_[0], "Entering LaTeX 2.09 Compatibility mode");
-  //     AssignValue('2.09_COMPATIBILITY' => 1, 'global');
-  //     onlyPreamble('\documentstyle'); },
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $class   = ToString($whatsit->getArg(2));
-  //     my $options = $whatsit->getArg(1);
-  //     $options = [($options ? split(/,\s*/, ToString($options)) : ())];
-  //     # Watch out; In principle, compatibility mode wants a .sty, not a .cls!!!
-  //     # But, we'd prefer .cls, since we'll have better bindings.
-  //     # And in fact, nobody's likely to write a binding for a .sty that wants to be a class
-  // anyway.     # So, we'll just try for a .cls, punting to OmniBus if needed.
-  //     # If we start wanting to read style files by default, we'll still need to handle this
-  //     # specially, since class (or sty files pretending to be) cover so much more.
-  //     LoadClass($class, options => $options, after => Tokens(T_CS('\compat@loadpackages')));
-  //     return; });
+  // Perl latex_constructs.pool.ltxml:137-154:
+  //   DefPrimitiveI('\compat@loadpackages', undef, sub {
+  //       my $hadmissing = 0;
+  //       foreach my $option (@{ LookupValue('@unusedoptionlist') }) {
+  //         if (FindFile($option, type => 'sty')) { RequirePackage($option); }
+  //         else { $hadmissing = 1; Info('unexpected', $option, ...); } }
+  //       if ($hadmissing && !LookupValue('OmniBus.cls_loaded')) {
+  //         Info('note', 'OmniBus', ...); LoadClass('OmniBus'); }
+  //       AssignValue('@unusedoptionlist', []); });
+  //
+  // Scheduled via `after => Tokens(T_CS('\compat@loadpackages'))` when the
+  // LaTeX-2.09-compat \documentstyle finishes its class load. Consumes the
+  // unused options that the class (e.g. article.cls) didn't recognise and
+  // routes each to \RequirePackage via Rust's `require_package` sub — which
+  // includes `find_file_fallback` (version-suffix stripping, e.g.
+  // `aaspp4` → `aaspp.sty.ltxml`). This is what lets
+  // `\documentstyle[aaspp4]{article}` load aas_support transitively and
+  // define \affil / \altaffilmark / \acknowledgments etc. that ~49 astro-ph
+  // papers in the 10k sandbox need (docs/SANDBOX_TRIAGE.md Class A).
+  //
+  // TODO(next cycle): once \documentstyle is converted to a DefConstructor
+  // with afterDigest (mirroring Perl's dispatch — .sty/.cls/OmniBus
+  // branching), this primitive becomes the sole route for "unused option →
+  // package". Currently \documentstyle's tex_job.rs DefMacro still emits
+  // `\RequirePackage` tokens inline; that will be removed when the
+  // DefConstructor lands.
+  DefPrimitive!("\\compat@loadpackages", {
+    use latexml_core::binding::content::{find_file, find_file_fallback};
+    let unused_list: Vec<String> = match state::lookup_value("@unusedoptionlist") {
+      Some(Stored::Strings(rc)) => {
+        rc.iter()
+          .map(|s| latexml_core::common::arena::with(*s, |s| s.to_string()))
+          .collect()
+      },
+      _ => Vec::new(),
+    };
+    let mut had_missing = false;
+    for opt in &unused_list {
+      let found = find_file(&format!("{opt}.sty"), None).is_some()
+        || find_file_fallback(opt, "sty").is_some();
+      if found {
+        require_package(opt, RequireOptions::default())?;
+      } else {
+        had_missing = true;
+        Info!("unexpected", opt, "Unexpected option '{}' passed via \\documentstyle", opt);
+      }
+    }
+    if had_missing && !state::lookup_bool("OmniBus.cls_loaded") {
+      Info!("note", "OmniBus", "Loading OmniBus class to attempt to cover missing options");
+      load_class("OmniBus", Vec::new(), Tokens!())?;
+    }
+    state::assign_value(
+      "@unusedoptionlist",
+      Stored::Strings(std::rc::Rc::new([])),
+      Some(Scope::Global),
+    );
+  });
 
-  // DefPrimitiveI('\compat@loadpackages', undef, sub {
-  //     my $name       = ToString(Expand(T_CS('\@currname')));
-  //     my $type       = ToString(Expand(T_CS('\@currext')));
-  //     my $hadmissing = 0;
-  //     foreach my $option (@{ LookupValue('@unusedoptionlist') }) {
-  //       if (FindFile($option, type => 'sty')) {
-  //         RequirePackage($option); }
-  //       else {
-  //         $hadmissing = 1;
-  //         Info('unexpected', $option, $_[0], "Unexpected option '$option' passed to
-  // $name.$type"); } }     # Often, in compatibility mode, the options are used to load what are
-  // effectively     # document classes for specific journals, etc that introduce a bunch of new
-  // frontmatter!     # To try to recover from this, we'll go ahead & load the OmniBus class.
-  //     if ($hadmissing && !LookupValue('OmniBus.cls_loaded')) {
-  //       Info('note', 'OmniBus', $_[0], "Loading OmniBus class to attempt to cover missing
-  // options");       LoadClass('OmniBus'); }
-  //     AssignValue('@unusedoptionlist', []); });
-
-  // sub onlyPreamble {
-  //   my ($cs) = @_;
-  //   Error('unexpected', $cs, $state->getStomach,
-  //     "The current command '" . ToString($cs) . "' can only appear in the preamble")
-  //     unless LookupValue("inPreamble");
-  //   return; }
+  // onlyPreamble (Perl helper) — flag-only; the actual Error emission when
+  // used outside preamble is a future polish (the mis-use cascade already
+  // surfaces downstream Errors today).
 
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
