@@ -426,6 +426,20 @@ LoadDefinitions!({
   // forces math context (errors if invoked outside math); `reversion =>
   // '#1'` round-trips just the body (no role wrapper) to TeX; `alias =>
   // ''` suppresses the constructor name in the reversion path.
+  // Perl latexml.sty.ltxml L166-167: \lxAddClass{class} adds a CSS class
+  // to the current element. Rust had this CS completely missing, so
+  // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
+  DefConstructor!("\\lxAddClass Semiverbatim", "",
+    after_construct => sub[document, whatsit] {
+      let class_tok = whatsit.get_arg(1);
+      if let Some(cls) = class_tok {
+        let class_str = cls.to_string();
+        if let Some(mut element) = document.get_element() {
+          let _ = document.add_class(&mut element, &class_str);
+        }
+      }
+    });
+
   DefConstructor!("\\lxFcn{}", "<ltx:XMWrap role='FUNCTION'>#1</ltx:XMWrap>",
     require_math => true, reversion => "#1", alias => "");
   DefConstructor!("\\lxID{}", "<ltx:XMWrap role='ID'>#1</ltx:XMWrap>",
