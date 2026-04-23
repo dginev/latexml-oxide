@@ -104,6 +104,7 @@ LoadDefinitions!({
     )
   });
   // Perl: Box(UTF(0xA0), undef, undef, T_ACTIVE("~"), ...);
+  // Perl Base_Utility.pool.ltxml L52: DefPrimitiveI('\lx@NBSP', undef, sub{...}, locked => 1)
   DefPrimitive!("\\lx@NBSP", {
     Tbox::new(
       arena::pin_static("\u{00A0}"),
@@ -112,7 +113,7 @@ LoadDefinitions!({
       Tokens!(T_ACTIVE!('~')),
       stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
     )
-  });
+  }, locked => true);
   DefPrimitive!("\\lx@nobreakspace", {
     Tbox::new(
       arena::pin_static("\u{00A0}"),
