@@ -1133,6 +1133,20 @@ LoadDefinitions!({
       rearrange_ams_split(document, last)?;
     }
   });
+  // Perl amsmath.sty.ltxml L359-362: `\@@@split` — same body as `\@@split`
+  // but WITHOUT the `beforeDigest => bgroup` opener. Used when the caller
+  // already manages its own group scope (so the inner split constructor
+  // doesn't double-wrap). Orphan in the ltxml source (no internal caller
+  // in amsmath or known peer packages), but kept for parity so a tpl
+  // writer or external expansion targeting `\@@@split` resolves.
+  DefConstructor!("\\@@@split DigestedBody",
+  "#1",
+  reversion => "\\begin{split}#1\\end{split}",
+  after_construct => sub[document, _whatsit] {
+    if let Some(last) = document.get_node().get_last_child() {
+      rearrange_ams_split(document, last)?;
+    }
+  });
 
   //======================================================================
   // Section 3.7 Alignment building blocks (gathered, aligned, alignedat)
