@@ -104,11 +104,27 @@ LoadDefinitions!({
   DefEnvironment!("{IEEEproof}[]",
     "<ltx:proof><ltx:title font='bold italic' _force_font='true' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>");
 
-  // IEEEbiography (Perl L238-247)
+  // IEEEbiography (Perl L238-247) — `[photo]{name}body`. Previous Rust
+  // simplification dropped the photo arg entirely and used <ltx:section>
+  // with <ltx:title>; that loses the photo placement (a defining IEEE
+  // feature) and the bold-name + inline-block layout. Restored to Perl's
+  // <ltx:float class='biography'><ltx:tabular> shape so author photos
+  // land in the left cell. Note signature: `[]{}` matches Perl
+  // (`{IEEEbiography}[]{}` — opt photo, mandatory name).
   DefEnvironment!("{IEEEbiography}[]{}",
-    "<ltx:section class='ltx_biography'><ltx:title>#2</ltx:title>#body</ltx:section>");
-  DefEnvironment!("{IEEEbiographynophoto}{}",
-    "<ltx:section class='ltx_biography'><ltx:title>#1</ltx:title>#body</ltx:section>");
+    "<ltx:float class='biography'><ltx:tabular>\
+     <ltx:tr><ltx:td>#1</ltx:td>\
+     <ltx:td><ltx:inline-block><ltx:text class='ltx_font_bold'>#2</ltx:text> #body</ltx:inline-block></ltx:td>\
+     </ltx:tr></ltx:tabular></ltx:float>");
+  // Perl uses `[]{}` here too (L243) — the optional `[photo]` is unused
+  // by the nophoto variant but still consumed for arg-shape parity. Rust
+  // previously declared `{}` (single arg), which silently broke any
+  // `\begin{IEEEbiographynophoto}[stub]{Name}` invocation: the `[stub]`
+  // would be left as inline content. Match Perl signature.
+  DefEnvironment!("{IEEEbiographynophoto}[]{}",
+    "<ltx:float class='biography'><ltx:tabular>\
+     <ltx:tr><ltx:td><ltx:inline-block><ltx:text class='ltx_font_bold'>#2</ltx:text> #body</ltx:inline-block></ltx:td>\
+     </ltx:tr></ltx:tabular></ltx:float>");
 
   // IEEEeqnarray (Perl L299-332) — map to eqnarray
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
