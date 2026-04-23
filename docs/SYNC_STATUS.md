@@ -134,6 +134,16 @@ live in git log and `memory/project_session_history.md`. What remains:
 `Def*!` kinds pair-by-pair. Baselines tracked in `docs/def_parity_*.tsv`;
 batch plan + per-batch progress in `docs/DEF_PARITY_AUDIT.md`.
 
+**`scope => 'global'` sweep (2026-04-23).** All 27 Perl occurrences of
+`scope => 'global'` across the 9 affected packages (aas_support,
+amsmath, amsfonts, colordvi, graphicx, llncs, mathtools, fontenc,
+latexml, pgfsys-latexml) audited. Result: 26/27 correctly ported with
+`scope => Some(Scope::Global)` (direct) or RawTeX `\global\def`
+(colordvi), or correctly elided (pgfsys-latexml is DVI-only stub;
+latexml.sty's `\@@XMDECL@ID` is bypassed by a live-counter register
+read). One gap landed in c8a232ecb — graphicx `\includegraphics`
+DefMacro.
+
 **Progress (2026-04-22):** engine 52 → 14, package 232, contrib 0.
 10 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
 + MergeFont! multi-key), `d7422914c` (\lx@cases@condition DefConstructor
