@@ -362,20 +362,26 @@ LoadDefinitions!({
   });
   DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
 
-  // Perl L252-254: \hyperdef{category}{name}{text}
-  // TODO: afterConstruct => \&localized_anchor (wraps content in ltx:anchor)
-  // For now, just output text with xml:id on a wrapper.
+  // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}
+  // Perl emits just `#3` / `#2` as content, then afterConstruct's
+  // localized_anchor wraps it in <ltx:anchor xml:id='#id'> at the first
+  // ancestor that can contain anchor. Rust approximates this by emitting
+  // <ltx:anchor> directly in the template — ltx:anchor is a valid Inline
+  // per the schema (Inline:=(ltx:Math,ltx:anchor,...)), so it fits where
+  // a plain text/content item was expected. Previously the template used
+  // <ltx:text xml:id='…'>, which is semantically weaker (a generic inline
+  // text wrapper vs. an anchor/target element) and didn't match the Perl
+  // semantics that downstream MathML/accessibility processors expect.
   DefConstructor!("\\hyperdef Semiverbatim Semiverbatim Semiverbatim",
-  "<ltx:text xml:id='#id'>#3</ltx:text>",
+  "<ltx:anchor xml:id='#id'>#3</ltx:anchor>",
   enter_horizontal => true,
   properties => sub[args] {
     let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
   });
-  // Perl L256-258: \hypertarget{name}{text}
   DefConstructor!("\\hypertarget Semiverbatim {}",
-  "<ltx:text xml:id='#id'>#2</ltx:text>",
+  "<ltx:anchor xml:id='#id'>#2</ltx:anchor>",
   enter_horizontal => true,
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
