@@ -95,6 +95,19 @@ LoadDefinitions!({
   DefMacro!("\\nuc{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
   DefMacro!("\\itnuc{}{}", "\\ensuremath{{}^{#2}\\textit{#1}}");
 
+  // Perl elsart_support.sty.ltxml L63-65: \@@nuc — internal DefConstructor
+  // that \nuc and \itnuc forward through in Perl. Rust short-circuits
+  // \nuc/\itnuc above, so adding \@@nuc is purely defensive — external
+  // code or Let-aliases that call \@@nuc{element}{mass} directly now
+  // resolve to the Perl-faithful XMArg/XMApp wrapper with role=
+  // SUPERSCRIPTOP. Simplification: Perl's properties closure computes
+  // pos='pre<scriptlevel>' for pre-superscript positioning; we emit the
+  // wrap unconditionally (position is determined by surrounding XMath).
+  DefConstructor!("\\@@nuc{}{}",
+    "<ltx:XMArg><ltx:XMApp>\
+       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='pre'/>#1#2\
+     </ltx:XMApp></ltx:XMArg>");
+
   // Perl L92-102: algorithm counter + environment
   NewCounter!("algorithm");
   DefMacro!("\\thealgorithm", "\\arabic{algorithm}");
