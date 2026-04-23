@@ -125,7 +125,10 @@ LoadDefinitions!({
   DefMacro!("\\weierp", "\\wp");
   DefMacro!("\\le", "\\leq");
   DefMacro!("\\ge", "\\geq");
-  // Perl L41-42: \part → \partial, \and → \land
+  // Perl L41-42: \part → \partial, \and → \land (both are texvc
+  // overrides of LaTeX sectioning / frontmatter CSes — in a MediaWiki
+  // math context \part means \partial, not the sectioning command).
+  Let!("\\part", "\\partial");
   Let!("\\and", "\\land");
   // Perl L47: texvc turns off equation group numbers
   Let!("\\@equationgroup@number", "\\nonumber");
@@ -142,8 +145,10 @@ LoadDefinitions!({
     }
   });
 
-  // Text-mode stubs — Perl L112-120
-  DefMacro!("\\part{}", "\\par\\textbf{#1}\\par");
+  // \bold is MediaWiki-specific math shorthand for \mathbf; not in Perl
+  // texvc.sty (which routes via amssymb/mathtools). Kept as a defensive
+  // stub so MediaWiki-flavored documents resolve it (MediaWiki users
+  // write `\bold{x}` rather than `\mathbf{x}`).
   DefMacro!("\\bold{}", "\\mathbf{#1}");
 
   // Color — Perl L155-183
