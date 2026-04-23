@@ -82,14 +82,22 @@ LoadDefinitions!({
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
   DefMacro!("\\pagesofar", "");
 
-  // Endnotes — Perl L119-149
+  // Endnotes — Perl L119-149. Each of \endnote/\endnotemark/\endnotetext
+  // calls `beforeDigest => sub { neutralizeFont(); }` in Perl so that the
+  // enclosing italic/bold/color state doesn't bleed into the note body
+  // (same reason latex_constructs.rs's `\lx@note` does it at L2857). Prior
+  // Rust port dropped the hook; without it a \textbf{\endnote{body}} would
+  // render `body` in bold. `neutralize_font` is already pub in base_utilities.
   NewCounter!("endnote");
   DefConstructor!("\\endnote[]{}", "<ltx:note role='endnote' mark='#mark' xml:id='#id'>#tags#2</ltx:note>",
-    mode => "internal_vertical");
+    mode => "internal_vertical",
+    before_digest => { neutralize_font(); });
   DefConstructor!("\\endnotemark[]", "<ltx:note role='endnotemark' mark='#mark' xml:id='#id'>#tags</ltx:note>",
-    mode => "restricted_horizontal", enter_horizontal => true);
+    mode => "restricted_horizontal", enter_horizontal => true,
+    before_digest => { neutralize_font(); });
   DefConstructor!("\\endnotetext[]{}", "<ltx:note role='endnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
-    mode => "internal_vertical");
+    mode => "internal_vertical",
+    before_digest => { neutralize_font(); });
 
   // 6. Math — Perl L159-176
   Let!("\\case", "\\frac");
