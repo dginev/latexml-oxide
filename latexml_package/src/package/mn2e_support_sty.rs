@@ -47,17 +47,20 @@ LoadDefinitions!({
   DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>");
   DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
 
-  // Keywords — Perl mn2e_support.sty.ltxml L48-54:
-  //   DefEnvironment('{keywords}', '',
-  //     afterDigest => sub { push 'ltx:classification'→frontmatter });
-  //
-  // As an environment, `\endkeywords` is auto-defined, so raw
-  // `mn2e-breakabs.sty` redefinitions of `\endkeywords` (which reference
-  // undefined `\SFB@keywordstrue`) never fire. Body digests as frontmatter
-  // classification entry via `\@add@frontmatter`.
+  // Keywords — Perl mn2e_support.sty.ltxml L48-54 registers the env with
+  //   afterDigest => push ['ltx:classification',{scheme=>'keywords'},body]
+  //   onto LookupValue('frontmatter')
+  // so the classification surfaces in the document's frontmatter rather
+  // than inline at the `\begin{keywords}` position. Rust's prior port
+  // emitted it inline as env body (missed the frontmatter push).
+  // Port via DefEnvironment expanding to `\@add@frontmatter` — same
+  // idiom used by companion `\keywords{}` macro. Perl's `\@add@frontmatter`
+  // schedules the attribute subtree for later frontmatter placement.
   DefEnvironment!("{keywords}",
-    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}");
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\nokeywords", "");
 
   // Dates — Perl L61-66
   DefMacro!("\\date[]{}", "\\@add@frontmatter{ltx:date}{#2}");
