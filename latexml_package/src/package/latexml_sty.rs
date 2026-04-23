@@ -440,6 +440,19 @@ LoadDefinitions!({
       }
     });
 
+  // Perl latexml.sty.ltxml L182-185: \lxWithClass{class}{body} — wraps
+  // body in a node with the given CSS class. Perl's getAnnotatableNode
+  // detects text-node context and opens <ltx:text> if needed, then
+  // addClass on the resulting container. Rust approximates: always
+  // wrap in <ltx:text class='#1'>#2</ltx:text>. This is correct for
+  // text-mode callers (the common case); in math mode the result
+  // diverges (Perl wouldn't wrap, Rust adds an ltx:text inside XMath).
+  // No test exercises \lxWithClass, so the approximation is
+  // acceptable until the filter_children/absorb pipeline can be
+  // wired.
+  DefConstructor!("\\lxWithClass Semiverbatim {}",
+    "<ltx:text class='#1'>#2</ltx:text>");
+
   DefConstructor!("\\lxFcn{}", "<ltx:XMWrap role='FUNCTION'>#1</ltx:XMWrap>",
     require_math => true, reversion => "#1", alias => "");
   DefConstructor!("\\lxID{}", "<ltx:XMWrap role='ID'>#1</ltx:XMWrap>",
