@@ -50,6 +50,7 @@ pub mod dblfloatfix_sty;
 pub mod deluxe_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
+pub mod ed_sty;
 pub mod emlines_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
@@ -175,6 +176,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cmcal", "sty", cmcal_sty::load_definitions),
   ("datetime2", "sty", datetime2_sty::load_definitions),
   ("datetime", "sty", datetime_sty::load_definitions),
+  ("ed", "sty", ed_sty::load_definitions),
   ("emlines", "sty", emlines_sty::load_definitions),
   ("hobby", "code.tex", hobby_code_tex::load_definitions),
   ("hyphenat", "sty", hyphenat_sty::load_definitions),
