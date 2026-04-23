@@ -73,6 +73,16 @@ LoadDefinitions!({
   DefPrimitive!("\\and", None);
   DefMacro!("\\authoremail", "\\email");
 
+  // Perl aas_support.sty.ltxml L119:
+  //   AddToMacro(T_CS('\@startsection@hook'),
+  //              TokenizeInternal('\let\email\@@email'));
+  // When a section starts, locally Let \email = \@@email so that
+  // \email{user@example} inside a section body renders as an inline
+  // mailto link (via \@@email) rather than being pushed to the
+  // frontmatter creator list. Pure additive parity port — no test
+  // exercises \email inside a section so no golden risk.
+  AddToMacro!("\\@startsection@hook", "\\let\\email\\@@email");
+
   // Affiliation marks — Perl L126-132
   DefMacro!("\\altaffilmark{}", "\\@altaffilmark{#1}");
   DefConstructor!("\\@altaffilmark{}", "<ltx:note role='affiliationmark' mark='#1'/>",
