@@ -47,7 +47,12 @@ LoadDefinitions!({
 
   // Perl: \lx@unactivate DefToken — resets mathcode of a character.
   // Perl kind is DefMacro with an imperative sub body (no token return);
-  // Rust DefPrimitive is the idiomatic match for that shape (WISDOM #41).
+  // Rust DefPrimitive runs the side effect at stomach time. WISDOM #44:
+  // the two kinds differ under expansion (`\edef` etc.); safe here because
+  // `\lx@unactivate` is only emitted inside `\DC@` expansions that execute
+  // at math-mode stomach time, never captured by `\edef`.
+  // TODO(WISDOM #44): if a future audit finds `\edef`-wrapped usage, port
+  // to DefMacro with a gullet-token return.
   DefPrimitive!("\\lx@unactivate DefToken", sub[(delim_tok)] {
     let delim_str = delim_tok.to_string();
     if let Some(ch) = delim_str.chars().next() {

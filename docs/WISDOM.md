@@ -1190,3 +1190,57 @@ hook code against it; Perl doesn't load `expl3-code.tex` so doesn't
 need the dispatch. Keep the gate; removing it silently regresses
 the raw-load path. Any future "clean up expl3 support" pass must
 preserve this compensator or replace the raw-load path first.
+
+## 44. `DefMacro(sub{…})` vs `DefPrimitive(sub{…})` are NOT interchangeable
+
+**Correction to an over-broad recent pattern** (several 2026-04-23
+breadcrumbs claimed a blanket equivalence — wrong).
+
+The two kinds agree on the **shape of the Perl body** (a sub that may
+have side effects and may return tokens), but they differ on **when
+and how the gullet sees the CS**:
+
+| Property | `DefMacro(sub{})` | `DefPrimitive(sub{})` |
+|---|---|---|
+| Expandable? | yes (gullet-level) | no (stomach-level) |
+| `read_x_token` over the CS | fires the sub, substitutes return | returns the CS token as-is |
+| Inside `\edef` / `\protected@edef` | sub runs, return inlined into definition | CS frozen as-is in the body |
+| `\ifx \cs \other` | compares expansion | compares primitive identity |
+| `\expandafter \cs` | triggers one expansion step | unchanged |
+| Side-effect timing | gullet-time (before stomach) | stomach-time |
+
+**Operational takeaway.** A Rust `DefPrimitive!(cs, sub{…})` is only a
+safe port of a Perl `DefMacro(cs, sub{…})` **if every call-site of the
+CS occurs in a non-expansion context** — i.e., the CS is always invoked
+at stomach time, never peeked by `read_x_token`, never captured by
+`\edef`, never compared via `\ifx`. For most state-mutating package
+helpers (e.g. `\DefineNamedColor`, `\lx@unactivate`,
+`\set@deluxetable@template`, `\lx@makecell@head`) the invariant does
+hold in practice — but the correctness is per-CS, not by-pattern.
+
+For gullet-reactive helpers (`\xspace` reads the next token; `\xglobal
+Token` peeks and decides; `\pgf@circ@stripdecimals Until:…` slices an
+argument stream) the distinction is observable and the two kinds are
+**not equivalent** in general. Those cases can still work because:
+- the outer protocol (what tokens follow the CS) dictates whether the
+  stomach-time consumption order matches the gullet-time expansion
+  order, AND
+- the CS is never placed inside a protected `\edef` or `\ifx` capture.
+
+When triaging a Perl `DefMacro(sub{})` → Rust `DefPrimitive(sub{})`
+mismatch, the right breadcrumb is **not** "WISDOM #41" (that entry is
+about math-mode structural ParameterType adaptations). The correct
+triage is:
+1. Name the gullet contexts that could observe the CS (calls from
+   `\edef`, `\ifx`, `\expandafter`, anything peeking with `readXToken`).
+2. Confirm none of them fire for this CS in practice (grep, or a
+   comment in the surrounding code that documents the invocation
+   contract).
+3. If confirmed, the DefPrimitive port is safe; otherwise it is a real
+   parity gap and needs a genuine DefMacro / sub-with-token-return.
+
+**Audit-tool consequence.** The Def*-parity audit surfaces every
+`DefMacro → DefPrimitive` mismatch. Most pass the per-CS test, but
+dismissing them all by pattern is unsafe. When in doubt, err toward
+keeping Perl's kind and porting the sub body as a DefMacro with
+gullet-token return.

@@ -953,7 +953,12 @@ LoadDefinitions!({
   // \newgathered{name}{pre_line}{post_line}{after}
   // Creates \name and \endname environments for gathered-like displays.
   // Perl: DefMacro sub{} body that dynamically DefMacroI-installs runtime
-  // macros. DefMacro-with-imperative-sub ≡ DefPrimitive (WISDOM #41).
+  // macros. Rust DefPrimitive does the installs at stomach time.
+  // WISDOM #44: NOT universally equivalent — safe here because
+  // `\newgathered` is a user-facing preamble declaration, not something
+  // that flows through `\edef`.
+  // TODO(WISDOM #44): if upstream mathtools adds `\edef`-wrapping of
+  // `\newgathered`, port to DefMacro with gullet-token return.
   DefPrimitive!("\\newgathered{}{}{}{}", sub[(name, _pre, _post, _after)] {
     let env_name = name.to_string();
     // Create \name macro → begins gathered alignment

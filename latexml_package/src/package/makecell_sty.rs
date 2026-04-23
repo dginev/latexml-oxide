@@ -8,7 +8,12 @@ LoadDefinitions!({
 
   // Mark thead et.al as headers (row & column).
   // Perl is DefMacroI with an imperative sub body (no token return);
-  // Rust DefPrimitive matches that shape idiomatically (WISDOM #41).
+  // Rust DefPrimitive runs at stomach time. WISDOM #44: the two kinds
+  // differ under expansion — safe here because `\lx@makecell@head` is
+  // injected by `\theadfont` inside alignment cells and never observed
+  // by `\edef` / `\ifx`.
+  // TODO(WISDOM #44): re-verify if a future theadfont-chain change moves
+  // the CS into an expansion context.
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
     if let Some(alignment) = lookup_alignment() {
       if let Some(data) = alignment.alignment_cell() {

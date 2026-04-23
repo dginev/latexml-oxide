@@ -596,8 +596,11 @@ LoadDefinitions!({
 
   // Perl: DefMacro('\xglobal Token', sub { check if token in xglobal@list; if yes set xglobal@;
   //   else emit \global token }).
-  // DefMacro-sub-imperative ≡ DefPrimitive (WISDOM #41) — token-stream
-  // variant (gullet::unread_one reinjects the peeked token).
+  // Rust uses DefPrimitive with gullet::unread_one for token reinject.
+  // WISDOM #44: DefMacro↔DefPrimitive is NOT universally equivalent —
+  // expansion-context (\edef, \ifx, \expandafter) observes a
+  // different CS identity. Safe here because `\xglobal` is only
+  // invoked at stomach time ahead of a color-defining primitive.
   DefPrimitive!("\\xglobal Token", sub[(token)] {
     // Check if token is one of the color-defining commands
     const COLOR_CMDS: &[&str] = &[

@@ -5,7 +5,13 @@ use latexml_core::common::color::from_model_components;
 LoadDefinitions!({
   // Perl L20-30: \DefineNamedColor — defines a named color + \text<name> + \<name>.
   // Perl kind is DefMacro with an imperative sub body that returns no tokens;
-  // Rust DefPrimitive matches that shape idiomatically (WISDOM #41).
+  // Rust DefPrimitive is the stomach-level analogue. WISDOM #44: the two
+  // kinds differ under `\edef`/`\ifx`/`\expandafter`; safe here because
+  // `\DefineNamedColor` is invoked at document-preamble stomach time by
+  // `\input{dvipsnam.def}`, never captured in an expansion context.
+  // TODO(WISDOM #44): verify no call site wraps `\DefineNamedColor` in
+  // `\edef` / `\protected@edef` — if any appear, port to DefMacro with
+  // gullet-token return.
   DefPrimitive!("\\DefineNamedColor{}{}{}{}", sub[(_dmodel, name, model, spec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string().trim().to_string();

@@ -186,7 +186,7 @@ structural/intentional**:
 | File | # | Pattern | Classification |
 |---|---|---|---|
 | texvc_sty | 30 | DefMacroI↔DefMath alias→direct-XMath | WISDOM #40 |
-| physics_sty | 22 | DefMacro(sub)↔DefPrimitive(imperative) | WISDOM #41 + inline at `:265` |
+| physics_sty | 22 | DefMacro(sub)↔DefPrimitive(imperative) | WISDOM #44 + inline at `:265` — safe-per-CS, not universally equivalent |
 | pgfsys_latexml_def | 17 | DefConstructor-empty-template↔DefPrimitive-state | top-of-file comment |
 | babel_support_sty | 15 | DefPrimitiveI-literal↔DefMacro-text-alias | inline comment |
 | llncs_cls \bbbX | 13 | DefPrimitiveI-glyph↔DefConstructor-template | inline at `:143` |
@@ -198,7 +198,7 @@ structural/intentional**:
 
 **Remaining 48 entries (long tail, files with ≤4 DP flags each).**
 Kind distribution shows **every pattern already catalogued**:
-- 20 DefMacro↔DefPrimitive → same gullet-sub↔stomach-imperative as physics (WISDOM #41)
+- 20 DefMacro↔DefPrimitive → same gullet-sub↔stomach-imperative as physics (WISDOM #44 — NOT a universal equivalence, validate per-CS that no call site observes the CS via `\edef`/`\ifx`/`\expandafter`)
 - 12 DefConstructor↔DefMacro → likely TeXDelimiter / other ParameterType workarounds (WISDOM #41)
 - 9 DefPrimitive↔DefMacro → babel_support literal-text pattern
 - 2 DefPrimitiveI↔DefMacro → babel_support pattern

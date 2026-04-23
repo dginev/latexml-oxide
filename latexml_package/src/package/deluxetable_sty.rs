@@ -26,7 +26,13 @@ LoadDefinitions!({
   }
 
   // Perl: DefMacro('\set@deluxetable@template AlignmentTemplate', sub { AssignValue(...); }).
-  // DefMacro-with-sub ≡ DefPrimitive-imperative (WISDOM #41).
+  // Rust uses DefPrimitive — same AssignValue side effect at stomach time.
+  // WISDOM #44: DefMacro↔DefPrimitive is NOT universally equivalent; safe
+  // here because `\set@deluxetable@template` is only emitted by the
+  // `\deluxetable{...}` expansion and consumed immediately in document
+  // body, never captured by `\edef`.
+  // TODO(WISDOM #44): re-verify if the Perl-defined name `\@deluxetable@template`
+  // appears in any `\edef` / `\expandafter` usage in future upstream changes.
   DefPrimitive!("\\set@deluxetable@template AlignmentTemplate", sub[(template)] {
     AssignValue!("@deluxetable@template", template);
   });

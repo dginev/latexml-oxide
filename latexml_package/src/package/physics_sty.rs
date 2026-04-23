@@ -265,9 +265,13 @@ LoadDefinitions!({
   // Perl kind: DefMacro with gullet-level sub body returning I_dual(...).
   // Rust kind: DefPrimitive with imperative stomach-level body — same
   // structured XMDual output, parsed at digest time instead of expansion
-  // time. Practical difference (expansion inside \edef) is negligible for
-  // physics notation. DP audit flags this as DefMacro↔DefPrimitive; it is
-  // a structural pattern, not a parity bug — see docs/WISDOM.md #41.
+  // time. WISDOM #44 (not #41 — #41 covers math-mode ParameterType
+  // adaptations; the kind shift here is the expandability difference).
+  // Practically safe because physics notation is math-mode stomach-time
+  // only; no call site is known to wrap `\evaluated` in `\edef`.
+  // TODO(WISDOM #44): confirm no physics-package consumer does
+  // `\edef\foo{…\evaluated…}`. If it does, port body to DefMacro with
+  // a gullet-token return path.
   DefPrimitive!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
