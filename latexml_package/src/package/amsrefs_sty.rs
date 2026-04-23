@@ -22,14 +22,27 @@ LoadDefinitions!({
   // \cites = \cite
   Let!("\\cites", "\\cite");
 
-  // {bibdiv} environment
-  // Perl: DefEnvironment('{bibdiv}', ... beforeDigest, afterDigestBegin ...)
-  // TODO: beforeDigestBibliography/beginBibliography_clean not yet available
+  // {bibdiv} environment — amsrefs.sty.ltxml L60-68.
+  // beforeDigest: beforeDigestBibliography (preamble/counter/guard setup).
+  // afterDigestBegin: beginBibliography_clean + Let('\par','\relax'). The
+  // `_clean` variant skips setup_pseudo_bibitem because amsrefs bibliographies
+  // always use explicit `\bibitem`; the pseudo-bibitem machinery rebinds
+  // `\bibitem` and would break amsrefs' own `\bib{...}{...}{...}` entries.
+  // The Let('\par','\relax') silences the implicit paragraph breaks between
+  // entries (amsrefs items are sibling elements, not paragraphs).
   DefEnvironment!("{bibdiv}",
-    "<ltx:bibliography xml:id='#id'>\
-     <ltx:title>#title</ltx:title>\
+    "<ltx:bibliography xml:id='#id' \
+     bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+     <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>\
      #body\
-     </ltx:bibliography>");
+     </ltx:bibliography>",
+    before_digest => {
+      crate::engine::latex_constructs::before_digest_bibliography()?;
+    },
+    after_digest_begin => sub[whatsit] {
+      crate::engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+      Let!("\\par", "\\relax");
+    });
 
   // {biblist} environment
   DefEnvironment!("{biblist}", "<ltx:biblist>#body</ltx:biblist>");

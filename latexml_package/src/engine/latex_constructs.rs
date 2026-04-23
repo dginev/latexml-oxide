@@ -1888,7 +1888,7 @@ pub(crate) fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
   setup_pseudo_bibitem()
 }
 
-fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
+pub(crate) fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // Check if \bibsection is defined and try to decipher it.
   // Expecting something like \section*{sometext}
   // Perl: beginBibliography_clean in latex_constructs.pool.ltxml
