@@ -107,7 +107,18 @@ LoadDefinitions!({
   // Acknowledgements — Perl L132-140
   //======================================================================
 
-  DefConstructor!("\\acknowledgements", "<ltx:acknowledgements>");
+  // Perl aa_support.sty.ltxml L132-138: \acknowledgements emits
+  // <ltx:acknowledgements name='#name'> where #name is the digested
+  // expansion of \acknowledgmentsname. Prior Rust port silently
+  // dropped the `name=` attribute — documents using the A&A binding
+  // and rendering the acknowledgement section in a tagset that
+  // surfaces a `@name` attribute would miss the heading.
+  DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
+    properties => sub[_args] {
+      let name = stomach::digest(T_CS!("\\acknowledgmentsname"))
+        .map(|d| d.to_string()).unwrap_or_default();
+      Ok(stored_map!("name" => name))
+    });
   DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
   Let!("\\acknowledgement", "\\acknowledgements");
   Let!("\\endacknowledgement", "\\endacknowledgements");
