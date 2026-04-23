@@ -957,8 +957,8 @@ LoadDefinitions!({
   // WISDOM #44: NOT universally equivalent — safe here because
   // `\newgathered` is a user-facing preamble declaration, not something
   // that flows through `\edef`.
-  // TODO(WISDOM #44): if upstream mathtools adds `\edef`-wrapping of
-  // `\newgathered`, port to DefMacro with gullet-token return.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\newgathered` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\newgathered{}{}{}{}", sub[(name, _pre, _post, _after)] {
     let env_name = name.to_string();
     // Create \name macro → begins gathered alignment

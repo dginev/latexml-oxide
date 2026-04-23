@@ -12,8 +12,8 @@ LoadDefinitions!({
   // differ under expansion — safe here because `\lx@makecell@head` is
   // injected by `\theadfont` inside alignment cells and never observed
   // by `\edef` / `\ifx`.
-  // TODO(WISDOM #44): re-verify if a future theadfont-chain change moves
-  // the CS into an expansion context.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\lx@makecell@head` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
     if let Some(alignment) = lookup_alignment() {
       if let Some(data) = alignment.alignment_cell() {

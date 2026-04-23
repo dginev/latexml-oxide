@@ -269,9 +269,8 @@ LoadDefinitions!({
   // adaptations; the kind shift here is the expandability difference).
   // Practically safe because physics notation is math-mode stomach-time
   // only; no call site is known to wrap `\evaluated` in `\edef`.
-  // TODO(WISDOM #44): confirm no physics-package consumer does
-  // `\edef\foo{…\evaluated…}`. If it does, port body to DefMacro with
-  // a gullet-token return path.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\evaluated` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");

@@ -33,7 +33,8 @@ LoadDefinitions!({
   // WISDOM #44: NOT universally equivalent — safe here because
   // `\lx@titleformat@star` is only invoked via `\titleformat*{\cmd}{format}`
   // at preamble/document time, never captured by `\edef`.
-  // TODO(WISDOM #44): verify no call site `\edef`s over this CS.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\lx@titleformat@star` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\lx@titleformat@star {}{}", sub[(cmd, format)] {
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);

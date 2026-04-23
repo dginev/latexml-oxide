@@ -51,8 +51,8 @@ LoadDefinitions!({
   // the two kinds differ under expansion (`\edef` etc.); safe here because
   // `\lx@unactivate` is only emitted inside `\DC@` expansions that execute
   // at math-mode stomach time, never captured by `\edef`.
-  // TODO(WISDOM #44): if a future audit finds `\edef`-wrapped usage, port
-  // to DefMacro with a gullet-token return.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\lx@unactivate` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\lx@unactivate DefToken", sub[(delim_tok)] {
     let delim_str = delim_tok.to_string();
     if let Some(ch) = delim_str.chars().next() {

@@ -31,8 +31,8 @@ LoadDefinitions!({
   // here because `\set@deluxetable@template` is only emitted by the
   // `\deluxetable{...}` expansion and consumed immediately in document
   // body, never captured by `\edef`.
-  // TODO(WISDOM #44): re-verify if the Perl-defined name `\@deluxetable@template`
-  // appears in any `\edef` / `\expandafter` usage in future upstream changes.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\set@deluxetable@template` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\set@deluxetable@template AlignmentTemplate", sub[(template)] {
     AssignValue!("@deluxetable@template", template);
   });

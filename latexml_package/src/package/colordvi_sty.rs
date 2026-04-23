@@ -9,9 +9,8 @@ LoadDefinitions!({
   // kinds differ under `\edef`/`\ifx`/`\expandafter`; safe here because
   // `\DefineNamedColor` is invoked at document-preamble stomach time by
   // `\input{dvipsnam.def}`, never captured in an expansion context.
-  // TODO(WISDOM #44): verify no call site wraps `\DefineNamedColor` in
-  // `\edef` / `\protected@edef` — if any appear, port to DefMacro with
-  // gullet-token return.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\DefineNamedColor` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\DefineNamedColor{}{}{}{}", sub[(_dmodel, name, model, spec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string().trim().to_string();
