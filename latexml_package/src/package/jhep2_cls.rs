@@ -4,5 +4,5 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: JHEP2.cls.ltxml
   // LoadClass("JHEP", withoptions => 1);
-  load_class("JHEP", Vec::new(), Tokens!())?;
+  load_class_with_options("JHEP", Tokens!())?;
 });

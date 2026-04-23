@@ -4,7 +4,7 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: PoS.cls.ltxml — Proceedings of Science style.
   // LoadClass("JHEP", withoptions => 1);
-  load_class("JHEP", Vec::new(), Tokens!())?;
+  load_class_with_options("JHEP", Tokens!())?;
   RequirePackage!("ifpdf");
   RequirePackage!("times");
   RequirePackage!("mathptmx");

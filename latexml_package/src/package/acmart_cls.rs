@@ -6,7 +6,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: LoadClass('amsart', withoptions => 1)
-  load_class("amsart", Vec::new(), Tokens!())?;
+  load_class_with_options("amsart", Tokens!())?;
 
   RequirePackage!("fancyhdr");
   RequirePackage!("geometry");
