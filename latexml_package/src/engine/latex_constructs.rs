@@ -4516,7 +4516,9 @@ LoadDefinitions!({
     "\\@verbatim",
     r"\par\aftergroup\lx@end@verbatim\lx@@verbatim"
   ); // Close enough?
+  // Perl latex_constructs.pool.ltxml L1774-1782: enterHorizontal => 1 + beforeDigest.
   DefConstructor!("\\lx@@verbatim", "<ltx:verbatim font='#font'>",
+  enter_horizontal => true,
   before_digest => {
     begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"));
