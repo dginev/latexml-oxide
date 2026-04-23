@@ -1278,3 +1278,42 @@ filter out entries that already have `mode => 'restricted_horizontal'`
 on the same or an adjacent line — the Rust `mode => "text"` picks
 up the flag automatically, and any explicit `enter_horizontal =>
 true` on such a call is a harmless no-op that adds visual noise.
+
+## #46 `NewCounter(..., idprefix => 'X')` silently decays to empty prefix when routed through `\newcounter`
+
+**Finding (cycles 225/226):** Three Rust bindings had counter
+declarations that lost their Perl `idprefix => '<prefix>'` option:
+
+- `aas_support_sty`: `\@appendix` reset — `new_counter("equation",
+  "section", None)` (was missing Perl's `idprefix => 'E'`)
+- `subfig_sty`: subfigure/subtable — routed through `RawTeX!
+  ("\\newcounter{subfigure}[figure]")` (raw `\newcounter` has no
+  `idprefix` keyword; the LaTeXML option is lost)
+- pre-existing subfigure_sty and subfloat_sty already correct
+
+**Mechanism:** Perl's `NewCounter(...)` takes idprefix as a keyword
+and wires it into LaTeXML's id-registry. LaTeX's `\newcounter`
+takes only `[within]`; no way to express idprefix. So when a Rust
+port uses `RawTeX!("\\newcounter{X}[Y]")`, the counter is created
+without an idprefix → document IDs fall back to empty. The collision
+surfaces on the *second* instance of the parent (e.g. second
+appendix, or second figure with subfigures) since the first counter
+value has no prefix-namespace separation.
+
+**Detection pattern:**
+```
+for each Perl file with `idprefix =>`:
+  count Perl idprefix occurrences
+  count Rust idprefix=>"..." occurrences in same-named binding
+  if Perl > Rust → audit
+```
+
+**Fix template:** replace `RawTeX!("\\newcounter{C}[W]")` with
+`NewCounter!("C", "W", idprefix => "P")`; or convert a bare
+`new_counter("C", "W", None)` to
+`new_counter("C", "W", Some(NewCounterOptions { idprefix: "P", ..Default::default() }))`.
+See commits `8fb8bf569`, `d79d1a2e4` for concrete examples.
+
+**Don't over-apply:** theorem/spnewtheorem counters delegate to
+`define_new_theorem` which builds `idprefix => "Thm{name}"` itself;
+those bindings show as "deficits" in counted grep but aren't.
