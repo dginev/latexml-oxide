@@ -6657,8 +6657,10 @@ LoadDefinitions!({
     "\\bibitem",
     r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem"#,
     locked=>true);
+  // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest.
   DefConstructor!("\\lx@bibitem[] Semiverbatim",
     "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
+    enter_horizontal => true,
     after_digest => sub[whatsit] {
       // Perl #2409: prune previous \lx@bibitem whatsit if it was auto-opened
       // with no tag/key body, and reuse its ID (avoids empty bibitem elements).
@@ -6746,10 +6748,11 @@ LoadDefinitions!({
     )?;
   });
 
+  // Perl latex_constructs.pool.ltxml L4187-4189: enterHorizontal => 1.
   DefConstructor!("\\lx@bibnewblock", sub[document] {
   if document.is_openable("ltx:bibblock") {
     document.open_element("ltx:bibblock",None,None)?;
-  }});
+  }}, enter_horizontal => true);
   Let!("\\newblock", "\\lx@bibnewblock");
   Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
