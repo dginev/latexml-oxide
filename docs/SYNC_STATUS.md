@@ -192,6 +192,18 @@ already emitted `col+1` since before. Verified already-synced:
 Relation ParameterType #2778 (`base_parameter_types.rs:148`), Dumper
 spec double-escape #2753 (Rust uses url-encode not backslash-escape,
 bug does not apply).
+Follow-up (cycle 244): Wider sweep of Perl commits 2025-09 → 2026-03.
+All verified already-synced, no code change: #2759 alignment-token
+`init_depth` guard (`stomach.rs:703`); #2771 `if_count`/`absorb_count`
+dump deny list (`dump_writer.rs:143-144`); #2772 `\fam` Number-wrap
++ self-coercions (`tex_math.rs:740`, `gullet.rs:1336-1347` explicit
+commit-cite); #2762 `\lgroup`/`\rgroup` → U+27EE/27EF without bold
+font (`math_common.rs:937-938`); #2759 romannumeral `n>=div` fix
+(`cleaners.rs:26`, `util/radix.rs:83`); #2770 `getFrameDepth` no `-1`
+(`state.rs:2041`); filecontents-end whitespace tolerance already
+permissive via `line.contains(end_marker)` (`latex_constructs.rs:6962`).
+Conclusion: no outstanding actionable upstream-sync commits in the
+2025-07 → 2026-03-20 window — #2671 was the one residual gap.
 
 **`protected => 1` sweep (2026-04-23).** All 32 Perl occurrences audited
 (package: gensymb×5, etoolbox×7, siunitx×2, expl3.lua×6; engine:
