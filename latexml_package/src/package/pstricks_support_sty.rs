@@ -22,6 +22,23 @@ LoadDefinitions!({
   DefMacro!("\\psset{}", "");
   DefMacro!("\\psset@special{}", "");
 
+  // Perl pstricks_support.sty.ltxml L580-606: register 22 pstricks keyvals
+  // covering dot/arrow sizes, line styling, frame/arc/label spacing, and
+  // coordinate units. Perl types PSDimFloat / PSAngle / PSDimension /
+  // PSDimDim / PSOrigin / PSRegisterDimension / Float aren't registered
+  // Rust types; register with the untyped placeholder ("") since this
+  // binding is DVI-only and no consumer coerces these values. Author code
+  // that tests `\@ifundefined{KV@pstricks@dotsize@default}` now sees the
+  // Perl-equivalent answer.
+  for key in ["dotsize", "tbarsize", "dotangle",
+              "arrowsize", "arrowlength", "arrowinset",
+              "dotsep", "dash", "linewidth", "linearc", "framearc",
+              "origin", "framesep", "labelsep", "doublesep",
+              "arcsep", "arcsepA", "arcsepB",
+              "unit", "xunit", "yunit", "runit"] {
+    DefKeyVal!("pstricks", key, "");
+  }
+
   // Graphics parameters — Perl L200-350
   DefRegister!("\\pslinewidth" => Dimension!("0.8pt"));
   DefRegister!("\\psunit" => Dimension!("1cm"));
