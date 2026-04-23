@@ -7226,7 +7226,11 @@ LoadDefinitions!({
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
-  DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox");
+  // Perl latex_constructs.pool.ltxml L4717: `robust => 1` so \makebox
+  // survives \write/\edef contexts (e.g. captions, moving arguments).
+  // Rust was missing the flag.
+  DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox",
+    robust => true);
   // Perl: enterHorizontal => 1 (now automatic via mode => "text")
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
@@ -7276,8 +7280,12 @@ LoadDefinitions!({
   // At any rate, since we're wrapping with an ltx:text, we'll try to unwrap it,
   // if the contents are a single child that can handle the framing.
 
-  DefMacro!("\\fbox{}", "\\@framebox{#1}");
-  DefMacro!("\\framebox", "\\@ifnextchar(\\pic@framebox\\@framebox");
+  // Perl latex_constructs.pool.ltxml L4744-4745: both \fbox and
+  // \framebox are defined with `robust => 1` so they survive
+  // \write/\edef moving-argument contexts.
+  DefMacro!("\\fbox{}", "\\@framebox{#1}", robust => true);
+  DefMacro!("\\framebox", "\\@ifnextchar(\\pic@framebox\\@framebox",
+    robust => true);
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
