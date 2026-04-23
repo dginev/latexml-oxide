@@ -25,7 +25,8 @@ LoadDefinitions!({
     def_macro(T_CS!("\\enddeluxetable*"), None, ExpansionBody::Tokens(expansion), None)?;
   }
 
-  // Perl: DefMacro('\set@deluxetable@template AlignmentTemplate', sub { AssignValue('@deluxetable@template', $_[1]); });
+  // Perl: DefMacro('\set@deluxetable@template AlignmentTemplate', sub { AssignValue(...); }).
+  // DefMacro-with-sub ≡ DefPrimitive-imperative (WISDOM #41).
   DefPrimitive!("\\set@deluxetable@template AlignmentTemplate", sub[(template)] {
     AssignValue!("@deluxetable@template", template);
   });

@@ -6,7 +6,9 @@ LoadDefinitions!({
   // Load raw TeX first
   InputDefinitions!("makecell", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // Mark thead et.al as headers (row & column)
+  // Mark thead et.al as headers (row & column).
+  // Perl is DefMacroI with an imperative sub body (no token return);
+  // Rust DefPrimitive matches that shape idiomatically (WISDOM #41).
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
     if let Some(alignment) = lookup_alignment() {
       if let Some(data) = alignment.alignment_cell() {
