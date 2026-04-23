@@ -363,6 +363,9 @@ LoadDefinitions!({
   // Also pickled `font => { shape => 'upright' }` (Perl L498) — the
   // raised symbol is upright by convention regardless of the
   // surrounding italic math font.
+  // Perl 98f6e5de (2025-08-12) added `sizer => '#2'` so the sizer is the
+  // symbol body (e.g. `d` in `\fd`), not the whole reversion — otherwise
+  // nested fstack expressions miscompute layout width.
   DefConstructor!("\\aas@@fstack Undigested {}",
     "<ltx:XMApp role='POSTFIX'>\
        <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/>\
@@ -372,6 +375,7 @@ LoadDefinitions!({
     bounded => true,
     font => { shape => "upright" },
     reversion => "#1",
+    sizer => "#2",
     properties => sub[_args] {
       Ok(stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())))
     }
