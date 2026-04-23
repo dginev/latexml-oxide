@@ -91,6 +91,7 @@ pub mod program_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
 pub mod scrbook_cls;
+pub mod scrpage_sty;
 pub mod scrpage2_sty;
 pub mod siamltex_cls;
 pub mod stix2_sty;
@@ -166,6 +167,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("needspace", "sty", needspace_sty::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
+  ("scrpage", "sty", scrpage_sty::load_definitions),
   ("scrpage2", "sty", scrpage2_sty::load_definitions),
   ("stix2", "sty", stix2_sty::load_definitions),
   ("stix", "sty", stix_sty::load_definitions),
