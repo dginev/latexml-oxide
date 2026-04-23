@@ -43,7 +43,10 @@ fn set_citation_style(pairs: &[(&str, &str)]) {
         Info!(
           "unexpected",
           *key,
-          &s!("Unexpected Citation Style keyword '{}' using authoryear", key)
+          &s!(
+            "Unexpected Citation Style keyword '{}' using authoryear",
+            key
+          )
         );
       },
     }

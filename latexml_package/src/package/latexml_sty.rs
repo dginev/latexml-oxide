@@ -245,10 +245,18 @@ LoadDefinitions!({
   // (GENERATE_IDS, INCLUDE_COMMENTS) are read elsewhere in Rust (document.rs
   // L459 and mouth.rs L358/L696/L889 respectively), so the options were
   // functional but unreachable until wired here.
-  DeclareOption!("ids",        { AssignValue!("GENERATE_IDS"     => true,  Scope::Global); });
-  DeclareOption!("noids",      { AssignValue!("GENERATE_IDS"     => false, Scope::Global); });
-  DeclareOption!("comments",   { AssignValue!("INCLUDE_COMMENTS" => true,  Scope::Global); });
-  DeclareOption!("nocomments", { AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global); });
+  DeclareOption!("ids", {
+    AssignValue!("GENERATE_IDS"     => true,  Scope::Global);
+  });
+  DeclareOption!("noids", {
+    AssignValue!("GENERATE_IDS"     => false, Scope::Global);
+  });
+  DeclareOption!("comments", {
+    AssignValue!("INCLUDE_COMMENTS" => true,  Scope::Global);
+  });
+  DeclareOption!("nocomments", {
+    AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global);
+  });
 
   // 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
   // (bibtex will not be ran). 'bibtex' is the default (try bib, fall back to bbl).
@@ -485,8 +493,10 @@ LoadDefinitions!({
   // Perl latexml.sty.ltxml L246-247: \lxKeywords{text} — add keywords to
   // the frontmatter. Thin macro wrapper around the existing \@add@frontmatter
   // dispatch; previously missing so `\lxKeywords{foo, bar}` hit undefined-CS.
-  DefMacro!("\\lxKeywords{}",
-    "\\@add@frontmatter{ltx:keywords}[name={keywords}]{#1}");
+  DefMacro!(
+    "\\lxKeywords{}",
+    "\\@add@frontmatter{ltx:keywords}[name={keywords}]{#1}"
+  );
 
   // Perl latexml.sty.ltxml L249-250: \lxContextTOC — emits a TOC element
   // with format='context'. The matching ltx:TOC schema element already
@@ -497,15 +507,15 @@ LoadDefinitions!({
   // to the current element. Rust had this CS completely missing, so
   // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
   DefConstructor!("\\lxAddClass Semiverbatim", "",
-    after_construct => sub[document, whatsit] {
-      let class_tok = whatsit.get_arg(1);
-      if let Some(cls) = class_tok {
-        let class_str = cls.to_string();
-        if let Some(mut element) = document.get_element() {
-          let _ = document.add_class(&mut element, &class_str);
-        }
+  after_construct => sub[document, whatsit] {
+    let class_tok = whatsit.get_arg(1);
+    if let Some(cls) = class_tok {
+      let class_str = cls.to_string();
+      if let Some(mut element) = document.get_element() {
+        let _ = document.add_class(&mut element, &class_str);
       }
-    });
+    }
+  });
 
   // Perl latexml.sty.ltxml L182-185: \lxWithClass{class}{body} — wraps
   // body in a node with the given CSS class. Perl's getAnnotatableNode
@@ -517,8 +527,10 @@ LoadDefinitions!({
   // No test exercises \lxWithClass, so the approximation is
   // acceptable until the filter_children/absorb pipeline can be
   // wired.
-  DefConstructor!("\\lxWithClass Semiverbatim {}",
-    "<ltx:text class='#1'>#2</ltx:text>");
+  DefConstructor!(
+    "\\lxWithClass Semiverbatim {}",
+    "<ltx:text class='#1'>#2</ltx:text>"
+  );
 
   DefConstructor!("\\lxFcn{}", "<ltx:XMWrap role='FUNCTION'>#1</ltx:XMWrap>",
     require_math => true, reversion => "#1", alias => "");
@@ -775,9 +787,9 @@ LoadDefinitions!({
   // point at the same two CSes (the Perl convention uses head/foot
   // for clarity; both just toggle the in_tabular_head flag).
   Let!("\\lxBeginTableHead", "\\lx@alignment@begin@heading");
-  Let!("\\lxEndTableHead",   "\\lx@alignment@end@heading");
+  Let!("\\lxEndTableHead", "\\lx@alignment@end@heading");
   Let!("\\lxBeginTableFoot", "\\lx@alignment@begin@heading");
-  Let!("\\lxEndTableFoot",   "\\lx@alignment@end@heading");
+  Let!("\\lxEndTableFoot", "\\lx@alignment@end@heading");
 
   // Perl latexml.sty.ltxml L310-313: \lxTableColumnHead — mirrors
   // \lxTableRowHead below but flips thead_in_column instead of
@@ -897,10 +909,12 @@ LoadDefinitions!({
   // is left empty (no git rev exposed at runtime); that makes
   // \LaTeXMLfullversion collapse to just the version string via the
   // `\ifx\expandafter.\LaTeXMLrevision.` guard.
-  DefMacro!("\\LaTeXMLversion",  "0.4.0");
+  DefMacro!("\\LaTeXMLversion", "0.4.0");
   DefMacro!("\\LaTeXMLrevision", "");
-  DefMacro!("\\LaTeXMLfullversion",
-    "\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)");
+  DefMacro!(
+    "\\LaTeXMLfullversion",
+    "\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)"
+  );
 
   // Perl latexml.sty.ltxml L227-230: \lxRef{label}{text} — like hyperref's
   // \hyperref but straightforward. Emits <ltx:ref labelref='label'>text</ref>

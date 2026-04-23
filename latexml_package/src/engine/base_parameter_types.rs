@@ -696,12 +696,11 @@ LoadDefinitions!({
   // plus revsymb's \biglb family fall back to DefMacro workarounds.
   //
   // Gap has two dimensions:
-  //   - Reader shape (3 branches missing): single-X-token read instead
-  //     of read_arg, BEGIN-unwrap-and-re-read, `.`/undef →
-  //     \lx@delimiterdot substitution.
-  //   - Architectural `undigested=>1`: ArgWrap has no Digested variant
-  //     and Parameter has no `undigested: bool` flag; closing this
-  //     needs latexml_core changes. Required for \left\delimiter<num>.
+  //   - Reader shape (3 branches missing): single-X-token read instead of read_arg,
+  //     BEGIN-unwrap-and-re-read, `.`/undef → \lx@delimiterdot substitution.
+  //   - Architectural `undigested=>1`: ArgWrap has no Digested variant and Parameter has no
+  //     `undigested: bool` flag; closing this needs latexml_core changes. Required for
+  //     \left\delimiter<num>.
   //
   // Reader-only partial port closes ZERO DP audit entries because the
   // call-site migrations need BOTH dimensions — don't commit half.

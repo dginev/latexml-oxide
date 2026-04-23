@@ -128,8 +128,10 @@ LoadDefinitions!({
   // document redefines \noteaddname this diverges; Perl is faithful
   // to the live value. Acceptable simplification — no Springer test
   // exercises noteadd env.
-  DefEnvironment!("{noteadd}",
-    "<ltx:note name='Note added in proof'>#body</ltx:note>");
+  DefEnvironment!(
+    "{noteadd}",
+    "<ltx:note name='Note added in proof'>#body</ltx:note>"
+  );
 
   Let!("\\orithanks", "\\thanks");
   DefMacro!("\\runheadhook", "");

@@ -134,47 +134,47 @@ LoadDefinitions!({
   // Without a Rust port, papers using these intermediate CSes (rare but
   // present in some templates) would error with undefined CS.
   DefConstructor!("\\Gscale@box@dd {Dimension}{Dimension}{}",
-    "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let parse_pt = |a: Option<&Digested>| -> f64 {
-        a.and_then(|x| x.to_attribute().trim_end_matches("pt").parse::<f64>().ok()).unwrap_or(0.0)
-      };
-      let num = parse_pt(whatsit.get_arg(1));
-      let denom = parse_pt(whatsit.get_arg(2));
-      let scale = if denom != 0.0 { num / denom } else { 1.0 };
-      whatsit.set_property("xscale", Stored::from(s!("{}", scale)));
-      whatsit.set_property("yscale", Stored::from(s!("{}", scale)));
-      if let Some(body) = whatsit.get_arg(3).cloned() {
-        if let Ok(props) = scaled_properties(body, scale, scale) {
-          for (k, v) in props { whatsit.set_property(k, v); }
-        }
+  "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+  mode => "restricted_horizontal", enter_horizontal => true,
+  after_digest => sub[whatsit] {
+    let parse_pt = |a: Option<&Digested>| -> f64 {
+      a.and_then(|x| x.to_attribute().trim_end_matches("pt").parse::<f64>().ok()).unwrap_or(0.0)
+    };
+    let num = parse_pt(whatsit.get_arg(1));
+    let denom = parse_pt(whatsit.get_arg(2));
+    let scale = if denom != 0.0 { num / denom } else { 1.0 };
+    whatsit.set_property("xscale", Stored::from(s!("{}", scale)));
+    whatsit.set_property("yscale", Stored::from(s!("{}", scale)));
+    if let Some(body) = whatsit.get_arg(3).cloned() {
+      if let Ok(props) = scaled_properties(body, scale, scale) {
+        for (k, v) in props { whatsit.set_property(k, v); }
       }
-    });
+    }
+  });
 
   // \Gscale@box@dddd {xnum}{xdenom}{ynum}{ydenom}{body} — Perl L112-118.
   // Same idea, but separate xscale/yscale ratios.
   DefConstructor!("\\Gscale@box@dddd {Dimension}{Dimension}{Dimension}{Dimension}{}",
-    "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#5</ltx:inline-block>",
-    mode => "restricted_horizontal", enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let parse_pt = |a: Option<&Digested>| -> f64 {
-        a.and_then(|x| x.to_attribute().trim_end_matches("pt").parse::<f64>().ok()).unwrap_or(0.0)
-      };
-      let xn = parse_pt(whatsit.get_arg(1));
-      let xd = parse_pt(whatsit.get_arg(2));
-      let yn = parse_pt(whatsit.get_arg(3));
-      let yd = parse_pt(whatsit.get_arg(4));
-      let xscale = if xd != 0.0 { xn / xd } else { 1.0 };
-      let yscale = if yd != 0.0 { yn / yd } else { 1.0 };
-      whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
-      whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
-      if let Some(body) = whatsit.get_arg(5).cloned() {
-        if let Ok(props) = scaled_properties(body, xscale, yscale) {
-          for (k, v) in props { whatsit.set_property(k, v); }
-        }
+  "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#5</ltx:inline-block>",
+  mode => "restricted_horizontal", enter_horizontal => true,
+  after_digest => sub[whatsit] {
+    let parse_pt = |a: Option<&Digested>| -> f64 {
+      a.and_then(|x| x.to_attribute().trim_end_matches("pt").parse::<f64>().ok()).unwrap_or(0.0)
+    };
+    let xn = parse_pt(whatsit.get_arg(1));
+    let xd = parse_pt(whatsit.get_arg(2));
+    let yn = parse_pt(whatsit.get_arg(3));
+    let yd = parse_pt(whatsit.get_arg(4));
+    let xscale = if xd != 0.0 { xn / xd } else { 1.0 };
+    let yscale = if yd != 0.0 { yn / yd } else { 1.0 };
+    whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
+    whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
+    if let Some(body) = whatsit.get_arg(5).cloned() {
+      if let Ok(props) = scaled_properties(body, xscale, yscale) {
+        for (k, v) in props { whatsit.set_property(k, v); }
       }
-    });
+    }
+  });
 
   // Perl: DefParameterType('GraphixDimension', sub { skipSpaces, readXToken,
   //   if ! or undef → undef, else unread + readDimension }, optional => 1)

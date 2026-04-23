@@ -145,12 +145,16 @@ LoadDefinitions!({
   // expands options lazily (at document time, not at package-load
   // time), so forward-reference is fine.
   DeclareOption!("labels", {
-    Let!("\\lxRDF@original@label",             "\\label");
+    Let!("\\lxRDF@original@label", "\\label");
     Let!("\\lxRDF@originallx@longtable@label", "\\lx@longtable@label");
-    DefMacro!("\\label Semiverbatim",
-      "\\lxRDF@original@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}");
-    DefMacro!("\\lx@longtable@label Semiverbatim",
-      "\\lxRDF@originallx@longtable@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}");
+    DefMacro!(
+      "\\label Semiverbatim",
+      "\\lxRDF@original@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
+    );
+    DefMacro!(
+      "\\lx@longtable@label Semiverbatim",
+      "\\lxRDF@originallx@longtable@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
+    );
   });
   ProcessOptions!();
 
