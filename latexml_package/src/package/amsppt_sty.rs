@@ -163,6 +163,16 @@ LoadDefinitions!({
   // reach amsppt's documented spec.
   Tag!("ltx:biblist",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
+
+  // Perl amsppt.sty.ltxml L457-458: token-valued \holdoverbox register
+  // and 1-arg \holdover{#1} no-op. AmSTeX bib entries use \holdover{...}
+  // to bounce a partial field to the next entry; the token register
+  // accumulates the held tokens across the bib-block. Rust doesn't run
+  // the accumulation (stubbed), but both CSes must still resolve so
+  // bibliographies using \holdover don't hit undefined-CS.
+  DefRegister!("\\holdoverbox" => Tokens!());
+  DefMacro!("\\holdover{}", "");
+
   DefMacro!("\\Refs", "\\begin{thebibliography}{}");
   DefMacro!("\\endRefs", "\\end{thebibliography}");
   DefMacro!("\\ref", "\\bibitem");
