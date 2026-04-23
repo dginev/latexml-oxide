@@ -952,7 +952,8 @@ LoadDefinitions!({
 
   // \newgathered{name}{pre_line}{post_line}{after}
   // Creates \name and \endname environments for gathered-like displays.
-  // Perl: DefMacro sub{} body creates runtime macros.
+  // Perl: DefMacro sub{} body that dynamically DefMacroI-installs runtime
+  // macros. DefMacro-with-imperative-sub ≡ DefPrimitive (WISDOM #41).
   DefPrimitive!("\\newgathered{}{}{}{}", sub[(name, _pre, _post, _after)] {
     let env_name = name.to_string();
     // Create \name macro → begins gathered alignment

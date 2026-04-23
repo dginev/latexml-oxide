@@ -1918,7 +1918,14 @@ LoadDefinitions!({
   RawTeX!(r"\AtBeginDocument{\lx@six@initialize}");
 
   //======================================================================
-  // Unit object macros (fallback expansion)
+  // Unit object macros (fallback expansion).
+  // Perl double-binds: first DefPrimitive (empty body, :1209) then DefMacro
+  // with a siunitx_macros lookup sub (:1212, protected=>1) that emits
+  // `\mathrm{presentation}` or "??". Rust uses only the empty DefPrimitive
+  // — the literal-parser (`six_parse_literalunits`) walks token streams
+  // containing these CSes and performs the siunitx_macros lookup itself
+  // (see :1570+), so the DefMacro fallback would never fire in normal
+  // control flow. Structural adaptation — audit flags last-binding-wins.
   DefPrimitive!("\\lx@six@unitobject{}", "");
   DefPrimitive!("\\lx@six@unitobject@arg{}{}", "");
 
