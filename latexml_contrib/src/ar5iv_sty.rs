@@ -19,8 +19,17 @@ LoadDefinitions!({
   // Practical maximum for warnings
   AssignValue!("MAX_WARNINGS" => 10000i64, Scope::Global);
 
-  // No \today in archival conversions
-  RawTeX!(r"\AtBeginDocument{\def\today{\relax}}");
+  // No \today in archival conversions. Perl L23-25:
+  //   AtBeginDocument(sub {
+  //     DefMacroI('\today', undef, '\relax', locked => 1, scope => 'global');
+  //   });
+  // We bind at load time with `locked => true, Scope::Global` instead of
+  // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
+  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock makes
+  // timing irrelevant: any preamble package that tries to (re)define
+  // \today after this point is silently rejected, matching the intent of
+  // Perl's AtBeginDocument hook (defer until all packages have loaded).
+  DefMacro!("\\today", "\\relax", locked => true, scope => Some(Scope::Global));
   // TODO: Perl has a DefRewrite that removes non-remote <ltx:resource> elements
   // and monkey-patches LaTeXML::Post::MathML::outerWrapper to add intent=':literal'.
   // These post-processing features are not available in the compile-time binding system.
