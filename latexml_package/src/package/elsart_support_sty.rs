@@ -34,9 +34,19 @@ LoadDefinitions!({
   // Perl L58: \pol (rightwards arrow overaccent)
   DefMath!("\\pol Digested", "\u{2192}", operator_role => "OVERACCENT");
 
-  // Perl L51-53: \operatorname already defined in amsopn (ported — role='OPERATOR' here).
-  // Perl's elsart variant uses font family=serif only (amsopn adds upright+medium); we
-  // keep amsopn's version (loaded via amsmath) since both produce OPERATOR markup.
+  // Perl L51-53: elsart_support redefines \operatorname to ALWAYS emit
+  //   <ltx:XMWrap role='OPERATOR'> — distinct from amsopn's OPFUNCTION-when-
+  // unstarred / OPERATOR-when-starred split. Prior Rust port delegated to
+  // amsopn unchanged (comment incorrectly claimed "both produce OPERATOR
+  // markup"), so an elsart document's `\operatorname{lim}` silently got
+  // role='OPFUNCTION' instead of 'OPERATOR'. Restore the override.
+  DefConstructor!("\\operatorname OptionalMatch:* {}",
+    "<ltx:XMWrap role='OPERATOR' scriptpos='#scriptpos'>#2</ltx:XMWrap>",
+    bounded => true, require_math => true, font => { family => "serif" },
+    properties => sub[args] {
+      let scriptpos = if args[0].is_some() { "mid" } else { "post" };
+      Ok(stored_map!("scriptpos" => scriptpos))
+    });
 
   // Perl L55-56: \astsymbol{n}, \fnstar{n} — n-repeated Unicode char
   DefMacro!("\\astsymbol{}", sub[(n)] {
