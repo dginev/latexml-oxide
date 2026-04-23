@@ -71,9 +71,19 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:abstract}{#1}");
   Let!("\\endabstract", "\\relax");
 
-  // Section structure — Perl L170-200
-  DefMacro!("\\heading", "\\section*");
-  DefMacro!("\\endheading", "");
+  // Section structure — Perl L112-147. AmSTeX uses terminator-delimited
+  // syntax (`\head Foo \endhead`) not balanced `\section{Foo}`. Previous
+  // Rust just did `\heading → \section*` which reads the next `{...}` — a
+  // real bug on `\heading Foo \endheading` (the Foo ends up inlined with
+  // no section wrapper, and `\endheading` leaks). Port the full family
+  // with `Until:\end<x>` delimiters. Perl uses DefConstructors with
+  // bounded+inlist=toc+RefStepID; we simplify to `\section*{#1}` etc.
+  // (same as existing simplification for other head CSes), but at least
+  // the argument capture is now syntactically correct.
+  DefMacro!("\\head Until:\\endhead", "\\section*{#1}");
+  Let!("\\endhead", "\\relax");
+  DefMacro!("\\heading Until:\\endheading", "\\head#1\\endhead");
+  Let!("\\endheading", "\\relax");
   // Perl amsppt.sty.ltxml L133-141: \subheading dispatches on next token.
   // `\subheading{title}` → \subheading@onearg{title}
   // `\subheading title \endsubheading` → \subheading@env (Until:\endsubheading)
@@ -96,8 +106,16 @@ LoadDefinitions!({
   // Kept defined as a no-op for stray-use safety; \subheading@env consumes
   // the trailing \endsubheading inline so this binding usually doesn't fire.
   DefMacro!("\\endsubheading", "");
-  DefMacro!("\\specialhead", "\\section*");
-  DefMacro!("\\endspecialhead", "");
+  // Perl L112-117 `\specialhead Until:\endspecialhead → <ltx:chapter>`;
+  // L143-148 `\subsubhead Until:\endsubsubhead → <ltx:subsubsection>`.
+  // Also `\subhead` (no current Rust) needed by the \subheading@env path.
+  // All forwarded to their LaTeX starred siblings.
+  DefMacro!("\\specialhead Until:\\endspecialhead", "\\section*{#1}");
+  Let!("\\endspecialhead", "\\relax");
+  DefMacro!("\\subhead Until:\\endsubhead", "\\subsection*{#1}");
+  Let!("\\endsubhead", "\\relax");
+  DefMacro!("\\subsubhead Until:\\endsubsubhead", "\\subsubsection*{#1}");
+  Let!("\\endsubsubhead", "\\relax");
 
   // Theorem environments — Perl L200-260 use
   //   DefConstructor('\<kind> Undigested DigestUntil:\end<kind>', …)
