@@ -47,9 +47,16 @@ LoadDefinitions!({
   DefConditional!("\\ifmaincaptiontop");
   DefConditional!("\\iflx@donecaption");
 
-  // Counter setup — Perl L91-93
-  RawTeX!("\\@ifundefined{c@subfigure}{\\newcounter{subfigure}[figure]}{}");
-  RawTeX!("\\@ifundefined{c@subtable}{\\newcounter{subtable}[table]}{}");
+  // Counter setup — Perl L36 uses NewCounter with `idprefix => 'sf'` and
+  // `idwithin => $name` so subfigure/subtable get xml:ids like `F1.sf2`,
+  // `T3.sf1`. The prior Rust port routed through `\newcounter{subfigure}
+  // [figure]` via RawTeX, which skipped LaTeXML's id machinery entirely,
+  // leaving subfigures with bare numeric ids that collided across floats.
+  // Call NewCounter directly with the Perl options; the `\@ifundefined`
+  // guard is dropped because NewCounter is itself idempotent (Perl L36
+  // reads as a fresh-or-overwrite, mirroring `\newcounter` semantics).
+  NewCounter!("subfigure", "figure", idprefix => "sf", idwithin => "figure");
+  NewCounter!("subtable", "table", idprefix => "sf", idwithin => "table");
   NewCounter!("subfigure@save");
   NewCounter!("subtable@save");
 
