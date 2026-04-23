@@ -138,6 +138,13 @@ LoadDefinitions!({
 
   // Bibliography — Perl L355-500
   // Complex Perl closure system for reference formatting
+  // Perl L359, L456: amsppt extends ltx:biblist + ltx:bibblock with
+  // autoOpen so a bibitem child without an explicit \begin{biblist}
+  // wrapper still nests correctly. Core latex_constructs already sets
+  // auto_close on biblist/bibblock; here we add auto_open on top to
+  // reach amsppt's documented spec.
+  Tag!("ltx:biblist",  auto_open => true, auto_close => true);
+  Tag!("ltx:bibblock", auto_open => true, auto_close => true);
   DefMacro!("\\Refs", "\\begin{thebibliography}{}");
   DefMacro!("\\endRefs", "\\end{thebibliography}");
   DefMacro!("\\ref", "\\bibitem");
@@ -231,9 +238,19 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     reversion => "\\qed"
   );
-  DefMacro!("\\tildechar", "\\texttt{\\textasciitilde}");
+  // Perl L327: DefPrimitiveI('\tildechar', undef, "~", font => { family => 'typewriter' })
+  // — emits a literal `~` other-token in typewriter family, immediately during
+  // digestion, with no expansion. Prior Rust DefMacro!("\\tildechar",
+  // "\\texttt{\\textasciitilde}") routed through textcomp's font dispatch,
+  // changing both the CS class (macro vs primitive) and producing different
+  // token structure (\texttt opens a bounded font scope; the literal `~` does
+  // not). Restored to faithful primitive form.
+  DefPrimitive!("\\tildechar", "~", font => { family => "typewriter" });
   DefMacro!("\\breakcheck", "");
   DefMacro!("\\usualspace", " ");
+  // Perl L329: \normalparindent — zero-Dimension register. Without it,
+  // `\the\normalparindent` fails on amsppt documents that probe it.
+  DefRegister!("\\normalparindent" => Dimension::new(0));
 
   // References section — Perl L333, L361-365.
   DefMacro!("\\Refsname", "References");
