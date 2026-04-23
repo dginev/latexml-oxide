@@ -23,7 +23,7 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px2">
       <title>Text vs Math</title>
       <para xml:id="S1.SS0.SSS0.Px2.p1">
-        <p><text class="ltx_number">123,456.134×10<sup>123</sup></text> and <Math mode="inline" tex="\ltx@math@@numprint@{123456.134e123}{123{,}456{.}134×10^{123}}" text="123456.134e123" xml:id="S1.SS0.SSS0.Px2.p1.m1">
+        <p><text class="ltx_number">123,456.134×10<sup>123</sup></text> and <Math mode="inline" tex="\numprint{123456.134e123}" text="123456.134e123" xml:id="S1.SS0.SSS0.Px2.p1.m1">
             <XMath>
               <XMDual>
                 <XMTok font="italic" meaning="123456.134e123" role="NUMBER">123456.134e123</XMTok>
