@@ -156,6 +156,17 @@ LoadDefinitions!({
     bounded => true
   );
 
+  // Perl pstricks_support.sty.ltxml L1009-1012: \@@@ackscale and the
+  // \scalebox / \@@scalebox / \@@@scalebox trio that threads a scale
+  // transform through the PSTricks _psActiveTransform tracker. The
+  // tracker (ackTransform) isn't ported to Rust — it lives only in
+  // PSTricks post-processing which Rust doesn't implement. Ship
+  // \@@@ackscale as a no-op consume-the-arg stub so documents invoking
+  // `\scalebox{0.5}{body}` via PSTricks don't hit undefined-CS.
+  // `\scalebox` itself is provided by graphics_sty (standard LaTeX form);
+  // not overriding it here keeps the tested scalebox golden intact.
+  DefMacro!("\\@@@ackscale{}", "");
+
   DefMacro!("\\black", "\\color{black}");
   DefMacro!("\\darkgray", "\\color{darkgray}");
   DefMacro!("\\gray", "\\color{gray}");
