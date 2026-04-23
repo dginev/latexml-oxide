@@ -1,3 +1,4 @@
+use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -61,9 +62,17 @@ LoadDefinitions!({
   // moment (after caption digests, so sub counter is final).
   DefMacro!("\\lx@subfloat@figure[][]{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#3\\caption{#1}\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
+  // Perl L58-60: beforeDigest=>{beforeFloat('subfigure')}, afterDigest=>
+  // {afterFloat + SetCounter('subfigure@save', CounterValue('subfigure'))}.
+  // beforeFloat sets \@captype='subfigure' so the nested \caption steps the
+  // sub-counter and emits sub-id labels. afterFloat finalizes caption
+  // properties on the whatsit. The subfigure@save counter sync is still
+  // handled in the macro-body `\setcounter{subfigure@save}{\value{subfigure}}`.
   DefEnvironment!("{lx@subfloat@@figure}",
     "^ <ltx:figure xml:id='#id'>#tags#body</ltx:figure>",
-    mode => "internal_vertical"
+    mode => "internal_vertical",
+    before_digest => { before_float("subfigure", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); }
   );
 
   // \lx@subfloat@table — Perl L45-60 (table variant)
@@ -71,7 +80,9 @@ LoadDefinitions!({
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#3\\caption{#1}\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefEnvironment!("{lx@subfloat@@table}",
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
-    mode => "internal_vertical"
+    mode => "internal_vertical",
+    before_digest => { before_float("subtable", None); },
+    after_digest  => sub[whatsit] { after_float(whatsit); }
   );
 
   // \ContinuedFloat — Perl L98-102
