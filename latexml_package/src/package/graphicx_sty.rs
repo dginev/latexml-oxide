@@ -408,17 +408,10 @@ LoadDefinitions!({
   // The graphicx-style \includegraphics with keyval options.
   // Perl: properties callback computes path, candidates, options from keyval args.
   // Perl also has: sizer => \&image_graphicx_sizer — computes box dimensions from image file.
-  // Perl L52-72 ships `alias => '\includegraphics'` so source-export reverts
-  // \@includegraphicx{foo} as \includegraphics{foo} (the user-facing CS) and
-  // `mode => 'restricted_horizontal'` to digest the (graphic-less) body in
-  // restricted-horizontal mode rather than inheriting an outer paragraph
-  // context. Both were missing from the Rust port; alias is the load-bearing
-  // one (every graphicx \includegraphics was reverting as \@includegraphicx).
   DefConstructor!(
     "\\@includegraphicx OptionalMatch:* OptionalKeyVals:Gin Semiverbatim",
     "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
-    alias => "\\includegraphics",
-    mode => "restricted_horizontal", enter_horizontal => true,
+    enter_horizontal => true,
     properties => sub[args] {
       // arg 0: starred, arg 1: keyvals, arg 2: graphic path
       let path = args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
