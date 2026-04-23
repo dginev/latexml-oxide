@@ -23,7 +23,8 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("book", Vec::new(), Tokens!())?;
+  // Perl svmult.cls.ltxml L34: LoadClass('book', withoptions => 1)
+  load_class_with_options("book", Tokens!())?;
   RequirePackage!("sv_support");
   RequirePackage!("url");
 
