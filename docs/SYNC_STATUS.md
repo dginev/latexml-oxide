@@ -144,6 +144,19 @@ latexml.sty's `\@@XMDECL@ID` is bypassed by a live-counter register
 read). One gap landed in c8a232ecb — graphicx `\includegraphics`
 DefMacro.
 
+**`robust => 1` sweep (2026-04-23).** All 31 Perl occurrences audited
+(package: amsmath×2, orcidlink×1; engine: latex_constructs×28 — 19
+accented-letter `DefPrimitiveI`, 9 macro/primitive — plus plain_base×2,
+math_common×2 (comment-only), latex_base×1). Gaps closed: plain_base
+`\i`/`\j` (b55df04a9), latex_constructs `\makebox`/`\fbox`/`\framebox`
+(55b073fd7). `\ensuremath` uses a manual two-binding `\protect +
+\@ensuremath` inlining equivalent to Perl's `robust => 1`. The 19
+accented-letter `DefPrimitiveI(...,robust=>1)` entries (`\OE`/`\oe`/
+`\AE`/`\ae`/`\AA`/`\aa`/`\O`/`\o`/`\L`/`\l`/`\ss`/`\dh`/`\DH`/`\dj`/
+`\DJ`/`\ng`/`\NG`/`\th`/`\TH`) remain blocked pending the
+case-mapping-pipeline rewrite catalogued in `docs/DEF_PARITY_AUDIT.md`
+B1 — three coordinated changes are required (see B1 design).
+
 **Progress (2026-04-22):** engine 52 → 14, package 232, contrib 0.
 10 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
 + MergeFont! multi-key), `d7422914c` (\lx@cases@condition DefConstructor
