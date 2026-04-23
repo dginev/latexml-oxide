@@ -740,6 +740,35 @@ LoadDefinitions!({
     }
   });
 
+  // Perl latexml.sty.ltxml L300-307: user-facing aliases for
+  // \lx@alignment@begin@heading / \lx@alignment@end@heading, which
+  // bracket a run of tabular heading rows. The table-foot aliases
+  // point at the same two CSes (the Perl convention uses head/foot
+  // for clarity; both just toggle the in_tabular_head flag).
+  Let!("\\lxBeginTableHead", "\\lx@alignment@begin@heading");
+  Let!("\\lxEndTableHead",   "\\lx@alignment@end@heading");
+  Let!("\\lxBeginTableFoot", "\\lx@alignment@begin@heading");
+  Let!("\\lxEndTableFoot",   "\\lx@alignment@end@heading");
+
+  // Perl latexml.sty.ltxml L310-313: \lxTableColumnHead — mirrors
+  // \lxTableRowHead below but flips thead_in_column instead of
+  // thead_in_row on the current column spec.
+  def_primitive(
+    T_CS!("\\lxTableColumnHead"),
+    None,
+    Some(PrimitiveBody::Closure(Rc::new(|_args| {
+      if let Some(alignment) = lookup_alignment() {
+        if let Some(data) = alignment.alignment_cell() {
+          if let Some(col) = data.borrow_mut().current_column() {
+            col.thead_in_column = true;
+          }
+        }
+      }
+      Ok(Vec::new())
+    }))),
+    PrimitiveOptions::default(),
+  )?;
+
   // Perl: DefMacroI('\lxTableRowHead', undef, sub { $alignment->currentColumn->{thead}{row} = 1 })
   // Marks the current column as a row header in alignment/tabular contexts.
   // Usage: >{\lxTableRowHead} in column spec with array.sty
