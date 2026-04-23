@@ -181,6 +181,25 @@ LoadDefinitions!({
     locked => true,
     mode => "internal_vertical");
 
+  // Override LaTeX's default IED lists with the IEEE versions defined
+  // above. Per Perl L369-380: a `\let` of the bare CSes AND a `\let` on
+  // the `\begin{itemize}` / `\end{itemize}` env-tokens, so user code that
+  // writes `\begin{itemize}` (the LaTeXish form) hits the IEEE variant
+  // — without these the standard latex-core itemize wins, bypassing
+  // IEEE's locked spec. 12 aliases total.
+  Let!("\\itemize",      "\\IEEEitemize");
+  Let!("\\enditemize",   "\\endIEEEitemize");
+  Let!("\\enumerate",    "\\IEEEenumerate");
+  Let!("\\endenumerate", "\\endIEEEenumerate");
+  Let!("\\description",  "\\IEEEdescription");
+  Let!("\\enddescription","\\endIEEEdescription");
+  Let!("\\begin{itemize}",      "\\IEEEitemize");
+  Let!("\\end{itemize}",        "\\endIEEEitemize");
+  Let!("\\begin{enumerate}",    "\\IEEEenumerate");
+  Let!("\\end{enumerate}",      "\\endIEEEenumerate");
+  Let!("\\begin{description}",  "\\IEEEdescription");
+  Let!("\\end{description}",    "\\endIEEEdescription");
+
   // String macros (Perl L383-395)
   DefMacro!("\\contentsname", "Contents");
   DefMacro!("\\listfigurename", "List of Figures");
