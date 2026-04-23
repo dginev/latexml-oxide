@@ -288,6 +288,12 @@ LoadDefinitions!({
   DefMacro!("\\fh", "\\aas@fstack{h}");
   DefMacro!("\\fm", "\\aas@fstack{m}");
   DefMacro!("\\fs", "\\aas@fstack{s}");
+  // Perl aa_support.sty.ltxml L309-311: \fdg / \farcm / \farcs — additional
+  // fractional-notation shortcuts (degree, arcminute, arcsecond) missing
+  // from the Rust port. Add for astronomical-paper parity.
+  DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
+  DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
+  DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
   DefMacro!("\\fp", "\\aas@fstack{p}");
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
