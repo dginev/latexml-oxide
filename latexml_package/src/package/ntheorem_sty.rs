@@ -31,8 +31,12 @@ LoadDefinitions!({
   DeclareOption!("thref", sub {
     Let!("\\orig@label", "\\label");
     DefMacro!("\\label Semiverbatim []", "\\orig@label{#1}");
+    // Perl ntheorem.sty.ltxml L60-63: `enterHorizontal => 1` — \thref
+    // emits an inline <ltx:ref>, so like \ref it must enter horizontal
+    // mode before absorbing into the surrounding paragraph.
     DefConstructor!("\\thref OptionalMatch:* Semiverbatim",
       "<ltx:ref labelref='#label' show='typerefnum' _force_font='true'/>",
+      enter_horizontal => true,
       properties => sub[args] {
         let label = args[1].as_ref().map(|a| clean_label(&a.to_string(), None).into_owned()).unwrap_or_default();
         Ok(stored_map!("label" => label))
