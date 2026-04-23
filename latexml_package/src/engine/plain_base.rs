@@ -120,9 +120,13 @@ LoadDefinitions!({
     document.get_node_mut().add_child(&mut replacement)?;
   });
 
-  // Ligatures moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L335-365)
-  DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
-  DefPrimitive!("\\j", "\u{0237}");
+  // Ligatures moved to tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L335-365).
+  // Perl plain_base.pool.ltxml L108-109: `robust => 1` wraps these in the
+  // standard LaTeX \protect/<cs-munged> pair so \MakeUppercase / \edef /
+  // moving-argument contexts see the frozen CS instead of substituting the
+  // raw glyph mid-traversal (WISDOM #40 accented-letter cluster).
+  DefPrimitive!("\\i", "\u{0131}", robust => true); // LATIN SMALL LETTER DOTLESS I
+  DefPrimitive!("\\j", "\u{0237}", robust => true);
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Alignment code
