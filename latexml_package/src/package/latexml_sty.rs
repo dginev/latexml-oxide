@@ -426,6 +426,19 @@ LoadDefinitions!({
   // forces math context (errors if invoked outside math); `reversion =>
   // '#1'` round-trips just the body (no role wrapper) to TeX; `alias =>
   // ''` suppresses the constructor name in the reversion path.
+  // Perl latexml.sty.ltxml L160-163: \lxRegisterNamespace{prefix}{uri}
+  // — dynamic XML namespace registration for foreign attributes. Perl's
+  // DefPrimitive calls RegisterNamespace(prefix => uri). Rust has
+  // latexml_core::common::model::register_namespace exposed; wire it up
+  // to the CS so documents using \lxRegisterNamespace{my}{http://…}
+  // can then set foreign attributes like my:data='value'.
+  DefPrimitive!("\\lxRegisterNamespace {} Semiverbatim", sub[(prefix, uri)] {
+    let prefix_str = prefix.to_string();
+    let uri_str = uri.to_string();
+    latexml_core::common::model::register_namespace(&prefix_str, Some(&uri_str));
+    Ok(Vec::new())
+  });
+
   // Perl latexml.sty.ltxml L166-167: \lxAddClass{class} adds a CSS class
   // to the current element. Rust had this CS completely missing, so
   // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
