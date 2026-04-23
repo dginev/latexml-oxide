@@ -149,6 +149,7 @@ macro_rules! LookupColor {
 //   AssignValue('derived_color_model_' . $model => [$coremodel, $tocore, $fromcore], 'global');
 //   return; }
 
+#[macro_export]
 macro_rules! DefRewrite {
   ($($input:tt)+) => {{
     let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});

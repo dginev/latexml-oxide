@@ -30,7 +30,25 @@ LoadDefinitions!({
   // \today after this point is silently rejected, matching the intent of
   // Perl's AtBeginDocument hook (defer until all packages have loaded).
   DefMacro!("\\today", "\\relax", locked => true, scope => Some(Scope::Global));
-  // TODO: Perl has a DefRewrite that removes non-remote <ltx:resource> elements
-  // and monkey-patches LaTeXML::Post::MathML::outerWrapper to add intent=':literal'.
-  // These post-processing features are not available in the compile-time binding system.
+
+  // Perl L30-35: drop all non-remote <ltx:resource> nodes (keep only `http*`
+  // src so the archival run doesn't embed default local CSS / JS).
+  //   DefRewrite(xpath => 'descendant-or-self::ltx:resource', replace => sub {
+  //     my ($self, $node) = @_;
+  //     my $src = $node->getAttribute('src') || '';
+  //     return if $src !~ /^http/;      # non-remote → silently drop
+  //     $self->getNode->appendChild($node); });   # remote → re-attach
+  DefRewrite!(xpath => "descendant-or-self::ltx:resource",
+    replace => sub[document, nodes] {
+      let node = nodes.pop().unwrap();
+      let src = node.get_attribute("src").unwrap_or_default();
+      if src.starts_with("http") {
+        document.get_node_mut().add_child(node)?;
+      }
+    });
+
+  // NOTE: Perl additionally monkey-patches LaTeXML::Post::MathML::outerWrapper
+  // to set intent=':literal' on the top-level math element. That is a
+  // post-processing hook (not a compile-time binding), tracked separately —
+  // we do not emulate it here. See Perl source L45-73 for context.
 });
