@@ -177,8 +177,6 @@ pub struct IfFrame {
 
 impl Conditional {
   fn invoke_conditional(&self) -> Result<Tokens> {
-    // TODO!!! Implement in full
-    // Keep a stack of the conditionals we are processing.
     let mut ifid = state::lookup_int("if_count");
     ifid += 1;
     state::assign_value("if_count", ifid, Some(Scope::Global));
