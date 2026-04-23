@@ -1428,6 +1428,10 @@ LoadDefinitions!({
   DefMacro!("\\faTachometer OptionalMatch:*",         "\\faIcon[#1]{tachometer-alt}");
   DefMacro!("\\faTicket OptionalMatch:*",             "\\faIcon[#1]{ticket-alt}");
   DefMacro!("\\faWineGlass OptionalMatch:*[]",        "\\faIcon[#2]{wine-glass}");
-  // `\faDiceD Number[]` → `\faIcon[#2]{dice-d#1}` — deferred; the `Number`
-  // parameter type isn't wired for raw DefMacro CS signatures in Rust.
+  // Perl fontawesome5.sty.ltxml L384: `\faDiceD Number[]` where #1 is the
+  // face count (4/6/8/10/12/20) and #2 is the optional style modifier.
+  // DefMacro! with `Number` parameter is already wired (see pdftex.rs and
+  // amsppt_sty.rs). Body `{dice-d#1}` concatenates the parsed number token
+  // stream directly into the icon-name literal, matching Perl behavior.
+  DefMacro!("\\faDiceD Number[]",                     "\\faIcon[#2]{dice-d#1}");
 });
