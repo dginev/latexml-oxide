@@ -6447,9 +6447,13 @@ LoadDefinitions!({
 
   // # These will get filled in during postprocessing.
   // # * is added to accommodate hyperref
+  // Perl latex_constructs.pool.ltxml L3873-3878: sizer => '()',
+  //   robust => 1, enterHorizontal => 1.
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref ?#1(class='ltx_nolink')() labelref='#label' _force_font='true'/>",
+    sizer => "()",
     robust => true,
+    enter_horizontal => true,
     properties => sub[args] {
       unpack_opt_ref!(args => _star, label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
