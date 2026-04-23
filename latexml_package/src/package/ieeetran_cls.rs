@@ -101,11 +101,12 @@ LoadDefinitions!({
   // Perl IEEEtran.cls.ltxml L200-203: \IEEEQEDhere pops top of QED@stack,
   // pushes empty Tokens() back, returns popped value. Intended to move
   // the QED symbol from proof-end to an explicit in-body position. Mirrors
-  // the amsthm.sty `\qedhere` pattern (amsthm_sty.rs L154-162); the full
-  // stack discipline (push '\qed' in IEEEproof afterDigestBegin, flush in
-  // beforeDigestEnd) is not yet ported — IEEEproof's simplified template
-  // skips the stack hooks, so \IEEEQEDhere outside a proof context simply
-  // returns empty (matches Perl's `$t || ()` fallthrough exactly).
+  // the amsthm.sty `\qedhere` pattern (amsthm_sty.rs L154-162). The
+  // IEEEproof environment (defined below) pushes `\qed` in
+  // after_digest_begin and pops-and-digests in before_digest_end, so the
+  // full Perl stack discipline is in place: inline `\IEEEQEDhere` pulls
+  // the token out of the stack (replacing it with empty Tokens), causing
+  // the proof-end pop to produce nothing.
   DefMacro!("\\IEEEQEDhere", sub[_args] {
     let t = pop_value("QED@stack");
     let _ = push_value("QED@stack", Stored::Tokens(Tokens!()));
@@ -119,8 +120,23 @@ LoadDefinitions!({
   // IEEEproof environment (Perl L206-229)
   // Perl digests \\textbf{\\textit{Proof:}} producing font="bold italic".
   // Our codegen treats \\word as literal text, so use explicit attributes instead.
+  //
+  // Perl L213-228: afterDigestBegin pushes T_CS('\qed') onto QED@stack, and
+  // beforeDigestEnd pops it and digests — firing the QED symbol at proof-end
+  // unless \IEEEQEDhere already consumed the token inline. Mirrors the amsthm
+  // \@proof / \end@proof stack pattern.
   DefEnvironment!("{IEEEproof}[]",
-    "<ltx:proof><ltx:title font='bold italic' _force_font='true' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>");
+    "<ltx:proof><ltx:title font='bold italic' _force_font='true' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>",
+    after_digest_begin => sub[_whatsit] {
+      let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
+    },
+    before_digest_end => {
+      if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack") {
+        if !qed.is_empty() {
+          stomach::digest(qed)?;
+        }
+      }
+    });
 
   // IEEEbiography (Perl L238-247)
   DefEnvironment!("{IEEEbiography}[]{}",
