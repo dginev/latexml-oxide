@@ -98,6 +98,24 @@ LoadDefinitions!({
   Let!("\\IEEEQEDopen", "\\IEEEQEDclosed");
   Let!("\\IEEEQED", "\\IEEEQEDclosed");
 
+  // Perl IEEEtran.cls.ltxml L200-203: \IEEEQEDhere pops top of QED@stack,
+  // pushes empty Tokens() back, returns popped value. Intended to move
+  // the QED symbol from proof-end to an explicit in-body position. Mirrors
+  // the amsthm.sty `\qedhere` pattern (amsthm_sty.rs L154-162); the full
+  // stack discipline (push '\qed' in IEEEproof afterDigestBegin, flush in
+  // beforeDigestEnd) is not yet ported — IEEEproof's simplified template
+  // skips the stack hooks, so \IEEEQEDhere outside a proof context simply
+  // returns empty (matches Perl's `$t || ()` fallthrough exactly).
+  DefMacro!("\\IEEEQEDhere", sub[_args] {
+    let t = pop_value("QED@stack");
+    let _ = push_value("QED@stack", Stored::Tokens(Tokens!()));
+    if let Ok(Some(Stored::Tokens(tokens))) = t {
+      Ok(tokens)
+    } else {
+      Ok(Tokens!())
+    }
+  });
+
   // IEEEproof environment (Perl L206-229)
   // Perl digests \\textbf{\\textit{Proof:}} producing font="bold italic".
   // Our codegen treats \\word as literal text, so use explicit attributes instead.
