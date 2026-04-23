@@ -1403,4 +1403,31 @@ LoadDefinitions!({
   DefMacro!("\\faTypo Match:3",         "\\faIcon[#1]{typo3}");
   DefMacro!("\\faDraft Match:2digital", "\\faIcon[#1]{draft2digital}");
   DefMacro!("\\faCss Match:3 OptionalMatch:*", "\\faIcon[#1]{css3}");
+
+  // Perl fontawesome5.sty.ltxml — legacy `\faXxx` names renamed to
+  // `\faIcon[…]{name-alt}` in FA5. Perl uses `OptionalMatch:*` to accept
+  // the optional `*` star suffix (e.g. `\faPencil*`) and pass the match
+  // through as `#1` into `\faIcon[#1]{…}`. No plain `\faXxx[]` entry
+  // exists for these in either Perl or Rust, so adding them is pure
+  // additive — no shadowing risk. (The cycle-141 deferral applied only
+  // to icons that DO have a plain counterpart, which these don't.)
+  DefMacro!("\\faCloudDownload OptionalMatch:*",      "\\faIcon[#1]{cloud-download-alt}");
+  DefMacro!("\\faCloudUpload OptionalMatch:*",        "\\faIcon[#1]{cloud-upload-alt}");
+  DefMacro!("\\faCompressArrows OptionalMatch:*",     "\\faIcon[#1]{compress-arrows-alt}");
+  DefMacro!("\\faExchange OptionalMatch:*",           "\\faIcon[#1]{exchange-alt}");
+  DefMacro!("\\faExpandArrows OptionalMatch:*",       "\\faIcon[#1]{expand-arrows-alt}");
+  DefMacro!("\\faExternalLink OptionalMatch:*",       "\\faIcon[#1]{external-link-alt}");
+  DefMacro!("\\faExternalLinkSquare OptionalMatch:*", "\\faIcon[#1]{external-link-square-alt}");
+  DefMacro!("\\faLevelDown OptionalMatch:*",          "\\faIcon[#1]{level-down-alt}");
+  DefMacro!("\\faLevelUp OptionalMatch:*",            "\\faIcon[#1]{level-up-alt}");
+  DefMacro!("\\faPencil OptionalMatch:*",             "\\faIcon[#1]{pencil-alt}");
+  DefMacro!("\\faShield OptionalMatch:*",             "\\faIcon[#1]{shield-alt}");
+  DefMacro!("\\faSignIn OptionalMatch:*",             "\\faIcon[#1]{sign-in-alt}");
+  DefMacro!("\\faSignOut OptionalMatch:*",            "\\faIcon[#1]{sign-out-alt}");
+  DefMacro!("\\faSquareRoot OptionalMatch:*",         "\\faIcon[#1]{square-root-alt}");
+  DefMacro!("\\faTachometer OptionalMatch:*",         "\\faIcon[#1]{tachometer-alt}");
+  DefMacro!("\\faTicket OptionalMatch:*",             "\\faIcon[#1]{ticket-alt}");
+  DefMacro!("\\faWineGlass OptionalMatch:*[]",        "\\faIcon[#2]{wine-glass}");
+  // `\faDiceD Number[]` → `\faIcon[#2]{dice-d#1}` — deferred; the `Number`
+  // parameter type isn't wired for raw DefMacro CS signatures in Rust.
 });
