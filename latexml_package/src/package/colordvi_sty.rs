@@ -3,7 +3,9 @@ use latexml_core::common::color::from_model_components;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl L20-30: \DefineNamedColor — defines a named color + \text<name> + \<name>
+  // Perl L20-30: \DefineNamedColor — defines a named color + \text<name> + \<name>.
+  // Perl kind is DefMacro with an imperative sub body that returns no tokens;
+  // Rust DefPrimitive matches that shape idiomatically (WISDOM #41).
   DefPrimitive!("\\DefineNamedColor{}{}{}{}", sub[(_dmodel, name, model, spec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string().trim().to_string();

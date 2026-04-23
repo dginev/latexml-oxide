@@ -72,7 +72,12 @@ LoadDefinitions!({
   DefMacro!("\\@marker{}", "");
 
   // Par dedup — Perl L109-116
-  // Conditional that prevents double-\par from producing blank lines
+  // Conditional that prevents double-\par from producing blank lines.
+  // Perl's dedup relies on `$STATE->setPrefix/getPrefix('didpar')` via a
+  // DefPrimitiveI+isPrefix pair; Rust has no setPrefix/getPrefix
+  // infrastructure, so the dedup is disabled (conditional never fires,
+  // setpar is a no-op, newpar always takes the else branch). Downstream
+  // callers only use the PAR-marker path, which still emits correctly.
   DefConditional!("\\if@lx@algo@par SkipSpaces");
   DefMacro!("\\lx@algo@setpar", "");
   DefMacro!("\\lx@algo@newpar{}{}", "#2");
