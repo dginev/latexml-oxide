@@ -400,10 +400,22 @@ LoadDefinitions!({
 
   //======================================================================
   // Vector Notation
-  // Perl: \vectorbold uses OptionalMatch:* {} — we skip the star for now
-  DefMacro!("\\vectorbold{}", r"\lx@wrap[role=ID]{\mathbf{#1}}");
-  DefMacro!("\\vectorarrow{}", r"\lx@wrap[role=ID]{\overrightarrow{\mathbf{#1}}}");
-  DefMacro!("\\vectorunit{}", r"\lx@wrap[role=ID]{\hat{\mathbf{#1}}}");
+  // Perl L229-231: \lx@physics@mathbfit is a DefConstructor with bounded +
+  // requireMath and a bold+italic+serif font merge. The starred form of
+  // \vectorbold / \vectorarrow / \vectorunit routes through it to render
+  // italic vectors; non-starred falls through to \mathbf (upright bold).
+  // The prior Rust port collapsed all three to \mathbf, losing the starred
+  // italic case entirely.
+  DefConstructor!("\\lx@physics@mathbfit{}", "#1",
+    bounded => true, require_math => true,
+    font => { shape => "italic", family => "serif", series => "bold", forcebold => true },
+    reversion => "{\\bf\\it#1}");
+  DefMacro!("\\vectorbold OptionalMatch:* {}",
+    "\\lx@wrap[role=ID]{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}");
+  DefMacro!("\\vectorarrow OptionalMatch:* {}",
+    "\\lx@wrap[role=ID]{\\lx@math@overrightarrow{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}");
+  DefMacro!("\\vectorunit OptionalMatch:* {}",
+    "\\lx@wrap[role=ID]{\\hat{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}");
   Let!("\\vb", "\\vectorbold");
   Let!("\\va", "\\vectorarrow");
   Let!("\\vu", "\\vectorunit");
