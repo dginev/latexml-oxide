@@ -23,24 +23,41 @@ LoadDefinitions!({
 
   // Perl L40-58: Frontmatter
   DefMacro!("\\speaker{}", "\\@add@frontmatter{ltx:creator}[role=speaker]{\\@personname{#1}}");
+  // Perl L43-44: properties => sub { (name => Digest(T_CS('\abstractname'))) }
+  // Hardcoded "Abstract" loses i18n — \renewcommand{\abstractname}{Resumé}
+  // wouldn't propagate. DigestIf! resolves the user's current binding.
   DefConstructor!("\\@@@abstract{}", "^ <ltx:abstract name='#name'>#1</ltx:abstract>",
-    properties => { stored_map!("name" => Stored::from("Abstract")) }
-  );
+    properties => {
+      let name_toks = DigestIf!(T_CS!("\\abstractname"))?;
+      stored_map!("name" => name_toks)
+    });
   DefMacro!("\\abstract{}", "\\@add@to@frontmatter{ltx:abstract}{\\@@@abstract{#1}}");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
   DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
-  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
-  DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised]{#1}");
-  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
+  // Perl L50-52: each date macro ships `name={\<role>name}` so the localized
+  // label is attached to the frontmatter date entry. Restored to match.
+  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received,name={\\receivedname}]{#1}");
+  DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised,name={\\revisedname}]{#1}");
+  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted,name={\\acceptedname}]{#1}");
   DefMacro!("\\JHEPcopydate{}", "\\@add@frontmatter{ltx:date}[role=copydate]{#1}");
   DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedicated]{#1}");
   DefMacro!("\\conference{}", "\\@add@frontmatter{ltx:note}[role=conference]{#1}");
   DefMacro!("\\preprint{}", "\\@add@frontmatter{ltx:note}[role=preprint]{#1}");
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
-  // Perl L61-64: Acknowledgements environment
-  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='Acknowledgments'>");
+  // Perl L61-64: Acknowledgements environment. Perl uses
+  //   properties => sub { (name => Digest(T_CS('\acknowlname'))) }
+  // — i18n via the user's current \acknowlname binding. Hardcoded
+  // "Acknowledgments" was breaking non-English JHEP submissions.
+  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
+    properties => {
+      let name_toks = DigestIf!(T_CS!("\\acknowlname"))?;
+      stored_map!("name" => name_toks)
+    });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
+  // Perl L64: explicit autoClose so a stray paragraph or sectioning command
+  // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
+  Tag!("ltx:acknowledgements", auto_close => true);
 
   // Perl L67-76: Misc macros
   DefMacro!("\\hash", "\\#");
