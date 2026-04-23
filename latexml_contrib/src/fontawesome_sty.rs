@@ -755,4 +755,11 @@ LoadDefinitions!({
   DefMacro!("\\faYoutube", "\\faIconFromMacro{faYoutube}");
   DefMacro!("\\faYoutubePlay", "\\faIconFromMacro{faYoutubePlay}");
   DefMacro!("\\faYoutubeSquare", "\\faIconFromMacro{faYoutubeSquare}");
+
+  // Perl fontawesome.sty.ltxml — `Match:N` variants for icon names ending
+  // in a digit (css3, html5). The cycle-124 batch generator matched only
+  // the plain `^DefMacro('\\faXxx',` form, so these two were skipped.
+  // `\faCss3` splits as `\faCss` + Match:3, forwarded to faCss3.
+  DefMacro!("\\faCss Match:3",  "\\faIconFromMacro{faCss3}");
+  DefMacro!("\\faHtml Match:5", "\\faIconFromMacro{faHtml5}");
 });
