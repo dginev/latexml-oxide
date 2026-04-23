@@ -1160,6 +1160,41 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   result
 }
 
+/// Perl: `RequirePackage($name, withoptions => 1)` — forward the current
+/// package/class's options to the required child package. Reads
+/// `\@currname` / `\@currext` to identify the caller, looks up its
+/// `opt@<name>.<ext>` options, and passes them explicitly as the child's
+/// options list. Mirrors `load_class_with_options` for the package path.
+pub fn require_package_with_options(name: &str) -> Result<()> {
+  let currname = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+    do_expand(T_CS!("\\@currname"))?.to_string()
+  } else {
+    String::new()
+  };
+  let currext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+    do_expand(T_CS!("\\@currext"))?.to_string()
+  } else {
+    String::new()
+  };
+  let options: Vec<String> = if !currname.is_empty() {
+    let key = s!("opt@{}.{}", currname, currext);
+    lookup_vecdeque(&key)
+      .unwrap_or_default()
+      .iter()
+      .filter_map(|item| match item {
+        Stored::String(s) => Some(arena::to_string(*s)),
+        _ => None,
+      })
+      .collect()
+  } else {
+    Vec::new()
+  };
+  require_package(name, RequireOptions {
+    options,
+    ..RequireOptions::default()
+  })
+}
+
 /// Perl Package.pm L2759-2796: maybeRequireDependencies
 /// When a package/class file has no binding AND raw TeX loading is disabled,
 /// scan the raw file for \RequirePackage/\usepackage/\LoadClass declarations

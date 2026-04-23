@@ -9,5 +9,6 @@ LoadDefinitions!({
   // the natbib option entirely and skipping revtex3_support outright
   // (with a stale comment — the support package is now ported).
   RequirePackage!("natbib", options => vec!["numbers".to_string()]);
-  RequirePackage!("revtex3_support");
+  // Perl L23: RequirePackage('revtex3_support', withoptions => 1)
+  require_package_with_options("revtex3_support")?;
 });

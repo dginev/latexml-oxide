@@ -17,7 +17,8 @@ LoadDefinitions!({
   RequirePackage!("calc");
   // TODO: add support for mhsetup
   // RequirePackage!("mhsetup");
-  RequirePackage!("amsmath");
+  // Perl L43: RequirePackage('amsmath', withoptions => 1)
+  require_package_with_options("amsmath")?;
   // Perl: AtBeginDocument(sub { RequirePackage('graphicx'); });
   RawTeX!("\\AtBeginDocument{\\RequirePackage{graphicx}}");
 

@@ -8,7 +8,8 @@ LoadDefinitions!({
   // Use lookup_definition_stored so the handle round-trips through
   // install_definition's `Into<Stored>` bound.
   let saved_fig = state::lookup_definition_stored(&T_CS!("\\fig")).ok().flatten();
-  RequirePackage!("aastex");
+  // Perl L28: RequirePackage('aastex', withoptions => 1)
+  require_package_with_options("aastex")?;
   RequirePackage!("epsf");
   if let Some(def) = saved_fig {
     state::install_definition(def, Some(Scope::Global));
