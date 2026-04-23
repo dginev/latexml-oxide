@@ -507,6 +507,15 @@ LoadDefinitions!({
   DefConstructor!("\\lxPunct{}", "<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>",
     require_math => true, reversion => "#1", alias => "");
 
+  // Perl latexml.sty.ltxml L342-350: \lxMathTweak RequiredKeyVals {} —
+  // the general form behind \lxFcn/\lxID/\lxPunct. Perl's comment says
+  // "same as \lx@math@tweak"; the engine actually has \lx@math@tweaked
+  // (base_xmath.rs L527) with the full RequiredKeyVals {} shape and
+  // the xmath_copy_keyvals after_digest hook. Let-alias the user-
+  // facing name at to the internal one so docs can write
+  // `\lxMathTweak{role=POSTFIX}{@}` and get the expected XMWrap.
+  Let!("\\lxMathTweak", "\\lx@math@tweaked");
+
   // \lxDeclare — declare semantic roles for math tokens
   // Perl: latexml.sty.ltxml lines 462-568
   // Creates <declare> elements and rewrite rules for math token annotation.
