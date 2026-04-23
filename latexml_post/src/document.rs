@@ -81,6 +81,38 @@ pub struct PostDocument {
   pub nocache:                 bool,
 }
 
+impl Drop for PostDocument {
+  /// Rationalize Node lifetime between post-processing components.
+  /// `idcache` entries are Node *handles* into the C-owned libxml
+  /// Document tree — the Document owns the lifetime, Node wrappers
+  /// are lookup references.
+  ///
+  /// libxml 0.3.9's `_Node::drop` fires `xmlFreeNode(ptr)` whenever
+  /// the wrapper's internal `unlinked` flag is true. Math processing
+  /// calls `unlink_node()` on nodes as it replaces XMath subtrees
+  /// with MathML, flipping that flag for nodes still held by
+  /// `idcache`. The resulting drop sequence is:
+  ///   1. `document: Document` (declared first) → `xmlFreeDoc` walks
+  ///      the full tree including still-reachable nodes that share
+  ///      memory with idcache entries; freed.
+  ///   2. `idcache: HashMap<String, Node>` → each Node with
+  ///      `unlinked=true` fires `xmlFreeNode` on already-freed
+  ///      memory → SIGSEGV inside `xmlFreeNodeList`.
+  ///
+  /// Fix: `mem::forget` the idcache entries before Rust's auto-drop
+  /// sequence runs. `xmlFreeDoc` remains the sole owner of the C
+  /// node memory. The per-entry Rc control block leaks (~24 bytes)
+  /// — bounded by per-document idcache size and reclaimed at process
+  /// exit. Proper fix is a pub setter for the `unlinked` flag
+  /// upstream, which would let us call `set_linked()` before drop
+  /// instead of forgetting.
+  fn drop(&mut self) {
+    for (_, node) in std::mem::take(&mut self.idcache) {
+      std::mem::forget(node);
+    }
+  }
+}
+
 impl PostDocument {
   /// Create a new PostDocument wrapping an existing XML document.
   ///
