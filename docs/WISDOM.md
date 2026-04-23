@@ -1244,3 +1244,37 @@ triage is:
 dismissing them all by pattern is unsafe. When in doubt, err toward
 keeping Perl's kind and porting the sub body as a DefMacro with
 gullet-token return.
+
+## #45 Rust `mode => "text"` auto-implies `enter_horizontal => true`
+
+When porting a Perl `DefConstructor` that carries
+`mode => 'restricted_horizontal', enterHorizontal => 1`, the Rust
+equivalent is `mode => "text"` alone — do NOT add
+`enter_horizontal => true` on top. The translation happens in
+`latexml_core/src/binding/def/dialect.rs:331-355`:
+
+```rust
+// Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
+let mut needs_enter_horizontal = options.enter_horizontal;
+let mode = if options.mode.as_deref() == Some("text") {
+  needs_enter_horizontal = true;
+  Some("restricted_horizontal".to_string())
+} else {
+  options.mode
+};
+```
+
+This applies to `DefConstructor`, `DefEnvironment`, and `DefMath`
+(three sites in `dialect.rs`).
+
+**When the explicit flag IS required:** Perl entries that carry
+`enterHorizontal => 1` with *no* `restricted_horizontal` mode (so
+Rust uses `mode => "restricted_horizontal"` verbatim, or no mode at
+all). Examples: `\ref`, `\lx@bibitem`, `\lx@bibnewblock`, `\@@bibref`,
+`\lx@@verbatim`.
+
+**Parity-sweep triage:** When scanning Perl for enterHorizontal gaps,
+filter out entries that already have `mode => 'restricted_horizontal'`
+on the same or an adjacent line — the Rust `mode => "text"` picks
+up the flag automatically, and any explicit `enter_horizontal =>
+true` on such a call is a harmless no-op that adds visual noise.
