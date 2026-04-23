@@ -49,7 +49,7 @@ LoadDefinitions!({
       let state_key = s!("CAPTION_{key}");
       state::assign_value(
         &state_key,
-        Stored::String(arena::pin(&value.to_string())),
+        Stored::String(arena::pin(value.to_string())),
         None,
       );
     }

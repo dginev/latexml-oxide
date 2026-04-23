@@ -94,7 +94,7 @@ LoadDefinitions!({
   DefMacro!("\\subheading", sub[_args] {
     let next = gullet::read_token()?;
     if let Some(t) = next {
-      gullet::unread(Tokens!(t.clone()));
+      gullet::unread(Tokens!(t));
       if t.get_catcode() == Catcode::BEGIN {
         return Ok(Tokens!(T_CS!("\\subheading@onearg")));
       }

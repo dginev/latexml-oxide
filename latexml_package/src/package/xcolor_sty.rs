@@ -136,7 +136,7 @@ fn lookup_xcolor(name: &str) -> Color {
   if name == "." {
     // Current color
     return match state::lookup_value("color_.") {
-      Some(Stored::String(sym)) => arena::with(sym, |s| Color::from_stored(s)).unwrap_or(BLACK),
+      Some(Stored::String(sym)) => arena::with(sym, Color::from_stored).unwrap_or(BLACK),
       _ => BLACK,
     };
   }
@@ -829,7 +829,7 @@ LoadDefinitions!({
   // \set@color
   DefPrimitive!("\\set@color", {
     if let Some(Stored::String(sym)) = state::lookup_value("color_.") {
-      if let Some(color) = arena::with(sym, |s| Color::from_stored(s)) {
+      if let Some(color) = arena::with(sym, Color::from_stored) {
         if state::lookup_bool_sym(pin!("inPreamble")) {
           assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
         }

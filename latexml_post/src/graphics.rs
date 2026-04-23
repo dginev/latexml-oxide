@@ -481,7 +481,7 @@ impl Graphics {
       .arg("--export-plain-svg")
       .arg(format!("--export-filename={}", dest));
     if let Some(p) = page {
-      cmd.arg(format!("--pdf-page={}", p.saturating_sub(1).max(0)));
+      cmd.arg(format!("--pdf-page={}", p.saturating_sub(1)));
     }
     cmd.arg(source);
     let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
