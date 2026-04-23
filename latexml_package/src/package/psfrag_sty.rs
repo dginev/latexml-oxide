@@ -6,10 +6,20 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Options — Perl L28-32
-  DeclareOption!("209mode", {});
-  DeclareOption!("2emode",  {});
-  DeclareOption!("scanall", {});
+  // Perl L25-27 — initial state: psfrag_scan_all defaults to the
+  // 2.09_COMPATIBILITY flag (true when the document used \documentstyle),
+  // psfrag_scan starts off. No reader consumes these in Rust yet, but
+  // setting them at load time keeps state shape consistent with Perl
+  // so the future \includegraphics hook can LookupValue them directly.
+  AssignValue!("psfrag_scan_all" => state::lookup_bool("2.09_COMPATIBILITY"));
+  AssignValue!("psfrag_scan"     => 0i32);
+
+  // Options — Perl L28-32. Each declared option toggles psfrag_scan_all:
+  //   209mode, scanall → true
+  //   2emode           → false
+  DeclareOption!("209mode", { AssignValue!("psfrag_scan_all" => true); });
+  DeclareOption!("2emode",  { AssignValue!("psfrag_scan_all" => false); });
+  DeclareOption!("scanall", { AssignValue!("psfrag_scan_all" => true); });
   ProcessOptions!();
 
   // \psfrag — stores fragment for later overlay — Perl L46-55
