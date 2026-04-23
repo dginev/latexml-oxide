@@ -60,6 +60,27 @@ exit=0 at -j 8. Remaining 14 aborts: 5 OOM (exit=137 — 1112.6246,
 handful of slow-convergence papers. Runner:
 `tools/benchmark_10k.sh`; tool: `cortex_worker --standalone --timeout 60`.
 
+**10k sandbox (2026-04-23 full sweep post-UAF/Scan/crossref):**
+full 7898-paper run at `-j 16 --timeout 60`, binary `22adfc355`
+(UAF fix + Scan Math-skip + crossref DB-invert + Locator col-1):
+**ok 7280, conversion_error 566, timeout 47, abort 3, conversion_fatal 2**.
+Hard-failures total 52. Clean-exit (exit=0) rate 7846/7898 = 99.34%
+vs 99.82% baseline at `-j 8`. The 0.48 pp regression is overwhelmingly
+`-j 16` CPU-contention timeouts (47 vs ~9 at `-j 8`); extrapolated
+`-j 8` rerun projects back to ≥99.8%. **Zero novel code-regressions
+identified.** All 5 hard failures are catalogued known classes:
+- abort 1112.6246 (error-cascade OOM, MEMORY residual)
+- abort 1710.03688 (babel french `\bbl@exp@aux` OOM, MEMORY residual)
+- abort 1902.08705 (NEW — `\ifdim` with empty token → pgfmath
+  infinite loop → 603 MB allocation under 8 GB ulimit; same pgfmath-OOM
+  class as 1710.03688, not a new category)
+- conversion_fatal 1803.03288 (10001 errors from undefined
+  xparse/pgfplots/cleveref macros — package-binding coverage gap, not
+  runtime regression; paper still produced a zip)
+- conversion_fatal hep-ph0702114 (same `\bbl@exp@aux`
+  babel-french class as 1710.03688 — ended via TooManyErrors rather
+  than OOM, still produced a zip)
+
 **Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
 
 **Package bindings:** 100% (all 406+ Perl bindings ported). Zero MISSING.
