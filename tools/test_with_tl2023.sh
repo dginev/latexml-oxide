@@ -41,4 +41,27 @@ echo
 cd "$(dirname "$0")/.."
 ./tools/make_formats.sh
 
+# The Perl LaTeXML tree under LaTeXML/ has its own texlive-version-
+# sensitive format dumps (LaTeXML/blib/.../plain_dump.pool.ltxml and
+# latex_dump.pool.ltxml), produced by `make formats` in that tree.
+# Several Rust tests compare Rust output against Perl output produced
+# by those dumps, so a TL-version mismatch between the Perl dumps and
+# the ambient kpsewhich can surface as spurious test failures (e.g.
+# the false-alarm IEEE_test regression that traced to IEEEtran.cls
+# moving between TL2023 and TL2025).
+#
+# Rebuilding the Perl dumps is multi-minute and requires the LaTeXML/
+# tree to have been `perl Makefile.PL && make`-prepared (which is
+# already the case for this checkout). Opt in with:
+#     REBUILD_PERL_FORMATS=1 tools/test_with_tl2023.sh ...
+if [ "${REBUILD_PERL_FORMATS:-0}" = "1" ]; then
+  if [ ! -f LaTeXML/Makefile ]; then
+    echo "error: LaTeXML/Makefile missing — run \`cd LaTeXML && perl Makefile.PL\` first" >&2
+    exit 3
+  fi
+  echo "=== Rebuilding Perl LaTeXML formats against TL2023 ==="
+  ( cd LaTeXML && make formats )
+  echo
+fi
+
 exec cargo test --release --tests "$@" -- --test-threads=1
