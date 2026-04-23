@@ -462,6 +462,17 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
+  // Perl latexml.sty.ltxml L246-247: \lxKeywords{text} — add keywords to
+  // the frontmatter. Thin macro wrapper around the existing \@add@frontmatter
+  // dispatch; previously missing so `\lxKeywords{foo, bar}` hit undefined-CS.
+  DefMacro!("\\lxKeywords{}",
+    "\\@add@frontmatter{ltx:keywords}[name={keywords}]{#1}");
+
+  // Perl latexml.sty.ltxml L249-250: \lxContextTOC — emits a TOC element
+  // with format='context'. The matching ltx:TOC schema element already
+  // flows through the native schema; previously missing in Rust.
+  DefConstructor!("\\lxContextTOC", "<ltx:TOC format='context'/>");
+
   // Perl latexml.sty.ltxml L166-167: \lxAddClass{class} adds a CSS class
   // to the current element. Rust had this CS completely missing, so
   // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
