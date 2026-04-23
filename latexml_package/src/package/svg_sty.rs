@@ -25,10 +25,31 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "pdftops",  "");
   DefKeyVal!("Gin", "convert",  "");
 
-  // svgpath — code callback that pushes onto GRAPHICSPATHS
-  // Perl: DefKeyVal('Gin', 'svgpath', '', '', code => sub { ... });
-  // For now, register the key; the code callback is not yet ported.
+  // svgpath — code callback that pushes onto GRAPHICSPATHS.
+  // Perl: DefKeyVal('Gin', 'svgpath', '', '', code => sub {
+  //   my $root = $STATE->lookupValue('SOURCEDIRECTORY') || '';
+  //   my $path = pathname_absolute(pathname_canonical(ToString($_[1])), $root);
+  //   PushValue(GRAPHICSPATHS => $path); });
+  // BLOCKER: Rust keyval::define doesn't dispatch the `code` field on set,
+  // so per-\includegraphics `svgpath=X` invocations don't trigger the
+  // GRAPHICSPATHS push. As a partial fix, parse the package-options form
+  // (`\usepackage[svgpath=X]{svg}` / `\RequirePackage[svgpath=X]{svg}`)
+  // at load time so at least the common preamble-level case works.
   DefKeyVal!("Gin", "svgpath",  "");
+  if let Some(opts) = state::lookup_vecdeque("opt@svg.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      if let Some(val) = opt_str.strip_prefix("svgpath=") {
+        let canonical = latexml_core::util::pathname::canonical(val.trim());
+        let absolute = latexml_core::util::pathname::absolute(&canonical);
+        // PushValue appends to back of the VecDeque (Perl PushValue semantics).
+        let _ = state::push_value(
+          "GRAPHICSPATHS",
+          Stored::String(arena::pin(&absolute)),
+        );
+      }
+    }
+  }
 
   DefMacro!("\\lx@svg@options", "");
   DefMacro!("\\setsvg{}", "\\gdef\\lx@svg@options{#1}");
