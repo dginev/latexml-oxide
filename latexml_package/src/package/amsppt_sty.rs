@@ -164,6 +164,21 @@ LoadDefinitions!({
   Tag!("ltx:biblist",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
 
+  // Perl amsppt.sty.ltxml L167-168, L358: auto_close on theorem/proof/
+  // bibliography so AmSTeX's implicit structure (no explicit \end) still
+  // closes on the next block-level open. AmSTeX documents rely on this
+  // because the top-level CSes like \proclaim and \demo don't pair with
+  // \end markers. Without these, a `\proclaim` followed by a top-level
+  // paragraph would try to nest the paragraph inside the theorem.
+  Tag!("ltx:theorem",      auto_close => true);
+  Tag!("ltx:proof",        auto_close => true);
+  Tag!("ltx:bibliography", auto_close => true);
+  // Perl L306 also registers `Tag('ltx:note', afterClose => \&relocate
+  // Footnote)` — the closure walks the node tree to re-parent stray
+  // footnotes onto their originating paragraph. Deferred: requires the
+  // full relocateFootnote infra. No amsppt test in the suite, so leaving
+  // note-handling unported is acceptable for now.
+
   // Perl amsppt.sty.ltxml L457-458: token-valued \holdoverbox register
   // and 1-arg \holdover{#1} no-op. AmSTeX bib entries use \holdover{...}
   // to bounce a partial field to the next entry; the token register
