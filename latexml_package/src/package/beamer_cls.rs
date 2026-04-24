@@ -167,7 +167,14 @@ LoadDefinitions!({
   DefMacro!("\\mode<>{}", "");
 
   // Misc commands
-  DefMacro!("\\alert OptionalMatch:<> {}", "\\textbf{#2}");
+  // Perl beamer.cls.ltxml L810-813 wraps `\alert{…}` in `\alertenv` which
+  // threads through `\beamer@alerted@begin` / `@end` — the semantic
+  // inline-block marker ported above. Route through that instead of a
+  // bare \textbf so downstream CSS can style ltx_alert independently of
+  // bold, and authoring `\setbeamercolor{alerted text}{…}` can be
+  // honoured later without re-porting the call site.
+  DefMacro!("\\alert OptionalMatch:<> {}",
+    "\\beamer@alerted@begin{#2}\\beamer@alerted@end");
   DefMacro!("\\structure OptionalMatch:<> {}", "#2");
   DefMacro!("\\emph OptionalMatch:<> {}", "\\textit{#2}");
   DefMacro!("\\AtBeginSection[]{}", "");
