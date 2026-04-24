@@ -7249,7 +7249,16 @@ LoadDefinitions!({
   });
 
   // Perl: DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');
-  // Note: wiring to \vskip causes paragraph breaks in moderncv — keep as stub for now
+  //
+  // Rust uses DefPrimitive with a None body — effectively a silent
+  // no-op that swallows the optional-star + dimension arg. Intentional
+  // DefMacro → DefPrimitive kind divergence (WISDOM #44): the literal
+  // Perl port (expanding to `\vskip #2\relax`) triggered paragraph
+  // breaks in moderncv that cascaded into multiple test failures. The
+  // no-op stub matches Perl's _observable_ effect on most documents
+  // (LaTeXML ignores vertical spacing) without the moderncv break.
+  // See docs/SYNC_STATUS.md Work-Plan batch B5 for the broader
+  // deferred vspace→\vskip port plan.
   DefPrimitive!("\\vspace OptionalMatch:* {}", None);
   DefPrimitive!("\\addvspace {}", None);
   DefPrimitive!("\\addpenalty {}", None);
