@@ -65,6 +65,23 @@ cargo doc --workspace --no-deps --open
 
 **Important:** A compile-time plugin discovers test suite files. When adding a new `[name].tex` / `[name].xml` test pair, run `cargo clean` to force rediscovery.
 
+**Parallel agents: serialize cargo with `tools/cargo-serialized.sh`.**
+Each worktree has its own `target/` so concurrent `cargo check`/`build`/`test`
+invocations across agents stack rustc processes on the host, easily hitting
+20-30 GB RSS + swap thrash on a 32 GB box. The wrapper takes a shared
+`flock` on `/tmp/latexml-oxide-cargo.lock` so only one cargo holds the
+compiler at a time host-wide. Use it whenever an agent is expected to
+run concurrently with others:
+
+```bash
+tools/cargo-serialized.sh check --workspace
+tools/cargo-serialized.sh build --release --bin latexml_oxide
+tools/cargo-serialized.sh test --release --tests
+```
+
+It execs cargo with all args forwarded, so exit codes and signals
+propagate normally. Solo sessions can still call `cargo` directly.
+
 ## Code Style
 
 Formatting is configured in `rustfmt.toml`:
