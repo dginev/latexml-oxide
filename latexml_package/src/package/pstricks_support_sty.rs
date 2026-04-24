@@ -186,6 +186,8 @@ LoadDefinitions!({
   // `\scalebox{0.5}{body}` via PSTricks don't hit undefined-CS.
   // `\scalebox` itself is provided by graphics_sty (standard LaTeX form);
   // not overriding it here keeps the tested scalebox golden intact.
+  // Intentional DefPrimitive → DefMacro (WISDOM #44, same DVI-only
+  // blocker as L18-31 umbrella).
   DefMacro!("\\@@@ackscale{}", "");
 
   DefMacro!("\\black", "\\color{black}");
