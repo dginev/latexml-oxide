@@ -72,6 +72,22 @@ LoadDefinitions!({
     "\\par\\textbf{#3}\\par");
   DefMacro!("\\framesubtitle OptionalMatch:<> {}", "");
 
+  // Perl beamer.cls.ltxml L961-963: internal frame title constructors
+  // that \frame@ / \beamer@frame@replay invoke to lift title/subtitle
+  // onto the enclosing slide element via `^` float-to-parent. Rust
+  // \frame stubs as ltx:subsection, so `^<ltx:title>` floats to that.
+  // Unported until now, so beamer themes that invoke
+  // \beamer@frametitle{...} directly (bypassing \frametitle) hit
+  // undefined-CS errors. The three constructors all carry the same
+  // float semantics, differing only in element (title vs subtitle)
+  // and CSS class.
+  DefConstructor!("\\beamer@frametitle{}",
+    "^<ltx:title class='ltx_frame_title'>#1</ltx:title>");
+  DefConstructor!("\\beamer@frameshorttitle{}",
+    "^<ltx:title class='ltx_frame_shorttitle'>#1</ltx:title>");
+  DefConstructor!("\\beamer@framesubtitle{}",
+    "^<ltx:subtitle class='ltx_frame_subtitle'>#1</ltx:subtitle>");
+
   // Insert counters
   DefMacro!("\\insertframenumber", "");
   DefMacro!("\\insertslidenumber", "");
