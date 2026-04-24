@@ -27,6 +27,10 @@ LoadDefinitions!({
   DeclareOption!("cm", { RequirePackage!("textcomp"); });
   DeclareOption!("bibnumber", { RequirePackage!("natbib"); });
   DeclareOption!("bibauthoryear", { RequirePackage!("natbib"); });
+  // Perl aa_support.sty.ltxml L44: default options — ensures `bibauthoryear`
+  // (which loads natbib) is executed even when user loads aa.cls without
+  // options, matching Perl preamble semantics.
+  Digest!("\\ExecuteOptions{a4paper,twocolumn,utf8,hideoverfull,bibauthoryear}")?;
   ProcessOptions!();
 
   // Dependencies — Perl L47-63
