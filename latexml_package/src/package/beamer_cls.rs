@@ -192,8 +192,13 @@ LoadDefinitions!({
   DefEnvironment!("{enumerate} OptionalMatch:<> []",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     mode => "internal_vertical");
+  // Perl beamer.cls.ltxml L1174-1179: description's \item[label] renders
+  // labels via \makelabel which beamer rebinds to \descriptionlabel
+  // (defined in ams_support_sty:188 as bold+space). Same pattern
+  // enumitem_sty:444 and ieeetran_cls:287 use.
   DefEnvironment!("{description} OptionalMatch:<>",
     "<ltx:description xml:id='#id'>#body</ltx:description>",
+    before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
     mode => "internal_vertical", locked => true);
 
   // Theorems — Perl L1193-1230
