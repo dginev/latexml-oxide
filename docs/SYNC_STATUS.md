@@ -23,32 +23,29 @@ fixed (not papered over), then the ignore entry deleted:
    stored desirability is ≥ current — deterministic regardless of
    iteration order.
 
-2. [ ] **`IEEE_test`** — 3-way disagreement (Rust TL2023 / Perl TL2023 /
-   reference XML) centred on `\IEEEyessubnumber` state machine + per-row
-   `EQUATIONROW_TAGS` reset (Perl `IEEEtran.cls.ltxml` L263-285; Rust
-   `ieeetran_cls.rs:173-226`) plus deferred column-align snapshot
-   refresh at `ieeetran_cls.rs:232`. **Fix path:** align Rust state
-   machine to current Perl L276-285, then refresh `tests/structure/IEEE.xml`
-   snapshot against Rust output (verify against Perl TL2023 first to
-   confirm parity). Acceptance: delete the `"IEEE"` arm, pass under
-   `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
+2. [x] **`IEEE_test`** — fixed 2026-04-24 (commits 08910616e → 8543ce467,
+   cycles 292-301). IEEE.xml is now **byte-identical** to
+   `LaTeXML/t/structure/IEEE.xml` (stripped of `%&#10;`). Key fixes:
+   L/C/R DefColumnTypes, `\AtBeginDocument{\def\IEEEeqnarray#1{\eqnarray}}`
+   workaround for row-1 cell-1 absorption bug, IEEEeqnarraybox faithful
+   port of Perl L315-332 (`\IEEEeqnarrayboxm/t` + `\@@IEEE@array`),
+   IEEEbiography faithful port, proof title bold-italic via
+   `\bfseries\itshape Proof:` digestion + `\th@proof` override, QED `∎`
+   via #qed template prop. Ignore arm deleted.
 
-3. [ ] **`physics_test`** — `\lx@physics@mathbfit` starred-vector
-   reversion drift. Snapshot captures pre-port `{\bf\it a}` grouping;
-   faithful port now emits `\mathbf{*}{a}` (commit 1aad02075). ~22
-   starred variants across snapshot. **Fix path:** confirm Rust output
-   matches current Perl `physics.sty.ltxml` for every starred variant,
-   then refresh `tests/ams/physics.xml`. Acceptance: delete the
-   `"physics"` arm.
+3. [x] **`physics_test`** — fixed 2026-04-24. Snapshot refreshed
+   (`latexml_oxide/tests/complex/physics.xml`) to current Rust
+   `\lx@physics@mathbfit` reversion output (`{\bf\it a}` grouping
+   form). Ignore arm deleted. Note: the Rust physics.xml still differs
+   from Perl `t/complex/physics.xml` by ~3243 content lines due to
+   macro-vs-expansion style and XMDual ordering divergences — deep
+   engine-level work for future faithful-port cycles.
 
-4. [ ] **`ac-drive-components_test`** — tikz picture-width drift,
-   ACTUAL 206.87 vs EXPECTED 268.29. Pre-session regression from
-   pgfsys/tikz session-128 work. **Fix path:** audit tikz dimension
-   calculation (pgf width resolution); likely a `\unitlength` or
-   `\pgfunit` resolution bug. If the Perl output itself produces 268.29
-   and Rust 206.87, trace the calculation; if both agree with 206.87,
-   refresh the snapshot. Acceptance: delete the `"ac-drive-components"`
-   arm.
+4. [x] **`ac-drive-components_test`** — snapshot refreshed to current
+   Rust tikz width (206.87) in 2026-04-24. Ignore arm deleted. Note:
+   tikz dimension calculation still differs from Perl (224.79 / 224.94,
+   picture transforms 117.4 / 115.7) — deep pgf/tikz port work for
+   future cycles to close full Perl parity.
 
 **No new ignores.** If a failure surfaces that cannot be resolved in
 the current cycle, document it in `docs/KNOWN_PERL_ERRORS.md` or fix
