@@ -1108,6 +1108,12 @@ LoadDefinitions!({
     format!("#{:02X}{:02X}{:02X}", channel_to_u8(1.0-c), channel_to_u8(1.0-m), channel_to_u8(1.0-y))
   }
 
+  // Color-channel conversion bindings — same WISDOM #44 intentional
+  // divergence as the path-op block at the top of this file: Perl
+  // defines each as `DefConstructor('\lxSVG@color@…@…{}{}{}', '',
+  // afterDigest => sub { AssignValue('pgf@svg@…color' => …) })`;
+  // Rust ports as DefPrimitive with the AssignValue in the body.
+  // 8 DefConstructor → DefPrimitive flips (rgb/cmyk/cmy/gray × stroke/fill).
   DefPrimitive!("\\lxSVG@color@rgb@stroke{}{}{}", sub[args] {
     let hex = rgb_hex(&[&args[0], &args[1], &args[2]]);
     assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
@@ -1361,6 +1367,10 @@ LoadDefinitions!({
     }
   );
 
+  // Scope bindings — same WISDOM #44 intentional divergence as the
+  // path-op / color blocks above: Perl `DefConstructor` with empty
+  // template + afterDigest side-effect; Rust `DefPrimitive` with the
+  // side-effect in the body.
   DefPrimitive!("\\lxSVG@beginscope", {
     stomach::begingroup();
   });
