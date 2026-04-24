@@ -7229,6 +7229,17 @@ LoadDefinitions!({
   DefMacro!("\\settoheight", "\\@settodim\\ht");
   DefMacro!("\\settodepth", "\\@settodim\\dp");
   DefMacro!("\\settowidth", "\\@settodim\\wd");
+  // \settototalheight sets its register to \ht+\dp of the box. Perl
+  // calc.sty.ltxml L73-77 models it as a DefPrimitive that directly
+  // sums getHeight+getDepth; we follow the same trampoline shape as
+  // the sibling \setto* macros and use \advance to add the depth.
+  DefMacro!(
+    "\\settototalheight{}{}",
+    "\\setbox\\@tempboxa\\hbox{{#2}}\
+     #1\\ht\\@tempboxa\
+     \\advance#1\\dp\\@tempboxa\
+     \\setbox\\@tempboxa\\box\\voidb@x"
+  );
   DefMacro!(r"\@settopoint{}", r"\divide#1\p@\multiply#1\p@");
 
   DefRegister!("\\fill", Glue!("0pt plus 1fill"));
