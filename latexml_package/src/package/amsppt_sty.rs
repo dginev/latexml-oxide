@@ -371,6 +371,23 @@ LoadDefinitions!({
   // \haswidth, then {width} follows. Drop the width spec, keep body.
   DefMacro!("\\pretend Until:\\haswidth {}", "#1");
 
+  // Perl L303-308: spdddot / spddddot / spbar / spvec / spbreve —
+  // math superscript accents (siblings of existing \spcheck/\sptilde/
+  // \spacute/\spgrave). Complete the family.
+  DefMacro!("\\spdddot", "^{...}");
+  DefMacro!("\\spddddot", "^{....}");
+  DefMacro!("\\spbar", "^{-}");
+  DefMacro!("\\spvec", "^{\\rightarrow}");
+
+  // Perl L348, L356, L393, L456-458: more empty stubs and aliases.
+  DefMacro!("\\ResetBuffer", "");
+  DefMacro!("\\snug", "");
+  DefMacro!("\\printoptions", "");
+  DefMacro!("\\showallocations", "");
+  DefMacro!("\\syntax", "");
+  // Perl L393: \topaligned = \aligned[t] (sibling of \botaligned).
+  DefMacro!("\\topaligned", "\\aligned[t]");
+
 
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
