@@ -12,19 +12,16 @@ CI-equivalent TL2023. Every current `#[ignore]` in
 `latexml_codegen/src/testable.rs:54-83` is a root cause that must be
 fixed (not papered over), then the ignore entry deleted:
 
-1. [ ] **`paralists_test`** — test-harness vs binary DOM divergence
-   (WISDOM #49). CLI emits the correct 389-line output; only the test
-   harness wraps `inparaenum` item bodies in `<picture>` wrappers (~12
-   extra lines). Not parallelism (reproduces with `--test-threads=1`).
-   Root cause lies in the `state::*` + `Core`-option deltas between
-   `Converter::convert` (bin) and `util::test::process_texfile` (test).
-   **Fix path:** bisect by aligning the test harness to the binary's
-   `Converter::from_config → initialize_session → convert` flow (adds
-   `latexml_contrib::class_binding_names`, an explicit
-   `initialize_singletons`, an `HTML5` format selector, etc.). Acceptance:
-   delete the `"paralists"` arm in `testable.rs`; `cargo test --release
-   --tests -p latexml paralists_test` passes green with no other
-   regressions.
+1. [x] **`paralists_test`** — fixed 2026-04-24 (commit `03ea91fed`).
+   Root cause was **not** a harness vs binary divergence; WISDOM #49
+   rewritten. `compute_indirect_model_aux` memoised
+   `desc[kid][start]` on first visit rather than max-desirability, so
+   hash-seed-dependent iteration of `contents(ltx:text)` let
+   `text → picture → #PCDATA` (desirability 50) overwrite the direct
+   `text → #PCDATA` (100). Auto-open then picked `<ltx:picture>` for
+   text inside `ltx:inline-item`. Fix skips memoisation only when the
+   stored desirability is ≥ current — deterministic regardless of
+   iteration order.
 
 2. [ ] **`IEEE_test`** — 3-way disagreement (Rust TL2023 / Perl TL2023 /
    reference XML) centred on `\IEEEyessubnumber` state machine + per-row
@@ -56,6 +53,31 @@ fixed (not papered over), then the ignore entry deleted:
 **No new ignores.** If a failure surfaces that cannot be resolved in
 the current cycle, document it in `docs/KNOWN_PERL_ERRORS.md` or fix
 it — never escape via `#[ignore]`.
+
+### Schema generation (`LaTeXML.model`)
+
+The Rust port ships `resources/RelaxNG/LaTeXML.model` (336 lines,
+verbatim copy of Perl's `LaTeXML/lib/LaTeXML/resources/RelaxNG/LaTeXML.model`).
+The file is loaded at runtime by `latexml_core::common::model::load_schema`;
+compile-time codegen would save only µs on a session that already
+spends minutes in digestion, so a runtime file remains the right
+trade-off (one-line `include_str!` swap is always available if that
+changes).
+
+- [ ] **Port `tools/compileschema`** — upstream's 92-line bash script
+  runs `trang` over `*.rnc` (rnc → rng) then invokes Perl's
+  `LaTeXML::Common::Model::compileSchema` to serialize the compiled
+  model back out as `.model`. Two stages:
+  1. *rnc → rng*: pure `trang` + `sed` URN fix-up. Port as
+     `tools/compileschema.sh`, identical shape to Perl.
+  2. *rng → model*: currently requires Perl. The Rust port's
+     `Model::compile_schema` exists (runtime) but has no serializer.
+     Port a `--dump-model` flag on `latexml_oxide` that writes the
+     loaded schema to stdout in `.model` format, then the script can
+     regenerate the file end-to-end without needing Perl. Acceptance:
+     `tools/compileschema.sh` regenerates both the Perl-tree and
+     Rust-tree `.model` copies from the same `.rnc` source and the
+     diffs are identical to what the Perl tool produces.
 
 ### CI build parity (TL2023 mechanics)
 
