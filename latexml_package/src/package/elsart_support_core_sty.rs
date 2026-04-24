@@ -259,6 +259,9 @@ LoadDefinitions!({
   DefMacro!("\\MARK{}", "");
   DefMacro!("\\mpfootnotemark", "");
 
+  // Perl L189: \note{} — emit <ltx:note> wrapper. Previously unported.
+  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
+
   // Float environment
   DefEnvironment!("{esmark}",  "#body");
   DefMacro!("\\figmark{}{}", "");
