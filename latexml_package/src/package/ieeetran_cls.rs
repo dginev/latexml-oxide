@@ -160,11 +160,30 @@ LoadDefinitions!({
       }
     });
 
-  // IEEEbiography (Perl L238-247)
+  // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
+  // tabular-in-float: photo/placeholder on left, bolded author + body
+  // on right. Matches Perl shape byte-for-byte.
   DefEnvironment!("{IEEEbiography}[]{}",
-    "<ltx:section class='ltx_biography'><ltx:title>#2</ltx:title>#body</ltx:section>");
-  DefEnvironment!("{IEEEbiographynophoto}{}",
-    "<ltx:section class='ltx_biography'><ltx:title>#1</ltx:title>#body</ltx:section>");
+    "<ltx:float class='biography'>\
+      <ltx:tabular>\
+        <ltx:tr>\
+          <ltx:td>#1</ltx:td>\
+          <ltx:td><ltx:inline-block>\
+            <ltx:text class='ltx_font_bold'>#2</ltx:text> #body\
+          </ltx:inline-block></ltx:td>\
+        </ltx:tr>\
+      </ltx:tabular>\
+    </ltx:float>");
+  DefEnvironment!("{IEEEbiographynophoto}[]{}",
+    "<ltx:float class='biography'>\
+      <ltx:tabular>\
+        <ltx:tr>\
+          <ltx:td><ltx:inline-block>\
+            <ltx:text class='ltx_font_bold'>#2</ltx:text> #body\
+          </ltx:inline-block></ltx:td>\
+        </ltx:tr>\
+      </ltx:tabular>\
+    </ltx:float>");
 
   // IEEEeqnarray (Perl IEEEtran.cls.ltxml L298-302) — Perl uses
   //   DefMacroI('\IEEEeqnarray', '{}', '\eqnarray')
