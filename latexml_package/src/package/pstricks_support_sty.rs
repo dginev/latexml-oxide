@@ -101,6 +101,18 @@ LoadDefinitions!({
   DefEnvironment!("{psclip}{}",
     "<ltx:clip><ltx:clippath>#1</ltx:clippath>#body</ltx:clip>");
 
+  // Perl pstricks_support.sty.ltxml L995:
+  //   DefConstructor('\clipbox [PSDimension] {}',
+  //     "<ltx:g bclip='&ptValue(#1)'>#2</ltx:g>");
+  // PSDimension parameter type isn't ported (see WISDOM #41 structural
+  // parameter-type gap), and &ptValue is the Perl-side dimension-to-pt
+  // converter that PSTricks post-processing consumes. Since pstricks is
+  // DVI-only in Rust, the bclip attribute has no downstream reader — we
+  // stub as a pass-through wrapper that still emits the <ltx:g> so the
+  // structural nesting matches. The raw optional-arg string is passed
+  // into bclip unchanged; harmless under the HTML/MathML backend.
+  DefConstructor!("\\clipbox[]{}", "<ltx:g bclip='#1'>#2</ltx:g>");
+
   // Arrow tips
   DefMacro!("\\psoverlay{}", "");
   DefMacro!("\\pst@getangle{}", "");
