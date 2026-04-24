@@ -424,6 +424,7 @@ LoadDefinitions!({
     // attribute serializes back to `\includegraphics` rather than the
     // internal `\@includegraphicx` name.
     alias => "\\includegraphics",
+    scope => Some(Scope::Global),
     properties => sub[args] {
       // arg 0: starred, arg 1: keyvals, arg 2: graphic path
       let path = args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
