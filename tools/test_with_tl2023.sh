@@ -42,9 +42,21 @@ export PATH="${TL2023_BIN}:${PATH}"
 
 # Optional CI-parity package bootstrap. Safe to re-run: tlmgr install is
 # idempotent, skips already-installed packages, and is bounded by the
-# tlnet-final snapshot.
+# TL2023 tlnet-final snapshot.
+#
+# Mirror note: the default install-tl config points at ftp.math.utah.edu,
+# which was observed to be connection-unreachable (port 443 timeout) as
+# of 2026-04-23. Chemnitz's TUG-historic mirror is an alternate with the
+# identical frozen tlnet-final tree — pin to it when the default mirror
+# hangs. Override via TLMGR_REPO if you want a different mirror.
+TLMGR_REPO="${TLMGR_REPO:-https://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2023/tlnet-final}"
 if [ "${INSTALL_CI_PACKAGES:-0}" = "1" ]; then
   echo "=== Installing CI-equivalent TL2023 collections ==="
+  echo "    repo=${TLMGR_REPO}"
+  current_repo=$("${TL2023_BIN}/tlmgr" option repository 2>/dev/null | awk -F': ' '{print $2}' | head -1)
+  if [ "${current_repo}" != "${TLMGR_REPO}" ]; then
+    "${TL2023_BIN}/tlmgr" option repository "${TLMGR_REPO}"
+  fi
   "${TL2023_BIN}/tlmgr" install \
     collection-latexextra collection-mathscience \
     collection-langgerman collection-langfrench \
