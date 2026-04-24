@@ -258,6 +258,15 @@ LoadDefinitions!({
   }
 
   //======================================================================
+  // Perl: amsmath.sty.ltxml lines 766-767 — MaxMatrixCols counter
+  // caps the number of columns accepted in ams matrix environments.
+  // User papers may override via \setcounter{MaxMatrixCols}{N} so the
+  // counter must exist at binding-load time even though Rust's matrix
+  // code doesn't currently consult it.
+  NewCounter!("MaxMatrixCols");
+  SetCounter!("MaxMatrixCols", Number::new(10));
+
+  //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
   // Matrix environments
   DefMacro!(
