@@ -499,6 +499,12 @@ LoadDefinitions!({
   DefMacro!("\\Jpnom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{Jp}$}");
 
   // 2.17.5 Hypertext — Perl L563-577
+  // Perl L565: RequirePackage('url') — re-required here alongside the
+  // hypertext definitions so `\url{}` is guaranteed loaded before
+  // `\anchor`/`\@@email`/etc. AAS-macros that route URL content. The
+  // package loader no-ops a re-require, so this is a faithful
+  // transcription, not a repeated load.
+  RequirePackage!("url");
   DefConstructor!("\\anchor Semiverbatim Semiverbatim", "<ltx:ref href='#1'>#2</ltx:ref>",
     enter_horizontal => true);
   DefConstructor!("\\@@email Semiverbatim", "<ltx:ref href='mailto:#1'>#1</ltx:ref>",
