@@ -432,3 +432,33 @@ indexing the content correctly. The sibling `elsart_support_core.sty`
 `\collab OptionalMatch:* {}` → `\author{#1}` exhibits the same
 pattern; `elsart_support_core_sty.rs` L135 likewise deliberately uses
 `#2` so the author name reaches `\author` (fix cycle 172).
+
+## 17. `titling.sty.ltxml` `\symbolthanksmark` redefined two lines later
+
+**Perl source:** `LaTeXML/Package/titling.sty.ltxml` L39 + L41
+
+```perl
+DefMacroI('\symbolthanksmark', undef, '\fnsymbol');        # L39
+DefMacro('\thanksmarkseries{}',  '');                       # L40
+DefMacro('\symbolthanksmark',    '');                       # L41 — overrides L39
+```
+
+**Root cause:** `\symbolthanksmark` is defined twice in consecutive
+statements. The second definition (empty body) always wins, so the
+first (`\fnsymbol` alias) is unreachable dead code.
+
+**Confirming convention:** the Perl `DefMacro`/`DefMacroI` pairing
+writes to the global state directly with no guard against prior
+definitions — the second call replaces the first unconditionally.
+
+**Impact:** Users of `\symbolthanksmark` get an empty expansion rather
+than the `\fnsymbol` numbering the first (abandoned) definition
+suggested. Likely a stale edit: either L39 was meant to be removed or
+L41 was meant to apply to a different CS.
+
+**Perl status:** Still present. Unfixed upstream as of the 2026-03 sync.
+
+**Rust behavior:** `titling_sty.rs` ports only the second (empty)
+definition — matches Perl's effective observable behavior. Preserving
+both would be bit-identical but would also preserve the dead code; the
+Rust port intentionally elides the shadowed L39.
