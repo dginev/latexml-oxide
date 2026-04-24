@@ -64,20 +64,22 @@ spends minutes in digestion, so a runtime file remains the right
 trade-off (one-line `include_str!` swap is always available if that
 changes).
 
-- [ ] **Port `tools/compileschema`** — upstream's 92-line bash script
-  runs `trang` over `*.rnc` (rnc → rng) then invokes Perl's
-  `LaTeXML::Common::Model::compileSchema` to serialize the compiled
-  model back out as `.model`. Two stages:
-  1. *rnc → rng*: pure `trang` + `sed` URN fix-up. Port as
-     `tools/compileschema.sh`, identical shape to Perl.
-  2. *rng → model*: currently requires Perl. The Rust port's
-     `Model::compile_schema` exists (runtime) but has no serializer.
-     Port a `--dump-model` flag on `latexml_oxide` that writes the
-     loaded schema to stdout in `.model` format, then the script can
-     regenerate the file end-to-end without needing Perl. Acceptance:
-     `tools/compileschema.sh` regenerates both the Perl-tree and
-     Rust-tree `.model` copies from the same `.rnc` source and the
-     diffs are identical to what the Perl tool produces.
+- [x] **Port `tools/compileschema` — stage 1 (rnc → rng).** Shipped as
+  `tools/compileschema.sh` + self-contained `resources/LaTeXML.catalog`
+  (same URN rewrites as the Perl catalog, paths re-rooted under
+  `resources/`). Script mirrors the Perl version line-for-line:
+  trang-with-catalog invocation, per-module URN fix-up sed pass for
+  both `LaTeXML*.rng` and `svg*.rng` outputs. Verified on this machine:
+  trang fails identically in Perl and Rust scripts due to a missing
+  `resolver.jar` — an environmental prerequisite unrelated to the port.
+- [ ] **Port `tools/compileschema` — stage 2 (rng → model).** Still
+  requires Perl's `LaTeXML::Common::Model::compileSchema`. Rust port
+  has `Model::compile_schema` at runtime but no serializer.
+  Acceptance: add a `--dump-model` flag on `latexml_oxide` that writes
+  the loaded schema to stdout in `.model` format, extend
+  `tools/compileschema.sh` to call it, then regenerate both
+  Perl-tree and Rust-tree `.model` copies from the same `.rnc` source
+  and diff against the Perl tool's output.
 
 ### CI build parity (TL2023 mechanics)
 
