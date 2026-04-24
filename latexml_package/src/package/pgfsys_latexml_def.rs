@@ -675,6 +675,13 @@ LoadDefinitions!({
   // 4. Stroking, filling, and clipping
   //===================================================================
 
+  // Intentional divergence (WISDOM #44 class: afterDigest-only state
+  // toggle): Perl L307 `\pgfsys@clipnext` is a DefConstructor whose
+  // constructor body is empty — the only observable effect is
+  // `AssignValue(pgf_clipnext=>1)` read back later by the next
+  // \pgfsys@drawpath. DefPrimitive is the idiomatic Rust shape for a
+  // pure-state-toggle CS with no XML emission. Same class as
+  // psfrag_sty's \psfragscanon/off. Audit flags the single L678 entry.
   DefPrimitive!("\\pgfsys@clipnext", {
     state::assign_value("pgf_clipnext", Stored::Int(1), None);
   });
@@ -1445,6 +1452,13 @@ LoadDefinitions!({
   //   no warnings 'recursion'; $document->absorb($arg); }, sizer => 0);
   // Use DefMacro to ensure content flows back through the normal pipeline.
   // The content is already pre-expanded (hex computed in Rust).
+  //
+  // Intentional divergence (WISDOM #44 class: re-digest-pipeline timing):
+  // Perl's DefConstructor+absorb re-enters the document digester; the
+  // Rust DefMacro pass-through puts #1 back on the input stream so the
+  // expansion + digest pipeline proceeds naturally. Observationally
+  // equivalent when the hex is pre-computed in Rust. Audit flags the
+  // single L1448 entry.
   DefMacro!("\\pgfsys@invoke{}", "#1", locked => true);
 
   DefMacro!("\\pgfsys@markposition{}", "");
