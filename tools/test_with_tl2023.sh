@@ -30,11 +30,26 @@ fi
 export PATH="${TL2023_BIN}:${PATH}"
 
 # Announce what we're using so the test output is self-documenting.
+# IEEEtran.cls (and similar probe targets) may be missing from a minimal
+# local TL2023 install — the CI runner pulls `texlive-science` via apt which
+# includes it, but `install-tl --profile minimal` does not. The probe is
+# diagnostic only, so `|| true` each lookup — we want the wrapper to fall
+# through to the actual build/test work, not die on a missing probe target.
 echo "=== Running with TL2023 ==="
 kpsewhich --version | head -1
-kpsewhich IEEEtran.cls
+echo "IEEEtran.cls: $(kpsewhich IEEEtran.cls 2>/dev/null || echo '<not installed>')"
+echo "article.cls: $(kpsewhich article.cls 2>/dev/null || echo '<not installed>')"
 echo "==========================="
 echo
+
+# If IEEEtran is missing, the 50_structure::IEEE_test cannot exercise the
+# real CI package set — flag that clearly so the wrapper's report is honest.
+if ! kpsewhich IEEEtran.cls >/dev/null 2>&1; then
+  echo "WARNING: IEEEtran.cls not found in local TL2023. To install:"
+  echo "  ${TL2023_BIN}/tlmgr install IEEEtran"
+  echo "without it, IEEE-related tests won't reproduce CI behaviour locally."
+  echo
+fi
 
 # Regenerate the kernel dump against TL2023 before the test, otherwise
 # cargo test will use the stale dump built with TL2025.
