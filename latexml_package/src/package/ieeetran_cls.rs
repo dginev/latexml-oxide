@@ -238,14 +238,24 @@ LoadDefinitions!({
   DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   DefMacro!("\\IEEEeqnarraynumspace", "");
-  // IEEEeqnarraybox — wrap in inline math so text-mode invocations
-  // produce <Math><XMath><XMArray>... instead of a bare <XMArray>.
-  // Perl (IEEEtran.cls.ltxml L316-328) dispatches on \ifmmode to
-  // either \IEEEeqnarrayboxm (math) or \IEEEeqnarrayboxt (text, with
-  // \lx@begin@inline@math wrapper). Rust uses `$...$` which TeX's
-  // math toggle already handles correctly for both invocation modes.
-  DefMacro!("\\IEEEeqnarraybox{}", "$\\begin{array}{#1}");
-  DefMacro!("\\endIEEEeqnarraybox", "\\end{array}$");
+  // IEEEeqnarraybox — faithful port of Perl IEEEtran.cls.ltxml L315-332.
+  // Perl dispatches \ifmmode into \IEEEeqnarrayboxm (math-mode) or
+  // \IEEEeqnarrayboxt (text-mode, with \lx@begin@inline@math wrapper),
+  // plus a \@@IEEE@array DefConstructor whose `reversion` preserves
+  // the original `\begin{IEEEeqnarraybox}` string in `tex=` attr.
+  RawTeX!(
+    r"\def\IEEEeqnarraybox{\ifmmode\def\@tempa{\let\endIEEEeqnarraybox\endIEEEeqnarrayboxm\IEEEeqnarrayboxm}\else\def\@tempa{\let\endIEEEeqnarraybox\endIEEEeqnarrayboxt\IEEEeqnarrayboxt}\fi\@tempa}"
+  );
+  DefMacro!("\\IEEEeqnarrayboxm OptionalMatch:* {}",
+    "\\@array@bindings{#2}\\@@IEEE@array{#2}\\lx@begin@alignment");
+  DefMacro!("\\endIEEEeqnarrayboxm", "\\lx@end@alignment\\@end@array");
+  DefMacro!("\\IEEEeqnarrayboxt OptionalMatch:* {}",
+    "\\lx@begin@inline@math\\@array@bindings{#2}\\@@IEEE@array{#2}\\lx@begin@alignment");
+  DefMacro!("\\endIEEEeqnarrayboxt",
+    "\\lx@end@alignment\\@end@array\\lx@end@inline@math");
+  DefConstructor!("\\@@IEEE@array[] Undigested DigestedBody", "#3",
+    before_digest => { bgroup(); },
+    reversion => "\\begin{IEEEeqnarraybox}[#1]{#2}#3\\end{IEEEeqnarraybox}");
   DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
   DefMacro!("\\IEEEeqnarraydefcol{}{}{}", "");
   DefMacro!("\\IEEEeqnarraydefcolsep{}{}", "");
