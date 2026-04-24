@@ -11,20 +11,28 @@ fleshing milestone entirely.** Those audits have been revisiting the
 same files without moving either of the two things that actually
 matter:
 
-1. **TL2023 CI push gate green** —
-   `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1
-   tools/test_with_tl2023.sh` must pass with **zero failures, zero
-   ignores**. Local TL2025 is already 1098/0/0; TL2023 is the
-   remaining variable.
-2. **10k sandbox error-free** — every `~/data/10k_sandbox/*.zip` must
-   convert cleanly via `cortex_worker` at `-j 8 --timeout 60`. Current
-   residual (session-128 sweep, binary 22adfc355):
-   - **5 hard-fails**: 1112.6246 (error-cascade OOM), 1710.03688 +
-     hep-ph0702114 (babel-french `\bbl@exp@aux` OOM), 1902.08705
-     (pgfmath infinite loop), 1803.03288 (xparse/pgfplots cascade).
-   - **~7 timeouts**: 1308.5727, 1407.5769, 1709.05096, 1711.10191,
-     1711.11576, 1707.01155, 1210.1891 (hyperref → etoolbox →
-     kvoptions → nameref chain), 1403.4135 (math-parser ambiguity).
+1. **[x] TL2023 CI push gate green** — 1098 passed / 0 failed / 0
+   ignored on TL2023 (2026-04-24, commit d2a1f471e+ with
+   REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1). Local TL2025 also
+   1098/0/0. Push gate can now be lifted.
+2. **10k sandbox error-free** — Perl-baseline triage (2026-04-24) on
+   the five previously catalogued hard-fails:
+   - **Real parity gaps** (Perl exits 0, 0 errors — Rust fails):
+     - 1112.6246 (error-cascade OOM on elsart + ?) — needs root-cause.
+     - hep-ph0702114 (conversion_fatal: babel-french `\csname` cascade
+       triggered mid-body of elsart3-1 paper) — see
+       [`memory/project_babel_francais_gap.md`](../memory/project_babel_francais_gap.md).
+     - 1710.03688 (OOM abort: same babel-french pattern as
+       hep-ph0702114, elsart4-1 class).
+   - **Not parity targets** (Perl also fails — per
+     `feedback_sandbox_perl_baseline.md` rule, pull from worklist):
+     - 1803.03288 (Perl exit 124 timeout — xparse/pgfplots paper).
+     - 1902.08705 (Perl exit 124 timeout on Figures/DataComplexity.tex,
+       pgfmath loop affects both engines).
+   - **Timeouts** (not yet Perl-baseline-triaged): 1308.5727, 1407.5769,
+     1709.05096, 1711.10191, 1711.11576, 1707.01155, 1210.1891
+     (hyperref → etoolbox → kvoptions → nameref chain), 1403.4135
+     (math-parser ambiguity).
 
 Each of these is a **root-cause investigation** — not a stub-port gap.
 Per-cycle work must target one of these two fronts; drive-by pstricks /
