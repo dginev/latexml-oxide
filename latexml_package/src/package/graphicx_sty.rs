@@ -420,6 +420,10 @@ LoadDefinitions!({
     "\\@includegraphicx OptionalMatch:* OptionalKeyVals:Gin Semiverbatim",
     "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
     enter_horizontal => true,
+    // Perl L54: alias => '\includegraphics' so the reversion `tex=`
+    // attribute serializes back to `\includegraphics` rather than the
+    // internal `\@includegraphicx` name.
+    alias => "\\includegraphics",
     properties => sub[args] {
       // arg 0: starred, arg 1: keyvals, arg 2: graphic path
       let path = args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
