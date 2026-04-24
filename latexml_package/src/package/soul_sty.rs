@@ -1,6 +1,26 @@
 use crate::package::color_sty::{lookup_color, lookup_color_obj};
 use crate::prelude::*;
 
+// RUST DIVERGENCE: `\sodef` routing via `\lx@soul@letterspaced` + `copy_soul_state`.
+// Perl (soul.sty.ltxml L27-35) implements `\sodef` by closure-capturing the
+// letterspacing/font arguments inside a fresh `DefConstructorI($cs, ...)` call —
+// every sodef-defined CS gets its own constructor whose `properties` and
+// `beforeDigest` close over the captured tokens.
+//
+// The Rust binding system compiles constructor CSes through statically-declared
+// prototypes; it has no per-call `DefConstructorI` equivalent that can fold
+// runtime arguments into a fresh closure. We therefore route all sodef CSes
+// through a single generic constructor `\lx@soul@letterspaced`:
+//   (a) `\sodef` stores per-CS spacing/font in State under
+//       `soul_spacing_<cs>` / `soul_font_<cs>`,
+//   (b) the CS is `Let!`-aliased to `\lx@soul@letterspaced`,
+//   (c) the constructor recovers the original CS name via `get_current_token()`
+//       (Let preserves the source token) and reads the stored spacing/font.
+//
+// `copy_soul_state` mirrors these per-CS entries when an alias is `Let!` to
+// another sodef CS (e.g. `\so` -> `\textso`): since both names resolve to the
+// same `\lx@soul@letterspaced`, the state must also be keyed under the alias.
+// In Perl `Let` naturally preserves closure identity, so this step is implicit.
 LoadDefinitions!({
   // Perl: soul.sty.ltxml
   // Space-Out and UnderLine package
@@ -75,14 +95,19 @@ LoadDefinitions!({
   DefMacro!("\\capsreset", None);
 
   // Underline (with optional frame color from \setulcolor)
+  // Perl L69-72: framecolor property is getSOULcolor('soul_ul_color'), which
+  // Perl L61-65 gates on LookupValue('color.sty.ltxml_loaded').
   DefConstructor!("\\textul{}",
   "<ltx:text framed='underline' framecolor='#framecolor' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
   after_digest => sub[whatsit] {
-    if let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
-      let color_name = arena::to_string(color_sym);
-      let hex = lookup_color(&color_name);
-      whatsit.set_property("framecolor", hex);
+    // Perl L63: `if (LookupValue('color.sty.ltxml_loaded')) { ... }`
+    if lookup_bool("color.sty.ltxml_loaded") {
+      if let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
+        let color_name = arena::to_string(color_sym);
+        let hex = lookup_color(&color_name);
+        whatsit.set_property("framecolor", hex);
+      }
     }
     Ok(Vec::new())
   });
@@ -99,37 +124,62 @@ LoadDefinitions!({
   DefMacro!("\\setuloverlap{Dimension}", None);
 
   // Strike-out (with optional strike color from \setstcolor)
+  // Perl L86-91: framecolor property is a sub that calls getSOULcolor (L61-65
+  // gated on color.sty.ltxml_loaded) and returns "text-decoration-color:HEX;"
+  // only when a framecolor comes back; otherwise empty string.
   DefConstructor!("\\textst{}",
   "<ltx:text cssstyle='#cssstyle' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
   after_digest => sub[whatsit] {
     let mut css = String::from("text-decoration:line-through;");
-    if let Some(Stored::String(color_sym)) = lookup_value("soul_strike_color") {
-      let color_name = arena::to_string(color_sym);
-      let hex = lookup_color(&color_name);
-      css.push_str(&s!("text-decoration-color:{hex};"));
+    // Perl L63: `if (LookupValue('color.sty.ltxml_loaded')) { ... }`
+    // Perl L64: `if (my $color = ToString(LookupValue($name)))` — stringify at read time.
+    if lookup_bool("color.sty.ltxml_loaded") {
+      let color_name = match lookup_value("soul_strike_color") {
+        Some(Stored::String(sym)) => arena::to_string(sym),
+        Some(Stored::Tokens(ts)) => ts.to_string(),
+        _ => String::new(),
+      };
+      if !color_name.is_empty() {
+        let hex = lookup_color(&color_name);
+        css.push_str(&s!("text-decoration-color:{hex};"));
+      }
     }
     whatsit.set_property("cssstyle", css);
     Ok(Vec::new())
   });
 
   // Customizing strikeout
+  // Perl L93: `DefPrimitive('\setstcolor{}', sub { AssignValue(soul_strike_color => $_[1]); });`
+  // stores the raw Tokens argument (no ToString). Mirror by storing Stored::Tokens so a later
+  // redefinition of a CS argument resolves against the then-current expansion (as in Perl).
   DefPrimitive!("\\setstcolor{}", sub[(color_arg)] {
-    let color_str = color_arg.to_string();
-    assign_value("soul_strike_color", color_str, Some(Scope::Global));
+    assign_value("soul_strike_color", Stored::Tokens(color_arg), Some(Scope::Global));
     Ok(())
   });
 
   // Highlighting — use background color (via MergeFont with bg)
+  // Perl L98-101: beforeDigest calls MergeFont(background => getSOULcolor(...)),
+  // where getSOULcolor (L61-65) returns undef unless color.sty.ltxml_loaded is set.
   DefConstructor!("\\lx@texthl@color{}",
   "<ltx:text _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
   bounded => true,
   before_digest => {
-    if let Some(Stored::String(color_sym)) = lookup_value("soul_hl_color") {
-      let color_name = arena::to_string(color_sym);
-      let color = lookup_color_obj(&color_name);
-      merge_font(Font { bg: Some(color), ..Font::default() });
+    // Perl L63: `if (LookupValue('color.sty.ltxml_loaded')) { ... }`
+    // Perl L64: `ToString(LookupValue($name))` — stringify at read time,
+    // supporting either a raw-Tokens entry (from `\sethlcolor`) or the
+    // initial string 'yellow' assignment (L103).
+    if lookup_bool("color.sty.ltxml_loaded") {
+      let color_name = match lookup_value("soul_hl_color") {
+        Some(Stored::String(sym)) => arena::to_string(sym),
+        Some(Stored::Tokens(ts)) => ts.to_string(),
+        _ => String::new(),
+      };
+      if !color_name.is_empty() {
+        let color = lookup_color_obj(&color_name);
+        merge_font(Font { bg: Some(color), ..Font::default() });
+      }
     }
   });
   DefMacro!(
@@ -141,9 +191,10 @@ LoadDefinitions!({
   assign_value("soul_hl_color", "yellow", Some(Scope::Global));
 
   // Customizing highlight
+  // Perl L104: `DefPrimitive('\sethlcolor{}', sub { AssignValue(soul_hl_color => $_[1]); });`
+  // stores the raw Tokens argument (no ToString). Mirror by storing Stored::Tokens.
   DefPrimitive!("\\sethlcolor{}", sub[(color_arg)] {
-    let color_str = color_arg.to_string();
-    assign_value("soul_hl_color", color_str, Some(Scope::Global));
+    assign_value("soul_hl_color", Stored::Tokens(color_arg), Some(Scope::Global));
     Ok(())
   });
 
