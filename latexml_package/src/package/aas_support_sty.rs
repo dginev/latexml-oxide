@@ -305,8 +305,11 @@ LoadDefinitions!({
   // sentinel cell. Perl L385-389 adds `B` with a TODO to "break table
   // eventually" — we match Perl's current behavior (identical to `h`).
   // The more complex `D` and `d` decimal-alignment column types (Perl
-  // L349-356) use SplitTokens token-shuffling for dot alignment; deferred
-  // pending a DefColumnType-friendly token-splitter helper.
+  // L349-356) use SplitTokens token-shuffling for dot alignment — the
+  // helper itself (`base_utilities::split_tokens` + XUntil parameter
+  // type) is now available, but porting is still deferred until a
+  // concrete aastex paper with `D`/`d` columns surfaces as a
+  // conversion gap, so the snapshot-regression risk is measurable.
   DefColumnType!("h", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
