@@ -165,6 +165,25 @@ LoadDefinitions!({
   // Mode commands — Perl L448-460
   DefMacro!("\\mode OptionalMatch:* {}", "");
   DefMacro!("\\mode<>{}", "");
+  // Perl L493-495: \presentation / \article / \common route to
+  // \mode<…>. Since the Rust \mode dispatcher is already a no-op for
+  // all overlay modes, the three become empty stubs. Including them
+  // keeps preamble-level `\mode<all>` equivalents (from example
+  // beamer style files) from throwing undefined-CS errors.
+  DefMacro!("\\presentation", "");
+  DefMacro!("\\common",       "");
+  // `\article` would clash with LaTeX `\article` docclass naming in
+  // principle, but LaTeXML's catcode + class-file routing keeps the
+  // control sequence distinct from the class name string. Perl ships
+  // this alias unconditionally.
+  DefMacro!("\\article",      "");
+
+  // Perl L414-416: beamer TODO CSes (expand to warnings under Perl;
+  // Rust matches by absorbing args and emitting nothing — same
+  // behaviour for slide-order rendering without the beamerTODO warning.
+  DefMacro!("\\jobnamebeamerversion{}",   "");
+  DefMacro!("\\includeslide{}",           "");
+  DefMacro!("\\setjobnamebeamerversion",  "");
 
   // Misc commands
   // Perl beamer.cls.ltxml L810-813 wraps `\alert{…}` in `\alertenv` which
