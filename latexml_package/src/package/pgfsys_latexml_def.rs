@@ -597,6 +597,35 @@ LoadDefinitions!({
     state::assign_value("pgf_clipnext", Stored::Int(0), None);
   });
 
+  //============================================================
+  // pgfsys low-level drawing primitives — Perl L242-577
+  //============================================================
+  //
+  // Umbrella WISDOM #44 intentional divergence for the whole
+  // block below:
+  //
+  // Perl pgfsys-latexml.def.ltxml defines each of \pgfsys@moveto,
+  // \pgfsys@lineto, \pgfsys@curveto, \pgfsys@rect, \pgfsys@closepath,
+  // \pgfsys@clipnext, \lxSVG@color@{rgb,cmyk,cmy,gray}@{stroke,fill},
+  // \lxSVG@{beginscope,endscope}, and a few more as
+  //   DefConstructor('\pgfsys@moveto{Dimension}{Dimension}', '',
+  //     afterDigest => sub { addToSVGPath('M', $_[1]->getArgs); },
+  //     sizer => 0);
+  // — constructors with an EMPTY template and sizer=0, whose only
+  // observable work lives in `afterDigest` (mutating the internal
+  // SVG-path buffer / color state).
+  //
+  // Rust ports these as DefPrimitive with the side-effect in the
+  // body sub. The direct primitive form does the same state
+  // mutation without the zero-sizer whatsit leaking into the
+  // digest tree. Kind-wise this is 17 DefConstructor →
+  // DefPrimitive flips, all under the same rationale (empty
+  // template + sizer=0 → no observable XML, only state).
+  //
+  // This applies uniformly to every pgfsys / lxSVG@color /
+  // lxSVG@scope binding in the block below; individual entries
+  // don't re-carry the WISDOM #44 tag to avoid comment noise.
+
   // Perl L242-276: path operations
   DefPrimitive!("\\pgfsys@moveto{Dimension}{Dimension}", sub[(x, y)] {
     add_to_svg_path("M", &[x, y]);
