@@ -204,6 +204,10 @@ LoadDefinitions!({
   );
   DefConstructor!("\\Gscale@@box{}{GraphixDimension}{GraphixDimension}{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#4</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
+  // Perl L124: reversion => '\resizebox{#2}{#3}{#4}' so the `tex=`
+  // attribute serializes back to the author-facing \resizebox shape
+  // rather than the internal \Gscale@@box dispatcher + heighttype arg.
+  reversion => "\\resizebox{#2}{#3}{#4}",
   after_digest => sub[whatsit] {
     let heighttype = whatsit.get_arg(1);
     let use_totalheight = heighttype.as_ref()
