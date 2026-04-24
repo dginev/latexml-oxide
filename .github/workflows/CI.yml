@@ -13,32 +13,41 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # The runner has ~16 GB RAM but the GitHub-hosted OS eats ~3-4 GB, and
-      # linker peaks can easily exceed 10 GB for the `latexml` aggregate crate
-      # (4 bin targets + lib + test executables). Previous CI runs OOM'd during
-      # the final codegen step. Every knob here is aimed at peak-RAM reduction,
-      # at the cost of some compile speed.
+      # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM. Strategy: use every
+      # core, keep per-rustc memory small, and lean on `mold` for the
+      # cheap-linker path so concurrent link steps don't OOM.
       #
-      # 1. Serialize rustc — only one compile at a time.
-      CARGO_BUILD_JOBS: 1
-      # 2. No debug info in release profile (workspace Cargo.toml sets debug=true
-      #    for production debugging; CI doesn't need it and it's a massive
-      #    contributor to peak RAM during linking).
+      # 1. Parallel rustc — unset CARGO_BUILD_JOBS so cargo defaults to
+      #    num_cpus (4). Previously set to 1 after a historical OOM when
+      #    the release profile carried `debug=true` (full DWARF); since
+      #    `line-tables-only` + `split-debuginfo=unpacked` + the CI knobs
+      #    below landed, peak linker RAM is well under the 16 GB budget
+      #    even with 4 concurrent rustc workers.
+      # 2. No debug info in release profile (workspace Cargo.toml sets
+      #    debug=line-tables-only; zero out entirely for CI — not needed
+      #    to run the test suite, shaves peak RAM + link time further).
       CARGO_PROFILE_RELEASE_DEBUG: "0"
-      # 3. Lower optimization level — opt-level=1 is still fast enough for tests
-      #    and uses much less memory per codegen unit than the default opt-level=3.
+      # 3. Fast-compile opt-level — opt-level=1 still runs the suite in
+      #    reasonable wall time and uses much less memory per codegen
+      #    unit than the default opt-level=3.
       CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
-      # 4. Many small codegen units (vs. the default 16) — smaller, cheaper
-      #    per-unit peaks during parallel codegen.
+      # 4. Many small codegen units — keeps individual rustc worker peaks
+      #    bounded, and maximises cross-CGU parallelism on the 4-core box.
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
-      # 5. Split debuginfo / strip — harmless if debug=0 but defensive.
+      # 5. Strip remaining debuginfo sections — defensive w/ DEBUG=0.
       CARGO_PROFILE_RELEASE_STRIP: "debuginfo"
-      # 6. No LTO (default is already off for "release", but be explicit).
+      # 6. No LTO (default for `release`, explicit for clarity).
       CARGO_PROFILE_RELEASE_LTO: "false"
-      # 7. Incremental caches are worthless on CI and cost RAM+disk.
+      # 7. Incremental is worthless on CI (cold target dir) and costs disk.
       CARGO_INCREMENTAL: "0"
-      # 8. Fetch via CLI git rather than libgit2 (smaller memory footprint).
+      # 8. Fetch via CLI git (smaller memory footprint than libgit2).
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      # 9. Use mold as the linker. GNU ld was the second-biggest driver
+      #    of link-time wall clock AND peak RAM; mold is ~2-4× faster
+      #    and streams symbols rather than slurping them, so parallel
+      #    link steps are tractable inside 16 GB. Installed in the apt
+      #    step below.
+      RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
     steps:
       - name: install dependencies
@@ -47,6 +56,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             imagemagick inkscape \
+            mold \
             texlive texlive-latex-extra texlive-science \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
             texlive-lang-cyrillic texlive-lang-european
@@ -80,9 +90,11 @@ jobs:
       - name: make formats
         run: tools/make_formats.sh
       - name: run tests
-        # We use --release because the test suite runs many full-document
-        # conversions and dev-profile runs are too slow even when compilation
-        # is faster. The env knobs above keep peak RAM manageable;
-        # --test-threads=1 serializes execution so at most one conversion's
-        # working set is live at a time.
-        run: cargo test --release --tests --workspace -- --test-threads=1
+        # --release because the suite runs many full-document conversions;
+        # dev-profile runtime is too slow even with faster compilation.
+        # --test-threads=2 lets two conversions run concurrently (each
+        # conversion's working set is a few hundred MB; 2 fits comfortably
+        # in the 16 GB budget) without hitting the thread-local state
+        # globals documented in CLAUDE.md. Do not raise to 4 without
+        # auditing the 86_tikz / 85_pgf memory-leak path first.
+        run: cargo test --release --tests --workspace -- --test-threads=2
