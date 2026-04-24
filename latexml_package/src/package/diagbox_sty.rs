@@ -4,6 +4,36 @@ use crate::prelude::*;
 fn roundto(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
 fn max_f(a: f64, b: f64) -> f64 { if a > b { a } else { b } }
 
+/// Build `\diagbox[dir=<dir>{,width=…}{,font=…}]{#3}{#4}` from slashbox /
+/// backslashbox args. Perl diagbox.sty.ltxml L177-188 uses
+/// `\if.\detokenize{#i}.` to emit the comma-prefixed keyval segments;
+/// we do the same check at the token level to avoid LaTeXML's
+/// re-tokenization dropping the segment.
+fn build_diagbox_invocation(dir: &str, args: Vec<ArgWrap>) -> Tokens {
+  let width_tokens: Tokens = args[0].clone().into();
+  let font_tokens: Tokens = args[1].clone().into();
+  let a_tokens: Tokens = args[2].clone().into();
+  let b_tokens: Tokens = args[3].clone().into();
+
+  let mut out: Vec<Token> = Vec::new();
+  out.push(T_CS!("\\diagbox"));
+  out.push(T_OTHER!("["));
+  out.extend(ExplodeText!("dir="));
+  out.extend(ExplodeText!(dir));
+  if !width_tokens.unlist_ref().is_empty() {
+    out.extend(ExplodeText!(",width="));
+    out.extend(width_tokens.unlist());
+  }
+  if !font_tokens.unlist_ref().is_empty() {
+    out.extend(ExplodeText!(",font="));
+    out.extend(font_tokens.unlist());
+  }
+  out.push(T_OTHER!("]"));
+  out.push(T_BEGIN!()); out.extend(a_tokens.unlist()); out.push(T_END!());
+  out.push(T_BEGIN!()); out.extend(b_tokens.unlist()); out.push(T_END!());
+  Tokens::new(out)
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Ensure <ltx:picture> gets xml:id generation (in case makecell isn't loaded)
@@ -269,19 +299,19 @@ LoadDefinitions!({
       whatsit.set_property("linecolor", Stored::from(linecolor));
     });
 
-  // slashbox / backslashbox compatibility — Perl diagbox.sty.ltxml L177-188.
-  // Perl takes TWO optional args: `\slashbox[<width>][<font>]{a}{b}`, both
-  // empty by default. The `\if.\detokenize{#i}.` guard turns each optional
-  // into the corresponding keyval segment (`,width=#1` or `,font=#2`) or
-  // the empty string when absent. Previous Rust translation used a
-  // single-optional `\def`+`\@ifnextchar` pair and silently dropped the
-  // font optional; align with Perl by taking both optionals directly.
-  DefMacro!(
-    "\\slashbox[][]{}{}",
-    r"\if.\detokenize{#1}.\def\lx@temp@width{}\else\def\lx@temp@width{,width=#1}\fi\if.\detokenize{#2}.\def\lx@temp@font{}\else\def\lx@temp@font{,font=#2}\fi\diagbox[dir=SW\lx@temp@width\lx@temp@font]{#3}{#4}"
-  );
-  DefMacro!(
-    "\\backslashbox[][]{}{}",
-    r"\if.\detokenize{#1}.\def\lx@temp@width{}\else\def\lx@temp@width{,width=#1}\fi\if.\detokenize{#2}.\def\lx@temp@font{}\else\def\lx@temp@font{,font=#2}\fi\diagbox[dir=NW\lx@temp@width\lx@temp@font]{#3}{#4}"
-  );
+  // slashbox / backslashbox — Perl diagbox.sty.ltxml L177-188.
+  //
+  // Perl's DefMacro uses `\if.\detokenize{#i}.` to route each of two
+  // optional args into a keyval segment. Porting that TeX-level dance
+  // through LaTeXML's re-tokenization silently dropped the width arg
+  // (diagboxtest:355 got 66.12pt instead of 78.74pt, plus wrong diagonal
+  // direction). Driving the dispatch from a Rust closure that inspects
+  // the tokens directly is more robust and equally faithful to the
+  // per-call behavior Perl specifies.
+  DefMacro!("\\slashbox [][]{}{}", sub[args] {
+    build_diagbox_invocation("SW", args)
+  });
+  DefMacro!("\\backslashbox [][]{}{}", sub[args] {
+    build_diagbox_invocation("NW", args)
+  });
 });
