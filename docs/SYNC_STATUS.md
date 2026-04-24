@@ -4,6 +4,42 @@
 
 ## Mission (2026-04-22)
 
+### HIGHEST PRIORITY — CI build parity (2026-04-23)
+
+**Fix CI by ensuring TeXLive-2023 `make formats` parity with the Perl
+side, so the Rust test suite passes under the TL2023 environment that
+Ubuntu-noble CI runners ship.** The IEEE_test false-alarm regression
+was the first symptom: local dev uses TL2025, CI uses TL2023, and
+package files like `IEEEtran.cls` shifted between those releases. The
+Perl LaTeXML tree under `LaTeXML/` has its own texlive-version-
+sensitive format dumps (`plain_dump.pool.ltxml` +
+`latex_dump.pool.ltxml`), produced by `make formats` — these freeze
+texlive state at dump-creation time and must be rebuilt against
+TL2023 binaries to produce byte-identical Perl reference XML.
+
+Concrete deliverables:
+1. `tools/test_with_tl2023.sh` already front-loads `~/data/texlive2023`
+   on PATH and regenerates the Rust dump. The `REBUILD_PERL_FORMATS=1`
+   opt-in (commit `ada3ed79a`) runs `make formats` in `LaTeXML/`
+   under that PATH.
+2. **Verify the TL2023 + Perl-formats combo actually restores CI
+   parity.** Run the full `cargo test --release --tests` suite with
+   `REBUILD_PERL_FORMATS=1 tools/test_with_tl2023.sh`. Any tests that
+   still fail with TL2023 Perl dumps in place are genuine Rust-side
+   divergences and must be triaged per-test.
+3. **Surface remaining Rust-vs-Perl diffs** that TL2023 exposes but
+   TL2025 hides (and vice versa). Document in this file under a
+   "TL2023 ↔ TL2025 parity deltas" subsection.
+4. Until all TL2023 tests pass locally, every commit pushed to CI
+   should be considered at risk. Prefer to run TL2023 locally before
+   each push; if not feasible, chain a CI retry and act on the
+   specific test that regressed.
+
+All other 10k-sandbox parity and DP-audit work is **subordinate** to
+this until CI is green.
+
+### Base mission (unchanged)
+
 **Exhaustively translate Perl LaTeXML into idiomatic, faithful Rust so
 that `~/data/10k_sandbox/` converts cleanly end-to-end via
 `cortex_worker`.** Success has two halves, which must advance together:
