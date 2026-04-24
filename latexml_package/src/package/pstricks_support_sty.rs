@@ -22,6 +22,14 @@ LoadDefinitions!({
   // PSDim are all structural parameter-type gaps). DP-audit flags both
   // entries; safe until the parameter types land (no \edef site
   // observes these CSes; pstricks use is stomach-time invocation).
+  //
+  // Intentional divergence (WISDOM #44 class: DVI-only + parameter-type
+  // blocker): pstricks is DVI-only — the tracker (_psActiveTransform /
+  // ackTransform) lives only in PSTricks post-processing and is not
+  // ported to Rust. Both the \psset DefConstructor → DefMacro flip
+  // (L28) and the \@@@ackscale DefPrimitive → DefMacro flip (L181) are
+  // no-op arg-consumers whose observable behavior under an
+  // HTML/MathML backend is identical to a constructor body of "".
   DefMacro!("\\pst@object{}", "#1");
   DefMacro!("\\use@par", "");
   DefMacro!("\\addto@par{}", "");
