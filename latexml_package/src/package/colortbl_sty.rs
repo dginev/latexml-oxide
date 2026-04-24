@@ -102,22 +102,42 @@ LoadDefinitions!({
 
   // Perl L64-74: \@setrowcolor — DefConstructor with afterDigest.
   //   afterDigest: captures font background, stores tabular_row_color globally.
-  //   constructor body: walks DOM to ancestor <tr>, sets backgroundcolor ONLY IF
-  //                     node doesn't already have the attribute (Perl L68 guard).
+  //   constructor body: walks DOM to ancestor <tr>, sets backgroundcolor.
+  //
+  // RUST DIVERGENCE vs Perl L68's `!$node->hasAttribute('backgroundcolor')`
+  // guard. First-principles analysis of where the divergence lives:
+  //
+  //   Perl has TWO constructors that can write <tr>@backgroundcolor:
+  //     1. \@setrowcolor — fired by the user's explicit \rowcolor{…}
+  //        (colortbl.sty.ltxml L64-74). hasAttribute-guarded.
+  //     2. \@tabular@row@before@xcolor — fired by \rowcolors cycling via
+  //        \@tabular@row@before (xcolor.sty.ltxml L757-778). Also
+  //        hasAttribute-guarded.
+  //   In Perl's digested token stream, \@setrowcolor for an explicit
+  //   \rowcolor appears BEFORE the cycling constructor in the same row's
+  //   tokens; at absorb time it writes first into an unset attribute, the
+  //   cycling constructor then sees the set attribute and skips. So Perl
+  //   gets "explicit \rowcolor wins" via order, not via guard inversion.
+  //
+  //   Rust's port injects the cycling and explicit-\rowcolor constructors
+  //   in the opposite order in the digested stream, so with the guard
+  //   intact the cycling color wins and \rowcolor{blue!25} is dropped
+  //   (regressed 65_graphics::xcolors_test on row 3: blue!25 → green!25).
+  //
+  //   The truly faithful fix is to reorder Rust's token injection so the
+  //   explicit-\rowcolor constructor precedes cycling's. That's a deeper
+  //   tabular-machinery change. Until then, drop the guard here so
+  //   explicit \rowcolor always overrides cycling — this matches the
+  //   user-observable TeX semantic (explicit beats cycling) even though
+  //   the mechanism diverges from Perl's guard+order pattern.
   DefConstructor!("\\lxsetrowcolor",
     sub[document, _args, props] {
       // Perl L66: if (my $bg = $props{background}) { ... }
       if let Some(Stored::String(bg_sym)) = props.get("background") {
         let bg_str = arena::with(*bg_sym, |s| s.to_string());
         let current = document.get_node().clone();
-        // Perl L67-69:
-        //   if (my $node = $document->findnode('ancestor-or-self::ltx:tr', ...)) {
-        //     if (!$node->hasAttribute('backgroundcolor')) {
-        //       $document->setAttribute($node, backgroundcolor => $bg); } }
         if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
-          if !tr_node.has_attribute("backgroundcolor") {
-            document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
-          }
+          document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
         }
       }
     },
