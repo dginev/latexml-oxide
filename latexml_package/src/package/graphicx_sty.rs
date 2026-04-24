@@ -16,22 +16,27 @@ LoadDefinitions!({
   DefMacro!("\\Gin@eresize", "");
   DefMacro!("\\Gin@esetsize", "");
 
-  // Perl L29-38: Gin keyvals. `GraphixDimension` / `GraphixDimensions` are
-  // custom parameter types registered in graphics.sty.ltxml L26-57 —
-  // ported in graphics_sty.rs. Using the Dimension-typed forms routes the
-  // keyval value through a TeX dimension reader so `\width`, registers,
-  // and unitful floats all round-trip correctly; plain-string keyvals
-  // would lose units.
-  DefKeyVal!("Gin", "width", "GraphixDimension");
-  DefKeyVal!("Gin", "height", "GraphixDimension");
-  DefKeyVal!("Gin", "totalheight", "GraphixDimension");
+  // Perl L29-38 uses `GraphixDimension` / `GraphixDimensions` custom parameter
+  // types (graphics.sty.ltxml L26-57, ported in graphics_sty.rs). The Rust
+  // port of those types currently returns raw scaled-point integers via
+  // `dim.value_of().to_string()`, which does NOT match the keyval→options
+  // attribute serializer's expected format. Using GraphixDimension here
+  // regressed 50_structure::figure_grids_test (emitted `width=11118493`
+  // instead of `width=169.65474pt`).
+  //
+  // Revert to `"Dimension"` / `""` until GraphixDimension's output is made
+  // byte-equivalent to the old Dimension path. The parameter types stay
+  // registered for any caller that wants to opt in explicitly.
+  DefKeyVal!("Gin", "width", "Dimension");
+  DefKeyVal!("Gin", "height", "Dimension");
+  DefKeyVal!("Gin", "totalheight", "Dimension");
   DefKeyVal!("Gin", "keepaspectratio", "", "true");
   DefKeyVal!("Gin", "clip", "", "true");
   DefKeyVal!("Gin", "scale", "");
   DefKeyVal!("Gin", "angle", "");
   DefKeyVal!("Gin", "alt", "");
-  DefKeyVal!("Gin", "trim", "GraphixDimensions");
-  DefKeyVal!("Gin", "viewport", "GraphixDimensions");
+  DefKeyVal!("Gin", "trim", "");
+  DefKeyVal!("Gin", "viewport", "");
   // NOTE: graphicx defines @angle to actually carry out the rotation (on \box\z@) w/\Gin@erotate
   // rather than to simply record the angle for later use. (also origin redefines)
   // This is used by adjustbox.
