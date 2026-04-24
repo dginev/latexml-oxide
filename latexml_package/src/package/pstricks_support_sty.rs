@@ -73,6 +73,7 @@ LoadDefinitions!({
   DefMacro!("\\pscircle[]", "");
   DefMacro!("\\psellipse[]", "");
   DefMacro!("\\psarc[]", "");
+  DefMacro!("\\psarcn[]", "");
   DefMacro!("\\pswedge[]", "");
   DefMacro!("\\psbezier[]", "");
   DefMacro!("\\pscurve[]", "");
