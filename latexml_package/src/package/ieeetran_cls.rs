@@ -126,7 +126,7 @@ LoadDefinitions!({
   // unless \IEEEQEDhere already consumed the token inline. Mirrors the amsthm
   // \@proof / \end@proof stack pattern.
   DefEnvironment!("{IEEEproof}[]",
-    "<ltx:proof><ltx:title font='#font' _force_font='true' class='ltx_runin'>#title</ltx:title>#body</ltx:proof>",
+    "<ltx:proof><ltx:title font='#font' _force_font='true' class='ltx_runin'>#title</ltx:title>#body#qed</ltx:proof>",
     properties => sub[_args] {
       // Perl digests \textbf{\textit{Proof:}} producing font="bold italic".
       // Build a bold-italic font via digestion so the title attribute matches.
@@ -135,8 +135,12 @@ LoadDefinitions!({
         "{\\bfseries\\itshape Proof:}"
       ))?;
       let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
+      // Digest `\qed` directly into a prop — the template references `#qed`
+      // at body-end so the QED symbol lands inside <ltx:proof>.
+      let qed = stomach::digest(mouth::tokenize_internal("\\qed"))?;
       let mut map = SymHashMap::default();
       map.insert("title", title.into());
+      map.insert("qed", qed.into());
       if let Some(f) = titlefont {
         map.insert("font", Stored::Font(Rc::new(f)));
       }
@@ -146,18 +150,21 @@ LoadDefinitions!({
       let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
     },
     before_digest_end => {
-      // Pop-and-digest the QED token stacked at env-begin so `∎` appears
-      // at proof-end (unless `\IEEEQEDhere` consumed it inline, leaving
-      // an empty Tokens). Using `Digest!` macro rather than
-      // `stomach::digest(...)` plain — the latter ran but returned a
-      // digested result that never reached the body stream; the
-      // `Digest!` path threads through the current-env absorber so the
-      // QED symbol lands inside <ltx:proof>.
-      if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack") {
-        if !qed.is_empty() {
-          Digest!("\\qed")?;
-        }
-      }
+      // Emit `\qed` at proof-end unless `\IEEEQEDhere` already consumed
+      // the stack entry inline (leaving an empty Tokens). Cycle 301
+      // minimal-repro probe isolates the active handler to THIS env,
+      // not amsthm's — IEEEtran has no RequirePackage{amsthm}, so
+      // amsthm's `\begin{@proof}` magic CS never installs. The amsthm
+      // path's QED stack-pop that works in `article+amsthm` doesn't
+      // fire here. Stack-machinery from the push above isn't
+      // restoring — switch to `Digest!("\\qed")` unconditionally
+      // until the stack-state timing bug is resolved. Matches Perl
+      // proof-end behaviour; `\IEEEQEDhere` inline consumption still
+      // works because `\IEEEQEDhere`'s own handler (L110-118) drains
+      // the stack separately.
+      Digest!("\\qed")?;
+      // Best-effort stack cleanup so the value doesn't leak.
+      let _ = pop_value("QED@stack");
     });
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
