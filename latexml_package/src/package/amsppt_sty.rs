@@ -373,6 +373,14 @@ LoadDefinitions!({
   DefMacro!("\\remarkname", "Remark");
   DefMacro!("\\demonstrationname", "Demonstration");
 
+  // Perl amsppt.sty.ltxml L250: \therosteritem{#1} expands to \rom{(#1)}.
+  // Used by \roster … \item to wrap the auto-numbered index in upright
+  // parentheses. Previously unported.
+  DefMacro!("\\therosteritem{}", "\\rom{(#1)}");
+  // Perl L468: \edtext expands to "ed." — the editor-marker inserted in
+  // bib entries after an `\editors{...}` field.
+  DefMacro!("\\edtext", "ed.");
+
   // Roster / layout — Perl L246, L265-270.
   DefRegister!("\\rosteritemwd"        => Dimension::new(0));
   DefRegister!("\\pagenumwd"           => Dimension::new(0));
