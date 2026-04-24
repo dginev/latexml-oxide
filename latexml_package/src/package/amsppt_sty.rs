@@ -388,6 +388,25 @@ LoadDefinitions!({
   // Perl L393: \topaligned = \aligned[t] (sibling of \botaligned).
   DefMacro!("\\topaligned", "\\aligned[t]");
 
+  // Perl L164-166: \textfonti, \textfontii — plain-TeX font-switch
+  // primitives, no LaTeXML-observable effect.
+  DefMacro!("\\textfonti", "");
+  DefMacro!("\\textfontii", "");
+
+  // Perl L281-282: \slanted{#1} — math-font wrapper flattened to
+  // identity (same rationale as \Cal/\italic/\boldkey).
+  DefMacro!("\\slanted{}", "#1");
+
+  // Perl L349: \shave{#1} → #1 (sibling of \botshave/\topshave).
+  DefMacro!("\\shave{}", "#1");
+
+  // Perl L169: \spreadlines {Dimension} — line-spacing dimension
+  // consumer, no output (DefConstructor with empty emission).
+  DefMacro!("\\spreadlines{}", "");
+  // Perl L360: \spreadmatrixlines Dimension — same shape, Dimension
+  // param.
+  DefMacro!("\\spreadmatrixlines Dimension", "");
+
 
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
