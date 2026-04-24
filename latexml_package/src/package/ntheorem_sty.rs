@@ -249,7 +249,8 @@ LoadDefinitions!({
       }
     }
     document.remove_node(capture);
-  });
+  },
+  reversion => "");
 
   DefMacro!("\\newframedtheorem{}[]{}[]",
     "\\begingroup\\thm@styling{\\lx@addframing}\\newtheorem{#1}[#2]{#3}[#4]\\endgroup"
