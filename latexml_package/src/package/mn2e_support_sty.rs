@@ -4,18 +4,25 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Dependencies
-  RequirePackage!("natbib");
-
-  // Perl: mn2e_support.sty.ltxml L19-20 — load graphicx if option was set
+  // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads
+  // only dcolumn/natbib/graphicx based on the matching option flags.
+  // NOTE: Perl does NOT load amsmath even when @useAMS is set — the
+  // raw-TeX `\if@useAMS\RequirePackage{amsmath,amssymb}\fi` from the .cls
+  // is DELIBERATELY bypassed. Loading amsmath makes `\cases` route through
+  // the amsmath `\lx@ams@cases@` constructor (DigestedBody — no explicit
+  // `\lx@end@alignment` close), whereas the base `\cases` from
+  // Base_XMath (`\lx@gen@plain@cases`) wraps the body with
+  // `\lx@end@alignment` which provides the clean termination.
+  // Regression path: paper 1112.6246 (`giersz_rv1.tex`, mn2e class)
+  // cascades 10001 mode-leak errors if amsmath is loaded here.
+  if state::lookup_int("@usedcolumn") != 0 {
+    RequirePackage!("dcolumn");
+  }
+  if state::lookup_int("@usenatbib") != 0 {
+    RequirePackage!("natbib");
+  }
   if state::lookup_int("@usegraphicx") != 0 {
     RequirePackage!("graphicx");
-  }
-  // mn2e.cls raw TeX: \if@useAMS\RequirePackage{amsmath,amssymb}\fi
-  // Since we don't load the raw class, check the flag and load AMS packages
-  if state::lookup_int("@useAMS") != 0 {
-    RequirePackage!("amsmath");
-    RequirePackage!("amssymb");
   }
 
   // Frontmatter — Perl L28-46
