@@ -108,9 +108,37 @@ LoadDefinitions!({
   DefPrimitive!("\\degr", "\u{00B0}");
   DefPrimitive!("\\arcmin", "\u{2032}");
   DefPrimitive!("\\arcsec", "\u{2033}");
+  // Perl mn2e_support.sty.ltxml L127-129: extra astronomy glyphs.
+  DefPrimitive!("\\diameter", "\u{2300}");
+  DefPrimitive!("\\earth", "\u{2295}");
+  // Perl L122-125: QED square glyph + \sq / \proofbox aliases.
+  DefConstructor!("\\squareforqed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+  // Perl has a typo here — `\squareforeqd` instead of `\squareforqed` —
+  // preserved verbatim for parity.
+  Let!("\\sq", "\\squareforeqd");
+  Let!("\\proofbox", "\\squareforeqd");
+  // Perl L131-148: relational operators. The original Rust binding
+  // had only \la, \ga, \getsto; the 10 missing entries (and the pair
+  // of \leqslant/\geqslant cleanups) are now ported faithfully.
   DefMath!("\\la", "\u{2272}", role => "RELOP", meaning => "less-than-or-similar-to");
   DefMath!("\\ga", "\u{2273}", role => "RELOP", meaning => "greater-than-or-similar-to");
+  DefMath!("\\cor", "\u{2258}", role => "RELOP", meaning => "corresonds-to");
+  DefMath!("\\sol", "\u{2A9D}", role => "RELOP", meaning => "similar-to-or-less-than");
+  DefMath!("\\sog", "\u{2A9E}", role => "RELOP", meaning => "similar-to-or-greater-than");
+  DefMath!("\\lse", "\u{2A8D}", role => "RELOP", meaning => "less-than-or-similar-to-or-equal");
+  DefMath!("\\gse", "\u{2A8E}", role => "RELOP", meaning => "greater-than-or-similar-to-or-equal");
+  DefMath!("\\leogr", "\u{2276}", role => "RELOP", meaning => "less-than-or-greater-than");
+  DefMath!("\\grole", "\u{2277}", role => "RELOP", meaning => "greater-than-or-less-than");
+  DefMath!("\\loa", "\u{2A85}", role => "RELOP", meaning => "less-than-or-approximately-equals");
+  DefMath!("\\goa", "\u{2A86}", role => "RELOP", meaning => "greater-than-or-approximately-equals");
+  DefMath!("\\lid", "\u{2266}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\gid", "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
   DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
+  DefMath!("\\leqslant", "\u{2A7D}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\geqslant", "\u{2A7E}", role => "RELOP", meaning => "greater-than-or-equals");
+  // Perl L150: micron = µ + m.
+  DefPrimitive!("\\micron", "\u{00B5}m");
   // Perl mn2e_support.sty.ltxml L106-109,113: \fd/\fh/\fm/\fs/\fp use \aas@fstack.
   // \aas@fstack wraps in \ensuremath so it works in both text and math contexts.
   DefMacro!("\\fd", "\\aas@fstack{d}");
@@ -122,7 +150,31 @@ LoadDefinitions!({
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
   DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
-  DefMacro!("\\ion{}{}", "#1\\,{\\sc #2}");
+  // Perl L151: \ion uses \textsc + \lowercase inside \text. The prior
+  // Rust body was a bare `\sc` font-switch without the \textsc wrap; now
+  // aligned to Perl.
+  DefMacro!("\\ion{}{}", "\\text{#1\\,\\textsc{\\lowercase{#2}}}");
+
+  // Perl L153-161: mathrm/mathit/mathbf/textbf-textit/textbf-textsf aliases.
+  DefMacro!("\\rmn{}", "\\mathrm{#1}");
+  DefMacro!("\\romn{}", "\\mathrm{#1}");
+  DefMacro!("\\itl{}", "\\mathit{#1}");
+  DefMacro!("\\bld{}", "\\mathbf{#1}");
+  DefMacro!("\\textbfit{}", "\\textbf{\\textit{#1}}");
+  DefMacro!("\\textbfss{}", "\\textbf{\\textsf{#1}}");
+  DefMacro!("\\mathbfit{}", "\\textbf{\\textit{#1}}");
+  DefMacro!("\\mathbfss{}", "\\textbf{\\textsf{#1}}");
+  DefMacro!("\\bmath{}", "\\mn@boldsymbol{#1}");
+  // Perl L162-165: preserve original <= and >= for those papers that
+  // redefine the unicode ones.
+  Let!("\\oldle", "\\le");
+  Let!("\\oldleq", "\\leq");
+  Let!("\\oldge", "\\ge");
+  Let!("\\oldgeq", "\\geq");
+  // Perl L167-169: upright Greek variants.
+  Let!("\\upi", "\\pi");
+  Let!("\\umu", "\\mu");
+  Let!("\\upartial", "\\partial");
 
   // Journal abbreviations — Perl L180-252
   DefMacro!("\\mnras", "MNRAS");
@@ -279,6 +331,9 @@ LoadDefinitions!({
   DefMacro!("\\boxit{}", "#1");
   DefRegister!("\\smallindent" => Glue!("1.5em"));
   Let!("\\fullhline", "\\hline");
+  // Perl L200-201: allocate the two conditionals mn2e uses internally.
+  RawTeX!("\\newif\\ifCUPmtlplainloaded");
+  RawTeX!("\\newif\\iffirstta");
   DefMacro!("\\sevensize", "\\small");
   DefMacro!("\\plate", "");
 
