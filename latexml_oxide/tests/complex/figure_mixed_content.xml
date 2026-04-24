@@ -59,7 +59,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}[433.62pt]\@includegraphicx[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\end{subfigure}&amp;\begin{subfigure}[433.62pt]\@includegraphicx[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
+    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}[433.62pt]\includegraphics[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\end{subfigure}&amp;\begin{subfigure}[433.62pt]\includegraphics[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
         <XMath>
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>
