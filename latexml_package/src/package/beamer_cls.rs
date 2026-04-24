@@ -19,14 +19,47 @@ LoadDefinitions!({
     "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>");
 
   // Overlay specification commands — stub as no-ops
-  DefMacro!("\\visible{}", "#1");
-  DefMacro!("\\uncover{}", "#1");
-  DefMacro!("\\invisible{}", "#1");
+  // Rust's \alt{}{}/\only/\onslide/\temporal/\pause take the
+  // "always-true" branch (first arg, or body) — faithful to what a
+  // reader expects from beamer slides printed as a continuous
+  // document. See Perl L793-834 for the full overlay/pause machinery.
   DefMacro!("\\only{}", "#1");
   DefMacro!("\\onslide", "");
   DefMacro!("\\temporal{}{}{}", "#2");
   DefMacro!("\\pause", "");
   DefMacro!("\\alt{}{}", "#1");
+
+  // Perl beamer.cls.ltxml L796-798: \uncover / \visible / \invisible
+  // dispatch via \alt to semantic inline-block markers. The markers at
+  // L718-737 emit <ltx:inline-block class='ltx_visible'> / _invisible /
+  // _uncovered / _covered / _alert wrappers. Without the markers,
+  // post-processors stripping overlays can't distinguish visible text
+  // from what would have been hidden. Perl TODO at L716 notes the
+  // classes aren't yet consumed downstream, but shipping them preserves
+  // the semantic hook for future CSS theming.
+  DefMacro!("\\visible",   "\\alt{\\beamer@visible}{\\beamer@invisible}");
+  DefMacro!("\\uncover",   "\\alt{\\beamer@uncovered}{\\beamer@covered}");
+  DefMacro!("\\invisible", "\\alt{\\beamer@invisible}{\\beamer@visible}");
+
+  DefMacro!("\\beamer@visible{}",   "\\beamer@visible@begin{#1}\\beamer@visible@end");
+  DefConstructor!("\\beamer@visible@begin", "<ltx:inline-block class='ltx_visible'>");
+  DefConstructor!("\\beamer@visible@end",   "</ltx:inline-block>");
+
+  DefMacro!("\\beamer@invisible{}", "\\beamer@invisible@begin{#1}\\beamer@invisible@end");
+  DefConstructor!("\\beamer@invisible@begin", "<ltx:inline-block class='ltx_invisible'>");
+  DefConstructor!("\\beamer@invisible@end",   "</ltx:inline-block>");
+
+  DefMacro!("\\beamer@uncovered{}", "\\beamer@uncovered@begin{#1}\\beamer@uncovered@end");
+  DefConstructor!("\\beamer@uncovered@begin", "<ltx:inline-block class='ltx_uncovered'>");
+  DefConstructor!("\\beamer@uncovered@end",   "</ltx:inline-block>");
+
+  DefMacro!("\\beamer@covered{}", "\\beamer@covered@begin{#1}\\beamer@covered@end");
+  DefConstructor!("\\beamer@covered@begin", "<ltx:inline-block class='ltx_covered'>");
+  DefConstructor!("\\beamer@covered@end",   "</ltx:inline-block>");
+
+  DefMacro!("\\beamer@alerted{}", "\\beamer@alerted@begin{#1}\\beamer@alerted@end");
+  DefConstructor!("\\beamer@alerted@begin", "<ltx:inline-block class='ltx_alert'>");
+  DefConstructor!("\\beamer@alerted@end",   "</ltx:inline-block>");
 
   // Frame structure
   DefMacro!("\\frametitle OptionalMatch:<> []{}",
