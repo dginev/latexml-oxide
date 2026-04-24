@@ -219,8 +219,14 @@ LoadDefinitions!({
   DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   DefMacro!("\\IEEEeqnarraynumspace", "");
-  DefMacro!("\\IEEEeqnarraybox{}", "\\begin{array}{#1}");
-  DefMacro!("\\endIEEEeqnarraybox", "\\end{array}");
+  // IEEEeqnarraybox — wrap in inline math so text-mode invocations
+  // produce <Math><XMath><XMArray>... instead of a bare <XMArray>.
+  // Perl (IEEEtran.cls.ltxml L316-328) dispatches on \ifmmode to
+  // either \IEEEeqnarrayboxm (math) or \IEEEeqnarrayboxt (text, with
+  // \lx@begin@inline@math wrapper). Rust uses `$...$` which TeX's
+  // math toggle already handles correctly for both invocation modes.
+  DefMacro!("\\IEEEeqnarraybox{}", "$\\begin{array}{#1}");
+  DefMacro!("\\endIEEEeqnarraybox", "\\end{array}$");
   DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
   DefMacro!("\\IEEEeqnarraydefcol{}{}{}", "");
   DefMacro!("\\IEEEeqnarraydefcolsep{}{}", "");
