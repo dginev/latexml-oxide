@@ -46,35 +46,7 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
         fn_filename
       };
       let fn_name = format_ident!("{fn_filename}_test");
-      // Push-gate blockers: tests whose reference XML is stale relative
-      // to current Rust output. Each entry is `(filebase, reason)`. The
-      // test is generated with `#[ignore = reason]` so the suite stays
-      // green in CI while the deferred binding + snapshot-refresh work
-      // lands. Re-run locally with `cargo test -- --ignored`.
-      let ignored: Option<&str> = match filebase.as_ref() {
-        "IEEE" => Some(
-          "IEEEeqnarray column-align refactor + snapshot refresh deferred \
-           (ieeetran_cls.rs:232; docs/SYNC_STATUS.md HIGHEST PRIORITY)"
-        ),
-        "physics" => Some(
-          "physics.sty \\lx@physics@mathbfit starred vector reversion drift \
-           — snapshot captures pre-port `{\\bf\\it a}` grouping; faithful \
-           port now emits `\\mathbf{*}{a}` (commit 1aad02075). Snapshot \
-           refresh pending verification that all ~22 starred variants \
-           match Perl reversion shape"
-        ),
-        "ac-drive-components" => Some(
-          "tikz picture-width drift — ACTUAL 206.87 vs EXPECTED 268.29. \
-           Pre-session regression from ~session 128 pgfsys/tikz work. \
-           Deferred pending tikz dimension-calculation audit."
-        ),
-        _ => None,
-      };
-      let attrs = if let Some(reason) = ignored {
-        quote!(#[test] #[ignore = #reason])
-      } else {
-        quote!(#[test])
-      };
+      let attrs = quote!(#[test]);
       quote!(
         #attrs
         fn #fn_name() {

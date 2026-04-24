@@ -653,29 +653,26 @@
       <title><tag close=" ">1.2</tag>Vector notation</title>
       <para xml:id="S1.SS2.p1">
         <equation xml:id="S1.Ex7">
-          <Math class="ltx_math_unparsed" mode="display" tex="\mathbf{a}\qquad\mathbf{*}{a}\qquad\overrightarrow{\mathbf{a}}\qquad\overrightarrow{\mathbf{*}}{a}\qquad\hat{\mathbf{a}}\qquad\hat{\mathbf{*}}{a}" xml:id="S1.Ex7.m1">
+          <Math class="ltx_math_unparsed" mode="display" tex="\mathbf{a}\qquad{\bf\it a}\qquad\overrightarrow{\mathbf{a}}\qquad\overrightarrow{{\bf\it a}}\qquad\hat{\mathbf{a}}\qquad\hat{{\bf\it a}}" xml:id="S1.Ex7.m1">
             <XMath>
               <XMTok font="bold" role="ID">a</XMTok>
-              <XMTok meaning="times" role="ID">∗</XMTok>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+              <XMTok font="bold italic" role="ID">a</XMTok>
               <XMApp role="ID">
                 <XMTok name="overrightarrow" role="OVERACCENT" stretchy="true">→</XMTok>
                 <XMTok font="bold" role="UNKNOWN">a</XMTok>
               </XMApp>
               <XMApp role="ID">
                 <XMTok name="overrightarrow" role="OVERACCENT" stretchy="true">→</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
+                <XMTok font="bold italic" role="UNKNOWN">a</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMApp role="ID">
                 <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
                 <XMTok font="bold" role="UNKNOWN">a</XMTok>
               </XMApp>
               <XMApp role="ID">
                 <XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>
-                <XMTok meaning="times" role="MULOP">∗</XMTok>
+                <XMTok font="bold italic" role="UNKNOWN">a</XMTok>
               </XMApp>
-              <XMTok font="italic" role="UNKNOWN">a</XMTok>
             </XMath>
           </Math>
         </equation>
