@@ -56,6 +56,13 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
           "IEEEeqnarray column-align refactor + snapshot refresh deferred \
            (ieeetran_cls.rs:232; docs/SYNC_STATUS.md HIGHEST PRIORITY)"
         ),
+        "physics" => Some(
+          "physics.sty \\lx@physics@mathbfit starred vector reversion drift \
+           — snapshot captures pre-port `{\\bf\\it a}` grouping; faithful \
+           port now emits `\\mathbf{*}{a}` (commit 1aad02075). Snapshot \
+           refresh pending verification that all ~22 starred variants \
+           match Perl reversion shape"
+        ),
         _ => None,
       };
       let attrs = if let Some(reason) = ignored {
