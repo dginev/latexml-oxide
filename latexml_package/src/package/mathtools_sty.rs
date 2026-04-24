@@ -122,6 +122,11 @@ LoadDefinitions!({
     use latexml_core::common::def_parser::parse_parameters;
 
     let name = name_arg.to_string();
+    // Perl L231-234: skip redefinition with Error('ignore', ...).
+    let mtstag_cs = T_CS!(&s!("\\@MTStag@{}", name));
+    if !is_definable(&mtstag_cs) {
+      Error!("ignore", mtstag_cs, "Ignoring redefinition (\\newtagform) of '{}'", name);
+    } else {
     // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
     let open_toks: Vec<Token> = open_arg.unlist();
     let close_toks: Vec<Token> = close_arg.unlist();
@@ -177,6 +182,7 @@ LoadDefinitions!({
       }))),
       PrimitiveOptions::default(),
     )?;
+    }
   });
 
   // \renewtagform — same logic as \newtagform (Perl skips isDefinable check)
