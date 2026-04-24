@@ -177,7 +177,12 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
+  // Perl beamer.cls.ltxml L1201-1239: theorem + German-compat envs.
+  // `\translate{}` is an identity pass-through in Rust, so bare English
+  // names match Perl's expansion.
   RawTeX!(r#"
+\newcommand{\ExampleInline}[1]{\translate{Example}: \ignorespaces#1}
+\newcommand{\BeispielInline}[1]{Beispiel: \ignorespaces#1}
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{fact}[theorem]{Fact}
@@ -188,6 +193,21 @@ LoadDefinitions!({
 \newtheorem{definitions}[theorem]{Definitions}
 \newtheorem{example}[theorem]{Example}
 \newtheorem{examples}[theorem]{Examples}
+\newtheorem{Beispiel}[theorem]{Beispiel}
+\newtheorem{Beispiele}[theorem]{Beispiele}
+\newtheorem{Loesung}[theorem]{L\"osung}
+\newtheorem{Satz}[theorem]{Satz}
+\newtheorem{Folgerung}[theorem]{Folgerung}
+\newtheorem{Fakt}[theorem]{Fakt}
+\newenvironment{Beweis}{\begin{proof}[Beweis.]}{\end{proof}}
+\newenvironment{Lemma}{\begin{lemma}}{\end{lemma}}
+\newenvironment{Proof}{\begin{proof}}{\end{proof}}
+\newenvironment{Theorem}{\begin{theorem}}{\end{theorem}}
+\newenvironment{Problem}{\begin{problem}}{\end{problem}}
+\newenvironment{Corollary}{\begin{corollary}}{\end{corollary}}
+\newenvironment{Example}{\begin{example}}{\end{example}}
+\newenvironment{Examples}{\begin{examples}}{\end{examples}}
+\newenvironment{Definition}{\begin{definition}}{\end{definition}}
 "#);
   DefMacro!("\\pushQED{}", "");
   DefMacro!("\\popQED", "");
