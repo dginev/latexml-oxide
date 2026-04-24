@@ -4,7 +4,60 @@
 
 ## Mission (2026-04-22)
 
-### HIGHEST PRIORITY — CI build parity (2026-04-23)
+### HIGHEST PRIORITY — zero-ignore test suite + TL2023 CI green (2026-04-24)
+
+**No test may remain `#[ignore]`.** User directive 2026-04-24: the suite
+must be fully green (0 failed, 0 ignored) on **both** local TL2025 and
+CI-equivalent TL2023. Every current `#[ignore]` in
+`latexml_codegen/src/testable.rs:54-83` is a root cause that must be
+fixed (not papered over), then the ignore entry deleted:
+
+1. [ ] **`paralists_test`** — test-harness vs binary DOM divergence
+   (WISDOM #49). CLI emits the correct 389-line output; only the test
+   harness wraps `inparaenum` item bodies in `<picture>` wrappers (~12
+   extra lines). Not parallelism (reproduces with `--test-threads=1`).
+   Root cause lies in the `state::*` + `Core`-option deltas between
+   `Converter::convert` (bin) and `util::test::process_texfile` (test).
+   **Fix path:** bisect by aligning the test harness to the binary's
+   `Converter::from_config → initialize_session → convert` flow (adds
+   `latexml_contrib::class_binding_names`, an explicit
+   `initialize_singletons`, an `HTML5` format selector, etc.). Acceptance:
+   delete the `"paralists"` arm in `testable.rs`; `cargo test --release
+   --tests -p latexml paralists_test` passes green with no other
+   regressions.
+
+2. [ ] **`IEEE_test`** — 3-way disagreement (Rust TL2023 / Perl TL2023 /
+   reference XML) centred on `\IEEEyessubnumber` state machine + per-row
+   `EQUATIONROW_TAGS` reset (Perl `IEEEtran.cls.ltxml` L263-285; Rust
+   `ieeetran_cls.rs:173-226`) plus deferred column-align snapshot
+   refresh at `ieeetran_cls.rs:232`. **Fix path:** align Rust state
+   machine to current Perl L276-285, then refresh `tests/structure/IEEE.xml`
+   snapshot against Rust output (verify against Perl TL2023 first to
+   confirm parity). Acceptance: delete the `"IEEE"` arm, pass under
+   `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
+
+3. [ ] **`physics_test`** — `\lx@physics@mathbfit` starred-vector
+   reversion drift. Snapshot captures pre-port `{\bf\it a}` grouping;
+   faithful port now emits `\mathbf{*}{a}` (commit 1aad02075). ~22
+   starred variants across snapshot. **Fix path:** confirm Rust output
+   matches current Perl `physics.sty.ltxml` for every starred variant,
+   then refresh `tests/ams/physics.xml`. Acceptance: delete the
+   `"physics"` arm.
+
+4. [ ] **`ac-drive-components_test`** — tikz picture-width drift,
+   ACTUAL 206.87 vs EXPECTED 268.29. Pre-session regression from
+   pgfsys/tikz session-128 work. **Fix path:** audit tikz dimension
+   calculation (pgf width resolution); likely a `\unitlength` or
+   `\pgfunit` resolution bug. If the Perl output itself produces 268.29
+   and Rust 206.87, trace the calculation; if both agree with 206.87,
+   refresh the snapshot. Acceptance: delete the `"ac-drive-components"`
+   arm.
+
+**No new ignores.** If a failure surfaces that cannot be resolved in
+the current cycle, document it in `docs/KNOWN_PERL_ERRORS.md` or fix
+it — never escape via `#[ignore]`.
+
+### CI build parity (TL2023 mechanics)
 
 CI runs on TL2023 (Ubuntu apt), local dev defaults to TL2025. Three
 alignment layers: (1) dump content regenerated under TL2023 via
@@ -15,16 +68,15 @@ alignment layers: (1) dump content regenerated under TL2023 via
 Run to reproduce CI locally:
 `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
 
-**Status (2026-04-23).** All 14 suites `000_hello`..`40_math` plus 27
-non-IEEE `50_structure` tests green under TL2023. Sole blocker:
-**IEEE_test** — 3-way disagreement (Rust TL2023 / Perl TL2023 / reference
-XML) centred on `\IEEEyessubnumber` state-machine + per-row
-`EQUATIONROW_TAGS` reset (Perl `IEEEtran.cls.ltxml` L263-285; Rust
-`ieeetran_cls.rs:173-226`). Plus a snapshot refresh deferred at
-`ieeetran_cls.rs:232`.
+**Status (2026-04-24).** Baseline TL2025 green after snapshot refreshes
+(mathtools, figure_mixed_content) + 4 strategic ignores
+(edea9d729) — 1094 passed / 0 failed / 4 ignored. Those 4 ignores are
+the entire gap to lifting the push gate; see the zero-ignore work plan
+above.
 
-Push gate active (`memory/feedback_ci_push_gate.md`) until IEEE_test fix
-lands.
+Push gate active (`memory/feedback_ci_push_gate.md`): no push until the
+full `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`
+run is green with **zero ignores**.
 
 ### Base mission (unchanged)
 
