@@ -1106,9 +1106,18 @@ LoadDefinitions!({
       vals.iter().any(|v| v.starts_with_text("align"))
     })
   });
-  // Perl: \lx@ams@marksplitinalign — constructor that marks the current _Capture_
-  // cell with colspan=2, align=center, then advances to the next column.
-  // Perl: afterDigest => sub { LookupValue('Alignment')->nextColumn; return; }
+  // Perl amsmath.sty.ltxml L338: DefConstructor('\lx@ams@marksplitinalign',
+  // sub { ... setAttribute(colspan=>2, align=>'center') on $capture ... },
+  // afterDigest => sub { LookupValue('Alignment')->nextColumn }, sizer=>0,
+  // reversion=>'') — a constructor whose emit is empty but whose main-sub
+  // body mutates the PREVIOUSLY-EMITTED _Capture_ ancestor. Rust uses
+  // DefPrimitive here because the Rust port doesn't store an XML-tree
+  // reference inside the whatsit's digest-time context; the equivalent
+  // cell-attribute mutation lives on the Rust Alignment.current_column()
+  // state and must execute at digest (stomach) time, before the capture
+  // cell is emitted as XML. Intentional DefConstructor → DefPrimitive
+  // kind divergence (WISDOM #44) — observable XML identical, but the
+  // state-mutation path differs.
   DefPrimitive!("\\lx@ams@marksplitinalign", {
     use latexml_core::alignment::template::Align;
     if let Some(alignment_stored) = state::lookup_alignment() {
@@ -1185,10 +1194,19 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: DefMacro('\aligned alignsafeOptional', ...)
-  // alignsafeOptional reads optional arg WITHOUT triggering alignment machinery.
-  // Standard [] would cause &-interception by handle_template for the outer alignment,
-  // breaking nested \begin{aligned} inside \begin{align}.
+  // Perl amsmath.sty.ltxml L614 is `DefMacro('\aligned alignsafeOptional',
+  //   '\lx@hidden@bgroup\@ams@aligned@bindings\@@amsaligned\lx@begin@alignment',
+  //   locked=>1)` — a plain DefMacro whose `alignsafeOptional` prototype
+  // reads an optional [t]/[b] arg WITHOUT triggering the outer alignment
+  // machinery's `&`-interception. Rust doesn't yet have an
+  // `alignsafeOptional` parameter type, so the port uses a DefPrimitive
+  // whose body manually brackets the optional-read with
+  // `local_align_group_count(1000000)` / `expire_align_group_count` —
+  // the Rust-native equivalent of Perl's `local $LaTeXML::ALIGN_STATE
+  // = 1000000` that disables `&`-interception during the read. The
+  // primitive then `gullet::unread`s the same expansion Perl's DefMacro
+  // emits. Intentional DefMacro → DefPrimitive kind divergence
+  // (WISDOM #44) forced by the missing Rust parameter type.
   DefPrimitive!("\\aligned", {
     // Perl: local $LaTeXML::ALIGN_STATE = 1000000; — disable alignment check
     local_align_group_count(1000000);
@@ -1202,7 +1220,10 @@ LoadDefinitions!({
   DefMacro!("\\endaligned",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
-  // Perl: DefMacro('\alignedat{} alignsafeOptional', ...)
+  // Perl amsmath.sty.ltxml L617 is the same shape as `\aligned` above:
+  // DefMacro('\alignedat{} alignsafeOptional', …, locked=>1). Same
+  // alignsafeOptional-parameter-type gap forces the same DefPrimitive
+  // port. WISDOM #44 intentional divergence — mirror of `\aligned`.
   DefPrimitive!("\\alignedat", {
     let _nargs = gullet::read_arg(ExpansionLevel::Off)?; // consume mandatory {n}
     local_align_group_count(1000000);
@@ -1393,9 +1414,20 @@ LoadDefinitions!({
     </ltx:XMApp>"
   );
 
-  // Section 4.12: Continued fractions — Perl L1098-1125
-  // Perl saves mathstyle context and conditionally sets 'text' vs display.
-  // The mathstyle attribute tells the MathML renderer which fraction style to use.
+  // Section 4.12: Continued fractions — Perl amsmath.sty.ltxml L1102-1125
+  // is structurally a DefMacro trampoline (`\cfrac` Lets itself to
+  // `\lx@inner@cfrac` and calls `\lx@inner@cfrac`) plus a
+  // DefConstructor implementing the XML emit. The Let-self-rebind is
+  // how Perl captures the mathstyle *once* on first invocation while
+  // subsequent nested `\cfrac`s reuse the captured style without
+  // another save. Rust fuses the trampoline-and-constructor into a
+  // single `\cfrac[]` DefConstructor + a CFRACSTYLE global that
+  // replaces the Let-self-rebind trick — the mathstyle attribute
+  // tells the MathML renderer which fraction style to use in both
+  // forms. Intentional DefMacro → DefConstructor kind divergence
+  // (WISDOM #44) — observable XML identical; the Let-rebind is a
+  // Perl-only stateful shortcut that Rust achieves via a scope-
+  // bounded global.
   assign_value(
     "CFRACSTYLE",
     Stored::String(arena::pin("display")),
