@@ -432,17 +432,20 @@ pub fn end_mode(mode: &str) -> Result<()> { end_mode_opt(mode, false) }
 /// When `noframe` is true, executeBeforeAfterGroup is run but the stack frame is not popped.
 pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
-    // Perl Stomach.pm L527-531: check BOUND_MODE at frame 0
-    // The strict check is: BOUND_MODE must be bound in the current top frame AND match.
-    // However, BOUND_MODE may have been set in a different frame (e.g. the locked frame
-    // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
-    // inside an environment). When the bound value matches but isn't in the top frame's
-    // undo table, treat it as valid — the mode system is about tracking what mode we're in.
+    // Perl Stomach.pm L527-528:
+    //   if ((!$STATE->isValueBound('BOUND_MODE', 0))     # Last stack frame was NOT a mode switch
+    //     || ($STATE->lookupValue('BOUND_MODE') ne $mode))  # OR switch to a different mode
+    // BUT: Rust's halign/cases machinery currently leaves extra frames on top
+    // at mode-close time (see `project_1112_6246_residual.md`), so applying
+    // the strict `isValueBound('BOUND_MODE', 0)` check prematurely fails
+    // `\end{equation}` on those inputs. Until the halign frame-balance is
+    // fixed to match Perl, we use the lax value-based check: if the CURRENT
+    // BOUND_MODE value matches `mode`, accept the pop — this preserves most
+    // tests at the cost of occasional mode leaks when frames stack deeper.
     let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
     if current_bound != bound_mode {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?
-      // Just log the error and return — faithful to Perl's endMode.
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
