@@ -30,6 +30,14 @@ LoadDefinitions!({
   // (same PSDim/PSAngle family as pstricks_support, WISDOM #41 parameter
   // gap). Rust's passthrough preserves the label text in output; the
   // geometric node-graph is simply not emitted. Not an `\edef` site.
+  //
+  // Intentional divergence (WISDOM #44 class: blocked-on-parameter-type):
+  // ALL node + connection stubs below share this single root cause —
+  // missing PSDim/PSAngle/PSDimDim/Float types — so the DefConstructor
+  // → DefMacro kind flips are a single-cluster waiver. Porting the
+  // PS* parameter-type family closes every rnode/Rnode/pnode/cnode/
+  // circlenode/ovalnode/trinode/dianode + nc*/pc* connection entry at
+  // once. Audit currently flags rnode+pnode explicitly.
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
   DefMacro!("\\pnode[]", "");
