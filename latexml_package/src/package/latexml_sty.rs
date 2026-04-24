@@ -349,9 +349,9 @@ LoadDefinitions!({
   // actually kicks in via the CLI `--verbose`/`--profile` flags, not
   // package options. Prevents load-time errors for documents that include
   // these flags defensively.
-  DeclareOption!("tracing",     None);
-  DeclareOption!("notracing",   None);
-  DeclareOption!("profiling",   None);
+  DeclareOption!("tracing", None);
+  DeclareOption!("notracing", None);
+  DeclareOption!("profiling", None);
   DeclareOption!("noprofiling", None);
 
   // Perl latexml.sty.ltxml L43-44: breakuntex / nobreakuntex toggle the
@@ -360,7 +360,7 @@ LoadDefinitions!({
   // line break or is suppressed. Default breakuntex=true (Perl omits the
   // flag by default; documents explicitly passing nobreakuntex enable
   // SUPPRESS).
-  DeclareOption!("breakuntex",   {
+  DeclareOption!("breakuntex", {
     AssignValue!("SUPPRESS_UNTEX_LINEBREAKS" => false, Scope::Global);
   });
   DeclareOption!("nobreakuntex", {
@@ -582,6 +582,7 @@ LoadDefinitions!({
   DefConstructor!("\\lxDeclare OptionalMatch:* OptionalKeyVals:Declare {}", "",
   mode => "restricted_horizontal",
   reversion => "",
+  before_digest => { neutralize_font(); },
   after_digest => sub[whatsit] {
     // Extract role/name/meaning from KeyVals arg (arg index 2 = keyvals)
     let mut role = String::new();
@@ -1027,10 +1028,17 @@ LoadDefinitions!({
   // than hoisted to a dedicated <ltx:navigation> container. Revisit
   // when the Tag()/afterClose + PushValue list-accumulator machinery
   // is ported.
+  // Perl all three envs run `beforeDigest => sub { AssignValue(inPreamble => 0); }`
+  // so body content digests as document text even when the env is
+  // invoked from the preamble (same pattern as jheppub affiliation
+  // and standalone.sty's \@standalone@start@input).
   DefEnvironment!("{lxNavbar}",
-    "<ltx:inline-logical-block class='ltx_page_navbar'>#body</ltx:inline-logical-block>");
+    "<ltx:inline-logical-block class='ltx_page_navbar'>#body</ltx:inline-logical-block>",
+    before_digest => { AssignValue!("inPreamble" => false); });
   DefEnvironment!("{lxHeader}",
-    "<ltx:inline-logical-block class='ltx_page_header'>#body</ltx:inline-logical-block>");
+    "<ltx:inline-logical-block class='ltx_page_header'>#body</ltx:inline-logical-block>",
+    before_digest => { AssignValue!("inPreamble" => false); });
   DefEnvironment!("{lxFooter}",
-    "<ltx:inline-logical-block class='ltx_page_footer'>#body</ltx:inline-logical-block>");
+    "<ltx:inline-logical-block class='ltx_page_footer'>#body</ltx:inline-logical-block>",
+    before_digest => { AssignValue!("inPreamble" => false); });
 });
