@@ -147,6 +147,16 @@ LoadDefinitions!({
   // IEEEeqnarray (Perl L299-332) — map to eqnarray
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
+  // Perl L301-302: `\IEEEeqnarray*` → `\eqnarray*` (unnumbered form).
+  // Port was missing — absence surfaced as undefined-macro errors on
+  // any `\begin{IEEEeqnarray*}…\end{IEEEeqnarray*}` in source, shifting
+  // subsequent equation numbering by 3 in tests/structure/IEEE.tex
+  // (the test uses 3 unnumbered IEEEeqnarray* env pairs interleaved
+  // with numbered ones). Fixing this + the matching \endIEEEeqnarray*
+  // should recover the ~3-equation drift between Rust and the
+  // IEEE.xml reference under TL2025.
+  DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
+  Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   DefMacro!("\\IEEEeqnarraynumspace", "");
   DefMacro!("\\IEEEeqnarraybox{}", "\\begin{array}{#1}");
   DefMacro!("\\endIEEEeqnarraybox", "\\end{array}");
