@@ -179,8 +179,13 @@ LoadDefinitions!({
   // bindings, and investigate `AssignMeaning` vs `Let` lock-out.
   //
   // Affects ~56 <Math>, ~38 <td> across IEEE.tex.
+  //
+  // Cycle 295 probe: use \AtBeginDocument-via-RawTeX to defer \def to
+  // post-preamble time — the proven-working context for
+  // `\def\IEEEeqnarray#1{\eqnarray}`.
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
+  RawTeX!(r"\AtBeginDocument{\def\IEEEeqnarray#1{\eqnarray}\def\endIEEEeqnarray{\endeqnarray}}");
   // Perl L301-302: `\IEEEeqnarray*` → `\eqnarray*` (unnumbered form).
   // Port was missing — absence surfaced as undefined-macro errors on
   // any `\begin{IEEEeqnarray*}…\end{IEEEeqnarray*}` in source, shifting
