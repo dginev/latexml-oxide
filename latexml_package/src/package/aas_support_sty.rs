@@ -281,6 +281,12 @@ LoadDefinitions!({
   state::let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
   state::let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
 
+  // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
+  // used by aas deluxetable tokenizes literal `$` from the template, so
+  // the package stashes an active math-shift token into `\savedollar`
+  // for later re-insertion. Port via state::let_i with T_MATH!().
+  state::let_i(&T_CS!("\\savedollar"), &T_MATH!(), None);
+
   // Decimal table conditionals — Perl L338-345
   DefConditional!("\\ifcolnumberson");
   DefConditional!("\\ifdeluxedecimals");
