@@ -438,6 +438,22 @@ line cross-ref breadcrumb and move on. Only dig deep when the kind pair
 is new, or when the Perl body contains state-mutating logic that the
 Rust body visibly omits.
 
+**DP-doc keyword sweep (2026-04-23, session-continuation cycles).**
+Added explicit `Intentional divergence (WISDOM #44 class: …)` keyword
+tags to eight package-layer cross-reference breadcrumbs so the future
+detector grep (searching for `WISDOM #44|intentional|idiomatic` within
+a back-window of the audit-flag line) matches every documented entry.
+Commits: `9e9e96da4` pspicture (Pair picture stubs), `21aef6244`
+revsymb (8-entry TeXDelimiter delimiter cluster), `43ec3b7b1` psfrag
+(afterDigest-only state toggles), `9f981285c` pst_node (node +
+connection cluster, PSDim/PSAngle blocker), `90732a867`
+pstricks_support (DVI-only + parameter-type blocker), `099740bcc`
+algorithm2e (missing setPrefix/getPrefix primitive), `0806559ee`
+pgfsys_latexml_def (pgfsys@clipnext state toggle + pgfsys@invoke
+re-digest-pipeline timing), `65c9ac206` physics matrix family (6 more
+entries under existing L178 umbrella). No behavioural change — all
+rationale was already in-source, only the detector-keyword wasn't.
+
 **Top-3 ParameterType ports (would close ~20 package entries)** —
 `TeXDelimiter` (10+ entries), `Pair:Number` (5+ entries),
 `alignsafeOptional` (2+ entries). Catalogued in WISDOM #41.
