@@ -59,6 +59,25 @@ LoadDefinitions!({
   //======================================================================
   // Special Characters.
   // Try to give them some sense in math...
+  //
+  // Perl plain_base.pool.ltxml L70-77 defines `\#`, `\&`, `\%`, `\$`
+  // (and `\_`) as single DefPrimitives whose sub body calls `Box(char,
+  // font, undef, T_CS('\#'), role => 'ADDOP|POSTFIX|OPERATOR|…')` —
+  // Perl's `Box` internally dispatches on mmode: emitting a Box in text
+  // mode and an XMTok (with the attached role) in math mode.
+  //
+  // Rust splits each character into a trio: a DefMacro that `\ifmmode`-
+  // dispatches to either `\lx@math@<name>` (DefMath with role) or
+  // `\lx@text@<name>` (DefPrimitive emitting literal char). Kind-wise
+  // the audit counts 4 DefPrimitive → DefMacro mismatches (# & % $);
+  // the trio structure is more explicit than Perl's Box-dispatch but
+  // observationally identical in both modes — same XMTok role + meaning
+  // in math, same character in text.
+  //
+  // Intentional DefPrimitive → DefMacro kind divergence (WISDOM #44).
+  // The explicit math/text split is idiomatic Rust — Perl's Box-
+  // auto-XMTok-promotion has no direct equivalent in the Rust
+  // Primitive API surface.
   DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi");
   DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi");
   DefMacro!(
