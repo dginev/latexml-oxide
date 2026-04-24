@@ -144,7 +144,21 @@ LoadDefinitions!({
   DefEnvironment!("{IEEEbiographynophoto}{}",
     "<ltx:section class='ltx_biography'><ltx:title>#1</ltx:title>#body</ltx:section>");
 
-  // IEEEeqnarray (Perl L299-332) — map to eqnarray
+  // IEEEeqnarray (Perl IEEEtran.cls.ltxml L298-302) — Perl uses
+  //   DefMacroI('\IEEEeqnarray', '{}', '\eqnarray')
+  // which consumes the `{rCl}` column spec and expands to `\eqnarray`.
+  // Literal Rust translation below. NOTE: a known bug — the first row
+  // of any `\IEEEeqnarray{...}` env in Rust drops its cell-1 content
+  // (observable as `<td colspan="2">` on row 1 merging cells 1+2,
+  // where Perl emits three separate `<td>` cells). Row 2+ and plain
+  // `\begin{eqnarray}` work correctly, so the bug is specific to the
+  // interaction between the `{}` arg-consuming DefMacro shell and
+  // the alignment absorber's first-cell opener. See IEEE_test
+  // failure; first-row cell loss affects ~56 <Math>, ~38 <td>
+  // elements across the full IEEE.tex (6 IEEEeqnarray blocks).
+  // TODO: root-cause trace through lx@begin@alignment's cell-1
+  // initial-absorption path to find where same-CS arg consumption
+  // steals the first body token.
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
   // Perl L301-302: `\IEEEeqnarray*` → `\eqnarray*` (unnumbered form).
