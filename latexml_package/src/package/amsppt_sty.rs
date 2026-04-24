@@ -351,6 +351,26 @@ LoadDefinitions!({
   // Perl L395: \botaligned = \aligned[b] (bottom-vertically-aligned).
   DefMacro!("\\botaligned", "\\aligned[b]");
 
+  // Perl L173-182: more layout-hint empty stubs.
+  DefMacro!("\\smallpagebreak", "");
+  DefMacro!("\\medpagebreak", "");
+  DefMacro!("\\mathbreak", "");
+  DefMacro!("\\nomathbreak", "");
+  DefMacro!("\\nomultlinegap", "");
+  DefMacro!("\\MultlineGap Dimension", "");
+
+  // Perl L350-358: top/bot shave and smash — pass-through text wrappers
+  // (Perl DefConstructor with enterHorizontal, flattened to DefMacro
+  // identity since the wrapper is decorative).
+  DefMacro!("\\botshave{}", "#1");
+  DefMacro!("\\topshave{}", "#1");
+  DefMacro!("\\topsmash{}", "#1");
+  DefMacro!("\\botsmash{}", "#1");
+
+  // Perl L354: \pretend Until:\haswidth {body} — body is #1 up through
+  // \haswidth, then {width} follows. Drop the width spec, keep body.
+  DefMacro!("\\pretend Until:\\haswidth {}", "#1");
+
 
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
