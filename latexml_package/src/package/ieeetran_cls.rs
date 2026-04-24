@@ -126,7 +126,22 @@ LoadDefinitions!({
   // unless \IEEEQEDhere already consumed the token inline. Mirrors the amsthm
   // \@proof / \end@proof stack pattern.
   DefEnvironment!("{IEEEproof}[]",
-    "<ltx:proof><ltx:title font='bold italic' _force_font='true' class='ltx_runin'>Proof:</ltx:title>#body</ltx:proof>",
+    "<ltx:proof><ltx:title font='#font' _force_font='true' class='ltx_runin'>#title</ltx:title>#body</ltx:proof>",
+    properties => sub[_args] {
+      // Perl digests \textbf{\textit{Proof:}} producing font="bold italic".
+      // Build a bold-italic font via digestion so the title attribute matches.
+      // Template engine auto-binds `"font"` prop to the element's font= attr.
+      let title = stomach::digest(mouth::tokenize_internal(
+        "{\\bfseries\\itshape Proof:}"
+      ))?;
+      let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
+      let mut map = SymHashMap::default();
+      map.insert("title", title.into());
+      if let Some(f) = titlefont {
+        map.insert("font", Stored::Font(Rc::new(f)));
+      }
+      Ok(map)
+    },
     after_digest_begin => sub[_whatsit] {
       let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
     },
@@ -435,6 +450,14 @@ LoadDefinitions!({
     enter_horizontal => true, reversion => "\\qed");
   Let!("\\proof", "\\IEEEproof");
   Let!("\\endproof", "\\endIEEEproof");
+  // Override amsthm_sty.rs:220's `\begin{proof}` → `\begin{@proof}` magic CS
+  // so `\begin{proof}` routes into IEEEproof (bold-italic header) rather than
+  // amsthm's default proof env (italic-only header). Without this, the
+  // `\proof → \IEEEproof` Let above is bypassed because the magic
+  // `\begin{proof}` CS in the `\begin{}` handler short-circuits the
+  // lookup before the alias resolves.
+  Let!("\\begin{proof}", "\\begin{IEEEproof}");
+  Let!("\\end{proof}",   "\\end{IEEEproof}");
 
   // Biography aliases
   Let!("\\biography", "\\IEEEbiography");

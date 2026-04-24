@@ -189,8 +189,10 @@ LoadDefinitions!({
       title_tokens.push(T_OTHER!("."));
       title_tokens.push(T_END!());
       let title = stomach::digest(Tokens::new(title_tokens))?;
-      // Perl: [$title->unlist]->[1]->getFont — get font from first content box
-      // Rust codegen uses props["font"] for any font='#...' template attr
+      // Perl: [$title->unlist]->[1]->getFont — get font from first content box.
+      // The template engine treats the `"font"` prop as the
+      // element-font attribute (auto-binds to font= attr regardless of
+      // placeholder name in the template).
       let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
       let mut map = SymHashMap::default();
       map.insert("title", title.into());
