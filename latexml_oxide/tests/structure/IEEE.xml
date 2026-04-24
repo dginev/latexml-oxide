@@ -479,12 +479,12 @@ N = 3<XMHint name="newline"/>N = 3</p>
                 <XMText>N</XMText>
               </XMArg>
             </XMCell>
-            <XMCell align="left">
+            <XMCell align="center">
               <XMArg rule="Anything">
                 <XMText>=</XMText>
               </XMArg>
             </XMCell>
-            <XMCell align="center">
+            <XMCell align="left">
               <XMArg rule="Anything">
                 <XMText>10</XMText>
               </XMArg>
@@ -496,12 +496,12 @@ N = 3<XMHint name="newline"/>N = 3</p>
                 <XMText>N</XMText>
               </XMArg>
             </XMCell>
-            <XMCell align="left">
+            <XMCell align="center">
               <XMArg rule="Anything">
                 <XMText>=</XMText>
               </XMArg>
             </XMCell>
-            <XMCell align="center">
+            <XMCell align="left">
               <XMArg rule="Anything">
                 <XMText>10</XMText>
               </XMArg>

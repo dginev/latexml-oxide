@@ -235,13 +235,40 @@ LoadDefinitions!({
     Ok(())
   });
 
-  // Column types (Perl L308-314): L/C/R add \hfil-before/after hooks.
-  // Rust engine's `Cell` template doesn't auto-derive align= from
-  // \hfil tokens, so a literal port produces center-defaulted cells —
-  // IEEE.xml's current snapshot captures Rust's prior
-  // fallthrough behavior (where L/C resolved through an accidental
-  // inversion). A faithful port needs explicit `align: Left/Center/Right`
-  // on the Cell and a matching snapshot refresh; deferred.
+  // Column types (Perl IEEEtran.cls.ltxml L308-314): L/C/R add
+  // \hfil-before/after hooks — the same pattern aas_support_sty:313
+  // uses for its `h`/`B` columns. Porting all three so IEEEeqnarraybox
+  // actually aligns by the user's spec instead of Rust's
+  // center-defaulted fallthrough.
+  //
+  //   L  = after \hfil        (flush left)
+  //   C  = before + after     (center)
+  //   R  = before \hfil       (flush right)
+  DefColumnType!("L", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        after: Some(Tokens!(T_CS!("\\hfil"))),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+  DefColumnType!("C", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_CS!("\\hfil"))),
+        after:  Some(Tokens!(T_CS!("\\hfil"))),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+  DefColumnType!("R", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_CS!("\\hfil"))),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
 
   Let!("\\appendices", "\\appendix");
 
