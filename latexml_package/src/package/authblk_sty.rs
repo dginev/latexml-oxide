@@ -71,9 +71,16 @@ LoadDefinitions!({
   DefConstructor!("\\lx@authormark{}",
     "^ <ltx:contact role='affiliationmark' _mark='#1'></ltx:contact>");
 
-  // \affil — Perl L60-69
-  // Use a macro wrapper to handle the auto-mark counter logic,
-  // then call the constructor with the resolved mark.
+  // \affil — Perl authblk.sty.ltxml L60-69 is a single DefConstructor
+  // whose `afterDigest` reads `\the@affil` + StepCounter('@affil') inline
+  // to auto-generate the mark when `#1` is absent. Rust splits that into
+  // a DefMacro wrapper (which expands the counter+token glue at gullet
+  // time) delegating to a hidden `\lx@ab@affil` DefConstructor with a
+  // pre-resolved mark arg. The split is required because the Rust
+  // constructor API doesn't expose a `Digest(T_CS('\the@affil'))`
+  // equivalent inside `after_digest` with a writable counter step.
+  // Intentional kind divergence (DefConstructor → DefMacro wrapper);
+  // see WISDOM #44 — the observable XML is identical.
   DefMacro!("\\affil[]{}", sub[(opt_mark, body)] {
     let mark_toks = opt_mark.unwrap_or_default();
     let mark_str = mark_toks.to_string();
