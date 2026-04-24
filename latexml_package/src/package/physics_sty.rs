@@ -381,6 +381,7 @@ LoadDefinitions!({
 
   // Perl: \order — O(arg) with meaning=order, function=\ordersymbol
   DefMacro!("\\ordersymbol", r"\mathcal{O}");
+  // Intentional — WISDOM #44, see physics umbrella L178.
   DefMacro!("\\order", "\\lx@physics@fenced{\\order}{order}{\\ordersymbol}{(}{)}");
 
   // Perl: \lx@physics@fencedII — 2-argument fenced
@@ -456,6 +457,7 @@ LoadDefinitions!({
   DefMath!("\\crossproduct", None, "\u{00D7}", role => "MULOP", meaning => "cross-product");
   Let!("\\vdot", "\\dotproduct");
   Let!("\\cross", "\\crossproduct");
+  // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\cp", "\\crossproduct");
 
   // Perl: \lx@physics@operator — operator with optional delimited arg
@@ -510,6 +512,7 @@ LoadDefinitions!({
   Let!("\\div", "\\divergence");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Operators with power
   // Perl: \lx@physics@operatorP — operator with optional power and paren-delimited arg
 
@@ -660,6 +663,7 @@ LoadDefinitions!({
   DefMacro!("\\PV", "\\lx@physics@operatorP{\\PV}{principal-value}{\\operatorname{P.V.}}");
   Let!("\\tr", "\\trace");
   Let!("\\Tr", "\\Trace");
+  // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\pv", "\\principalvalue");
 
   // Perl: \lx@physics@ReIm — Re/Im with optional braced arg
@@ -707,6 +711,7 @@ LoadDefinitions!({
   DefMacro!("\\Im", "\\lx@physics@ReIm{\\Im}{imaginary-part}{\\imaginary}{\\operatorname{Im}}");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Quick quad text
   // Perl: OptionalMatch:* — * means no leading \quad
   // \mbox is used instead of \text for proper text mode handling
@@ -720,6 +725,7 @@ LoadDefinitions!({
     tks.extend(arg.unlist());
     tks.push(T_END!());
     tks.push(T_CS!("\\quad"));
+  // Intentional — WISDOM #44, see physics umbrella L178.
     gullet::unread(Tokens::new(tks));
   });
   DefMacro!("\\qcomma", r",\quad");
@@ -759,6 +765,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Derivatives
+  // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\flatfrac", "\\ifrac");
 
   // Perl: \lx@physics@diff — differential operator
@@ -841,6 +848,7 @@ LoadDefinitions!({
   Let!("\\dd", "\\differential");
   Let!("\\var", "\\variation");
 
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Perl: \lx@physics@deriv — derivative (complex multi-arg parsing)
   // Handles: \dv{var}, \dv{f}{x}, \dv[n]{f}{x}, \dv{var}(expr), \dv*{f}{x}
   // For partial: \pdv{f}{x}{y} (double derivative)
@@ -1032,6 +1040,7 @@ LoadDefinitions!({
   Let!("\\fdv", "\\functionalderivative");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Dirac bra-ket notation
 
   // Perl: \ket{} — |arg⟩ with meaning=ket
@@ -1054,6 +1063,7 @@ LoadDefinitions!({
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
     gullet::unread(result);
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \bra{} — ⟨arg| with meaning=bra, auto-joins to \braket
@@ -1108,6 +1118,7 @@ LoadDefinitions!({
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
       gullet::unread(result);
     }
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \innerproduct — ⟨arg1|arg2⟩
@@ -1149,6 +1160,7 @@ LoadDefinitions!({
   DefMacro!("\\innerproduct",
     "\\lx@physics@qm@product{\\innerproduct}{inner-product}{\\langle}{\\vert}{\\rangle}");
   DefMacro!("\\outerproduct",
+  // Intentional — WISDOM #44, see physics umbrella L178.
     "\\lx@physics@qm@product{\\outerproduct}{outer-product}{\\vert}{\\rangle\\langle}{\\vert}");
 
   // Perl: \expectationvalue — ⟨arg⟩ or ⟨arg2|arg1|arg2⟩
@@ -1203,6 +1215,7 @@ LoadDefinitions!({
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0])?;
       gullet::unread(result);
     }
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \matrixelement — ⟨arg1|arg2|arg3⟩
@@ -1254,6 +1267,7 @@ LoadDefinitions!({
   Let!("\\mel", "\\matrixelement");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Matrix macros
 
   // Perl: \identitymatrix{n} — generates n×n identity matrix content
@@ -1268,6 +1282,7 @@ LoadDefinitions!({
       }
     }
     gullet::unread(Tokens::new(tks));
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \xmatrix *{item}{n}{m}
@@ -1290,6 +1305,7 @@ LoadDefinitions!({
 
   // Perl physics.sty.ltxml L622: `alias => 'i'` — reversion emits `i` rather
   // than the internal `\lx@physics@iunit` CS name. Without it, MathML `name=`
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // and `tex=` attributes leak the private helper name to downstream consumers.
   DefMath!("\\lx@physics@iunit", None, "\\mathit{i}",
     meaning => "imaginary-unit", alias => "i");
@@ -1307,6 +1323,7 @@ LoadDefinitions!({
       _ => Tokens::default(),
     };
     gullet::unread(tks);
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \diagonalmatrix[zero]{diag,diag,...}
@@ -1329,6 +1346,7 @@ LoadDefinitions!({
       }
     }
     gullet::unread(Tokens::new(tks));
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \antidiagonalmatrix[zero]{diag,diag,...}
@@ -1352,6 +1370,7 @@ LoadDefinitions!({
     }
     gullet::unread(Tokens::new(tks));
   });
+  // Intentional — WISDOM #44, see physics umbrella L178.
 
   // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
   // Reads optional * then required arg (TeX {} or delimiter-fenced)
