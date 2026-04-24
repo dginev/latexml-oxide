@@ -23,11 +23,18 @@ LoadDefinitions!({
     "\\ifmmode\\ltx@math@numprint@@{#1}{#2}\\else\\ltx@text@numprint@@{#1}{#2}\\fi");
   DefMacro!("\\ltx@text@numprint@{}",    "\\ltx@text@number{\\ltx@orig@numprint{#1}}");
   DefMacro!("\\ltx@text@numprint@@{}{}", "\\ltx@text@number{\\ltx@orig@numprint[#1]{#2}}");
-  // In text mode, \numprint wraps output in ltx:text class="ltx_number".
-  // Port of Perl: DefConstructor('\ltx@text@number{}',
-  //   "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>",
-  //   enterHorizontal => 1);
-  // Use \ifmmode guard: skip wrapping in math mode (ltx:text invalid inside XMath).
+  // \ltx@text@number: Perl numprint.sty.ltxml L48-50 defines this as
+  //   DefConstructor('\ltx@text@number{}',
+  //     "<ltx:text class='ltx_number' _noautoclose='1'>#1</ltx:text>",
+  //     enterHorizontal => 1);
+  // — a single DefConstructor. Rust splits into a DefMacro trampoline
+  // that `\ifmmode`-guards the wrap, then delegates to a hidden
+  // `\ltx@text@number@wrap` DefConstructor. Without the math-mode
+  // guard, `ltx:text` emits inside `<ltx:XMath>` which the validator
+  // rejects; Perl avoids this by its `\numprint` caller never being
+  // reachable from math mode in the same way as the Rust port.
+  // Intentional DefConstructor → DefMacro kind divergence; see
+  // WISDOM #44 + OXIDIZED_DESIGN for the ltx:text-in-math invariant.
   DefMacro!("\\ltx@text@number{}",
     "\\ifmmode#1\\else\\ltx@text@number@wrap{#1}\\fi");
   // Perl numprint.sty.ltxml has `enterHorizontal => 1` on
