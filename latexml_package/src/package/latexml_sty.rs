@@ -986,4 +986,24 @@ LoadDefinitions!({
   DefConstructor!("\\ltx@count@parses",
     "<ltx:text class='ltx_count_parses' _parsetrees_marker='true'>0</ltx:text>",
     enter_horizontal => true);
+
+  // Perl latexml.sty.ltxml L263-289: {lxNavbar} / {lxHeader} / {lxFooter}
+  // envs accumulate body content into a `navigation` list that
+  // insertNavigation (ltx:document afterClose) splices under an
+  // <ltx:navigation> wrapper. Rust has no afterClose hook yet and no
+  // PushValue-based list accumulator plumbed through the post-pipeline,
+  // so a faithful hoisted-navigation output isn't possible yet. Stub
+  // as inline-logical-block wrappers that keep body content visible
+  // in-flow and prevent undefined-env errors when documents invoke
+  // \begin{lxNavbar}.../\begin{lxHeader}.../\begin{lxFooter}... .
+  // Intentional divergence: navigation content appears in flow rather
+  // than hoisted to a dedicated <ltx:navigation> container. Revisit
+  // when the Tag()/afterClose + PushValue list-accumulator machinery
+  // is ported.
+  DefEnvironment!("{lxNavbar}",
+    "<ltx:inline-logical-block class='ltx_page_navbar'>#body</ltx:inline-logical-block>");
+  DefEnvironment!("{lxHeader}",
+    "<ltx:inline-logical-block class='ltx_page_header'>#body</ltx:inline-logical-block>");
+  DefEnvironment!("{lxFooter}",
+    "<ltx:inline-logical-block class='ltx_page_footer'>#body</ltx:inline-logical-block>");
 });
