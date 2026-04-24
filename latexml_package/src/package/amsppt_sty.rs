@@ -295,6 +295,21 @@ LoadDefinitions!({
   // Perl AmSTeX.pool L114: \flushpar = \par\noindent
   DefMacro!("\\flushpar", "\\par\\noindent");
 
+  // Page-layout no-ops — Perl AmSTeX.pool L116-119.
+  DefMacro!("\\pagewidth{Dimension}", "");
+  DefMacro!("\\pageheight{Dimension}", "");
+  DefMacro!("\\hcorrection{Dimension}", "");
+  DefMacro!("\\vcorrection{Dimension}", "");
+
+  // Perl L186: \tie = \unskip\nobreak\␣ (non-breaking space with
+  // preceding skip-absorption).
+  DefMacro!("\\tie", "\\unskip\\nobreak\\ ");
+
+  // Perl L299-300: math superscript accents via manual ^{...}.
+  // Siblings \spcheck/\sptilde are already in Rust plain_base.
+  DefMacro!("\\spacute", "^{'}");
+  DefMacro!("\\spgrave", "^{`}");
+
 
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
