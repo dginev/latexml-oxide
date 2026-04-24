@@ -180,6 +180,20 @@ Remaining 48 long-tail entries all match the 11 patterns above.
 **Top-3 ParameterType ports** (~20 package entries each collapse):
 `TeXDelimiter`, `Pair:Number`, `alignsafeOptional`. See WISDOM #41.
 
+**Round-17 real-port sprint (2026-04-24).** Small CS-set + RequirePackage
+audit sweep across packages. Real gaps closed: `\note{}` ported in
+elsart_support_core (7cd476335); `\index{}{}` math macro ported in
+proofwiki (248b1636f); `\bib@field@default@adsurl` Verbatim constructor
+in aa_support (9c76d5d45); `\author[]{}` override in mn2e_support
+(1aeb982a1 — approximate, missing andSplit helper); `\lxAddAnnotation`/
+`\lxWithAnnotation` stubs in latexml_sty (83c5cc8d6);
+`\lxRefDeclaration` stub (4580a8a1b); conditional `dcolumn`
+RequirePackage in mn2e (e48dc33ea); textcomp RequirePackage in
+french_ldf (904c35236); conditional `amsthm` RequirePackage in
+elsart_support (c49ae318d); `xspace` RequirePackage in glossaries
+(ec512487d). Beamer RequirePackage expansion reverted after
+regression. Every commit passes `cargo check --workspace`.
+
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
 Three failure classes in the session-128 sweep:
