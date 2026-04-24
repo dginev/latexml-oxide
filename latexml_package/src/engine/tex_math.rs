@@ -590,6 +590,21 @@ LoadDefinitions!({
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
+  //
+  // Perl TeX_Math.pool.ltxml L573 is DefPrimitive('\mathchar Number',
+  // sub { ... Box($glyph, $font, undef, reversion, %props) }) — a
+  // primitive whose body calls `Box(...)` with math-role props to
+  // produce an XMTok via Perl's Box-auto-XMTok dispatch.
+  //
+  // Rust ports as a DefConstructor with the XMTok template + an
+  // `after_digest` closure that runs `decode_math_char` and populates
+  // the glyph/role/meaning/name/scriptpos/mathstyle/stretchy
+  // properties that the template substitutes in. Observable XML is
+  // identical — same XMTok with the same role attribute. Kind-wise
+  // this is a DefPrimitive → DefConstructor flip (WISDOM #44) because
+  // Perl's Box-auto-XMTok promotion in math mode has no direct Rust
+  // Primitive-API equivalent; the template form is the idiomatic way
+  // to express "emit this XML with these computed properties".
   DefConstructor!("\\mathchar Number",
     "?#glyph(<ltx:XMTok role='#role' ?#meaning(meaning='#meaning') ?#name(name='#name')\
      ?#scriptpos(scriptpos='#scriptpos') ?#mathstyle(mathstyle='#mathstyle')\
