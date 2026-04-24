@@ -127,8 +127,16 @@ LoadDefinitions!({
   RawTeX!("\\@ifundefined{remark}{\\newtheorem{remark}[theorem]{Remark}}{}");
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
-  // Perl llncs.cls.ltxml L101-157: Like \newtheorem + capfont/bodyfont (visual styling ignored).
-  // capfont/bodyfont are TeX font commands (e.g. \bfseries, \itshape) — ignored in LaTeXML.
+  // Perl llncs.cls.ltxml L101-157 is `DefMacro('\spnewtheorem ...', sub
+  // { ... DefMacroI + NewCounter + MergeFont ... })` — a macro whose
+  // body imperatively installs new CSes/env bindings + counters.
+  // Rust uses DefPrimitive (stomach-level) because the installation
+  // needs to happen at digest-stable time so subsequent uses of the
+  // new `{env}` work. WISDOM #44: kind flip is intentional —
+  // `\spnewtheorem` is a preamble-declaration macro only, never
+  // captured by `\edef`/`\ifx`. capfont/bodyfont are TeX font
+  // commands (e.g. \bfseries, \itshape) — ignored in LaTeXML (both
+  // Perl and Rust do the same).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
     crate::engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
