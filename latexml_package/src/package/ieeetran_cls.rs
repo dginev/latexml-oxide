@@ -146,19 +146,39 @@ LoadDefinitions!({
 
   // IEEEeqnarray (Perl IEEEtran.cls.ltxml L298-302) — Perl uses
   //   DefMacroI('\IEEEeqnarray', '{}', '\eqnarray')
-  // which consumes the `{rCl}` column spec and expands to `\eqnarray`.
-  // Literal Rust translation below. NOTE: a known bug — the first row
-  // of any `\IEEEeqnarray{...}` env in Rust drops its cell-1 content
-  // (observable as `<td colspan="2">` on row 1 merging cells 1+2,
-  // where Perl emits three separate `<td>` cells). Row 2+ and plain
-  // `\begin{eqnarray}` work correctly, so the bug is specific to the
-  // interaction between the `{}` arg-consuming DefMacro shell and
-  // the alignment absorber's first-cell opener. See IEEE_test
-  // failure; first-row cell loss affects ~56 <Math>, ~38 <td>
-  // elements across the full IEEE.tex (6 IEEEeqnarray blocks).
-  // TODO: root-cause trace through lx@begin@alignment's cell-1
-  // initial-absorption path to find where same-CS arg consumption
-  // steals the first body token.
+  // Consumes `{rCl}` column spec, expands to `\eqnarray`.
+  //
+  // KNOWN BUG: Rust translation below drops row-1 cell-1 of the
+  // expanded env (emits `<td colspan="2">` merging cells 1+2 where
+  // Perl emits three separate `<td>` cells). Plain `\eqnarray` via
+  // direct `\begin{eqnarray}` works correctly; rows 2+ of
+  // IEEEeqnarray also work correctly. Failing mode scoped to row 1.
+  //
+  // Cycle 294 diagnostic probes (all still broken):
+  //   1. Zero-arg `\IEEEeqnarray` (leave `{rCl}` in stream)
+  //   2. Trailing space after `\eqnarray` in body
+  //   3. Inlined `\eqnarray` expansion directly
+  //   4. `\@gobble`-style intermediate macro indirection
+  //   5. `\relax` barrier before `\eqnarray`
+  //   6. `RawTeX!(r"\long\def\IEEEeqnarray#1{\eqnarray}…")` (replace
+  //      compile-time DefMacro! with runtime \def in ltxml class-load)
+  //   7. `LATEXML_NODUMP=1` (bypass dump cache)
+  //
+  // **Works:** an in-`.tex` document-preamble `\def\IEEEeqnarray#1{\eqnarray}`
+  // correctly rescues row 1 cell 1. Also a rename probe — `\myeqnarray`
+  // via `\def\myeqnarray#1{\eqnarray}` + `\def\endmyeqnarray{\endeqnarray}`
+  // under the same IEEEtran class load — works.
+  //
+  // So the bug is SPECIFIC to the `\IEEEeqnarray` CS binding installed
+  // from this `.cls.ltxml` (probably interacting with the dump cache
+  // or a pre-class `\let` against `\IEEEeqnarray`). The runtime \def
+  // workaround via RawTeX does NOT override it, suggesting the
+  // binding is installed before this RawTeX runs, or persists via a
+  // path that \def can't supersede. Needs dumper-trace next cycle —
+  // grep the .model / dump files for `\IEEEeqnarray` pre-existing
+  // bindings, and investigate `AssignMeaning` vs `Let` lock-out.
+  //
+  // Affects ~56 <Math>, ~38 <td> across IEEE.tex.
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
   // Perl L301-302: `\IEEEeqnarray*` → `\eqnarray*` (unnumbered form).
