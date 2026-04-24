@@ -33,6 +33,14 @@ LoadDefinitions!({
 
   // Frontmatter — Perl L28-46
   DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
+
+  // Perl L31: DefMacro('\author[]{}', sub { andSplit(T_CS('\lx@author'), $_[2]); });
+  // Perl uses `andSplit` to call `\lx@author` once per `\and`-separated
+  // author in #2. Rust doesn't have `andSplit`; approximate with a single
+  // `\lx@author{#2}` (matching ams_support.sty shape). Multi-author MNRAS
+  // papers will lump authors together rather than emit separate
+  // <ltx:creator> nodes — an andSplit port would close this divergence.
+  DefMacro!("\\author[]{}", "\\lx@author{#2}");
   DefMacro!("\\newauthor", "");
   DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
