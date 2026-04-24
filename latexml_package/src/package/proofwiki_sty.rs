@@ -284,4 +284,11 @@ LoadDefinitions!({
   DefMacro!("\\Re", "\\mathfrak{Re}");
   DefMacro!("\\Im", "\\mathfrak{Im}");
   DefMacro!("\\ds", "\\displaystyle");
+
+  // Perl L218: \index{G}{H} — subgroup index notation [G : H].
+  // ProofWiki redefines the LaTeX \index (normally an indexing command) as a
+  // math macro. Both the LaTeX-index and math-index senses take the `{}{}`
+  // shape here; this package is math-notation-only, so the override stands.
+  // Previously unported.
+  DefMacro!("\\index{}{}", "\\left[ #1 : #2 \\right]");
 });
