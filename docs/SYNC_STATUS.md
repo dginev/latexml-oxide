@@ -2,9 +2,43 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-## Mission (2026-04-22)
+## Mission (2026-04-24 pivot)
 
-### HIGHEST PRIORITY — zero-ignore test suite + TL2023 CI green (2026-04-24)
+### HIGHEST PRIORITY — CI green + 10k sandbox clean
+
+User directive 2026-04-24: **stop the Def*-parity / bounded-hook / stub-
+fleshing milestone entirely.** Those audits have been revisiting the
+same files without moving either of the two things that actually
+matter:
+
+1. **TL2023 CI push gate green** —
+   `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1
+   tools/test_with_tl2023.sh` must pass with **zero failures, zero
+   ignores**. Local TL2025 is already 1098/0/0; TL2023 is the
+   remaining variable.
+2. **10k sandbox error-free** — every `~/data/10k_sandbox/*.zip` must
+   convert cleanly via `cortex_worker` at `-j 8 --timeout 60`. Current
+   residual (session-128 sweep, binary 22adfc355):
+   - **5 hard-fails**: 1112.6246 (error-cascade OOM), 1710.03688 +
+     hep-ph0702114 (babel-french `\bbl@exp@aux` OOM), 1902.08705
+     (pgfmath infinite loop), 1803.03288 (xparse/pgfplots cascade).
+   - **~7 timeouts**: 1308.5727, 1407.5769, 1709.05096, 1711.10191,
+     1711.11576, 1707.01155, 1210.1891 (hyperref → etoolbox →
+     kvoptions → nameref chain), 1403.4135 (math-parser ambiguity).
+
+Each of these is a **root-cause investigation** — not a stub-port gap.
+Per-cycle work must target one of these two fronts; drive-by pstricks /
+bounded / DP-audit additions are **paused** until CI and sandbox are
+both green.
+
+**Out of scope for this milestone** (do not touch unless it directly
+unblocks a residual):
+- Def*-parity kind-flip audit (already fully triaged — see §DP).
+- Drive-by `bounded`/`scope=>Global`/`AtBeginDocument` / stub
+  fleshing sweeps.
+- pstricks mop-up beyond what a specific residual demands.
+
+### Previous milestone (CLOSED) — zero-ignore test suite
 
 **No test may remain `#[ignore]`.** User directive 2026-04-24: the suite
 must be fully green (0 failed, 0 ignored) on **both** local TL2025 and
