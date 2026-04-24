@@ -1034,4 +1034,31 @@ mod tests {
     let kv = KeyVals::new(cfg);
     assert!(kv.set_all);
   }
+
+  #[test]
+  fn keyvals_new_filters_empty_keysets() {
+    // Perl KeyVals.pm #2777 (fdc8bf91): \pst@famlist accumulates as
+    // ",pstricks"; a naive split yields ["", "pstricks"]. The empty
+    // entry would collide with `\def\psset@@ArrowInside` via the
+    // keyval_qname("psset","","ArrowInside") → "psset@@ArrowInside"
+    // path. Empty entries must be filtered before any default fallback.
+    let cfg = KeyvalsConfig {
+      keysets: vec!["".to_string(), "pstricks".to_string()],
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.keysets, vec!["pstricks".to_string()]);
+  }
+
+  #[test]
+  fn keyvals_new_all_empty_keysets_defaults_to_anonymous() {
+    // If every keyset entry is empty, we still fall back to
+    // _anonymous_ (not retain an empty keyset).
+    let cfg = KeyvalsConfig {
+      keysets: vec!["".to_string(), "".to_string()],
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+  }
 }
