@@ -1621,7 +1621,7 @@ pub fn read_dimension() -> Result<Dimension> {
 // ```
 
 /// Read a unit, returning the equivalent number of scaled points,
-fn read_unit() -> Result<Option<f64>> {
+pub fn read_unit() -> Result<Option<f64>> {
   let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
     skip_one_space(true)?;
     Some(convert_unit(&u))
@@ -1889,7 +1889,7 @@ pub fn skip_one_space(expanded: bool) -> Result<()> {
 
 // <optional signs> = <optional spaces> | <optional signs><plus or minus><optional spaces>
 // returns false if None, or positive, true if negative
-fn read_optional_signs() -> Result<bool> {
+pub fn read_optional_signs() -> Result<bool> {
   let mut sign = false;
   while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();
@@ -1930,7 +1930,7 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
 // <decimal constant> = . | , | <digit><decimal constant> | <decimal constant><digit>
 // ```
 /// Return a number (Rust f64 number)
-fn read_factor() -> Result<Option<f64>> {
+pub fn read_factor() -> Result<Option<f64>> {
   let mut factor = read_digits(&DIGIT_RE, false)?;
   let mut token_opt = read_x_token(None, false, None)?;
   if let Some(ref token) = token_opt {

@@ -33,7 +33,7 @@ LoadDefinitions!({
           raw.trim().to_string()
         } else { String::new() }
       } else { String::new() };
-      let candidates = crate::package::graphicx_sty::image_candidates(&file);
+      let candidates = latexml_core::util::image::image_candidates(&file);
       // Serialize remaining keyvals as "k=v,k=v" (skip file/figure,
       // inject clip=true if epsfclip was toggled on).
       let clip_on = state::lookup_value("epsfclip")

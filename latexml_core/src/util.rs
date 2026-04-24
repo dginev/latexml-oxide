@@ -1,3 +1,5 @@
+/// image file helpers — port of `LaTeXML::Util::Image`
+pub mod image;
 /// log recording and reporting interface
 pub mod logger;
 /// helper methods for file system paths

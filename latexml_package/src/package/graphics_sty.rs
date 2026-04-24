@@ -196,6 +196,68 @@ LoadDefinitions!({
     }
   }, optional => true);
 
+  // Perl graphics.sty.ltxml L40-57: DefParameterType('GraphixDimensions', ...)
+  //   A sequence of up to 4 dimensions (for `trim=` / `viewport=`). They
+  //   MUST be space-separated but trailing commas are tolerated between
+  //   entries. Each entry tries a register value first, else reads a
+  //   factor + unit (defaulting to bp). Returns a space-separated token
+  //   sequence of the raw sp values.
+  DefParameterType!(GraphixDimensions, sub[_inner, _extra] {
+    gullet::skip_spaces()?;
+    let mut dims: Vec<i64> = Vec::new();
+    while dims.len() < 4 {
+      if !dims.is_empty() {
+        // Optionally consume a single comma between entries (Perl: if
+        // the next token isn't T_OTHER(','), unread it).
+        if let Some(t) = gullet::read_token()? {
+          if t.text != pin!(",") {
+            gullet::unread_one(t);
+          }
+        }
+      }
+      let is_negative = gullet::read_optional_signs()?;
+      // Try register value (Dimension) first, allowing coercion.
+      let register_dim = gullet::read_register_value_coerce(
+        latexml_core::definition::register::RegisterType::Dimension,
+        true,
+      )?;
+      if let Some(register_value) = register_dim {
+        if let latexml_core::definition::register::RegisterValue::Dimension(d) = register_value {
+          let v = d.value_of();
+          dims.push(if is_negative { -v } else { v });
+          continue;
+        }
+      }
+      // Otherwise try factor + unit. If the unit is missing, fall back
+      // to `bp` (big points) per Perl L52-54.
+      if let Some(factor) = gullet::read_factor()? {
+        let unit = match gullet::read_unit()? {
+          Some(u) => u,
+          None => state::convert_unit("bp"),
+        };
+        let signed = if is_negative { -factor } else { factor };
+        let sp = latexml_core::common::numeric_ops::fixpoint(signed, Some(unit));
+        dims.push(sp);
+      } else {
+        break;
+      }
+    }
+    if dims.is_empty() {
+      Ok(Tokens!())
+    } else {
+      // Space-separated token sequence of raw sp values — matches the
+      // shape expected by `image_graphicx_parse` which splits on
+      // whitespace and passes each value through `to_bp` (Util::Image
+      // L155-159).
+      let joined = dims
+        .iter()
+        .map(|d| d.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+      Ok(Tokenize!(&joined))
+    }
+  }, optional => true);
+
   // \resizebox{width}{height}{content}
   // Perl: \Gscale@@box computes xscale/yscale, wraps in inline-block.
   DefMacro!(
@@ -380,7 +442,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let path = args[3].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       let path = path.trim().to_string();
-      let candidates = crate::package::graphicx_sty::image_candidates(&path);
+      let candidates = latexml_core::util::image::image_candidates(&path);
       Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
     },
     alias => "\\includegraphics");

@@ -39,7 +39,7 @@ LoadDefinitions!({
       let bb   = bb.trim().to_string();
       let path = args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       let path = path.trim().to_string();
-      let candidates = crate::package::graphicx_sty::image_candidates(&path);
+      let candidates = latexml_core::util::image::image_candidates(&path);
 
       let clip = state::lookup_value("epsf_clip")
         .map(|v| v.to_string() != "0" && !v.to_string().is_empty())
