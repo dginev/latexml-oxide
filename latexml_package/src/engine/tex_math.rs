@@ -830,7 +830,21 @@ LoadDefinitions!({
   // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
   // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
   // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-  // Perl: DefMacro('\left TeXDelimiter', ...) where TeXDelimiter invokes the token.
+  // Perl TeX_Math.pool.ltxml L773: `DefConstructor('\left TeXDelimiter', …)`
+  // using the `TeXDelimiter` parameter type (which digests the delimiter
+  // argument fully, resolving \delimiter<Number>, \. , \{, \langle, etc.
+  // into the delimiter glyph).
+  //
+  // Rust doesn't yet have a `TeXDelimiter` parameter type port, so the
+  // split is a DefMacro `\left XToken` trampoline + inline handling of
+  // the \delimiter<Number> case via `gullet::read_number` + the
+  // `decode_math_char` delimiter table. Same approach for `\lx@right
+  // XToken` at L1192 (which wraps `\@right` to handle the Number form).
+  //
+  // Intentional DefConstructor → DefMacro kind divergence for both
+  // `\left` and `\lx@right` (audit tex_math.rs:836, tex_math.rs:1192)
+  // driven by the missing `TeXDelimiter` parameter type. WISDOM #44.
+  //
   // When the delimiter is \delimiter<Number>, we must digest it to produce the glyph.
   // For regular tokens (., \{, \langle, etc.), XToken suffices.
   DefMacro!("\\left XToken", sub[(delim)] {
