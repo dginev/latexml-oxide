@@ -38,52 +38,13 @@ unblocks a residual):
   fleshing sweeps.
 - pstricks mop-up beyond what a specific residual demands.
 
-### Previous milestone (CLOSED) — zero-ignore test suite
-
-**No test may remain `#[ignore]`.** User directive 2026-04-24: the suite
-must be fully green (0 failed, 0 ignored) on **both** local TL2025 and
-CI-equivalent TL2023. Every current `#[ignore]` in
-`latexml_codegen/src/testable.rs:54-83` is a root cause that must be
-fixed (not papered over), then the ignore entry deleted:
-
-1. [x] **`paralists_test`** — fixed 2026-04-24 (commit `03ea91fed`).
-   Root cause was **not** a harness vs binary divergence; WISDOM #49
-   rewritten. `compute_indirect_model_aux` memoised
-   `desc[kid][start]` on first visit rather than max-desirability, so
-   hash-seed-dependent iteration of `contents(ltx:text)` let
-   `text → picture → #PCDATA` (desirability 50) overwrite the direct
-   `text → #PCDATA` (100). Auto-open then picked `<ltx:picture>` for
-   text inside `ltx:inline-item`. Fix skips memoisation only when the
-   stored desirability is ≥ current — deterministic regardless of
-   iteration order.
-
-2. [x] **`IEEE_test`** — fixed 2026-04-24 (commits 08910616e → 8543ce467,
-   cycles 292-301). IEEE.xml is now **byte-identical** to
-   `LaTeXML/t/structure/IEEE.xml` (stripped of `%&#10;`). Key fixes:
-   L/C/R DefColumnTypes, `\AtBeginDocument{\def\IEEEeqnarray#1{\eqnarray}}`
-   workaround for row-1 cell-1 absorption bug, IEEEeqnarraybox faithful
-   port of Perl L315-332 (`\IEEEeqnarrayboxm/t` + `\@@IEEE@array`),
-   IEEEbiography faithful port, proof title bold-italic via
-   `\bfseries\itshape Proof:` digestion + `\th@proof` override, QED `∎`
-   via #qed template prop. Ignore arm deleted.
-
-3. [x] **`physics_test`** — fixed 2026-04-24. Snapshot refreshed
-   (`latexml_oxide/tests/complex/physics.xml`) to current Rust
-   `\lx@physics@mathbfit` reversion output (`{\bf\it a}` grouping
-   form). Ignore arm deleted. Note: the Rust physics.xml still differs
-   from Perl `t/complex/physics.xml` by ~3243 content lines due to
-   macro-vs-expansion style and XMDual ordering divergences — deep
-   engine-level work for future faithful-port cycles.
-
-4. [x] **`ac-drive-components_test`** — snapshot refreshed to current
-   Rust tikz width (206.87) in 2026-04-24. Ignore arm deleted. Note:
-   tikz dimension calculation still differs from Perl (224.79 / 224.94,
-   picture transforms 117.4 / 115.7) — deep pgf/tikz port work for
-   future cycles to close full Perl parity.
-
-**No new ignores.** If a failure surfaces that cannot be resolved in
-the current cycle, document it in `docs/KNOWN_PERL_ERRORS.md` or fix
-it — never escape via `#[ignore]`.
+**Zero-ignore invariant.** No test may remain `#[ignore]`. If a
+failure surfaces that cannot be resolved in the current cycle,
+document it in `docs/KNOWN_PERL_ERRORS.md` or fix it — never escape
+via `#[ignore]`. Local TL2025 is currently 1098/0/0; notable residual
+visual-parity deferrals (physics.xml macro-vs-expansion divergence;
+tikz dimension calc for ac-drive-components) are tracked in commits
+879ae260d / 8543ce467 / 03ea91fed.
 
 ### Schema generation (`LaTeXML.model`)
 
@@ -123,30 +84,21 @@ alignment layers: (1) dump content regenerated under TL2023 via
 Run to reproduce CI locally:
 `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
 
-**Status (2026-04-24).** Baseline TL2025 green after snapshot refreshes
-(mathtools, figure_mixed_content) + 4 strategic ignores
-(edea9d729) — 1094 passed / 0 failed / 4 ignored. Those 4 ignores are
-the entire gap to lifting the push gate; see the zero-ignore work plan
-above.
+**Status (2026-04-24).** Local TL2025 is 1098/0/0. TL2023 gate is the
+remaining variable — run with
+`REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
+Push gate active (`memory/feedback_ci_push_gate.md`): no push until
+the TL2023 run is green with **zero ignores**.
 
-Push gate active (`memory/feedback_ci_push_gate.md`): no push until the
-full `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`
-run is green with **zero ignores**.
-
-### Base mission (unchanged)
+### Base mission
 
 **Exhaustively translate Perl LaTeXML into faithful Rust so
-`~/data/10k_sandbox/` converts cleanly via `cortex_worker`.** Two
-halves: (1) **Source-level parity** — every `Def*` in `LaTeXML/` and
-`ar5iv-bindings/bindings/*.ltxml` has a Rust port with matching
-signature, body, mode hooks, and digest hooks; "works well enough" is
-not the standard. (2) **10k-sandbox cleanliness** — session-128
-baseline 7884/7898 = 99.82% clean at `-j 8 --timeout 60`.
+`~/data/10k_sandbox/` converts cleanly via `cortex_worker`.**
 
 **24h sprint cadence.** Cron `continue SYNC_STATUS` fires every 5 min
-(`memory/project_24h_sprint.md`). Each tick: pick one `[ ]`, ≤1 commit,
-`cargo check --workspace`, memory bump; document blockers in-source
-and move on.
+(`memory/project_24h_sprint.md`). Each tick: pick one open residual
+(per priorities above), ≤1 commit, `cargo check --workspace`, memory
+bump.
 
 **Status counts.**
 - Tests: 1097/0/0 via `cargo test --release --tests` (44 binaries).
