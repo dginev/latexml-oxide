@@ -209,6 +209,15 @@ impl KeyVals {
       hook_missing,
     } = options;
     let prefix = prefix.unwrap_or_else(|| String::from("KV"));
+    // Perl KeyVals.pm #2777 (fdc8bf91, 2026-03-27):
+    // filter empty strings from the keyset list. Split("," , ",pstricks")
+    // (e.g. \pst@famlist accumulates as ",pstricks") yields ["", "pstricks"];
+    // the empty keyset caused keyval_qname("psset","","ArrowInside") to
+    // collide with raw \def\psset@@ArrowInside (a delimited-argument helper)
+    // and emit spurious "Missing argument" errors. Hardening here matches
+    // the Perl fix regardless of how keysets was constructed at the call
+    // site.
+    keysets.retain(|k| !k.is_empty());
     if keysets.is_empty() {
       keysets = vec![String::from("_anonymous_")];
     }
