@@ -13,27 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM. Strategy: use every
-      # core, keep per-rustc memory small, and lean on `mold` for the
-      # cheap-linker path so concurrent link steps don't OOM.
+      # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM. Strategy: use
+      # every core (CARGO_BUILD_JOBS=4 implicit), rely on `mold` for
+      # fast parallel linking, and keep per-rustc memory bounded by
+      # opt-level=1 + DEBUG=0 + default codegen-units.
       #
-      # 1. Parallel rustc — unset CARGO_BUILD_JOBS so cargo defaults to
-      #    num_cpus (4). Previously set to 1 after a historical OOM when
-      #    the release profile carried `debug=true` (full DWARF); since
-      #    `line-tables-only` + `split-debuginfo=unpacked` + the CI knobs
-      #    below landed, peak linker RAM is well under the 16 GB budget
-      #    even with 4 concurrent rustc workers.
+      # 1. Parallel rustc — unset CARGO_BUILD_JOBS so cargo defaults
+      #    to num_cpus (=4), using all runner cores. The earlier
+      #    f922f23b4 attempt also unset this but retained
+      #    codegen-units=256, which fragmented the dep graph into
+      #    thousands of tiny object files and REGRESSED total wall
+      #    clock. With default codegen-units (16 for release), 4 rustc
+      #    workers hit the expected ~4× compile throughput.
       # 2. No debug info in release profile (workspace Cargo.toml sets
       #    debug=line-tables-only; zero out entirely for CI — not needed
       #    to run the test suite, shaves peak RAM + link time further).
       CARGO_PROFILE_RELEASE_DEBUG: "0"
-      # 3. Fast-compile opt-level — opt-level=1 still runs the suite in
-      #    reasonable wall time and uses much less memory per codegen
-      #    unit than the default opt-level=3.
+      # 3. Fast-compile opt-level — opt-level=1 keeps codegen cheap and
+      #    is still fast enough for the test-runtime phase.
       CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
-      # 4. Many small codegen units — keeps individual rustc worker peaks
-      #    bounded, and maximises cross-CGU parallelism on the 4-core box.
-      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
+      # 4. Default codegen-units (16 for release). The earlier
+      #    codegen-units=256 override (f922f23b4) was intended to keep
+      #    per-worker peaks bounded, but it just fragments the dep
+      #    graph into 256 tiny object files per crate — each with its
+      #    own rustc/linker overhead — for no parallelism benefit.
+      #    Default 16 is well-tuned for 2-4 core rustc invocations.
       # 5. Strip remaining debuginfo sections — defensive w/ DEBUG=0.
       CARGO_PROFILE_RELEASE_STRIP: "debuginfo"
       # 6. No LTO (default for `release`, explicit for clarity).
@@ -92,9 +96,8 @@ jobs:
       - name: run tests
         # --release because the suite runs many full-document conversions;
         # dev-profile runtime is too slow even with faster compilation.
-        # --test-threads=2 lets two conversions run concurrently (each
-        # conversion's working set is a few hundred MB; 2 fits comfortably
-        # in the 16 GB budget) without hitting the thread-local state
-        # globals documented in CLAUDE.md. Do not raise to 4 without
-        # auditing the 86_tikz / 85_pgf memory-leak path first.
-        run: cargo test --release --tests --workspace -- --test-threads=2
+        # --test-threads=4 uses every runner core. Each conversion's
+        # working set is a few hundred MB; 4 concurrent conversions
+        # fit inside the 16 GB budget. CLAUDE.md's thread-local state
+        # globals are per-thread so this does not cross-contaminate.
+        run: cargo test --release --tests --workspace -- --test-threads=4
