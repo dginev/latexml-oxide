@@ -110,7 +110,39 @@ LoadDefinitions!({
   DefMacro!("\\insertshortdate[]", "");
   DefMacro!("\\insertshortinstitute[]", "");
   DefMacro!("\\insertshorttitle[]", "");
+  DefMacro!("\\insertshortpart[]", "");
+  DefMacro!("\\insertshortsubtitle[]", "");
   DefMacro!("\\inserttotalframenumber", "");
+  DefMacro!("\\insertmainframenumber", "");
+  DefMacro!("\\insertappendixframenumber", "");
+
+  // Perl L1013-1045 beamerTODO navigation + page-range \insert*s.
+  // All are stomach-time no-ops under Rust's continuous-document
+  // rendering (beamer's slide-tracking state machine is not ported).
+  // Shipping the stubs prevents undefined-CS errors in beamer themes
+  // that reference them via `\setbeamertemplate{footline}` bodies.
+  DefMacro!("\\insertnavigation{}", "");
+  DefMacro!("\\insertsectionnavigation{}", "");
+  DefMacro!("\\insertsectionnavigationhorizontal{}{}{}", "");
+  DefMacro!("\\insertsubsectionnavigation{}", "");
+  DefMacro!("\\insertsubsectionnavigationhorizontal{}{}{}", "");
+  DefMacro!("\\insertverticalnavigation{}", "");
+  DefMacro!("\\insertsubsection", "");
+  DefMacro!("\\insertsubsubsection", "");
+  DefMacro!("\\insertframestartpage", "");
+  DefMacro!("\\insertframeendpage", "");
+  DefMacro!("\\insertsubsectionstartpage", "");
+  DefMacro!("\\insertsubsectionendpage", "");
+  DefMacro!("\\insertsectionstartpage", "");
+  DefMacro!("\\insertsectionendpage", "");
+  DefMacro!("\\insertpartstartpage", "");
+  DefMacro!("\\insertpartendpage", "");
+  DefMacro!("\\insertpresentationstartpage", "");
+  DefMacro!("\\insertpresentationendpage", "");
+  DefMacro!("\\insertappendixstartpage", "");
+  DefMacro!("\\insertappendixendpage", "");
+  DefMacro!("\\insertdocumentstartpage", "");
+  DefMacro!("\\insertdocumentendpage", "");
 
   // Theme commands — Perl L1246-1253
   DefMacro!("\\usetheme[]{}", "");
