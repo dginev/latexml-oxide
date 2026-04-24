@@ -5,7 +5,8 @@ use std::collections::VecDeque;
 LoadDefinitions!({
   // Perl: array.sty.ltxml
 
-  TeX!(r"\newdimen\extrarowheight \extrarowheight=0pt");
+  // Perl L18: DefRegister('\extrarowheight' => Dimension('0pt'));
+  DefRegister!("\\extrarowheight" => Dimension::new(0));
 
   // Not sure how to effect these
   DefMacro!("\\firsthline", "\\hline");
@@ -95,7 +96,11 @@ LoadDefinitions!({
   });
 
   // \newcolumntype — define new column types
-  // Perl: defines \NC@rewrite@<char> AND calls AddToPreamble to record a PI
+  // Perl L68-71:
+  //   DefPrimitive('\newcolumntype{}[Number][]{}', sub {
+  //     my ($stomach, $char, $nargs, $opt, $replacement) = @_;
+  //     DefMacroI(T_CS('\NC@rewrite@' . ToString($char)), convertLaTeXArgs($nargs, $opt), $replacement);
+  //     return AddToPreamble(T_CS('\newcolumntype'), $char, $nargs, $opt, $replacement); });
   DefPrimitive!("\\newcolumntype{}[Number][]{}", sub[(ch, nargs, opt, replacement)] {
     let ch_str = ch.to_string();
     let nargs_val = nargs.value_of() as usize;
@@ -105,9 +110,10 @@ LoadDefinitions!({
     let cs_name = s!("\\NC@rewrite@{ch_str}");
     let cs_args = convert_latex_args(nargs_val, opt_clone)?;
     def_macro(T_CS!(cs_name), cs_args, Some(ExpansionBody::from(replacement_toks.clone())), None)?;
-    // AddToPreamble: record as <?latexml preamble="\newcolumntype{C}{...}"?>
+    // AddToPreamble: record as <?latexml preamble="\newcolumntype{C}[nargs][opt]{...}"?>
+    // Perl L71 passes $nargs and $opt through verbatim — we must preserve
+    // both so a rebuilt definition like `\newcolumntype{C}[1][c]{...}` round-trips.
     let mut pi_tokens = vec![T_CS!("\\lx@add@Preamble@PI")];
-    // Build: \newcolumntype{ch}[nargs][opt]{replacement}
     pi_tokens.push(T_BEGIN!()); // start of Undigested arg
     pi_tokens.push(T_CS!("\\newcolumntype"));
     pi_tokens.push(T_BEGIN!());
@@ -117,6 +123,13 @@ LoadDefinitions!({
       pi_tokens.push(T_OTHER!("["));
       pi_tokens.extend(ExplodeText!(s!("{nargs_val}")));
       pi_tokens.push(T_OTHER!("]"));
+      // Perl L71: $opt is forwarded too. When present it's the default value
+      // of the first argument — emit as `[<opt>]` so the preamble round-trips.
+      if let Some(opt_tks) = opt {
+        pi_tokens.push(T_OTHER!("["));
+        pi_tokens.extend(opt_tks.unlist());
+        pi_tokens.push(T_OTHER!("]"));
+      }
     }
     pi_tokens.push(T_BEGIN!());
     pi_tokens.extend(replacement_toks.unlist());
@@ -127,11 +140,4 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\arraybackslash", r"\let\\\tabularnewline");
-
-  // Internal macros from raw array.sty used by \newcolumntype mechanism.
-  // \NC@list accumulates column type definitions, \NC@do processes them.
-  // We define empty stubs since our column type system handles this differently.
-  DefRegister!("\\NC@list" => Tokens!());
-  DefMacro!("\\NC@do DefToken", "");
-  DefMacro!("\\NC@find DefToken", "");
 });

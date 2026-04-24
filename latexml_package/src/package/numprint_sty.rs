@@ -8,7 +8,12 @@ LoadDefinitions!({
   // defines these using \nprt@rewrite@ with \@ifnextchar and \nprt@digittoks
   // which produce unrecognized tokens in our alignment template parser.
   // Simplify to plain right-aligned columns (loses decimal alignment but
-  // prevents 54+ stray alignment errors).
+  // prevents 54+ stray alignment errors). `\NC@find` is array.sty's internal
+  // dispatcher for "resume template scanning with the next char"; Perl's
+  // LaTeXML doesn't need it because Perl numprint.sty.ltxml overrides the
+  // column types via DefColumnType directly. This is a Rust-local stub —
+  // not part of the array.sty.ltxml port.
+  DefMacro!("\\NC@find DefToken", "");
   RawTeX!(r#"\makeatletter
 \renewcommand{\NC@rewrite@n}[1]{\NC@find r}%
 \renewcommand{\NC@rewrite@N}[1]{\NC@find r}%
