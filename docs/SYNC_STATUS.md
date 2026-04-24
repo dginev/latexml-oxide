@@ -176,6 +176,18 @@ Remaining 48 long-tail entries all match the 11 patterns above.
   (`dump_reader`). Queued (large-scope): pstricks_support refactor
   fdc8bf91, inline_math→math rename 2b1ff6df, color-var inline styles
   c2370ac3.
+- Perl upstream sync (2025-01 → 2025-12): re-audited; all ported.
+  Verified: \overunderset #2687, \Yinyang alias #2688, bibconfig
+  #2683, textunderscore refactor #2704, \includegraphics page option
+  #2677, orcidlink tikz dep #2681, grffile graphicx load #2699,
+  aastex base-class revtex4 #2698, Newlines #2700 (Explode/\string/
+  \meaning catcode-aware SPACE handling), pgfNumber double-negation
+  guard #2711, backsimeq U+22CD #2633, `c2370ac3` color-vars, and
+  several smaller fixes (#2665 epub lang, #2697 DecodeColor,
+  #2689 picScale, #2609 glossaries test skip, #2668 CI). Only
+  fdc8bf91 pstricks refactor + 2b1ff6df inline_math→math remain as
+  large-scope queued items — no actionable small-port gaps in 2025
+  upstream.
 
 **Top-3 ParameterType ports** (~20 package entries each collapse):
 `TeXDelimiter`, `Pair:Number`, `alignsafeOptional`. See WISDOM #41.
