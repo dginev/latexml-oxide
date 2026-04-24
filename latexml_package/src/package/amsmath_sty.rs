@@ -383,11 +383,16 @@ LoadDefinitions!({
   DefMacro!("\\DOTSX", None);
   Let!("\\hdots", "\\lx@ldots");
 
-  // Perl: expands to N copies of \hdots (where N is the numeric argument)
-  DefPrimitive!("\\hdotsfor Number", sub[(n)] {
+  // Perl amsmath.sty.ltxml L844: `DefMacro('\hdotsfor Number', sub { (map
+  // { T_CS('\hdots') } 1..$_[1]->valueOf) })` — a gullet-level macro
+  // expanding to N `\hdots` tokens. Matching Perl's DefMacro kind (was
+  // DefPrimitive with gullet::unread; observationally similar but the
+  // macro form means `\edef\x{\hdotsfor{3}}` fully resolves, whereas a
+  // primitive would leave `\hdotsfor` unexpanded).
+  DefMacro!("\\hdotsfor Number", sub[(n)] {
     let count = n.value_of().max(1) as usize;
     let toks: Vec<Token> = (0..count).flat_map(|_| vec![T_CS!("\\hdots")]).collect();
-    gullet::unread(Tokens::new(toks));
+    Ok(Tokens::new(toks))
   });
 
   // Perl amsmath L848-860: Smart \dots — peek at following token's role.
