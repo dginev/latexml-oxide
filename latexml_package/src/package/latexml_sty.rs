@@ -942,6 +942,14 @@ LoadDefinitions!({
   DefMacro!("\\lxAddAnnotation RequiredKeyVals", "");
   DefMacro!("\\lxWithAnnotation RequiredKeyVals {}", "#2");
 
+  // Perl latexml.sty.ltxml L514-528: \lxRefDeclaration OptionalKeyVals:Declare {}
+  // — refers declarations from another document point to labels at the
+  // call site, via createDeclarationRewrite + the Declaration_ state
+  // registry. Neither helper is ported. Stub as arg-consuming no-op so
+  // documents don't hit undefined-CS; annotations won't actually rewrite
+  // but the prose renders cleanly.
+  DefMacro!("\\lxRefDeclaration OptionalKeyVals:Declare {}", "");
+
   // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
   // document's xml:id via a plain TeX `\def` of the internal
   // \thedocument@ID command that \begin{document}'s constructor
