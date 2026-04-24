@@ -8,11 +8,22 @@
 # can be validated without waiting on CI.
 #
 # Usage:
-#   tools/test_with_tl2023.sh                        # full cargo test --release --tests --workspace
+#   tools/test_with_tl2023.sh                          # full cargo test --release --tests --workspace
 #   tools/test_with_tl2023.sh -p latexml --test 50_structure IEEE_test
+#   INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh    # run tlmgr install for CI-parity collections first
+#   REBUILD_PERL_FORMATS=1 tools/test_with_tl2023.sh   # rebuild Perl dumps under TL2023 before tests
 #
 # See docs/SYNC_STATUS.md §"Upstream Perl sync audit" for the CI texlive
 # evidence (texlive-binaries 2023.20230311.66589 on Ubuntu noble).
+#
+# CI-parity package set: Ubuntu-noble CI installs
+#   texlive texlive-latex-extra texlive-science
+#   texlive-lang-{german,french,greek,cyrillic,european}
+# which map to TL2023 collections:
+#   collection-latexextra     collection-mathscience
+#   collection-lang{german,french,greek,cyrillic,european}
+#   collection-fontsrecommended  collection-fontsextra  collection-pictures
+# INSTALL_CI_PACKAGES=1 runs these via tlmgr before the probe banner.
 
 set -euo pipefail
 
@@ -28,6 +39,20 @@ fi
 # Front-load the TL2023 bin so kpsewhich/latex/pdflatex resolve to 2023
 # binaries; core rust-libxml / system libs unchanged.
 export PATH="${TL2023_BIN}:${PATH}"
+
+# Optional CI-parity package bootstrap. Safe to re-run: tlmgr install is
+# idempotent, skips already-installed packages, and is bounded by the
+# tlnet-final snapshot.
+if [ "${INSTALL_CI_PACKAGES:-0}" = "1" ]; then
+  echo "=== Installing CI-equivalent TL2023 collections ==="
+  "${TL2023_BIN}/tlmgr" install \
+    collection-latexextra collection-mathscience \
+    collection-langgerman collection-langfrench \
+    collection-langgreek collection-langcyrillic collection-langeuropean \
+    collection-fontsrecommended collection-fontsextra collection-pictures
+  echo "=== tlmgr install done ==="
+  echo
+fi
 
 # Announce what we're using so the test output is self-documenting.
 # IEEEtran.cls (and similar probe targets) may be missing from a minimal
