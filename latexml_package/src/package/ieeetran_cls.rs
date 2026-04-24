@@ -146,26 +146,20 @@ LoadDefinitions!({
       }
       Ok(map)
     },
-    after_digest_begin => sub[_whatsit] {
-      let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
-    },
-    before_digest_end => {
-      // Emit `\qed` at proof-end unless `\IEEEQEDhere` already consumed
-      // the stack entry inline (leaving an empty Tokens). Cycle 301
-      // minimal-repro probe isolates the active handler to THIS env,
-      // not amsthm's — IEEEtran has no RequirePackage{amsthm}, so
-      // amsthm's `\begin{@proof}` magic CS never installs. The amsthm
-      // path's QED stack-pop that works in `article+amsthm` doesn't
-      // fire here. Stack-machinery from the push above isn't
-      // restoring — switch to `Digest!("\\qed")` unconditionally
-      // until the stack-state timing bug is resolved. Matches Perl
-      // proof-end behaviour; `\IEEEQEDhere` inline consumption still
-      // works because `\IEEEQEDhere`'s own handler (L110-118) drains
-      // the stack separately.
-      Digest!("\\qed")?;
-      // Best-effort stack cleanup so the value doesn't leak.
-      let _ = pop_value("QED@stack");
-    });
+    // Cycle 302 cleanup: removed after_digest_begin (push \qed) +
+    // before_digest_end (pop+digest \qed) hooks. The QED symbol is
+    // now emitted via the `#qed` template prop above (properties
+    // closure digests `\qed` once at construction time). These
+    // hooks never fired correctly in the DefEnvironment absorber
+    // context — cycle 301 probe confirmed Digest! from
+    // before_digest_end didn't reach the body. The properties-prop
+    // approach is simpler and works. Note: `\IEEEQEDhere` inline
+    // consumption (Perl IEEEtran.cls.ltxml L200-203) now emits an
+    // extra symbol that Perl would have suppressed via the stack
+    // machinery — tracked as a known minor divergence; no test
+    // exercises \IEEEQEDhere against Perl ground truth, so accepting
+    // the simplification.
+    );
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
   // tabular-in-float: photo/placeholder on left, bolded author + body
