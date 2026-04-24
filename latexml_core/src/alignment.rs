@@ -400,7 +400,10 @@ impl Alignment {
     bgroup(); // Grouping around CELL!
     // Note: a VERY round-about way of tracking the column spanning!
     assign_value("alignmentStartColumn", self.current_column_number(), None);
-    let _colspec = self.next_column();
+    // Propagate `?` so a TooManyErrors Fatal (e.g. from a runaway
+    // `&` storm in a malformed alignment, paper 1112.6246) actually
+    // aborts rather than getting silently swallowed by `let _ =`.
+    let _colspec = self.next_column()?;
     set_align_group_count(1000000);
     self.in_column = true;
     Ok(())
