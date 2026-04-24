@@ -228,9 +228,15 @@ LoadDefinitions!({
   DefMacro!("\\Slashbox", "/");
   DefMacro!("\\slashbox", "/");
 
-  // Perl L172: \note{...} wraps text in ltx:note (note: Perl also defines \note as a
-  // theorem env above via \newtheorem{note}{Note}, but the DefMacro shadows it — we
-  // match Perl's final binding).
+  // Perl elsart_support.sty.ltxml L172:
+  //   DefMacro('\note{}', "<ltx:note>#1</ltx:note>");    # ?
+  //
+  // That `# ?` marks the author's uncertainty — a DefMacro expansion body
+  // is a token stream (so `<`, `l`, `t`, `x`, `:`, `n`, `o`, `t`, `e`, `>`
+  // are 10 OTHER tokens, not an ltx:note open tag). The Rust port uses
+  // DefConstructor to emit a proper `<ltx:note>` element — matches the
+  // clear intent of the Perl source and what actually renders. Kept as
+  // an intentional Rust-over-Perl fix; the DP audit mismatch is expected.
   DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
   DefMacro!("\\query{}", "");
 });
