@@ -17,6 +17,12 @@ LoadDefinitions!({
   // porting TeXDelimiter as a ParameterType would collapse them back to
   // audit-clean shape. Current forwarding to \mathopen/\mathclose + \big/\Big
   // preserves the visible delimiter rendering.
+  //
+  // Intentional divergence (WISDOM #44 class: blocked-on-parameter-type):
+  // these 8 DefConstructor → DefMacro flips are a single-root-cause cluster
+  // — porting TeXDelimiter closes all 8 at once. Meanwhile the \big/\Big
+  // expansion keeps delimiter sizing authentic even if emission is not
+  // <ltx:XMWrap open=.../>. Audit counts 8 flips; all 8 share this root.
   DefMacro!("\\biglb", "\\mathopen\\big");
   DefMacro!("\\bigrb", "\\mathclose\\big");
   DefMacro!("\\Biglb", "\\mathopen\\Big");
