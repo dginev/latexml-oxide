@@ -99,10 +99,15 @@ LoadDefinitions!({
   // passthrough. The visual width "smashing" is cosmetic.
   DefMacro!("\\smashoperator[]{}", "#2");
 
-  // \adjustlimits — Perl L180-199: two subscripted limit operators with aligned
-  // depth/height. The afterDigest computes max depth/height — cosmetic only.
-  // We use the simple macro form since the DefConstructor structure causes
-  // cascading diffs from scriptpos='mid' attributes.
+  // \adjustlimits — Perl mathtools.sty.ltxml L180-199 is a
+  // DefConstructor emitting `<ltx:XMApp>` with `scriptpos='mid'` +
+  // aligned-depth/height attributes computed in afterDigest. Rust uses
+  // a simpler DefMacro expanding to `#1_{#3}#4_{#6}` because the
+  // DefConstructor form caused cascading `scriptpos='mid'` diffs that
+  // propagate through every descendant XMApp's baseline calculation,
+  // and the depth/height alignment is cosmetic-only (both math-
+  // rendering backends ignore it). Intentional DefConstructor →
+  // DefMacro kind divergence (WISDOM #44).
   DefMacro!("\\adjustlimits{}{}{}{}{}{}", "#1_{#3}#4_{#6}");
 
   DefConstructor!("\\SwapAboveDisplaySkip", "");

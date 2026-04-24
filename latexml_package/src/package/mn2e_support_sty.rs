@@ -75,8 +75,12 @@ LoadDefinitions!({
   DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
 
-  // Acknowledgements — Perl L95
-  DefConstructor!("\\bsp", "");
+  // Acknowledgements — Perl L186 defines `\bsp` as DefMacro('' )
+  // (silent expand-to-nothing). Rust had DefConstructor with empty
+  // template, which would emit a whatsit in the digest tree — a
+  // visible no-op, but needlessly heavyweight. DefMacro matches
+  // Perl's kind + leaves no trace in the digest stream.
+  DefMacro!("\\bsp", "");
   Let!("\\ackn", "\\acknowledgments");
   DefMacro!("\\acknowledgments", "\\section*{Acknowledgments}");
 
@@ -132,7 +136,18 @@ LoadDefinitions!({
   DefMacro!("\\na", "New A");
   DefMacro!("\\nar", "New A Rev.");
 
-  // Bold Greek — Perl L66-97
+  // Bold Greek — Perl mn2e_support.sty.ltxml L66-97.
+  // Perl L66: `DefConstructor('\mn@boldsymbol{}', '#1', bounded => 1,
+  //   requireMath => 1, font => { forcebold => 1 })` — a bounded
+  // constructor that forces bold font on its argument.
+  // Rust short-circuits to `\boldsymbol{#1}` (amsmath) which already
+  // does the same `bounded + forcebold` work via its own
+  // DefConstructor. The trampoline is kind-wise a DefMacro rather
+  // than the font-forcing DefConstructor, but the resolved emit is
+  // observationally identical (same XMApp+XMTok role='NUMBER' bold
+  // + nested XMArg wrapping). Intentional DefConstructor → DefMacro
+  // kind divergence (WISDOM #44) — delegating to the existing
+  // `\boldsymbol` is simpler than re-implementing the bold-font glue.
   DefMacro!("\\mn@boldsymbol{}", "\\boldsymbol{#1}");
   DefMacro!("\\balpha", "\\mn@boldsymbol{\\alpha}");
   DefMacro!("\\bbeta", "\\mn@boldsymbol{\\beta}");
