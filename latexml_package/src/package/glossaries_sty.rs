@@ -204,6 +204,11 @@ fn gls_plural_text(key: &str) -> String {
 }
 
 LoadDefinitions!({
+  // Perl glossaries.sty.ltxml L19: RequirePackage('xspace').
+  // \glspostlinkhook (L44) expands to \xspace, and many acronym-first-use
+  // paths invoke \xspace, so the package must be loaded up front.
+  RequirePackage!("xspace");
+
   // ======================================================================
   // Options
   // ======================================================================
