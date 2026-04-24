@@ -400,6 +400,27 @@ LoadDefinitions!({
   // Perl L349: \shave{#1} → #1 (sibling of \botshave/\topshave).
   DefMacro!("\\shave{}", "#1");
 
+  // Perl amsppt.sty.ltxml L460-495: \@bibfield and friends are the
+  // formatted-bib-entry field-routing dispatcher. Rust doesn't
+  // implement the \@fill@bibitem consumer that collects these
+  // fields, so each routed entry degrades to just its trailing
+  // "label text" part. \@end@bibfield is a bare marker; \@bibfield
+  // takes a type and swallows content until the next \@end@bibfield
+  // or top-level break.
+  DefMacro!("\\@end@bibfield", "");
+  DefMacro!("\\@bibfield{}", "");
+  // The routed entries, Perl L460-493. Expansion after stub:
+  // \key → "\@end@bibfield\@bibfield{key}" → ""  (field consumed).
+  // \MR  → "\@end@bibfield\@bibfield{mathreview}MR " → "MR ".
+  // \AMSPPS → "AMS-PPS ". \CMP → "CMP ".
+  DefMacro!("\\key", "\\@end@bibfield\\@bibfield{key}");
+  DefMacro!("\\no", "\\@end@bibfield\\@bibfield{refnum}");
+  DefMacro!("\\inbook", "\\@end@bibfield\\@bibfield{inbook}");
+  DefMacro!("\\procinfo", "\\@end@bibfield\\@bibfield{proceedingsinfo}");
+  DefMacro!("\\MR", "\\@end@bibfield\\@bibfield{mathreview}MR ");
+  DefMacro!("\\AMSPPS", "\\@end@bibfield\\@bibfield{ams-preprint}AMS-PPS ");
+  DefMacro!("\\CMP", "\\@end@bibfield\\@bibfield{CMP}CMP ");
+
   // Perl L169: \spreadlines {Dimension} — line-spacing dimension
   // consumer, no output (DefConstructor with empty emission).
   DefMacro!("\\spreadlines{}", "");
