@@ -931,6 +931,17 @@ LoadDefinitions!({
     }
   );
 
+  // Perl latexml.sty.ltxml L209-222: \lxAddAnnotation / \lxWithAnnotation
+  // add RDFa-ish annotations to the current / enclosing node via the
+  // `addAnnotations` helper. That helper isn't ported to Rust yet (see
+  // latexml_sty.rs:855 "Track separately" for \@lxDefMathDeclare, same
+  // family). Ship arg-consuming stubs so documents invoking
+  // \lxAddAnnotation{key=val,...} or \lxWithAnnotation{…}{body} don't
+  // hit undefined-CS. The {body} arg passes through for \lxWithAnnotation
+  // so the visible content is preserved; the annotation itself is dropped.
+  DefMacro!("\\lxAddAnnotation RequiredKeyVals", "");
+  DefMacro!("\\lxWithAnnotation RequiredKeyVals {}", "#2");
+
   // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
   // document's xml:id via a plain TeX `\def` of the internal
   // \thedocument@ID command that \begin{document}'s constructor
