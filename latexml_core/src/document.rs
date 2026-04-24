@@ -1675,21 +1675,10 @@ impl Document {
         && (node_type == Some(NodeType::DocumentNode)
           || (node_type == Some(NodeType::ElementNode) && !can_contain(&self.node, "#PCDATA")))
       {
-        if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && text.contains('\u{2003}') {
-          let nname = with_node_qname(&self.node, |n| n.to_string());
-          let cc = can_contain(&self.node, "#PCDATA");
-          eprintln!(
-            "DEBUG open_text SKIP spaces: text={:?} node_type={node_type:?} node={nname} can_contain_pcdata={cc}",
-            text
-          );
-        }
         return Ok(None);
       }
     }
     if matches!(&font.family.as_deref(), Some("nullfont")) {
-      if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && text.contains('\u{2003}') {
-        eprintln!("DEBUG open_text SKIP nullfont: text={:?}", text);
-      }
       return Ok(None);
     };
     Debug!(
@@ -1925,20 +1914,6 @@ impl Document {
   fn open_text_internal(&mut self, text: &str) -> Result<Node> {
     if text.is_empty() {
       return Ok(self.node.clone());
-    }
-    if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && text.contains('\u{2003}') {
-      let nt = self.node.get_type();
-      let nn = with_node_qname(&self.node, |n| n.to_string());
-      let has_ns = HAS_NONSPACE_RE.is_match(text);
-      let cc = if nt == Some(NodeType::ElementNode) {
-        can_contain(&self.node, "#PCDATA")
-      } else {
-        false
-      };
-      eprintln!(
-        "DEBUG open_text_internal: text={:?} node_type={nt:?} node={nn} has_nonspace={has_ns} can_contain={cc}",
-        text
-      );
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.

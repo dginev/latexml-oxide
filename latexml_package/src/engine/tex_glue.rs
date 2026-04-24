@@ -72,11 +72,6 @@ LoadDefinitions!({
       Warn!("unexpected", "kern", s!("Lost hskip in SVG {length}"));
     } else {
       let spaces = dimension_to_spaces(length);
-      if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() {
-        let parent = document.get_node();
-        let pname = document::with_node_qname(parent, |n| n.to_string());
-        eprintln!("DEBUG hskip absorb: length={length:?} spaces={:?} len={} parent={pname}", spaces, spaces.len());
-      }
       document.absorb_string(&spaces, &SymHashMap::default())?;
     }
   },

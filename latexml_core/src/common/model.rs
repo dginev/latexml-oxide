@@ -797,11 +797,7 @@ pub(crate) fn compute_indirect_model_aux(
     // sub-recursion `text → picture → #PCDATA` inserted 50 first and the
     // direct `text → #PCDATA` path was skipped, forcing the auto-open
     // path to pick `<ltx:picture>` instead of `<ltx:text>`.
-    let prior = desc
-      .entry_sym(kid)
-      .or_default()
-      .get_sym(start)
-      .copied();
+    let prior = desc.entry_sym(kid).or_default().get_sym(start).copied();
     if let Some(prior_d) = prior {
       if prior_d >= desirability {
         continue;
