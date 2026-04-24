@@ -269,11 +269,19 @@ LoadDefinitions!({
       whatsit.set_property("linecolor", Stored::from(linecolor));
     });
 
-  // slashbox/backslashbox compatibility (Perl uses complex \edef to build keyvals)
-  RawTeX!(r"
-\def\slashbox{\@ifnextchar[{\@slashbox}{\diagbox[dir=SW]}}
-\def\@slashbox[#1]{\diagbox[dir=SW,width=#1]}
-\def\backslashbox{\@ifnextchar[{\@backslashbox}{\diagbox[dir=NW]}}
-\def\@backslashbox[#1]{\diagbox[dir=NW,width=#1]}
-");
+  // slashbox / backslashbox compatibility — Perl diagbox.sty.ltxml L177-188.
+  // Perl takes TWO optional args: `\slashbox[<width>][<font>]{a}{b}`, both
+  // empty by default. The `\if.\detokenize{#i}.` guard turns each optional
+  // into the corresponding keyval segment (`,width=#1` or `,font=#2`) or
+  // the empty string when absent. Previous Rust translation used a
+  // single-optional `\def`+`\@ifnextchar` pair and silently dropped the
+  // font optional; align with Perl by taking both optionals directly.
+  DefMacro!(
+    "\\slashbox[][]{}{}",
+    r"\if.\detokenize{#1}.\def\lx@temp@width{}\else\def\lx@temp@width{,width=#1}\fi\if.\detokenize{#2}.\def\lx@temp@font{}\else\def\lx@temp@font{,font=#2}\fi\diagbox[dir=SW\lx@temp@width\lx@temp@font]{#3}{#4}"
+  );
+  DefMacro!(
+    "\\backslashbox[][]{}{}",
+    r"\if.\detokenize{#1}.\def\lx@temp@width{}\else\def\lx@temp@width{,width=#1}\fi\if.\detokenize{#2}.\def\lx@temp@font{}\else\def\lx@temp@font{,font=#2}\fi\diagbox[dir=NW\lx@temp@width\lx@temp@font]{#3}{#4}"
+  );
 });
