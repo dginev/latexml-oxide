@@ -1401,3 +1401,50 @@ downstream-needed xml:ids (e.g. `ltx:figure`, `ltx:note`); those are
 handled by their own dispatch branches and already register properly.
 The Math skip is load-bearing specifically because XM* descendants are
 an ar5iv-preload artifact.
+
+## #49 `paralists_test` failure: test-harness vs binary path DOM divergence
+
+**Symptom:** `cargo test --release --tests -p latexml paralists_test`
+fails with "actual 401 lines, expected 389 lines, 12 extra." Extra
+lines look like another enumerate item at first glance, but are
+actually `<picture xml:id="S0.Ik.ik.pic1"><text>…</text></picture>`
+wrappers around the 3 `inparaenum` item bodies (lines 16–82).
+
+**Reproducer:**
+
+```bash
+# Save actual DOM from test-harness path
+LATEXML_SAVE_ACTUAL=1 cargo test --release --tests -p latexml paralists_test
+diff /tmp/latexml_actual_paralists.xml latexml_oxide/tests/structure/paralists.xml
+# → 42 diff lines, 12 picture/text/picture-close changes
+
+# Binary path — NO picture wrapping, matches expected 389 lines
+cargo run --release --bin latexml_oxide -- latexml_oxide/tests/structure/paralists.tex > /tmp/paralists_out.xml
+diff /tmp/paralists_out.xml latexml_oxide/tests/structure/paralists.xml
+# → exits 0, no diff
+```
+
+**Root cause (partial):** Unknown. NOT a test-parallelism pollution
+issue (reproduces with `--test-threads=1`). NOT about `include_comments`
+alone (binary with `--nocomments` also matches expected). The test
+harness at `latexml_oxide/src/util/test.rs:108-179` differs from binary
+by calling `state::set_bindings_dispatch(latexml_package::dispatch)` +
+`state::add_class_binding_names(...)` between `Core::new` and
+`convert_file` — somehow this path produces a DOM that wraps
+inline-enumerate item bodies in pictures. Picture IDs follow the
+`.pic1` convention; presumably something in the inparaenum
+`mode=>"internal_vertical"` + `OptionalUndigested` + `enter_horizontal`
+implicit flip is triggering a picture-environment dispatch.
+
+**When to apply:** When investigating paralists_test, start by comparing
+the saved-actual XML to the expected — NOT by re-reading the "DIFF
+line" output which looks like extra items. The 12-line delta is
+picture/text wrappers only. The regression is orthogonal to paralist
+item-handling: same `inparaenum` through binary emits zero pictures.
+
+**Next step for a dedicated session:** diff the DOM-construction trace
+between the binary's `latexml_oxide::run` flow and the test harness's
+`process_texfile` flow, bisecting on the `state::*` calls and Core
+option differences. Or: add a `LATEXML_TRACE_PICTURE=1` env to log
+every `<picture>` node insertion and see what caller emits them during
+the test run.
