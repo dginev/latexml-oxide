@@ -29,17 +29,16 @@ LoadDefinitions!({
   DefMacro!("\\pause", "");
   DefMacro!("\\alt{}{}", "#1");
 
-  // Perl beamer.cls.ltxml L796-798: \uncover / \visible / \invisible
-  // dispatch via \alt to semantic inline-block markers. The markers at
-  // L718-737 emit <ltx:inline-block class='ltx_visible'> / _invisible /
-  // _uncovered / _covered / _alert wrappers. Without the markers,
-  // post-processors stripping overlays can't distinguish visible text
-  // from what would have been hidden. Perl TODO at L716 notes the
-  // classes aren't yet consumed downstream, but shipping them preserves
-  // the semantic hook for future CSS theming.
-  DefMacro!("\\visible",   "\\alt{\\beamer@visible}{\\beamer@invisible}");
-  DefMacro!("\\uncover",   "\\alt{\\beamer@uncovered}{\\beamer@covered}");
-  DefMacro!("\\invisible", "\\alt{\\beamer@invisible}{\\beamer@visible}");
+  // Perl beamer.cls.ltxml L796-798 dispatches \visible/\uncover/
+  // \invisible via \alt to the \beamer@{visible,uncovered,…}
+  // inline-block markers, but that routing needs the BeamerAngled
+  // parameter type + \beamer@ifnextcharospec overlay dispatcher Rust
+  // hasn't ported. Keep the body-passthrough stubs for now — the
+  // markers below are still defined and usable directly by advanced
+  // beamer styles that invoke them without angle-spec preprocessing.
+  DefMacro!("\\visible{}",   "#1");
+  DefMacro!("\\uncover{}",   "#1");
+  DefMacro!("\\invisible{}", "#1");
 
   DefMacro!("\\beamer@visible{}",   "\\beamer@visible@begin{#1}\\beamer@visible@end");
   DefConstructor!("\\beamer@visible@begin", "<ltx:inline-block class='ltx_visible'>");
@@ -218,14 +217,12 @@ LoadDefinitions!({
   DefMacro!("\\setjobnamebeamerversion",  "");
 
   // Misc commands
-  // Perl beamer.cls.ltxml L810-813 wraps `\alert{…}` in `\alertenv` which
-  // threads through `\beamer@alerted@begin` / `@end` — the semantic
-  // inline-block marker ported above. Route through that instead of a
-  // bare \textbf so downstream CSS can style ltx_alert independently of
-  // bold, and authoring `\setbeamercolor{alerted text}{…}` can be
-  // honoured later without re-porting the call site.
-  DefMacro!("\\alert OptionalMatch:<> {}",
-    "\\beamer@alerted@begin{#2}\\beamer@alerted@end");
+  // Perl beamer.cls.ltxml L810-813 wraps \alert in \alertenv which threads
+  // through \beamer@alerted@begin/end (inline-block markers defined
+  // above). Routing through those requires BeamerAngled overlay parsing
+  // (unported), so keep the \textbf fallback — the markers remain defined
+  // and usable directly by styles that invoke them without angle-spec.
+  DefMacro!("\\alert OptionalMatch:<> {}", "\\textbf{#2}");
   DefMacro!("\\structure OptionalMatch:<> {}", "#2");
   DefMacro!("\\emph OptionalMatch:<> {}", "\\textit{#2}");
   DefMacro!("\\AtBeginSection[]{}", "");
