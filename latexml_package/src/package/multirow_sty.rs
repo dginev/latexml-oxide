@@ -47,11 +47,20 @@ LoadDefinitions!({
   });
   // \multirow[vpos]{nrows}[bigstruts]{width}[fixup]{content}
   //
-  // Perl multirow.sty.ltxml L38 wraps content in `\hbox{\multirowsetup #6}`
-  // and digests the whole thing. The \hbox forces text mode so nested
-  // `$…$` cleanly switches into math — otherwise in array cell context
-  // (outer math), the inner `$` toggles math OFF, landing the content in
-  // text mode with script errors. arxiv 1004.2626 Table 6 was the witness.
+  // Perl multirow.sty.ltxml L19 defines `\multirow` as DefPrimitive
+  // whose sub body reads the Alignment column, computes rowspan, and
+  // digests the content inline. Rust uses DefMacro instead so that
+  // the content can be wrapped in `\hbox{\multirowsetup #6}` at gullet
+  // expansion time — the \hbox forces text mode so nested `$…$` cleanly
+  // switches into math; without it, inside array-cell (outer math)
+  // context the inner `$` toggles math OFF, landing content in text
+  // mode with script errors (arxiv 1004.2626 Table 6 was the witness).
+  //
+  // Intentional DefPrimitive → DefMacro kind divergence (WISDOM #44).
+  // The rowspan/colspec computation moved into `\lx@multirow@setup`,
+  // a paired DefPrimitive that runs after gullet expansion. Observable
+  // XML remains identical to the Perl port for well-formed input, and
+  // strictly better (no script-mode bleed) for malformed input.
   DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]{}",
     "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\multirowsetup #6}");
 });
