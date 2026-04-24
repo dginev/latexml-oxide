@@ -68,15 +68,6 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
            Pre-session regression from ~session 128 pgfsys/tikz work. \
            Deferred pending tikz dimension-calculation audit."
         ),
-        "paralists" => Some(
-          "test-harness vs binary path DOM divergence (WISDOM #49). \
-           The CLI (`latexml_oxide` binary) produces correct output; \
-           only the test harness wraps `inparaenum` item bodies in \
-           `<picture>` elements. Not test-parallelism (reproduces with \
-           --test-threads=1). Deferred to a dedicated bisection session \
-           on the state::* + Core option differences between \
-           Converter::convert and util::test::process_texfile."
-        ),
         _ => None,
       };
       let attrs = if let Some(reason) = ignored {

@@ -785,11 +785,27 @@ pub(crate) fn compute_indirect_model_aux(
   let tag_contents: Vec<SymStr> = get_tag_contents(tag);
 
   for kid in tag_contents {
-    // Perl Document.pm L217: `next if $::DESC{$kid}{$start}`. Any prior
-    // visit wins, so don't recompute — the bookkeeping is keyed on (kid,
-    // start) and collisions pick the earliest (best) path by sort order.
-    if desc.entry_sym(kid).or_default().contains_key_sym(&start) {
-      continue;
+    // Memoise on (kid, start) to bound recursion in cyclic schemas, but
+    // retain the *maximum* desirability observed across paths — the
+    // outer loop in compute_indirect_model picks the highest-scoring
+    // starting tag, so the score stored here must reflect the best path,
+    // not the first one the hashmap iteration happened to surface.
+    //
+    // The prior "first visit wins" behavior (WISDOM #49) caused paralists
+    // test-harness runs to assign `desc[#PCDATA][ltx:text] = 50` when
+    // `contents(text)` iterated `ltx:picture` before `#PCDATA`: the
+    // sub-recursion `text → picture → #PCDATA` inserted 50 first and the
+    // direct `text → #PCDATA` path was skipped, forcing the auto-open
+    // path to pick `<ltx:picture>` instead of `<ltx:text>`.
+    let prior = desc
+      .entry_sym(kid)
+      .or_default()
+      .get_sym(start)
+      .copied();
+    if let Some(prior_d) = prior {
+      if prior_d >= desirability {
+        continue;
+      }
     }
 
     if start != pin!("") {

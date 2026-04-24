@@ -1402,49 +1402,49 @@ handled by their own dispatch branches and already register properly.
 The Math skip is load-bearing specifically because XM* descendants are
 an ar5iv-preload artifact.
 
-## #49 `paralists_test` failure: test-harness vs binary path DOM divergence
+## #49 Indirect-model memoisation must keep the max desirability, not the first
 
-**Symptom:** `cargo test --release --tests -p latexml paralists_test`
-fails with "actual 401 lines, expected 389 lines, 12 extra." Extra
-lines look like another enumerate item at first glance, but are
-actually `<picture xml:id="S0.Ik.ik.pic1"><text>…</text></picture>`
-wrappers around the 3 `inparaenum` item bodies (lines 16–82).
+**Symptom observed as:** `paralists_test` failing in the test-harness
+while the CLI binary (`latexml_oxide`) passed — `inparaenum` item
+bodies wrapped in `<picture xml:id="…pic1">` under test, but not via
+the bin. Earlier drafts of this entry blamed a harness vs binary
+divergence; that was wrong.
 
-**Reproducer:**
+**Actual root cause:** `latexml_core::common::model::compute_indirect_model_aux`
+memoised `desc[kid][start]` on *first visit* and skipped any later
+path. In the LaTeXML schema both `ltx:text` (autoOpen 1.0) and
+`ltx:picture` (autoOpen 0.5) are valid containers for `#PCDATA`, and
+`ltx:text` itself lists `ltx:picture` among its allowed children. When
+the recursion explored `ltx:text → ltx:picture → #PCDATA` before the
+direct `ltx:text → #PCDATA` child (which happens whenever the
+`HashSet`-backed `contents(ltx:text)` iteration yields `ltx:picture`
+first), it inserted `desc[#PCDATA][ltx:text] = 50` — the path
+desirability after picture's 0.5 attenuation — and blocked the 100
+score from the direct child. In the outer ranking loop at
+`state.rs::compute_indirect_model` the stored 50 tied with
+`desc[#PCDATA][ltx:picture] = 50`, and alphabetical sort put picture
+first, so `imodel[inline-item][#PCDATA] = ltx:picture`. Process hash
+seed determined iteration order, so the bin and test binaries picked
+different outcomes on the same input.
+
+**Fix:** Replace the "skip if already present" memoisation with a
+"skip only if prior ≥ current" check so max-desirability wins
+regardless of iteration order (model.rs ~L790). Remove WISDOM #49's
+old claim and the corresponding paralists ignore entry in
+`testable.rs`.
+
+**Reproducer (historical):**
 
 ```bash
-# Save actual DOM from test-harness path
-LATEXML_SAVE_ACTUAL=1 cargo test --release --tests -p latexml paralists_test
+# Pre-fix: either the bin or the test binary would produce the picture
+# wrap depending on the process hash seed.
+LATEXML_SAVE_ACTUAL=1 cargo test --release --tests -p latexml paralists_test --include-ignored
 diff /tmp/latexml_actual_paralists.xml latexml_oxide/tests/structure/paralists.xml
-# → 42 diff lines, 12 picture/text/picture-close changes
-
-# Binary path — NO picture wrapping, matches expected 389 lines
-cargo run --release --bin latexml_oxide -- latexml_oxide/tests/structure/paralists.tex > /tmp/paralists_out.xml
-diff /tmp/paralists_out.xml latexml_oxide/tests/structure/paralists.xml
-# → exits 0, no diff
 ```
 
-**Root cause (partial):** Unknown. NOT a test-parallelism pollution
-issue (reproduces with `--test-threads=1`). NOT about `include_comments`
-alone (binary with `--nocomments` also matches expected). The test
-harness at `latexml_oxide/src/util/test.rs:108-179` differs from binary
-by calling `state::set_bindings_dispatch(latexml_package::dispatch)` +
-`state::add_class_binding_names(...)` between `Core::new` and
-`convert_file` — somehow this path produces a DOM that wraps
-inline-enumerate item bodies in pictures. Picture IDs follow the
-`.pic1` convention; presumably something in the inparaenum
-`mode=>"internal_vertical"` + `OptionalUndigested` + `enter_horizontal`
-implicit flip is triggering a picture-environment dispatch.
-
-**When to apply:** When investigating paralists_test, start by comparing
-the saved-actual XML to the expected — NOT by re-reading the "DIFF
-line" output which looks like extra items. The 12-line delta is
-picture/text wrappers only. The regression is orthogonal to paralist
-item-handling: same `inparaenum` through binary emits zero pictures.
-
-**Next step for a dedicated session:** diff the DOM-construction trace
-between the binary's `latexml_oxide::run` flow and the test harness's
-`process_texfile` flow, bisecting on the `state::*` calls and Core
-option differences. Or: add a `LATEXML_TRACE_PICTURE=1` env to log
-every `<picture>` node insertion and see what caller emits them during
-the test run.
+**When to apply:** Any auto-open regression where two openable tags
+compete for the same child (e.g. `ltx:text` vs `ltx:picture`,
+`ltx:p` vs `ltx:para` in `_CaptureBlock_`). Check that the indirect
+model returns the *maximum*-scoring intermediate, not the
+first-inserted one. Add a sorted tag iteration if determinism is
+needed beyond desirability ranking.
