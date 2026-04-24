@@ -466,6 +466,25 @@ fn index_color_series(name: &str, p: usize) -> Color {
   }
 }
 
+/// Perl xcolor.sty.ltxml L403-409: if the optional `[type]` argument
+/// equals "ps", emit an Info and return false so the caller skips the
+/// definition. Otherwise return true. Non-"ps" types (empty, "named",
+/// "ful", ...) all pass through.
+fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<bool> {
+  if let Some(t) = type_opt {
+    let s = gullet::do_expand(t)?.to_string();
+    if s == "ps" {
+      Info!(
+        "ignored",
+        macro_name,
+        s!("Ignoring definition of postscript color in {macro_name}")
+      );
+      return Ok(false);
+    }
+  }
+  Ok(true)
+}
+
 /// Perl: ParseXColor($models, $specs, $tomodel)
 fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
   let specs = specs.trim().trim_matches(|c| c == '{' || c == '}').trim();
@@ -626,7 +645,7 @@ LoadDefinitions!({
 
   // Perl: DefPrimitive('\XC@definecolor[]{}[]{}{}', sub { ... });
   DefPrimitive!("\\XC@definecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
-    // TODO: checkNoPostscript
+    if !check_no_postscript(type_opt, "\\XC@definecolor")? { return Ok(Vec::new()); }
     let name_str = do_expand(name)?.to_string();
     let models_str = do_expand(models)?.to_string();
     let specs_str = do_expand(specs)?.to_string();
@@ -646,6 +665,7 @@ LoadDefinitions!({
   // primitive. Rust collapses directly to the primitive (WISDOM #40 —
   // direct-call simplification of an expand-to-alias indirection).
   DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
+    if !check_no_postscript(type_opt, "\\XC@providecolor")? { return Ok(Vec::new()); }
     let name_str = do_expand(name)?.to_string();
     let key = s!("color_{name_str}");
     if state::with_value(&key, |v| v.is_some()) {
@@ -665,7 +685,8 @@ LoadDefinitions!({
 
   // \colorlet[type]{name}[tomodel]{color_expr}
   // Perl: DefPrimitive('\colorlet[]{}[]{}', sub { ... ParseXColor(undef, $colordesc, $tomodel) ... })
-  DefPrimitive!("\\colorlet[]{}[]{}", sub[(_type_opt, name, tomodel_opt, colordesc)] {
+  DefPrimitive!("\\colorlet[]{}[]{}", sub[(type_opt, name, tomodel_opt, colordesc)] {
+    if !check_no_postscript(type_opt, "\\colorlet")? { return Ok(Vec::new()); }
     let name_str = do_expand(name)?.to_string();
     let colordesc_str = do_expand(colordesc)?.to_string();
     let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
@@ -677,7 +698,8 @@ LoadDefinitions!({
   });
 
   // \definecolorset[type]{model_list}{head}{tail}{set_spec}
-  DefPrimitive!("\\definecolorset[]{}{}{}{}", sub[(_type_opt, models, head, tail, specset)] {
+  DefPrimitive!("\\definecolorset[]{}{}{}{}", sub[(type_opt, models, head, tail, specset)] {
+    if !check_no_postscript(type_opt, "\\definecolorset")? { return Ok(Vec::new()); }
     let models_str = do_expand(models)?.to_string();
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
@@ -700,7 +722,8 @@ LoadDefinitions!({
   Let!("\\preparecolorset", "\\definecolorset");
 
   // \providecolorset
-  DefPrimitive!("\\providecolorset[]{}{}{}{}", sub[(_type_opt, models, head, tail, specset)] {
+  DefPrimitive!("\\providecolorset[]{}{}{}{}", sub[(type_opt, models, head, tail, specset)] {
+    if !check_no_postscript(type_opt, "\\providecolorset")? { return Ok(Vec::new()); }
     let models_str = do_expand(models)?.to_string();
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
