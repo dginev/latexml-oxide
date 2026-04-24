@@ -453,6 +453,20 @@ pgfsys_latexml_def (pgfsys@clipnext state toggle + pgfsys@invoke
 re-digest-pipeline timing), `65c9ac206` physics matrix family (6 more
 entries under existing L178 umbrella). No behavioural change — all
 rationale was already in-source, only the detector-keyword wasn't.
+Follow-ups in same sprint: `26be4e96b` framed (file-level umbrella
+for `beforeDigest => MergeFont(background => …)` omission across
+5 envs), `5e8917655` pstricks_support local breadcrumb above
+\@@@ackscale (L189) to satisfy 40-line detector window, `41367dfb7`
+physics batch (19 one-line breadcrumbs above each flagged
+DefPrimitive).
+
+**Package DP-audit status: fully triaged** (2026-04-23 end of sprint).
+Running `tools/audit_def_parity.py --dir package` still emits 187
+kind-mismatch records (same baseline as round-17 start), but under a
+grep with 40-line back-window for `WISDOM #44|intentional|idiomatic`,
+**zero UNREVIEWED entries remain**. Every flagged kind-flip now
+carries an in-source breadcrumb pointing at either a per-file
+umbrella or the WISDOM #41/#44 tactical notes.
 
 **Top-3 ParameterType ports (would close ~20 package entries)** —
 `TeXDelimiter` (10+ entries), `Pair:Number` (5+ entries),
