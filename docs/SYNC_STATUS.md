@@ -74,14 +74,29 @@ tlmgr):
 - cargo test --release --tests --test-threads=1: **all 14 test suites
   000_hello through 40_math pass**. First failure lands in
   50_structure::IEEE_test.
-- `IEEE_test` diff: Rust (TL2023) emits equation tags `(6a)(6b)` where
-  Perl (TL2023) + reference XML produce `(6)(7)`. The Rust port of
-  `\IEEEyessubnumber` / `\IEEEyesnumber` incorrectly keeps sub-equation
-  mode persistent across rows even for the non-star one-shot variant.
-  Source: `latexml_package/src/package/ieeetran_cls.rs:201-217` —
-  treat the `OptionalMatch:*` case correctly but the `EQUATIONROW_TAGS`
-  per-row reset that Perl does (clearing the sub-counter after the
-  next `\\`) is missing.
+- `IEEE_test` diff: Rust (TL2023) emits equation tags `(6a)(6b)…
+  S2.E8.E2` where Perl (TL2023) emits `(1)…(9)(10a)…`, and the
+  reference XML has yet a *third* numbering scheme `(6)(7)(8)(9)…`.
+  So **all three disagree** — the reference XML was captured from
+  a historical Rust state, and both current Rust and current Perl
+  under TL2023 have drifted from it (in different directions).
+- Under TL2025 (my default local) Rust emits a 4th numbering scheme
+  with equations stopping at `S2.E14` where the reference runs to
+  `S2.E17` — same test, different failure mode. IEEE_test has been
+  silently red in CI and local for multiple commits; the earlier
+  "false-alarm IEEE_test regression" conclusion was wrong.
+- Fix requires focused investigation of `\IEEEyesnumber` /
+  `\IEEEyessubnumber` state machine + `EQUATIONROW_TAGS` per-row
+  reset alignment with Perl (sources: Perl IEEEtran.cls.ltxml
+  L263-285, Rust `latexml_package/src/package/ieeetran_cls.rs:173-
+  226`). Candidate Rust-side misses:
+    - Perl resets `$$tags{counter} = 'subequation'` for ONE row
+      (the next `\\` clears $tags), then falls back to the
+      `numbering` counter. Rust may be persisting the subequation
+      counter across row boundaries.
+    - The IEEE.xml snapshot needs a matched refresh once the
+      binding is correct, per the deferred note in the source at
+      ieeetran_cls.rs:232.
 - All other 50_structure tests passing under TL2023 (confirmed by
   re-running the single file: abstract/acro/amsarticle/app/apps/article/
   authors/autoref/badabstract/beforeafter/bibsect/book/changectr/
