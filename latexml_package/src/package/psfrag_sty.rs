@@ -25,7 +25,11 @@ LoadDefinitions!({
   // \psfrag — stores fragment for later overlay — Perl L46-55
   // NOT a constructor since args should not be digested yet
   DefPrimitive!("\\psfrag OptionalMatch:* Semiverbatim [][][][]{}", None);
-  DefConstructor!("\\lx@delayed@psfrag OptionalMatch:* Semiverbatim [][][][]{}", "");
+  // Perl L55: alias => '\psfrag' so the reversion `tex=` attribute
+  // serializes back to the author-facing `\psfrag` rather than the
+  // internal `\lx@delayed@psfrag` name.
+  DefConstructor!("\\lx@delayed@psfrag OptionalMatch:* Semiverbatim [][][][]{}", "",
+    alias => "\\psfrag");
 
   // Scan control — Perl L57-64.
   // Perl DefConstructor(...afterDigest {save_psfrag(cs); AssignValue(psfrag_scan=>0/1)});
