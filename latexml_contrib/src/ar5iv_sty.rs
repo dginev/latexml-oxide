@@ -2,9 +2,16 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   // Perl: PassOptions('latexml', 'sty', ...) + RequirePackage('latexml')
+  // `localrawstyles` (INCLUDE_STYLES => 'searchpaths') enables raw .sty
+  // loading but restricts the fallback to the user's SEARCHPATHS — i.e.
+  // the paper's own bundle directory, not system-wide texmf. This is the
+  // intended mode for archival conversion: paper-local helper .sty files
+  // (mst-stylefile.sty, harvard.sty, etc.) resolve, but stray texmf
+  // packages with unexpected TeX-only semantics don't silently leak in.
+  // Perl ref Package.pm L2674 + L2135.
   latexml_core::binding::content::pass_options("latexml", "sty", vec![
     s!("ids"),
-    s!("rawstyles"),
+    s!("localrawstyles"),
     s!("bibconfig=bbl,bib"),
     s!("nobreakuntex"),
     s!("magnify=1.2"),

@@ -43,46 +43,53 @@ thread_local! {
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 pub struct InputDefinitionOptions {
   /// an optional extension (such as "sty")
-  pub extension:     Option<Cow<'static, str>>,
+  pub extension:        Option<Cow<'static, str>>,
   /// package options to pass into the loaded library
-  pub options:       Vec<String>,
+  pub options:          Vec<String>,
   /// Tokens to process after the definition is loaded
-  pub after:         Tokens,
+  pub after:            Tokens,
   /// flag to forbid raw TeX sources
-  pub notex:         bool,
+  pub notex:            bool,
   /// flag to forbid errors ?
-  pub noerror:       bool,
+  pub noerror:          bool,
   /// flag to forbid binding dispatch
-  pub noltxml:       bool,
+  pub noltxml:          bool,
   /// collection of (package) options to process when loading the dependency
-  pub withoptions:   Option<Vec<String>>,
+  pub withoptions:      Option<Vec<String>>,
   /// flag to handle options, or ignore them
-  pub handleoptions: bool,
+  pub handleoptions:    bool,
   /// flag to process in .cls mode (default: false)
-  pub as_class:      bool,
+  pub as_class:         bool,
   /// flag to indicate reading the file raw in Gullet
-  pub raw:           bool,
+  pub raw:              bool,
   /// flag to allow reloading a previously loaded definitions file
-  pub reloadable:    bool,
+  pub reloadable:       bool,
   /// flag: set @ catcode to LETTER during loading (default true).
   /// Set to false for packages like xy.tex that need @ to stay as OTHER.
-  pub at_letter:     bool,
+  pub at_letter:        bool,
+  /// When set, raw-file lookup is restricted to the user-supplied
+  /// SEARCHPATHS (SOURCEDIRECTORY + graphicspaths), skipping the
+  /// kpsewhich fallback into system texmf. Matches Perl Package.pm's
+  /// `searchpaths_only => 1` — enabled by the `localrawstyles` option
+  /// to latexml.sty. Perl ref: Package.pm L2135, L2674.
+  pub searchpaths_only: bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
     InputDefinitionOptions {
-      extension:     None,
-      options:       Vec::new(),
-      after:         Tokens!(),
-      notex:         false,
-      noerror:       false,
-      noltxml:       false,
-      raw:           false,
-      reloadable:    false,
-      withoptions:   None,
-      handleoptions: false,
-      as_class:      false,
-      at_letter:     true,
+      extension:        None,
+      options:          Vec::new(),
+      after:            Tokens!(),
+      notex:            false,
+      noerror:          false,
+      noltxml:          false,
+      raw:              false,
+      reloadable:       false,
+      withoptions:      None,
+      handleoptions:    false,
+      as_class:         false,
+      at_letter:        true,
+      searchpaths_only: false,
     }
   }
 }
@@ -356,7 +363,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           forbid_ltxml:      options.noltxml,
           notex:             false,
           ext_type:          options.extension.as_ref().cloned(),
-          search_paths_only: false,
+          search_paths_only: options.searchpaths_only,
         }),
       )
     } else {
@@ -412,7 +419,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           forbid_ltxml:      options.noltxml,
           notex:             false,
           ext_type:          options.extension.as_ref().cloned(),
-          search_paths_only: false,
+          search_paths_only: options.searchpaths_only,
         }),
       )
     } else {
@@ -1128,6 +1135,17 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   {
     options.notex = Some(true);
   }
+  // Perl Package.pm L2674: top-level \RequirePackage can be limited to
+  // local sources via searchpaths_only. Triggered by the `localrawstyles`
+  // option to latexml.sty (sets `INCLUDE_STYLES => 'searchpaths'`).
+  // Only applies when raw TeX is allowed (notex==false); otherwise the
+  // gate is moot since find_file won't search on-disk anyway.
+  if !options.searchpaths_only
+    && !matches!(options.notex, Some(true))
+    && lookup_string("INCLUDE_STYLES") == "searchpaths"
+  {
+    options.searchpaths_only = true;
+  }
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
@@ -1145,6 +1163,7 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     as_class: options.as_class,
     noltxml: options.noltxml.unwrap_or(false),
     notex: options.notex.unwrap_or(false),
+    searchpaths_only: options.searchpaths_only,
     after: options.after,
     ..InputDefinitionOptions::default()
   });
@@ -1393,11 +1412,15 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // .cls to "succeed" the load prevents the OmniBus fallback that provides
   // generic frontmatter / counter / theorem bindings.
   let notex_default = !lookup_bool("INCLUDE_CLASSES");
+  // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
+  // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
+  let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
     after: after.clone(),
     notex: notex_default,
+    searchpaths_only,
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
@@ -1633,7 +1656,13 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     //   return $path; }
     // When notex is set, don't search for the raw TeX file via kpsewhich.
     // This prevents non-TeX files (e.g. .lua) from being loaded as raw TeX.
-    if options.notex {
+    //
+    // Additionally, when `search_paths_only` is set (from Perl Package.pm's
+    // `searchpaths_only => 1`, enabled by the `localrawstyles`/`localrawclasses`
+    // options to latexml.sty), skip the kpsewhich fallback into system texmf.
+    // This restricts raw .sty/.cls lookup to the user-supplied SEARCHPATHS
+    // (i.e. the paper's own bundle directory), matching Perl ref L2135.
+    if options.notex || options.search_paths_only {
       None
     } else {
       pathname::kpsewhich(&[file])
