@@ -201,4 +201,22 @@ LoadDefinitions!({
   DefMacro!("\\yellow", "\\color{yellow}");
   DefMacro!("\\magenta", "\\color{magenta}");
   DefMacro!("\\cyan", "\\color{cyan}");
+
+  // Rotation wrappers — Perl pstricks_support.sty.ltxml L1002-1008.
+  // Perl runs `ackTransform(...)` in before_digest to track the
+  // transform for PSTricks post-processing (which Rust doesn't do —
+  // pstricks is DVI-only here, documented at file-top WISDOM #44
+  // class). Drop the before_digest and emit the <ltx:g> element
+  // directly; visual result is identical under HTML/MathML backend.
+  DefConstructor!("\\rotateleft{}",  "<ltx:g transform='rotate(90)'>#1</ltx:g>",
+    bounded => true);
+  DefConstructor!("\\rotateright{}", "<ltx:g transform='rotate(-90)'>#1</ltx:g>",
+    bounded => true);
+  DefConstructor!("\\rotatedown{}",  "<ltx:g transform='rotate(180)'>#1</ltx:g>",
+    bounded => true);
+  // Note: `\scalebox` is left to graphics.sty's fully-featured
+  // DefConstructor — pstricks's Perl override only swaps in its own
+  // post-processing tracker (`\@@scalebox` → `\@@@scalebox`) which is
+  // the DVI-only path we already omit above via the `\@@@ackscale`
+  // no-op stub.
 });
