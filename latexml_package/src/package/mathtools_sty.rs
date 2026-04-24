@@ -559,7 +559,8 @@ LoadDefinitions!({
         let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
         crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
       }
-    }
+    },
+    reversion => "\\begin{multlined}#1\\end{multlined}"
   );
   // Perl: \multlined[][] → \@multlined@tmp{name=multlined,...}\@@multlined\lx@begin@alignment
   // The \ifx/#1/ pattern: if #1 is empty, /==/ is true and vattach is omitted.
