@@ -183,7 +183,10 @@ LoadDefinitions!({
   //   \lx@physics@operator, \lx@physics@operatorP, \lx@physics@ReIm,
   //   \qqtext, \qcc, \lx@physics@diff, \lx@physics@deriv,
   //   \ket, \bra, \lx@physics@qm@product, \expectationvalue,
-  //   \matrixelement (~16 entries total)
+  //   \matrixelement
+  //   + matrix family: \identitymatrix, \xmatrix, \paulimatrix,
+  //   \diagonalmatrix, \antidiagonalmatrix, \lx@physics@mat
+  //   (~22 entries total; DP-audit flags all of them intentionally)
   //
   // Perl defines each as a DefConstructor that runs custom digest-
   // time size-reading + delimiter-reading, then emits the fenced
