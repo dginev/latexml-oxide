@@ -78,6 +78,13 @@ LoadDefinitions!({
   // infrastructure, so the dedup is disabled (conditional never fires,
   // setpar is a no-op, newpar always takes the else branch). Downstream
   // callers only use the PAR-marker path, which still emits correctly.
+  //
+  // Intentional divergence (WISDOM #44 class: blocked-on-missing-state
+  // primitive): the \lx@algo@setpar DefPrimitiveI → DefMacro flip is
+  // the only observable footprint of the disabled dedup — when the
+  // setPrefix/getPrefix pair is implemented in Rust, this reverts
+  // cleanly to a DefPrimitive that sets the `didpar` prefix. DP-audit
+  // flags the single L82 entry.
   DefConditional!("\\if@lx@algo@par SkipSpaces");
   DefMacro!("\\lx@algo@setpar", "");
   DefMacro!("\\lx@algo@newpar{}{}", "#2");
