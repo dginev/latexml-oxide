@@ -146,9 +146,16 @@ LoadDefinitions!({
       let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
     },
     before_digest_end => {
+      // Pop-and-digest the QED token stacked at env-begin so `∎` appears
+      // at proof-end (unless `\IEEEQEDhere` consumed it inline, leaving
+      // an empty Tokens). Using `Digest!` macro rather than
+      // `stomach::digest(...)` plain — the latter ran but returned a
+      // digested result that never reached the body stream; the
+      // `Digest!` path threads through the current-env absorber so the
+      // QED symbol lands inside <ltx:proof>.
       if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack") {
         if !qed.is_empty() {
-          stomach::digest(qed)?;
+          Digest!("\\qed")?;
         }
       }
     });
@@ -450,14 +457,15 @@ LoadDefinitions!({
     enter_horizontal => true, reversion => "\\qed");
   Let!("\\proof", "\\IEEEproof");
   Let!("\\endproof", "\\endIEEEproof");
-  // Override amsthm_sty.rs:220's `\begin{proof}` → `\begin{@proof}` magic CS
-  // so `\begin{proof}` routes into IEEEproof (bold-italic header) rather than
-  // amsthm's default proof env (italic-only header). Without this, the
-  // `\proof → \IEEEproof` Let above is bypassed because the magic
-  // `\begin{proof}` CS in the `\begin{}` handler short-circuits the
-  // lookup before the alias resolves.
-  Let!("\\begin{proof}", "\\begin{IEEEproof}");
-  Let!("\\end{proof}",   "\\end{IEEEproof}");
+  // IEEEtran proofs route through amsthm's `\@proof` / `\end@proof`
+  // machinery (the magic `\begin{proof}` CS from amsthm_sty.rs:220 —
+  // `\begin{proof}` → `\begin{@proof}`). We re-override `\th@proof`
+  // here so the amsthm header-font is bold-italic (Perl ships
+  // `\textbf{\textit{Proof:}}` under IEEEtran, producing
+  // font="bold italic"). Keeping amsthm's env path also gives us the
+  // QED symbol emission at proof-end for free — it's already wired
+  // through amsthm's `\end@proof` before_digest stack-pop.
+  RawTeX!(r"\def\th@proof{\def\thm@headfont{\bfseries\itshape}\def\thm@bodyfont{\normalfont}}");
 
   // Biography aliases
   Let!("\\biography", "\\IEEEbiography");
