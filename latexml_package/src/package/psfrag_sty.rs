@@ -34,6 +34,14 @@ LoadDefinitions!({
   // hook doesn't consult that list yet (see the L24-28 TODO note), so
   // skipping it is not observable. When that hook lands, extend these
   // to also append the CS invocation to saved_psfragments.
+  //
+  // Intentional divergence (WISDOM #44 class: afterDigest-only no-op
+  // side effect): both \psfragscanon/off Perl DefConstructors emit
+  // nothing to the DOM — their entire effect is an afterDigest
+  // AssignValue. DefPrimitive is the idiomatic Rust shape for a
+  // pure-state-toggle CS with no XML emission; DefConstructor would
+  // only add an empty constructor string and be strictly equivalent.
+  // Audit counts 2 DefConstructor → DefPrimitive flips.
   DefPrimitive!("\\psfragscanon", {
     AssignValue!("psfrag_scan" => 1i32);
   });
