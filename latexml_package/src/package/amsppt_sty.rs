@@ -333,6 +333,24 @@ LoadDefinitions!({
   DefMacro!("\\@thickfracwithdelims {}{} Token Number {}{}",
     "\\genfrac{#1}{#2}{#4}{}{#5}{#6}");
 
+  // Perl AmSTeX.pool L34: \AmSTeX — logo constructor; render as plain text.
+  DefMacro!("\\AmSTeX", "AMSTeX");
+  // Perl L175-184: page/line/math break hints — all empty (layout-only).
+  DefMacro!("\\bigpagebreak", "");
+  DefMacro!("\\allowlinebreak", "");
+  DefMacro!("\\allowmathbreak", "");
+  DefMacro!("\\allowdisplaybreak", "");
+  DefMacro!("\\allowdisplaybreaks", "");
+  // Perl L270-284: pass-through math-font wrappers. Perl uses
+  // DefConstructor with `bounded => 1, requireMath => 1` to scope
+  // the font change; Rust simplifies to the identity DefMacro since
+  // the body already carries the math-mode context.
+  DefMacro!("\\Cal{}", "#1");
+  DefMacro!("\\italic{}", "#1");
+  DefMacro!("\\boldkey{}", "#1");
+  // Perl L395: \botaligned = \aligned[b] (bottom-vertically-aligned).
+  DefMacro!("\\botaligned", "\\aligned[b]");
+
 
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
