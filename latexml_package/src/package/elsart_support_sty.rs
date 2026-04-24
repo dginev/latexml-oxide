@@ -7,6 +7,15 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("elsart_support_core");
 
+  // Perl elsart_support.sty.ltxml L23-24:
+  //   if (LookupValue('@amsthm')) { RequirePackage('amsthm'); }
+  // Papers that pass the `amsthm` class option get amsthm's
+  // \newtheorem{…} machinery; without it, elsart's theorem-like
+  // environments fall through to the plain-stub defaults below.
+  if state::lookup_bool_sym(pin!("@amsthm")) {
+    RequirePackage!("amsthm");
+  }
+
   // Theorem stubs (if amsthm not loaded)
   DefMacro!("\\theoremstyle{}", "");
   DefMacro!("\\qed", "\\ltx@qed");
