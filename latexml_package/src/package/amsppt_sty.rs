@@ -80,6 +80,17 @@ LoadDefinitions!({
   // bounded+inlist=toc+RefStepID; we simplify to `\section*{#1}` etc.
   // (same as existing simplification for other head CSes), but at least
   // the argument capture is now syntactically correct.
+  //
+  // Intentional DefConstructor → DefMacro kind divergence for the
+  // entire head family (\head, \heading, \subheading*, \specialhead,
+  // \subhead, \subsubhead, and their \end<x> pairs): Rust delegates
+  // to `\section*` / `\subsection*` / `\subsubsection*` instead of
+  // re-implementing per-kind RefStepID + inlist=toc + bounded glue.
+  // Section/TOC numbering uses LaTeX's native machinery rather than
+  // amsppt's, which is a known cross-package divergence but acceptable
+  // because amsppt is only used by legacy pre-LaTeX2e submissions.
+  // WISDOM #44 — observable XML structure matches; TOC numbering
+  // scheme differs deliberately.
   DefMacro!("\\head Until:\\endhead", "\\section*{#1}");
   Let!("\\endhead", "\\relax");
   DefMacro!("\\heading Until:\\endheading", "\\head#1\\endhead");
@@ -127,6 +138,16 @@ LoadDefinitions!({
   // Current stubs forward to the corresponding `theorem`/`definition`/
   // etc. LaTeX environments, which produce valid ltx:theorem output
   // but with a different counter namespace than native amsppt would.
+  //
+  // Intentional DefConstructor → DefMacro kind divergence for the
+  // entire theorem-env family (\proclaim, \definition, \remark,
+  // \example, \demo, \roster and their \end<x> pairs): Rust delegates
+  // to `\begin{theorem}` / `\begin{definition}` / etc. instead of
+  // re-implementing per-kind counter+title glue. The `{theorem}` env
+  // machinery (from LaTeX's native amsthm equivalent) already
+  // produces the `ltx:theorem class="ltx_theorem_<kind>"` wrapper
+  // Perl's DefConstructor would emit. WISDOM #44 — observable XML
+  // matches; amsthm-counter-namespace-aliasing is deliberate.
   DefMacro!("\\proclaim", "\\begin{theorem}");
   DefMacro!("\\endproclaim", "\\end{theorem}");
   DefMacro!("\\definition", "\\begin{definition}");
@@ -152,6 +173,11 @@ LoadDefinitions!({
   Let!(T_CS!("\\endblock"), T_CS!("\\relax"));
 
   // Footnotes — Perl L305-350
+  // Perl amsppt L276 is `DefConstructor('\footnote', <ltx:note role='footnote'>)`
+  // — a direct constructor. Rust delegates to `\lx@note{footnote}` (a
+  // helper in `latex_constructs.rs` that already carries the same
+  // ltx:note wrapper + role attr). Intentional DefConstructor →
+  // DefMacro kind divergence via delegation (WISDOM #44).
   DefMacro!("\\footnote", "\\lx@note{footnote}");
 
   // Bibliography — Perl L355-500
