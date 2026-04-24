@@ -80,14 +80,21 @@ LoadDefinitions!({
   Let!("\\ackn", "\\acknowledgments");
   DefMacro!("\\acknowledgments", "\\section*{Acknowledgments}");
 
-  // Math shortcuts — Perl L120-175
-  DefMacro!("\\la", "\\lesssim");
-  DefMacro!("\\ga", "\\gtrsim");
-  DefMacro!("\\getsto", "\\rightleftharpoons");
-  DefMacro!("\\sun", "\u{2609}");
-  DefMacro!("\\degr", "\u{00B0}");
-  DefMacro!("\\arcmin", "\u{2032}");
-  DefMacro!("\\arcsec", "\u{2033}");
+  // Math shortcuts — Perl mn2e_support.sty.ltxml L118-131,145.
+  // The Perl bindings are DefPrimitiveI for text glyphs and DefMath for
+  // math RELOPs/ARROWs — each carries the correct Unicode + role/meaning
+  // directly. A prior Rust port aliased these via DefMacro to the nearest
+  // existing LaTeX command (\la→\lesssim etc.); that aliasing was close
+  // enough for the text glyphs but wrong for \getsto (\rightleftharpoons
+  // = U+21CC, two harpoons) whereas Perl \getsto = U+21C6 (two arrows).
+  // Port to match Perl kind + exact Unicode.
+  DefPrimitive!("\\sun", "\u{2609}");
+  DefPrimitive!("\\degr", "\u{00B0}");
+  DefPrimitive!("\\arcmin", "\u{2032}");
+  DefPrimitive!("\\arcsec", "\u{2033}");
+  DefMath!("\\la", "\u{2272}", role => "RELOP", meaning => "less-than-or-similar-to");
+  DefMath!("\\ga", "\u{2273}", role => "RELOP", meaning => "greater-than-or-similar-to");
+  DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
   // Perl mn2e_support.sty.ltxml L106-109,113: \fd/\fh/\fm/\fs/\fp use \aas@fstack.
   // \aas@fstack wraps in \ensuremath so it works in both text and math contexts.
   DefMacro!("\\fd", "\\aas@fstack{d}");
