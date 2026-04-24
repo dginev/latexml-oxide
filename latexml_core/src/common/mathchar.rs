@@ -886,7 +886,7 @@ pub fn decode_math_char(
   let mut final_reversion = reversion;
   if let Some(rev) = final_reversion.clone() {
     let mut wrap = maybe_rev && !d.is_empty();
-    if state::with_value("LaTeX.pool.ltxml_loaded", |v| v.is_some()) {
+    if state::with_value("LaTeX.pool_loaded", |v| v.is_some()) {
       wrap = false;
     }
     if wrap {

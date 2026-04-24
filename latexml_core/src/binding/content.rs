@@ -322,6 +322,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
+    // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded
+    // (e.g. `color.sty_loaded`) AND `$ltxname`_loaded (`color.sty.ltxml_loaded`),
+    // where `.ltxml` is the suffix of the Perl binding file. Rust's port
+    // keeps only the former — `.ltxml` is not a suffix in the Rust world, so
+    // binding-vs-raw-tex distinction is queryable via `*_loaded` directly.
+    // See OXIDIZED_DESIGN.md. Callers of the legacy `.ltxml_loaded` form
+    // must be migrated to `_loaded`.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
     assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));

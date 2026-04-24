@@ -31,5 +31,5 @@ LoadDefinitions!({
   // aa_support pulled amsmath in implicitly. Example:
   // arXiv:astro-ph/0203101. Without this reset the re-RequirePackage
   // is a no-op and {cases} stays as the plain-TeX version above.
-  AssignValue!("amsmath.sty.ltxml_loaded" => Stored::None, Some(Scope::Global));
+  AssignValue!("amsmath.sty_loaded" => Stored::None, Some(Scope::Global));
 });

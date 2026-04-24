@@ -96,13 +96,13 @@ LoadDefinitions!({
 
   // Underline (with optional frame color from \setulcolor)
   // Perl L69-72: framecolor property is getSOULcolor('soul_ul_color'), which
-  // Perl L61-65 gates on LookupValue('color.sty.ltxml_loaded').
+  // Perl L61-65 gates on LookupValue('color.sty_loaded').
   DefConstructor!("\\textul{}",
   "<ltx:text framed='underline' framecolor='#framecolor' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
   after_digest => sub[whatsit] {
-    // Perl L63: `if (LookupValue('color.sty.ltxml_loaded')) { ... }`
-    if lookup_bool("color.sty.ltxml_loaded") {
+    // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
+    if lookup_bool("color.sty_loaded") {
       if let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
         let color_name = arena::to_string(color_sym);
         let hex = lookup_color(&color_name);
@@ -125,16 +125,16 @@ LoadDefinitions!({
 
   // Strike-out (with optional strike color from \setstcolor)
   // Perl L86-91: framecolor property is a sub that calls getSOULcolor (L61-65
-  // gated on color.sty.ltxml_loaded) and returns "text-decoration-color:HEX;"
+  // gated on color.sty_loaded) and returns "text-decoration-color:HEX;"
   // only when a framecolor comes back; otherwise empty string.
   DefConstructor!("\\textst{}",
   "<ltx:text cssstyle='#cssstyle' _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
   after_digest => sub[whatsit] {
     let mut css = String::from("text-decoration:line-through;");
-    // Perl L63: `if (LookupValue('color.sty.ltxml_loaded')) { ... }`
+    // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `if (my $color = ToString(LookupValue($name)))` — stringify at read time.
-    if lookup_bool("color.sty.ltxml_loaded") {
+    if lookup_bool("color.sty_loaded") {
       let color_name = match lookup_value("soul_strike_color") {
         Some(Stored::String(sym)) => arena::to_string(sym),
         Some(Stored::Tokens(ts)) => ts.to_string(),
@@ -160,17 +160,17 @@ LoadDefinitions!({
 
   // Highlighting — use background color (via MergeFont with bg)
   // Perl L98-101: beforeDigest calls MergeFont(background => getSOULcolor(...)),
-  // where getSOULcolor (L61-65) returns undef unless color.sty.ltxml_loaded is set.
+  // where getSOULcolor (L61-65) returns undef unless color.sty_loaded is set.
   DefConstructor!("\\lx@texthl@color{}",
   "<ltx:text _noautoclose='1'>#1</ltx:text>",
   enter_horizontal => true,
   bounded => true,
   before_digest => {
-    // Perl L63: `if (LookupValue('color.sty.ltxml_loaded')) { ... }`
+    // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `ToString(LookupValue($name))` — stringify at read time,
     // supporting either a raw-Tokens entry (from `\sethlcolor`) or the
     // initial string 'yellow' assignment (L103).
-    if lookup_bool("color.sty.ltxml_loaded") {
+    if lookup_bool("color.sty_loaded") {
       let color_name = match lookup_value("soul_hl_color") {
         Some(Stored::String(sym)) => arena::to_string(sym),
         Some(Stored::Tokens(ts)) => ts.to_string(),

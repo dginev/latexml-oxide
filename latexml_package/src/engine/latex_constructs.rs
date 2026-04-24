@@ -3551,8 +3551,9 @@ LoadDefinitions!({
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
-  // If EITHER the raw TeX or ltxml version of this file was loaded.
-  if lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}.ltxml_loaded")) {
+  // Rust divergence from Perl: we drop the `.ltxml` form (no .ltxml files
+  // exist here); the loader at binding/content.rs:326 sets only `_loaded`.
+  if lookup_bool(&s!("{path}_loaded")) {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")
