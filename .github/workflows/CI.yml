@@ -11,46 +11,31 @@ jobs:
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
-      # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM. Strategy: use
-      # every core (CARGO_BUILD_JOBS=4 implicit), rely on `mold` for
-      # fast parallel linking, and keep per-rustc memory bounded by
-      # opt-level=1 + DEBUG=0 + default codegen-units.
+      # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
-      # 1. Parallel rustc — unset CARGO_BUILD_JOBS so cargo defaults
-      #    to num_cpus (=4), using all runner cores. The earlier
-      #    f922f23b4 attempt also unset this but retained
-      #    codegen-units=256, which fragmented the dep graph into
-      #    thousands of tiny object files and REGRESSED total wall
-      #    clock. With default codegen-units (16 for release), 4 rustc
-      #    workers hit the expected ~4× compile throughput.
-      # 2. No debug info in release profile (workspace Cargo.toml sets
-      #    debug=line-tables-only; zero out entirely for CI — not needed
-      #    to run the test suite, shaves peak RAM + link time further).
+      # Repeated "hosted runner lost communication" failures (24906265758,
+      # 24908842754) were OOMs: 4 parallel rustc workers can each peak past
+      # 3 GB on the larger crates in this workspace; add the test-runner's
+      # 4 concurrent conversions (each several hundred MB, tikz/pgf spikes
+      # into the low GB range) and peak RSS exceeds the 16 GB budget. The
+      # runner stops responding, GH marks the job failed.
+      #
+      # Design: split build from test so peak-rustc RSS is released before
+      # the test workers spin up, and cap concurrency on each phase at 2.
+      # With default codegen-units=16 and opt-level=1, 2 rustc workers peak
+      # comfortably under 8 GB, and 2 test threads leaves ~8 GB headroom
+      # for tikz/pgf spikes.
+      CARGO_BUILD_JOBS: "2"
       CARGO_PROFILE_RELEASE_DEBUG: "0"
-      # 3. Fast-compile opt-level — opt-level=1 keeps codegen cheap and
-      #    is still fast enough for the test-runtime phase.
       CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
-      # 4. Default codegen-units (16 for release). The earlier
-      #    codegen-units=256 override (f922f23b4) was intended to keep
-      #    per-worker peaks bounded, but it just fragments the dep
-      #    graph into 256 tiny object files per crate — each with its
-      #    own rustc/linker overhead — for no parallelism benefit.
-      #    Default 16 is well-tuned for 2-4 core rustc invocations.
-      # 5. Strip remaining debuginfo sections — defensive w/ DEBUG=0.
       CARGO_PROFILE_RELEASE_STRIP: "debuginfo"
-      # 6. No LTO (default for `release`, explicit for clarity).
       CARGO_PROFILE_RELEASE_LTO: "false"
-      # 7. Incremental is worthless on CI (cold target dir) and costs disk.
       CARGO_INCREMENTAL: "0"
-      # 8. Fetch via CLI git (smaller memory footprint than libgit2).
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-      # 9. Use mold as the linker. GNU ld was the second-biggest driver
-      #    of link-time wall clock AND peak RAM; mold is ~2-4× faster
-      #    and streams symbols rather than slurping them, so parallel
-      #    link steps are tractable inside 16 GB. Installed in the apt
-      #    step below.
+      # mold is ~2-4× faster than GNU ld on this workspace and streams
+      # symbols rather than slurping them, keeping parallel link RSS down.
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
     steps:
@@ -64,40 +49,28 @@ jobs:
             texlive texlive-latex-extra texlive-science \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
             texlive-lang-cyrillic texlive-lang-european
-          # imagemagick = default PDF/EPS → PNG rasteriser.
-          # inkscape    = optional vector-SVG path (opt-in via
-          #               --graphics-svg-threshold-kb N on the CLI).
-          #               Runtime probes PATH and silently falls back to
-          #               `convert` if inkscape is absent, so missing it
-          #               wouldn't fail the suite — but CI covers both
-          #               paths so regressions in the SVG branch are
-          #               caught. See brucemiller/LaTeXML#902 + round-17
-          #               graphics parallelism notes.
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
       # NOTE: CI intentionally does NOT enable the `cortex` feature.
-      # That feature pulls in pericortex → zmq → zeromq-src (C library build),
-      # plus rand, chrono, tempdir, walkdir, zip v0.6 — ~15 min of extra
-      # compile time we don't need to validate the core conversion pipeline.
       # Cortex worker is a production deployment artifact, built separately.
-
-      # Rust-port equivalent of Perl's `make formats` — builds latexml_oxide
-      # once, then runs --init=latex.ltx to produce resources/dumps/latex.dump.txt
-      # against the runner's ambient texlive. The dump is NOT embedded by
-      # build.rs (it's read from disk at runtime), so the dump the test suite
-      # consumes matches the texlive the test runtime sees — not the
-      # developer-laptop-texlive-era snapshot the embedded dump used to freeze.
-      # See docs/SYNC_STATUS.md D0 for context.
       - name: make formats
         run: tools/make_formats.sh
+
+      # Build test binaries first (--no-run) so the rustc/linker RSS peak
+      # completes and is reclaimed before we spin up test workers. On a
+      # warm rust-cache hit this is a no-op; on a cold cache it's the main
+      # memory-pressure phase and isolating it from the test phase is what
+      # fits the job back inside the 16 GB runner budget.
+      - name: build test binaries
+        run: cargo test --release --tests --workspace --no-run
+
       - name: run tests
-        # --release because the suite runs many full-document conversions;
-        # dev-profile runtime is too slow even with faster compilation.
-        # --test-threads=4 uses every runner core. Each conversion's
-        # working set is a few hundred MB; 4 concurrent conversions
-        # fit inside the 16 GB budget. CLAUDE.md's thread-local state
-        # globals are per-thread so this does not cross-contaminate.
-        run: cargo test --release --tests --workspace -- --test-threads=4
+        # --test-threads=2 keeps per-thread working-set × N under the
+        # remaining 12-14 GB budget (after kernel/texlive). Each
+        # conversion's working set is typically a few hundred MB but
+        # pgf/tikz-heavy tests spike into the low GB range, so 2 threads
+        # is the conservative setting that actually completes.
+        run: cargo test --release --tests --workspace -- --test-threads=2
