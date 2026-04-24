@@ -517,8 +517,11 @@ LoadDefinitions!({
   DefMacro!("\\setenumerate Optional {}", "\\setlist[enumerate,#1]{#2}");
   DefMacro!("\\setdescription Optional {}", "\\setlist[description,#1]{#2}");
 
-  // \restartlist — Perl: enumitem.sty.ltxml L128-140
-  DefPrimitive!("\\restartlist{}", sub[(listname)] {
+  // \restartlist — Perl enumitem.sty.ltxml L128-140 uses `DefMacro` with a
+  // side-effect sub returning undef (empty expansion). Match that kind:
+  // macro-level so the reset happens during gullet expansion, consistent
+  // with how Perl dispatches `\restartlist` inside `\begin{enumerate}`.
+  DefMacro!("\\restartlist{}", sub[(listname)] {
     let listname = listname.to_string();
     let counter = match listname.as_str() {
       "enumerate" => "enum",
@@ -533,6 +536,7 @@ LoadDefinitions!({
         SetCounter!(ctr_name, Number(0));
       }
     }
+    Ok(Tokens!())
   });
 
   // Not-yet-handled bits
