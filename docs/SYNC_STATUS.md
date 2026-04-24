@@ -57,6 +57,28 @@ unblocks a residual):
   fleshing sweeps.
 - pstricks mop-up beyond what a specific residual demands.
 
+### Preamble-faithfulness audit for 1112.6246 (2026-04-24)
+
+The 1112.6246 reproducer loads 11 packages. Perl-vs-Rust audit summary:
+
+| Package | Perl L | Rust L | Verdict |
+|---|---|---|---|
+| `mn2e.cls` | 36 | 36 | ≈ parity |
+| `mn2e_support.sty` | 252 | 395→(phase-1 pending) | partial — e72861c7c ported 10 DefMath relops + 8 aliases + 3 lets + 2 `\newif`; phase-2 trim pending (task #3) |
+| `times.sty` | 19 | 3 | ✅ faithful (intentional no-op) |
+| `ulem.sty` | 47 | 29 | ✅ faithful (9/9 entries match; Rust collapses multi-line templates) |
+| `soul.sty` | 122 | 175 | ⚠️ divergent — missing `color.sty.ltxml_loaded` guard; `\setstcolor`/`\sethlcolor` stringify vs raw-token (task #4) |
+| `color.sty` | 148 | 328 | ⚠️ divergent — `\definecolor`/`\DefineNamedColor` drop reversion Invocation; `lookup_color_obj` unknown-name downgraded Error→Warn and doesn't persist Black; default-color scope hard-coded Global (task #9) |
+| `array.sty` | 74 | 137 | ⚠️ divergent — `\newcolumntype` drops `opt` field; `\extrarowheight` via `TeX!` not `DefRegister!` (task #6) |
+| `colortbl.sty` | 95 | 169 | ⚠️ divergent — `\@userowcolor` silently drops on parse failure; `\@setrowcolor` drops `!hasAttribute` guard; `\@setcellcolor` gains Rust-only after_digest; `tabular_row_color` stored as string not Color (task #5) |
+| `graphicx.sty` | 75 | 493 | ⚠️ heavily divergent (6× bloat) — `GraphixDimension(s)` keyval types unregistered; extra `page` keyval; misplaced `\rotatebox`; drops `mode=>"restricted_horizontal"`; ~330L inlined `util::image` logic should relocate (task #7) |
+| `natbib.sty` | 674 | 1085 | ⚠️ divergent — `\setcitestyle` hand-rolled instead of `RequiredKeyVals` delegation; duplicated key→CITE_* dispatch; Rust-only `curly` keyval + `\harvardurl` extras (task #10) |
+| `amssymb.sty` | 365 | 353 | ≈ close — not deep-audited |
+
+**Parallel port cycle in progress (2026-04-24):** 7 port agents running
+in isolated worktrees against tasks #3-7, #9, #10. Results will be
+aggregated into this doc as branches land.
+
 **Zero-ignore invariant.** No test may remain `#[ignore]`. If a
 failure surfaces that cannot be resolved in the current cycle,
 document it in `docs/KNOWN_PERL_ERRORS.md` or fix it — never escape
