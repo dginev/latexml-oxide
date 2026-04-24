@@ -2028,7 +2028,16 @@ LoadDefinitions!({
       crate::engine::latex_constructs::after_float(whatsit);
     });
 
-  // Block listing constructor — holds the actual content + base64 data
+  // Block listing constructor — holds the actual content + base64 data.
+  //
+  // Audit breadcrumb: Perl listings.sty.ltxml L262 attaches an
+  // `afterDigest` hook that sets whatsit properties by looking up
+  // `LISTINGS_DATA_<counter>`. Rust shifts that work into a `properties`
+  // closure (runs at construction time instead of digestion time).
+  // Both populate the #lstdata / #lstmime / #lstenc template slots —
+  // observable XML identical. Intentional afterDigest → properties
+  // kind-translation so the count-diff audit (Perl 3 vs Rust 2
+  // `after_digest`) is a documented false positive.
   DefConstructor!("\\@@listings@block {} {} {}",
     "<ltx:listing class='ltx_lstlisting' data='#lstdata' datamimetype='#lstmime' \
      dataencoding='#lstenc' dataname='#3'>#2</ltx:listing>",
