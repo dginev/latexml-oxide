@@ -18,7 +18,18 @@ matter:
 2. **10k sandbox error-free** — Perl-baseline triage (2026-04-24) on
    the five previously catalogued hard-fails:
    - **Real parity gaps** (Perl exits 0, 0 errors — Rust fails):
-     - 1112.6246 (error-cascade OOM on elsart + ?) — needs root-cause.
+     - **1112.6246** — 9-line standalone reproducer
+       (`docs/reproducers/min_1112_6246.tex`): `mn2e` class +
+       `\begin{equation}\cases{… & $a$ \cr … & $b$, }\end{equation}`
+       (missing final `\cr`) + subsequent inline `$m_1$` →
+       10001-error cascade. Perl on same input: exit 0, produces
+       clean `<XMArray>` / `<XMRow>` XML. Root cause narrowed to the
+       interaction of mn2e's `\let T_MATH → \lx@dollar@in@mathmode`
+       (mn2e_support_sty.rs:321) with `\cases{…}` alignment close
+       when last row has no trailing `\cr`. Failed fix attempt:
+       reset `MATH_ALIGN_$_BEGUN` at equation close (no effect).
+       True leak is mode-frame-level, not counter-level. See
+       [`memory/project_1112_6246_residual.md`](../memory/project_1112_6246_residual.md).
      - hep-ph0702114 (conversion_fatal: babel-french `\csname` cascade
        triggered mid-body of elsart3-1 paper) — see
        [`memory/project_babel_francais_gap.md`](../memory/project_babel_francais_gap.md).
