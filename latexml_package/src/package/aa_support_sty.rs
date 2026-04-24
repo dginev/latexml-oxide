@@ -375,6 +375,12 @@ LoadDefinitions!({
   DefMacro!("\\at", "@");
   DefMacro!("\\citeyearpar{}", "");
 
+  // Perl L348-349: \bib@field@default@adsurl — ADS URL in bibitem.
+  // Verbatim arg lets % survive (A&A adsurls often contain %26 = &).
+  // Previously unported.
+  DefConstructor!("\\bib@field@default@adsurl Verbatim",
+    "<ltx:bib-url href='#1'>ADS entry</ltx:bib-url>");
+
   // \eprint — Perl L353
   DefMacro!("\\eprint[]{}", "{\\tt\\if!#1!#2\\else#1:#2\\fi}");
 
