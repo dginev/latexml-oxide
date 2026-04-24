@@ -15,6 +15,14 @@ LoadDefinitions!({
   // cluster blocked on missing picProperties/picScale helpers — WISDOM #41
   // (same pattern as latex_constructs `\line`/`\vector`/`\oval` engine
   // entries). Kind-flip remains contingent on porting the helpers first.
+  //
+  // Intentional divergence (WISDOM #44 class: blocked-on-helper-port):
+  // until picProperties/picScale land, these 3 stubs silently consume
+  // their Pair/Pair+Float args so author-level use doesn't leak
+  // "(10,20)" into surrounding text after expansion — strictly better
+  // than Perl's undefined-macro-on-missing-helper cascade, but without
+  // the <ltx:line> / <ltx:bezier> emission Perl does with full
+  // helpers. Audit counts 3 DefConstructor → DefMacro flips here.
   DefMacro!("\\Line Pair", "");
   DefMacro!("\\Vector Pair", "");
   DefMacro!("\\Curve Pair {}", "");
