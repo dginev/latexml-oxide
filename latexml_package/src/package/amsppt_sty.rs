@@ -258,6 +258,44 @@ LoadDefinitions!({
   // Miscellaneous — Perl L480-500
   DefMacro!("\\nologo", "");
   DefMacro!("\\NoBlackBoxes", "");
+
+  // AmSTeX pool compatibility stubs — Perl AmSTeX.pool.ltxml L75-114.
+  // amsppt.sty (Perl) implicitly loads the AmSTeX pool, which provides
+  // these as author-ignorable no-ops. Rust doesn't port AmSTeX pool
+  // (~30% ported per L10 comment), so documents using bare amsppt risk
+  // undefined-CS on these formatting controls. Adding as empty stubs
+  // keeps documents compile without altering XML output.
+  DefMacro!("\\NoPageNumbers", "");
+  DefMacro!("\\BlackBoxes", "");
+  DefMacro!("\\TagsAsMath", "");
+  DefMacro!("\\TagsAsText", "");
+  DefMacro!("\\TagsOnLeft", "");
+  DefMacro!("\\TagsOnRight", "");
+  DefMacro!("\\CenteredTagsOnSplits", "");
+  DefMacro!("\\TopOrBottomTagsOnSplits", "");
+  DefMacro!("\\LimitsOnInts", "");
+  DefMacro!("\\NoLimitsOnInts", "");
+  DefMacro!("\\LimitsOnNames", "");
+  DefMacro!("\\NoLimitsOnNames", "");
+  DefMacro!("\\LimitsOnSums", "");
+  DefMacro!("\\NoLimitsOnSums", "");
+  DefMacro!("\\UseAMSsymbols", "");
+  DefMacro!("\\loadbold", "");
+  DefMacro!("\\loadeufb", "");
+  DefMacro!("\\loadeufm", "");
+  DefMacro!("\\loadeurb", "");
+  DefMacro!("\\loadeurm", "");
+  DefMacro!("\\loadeusb", "");
+  DefMacro!("\\loadeusm", "");
+  DefMacro!("\\loadmathfont", "");
+  DefMacro!("\\loadmsam", "");
+  DefMacro!("\\loadmsbm", "");
+  DefMacro!("\\boldnotloaded{}", "");
+  DefMacro!("\\galleys", "");
+  // Perl AmSTeX.pool L114: \flushpar = \par\noindent
+  DefMacro!("\\flushpar", "\\par\\noindent");
+
+
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
 
