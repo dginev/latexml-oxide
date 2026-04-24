@@ -62,6 +62,18 @@ LoadDefinitions!({
   DefRegister!("\\tocauthor" => Tokens!());
   DefRegister!("\\titrun" => Tokens!());
   DefRegister!("\\titlerunning" => Tokens!());
+  // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle{}' => Tokens())`
+  // — a Tokens-valued register with a `{}` proto, meaning the register
+  // is read/written via an argument. Rust's DefRegister! doesn't accept
+  // a `{}` proto (the macro only handles name-only register shapes),
+  // so the port uses DefMacro!("{}", "") which accepts the arg and
+  // silently discards it. Observable effect identical for all known
+  // uses: `\toctitle{…}` writes are no-ops in LaTeXML output (the TOC
+  // is rebuilt from section labels, not from per-section tokens
+  // stored in \toctitle). Intentional DefRegister → DefMacro
+  // divergence forced by the missing `{}`-proto DefRegister support
+  // (WISDOM #44). The sibling \tocauthor/\titrun/\titlerunning are
+  // proto-less, so they port as DefRegister normally.
   DefMacro!("\\toctitle{}", "");
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
