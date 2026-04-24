@@ -310,6 +310,29 @@ LoadDefinitions!({
   DefMacro!("\\spacute", "^{'}");
   DefMacro!("\\spgrave", "^{`}");
 
+  // Perl AmSTeX.pool L133-134: frontmatter bracket markers.
+  // Rust amsppt handles frontmatter via \title/\author/\abstract
+  // directly, so the outer bracket is a no-op.
+  DefMacro!("\\topmatter", "");
+  DefMacro!("\\endtopmatter", "");
+
+  // Perl L256-257: set-braces via \overbrace/\underbrace with the
+  // "label" part from before `\to` as superscript/subscript.
+  DefMacro!("\\oversetbrace Until:\\to {}",  "\\overbrace{#2}^{#1}");
+  DefMacro!("\\undersetbrace Until:\\to {}", "\\underbrace{#2}^{#1}");
+
+  // Perl L289-295: \thickfrac / \thickfracwithdelims. Perl peeks
+  // for a following `\thickness` keyword to dispatch between the
+  // `\@thickfrac` and `\frac` forms. Rust doesn't implement the
+  // `\thickness`-peek dispatch, so route directly to \frac (the
+  // no-thickness variant) — the most common case. Same for the
+  // delims variant.
+  DefMacro!("\\thickfrac", "\\frac");
+  DefMacro!("\\thickfracwithdelims{}{}", "\\fracwithdelims{#1}{#2}");
+  DefMacro!("\\@thickfrac Token Number {}{}", "\\genfrac{}{}{#2}{}{#3}{#4}");
+  DefMacro!("\\@thickfracwithdelims {}{} Token Number {}{}",
+    "\\genfrac{#1}{#2}{#4}{}{#5}{#6}");
+
 
   DefMacro!("\\redefine", "\\def");
   DefMacro!("\\define", "\\def");
