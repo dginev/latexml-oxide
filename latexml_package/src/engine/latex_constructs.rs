@@ -7847,6 +7847,33 @@ LoadDefinitions!({
     }
   );
 
+  //============================================================
+  // Picture primitives (\line, \vector, \oval, \qbezier, \bezier)
+  //============================================================
+  //
+  // Umbrella WISDOM #44 intentional divergence for the block below:
+  //
+  // Perl defines each picture primitive as
+  //   DefConstructor('\line Pair:Number {Float}', …)
+  //   DefConstructor('\vector Pair:Number {Float}', …)
+  //   DefConstructor('\oval Pair:Float []', …)
+  //   DefConstructor('\qbezier [] Pair:Number Pair:Number Pair:Number', …)
+  //   DefConstructor('\bezier {Number} Pair:Float Pair:Float Pair:Float', …)
+  // using the `Pair:Number`/`Pair:Float` parameter type, which parses
+  // the LaTeX `(x,y)` slope/position syntax directly into a pair of
+  // numbers for the constructor's args.
+  //
+  // Rust doesn't have the `Pair:*` parameter type, so each port is
+  // split into a DefMacro trampoline with
+  // `Match:( Until:, Until:) {…}` parsing the (a,b) syntax manually,
+  // followed by a hidden `\lx@pic@<name>{}{}{…}` DefConstructor that
+  // takes the 3 (or more) pre-parsed args.
+  //
+  // Audit reports 5 DefConstructor → DefMacro kind flips across
+  // \line, \vector, \oval, \qbezier, \lx@pic@bezier. All 5 carry
+  // the same rationale (missing Pair:Number parameter type), so
+  // individual entries don't re-carry the tag.
+
   // \line(slope){length} — Perl: DefConstructor('\line Pair:Number {Float}', ...)
   DefMacro!("\\line Match:( Until:, Until:) {Float}", "\\lx@pic@line{#2}{#3}{#4}");
   DefConstructor!("\\lx@pic@line{}{}{}",
