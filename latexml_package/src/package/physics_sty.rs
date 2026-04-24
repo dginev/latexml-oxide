@@ -173,21 +173,37 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
 
   //======================================================================
-  // Automatic bracing
-  // Perl: physics.sty.ltxml L132-142 — \quantity
+  // Automatic bracing — Perl physics.sty.ltxml L132-900
+  //======================================================================
   //
-  // Perl defines `\quantity` and the sister `\lx@physics@fenced` helper
-  // as DefConstructors that run custom digest-time size-reading /
-  // delimiter-reading + emit the fenced XMApp/XMDual shape directly.
-  // Rust ports both as DefPrimitives that do the size+delimiter read
-  // manually via `phys_read_size` / `phys_read_arg` / `gullet::read_arg`
-  // and unread the composed presentation back into the gullet for
-  // normal math-parser absorption. Intentional DefConstructor →
-  // DefPrimitive kind divergence for both entries (WISDOM #44): the
-  // Rust-native gullet API gives finer control over the multi-token
-  // lookahead these physics macros need, and the unread-presentation
-  // path produces the same observable XMApp/XMDual shape as Perl's
-  // direct-emit DefConstructor would.
+  // **Umbrella WISDOM #44 intentional divergence** — applies to the
+  // entire physics math-macro family below (not just \quantity):
+  //
+  //   \quantity, \lx@physics@fenced, \lx@physics@fencedII,
+  //   \lx@physics@operator, \lx@physics@operatorP, \lx@physics@ReIm,
+  //   \qqtext, \qcc, \lx@physics@diff, \lx@physics@deriv,
+  //   \ket, \bra, \lx@physics@qm@product, \expectationvalue,
+  //   \matrixelement (~16 entries total)
+  //
+  // Perl defines each as a DefConstructor that runs custom digest-
+  // time size-reading + delimiter-reading, then emits the fenced
+  // XMApp/XMDual shape directly via `DefMath`-style XML template.
+  //
+  // Rust ports each as a DefPrimitive that does the size + delimiter
+  // read manually via the `phys_read_size` / `phys_read_arg` /
+  // `gullet::read_arg` helpers (all defined in this file), composes
+  // the presentation + content + reversion tokens, and `gullet::unread`s
+  // the result for normal math-parser absorption.
+  //
+  // Rationale (WISDOM #44): the Rust-native gullet API gives finer
+  // control over the multi-token lookahead these physics macros need
+  // (TeX-level OptionalMatch of size modifiers like `\big`/`\Big`,
+  // delimiter pair peeking, XMDual reversion construction), and the
+  // unread-presentation path produces the same observable XMApp /
+  // XMDual shape as Perl's direct-emit DefConstructor. Kind-wise the
+  // audit counts ~16 DefConstructor → DefPrimitive flips in this
+  // file, all under the same rationale. Individual entries don't
+  // re-carry the WISDOM #44 tag to avoid comment noise.
 
   DefPrimitive!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
