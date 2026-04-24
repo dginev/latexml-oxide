@@ -1251,6 +1251,14 @@ pub fn def_environment(
     Some(ref emode) => {
       let emode = emode.clone();
       let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
+        // Perl Package.pm L1944-1945:
+        //   # Switch mode (w/stack frame pop), OR egroup
+        //   ($mode ? (sub { $_[0]->endMode($mode) }) : sub { $_[0]->egroup; }),
+        // endMode(mode) with no second arg defaults to noframe=0 — it DOES
+        // pop a frame. This pairs with L1902's `bgroup` + L1908's
+        // `beginMode($mode, 1)` (noframe=1, no push) on the begin side:
+        // bgroup pushes exactly one frame, beginMode writes MODE/BOUND_MODE
+        // Local into that frame, endMode pops the frame and reverts.
         end_mode(&emode)?;
         Ok(Vec::new())
       });
