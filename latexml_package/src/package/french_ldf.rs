@@ -15,6 +15,10 @@ LoadDefinitions!({
   // xspace_sty up front so those expansions resolve, matching what
   // the raw french.ldf implicitly assumes.
   RequirePackage!("xspace");
+  // Perl french.ldf.ltxml L20: load textcomp for text symbols
+  // (\textdegree, \texttrademark, etc.) that French abbreviations
+  // may reference via the raw frenchb ordinals.
+  RequirePackage!("textcomp");
 
   // \captionsfrench — the French caption strings, equivalent to what
   // babel's frenchb.ldf defines. Use \providecommand so the raw load
