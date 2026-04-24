@@ -63,6 +63,42 @@ Concrete deliverables:
 All other 10k-sandbox parity and DP-audit work is **subordinate**
 to this until CI is green.
 
+**2026-04-23 first TL2023 wrapper run results (commit 8fae71ff0 baseline).**
+Full `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`
+against a fully-populated TL2023 (2.9 GB, 594 packages + IEEEtran from
+tlmgr):
+
+- `make formats` in LaTeXML/ ran clean under TL2023 — plain_dump.pool.ltxml
+  (83 KB) + latex_dump.pool.ltxml (4.1 MB) regenerated in 10m 22s.
+  Two harmless warnings about Whatsit-in-value for box26 during dump.
+- cargo test --release --tests --test-threads=1: **all 14 test suites
+  000_hello through 40_math pass**. First failure lands in
+  50_structure::IEEE_test.
+- `IEEE_test` diff: Rust (TL2023) emits equation tags `(6a)(6b)` where
+  Perl (TL2023) + reference XML produce `(6)(7)`. The Rust port of
+  `\IEEEyessubnumber` / `\IEEEyesnumber` incorrectly keeps sub-equation
+  mode persistent across rows even for the non-star one-shot variant.
+  Source: `latexml_package/src/package/ieeetran_cls.rs:201-217` —
+  treat the `OptionalMatch:*` case correctly but the `EQUATIONROW_TAGS`
+  per-row reset that Perl does (clearing the sub-counter after the
+  next `\\`) is missing.
+- All other 50_structure tests passing under TL2023 (confirmed by
+  re-running the single file: abstract/acro/amsarticle/app/apps/article/
+  authors/autoref/badabstract/beforeafter/bibsect/book/changectr/
+  columns/crazybib/csquotes/endnote/enum/epitest/eqnums/faketitlepage/
+  fancyhdr/figure_grids/figures/filelist/floatnames/footnote — all OK).
+
+**This validates the CI-parity approach:** the TL2023-green state
+isolates IEEEtran `\IEEEyessubnumber` as the sole blocker, not a
+distributed set of environment-sensitivity failures. Fix that one
+binding + the IEEE.xml snapshot refresh noted in ieeetran_cls.rs
+L232 ("the existing snapshot captures Rust's prior fallthrough
+behavior; a faithful port needs explicit align: Left/Center/Right
+plus a matching snapshot refresh; deferred"), and CI should go green.
+
+Push gate remains in force (memory/feedback_ci_push_gate.md) until
+the IEEE_test fix lands.
+
 ### Base mission (unchanged)
 
 **Exhaustively translate Perl LaTeXML into idiomatic, faithful Rust so
