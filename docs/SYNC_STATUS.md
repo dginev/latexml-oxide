@@ -182,64 +182,30 @@ Remaining 48 long-tail entries all match the 11 patterns above.
 
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
-Three failure classes in the session-128 7898-paper sweep:
+Three failure classes in the session-128 sweep:
 
-1. **pgfkeys / raw-TeX expl3-group leaks.** The
-   `\usepackage{lipsum}\usepackage{tikz}` minimal reproducer went
-   from 988 errors to 0 after `load_tex_definitions` started
-   digesting `\ExplSyntaxOff` at EOF when a raw-.sty load left
-   expl3 active (`b0b9852bd`). Expected to clear 1511.00722 /
-   1611.04489 / 1612.08368 on next 10k sweep.
-
-   **Residual on 1611.04489 (MEMORY cycle 60 post-cec5c36a7):** 19
-   errors from 8 undefined expl3 kernel IOW-family CSes
-   (`\__kernel_iow_with:Nnn`, `\iow_wrap:nenN`, `\iow_term:n`,
-   `\l_file_search_path_seq`, `\iow_wrap:nnnN`,
-   `\__file_name_expand_end:`, `\__kernel_file_name_sanitize:n`).
-   Critical-assessment of this cluster: Perl LaTeXML has **zero
-   stubs** for these CSes (exhaustive grep); Perl relies on the raw
-   `expl3-code.tex` load. Rust's `resources/dumps/latex.dump.txt`
-   **does** contain 272 IOW-related entries — but all are blocked
-   from loading by `dump_reader.rs`'s `:`-key gate (see Long-horizon
-   "Deep dumper-reader parity audit"; the gate blocks ~8,914 M-kind
-   and ~156 PA-kind entries). So this is specifically a dump_reader
-   gate-widening problem, NOT a missing-dump-coverage or
-   missing-engine-port problem. The fix path is whichever lands
-   first: (i) the "Kernel-first discipline for dumper widening"
-   long-horizon item (port the primitives needed so the `:`-gate
-   can safely widen) or (ii) the "Deep expl3 kernel parity" item
-   (make raw expl3-code.tex load cleanly so the dump short-circuit
-   isn't needed). A naive stub-8-macros fix would be a Rust-only
-   divergence from both paths.
-
-   **Narrow IOW-only widening probed, confirmed infeasible
-   (2026-04-22):** sampled the 8 IOW/file records — all have `16:`
-   CS-token markers in their bodies (`\iow_wrap:nnnN` body has ~25
-   `\group_begin:`/`\cs_set:Npe`/`\int_set:Nn` tokens; even the
-   simplest `\l_file_search_path_seq → E \c_empty_seq … 16:\s__seq`
-   has 1 CS). None fit the existing `is_safe_colon_safe_e`
-   predicate's `!body_has_cs` requirement; re-admitting them falls
-   on the cascade-risk path Step 4/5 widening already regressed on
-   (see `dump_reader.rs:270-277`). Narrow hand-crafted rules (e.g.
-   "1-CS body where CS is a known-safe seq-struct marker") are
-   plausible but hacky; proper parity still requires the coupled
-   dumper/kernel investment.
-
-   Deeper cleanup tracked in "Deep expl3 kernel parity" under
-   Long-horizon — goal: no `SUPPRESS_*_ERRORS`, no catcode safety-
-   nets, no EOF-injection workaround. Per user round-17 directive:
-   "we want lipsum to load natively and cleanly."
+1. **pgfkeys / raw-TeX expl3-group leaks.** Fix shipped b0b9852bd
+   (`load_tex_definitions` now digests `\ExplSyntaxOff` at EOF).
+   Residual on 1611.04489: 19 errors from 8 expl3 kernel IOW-family
+   CSes (`\__kernel_iow_with:Nnn`, `\iow_wrap:n(en|nnn)N`, `\iow_term:n`,
+   `\l_file_search_path_seq`, `\__file_name_expand_end:`,
+   `\__kernel_file_name_sanitize:n`). Perl has zero stubs — relies on
+   raw `expl3-code.tex` load; Rust's dump has 272 IOW entries but
+   they're blocked by `dump_reader.rs`'s `:`-key gate. Narrow widening
+   probed 2026-04-22 — infeasible (all 8 records carry CS tokens
+   failing `is_safe_colon_safe_e`'s `!body_has_cs`). Fix path: either
+   Long-horizon "Kernel-first dumper widening" or "Deep expl3 kernel
+   parity" (raw expl3-code.tex loads cleanly). Per user round-17:
+   "lipsum should load natively and cleanly."
 2. **Math-parser pathological-ambiguity timeouts** — 1403.4135,
-   1407.5769. 500+-token formulas × 121 parse choices × ~500 ms
-   each hits the 60 s wall.
-3. **Preamble-heavy digestion timeouts** — e.g. 1210.1891 (hyperref
-   → etoolbox → kvoptions → nameref chain).
+   1407.5769.
+3. **Preamble-heavy digestion timeouts** — 1210.1891 (hyperref →
+   etoolbox → kvoptions → nameref chain).
 
-[ ] **Per-paper diagnosis method.** Run Perl with the same
-`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` flags;
-if Perl errors on the same CS it's a shared bug (skip). Otherwise
-the divergence is upstream of the named symptom — trace `.sty`/
-`.cls` option/hook machinery. Keep 1097/0 green throughout.
+[ ] **Per-paper diagnosis method.** Run Perl with same
+`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` flags; if
+Perl errors on same CS it's a shared bug (skip). Otherwise divergence
+is upstream of symptom — trace `.sty`/`.cls` option/hook machinery.
 
 ### D3. Performance corpus
 
