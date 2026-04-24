@@ -20,6 +20,10 @@ LoadDefinitions!({
   // mn2e.cls internal: base line skip (used in raw TeX class)
   DefRegister!("\\@bls" => Dimension!("12pt"));
 
+  // Perl L18-19: load dcolumn if option was set
+  if state::lookup_int("@usedcolumn") != 0 {
+    RequirePackage!("dcolumn");
+  }
   // Perl: mn2e_support.sty.ltxml L19-20 — load graphicx if option was set
   if state::lookup_int("@usegraphicx") != 0 {
     RequirePackage!("graphicx");
