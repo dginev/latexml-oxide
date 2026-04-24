@@ -340,6 +340,33 @@ LoadDefinitions!({
     AssignValue!("INCLUDE_CLASSES" => false, Scope::Global);
   });
 
+  // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
+  // a TRACING bitmap via TRACE_ALL / TRACE_PROFILE constants. Rust hasn't
+  // wired the bitmap constants (no TRACE_ALL/TRACE_PROFILE symbols in the
+  // state module), so stub these as no-op option declarations. The
+  // observable effect is that `\usepackage[tracing]{latexml}` etc. simply
+  // load latexml.sty without throwing an "unknown option" error; tracing
+  // actually kicks in via the CLI `--verbose`/`--profile` flags, not
+  // package options. Prevents load-time errors for documents that include
+  // these flags defensively.
+  DeclareOption!("tracing",     None);
+  DeclareOption!("notracing",   None);
+  DeclareOption!("profiling",   None);
+  DeclareOption!("noprofiling", None);
+
+  // Perl latexml.sty.ltxml L43-44: breakuntex / nobreakuntex toggle the
+  // SUPPRESS_UNTEX_LINEBREAKS boolean, which controls whether the `\\`
+  // backslash-newline reversion in `tex=` attributes inserts a real
+  // line break or is suppressed. Default breakuntex=true (Perl omits the
+  // flag by default; documents explicitly passing nobreakuntex enable
+  // SUPPRESS).
+  DeclareOption!("breakuntex",   {
+    AssignValue!("SUPPRESS_UNTEX_LINEBREAKS" => false, Scope::Global);
+  });
+  DeclareOption!("nobreakuntex", {
+    AssignValue!("SUPPRESS_UNTEX_LINEBREAKS" => true, Scope::Global);
+  });
+
   ProcessOptions!();
 
   // Process bibconfig keyval from options passed to latexml.sty.
