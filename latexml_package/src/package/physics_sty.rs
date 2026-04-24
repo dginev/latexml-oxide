@@ -175,6 +175,19 @@ LoadDefinitions!({
   //======================================================================
   // Automatic bracing
   // Perl: physics.sty.ltxml L132-142 — \quantity
+  //
+  // Perl defines `\quantity` and the sister `\lx@physics@fenced` helper
+  // as DefConstructors that run custom digest-time size-reading /
+  // delimiter-reading + emit the fenced XMApp/XMDual shape directly.
+  // Rust ports both as DefPrimitives that do the size+delimiter read
+  // manually via `phys_read_size` / `phys_read_arg` / `gullet::read_arg`
+  // and unread the composed presentation back into the gullet for
+  // normal math-parser absorption. Intentional DefConstructor →
+  // DefPrimitive kind divergence for both entries (WISDOM #44): the
+  // Rust-native gullet API gives finer control over the multi-token
+  // lookahead these physics macros need, and the unread-presentation
+  // path produces the same observable XMApp/XMDual shape as Perl's
+  // direct-emit DefConstructor would.
 
   DefPrimitive!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
