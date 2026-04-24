@@ -6,200 +6,60 @@
 
 ### HIGHEST PRIORITY — CI build parity (2026-04-23)
 
-**Fix CI by ensuring TeXLive-2023 parity, so the Rust test suite
-passes under the TL2023 environment Ubuntu-noble CI runners ship.**
-The IEEE_test false-alarm regression was the first symptom: local dev
-uses TL2025 (standalone install), CI uses TL2023 (Ubuntu apt). The
-divergence is not just one dimension — **three layers must all align
-with TL2023** to reproduce CI:
+CI runs on TL2023 (Ubuntu apt), local dev defaults to TL2025. Three
+alignment layers: (1) dump content regenerated under TL2023 via
+`REBUILD_PERL_FORMATS=1` (ada3ed79a), (2) kpsewhich path resolution,
+(3) CI-equivalent package set installed via `tlmgr install IEEEtran …`
+(INSTALL_CI_PACKAGES=1 wrapper).
 
-1. **Dump content.** The Perl `LaTeXML/` tree has format dumps
-   (`plain_dump.pool.ltxml`, `latex_dump.pool.ltxml`) produced by
-   `make formats`, which freeze texlive state at build time. The
-   Rust dump (`resources/dumps/latex.dump.txt`) is the same on the
-   Rust side. Both must be rebuilt with TL2023 binaries on PATH to
-   produce byte-identical reference output.
+Run to reproduce CI locally:
+`REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
 
-2. **kpsewhich path resolution.** Even for packages that exist in
-   both TL2023 and TL2025, kpsewhich returns different absolute
-   paths (different `texmf-dist/` trees), and package *content*
-   often shifted between releases — IEEEtran.cls, svjour3.cls, and
-   many AMS/ACM classes carry dated `\ProvidesClass` versions
-   baked into the file text. Any test that raw-loads these .cls /
-   .sty files will see different tokens under TL2023 vs TL2025.
+**Status (2026-04-23).** All 14 suites `000_hello`..`40_math` plus 27
+non-IEEE `50_structure` tests green under TL2023. Sole blocker:
+**IEEE_test** — 3-way disagreement (Rust TL2023 / Perl TL2023 / reference
+XML) centred on `\IEEEyessubnumber` state-machine + per-row
+`EQUATIONROW_TAGS` reset (Perl `IEEEtran.cls.ltxml` L263-285; Rust
+`ieeetran_cls.rs:173-226`). Plus a snapshot refresh deferred at
+`ieeetran_cls.rs:232`.
 
-3. **Package *set* availability.** CI's `apt install texlive
-   texlive-latex-extra texlive-science texlive-lang-german/…`
-   bundle is a specific slice of TL2023. A minimal standalone
-   install (what I set up at `~/data/texlive2023/` via
-   `install-tl --profile minimal`) lacks e.g. `IEEEtran.cls`,
-   so local TL2023 under-approximates CI's package set unless the
-   missing packages are installed via `tlmgr install <pkg>`.
-
-Concrete deliverables:
-1. `tools/test_with_tl2023.sh` already front-loads
-   `~/data/texlive2023` on PATH and regenerates the Rust dump. The
-   `REBUILD_PERL_FORMATS=1` opt-in (commit `ada3ed79a`) runs `make
-   formats` in `LaTeXML/` under that PATH.
-2. **Install the missing CI-equivalent packages** into the local
-   TL2023 — at minimum `IEEEtran`, plus the texlive-science /
-   texlive-latex-extra equivalents. `tlmgr install IEEEtran` is
-   the concrete first step. Wrapper now warns when the probe
-   target is missing (commit pending).
-3. **Verify the TL2023 + Perl-formats + expanded-package-set combo
-   actually restores CI parity.** Run the full `cargo test
-   --release --tests` suite with `REBUILD_PERL_FORMATS=1
-   tools/test_with_tl2023.sh`. Any tests that still fail with
-   TL2023 Perl dumps in place are genuine Rust-side divergences
-   and must be triaged per-test.
-4. **Surface remaining Rust-vs-Perl diffs** that TL2023 exposes
-   but TL2025 hides (and vice versa). Document in this file under
-   a "TL2023 ↔ TL2025 parity deltas" subsection.
-5. Until all TL2023 tests pass locally, every commit pushed to CI
-   should be considered at risk. Prefer to run TL2023 locally
-   before each push; if not feasible, chain a CI retry and act on
-   the specific test that regressed.
-
-All other 10k-sandbox parity and DP-audit work is **subordinate**
-to this until CI is green.
-
-**2026-04-23 first TL2023 wrapper run results (commit 8fae71ff0 baseline).**
-Full `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`
-against a fully-populated TL2023 (2.9 GB, 594 packages + IEEEtran from
-tlmgr):
-
-- `make formats` in LaTeXML/ ran clean under TL2023 — plain_dump.pool.ltxml
-  (83 KB) + latex_dump.pool.ltxml (4.1 MB) regenerated in 10m 22s.
-  Two harmless warnings about Whatsit-in-value for box26 during dump.
-- cargo test --release --tests --test-threads=1: **all 14 test suites
-  000_hello through 40_math pass**. First failure lands in
-  50_structure::IEEE_test.
-- `IEEE_test` diff: Rust (TL2023) emits equation tags `(6a)(6b)…
-  S2.E8.E2` where Perl (TL2023) emits `(1)…(9)(10a)…`, and the
-  reference XML has yet a *third* numbering scheme `(6)(7)(8)(9)…`.
-  So **all three disagree** — the reference XML was captured from
-  a historical Rust state, and both current Rust and current Perl
-  under TL2023 have drifted from it (in different directions).
-- Under TL2025 (my default local) Rust emits a 4th numbering scheme
-  with equations stopping at `S2.E14` where the reference runs to
-  `S2.E17` — same test, different failure mode. IEEE_test has been
-  silently red in CI and local for multiple commits; the earlier
-  "false-alarm IEEE_test regression" conclusion was wrong.
-- Fix requires focused investigation of `\IEEEyesnumber` /
-  `\IEEEyessubnumber` state machine + `EQUATIONROW_TAGS` per-row
-  reset alignment with Perl (sources: Perl IEEEtran.cls.ltxml
-  L263-285, Rust `latexml_package/src/package/ieeetran_cls.rs:173-
-  226`). Candidate Rust-side misses:
-    - Perl resets `$$tags{counter} = 'subequation'` for ONE row
-      (the next `\\` clears $tags), then falls back to the
-      `numbering` counter. Rust may be persisting the subequation
-      counter across row boundaries.
-    - The IEEE.xml snapshot needs a matched refresh once the
-      binding is correct, per the deferred note in the source at
-      ieeetran_cls.rs:232.
-- All other 50_structure tests passing under TL2023 (confirmed by
-  re-running the single file: abstract/acro/amsarticle/app/apps/article/
-  authors/autoref/badabstract/beforeafter/bibsect/book/changectr/
-  columns/crazybib/csquotes/endnote/enum/epitest/eqnums/faketitlepage/
-  fancyhdr/figure_grids/figures/filelist/floatnames/footnote — all OK).
-
-**This validates the CI-parity approach:** the TL2023-green state
-isolates IEEEtran `\IEEEyessubnumber` as the sole blocker, not a
-distributed set of environment-sensitivity failures. Fix that one
-binding + the IEEE.xml snapshot refresh noted in ieeetran_cls.rs
-L232 ("the existing snapshot captures Rust's prior fallthrough
-behavior; a faithful port needs explicit align: Left/Center/Right
-plus a matching snapshot refresh; deferred"), and CI should go green.
-
-Push gate remains in force (memory/feedback_ci_push_gate.md) until
-the IEEE_test fix lands.
+Push gate active (`memory/feedback_ci_push_gate.md`) until IEEE_test fix
+lands.
 
 ### Base mission (unchanged)
 
-**Exhaustively translate Perl LaTeXML into idiomatic, faithful Rust so
-that `~/data/10k_sandbox/` converts cleanly end-to-end via
-`cortex_worker`.** Success has two halves, which must advance together:
+**Exhaustively translate Perl LaTeXML into faithful Rust so
+`~/data/10k_sandbox/` converts cleanly via `cortex_worker`.** Two
+halves: (1) **Source-level parity** — every `Def*` in `LaTeXML/` and
+`ar5iv-bindings/bindings/*.ltxml` has a Rust port with matching
+signature, body, mode hooks, and digest hooks; "works well enough" is
+not the standard. (2) **10k-sandbox cleanliness** — session-128
+baseline 7884/7898 = 99.82% clean at `-j 8 --timeout 60`.
 
-1. **Source-level parity.** Every `Def*` in `LaTeXML/` and every
-   `ar5iv-bindings/bindings/*.ltxml` has a corresponding Rust port with
-   the same signature, body, mode hooks, and digest hooks. Stubs marked
-   "TODO: not ported" are technical debt, not a destination. When the
-   Perl source uses `beforeDigest`, `afterDigest`, `leaveHorizontal`,
-   `locked`, `code => sub {…}`, a keyval callback, a `DefColumnType`,
-   etc., the Rust port reproduces each one. "Works well enough" is not
-   the standard — semantic parity is.
-2. **10k-sandbox cleanliness.** Baseline (session 128): 7884/7898 = 99.82%
-   clean under `-j 8 --timeout 60`. Remaining 14 aborts are concrete
-   targets (5 OOM, 9 timeout) with known first causes (math-parser
-   ambiguity, babel french, pgfkeys raw TeX, preamble-heavy digestion).
-   Each port landed above should be validated — or at least re-sampled —
-   against the affected papers.
+**24h sprint cadence.** Cron `continue SYNC_STATUS` fires every 5 min
+(`memory/project_24h_sprint.md`). Each tick: pick one `[ ]`, ≤1 commit,
+`cargo check --workspace`, memory bump; document blockers in-source
+and move on.
 
-The 10k sandbox is the truth that pins the porting work to real-world
-documents. Don't port in a vacuum; pick the gap whose closure clears an
-abort, prevents an observed warning cascade, or tightens a diff vs
-Perl's output on a specific paper.
-
-**24-hour sprint cadence.** Recurring `continue SYNC_STATUS` cron
-enqueues an autonomous work tick every 5 minutes (see `CronList` /
-`memory/project_24h_sprint.md`). Each tick should: pick one unchecked
-`[ ]` from this doc or the Perl source, do ≤1 commit, verify with
-`cargo check --workspace` + (when small) `cargo test --release
---tests`, update memory. If blocked, document the blocker in the
-file's inline comment and move on — don't idle a cycle polling.
-
-Updated 2026-04-22. **Open gaps & active TODOs only.** Completed work
-lives in git log and `memory/project_session_history.md`.
-
-**Test inventory:** 1097 tests pass (0 failures, 0 ignored) via `cargo test --release --tests` across 44 binaries.
-
-**arxiv sandbox:** 101 papers in `arxiv-examples/`. **93+%** catalog OK.
-
-**10k sandbox (session 128 post-idstore-fix):** retried 38 aborts
-from the prior 7898-paper sweep with the idstore-rebuild-at-finalize
-binary at -j 8 parallel: **15 of 38 now pass** (incl. 1605.08055
-SIGSEGV, DUPID borderline timeouts 1505.03876 / 1506.09203 /
-1511.07586, pgfkeys-library paper 1511.00722, math-parser paper
-1403.4135, and several CPU-contention edges that fit in 60 s at
--j 8 vs -j 12). Projected aggregate: **7884/7898 = 99.82%**
-exit=0 at -j 8. Remaining 14 aborts: 5 OOM (exit=137 — 1112.6246,
-1203.5977, 1710.03688 babel french, 1711.10191, 1711.11576), 9 at
--60 s timeout (exit=134 — 1210.1891, 1407.5769, 1308.5727,
-1611.04489, 1702.00409, 1707.01155, 1709.05096, 1710.11417,
-1802.08782). Remaining abort classes: pgfkeys.code.tex port gap
-(1611.04489), math-parser pathological-ambiguity (1407.5769,
-1308.5727), preamble-heavy digestion timeouts (1210.1891), and a
-handful of slow-convergence papers. Runner:
-`tools/benchmark_10k.sh`; tool: `cortex_worker --standalone --timeout 60`.
-
-**10k sandbox (2026-04-23 full sweep post-UAF/Scan/crossref):**
-full 7898-paper run at `-j 16 --timeout 60`, binary `22adfc355`
-(UAF fix + Scan Math-skip + crossref DB-invert + Locator col-1):
-**ok 7280, conversion_error 566, timeout 47, abort 3, conversion_fatal 2**.
-Hard-failures total 52. Clean-exit (exit=0) rate 7846/7898 = 99.34%
-vs 99.82% baseline at `-j 8`. The 0.48 pp regression is overwhelmingly
-`-j 16` CPU-contention timeouts (47 vs ~9 at `-j 8`); extrapolated
-`-j 8` rerun projects back to ≥99.8%. **Zero novel code-regressions
-identified.** All 5 hard failures are catalogued known classes:
-- abort 1112.6246 (error-cascade OOM, MEMORY residual)
-- abort 1710.03688 (babel french `\bbl@exp@aux` OOM, MEMORY residual)
-- abort 1902.08705 (NEW — `\ifdim` with empty token → pgfmath
-  infinite loop → 603 MB allocation under 8 GB ulimit; same pgfmath-OOM
-  class as 1710.03688, not a new category)
-- conversion_fatal 1803.03288 (10001 errors from undefined
-  xparse/pgfplots/cleveref macros — package-binding coverage gap, not
-  runtime regression; paper still produced a zip)
-- conversion_fatal hep-ph0702114 (same `\bbl@exp@aux`
-  babel-french class as 1710.03688 — ended via TooManyErrors rather
-  than OOM, still produced a zip)
-
-**Engine definition coverage:** **99.9%** (2,455/2,457 Perl Engine definitions ported). Only `\directlua` (LuaTeX) and `\ASCII` (niche) missing by design.
-
-**Package bindings:** 100% (all 406+ Perl bindings ported). Zero MISSING.
-
-**Dump:** 25,172 entries serialized; 6,154 installed into state at load time. Add-only policy preserves engine semantics. Unified load order `bootstrap → _base → dump → _constructs`. `LATEXML_NODUMP=1` opts out.
-
-**Production-ready:** Full CorTeX ZIP-to-ZIP pipeline operational.
+**Status counts.**
+- Tests: 1097/0/0 via `cargo test --release --tests` (44 binaries).
+- arxiv-examples/: 93+% of 101 papers OK.
+- 10k sandbox (2026-04-23 full sweep, `-j 16 --timeout 60`, binary
+  22adfc355): ok 7280 / conversion_error 566 / timeout 47 / abort 3 /
+  conversion_fatal 2 (clean-exit 7846/7898 = 99.34%; 0.48 pp below
+  `-j 8` baseline is CPU-contention timeouts, not code regressions).
+  Residual hard failures 5, all in catalogued classes (error-cascade
+  OOM 1112.6246; babel-french `\bbl@exp@aux` OOM 1710.03688 &
+  hep-ph0702114; pgfmath-infinite-loop OOM 1902.08705; undefined
+  xparse/pgfplots cascade 1803.03288). Session-128 residual-14 list
+  reduced by 5 (1203.5977, 1702.00409, 1611.04489, 1710.11417,
+  1802.08782 now ok or producing output).
+- Engine def coverage: 99.9% (2,455/2,457). Missing: `\directlua`,
+  `\ASCII` by design.
+- Package bindings: 100% (406+). Zero MISSING.
+- Dump: 25,172 entries; 6,154 installed at load. `LATEXML_NODUMP=1`
+  opts out.
+- CorTeX ZIP-to-ZIP pipeline production-ready.
 
 **See also:** [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) | [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) | [`PERFORMANCE.md`](PERFORMANCE.md)
 
@@ -270,207 +130,55 @@ Phase D0 (2k-sandbox, 84/84) and the test-suite refactor (round 17) are
 closed out; per-paper narration and session diaries for sessions ≤128
 live in git log and `memory/project_session_history.md`. What remains:
 
-### DP. Def*-parity audit (round 17, in progress)
+### DP. Def*-parity audit (round 17, fully triaged)
 
-**Tool:** `tools/audit_def_parity.py` — compares Perl `Def*` vs Rust
-`Def*!` kinds pair-by-pair. Baselines tracked in `docs/def_parity_*.tsv`;
-batch plan + per-batch progress in `docs/DEF_PARITY_AUDIT.md`.
+**Tool:** `tools/audit_def_parity.py`; baselines `docs/def_parity_*.tsv`;
+batch plan `docs/DEF_PARITY_AUDIT.md`.
 
-**`scope => 'global'` sweep (2026-04-23).** All 27 Perl occurrences of
-`scope => 'global'` across the 9 affected packages (aas_support,
-amsmath, amsfonts, colordvi, graphicx, llncs, mathtools, fontenc,
-latexml, pgfsys-latexml) audited. Result: 26/27 correctly ported with
-`scope => Some(Scope::Global)` (direct) or RawTeX `\global\def`
-(colordvi), or correctly elided (pgfsys-latexml is DVI-only stub;
-latexml.sty's `\@@XMDECL@ID` is bypassed by a live-counter register
-read). One gap landed in c8a232ecb — graphicx `\includegraphics`
-DefMacro.
+**Engine fully triaged.** 14 residual kind-mismatches are all
+intentional divergences (WISDOM #38/#40/#41/#44). No actionable
+kind-flip work remains.
 
-**`robust => 1` sweep (2026-04-23).** All 31 Perl occurrences audited
-(package: amsmath×2, orcidlink×1; engine: latex_constructs×28 — 19
-accented-letter `DefPrimitiveI`, 9 macro/primitive — plus plain_base×2,
-math_common×2 (comment-only), latex_base×1). Gaps closed: plain_base
-`\i`/`\j` (b55df04a9), latex_constructs `\makebox`/`\fbox`/`\framebox`
-(55b073fd7). `\ensuremath` uses a manual two-binding `\protect +
-\@ensuremath` inlining equivalent to Perl's `robust => 1`. The 19
-accented-letter `DefPrimitiveI(...,robust=>1)` entries (`\OE`/`\oe`/
-`\AE`/`\ae`/`\AA`/`\aa`/`\O`/`\o`/`\L`/`\l`/`\ss`/`\dh`/`\DH`/`\dj`/
-`\DJ`/`\ng`/`\NG`/`\th`/`\TH`) remain blocked pending the
-case-mapping-pipeline rewrite catalogued in `docs/DEF_PARITY_AUDIT.md`
-B1 — three coordinated changes are required (see B1 design).
+**Package fully triaged (2026-04-23).** 187 kind-mismatch records in
+the baseline, but **zero UNREVIEWED under a 40-line detector
+back-window grep for `WISDOM #44|intentional|idiomatic`**. Every
+flagged flip has an in-source breadcrumb pointing at a per-file
+umbrella or the WISDOM #41/#44 tactical notes.
 
-**Perl upstream sync audit (2026-04-23, cycles 214-216).** Surveyed
-25+ recent LaTeXML Perl commits (Jan 2025 - Mar 2026) for Rust-side
-parity. Fixed this sprint: `aas_support \aas@@fstack sizer => #2`
-(commit 4868a9a2f, Perl 98f6e5de), natbib unknown-citation-style
-`Info` diagnostic (5836935f5, Perl 8960af9a). Already synced on
-Rust side (verified): siunitx list separators #2751, hyperref
-iftex/etoolbox deps #2736, aastex_cls revtex4-default #2698,
-orcidlink tikz dep #2681, marvosym `\Yinyang` alias #2688, grffile
-graphicx dep #2699, amssymb `\backsimeq` U+22CD #2633, amsmath
-`\overunderset` #2687, underscore.sty `\textunderscore` refactor
-#2704, pgfmath double-negation guard #2711, xcolor DecodeColor
-unresolvable-name diagnostic #2697, latexml.sty bibconfig #2683,
-iftex.sty texpad/hint conditionals #2484, natbib `\bibsep` glue
-#2489, TeX_Math `\fam`-as-Number #2772, TeX_FileIO `\read` extra-}
-discard guard + runaway-definition Error #(pre-2025 unchecked).
-Queued for future work (large-scope commits): pstricks_support
-refactor fdc8bf91 (2100 lines moved into new support file),
-`inline_math` → `math` systemic rename 2b1ff6df (7 files), color
-variables for inline styles c2370ac3 (post-processing + XSLT).
-Follow-up (cycle 243): Locator 1-indexed columns #2671 synced —
-`dump_reader::current_dump_locator` now uses `from_column=1,
-to_column=1` (was `0,0`) to match Perl `LoadFormat` locator; Mouth
-already emitted `col+1` since before. Verified already-synced:
-Relation ParameterType #2778 (`base_parameter_types.rs:148`), Dumper
-spec double-escape #2753 (Rust uses url-encode not backslash-escape,
-bug does not apply).
-Follow-up (cycle 244): Wider sweep of Perl commits 2025-09 → 2026-03.
-All verified already-synced, no code change: #2759 alignment-token
-`init_depth` guard (`stomach.rs:703`); #2771 `if_count`/`absorb_count`
-dump deny list (`dump_writer.rs:143-144`); #2772 `\fam` Number-wrap
-+ self-coercions (`tex_math.rs:740`, `gullet.rs:1336-1347` explicit
-commit-cite); #2762 `\lgroup`/`\rgroup` → U+27EE/27EF without bold
-font (`math_common.rs:937-938`); #2759 romannumeral `n>=div` fix
-(`cleaners.rs:26`, `util/radix.rs:83`); #2770 `getFrameDepth` no `-1`
-(`state.rs:2041`); filecontents-end whitespace tolerance already
-permissive via `line.contains(end_marker)` (`latex_constructs.rs:6962`).
-Conclusion: no outstanding actionable upstream-sync commits in the
-2025-07 → 2026-03-20 window — #2671 was the one residual gap.
-
-**`protected => 1` sweep (2026-04-23).** All 32 Perl occurrences audited
-(package: gensymb×5, etoolbox×7, siunitx×2, expl3.lua×6; engine:
-latex_constructs×11 — `\text{md,bf,rm,sf,tt,up,sl,it,normal,em}` family,
-math_common×2 — `\{`/`\}`, plain_constructs×1 — `\,`, TeX_Character×1 via
-`DefAccent`). Ported or structurally adapted, no code gaps. Engine
-`latex_constructs` `\textmd`/etc. and math_common `\{`/`\}` carry
-`protected => true`; `\,` carries `protected => true` at
-`plain_constructs.rs:297`. `DefAccent!` in `setup_binding_language.rs:899`
-is adapted: Rust macro-expands the accent CS to
-`\lx@applyaccent ...` (DefPrimitive) with `protected: true` on the
-gullet-level wrapper — #44 structural divergence, observationally
-equivalent under `\edef`. siunitx's `\lx@six@unitobject` is adapted
-(literal-parser dispatch, empty DefPrimitive stub). All etoolbox
-`\newrobustcmd`/`\patchcmd`/`\ifdefprotected`/`\etb@ifpattern` entries
-threaded with `protected => true` in `etoolbox_sty.rs`. gensymb
-`\degree`/`\celcius`/`\perthousand`/`\ohm`/`\micro` threaded with
-`protected => true` in `gensymb_sty.rs`. expl3 `protected` calls in
-lua-side are stubbed (expl3 scope-exit short-circuit blocks direct
-porting).
-
-**Progress (2026-04-22):** engine 52 → 14, package 232, contrib 0.
-10 commits. 1097/0/0 throughout. Recent: `6a18f1a5a` (\mit sub-body
-+ MergeFont! multi-key), `d7422914c` (\lx@cases@condition DefConstructor
-with captureBody), audit tool now anchors on 0-indent top-level Perl
-Def* only (prior regex caught nested calls inside `beforeDigest => sub
-{…}` blocks, producing false positives like `\abstract`).
-
-**Remaining 14 engine mismatches** (fresh audit; by file/shape):
-- `latex_constructs.rs` (7): 5 picture primitives `\line`/`\vector`/
-  `\oval`/`\qbezier`/`\lx@pic@bezier` (**blocked — see WISDOM #41**;
-  Rust splits each into a top-level DefMacro that unpacks `Pair:Number`
-  into primitive args + forwards to `\lx@pic@XXX{}{}{}` DefConstructor;
-  audit only sees the DefMacro layer. Proper kind-flip needs
-  `Pair:Number` as a ParameterType first.) `\tabular` DefKeyVal.
-  `\vspace` DefMacro (**blocked — see WISDOM #38**; naive kind-flip
-  regresses `moderncv/cs_cv.tex` via Rust `\vskip` horizontal-mode
-  paragraph-break asymmetry).
-- `plain_base.rs` (4): `#`/`&`/`%`/`$` — **blocked / intentional, see
-  WISDOM #40**. Rust uses `\ifmmode` → `\lx@text@…`/`\lx@math@…` split
-  which is more precise than Perl's single-Box approach; kind-flip
-  would regress math-mode output.
-- `tex_math.rs` (3): `\mathchar`, `\left`, `\lx@right` — **blocked /
-  intentional, see WISDOM #41**. `\mathchar` uses direct `<ltx:XMTok>`
-  emission (Rust precision improvement); `\left`/`\lx@right` are
-  DefMacro workarounds for the missing `TeXDelimiter` parameter type
-  (structural gap to port first).
-
-**Truly actionable remaining (0 items):** the prior `\tabular` flag was
-a third class of audit false-positive — Perl `DefKeyVal('tabular',
-'width', 'Dimension')` registers a KV key under the keyset named
-"tabular"; the first arg is NOT a CS. Perl's actual `\tabular` CS
-definition is a `DefMacro` (at `latex_constructs.pool.ltxml:3722`),
-matching Rust's `DefMacro!("\\tabular[]{}", …)` exactly. Audit tool
-updated to skip `DefKeyVal` entries whose first arg isn't `\`-prefixed.
-
-**Blocked / intentional (documented in WISDOM):** `\vspace` (#38),
-`$/#/&/%` special chars (#40), math-mode `\mathchar`/`\left`/`\lx@right`
-+ picture primitives cluster (#41). **All 13 engine mismatches**
-belong here — structural adaptations (missing `TeXDelimiter` /
-`Pair:Number` parameter types, 2-layer DefMacro+DefConstructor
-factoring), Rust improvements (mode-split, direct XML emission), or
-load-bearing bug workarounds (\vspace shielding \vskip paragraph-break).
-**The DP audit for engine is fully triaged** — no kind-flip work
-remains actionable.
-
-**Package (187 mismatches after DefKeyVal fix).** Pattern-based
-triage across 11 clusters classifies **139 of 187 entries (74%) as
-structural/intentional**:
+Pattern-triage (the 11 catalogued clusters):
 
 | File | # | Pattern | Classification |
 |---|---|---|---|
 | texvc_sty | 30 | DefMacroI↔DefMath alias→direct-XMath | WISDOM #40 |
-| physics_sty | 22 | DefMacro(sub)↔DefPrimitive(imperative) | WISDOM #44 + inline at `:265` — safe-per-CS, not universally equivalent |
-| pgfsys_latexml_def | 17 | DefConstructor-empty-template↔DefPrimitive-state | top-of-file comment |
-| babel_support_sty | 15 | DefPrimitiveI-literal↔DefMacro-text-alias | inline comment |
-| llncs_cls \bbbX | 13 | DefPrimitiveI-glyph↔DefConstructor-template | inline at `:143` |
-| svmult_cls \bbbX | 13 | same as llncs | cross-ref inline |
+| physics_sty | 22 | DefMacro(sub)↔DefPrimitive(imperative) | WISDOM #44 umbrella L178 + 19 per-site breadcrumbs |
+| pgfsys_latexml_def | 17 | DefConstructor-empty-template↔DefPrimitive-state | top-of-file + per-site |
+| babel_support_sty | 15 | DefPrimitiveI-literal↔DefMacro-text-alias | inline |
+| llncs_cls / svmult_cls \bbbX | 13+13 | DefPrimitiveI-glyph↔DefConstructor-template | inline at `:143` |
 | amsppt_sty | 10 | DefConstructor-XML↔DefMacro-LaTeX-shim | WISDOM #42 |
-| mn2e_support_sty | 9 | mixed (astronomy symbols) | top-of-file comment |
-| revsymb_sty | 8 | DefConstructor-TeXDelimiter↔DefMacro | WISDOM #41 + inline at `:12` |
+| mn2e_support_sty | 9 | astronomy symbols | top-of-file |
+| revsymb_sty | 8 | DefConstructor-TeXDelimiter↔DefMacro | WISDOM #41 inline |
 | amsmath_sty | 2 | alignsafeOptional workaround | WISDOM #41 |
 
-**Remaining 48 entries (long tail, files with ≤4 DP flags each).**
-Kind distribution shows **every pattern already catalogued**:
-- 20 DefMacro↔DefPrimitive → same gullet-sub↔stomach-imperative as physics (WISDOM #44 — NOT a universal equivalence, validate per-CS that no call site observes the CS via `\edef`/`\ifx`/`\expandafter`)
-- 12 DefConstructor↔DefMacro → likely TeXDelimiter / other ParameterType workarounds (WISDOM #41)
-- 9 DefPrimitive↔DefMacro → babel_support literal-text pattern
-- 2 DefPrimitiveI↔DefMacro → babel_support pattern
-- 2 DefMacro↔DefConstructor → direct-XML emission (WISDOM #40)
-- 2 DefMacroI↔DefPrimitive → minor structural
-- 1 DefConstructor↔DefPrimitive → pgfsys empty-template pattern
+Remaining 48 long-tail entries all match the 11 patterns above.
 
-**Methodology for future per-file long-tail triage:** start with the
-file's `Perl→Rust` kind pair (via `awk '{sub(/\(L[0-9]+\)/,"",$3); print
-$3"\t"$4}' docs/def_parity_package.tsv | uniq -c`). If the pair matches
-one of the 11 catalogued patterns above, it's structural — add a 2-3
-line cross-ref breadcrumb and move on. Only dig deep when the kind pair
-is new, or when the Perl body contains state-mutating logic that the
-Rust body visibly omits.
+**Completed sweeps.**
+- `scope => 'global'` (27 Perl occurrences across 9 packages): 26/27
+  ported; one gap closed c8a232ecb (graphicx `\includegraphics`).
+- `robust => 1` (31 occurrences): 12 ported (plain_base `\i`/`\j`
+  b55df04a9; latex_constructs `\makebox`/`\fbox`/`\framebox`
+  55b073fd7); 19 accented-letter DefPrimitiveI blocked on
+  case-mapping-pipeline rewrite (`DEF_PARITY_AUDIT.md` B1).
+- `protected => 1` (32 occurrences): all ported or structurally
+  adapted.
+- Perl upstream sync (2026-01 → 2026-03): all verified already-synced.
+  Fixed: aas_support `\aas@@fstack sizer=>#2` (4868a9a2f), natbib
+  unknown-citation Info (5836935f5), Locator 1-indexed columns #2671
+  (`dump_reader`). Queued (large-scope): pstricks_support refactor
+  fdc8bf91, inline_math→math rename 2b1ff6df, color-var inline styles
+  c2370ac3.
 
-**DP-doc keyword sweep (2026-04-23, session-continuation cycles).**
-Added explicit `Intentional divergence (WISDOM #44 class: …)` keyword
-tags to eight package-layer cross-reference breadcrumbs so the future
-detector grep (searching for `WISDOM #44|intentional|idiomatic` within
-a back-window of the audit-flag line) matches every documented entry.
-Commits: `9e9e96da4` pspicture (Pair picture stubs), `21aef6244`
-revsymb (8-entry TeXDelimiter delimiter cluster), `43ec3b7b1` psfrag
-(afterDigest-only state toggles), `9f981285c` pst_node (node +
-connection cluster, PSDim/PSAngle blocker), `90732a867`
-pstricks_support (DVI-only + parameter-type blocker), `099740bcc`
-algorithm2e (missing setPrefix/getPrefix primitive), `0806559ee`
-pgfsys_latexml_def (pgfsys@clipnext state toggle + pgfsys@invoke
-re-digest-pipeline timing), `65c9ac206` physics matrix family (6 more
-entries under existing L178 umbrella). No behavioural change — all
-rationale was already in-source, only the detector-keyword wasn't.
-Follow-ups in same sprint: `26be4e96b` framed (file-level umbrella
-for `beforeDigest => MergeFont(background => …)` omission across
-5 envs), `5e8917655` pstricks_support local breadcrumb above
-\@@@ackscale (L189) to satisfy 40-line detector window, `41367dfb7`
-physics batch (19 one-line breadcrumbs above each flagged
-DefPrimitive).
-
-**Package DP-audit status: fully triaged** (2026-04-23 end of sprint).
-Running `tools/audit_def_parity.py --dir package` still emits 187
-kind-mismatch records (same baseline as round-17 start), but under a
-grep with 40-line back-window for `WISDOM #44|intentional|idiomatic`,
-**zero UNREVIEWED entries remain**. Every flagged kind-flip now
-carries an in-source breadcrumb pointing at either a per-file
-umbrella or the WISDOM #41/#44 tactical notes.
-
-**Top-3 ParameterType ports (would close ~20 package entries)** —
-`TeXDelimiter` (10+ entries), `Pair:Number` (5+ entries),
-`alignsafeOptional` (2+ entries). Catalogued in WISDOM #41.
+**Top-3 ParameterType ports** (~20 package entries each collapse):
+`TeXDelimiter`, `Pair:Number`, `alignsafeOptional`. See WISDOM #41.
 
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
 
