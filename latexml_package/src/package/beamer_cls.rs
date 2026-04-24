@@ -12,6 +12,13 @@ LoadDefinitions!({
   // Don't load raw beamer.cls — its expansion chains exceed the token limit.
   RequirePackage!("article");
 
+  // Perl beamer.cls.ltxml L853: DefKeyVal('beamerframe', 'fragile', '', '')
+  // — declares `fragile` as a zero-argument key for the beamerframe keyset.
+  // Documents using `\begin{frame}[fragile]{Title}` rely on this to parse
+  // without "unknown keyval" errors. Frame env's Rust stub doesn't
+  // consult keyvals yet, but the declaration itself must load.
+  DefKeyVal!("beamerframe", "fragile", "");
+
   // Frame environment — the core beamer construct.
   // Absorbs optional overlay spec and optional title/subtitle args.
   // Perl: DefEnvironment('{frame}[][]', '<ltx:slide...>...</ltx:slide>');
