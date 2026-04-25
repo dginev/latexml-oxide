@@ -647,31 +647,32 @@ impl State {
   ) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized.
-    // Perl `State.pm:144-151`: register override fires unless `scope` is set to
-    // a Named-style value (Perl: anything that isn't 'global' or 'local').
-    // `\globaldefs` is a Number register, so the stored variant is
-    // `Stored::Number`, NOT `Stored::Int` — Perl's `==` coerces both, Rust must
-    // unwrap explicitly. Without this, pgfplots' `\pgfplots@pop@next@legend`
-    // pattern (`\def\foo{{\globaldefs=1 \let\x=\relax}}`) silently drops the
-    // `\let` on group exit, leaving `\pgfplots@curlegend`/`@curplotlist`
-    // undefined and triggering an infinite-loop in `\pgfplots@createlegend`.
+    // TeX semantics: positive → all assignments global, negative → \global
+    // ignored, zero → no override. `\globaldefs` is a Number register, so the
+    // stored variant is `Stored::Number`, NOT `Stored::Int` — Perl's `==`
+    // coerces both, Rust must unwrap explicitly. Perl `State.pm:144-151` uses
+    // strict `==1`/`==-1`; we slightly broaden to TeX's sign-based rule
+    // (matches behavior for the canonical `\globaldefs=1`/`\globaldefs=-1`
+    // uses while also handling rare `\globaldefs=2` etc).
+    // `Scope::Named(_)` is preserved per Perl's "ONLY override global/local/
+    // undef" rule (State.pm:146).
+    // Without this: pgfplots' `\pgfplots@pop@next@legend`
+    // (`\def\foo{{\globaldefs=1 \let\x=\relax}}`) silently drops the `\let`
+    // on group exit, leaving `\pgfplots@curlegend`/`@curplotlist` undefined
+    // and looping `\pgfplots@createlegend` at the digest wall-clock cap.
     let preserve = matches!(scope_opt, Some(Scope::Named(_)));
     if !preserve {
       if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
         if let Some(global_value) = globaldefs.front() {
-          let int_value: Option<i64> = match *global_value {
-            Stored::Int(v) => Some(v),
-            Stored::Number(n) => Some(n.0),
-            _ => None,
+          let int_value: i64 = match *global_value {
+            Stored::Int(v) => v,
+            Stored::Number(n) => n.0,
+            _ => 0,
           };
-          match int_value {
-            Some(1) => {
-              scope_opt = Some(Scope::Global);
-            },
-            Some(-1) => {
-              scope_opt = Some(Scope::Local);
-            },
-            _ => {},
+          if int_value > 0 {
+            scope_opt = Some(Scope::Global);
+          } else if int_value < 0 {
+            scope_opt = Some(Scope::Local);
           }
         }
       }

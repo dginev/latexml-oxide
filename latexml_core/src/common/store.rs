@@ -950,8 +950,14 @@ impl From<Option<&Stored>> for Stored {
 
 impl From<&Stored> for bool {
   fn from(value: &Stored) -> bool {
+    // Mirror Perl's `if ($val)` truthiness: defined-and-nonzero is true,
+    // numeric-zero is false. Without the numeric-zero check, registers
+    // initialized to 0 (e.g. `\globaldefs` default, `\count255` unset)
+    // would read as "set" via `lookup_bool`, breaking flag-style probes.
     match value {
       Stored::Bool(b) => *b,
+      Stored::Int(0) => false,
+      Stored::Number(n) if n.0 == 0 => false,
       _ => true,
     }
   }
