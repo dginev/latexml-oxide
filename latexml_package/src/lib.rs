@@ -253,6 +253,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("endnotes", "sty", package::endnotes_sty::load_definitions),
   ("enumitem", "sty", package::enumitem_sty::load_definitions),
   ("epigraph", "sty", package::epigraph_sty::load_definitions),
+  ("epic", "sty", package::epic_sty::load_definitions),
+  ("eepic", "sty", package::epic_sty::load_definitions),
   ("float", "sty", package::float_sty::load_definitions),
   ("floatfig", "sty", package::floatfig_sty::load_definitions),
   ("floatpag", "sty", package::floatpag_sty::load_definitions),
