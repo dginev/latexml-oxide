@@ -806,6 +806,13 @@ fn load_tex_definitions(
   reloadable: bool,
   at_letter: bool,
 ) -> Result<()> {
+  // Perl Package.pm L2334: $STATE->getStomach->leaveHorizontal_internal;
+  // Defensive cleanup before reading definitions — if we're somehow in
+  // horizontal mode while bound to vertical (e.g. after \par-less inline
+  // text), repack and flip MODE in-place. No-op in the common case but
+  // matches Perl's pre-load state hygiene.
+  crate::stomach::leave_horizontal_internal();
+
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -891,6 +898,15 @@ fn load_tex_definitions(
   );
   assign_value("INCLUDE_STYLES", was_including_styles, None);
   expire_state_unlocked();
+
+  // Perl Package.pm L2376: Let(T_CS('\ver@'.$request), T_CS('\fmtversion'), 'global');
+  // Mark the raw .sty/.tex as loaded so LaTeX's `\@ifpackageloaded` and
+  // `\RequirePackage` date-version guards work after a raw TeX load. Perl
+  // unconditionally Lets here (in contrast to the LTXML loader at line 339,
+  // which only Lets when undefined).
+  let ver_cs = T_CS!(s!("\\ver@{}", request));
+  let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
+
   Ok(())
 }
 
