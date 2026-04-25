@@ -72,6 +72,7 @@ pub mod avant_sty;
 pub mod babel_def;
 pub mod babel_sty;
 pub mod babel_support_sty;
+pub mod babelbib_sty;
 pub mod balance_sty;
 pub mod bbding_sty;
 pub mod bbm_sty;
