@@ -79,12 +79,51 @@ LoadDefinitions!({
   //       L12457 (\__file_name_expand_end: end-marker). See cycle 60 of
   //       10k_sandbox match; paper 1611.04489 surfaces these via the
   //       msg / file-input paths.
+  // Use TeX-level \protected\gdef instead of \cs_gset_protected:Npn —
+  // the latter may itself be in ERROR-stub state if expl3-code.tex's
+  // raw load with SUPPRESS_UNDEFINED_ERRORS=true left it broken.
+  // \protected\gdef can't fail.
   raw_tex(concat!(
-    r"\cs_gset_protected:Npn \__kernel_iow_with:Nnn #1#2#3 {#3}",
-    r"\cs_gset_protected:Npn \iow_term:n #1 {}",
-    r"\cs_gset_protected:Npn \iow_wrap:nnnN #1#2#3#4 {#3 #4 {#1}}",
-    r"\cs_gset_protected:Npn \iow_wrap:nenN #1#2#3#4 {#3 #4 {#1}}",
-    r"\cs_gset:Npn \__file_name_expand_end: {}",
+    r"\protected\gdef \__kernel_iow_with:Nnn #1#2#3 {#3}",
+    r"\protected\gdef \iow_term:n #1 {}",
+    r"\protected\gdef \iow_wrap:nnnN #1#2#3#4 {#3 #4 {#1}}",
+    r"\protected\gdef \iow_wrap:nenN #1#2#3#4 {#3 #4 {#1}}",
+    r"\gdef \__file_name_expand_end: {}",
+  ))?;
+  // Additional stubs for the post-fix dominant-undefined cluster
+  // (see docs/SANDBOX_TRIAGE.md and project_explsyntax_midload.md).
+  // These are L3 helpers that expl3-code.tex's raw load fails to install
+  // due to SUPPRESS_UNDEFINED_ERRORS suppression of forward-ref errors.
+  // Stubs use TeX-level \protected\gdef for robustness.
+  raw_tex(concat!(
+    // l3file: \iow_char:N produces the literal char (e.g. \iow_char:N \\ → \\)
+    r"\protected\gdef \iow_char:N #1{#1}",
+    // l3file: \file_input_stop: terminates input — no-op (file already
+    // bounded by mouth)
+    r"\gdef \file_input_stop: {}",
+    // l3file: \file_input:n {file} — input a file. Stub gobbles arg.
+    r"\protected\gdef \file_input:n #1 {}",
+    // l3keys: define/set keys — gobble the key arguments
+    r"\protected\gdef \keys_define:nn #1#2 {}",
+    r"\protected\gdef \keys_set:nn #1#2 {}",
+    r"\protected\gdef \keys_set:nV #1#2 {}",
+    r"\protected\gdef \keys_set:nv #1#2 {}",
+    // l3keys: existence tests — \keys_if_exist:nnTF returns false branch
+    r"\protected\gdef \keys_if_exist:nnTF #1#2#3#4 {#4}",
+    r"\protected\gdef \keys_if_exist:nnT #1#2#3 {}",
+    r"\protected\gdef \keys_if_exist:nnF #1#2#3 {#3}",
+    r"\protected\gdef \keys_if_exist:neT #1#2#3 {}",
+    r"\protected\gdef \keys_if_exist:neF #1#2#3 {#3}",
+    // l3keys: empty initial values for variant CSes
+    r"\gdef \l_keys_key_str {}",
+    // l3char/l3str: codepoint generation — pass through
+    r"\protected\gdef \codepoint_str_generate:n #1 {#1}",
+    r"\protected\gdef \__kernel_codepoint_case:nn #1#2 {#2}",
+    // l3cmd / l3xparse log-bool variables — define as \c_false_bool
+    // (which itself should be defined by expl3-code.tex; if not, it'll
+    // be undefined too but that's a separate issue).
+    r"\global\let \l__cmd_log_bool \c_false_bool",
+    r"\global\let \l__xparse_log_bool \c_false_bool",
   ))?;
   // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run properly.
   // Check both space and underscore catcodes — packages using \ProvidesExplPackage
