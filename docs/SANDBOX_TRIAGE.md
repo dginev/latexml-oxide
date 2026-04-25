@@ -1,10 +1,28 @@
 # 10k sandbox triage — post-session worklist
 
-Latest run: `~/data/sandbox_full_2026-04-25b/` (binary `188ed64ee+`,
-post-session 2026-04-25 evening with stack-overflow + def_autoload
-re-entry + amsppt cls dispatcher + lipsum/expl3 diagnosis).
-Prior: `~/data/sandbox_full_2026-04-25/` (binary `771bcb861`).
-Baseline: `~/data/sandbox_full_2026-04-24/` (`b9bc02155`).
+Latest run: `~/data/sandbox_full_2026-04-26_postfix/` (binary
+`3088dbd17` with the `endgroup()` INTERPRETING_DEFINITIONS
+suppression fix). Prior: `~/data/sandbox_full_2026-04-25b/`
+(`188ed64ee`).
+
+## Top-level distribution (2026-04-26, post-fix)
+
+| Status | Count | % | Δ from 2026-04-25b |
+|---|---:|---:|---:|
+| `ok` | **7538** | **95.44%** | **+29** |
+| `conversion_error` | 322 | 4.08% | -38 |
+| `timeout` | 31 | 0.39% | +8 |
+| `conversion_fatal` | 5 | 0.06% | +1 |
+| `abort` | 2 | 0.03% | 0 |
+| **Total failures** | **360** | **4.56%** | **-29** |
+
+Net session: +29 ok, -29 total failures. The endgroup() fix unblocks
+~29 papers that previously halted on the false-positive `\group_end:`
+mode-switch error during expl3-code.tex raw load. Some bordering
+papers shifted from conv_err → timeout/fatal as their loads now
+run further before hitting other resource limits.
+
+Older 2026-04-25b distribution shown for reference:
 
 ## Top-level distribution (2026-04-25b, run complete)
 
