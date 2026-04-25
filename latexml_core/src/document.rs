@@ -547,13 +547,25 @@ impl Document {
             }
           }
         },
-        Work::PostWork { mut node, bookkeeping_attrs } => {
-          // Remove bookkeeping attributes that were captured during Enter.
-          // Capture total attribute count before removal to determine if
-          // the node will have empty attributes after bookkeeping removal.
-          let total_attrs = node.get_attributes().len();
+        Work::PostWork { mut node, bookkeeping_attrs: _captured_at_enter } => {
+          // Mirrors Perl `Document.pm:452`: at finalize time, ANY attribute
+          // whose name starts with `_` is internal bookkeeping and gets
+          // stripped. Re-derive the set at PostWork time rather than relying
+          // on the captured-at-Enter snapshot, because descendant
+          // `generate_id` calls can write `_ID_counter_<prefix>_` attributes
+          // ONTO the current node (their nearest-id-bearing ancestor) during
+          // child traversal — those late-added attrs were missing from the
+          // Enter snapshot and would otherwise leak into the output XML,
+          // causing duplicate xml:id collisions in the post-processing
+          // libxml2 validator (1312.5864 cluster: 70× `S8.T5.m2241 already
+          // defined`, where the Math element carried `_ID_counter__="1"`
+          // populated post-Enter).
+          let attrs_now = node.get_attributes();
+          let total_attrs = attrs_now.len();
+          let bookkeeping_attrs: Vec<&String> =
+            attrs_now.keys().filter(|name| name.starts_with('_')).collect();
           let bookkeeping_count = bookkeeping_attrs.len();
-          for name in &bookkeeping_attrs {
+          for name in bookkeeping_attrs {
             let _ = node.remove_attribute(name);
           }
           // If all attributes were bookkeeping, the node now has empty attrs.

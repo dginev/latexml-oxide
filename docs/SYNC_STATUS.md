@@ -137,6 +137,23 @@ changes).
   Perl-tree and Rust-tree `.model` copies from the same `.rnc` source
   and diff against the Perl tool's output.
 
+### Architectural invariant: TL-version independence
+
+Both Rust and Perl LaTeXML core engines are TL-version independent
+by design. The only TL-bound surfaces are:
+
+1. **Raw `.tex`/`.sty`/`.cls` loads** from the ambient TeXLive
+   ecosystem (xparse, lipsum, expl3-code.tex, hyperref, …) —
+   resolved via `kpsewhich`.
+2. **Kernel-dumper output** (Rust-only artefact:
+   `resources/dumps/latex.dump.txt`) — generated against a specific
+   TL and frozen for fast load.
+
+Mismatch between dump baseline and ambient PATH should produce a
+`Warn:latexml_dump TeXLive MISMATCH` warning at startup. Bugs that
+PERSIST across both TL2023 PATH and TL2025 PATH point to core code,
+not the version-bound layer.
+
 ### CI build parity (TL2023 mechanics)
 
 CI runs on TL2023 (Ubuntu apt), local dev defaults to TL2025. Three
@@ -252,6 +269,91 @@ same `--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` profile):
 Phase D0 (2k-sandbox, 84/84) and the test-suite refactor (round 17) are
 closed out; per-paper narration and session diaries for sessions ≤128
 live in git log and `memory/project_session_history.md`. What remains:
+
+### CB. Compile-time bottleneck — `latexml_package` codegen (NEW, next-up)
+
+**Symptom.** `cargo-timings` (2026-04-25 run, file
+`target/cargo-timings/cargo-timing-20260425T114827177Z-c735ed78fd4ba998.html`)
+shows `latexml_package` consuming ~95% of total wall-clock build time. The
+crate is a 4.9MB / ~93k-LOC monolith with ~11,200 invocations of derive
+proc-macros (`compile_prototype!` / `compile_expansion!` /
+`compile_replacement!` / `compile_tokenize!` / `load_model!` …) across
+~450 files under `src/package/` plus `src/engine/` (notably
+`latex_constructs.rs` at 9092 LOC). rustc's frontend is single-threaded
+per crate, so this single compile unit pins the GHA CI critical path.
+
+**Plan.** Layered, accepted scope:
+
+- [ ] **CB.1** Parallel rustc frontend. Add to a `.cargo/config.toml`
+      (CI-scoped if needed) `rustflags = ["-Z", "threads=8"]`. Already
+      on nightly; expected 2–3× win on this crate alone (parses +
+      name-resolution + type-check parallelize within a crate).
+- [ ] **CB.2** Bump LLVM codegen units for `latexml_package` release
+      profile in workspace `Cargo.toml`:
+      ```toml
+      [profile.release.package.latexml_package]
+      codegen-units = 256
+      ```
+      Helps the back-end with the 11k+ closures emitted by the proc-macro
+      expansions.
+- [ ] **CB.3** Extract `latexml_engine` as a separate crate.
+      Move `src/engine/` + `src/prelude/` + bootstrap modules
+      (`engine.rs`, `prelude.rs`, `xmath_helpers.rs` and any package
+      modules required by engine bootstrap) into a sibling crate.
+      Keeps `latexml_package` focused on the ~450 `*_sty.rs` /
+      `*_cls.rs` / `*_def.rs` package modules. Goal: two parallel
+      compile units instead of one. Mechanical refactor — most engine
+      files have no dependencies on `package/`. The shared
+      `latexml_codegen` proc-macros and `latexml_core` plumbing remain
+      common deps.
+- [ ] **CB.4** Diagnostic baseline + post-change measurement. Run with
+      `RUSTFLAGS="-Zself-profile -Zself-profile-events=default,args"`,
+      summarize with `summarize`, record top-3 passes
+      (`expand_invoc` vs `LLVM_passes` vs `type_check_crate`) before
+      and after CB.1–CB.3 in this section so we know which lever moved
+      the needle.
+
+**Other speed-up avenues to explore (ordered by likely ROI):**
+
+- [ ] **CB.5** Drop `latexml_core` dep from `latexml_codegen`. The
+      proc-macro crate currently uses only `latexml_core::util::text::*`.
+      Inline those helpers into the codegen crate (or factor them into
+      a tiny `latexml_text_util` no-dep leaf). Removes a forced serial
+      link in the dependency chain (`core → codegen → package`) and
+      shrinks the proc-macro `.so`.
+- [ ] **CB.6** Pre-compute proc-macro outputs at build time via
+      `build.rs` + `include!`. The `compile_prototype!` /
+      `compile_expansion!` / `compile_tokenize!` derives are pure
+      functions of the literal payload (regex tokenize → emit Rust).
+      A build script can scan source for these literals, run the
+      pipeline once, write `$OUT_DIR/compiled_prototypes.rs`, and call
+      sites become indexed lookups. Removes proc-macros from the
+      per-invocation critical path entirely; `target/` caches the
+      output like normal source. Highest source-side payoff but most
+      invasive.
+- [ ] **CB.7** `syn = "1.0"` → `syn = "2.0"` in `latexml_codegen`.
+      One-shot win on codegen-crate compile time + smaller proc-macro
+      surface. Migration is moderate (the few `Meta::NameValue` /
+      `Lit::Str` matchers need updating).
+- [ ] **CB.8** GHA caching. Verify `Swatinem/rust-cache@v2` (or
+      equivalent) is in place for `target/` + `~/.cargo/registry`, and
+      that release-profile builds run with `CARGO_INCREMENTAL=1` on CI.
+      Cold-cache CI is unfixable from source; warm cache should make
+      most CI runs trivial.
+- [ ] **CB.9** Split the package set further if CB.3 is insufficient.
+      Coarse alphabetical or family-based subcrates
+      (`latexml_packages_amsmath`, `latexml_packages_pgf`,
+      `latexml_packages_misc`) — leaves are mostly inter-independent
+      modulo a shared registry trait. Only pursued if cargo-timings
+      after CB.1+CB.2+CB.3 still shows `latexml_package` dominating.
+- [ ] **CB.10** Grep for the single largest macro hot-spots
+      (`latex_constructs.rs` — 9092 LOC; `pgfsys_latexml_def.rs` — 1858;
+      `etoolbox_sty.rs` — 1728) and consider per-file submodule split
+      to enable better incremental rebuilds when only one is touched.
+
+**Acceptance.** CI wall-clock cut by ≥40% on a cold-cache release build
+of the workspace; `cargo-timings` no longer shows `latexml_package` at
+>70% of total. Test counts unchanged (1100/0/0 local TL2025).
 
 ### DP. Def*-parity audit (round 17, fully triaged)
 
