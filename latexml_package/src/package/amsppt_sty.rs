@@ -7,7 +7,14 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // amsppt loads the AmSTeX pool — Perl L27
-  // AmSTeX pool is partially ported (~30%)
+  // AmSTeX pool is partially ported (~30%); residual undefined-CS
+  // errors on amsppt papers (\text, \proof, \theorem env, \endmatrix,
+  // \foldedtext, \eightbf, \AmSTeX, \DN@, \frills@, etc — see
+  // LaTeXML/lib/LaTeXML/Engine/AmSTeX.pool.ltxml) trace to the
+  // missing pool. Tested RequirePackage("amsmath") — covers \text but
+  // exposes more AmS-TeX-specific CSes on math0111087 (54 undef →
+  // worse-looking in absolute count). Proper fix is a real port of
+  // AmSTeX.pool.ltxml; quick amsmath shim deferred.
 
   // Frontmatter — Perl L32-80. Original (pre-LaTeX) AMSPPT syntax uses
   // `\title Foo \endtitle` (tokens terminated by `\endtitle`, not a
