@@ -541,8 +541,11 @@ pub fn read_x_token(
       if for_conditional && unexpanded.code == Catcode::ACTIVE {
         return Ok(Some(unexpanded));
       } else {
-        // Perl: smuggle the unexpanded token in \special_relax
-        set_special_relax_smuggled(unexpanded);
+        // Perl Gullet.pm L395-397 (readXToken): does NOT smuggle the
+        // unexpanded token here. Only Perl's readToken (Gullet.pm
+        // L313-317) smuggles. We follow Perl exactly: drop the
+        // unexpanded token in this path. (Earlier Rust always
+        // smuggled; that diverged from Perl on this branch.)
         return Ok(Some(T_CS!("\\special_relax")));
       }
     }
