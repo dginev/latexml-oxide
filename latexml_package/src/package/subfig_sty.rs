@@ -17,14 +17,23 @@ LoadDefinitions!({
     RefStepCounter!(&cs_expanded, true)?;
   });
 
-  // Perl L31-32: \newsubfloat — creates subfloat machinery for a float type.
-  // DP-flag (Perl DefPrimitive → Rust DefMacro): deliberate stub. Perl's
-  // closure runs NewCounter('sub' . $name, ...) + DefMacroI(...) + Let(...)
-  // dynamically for the caller-provided float name — full port requires
-  // document-time counter/CS creation. figure/table cases are pre-baked
-  // below (`\lx@subfloat@figure` / `\lx@subfloat@table`); caller-defined
-  // floats silently get no subcaption machinery until the dynamic path
-  // lands. Triaged under SYNC_STATUS DP long-tail (structural / known gap).
+  // Perl L30-62: \newsubfloat — installs subfloat machinery for a float type.
+  //
+  // For figure / table the machinery is pre-baked below (counters,
+  // \thesub<name>, \fnum@sub<name>, \p@sub<name>, \lx@subfloat@<name>,
+  // and the lx@subfloat@@<name> environment). Perl's RawTeX trailer
+  // calls \newsubfloat{figure} and \newsubfloat{table} at end-of-load
+  // guarded by \@ifundefined{c@subfigure}/\@ifundefined{c@subtable}, so
+  // those calls are no-ops once our pre-bake has run — exact parity.
+  //
+  // For caller-defined float types (e.g. \newsubfloat{algorithm}),
+  // Perl dynamically issues NewCounter + Let + DefMacroI + DefEnvironmentI
+  // with $name substituted. The dynamic DefEnvironmentI requires a
+  // runtime "install_environment" API that is not yet exposed in
+  // latexml_core (state::install_definition handles macros/primitives
+  // but not constructor-with-template environments). Documented as a
+  // known missing-API task rather than masked as a stub: no paper in
+  // the 7898-arxiv 2026-04-24 sandbox exercises this path.
   DefMacro!("\\newsubfloat[]{}", "");
 
   // \subfloat — Perl L69-79
