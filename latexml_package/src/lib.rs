@@ -740,6 +740,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("eulervm", "sty", package::eulervm_sty::load_definitions),
   ("exscale", "sty", package::exscale_sty::load_definitions),
   ("fourier", "sty", package::fourier_sty::load_definitions),
+  ("harvard", "sty", package::harvard_sty::load_definitions),
   ("helvet", "sty", package::helvet_sty::load_definitions),
   ("ifsym", "sty", package::ifsym_sty::load_definitions),
   ("l3keys2e", "sty", package::l3keys2e_sty::load_definitions),
