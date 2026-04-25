@@ -286,10 +286,21 @@ pub fn egroup() -> Result<()> {
   Ok(())
 }
 /// Begin a new level of binding by pushing a new stack frame.
-pub fn begingroup() { push_stack_frame(true); }
+pub fn begingroup() {
+  if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+    let depth = crate::state::get_frame_depth();
+    eprintln!("[trace] begingroup pre-depth={depth}");
+  }
+  push_stack_frame(true);
+}
 /// End a level of binding by popping the last stack frame,
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
+  if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+    let depth = crate::state::get_frame_depth();
+    let bound = is_value_bound("BOUND_MODE", Some(0));
+    eprintln!("[trace] endgroup pre-depth={depth} bound_top={bound}");
+  }
   // BAND-AID (commit 3088dbd17 — under root-cause investigation, see
   // `project_explsyntax_midload.md`): during raw .sty/.tex load
   // (INTERPRETING_DEFINITIONS=true), suppress strict BOUND_MODE check.
@@ -304,6 +315,17 @@ pub fn endgroup() -> Result<()> {
   // Each of those needs its own root-cause investigation.
   let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
   if interpreting {
+    // Diagnostic: capture band-aid suppression occurrences for analysis.
+    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok()
+      && is_value_bound("BOUND_MODE", Some(0))
+    {
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let frame_keys = crate::state::dump_top_frame_keys();
+      eprintln!(
+        "[trace] endgroup SUPPRESSED-ERR: BOUND_MODE={bound} MODE={mode} frame0_keys={frame_keys:?}",
+      );
+    }
     pop_stack_frame(true)?;
   } else if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
@@ -360,6 +382,13 @@ pub fn set_mode(mode: &str) -> Result<()> {
   // Perl: beginMode maps to internal mode names, but set_mode stores as-is
   // We also set BOUND_MODE so end_mode can find it
   let bound_mode = bindable_mode(mode).unwrap_or(mode);
+  // Diagnostic
+  if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+    eprintln!(
+      "[trace] set_mode mode={mode} bound_mode={bound_mode}\n{}",
+      std::backtrace::Backtrace::force_capture()
+    );
+  }
   assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
   assign_value("MODE", arena::pin(bound_mode), Some(Scope::Local));
   assign_value("IN_MATH", ismath, Some(Scope::Local));

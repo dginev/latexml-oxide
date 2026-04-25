@@ -2000,6 +2000,26 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
 //======================================================================
 /// Starts a new level of grouping.
 /// Note that this is lower level than C<\bgroup>;
+/// Diagnostic helper: dump the keys in undo[0]'s value table.
+/// For temporary instrumentation only — no production callers should rely on this.
+pub fn dump_top_frame_keys() -> String {
+  let state = state!();
+  let f0 = state.undo.front().expect("undo is non-empty");
+  let mut entries: Vec<String> = Vec::new();
+  for (k, v) in f0.table(TableName::Value).iter() {
+    let val = state
+      .value
+      .get(k)
+      .and_then(|vec| vec.front())
+      .map(|s| format!("{s:?}"))
+      .unwrap_or_else(|| "<none>".into());
+    let ks: String = arena::with(*k, |s| s.to_string());
+    entries.push(format!("{ks}=[{v}, {val}]"));
+  }
+  entries.sort();
+  entries.join(", ")
+}
+
 pub fn push_frame() {
   // Easy: just push a new undo frame.
   state_mut!().undo.push_front(UndoFrame::default());
