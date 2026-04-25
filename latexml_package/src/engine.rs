@@ -54,3 +54,6 @@ pub mod latex_dump; // Rust: precompiled latex.ltx state (auto-generated) // Per
 // Top-level entry points
 pub mod latex;
 pub mod tex; // Perl: TeX.pool.ltxml (loads Base + LoadFormat('plain')) // Perl: LaTeX.pool.ltxml (loads TeX + LoadFormat('latex'))
+
+// AmSTeX format — LoadPool('AmSTeX'), routed via `\input amstex`.
+pub mod amstex; // Perl: AmSTeX.pool.ltxml
