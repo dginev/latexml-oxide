@@ -3986,7 +3986,16 @@ impl Document {
         prefix = "id";
       }
 
-      let ctrkey = s!("_ID_counter_") + prefix + "_";
+      // Perl `Package.pm:939` (`'_ID_counter_' . ($prefix ? $prefix . '_' : '')`)
+      // — empty prefix uses `_ID_counter_` with a single trailing underscore,
+      // not `_ID_counter__`. Matters for interop with code that reads the
+      // attribute by exact name (e.g. `Base_XMath.pool.ltxml:940` reads
+      // `_ID_counter_` for the empty-prefix counter).
+      let ctrkey = if prefix.is_empty() {
+        s!("_ID_counter_")
+      } else {
+        s!("_ID_counter_") + prefix + "_"
+      };
       let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
 
       let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
