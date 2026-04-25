@@ -8577,11 +8577,6 @@ LoadDefinitions!({
   });
   // From latex_constructs.pool.ltxml
   DefAccent!("\\k", '\u{0328}', "\u{02DB}", below => true); // COMBINING OGONEK & OGONEK
-  // \polhk — biblatex/biber lossless ogonek accent (used in legacy `.bbl`
-  // strings to round-trip Polish hooks). Same combining char as `\k`.
-  // ~15 sandbox papers fail with `\polhk` undefined when bibtex output
-  // pulls accented author names through.
-  Let!("\\polhk", "\\k");
   DefPrimitive!("\\textless", "<");
   DefPrimitive!("\\textgreater", ">");
   DefPrimitive!("\\textcopyright", "\u{00A9}"); // COPYRIGHT SIGN
