@@ -261,29 +261,9 @@ LoadDefinitions!({
   DefMacro!("\\glsentrytext Semiverbatim", "");
   DefMacro!("\\glsentrylong Semiverbatim", "");
   DefMacro!("\\glsentryshort Semiverbatim", "");
-  // glossaries.sty acronym family — short/long/full × plural × case variants.
-  // 30+ sandbox papers fail with `\acrfullpl` undefined; the rest of the
-  // family (Acrshortpl, ACRfullpl, …) is wired here too even though the
-  // sandbox cluster is dominated by lowercase plural. All emit empty —
-  // the surrounding text already names the acronym.
-  DefMacro!("\\acrshort Semiverbatim",   "");
-  DefMacro!("\\acrshortpl Semiverbatim", "");
-  DefMacro!("\\Acrshort Semiverbatim",   "");
-  DefMacro!("\\Acrshortpl Semiverbatim", "");
-  DefMacro!("\\ACRshort Semiverbatim",   "");
-  DefMacro!("\\ACRshortpl Semiverbatim", "");
-  DefMacro!("\\acrlong Semiverbatim",    "");
-  DefMacro!("\\acrlongpl Semiverbatim",  "");
-  DefMacro!("\\Acrlong Semiverbatim",    "");
-  DefMacro!("\\Acrlongpl Semiverbatim",  "");
-  DefMacro!("\\ACRlong Semiverbatim",    "");
-  DefMacro!("\\ACRlongpl Semiverbatim",  "");
-  DefMacro!("\\acrfull Semiverbatim",    "");
-  DefMacro!("\\acrfullpl Semiverbatim",  "");
-  DefMacro!("\\Acrfull Semiverbatim",    "");
-  DefMacro!("\\Acrfullpl Semiverbatim",  "");
-  DefMacro!("\\ACRfull Semiverbatim",    "");
-  DefMacro!("\\ACRfullpl Semiverbatim",  "");
+  DefMacro!("\\acrshort Semiverbatim", "");
+  DefMacro!("\\acrlong Semiverbatim", "");
+  DefMacro!("\\acrfull Semiverbatim", "");
   // glossaries-internal macros that might be called
   DefMacro!("\\warn@noprintglossary", "");
   // glossary title macros
