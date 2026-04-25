@@ -82,6 +82,17 @@ LoadDefinitions!({
               r"{\ifnum\lccode#2=0 \exp_stop_f:#2\else\lccode#2\exp_stop_f:\fi}}}",
       r"}}{}{}",
     r"}",
+    // l3text \text_lowercase:n / \text_uppercase:n: full Unicode-aware text-mode
+    // case mapping is dump-gated (\__text_change_case:nnn at line 18979 plus
+    // a deep helper chain). For ASCII / non-grouped text inputs, the result
+    // matches \str_lowercase:n / \str_uppercase:n. Shim accordingly so the
+    // ~90 packages using \text_*case:n produce *something* useful instead of
+    // letting the CS expand to its own name. Real text-mode semantics
+    // (handling \protect, ungrouping, etc.) require dump_reader gate widening.
+    r"\gdef \text_lowercase:n #1 {\str_lowercase:n {#1}}",
+    r"\gdef \text_uppercase:n #1 {\str_uppercase:n {#1}}",
+    r"\gdef \text_titlecase:n #1 {\str_uppercase:n {#1}}",
+    r"\gdef \text_titlecase_first:n #1 {\str_uppercase:n {#1}}",
   ))?;
 
   // Post-load: set expl3 catcodes for fixup commands.
