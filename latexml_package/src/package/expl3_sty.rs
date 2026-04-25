@@ -38,6 +38,31 @@ LoadDefinitions!({
     latexml_core::common::error::set_suppress_log_output(false);
     state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
   }
+  // l3char/l3str: codepoint generation — passthrough no-op (raw-load fallback).
+  // Full Unicode-aware bodies are in the dump (`\codepoint_str_generate:n` line
+  // ~6336, `\__kernel_codepoint_case:nn` line ~23789), but the dump_reader
+  // gates `:`-named E entries with CS bodies (dump_reader.rs L191-207). So
+  // raw-load fallback stubs are needed even when dump-load nominally succeeds.
+  //
+  // CRITICAL: NO `\protected` — these CSes are invoked from `\exp_args:Ne` /
+  // `\use:e` contexts and MUST be expandable. The previous `\protected` stub
+  // caused a cascade: `\__kernel_codepoint_case:nn` not unfolding inside
+  // e-context fed `\if_int_compare:w \__int_eval:w \__kernel_codepoint_case:nn`
+  // → "Missing number, treated as zero, next token \relax" loops in
+  // `\str_lowercase:n` (and lipsum.sty L208 — see project_lipsum_clist_map_73).
+  //
+  // `\__kernel_codepoint_case:nn` returns 3 brace groups (codepoint, empty,
+  // empty) matching Perl's `\__codepoint_case:nn` calling convention which
+  // feeds `\__str_change_case_char:nnnnn`'s 5-arg signature. Returning the
+  // input codepoint unchanged makes case mapping a no-op (so `\str_lowercase:n
+  // {Hello}` outputs "Hello", not "hello") — but the cascade is gone. Real
+  // ASCII case mapping needs `\char_generate:nn` (also dump-gated) to convert
+  // codepoint→char in `\codepoint_str_generate:n`. Both unblockings depend on
+  // the deep expl3 widening planned in dump_reader.rs.
+  raw_tex(concat!(
+    r"\gdef \codepoint_str_generate:n #1 {#1}",
+    r"\gdef \__kernel_codepoint_case:nn #1#2 {{#2}{}{}}",
+  ))?;
 
   // Post-load: set expl3 catcodes for fixup commands.
   state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
@@ -116,9 +141,6 @@ LoadDefinitions!({
     r"\protected\gdef \keys_if_exist:neF #1#2#3 {#3}",
     // l3keys: empty initial values for variant CSes
     r"\gdef \l_keys_key_str {}",
-    // l3char/l3str: codepoint generation — pass through
-    r"\protected\gdef \codepoint_str_generate:n #1 {#1}",
-    r"\protected\gdef \__kernel_codepoint_case:nn #1#2 {#2}",
     // l3cmd / l3xparse log-bool variables — define as \c_false_bool
     // (which itself should be defined by expl3-code.tex; if not, it'll
     // be undefined too but that's a separate issue).
