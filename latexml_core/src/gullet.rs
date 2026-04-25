@@ -614,16 +614,35 @@ pub fn read_x_token(
             // \group_begin: count — helps locate the macro that produces
             // an unmatched group-end token in expl3-code.tex.
             let (mut begs, mut ends) = (0, 0);
+            let mut has_group_token = false;
             for t in invoked.unlist_ref() {
               if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
                 begs += 1;
+                has_group_token = true;
               } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
                 ends += 1;
+                has_group_token = true;
               }
             }
-            if begs != ends {
+            // Filter to specific suspect macros to reduce noise.
+            let tok_str = token.to_string();
+            let is_suspect = matches!(
+              tok_str.as_str(),
+              "\\__cs_generate_variant:wwNN"
+                | "\\__cs_generate_variant:N"
+                | "\\__cs_generate_variant:nnNN"
+                | "\\__cs_generate_internal_variant:n"
+                | "\\__cs_generate_internal_variant:wwnNwn"
+                | "\\__cs_generate_internal_variant:NNn"
+                | "\\cs_generate_variant:Nn"
+                | "\\cs_generate_variant:cn"
+                | "\\cs_if_free:N"
+                | "\\__kernel_chk_if_free_cs:N"
+                | "\\tl_const:Nn"
+            );
+            if has_group_token && is_suspect {
               eprintln!(
-                "[trace] IMBALANCE: expansion of {} produced begs={} ends={} ({} tokens)",
+                "[trace] {} expansion: begs={} ends={} ({} tokens)",
                 token,
                 begs,
                 ends,
