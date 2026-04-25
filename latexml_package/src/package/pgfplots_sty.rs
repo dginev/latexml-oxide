@@ -14,3 +14,15 @@ LoadDefinitions!({
   DefMacro!("\\pgfplots@iffileexists", "\\IfFileExists", locked => true);
   InputDefinitions!("pgfplots", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });
+
+// Open issue (sandbox 2026-04-24, 11 papers — 1305.3934 et al):
+// `\pgfplots@curplotlist` and `\pgfplots@curlegend` undefined errors
+// from raw pgfplots.code.tex L5790/5795 — those `\let`s are local to
+// the `\pgfplots@drawplots@@@iter` body, but some axis/legend hooks
+// reach them earlier. Naive defensive init at load (either via `\let`
+// to `\pgfutil@empty` or `\def` to empty) routes downstream
+// `\ifx ... \pgfutil@empty` matches into a token-limit infinite loop,
+// regressing the cluster from conversion_error → fatal. Resolution
+// path: identify the concrete macro that calls these CSes outside the
+// iterator body and add a localised guard there, OR fix the iterator
+// init order. Deferred — preserving the conversion_error baseline.
