@@ -2799,7 +2799,23 @@ impl Document {
     Ok(())
   }
 
-  fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis: bool) -> Result<()> {
+  fn mark_xmnode_visibility_aux(&self, node: Node, cvis: bool, pvis: bool) -> Result<()> {
+    // Recurses to math-tree depth via XMDual/XMRef-following + element-
+    // child fan-out. Deep grammar-ambiguous papers (sandbox 0711.4787
+    // et al, #17) hit Rust's 8 MB main-thread stack here during the
+    // `Finalizing...` phase (via prune_xmduals → mark_xmnode_visibility).
+    // Grow the stack on demand instead of overflowing.
+    stacker::maybe_grow(64 * 1024, 4 * 1024 * 1024, move || {
+      self.mark_xmnode_visibility_aux_inner(node, cvis, pvis)
+    })
+  }
+
+  fn mark_xmnode_visibility_aux_inner(
+    &self,
+    mut node: Node,
+    cvis: bool,
+    mut pvis: bool,
+  ) -> Result<()> {
     if (!cvis || node.has_attribute("_cvis")) && (!pvis || node.has_attribute("_pvis")) {
       return Ok(());
     }
