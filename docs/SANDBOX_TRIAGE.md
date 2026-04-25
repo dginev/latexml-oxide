@@ -41,8 +41,31 @@ Full list in `/tmp/worklist/abort.txt`. First batch:
 
 Many of these were timeout-territory in earlier runs (1210.1891,
 1308.5727, 1407.5769, 1709.05096, 1707.01155, 1711.10191, 1711.11576,
-1710.03688) — recheck under the current binary; some may have moved
-into hard-fail territory after recent changes.
+1710.03688).
+
+### Session 2026-04-25 progress on aborts
+
+Re-ran the 35-paper abort subset against post-session binary
+(commit `188ed64ee`). Result: **10 papers cleared** (28% reduction).
+
+Still aborting (25):
+
+```
+0711.4787   0903.3289   1407.5769   astro-ph0612758  hep-ph9210253
+hep-ph9512208 hep-th0101151 math0505371 math9204211 (math_parser
+stack overflow — see #17 finalize-phase)
+
+1210.1891   1709.05096  1710.04068  1711.11576  1806.06448
+math0005251 math9805021 math9810139 alg-geom9604001
+alg-geom9604020 alg-geom9703018 (real timeouts — likely throughput
+limits, not bugs)
+
+1710.03688 hep-ph0702114 (babel-french — see project_babel_francais_gap.md)
+```
+
+Cleared (10): mostly former timeouts that finished within the 90 s
+budget on the current binary. Notable: 1308.1148 (5918 maths) and
+1310.6857 now complete.
 
 ## conversion_error (priority 2) — 497 papers
 
