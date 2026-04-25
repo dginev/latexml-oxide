@@ -290,20 +290,20 @@ pub fn begingroup() { push_stack_frame(true); }
 /// End a level of binding by popping the last stack frame,
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
-  // During raw .sty/.tex load (INTERPRETING_DEFINITIONS=true), suppress the
-  // strict BOUND_MODE check. Empirically Perl doesn't trip this check on the
-  // same inputs (e.g. `\usepackage{xparse}` reproducer — Perl outputs zero
-  // errors, our Rust emits "Attempt to close a group that switched to mode
-  // horizontal" 19 times during expl3-code.tex raw load). Until we identify
-  // the exact state-machine divergence, suppress the false-positive in
-  // raw-load context where benign mode-switches inside macro-definition
-  // bodies can accumulate. See project_explsyntax_midload.md memory.
+  // BAND-AID (commit 3088dbd17 — under root-cause investigation, see
+  // `project_explsyntax_midload.md`): during raw .sty/.tex load
+  // (INTERPRETING_DEFINITIONS=true), suppress strict BOUND_MODE check.
+  // Empirically Perl emits zero errors on the same inputs while strict
+  // checks fire 19 times in our Rust during expl3-code.tex raw load.
+  // Latent bugs found 2026-04-25 when removing this guard:
+  //   - `#` (catcode PARAM) escapes to stomach
+  //   - `\q_stop` recursion
+  //   - residual `\group_end:` mode-switch error (not caught by strict
+  //     end_mode_opt either — separate divergence point)
+  //   - `\xparse-2018-04-12.sty-h@@k` undefined
+  // Each of those needs its own root-cause investigation.
   let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
   if interpreting {
-    // Raw .sty/.tex load: suppress strict checks. Just pop. Mirrors Perl's
-    // observed behavior — Perl converts \usepackage{xparse} reproducer with
-    // zero errors while strict checks fire 19 times in our Rust during
-    // expl3-code.tex load. See project_explsyntax_midload.md memory.
     pop_stack_frame(true)?;
   } else if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
@@ -480,15 +480,14 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // Perl Stomach.pm L527-528:
     //   if ((!$STATE->isValueBound('BOUND_MODE', 0))     # Last stack frame was NOT a mode switch
     //     || ($STATE->lookupValue('BOUND_MODE') ne $mode))  # OR switch to a different mode
-    // BUT: Rust's halign/cases machinery currently leaves extra frames on top
-    // at mode-close time (see `project_1112_6246_residual.md`), so applying
-    // the strict `isValueBound('BOUND_MODE', 0)` check prematurely fails
-    // `\end{equation}` on those inputs. Until the halign frame-balance is
-    // fixed to match Perl, we use the lax value-based check: if the CURRENT
-    // BOUND_MODE value matches `mode`, accept the pop — this preserves most
-    // tests at the cost of occasional mode leaks when frames stack deeper.
+    // Strict Perl-faithful: error if BOUND_MODE is not bound on the top
+    // frame, OR if its value doesn't match the mode being closed. (Earlier
+    // versions of this file used a lax value-only check as a workaround
+    // for the 1112.6246 halign frame-balance issue, since fixed in
+    // d162803d2.)
     let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-    if current_bound != bound_mode {
+    let bound_on_top = is_value_bound("BOUND_MODE", Some(0));
+    if !bound_on_top || current_bound != bound_mode {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?
       let message = s!(
