@@ -466,14 +466,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("turing", "sty", package::turing_sty::load_definitions),
   ("amsppt", "sty", package::amsppt_sty::load_definitions),
   // Open issue: \documentstyle{amsppt} (sandbox math0004154 + \Cal/
-  // \Refs/\topmatter cluster) routes through .cls lookup and falls
-  // through to OmniBus, dropping all amsppt CSes.
-  // - Direct .cls→amsppt_sty alias: timeout in amsppt_sty load chain
-  //   (paper hangs at "Loading amsfonts.sty").
-  // - LoadClass!(article)+RequirePackage!(amsppt) shim: same timeout.
-  // The amsppt_sty body has an init path that infinite-loops only
-  // under bare-class invocation. Needs deeper investigation in
-  // amsppt_sty's amsfonts handoff before .cls registration is safe.
+  // \Refs/\topmatter cluster) routes through .cls lookup. Direct
+  // alias to amsppt_sty deadlocks at amsfonts.sty load (200s+ wall);
+  // the path triggers def_autoload (\mathfrak/\mathbb/\Bbb in
+  // engine/tex.rs:118) which RequirePackage(amsfonts) — and amsfonts
+  // load loops only when invoked from this AmS-TeX-as-class entry
+  // point (works fine via OmniBus fallback or article-as-class).
+  // Needs investigation in amsfonts_sty load body before .cls
+  // registration is safe.
   ("titlesec", "sty", package::titlesec_sty::load_definitions),
   ("upgreek", "sty", package::upgreek_sty::load_definitions),
   ("xcolor", "sty", package::xcolor_sty::load_definitions),
