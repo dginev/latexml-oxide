@@ -139,11 +139,4 @@ LoadDefinitions!({
     let s = if in_french() { "\u{2006}?" } else { "?" };
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
-
-  // \frenchbsetup{key=value,...} — frenchb's option-tweak interface.
-  // ~6 sandbox papers (1702.08652 … 1704.05389) hit this when a paper
-  // configures babel-french. We don't model the per-key options; just
-  // accept the keyval list and emit nothing.
-  DefMacro!("\\frenchbsetup{}", "");
-  DefMacro!("\\frenchsetup{}",  "");
 });
