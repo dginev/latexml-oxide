@@ -248,6 +248,18 @@ pub fn bgroup() {
 /// decrementing the level of boxing.
 pub fn egroup() -> Result<()> {
   if is_value_bound("BOUND_MODE", Some(0)) {
+    // Diagnostic for cluster investigation (project_explsyntax_midload.md).
+    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let cur_tok = get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+      eprintln!(
+        "[trace] egroup ERROR: cur_tok={cur_tok} BOUND_MODE={bound} MODE={mode}\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
+    }
     // Last stack frame was a mode switch!?!?!
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
@@ -279,6 +291,16 @@ pub fn begingroup() { push_stack_frame(true); }
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
   if is_value_bound("BOUND_MODE", Some(0)) {
+    // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
+    // See project_explsyntax_midload.md memory.
+    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      eprintln!(
+        "[trace] endgroup ERROR: BOUND_MODE={bound} MODE={mode}\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
+    }
     // Last stack frame was a mode switch!?!?!
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
