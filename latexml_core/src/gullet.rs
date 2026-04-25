@@ -610,43 +610,24 @@ pub fn read_x_token(
           local_current_token(token.clone());
           let invoked = defn.invoke(false)?;
           if std::env::var("LXML_TRACE_GROUP_END").is_ok() {
-            // Log when expansion contains \group_end: with imbalanced
-            // \group_begin: count — helps locate the macro that produces
-            // an unmatched group-end token in expl3-code.tex.
+            // Print per-event {macro, delta} so post-processing can sum
+            // by-macro to find which expandable CS contributes net +/- 1
+            // imbalance across the run. Format: TRACE_GE delta CS
             let (mut begs, mut ends) = (0, 0);
-            let mut has_group_token = false;
             for t in invoked.unlist_ref() {
               if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
                 begs += 1;
-                has_group_token = true;
               } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
                 ends += 1;
-                has_group_token = true;
               }
             }
-            // Filter to specific suspect macros to reduce noise.
-            let tok_str = token.to_string();
-            let is_suspect = matches!(
-              tok_str.as_str(),
-              "\\__cs_generate_variant:wwNN"
-                | "\\__cs_generate_variant:N"
-                | "\\__cs_generate_variant:nnNN"
-                | "\\__cs_generate_internal_variant:n"
-                | "\\__cs_generate_internal_variant:wwnNwn"
-                | "\\__cs_generate_internal_variant:NNn"
-                | "\\cs_generate_variant:Nn"
-                | "\\cs_generate_variant:cn"
-                | "\\cs_if_free:N"
-                | "\\__kernel_chk_if_free_cs:N"
-                | "\\tl_const:Nn"
-            );
-            if has_group_token && is_suspect {
+            if begs > 0 || ends > 0 {
               eprintln!(
-                "[trace] {} expansion: begs={} ends={} ({} tokens)",
-                token,
+                "TRACE_GE delta={} begs={} ends={} cs={}",
+                begs as i32 - ends as i32,
                 begs,
                 ends,
-                invoked.unlist_ref().len()
+                token
               );
             }
           }
