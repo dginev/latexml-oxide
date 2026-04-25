@@ -49,6 +49,24 @@ matter:
      1709.05096, 1711.10191, 1711.11576, 1707.01155, 1210.1891
      (hyperref → etoolbox → kvoptions → nameref chain), 1403.4135
      (math-parser ambiguity).
+   - **NEW dominant cluster (2026-04-25b run, ~95-100 conv_err papers):**
+     `Error:unexpected:\group_end: Attempt to close a group that switched
+     to mode horizontal` at `latexml_core/src/stomach.rs:284` from
+     `endgroup()`'s `is_value_bound("BOUND_MODE", Some(0))` check.
+     Reproducer locations: `xparse-2018-04-12.sty:1762-1776` and
+     `lipsum.sty:401`. BOUND_MODE somehow gets bound on the
+     `\group_begin:` (==`\begingroup`) frame during the body of an
+     expl3 group; `\group_end:` (==`\endgroup`) then errors. All three
+     `BOUND_MODE` Local-assign sites in stomach.rs (`set_mode:327`,
+     `begin_mode_opt:403`) are paired with `push_stack_frame` except
+     when called via `dialect.rs:1114/1319` and
+     `latex_constructs.rs:2655` (DefEnvironment-style noframe=true).
+     None should fire during the xparse raw .sty load yet they do.
+     Full diagnosis trail in
+     [`memory/project_explsyntax_midload.md`](../memory/project_explsyntax_midload.md).
+     **Next-cycle target:** instrument `begin_mode_opt` to capture
+     caller backtrace when noframe=true, run on `1402.5859` reproducer
+     to identify the unexpected mid-load mode-switch site.
 
 Each of these is a **root-cause investigation** — not a stub-port gap.
 Per-cycle work must target one of these two fronts; drive-by pstricks /
