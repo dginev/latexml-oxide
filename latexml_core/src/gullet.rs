@@ -607,8 +607,30 @@ pub fn read_x_token(
           return Ok(Some(token));
         },
         Outcome::Invoke(defn) => {
-          local_current_token(token);
+          local_current_token(token.clone());
           let invoked = defn.invoke(false)?;
+          if std::env::var("LXML_TRACE_GROUP_END").is_ok() {
+            // Log when expansion contains \group_end: with imbalanced
+            // \group_begin: count — helps locate the macro that produces
+            // an unmatched group-end token in expl3-code.tex.
+            let (mut begs, mut ends) = (0, 0);
+            for t in invoked.unlist_ref() {
+              if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
+                begs += 1;
+              } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
+                ends += 1;
+              }
+            }
+            if begs != ends {
+              eprintln!(
+                "[trace] IMBALANCE: expansion of {} produced begs={} ends={} ({} tokens)",
+                token,
+                begs,
+                ends,
+                invoked.unlist_ref().len()
+              );
+            }
+          }
           unread(invoked);
           expire_current_token();
           continue;
