@@ -135,36 +135,48 @@ LoadDefinitions!({
   DefMacro!("\\subsubhead Until:\\endsubsubhead", "\\subsubsection*{#1}");
   Let!("\\endsubsubhead", "\\relax");
 
-  // Theorem environments — Perl L200-260 use
+  // Theorem environments — Perl L170-243 use
   //   DefConstructor('\<kind> Undigested DigestUntil:\end<kind>', …)
-  // each with its own counter, title font, afterConstruct close, and
-  // title-name Digest. DigestUntil is now fully ported (27cc66b60);
-  // wiring these up to Perl-parity is still deferred because each
-  // needs a NewCounter('<kind>') declaration plus the title-font
-  // computation — risk of conflict with amsthm's theorem counter.
-  // Current stubs forward to the corresponding `theorem`/`definition`/
-  // etc. LaTeX environments, which produce valid ltx:theorem output
-  // but with a different counter namespace than native amsppt would.
-  //
-  // Intentional DefConstructor → DefMacro kind divergence for the
-  // entire theorem-env family (\proclaim, \definition, \remark,
-  // \example, \demo, \roster and their \end<x> pairs): Rust delegates
-  // to `\begin{theorem}` / `\begin{definition}` / etc. instead of
-  // re-implementing per-kind counter+title glue. The `{theorem}` env
-  // machinery (from LaTeX's native amsthm equivalent) already
-  // produces the `ltx:theorem class="ltx_theorem_<kind>"` wrapper
-  // Perl's DefConstructor would emit. WISDOM #44 — observable XML
-  // matches; amsthm-counter-namespace-aliasing is deliberate.
-  DefMacro!("\\proclaim", "\\begin{theorem}");
-  DefMacro!("\\endproclaim", "\\end{theorem}");
-  DefMacro!("\\definition", "\\begin{definition}");
-  DefMacro!("\\enddefinition", "\\end{definition}");
-  DefMacro!("\\remark", "\\begin{remark}");
-  DefMacro!("\\endremark", "\\end{remark}");
-  DefMacro!("\\example", "\\begin{example}");
-  DefMacro!("\\endexample", "\\end{example}");
-  DefMacro!("\\demo", "\\begin{proof}");
-  DefMacro!("\\enddemo", "\\end{proof}");
+  // The Rust port now follows that pattern (with title font/counter
+  // glue intentionally simplified — see #44 amsthm-counter aliasing).
+  // Earlier Rust versions routed through `\begin{theorem}` macros,
+  // which leaked an internal_vertical mode frame at \enddocument
+  // time when the body content closed paragraphs naturally. Reverting
+  // to the Perl-faithful DefConstructor approach avoids that — the
+  // body digests in surrounding mode without pushing a new frame.
+  // Perl-faithful port of L170-243 — DefConstructor with `Undigested
+  // DigestUntil:\end<kind>` so the body digests in surrounding mode
+  // without pushing/popping a mode frame (which the previous
+  // `\begin{theorem}` macro routing did, and which leaked at
+  // \enddocument time when the body content closed paragraphs
+  // naturally — see amsppt mode-leak repro `/tmp/min_amstex.tex`,
+  // commit `aa3304142`'s residual). The Perl `properties => RefStepID`
+  // and per-kind counter glue is omitted; ltx:theorem auto_close
+  // (already registered above) handles the closing.
+  DefConstructor!("\\proclaim Undigested DigestUntil:\\endproclaim",
+    "<ltx:theorem class='ltx_theorem_proclaim'><ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+  Let!("\\endproclaim", "\\relax");
+
+  DefConstructor!("\\definition Undigested DigestUntil:\\enddefinition",
+    "<ltx:theorem class='ltx_theorem_definition'><ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+  Let!("\\enddefinition", "\\relax");
+
+  DefConstructor!("\\remark Undigested DigestUntil:\\endremark",
+    "<ltx:theorem class='ltx_theorem_remark'><ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+  Let!("\\endremark", "\\relax");
+
+  DefConstructor!("\\example Undigested DigestUntil:\\endexample",
+    "<ltx:theorem class='ltx_theorem_example'><ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+  Let!("\\endexample", "\\relax");
+
+  DefConstructor!("\\demo Undigested DigestUntil:\\enddemo",
+    "<ltx:theorem class='ltx_theorem_demonstration'><ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+  Let!("\\enddemo", "\\relax");
 
   // Lists — Perl L265-300
   DefMacro!("\\roster", "\\begin{enumerate}");
