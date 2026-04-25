@@ -82,17 +82,36 @@ LoadDefinitions!({
               r"{\ifnum\lccode#2=0 \exp_stop_f:#2\else\lccode#2\exp_stop_f:\fi}}}",
       r"}}{}{}",
     r"}",
-    // l3text \text_lowercase:n / \text_uppercase:n: full Unicode-aware text-mode
-    // case mapping is dump-gated (\__text_change_case:nnn at line 18979 plus
-    // a deep helper chain). For ASCII / non-grouped text inputs, the result
-    // matches \str_lowercase:n / \str_uppercase:n. Shim accordingly so the
-    // ~90 packages using \text_*case:n produce *something* useful instead of
-    // letting the CS expand to its own name. Real text-mode semantics
-    // (handling \protect, ungrouping, etc.) require dump_reader gate widening.
+    // l3text \text_lowercase:n / \text_uppercase:n etc.: full Unicode-aware
+    // text-mode case mapping is dump-gated (\__text_change_case:nnn at line
+    // 18979 plus a deep helper chain). For ASCII / non-grouped text inputs,
+    // the result matches \str_lowercase:n / \str_uppercase:n. Shim accordingly
+    // so the ~90 packages using \text_*case:n produce *something* useful
+    // instead of letting the CS expand to its own name. Real text-mode
+    // semantics (handling \protect, ungrouping, etc.) require dump_reader
+    // gate widening.
+    //
+    // The :nn variants take a language as #1 and content as #2 — for
+    // ASCII parity we ignore lang. The _all variants apply titlecase to
+    // every word (Perl's lib does this via word splitting); for ASCII
+    // approximation we just uppercase everything. The _first variant
+    // properly upcases only the first letter; full uppercase is the
+    // closest expandable approximation without word-parsing logic.
     r"\gdef \text_lowercase:n #1 {\str_lowercase:n {#1}}",
     r"\gdef \text_uppercase:n #1 {\str_uppercase:n {#1}}",
     r"\gdef \text_titlecase:n #1 {\str_uppercase:n {#1}}",
     r"\gdef \text_titlecase_first:n #1 {\str_uppercase:n {#1}}",
+    r"\gdef \text_titlecase_all:n #1 {\str_uppercase:n {#1}}",
+    r"\gdef \text_lowercase:nn #1#2 {\str_lowercase:n {#2}}",
+    r"\gdef \text_uppercase:nn #1#2 {\str_uppercase:n {#2}}",
+    r"\gdef \text_titlecase:nn #1#2 {\str_uppercase:n {#2}}",
+    r"\gdef \text_titlecase_first:nn #1#2 {\str_uppercase:n {#2}}",
+    r"\gdef \text_titlecase_all:nn #1#2 {\str_uppercase:n {#2}}",
+    // l3str \str_foldcase:n / :V — case-fold for case-insensitive comparison.
+    // For ASCII this is equivalent to lowercase. Real Unicode case-folding
+    // (German eszett ß → ss, etc.) requires the gated case tables.
+    r"\gdef \str_foldcase:n #1 {\str_lowercase:n {#1}}",
+    r"\gdef \str_foldcase:V #1 {\str_lowercase:n {#1}}",
   ))?;
 
   // Post-load: set expl3 catcodes for fixup commands.
