@@ -59,7 +59,6 @@ pub mod amstext_sty;
 pub mod amsthm_sty;
 pub mod amsxtra_sty;
 pub mod animate_sty;
-pub mod anysize_sty;
 pub mod apjfonts_sty;
 pub mod appendix_sty;
 pub mod array_sty;
