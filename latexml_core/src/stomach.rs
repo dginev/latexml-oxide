@@ -302,10 +302,19 @@ pub fn endgroup() -> Result<()> {
     let bound = is_value_bound("BOUND_MODE", Some(0));
     let loc = gullet::get_locator();
     let tok = get_current_token().unwrap_or(T_CS!("\\?"));
-    eprintln!(
-      "[trace] endgroup pre-depth={depth} bound_top={bound} tok={} at {}",
-      tok, loc
-    );
+    if depth == 0 {
+      eprintln!(
+        "[trace] endgroup at locked frame: tok={} at {}\n{}",
+        tok,
+        loc,
+        std::backtrace::Backtrace::force_capture()
+      );
+    } else {
+      eprintln!(
+        "[trace] endgroup pre-depth={depth} bound_top={bound} tok={} at {}",
+        tok, loc
+      );
+    }
   }
   // BAND-AID (commit 3088dbd17 — under root-cause investigation, see
   // `project_explsyntax_midload.md`): during raw .sty/.tex load
