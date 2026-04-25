@@ -730,7 +730,52 @@ impl XM {
     nodes: &mut [Node],
     document: &mut Document,
   ) -> Result<Node, Box<dyn Error + Send + Sync>> {
-    match self {
+    // Grow the call stack on demand if we are running low. Heavily
+    // nested math trees (XMApp(op, [XMApp(...)]) chains) recurse
+    // through this function at depth proportional to expression
+    // nesting; on Rust's 8 MB main-thread default stack that overflows
+    // on grammar-ambiguous papers (sandbox 0711.4787, 0903.3289,
+    // hep-th0101151, math0505371, math9204211, hep-ph9210253,
+    // hep-ph9512208, astro-ph0612758 — 8 papers, SIGABRT with
+    // `thread 'main' has overflowed its stack`). stacker::maybe_grow
+    // allocates a new stack chunk on a separate thread when the
+    // current frame's remaining space drops below the red zone.
+    stacker::maybe_grow(64 * 1024, 4 * 1024 * 1024, || {
+      self.into_xmath_inner(owner, nodes, document)
+    })
+  }
+
+  fn into_xmath_inner(
+    self,
+    owner: &mut Node,
+    nodes: &mut [Node],
+    document: &mut Document,
+  ) -> Result<Node, Box<dyn Error + Send + Sync>> {
+    // Drain nested XM::Choices iteratively before the match. Each
+    // Choices wrapper is a tail call into the first remaining choice
+    // — preserving the per-layer Info log so the discard count
+    // is visible identically to the prior recursive form.
+    let mut tree = self;
+    loop {
+      match tree {
+        XM::Choices(mut choices) => {
+          Info!(
+            "math_parser",
+            "choices",
+            format!(
+              "to_xmath handler discarded {} parse choices.",
+              choices.len() - 1
+            )
+          );
+          tree = choices.remove(0);
+        },
+        other => {
+          tree = other;
+          break;
+        },
+      }
+    }
+    match tree {
       XM::Lexeme(content, _meta) => {
         let id = content
           .split(':')
@@ -834,19 +879,8 @@ impl XM {
         }
         Ok(arg_node)
       },
-      XM::Choices(mut choices) => {
-        {
-          Info!(
-            "math_parser",
-            "choices",
-            format!(
-              "to_xmath handler discarded {} parse choices.",
-              choices.len() - 1
-            )
-          );
-        }
-        choices.remove(0).into_xmath(owner, nodes, document)
-      },
+      // XM::Choices was already drained iteratively above the match.
+      XM::Choices(_) => unreachable!("Choices drained before match"),
     }
   }
 
