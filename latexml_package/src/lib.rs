@@ -417,6 +417,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cancel", "sty", package::cancel_sty::load_definitions),
   ("ccfonts", "sty", package::ccfonts_sty::load_definitions),
   ("cases", "sty", package::cases_sty::load_definitions),
+  ("colonequals", "sty", package::colonequals_sty::load_definitions),
   ("colortbl", "sty", package::colortbl_sty::load_definitions),
   ("crop", "sty", package::crop_sty::load_definitions),
   ("chngcntr", "sty", package::chngcntr_sty::load_definitions),

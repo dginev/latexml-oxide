@@ -109,6 +109,7 @@ pub mod cmap_sty;
 pub mod cmbright_sty;
 pub mod color_sty;
 pub mod colordvi_sty;
+pub mod colonequals_sty;
 pub mod colortbl_sty;
 pub mod comment_sty;
 pub mod concmath_sty;
