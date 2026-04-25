@@ -1,16 +1,27 @@
-# 10k sandbox triage — fresh worklist
+# 10k sandbox triage — post-session worklist
 
-Run: `~/data/sandbox_full_2026-04-24/` (binary `b9bc02155`,
-post-1112.6246 fix). Output dir: 7898 inputs, results.tsv = 7898 rows.
+Latest run: `~/data/sandbox_full_2026-04-25/` (binary `771bcb861`,
+end of 2026-04-25 session). Baseline: `~/data/sandbox_full_2026-04-24/`
+(`b9bc02155`).
 
-## Top-level distribution
+## Top-level distribution (2026-04-25, post-session)
 
-| Status | Count | % | Notes |
-|---|---:|---:|---|
-| `ok` | **7363** | **93.2%** | converts error-free (some may carry recoverable warnings) |
-| `conversion_error` | 497 | 6.3% | exit ≠ 0 from cortex_worker, finite wall time |
-| `abort` | 35 | 0.4% | exit 134 (SIGABRT) — assertion / panic / OOM |
-| `conversion_fatal` | 3 | 0.04% | 10001-error mode-leak cascade |
+| Status | Count | % | Δ from 2026-04-24 |
+|---|---:|---:|---:|
+| `ok` | **7497** | **94.9%** | **+134** |
+| `conversion_error` | 369 | 4.7% | -128 |
+| `abort` | 29 | 0.37% | -6 |
+| `conversion_fatal` | 3 | 0.04% | 0 |
+| **Total failures** | **401** | **5.1%** | **-134 (25% reduction)** |
+
+Earlier 2026-04-24 distribution shown for reference:
+
+| Status | Count | % |
+|---|---:|---:|
+| `ok` | 7363 | 93.2% |
+| `conversion_error` | 497 | 6.3% |
+| `abort` | 35 | 0.4% |
+| `conversion_fatal` | 3 | 0.04% |
 
 Per the user directive, only **papers Perl latexml converts
 error-free** are in scope. Cross-check each cell below against
