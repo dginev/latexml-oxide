@@ -394,7 +394,6 @@ pub mod t2a_fontmap;
 pub mod t2b_fontmap;
 pub mod t2c_fontmap;
 pub mod tablefootnote_sty;
-pub mod tensor_sty;
 pub mod tabularx_sty;
 pub mod tabulary_sty;
 pub mod tcilatex_tex;
