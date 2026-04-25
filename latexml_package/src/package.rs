@@ -194,7 +194,6 @@ pub mod glossaries_sty;
 pub mod graphics_sty;
 pub mod graphicx_sty;
 pub mod grffile_sty;
-pub mod harvard_sty;
 pub mod helvet_sty;
 pub mod hepunits_sty;
 pub mod here_sty;
