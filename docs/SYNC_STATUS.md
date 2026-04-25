@@ -18,18 +18,23 @@ matter:
 2. **10k sandbox error-free** — Perl-baseline triage (2026-04-24) on
    the five previously catalogued hard-fails:
    - **Real parity gaps** (Perl exits 0, 0 errors — Rust fails):
-     - **1112.6246** — 9-line standalone reproducer
-       (`docs/reproducers/min_1112_6246.tex`): `mn2e` class +
-       `\begin{equation}\cases{… & $a$ \cr … & $b$, }\end{equation}`
-       (missing final `\cr`) + subsequent inline `$m_1$` →
-       10001-error cascade. Perl on same input: exit 0, produces
-       clean `<XMArray>` / `<XMRow>` XML. Root cause narrowed to the
-       interaction of mn2e's `\let T_MATH → \lx@dollar@in@mathmode`
-       (mn2e_support_sty.rs:321) with `\cases{…}` alignment close
-       when last row has no trailing `\cr`. Failed fix attempt:
-       reset `MATH_ALIGN_$_BEGUN` at equation close (no effect).
-       True leak is mode-frame-level, not counter-level. See
-       [`memory/project_1112_6246_residual.md`](../memory/project_1112_6246_residual.md).
+     - ~~**1112.6246**~~ **FIXED 2026-04-24** (commit `d162803d2`,
+       local). Root cause: Rust's `mn2e_support_sty.rs` erroneously
+       loaded amsmath+amssymb when `@useAMS` was set (mirroring
+       mn2e.cls's raw-TeX `\if@useAMS\RequirePackage{amsmath,
+       amssymb}\fi`), but Perl's `mn2e_support.sty.ltxml` deliberately
+       skips this. The extra amsmath load re-routed `\cases` onto
+       amsmath's `\lx@ams@cases@` DefConstructor (DigestedBody — no
+       explicit close terminator) instead of base_xmath's
+       `\lx@gen@plain@cases{}{}` which wraps the body with
+       `{\lx@begin@alignment#2\lx@end@alignment}` — the
+       `\lx@hidden@crcr\lx@close@alignment` that provides clean
+       halign termination. Dropping the amsmath/amssymb RequirePackage
+       (and aligning dcolumn/natbib/graphicx with Perl's conditional
+       loading pattern) makes 1112.6246 reproducer go 10001 → 0
+       errors while keeping 1093/0/0 on the local test suite. See
+       [`memory/project_1112_6246_residual.md`](../memory/project_1112_6246_residual.md)
+       for the full investigation trail.
      - hep-ph0702114 (conversion_fatal: babel-french `\csname` cascade
        triggered mid-body of elsart3-1 paper) — see
        [`memory/project_babel_francais_gap.md`](../memory/project_babel_francais_gap.md).
@@ -307,6 +312,30 @@ elsart_support (c49ae318d); `xspace` RequirePackage in glossaries
 regression. Every commit passes `cargo check --workspace`.
 
 ### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
+
+#### Session 2026-04-25 progress
+
+Cumulative reductions against the 2026-04-24 baseline (7898 papers,
+535 failures = 7363 ok, 497 conv_error, 35 abort, 3 fatal):
+- **#12 \ext@subfigure** (subfig binding) — 119 papers, fix `e93403169`
+- **#13 \languagename** (default in tex_hyphenation) — 50 papers, fix `fcdcbc828`
+- **#16 \la/\ga via DefMath in mn2e_support** — ~21 papers, fix `3d3b3153a`
+- **#17 finalize stack-overflow** — 8/9 papers, fix `74556fc8a`
+  (256 MB worker thread in latexml_oxide / latexmlmath_oxide /
+  cortex_worker; the recursion was finite-but-deep through
+  mark_xmnode_visibility_aux + has_namespace_usage + mark_seen_rec
+  chains, validated by `ulimit -s unlimited`)
+- **abort timeouts naturally cleared** by intermediate perf
+  improvements — 2/26 paper baseline measured (1308.1148, 1310.6857)
+
+Total session impact: ~200 papers cleared (>37% of original 535
+failures). Remaining residual: babel-french (#19, hep-ph0702114 +
+1710.03688), pgfmath (#21, 1902.08705), modern-xparse cascade
+(#20, 1803.03288), throughput-bound timeouts (~13 papers,
+expected to close as math-parser perf improves), expl3 kernel
+cluster (#11, ~290 papers, long-horizon).
+
+#### Earlier failure classes (session-128 sweep)
 
 Three failure classes in the session-128 sweep:
 
