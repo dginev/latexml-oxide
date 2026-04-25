@@ -173,9 +173,16 @@ LoadDefinitions!({
   raw_tex(concat!(
     // l3file: \iow_char:N produces the literal char (e.g. \iow_char:N \\ → \\)
     r"\protected\gdef \iow_char:N #1{#1}",
-    // l3file: \file_input_stop: terminates input — no-op (file already
-    // bounded by mouth)
-    r"\gdef \file_input_stop: {}",
+    // l3file: \file_input_stop: terminates current file. Real expl3:
+    //   \cs_new_eq:NN \file_input_stop: \tex_endinput:D
+    // Previous no-op stub was incorrect — files using
+    //   \cs_if_exist:NT \X { \file_input_stop: }
+    //   <continued code that should be skipped>
+    // would NOT skip the continued code, leading to double-execution.
+    // Example: xparse.sty's version-dispatch idiom relies on this to stop
+    // the umbrella file after loading the dated variant. Pattern is
+    // standard l3 idiom; the stub was a Perl-divergent simplification.
+    r"\protected\gdef \file_input_stop: {\endinput}",
     // l3file: \file_input:n {file} — input a file. Stub gobbles arg.
     r"\protected\gdef \file_input:n #1 {}",
     // l3keys: define/set keys — gobble the key arguments
