@@ -59,6 +59,22 @@ done
 
 echo "==============================="
 echo "rnc → rng conversion complete."
-echo "Stage 2 (rng → .model) still requires the Perl toolchain — see"
-echo "LaTeXML/tools/compileschema and SYNC_STATUS.md §Work Plan."
 echo "==============================="
+
+# =====================================================================
+# rng → .model — invokes the Rust binary's --dump-model flag, which
+# loads the embedded LaTeXML schema (the same one runtime sees) and
+# serialises it via Model::dump_compiled_schema(). Mirrors the Perl
+# compileSchema print loop (Model.pm L121-136). Output is byte-for-byte
+# identical to Perl's `bin/compileschema --schema=LaTeXML > LaTeXML.model`.
+# =====================================================================
+LATEXML_BIN="$LATEXMLDIR/target/release/latexml_oxide"
+if [ ! -x "$LATEXML_BIN" ]; then
+  echo "warning: $LATEXML_BIN not built — skipping stage 2." >&2
+  echo "  Build with: cargo build --release --bin latexml_oxide" >&2
+  exit 0
+fi
+MODEL_OUT="$RELAXNGDIR/$SCHEMA.model"
+echo "Generating $SCHEMA.model via --dump-model"
+"$LATEXML_BIN" --dump-model > "$MODEL_OUT"
+echo "$MODEL_OUT updated."

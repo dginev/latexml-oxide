@@ -25,7 +25,11 @@ pub type IndirectModel = SymHashMap<SymHashMap<SymStr>>;
 static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
 static TAG_MODEL_LINE_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
-static CLASS_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
+// Mirrors Perl Model.pm L149: `m/^([^:=]+):=\(?([^)]*?)\)?$/` — the
+// `\(?…\)?` pair strips the surrounding parens from
+// `classname:=(elt1,elt2,...)` so the elements split cleanly.
+static CLASS_MODEL_LINE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
 static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 #[derive(Default, Debug)]

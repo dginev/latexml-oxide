@@ -201,6 +201,12 @@ struct Cli {
   /// Codegen mode: generate Rust from dump file
   #[arg(long, value_name = "DUMP")]
   codegen: Option<String>,
+
+  /// Dump compiled schema model to stdout in `.model` plain-text format,
+  /// then exit. Currently only the embedded `LaTeXML` schema is supported
+  /// (matches Perl `LaTeXML::Common::Model::compileSchema` output).
+  #[arg(long)]
+  dump_model: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -234,6 +240,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     _ => log::LevelFilter::Debug,
   };
   latexml_core::util::logger::init(log_level).ok();
+
+  // Dump-model mode — load the embedded LaTeXML schema, serialise to
+  // stdout in `.model` format, exit. Mirrors Perl
+  // `LaTeXML::Common::Model::compileSchema` (Model.pm L121-136). Used
+  // by tools/compileschema.sh stage 2 to regenerate `LaTeXML.model`
+  // from the same source the runtime sees.
+  if cli.dump_model {
+    print!("{}", latexml::dump_compiled_latexml_model());
+    process::exit(0);
+  }
 
   // Codegen mode — handle early, no source file needed
   if let Some(dump_path) = cli.codegen {
