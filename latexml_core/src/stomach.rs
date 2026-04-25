@@ -399,6 +399,15 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     if !noframe {
       push_stack_frame(false); // Effectively bgroup
     }
+    // Diagnostic: tracking who binds BOUND_MODE during raw .sty load
+    // (gated by LXML_TRACE_BOUND_MODE env var to avoid noise in normal runs).
+    // See project_explsyntax_midload.md memory for the active investigation.
+    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+      eprintln!(
+        "[trace] begin_mode_opt mode={mode} noframe={noframe} bound_mode={bound_mode}\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
+    }
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
     set_mode(bound_mode)?;
