@@ -199,43 +199,6 @@ LoadDefinitions!({
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
 
-  // Fallback theorem-family envs — Rust convergence shim (no Perl
-  // counterpart). The Perl amsppt.sty.ltxml emits ltx:theorem/ltx:proof
-  // directly via DefConstructor for `\proclaim`/`\demo`/etc. The Rust
-  // amsppt port (WISDOM #44, see `latexml_package/src/package/amsppt_sty.rs:158`)
-  // takes a routing shortcut: `\proclaim` → `\begin{theorem}`,
-  // `\demo` → `\begin{proof}`, etc. — relying on amsthm-style envs
-  // pre-existing in the LaTeX path. In pure-AmSTeX mode (this pool),
-  // LaTeX.pool isn't loaded, so those envs don't exist and the
-  // `\begin{theorem}` lookup leaks `\theorem` and `{theorem}` as
-  // undefined. Define minimal wrappers here so amsppt's existing
-  // routing produces valid output. Real `\newtheorem` (when later
-  // available) will rebind these if needed.
-  DefEnvironment!("{theorem}",
-    "<ltx:theorem class='ltx_theorem_proclaim'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{lemma}",
-    "<ltx:theorem class='ltx_theorem_lemma'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{corollary}",
-    "<ltx:theorem class='ltx_theorem_corollary'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{proposition}",
-    "<ltx:theorem class='ltx_theorem_proposition'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{definition}",
-    "<ltx:theorem class='ltx_theorem_definition'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{remark}",
-    "<ltx:theorem class='ltx_theorem_remark'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{example}",
-    "<ltx:theorem class='ltx_theorem_example'>#body</ltx:theorem>",
-    mode => "internal_vertical");
-  DefEnvironment!("{proof}",
-    "<ltx:proof>#body</ltx:proof>",
-    mode => "internal_vertical");
-
   Let!("\\dsize",  "\\displaystyle");
   Let!("\\tsize",  "\\textstyle");
   Let!("\\ssize",  "\\scriptstyle");
