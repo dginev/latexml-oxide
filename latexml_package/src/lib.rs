@@ -614,6 +614,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::attachfile_sty::load_definitions,
   ),
+  ("anysize", "sty", package::anysize_sty::load_definitions),
   ("apjfonts", "sty", package::apjfonts_sty::load_definitions),
   ("aipproc", "cls", package::aipproc_cls::load_definitions),
   ("aipproc", "sty", package::aipproc_sty::load_definitions),
