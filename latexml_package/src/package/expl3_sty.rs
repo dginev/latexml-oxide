@@ -38,30 +38,50 @@ LoadDefinitions!({
     latexml_core::common::error::set_suppress_log_output(false);
     state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
   }
-  // l3char/l3str: codepoint generation — passthrough no-op (raw-load fallback).
-  // Full Unicode-aware bodies are in the dump (`\codepoint_str_generate:n` line
-  // ~6336, `\__kernel_codepoint_case:nn` line ~23789), but the dump_reader
-  // gates `:`-named E entries with CS bodies (dump_reader.rs L191-207). So
-  // raw-load fallback stubs are needed even when dump-load nominally succeeds.
+  // l3char/l3str: codepoint generation — Perl-faithful ASCII case mapping
+  // (raw-load fallback). Full Unicode-aware bodies live in the dump
+  // (`\codepoint_str_generate:n` line ~6336, `\__kernel_codepoint_case:nn`
+  // line ~23789), but dump_reader gates `:`-named E entries with CS bodies
+  // (dump_reader.rs L191-207). However, raw expl3 load DOES register
+  // `\char_generate:nn` (verified expandable, uses `\c__char_*_tl` tables).
   //
   // CRITICAL: NO `\protected` — these CSes are invoked from `\exp_args:Ne` /
   // `\use:e` contexts and MUST be expandable. The previous `\protected` stub
-  // caused a cascade: `\__kernel_codepoint_case:nn` not unfolding inside
-  // e-context fed `\if_int_compare:w \__int_eval:w \__kernel_codepoint_case:nn`
-  // → "Missing number, treated as zero, next token \relax" loops in
-  // `\str_lowercase:n` (and lipsum.sty L208 — see project_lipsum_clist_map_73).
+  // caused the lipsum L208 cascade (73-paper cluster).
   //
-  // `\__kernel_codepoint_case:nn` returns 3 brace groups (codepoint, empty,
-  // empty) matching Perl's `\__codepoint_case:nn` calling convention which
-  // feeds `\__str_change_case_char:nnnnn`'s 5-arg signature. Returning the
-  // input codepoint unchanged makes case mapping a no-op (so `\str_lowercase:n
-  // {Hello}` outputs "Hello", not "hello") — but the cascade is gone. Real
-  // ASCII case mapping needs `\char_generate:nn` (also dump-gated) to convert
-  // codepoint→char in `\codepoint_str_generate:n`. Both unblockings depend on
-  // the deep expl3 widening planned in dump_reader.rs.
+  // `\__kernel_codepoint_case:nn` returns 3 brace groups (mapped-codepoint,
+  // empty, empty) matching Perl's `\__codepoint_case:nn` calling convention
+  // which feeds `\__str_change_case_char:nnnnn`'s 5-arg signature.
+  //
+  // Body uses `\lccode`/`\uccode` for ASCII case mapping. `\exp_stop_f:`
+  // separators are CRITICAL — under ExplSyntaxOn (active when this raw_tex
+  // runs), spaces are catcode-IGNORED, so without explicit \relax-like
+  // separators between `=0` and `#2` the integer scanner would absorb #2's
+  // digits into num2 (e.g. `=0 101` lexes as `=0101`, num2=101=lccode value,
+  // then TRUE branch is empty → returns 0, leaks `\__int_eval_end:`).
+  //
+  // For non-letters where lccode/uccode is 0, fall through to passthrough
+  // (#2 unchanged) — required so `\__str_change_case_char:nnnnn`'s
+  // `\int_compare {#1} = {#4}` detects no-op case changes (otherwise
+  // non-letters would map to char 0, generating NUL).
+  //
+  // Full Unicode case mapping (Greek, Cyrillic, German eszett, Turkish
+  // dotted I, etc.) requires the gated `\__codepoint_case:nn{n}`,
+  // `\__kernel_codepoint_data:nn`, and `\c__codepoint_*_intarray` tables —
+  // future work via dump_reader gate widening.
   raw_tex(concat!(
-    r"\gdef \codepoint_str_generate:n #1 {#1}",
-    r"\gdef \__kernel_codepoint_case:nn #1#2 {{#2}{}{}}",
+    r"\gdef \codepoint_str_generate:n #1 {\char_generate:nn{#1}{12}}",
+    r"\gdef \__kernel_codepoint_case:nn #1#2 {",
+      r"{\int_eval:n{",
+        r"\str_if_eq:nnTF{#1}{lowercase}",
+          r"{\ifnum\lccode#2=0 \exp_stop_f:#2\else\lccode#2\exp_stop_f:\fi}",
+          r"{\str_if_eq:nnTF{#1}{uppercase}",
+            r"{\ifnum\uccode#2=0 \exp_stop_f:#2\else\uccode#2\exp_stop_f:\fi}",
+            r"{\str_if_eq:nnTF{#1}{titlecase}",
+              r"{\ifnum\uccode#2=0 \exp_stop_f:#2\else\uccode#2\exp_stop_f:\fi}",
+              r"{\ifnum\lccode#2=0 \exp_stop_f:#2\else\lccode#2\exp_stop_f:\fi}}}",
+      r"}}{}{}",
+    r"}",
   ))?;
 
   // Post-load: set expl3 catcodes for fixup commands.
