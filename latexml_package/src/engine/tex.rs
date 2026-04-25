@@ -1,9 +1,31 @@
 use crate::prelude::*;
 
 /// Perl: DefAutoload — define a macro that auto-loads a package on first use.
-/// When the command is first invoked, it loads the specified package (via RequirePackage),
-/// then re-emits the original CS so it gets re-executed with the proper definition.
+/// When the command is first invoked, it loads the specified package (via
+/// RequirePackage), then re-emits the original CS so it gets re-executed
+/// with the proper definition.
+///
+/// Mirrors Perl `Package.pm` `DefAutoload` (L1081-1100) + `ClearAutoLoad`
+/// (L1106-1111): clear the trigger's meaning GLOBALLY before loading, then
+/// run the package, then re-emit the original CS. Without the global clear,
+/// if the autoload fires from inside a `\begin{X}` group whose env-CS is
+/// itself the trigger, the package's bindings install at LOCAL scope on
+/// the env's frame and get popped on `\end{X}` — reverting the trigger CS
+/// to the autoload closure and re-firing on every subsequent invocation
+/// (1.6M+ infinite locked-redefinition loop, observed in 1711.11576 etc).
+/// Clearing globally short-circuits the loop: after first fire, the
+/// trigger is `Stored::None` globally, so subsequent invocations with no
+/// in-scope local binding hit a clean undefined-CS error rather than
+/// re-entering the autoload.
+///
+/// Sandbox math0004154 + amsppt class-route hang at amsfonts.sty
+/// (see project_amsppt_cls_dispatcher.md memory) — the original re-entry
+/// guard was a `Tokens(vec![])` no-op installed at LOCAL scope before the
+/// package load. The Perl-faithful global clear (Stored::None at Global)
+/// covers the same re-entry-during-package-load case AND the
+/// autoload-from-inside-a-group case.
 fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
+  use latexml_core::common::store::Stored;
   use latexml_core::definition::ExpansionBody;
   let cs_tok = T_CS!(cs_name);
   // Don't overwrite if already defined
@@ -16,25 +38,22 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
-      // Re-entry guard: replace the autoload trigger with a no-op
-      // BEFORE calling require_package so any reentrant call to the
-      // same CS during the package's load body — common when the
-      // package's own DefConstructor for this CS triggers indirect
-      // expansion of `cs_for_closure` mid-install — short-circuits
-      // instead of recursively re-loading the package. After the
-      // package completes its load, its real DefConstructor/DefMacro
-      // for cs_for_closure overrides this stub. If the package
-      // happens not to install the CS, the no-op remains (still
-      // better than a hang).
-      // Sandbox math0004154 + amsppt class-route hang at amsfonts.sty
-      // (see project_amsppt_cls_dispatcher.md memory).
-      def_macro(
-        cs_for_closure,
-        None,
-        ExpansionBody::Tokens(Tokens::new(vec![])),
-        None,
-      )?;
+      // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
+      // 'global'). Removes the autoload trigger globally.
+      state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
       require_package(&pkg_name, RequireOptions::default())?;
+      // Promote whatever the package just installed for this CS from its
+      // current local scope (which is the calling group's frame, when the
+      // autoload fires from inside `\begin{X}`) to GLOBAL — so the binding
+      // survives `\end{X}`'s pop_frame. Without this, the second use of
+      // the CS would find the cleared `Stored::None` AND a `:locked=true`
+      // (which the package's `DefMacro!(..., locked=>true)` set globally),
+      // triggering a redef-blocked-by-lock loop on each generate_error_stub
+      // attempt. The trigger CS is the only one we promote — the package's
+      // internal CSes (referenced by the trigger's body) are typically
+      // installed by base-pool layers at depth=0 already, so they survive
+      // independently. (1711.11576: 18M-line timeout → clean output.)
+      latexml_core::state::let_i(&cs_for_closure, &cs_for_closure, Some(Scope::Global));
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
