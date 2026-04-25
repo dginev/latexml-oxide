@@ -260,4 +260,12 @@ LoadDefinitions!({
       after_equation(Some(whatsit))?;
     },
     locked => true);
+
+  // Perl mn2e_support.sty.ltxml L200-201 — declare two boolean ifs that
+  // mn2e papers test against later. \ifCUPmtlplainloaded gates a CUP
+  // plain-mode branch, \iffirstta gates the first-table-author flag.
+  // Sandbox astro-ph0207632 + astro-ph9807011 + astro-ph9909211 +
+  // astro-ph9907099 hit `\ifCUPmtlplainloaded` undefined.
+  RawTeX!(r"\newif\ifCUPmtlplainloaded");
+  RawTeX!(r"\newif\iffirstta");
 });
