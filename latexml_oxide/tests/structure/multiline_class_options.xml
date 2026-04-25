@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="revtex4" options="amsmath
+,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <equationgroup class="ltx_eqn_align" xml:id="S0.EGx1">
+      <equation xml:id="S0.E1">
+        <tags>
+          <tag>(1)</tag>
+          <tag role="autoref">Equation 1</tag>
+          <tag role="refnum">1</tag>
+        </tags>
+        <MathFork>
+          <Math tex="\displaystyle a=1" text="a = 1" xml:id="S0.E1.m3">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok meaning="1" role="NUMBER">1</XMTok>
+              </XMApp>
+            </XMath>
+          </Math>
+          <MathBranch>
+            <td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1">
+                <XMath>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                </XMath>
+              </Math></td>
+            <td align="left"><Math mode="inline" tex="\displaystyle=1" text="absent = 1" xml:id="S0.E1.m2">
+                <XMath>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMTok meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
+                </XMath>
+              </Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+    </equationgroup>
+    <equationgroup class="ltx_eqn_align" xml:id="S0.EGx2">
+      <equation xml:id="S0.E2">
+        <tags>
+          <tag>(2)</tag>
+          <tag role="autoref">Equation 2</tag>
+          <tag role="refnum">2</tag>
+        </tags>
+        <MathFork>
+          <Math tex="\displaystyle b=2" text="b = 2" xml:id="S0.E2.m3">
+            <XMath>
+              <XMApp>
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
+              </XMApp>
+            </XMath>
+          </Math>
+          <MathBranch>
+            <td align="right"><Math mode="inline" tex="\displaystyle b" text="b" xml:id="S0.E2.m1">
+                <XMath>
+                  <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                </XMath>
+              </Math></td>
+            <td align="left"><Math mode="inline" tex="\displaystyle=2" text="absent = 2" xml:id="S0.E2.m2">
+                <XMath>
+                  <XMApp>
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMTok meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMath>
+              </Math></td>
+          </MathBranch>
+        </MathFork>
+      </equation>
+    </equationgroup>
+  </para>
+</document>

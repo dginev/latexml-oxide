@@ -16,7 +16,13 @@ use crate::prelude::*;
 use latexml_core::alignment::template::TemplateConfig;
 use std::collections::VecDeque;
 
-static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r",\s*").unwrap());
+// Mirrors Perl `Package.pm` (`split(/\s*,\s*/, $options)`) — strips
+// whitespace on BOTH sides of each comma so option names are normalized
+// when LaTeX line-wraps the option list (e.g. `[twocolumn,amsmath\n
+// ,amssymb]`). Without leading `\s*` we'd get `"amsmath\n"` and the
+// declared option callback wouldn't fire — silently turning the option
+// into an unused-global.
+static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
 static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
