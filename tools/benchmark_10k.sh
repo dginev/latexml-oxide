@@ -199,6 +199,7 @@ convert_one() {
   TMPDIR="$task_tmp" timeout --kill-after=10 "$TIMEOUT_S" \
     bash -c "ulimit -v $MAX_RAM_KB 2>/dev/null; exec \"\$@\"" -- \
     "$WORKER_BIN" --standalone --input "$input_zip" --output "$output_zip" \
+    --timeout "$TIMEOUT_S" \
     2>"$log_file" || exit_code=$?
 
   wall_time=$(( ($(date +%s%N) - start_time) / 1000000 ))  # milliseconds
