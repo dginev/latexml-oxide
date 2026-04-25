@@ -76,7 +76,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("article", "cls", package::article_cls::load_definitions),
   ("OmniBus", "cls", package::omnibus_cls::load_definitions),
   ("babel", "sty", package::babel_sty::load_definitions),
-  ("babelbib", "sty", package::babelbib_sty::load_definitions),
   ("beamer", "cls", package::beamer_cls::load_definitions),
   ("balance", "sty", package::balance_sty::load_definitions),
   ("breakurl", "sty", package::breakurl_sty::load_definitions),
