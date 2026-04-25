@@ -199,6 +199,25 @@ LoadDefinitions!({
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
 
+  // Fallback section commands — Rust convergence shim (no Perl
+  // counterpart). The Rust amsppt port routes `\head`/`\subhead`/
+  // `\subsubhead` through LaTeX's `\section*{}`/`\subsection*{}`/
+  // `\subsubsection*{}` (latexml_package/src/package/amsppt_sty.rs:101,
+  // 133, 135), which depend on LaTeX.pool's `\@startsection` machinery.
+  // In pure-AmSTeX mode that machinery isn't loaded, leaking
+  // `\subsection` etc. as undefined when amsppt's `\subhead` fires.
+  // Define minimal section constructors here that emit the matching
+  // ltx wrapper so amsppt's existing routing works in both modes.
+  DefConstructor!("\\section OptionalMatch:* {}",
+    "<ltx:section><ltx:title>#2</ltx:title>",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:section")?; });
+  DefConstructor!("\\subsection OptionalMatch:* {}",
+    "<ltx:subsection><ltx:title>#2</ltx:title>",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:subsection")?; });
+  DefConstructor!("\\subsubsection OptionalMatch:* {}",
+    "<ltx:subsubsection><ltx:title>#2</ltx:title>",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:subsubsection")?; });
+
   // Fallback theorem-family envs — Rust convergence shim (no Perl
   // counterpart). The Perl amsppt.sty.ltxml emits ltx:theorem/ltx:proof
   // directly via DefConstructor for `\proclaim`/`\demo`/etc. The Rust
