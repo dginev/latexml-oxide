@@ -3549,6 +3549,16 @@ LoadDefinitions!({
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
+  // Modern LaTeX2e kernel public API (added 2020-10) — TF-style wrappers
+  // around the legacy \@ifpackageloaded / \@ifclassloaded. ~15 sandbox
+  // papers fail with `\IfPackageLoadedTF` undefined; ditto smaller cluster
+  // for class form. Public CSes route to the @-private CSes verbatim.
+  DefMacro!("\\IfPackageLoadedTF", r"\@ifpackageloaded");
+  DefMacro!("\\IfPackageLoadedT{}{}", r"\@ifpackageloaded{#1}{#2}{}");
+  DefMacro!("\\IfPackageLoadedF{}{}", r"\@ifpackageloaded{#1}{}{#2}");
+  DefMacro!("\\IfClassLoadedTF", r"\@ifclassloaded");
+  DefMacro!("\\IfClassLoadedT{}{}", r"\@ifclassloaded{#1}{#2}{}");
+  DefMacro!("\\IfClassLoadedF{}{}", r"\@ifclassloaded{#1}{}{#2}");
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // Rust divergence from Perl: we drop the `.ltxml` form (no .ltxml files
