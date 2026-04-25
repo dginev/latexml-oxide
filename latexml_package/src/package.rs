@@ -364,6 +364,7 @@ pub mod slashed_sty;
 pub mod slides_cls;
 pub mod smfart_cls;
 pub mod soul_sty;
+pub mod sprocl_sty;
 pub mod srcltx_sty;
 pub mod standalone_cls;
 pub mod standalone_sty;

@@ -700,6 +700,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("upquote", "sty", package::upquote_sty::load_definitions),
   ("minimal", "cls", package::minimal_cls::load_definitions),
+  ("sprocl", "sty", package::sprocl_sty::load_definitions),
   ("srcltx", "sty", package::srcltx_sty::load_definitions),
   (
     "standalone",
