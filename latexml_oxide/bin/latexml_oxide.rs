@@ -204,6 +204,20 @@ struct Cli {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+  // Run all work on a worker thread with a 256 MB stack so deeply
+  // nested math trees don't overflow the OS-default 8 MB main-thread
+  // stack during finalize/post-processing. See cortex_worker.rs for
+  // full rationale (sandbox 0711.4787 et al, #17).
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .expect("spawn worker thread")
+    .join()
+    .expect("worker thread panicked")
+    .map_err(|s| s.into())
+}
+
+fn real_main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
   // Initialize logger with verbosity level

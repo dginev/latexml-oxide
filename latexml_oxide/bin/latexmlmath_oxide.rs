@@ -14,6 +14,17 @@ use latexml_core::state;
 use latexml_math_parser::*;
 
 fn main() -> Result<()> {
+  // 256 MB stack — see cortex_worker.rs for rationale (#17).
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .expect("spawn worker thread")
+    .join()
+    .expect("worker thread panicked")
+    .map_err(|s| s.into())
+}
+
+fn real_main() -> Result<()> {
   let mut argv: Vec<String> = env::args().skip(1).collect();
 
   // Parse flags

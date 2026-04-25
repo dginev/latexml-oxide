@@ -698,6 +698,22 @@ fn add_dir_to_zip(
 // --- Main ---
 
 fn main() -> Result<(), Box<dyn Error>> {
+  // Run all work on a worker thread with a 256 MB stack so deeply
+  // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
+  // ambiguous papers — sandbox 0711.4787 et al, #17) don't overflow
+  // the OS-default 8 MB main-thread stack during finalize/post-
+  // processing. Validated: 0711.4787 converts cleanly under
+  // `ulimit -s unlimited` (959 maths, Status:conversion:1).
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .expect("spawn worker thread")
+    .join()
+    .expect("worker thread panicked")
+    .map_err(|s| s.into())
+}
+
+fn real_main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
   let verbosity = if cli.quiet {
