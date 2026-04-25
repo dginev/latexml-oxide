@@ -289,7 +289,8 @@ pub fn egroup() -> Result<()> {
 pub fn begingroup() {
   if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
     let depth = crate::state::get_frame_depth();
-    eprintln!("[trace] begingroup pre-depth={depth}");
+    let loc = gullet::get_locator();
+    eprintln!("[trace] begingroup pre-depth={depth} at {}", loc);
   }
   push_stack_frame(true);
 }
@@ -299,7 +300,12 @@ pub fn endgroup() -> Result<()> {
   if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
     let depth = crate::state::get_frame_depth();
     let bound = is_value_bound("BOUND_MODE", Some(0));
-    eprintln!("[trace] endgroup pre-depth={depth} bound_top={bound}");
+    let loc = gullet::get_locator();
+    let tok = get_current_token().unwrap_or(T_CS!("\\?"));
+    eprintln!(
+      "[trace] endgroup pre-depth={depth} bound_top={bound} tok={} at {}",
+      tok, loc
+    );
   }
   // BAND-AID (commit 3088dbd17 — under root-cause investigation, see
   // `project_explsyntax_midload.md`): during raw .sty/.tex load
