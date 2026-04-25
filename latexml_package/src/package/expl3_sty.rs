@@ -23,6 +23,26 @@ LoadDefinitions!({
   // Rust to avoid opening the raw mouth entirely.
   let dump_has_expl3 = lookup_definition(&T_CS!("\\tex_let:D"))?.is_some();
   if !dump_has_expl3 {
+    // Pre-load stubs: \iow_wrap:n*N is USED at expl3-code.tex L4516, L4532
+    // etc. but DEFINED at L11205. So during raw load, the early calls hit
+    // the undefined error and get registered as `<ltx:ERROR/>` stubs even
+    // before the real \cs_new_protected:Npn at L11205 runs. By pre-installing
+    // \protected\gdef stubs BEFORE the raw load, the early calls succeed
+    // (against our stub) and the L11205 \cs_new fails with "already defined"
+    // which is silently absorbed by SUPPRESS_UNEXPECTED_ERRORS. Net: stubs
+    // remain in effect for both the load body AND post-load user code.
+    // Need _ and : at LETTER catcode for the stub parsing.
+    state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
+    state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
+    raw_tex(concat!(
+      r"\protected\gdef \iow_wrap:nnnN #1#2#3#4 {#3 #4 {#1}}",
+      r"\protected\gdef \iow_wrap:nenN #1#2#3#4 {#3 #4 {#1}}",
+    ))?;
+    // Restore ':' to OTHER and '_' to SUB so the raw expl3.sty load starts
+    // with normal LaTeX catcodes (\ExplSyntaxOn inside the file flips them).
+    state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+    state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+
     // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
     // Suppress errors during loading: expl3-code.tex has many forward references
     // (functions used before defined) and one expansion chain issue producing
