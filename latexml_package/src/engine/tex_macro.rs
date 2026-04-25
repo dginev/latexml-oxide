@@ -162,7 +162,14 @@ LoadDefinitions!({
     Ok(Tokens::new(skipped))
   });
   // If next token is expandable, prefix it with the internal marker \dont_expand
-  // That token is never defined, explicitly handled in Gullet & should never escape the Gullet
+  // That token is never defined, explicitly handled in Gullet & should never escape the Gullet.
+  //
+  // Mirrors Perl `TeX_Macro.pool.ltxml:228-235`: uses `isDontExpandable`
+  // (not `lookupExpandable`). The predicate is true for CS/Active that are
+  // expandable OR undefined — so `\noexpand` smuggles `\dont_expand` for
+  // both, which is what makes `\noexpand\undef` ≠ `\undef` under `\ifx`
+  // (Gullet rewrites `\dont_expand X` into `\special_relax` with `X`
+  // smuggled in slot[2]; that asymmetry is the whole point).
   DefMacro!(T_CS!("\\noexpand"), None, {
     if let Some(token) = gullet::read_token()? {
       let cc = token.get_catcode();
