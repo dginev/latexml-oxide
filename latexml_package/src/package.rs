@@ -132,7 +132,6 @@ pub mod elsart_support_core_sty;
 pub mod elsart_support_sty;
 pub mod elsarticle_cls;
 pub mod empheq_sty;
-pub mod epic_sty;
 pub mod emulateapj5_sty;
 pub mod emulateapj_cls;
 pub mod emulateapj_sty;
