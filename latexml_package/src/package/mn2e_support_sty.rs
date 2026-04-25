@@ -63,10 +63,17 @@ LoadDefinitions!({
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
   DefMacro!("\\bsp", "");
 
-  // Math shortcuts — Perl L120-175
-  DefMacro!("\\la", "\\lesssim");
-  DefMacro!("\\ga", "\\gtrsim");
-  DefMacro!("\\getsto", "\\rightleftharpoons");
+  // Math shortcuts — Perl mn2e_support.sty.ltxml L131-145.
+  // Perl binds these directly via DefMath, NOT by aliasing to amssymb
+  // CSes — mn2e_support is intentionally amssymb-free (see top-of-file
+  // comment on the dropped amsmath/amssymb RequirePackage). Aliasing
+  // \la → \lesssim leaves \la dangling whenever a paper doesn't load
+  // amssymb separately (sandbox 0911.3798, ~21 papers).
+  DefMath!("\\la", "\u{2272}", role => "RELOP",
+    meaning => "less-than-or-similar-to");
+  DefMath!("\\ga", "\u{2273}", role => "RELOP",
+    meaning => "greater-than-or-similar-to");
+  DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
   DefMacro!("\\sun", "\u{2609}");
   DefMacro!("\\degr", "\u{00B0}");
   DefMacro!("\\arcmin", "\u{2032}");
