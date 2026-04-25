@@ -314,6 +314,28 @@ LoadDefinitions!({
     font => {series => "bold", family => "typewriter", shape => "upright"},
     enter_horizontal => true);
 
+  // \frac InFractionStyle InFractionStyle — Perl L262-268.
+  // The earlier port omitted this and relied on amsmath/latex_constructs
+  // to provide \frac, but neither loads in pure-AmSTeX mode → \frac
+  // surfaced as undefined on the first math-mode use. Faithful port
+  // here mirrors latex_constructs.rs:5020-5034 — same XMApp output,
+  // mathstyle property pulled from the active font.
+  DefConstructor!(
+    "\\frac InFractionStyle InFractionStyle",
+    "<ltx:XMApp>\
+      <ltx:XMTok meaning='divide' role='FRACOP' mathstyle='#mathstyle'/>\
+      <ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#2</ltx:XMArg>\
+      </ltx:XMApp>",
+    properties => {
+      let ms = lookup_font()
+        .and_then(|f| f.get_mathstyle().map(|s| s.to_string()));
+      match ms {
+        Some(s) => Ok(stored_map!("mathstyle" => s)),
+        None => Ok(stored_map!()),
+      }
+    }
+  );
+
   // \thickfrac / \thickfracwithdelims — peek for \thickness keyword.
   // Approximation: route to \frac / \fracwithdelims unconditionally.
   // The "with thickness" branch is rarely used in real AmSTeX papers
