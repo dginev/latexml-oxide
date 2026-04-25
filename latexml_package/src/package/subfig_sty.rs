@@ -60,6 +60,17 @@ LoadDefinitions!({
   NewCounter!("subfigure@save");
   NewCounter!("subtable@save");
 
+  // Perl L37/Perl-tail RawTeX `\@ifundefined{c@subfigure}{\newsubfloat
+  // {figure}}{}` (and the table variant) executes \newsubfloat which
+  // among other things does `Let('\ext@sub' . $name, '\ext@' . $name)`.
+  // Since the Rust `\newsubfloat` is a stub, the figure/table cases are
+  // pre-baked here so `\caption` machinery resolving `\ext@subfigure`
+  // (e.g. via `subfig` callers) finds the figure-extension list. Sandbox
+  // 0911.3405 (subfig + eptcs) cluster: 119 papers undefined
+  // `\ext@subfigure`.
+  Let!("\\ext@subfigure", "\\ext@figure");
+  Let!("\\ext@subtable", "\\ext@table");
+
   // Subfigure display macros
   DefMacro!("\\thesubfigure", "\\alph{subfigure}");
   DefMacro!("\\thesubtable", "\\alph{subtable}");
