@@ -1,26 +1,36 @@
 # 10k sandbox triage — post-session worklist
 
-Latest run: `~/data/sandbox_full_2026-04-26_postfix/` (binary
-`3088dbd17` with the `endgroup()` INTERPRETING_DEFINITIONS
-suppression fix). Prior: `~/data/sandbox_full_2026-04-25b/`
-(`188ed64ee`).
+Latest run: `~/data/sandbox_full_2026-04-26b_postfix/` (binary
+`61b46aa40` with endgroup() fix + expl3 TeX-level stubs).
+Prior: `~/data/sandbox_full_2026-04-26_postfix/` (`3088dbd17`).
+Original: `~/data/sandbox_full_2026-04-25b/` (`188ed64ee`).
 
-## Top-level distribution (2026-04-26, post-fix)
+## Top-level distribution (2026-04-26b, with stubs)
 
-| Status | Count | % | Δ from 2026-04-25b |
-|---|---:|---:|---:|
-| `ok` | **7538** | **95.44%** | **+29** |
-| `conversion_error` | 322 | 4.08% | -38 |
-| `timeout` | 31 | 0.39% | +8 |
-| `conversion_fatal` | 5 | 0.06% | +1 |
-| `abort` | 2 | 0.03% | 0 |
-| **Total failures** | **360** | **4.56%** | **-29** |
+| Status | Count | % | Δ from 2026-04-26 | Δ from 2026-04-25b |
+|---|---:|---:|---:|---:|
+| `ok` | **7554** | **95.65%** | **+16** | **+45** |
+| `conversion_error` | 310 | 3.92% | -12 | -50 |
+| `timeout` | 27 | 0.34% | -4 | +4 |
+| `conversion_fatal` | 5 | 0.06% | 0 | +1 |
+| `abort` | 2 | 0.03% | 0 | 0 |
+| **Total failures** | **344** | **4.35%** | **-16** | **-45** |
 
-Net session: +29 ok, -29 total failures. The endgroup() fix unblocks
-~29 papers that previously halted on the false-positive `\group_end:`
-mode-switch error during expl3-code.tex raw load. Some bordering
-papers shifted from conv_err → timeout/fatal as their loads now
-run further before hitting other resource limits.
+**Cumulative session gain: 7509 → 7554 ok (+45 papers, +0.58
+percentage points).** Two-step contribution:
+1. `3088dbd17` endgroup() raw-load suppression: +29 ok
+2. `61b46aa40` expl3 TeX-level stubs (l3keys/l3file/l3char):
+   +16 ok additional
+
+Older 2026-04-26 (post-fix only) distribution shown for reference:
+
+| Status | Count | % |
+|---|---:|---:|
+| `ok` | 7538 | 95.44% |
+| `conversion_error` | 322 | 4.08% |
+| `timeout` | 31 | 0.39% |
+| `conversion_fatal` | 5 | 0.06% |
+| `abort` | 2 | 0.03% |
 
 Older 2026-04-25b distribution shown for reference:
 
