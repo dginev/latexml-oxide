@@ -465,15 +465,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pst-node", "sty", package::pst_node_sty::load_definitions),
   ("turing", "sty", package::turing_sty::load_definitions),
   ("amsppt", "sty", package::amsppt_sty::load_definitions),
-  // Open issue: \documentstyle{amsppt} (sandbox math0004154 + \Cal/
-  // \Refs/\topmatter cluster) routes through .cls lookup. Direct
-  // alias to amsppt_sty deadlocks at amsfonts.sty load (200s+ wall);
-  // the path triggers def_autoload (\mathfrak/\mathbb/\Bbb in
-  // engine/tex.rs:118) which RequirePackage(amsfonts) — and amsfonts
-  // load loops only when invoked from this AmS-TeX-as-class entry
-  // point (works fine via OmniBus fallback or article-as-class).
-  // Needs investigation in amsfonts_sty load body before .cls
-  // registration is safe.
+  // \documentstyle{amsppt} (sandbox math0004154 + \Cal/\Refs/
+  // \topmatter cluster) routes through .cls lookup. amsppt is
+  // canonically a .sty (AmS-TeX style file) used as a pseudo-class.
+  // Direct alias was unblocked by the def_autoload re-entry guard
+  // (engine/tex.rs:18-29) which prevents \mathfrak/\theoremstyle
+  // autoloads from looping mid-package-load.
+  ("amsppt", "cls", package::amsppt_sty::load_definitions),
   ("titlesec", "sty", package::titlesec_sty::load_definitions),
   ("upgreek", "sty", package::upgreek_sty::load_definitions),
   ("xcolor", "sty", package::xcolor_sty::load_definitions),

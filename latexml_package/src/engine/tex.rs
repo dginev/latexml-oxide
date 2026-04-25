@@ -16,6 +16,24 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
+      // Re-entry guard: replace the autoload trigger with a no-op
+      // BEFORE calling require_package so any reentrant call to the
+      // same CS during the package's load body — common when the
+      // package's own DefConstructor for this CS triggers indirect
+      // expansion of `cs_for_closure` mid-install — short-circuits
+      // instead of recursively re-loading the package. After the
+      // package completes its load, its real DefConstructor/DefMacro
+      // for cs_for_closure overrides this stub. If the package
+      // happens not to install the CS, the no-op remains (still
+      // better than a hang).
+      // Sandbox math0004154 + amsppt class-route hang at amsfonts.sty
+      // (see project_amsppt_cls_dispatcher.md memory).
+      def_macro(
+        cs_for_closure,
+        None,
+        ExpansionBody::Tokens(Tokens::new(vec![])),
+        None,
+      )?;
       require_package(&pkg_name, RequireOptions::default())?;
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
