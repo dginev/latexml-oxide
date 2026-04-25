@@ -1,0 +1,19 @@
+\documentclass{article}
+\makeatletter
+% Perl ground truth: \globaldefs=1 inside a group makes subsequent
+% \let / \def assignments globally effective. This is the pattern used
+% by pgfplots `\pgfplots@pop@next@legend` to define `\pgfplots@curlegend`
+% and `\pgfplots@curplotlist` from inside a {{...}} double group.
+\def\my@empty{}
+\let\bbb=\my@empty
+\let\ddd=\my@empty
+{%
+  \globaldefs=1
+  \let\bbb=\relax
+  \def\ddd{NEWVAL}%
+}%
+\bbb-marker / \ddd
+\makeatother
+\begin{document}
+done
+\end{document}

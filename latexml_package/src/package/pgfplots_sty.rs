@@ -15,14 +15,12 @@ LoadDefinitions!({
   InputDefinitions!("pgfplots", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });
 
-// Open issue (sandbox 2026-04-24, 11 papers — 1305.3934 et al):
-// `\pgfplots@curplotlist` and `\pgfplots@curlegend` undefined errors
-// from raw pgfplots.code.tex L5790/5795 — those `\let`s are local to
-// the `\pgfplots@drawplots@@@iter` body, but some axis/legend hooks
-// reach them earlier. Naive defensive init at load (either via `\let`
-// to `\pgfutil@empty` or `\def` to empty) routes downstream
-// `\ifx ... \pgfutil@empty` matches into a token-limit infinite loop,
-// regressing the cluster from conversion_error → fatal. Resolution
-// path: identify the concrete macro that calls these CSes outside the
-// iterator body and add a localised guard there, OR fix the iterator
-// init order. Deferred — preserving the conversion_error baseline.
+// (Resolved 2026-04-25) `\pgfplots@curplotlist`/`\pgfplots@curlegend`
+// undefined-CS cluster traced to a Rust core bug, NOT a pgfplots-shim
+// issue. `\pgfplots@pop@next@legend` (raw pgfplots.code.tex L5813-5827)
+// uses the `\def\foo{{\globaldefs=1 \let\x=\relax}}` idiom to make
+// local lets globally effective. Rust's `assign_internal` (state.rs)
+// only matched `Stored::Int(1)` for the `\globaldefs` magic, but the
+// register stores as `Stored::Number(1)` — so the override silently
+// failed and the lets popped on group exit, leaving the CSes undefined
+// and `\pgfplots@createlegend` looping at the digest wall-clock cap.

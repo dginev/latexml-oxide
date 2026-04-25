@@ -646,18 +646,33 @@ impl State {
     mut scope_opt: Option<Scope>,
   ) {
     // hotcode lookupDefinition for \globaldefs,
-    // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
-      if let Some(global_value) = globaldefs.front() {
-        // magic TeX register override: \globaldefs
-        match *global_value {
-          Stored::Int(1) => {
-            scope_opt = Some(Scope::Global);
-          },
-          Stored::Int(-1) => {
-            scope_opt = Some(Scope::Local);
-          },
-          _ => {},
+    // since this is called extremely often and should be highly standardized.
+    // Perl `State.pm:144-151`: register override fires unless `scope` is set to
+    // a Named-style value (Perl: anything that isn't 'global' or 'local').
+    // `\globaldefs` is a Number register, so the stored variant is
+    // `Stored::Number`, NOT `Stored::Int` — Perl's `==` coerces both, Rust must
+    // unwrap explicitly. Without this, pgfplots' `\pgfplots@pop@next@legend`
+    // pattern (`\def\foo{{\globaldefs=1 \let\x=\relax}}`) silently drops the
+    // `\let` on group exit, leaving `\pgfplots@curlegend`/`@curplotlist`
+    // undefined and triggering an infinite-loop in `\pgfplots@createlegend`.
+    let preserve = matches!(scope_opt, Some(Scope::Named(_)));
+    if !preserve {
+      if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
+        if let Some(global_value) = globaldefs.front() {
+          let int_value: Option<i64> = match *global_value {
+            Stored::Int(v) => Some(v),
+            Stored::Number(n) => Some(n.0),
+            _ => None,
+          };
+          match int_value {
+            Some(1) => {
+              scope_opt = Some(Scope::Global);
+            },
+            Some(-1) => {
+              scope_opt = Some(Scope::Local);
+            },
+            _ => {},
+          }
         }
       }
     }
