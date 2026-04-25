@@ -1,10 +1,41 @@
 # 10k sandbox triage — post-session worklist
 
-Latest run: `~/data/sandbox_full_2026-04-25/` (binary `771bcb861`,
-end of 2026-04-25 session). Baseline: `~/data/sandbox_full_2026-04-24/`
-(`b9bc02155`).
+Latest run: `~/data/sandbox_full_2026-04-25b/` (binary `188ed64ee+`,
+post-session 2026-04-25 evening with stack-overflow + def_autoload
+re-entry + amsppt cls dispatcher + lipsum/expl3 diagnosis).
+Prior: `~/data/sandbox_full_2026-04-25/` (binary `771bcb861`).
+Baseline: `~/data/sandbox_full_2026-04-24/` (`b9bc02155`).
 
-## Top-level distribution (2026-04-25, post-session)
+## Top-level distribution (2026-04-25b, run complete)
+
+| Status | Count | % | Δ from 2026-04-25 first run |
+|---|---:|---:|---:|
+| `ok` | **7509** | **95.07%** | **+12** |
+| `conversion_error` | 360 | 4.56% | -9 |
+| `timeout` | 23 | 0.29% | (new category — was `abort`) |
+| `conversion_fatal` | 4 | 0.05% | +1 |
+| `abort` | 2 | 0.03% | -27 |
+| **Total failures** | **389** | **4.93%** | **-12** |
+
+Most aborts re-classified as timeouts after `1c85a137f` (timeout
+alignment fix). Net session improvement modest but consistent.
+
+### Dominant cluster (highest-leverage next target)
+
+**93+ conv_err papers + 8 ok-but-warned** all share the pattern:
+```
+Error:unexpected:\group_end: Attempt to close a group that switched
+to mode horizontal; current frame is mode-switch to horizontal due to
+```
+triggered at `latexml_core/src/stomach.rs:284` from `endgroup()`'s
+`is_value_bound("BOUND_MODE", Some(0))` check. Reproducer locations:
+`xparse-2018-04-12.sty:1762-1776` and `lipsum.sty:401`. See
+`project_explsyntax_midload.md` memory for the full hypothesis trail
+and next-cycle fix candidates (instrument `begin_mode_opt` to find
+the mid-load BOUND_MODE binder; or relax the strict frame-0 check
+when in raw .sty load context).
+
+## Older 2026-04-25 distribution (for reference)
 
 | Status | Count | % | Δ from 2026-04-24 |
 |---|---:|---:|---:|
