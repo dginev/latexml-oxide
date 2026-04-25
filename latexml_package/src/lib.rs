@@ -628,6 +628,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("framed", "sty", package::framed_sty::load_definitions),
   ("tabularx", "sty", package::tabularx_sty::load_definitions),
+  ("tensor", "sty", package::tensor_sty::load_definitions),
   ("tabulary", "sty", package::tabulary_sty::load_definitions),
   ("tcolorbox", "sty", package::tcolorbox_sty::load_definitions),
   (
