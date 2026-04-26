@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # make_formats.sh — Rust-port equivalent of Perl LaTeXML's `make formats`.
 #
-# Builds latexml_oxide (if needed) and runs --init=latex.ltx to produce
-# resources/dumps/latex.dump.txt for the ambient TeX Live install.
+# Builds latexml_oxide (if needed) and runs TWO --init invocations
+# (mirroring Perl LaTeXML/Makefile.PL `formats` target which has two
+# distinct dumps):
+#   --init=plain.tex → resources/dumps/plain.dump.txt
+#   --init=latex.ltx → resources/dumps/latex.dump.txt
+# for the ambient TeX Live install.
 #
 # Call this once after checkout, after any TeX Live upgrade, or before
 # running the test suite when matching a specific texlive is required
@@ -38,19 +42,33 @@ if [ ! -x "$BIN" ]; then
   cargo build $CARGO_PROFILE_FLAG --bin latexml_oxide
 fi
 
-# Generate the dump. The binary writes to resources/dumps/latex.dump.txt
-# relative to CWD (the repo root, via cd above). Honor LATEXML_DUMP_DIR
-# if the user wants a custom location.
+# Generate BOTH dumps — strict mirror of Perl Makefile.PL `formats`
+# target (LaTeXML/Makefile.PL):
+#
+#   $(INST_FMTDIR)/plain_dump.pool.ltxml: latexml --init=plain.tex
+#   $(INST_FMTDIR)/latex_dump.pool.ltxml: latexml --init=latex.ltx
+#
+# Each captures the kernel-state delta from raw-loading its respective
+# format file. Plain.tex contributes core TeX bindings (the
+# \settabs/\sett@b chain, \matrix, \cases, etc.) that latex.ltx
+# doesn't redefine — without the plain dump those CSes are missing
+# at runtime. The binary writes each to resources/dumps/<basename>.dump.txt
+# relative to CWD.
+echo "[make_formats] generating plain.dump.txt (--init=plain.tex)..."
+"$BIN" --init=plain.tex
+
+echo "[make_formats] generating latex.dump.txt (--init=latex.ltx)..."
+"$BIN" --init=latex.ltx
+
 if [ -n "${LATEXML_DUMP_DIR:-}" ]; then
   mkdir -p "$LATEXML_DUMP_DIR"
-  # Binary defaults to resources/dumps; we symlink or copy afterward.
-  "$BIN" --init=latex.ltx
+  cp resources/dumps/plain.dump.txt "$LATEXML_DUMP_DIR/plain.dump.txt" 2>/dev/null || true
   cp resources/dumps/latex.dump.txt "$LATEXML_DUMP_DIR/latex.dump.txt"
   cp resources/dumps/texlive.version "$LATEXML_DUMP_DIR/texlive.version" 2>/dev/null || true
-  echo "[make_formats] dump copied to $LATEXML_DUMP_DIR"
-else
-  "$BIN" --init=latex.ltx
+  echo "[make_formats] dumps copied to $LATEXML_DUMP_DIR"
 fi
 
-echo "[make_formats] done. dump: resources/dumps/latex.dump.txt"
+echo "[make_formats] done."
+echo "[make_formats]   plain dump: resources/dumps/plain.dump.txt"
+echo "[make_formats]   latex dump: resources/dumps/latex.dump.txt"
 kpsewhich --version | head -1 | sed 's/^/[make_formats] texlive: /'
