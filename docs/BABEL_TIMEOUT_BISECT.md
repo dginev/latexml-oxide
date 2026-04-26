@@ -159,3 +159,56 @@ or its execution context.
 - `LaTeXML/lib/LaTeXML/Package/babel_support.sty.ltxml` — quote chars,
   language map, `\select@language` override, `\iflanguage` fake
 - TL2025 raw `babel.sty` v25.15 (4306 lines)
+
+## CRITICAL FINDING (2026-04-26 iteration B): NODUMP works
+
+Setting `LATEXML_NODUMP=1` (which uses `latex_base.rs` source-level
+definitions instead of the `latex_dump.txt` precompiled state)
+makes the same babel probe load CLEANLY:
+
+```
+$ LATEXML_NODUMP=1 ./target/release/latexml_oxide /tmp/babel_simplest.tex
+(Loading "babel.sty" definitions...
+Info:latexml::converter Conversion complete: No obvious problems
+```
+
+Without NODUMP (default — uses `resources/dumps/latex.dump.txt`):
+```
+$ ./target/release/latexml_oxide /tmp/babel_simplest.tex
+Error:unexpected:babel.sty Error loading binding for 'babel.sty':
+Error:token_limit:Timeout Token limit of 100000000 exceeded
+```
+
+**The bug is in our dump-loaded state.** Some entry in
+`latex_dump.txt` corrupts a definition that babel.sty's option
+processing depends on. Likely candidates:
+- `\@ifpackagewith`, `\DeclareOption`, `\ProcessOptions`, `\ProcessOptions*`
+- `\edef`-friendly internals: `\bbl@trim@def`, `\bbl@xin@`, `\bbl@add`
+- LaTeX2e option list bookkeeping: `\@unprocessedoptions`,
+  `\@unusedoptionlist`, `\@optionlist`
+
+## Distilled minimal probes (TDD reds + greens)
+
+Tested isolation of babel's recursive constructs in `/tmp/babel_minrec*.tex`:
+
+1. `\bbl@vforeach` over `english,french,german`
+   → `[english][french][german]` ✅ matches Perl
+2. `\bbl@tempc 0/1000//english//english/x\@@`
+   → `[0/1000/english/english/x]` ✅ matches Perl
+3. `\bbl@foreach\bbl@toload{\bbl@tempc#1\@@}` with
+   `\def\bbl@toload{0/1000//english//english/x}`
+   → `[0/1000/english/english/x]` ✅ matches Perl
+
+The babel constructs WORK on a fresh state — the loop is from a
+state interaction with the dump-loaded LaTeX kernel. Regression
+test: `latexml_oxide/tests/regression/babel_recursive_loop.tex`.
+
+## Next-iteration plan (UPDATED)
+
+1. Diff dump-loaded `\@ifpackagewith` definition vs source-level
+   (latex_base.rs). Same for `\DeclareOption`, `\ProcessOptions`,
+   `\bbl@*` internals.
+2. Suspect: macro encoded in dump uses different param-spec or
+   body that produces infinite recursion when babel calls it.
+3. If a specific dump entry is the culprit, either fix the
+   dump-writer or add an explicit override for that CS.
