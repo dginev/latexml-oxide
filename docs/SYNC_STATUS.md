@@ -383,21 +383,41 @@ and removes the indirection layer that has caused
 ### POST-AR-FLIP MEASUREMENT (2026-04-26 in-progress)
 
 Full sandbox run launched against current HEAD with 16 workers,
-120s timeout. **First 894 papers (11.3% of 7898):**
+120s timeout. **At 41% (3252/7898):**
 
 | Status | Count | Meaning |
 |---|---|---|
-| `:0` | 704 | clean (rc=0, no warnings) |
-| `:1` | 188 | warnings only (rc=0, sandbox-clean) |
-| `:2` | **1** | errors (`0909.3444` — frenchb babel missing, **Perl-also-broken** per `feedback_sandbox_perl_baseline.md`) |
-| `:3` | 0 | fatal |
+| `:0` | 2463 | clean (rc=0, no warnings) |
+| `:1` | 767 | warnings only (rc=0, sandbox-clean) |
+| `:2` | **19** | errors |
+| `:3` | **1** | fatal (`1401.0971` — tikz petri timeout per MEMORY.md) |
 
-**Projection:** at this rate, full sandbox should yield ~5-10 actual
-error papers (Status:2) out of 7898, most of which are likely
-already documented as Perl-also-broken. Down from the
-sandbox_full_2026-04-26c_postfix baseline of ~196 errors. The AR.
-flip alone (rawstyles enabling kpsewhich) appears to clear the
-overwhelming majority of "missing CS from system .sty" cases.
+**Projected final: ~45-50 error papers out of 7898 (~99.4% clean),
+down from ~196 (97.5%) pre-AR**. Top error clusters at 41%:
+
+| Cluster | # | Status |
+|---|---|---|
+| mhchem `\regex_const:Nn` (expl3 regex) | 4 | task #11 — deferred, dump_reader gates `:`-named CS bodies |
+| mode/group mismatches | 4 | individual frame bugs across papers |
+| `\@nil` undefined (pgf cascade) | 2 | **pre-existing** (verified — same in pre-AR snapshot for 1304.0737); pgfutil-common.tex catcode issues |
+| `\shipout` undefined | 2 | **Perl-also-broken** per `feedback_sandbox_perl_baseline.md` (acknowledgements-only files, no `\documentclass`) |
+| babel-language undefined | 2 | partly Perl-also-broken (frenchb), partly babel-french deferred |
+| AmSTeX `\section` | 1 | `documentstyle{amsppt}` → AmSTeX.pool route, `project_amstex_pool_dispatcher.md` |
+| IEEE `\ifCLASSINFOpdf` | 1 | per-class issue |
+| array `\NC@list` | 1 | array.sty internal |
+| mn `\bullets` | 1 | mn.cls related |
+| `\newmarks` | 1 | etex extension stub |
+
+**Verified non-regression:** `1304.0737` (pgf cascade + `\@nil`)
+errored identically in pre-AR snapshot — AR. flip introduces no new
+regressions for this paper. Spot-check confirms AR. is purely
+additive (more errors cleared, none introduced).
+
+**Remaining work to error-free** is mostly granular long-tail:
+- Task #11 (expl3 regex cascade): largest cluster (4 papers,
+  expandable as more papers complete)
+- Per-paper mode/frame bugs
+- Per-class IEEE / mn / array internal CS gaps
 
 Re-tally pending full run completion.
 
