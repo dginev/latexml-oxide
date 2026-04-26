@@ -868,9 +868,40 @@ later `\input <name>.sty`s).
 `<name>_raw_loaded`.
 
 **Status:** Decision made 2026-04-26 during babel.sty timeout investigation.
-Implementation follows as the Rust `_loaded` mechanics are audited for
-Perl parity. See `docs/BABEL_TIMEOUT_BISECT.md` for the triggering
+Implementation completed 2026-04-26 (commits `1eb66c75c`, `de21ae928`,
+`01df250c6`). See `docs/BABEL_TIMEOUT_BISECT.md` for the triggering
 investigation.
+
+#### Path-aware gating (commit `de21ae928`)
+
+CRITICAL invariant: a binding `<file>.rs` MUST be allowed to call
+`InputDefinitions(noltxml=>1)` for its same-named raw `.sty/.cls/.def`
+AFTER its own `_loaded` flag was already set. Examples:
+- `babel_sty.rs` → raw `babel.sty`
+- `cite_sty.rs` → raw `cite.sty`
+
+`input_definitions` therefore gates by the load path actually being
+taken (helper `already_handled` in `binding/content.rs:226`):
+- `noltxml=true` (raw-only path) → check ONLY `_raw_loaded`
+- `notex=true` (binding-only path) → check ONLY `_loaded`
+- otherwise (default: binding-then-raw) → check EITHER
+
+The step-4 raw-search gate (L437) drops the `_loaded` check entirely:
+when the search reaches step 4, the calling context has already
+decided to load raw (binding either failed or was suppressed via
+`noltxml`). Only the raw flag should block.
+
+`_load_binding` keeps a binding-only `_loaded` gate (mirrors Perl
+`loadLTXML` Package.pm L2311 which checks only the binding flag).
+
+#### Reader semantics (commit `01df250c6`)
+
+User-level "is X loaded?" queries consult EITHER flag — they don't
+care which path produced the load. This applies to:
+- `\@ifpackageloaded` / `\@ifclassloaded`
+  (`latex_constructs.rs:3598`)
+- `soul_sty.rs` color-presence checks (3 sites)
+- `cleveref_sty.rs` amsmath-fake-loaded probe
 
 #### Rationalization: drop `_found_loaded`
 
