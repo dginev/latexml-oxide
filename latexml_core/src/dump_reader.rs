@@ -245,7 +245,7 @@ const SKIP_VALUE_PREFIXES: &[&str] = &["input_file:", "output_file:", "texsys"];
 
 /// V entry key substrings to skip.
 ///
-/// Note: `_loaded` / `_found_loaded` flags are present in the dump (correctly,
+/// Note: `_loaded` / `_raw_loaded` flags are present in the dump (correctly,
 /// since `--init=latex.ltx` sees expl3-code.tex, hyphenation patterns, and
 /// hundreds of other raw-loaded files). But carrying them through into state
 /// at dump-load time blows up in practice:
@@ -262,8 +262,8 @@ const SKIP_VALUE_PREFIXES: &[&str] = &["input_file:", "output_file:", "texsys"];
 /// active at a time, mirroring Perl's `LoadFormat` branching. Until that lands,
 /// keep the skip list conservative so mixed paths don't trigger recovery loops.
 const SKIP_VALUE_CONTAINS: &[&str] = &[
-  "_loaded",       // Package loading flags — see doc comment above
-  "_found_loaded", // Package found+loaded flags
+  "_loaded", // Package loading flags — see doc comment above.
+             // Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23).
 ];
 
 /// Load a value entry: V\tKEY\tTYPE\tDATA

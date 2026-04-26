@@ -329,9 +329,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // binding-vs-raw-tex distinction is queryable via `*_loaded` directly.
     // See OXIDIZED_DESIGN.md. Callers of the legacy `.ltxml_loaded` form
     // must be migrated to `_loaded`.
+    // Per OXIDIZED_DESIGN #23: binding success → `<filename>_loaded`.
+    // Raw load tracks separately via `<filename>_raw_loaded` (see
+    // load_tex_definitions). The `_found_loaded` Rust-only flag is
+    // dropped — read sites check `_loaded || _raw_loaded` instead.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
-    assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));
     // Perl L2326: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
     // Without this, \RequirePackage date checks fail and packages get re-loaded.
@@ -435,10 +438,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
     if let Some(file) = found_raw {
       is_found_raw = true;
-      // Mark as successfully loaded — prevents maybeRequireDependencies from
-      // scanning for deps when the raw file was found and loaded.
-      // (Perl: InputDefinitions returns $file on success, which is truthy.)
-      assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));
+      // The raw load itself sets `<filename>_raw_loaded` via
+      // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
+      // check `_loaded || _raw_loaded` to detect "any load happened".
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
     } else if !lookup_bool(&s!("{filename}_loaded")) {
       if options.noerror {
@@ -562,7 +564,9 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
   // (e.g. `\inputencoding{cp1251}` re-invokes cp1251.def to re-register
   // DeclareInputText mappings after `set_input_encoding` reset them).
-  let loaded_key = s!("{request}_found_loaded");
+  // OXIDIZED_DESIGN #23: binding load checks the binding-specific
+  // `_loaded` flag (set on success at L332 below).
+  let loaded_key = s!("{request}_loaded");
   if !reloadable && lookup_bool(&loaded_key) {
     return Ok(true);
   }
@@ -1244,11 +1248,10 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   });
   // Perl Package.pm L2679: maybeRequireDependencies unless $success
   // input_definitions returns Ok even when no binding/raw file was found
-  // (it just sets _loaded and warns). Perl checks the return value of
-  // InputDefinitions which returns undef on failure. We check the
-  // "_found_loaded" flag which is only set when an actual binding or
-  // raw TeX file was loaded (not set on error/not-found).
-  if !lookup_bool(&s!("{name}.{ext_type}_found_loaded")) {
+  // (it just sets _loaded and warns). Per OXIDIZED_DESIGN #23, "did
+  // a binding OR raw load happen" is `_loaded || _raw_loaded`.
+  let key = s!("{name}.{ext_type}");
+  if !lookup_bool(&s!("{key}_loaded")) && !lookup_bool(&s!("{key}_raw_loaded")) {
     maybe_require_dependencies(name, &ext_type);
   }
   result
@@ -1369,7 +1372,9 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     for pkg in cap[2].split(',') {
       let pkg = pkg.trim().to_string();
       // Perl L2773: skip if binding already loaded
-      if !pkg.is_empty() && !seen.contains(&pkg) && !lookup_bool(&s!("{pkg}.sty_found_loaded")) {
+      if !pkg.is_empty() && !seen.contains(&pkg)
+        && !lookup_bool(&s!("{pkg}.sty_loaded"))
+        && !lookup_bool(&s!("{pkg}.sty_raw_loaded")) {
         seen.insert(pkg.clone());
         packages.push((pkg, opts.clone()));
       }
@@ -1511,7 +1516,8 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
   // undefined and the `_` characters then reach the stomach as subscript
   // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
-  if !lookup_bool(&s!("{name}.cls_found_loaded")) {
+  if !lookup_bool(&s!("{name}.cls_loaded"))
+    && !lookup_bool(&s!("{name}.cls_raw_loaded")) {
     maybe_require_dependencies(name, "cls");
   }
   // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.

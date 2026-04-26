@@ -924,3 +924,42 @@ Perl does NOT have this distinction. Perl's caller of `loadLTXML` /
 This must be done WITH CARE — the error behavior at `binding/content.rs:317`
 could be load-bearing for Rust-specific recursion guards. Implementer
 must run the full test suite and sandbox after each change.
+
+#### Perl's dump-format equivalent of SKIP_VALUE_CONTAINS
+
+Question: does Perl have an equivalent to Rust's
+`dump_reader::SKIP_VALUE_CONTAINS = ["_loaded"]`?
+
+**Answer**: NO. Perl's `latex_dump.pool.ltxml` dump emits all
+`_loaded` flags verbatim, e.g.:
+```
+V('antomega.cfg_loaded',1);
+V('dumyhyph.tex_loaded',1);
+V('expl3-code.tex_loaded',1);
+V('expl3.ltx.ltxml_loaded',1);
+V('expl3.ltx_loaded',1);
+```
+Perl carries BOTH `expl3.ltx_loaded` (raw) AND
+`expl3.ltx.ltxml_loaded` (binding) into the post-dump state.
+
+Why Rust needed the skip-list: the runtime engine treats the
+dump-loaded `<file>_loaded` flag as "raw was loaded", which makes
+subsequent `\input <file>` short-circuit and skips re-execution
+that the engine actually depends on (e.g., babel's hyphenation
+language registers).
+
+**Rationalization opportunity** with #23's binding/raw split:
+- Perl `<name>_loaded` (raw) → Rust `<name>_raw_loaded`
+- Perl `<name>.ltxml_loaded` (binding) → Rust `<name>_loaded`
+
+If `dump_writer` faithfully maps Perl's two-key scheme into Rust's
+two-key scheme, the dump's `_raw_loaded` entries correctly mark
+"already raw-loaded" state. The skip-list is then no longer a
+workaround but reflects intentional state. The underlying issue
+(raw-load short-circuiting) is solved by `LoadFormat`-style
+mutual exclusivity (dump-cache vs raw-load): one path is active
+at a time, never both. See SYNC_STATUS D0 "dump/_base
+mutual-exclusivity".
+
+After mutual-exclusivity lands, `SKIP_VALUE_CONTAINS` should
+become empty/removable.
