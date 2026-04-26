@@ -821,3 +821,66 @@ unwinding logic at group close that has no downstream benefit.
 **Impact:** The `tests/babel/page545.xml` expected XML has been updated to
 the Rust form (single empty wrap). Any future test XMLs copied from Perl
 with this pattern should be similarly normalized.
+
+### 23. `_loaded` Flag Naming — Drop `ltxml_loaded`, Add `_raw_loaded`
+
+**Decision:** Rust uses a unified `<name>_loaded` flag for *bindings* (Rust
+modules under `latexml_package/src/package/`) and a separate `<name>_raw_loaded`
+flag for raw .sty/.cls/.def TeX files. The Perl `<name>.ltxml_loaded` form
+is dropped.
+
+**Perl behavior** (Package.pm L2311-2316, L2346-2347):
+- `loadLTXML` (binding load): sets BOTH `$request_loaded` AND
+  `$ltxname_loaded` where `$ltxname = $name . '.ltxml'`
+  (e.g. `babel.sty.ltxml_loaded`).
+- `loadTeXDefinitions` (raw .sty/.cls load): sets only `$request_loaded`
+  (e.g. `babel.sty_loaded`).
+- The `.ltxml`-suffixed key was a Perl-specific marker indicating "binding
+  loaded", checked by `\@ifpackageloaded` and `\RequirePackage` guards.
+
+**Rust translation:**
+- Binding load (Rust module dispatch) → `<filename>_loaded` (drop the
+  `ltxml_loaded` variant — Rust has no `.ltxml` suffix in module paths).
+- Raw .sty/.cls/.def load → `<filename>_raw_loaded` (NEW — distinguishes
+  raw-vs-binding load when both happen for the same package).
+- `_loaded` reflects the most recent state (binding OR raw); `_raw_loaded`
+  is the explicit raw-file marker.
+
+**Rationale:** Perl's two-key scheme leaks the `.ltxml` filesystem suffix
+into the API. In Rust, bindings are compile-time modules with no `.ltxml`
+filename, so the Perl convention is meaningless and confusing. The
+`_loaded` rename simplifies the Rust API. The `_raw_loaded` key preserves
+the binding-vs-raw distinction needed for correctness (e.g., when a binding
+replaces a raw file, we should not double-load the raw file when something
+later `\input <name>.sty`s).
+
+**Migration:** Sites that check `<name>.ltxml_loaded` migrate to
+`<name>_loaded`. Sites that check whether the *raw* file was loaded use
+`<name>_raw_loaded`.
+
+**Status:** Decision made 2026-04-26 during babel.sty timeout investigation.
+Implementation follows as the Rust `_loaded` mechanics are audited for
+Perl parity. See `docs/BABEL_TIMEOUT_BISECT.md` for the triggering
+investigation.
+
+#### Rationalization: drop `_found_loaded`
+
+The Rust port also accumulated a Rust-only `<filename>_found_loaded` flag
+that has no Perl equivalent. It's set at:
+- `binding/content.rs:334` — alongside `_loaded` on binding load
+- `binding/content.rs:441` — on raw-file load
+- Read at `binding/content.rs:565`, `:1247`, `:1368`, `:1510`
+
+The original intent was "binding actually fired AND loaded successfully"
+(distinct from "_loaded" which could be set even on early-skip paths).
+This distinction is not present in Perl and produces a third flag that
+shadows the same lifecycle.
+
+**Action**: Audit every `_found_loaded` site and either:
+- Replace with `_loaded` (in cases where it represents post-load state).
+- Replace with `_raw_loaded` (cases tracking raw .sty/.cls load).
+- Delete entirely (cases that duplicate `_loaded`).
+
+After the rename, the Rust set of `_loaded`-family flags should be
+EXACTLY: `<name>_loaded`, `<name>_raw_loaded`, `<name>_loaded_with_options`
+(matches Perl's `_loaded_with_options` at L2569/L2612).
