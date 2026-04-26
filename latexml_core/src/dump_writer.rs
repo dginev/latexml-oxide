@@ -361,11 +361,35 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       let target_cs = c.cs.with_str(url_encode);
       Some(format!("PA\t{}", target_cs))
     },
+    // Constructors — `\cr`, `\noalign`, `\mathchoice`, etc. defined via
+    // `DefConstructor!` carry replacement / before_digest / after_digest
+    // closures that the dump format can't serialize. But the canonical
+    // CS lives in the compiled engine, so a `\let \tex_cr:D \cr`-style
+    // alias can round-trip as `PA\t<cs>` and replay via `state::let_i`.
+    // Self-aliases are no-ops at load (key already defined).
+    Stored::Constructor(c) => {
+      let target_cs = c.cs.with_str(url_encode);
+      Some(format!("PA\t{}", target_cs))
+    },
     Stored::Register(reg) => {
       // Register: serialize as R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
-      // Only serialize simple registers without getter/setter closures
+      //
+      // Closure-backed registers can't be serialized directly — but if the
+      // dump entry is a `\let`-alias to a closure-Register primitive
+      // (e.g. `\let \tex_dimexpr:D \dimexpr`), we CAN capture it via PA.
+      // Mirrors the `Stored::Primitive` / closure-`Expandable` arms above.
+      // Without this every `\let \tex_dimexpr:D \dimexpr`-style alias is
+      // silently dropped from the dump — the cause of `\tex_dimexpr:D`,
+      // `\tex_cr:D`, `\tex_dp:D`, `\tex_ht:D`, `\tex_wd:D` (and ~430
+      // engine-specific others) being missing in `latex.dump.txt` even
+      // though expl3-code.tex L280-700 aliases them. The dump_reader's
+      // add-only policy at load-time skips entries whose key is already
+      // defined (the canonical CS lives in the compiled engine), so
+      // self-aliases are no-ops. Real let-aliases (key != cs) replay via
+      // `state::let_i` — so the engine-only register's behavior follows.
       if reg.getter.is_some() || reg.setter.is_some() {
-        return Option::None; // Has closures, can't serialize
+        let target_cs = reg.cs.with_str(url_encode);
+        return Some(format!("PA\t{}", target_cs));
       }
       let cs_name = reg.cs.with_str(url_encode);
       let rtype = match reg.register_type {

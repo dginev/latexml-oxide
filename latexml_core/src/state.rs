@@ -2825,9 +2825,19 @@ pub fn is_serializable(stored: &Stored) -> bool {
     // they're in the pre-snapshot — but if they do, the dump reader skips
     // them by comparing key to target.
     Primitive(_) | MathPrimitive(_) | Conditional(_) => true,
-    // Constructor: presentation-logic closure, can't be aliased meaningfully
-    // through the dump (the constructor body needs Rust code).
-    Constructor(_) => false,
+    // Constructor: same logic as Primitive/Conditional. Constructors carry a
+    // closure body the dump can't serialize, BUT they each carry a canonical
+    // CS field. When the entry key differs from that CS, it's a `\let`-alias
+    // (e.g. `\let \tex_par:D \par` where `\par` is itself a `Let!` alias to
+    // `\lx@normal@par` — a Constructor). dump_writer emits `PA\t<cs>`;
+    // dump_reader replays via `state::let_i`. Mirrors Perl's writer:
+    // `dump_constructor` is undefined in `Dumper.pm`, but TeX_Job.pool
+    // `DumpFile`'s let-detection branch (L184-198) catches the (key !=
+    // value->getCSName) case and emits `Lt(key, letkey)`. Without this,
+    // `\tex_par:D`, `\tex_cr:D`, `\tex_noindent:D`, etc. drop from the dump
+    // because diff_from_snapshot filters them before the writer's
+    // Constructor arm sees them.
+    Constructor(_) => true,
     // Collections: serializable if contents are
     VecDequeStored(_) | HashStored(_) | HashString(_) => true,
     // Everything else: skip for safety
