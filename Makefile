@@ -18,8 +18,14 @@
 
 .PHONY: test fresh-test dump build clean
 
+# 6 GB virtual-memory ceiling for the test runner. The TeX-engine state
+# and dump-builder retain large arenas; one stuck test (token loop, deep
+# recursion in the math parser, etc.) can expand to many GB and OOM the
+# host. With the cap, the offending test fails fast with allocation
+# error instead of taking the rest of the suite + the developer's
+# session down with it.
 test:
-	cargo test --release --tests
+	@bash -c 'ulimit -v 6291456 && cargo test --release --tests'
 
 dump:
 	tools/make_formats.sh
