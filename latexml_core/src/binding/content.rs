@@ -870,10 +870,14 @@ fn load_tex_definitions(
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if lookup_bool(&s!("{request}_loaded")) && !reloadable && !pathname::is_reloadable(pathname) {
+    // Per OXIDIZED_DESIGN #23: raw .sty/.cls/.def load tracks
+    // `<request>_raw_loaded`, separate from the binding `<request>_loaded`.
+    // This lets a binding .rs load the raw file of the same name without
+    // the flags clobbering each other.
+    if lookup_bool(&s!("{request}_raw_loaded")) && !reloadable && !pathname::is_reloadable(pathname) {
       return Ok(());
     }
-    assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
+    assign_value(&s!("{request}_raw_loaded"), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)

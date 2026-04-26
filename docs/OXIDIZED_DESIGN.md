@@ -839,12 +839,21 @@ is dropped.
   loaded", checked by `\@ifpackageloaded` and `\RequirePackage` guards.
 
 **Rust translation:**
-- Binding load (Rust module dispatch) → `<filename>_loaded` (drop the
-  `ltxml_loaded` variant — Rust has no `.ltxml` suffix in module paths).
-- Raw .sty/.cls/.def load → `<filename>_raw_loaded` (NEW — distinguishes
-  raw-vs-binding load when both happen for the same package).
-- `_loaded` reflects the most recent state (binding OR raw); `_raw_loaded`
-  is the explicit raw-file marker.
+- Binding load (Rust module dispatch, e.g. `babel_sty.rs`) → sets
+  `<filename>_loaded` (e.g. `babel.sty_loaded`). This is the ONLY flag
+  set on binding load.
+- Raw `.sty`/`.cls`/`.def` load (the underlying TeX file, possibly
+  triggered from inside a binding via `\input`) → sets
+  `<filename>_raw_loaded` (e.g. `babel.sty_raw_loaded`). This is the
+  ONLY flag set on raw load.
+- A binding `.rs` can load a raw `.sty` of the same name without the
+  flags clobbering each other:
+  - `babel_sty.rs` runs → `babel.sty_loaded = 1`
+  - inside, `InputDefinitions("babel", noltxml=true)` → `babel.sty_raw_loaded = 1`
+- Reads check the appropriate flag(s):
+  - "Was the binding loaded?" → `<filename>_loaded`
+  - "Was the raw file loaded?" → `<filename>_raw_loaded`
+  - "Either?" → check both
 
 **Rationale:** Perl's two-key scheme leaks the `.ltxml` filesystem suffix
 into the API. In Rust, bindings are compile-time modules with no `.ltxml`
