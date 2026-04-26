@@ -66,6 +66,69 @@ Most likely: `\bbl@foreach` triggers a loop in our gullet when
 processing the language code `english`. The `\bbl@foreach` macro
 itself is a babel-internal for-each iterator.
 
+## Deeper localization (next iteration's findings)
+
+`\bbl@foreach\bbl@toload{\bbl@tempc#1\@@}` calls `\bbl@tempc` for
+each entry in `\bbl@toload`. `\bbl@tempc` is defined at line 4251:
+
+```latex
+\def\bbl@tempc#1/#2//#3//#4/#5\@@{%
+  \count@\z@
+  \ifnum#2=\@m % if no \BabelDefinitionFile
+    \ifnum#1=\z@
+      \ifnum\bbl@ldfflag>\@ne\bbl@tempc 0/0//#3//#4/#3\@@
+      \else\bbl@tempd{#1}{#2}{#3}{#4}{#5}%
+      \fi
+    \else
+      \ifodd\bbl@ldfflag\bbl@tempc 10/0//#3//#4/#3\@@
+      \else\bbl@tempd{#1}{#2}{#3}{#4}{#5}%
+      \fi
+    \fi
+  \else
+    ...
+    \bbl@tempd{#1}{#2}{#3}{#4}{#5}%
+  \fi}
+```
+
+The recursive call: `\bbl@tempc 0/0//#3//#4/#3\@@` (lines 4255 and
+4259) RE-INVOKES `\bbl@tempc` with first args = "0/0/...".
+
+For our probe with just `english`:
+- `\bbl@ldfflag` = 0 (default, line 360)
+- `\bbl@iniflag` = 0 (default, line 356)
+- `\@ne` = 1, `\@m` = 1000 (LaTeX kernel)
+
+So `\ifnum 0>\@ne` = `\ifnum 0>1` = FALSE → no recursion. Same for
+`\ifodd 0` = FALSE.
+
+**Verified locally**: `\ifnum\foo>\@ne` (with `\chardef\foo=0`)
+returns "NO" in BOTH Rust and Perl. The basic conditional works.
+
+So the loop trigger is NOT in `\bbl@tempc`'s `\ifnum`/`\ifodd` paths.
+It must be earlier — in `\bbl@toload`'s value parsing, or in
+`\bbl@foreach` / `\bbl@vforeach`'s for-each iteration itself.
+
+`\bbl@toload@last` at line 4193 is set as:
+```latex
+\edef\bbl@toload@last{0/\bbl@tempa//\CurrentOption//#1/\bbl@tempb}
+```
+
+For `english`, this becomes: `0/<\bbl@tempa>//english//<#1>/<\bbl@tempb>`.
+
+If `\bbl@tempa` or `#1` or `\bbl@tempb` expands incorrectly in our
+gullet (e.g. expanding to itself or a recursive form), the `\edef`
+expansion could blow up. Or the resulting `\bbl@toload` value
+might confuse `\bbl@vforeach`'s comma-delimited parsing.
+
+## Next-iteration tools
+
+- Add a token-counter eprintln! gated on `LATEXML_TRACE_TOKENS=1`
+  that prints the current CS being expanded every 1M tokens. This
+  would identify the looping CS.
+- Run Perl LaTeXML on the same probe with `--verbosity=3` to see
+  what `\bbl@toload` ends up as. Compare to Rust.
+- Suspect `\bbl@tempa` and `\bbl@tempb` expansion in `\edef`.
+
 ## Why `\endinput` doesn't fire
 
 Despite the bisection showing line 4304's `\endinput` is reached,
