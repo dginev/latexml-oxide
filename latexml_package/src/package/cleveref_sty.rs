@@ -9,8 +9,11 @@ LoadDefinitions!({
   DefMacro!("\\lx@cleverref@label[]", "\\lx@cleverref@save@label");
 
   // Load the raw cleveref.sty (for language-dependent definitions)
-  // Pretend amsmath is loaded to avoid errors
-  let ams_loaded = state::with_value("amsmath.sty_loaded", |v| v.is_some());
+  // Pretend amsmath is loaded to avoid errors. Per OXIDIZED_DESIGN
+  // #23, "amsmath is loaded" means EITHER `amsmath.sty_loaded` OR
+  // `amsmath.sty_raw_loaded` is set.
+  let ams_loaded = state::with_value("amsmath.sty_loaded", |v| v.is_some())
+    || state::with_value("amsmath.sty_raw_loaded", |v| v.is_some());
   assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
   InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   if !ams_loaded {

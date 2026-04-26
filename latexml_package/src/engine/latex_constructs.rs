@@ -3597,9 +3597,12 @@ LoadDefinitions!({
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
-  // Rust divergence from Perl: we drop the `.ltxml` form (no .ltxml files
-  // exist here); the loader at binding/content.rs:326 sets only `_loaded`.
-  if lookup_bool(&s!("{path}_loaded")) {
+  // Per OXIDIZED_DESIGN #23: a package is "loaded" when EITHER the
+  // binding (`_loaded`) OR the raw .sty/.cls (`_raw_loaded`) is in
+  // place. User-level `\@ifpackageloaded{X}` doesn't care which path.
+  // Mirrors Perl `\@ifpackageloaded` checking `<X.sty>_loaded` (which
+  // is set by both Perl `loadLTXML` and `loadTeXDefinitions`).
+  if lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")) {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")
