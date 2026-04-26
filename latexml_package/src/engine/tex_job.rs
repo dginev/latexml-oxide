@@ -101,6 +101,7 @@ LoadDefinitions!({
   // Reads [options]{class}, loads LaTeX (or AmSTeX) pool, then re-emits
   // \documentclass [options]{class} for the now-loaded LaTeX pool to handle.
   DefMacro!("\\documentstyle[]{}", sub[(options_opt, class_tks)] {
+    use latexml_core::binding::content::find_file;
     let class = class_tks.to_string();
     let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
     input_definitions(pool, InputDefinitionOptions {
@@ -110,14 +111,35 @@ LoadDefinitions!({
 
     state::assign_value("2.09_COMPATIBILITY", true, Some(Scope::Global));
 
+    // Perl latex_constructs.pool.ltxml L114-119: if `<class>.sty` exists
+    // (filesystem OR Rust binding registry), the LaTeX-2.09 idiom expects
+    // `<class>` to be loaded as a package on top of `article.cls`. Without
+    // this, `\documentstyle{spackap}` (Kluwer Academic, ~5 papers) falls
+    // through to the OmniBus-cls fallback and never sees `\opening`/etc.
+    // Examples: `\documentstyle{spackap}` (kluwer.sty + spackap.sty are
+    // local zip files), `\documentstyle{aipproc}` (older arXiv pre-2002
+    // form). Class-form bindings (revtex_cls.rs etc.) are unaffected
+    // because their `.sty` is not registered.
+    let class_sty_found = find_file(&format!("{}.sty", class), None).is_some();
+
     // In LaTeX 2.09, options are both class options AND packages to load.
     // First load the class, then try to load each option as a package.
+    let actual_class = if class_sty_found { "article" } else { class.as_str() };
     let mut result = Tokens!(T_CS!("\\documentclass"));
     if let Some(ref opts) = options_opt {
       let opts: &Tokens = opts;
       result = Tokens!(result, T_OTHER!("["), opts.clone(), T_OTHER!("]"));
     }
-    result = Tokens!(result, T_BEGIN!(), class_tks, T_END!());
+    result = Tokens!(result, T_BEGIN!(), Explode!(actual_class), T_END!());
+
+    // When the class arrived via `.sty` route, emit `\RequirePackage{class}`
+    // BEFORE the option-as-package emissions so the class definitions land
+    // before any options' package code can reference them.
+    if class_sty_found {
+      result = Tokens!(result,
+        T_CS!("\\RequirePackage"), T_BEGIN!(), Explode!(class.as_str()), T_END!()
+      );
+    }
 
     // After class loads, try each option as a package (Perl \compat@loadpackages
     // in latex_constructs.pool.ltxml:137-154).
