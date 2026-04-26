@@ -37,6 +37,24 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 ### Active gaps (as of 2026-04-26)
 
+* **2026-04-26 (commit `4da59f30e`)**: `expl3_sty.rs` reduced to
+  strict-Perl 3-line mirror (229 → 23 lines, deletes 13 categories
+  of compensating raw_tex blocks). Standalone `\usepackage{expl3}`:
+  49 → **0 boxing errors**. The compensations were workarounds for
+  an underlying engine bug: the `\__msg_interrupt:n` body has
+  catcoded SPACE tokens (catcode 1/2 with content ` `) used as
+  PADDING in `\tex_errmessage:D` rendering — Rust gullet/stomach
+  treats every catcode-2 token as a structural group-close, hitting
+  boxing-vs-non-boxing mismatch. Sandbox cost (commit 142312):
+  12 conversion_error papers regressed to abort because OTHER
+  expl3-dependent packages (xparse, l3keys2e, mhchem) hit the
+  SAME chk_free→cascade when their raw loads call `\msg_new:nnn`,
+  `\quark_new:N`, `\seq_gclear_new:N` etc. Audit doc:
+  [`docs/EXPL3_PARITY_AUDIT.md`](EXPL3_PARITY_AUDIT.md). Fix path:
+  engine-side change to gullet/stomach catcode-2-as-content
+  vs catcode-2-as-syntax handling, OR per-package strict-Perl
+  rewrites (xparse_sty.rs, l3keys2e_sty.rs etc.). Pending.
+
 * **DONE 2026-04-26 (commit `e3d4f8532`)**: `\q_no_value`-recursion
   cascade resolved. Root cause: gullet's `DEFERRED_COMMANDS` gate
   in `read_balanced` only matched `defn.get_cs().text`, but Perl
