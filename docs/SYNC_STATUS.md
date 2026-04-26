@@ -413,13 +413,61 @@ errored identically in pre-AR snapshot — AR. flip introduces no new
 regressions for this paper. Spot-check confirms AR. is purely
 additive (more errors cleared, none introduced).
 
-**Remaining work to error-free** is mostly granular long-tail:
-- Task #11 (expl3 regex cascade): largest cluster (4 papers,
-  expandable as more papers complete)
-- Per-paper mode/frame bugs
-- Per-class IEEE / mn / array internal CS gaps
+### FINAL CLUSTER TRIAGE (89% completion, 7059/7898)
 
-Re-tally pending full run completion.
+**135 errors + 3 fatals + 5 empty = ~143 problem papers** projected
+final ~155-165 / 7898 (~98% clean), down from ~196 (97.5%) pre-AR.
+Net improvement: 30-40 papers cleared. Less dramatic than early
+projection (had been extrapolating from initial AR-only-improved
+papers; later batches surfaced clusters AR. didn't address).
+
+**Top clusters (by first-error pattern, sed-normalized):**
+
+| # | Cluster | Status |
+|---|---|---|
+| 14 | `XMApp` in `<ltx:text>` (math leak) | task #11 (math-parser shape) |
+| 11 | `XMTok` in `<ltx:text>` (math leak) | task #11 |
+| 9 | `\regex_const:Nn` undefined (mhchem/expl3) | task #11 (expl3 regex) |
+| 6 | `} A closing } was supposed to be here` | brace-mismatch / gullet |
+| 5 | `XMApp` in `<ltx:p>` | task #11 |
+| 5 | `\end{equation} Attempt to end mode display_math` | math env close |
+| 5 | `}` close group at vertical | mode-switch |
+| 4 | `\@nil` undefined | pgf cascade (pre-existing, verified non-AR) |
+| 3 | `\lx@end@gen@cases` boxing group | amsmath cases |
+| 3 | `XMArray` in `<ltx:p>` | task #11 |
+| 3 | `\columns` undefined | elsart legacy (task #15) |
+| 3 | `\CITE` undefined | custom .sty per-paper |
+| 3 | `<box> was supposed to be here` | brace-mismatch |
+| 3 | `\affil` undefined | revtex/aastex |
+| 2 | `\+` undefined | core kernel CS gap |
+| 2 | `\shipout` undefined | Perl-also-broken |
+| 2 | `\section` undefined | AmSTeX dispatcher |
+| 2 | `\gnuplot` undefined | gnuplot.sty |
+| 2 | `\DeclareKeys` undefined | l3keys2e/expl3 |
+| 2 | `\citeauthoryear` undefined | natbib |
+| 2 | `\box_new:N` undefined | task #11 (expl3) |
+| 2 | `\address` undefined | revtex per-paper |
+
+**Aggregate by cluster type:**
+- **Task #11 (math-parser + expl3 regex/box):** ~46 papers — by far
+  the largest. Multi-week deep work per `project_kernel_dump_parity.md`.
+- **Brace/mode mismatches:** ~22 papers — per-paper investigations,
+  some gullet-related (`project_revtex3_faketext_mode.md`).
+- **Per-class long-tail (revtex/aastex/aas/elsart/IEEE/AmSTeX):**
+  ~25 papers — per-class CS gaps, partly task #15.
+- **Perl-also-broken / out of worklist:** 4-6 papers
+  (`feedback_sandbox_perl_baseline.md`).
+- **Pre-existing pgf cascade (`\@nil`):** 4 papers — same as pre-AR
+  baseline.
+
+**Bottom line for further error reduction:**
+- Most of the remaining ~140 papers fall into deep/multi-week areas
+  (task #11 math-parser, expl3 kernel port).
+- Per-paper investigations average several hours each.
+- The AR. flip captured the easy wins; remaining wins require
+  structural rewrites or specific package-by-package fleshing.
+
+Re-tally pending full run completion (~10% remaining).
 
 ### SS. Sandbox snapshot is stale (resolved)
 
