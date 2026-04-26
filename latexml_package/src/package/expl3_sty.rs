@@ -161,6 +161,14 @@ LoadDefinitions!({
   raw_tex(concat!(
     r"\protected\gdef \__kernel_iow_with:Nnn #1#2#3 {#3}",
     r"\protected\gdef \iow_term:n #1 {}",
+    // `\iow_log:n` writes to the log file in real expl3. For LaTeXML
+    // (no log-file output) suppress as no-op, parallel to \iow_term:n.
+    // Cluster: ~6 sandbox papers in 2026-04-26_postfix had `\iow_log:n`
+    // undefined post-expl3-load (verified via probe_iowlog.tex). The
+    // expl3-code.tex raw-load fails to register it due to forward-ref
+    // chains in the l3file/msg sections — same failure mode as
+    // \iow_term:n / \iow_wrap.
+    r"\protected\gdef \iow_log:n #1 {}",
     r"\protected\gdef \iow_wrap:nnnN #1#2#3#4 {#3 #4 {#1}}",
     r"\protected\gdef \iow_wrap:nenN #1#2#3#4 {#3 #4 {#1}}",
     r"\gdef \__file_name_expand_end: {}",
