@@ -96,6 +96,14 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   if std::env::var_os("LATEXML_SKIP_DUMP_STAMP_CHECK").is_none() {{
     check_dump_staleness(&path);
   }}
+  // Conservative add-only load. The latex dump can't fully replace
+  // `latex_base.rs` (closure-backed defs aren't serializable), so the
+  // engine loads BOTH; `load_from_str` skips dump entries already
+  // installed by `_base` rather than overwriting them. This is the
+  // "transitional" mode — strict Perl would call
+  // `load_from_str_plain` (unconditional `assign_internal('global')`)
+  // but that requires `_base` closures be re-expressible through the
+  // dump.
   let count = latexml_core::dump_reader::load_from_str(&content)
     .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
   log::info!("[latex_dump] loaded {{}} entries from {{}}", count, path.display());

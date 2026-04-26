@@ -10,6 +10,39 @@
 ///**********************************************************************
 use crate::prelude::*;
 
+/// Perl `FindFile($format._dump, ...)` parity for the latex dump.
+/// Mirrors `latex_dump::resolve_dump_path` (defined in
+/// `OUT_DIR/latex_dump_loader.rs`). Returns true if `latex.dump.txt`
+/// is reachable — used by `LoadFormat('latex')` to decide between the
+/// dump branch and the base branch.
+fn latex_dump_available() -> bool {
+  if let Ok(p) = std::env::var("LATEXML_DUMP_PATH") {
+    if std::path::Path::new(&p).is_file() {
+      return true;
+    }
+  }
+  if let Ok(dir) = std::env::var("LATEXML_DUMP_DIR") {
+    if std::path::Path::new(&dir).join("latex.dump.txt").is_file() {
+      return true;
+    }
+  }
+  if let Ok(exe) = std::env::current_exe() {
+    if let Some(exe_dir) = exe.parent() {
+      if exe_dir.join("../resources/dumps/latex.dump.txt").is_file() {
+        return true;
+      }
+      if exe_dir.join("latex.dump.txt").is_file() {
+        return true;
+      }
+    }
+  }
+  let dev = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/dumps/latex.dump.txt"
+  );
+  std::path::Path::new(dev).is_file()
+}
+
 LoadDefinitions!({
   //**********************************************************************
   // Organized following
@@ -25,35 +58,21 @@ LoadDefinitions!({
   // Perl: LaTeX.pool.ltxml — LoadPool('TeX'); LoadFormat('latex');
   LoadPool!("TeX");
 
-  // Load order — always the same, whether the dump is present or not:
-  //   bootstrap → _base → dump → _constructs
-  //
-  // `_base` always runs BEFORE the dump so its closure-backed defs
-  // (which can't be serialized) are installed. The dump then adds
-  // serializable state (~25k entries of post-raw-load kernel state)
-  // via add-only policy — CSes already defined by `_base` are not
-  // overwritten. `_constructs` runs last and defines closure-backed
-  // CSes that must be available regardless of dump state.
-  //
-  // This differs from Perl's strictly-mutually-exclusive `LoadFormat`
-  // (bootstrap+dump+constructs XOR bootstrap+base+constructs) because
-  // in our Rust port `_base` runs in ~3-5 ms of compiled code; there
-  // is no meaningful speed win from skipping it, and keeping it loaded
-  // means closure-backed defs don't vanish.
   InnerPool!(latex_bootstrap);
 
-  // SYNC_STATUS D0 (d.1): stage a snapshot right after bootstrap.
-  // ini_tex::dump_format reads it so its diff captures "bootstrap →
-  // fully-initialized kernel", matching Perl's DumpFile semantics.
-  // Has no effect at normal runtime (just stored in a thread-local).
-  latexml_core::state::stage_snapshot("bootstrap");
+  // Stage snapshot right after latex_bootstrap — diff baseline for
+  // `--init=latex.ltx`.
+  latexml_core::state::stage_snapshot("latex_bootstrap");
 
-  InnerPool!(latex_base);
-
-  // Dump load — add-only: CSes already defined by _base skipped.
-  // Honours `LATEXML_NODUMP=1` (Perl-parity) to disable the dump path.
-  if let Err(e) = crate::engine::latex_dump::load_definitions() {
-    log::warn!("latex_dump: {}", e);
+  // Perl `LoadFormat('latex')` strict split:
+  //   if dump available: bootstrap → dump → constructs (NO base)
+  //   else:              bootstrap → base → constructs (NO dump)
+  if std::env::var_os("LATEXML_NODUMP").is_none() && latex_dump_available() {
+    if let Err(e) = crate::engine::latex_dump::load_definitions() {
+      log::warn!("latex_dump: {}", e);
+    }
+  } else {
+    InnerPool!(latex_base);
   }
 
   InnerPool!(latex_constructs);

@@ -47,6 +47,14 @@ pub fn load_from_str(content: &str) -> Result<usize, String> {
   load_from_str_internal(content, "<embedded>")
 }
 
+/// Backwards-compat alias kept until call sites are migrated. Both
+/// entry points now load unconditionally, mirroring Perl `I(...)` /
+/// `V(...)` (Core/Dumper.pm) which call `assign_internal('global')`
+/// without filters.
+pub fn load_from_str_plain(content: &str) -> Result<usize, String> {
+  load_from_str_internal(content, "<embedded:plain>")
+}
+
 // Per-load context used to attach a nominal Locator to dump-installed
 // Expandables. Matches Perl #aaacdba2 (2026): dump-loaded definitions
 // should be traceable to the dump file + line, not report the arena's
@@ -156,7 +164,7 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
 }
 
 /// Parse a single dump line and load it. Returns Ok(true) if loaded,
-/// Ok(false) if skipped (already defined or filtered), Err on parse error.
+/// Ok(false) if filtered (e.g. corrupt MC/DC), Err on parse error.
 fn parse_and_load(line: &str) -> Result<bool, String> {
   let parts: Vec<&str> = line.splitn(3, '\t').collect();
   if parts.len() < 2 {
@@ -179,136 +187,14 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // V: Value entries (registers, fontdimen, font metadata).
     // Add-only policy: only loads if key has no existing value.
     "V" => load_value(key, data),
-    // M: Meaning entries (expandable definitions + primitive aliases).
+    // M: Meaning entries (Expandable, Let-alias, Register, etc.).
     //
-    // Current policy: only route `@`-internal entries (whose body does
-    // not reference the expl3 hook system) to `load_meaning`. Those
-    // include `@`-internal PA/MPA aliases, which DO get consumed via
-    // the PA arm of `load_meaning`. The @-internal gate is still the
-    // right safety fence: it keeps us out of the expl3 short-circuit
-    // hazard zone.
-    //
-    // `:`-style expl3 Meanings and public-CS PAs (like
-    // `\tex_let:D → \let`) remain gated off because enabling them
-    // causes two failure modes, both observed in earlier experiments:
-    //
-    //   - PA alone: `\tex_let:D` becomes let-aliased to `\let` via the dump → `expl3.sty`'s own
-    //     guard fires → raw `\input expl3-code.tex` is skipped → post-guard code hits
-    //     `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`, `\keys_define:nn { sys }`,
-    //     which are `:`-style macros we don't load → undefined-CS recovery loop (60 s timeout,
-    //     memory climbing, SIGTERM-by-watchdog).
-    //
-    //   - PA + `:`-style M: the `:`-style bodies themselves trigger the same pattern via
-    //     cross-references.
-    //
-    // Both must be unblocked TOGETHER, in coordination with
-    // `expl3_sty.rs` short-circuiting its whole `load_definitions`
-    // when the dump already supplies expl3 state. See SYNC_STATUS
-    // D0 (d.5).
-    "M" => {
-      let name = key.trim_start_matches('\\');
-      let is_at_internal = name.contains('@') && !name.contains(':');
-      // Safe additional gate: public CharDef/Register entries (payload
-      // starts with `R\t…`). These set a character code or register value
-      // and never chain into expl3/hook machinery, so they can't trigger
-      // the cascade the expl3 short-circuit is guarding against. Allows
-      // plain-TeX math chardefs like `\ldotp`, `\cdotp`, `\intop` to load
-      // without opening the door to public Expandable bodies.
-      //
-      // Targeted exclusion: `\BooleanTrue`/`\BooleanFalse` are defined
-      // in latex.ltx L4408-4409 (TL2023 kernel xparse merge) AND
-      // re-defined in xparse-2018-04-12.sty L2264-2265. Admitting them
-      // from the dump means the legacy xparse-2018 raw-load (triggered
-      // when `\NewDocumentCommand` isn't admitted) hits expl3's strict
-      // "command-already-defined" check, producing 2 cosmetic LaTeX
-      // errors + 2 undefineds (`\iow_wrap:nnnN`/`\iow_wrap:nenN`) per
-      // document that does `\usepackage{xparse}`. Excluding these two
-      // names lets xparse-2018 re-define them cleanly. See
-      // project_kernel_dump_parity.md Stage 5 option (b).
-      let is_public_register =
-        data.starts_with("R\t") && name != "BooleanTrue" && name != "BooleanFalse";
-      // Safe additional gate: Let-alias records (`PA\t<target>` or
-      // `MPA\t<target>`) where NEITHER the key NOR the target is an
-      // expl3 `:`-style identifier. These replay `\let <key> <target>`
-      // at load time — the target must be an existing (Rc<Primitive>)
-      // binding, so there's no body cascade, and without `:` in either
-      // name we can't trip the expl3 short-circuit hazard the main
-      // gate guards against. Recovers plain-LaTeX public aliases like
-      // `\let\a=\@tabacckludge` (latex.ltx L10007) that previously
-      // required hand-written `Let!(...)` in `latex_constructs.rs`.
-      let is_safe_let_alias = {
-        let (prefix, rest) = if let Some(r) = data.strip_prefix("PA\t") {
-          ("PA", r)
-        } else if let Some(r) = data.strip_prefix("MPA\t") {
-          ("MPA", r)
-        } else {
-          ("", "")
-        };
-        let target_raw = if rest.contains('%') {
-          url_decode(rest)
-        } else {
-          rest.to_string()
-        };
-        !prefix.is_empty()
-          && !name.contains(':')
-          && !target_raw.trim_start_matches('\\').contains(':')
-      };
-      // Round 17 — deep dumper parity, progressive widening of the
-      // `:`-named entry admission. Each class is added only after
-      // empirical verification that 83_expl3 + the full workspace
-      // test suite pass. The record-type classification of the
-      // 8,914 `:`-named M entries in the baseline latex.dump.txt:
-      //   8,484 E  (Expandable — most can cascade via expansion)
-      //     216 R  (Register — already admitted via is_public_register)
-      //     156 PA (let-alias — trips expl3.sty guard; needs coord)
-      //      44 N  (None — no-op)
-      //      14 T  (Token — single assign_meaning, no chain)
-      //
-      // Step 1 (b44a065b6): N + T records — no cascade risk.
-      // Step 2 (this commit): :-named E records with nargs=0 AND
-      //   empty body — 43 of 8,484. These define empty macros,
-      //   which expand to nothing. Canary-safe because the expl3.sty
-      //   guard tests `\tex_let:D` (a PA, not an E), so admitting
-      //   bodyless E entries doesn't trip it. The add-only policy in
-      //   load_meaning means any later raw-expl3 redefinition wins.
-      let is_safe_colon_noncascade =
-        name.contains(':') && (data.starts_with("N") || data.starts_with("T\t"));
-      // Step 2 & 3 combined: :-named E records with nargs=0 whose
-      // body is either empty (43) or contains no CS tokens (303 more
-      // — literal characters, digits, punctuation only). "No CS"
-      // means no `16:` catcode marker in the comma-separated token
-      // list, so there's no expansion chain to cascade.
-      //
-      // Step 4 attempted 1-CS bodies, step 5 attempted whole-E
-      // admission. Both regressed 83_expl3 on `\ifdefined\X`
-      // branch mis-selection. The lesson: widening the E gate
-      // further requires porting the underlying kernel primitives
-      // (\hook_*, \group_*, \keys_*, etc.) so the bodies we admit
-      // execute correctly, not just parse. See the "Deep expl3 /
-      // LaTeX 3 kernel parity" long-horizon task — the dumper
-      // widening and the kernel port must advance together.
-      let is_safe_colon_safe_e = name.contains(':') && data.starts_with("E\t") && {
-        let eparts: Vec<&str> = data.split('\t').collect();
-        let nargs_zero = eparts.get(2).map(|s| *s == "0").unwrap_or(false);
-        let body = eparts.get(4).copied().unwrap_or("");
-        let body_has_cs = body.starts_with("16:") || body.contains(",16:");
-        nargs_zero && !body_has_cs
-      };
-      // Backwards alias preserved.
-      let is_safe_colon_empty_e = is_safe_colon_safe_e;
-      if (is_at_internal
-        || is_public_register
-        || is_safe_let_alias
-        || is_safe_colon_noncascade
-        || is_safe_colon_empty_e)
-        && !data.contains("\\\\hook")
-        && !data.contains("16:\\hook")
-      {
-        load_meaning(key, data)
-      } else {
-        Ok(false)
-      }
-    },
+    // Perl-faithful: `plain_dump.pool.ltxml` and `latex_dump.pool.ltxml`
+    // emit one `I(...)` per Meaning entry, which is
+    // `assign_internal($STATE, 'meaning', $cs, $def, 'global')` —
+    // unconditional global write. No admission gate, no skip-if-defined.
+    // Match it: route every M entry to `load_meaning` directly.
+    "M" => load_meaning(key, data),
     // LC/UC: case-mapping codes — safe, always load
     "LC" => load_lccode(key, data),
     "UC" => load_uccode(key, data),
@@ -404,13 +290,9 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
     }
   }
 
-  // Add-only policy: don't overwrite any existing value.
-  // This preserves engine-configured state (e.g., \everymath, \everypar,
-  // named skips, etc.) while filling in gaps from the dump (e.g., expl3
-  // fontdimen intarrays, font metadata).
-  if state::has_value(key) {
-    return Ok(false);
-  }
+  // Perl `V()` parity (`Core/Dumper.pm` L59): every dumped Value entry
+  // maps to `assign_internal($STATE, 'value', $key, $val, 'global')` —
+  // unconditional global write. No skip-if-defined.
 
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
   if parts.is_empty() {
@@ -427,6 +309,16 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
         .parse()
         .map_err(|e| format!("Bad int: {}", e))?;
       Stored::Int(n)
+    },
+    // "Nm": Stored::Number marker (distinct from "I" Stored::Int) —
+    // see dump_writer's Number serializer for rationale.
+    "Nm" => {
+      let n: i64 = parts
+        .get(1)
+        .unwrap_or(&"0")
+        .parse()
+        .map_err(|e| format!("Bad number: {}", e))?;
+      Stored::Number(crate::common::number::Number(n))
     },
     "S" => Stored::from(url_decode(parts.get(1).unwrap_or(&""))),
     "CH" => {
@@ -494,46 +386,10 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
     code: Catcode::CS,
   };
 
-  // Add-only policy: don't override ANY existing definition.
-  if state::has_meaning(&cs_tok) {
-    return Ok(false);
-  }
-
-  // Safety filter: only load definitions that won't interfere with normal
-  // LaTeX processing. Public macros from the dump (like \document, \hook,
-  // \UseOneTimeHook) can reference expl3 hooks and internal state that
-  // our engine doesn't fully support, causing cascading errors.
-  //
-  // Safe: expl3 internals (with `:` or `__`), LaTeX internals (with `@`),
-  //       public Register/CharDef entries (they set char codes and
-  //       can't chain into expl3 cascades), AND public PA/MPA let-aliases
-  //       whose target is not a `:`-style expl3 identifier (they replay
-  //       `\let <key> <target>` against an existing Rc<Primitive>, so
-  //       there's no body cascade either).
-  // Unsafe: public Expandable macros without `:` or `@` (e.g., \document,
-  //         \hook) — their bodies reference the hook system we don't
-  //         fully support. `_base.rs` + `_constructs.rs` already define
-  //         the public CSes the engine cares about; public-CS Expandable
-  //         dump entries are redundant.
-  let name = key.trim_start_matches('\\');
-  let is_internal = name.contains(':') || name.contains('@');
-  let is_public_register = data.starts_with("R\t");
-  let is_public_let_alias = {
-    let rest_opt = data
-      .strip_prefix("PA\t")
-      .or_else(|| data.strip_prefix("MPA\t"));
-    rest_opt.is_some_and(|rest| {
-      let target_raw = if rest.contains('%') {
-        url_decode(rest)
-      } else {
-        rest.to_string()
-      };
-      !target_raw.trim_start_matches('\\').contains(':')
-    })
-  };
-  if !is_internal && !is_public_register && !is_public_let_alias {
-    return Ok(false);
-  }
+  // Perl `I(...)` parity (`Core/Dumper.pm` L67): every dumped Meaning
+  // entry maps to `assign_internal($STATE, 'meaning', $cs, $def,
+  // 'global')` — unconditional global write. No skip-if-defined, no
+  // admission filter.
 
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
   if parts.is_empty() {

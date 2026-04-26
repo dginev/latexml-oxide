@@ -408,7 +408,11 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       }
       Some(s)
     },
-    Stored::Number(n) => Some(format!("I\t{}", n.value_of())),
+    // "Nm" (Number) — distinct from "I" (raw Int) so the reader knows
+    // to install Stored::Number, matching the type expected by register
+    // slots. Round-tripping Number through "I" silently downgraded
+    // values to Stored::Int and broke `\count` register reads.
+    Stored::Number(n) => Some(format!("Nm\t{}", n.value_of())),
     Stored::Float(f) => Some(format!("F\t{}", f.0)),
     Stored::Dimension(d) => Some(format!("D\t{}", d.0)),
     Stored::Glue(g) => {

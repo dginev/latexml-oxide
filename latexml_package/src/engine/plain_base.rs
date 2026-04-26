@@ -258,72 +258,26 @@ LoadDefinitions!({
     NoteLog!(Expand!(arg).to_string());
     Ok(Vec::new())
   }, locked => true);
-  // From plain.tex
-  DefPrimitive!("\\newcount DefToken", sub[(name)] {
-    DefRegister!(name, None, Number::new(0), allocate=>"\\count");
-  });
-  DefPrimitive!("\\newdimen DefToken", sub[(name)] {
-    DefRegister!(name, None, Dimension::new(0), allocate=>"\\dimen");
-  });
-  DefPrimitive!("\\newskip DefToken", sub[(name)] {
-    DefRegister!(name, None, Glue::new(0), allocate=>"\\skip");
-  });
-  DefPrimitive!("\\newmuskip DefToken", sub[(name)] {
-    DefRegister!(name, None, MuGlue::new(0), allocate=>"\\muskip");
-  });
-  AssignValue!("allocated_boxes" => 0);
-  DefPrimitive!("\\newbox DefToken", sub[(t)] {
-    let n = lookup_int("allocated_boxes");
-    AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
-    // Don't store a value — a newly allocated box is void.
-    // classify_box returns "" for None, making \ifvoid true.
-    DefRegister!(t, None, Number(n), readonly => true);
-  });
-  // Perl plain_base.pool.ltxml L213:
-  //   \outer\def\newhelp#1#2{\newtoks#1#1\expandafter{\csname#2\endcsname}}
-  // allocates a \newtoks register so `#1` becomes defined, then stores
-  // the help text. LaTeXML has no errhelp output, so the stored text
-  // is irrelevant; what matters is that #1 is installed as a Toks
-  // register, otherwise later `\errhelp\defbhelp@` reports undefined.
-  // arxiv 1012.3836 (amstex.tex) was the witness.
-  DefPrimitive!("\\newhelp DefToken {}", sub[(token, _arg)] {
-    DefRegister!(token, None, Tokens!(), allocate => "\\toks");
-  });
-  DefPrimitive!("\\newtoks DefToken", sub[(name)] {
-    DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
-  });
+  // From plain.tex (Perl `plain_base.pool.ltxml` L207-218 RawTeX block).
+  // Raw `\outer\def` bodies matching Perl exactly so the dump captures
+  // these as serializable Token bodies, not opaque Rust closures.
+  TeX!(
+    r"\outer\def\newcount{\alloc@0\count\countdef\insc@unt}
+\outer\def\newdimen{\alloc@1\dimen\dimendef\insc@unt}
+\outer\def\newskip{\alloc@2\skip\skipdef\insc@unt}
+\outer\def\newmuskip{\alloc@3\muskip\muskipdef\@cclv}
+\outer\def\newbox{\alloc@4\box\chardef\insc@unt}
+\outer\def\newhelp#1#2{\newtoks#1#1\expandafter{\csname#2\endcsname}}
+\outer\def\newtoks{\alloc@5\toks\toksdef\@cclv}
+\outer\def\newread{\alloc@6\read\chardef\sixt@@n}
+\outer\def\newwrite{\alloc@7\write\chardef\sixt@@n}
+\outer\def\newfam{\alloc@8\fam\chardef\sixt@@n}
+\outer\def\newlanguage{\alloc@9\language\chardef\@cclvi}"
+  );
 
-  // the next 4 actually work by doing a \chardef instead of \countdef, etc.
-  // which means they actually work quite differently
-  DefPrimitive!("\\alloc@@ {}", sub[(atype)] {
-    let c = s!("allocation @{}", atype);
-    let n = state::lookup_int(&c);
-    state::assign_value(&c, n + 1, Some(Scope::Global));
-    state::assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
-  });
-  DefMacro!(
-    "\\newread DefToken",
-    r"\alloc@@{read}\global\chardef#1=\allocationnumber"
-  );
-  DefMacro!(
-    "\\newwrite DefToken",
-    r"\alloc@@{write}\global\chardef#1=\allocationnumber"
-  );
-  DefMacro!(
-    "\\newfam DefToken",
-    r"\alloc@@{fam}\global\chardef#1=\allocationnumber"
-  );
-  DefMacro!(
-    "\\newlanguage DefToken",
-    r"\alloc@@{language}\global\chardef#1=\allocationnumber"
-  );
-  // \alloc@ moved to plain_bootstrap.rs (Perl plain_bootstrap.pool.ltxml L32)
-  // Perl plain_base.pool.ltxml: \outer\def\newread{\alloc@6\read\chardef\sixt@@n}
-  DefMacro!("\\newread", r"\alloc@6\read\chardef\sixt@@n");
-  // Perl plain_base.pool.ltxml: \outer\def\newwrite{\alloc@7\write\chardef\sixt@@n}
-  DefMacro!("\\newwrite", r"\alloc@7\write\chardef\sixt@@n");
-
-  // This implementation is quite wrong
+  // Perl plain_base.pool.ltxml L222: `\newinsert` is closure-backed
+  // (the only one in this group). DefRegister with no scope hint
+  // matches `DefRegisterI($_[1], undef, Number(0))`.
   DefPrimitive!("\\newinsert Token", sub[(t)] {
     DefRegister!(t, None, Number::new(0));
   });

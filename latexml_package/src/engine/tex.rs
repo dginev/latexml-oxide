@@ -67,6 +67,39 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   Ok(())
 }
 
+/// Perl `FindFile($format._dump, ...)` parity for the plain dump.
+/// Returns `true` if `plain.dump.txt` is reachable through any of the
+/// runtime resolution paths (env overrides, exe-relative install layout,
+/// dev-tree). Mirrors `plain_dump::resolve_dump_path` exactly so the
+/// branch decision in `LoadFormat('plain')` doesn't drift.
+fn plain_dump_available() -> bool {
+  if let Ok(p) = std::env::var("LATEXML_PLAIN_DUMP_PATH") {
+    if std::path::Path::new(&p).is_file() {
+      return true;
+    }
+  }
+  if let Ok(dir) = std::env::var("LATEXML_DUMP_DIR") {
+    if std::path::Path::new(&dir).join("plain.dump.txt").is_file() {
+      return true;
+    }
+  }
+  if let Ok(exe) = std::env::current_exe() {
+    if let Some(exe_dir) = exe.parent() {
+      if exe_dir.join("../resources/dumps/plain.dump.txt").is_file() {
+        return true;
+      }
+      if exe_dir.join("plain.dump.txt").is_file() {
+        return true;
+      }
+    }
+  }
+  let dev = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/dumps/plain.dump.txt"
+  );
+  std::path::Path::new(dev).is_file()
+}
+
 LoadDefinitions!({
   // port of TeX.pool.ltxml
   // commit 4cd73e7584c5f0422293ba38f9b757332584afec
@@ -101,10 +134,39 @@ LoadDefinitions!({
 
   InnerPool!(base_deprecated);
 
-  // Perl: LoadFormat('plain') — loads bootstrap → base → dump → constructs
+  // Perl: LoadFormat('plain') — Package.pm L2734-2752. The dump and
+  // base branches are MUTUALLY EXCLUSIVE:
+  //
+  //   if (!$ENV{LATEXML_NODUMP} && FindFile($format._dump, ...)) {
+  //     LoadPool(plain_bootstrap);
+  //     LoadPool(plain_dump);          # base is SKIPPED
+  //     LoadPool(plain_constructs);
+  //   } elsif (FindFile($format._base, ...)) {
+  //     LoadPool(plain_bootstrap);
+  //     LoadPool(plain_base);          # dump is SKIPPED
+  //     LoadPool(plain_constructs);
+  //   }
+  //
+  // The dump replays the frozen `--init=plain.tex` state delta; loading
+  // base on top would re-stub macros like `\settabs` after the dump has
+  // installed their real definitions, defeating the format-cache point.
   InnerPool!(plain_bootstrap); // Perl: plain_bootstrap.pool.ltxml
-  InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
-  // plain_dump: not loaded separately — plain.ltx state is subsumed by latex dump
+
+  // Stage a snapshot right after plain_bootstrap. `ini_tex::dump_format`
+  // uses this as the diff baseline for `--init=plain.tex`, mirroring
+  // Perl `make formats`: the dump captures everything plain_base +
+  // raw plain.tex contribute on top of pure bootstrap.
+  latexml_core::state::stage_snapshot("plain_bootstrap");
+
+  // Perl `LoadFormat('plain')` (Package.pm L2734-2752) — strict
+  // mutually-exclusive split:
+  //   if dump available: bootstrap → dump → constructs (NO base)
+  //   else:              bootstrap → base → constructs (NO dump)
+  if std::env::var_os("LATEXML_NODUMP").is_none() && plain_dump_available() {
+    InnerPool!(plain_dump); // Perl: plain_dump.pool.ltxml
+  } else {
+    InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
+  }
   InnerPool!(plain_constructs); // Perl: plain_constructs.pool.ltxml → math_common
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

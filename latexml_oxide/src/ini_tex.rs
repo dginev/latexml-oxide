@@ -29,40 +29,48 @@ pub fn dump_format(
 ) -> Result<usize, String> {
   eprintln!("[ini_tex] Dumping format from {}", init_file);
 
-  // Step 1: snapshot the state BEFORE raw-loading latex.ltx.
+  // Step 1: pick the diff baseline snapshot.
   //
-  // Perl's DumpFile semantics: the diff captures "bootstrap → full
-  // kernel + raw latex.ltx extras". In Rust, at the point ini_tex fires
-  // we have TeX + plain pools loaded (≈2300 entries — includes `\let`,
-  // `\def`, `\relax`, and the other TeX primitives our PA aliases will
-  // reference). Step 1b below surgically preloads `latex_base.rs` so
-  // its `_base`-only CSes end up in the diff — without it, the
-  // `\makeatletter` autoload trigger never fires during `--init`'s
-  // raw-load path and 20 CSes (font-size aliases, scratch macros,
-  // output-routine stubs) would be missing from the dump.
+  // Perl `make formats` semantics:
+  //   `--init=plain.tex` → diff against `plain_bootstrap` (so
+  //     plain_base + raw plain.tex contributions all enter the dump).
+  //   `--init=latex.ltx` → diff against `latex_bootstrap` (so
+  //     latex_base + raw latex.ltx contributions enter the dump,
+  //     while plain.tex state is already in the baseline).
   //
-  // We stage this snapshot as "bootstrap" so dump_writer can classify
-  // let-alias targets: targets present in this snapshot → early
-  // section; targets appearing only after the raw-load → late section.
-  let snap = state::take_snapshot();
+  // The relevant `stage_snapshot(...)` call is made by the engine's
+  // pool loaders (`tex.rs` for plain_bootstrap, `latex.rs` for
+  // latex_bootstrap). We retrieve the staged snapshot here.
+  //
+  // Falls back to `take_snapshot()` (current state) if the staged one
+  // is missing — preserves the legacy behavior for unexpected paths.
+  let init_lower = init_file.to_ascii_lowercase();
+  let stage_name = if init_lower.contains("plain") {
+    "plain_bootstrap"
+  } else {
+    "latex_bootstrap"
+  };
+  let snap = match state::get_staged_snapshot(stage_name) {
+    Some(s) => {
+      eprintln!(
+        "[ini_tex] Using staged snapshot \"{}\" ({} entries) as diff baseline",
+        stage_name,
+        s.len()
+      );
+      s
+    },
+    None => {
+      eprintln!(
+        "[ini_tex] WARN: no staged \"{}\" snapshot — falling back to take_snapshot",
+        stage_name
+      );
+      state::take_snapshot()
+    },
+  };
+  // Re-stage as "bootstrap" so `dump_writer` finds it for let-alias
+  // classification (early/late sections).
   state::stage_snapshot_value("bootstrap", snap.clone());
   let snap_size = snap.len();
-  eprintln!(
-    "[ini_tex] Pre-dump snapshot: {} entries (staged as \"bootstrap\")",
-    snap_size
-  );
-
-  // Step 1b (D0 d.1): surgically load ONLY latex_base.rs after the
-  // snapshot so its _base-only CSes (\@tempa/b/c, \@currbox, \xpt and
-  // the other 17 entries listed in SYNC_STATUS) enter state before the
-  // raw latex.ltx load. We avoid the full latex.rs chain here —
-  // latex_bootstrap / latex_constructs / the old-dump load would
-  // contribute hundreds of unrelated entries and make the diff
-  // unreadable. The surgical call keeps the extra dump entries close
-  // to the 20-CS gap we actually care about.
-  if let Err(e) = latexml_package::engine::latex_base::load_definitions() {
-    eprintln!("[ini_tex] latex_base preload warning: {}", e);
-  }
 
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)
