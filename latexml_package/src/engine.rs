@@ -41,7 +41,7 @@ pub mod pdftex; // Perl: pdfTeX.pool.ltxml
 // plain TeX format — LoadFormat('plain') chain called by tex.rs
 mod math_common;
 mod plain_base; // Perl: plain_base.pool.ltxml
-mod plain_bootstrap; // Perl: plain_bootstrap.pool.ltxml
+pub mod plain_bootstrap; // Perl: plain_bootstrap.pool.ltxml
 mod plain_constructs; // Perl: plain_constructs.pool.ltxml
 pub mod plain_dump; // Rust: precompiled plain.ltx state (auto-generated) // Perl: math_common.pool.ltxml
 

@@ -12,7 +12,6 @@
 //! The resulting dump can be loaded at runtime to skip re-processing
 //! the LaTeX kernel on every test run.
 
-use std::borrow::Cow;
 use std::path::Path;
 
 use latexml_core::binding::content::InputDefinitionOptions;
@@ -30,75 +29,55 @@ pub fn dump_format(
 ) -> Result<usize, String> {
   eprintln!("[ini_tex] Dumping format from {}", init_file);
 
-  // Step 1: pick the diff baseline snapshot.
+  // Step 1: load only the bootstrap pool, then snapshot.
   //
-  // Perl `make formats` semantics:
-  //   `--init=plain.tex` → diff against `plain_bootstrap` (so
-  //     plain_base + raw plain.tex contributions all enter the dump).
-  //   `--init=latex.ltx` → diff against `latex_bootstrap` (so
-  //     latex_base + raw latex.ltx contributions enter the dump,
-  //     while plain.tex state is already in the baseline).
+  // Perl `DumpFile` (TeX_Job.pool.ltxml L120-220):
+  //   LoadPool($name . '_bootstrap');   # LaTeX → latex_bootstrap.pool
+  //   $snap = ...                       # snapshot all 8 tables
+  //   loadTeXDefinitions($name, ...)    # raw <name>.ltx
+  //   diff
+  //   write
   //
-  // The relevant `stage_snapshot(...)` call is made by the engine's
-  // pool loaders (`tex.rs` for plain_bootstrap, `latex.rs` for
-  // latex_bootstrap). We retrieve the staged snapshot here.
+  // CRITICAL: Perl loads ONLY `<name>_bootstrap` between init and
+  // snapshot — NOT `<name>_base`, `<name>_dump`, or `<name>_constructs`.
+  // Those would pollute the diff with `:locked` flags, base/constructs
+  // definitions, etc. that the dump should NOT carry (the constructs
+  // run fresh at runtime AFTER the dump loads).
   //
-  // Falls back to `take_snapshot()` (current state) if the staged one
-  // is missing — preserves the legacy behavior for unexpected paths.
+  // Earlier Rust did `input_definitions("LaTeX","pool")` which fires
+  // the full `latex.rs` LoadDefinitions chain (bootstrap + base/dump +
+  // constructs). That populated state with `:locked` flags from
+  // `latex_constructs.rs::DefMacro!(..., locked => true)` and made
+  // them appear in the diff — Perl's dump never has them. Now we
+  // call the bootstrap loader directly to mirror Perl exactly.
   let init_lower = init_file.to_ascii_lowercase();
   let is_plain_init = init_lower.contains("plain");
 
-  // For `--init=latex.ltx`: explicitly load LaTeX.pool BEFORE snapshotting.
-  // Perl's `make formats` recipe runs LaTeX in interactive iniTeX mode where
-  // the LaTeX kernel pool is loaded as part of normal startup. In Rust, the
-  // `\documentclass`-class autoload triggers (TeX.pool L33-39) only fire on
-  // user-emitted document keywords, so without this explicit load the
-  // engine reaches raw latex.ltx with no `\@latex@info`, `\@gtempa`, or
-  // any latex_base content — and 10000+ undefined-CS errors cascade.
-  //
-  // Mirrors LaTeX.pool.ltxml L28-29:
-  //   LoadPool('TeX'); LoadFormat('latex');
-  //
-  // We invoke via input_definitions("LaTeX","pool") so the LaTeX.pool
-  // entry registered in `latexml_package/src/lib.rs:36` fires its
-  // standard load chain.
-  if !is_plain_init {
-    eprintln!("[ini_tex] Pre-loading LaTeX.pool before snapshot (Perl `make formats` parity)");
-    let preload = input_definitions("LaTeX", InputDefinitionOptions {
-      extension: Some(Cow::Borrowed("pool")),
-      ..InputDefinitionOptions::default()
-    });
-    if let Err(e) = preload {
-      eprintln!("[ini_tex] LaTeX.pool preload warning: {}", e);
+  if is_plain_init {
+    eprintln!("[ini_tex] Loading plain_bootstrap (mirrors Perl `LoadPool('plain_bootstrap')`)");
+    if let Err(e) = latexml_package::engine::plain_bootstrap::load_definitions() {
+      eprintln!("[ini_tex] plain_bootstrap warning: {}", e);
+    }
+  } else {
+    eprintln!("[ini_tex] Loading latex_bootstrap (mirrors Perl `LoadPool('latex_bootstrap')`)");
+    // latex_bootstrap.rs L11 does `InnerPool!(plain_bootstrap)` itself
+    // (mirrors Perl `LoadPool('plain_bootstrap')` at the top of
+    // latex_bootstrap.pool.ltxml), so plain_bootstrap state is included.
+    if let Err(e) = latexml_package::engine::latex_bootstrap::load_definitions() {
+      eprintln!("[ini_tex] latex_bootstrap warning: {}", e);
     }
   }
 
-  let stage_name = if is_plain_init {
-    "plain_bootstrap"
-  } else {
-    "latex_bootstrap"
-  };
-  let snap = match state::get_staged_snapshot(stage_name) {
-    Some(s) => {
-      eprintln!(
-        "[ini_tex] Using staged snapshot \"{}\" ({} entries) as diff baseline",
-        stage_name,
-        s.len()
-      );
-      s
-    },
-    None => {
-      eprintln!(
-        "[ini_tex] WARN: no staged \"{}\" snapshot — falling back to take_snapshot",
-        stage_name
-      );
-      state::take_snapshot()
-    },
-  };
+  // Perl `DumpFile` L132-138: snapshot all tables AFTER the bootstrap pool.
+  let snap = state::take_snapshot();
   // Re-stage as "bootstrap" so `dump_writer` finds it for let-alias
   // classification (early/late sections).
   state::stage_snapshot_value("bootstrap", snap.clone());
   let snap_size = snap.len();
+  eprintln!(
+    "[ini_tex] Snapshot taken at bootstrap ({} entries)",
+    snap_size
+  );
 
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)
