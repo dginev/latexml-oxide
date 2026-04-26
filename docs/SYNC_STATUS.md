@@ -54,6 +54,34 @@ are LOWERED until the dumps are complete and Perl-faithful.
   engine-side change to gullet/stomach catcode-2-as-content
   vs catcode-2-as-syntax handling, OR per-package strict-Perl
   rewrites (xparse_sty.rs, l3keys2e_sty.rs etc.). Pending.
+* **2026-04-26 audit (commit `4da59f30e` strict-Perl mirror trace)**:
+  Perl ALSO fires "already-defined" error per duplicate `\msg_new:nnn`,
+  but produces just **1 error per duplicate call** ("LaTeX Error:
+  Message 'define-command' for module 'cmd' already defined"). Rust
+  produces **8 boxing-group errors PLUS the LaTeX error** per duplicate
+  call — 8× amplification. Both engines invoke `\__msg_interrupt:n`
+  body (verified bit-equivalent in dumps). The body has 8 catcode-1
+  + 8 catcode-2 SPACE tokens (TeX trick for error-message rendering)
+  + 44 catcode-12 OTHER spaces. The catcode-1/2 SPACE tokens are
+  STRUCTURAL group-syntax in TeX (8 begin / 8 end, balanced). They
+  should pair within `\tex_errmessage:D`'s `{...}` arg-reading and
+  `\cs_set_protected:Npn \<space> {body}` body-reading.
+
+  The 8× amplification suggests Rust's `\errmessage{}` primitive
+  (using `{}` parameter type → `read_balanced`) is correctly tracking
+  catcoded-1/2 SPACE-as-BEGIN/END within braces, but somewhere ELSE
+  in the `\__msg_interrupt:n` body, the structural pairing fails.
+  Likely candidates: (a) `\cs_set_protected:Npn \<space>` body-reading
+  via DefExpanded parameter — the body contains catcoded-1/2 SPACE
+  pairs; (b) gullet's level counter in `read_balanced` not matching
+  TeX's group-begin/end semantics for SPACE-content tokens; (c)
+  invoke_token in stomach routing each unmatched catcode-2 SPACE to
+  egroup() which fires boxing-mismatch.
+
+  Engine investigation deferred to next iteration. Target file:
+  `latexml_core/src/gullet.rs` `read_balanced` (level counter) +
+  `latexml_core/src/stomach.rs` `egroup()` (group-mismatch check).
+
 
 * **DONE 2026-04-26 (commit `e3d4f8532`)**: `\q_no_value`-recursion
   cascade resolved. Root cause: gullet's `DEFERRED_COMMANDS` gate
