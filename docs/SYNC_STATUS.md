@@ -37,6 +37,24 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 ### Active gaps (as of 2026-04-26)
 
+* **DONE 2026-04-26 (commit `e3d4f8532`)**: `\q_no_value`-recursion
+  cascade resolved. Root cause: gullet's `DEFERRED_COMMANDS` gate
+  in `read_balanced` only matched `defn.get_cs().text`, but Perl
+  `Lt('\\exp_not:n','\\unexpanded')` shares the `\unexpanded`
+  Definition object — Rust's dump_writer flattens these into
+  separate Expandable entries with `alias=\unexpanded`. Without
+  the alias-aware gate, `\exp_not:n {\s__seq \__seq_item:n {…}}`
+  inside `\seq_gpush:Nn`'s body was re-expanded, `\__seq_item:n`
+  hit its expandable-error trap, the seq stayed `\s__seq` only,
+  later `\__hook_curr_name_pop:` on empty stack →
+  `\msg_error:nn{hooks}{extra-pop-label}` → `\edef \__msg_use_code:`
+  fully-expanded `\q_no_value` → recursion. Fix: dump_reader
+  propagates alias to `ExpandableOptions` (narrow allowlist:
+  `\unexpanded`/`\the`/`\detokenize`/`\showthe`),
+  `Expandable::new` copies it through, gullet checks both
+  `cs.text` and alias. `\documentclass{article}` errors
+  4 → 2 (q_no_value × 2 gone). Sandbox rerun in progress.
+  Documented in [wisdom_deferred_commands_alias.md].
 * **Plain dump (the easier target — perfect this first).**
   Currently 1196 entries vs Perl's ~1238. ~36 non-`\lx@` extras
   remain in the Rust dump that Perl's `plain_dump.pool.ltxml`
