@@ -41,19 +41,25 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
       // 'global'). Removes the autoload trigger globally.
       state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
+      // Snapshot the calling frame's MEANING keys before the package load.
+      // Anything new the package installs at the calling frame is then
+      // hoisted to GLOBAL so it survives `\end{X}`'s pop_frame.
+      //
+      // Without this, autoload-triggered package loads from inside a body
+      // group (e.g. amsmath autoload via `\subequations` inside an
+      // environment group at depth>=1) install ALL of the package's CSes
+      // at the calling frame; those CSes vanish when the group exits, so
+      // a sibling autoload trigger (e.g. `\align` later in the body)
+      // fires, finds no real binding, and clears+re-emits → undefined CS
+      // → 10000-error MaxLimit cascade. Observed in 1711.11576 + cluster.
+      //
+      // The single-trigger `let_i(\trigger, \trigger, Global)` from the
+      // earlier round-17 fix is subsumed by the delta-hoist (since the
+      // trigger CS is itself a meaning-key newly-installed by the package
+      // load). (1711.11576: cleanly converts post-fix.)
+      let pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
       require_package(&pkg_name, RequireOptions::default())?;
-      // Promote whatever the package just installed for this CS from its
-      // current local scope (which is the calling group's frame, when the
-      // autoload fires from inside `\begin{X}`) to GLOBAL — so the binding
-      // survives `\end{X}`'s pop_frame. Without this, the second use of
-      // the CS would find the cleared `Stored::None` AND a `:locked=true`
-      // (which the package's `DefMacro!(..., locked=>true)` set globally),
-      // triggering a redef-blocked-by-lock loop on each generate_error_stub
-      // attempt. The trigger CS is the only one we promote — the package's
-      // internal CSes (referenced by the trigger's body) are typically
-      // installed by base-pool layers at depth=0 already, so they survive
-      // independently. (1711.11576: 18M-line timeout → clean output.)
-      latexml_core::state::let_i(&cs_for_closure, &cs_for_closure, Some(Scope::Global));
+      latexml_core::state::hoist_top_frame_meaning_delta(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,

@@ -640,7 +640,7 @@ impl State {
     }
   }
 
-  fn assign_internal(
+  pub(crate) fn assign_internal(
     &mut self,
     table_name: TableName,
     key: SymStr,
@@ -2041,6 +2041,59 @@ pub fn dump_top_frame_keys() -> String {
 pub fn push_frame() {
   // Easy: just push a new undo frame.
   state_mut!().undo.push_front(UndoFrame::default());
+}
+
+/// Snapshot of the keys currently bound at the topmost (calling) undo frame
+/// for the Meaning table. Used by Perl-style autoload triggers that need to
+/// promote everything a package's load just installed at this scope to
+/// GLOBAL — without that promotion, sibling autoload triggers fired AFTER
+/// a group pop would re-fire on a now-undefined sibling CS (the canonical
+/// case is `\begin{subequations}` triggering amsmath autoload at depth=N,
+/// then a later `\begin{align}` at depth=0 finding `\align` undefined
+/// because amsmath's depth=N install was popped on `\end{subequations}`).
+pub fn snapshot_top_frame_meaning_keys() -> Vec<SymStr> {
+  state!()
+    .undo
+    .front()
+    .map(|f| f.meaning.keys().copied().collect())
+    .unwrap_or_default()
+}
+
+/// Hoist every Meaning binding installed at the topmost frame since
+/// `pre_snapshot` was taken to GLOBAL scope. Idempotent: keys already
+/// in `pre_snapshot` are skipped. Operates on the Meaning table only —
+/// callers that need to promote Value/Catcode/etc. should add parallel
+/// helpers (none required so far).
+pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
+  let pre: rustc_hash::FxHashSet<SymStr> = pre_snapshot.iter().copied().collect();
+  let new_keys: Vec<SymStr> = {
+    let state = state!();
+    state
+      .undo
+      .front()
+      .map(|f| {
+        f.meaning
+          .keys()
+          .copied()
+          .filter(|k| !pre.contains(k))
+          .collect()
+      })
+      .unwrap_or_default()
+  };
+  for key in new_keys {
+    let current = {
+      let state = state!();
+      state.meaning.get(&key).and_then(|stack| stack.front().cloned())
+    };
+    if let Some(value) = current {
+      // Direct re-bind via assign_internal so we don't need to round-trip a
+      // full Token. The Meaning table is keyed by SymStr (the CS name);
+      // any future read via `assign_meaning(token, ...)` would reach the
+      // same cell. Scope::Global removes higher-frame undo entries and
+      // installs at the lowest non-locked frame.
+      state_mut!().assign_internal(TableName::Meaning, key, value, Some(Scope::Global));
+    }
+  }
 }
 /// Ends the current level of grouping.
 /// Note that this is lower level than `\egroup`;
