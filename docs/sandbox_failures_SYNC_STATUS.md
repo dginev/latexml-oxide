@@ -67,5 +67,52 @@ the next-up gap (302/752 `\tex_*:D` aliases missing — see
 | Date | Commit | Cluster | Papers cleared | Total problem |
 |---|---|---|---|---|
 | 2026-04-26 (baseline) | — | — | 0 | 181 |
+| 2026-04-26 (rerun #2) | `b315c86ec` | Constructor/Register PA | 2 (`hep-th9609235`, `math9712228`) | ~165 fatal-3 from new `\q_no_value` regression |
 
 (Append rows here after each run.)
+
+## Active regression — `\q_no_value` recursion cascade (NEW)
+
+**Symptom.** 165 of 181 sandbox papers now hit
+`Error:recursion:\q_no_value Token \q_no_value expands into itself!`
+during textcomp.sty / article.cls load, fatally cascading at 10k
+errors. The error fires only when the LaTeX dump is loaded; with
+`LATEXML_NODUMP=1` the same papers convert with zero `\q_no_value`
+errors.
+
+**Root cause (decisive bisection).**
+- Pre-`209083ff4`: expl3-code.tex aborted before line 3205
+  (`\quark_new:N \q_no_value`), so `\q_no_value` never got into the
+  dump. Anything that touched `\q_no_value` got the undefined-CS
+  path (silent-recovery in our binding loaders).
+- Post-`209083ff4` (LaTeX.pool preload): expl3 finishes loading.
+  `\q_no_value` is now installed as `Stored::Expandable` with body
+  `\q_no_value` (self-referential sentinel — matches Perl's
+  `latex_dump.pool.ltxml` L16030
+  `I(E(C('\\q_no_value'),undef,T(C('\\q_no_value'))))`).
+- Our engine's `Expandable::invoke` recursion-detect (`expandable.rs`
+  L149-162) emits `Error!` and returns empty Tokens — same as
+  Perl's `Expandable.pm` invoke. **But Perl's textcomp.sty load
+  doesn't trigger the expansion path** (Perl emits the diagnostic
+  ONLY when something accidentally tries to expand a quark, which
+  Perl's normal package-load flow doesn't).
+
+**Deeper bug.** Some Rust-engine code path during package binding
+load (textcomp_sty.rs's DefAccent/DefPrimitive/DefMath chain, OR
+the surrounding LaTeX kernel autoload tail) is eagerly expanding
+quark tokens that Perl leaves alone. Need to instrument
+`expandable.rs:149` with backtrace capture to find the call site.
+
+**Why this matters.** User directive: "it is critical we emulate
+the original behavior accurately with our translation." Demoting
+`Error!` to `Warn!` (band-aid) was reverted — that diverges from
+Perl's error reporting. The right fix is finding and removing the
+unwanted eager expansion of `\q_no_value`.
+
+**Next iteration plan.**
+1. Add env-gated `eprintln!` with `std::backtrace::Backtrace::capture()`
+   at `expandable.rs:149` (only fires under `LATEXML_DEBUG_RECURSION=1`).
+2. Run `\documentclass{article}\usepackage{textcomp}` minimal repro
+   with that env to capture the call stack.
+3. Identify the unwanted expansion site and prevent it (without
+   touching the diagnostic).
