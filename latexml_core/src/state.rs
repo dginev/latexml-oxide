@@ -979,6 +979,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   }
 }
 
+
 /// Generate a stub definition for an undefined control-sequence,
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
@@ -1057,6 +1058,21 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
 // TODO: Should this be a prelude?
 
 /// assigns a `Stored` value at the given key and scope
+/// Direct mirror of Perl's free-function form
+/// `LaTeXML::Core::State::assign_internal($STATE, $table, $key, $value, $scope)`
+/// (Core/State.pm L140). Bypasses every dialect / lock / let-chase / admission
+/// layer Rust has accreted on top of the table mutation; used by the dump
+/// loader (Core/Dumper.pm `V/Cc/Mc/Sc/Lc/Uc/Dc/Im/I/Lt`) so the dump replay
+/// matches Perl exactly: one record == one `assign_internal` call.
+pub fn assign_internal<T: Into<Stored>>(
+  table_name: TableName,
+  key: SymStr,
+  value: T,
+  scope: Option<Scope>,
+) {
+  state_mut!().assign_internal(table_name, key, value.into(), scope);
+}
+
 pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T, scope: S) {
   state_mut!().assign_value(key, value, scope)
 }

@@ -28,7 +28,7 @@ use crate::common::arena;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::expandable::{Expandable, ExpandableOptions};
-use crate::state::{self, Scope};
+use crate::state::{self, Scope, TableName};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -80,12 +80,6 @@ pub fn flush_deferred_aliases() -> (usize, usize) {
   let mut applied = 0usize;
   let mut skipped = 0usize;
   for (cs_tok, target_tok) in pending {
-    // Add-only: if compiled definitions since dump-load have defined
-    // the key themselves, don't override.
-    if state::has_meaning(&cs_tok) {
-      skipped += 1;
-      continue;
-    }
     // Target still undefined — the alias's target must be defined
     // in some source we never load (e.g. expl3 intarrays that the
     // short-circuit skips). Leave the key undefined; the engine's
@@ -94,8 +88,19 @@ pub fn flush_deferred_aliases() -> (usize, usize) {
       skipped += 1;
       continue;
     }
-    state::let_i(&cs_tok, &target_tok, Some(Scope::Global));
-    applied += 1;
+    // Perl `Lt()` parity: look up target's meaning, write it at
+    // alias key via `assign_internal('meaning', ..., 'global')`.
+    if let Some(meaning) = state::lookup_meaning(&target_tok) {
+      state::assign_internal(
+        TableName::Meaning,
+        cs_tok.get_cs_name(),
+        meaning,
+        Some(Scope::Global),
+      );
+      applied += 1;
+    } else {
+      skipped += 1;
+    }
   }
   (applied, skipped)
 }
@@ -367,7 +372,15 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
     _ => return Ok(false),    // Unknown value type
   };
 
-  state::assign_value(key, value, Some(Scope::Global));
+  // Perl `V()` (`Core/Dumper.pm` L59):
+  //   sub V { State::assign_internal($STATE,'value',$_[0],$_[1],'global'); }
+  // Direct table mutation, no dialect.
+  state::assign_internal(
+    TableName::Value,
+    arena::pin(key),
+    value,
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
@@ -519,16 +532,33 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           // diagnostics attribute errors to the dump source rather
           // than the arena's compile-site default.
           exp.locator = current_dump_locator();
-          state::install_definition(exp, Some(Scope::Global));
+          // Perl `I()` (`Core/Dumper.pm` L67):
+          //   sub I { State::assign_internal($STATE,'meaning',
+          //           $_[0]->getCSName, $_[0], 'global'); }
+          // Direct table mutation — no `:locked` gate, no add-only.
+          state::assign_internal(
+            TableName::Meaning,
+            cs_tok.get_cs_name(),
+            Stored::from(exp),
+            Some(Scope::Global),
+          );
           Ok(true)
         },
         Err(e) => Err(format!("Expandable creation failed: {}", e)),
       }
     },
     "T" => {
-      // Token meaning (let-assignment)
+      // Token meaning. Perl `Im()` (`Core/Dumper.pm` L66):
+      //   sub Im { State::assign_internal($STATE,'meaning',
+      //            $_[0], $_[1], 'global'); }
+      // Direct write — no `\let`-chase, no chain follow.
       let tok = parse_token(parts.get(1).unwrap_or(&""))?;
-      state::assign_meaning(&cs_tok, tok, Some(Scope::Global));
+      state::assign_internal(
+        TableName::Meaning,
+        cs_tok.get_cs_name(),
+        Stored::Token(tok),
+        Some(Scope::Global),
+      );
       Ok(true)
     },
     "PA" | "MPA" => {
@@ -549,19 +579,31 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         text: arena::pin(&target_cs_raw),
         code: Catcode::CS,
       };
-      // Target not yet defined — defer the alias. Load order is
-      // `bootstrap → _base → dump → _constructs`, and some aliases
-      // (e.g. `\let\a=\@tabacckludge` from latex.ltx L10007) point
-      // at CSes defined in _constructs, which runs after the dump.
-      // `flush_deferred_aliases()` retries these after _constructs
-      // finishes.
+      // Perl `Lt()` (`Core/Dumper.pm` L69-72):
+      //   sub Lt { my $d = State::lookupDefinition($STATE, T_CS($_[1]));
+      //            State::assign_internal($STATE,'meaning',$_[0],$d,'global'); }
+      // Look up the target's current Meaning entry, then writes that
+      // very Stored value at the alias key. Sharing the Rc preserves
+      // identity (e.g. \let\tex_let:D\let keeps the same Primitive Rc).
+      //
+      // If the target is not yet defined (load order has _constructs
+      // running after the dump for some let-aliases — e.g.
+      // `\let\a=\@tabacckludge`), defer until flush_deferred_aliases().
       if !state::has_meaning(&target_tok) {
         DEFERRED_ALIASES.with(|cell| {
           cell.borrow_mut().push((cs_tok, target_tok));
         });
         return Ok(false);
       }
-      state::let_i(&cs_tok, &target_tok, Some(Scope::Global));
+      let target_meaning = state::lookup_meaning(&target_tok);
+      if let Some(meaning) = target_meaning {
+        state::assign_internal(
+          TableName::Meaning,
+          cs_tok.get_cs_name(),
+          meaning,
+          Some(Scope::Global),
+        );
+      }
       Ok(true)
     },
     "R" => {
@@ -647,10 +689,26 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       reg.address = key.to_string();
       if !matches!(reg_type, RegisterType::CharDef) {
         if let Some(ref rv) = reg_value {
-          state::assign_value(&reg.address, rv.clone(), Some(Scope::Global));
+          // Perl `R(...)` register dump-restore: the address slot
+          // gets the initial value via `assign_internal('value', ...,
+          // 'global')`. Mirror exactly.
+          state::assign_internal(
+            TableName::Value,
+            arena::pin(&reg.address),
+            rv.clone(),
+            Some(Scope::Global),
+          );
         }
       }
-      state::install_definition(reg, Some(Scope::Global));
+      // Perl `I(...)` for the Register meaning entry — direct
+      // `assign_internal('meaning', ..., 'global')`, bypassing the
+      // `:locked` and add-only checks of install_definition.
+      state::assign_internal(
+        TableName::Meaning,
+        cs_tok.get_cs_name(),
+        Stored::from(reg),
+        Some(Scope::Global),
+      );
       Ok(true)
     },
     _ => Ok(false),
@@ -665,7 +723,15 @@ fn decode_char_key(key: &str) -> Option<char> {
   decoded.chars().next()
 }
 
-/// Load a catcode entry: C\tCHAR\tCC\tVALUE
+/// Char-keyed table key: dump uses the single character as the key.
+/// `assign_internal` wants a SymStr — pin the single-char string.
+fn char_key(ch: char) -> crate::common::arena::SymStr {
+  let mut buf = [0u8; 4];
+  arena::pin(ch.encode_utf8(&mut buf))
+}
+
+/// Load a catcode entry: C\tCHAR\tCC\tVALUE.
+/// Perl `Cc()` (`Core/Dumper.pm` L60): `assign_internal('catcode', ..., 'global')`.
 fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad catcode char: {}", key))?;
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
@@ -675,11 +741,17 @@ fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
   let cc: u8 = parts[1]
     .parse()
     .map_err(|e| format!("Bad catcode value: {}", e))?;
-  state::assign_catcode(ch, Catcode::from(cc), Some(Scope::Global));
+  state::assign_internal(
+    TableName::Catcode,
+    char_key(ch),
+    Stored::Catcode(Catcode::from(cc)),
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
-/// Load a lccode entry: LC\tCHAR\tCH\tVALUE
+/// Load a lccode entry: LC\tCHAR\tCH\tVALUE.
+/// Perl `Lc()` (`Core/Dumper.pm` L63): `assign_internal('lccode', ..., 'global')`.
 fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad lccode char: {}", key))?;
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
@@ -689,11 +761,17 @@ fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
   let val: u16 = parts[1]
     .parse()
     .map_err(|e| format!("Bad lccode value: {}", e))?;
-  state::assign_lccode(ch, val, Some(Scope::Global));
+  state::assign_internal(
+    TableName::Lccode,
+    char_key(ch),
+    Stored::Charcode(val),
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
-/// Load a uccode entry: UC\tCHAR\tCH\tVALUE
+/// Load a uccode entry: UC\tCHAR\tCH\tVALUE.
+/// Perl `Uc()` (`Core/Dumper.pm` L64): `assign_internal('uccode', ..., 'global')`.
 fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad uccode char: {}", key))?;
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
@@ -703,11 +781,17 @@ fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
   let val: u16 = parts[1]
     .parse()
     .map_err(|e| format!("Bad uccode value: {}", e))?;
-  state::assign_uccode(ch, val, Some(Scope::Global));
+  state::assign_internal(
+    TableName::Uccode,
+    char_key(ch),
+    Stored::Charcode(val),
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
-/// Load a sfcode entry: SC\tCHAR\tCH\tVALUE
+/// Load an sfcode entry: SC\tCHAR\tCH\tVALUE.
+/// Perl `Sc()` (`Core/Dumper.pm` L62): `assign_internal('sfcode', ..., 'global')`.
 fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad sfcode char: {}", key))?;
   let parts: Vec<&str> = data.splitn(2, '\t').collect();
@@ -717,7 +801,12 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   let val: u16 = parts[1]
     .parse()
     .map_err(|e| format!("Bad sfcode value: {}", e))?;
-  state::assign_sfcode(ch, val, Some(Scope::Global));
+  state::assign_internal(
+    TableName::Sfcode,
+    char_key(ch),
+    Stored::Charcode(val),
+    Some(Scope::Global),
+  );
   Ok(true)
 }
 
