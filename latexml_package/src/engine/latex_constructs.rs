@@ -5300,6 +5300,13 @@ LoadDefinitions!({
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
+  // latex_constructs.pool.ltxml:2702-2709. Perl always calls DefMathI even
+  // when FontDecode returns undef (DefMathI normalizes `$presentation = ''`
+  // when undef, Package.pm:1609). Earlier Rust skipped def_math when glyph
+  // is None — that left the CS undefined for unknown encodings (e.g.
+  // `\DeclareMathAccent{\widecheck}{\mathalpha}{mathx}{"71}` with no
+  // mathx font map → \widecheck undefined → 1806.02506-style 1-error
+  // cluster). Mirror Perl: always install, fall back to empty presentation.
   DefPrimitive!("\\DeclareMathAccent DefToken {}{} {Number}",
   sub[(cs, kind, class, code)] {
     let class_str = class.to_string();
@@ -5307,14 +5314,12 @@ LoadDefinitions!({
       .and_then(|v| if let Stored::Font(ref f) = v { f.get_encoding().map(|e| e.to_string()) } else { None })
       .unwrap_or(class_str);
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
-    if let Some(ch) = glyph {
-      let presentation = ch.to_string();
-      let paramlist = parse_parameters("Digested", &cs, true)?;
-      let opts = MathPrimitiveOptions{
-        operator_role: Some("OVERACCENT".to_string()),
-        ..Default::default()};
-      def_math(cs, paramlist, presentation, opts)?;
-    }
+    let presentation = glyph.map(|c| c.to_string()).unwrap_or_default();
+    let paramlist = parse_parameters("Digested", &cs, true)?;
+    let opts = MathPrimitiveOptions{
+      operator_role: Some("OVERACCENT".to_string()),
+      ..Default::default()};
+    def_math(cs, paramlist, presentation, opts)?;
     // Perl: return AddToPreamble('\DeclareMathAccent', $cs, $kind, $class, $code);
     // AddToPreamble returns Digest(Invocation(\lx@add@Preamble@PI, Invocation(\DeclareMathAccent, ...)))
     // The primitive must RETURN this digested result so it gets absorbed by the document.
