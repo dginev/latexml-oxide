@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="elsart"?>
+<?latexml package="babel" options="english,francais"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="fr">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <title xml:lang="en">T</title>
+  <creator xml:lang="en" role="author">
+    <personname>A</personname>
+    <contact role="address">X</contact>
+  </creator>
+  <classification xml:lang="en" scheme="keywords">Higgs; Boson; Symmetry </classification>
+  <para xml:id="p1">
+    <p><text xml:lang="en">After.</text></p>
+  </para>
+</document>

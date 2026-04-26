@@ -223,7 +223,18 @@ LoadDefinitions!({
   // NOT DefEnvironment!, to properly scope the XUntil delimiter reading.
   DefMacro!(T_CS!("\\begin{keyword}"), None, "\\begingroup\\@keyword");
   DefMacro!(T_CS!("\\end{keyword}"), None, "\\@keyword@cut\\endgroup");
-  DefMacro!("\\keyword", "\\@keyword");
+  // Perl elsart_support_core.sty.ltxml L138-141: `\keyword{...}` (1-arg
+  // form) reads a balanced group and wraps with `\@keyword <arg>
+  // \@keyword@cut` so XUntil can terminate correctly. Without this,
+  // `\keyword{Higgs; Boson}` written outside a `\begin{keyword}...
+  // \end{keyword}` env (legacy elsart3-1 idiom — see hep-ph0702114
+  // / 1710.03688 with babel[english,francais]) leaves XUntil
+  // gobbling tokens until `\@keyword@cut` is found via some
+  // unrelated `\PACS`/`\MSC`/`\end{keyword}` — which never arrives,
+  // so the read consumes through `\end{abstract}` and beyond,
+  // perturbing babel's queued `\aftergroup\bbl@pop@language` into
+  // a `\bbl@exp@aux`-undefined cascade.
+  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut");
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
   DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
