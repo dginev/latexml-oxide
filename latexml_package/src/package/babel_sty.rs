@@ -18,6 +18,12 @@ LoadDefinitions!({
   // includes it, older may not).
   RawTeX!(r"\expandafter\ifx\csname l@polutonikogreek\endcsname\relax\newlanguage\l@polutonikogreek\fi");
 
+  // \bbl@opt@safe = \@empty inhibits some risky redefinitions in babel.
+  // Mirror Perl LaTeXML/lib/LaTeXML/Package/babel.def.ltxml: `Let('\bbl@opt@safe', '\@empty')`.
+  // Without this, babel.sty's option processing enters an infinite loop on
+  // some redefinition paths (verified: triggers token_limit:Timeout 100M).
+  RawTeX!(r"\let\bbl@opt@safe\@empty");
+
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Sets DOCUMENT_LANGUAGE and force-sets \bbl@main@language from
