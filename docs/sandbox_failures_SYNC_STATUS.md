@@ -109,10 +109,53 @@ the original behavior accurately with our translation." Demoting
 Perl's error reporting. The right fix is finding and removing the
 unwanted eager expansion of `\q_no_value`.
 
-**Next iteration plan.**
-1. Add env-gated `eprintln!` with `std::backtrace::Backtrace::capture()`
-   at `expandable.rs:149` (only fires under `LATEXML_DEBUG_RECURSION=1`).
-2. Run `\documentclass{article}\usepackage{textcomp}` minimal repro
-   with that env to capture the call stack.
-3. Identify the unwanted expansion site and prevent it (without
-   touching the diagnostic).
+**Investigation complete (2026-04-26 iteration 2):** instrumented and
+captured. Cleanly comparing Perl vs Rust:
+
+* `\edef`/`\xdef` definitions match exactly (Perl
+  `TeX_Macro.pool.ltxml:176-177` ↔ Rust `tex_macro.rs:101-110`):
+  `DefPrimitive('\edef SkipSpaces Token UntilBrace DefExpanded',
+  sub { do_def(0, @_); }, locked => 1)`. Both use `DefExpanded`
+  parameter type, both call `do_def(global=false/true, ...)`, both
+  `locked`.
+* `DefExpanded` parameter type calls `gullet::read_balanced` with
+  `ExpansionLevel::Partial` — same in both.
+* `Expandable::invoke` recursion-detect emits `Error!`-equivalent in
+  both when body == `[cs]` (Perl `Expandable.pm` invoke L72-92,
+  Rust `expandable.rs:149-162`).
+
+**The asymmetry is procedural, not semantic.** Backtrace shows the
+Rust path:
+```
+expandable.rs:160 (\q_no_value recursion)
+gullet.rs:866 (read_balanced expanding tokens)
+base_parameter_types.rs:297 (DefExpanded closure)
+parameter::read → read_arguments
+primitive::invoke_primitive (\xdef → \edef)
+stomach::invoke_token
+binding/content.rs:492 (input_definitions for textcomp.sty)
+binding/content.rs:1176 (require_package)
+prelude/setup_binding_language.rs:56 (LoadDefinitions wrapper)
+```
+
+So during textcomp.sty's binding-load, an `\xdef` runs whose body
+contains an `\edef` whose body contains `\q_no_value`. That `\edef`
+expanding `\q_no_value` triggers the recursion error.
+
+**The most likely culprit**: dump installs expl3 `\hook_use:n` chain
+(`M  \hook_use:n  E  \hook_use:n  1  LP
+\__hook_preamble_hook:n {#1} \__hook_use_initialized:n {#1}`).
+This expands to chains that eventually contain `\q_no_value` refs
+inside an `\edef` arg. Perl's `_constructs` either redefines
+`\hook_use:n` to a no-op stub OR Perl's package-load architecture
+intercepts BEFORE the dump's `\hook_use:n` fires.
+
+**Fix path for next iteration:**
+1. Add `\hook_use:n` (and the kernel hook family) as no-op stubs
+   in `expl3_sty.rs` or `latex_constructs.rs` — they'd run AFTER
+   the dump install (per strict-Perl LoadFormat ordering:
+   `bootstrap → dump → constructs`), overriding the kernel chain
+   with stub bodies.
+2. Verify Perl-parity: confirm Perl's runtime actually runs a
+   stub for these (per `wisdom_lhook_perl_parity_stub.md`).
+3. Re-run sandbox to measure recovery.
