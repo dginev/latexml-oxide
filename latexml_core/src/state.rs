@@ -2788,33 +2788,39 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Glue(_) | MuGlue(_) | Dimension(_) | MuDimension(_) => true,
     Reversion(_) | KeyVal(_) => true,
     Chars(_) | Strings(_) => true,
-    // Expandable: serializable only if it has a Tokens body (not a Closure body)
-    Expandable(exp) => {
-      matches!(
-        exp.get_expansion(),
-        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None
-      )
-    },
+    // Expandable: serializable when body is Tokens OR None (regular
+    // macros). Closure-bodied Expandables (e.g. `\expandafter`,
+    // `\unexpanded`, `\the` — defined via `DefMacro!` with a closure
+    // body) ALSO pass — dump_writer's `serialize_stored` emits a PA
+    // alias to the canonical CS so `\let \tex_expandafter:D
+    // \expandafter`-style aliases survive the dump. (Bug C parity fix
+    // — see project_kernel_dump_tdd.md.) The writer's add-only policy
+    // at load time skips entries whose key is already defined in the
+    // compiled engine, so primary CSes don't double-bind.
+    Expandable(_) => true,
     // Register: serializable (stores value + type, no closures)
     Register(_) => true,
     // Font: serializable (data only)
     Font(_) => true,
-    // Primitives/MathPrimitives: the CLOSURE can't be serialized, but the
-    // Primitive carries its own canonical CS name. If the entry's key
-    // differs from that canonical CS, this is a `\let`-alias we CAN
-    // capture (as a "PA" pointer) so the dump reader replays the `\let`
-    // at load time. dump_writer returns the PA/MPA tag; dump_reader
+    // Primitives/MathPrimitives/Conditionals: the CLOSURE can't be
+    // serialized, but each carries its own canonical CS name. If the
+    // entry's key differs from that canonical CS, this is a `\let`-alias
+    // we CAN capture (as a "PA" pointer) so the dump reader replays the
+    // `\let` at load time. dump_writer returns the PA tag; dump_reader
     // re-applies via state::let_i. This is how \tex_let:D, \tex_def:D,
-    // and the hundreds of other expl3-renamed primitives survive the
-    // dump without needing to re-run 36k lines of expl3-code.tex.
+    // \tex_ifx:D, \if_meaning:w, and the hundreds of other expl3-renamed
+    // primitives + conditionals survive the dump without needing to re-run
+    // 36k lines of expl3-code.tex.
     //
     // Returning true here only means "pass to dump_writer"; the writer's
-    // serialize_stored will emit Option::None for entries that ARE the
-    // primary (canonical) binding (key == primitive.cs), and those get
-    // filtered by the writer's `filter_map(serialize_stored)`.
-    Primitive(_) | MathPrimitive(_) => true,
-    // These contain closures — NOT serializable
-    Constructor(_) | Conditional(_) => false,
+    // serialize_stored emits the PA target. Self-aliases (primary CSes
+    // not yet aliased anywhere) typically don't appear in the diff because
+    // they're in the pre-snapshot — but if they do, the dump reader skips
+    // them by comparing key to target.
+    Primitive(_) | MathPrimitive(_) | Conditional(_) => true,
+    // Constructor: presentation-logic closure, can't be aliased meaningfully
+    // through the dump (the constructor body needs Rust code).
+    Constructor(_) => false,
     // Collections: serializable if contents are
     VecDequeStored(_) | HashStored(_) | HashString(_) => true,
     // Everything else: skip for safety

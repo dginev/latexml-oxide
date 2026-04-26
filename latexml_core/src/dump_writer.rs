@@ -312,8 +312,21 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
           "E\t{}\t{}\t{}\t\t{}\t{}",
           cs_name, nargs, flags, proto_encoded, v3_params
         )),
-        // Closure-based — can't serialize.
-        Some(crate::definition::ExpansionBody::Closure(_)) => Option::None,
+        // Closure-based body — can't serialize the closure itself, BUT
+        // if the dump entry is a `\let`-alias to a closure-Expandable
+        // primitive (e.g. `\let \tex_expandafter:D \expandafter`), we
+        // CAN capture it via PA. Mirrors the `Stored::Primitive` /
+        // `Stored::Conditional` arms below. Without this, every
+        // `\let \X \expandafter`-style alias is silently dropped from
+        // the dump — the cause of `\tex_expandafter:D`,
+        // `\tex_unexpanded:D`, `\tex_the:D` being missing in
+        // `latex.dump.txt` even though expl3-code.tex L357+ aliases them.
+        //
+        // The dump_reader's add-only policy at load-time skips entries
+        // whose key is already defined (the canonical CS lives in the
+        // compiled engine), so self-aliases are no-ops. Real let-aliases
+        // (key != cs) replay via `state::let_i`.
+        Some(crate::definition::ExpansionBody::Closure(_)) => Some(format!("PA\t{}", cs_name)),
       }
     },
     // Closure-based primitives can't be serialized directly — but if the entry's
@@ -336,6 +349,17 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
     Stored::MathPrimitive(p) => {
       let target_cs = p.cs.with_str(url_encode);
       Some(format!("MPA\t{}", target_cs))
+    },
+    // Conditionals — same logic as Primitives. \ifx, \ifnum, \if etc. are
+    // stored as Stored::Conditional with their canonical CS field. When
+    // expl3-code.tex does `\let \if_meaning:w \ifx`, the new entry shares
+    // the same Conditional Rc, with cs = \ifx. Capturing this as a PA
+    // alias lets the dump reader replay `\let \if_meaning:w \ifx` at load
+    // time. Without this, every expl3 conditional alias is silently lost
+    // from the dump and `\if_meaning:w`-style invocations fail at runtime.
+    Stored::Conditional(c) => {
+      let target_cs = c.cs.with_str(url_encode);
+      Some(format!("PA\t{}", target_cs))
     },
     Stored::Register(reg) => {
       // Register: serialize as R\tCS\tTYPE\tVALUE[\tMATHGLYPH]

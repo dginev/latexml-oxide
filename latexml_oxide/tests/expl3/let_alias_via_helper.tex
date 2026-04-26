@@ -1,0 +1,43 @@
+% TDD red/green: \let invoked via primitive-alias inside a helper macro body.
+%
+% Mirrors expl3-code.tex L271-275 \__kernel_primitive:NN pattern, in
+% generic form:
+%   \let \drlet \let
+%   \protected\def \kp #1#2{\drlet #2 #1}
+%   \kp \target \new           → \let \new \target
+%
+% Validates that:
+%   1. `\drlet` (a let-alias to `\let`) dispatches as `\let` when invoked.
+%   2. arg-reading consumes the next two tokens as literals (no
+%      premature expansion of expandable primitives like `\expandafter`).
+%   3. The resulting alias is `\ifx`-equal to the source.
+%
+% Per probe6/7 in /tmp/dump_repro: this passes at runtime. The dump-writer
+% capture is a separate concern (see project_kernel_dump_parity.md Bugs A/C).
+\documentclass{article}
+\makeatletter
+
+\let \drlet \let
+\protected\def \kp #1#2{\drlet #2 #1}
+
+% Case A: arg #1 is a regular Expandable macro
+\def \drsrc{HELLO}
+\kp \drsrc \draliasA
+
+% Case B: arg #1 is a Conditional primitive
+\kp \ifx \draliasB
+
+% Case C: arg #1 is the highly-special `\expandafter` primitive (DefMacro
+% closure-backed). Bug B in the memory speculated this corrupted arg-reading;
+% probe_ifx.tex confirmed it works correctly.
+\kp \expandafter \draliasC
+
+\def\rA{FAIL}\def\rB{FAIL}\def\rC{FAIL}
+\ifx\draliasA\drsrc       \def\rA{PASS}\fi
+\ifx\draliasB\ifx         \def\rB{PASS}\fi
+\ifx\draliasC\expandafter \def\rC{PASS}\fi
+
+\makeatother
+\begin{document}
+A=\rA. B=\rB. C=\rC.
+\end{document}

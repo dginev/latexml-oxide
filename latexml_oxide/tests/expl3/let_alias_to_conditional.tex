@@ -1,0 +1,31 @@
+% TDD red/green: `\let \X \ifx` should preserve conditional behavior of \X.
+%
+% Tests two facets at once:
+%   1. RUNTIME: aliased CS dispatches to the conditional primitive.
+%   2. DUMP-WRITER: Stored::Conditional aliases must serialize as PA
+%      (Bug A in project_kernel_dump_parity.md). At document level the
+%      runtime currently passes, but if the dump round-trip ever needs
+%      `\X` to survive, the dump-writer must capture it.
+%
+% Perl LaTeXML output: PASS_A. PASS_B. PASS_C.
+\documentclass{article}
+\makeatletter
+
+% Direct \let to a conditional — Stored::Conditional alias
+\let \drcond \ifx
+
+\def\rA{FAIL_A}\def\rB{FAIL_B}\def\rC{FAIL_C}
+
+% A. The alias should be \ifx-equal to its target
+\ifx \drcond \ifx \def\rA{PASS_A}\fi
+
+% B. The aliased CS should perform conditional behavior (false branch)
+\drcond AB \def\rB{FAIL_B}\else \def\rB{PASS_B}\fi
+
+% C. The aliased CS should perform conditional behavior (true branch)
+\drcond AA \def\rC{PASS_C}\else \def\rC{FAIL_C}\fi
+
+\makeatother
+\begin{document}
+\rA. \rB. \rC.
+\end{document}
