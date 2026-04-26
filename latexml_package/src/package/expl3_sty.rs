@@ -156,7 +156,7 @@ LoadDefinitions!({
   raw_tex(r"\cs_gset:Npn \__kernel_file_name_sanitize:n #1 {#1}")?;
   // \__file_quark_if_nil:nTF — conditional test for \q__file_nil. Guard
   // with \cs_if_exist:NF to avoid already-defined error (7 boxing errors).
-  raw_tex(r"\cs_if_exist:NF \__file_quark_if_nil:nTF { \__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF } }")?;
+  raw_tex(r"\cs_if_exist:NF \__file_quark_if_nil:n { \__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF } }")?;
   // l3file IOW family fixups — these don't survive raw-load with
   // SUPPRESS_UNDEFINED_ERRORS either. Faithful LaTeXML-mode stubs
   // (all writes-to-terminal suppressed; wraps skip the wrap-and-measure
