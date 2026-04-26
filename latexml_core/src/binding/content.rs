@@ -217,13 +217,29 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // Perl: early-stop if already loaded (checks request_loaded, name_loaded, etc.)
   // This prevents double-loading and breaks circular loading chains.
   // IMPORTANT: check BEFORE printing "Loading..." message to avoid spurious output.
-  let loaded_key = s!("{filename}_loaded");
-  if !options.reloadable && lookup_bool(&loaded_key) {
+  //
+  // Per OXIDIZED_DESIGN #23: gate on the flag matching the load path
+  // we'll actually take. CRITICAL invariant: a binding `<file>.rs` is
+  // allowed to call `InputDefinitions(noltxml=>1)` for its same-named
+  // raw .sty/.cls/.def AFTER its own `_loaded` flag was set — the raw
+  // load gates on `_raw_loaded`, not `_loaded`. Examples: babel_sty
+  // → raw babel.sty; cite_sty → raw cite.sty.
+  let opt_noltxml = options.noltxml;
+  let opt_notex = options.notex;
+  let already_handled = |fkey: &str| -> bool {
+    if opt_noltxml {
+      lookup_bool(&s!("{fkey}_raw_loaded"))
+    } else if opt_notex {
+      lookup_bool(&s!("{fkey}_loaded"))
+    } else {
+      lookup_bool(&s!("{fkey}_loaded")) || lookup_bool(&s!("{fkey}_raw_loaded"))
+    }
+  };
+  if !options.reloadable && already_handled(&filename) {
     return Ok(());
   }
   // Also check without extension (Perl checks name_loaded too)
-  let name_loaded_key = s!("{name}_loaded");
-  if !options.reloadable && name != filename && lookup_bool(&name_loaded_key) {
+  if !options.reloadable && name != filename && already_handled(name) {
     return Ok(());
   }
 
@@ -282,7 +298,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // Skip loading entirely if already loaded (unless reloadable)
   // This prevents double-loading when e.g. smfart calls load_class("amsart")
   // after the binding already set the _loaded flag.
-  if !options.reloadable && lookup_bool(&s!("{filename}_loaded")) {
+  // Per OXIDIZED_DESIGN #23: gate by the load path's flag — same
+  // path-aware logic as the early-skip above. Allows a binding to
+  // load its same-named raw counterpart via `noltxml=>1`.
+  if !options.reloadable && already_handled(&filename) {
     if this_frame_announces {
       note_end(&s!("Loading {:?} definitions", filename));
       crate::state::assign_value(
@@ -417,11 +436,15 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
     // Step 4: Raw TeX in search paths (without INTERPRETING_DEFINITIONS gate)
     // Perl Package.pm L2122-2125
+    //
+    // Per OXIDIZED_DESIGN #23: gate by `_raw_loaded` only — when a binding
+    // explicitly loads its raw counterpart via `noltxml=>1`, the binding's
+    // own `_loaded` flag is already set, but we MUST still proceed.
     let found_raw = if found_raw.is_some() {
       found_raw
     } else if !options.notex
       && !interpreting
-      && (options.reloadable || !lookup_bool(&s!("{filename}_loaded")))
+      && (options.reloadable || !lookup_bool(&s!("{filename}_raw_loaded")))
     {
       find_file(
         &filename,
@@ -442,7 +465,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
       // check `_loaded || _raw_loaded` to detect "any load happened".
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
-    } else if !lookup_bool(&s!("{filename}_loaded")) {
+    } else if !lookup_bool(&s!("{filename}_loaded"))
+      && !lookup_bool(&s!("{filename}_raw_loaded"))
+    {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
@@ -564,8 +589,10 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
   // (e.g. `\inputencoding{cp1251}` re-invokes cp1251.def to re-register
   // DeclareInputText mappings after `set_input_encoding` reset them).
-  // OXIDIZED_DESIGN #23: binding load checks the binding-specific
-  // `_loaded` flag (set on success at L332 below).
+  // OXIDIZED_DESIGN #23: binding load gates ONLY on the binding-specific
+  // `_loaded` flag (set on success below). A prior raw load
+  // (`_raw_loaded`) does NOT preclude the binding from loading — they
+  // are independent paths. Mirrors Perl `loadLTXML` (Package.pm L2311).
   let loaded_key = s!("{request}_loaded");
   if !reloadable && lookup_bool(&loaded_key) {
     return Ok(true);
@@ -584,11 +611,9 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
           // Here and only here we are certain we have binding support.
           // Preemptively mark as loaded to avoid recursion.
 
-          // TODO: is this still true?
-          // Note (only!) that the binding version of this was loaded; still could load raw tex!
+          // Mark binding as loaded (raw `<request>_raw_loaded` is tracked
+          // separately by load_tex_definitions). Per OXIDIZED_DESIGN #23.
           assign_value(&loaded_key, true, Some(Scope::Global));
-          // if a binding load succeeded, mark the generic request as loaded.
-          assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
             Err(e) => Err(e),
@@ -1409,6 +1434,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
         )
         .is_some()
           || lookup_bool(&s!("{class}.cls_loaded"))
+          || lookup_bool(&s!("{class}.cls_raw_loaded"))
         {
           let _ = load_class(&class, opts, Tokens::default());
         }
@@ -1527,10 +1553,13 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   //   mn2ebis.cls   → starts with "mn2e"   → binding: mn2e
   //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
   // Fall through to OmniBus only when nothing matches.
-  if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
+  if (result.is_err()
+    || (!lookup_bool(&format!("{name}.cls_loaded"))
+      && !lookup_bool(&format!("{name}.cls_raw_loaded"))))
     && name != "OmniBus"
     && name != "article"
     && !lookup_bool("OmniBus.cls_loaded")
+    && !lookup_bool("OmniBus.cls_raw_loaded")
   {
     note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
 
