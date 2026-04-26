@@ -101,6 +101,15 @@ pub fn dump_format(
   state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !init_debug, None);
   state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !init_debug, None);
 
+  // Lift the MAX_ERRORS cap during dump-build. Raw latex.ltx contains
+  // many CSes our engine reports as errors (forward references in
+  // expl3-code.tex, `\@onlypreamble` checks, autoload triggers, etc.).
+  // The default 10000-error cap aborts dump-build before plain.tex's
+  // `\outer\def\newread`, `\loop`, etc. land in the diff. Mirrors Perl
+  // `DumpFile`'s behavior — Perl runs latex.ltx through to `\dump`
+  // regardless of error count.
+  state::assign_value("MAX_ERRORS", 1_000_000_i64, None);
+
   // Use the full filename with extension for proper file resolution
   let load_name = if ext.is_empty() {
     name.clone()
