@@ -186,16 +186,29 @@ impl DigestionAPI for Core {
     };
     let mut dir_opt = None;
 
+    // Canonicalize relative paths so `Path::parent()` gives a real directory.
+    // `Path::new("foo.tex").parent()` returns `Some("")` (empty string) which
+    // poisons SEARCHPATHS / SOURCEDIRECTORY: an empty-string search-path
+    // entry resolves files via cwd-name with no normalization, changing the
+    // order in which resource files (e.g. `ts1enc.def` vs `t1enc.def`) are
+    // discovered. Concrete symptom: TS1 fontmap leaks into control-sequence
+    // construction → `cn` characters become `⚮♪` → `\c@cn` undefined →
+    // 381-error cascade (paper 0709.2868). Canonicalizing matches Perl's
+    // `File::Spec->splitpath` behavior which always yields a real directory.
+    let canonical_request = if pathname::is_literaldata(&request) || pathname::is_url(&request) {
+      request.clone()
+    } else {
+      std::fs::canonicalize(&request)
+        .ok()
+        .and_then(|p| p.to_str().map(String::from))
+        .unwrap_or_else(|| request.clone())
+    };
     let name = if pathname::is_literaldata(&request) {
       s!("Anonymous String")
     } else if pathname::is_url(&request) {
       request.clone()
     } else {
-      let path = Path::new(&request);
-      // _ext = match path.extension() {
-      //   Some(pe) => Some(pe.to_str().unwrap().to_string()),
-      //   None => None,
-      // };
+      let path = Path::new(&canonical_request);
       dir_opt = path.parent();
       match path.file_stem() {
         None => String::from("missing_name"),
