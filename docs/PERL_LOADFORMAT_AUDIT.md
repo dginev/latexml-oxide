@@ -140,12 +140,24 @@ zero undefined-CS errors during expl3 load.
   undefined-CS at lookup time).
 
 * **Real gap**: `\__kernel_primitive:NN \par \tex_par:D` (expl3-code.tex
-  L499) doesn't successfully install `\tex_par:D` aliased to `\par`
-  during raw `--init=latex.ltx`. Yet `\__kernel_primitive:NN \space
-  \tex_space:D` (L280, same loop) DOES produce `\tex_space:D = \ `.
-  Difference is unclear — maybe `\par` is special-cased in Rust's
-  let-handling (paragraph-terminator semantics?), or the expl3
-  catcode regime in the loop doesn't take effect for `\par`'s line.
+  L499) doesn't successfully install `\tex_par:D` during raw
+  `--init=latex.ltx`. Yet `\__kernel_primitive:NN \space \tex_space:D`
+  (L280, same loop) DOES produce `\tex_space:D = \ `.
+  
+  **Narrowed (this iteration):** manual `\global\let\tex_par:D\par`
+  AT RUNTIME (in a `.tex` document with explicit `\catcode`\_=11`) works
+  perfectly — produces the long-body Expandable. So `\let` correctly
+  handles `\par`. The bug is specifically in raw-loading expl3-code.tex
+  via `ini_tex`. ~302 of 752 `\tex_*:D` aliases are missing. Many are
+  legitimately engine-specific (LuaTeX/XeTeX), but core ones like
+  `\tex_par:D`, `\tex_dimexpr:D`, `\tex_catcode:D`, `\tex_cr:D`,
+  `\tex_dp:D` are also missing.
+
+  **Suspected cause:** catcode regime during `ini_tex`'s raw expl3
+  load may not have `_` / `:` as LETTER everywhere expl3-code.tex
+  expects, OR `\__kernel_primitive:NN` defined in the loop's
+  `\begingroup` doesn't expand consistently for all tokens (`\par`,
+  `\dimexpr`, etc. may be tokenized differently than `\space`).
 
 * **`\__int_eval:w` runtime meaning is `\x@protect …`** (per probe
   with `\meaning`), suggesting it's wrapped in robust-protection
