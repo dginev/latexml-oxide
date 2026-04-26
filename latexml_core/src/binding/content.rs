@@ -489,7 +489,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     if !prevext.is_empty() {
       def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prevext)), None)?;
     }
-    digest(T_CS!("\\@popfilename"))?;
+    // Perl-faithful: Package.pm:2637 —
+    //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
+    // Pair with the dispatched push above. Using `\@popfilename` (dump's
+    // expl3-wrapped) when both push/pop are defined; else `\lx@popfilename`
+    // (LaTeXML safe internal). The push site re-checks `\@pushfilename` and
+    // `\@popfilename` definedness independently (state may have changed
+    // mid-load); here we re-check too rather than threading a flag.
+    let pop_use_expl =
+      lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
+        && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
+    if pop_use_expl {
+      digest(T_CS!("\\@popfilename"))?;
+    } else {
+      digest(T_CS!("\\lx@popfilename"))?;
+    }
     // Verify @currname was correctly restored, and force-fix if not
     let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
       do_expand(T_CS!("\\@currname"))?.to_string()
@@ -592,9 +606,43 @@ fn before_input_handle_options(
   name: &str,
   as_type: &str,
 ) -> Result<()> {
-  // Note: this is trying to emulate the LaTeX 2 (latex.ltx) use of \@pushfilename. For expl3, see
-  // expl3.sty.ltxml
-  digest(T_CS!("\\@pushfilename"))?;
+  // Perl-faithful translation of Package.pm:2578-2591:
+  //
+  //   my $pushpop = LookupDefinition(T_CS('\@pushfilename'))
+  //              && LookupDefinition(T_CS('\@popfilename'));
+  //   if ($pushpop) {
+  //     Digest(Tokens(T_CS('\@pushfilename'),
+  //         T_BEGIN, T_END, T_BEGIN, T_END, T_BEGIN, Explode($name), T_END));
+  //   } else {
+  //     Digest(T_CS('\lx@pushfilename'));
+  //   }
+  //
+  // The 3 trailing brace-arg pairs `{}{}{name}` feed
+  // `\@expl@push@filename@aux@@` (which the dump's `\@pushfilename`
+  // body chains into) — that aux takes 3 args. Without them it reads
+  // 3 garbage tokens from the input stream, corrupting the
+  // `\g__hook_name_stack_seq` push. Subsequent `\@popfilename`
+  // then sees an empty/corrupt seq, fires `\msg_error:nn{hooks}{extra-pop-label}`,
+  // whose `\use:e` (=`\edef`) chain expands `\q_no_value` and triggers
+  // recursion-detect. See docs/sandbox_failures_SYNC_STATUS.md
+  // "\q_no_value cascade" for the full investigation.
+  let push_defined = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some();
+  let pop_defined = lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
+  if push_defined && pop_defined {
+    let mut pushtoks = vec![
+      T_CS!("\\@pushfilename"),
+      T_BEGIN!(),
+      T_END!(),
+      T_BEGIN!(),
+      T_END!(),
+      T_BEGIN!(),
+    ];
+    pushtoks.extend(Explode!(name));
+    pushtoks.push(T_END!());
+    digest(Tokens::new(pushtoks))?;
+  } else {
+    digest(T_CS!("\\lx@pushfilename"))?;
+  }
 
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
