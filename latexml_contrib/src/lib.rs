@@ -247,24 +247,18 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     .map(|(_, _, loader)| loader())
 }
 
-/// Names of all registered class bindings in this crate (without the `.cls`
-/// suffix), in registration order. Consumed alongside
-/// `latexml_package::class_binding_names` by the Perl-parity `LoadClass`
-/// prefix-match fallback, so contrib classes like `memoir`, `siamltex`,
-/// `scrbook`, etc. are eligible as alternates for unknown author-renamed
-/// classes. Lazily materialized from `BINDINGS` once and cached via
-/// `OnceLock`.
-pub fn class_binding_names() -> &'static [&'static str] {
+/// All registered (name, extension) pairs for this crate's BINDINGS.
+/// Mirror of `latexml_package::binding_names`. Consumed by
+/// `find_file(notex=true)` to detect compiled-binding existence across
+/// all registered extensions (cls/sty/def/pool/code.tex/...). The class
+/// names (entries with `ext == "cls"`) flow into `load_class`'s
+/// Perl-parity prefix-match fallback via the
+/// `state::get_class_binding_names()` filtered view.
+pub fn binding_names() -> &'static [(&'static str, &'static str)] {
   use std::sync::OnceLock;
-  static NAMES: OnceLock<Vec<&'static str>> = OnceLock::new();
+  static NAMES: OnceLock<Vec<(&'static str, &'static str)>> = OnceLock::new();
   NAMES
-    .get_or_init(|| {
-      BINDINGS
-        .iter()
-        .filter(|(_, ext, _)| *ext == "cls")
-        .map(|(name, ..)| *name)
-        .collect()
-    })
+    .get_or_init(|| BINDINGS.iter().map(|(name, ext, _)| (*name, *ext)).collect())
     .as_slice()
 }
 

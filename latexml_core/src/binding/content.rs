@@ -1337,7 +1337,11 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
         .unwrap_or_default();
       let class = cap[2].trim().to_string();
       if !class.is_empty() {
-        // Perl L2788: only load if we have a binding for it (notex => 1)
+        // Perl L2788: only load if we have a binding for it (notex => 1).
+        // `find_file` (post-fix) consults the compiled-binding registry
+        // when `notex=true`, so this returns Some for compiled `.cls`
+        // bindings like `revtex4-1` registered via latexml_package's
+        // BINDINGS (not just per-call `_binding_available` flags).
         if find_file(
           &s!("{class}.cls"),
           Some(FindFileOptions {
@@ -1478,10 +1482,8 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     // latexml_contrib + any future extensions) so contrib classes like
     // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
     let alternate = {
-      let all_slices = crate::state::get_class_binding_names();
-      let mut sorted: Vec<&str> = all_slices
-        .iter()
-        .flat_map(|s| s.iter().copied())
+      let mut sorted: Vec<&str> = crate::state::get_class_binding_names()
+        .into_iter()
         .filter(|n| *n != "OmniBus" && *n != name)
         .collect();
       sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
@@ -1649,10 +1651,34 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // Rust equivalent of Perl's ".ltxml" check: if the binding dispatcher
     // has an entry for this file, consider it "found". This is how Perl's
     // FindFile discovers pgfsys-latexml.def.ltxml etc.
-    // We check the `{file}_binding_available` flag, which binding packages
-    // can set to pre-announce their availability to find_file.
-    if !options.forbid_ltxml && lookup_bool(&s!("{file}_binding_available")) {
-      return Some(file.to_string());
+    //
+    // Two registry kinds are consulted (in order of cost):
+    //  1. The per-call `{file}_binding_available` runtime flag, which
+    //     packages can set to pre-announce their availability (used by
+    //     pgf_sty for `pgfsys-latexml.def`).
+    //  2. The compile-time class registry (latexml_package's `BINDINGS`)
+    //     surfaced via `state::get_class_binding_names()`. Without this,
+    //     `find_file("revtex4-1.cls", notex=true)` returned None for
+    //     compiled-in bindings — so AIAA.cls's `\LoadClass{revtex4-1}` was
+    //     silently skipped, breaking the eager natbib transitive load
+    //     (1709.05096 / AIAA → 60s wall-clock SIGABRT in the autoload-
+    //     trapped-by-abstract loop).
+    if !options.forbid_ltxml {
+      if lookup_bool(&s!("{file}_binding_available")) {
+        return Some(file.to_string());
+      }
+      // Check the compile-time binding registries from latexml_package and
+      // latexml_contrib for ANY (name, ext) pair that matches `file` (split
+      // on the FIRST `.`, mirroring `dispatch()`'s split rule so multi-dot
+      // names like `pgfmath.code.tex` resolve as `("pgfmath", "code.tex")`).
+      if let Some((base, ext)) = file.split_once('.') {
+        if crate::state::get_binding_names()
+          .iter()
+          .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext))
+        {
+          return Some(file.to_string());
+        }
+      }
     }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)
     if !options.notex {

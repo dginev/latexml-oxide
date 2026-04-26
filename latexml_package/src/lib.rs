@@ -816,24 +816,17 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     .map(|(_, _, loader)| loader())
 }
 
-/// Names of all registered class bindings (without the `.cls` suffix),
-/// in registration order. Consumed by Perl-parity `LoadClass` prefix-match
-/// fallback — when `mn2ebis.cls` has no direct binding, the caller sorts
-/// these longest-first and picks the first whose name is a prefix of
-/// `mn2ebis` (→ `mn2e`). Lazily materialized once from `BINDINGS` and
-/// cached via `OnceLock`, so callers can take `&'static [&'static str]`
-/// without allocating on every query.
-pub fn class_binding_names() -> &'static [&'static str] {
+/// All registered (name, extension) pairs across the BINDINGS table.
+/// Consumed by `find_file(notex=true)` to discover whether a compiled
+/// binding exists for a given filename — across `.cls` / `.sty` / `.def`
+/// / `.pool` / `code.tex` / etc. Also surfaces classes (extension `"cls"`)
+/// for `load_class`'s Perl-parity prefix-match fallback via
+/// `state::get_class_binding_names()` (a filtered view of this list).
+pub fn binding_names() -> &'static [(&'static str, &'static str)] {
   use std::sync::OnceLock;
-  static NAMES: OnceLock<Vec<&'static str>> = OnceLock::new();
+  static NAMES: OnceLock<Vec<(&'static str, &'static str)>> = OnceLock::new();
   NAMES
-    .get_or_init(|| {
-      BINDINGS
-        .iter()
-        .filter(|(_, ext, _)| *ext == "cls")
-        .map(|(name, ..)| *name)
-        .collect()
-    })
+    .get_or_init(|| BINDINGS.iter().map(|(name, ext, _)| (*name, *ext)).collect())
     .as_slice()
 }
 
@@ -847,22 +840,24 @@ mod tests {
   }
 
   #[test]
-  fn class_binding_names_only_contains_cls_entries() {
-    let names = class_binding_names();
-    // Cross-check: every class name appears in BINDINGS with ext="cls".
-    for name in names {
+  fn binding_names_round_trips_with_bindings() {
+    // Cross-check: every (name, ext) in `binding_names()` matches an entry in
+    // `BINDINGS`, and the lengths agree.
+    let names = binding_names();
+    assert_eq!(names.len(), BINDINGS.len());
+    for (name, ext) in names {
       let matched = BINDINGS
         .iter()
-        .any(|(n, ext, _)| n == name && *ext == "cls");
-      assert!(matched, "{} must have a cls registration", name);
+        .any(|(n, e, _)| n == name && e == ext);
+      assert!(matched, "{}.{} must round-trip via BINDINGS", name, ext);
     }
   }
 
   #[test]
-  fn class_binding_names_cached_via_once_lock() {
+  fn binding_names_cached_via_once_lock() {
     // Two consecutive calls return the same &'static slice (same data pointer).
-    let first = class_binding_names();
-    let second = class_binding_names();
+    let first = binding_names();
+    let second = binding_names();
     assert_eq!(first.as_ptr(), second.as_ptr());
     assert_eq!(first.len(), second.len());
   }

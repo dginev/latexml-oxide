@@ -258,14 +258,16 @@ pub struct State {
   pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
-  /// Names (without `.cls` suffix) of all class bindings the dispatchers
-  /// can load, stacked one slice per registered dispatcher. Used by
-  /// `load_class` to implement Perl's prefix-match fallback for unknown
-  /// class names (Package.pm L2702-2706). Populated at startup by each
-  /// binding crate via `add_class_binding_names`, so both
-  /// `latexml_package` and `latexml_contrib` contribute their classes to
-  /// the fallback pool.
-  pub class_binding_names:     Vec<&'static [&'static str]>,
+  /// All `(name, ext)` pairs for compile-time bindings the dispatchers can
+  /// load, stacked one slice per registered dispatcher. Populated at
+  /// startup by each binding crate via `add_binding_names`, so both
+  /// `latexml_package` and `latexml_contrib` contribute their classes/
+  /// styles/defs/pools to the fallback pool. Consumed by:
+  /// - `find_file(notex=true)` to resolve compile-time bindings without
+  ///   touching the filesystem.
+  /// - `load_class`'s Perl-parity prefix-match fallback (Package.pm
+  ///   L2702-2706) via the `get_class_binding_names()` filtered view.
+  pub binding_names:           Vec<&'static [(&'static str, &'static str)]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
 }
@@ -316,7 +318,7 @@ impl Default for State {
       nomathparse:             false,
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
-      class_binding_names:     Vec::new(),
+      binding_names:           Vec::new(),
       label_mapping_hook:      None,
     }
   }
@@ -2522,25 +2524,39 @@ pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   state.extra_bindings_dispatch = Some(dispatcher);
 }
 
-/// Snapshot of all registered class-name slices (one per dispatcher).
-/// Callers (e.g. `load_class`) typically flatten this to iterate every
-/// candidate name across all registered binding crates.
-pub fn get_class_binding_names() -> Vec<&'static [&'static str]> {
-  state!().class_binding_names.clone()
+/// Snapshot of all registered (name, ext) binding pairs across all
+/// dispatchers. Used by `find_file(notex=true)` to detect compiled-binding
+/// existence regardless of extension (cls/sty/def/pool/code.tex/...).
+pub fn get_binding_names() -> Vec<&'static [(&'static str, &'static str)]> {
+  state!().binding_names.clone()
 }
-/// Append one crate's class-name slice. Call this from each binding crate's
-/// dispatcher-registration site (e.g. `set_bindings_dispatch` companion
-/// for `latexml_package`, `set_extra_bindings_dispatch` companion for
-/// `latexml_contrib`). Duplicates are deduplicated by pointer so repeated
-/// calls from the same crate don't inflate the fallback pool.
-pub fn add_class_binding_names(names: &'static [&'static str]) {
+/// Append one crate's `(name, ext)` slice. Companion to
+/// `set_bindings_dispatch` / `set_extra_bindings_dispatch` — call alongside
+/// dispatcher registration so `find_file` can resolve compile-time
+/// bindings. Duplicates are deduplicated by pointer so repeated calls from
+/// the same crate don't inflate the fallback pool.
+pub fn add_binding_names(names: &'static [(&'static str, &'static str)]) {
   let mut state = state_mut!();
-  // Pointer-level dedup: two slices from the same static are equal here.
   let ptr = names.as_ptr();
-  if state.class_binding_names.iter().any(|s| s.as_ptr() == ptr) {
+  if state.binding_names.iter().any(|s| s.as_ptr() == ptr) {
     return;
   }
-  state.class_binding_names.push(names);
+  state.binding_names.push(names);
+}
+
+/// Filtered view of `get_binding_names()` returning ONLY class names
+/// (without `.cls` suffix). Used by `load_class` for Perl's prefix-match
+/// fallback (Package.pm L2702-2706). Returns a flat `Vec<&str>` rather
+/// than per-crate slices — callers that need to preserve crate boundaries
+/// should iterate `get_binding_names()` directly.
+pub fn get_class_binding_names() -> Vec<&'static str> {
+  state!()
+    .binding_names
+    .iter()
+    .flat_map(|slice| slice.iter())
+    .filter(|(_, ext)| *ext == "cls")
+    .map(|(name, _)| *name)
+    .collect()
 }
 
 pub fn get_label_mapping_hook() -> Option<LabelMappingHook> { state!().label_mapping_hook.clone() }
