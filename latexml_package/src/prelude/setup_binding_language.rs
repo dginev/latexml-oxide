@@ -42,12 +42,33 @@ macro_rules! InputDefinitions {
   }
 }
 
-/// Loader shorthand for pool dependencies
+/// Loader shorthand for pool dependencies. Mirrors Perl `LoadPool` —
+/// honors `<name>.pool_loaded` (the Rust port's analogue of Perl's
+/// `<name>.pool.ltxml_loaded` from `Package.pm::loadLTXML`
+/// L2311-2316; Rust drops the `.ltxml` suffix since the suffix has
+/// no meaning in our world — see existing reads at
+/// `tex_file_io.rs:199`, `mathchar.rs:889`). Already-loaded pools
+/// are skipped; the flag is set before the body runs (matches Perl
+/// L2315: `AssignValue(... _loaded => 1, 'global')`).
+///
+/// To force a re-load (Perl `latex_constructs.pool.ltxml` L19-20
+/// pattern: `AssignValue('<name>.pool.ltxml_loaded' => undef);
+/// LoadPool('<name>')`), clear the flag first via
+/// `state::assign_value("<name>.pool_loaded", Stored::None,
+/// Some(Scope::Global))` and then call `InnerPool!(<name>)`.
 #[macro_export]
 macro_rules! InnerPool {
-  ($name:ident) => {
-    $crate::engine::$name::load_definitions()?
-  };
+  ($name:ident) => {{
+    let __pool_flag = concat!(stringify!($name), ".pool_loaded");
+    if !$crate::prelude::lookup_bool(__pool_flag) {
+      $crate::prelude::state::assign_value(
+        __pool_flag,
+        true,
+        Some($crate::prelude::state::Scope::Global),
+      );
+      $crate::engine::$name::load_definitions()?;
+    }
+  }};
 }
 
 #[macro_export]

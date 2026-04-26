@@ -2282,6 +2282,42 @@ fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
 #[rustfmt::skip]
 LoadDefinitions!({
 
+  // Perl `latex_constructs.pool.ltxml` L19-38 — force-reload of
+  // `plain_constructs` and `math_common`. By the time
+  // `latex_constructs` runs, both pools were already loaded during the
+  // plain-format chain (`tex.rs::LoadFormat('plain')`), and several of
+  // their definitions have since been clobbered by `latex_base` and
+  // earlier `latex_constructs` activity. Perl explicitly clears the
+  // `_loaded` flags and re-runs `LoadPool('plain_constructs')` (L21)
+  // followed by `LoadPool('math_common')` (L38) to re-establish those
+  // pools' definitions on top of LaTeX-side changes.
+  //
+  // Rust note: `InnerPool!(...)` calls `load_definitions()` directly
+  // and does not consult any `_loaded` guard (unlike Perl's
+  // `LoadPool`, which honors `<name>.pool.ltxml_loaded`). The two
+  // `assign_value(... Stored::None)` resets below are kept anyway for
+  // parity with any external code (e.g. `lookup_bool`) that reads
+  // those flags.
+  //
+  // Perl interleaves a handful of defs (font reset, `\hline`,
+  // `\f@encoding`, `\par→\lx@normal@par`, etc.) between L21 and L38;
+  // Rust collapses both reloads here at the top because the
+  // intervening defs are positioned later in this file (or in
+  // `plain_constructs.rs`) and are agnostic to whether `math_common`
+  // is reloaded before or after them.
+  state::assign_value(
+    "plain_constructs.pool_loaded",
+    latexml_core::common::store::Stored::None,
+    Some(latexml_core::state::Scope::Global),
+  );
+  state::assign_value(
+    "math_common.pool_loaded",
+    latexml_core::common::store::Stored::None,
+    Some(latexml_core::state::Scope::Global),
+  );
+  InnerPool!(plain_constructs);
+  InnerPool!(math_common);
+
   // ======================================================================
   // C.1 Commands and Environments
   // ======================================================================
