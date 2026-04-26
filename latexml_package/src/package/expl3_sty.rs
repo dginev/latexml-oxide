@@ -119,44 +119,33 @@ LoadDefinitions!({
   state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
   // Define cmd module messages (normally from latex.ltx, not in our LaTeX pool)
   // and suppress info messages to prevent \NewDocumentCommand from leaking text.
-  //
-  // CRITICAL: dump now provides `\msg text > cmd/define-command` etc., so the
-  // unguarded `\msg_new:nnn` triggers `\__msg_chk_free:nn` →
-  // `\msg_error:nnnn{msg}{already-defined}` → `\__msg_interrupt:NnnnN` which
-  // mismatches our boxing-vs-non-boxing group accounting (49 boxing-group
-  // errors per `\usepackage{expl3}`-style load — see DEFERRED_COMMANDS audit
-  // session 2026-04-26). Use `\msg_set:nnn` (no chk_free) for already-known
-  // messages; `\msg_redirect_module:nnn` and `\cs_gset_protected:Npn` are
-  // safe (no chk_free).
   raw_tex(concat!(
-    r"\msg_set:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
-    r"\msg_set:nnn{cmd}{define-env}{Defining~environment~#1~with~sig.~'#2'~\msg_line_context:.}",
+    r"\msg_new:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
+    r"\msg_new:nnn{cmd}{define-env}{Defining~environment~#1~with~sig.~'#2'~\msg_line_context:.}",
     r"\msg_redirect_module:nnn{cmd}{info}{none}",
     r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
     r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
   ))?;
-  // l3file fixups: dump now provides `\q__file_nil`, `\g__file_record_seq`,
-  // etc. as proper Expandable/Register entries — so `\quark_new:N` and
-  // `\seq_gclear_new:N` calls fire `\__kernel_chk_if_free_cs:N` →
-  // `\msg_error:nnee{kernel}{command-already-defined}`, triggering ~7 boxing
-  // errors per call (35 across the 6 calls in this block + the conditional
-  // below). Wrap each in `\cs_if_exist:NF` so we only define when the dump
-  // didn't already provide the CS.
+  // l3file fixups: the l3file section of expl3-code.tex has a subtle failure
+  // where some definitions (quarks, file name functions) don't survive loading.
+  // The expl3 core functions (\cs_new:Npn, \quark_new:N, etc.) ARE available
+  // at this point, so we use them directly (catcodes are LETTER for _ and :).
   // Perl: all defined naturally by expl3-code.tex L12416-12430.
+  // Define unconditionally using \cs_gset — ERROR stubs from suppressed-error
+  // loading fool \cs_if_exist into thinking the CS is already defined.
+  // \quark_new:N uses \cs_gset_nopar:Npn which overwrites any existing def.
   raw_tex(concat!(
-    r"\cs_if_exist:NF \g__file_record_seq { \seq_new:N \g__file_record_seq }",
-    r"\cs_if_exist:NF \l_file_search_path_seq { \seq_new:N \l_file_search_path_seq }",
-    r"\cs_if_exist:NF \s__file_stop { \scan_new:N \s__file_stop }",
-    r"\cs_if_exist:NF \q__file_nil { \quark_new:N \q__file_nil }",
-    r"\cs_if_exist:NF \q__file_recursion_tail { \quark_new:N \q__file_recursion_tail }",
-    r"\cs_if_exist:NF \q__file_recursion_stop { \quark_new:N \q__file_recursion_stop }",
+    r"\seq_gclear_new:N \g__file_record_seq",
+    r"\seq_gclear_new:N \l_file_search_path_seq",
+    r"\scan_new:N \s__file_stop",
+    r"\quark_new:N \q__file_nil",
+    r"\quark_new:N \q__file_recursion_tail",
+    r"\quark_new:N \q__file_recursion_stop",
   ))?;
-  // \__kernel_file_name_sanitize:n — passthrough stub (overwrites ERROR stub
-  // safely; \cs_gset:Npn doesn't chk_free).
+  // \__kernel_file_name_sanitize:n — passthrough stub (overwrites ERROR stub)
   raw_tex(r"\cs_gset:Npn \__kernel_file_name_sanitize:n #1 {#1}")?;
-  // \__file_quark_if_nil:nTF — conditional test for \q__file_nil. Guard
-  // with \cs_if_exist:NF to avoid already-defined error (7 boxing errors).
-  raw_tex(r"\cs_if_exist:NF \__file_quark_if_nil:n { \__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF } }")?;
+  // \__file_quark_if_nil:nTF — conditional test for \q__file_nil
+  raw_tex(r"\__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF }")?;
   // l3file IOW family fixups — these don't survive raw-load with
   // SUPPRESS_UNDEFINED_ERRORS either. Faithful LaTeXML-mode stubs
   // (all writes-to-terminal suppressed; wraps skip the wrap-and-measure
