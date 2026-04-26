@@ -37,6 +37,21 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 ### Active gaps (as of 2026-04-26)
 
+* **2026-04-26 (`_loaded` flag dual-naming complete)**: OXIDIZED_DESIGN
+  #23 implementation landed:
+  - `de21ae928` — path-aware `already_handled` closure in
+    `input_definitions`. Allows binding `<file>.rs` to load its
+    same-named raw `.sty/.cls/.def` after binding's own `_loaded`
+    is already set (babel_sty / cite_sty / etc. pattern).
+  - `01df250c6` — reader sites consult either flag:
+    `\@ifpackageloaded`, soul_sty.rs (3 sites), cleveref_sty.rs.
+  - `c4f7ddd55` — OXIDIZED_DESIGN.md updated.
+  - `6e85a1cf9` — `dump_writer` adds Perl IGNORED_SYMBOLS missing
+    entries (`meaning:\lnot`, `meaning:\to`).
+  Sub-status: babel.sty timeout (separate dump-state issue) still
+  open, but is independent of the flag work. Babel raw load via
+  `LATEXML_NODUMP=1` already worked clean before this round.
+
 * **2026-04-26 (commit `4da59f30e`)**: `expl3_sty.rs` reduced to
   strict-Perl 3-line mirror (229 → 23 lines, deletes 13 categories
   of compensating raw_tex blocks). Standalone `\usepackage{expl3}`:
