@@ -2,16 +2,18 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   // Perl: PassOptions('latexml', 'sty', ...) + RequirePackage('latexml')
-  // `localrawstyles` (INCLUDE_STYLES => 'searchpaths') enables raw .sty
-  // loading but restricts the fallback to the user's SEARCHPATHS — i.e.
-  // the paper's own bundle directory, not system-wide texmf. This is the
-  // intended mode for archival conversion: paper-local helper .sty files
-  // (mst-stylefile.sty, harvard.sty, etc.) resolve, but stray texmf
-  // packages with unexpected TeX-only semantics don't silently leak in.
-  // Perl ref Package.pm L2674 + L2135.
+  // Mirror Perl ar5iv.sty.ltxml: pass `rawstyles` (INCLUDE_STYLES => true,
+  // kpsewhich enabled, system-wide texmf reachable). Earlier the Rust
+  // port passed `localrawstyles` (kpsewhich suppressed, only paper-local
+  // SEARCHPATHS) per past user direction (commit 9869267eb), but that
+  // diverged from the Perl ar5iv profile and caused real parity gaps:
+  // papers using system-installed-but-unbound .sty packages
+  // (colonequals, comment, gnuplot, …) loaded fine in Perl but errored
+  // in Rust with `\<missing-cs> undefined`. Switch back to `rawstyles`
+  // for Perl-baseline parity (cf. feedback_sandbox_perl_baseline.md).
   latexml_core::binding::content::pass_options("latexml", "sty", vec![
     s!("ids"),
-    s!("localrawstyles"),
+    s!("rawstyles"),
     s!("bibconfig=bbl,bib"),
     s!("nobreakuntex"),
     s!("magnify=1.2"),

@@ -453,22 +453,20 @@ system-installed package" pattern:
 
 **Plan.**
 
-- [ ] **AR.1** Decide: align Rust ar5iv with Perl (`rawstyles`,
-      kpsewhich enabled) OR keep the hardening (`localrawstyles`,
-      kpsewhich suppressed)? The "Sandbox = Perl-error-free" rule
-      (`feedback_sandbox_perl_baseline.md`) argues for the former
-      since Perl successfully handles these papers. The hardening
-      argument was about archival determinism — but determinism is
-      already provided by the `tools/test_with_tl2023.sh` CI gate
-      (TL2023 image), which pins the texmf surface.
-- [ ] **AR.2** If aligning to Perl: change
-      `latexml_contrib/src/ar5iv_sty.rs:14` `localrawstyles` →
-      `rawstyles`. Run workspace tests for regression. Re-run a
-      sandbox 100-paper sample to measure error reduction.
-- [ ] **AR.3** Update `wisdom_include_styles_tristate.md` to remove
-      the "Rust uses localrawstyles" claim if AR.2 lands; or replace
-      it with a documented OXIDIZED_DESIGN intentional-divergence
-      entry if the hardening is kept.
+- [x] **AR.1** Decided 2026-04-26: align Rust ar5iv with Perl
+      (`rawstyles`, kpsewhich enabled). The "Sandbox = Perl-error-free"
+      rule (`feedback_sandbox_perl_baseline.md`) is binding — Perl
+      successfully handles these papers, so Rust must too.
+      Determinism for archival conversion is provided by the
+      `tools/test_with_tl2023.sh` CI gate (TL2023 image pinning).
+- [x] **AR.2** Done. Flipped `latexml_contrib/src/ar5iv_sty.rs`
+      `localrawstyles` → `rawstyles`. Verified `\colonequals` minimal
+      repro: 1 error → 0 (kpsewhich now finds
+      `/usr/local/texlive/.../oberdiek/colonequals.sty`). Workspace
+      tests 1108/0/0 unchanged.
+- [ ] **AR.3** Update `wisdom_include_styles_tristate.md` to reflect
+      the post-flip state. Mark the "Rust uses localrawstyles" claim
+      as superseded.
 
 **Why not flipped here.** This is a high-impact change (every Rust
 sandbox conversion), and the original commit was explicitly
