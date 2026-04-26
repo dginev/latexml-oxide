@@ -6,8 +6,14 @@
 
 This project is in an **early beta** stage. Please avoid using it in any real world setting before mainline LaTeXML parity is reached.
 
-**Current status (2026-04-05):** All tests passing (100%), 0 ignored. 
-Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
+**Current status (2026-04-26):** active strict-Perl dump-parity work
+(see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) "Mission"). The
+engine dump is being aligned with Perl's `make formats` output;
+test regressions during this work are expected and will be cleared
+once the dumps stabilise. Full post-processing pipeline:
+`latexml_oxide --format=html5 --dest=paper.html paper.tex`
+produces complete HTML with cross-references, citations, MathML,
+and XSLT.
 
 ### Why?
 

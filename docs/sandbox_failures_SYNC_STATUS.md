@@ -1,5 +1,12 @@
 # Sandbox Failures Worksheet — 181 papers
 
+> **Active priority (2026-04-26):** strict-Perl dump parity. See
+> [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission" and
+> [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md). Sandbox
+> work continues opportunistically but is **not the gating front**.
+> Sandbox regressions during the dump-parity push are accepted —
+> re-validate after dumps stabilize.
+
 Tracks per-cluster Rust→Perl translation gaps for the focused
 ~/data/sandbox_failures sandbox of error-producing papers. Each
 row tracks the cluster size, root cause, fix approach, and
@@ -24,25 +31,13 @@ papers with `[x]`.
 `astro-ph9308008, astro-ph9708022, funct-an9711006, hep-th9404085,
 q-alg9505016`) error with `\columns undefined`.
 
-**Root cause.** Verified 2026-04-26:
-- Perl `\meaning\settabs` returns the full plain.tex chain
-  (`\setbox\tabs\null \futurelet\next\sett@b`), defined at
-  `/usr/local/texlive/2025/texmf-dist/tex/plain/base/plain.tex:602`.
-- The Rust `latex.dump.txt` has **zero** `\settabs`/`\sett@b`/
-  `\sett@bb`/`\s@tt@b` entries.
-- The Rust `--init=latex.ltx` pipeline (`latexml_oxide/src/ini_tex.rs`
-  L67-95) raw-loads ONLY `latex.ltx`. Perl's format build implicitly
-  loads `plain.tex` first (TeX format build convention).
-- `latex.ltx` itself does not redefine `\settabs`.
-- Net: Perl's format file has `plain.tex`'s definitions baked in;
-  Rust's dump is missing them entirely.
-
-**Fix approach.** In `ini_tex.rs`, raw-load `plain.tex` BETWEEN the
-state snapshot and the `latex.ltx` raw load. The diff then captures
-the plain.tex chain, which `dump_writer` serializes into
-`latex.dump.txt`.
-
-Status: in progress (this turn).
+**Status (2026-04-26): largely addressed by strict-Perl LoadFormat
+work.** The new `plain.dump.txt` (1196 entries, runtime-loaded by
+`plain_dump.rs`) captures `\settabs`/`\sett@b`/`\sett@bb`/`\s@tt@b`/
+`\columns` directly (verified post-`1e04a96c8`). Re-run the
+worksheet to confirm; expect these 5 papers cleared. Latex side is
+the next-up gap (302/752 `\tex_*:D` aliases missing — see
+`PERL_LOADFORMAT_AUDIT.md` "Remaining dump gaps").
 
 ### Other clusters (181 - 5 = 176 remaining, deferred behind Track A)
 

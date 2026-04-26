@@ -1,5 +1,53 @@
 # Change Log
 
+## [0.4.2] (in active development) — strict-Perl dump parity pivot
+
+  - **Strict-Perl `LoadFormat` mutual exclusivity** (commit
+    `0c4d609ad`). `tex.rs` and `latex.rs` now mirror Perl
+    `Package.pm:LoadFormat` L2734-2752 exactly: `bootstrap → dump
+    → constructs` when the dump is on disk and `LATEXML_NODUMP` is
+    unset; `bootstrap → base → constructs` otherwise. Replaces the
+    older "always run all four" unified design that had been on
+    the back burner since 2026-04-18.
+  - **`dump_reader.rs` admission gates removed**. Mirrors Perl
+    `Core/Dumper.pm` L59-67 — every record calls
+    `assign_internal('global')` unconditionally, with no
+    skip-if-defined and no `:`-named filtering. Dumps now overwrite
+    any prior definition.
+  - **`Stored::Number` "Nm" marker** in dump format. Was sharing
+    "I" with `Stored::Int`, breaking register reads after the
+    strict split skipped `_base.rs`.
+  - **`plain.dump.txt` runtime loader** replaces the legacy
+    compiled-Rust `plain_dump.rs` (via `dump_codegen`). Matches
+    `latex_dump.rs` pattern; resolution paths: `LATEXML_NODUMP`,
+    `LATEXML_PLAIN_DUMP_PATH`, `LATEXML_DUMP_DIR`, exe-relative,
+    dev-tree.
+  - **`ini_tex.rs` LaTeX.pool preload**. `--init=latex.ltx` now
+    explicitly loads LaTeX.pool BEFORE the snapshot (commit
+    `209083ff4`), mirroring Perl's `make formats` recipe.
+    Eliminates the 10000-error abort during expl3-code.tex
+    raw-load. `latex.dump.txt` 19,797 → 24,987 entries (+26%);
+    zero undefined-CS errors during expl3 load.
+  - **Plain dump pollution removed** (commit `1e04a96c8`).
+    Autoload triggers (`\documentclass`, `\AtBeginDocument`,
+    `\Bbb`, `\align`, …), file-bookkeeping CSes
+    (`\@pushfilename`, `\@popfilename`), and early stubs are now
+    defined BEFORE `stage_snapshot("plain_bootstrap")`, so they
+    enter the baseline and do NOT pollute the dump diff. Result:
+    plain.dump.txt 1238 → 1196 entries; pollution gone, content
+    (`\settabs`, `\@cclv`, `\null`, `\sett@b`, `\matrix`, `\loop`)
+    preserved.
+  - **`plain_base.rs` `\new*` family** converted to raw `\outer\def`
+    Token bodies (commit `0c4d609ad`), matching Perl
+    `plain_base.pool.ltxml:207-218` RawTeX block. Required because
+    Rust closures aren't serializable through the dump format —
+    when the strict split skips `_base.rs`, only Token bodies
+    survive in the dump.
+  - **Active gaps** (top of [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md)):
+    plain dump 36 non-`\lx@` extras vs Perl (math symbols defined
+    pre-snapshot in `math_common.rs`); latex dump 302/752
+    `\tex_*:D` aliases missing (raw-expl3-load gap).
+
 ## [0.4.1] (in active development)
 
   - **D0 d.1 complete — dump / `_base` closure-only gap closed from

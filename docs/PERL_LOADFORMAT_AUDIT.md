@@ -88,8 +88,17 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
   `latexml_oxide --init=plain.tex` (with `LATEXML_NODUMP=1`).
 * `plain_dump.rs` is a runtime loader for `plain.dump.txt` —
   delegates to `dump_reader::load_from_str_plain`.
-* **Status: PARITY** (the file format differs but the
-  data captured is parallel — see `DUMP_FORMAT_PERL_ANALYSIS.md`).
+* **Status: NEAR-PARITY.** Rust 1196 entries (689 M-keys);
+  Perl 1238 entries (628 M-keys). Pollution from autoload
+  triggers (`\AtBeginDocument`, `\documentclass`, `\Bbb`,
+  `\align`, `\@pushfilename`, etc.) removed in commit `1e04a96c8`
+  by moving those blocks BEFORE `stage_snapshot("plain_bootstrap")`.
+  Remaining 36 non-`\lx@` extras (`\Box`, `\Diamond`, `\Join`,
+  `\boldmath`, `\to`, `\sc`, etc.) are math symbols / font
+  commands defined in `math_common.rs` / `plain_base.rs`
+  pre-snapshot — Perl puts them in `latex_dump.pool.ltxml`,
+  not `plain_dump.pool.ltxml`. Path forward: relocate to
+  post-snapshot or to LaTeX-only definition.
 
 ## File-by-file divergence (latex side)
 

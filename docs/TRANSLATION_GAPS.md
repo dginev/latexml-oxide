@@ -1,5 +1,15 @@
 # Translation Gaps: Perl → Rust Function-Level Comparison
 
+> **Status (2026-04-26): SUBSTANTIALLY RESOLVED.** This document
+> snapshotted the state on 2026-03-15. All major sections are now
+> closed; the only remaining `[ ]` items are intentional Perl
+> divergences or comment-only Perl entries (see "Priority Order"
+> at the bottom). Future translation-gap audits should be performed
+> with a fresh Perl↔Rust diff, not by extending this file.
+>
+> The active priority is now strict-Perl dump parity — see
+> [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission".
+
 Generated 2026-03-15. Each `[ ]` marks an under-translated function. `[x]` when updated.
 
 ## 1. Font.pm — compute_boxes_size helpers (DONE)

@@ -750,9 +750,11 @@ modification) to defer until after frame pop.
 
 ## 32. parse_parameters(..., init_flag): true at runtime, false at compile-time
 
-**Discovery:** Attempting to flip mutual-exclusivity on the dump-load path
-surfaced "Missing argument {}" errors the moment any dump-provided Expandable
-tried to read an argument — e.g. `\@gobble{x}` said `x` was missing.
+**Discovery:** Strict-Perl `LoadFormat` mutual exclusivity (active 2026-04-26)
+depends on dump-provided Expandables reading arguments correctly when
+`_base.rs` is skipped. Initial flip-attempts surfaced "Missing argument {}"
+errors the moment any dump-provided Expandable tried to read an argument —
+e.g. `\@gobble{x}` said `x` was missing.
 
 **Analysis:** `def_parser::parse_parameters(proto, cs, init_flag)` has an
 `init_flag` parameter that controls whether each `Parameter` runs its
@@ -787,7 +789,8 @@ warning followed by "Missing argument {}", the root cause is an
 
 ## 33. Dump round-trip: nargs alone is insufficient for parameter fidelity
 
-**Discovery:** The D0 mutual-exclusivity PoC hung `00_tokenize` for 34+
+**Discovery:** Early strict-Perl `LoadFormat` PoC (the D0 effort that
+preceded the active 2026-04-26 mission) hung `00_tokenize` for 34+
 minutes at 300% CPU even AFTER landing all the `init_flag=true` and
 None-body-serialization fixes. Root cause traced to parameter-type
 flattening in the dump round-trip.
@@ -816,16 +819,16 @@ falls back to `"{}".repeat(nargs)` when proto fails to parse.
 for delimited-with-brace params; `parse_parameters`'s `PARAMSPECT_CHECK_RE`
 stops at `{`, so the tail mis-parses as a separate nested Plain with inner
 type "verbatim". Tests still pass because:
-- the `@`-internal gate shadows most dump entries via `_base.rs` closures
-- the v2 reader falls back gracefully on parse failure
-
-Full round-trip would require structural per-Parameter serialization
-(name + extra tokens) rather than a stringified summary.
+- the v3 structured Parameter sub-line encoding (commit `3e1f89eb2`)
+  carries `(name, spec, extra)` per Parameter, bypassing
+  `parse_parameters` for catcoded delimiters. See
+  `DUMP_FORMAT_PERL_ANALYSIS.md`.
+- the v2 reader falls back gracefully when v3 sub-lines are absent.
 
 **Key insight:** `Parameters::stringify` is NOT a true inverse of
-`parse_parameters`. For any round-trip scenario that installs dump-loaded
-definitions as the active runtime definitions (mutual-exclusivity, daemon
-mode, etc.), plan for structural serialization from the start.
+`parse_parameters`. The active strict-Perl `LoadFormat` dump install
+relies on the v3 structural encoding to keep `Until:`/`Match:` /
+`DefToken` parameters faithful through the dump round-trip.
 
 **Sentinel:** When a dump-loaded CS invokes with unexpected input
 interpretation — e.g. `\@ifnextchar[` reads `[{yes}` as arg #1 — check

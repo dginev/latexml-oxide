@@ -4,28 +4,44 @@
 
 ## Active priority (2026-04-26): strict-Perl dump parity
 
-Engine-dump parity is the current top priority. See
-[`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md)
-and [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) "Mission".
+Engine-dump parity is the current top priority. **Tests / 10k
+sandbox / CI-green concerns are LOWERED** until the dumps are
+complete and Perl-faithful. Working docs:
+[`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) "Mission".
+
 Concretely:
 
-* `tex.rs` and `latex.rs` use Perl `LoadFormat`'s mutually
-  exclusive split (dump XOR base, NOT both).
-* `dump_reader.rs` mirrors Perl `I()`/`V()` — unconditional
-  `assign_internal('global')`, no admission gate, no
-  skip-if-defined.
-* Every `\foo` defined in `Engine/<file>.pool.ltxml` must live in
-  `latexml_package/src/engine/<file>.rs`. Use raw `\outer\def`
-  bodies wherever Perl uses `RawTeX`, so the dump captures them
-  as Token bodies — Rust closures aren't serializable through the
-  dump format.
-* Parity target: `--init=plain.tex` and `--init=latex.ltx` must
-  complete with **zero errors** (Perl loads expl3-code.tex
-  cleanly; Rust currently aborts at 10000 errors during expl3
-  forward-reference resolution — that's the gap to close).
+1. **Strict `LoadFormat` mutual exclusivity** (Perl
+   `Package.pm:LoadFormat` L2734-2752). `tex.rs` and `latex.rs`
+   take exactly one branch:
+   * `bootstrap → dump → constructs` if `<format>.dump.txt` is on
+     disk and `LATEXML_NODUMP` is unset, OR
+   * `bootstrap → base → constructs` otherwise.
+   Never both.
+2. **Unconditional dump apply** in `dump_reader.rs`. Mirrors Perl
+   `Core/Dumper.pm` L59-67: every record calls
+   `assign_internal('global')`. No admission gate, no
+   skip-if-defined, no closure guards. The dump WILL overwrite
+   any prior definition.
+3. **Same-file definitions** as Perl. Every `\foo` defined in
+   `LaTeXML/blib/lib/LaTeXML/Engine/<file>.pool.ltxml` must be
+   defined in `latexml_package/src/engine/<file>.rs`. Use raw
+   `\outer\def`-style Token bodies wherever Perl uses `RawTeX`,
+   so the dump captures them as serializable Token-bodies, not
+   opaque Rust closures.
+4. **Perl-zero-error parity target**: `--init=plain.tex` and
+   `--init=latex.ltx` must complete with **zero errors**, matching
+   Perl. Any error during expl3-code.tex / latex.ltx raw-load is
+   a parity gap, not a thing to suppress with caps.
 
-Test regressions during this work are expected and acceptable —
-re-pass tests AFTER the dumps are complete + correct.
+The plain dump is the easier target — get it perfect first, then
+tackle latex. Test regressions during this work are expected and
+acceptable — re-pass tests AFTER the dumps are complete + correct.
+
+**Distribution follow-up** (after TL2025 dumps are robust): bundle
+multiple TL versions' dumps (TL2022 … TL2026) into the binary via
+`include_bytes!` + runtime selection by `kpsewhich --version`.
 
 ## Project Overview
 
@@ -130,7 +146,7 @@ git config --local core.hooksPath .githooks/
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
-- **Follow the Work Plan in `docs/SYNC_STATUS.md`**: Always work on the first unchecked `[ ]` item in the "Work Plan — Ordered TODO List" section. Do not skip ahead or investigate what to do next until all preceding items are clearly completed. Mark items `[x]` when done.
+- **Active work**: drive the strict-Perl dump-parity mission described above. Concrete sub-tasks are tracked in `docs/PERL_LOADFORMAT_AUDIT.md` and `docs/SYNC_STATUS.md`.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 When a **session is completed**: continue working, until:

@@ -1,23 +1,28 @@
 # Engine Sync Status: Perl vs Rust
 
-> **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
+> **This is a Perl-to-Rust translation project.** Every ported function,
+> macro, and definition must faithfully reproduce the original Perl
+> semantics, control flow, and edge-case behavior. The Perl source
+> (`LaTeXML/` directory) is the ground truth. Only diverge when
+> explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
 ## Mission (2026-04-26 pivot — STRICT-PERL DUMP PARITY)
 
-### HIGHEST PRIORITY — strict Perl LoadFormat + complete dump parity
+The engine dumps must be a strict translation of Perl's `make formats`
+output. This is the **top priority**; CI-green / 10k-sandbox concerns
+are LOWERED until the dumps are complete and Perl-faithful.
 
-User directive 2026-04-26: **the engine dumps must be a strict
-translation of Perl's `make formats` output.** That means:
+**The four invariants** (set by user directive 2026-04-26):
 
 1. **Strict mutual-exclusivity in `LoadFormat`**
-   (`Package.pm:LoadFormat` L2734-2752):
+   (Perl `Package.pm:LoadFormat` L2734-2752):
    * if `<format>_dump.pool.ltxml` exists AND `LATEXML_NODUMP` is
      unset → load `bootstrap → dump → constructs` (NO base);
    * else → load `bootstrap → base → constructs` (NO dump).
 2. **Unconditional `I()`/`V()` semantics** in `dump_reader.rs`:
-   no admission gate, no skip-if-defined. Mirrors Perl's
-   `Core/Dumper.pm` L59-67 which call `assign_internal('global')`
-   without filters.
+   no admission gate, no skip-if-defined, no closure guards.
+   Mirrors Perl's `Core/Dumper.pm` L59-67 which call
+   `assign_internal('global')` without filters.
 3. **Same-file definitions** as Perl: every `\foo` defined in
    `Engine/<file>.pool.ltxml` must be defined in
    `latexml_package/src/engine/<file>.rs`. Use raw `\outer\def`
@@ -28,156 +33,79 @@ translation of Perl's `make formats` output.** That means:
    matching Perl. Any error during expl3-code.tex / latex.ltx
    raw-load is a parity gap, not a thing to suppress with caps.
 
-**Working doc:** [`docs/PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
+**Working doc:** [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
 
-**Active gaps (as of commit `0c4d609ad` + this turn):**
-- **expl3-code.tex aborts at 10000 errors** during `--init=latex.ltx`.
-  First two undefined CSes: `\@latex@info`, `\@gtempa`. Need to
-  trace back to the kernel CSes Perl has but Rust doesn't.
-- **Eager-vs-lazy LaTeX load**: Perl autoloads LaTeX.pool from
-  `\documentclass`; Rust's `latex.rs` runs at engine init.
-- **latex_base.rs closures**: when dump is loaded, latex_base is
-  skipped — closures lost.
+### Active gaps (as of 2026-04-26)
 
-**Future** (after dumps are robust): bundle multiple TL versions'
-dumps into the binary via `include_bytes!` + runtime selection by
-`kpsewhich --version`. See `PERL_LOADFORMAT_AUDIT.md` "Distribution"
-section.
+* **Plain dump (the easier target — perfect this first).**
+  Currently 1196 entries vs Perl's ~1238. ~36 non-`\lx@` extras
+  remain in the Rust dump that Perl's `plain_dump.pool.ltxml`
+  does not contain (`\Box`, `\Diamond`, `\Join`, `\boldmath`,
+  `\unboldmath`, `\to`, `\lnot`, `\land`, `\lor`, `\sc`, `\sf`,
+  etc.). These are math symbols / font commands defined in
+  `math_common.rs` / `plain_base.rs` that load before
+  `stage_snapshot("plain_bootstrap")`. In Perl they live in
+  `latex_dump.pool.ltxml`, not `plain_dump.pool.ltxml`. Either
+  they should be moved post-snapshot in Rust, or the Perl
+  origin should be re-confirmed.
+* **Latex dump — expl3 raw-load gap.** Manual `\global\let
+  \tex_par:D\par` AT RUNTIME succeeds (long-body Expandable
+  installed correctly), but the same `\__kernel_primitive:NN
+  \par \tex_par:D` line in expl3-code.tex during raw `--init=
+  latex.ltx` does NOT install the alias. ~302 of 752 `\tex_*:D`
+  aliases are missing from `latex.dump.txt`. Suspect: catcode
+  regime during the raw expl3 load doesn't match what the loop
+  expects, OR the expl3 setup of `\__kernel_primitive:NN`
+  inside its `\begingroup` doesn't expand consistently for all
+  tokens. Compare against Perl's iniTeX log — Perl does this
+  cleanly.
+* **Eager-vs-lazy LaTeX load**. Perl autoloads LaTeX.pool from
+  `\documentclass`/`\NeedsTeXFormat`/etc.
+  (`TeX.pool.ltxml:33-39`); Rust's `latex.rs` runs at engine
+  init. `ini_tex.rs` now explicitly preloads LaTeX.pool before
+  the snapshot when `--init=latex.*` (commit `209083ff4`,
+  19,797 → 24,987 dump entries, +26%). Path forward: move
+  `latex.rs::LoadDefinitions` body behind `\@load@latex@pool`.
+* **Closure-backed defs in `_base.rs`**. When the dump is
+  loaded, `_base.rs` is skipped (strict split). Anything that
+  relied on its Rust closures fails at runtime unless the dump
+  captures them. Convert closures to raw-TeX `\outer\def`
+  Token bodies wherever Perl uses RawTeX. Started in commit
+  `0c4d609ad` (`\new*` family in `plain_base.rs`); rest TBD.
+* **`Stored::Number` "Nm" marker** (commit `0c4d609ad`): was
+  sharing "I" with `Stored::Int`, breaking register reads.
 
-### Historical priority (LOWERED) — CI green + 10k sandbox clean
+### Distribution follow-up (after parity)
 
-User directive 2026-04-24: **stop the Def*-parity / bounded-hook / stub-
-fleshing milestone entirely.** Those audits have been revisiting the
-same files without moving either of the two things that actually
-matter:
+Once TL2025 dumps are robust + tested: bundle multiple TL versions'
+dumps (TL2022 … TL2026) into the binary via `include_bytes!` +
+runtime selection by `kpsewhich --version`. Currently dumps load
+from disk under `resources/dumps/` — fine for development, not
+fine for single-binary distribution. Gated on TL2025 robustness.
 
-1. **[x] TL2023 CI push gate green** — 1098 passed / 0 failed / 0
-   ignored on TL2023 (2026-04-24, commit d2a1f471e+ with
-   REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1). Local TL2025 also
-   1098/0/0. Push gate can now be lifted.
-2. **10k sandbox error-free** — Perl-baseline triage (2026-04-24) on
-   the five previously catalogued hard-fails:
-   - **Real parity gaps** (Perl exits 0, 0 errors — Rust fails):
-     - ~~**1112.6246**~~ **FIXED 2026-04-24** (commit `d162803d2`,
-       local). Root cause: Rust's `mn2e_support_sty.rs` erroneously
-       loaded amsmath+amssymb when `@useAMS` was set (mirroring
-       mn2e.cls's raw-TeX `\if@useAMS\RequirePackage{amsmath,
-       amssymb}\fi`), but Perl's `mn2e_support.sty.ltxml` deliberately
-       skips this. The extra amsmath load re-routed `\cases` onto
-       amsmath's `\lx@ams@cases@` DefConstructor (DigestedBody — no
-       explicit close terminator) instead of base_xmath's
-       `\lx@gen@plain@cases{}{}` which wraps the body with
-       `{\lx@begin@alignment#2\lx@end@alignment}` — the
-       `\lx@hidden@crcr\lx@close@alignment` that provides clean
-       halign termination. Dropping the amsmath/amssymb RequirePackage
-       (and aligning dcolumn/natbib/graphicx with Perl's conditional
-       loading pattern) makes 1112.6246 reproducer go 10001 → 0
-       errors while keeping 1093/0/0 on the local test suite. See
-       [`memory/project_1112_6246_residual.md`](../memory/project_1112_6246_residual.md)
-       for the full investigation trail.
-     - hep-ph0702114 (conversion_fatal: babel-french `\csname` cascade
-       triggered mid-body of elsart3-1 paper) — see
-       [`memory/project_babel_francais_gap.md`](../memory/project_babel_francais_gap.md).
-     - 1710.03688 (OOM abort: same babel-french pattern as
-       hep-ph0702114, elsart4-1 class).
-   - **Not parity targets** (Perl also fails — per
-     `feedback_sandbox_perl_baseline.md` rule, pull from worklist):
-     - 1803.03288 (Perl exit 124 timeout — xparse/pgfplots paper).
-     - 1902.08705 (Perl exit 124 timeout on Figures/DataComplexity.tex,
-       pgfmath loop affects both engines).
-   - **Timeouts** (not yet Perl-baseline-triaged): 1308.5727, 1407.5769,
-     1709.05096, 1711.10191, 1711.11576, 1707.01155, 1210.1891
-     (hyperref → etoolbox → kvoptions → nameref chain), 1403.4135
-     (math-parser ambiguity).
-   - **NEW dominant cluster (2026-04-25b run, ~95-100 conv_err papers):**
-     `Error:unexpected:\group_end: Attempt to close a group that switched
-     to mode horizontal` at `latexml_core/src/stomach.rs:284` from
-     `endgroup()`'s `is_value_bound("BOUND_MODE", Some(0))` check.
-     Reproducer locations: `xparse-2018-04-12.sty:1762-1776` and
-     `lipsum.sty:401`. BOUND_MODE somehow gets bound on the
-     `\group_begin:` (==`\begingroup`) frame during the body of an
-     expl3 group; `\group_end:` (==`\endgroup`) then errors. All three
-     `BOUND_MODE` Local-assign sites in stomach.rs (`set_mode:327`,
-     `begin_mode_opt:403`) are paired with `push_stack_frame` except
-     when called via `dialect.rs:1114/1319` and
-     `latex_constructs.rs:2655` (DefEnvironment-style noframe=true).
-     None should fire during the xparse raw .sty load yet they do.
-     Full diagnosis trail in
-     [`memory/project_explsyntax_midload.md`](../memory/project_explsyntax_midload.md).
-     **Next-cycle target:** instrument `begin_mode_opt` to capture
-     caller backtrace when noframe=true, run on `1402.5859` reproducer
-     to identify the unexpected mid-load mode-switch site.
+## Status snapshot (carried forward from prior milestones)
 
-Each of these is a **root-cause investigation** — not a stub-port gap.
-Per-cycle work must target one of these two fronts; drive-by pstricks /
-bounded / DP-audit additions are **paused** until CI and sandbox are
-both green.
+These numbers reflect the state before the dump-parity pivot. Once
+the dumps are correct, re-validate.
 
-**Out of scope for this milestone** (do not touch unless it directly
-unblocks a residual):
-- Def*-parity kind-flip audit (already fully triaged — see §DP).
-- Drive-by `bounded`/`scope=>Global`/`AtBeginDocument` / stub
-  fleshing sweeps.
-- pstricks mop-up beyond what a specific residual demands.
+* Tests: 1098/0/0 on TL2023 CI (commit `4344e38e0`); 1108/0/0
+  local TL2025 (some tests gated by `LATEXML_NODUMP=1`).
+* Engine def coverage: 99.9% (2,455/2,457). Missing
+  `\directlua`, `\ASCII` by design.
+* Package bindings: 100% (406+). Zero MISSING.
+* arxiv-examples/: 93+% of 101 papers OK.
+* 10k sandbox (last full sweep `sandbox_full_2026-04-26c_postfix`,
+  pre-strict-Perl): 7717/7898 OK = 97.71% clean. Many of the
+  remaining 181 are deep multi-week clusters
+  (math-parser shape, expl3 kernel cascade) tracked in
+  `docs/sandbox_failures_SYNC_STATUS.md`. Sandbox work
+  continues opportunistically but is **not** the gating front.
+  Strict-Perl dump regressions during this work are accepted
+  per user directive.
 
-### Preamble-faithfulness audit for 1112.6246 (2026-04-24)
+## Architectural invariants
 
-The 1112.6246 reproducer loads 11 packages. Perl-vs-Rust audit summary:
-
-| Package | Perl L | Rust L | Verdict |
-|---|---|---|---|
-| `mn2e.cls` | 36 | 36 | ≈ parity |
-| `mn2e_support.sty` | 252 | 395→(phase-1 pending) | partial — e72861c7c ported 10 DefMath relops + 8 aliases + 3 lets + 2 `\newif`; phase-2 trim pending (task #3) |
-| `times.sty` | 19 | 3 | ✅ faithful (intentional no-op) |
-| `ulem.sty` | 47 | 29 | ✅ faithful (9/9 entries match; Rust collapses multi-line templates) |
-| `soul.sty` | 122 | 175 | ⚠️ divergent — missing `color.sty.ltxml_loaded` guard; `\setstcolor`/`\sethlcolor` stringify vs raw-token (task #4) |
-| `color.sty` | 148 | 328 | ⚠️ divergent — `\definecolor`/`\DefineNamedColor` drop reversion Invocation; `lookup_color_obj` unknown-name downgraded Error→Warn and doesn't persist Black; default-color scope hard-coded Global (task #9) |
-| `array.sty` | 74 | 137 | ⚠️ divergent — `\newcolumntype` drops `opt` field; `\extrarowheight` via `TeX!` not `DefRegister!` (task #6) |
-| `colortbl.sty` | 95 | 169 | ⚠️ divergent — `\@userowcolor` silently drops on parse failure; `\@setrowcolor` drops `!hasAttribute` guard; `\@setcellcolor` gains Rust-only after_digest; `tabular_row_color` stored as string not Color (task #5) |
-| `graphicx.sty` | 75 | 493 | ⚠️ heavily divergent (6× bloat) — `GraphixDimension(s)` keyval types unregistered; extra `page` keyval; misplaced `\rotatebox`; drops `mode=>"restricted_horizontal"`; ~330L inlined `util::image` logic should relocate (task #7) |
-| `natbib.sty` | 674 | 1085 | ⚠️ divergent — `\setcitestyle` hand-rolled instead of `RequiredKeyVals` delegation; duplicated key→CITE_* dispatch; Rust-only `curly` keyval + `\harvardurl` extras (task #10) |
-| `amssymb.sty` | 365 | 353 | ≈ close — not deep-audited |
-
-**Parallel port cycle in progress (2026-04-24):** 7 port agents running
-in isolated worktrees against tasks #3-7, #9, #10. Results will be
-aggregated into this doc as branches land.
-
-**Zero-ignore invariant.** No test may remain `#[ignore]`. If a
-failure surfaces that cannot be resolved in the current cycle,
-document it in `docs/KNOWN_PERL_ERRORS.md` or fix it — never escape
-via `#[ignore]`. Local TL2025 is currently 1098/0/0; notable residual
-visual-parity deferrals (physics.xml macro-vs-expansion divergence;
-tikz dimension calc for ac-drive-components) are tracked in commits
-879ae260d / 8543ce467 / 03ea91fed.
-
-### Schema generation (`LaTeXML.model`)
-
-The Rust port ships `resources/RelaxNG/LaTeXML.model` (336 lines,
-verbatim copy of Perl's `LaTeXML/lib/LaTeXML/resources/RelaxNG/LaTeXML.model`).
-The file is loaded at runtime by `latexml_core::common::model::load_schema`;
-compile-time codegen would save only µs on a session that already
-spends minutes in digestion, so a runtime file remains the right
-trade-off (one-line `include_str!` swap is always available if that
-changes).
-
-- [x] **Port `tools/compileschema` — stage 1 (rnc → rng).** Shipped as
-  `tools/compileschema.sh` + self-contained `resources/LaTeXML.catalog`
-  (same URN rewrites as the Perl catalog, paths re-rooted under
-  `resources/`). Script mirrors the Perl version line-for-line:
-  trang-with-catalog invocation, per-module URN fix-up sed pass for
-  both `LaTeXML*.rng` and `svg*.rng` outputs. Verified on this machine:
-  trang fails identically in Perl and Rust scripts due to a missing
-  `resolver.jar` — an environmental prerequisite unrelated to the port.
-- [ ] **Port `tools/compileschema` — stage 2 (rng → model).** Still
-  requires Perl's `LaTeXML::Common::Model::compileSchema`. Rust port
-  has `Model::compile_schema` at runtime but no serializer.
-  Acceptance: add a `--dump-model` flag on `latexml_oxide` that writes
-  the loaded schema to stdout in `.model` format, extend
-  `tools/compileschema.sh` to call it, then regenerate both
-  Perl-tree and Rust-tree `.model` copies from the same `.rnc` source
-  and diff against the Perl tool's output.
-
-### Architectural invariant: TL-version independence
+### TL-version independence
 
 Both Rust and Perl LaTeXML core engines are TL-version independent
 by design. The only TL-bound surfaces are:
@@ -186,8 +114,8 @@ by design. The only TL-bound surfaces are:
    ecosystem (xparse, lipsum, expl3-code.tex, hyperref, …) —
    resolved via `kpsewhich`.
 2. **Kernel-dumper output** (Rust-only artefact:
-   `resources/dumps/latex.dump.txt`) — generated against a specific
-   TL and frozen for fast load.
+   `resources/dumps/{plain,latex}.dump.txt`) — generated against
+   a specific TL and frozen for fast load.
 
 Mismatch between dump baseline and ambient PATH should produce a
 `Warn:latexml_dump TeXLive MISMATCH` warning at startup. Bugs that
@@ -198,1169 +126,197 @@ not the version-bound layer.
 
 CI runs on TL2023 (Ubuntu apt), local dev defaults to TL2025. Three
 alignment layers: (1) dump content regenerated under TL2023 via
-`REBUILD_PERL_FORMATS=1` (ada3ed79a), (2) kpsewhich path resolution,
-(3) CI-equivalent package set installed via `tlmgr install IEEEtran …`
-(INSTALL_CI_PACKAGES=1 wrapper).
+`REBUILD_PERL_FORMATS=1`, (2) kpsewhich path resolution, (3)
+CI-equivalent package set installed via `tlmgr install IEEEtran …`
+(`INSTALL_CI_PACKAGES=1` wrapper).
 
 Run to reproduce CI locally:
 `REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
 
-**Status (2026-04-24).** Local TL2025 is 1098/0/0. TL2023 gate is the
-remaining variable — run with
-`REBUILD_PERL_FORMATS=1 INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh`.
-Push gate active (`memory/feedback_ci_push_gate.md`): no push until
-the TL2023 run is green with **zero ignores**.
+### Schema generation (`LaTeXML.model`)
 
-### Base mission
-
-**Exhaustively translate Perl LaTeXML into faithful Rust so
-`~/data/10k_sandbox/` converts cleanly via `cortex_worker`.**
-
-**24h sprint cadence.** Cron `continue SYNC_STATUS` fires every 5 min
-(`memory/project_24h_sprint.md`). Each tick: pick one open residual
-(per priorities above), ≤1 commit, `cargo check --workspace`, memory
-bump.
-
-**Status counts.**
-- Tests: 1097/0/0 via `cargo test --release --tests` (44 binaries).
-- arxiv-examples/: 93+% of 101 papers OK.
-- 10k sandbox (2026-04-23 full sweep, `-j 16 --timeout 60`, binary
-  22adfc355): ok 7280 / conversion_error 566 / timeout 47 / abort 3 /
-  conversion_fatal 2 (clean-exit 7846/7898 = 99.34%; 0.48 pp below
-  `-j 8` baseline is CPU-contention timeouts, not code regressions).
-  Residual hard failures 5, all in catalogued classes (error-cascade
-  OOM 1112.6246; babel-french `\bbl@exp@aux` OOM 1710.03688 &
-  hep-ph0702114; pgfmath-infinite-loop OOM 1902.08705; undefined
-  xparse/pgfplots cascade 1803.03288). Session-128 residual-14 list
-  reduced by 5 (1203.5977, 1702.00409, 1611.04489, 1710.11417,
-  1802.08782 now ok or producing output).
-- Engine def coverage: 99.9% (2,455/2,457). Missing: `\directlua`,
-  `\ASCII` by design.
-- Package bindings: 100% (406+). Zero MISSING.
-- Dump: 25,172 entries; 6,154 installed at load. `LATEXML_NODUMP=1`
-  opts out.
-- CorTeX ZIP-to-ZIP pipeline production-ready.
-
-**See also:** [`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) | [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) | [`PERFORMANCE.md`](PERFORMANCE.md)
-
----
+The Rust port ships `resources/RelaxNG/LaTeXML.model` (336 lines,
+verbatim copy from Perl). Loaded at runtime by
+`latexml_core::common::model::load_schema`; compile-time codegen
+would save µs on minute-long sessions, so a runtime file remains
+the right trade-off. `tools/compileschema.sh` ports stage 1
+(rnc → rng); stage 2 (rng → model) still requires Perl's
+`LaTeXML::Common::Model::compileSchema`. Acceptance for stage 2:
+add a `--dump-model` flag on `latexml_oxide` that writes the
+loaded schema to stdout in `.model` format, extend
+`tools/compileschema.sh` to call it, regenerate both Perl-tree
+and Rust-tree `.model` from the same `.rnc`, diff against Perl
+output.
 
 ## Engine Files — Open Gaps
 
 | File | Status | Open Gaps |
 |------|--------|-----------|
-| base_parameter_types.rs | MINOR | `DirectoryList`/`CommaList` ported (token-stream encoding since Rust has no Array type). `DigestUntil` and `SanitizedVerbatim` landed 2026-04-21. Parameterized `CommaList:Type` form still unported (no Perl users). |
+| base_parameter_types.rs | MINOR | `DirectoryList`/`CommaList` ported. Parameterized `CommaList:Type` form unported (no Perl users). |
 | tex_box.rs | MINOR | Minor box dimension edge cases |
-| tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics |
+| tex_fonts.rs | MINOR | Missing: `\fontdimen` full array semantics (cross-cutting: `FontDef` parameter type simplified to `FontToken` — blocks per-font `\hyphenchar` tracking) |
 | tex_tables.rs | MINOR | Minor: padding CSS classes (XSLT concern) |
+| plain_base.rs | OPEN | Some closure-backed defs need conversion to Token bodies for dump round-trip (strict-Perl mission) |
+| latex_base.rs | OPEN | Closure-backed defs need conversion or relocation to `latex_constructs.rs` (strict-Perl mission) |
 
-**Cross-cutting:** `FontDef` parameter type simplified to `FontToken` — blocks full `\fontdimen`, per-font `\hyphenchar` tracking.
+**Unported:** `AmSTeX.pool.ltxml` (112 defs, ~30%, Plain TeX rare);
+`BibTeX.pool.ltxml` (956 defs, 0%, skipped via `--nobibtex`).
 
-**Unported:** `AmSTeX.pool.ltxml` (112 defs, ~30%, Plain TeX rare); `BibTeX.pool.ltxml` (956 defs, 0%, skipped via `--nobibtex`).
+**Permanent sandbox ignores:** ns1–ns5 (52_namespace, no DTD);
+2402.03300, 2410.10068, 2511.03798 (Perl also fails).
 
-Active round-17 workstreams: Def*-parity audit (see "DP" section
-below) + raw-TeX / expl3 kernel parity (D1-D2 + Long-horizon). Recent
-completed landings in git log; this file tracks open work only.
+**Perl-error-only papers** (excluded from parity target — Perl
+itself fails under the same `--preload=ar5iv.sty
+--path=~/git/ar5iv-bindings/bindings` profile):
 
-**Upstream Perl sync** (audited 2026-04-23 through commit `fdc8bf91`):
-Rust current with **all 19 recent upstream commits** reviewed. Only
-narrow gap found: `pstricks.tex.ltxml`'s two-step load — ported in
-`92b9b0d5c`. Audit scope: fdc8bf91 (pstricks/KeyVal), 8a5cd306
-(hyperref etoolbox), 70508320 (alignment-token #2775 — boxing-depth
-guard at `stomach.rs:703`), 7119a535 (Dumper spec — N/A, Rust uses
-url-encoding), 3a89a24d (Lrgroup U+27EE/27EF #2762 — `math_common.rs:937`),
-3b027351 (siunitx separators #2751), 285bb02b (iflimit deny-list #2771),
-dfeeb1b8 (pgfNumber double negation #2711 — `pgfmath_code_tex.rs:122`),
-21eeedf5 (ePub lang #2665), 3875cd64 (bibconfig KV #2683), 5082b034
-(CI-only), 48ad18db (Relation parameter — `tex_logic.rs:56`), d3084fc4
-(lx@ams@matrix@ → Base_XMath — `base_xmath.rs:977`), ab237405 (base→cls
-register moves — article_cls.rs:70, book_cls.rs:62, report_cls.rs:62),
-d4febb30 (DecodeColor error — `color_sty.rs:45`), 3c7b20db (UnTeX in
-patchcmd — `etoolbox_sty.rs:1287`), 7399c5a7 (Newlines CC_OTHER fix —
-`token.rs:572`, `tex_debugging.rs:116`), b5ea6f39 (subfloat sync),
-d1ac68ff (tableref trailing-brace — `deluxetable_sty.rs:117`),
-9557409d (bbox locked — `revtex4_support_sty.rs:115`). Prior 6
-spot-checked in memory cycle 59 (48ad18db [now verified], d81e955b,
-e6db0871, 50f0061d, acaab773, 4eb681c0). Explicit "Perl #NNNN" parity
-breadcrumbs live in `keyval.rs:326`, `stomach.rs:699`, `math_common.rs:927`,
-and other targeted call sites — the right primary audit path for
-future sync checks is grep for "Perl #" first, then diff the uncovered
-ranges.
+- `1207.6068` — Perl emits 30 errors (acknowledgements-only file,
+  no `\documentclass`)
+- `0909.3444` — Perl emits 2 errors (frenchb babel missing)
 
 ## Tikz — Known Diffs (vs Perl output)
 
 1. foreignObject transform Y / width/height
 2. Arrow tip shape (different path data)
 3. SVG viewBox/width — total dimensions differ slightly
-4. tikz matrix rendering uses `<svg:g class="ltx_tikzmatrix">` groups (Rust) vs inline-blocks (Perl)
-
-**Permanent sandbox ignores:** ns1–ns5 (52_namespace, no DTD); 2402.03300, 2410.10068, 2511.03798 (Perl also fails).
-
-**Perl-error-only papers** (excluded from parity target — Perl itself fails under the
-same `--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` profile):
-
-- `1207.6068` — Perl emits 30 errors (acknowledgements-only file, no `\documentclass`)
-- `0909.3444` — Perl emits 2 errors (frenchb babel missing)
-
----
-
-## Work Plan — Open TODOs
-
-Phase D0 (2k-sandbox, 84/84) and the test-suite refactor (round 17) are
-closed out; per-paper narration and session diaries for sessions ≤128
-live in git log and `memory/project_session_history.md`. What remains:
-
-### FN. `\font` primitive — Perl-faithful rewrite (NEW)
-
-**Symptom.** Current `tex_fonts.rs:52-141` `\font` translation has
-diverged from Perl's `LaTeXML/lib/LaTeXML/Engine/TeX_Fonts.pool.ltxml:82-120`
-in three structural dimensions. None are individually fatal but
-together they make `\global\font` and `\fontname\font` semantics
-fragile, and they leak into 6 downstream consumer files.
-
-**Specific divergences from Perl.**
-
-1. **Prototype mismatch.** Perl reads
-   `\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName`.
-   Rust currently has `\font Token SkipMatch:= SkipSpaces TeXFileName` —
-   missing both `SkipSpaces` before `Token` and before `SkipMatch:=`.
-   Causes input like `\font  \foo  =  cmr10` to misread the CS arg.
-2. **`at`/`scaled` read order.** Perl L88-89 reads
-   `at`/`scaled` AFTER decoding the fontname (so `decode_fontname`
-   runs without `at`/`scaled` first, then those are layered onto the
-   resulting size). Rust passes them as args INTO `decode_fontname`
-   on L60.
-3. **Storage shape.** Perl uses ONE keyed struct
-   `$key = 'fontinfo_' . $name [ . " at " . $at ]`, looked up via
-   `LookupValue($key)` with cache check (Perl L102-103: only build
-   fontinfo if not present). Rust splits into 4 separate state keys
-   per CS:
-     - `fontinfo_{cs}` — Stored::Font
-     - `font_shared_key_{cs}` — Stored::String pointing to the
-       Perl-shaped key
-     - `fontinfo_at_{cs}` — Stored::String of the "at" dimension
-     - `hyphenchar_{shared_key}` / `skewchar_{shared_key}` —
-       per-shared-key character defaults
-   Result: no cache check (every `\font\foo=cmr10` rebuilds), and
-   `\meaning\foo` / `\fontname\foo` go through Rust-only indirections
-   instead of Perl's single FontDef invoke pattern.
-4. **No FontDef class.** Perl `LaTeXML/lib/LaTeXML/Core/Definition/FontDef.pm`
-   is a `Definition::Primitive` subclass whose `invoke()` does:
-     ```perl
-     assignValue(current_FontDef => $$self{cs}, 'local');
-     assignValue(font => lookupValue('font')->merge(%$fontinfo), 'local');
-     return Box(undef, undef, undef, $$self{cs});
-     ```
-   Rust uses an inline `DefPrimitive!` closure with `font => props_opt`
-   that pre-bakes the merged Font at INSTALL time, not at INVOKE time.
-   This bakes-in is wrong: when `\font\foo=cmr10` is called inside a
-   group with custom `\hyphenchar\foo=...`, the invoke-time merge
-   should pick up the current group's hyphenchar via `$fontinfo`
-   indirection. With pre-baked closures, post-install hyphenchar
-   changes don't surface.
-
-**Plan.** Five-step Perl-faithful rewrite, accepted scope.
-
-- [x] **FN.1** Fix the prototype string in `tex_fonts.rs:52` to
-      `"\\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName"`.
-      **Done.** Verified zero observable diff on
-      `\font\foo=cmr10 / \font \bar = cmr10 / \font  \baz   =   cmr10 /
-      \global\font\quux=cmr10` baseline (`Token` does not auto-skip
-      spaces in Rust gullet, but the LaTeX mouth's catcode-10 absorption
-      already eats whitespace following control sequences, so observable
-      behavior is unchanged on real-world LaTeX inputs). Workspace tests
-      still 1107/0/0.
-- [ ] **FN.2** Reorder `decode_fontname` / `at` / `scaled` reads to
-      match Perl L82-95: read `at`/`scaled` AFTER `decode_fontname`,
-      then call `$size = $$props{size}; $$props{size} = $size * $sc / 1000`
-      (or `* $at / $size` for the `at` form). Match Perl semantics
-      exactly: `at <dim>` sets size to the dim; `scaled N` multiplies
-      the decoded size by N/1000.
-- [ ] **FN.3** Introduce a `FontDef` Rust struct equivalent to
-      `LaTeXML::Core::Definition::FontDef`: `{ cs: Token, font_id_key:
-      Cow<str> }` with an `invoke()` method that mirrors Perl
-      FontDef.pm L38-45. Hook it into the `Definition` enum (or
-      whatever Rust uses for primitive-with-data — see how
-      `RegisterDef` is structured) so that the install-time call can
-      pass `(cs, key)` and the invoke-time logic does the lookup-merge.
-- [ ] **FN.4** Migrate storage to the Perl-shaped single key
-      `fontinfo_{name}[ at {at}]`. Add the `LookupValue` cache check
-      (Perl L102-103). Remove the four-state-key shape
-      (`font_shared_key_*`, `fontinfo_at_*`, etc.). Stored::Font
-      retains the merged props; `at`/`hyphenchar`/`skewchar` go inside
-      the struct, not as parallel state values.
-- [ ] **FN.5** Update consumers to read from the Perl-shaped key.
-      Files affected (as of 2026-04-26):
-        - `latexml_package/src/engine/tex_hyphenation.rs:62,75` —
-          reads `hyphenchar_{shared_key}`
-        - `latexml_package/src/engine/tex_debugging.rs:85,93` —
-          `\meaning\foo` reads `fontinfo_at_{cs}`
-        - `latexml_package/src/engine/etex.rs:9,11,124` — `\fontchardef`
-          / `\fontcharht` / `\fontcharwd` read `fontinfo_{cs}`
-        - `latexml_package/src/engine/tex_macro.rs:229` — `\fontname`
-          reads `fontinfo_{lookup_cs}`
-        - `latexml_core/src/state.rs:836,838` — `\meaning` formatter
-          for FontDef
-        - `latexml_package/src/dump_writer/plain_dump.rs:39-41` —
-          dump round-trip for fontinfo
-
-**Acceptance.** All five FN.* substeps complete. New regression
-tests under `latexml_oxide/tests/structure/font_*.tex` cover the
-prototype, `at`/`scaled` semantics, cache-reuse, `\global\font`,
-post-install `\hyphenchar\foo` change, and `\fontname\font`.
-Workspace tests stable at 1108/0/0 or higher. Sandbox unchanged
-(this is structural cleanup, not a regression-recovery push).
-
-**Why this matters.** `\font` is a fundamental TeX primitive
-exercised by every paper. The current 4-state-key shape leaks Rust
-internals into the `\meaning` and `\fontname` formatters, making
-the code brittle to consumer changes. Switching to the Perl-shaped
-single key + FontDef class brings parity with the Perl reference
-and removes the indirection layer that has caused
-`current_FontDef` resets to fail under nested groups in the past
-(e.g., 1709.05096 AIAA cluster).
-
-### POST-AR-FLIP MEASUREMENT (2026-04-26 in-progress)
-
-Full sandbox run launched against current HEAD with 16 workers,
-120s timeout. **At 41% (3252/7898):**
-
-| Status | Count | Meaning |
-|---|---|---|
-| `:0` | 2463 | clean (rc=0, no warnings) |
-| `:1` | 767 | warnings only (rc=0, sandbox-clean) |
-| `:2` | **19** | errors |
-| `:3` | **1** | fatal (`1401.0971` — tikz petri timeout per MEMORY.md) |
-
-**Projected final: ~45-50 error papers out of 7898 (~99.4% clean),
-down from ~196 (97.5%) pre-AR**. Top error clusters at 41%:
-
-| Cluster | # | Status |
-|---|---|---|
-| mhchem `\regex_const:Nn` (expl3 regex) | 4 | task #11 — deferred, dump_reader gates `:`-named CS bodies |
-| mode/group mismatches | 4 | individual frame bugs across papers |
-| `\@nil` undefined (pgf cascade) | 2 | **pre-existing** (verified — same in pre-AR snapshot for 1304.0737); pgfutil-common.tex catcode issues |
-| `\shipout` undefined | 2 | **Perl-also-broken** per `feedback_sandbox_perl_baseline.md` (acknowledgements-only files, no `\documentclass`) |
-| babel-language undefined | 2 | partly Perl-also-broken (frenchb), partly babel-french deferred |
-| AmSTeX `\section` | 1 | `documentstyle{amsppt}` → AmSTeX.pool route, `project_amstex_pool_dispatcher.md` |
-| IEEE `\ifCLASSINFOpdf` | 1 | per-class issue |
-| array `\NC@list` | 1 | array.sty internal |
-| mn `\bullets` | 1 | mn.cls related |
-| `\newmarks` | 1 | etex extension stub |
-
-**Verified non-regression:** `1304.0737` (pgf cascade + `\@nil`)
-errored identically in pre-AR snapshot — AR. flip introduces no new
-regressions for this paper. Spot-check confirms AR. is purely
-additive (more errors cleared, none introduced).
-
-### FINAL CLUSTER TRIAGE (89% completion, 7059/7898)
-
-**135 errors + 3 fatals + 5 empty = ~143 problem papers** projected
-final ~155-165 / 7898 (~98% clean), down from ~196 (97.5%) pre-AR.
-Net improvement: 30-40 papers cleared. Less dramatic than early
-projection (had been extrapolating from initial AR-only-improved
-papers; later batches surfaced clusters AR. didn't address).
-
-**Top clusters (by first-error pattern, sed-normalized):**
-
-| # | Cluster | Status |
-|---|---|---|
-| 14 | `XMApp` in `<ltx:text>` (math leak) | task #11 (math-parser shape) |
-| 11 | `XMTok` in `<ltx:text>` (math leak) | task #11 |
-| 9 | `\regex_const:Nn` undefined (mhchem/expl3) | task #11 (expl3 regex) |
-| 6 | `} A closing } was supposed to be here` | brace-mismatch / gullet |
-| 5 | `XMApp` in `<ltx:p>` | task #11 |
-| 5 | `\end{equation} Attempt to end mode display_math` | math env close |
-| 5 | `}` close group at vertical | mode-switch |
-| 4 | `\@nil` undefined | pgf cascade (pre-existing, verified non-AR) |
-| 3 | `\lx@end@gen@cases` boxing group | amsmath cases |
-| 3 | `XMArray` in `<ltx:p>` | task #11 |
-| 3 | `\columns` undefined | elsart legacy (task #15) |
-| 3 | `\CITE` undefined | custom .sty per-paper |
-| 3 | `<box> was supposed to be here` | brace-mismatch |
-| 3 | `\affil` undefined | revtex/aastex |
-| 2 | `\+` undefined | core kernel CS gap |
-| 2 | `\shipout` undefined | Perl-also-broken |
-| 2 | `\section` undefined | AmSTeX dispatcher |
-| 2 | `\gnuplot` undefined | gnuplot.sty |
-| 2 | `\DeclareKeys` undefined | l3keys2e/expl3 |
-| 2 | `\citeauthoryear` undefined | natbib |
-| 2 | `\box_new:N` undefined | task #11 (expl3) |
-| 2 | `\address` undefined | revtex per-paper |
-
-**Aggregate by cluster type:**
-- **Task #11 (math-parser + expl3 regex/box):** ~46 papers — by far
-  the largest. Multi-week deep work per `project_kernel_dump_parity.md`.
-- **Brace/mode mismatches:** ~22 papers — per-paper investigations,
-  some gullet-related (`project_revtex3_faketext_mode.md`).
-- **Per-class long-tail (revtex/aastex/aas/elsart/IEEE/AmSTeX):**
-  ~25 papers — per-class CS gaps, partly task #15.
-- **Perl-also-broken / out of worklist:** 4-6 papers
-  (`feedback_sandbox_perl_baseline.md`).
-- **Pre-existing pgf cascade (`\@nil`):** 4 papers — same as pre-AR
-  baseline.
-
-**Bottom line for further error reduction:**
-- Most of the remaining ~140 papers fall into deep/multi-week areas
-  (task #11 math-parser, expl3 kernel port).
-- Per-paper investigations average several hours each.
-- The AR. flip captured the easy wins; remaining wins require
-  structural rewrites or specific package-by-package fleshing.
-
-### FINAL RESULT (sandbox complete 2026-04-26)
-
-**Full sandbox completion: 7717/7898 OK = 97.71% clean.**
-
-| Bucket | Count |
-|---|---|
-| Status:0 (clean) | 5119 |
-| Status:1 (warnings only, rc=0, sandbox-OK) | 2598 |
-| Status:2 (errors) | 172 |
-| Status:3 (fatals) | 3 |
-| Empty/abort (SIGABRT/SIGKILL) | 6 |
-| **Total problem papers** | **181** |
-
-**Driver script categories:** 172 conversion_error, 3 conversion_fatal,
-2 abort. **Net change vs `sandbox_full_2026-04-26c_postfix` baseline
-(196 problem papers): 15-20 papers cleared.**
-
-Key insight: the AR. flip and other session fixes did clear papers,
-but many AR-flip-recovered papers gained new errors from raw .sty
-load cascades (pgf catcode, mhchem regex, expl3 dependencies) that
-partially offset the wins. The dominant remaining clusters are
-deep multi-week areas (math-parser shape, expl3 kernel) per the
-cluster table above.
-
-### SS. Sandbox snapshot is stale (resolved)
-
-`sandbox_full_2026-04-26c_postfix` was generated 2026-04-25, BEFORE
-commits `2e5769f08` (`\end{document}` dangling-group cleanup) and
-`4e2b3777b` (`\documentstyle` .sty-before-.cls dispatch) landed.
-At least one cluster from that snapshot is already resolved:
-
-- **`\end{document}: Attempt to end mode internal_vertical in
-  restricted_horizontal`** (5 single-error papers — `1112.0082,
-  1306.0904, 1309.2191, 1404.1853, 1505.00149`). Spot-checked
-  `1112.0082` and `1306.0904` 2026-04-26: both now report
-  *"Conversion complete: 1 warning"* (rc=0, sandbox-clean). The
-  warning is the cleanup-loop's "open groups, environments or
-  conditionals" notice — informative, not blocking.
-
-Re-running task #23 ("Sandbox: re-run after each fix and prune
-worklist") against current HEAD will produce a cleaner baseline.
-Several other 1-error patterns in the snapshot are likely also
-already-resolved by the post-2026-04-25 commits and just haven't
-been re-measured.
-
-### AR. ar5iv.sty `localrawstyles` ↔ Perl `rawstyles` divergence (NEW)
-
-**Symptom.** Papers using system-installed but unbound .sty packages
-(colonequals, mathdots, comment, …) succeed in Perl LaTeXML but fail
-in Rust with `\<missing-cs> undefined`. Confirmed reproducer:
-
-```bash
-# Perl: 0 errors, loads colonequals.sty from /usr/local/texlive...
-latexml --preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings paper.tex
-
-# Rust: error \colonequals undefined
-cargo run --release --bin latexml_oxide -- paper.tex
-```
-
-with paper:
-```tex
-\documentclass{article}
-\usepackage{colonequals}
-\begin{document} $f \colonequals 1$ \end{document}
-```
-
-**Root cause (verified 2026-04-26).**
-- `LaTeXML/lib/LaTeXML/Package/` has NO `colonequals.sty.ltxml`.
-- `~/git/ar5iv-bindings/bindings/` has NO `colonequals.sty.ltxml`.
-- Perl `ar5iv.sty.ltxml` passes `rawstyles` →
-  `INCLUDE_STYLES=true` → `notex=false`, **kpsewhich enabled**.
-  Perl's `\usepackage{colonequals}` falls through to kpsewhich,
-  finds the system .sty in `/usr/local/texlive/.../oberdiek/`, loads
-  raw — `\colonequals` defined.
-- Rust `latexml_contrib/src/ar5iv_sty.rs:14` passes `localrawstyles`
-  → `INCLUDE_STYLES='searchpaths'` → `notex=false` AND
-  `searchpaths_only=true`, **kpsewhich SUPPRESSED**. Rust's
-  `find_file_aux` skips the system-texmf fallback. `colonequals.sty`
-  isn't on the user-supplied SEARCHPATHS, so the lookup fails.
-- The divergence was introduced in commit `9869267eb` (2026-04-23,
-  "switches ar5iv.sty from `rawstyles` to `localrawstyles` per user
-  directive") with the explicit follow-up note: *"the Perl
-  ar5iv.sty.ltxml (separate repo) still passes `rawstyles`; keeping it
-  in sync is a separate change once the user directs that repo's
-  update."*
-
-**Sandbox impact estimate.** Single-error papers in
-`sandbox_full_2026-04-26c_postfix` matching the "missing CS from
-system-installed package" pattern:
-- `1204.2526` (`\colonequals` from colonequals.sty)
-- `0806.0463` (`\excludeversion` from comment.sty)
-- … and many of the remaining 196 errors that bottom out in
-  per-package long-tail undefined-CS reports likely also depend on
-  this lookup path.
-
-**Plan.**
-
-- [x] **AR.1** Decided 2026-04-26: align Rust ar5iv with Perl
-      (`rawstyles`, kpsewhich enabled). The "Sandbox = Perl-error-free"
-      rule (`feedback_sandbox_perl_baseline.md`) is binding — Perl
-      successfully handles these papers, so Rust must too.
-      Determinism for archival conversion is provided by the
-      `tools/test_with_tl2023.sh` CI gate (TL2023 image pinning).
-- [x] **AR.2** Done. Flipped `latexml_contrib/src/ar5iv_sty.rs`
-      `localrawstyles` → `rawstyles`. Verified `\colonequals` minimal
-      repro: 1 error → 0 (kpsewhich now finds
-      `/usr/local/texlive/.../oberdiek/colonequals.sty`). Workspace
-      tests 1108/0/0 unchanged.
-- [ ] **AR.3** Update `wisdom_include_styles_tristate.md` to reflect
-      the post-flip state. Mark the "Rust uses localrawstyles" claim
-      as superseded.
-
-**Why not flipped here.** This is a high-impact change (every Rust
-sandbox conversion), and the original commit was explicitly
-user-directed. The right call needs explicit user OK before flipping.
-The finding is documented here as a candidate for the user to
-prioritize after FN. completes.
-
-### CB. Compile-time bottleneck — `latexml_package` codegen (NEW, next-up)
-
-**Symptom.** `cargo-timings` (2026-04-25 run, file
-`target/cargo-timings/cargo-timing-20260425T114827177Z-c735ed78fd4ba998.html`)
-shows `latexml_package` consuming ~95% of total wall-clock build time. The
-crate is a 4.9MB / ~93k-LOC monolith with ~11,200 invocations of derive
-proc-macros (`compile_prototype!` / `compile_expansion!` /
-`compile_replacement!` / `compile_tokenize!` / `load_model!` …) across
-~450 files under `src/package/` plus `src/engine/` (notably
-`latex_constructs.rs` at 9092 LOC). rustc's frontend is single-threaded
-per crate, so this single compile unit pins the GHA CI critical path.
-
-**Plan.** Layered, accepted scope:
-
-- [ ] **CB.1** Parallel rustc frontend. Add to a `.cargo/config.toml`
-      (CI-scoped if needed) `rustflags = ["-Z", "threads=8"]`. Already
-      on nightly; expected 2–3× win on this crate alone (parses +
-      name-resolution + type-check parallelize within a crate).
-- [ ] **CB.2** Bump LLVM codegen units for `latexml_package` release
-      profile in workspace `Cargo.toml`:
-      ```toml
-      [profile.release.package.latexml_package]
-      codegen-units = 256
-      ```
-      Helps the back-end with the 11k+ closures emitted by the proc-macro
-      expansions.
-- [ ] **CB.3** Extract `latexml_engine` as a separate crate.
-      Move `src/engine/` + `src/prelude/` + bootstrap modules
-      (`engine.rs`, `prelude.rs`, `xmath_helpers.rs` and any package
-      modules required by engine bootstrap) into a sibling crate.
-      Keeps `latexml_package` focused on the ~450 `*_sty.rs` /
-      `*_cls.rs` / `*_def.rs` package modules. Goal: two parallel
-      compile units instead of one. Mechanical refactor — most engine
-      files have no dependencies on `package/`. The shared
-      `latexml_codegen` proc-macros and `latexml_core` plumbing remain
-      common deps.
-- [ ] **CB.4** Diagnostic baseline + post-change measurement. Run with
-      `RUSTFLAGS="-Zself-profile -Zself-profile-events=default,args"`,
-      summarize with `summarize`, record top-3 passes
-      (`expand_invoc` vs `LLVM_passes` vs `type_check_crate`) before
-      and after CB.1–CB.3 in this section so we know which lever moved
-      the needle.
-
-**Other speed-up avenues to explore (ordered by likely ROI):**
-
-- [ ] **CB.5** Drop `latexml_core` dep from `latexml_codegen`. The
-      proc-macro crate currently uses only `latexml_core::util::text::*`.
-      Inline those helpers into the codegen crate (or factor them into
-      a tiny `latexml_text_util` no-dep leaf). Removes a forced serial
-      link in the dependency chain (`core → codegen → package`) and
-      shrinks the proc-macro `.so`.
-- [ ] **CB.6** Pre-compute proc-macro outputs at build time via
-      `build.rs` + `include!`. The `compile_prototype!` /
-      `compile_expansion!` / `compile_tokenize!` derives are pure
-      functions of the literal payload (regex tokenize → emit Rust).
-      A build script can scan source for these literals, run the
-      pipeline once, write `$OUT_DIR/compiled_prototypes.rs`, and call
-      sites become indexed lookups. Removes proc-macros from the
-      per-invocation critical path entirely; `target/` caches the
-      output like normal source. Highest source-side payoff but most
-      invasive.
-- [ ] **CB.7** `syn = "1.0"` → `syn = "2.0"` in `latexml_codegen`.
-      One-shot win on codegen-crate compile time + smaller proc-macro
-      surface. Migration is moderate (the few `Meta::NameValue` /
-      `Lit::Str` matchers need updating).
-- [ ] **CB.8** GHA caching. Verify `Swatinem/rust-cache@v2` (or
-      equivalent) is in place for `target/` + `~/.cargo/registry`, and
-      that release-profile builds run with `CARGO_INCREMENTAL=1` on CI.
-      Cold-cache CI is unfixable from source; warm cache should make
-      most CI runs trivial.
-- [ ] **CB.9** Split the package set further if CB.3 is insufficient.
-      Coarse alphabetical or family-based subcrates
-      (`latexml_packages_amsmath`, `latexml_packages_pgf`,
-      `latexml_packages_misc`) — leaves are mostly inter-independent
-      modulo a shared registry trait. Only pursued if cargo-timings
-      after CB.1+CB.2+CB.3 still shows `latexml_package` dominating.
-- [ ] **CB.10** Grep for the single largest macro hot-spots
-      (`latex_constructs.rs` — 9092 LOC; `pgfsys_latexml_def.rs` — 1858;
-      `etoolbox_sty.rs` — 1728) and consider per-file submodule split
-      to enable better incremental rebuilds when only one is touched.
-
-**Acceptance.** CI wall-clock cut by ≥40% on a cold-cache release build
-of the workspace; `cargo-timings` no longer shows `latexml_package` at
->70% of total. Test counts unchanged (1100/0/0 local TL2025).
-
-### DP. Def*-parity audit (round 17, fully triaged)
-
-**Tool:** `tools/audit_def_parity.py`; baselines `docs/def_parity_*.tsv`;
-batch plan `docs/DEF_PARITY_AUDIT.md`.
-
-**Engine fully triaged.** 14 residual kind-mismatches are all
-intentional divergences (WISDOM #38/#40/#41/#44). No actionable
-kind-flip work remains.
-
-**Package fully triaged (2026-04-23).** 187 kind-mismatch records in
-the baseline, but **zero UNREVIEWED under a 40-line detector
-back-window grep for `WISDOM #44|intentional|idiomatic`**. Every
-flagged flip has an in-source breadcrumb pointing at a per-file
-umbrella or the WISDOM #41/#44 tactical notes.
-
-Pattern-triage (the 11 catalogued clusters):
-
-| File | # | Pattern | Classification |
-|---|---|---|---|
-| texvc_sty | 30 | DefMacroI↔DefMath alias→direct-XMath | WISDOM #40 |
-| physics_sty | 22 | DefMacro(sub)↔DefPrimitive(imperative) | WISDOM #44 umbrella L178 + 19 per-site breadcrumbs |
-| pgfsys_latexml_def | 17 | DefConstructor-empty-template↔DefPrimitive-state | top-of-file + per-site |
-| babel_support_sty | 15 | DefPrimitiveI-literal↔DefMacro-text-alias | inline |
-| llncs_cls / svmult_cls \bbbX | 13+13 | DefPrimitiveI-glyph↔DefConstructor-template | inline at `:143` |
-| amsppt_sty | 10 | DefConstructor-XML↔DefMacro-LaTeX-shim | WISDOM #42 |
-| mn2e_support_sty | 9 | astronomy symbols | top-of-file |
-| revsymb_sty | 8 | DefConstructor-TeXDelimiter↔DefMacro | WISDOM #41 inline |
-| amsmath_sty | 2 | alignsafeOptional workaround | WISDOM #41 |
-
-Remaining 48 long-tail entries all match the 11 patterns above.
-
-**Completed sweeps.**
-- `scope => 'global'` (27 Perl occurrences across 9 packages): 26/27
-  ported; one gap closed c8a232ecb (graphicx `\includegraphics`).
-- `robust => 1` (31 occurrences): 12 ported (plain_base `\i`/`\j`
-  b55df04a9; latex_constructs `\makebox`/`\fbox`/`\framebox`
-  55b073fd7); 19 accented-letter DefPrimitiveI blocked on
-  case-mapping-pipeline rewrite (`DEF_PARITY_AUDIT.md` B1).
-- `protected => 1` (32 occurrences): all ported or structurally
-  adapted.
-- Perl upstream sync (2026-01 → 2026-03): all verified already-synced.
-  Fixed: aas_support `\aas@@fstack sizer=>#2` (4868a9a2f), natbib
-  unknown-citation Info (5836935f5), Locator 1-indexed columns #2671
-  (`dump_reader`). Queued (large-scope): pstricks_support refactor
-  fdc8bf91, inline_math→math rename 2b1ff6df, color-var inline styles
-  c2370ac3.
-- Perl upstream sync (2025-01 → 2025-12): re-audited; all ported.
-  Verified: \overunderset #2687, \Yinyang alias #2688, bibconfig
-  #2683, textunderscore refactor #2704, \includegraphics page option
-  #2677, orcidlink tikz dep #2681, grffile graphicx load #2699,
-  aastex base-class revtex4 #2698, Newlines #2700 (Explode/\string/
-  \meaning catcode-aware SPACE handling), pgfNumber double-negation
-  guard #2711, backsimeq U+22CD #2633, `c2370ac3` color-vars, and
-  several smaller fixes (#2665 epub lang, #2697 DecodeColor,
-  #2689 picScale, #2609 glossaries test skip, #2668 CI). Only
-  fdc8bf91 pstricks refactor + 2b1ff6df inline_math→math remain as
-  large-scope queued items — no actionable small-port gaps in 2025
-  upstream.
-
-**Top-3 ParameterType ports** (~20 package entries each collapse):
-`TeXDelimiter`, `Pair:Number`, `alignsafeOptional`. See WISDOM #41.
-
-**Round-17 real-port sprint (2026-04-24).** Small CS-set + RequirePackage
-audit sweep across packages. Real gaps closed: `\note{}` ported in
-elsart_support_core (7cd476335); `\index{}{}` math macro ported in
-proofwiki (248b1636f); `\bib@field@default@adsurl` Verbatim constructor
-in aa_support (9c76d5d45); `\author[]{}` override in mn2e_support
-(1aeb982a1 — approximate, missing andSplit helper); `\lxAddAnnotation`/
-`\lxWithAnnotation` stubs in latexml_sty (83c5cc8d6);
-`\lxRefDeclaration` stub (4580a8a1b); conditional `dcolumn`
-RequirePackage in mn2e (e48dc33ea); textcomp RequirePackage in
-french_ldf (904c35236); conditional `amsthm` RequirePackage in
-elsart_support (c49ae318d); `xspace` RequirePackage in glossaries
-(ec512487d). Beamer RequirePackage expansion reverted after
-regression. Every commit passes `cargo check --workspace`.
-
-### D1–D2. Residual sandbox aborts (~30 papers, ~0.4% of 7898)
-
-#### Session 2026-04-25 progress
-
-Cumulative reductions against the 2026-04-24 baseline (7898 papers,
-535 failures = 7363 ok, 497 conv_error, 35 abort, 3 fatal):
-- **#12 \ext@subfigure** (subfig binding) — 119 papers, fix `e93403169`
-- **#13 \languagename** (default in tex_hyphenation) — 50 papers, fix `fcdcbc828`
-- **#16 \la/\ga via DefMath in mn2e_support** — ~21 papers, fix `3d3b3153a`
-- **#17 finalize stack-overflow** — 8/9 papers, fix `74556fc8a`
-  (256 MB worker thread in latexml_oxide / latexmlmath_oxide /
-  cortex_worker; the recursion was finite-but-deep through
-  mark_xmnode_visibility_aux + has_namespace_usage + mark_seen_rec
-  chains, validated by `ulimit -s unlimited`)
-- **abort timeouts naturally cleared** by intermediate perf
-  improvements — 2/26 paper baseline measured (1308.1148, 1310.6857)
-
-Total session impact: ~200 papers cleared (>37% of original 535
-failures). Remaining residual: babel-french (#19, hep-ph0702114 +
-1710.03688), pgfmath (#21, 1902.08705), modern-xparse cascade
-(#20, 1803.03288), throughput-bound timeouts (~13 papers,
-expected to close as math-parser perf improves), expl3 kernel
-cluster (#11, ~290 papers, long-horizon).
-
-#### Earlier failure classes (session-128 sweep)
-
-Three failure classes in the session-128 sweep:
-
-1. **pgfkeys / raw-TeX expl3-group leaks.** Fix shipped b0b9852bd
-   (`load_tex_definitions` now digests `\ExplSyntaxOff` at EOF).
-   Residual on 1611.04489: 19 errors from 8 expl3 kernel IOW-family
-   CSes (`\__kernel_iow_with:Nnn`, `\iow_wrap:n(en|nnn)N`, `\iow_term:n`,
-   `\l_file_search_path_seq`, `\__file_name_expand_end:`,
-   `\__kernel_file_name_sanitize:n`). Perl has zero stubs — relies on
-   raw `expl3-code.tex` load; Rust's dump has 272 IOW entries but
-   they're blocked by `dump_reader.rs`'s `:`-key gate. Narrow widening
-   probed 2026-04-22 — infeasible (all 8 records carry CS tokens
-   failing `is_safe_colon_safe_e`'s `!body_has_cs`). Fix path: either
-   Long-horizon "Kernel-first dumper widening" or "Deep expl3 kernel
-   parity" (raw expl3-code.tex loads cleanly). Per user round-17:
-   "lipsum should load natively and cleanly."
-2. **Math-parser pathological-ambiguity timeouts** — 1403.4135,
-   1407.5769.
-3. **Preamble-heavy digestion timeouts** — 1210.1891 (hyperref →
-   etoolbox → kvoptions → nameref chain).
-
-[ ] **Per-paper diagnosis method.** Run Perl with same
-`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` flags; if
-Perl errors on same CS it's a shared bug (skip). Otherwise divergence
-is upstream of symptom — trace `.sty`/`.cls` option/hook machinery.
-
-### D3. Performance corpus
-
-Tier A corpus + per-phase audit (`LATEXML_POST_AUDIT=1`) + parallel
-Graphics worker landed round 17. Details in `PERFORMANCE.md`. Reproducer:
-`tools/run_perf_corpus.sh`. See commits `8df9c7b53` (audit flag),
-`aa3c7c1bb` (parallel graphics — 4-5.5× on image-heavy Tier A papers).
-
-- [~] **Vector-preserving PDF/EPS → SVG via inkscape/pdf2svg**
-  (tracks upstream [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)).
-  Opt-in via `--graphics-svg-threshold-kb N` on `latexml_oxide`. Runtime
-  falls back to ImageMagick `convert` when inkscape fails / is missing.
-  Timeout: 15 s default, `LATEXML_INKSCAPE_TIMEOUT_SECS`. Benchmarked
-  130× speedup on `fig8.pdf` (issue #902). CI installs inkscape.
-  PERFORMANCE.md has the validation table. Remaining:
-  - [ ] EPS support via the same path. **Blocked upstream**:
-    Inkscape 1.x dropped direct EPS/PS reading (relied on
-    ghostscript glue that was removed). `inkscape source.eps`
-    reports "Failed to open". Workarounds would be either (a) pipe
-    through `epstopdf source.eps stage.pdf && inkscape stage.pdf`,
-    adding a conversion step + `epstopdf` dependency, or (b) try
-    `pstoedit` which can emit SVG directly from PS/EPS. Neither is
-    compelling given that EPS files are often already raster-wrapped
-    (EPSF-of-a-TIFF style). Leaving EPS on the ImageMagick raster
-    path for now.
-  - [ ] Consider pdf2svg as a cheaper fallback when inkscape is
-    absent but pdf2svg is available — smaller install, simpler
-    flags. (Not blocking; inkscape covers the use cases.)
-
-
-Specific slow-convergence follow-ups:
-
-- [~] **1709.05096** — >90s wall under parallel load (digestion, not
-  post-processing). `Info:undefined:… KV:vattach …` scanning pattern
-  suggests a keyval loop paying per-row cost in a huge tabular.
-- [~] **1710.03688** — OOM at ~19 GB RSS during babel french.ldf load;
-  `\bbl@exp@aux` undefined (babel 3.x port gap).
-
-### D3b. Stability — libxml2 node lifetimes
-
-**Policy:** no direct `libxml::bindings::*` FFI calls from latexml. When
-a safe API is missing, add it to `~/git/rust-libxml` and
-vendor-patch/upstream. **Zero direct FFI call sites remaining** as of
-round 17 commit (see below).
-
-(Prior lifetime caveats moved to WISDOM.md #36–37.)
-
-- [~] Rc `Can not mutably reference a shared Node "text"` — guard raised
-  to 8192 (diagnostic). dcpic cluster converges. Follow-up: identify
-  semantic cause of high "text"-node refcounts (2000–8000) on dcpic.
-- [~] **Optional refinement (ready to verify, not yet
-  executed)**: downgrade `rebuild_idstore_from_dom` at `finalize()`
-  entry to a debug-only probe. Cycle 72 audit of the 5 call sites
-  the inline comment at `document.rs:244-253` worried about:
-  - `math_parser/parser.rs:456` (`replace_tree`): SAFE —
-    `replace_tree` calls `remove_node` which cascades `unrecord_id`
-    via `remove_node_aux` (`document.rs:3189-3211`).
-  - `math_parser/parser.rs:639` (`unbind_node` loop): SAFE —
-    preceded by `unrecord_node_ids(el_node)` at L633-635.
-  - `math_parser/parser.rs:690` (`replace_tree`): SAFE — same
-    mechanism as :456.
-  - `math_parser/parser.rs:856` (`unbind_node` loop): SAFE —
-    preceded by `unrecord_node_ids(mathnode)` at L854.
-  - `rewrite.rs:522` (`unbind_node` loop): SAFE — `replaced` Vec
-    walks `unrecord_node_ids` at L539-541 before the closure
-    invocation at L546.
-
-  So document.rs:244-253's hazard comment is **outdated**; all
-  referenced call sites now have proper ID-bookkeeping guards.
-  The remaining blocker is empirical: reproduce (or verify no-
-  longer-reproducible) the 1605.08055 SIGSEGV with the fallback
-  downgraded. That requires a 10k-sandbox run — not cheap per
-  cycle. Leaving as `[~]` (audited, not yet verified).
-  Lesson: the inline code comment should also be updated when the
-  verification lands.
-
-### Dump — deferred alias retry (session 128)
-
-- [ ] `\a → \@tabacckludge` — still hand-written `Let!` in
-  `latex_constructs.rs`. The dump serializer captured `\a` as an
-  Expandable `E` record (with `\@changed@cmd`-wrapped body), not a
-  PA let-alias, so the deferred-alias retry pass added in
-  `91c82d5a4` doesn't help. Either (a) teach the serializer to
-  detect "let-aliases preserved under _constructs" and emit them as
-  PA records, or (b) widen the outer M-gate to admit E records whose
-  body is a specific safe `\@changed@cmd` pattern. Deferred for now
-  — the hand-written `Let!` mirrors latex.ltx L10007 exactly and
-  has no behavioral downside.
-
-### D4. Performance — parallel scaling & allocations
-
-**Baseline (session 105, paper 0707.1173):** 1-worker 22.6s → 16-worker
-76.8s (29% per-worker efficiency). 14-core/20-thread machine. Peak RSS
-570 MB/process.
-
-- [~] Audit `.to_string()` (~1900 sites) — replace with `&str` /
-  interned symbols where the value goes into `HashMap<String,String>`.
-  **61 sites converted round 17** (commits `741809e6e` through
-  `7a5433cd4`), across 21 files spanning core, math parser, package
-  engine, and individual packages (amsmath, xcolor, listings,
-  enumitem, thmtools, xy, pgfsys, amscd, hyperref, fontenc, etc.).
-  Key tooling added to the core:
-  - `Tokens::eq_text` / `Tokens::starts_with_text`
-  - `ArgWrap::eq_text` / `ArgWrap::starts_with_text`
-  - `Stored::eq_text` / `Stored::starts_with_text` / `Stored::ends_with_text`
-  - `state::graphics_paths_contains` (zero-alloc membership)
-  Measured payoff (PERFORMANCE.md round-17 second refresh):
-  complex/si.tex −9%, several Tier A papers −2-7%, others flat.
-  Remaining sites are dominated by `Vec<String>` collections, format!
-  results, and other legitimate owned-allocations. Further cleanup
-  should be callgrind-guided, not blanket. **Pivoting** — next
-  perf work should target Stored-enum rationalisation (separate
-  long-horizon task) or Tokens deep-copy reduction.
-- [ ] Audit `String::from("...")` literals for interned conversions.
-- [ ] Replace `HashMap<String,String>` with `SymHashMap<SymStr>` in hot paths.
-  **Scoping (2026-04-22):** 66 `HashMap<String,String>` + 6
-  `HashMap<String,Stored>` + 0 `HashMap<String,Tokens>` = 72 total
-  call sites. Top-5 files by density: document.rs (11; mostly
-  `Option<HashMap<String,String>>` function-parameter attribute maps
-  — public API surface, invasive to migrate), amsmath_sty.rs (7),
-  store.rs (7), alignment.rs (6), latex_constructs.rs (5). The
-  document.rs cluster is dominated by per-call one-shot attribute
-  maps passed to `add_element`-style constructors; migrating would
-  require pre-interning each caller's keys and may not pay off if
-  the intern-lookup cost exceeds the saved `String` allocations for
-  ephemeral per-element maps. Higher ROI target is the
-  `HashMap<String,Stored>` variant (6 sites — long-lived state
-  tables in store.rs) where a key-type-only migration to
-  `SymHashMap<Stored>` keeps the API surface narrow. Dedicated
-  multi-hour session needed; not appropriate for short cron
-  fires.
-- [~] Audit `.clone()` in `document.rs` (~73), `latex_constructs.rs` (~73), `font.rs` (~39).
-  **Audit finding (round 17)**: the raw clone counts are misleading.
-  - `font.rs` (~39): almost all clones are on
-    `Option<Cow<'static, str>>` fields whose common-case variant is
-    `Cow::Borrowed("serif")`-style static-literal pointers (3 pointer
-    reads, no heap). The `.clone().or_else(|| other.clone())` pattern
-    in `make_concrete` / `merge_ref` looks redundant but costs
-    exactly one real clone either way.
-  - `document.rs` (~71): dominated by `self.node.clone()` patterns
-    (24+ sites). `libxml::tree::Node` is `Rc<RefCell<_Node>>` so
-    `.clone()` is an Rc refcount bump, not a DOM copy.
-  Real optimisation would require consuming-self API overloads and
-  an Rc-vs-Arc refcount audit — both invasive. Deferred as
-  low-ROI. The D4 allocation-hotspot work should instead chase
-  `.to_string()` on interner symbols and `Tokens` deep-copies —
-  those are where the real heap churn is.
-- [ ] Review `Tokens` cloning — pass `&Tokens` or `Cow` for read-only iteration.
-- [ ] Profile math parser RAM independently (Marpa chart, forest).
-- [ ] Investigate shared read-only engine state across processes (mmap dump).
-- [ ] Long-running daemon / process pool to amortize 570 MB startup.
-- [ ] Fork-based parallelism for CoW memory sharing.
-- [~] `lookup_value(key)` → `with_value(key, |v| …)` closure refactor
-  — 248 initial sites, ~12 converted (mathchar, pin_char, defined_as).
-  Remaining: `state.rs` (17), `binding/content.rs` (5), `keyval.rs` (4,
-  tricky — return `Option<Stored>`), `binding/counter/dialect.rs` (3).
-
-### D5. Math parser ambiguity
-
-Callgrind (math-heavy paper, session 105): Marpa dominates — transitive
-closure 34.3%, grammar precompute 8.3%, bv_scan 7.1%, AVL 6.8%.
-Marpa-related >60% CPU.
-
-- [~] Avoid `init_grammar()` fallback — reuse existing grammar on reset failure.
-  **Partial landing round 17.** The fallback path is still needed
-  (`testscripts_test` fixture demonstrates grammar-corruption patterns
-  that only clear after a fresh precompute), but the recovery ladder
-  is now: (1) clone `self.grammar` + trivial parse, (2) retry once —
-  covers transient state hiccups without reaching for init_grammar,
-  (3) full `init_grammar()` rebuild if both clone attempts fail, (4)
-  log + keep previous engine if init_grammar itself errors. Removed
-  the `init_grammar().unwrap()` panic — subsequent formula parses
-  fail cleanly (0 trees) rather than crashing the whole conversion.
-  The "avoid" goal remains aspirational; the real win is graceful
-  degradation, not elimination. Still-open refinement: instrument the
-  fallback call count on the 10k sandbox and identify the triggering
-  grammar cases to see if they are addressable at the grammar level.
-- [ ] Audit script attachment ambiguity (`{}^4{}_{12}C^{5+}` — 27 unique trees).
-- [ ] Early pruning: fail parses on inconsistency detection rather than post-hoc pragmas.
-- [ ] Enumerate grammar rules by parse-tree count contribution.
-- [ ] Document grammar ambiguity per category.
-Remaining semantic-ambiguity hotspots (see
-`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`; live audit via
-`LATEXML_PARSE_AUDIT=1`):
-
-1. `\sin[XY]` chain — 1022 trees / 10 unique (real semantic ambiguity)
+4. tikz matrix rendering uses `<svg:g class="ltx_tikzmatrix">`
+   groups (Rust) vs inline-blocks (Perl)
+
+## Triaged work — not actionable, kept for context
+
+Several large investigations have been triaged and folded into
+WISDOM.md / KNOWN_PERL_ERRORS.md. Pulling them out of the active
+TODO surface keeps this doc focused on the dump-parity mission.
+
+* **Def\*-parity audit** — engine 14 residual kind-mismatches and
+  package 187 records all reviewed. Every flip has an in-source
+  breadcrumb pointing at WISDOM #38/#40/#41/#44 or a per-file
+  umbrella. See `DEF_PARITY_AUDIT.md` for the catalogued
+  pattern triage. No actionable kind-flip work remains.
+* **`scope=>'global'`, `robust=>1`, `protected=>1`** — sweeps
+  complete (26/27, 12/31 ported, all 32 ported respectively).
+  Remaining `robust=>1` accented-letter sites blocked on a
+  case-mapping pipeline rewrite (`DEF_PARITY_AUDIT.md` B1).
+* **Perl upstream sync (2025-01 → 2026-04)** — all small
+  port-gaps closed; large-scope items queued
+  (pstricks_support refactor `fdc8bf91`, inline_math→math
+  rename `2b1ff6df`, color-var inline styles `c2370ac3`).
+  Future audits: grep for "Perl #" breadcrumbs first, then diff
+  uncovered ranges.
+* **`ar5iv.sty localrawstyles` flip** — resolved 2026-04-26.
+  Rust now uses `rawstyles` (kpsewhich enabled) matching Perl;
+  determinism via `tools/test_with_tl2023.sh` CI gate.
+* **`1112.6246`** — fixed 2026-04-24 (commit `d162803d2`).
+  `mn2e_support_sty.rs` was erroneously loading
+  `amsmath`+`amssymb`; Perl's `mn2e_support.sty.ltxml`
+  deliberately skips this. The `\cases` routing then mismatched.
+
+## Open structural follow-ups
+
+These are still actionable but secondary to the strict-Perl
+dump-parity mission. Pursue when dump work is in a parity-stable
+state.
+
+* **`\font` primitive Perl-faithful rewrite (FN.1–FN.5).**
+  Current `tex_fonts.rs:52-141` has diverged structurally from
+  Perl `TeX_Fonts.pool.ltxml:82-120` in three dimensions:
+  prototype mismatch, `at`/`scaled` read order, four-state-key
+  storage shape vs Perl's single keyed struct. FN.1 landed
+  (commit prior); FN.2–FN.5 pending. Six consumers need
+  migration when the storage shape flips.
+* **Compile-time bottleneck (CB.1–CB.10).** `latexml_package`
+  consumes ~95% of cold-cache build wall-clock. Layered fixes:
+  parallel rustc frontend (`-Z threads=8`), bumped LLVM
+  codegen-units, splitting `latexml_engine` out as a sibling
+  crate. Acceptance: ≥40% CI wall-clock reduction; tests
+  unchanged. Work proceeds opportunistically.
+* **Dump Let-alias preservation.** Perl serialises
+  `Lt('\cs','\target')` separately from full Expandable
+  `I(E(...))` records; our writer collapses both to `M E`. New
+  `L <cs> <target>` record type with a narrow loader gate would
+  recover wholesale `\filecontents`, `\fbox`, `\itshape`, `\ae`,
+  `\shipout`, etc.
+* **Vector-preserving PDF/EPS → SVG via inkscape/pdf2svg**
+  (tracks upstream
+  [brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)).
+  Inkscape PDF path landed (130× speedup on `fig8.pdf`). EPS
+  path blocked upstream — Inkscape 1.x dropped EPS support.
+  Workarounds: epstopdf pipe or pstoedit; not compelling.
+
+## Math parser — open ambiguity hotspots
+
+Live audit via `LATEXML_PARSE_AUDIT=1`; design context in
+`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`.
+
+1. `\sin[XY]` chain — 1022 trees / 10 unique (real semantic
+   ambiguity)
 2. `tr ρ / tr(XY) / rank M / …` — 100 / 8 unique
-3. `FGHa` OPFUNCTION cascade — 87 / 9 unique (genuine math ambiguity)
+3. `FGHa` OPFUNCTION cascade — 87 / 9 unique (genuine math
+   ambiguity)
 4. `a|a|+b|b|+c|c|` VERTBAR — 53 / 10 unique
 
-### Long-horizon — architectural rationalization
+Marpa-related CPU >60%: transitive closure 34.3%, grammar
+precompute 8.3%, bv_scan 7.1%, AVL 6.8% (callgrind, math-heavy
+paper). The grammar-recovery ladder is now graceful (clone +
+trivial parse → retry → full `init_grammar()` rebuild → keep
+previous engine on init failure); the panic-on-fallback path is
+gone.
 
-(l3hooks Perl-parity stub caveat moved to WISDOM.md #38.)
+Long-horizon: a categorical first-principles redesign that pushes
+disambiguation work into the grammar instead of post-hoc
+pragmas. Many recently-added pragmas
+(ConsistentLetterBlocks, AdjacentNumbersDontMultiply, etc.) are
+guards against grammar over-expression — a sharper category
+hierarchy would make them obsolete. See
+`MATH_GRAMMAR_FIRST_PRINCIPLES.md`.
 
-- [ ] **Kernel-first discipline for dumper widening** (user directive,
-  round 17). Cross-links the dumper audit and the expl3 kernel
-  parity tasks. Each failed staircase step in the dumper widening
-  is a signal that a specific runtime primitive is missing:
+## Long-horizon — architectural rationalisation
 
-  - Step 4 (1-CS body E records) regressed because the referenced
-    CS targets — often `\hook_*`, `\__regex_*`, `\__cmd_*` — are
-    not defined by our engine, so the admitted wrapper cascades
-    on expansion.
-  - Step 5 (all :-named E) regressed for the same root cause at
-    scale.
+Pursued only after the dump parity mission is closed.
 
-  **Discipline going forward**: every dumper widening step that
-  fails must be paired with a targeted Rust port in
-  `latexml_package/src/engine/` (or `latexml_core/` if truly
-  kernel-level) of the underlying primitive family. The dumper
-  and the engine advance together — the dumper can't admit
-  records whose bodies call primitives the engine doesn't execute.
+* **Deep dumper-reader parity audit.** Perl `Dumper.pm` is 392
+  lines, single-dispatch, no special cases. Our `dump_reader.rs`
+  is ~950 lines with multiple gates and a deferred-alias retry.
+  Strict-Perl pivot has already removed admission gates; next
+  steps remove the remaining gates one class at a time, with
+  the 83_expl3 test as canary. Acceptance:
+  `dump_reader.rs` halved in size, no special gates,
+  byte-identical dump consumption produces matching state
+  Perl-vs-Rust.
+* **Deep expl3 / LaTeX 3 kernel parity.** Goal:
+  `\usepackage{lipsum}` (or any expl3-first package) loads
+  cleanly without `SUPPRESS_*` flags or catcode safety-nets. The
+  raw expl3-code.tex load currently relies on suppression to
+  finish; that's the parity gap. Cross-links the dump-parity
+  mission — every primitive missing from the dump is also a
+  candidate for native port in `latexml_package/src/engine/`.
+* **Rationalize the `Stored` enum.** Universal value currency,
+  so its memory footprint and method dispatch is a first-order
+  driver. Variant set has grown organically; needs
+  size_of histogram + small/large variant split + closure
+  accessors mirroring `state::with_value`. Invasive — deferred
+  until D4 allocation hotspot work has more per-variant data.
+* **Pragma rationalisation.** Classify every current pragma into
+  {obsolete under redesign, still needed for genuine ambiguity,
+  still needed as engineering compromise}. Migration plan in a
+  design doc extending `MATH_GRAMMAR_FIRST_PRINCIPLES.md`.
 
-  Immediate primitive candidates from step 4/5 body analysis:
-  - ~~`\hook_*:n` family~~ — **resolved via Perl-parity stubs**,
-    see the completed l3hooks entry above. Not a native port;
-    Perl itself doesn't emulate hook storage.
-  - `\group_begin:`, `\group_end:` (already aliased to
-    `\begingroup`/`\endgroup` via PA, but blocked from the dump
-    under the `:`-key gate — see the "Known antipattern" below
-    for why they can't be admitted solo)
-  - `\exp_args:N*` family (expansion control)
-  - `\__kernel_*` internals used by the kernel setup
-  - `\cs_new_eq:NN`, `\cs_gset_protected:Npn`, etc. (cs-aliasing
-    and definition primitives)
+## Future-facing (not wired)
 
-  Targeted port suggestion: after the hook-stub parity fix, retry
-  the step-4/5 widening to re-profile which primitive family now
-  dominates the cascade. The hook fix is expected to unblock a
-  large fraction of PA/MPA records whose bodies called
-  `\hook_gput_code:nnn`; what remains should point to the next
-  family to port.
+Beyond-Perl directions worth revisiting only after parity is
+clean. Not loaded, not referenced by any compiled code path.
 
-- [ ] **Dump writer ↔ reader simplicity audit** (user directive,
-  round 17). Separate question from widening: are both the Rust
-  writer and reader as simple and universal as the Perl
-  equivalents?
-
-  Current state:
-  - Rust writer (`dump_writer.rs`, 525 lines): emits tab-separated
-    records from `(TableName, SymStr, Stored)` tuples. Schema
-    documented in the file header (M/E, M/PA, M/T, M/R, M/N, V,
-    C, LC/UC/SC/MC/DC). All state types covered.
-  - Rust reader (`dump_reader.rs`, 950 lines): text parser with
-    gates, deferred-alias retry pass, type dispatch.
-  - Perl writer+reader (`LaTeXML::Core::Dumper.pm`, 392 lines):
-    emits **Perl source code**. The dump is a `.pl` file that's
-    `require`-d. Each record becomes one sub call — `I(defn)`,
-    `V(key, value)`, `Lt(key, target)`, `N(...)`, etc. No parser,
-    no gates. Writer and reader share one object model with the
-    runtime.
-
-  Coverage parity exists. **Conceptual simplicity parity doesn't.**
-  Perl's dump is "code, not data"; ours is "data, not code". The
-  data choice forces a reader with gates because the reader can't
-  execute what it can't safely parse.
-
-  **Proposed direction** (to evaluate):
-  - Option A — keep text format but tighten semantics so the reader
-    becomes a flat dispatch table with no gates. Each record's
-    safety is the writer's responsibility (don't emit what can't
-    load); the reader just applies each record to the state.
-  - Option B — swap the text format for generated Rust source
-    (compiled via build.rs into a kernel_dump.rs module). Zero
-    runtime parsing, structural typing of records. Mirrors Perl's
-    code-not-data philosophy; downside is dump regen requires a
-    build.
-  - Option C — hybrid: keep text for arxiv-sandbox dumps (portable
-    across developer machines), compile to Rust for the kernel
-    dump that's embedded in the binary.
-
-  Cross-ref: the Deep Dumper-Reader Parity task below focuses on
-  runtime behavior (which records load cleanly); this task focuses
-  on architectural simplicity of the pair itself.
-
-- [ ] **Deep dumper-reader parity audit** (user directive round 17).
-  Parallel to the expl3 task below. Perl's `LaTeXML::Core::Dumper`
-  is 392 lines, single-dispatch, no special cases: each dump record
-  just calls `assign_internal($STATE, $table, $key, $value, 'global')`.
-  Our `dump_reader.rs` is 950 lines with three gates
-  (`is_at_internal`, `is_public_register`, `is_safe_let_alias`), a
-  deferred-alias retry pass, and explicit rejection of `:`-named
-  entries. The gap isn't in the data — both sides speak the same
-  tab-separated format. The gap is in the **runtime semantics
-  downstream of the reader**: every gate exists because enabling it
-  triggered a cascade (undefined-CS recovery loop, infinite expl3
-  expansion, etc.). Systematic path to parity:
-
-  **Step 1 — enumerate and classify the current gates**:
-  - `is_at_internal` — `@`-named CS, no `:` in key. Admits
-    `\@tabacckludge`-style aliases. Should always be safe.
-  - `is_public_register` — data starts with `R\t…` (CharDef /
-    Register). No hook/cascade risk; always safe.
-  - `is_safe_let_alias` — PA/MPA where neither key nor target
-    contains `:`. Recovers ~170 plain-LaTeX public aliases.
-  - Everything with `:` in the key — blocked. Includes ~8,914 M
-    entries and ~156 PA entries in our current latex.dump.txt.
-
-  **Step 2 — attempt narrow widenings, one class at a time**,
-  with the 83_expl3 test as the canary. Round-17 confirmed that
-  widening PA-with-colon-name-to-non-colon-target alone regresses
-  the test into an infinite loop because expl3.sty's own guards
-  misfire. PA and `:`-style M entries must be widened together,
-  and the expl3_sty.rs short-circuit must know about the new
-  coverage.
-
-  **Step 3 — for each regression, identify the specific runtime
-  feature missing in core/engine/package** and port it properly:
-  - If the symptom is "undefined CS" on a `:`-named expl3
-    primitive, port that primitive in `latexml_package/src/engine/`.
-  - If the symptom is a hook cascade, understand the hook
-    mechanism and port the hook primitives (`\hook_gput_code:nnn`,
-    `\hook_use:n`, etc.) natively.
-  - If the symptom is expansion looping, trace which forward-ref
-    closes the loop in Perl but not in Rust.
-
-  **Step 4 — when a gate is demonstrably not needed (all records
-  of that class load safely), remove it**. Target end state:
-  `dump_reader.rs` down to ~400 lines, no special gates, single
-  uniform dispatch matching Perl's streamlined pattern.
-
-  **Acceptance**:
-  1. `dump_reader.rs` line count halved (950 → ~400-500).
-  2. All three custom gates removed.
-  3. Deferred-alias retry pass no longer needed.
-  4. Full dump loads without error; every M/PA/C/LC/UC/SC/MC/DC
-     record round-trips cleanly.
-  5. Byte-identical latex.dump.txt consumption produces matching
-     state between Perl's `assign_internal` path and Rust's.
-
-  Tracks alongside the expl3 kernel parity task — the two share a
-  common root (faithful runtime semantics for everything the dump
-  can contain). Work here often directly unblocks work there.
-
-- [ ] **Deep expl3 / LaTeX 3 kernel parity** (round 17 directive,
-  `58617b6b6` diagnostic). Goal: `\usepackage{lipsum}` — or any
-  other expl3-first package — loads cleanly without error
-  suppression, catcode safety-nets, or dump-loader gate
-  exceptions. Subsequent package loads (tikz, etc.) should
-  compose cleanly.
-
-  **Evidence of current gaps**:
-  - `expl3_sty.rs` sets `SUPPRESS_UNDEFINED_ERRORS`,
-    `SUPPRESS_UNEXPECTED_ERRORS`, and `set_suppress_log_output`
-    around the raw `expl3-code.tex` load. Forward-ref errors are
-    being swallowed rather than avoided.
-  - `expl3_sty.rs`, `xparse_sty.rs`, `l3keys2e_sty.rs` all have
-    catcode restoration safety-nets after raw-file loading (space,
-    underscore, at, colon). If `\ExplSyntaxOff` worked correctly
-    these wouldn't be needed.
-  - `dump_reader.rs` blocks every `:`-named PA alias from loading,
-    even trivial ones like `\group_begin: PA \begingroup` — reflects
-    low trust in the downstream expl3 machinery.
-  - 1611.04489's failure cascade (`\group_begin:` on the stack
-    persisting through pgfutil-common.tex) is a *symptom* of the
-    partial port, not an isolated pgfkeys bug.
-
-  **Acceptance criteria**:
-  1. `\usepackage{lipsum}` loads with 0 errors, 0 warnings,
-     without the SUPPRESS_* flags or catcode safety-nets.
-  2. `\usepackage{lipsum}\usepackage{tikz}` loads both cleanly
-     and neither leaves state residue.
-  3. `dump_reader.rs` gate can admit `:`-named aliases that point
-     at safe targets (trivial primitives, not expl3 hooks) without
-     the current "both-non-colon" guard.
-  4. arxiv:1611.04489 / 1511.00722 / 1612.08368 convert with the
-     sandbox-expected error profile (which matches Perl's — for
-     1611.04489 that's 2 warnings, exit=0, 25 s).
-  5. Broader sandbox: any paper currently aborting with `\pgfkeys`
-     / `\pgfmath` undefined-CS cascades recovers. Session 128
-     counted these collectively as one of the three dominant
-     remaining abort classes (~8 papers in the 14-abort
-     residual).
-
-  Deferred — deep work. Requires a careful expl3-code.tex
-  run-through, identifying each forward-ref / hook / cascade that
-  currently breaks, and porting enough kernel primitives that the
-  raw loading succeeds on its own merit.
-
-  **Known antipattern to avoid** (round-17 experiment):
-  widening the `dump_reader.rs` gate to admit `:`-named PA aliases
-  like `\tex_let:D PA \let` IN ISOLATION (without also admitting
-  `:`-style M entries and adjusting the `expl3_sty.rs`
-  short-circuit) regresses the 83_expl3 test into an infinite loop
-  / 60 s timeout. The mechanism: `\tex_let:D` gets let-aliased to
-  `\let` → `expl3.sty`'s own guard thinks expl3 is "loaded" →
-  skips raw `\input expl3-code.tex` → post-guard code hits
-  `\__kernel_dependency_version_check:Nn`, `\ProcessOptions`,
-  `\keys_define:nn { sys }` which our gate still doesn't define
-  → undefined-CS recovery loop. PA widening and M widening must
-  land **together**, coordinated with the expl3_sty.rs
-  short-circuit logic.
-
-
-
-- [ ] **Rationalize pragma / semantics / grammar categories from first
-  principles.** Observation from round 17: many of the recently-added
-  pragmas (ConsistentLetterBlocks, AdjacentNumbersDontMultiply,
-  FencedLettersAreFunctionArguments, HigherOrderInvisibleOpsAreExceptions,
-  FlattenSimpleInvisibleTimesChains, …) are downstream *guards* that
-  correct for grammar over-expression — they exist because the Marpa
-  grammar admits parses that would not even be theoretically
-  reachable under a better-factored categorical hierarchy of
-  mathematical notation. `xy` as "function application vs
-  multiplication of two bare letters", `(x)` as "fenced expression vs
-  single-arg call", `f × f` as a flat binary product etc. are not
-  genuine mathematical ambiguities — they are artefacts of conflating
-  role-bearing categories (operator, function, coefficient, variable)
-  at the same lexical surface.
-
-  Near-term (done): enable the pragmas that already encode the correct
-  preferences so the forest is narrowed before post-processing.
-
-  Long-term: sit down with `docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md` and
-  redraw the boundary between (a) what the grammar produces, (b) what
-  semantic enrichment (role, fences, NUMBER/ID/OPERATOR distinctions)
-  adds, and (c) what pragmas legitimately prune. The goal is to push
-  work *earlier*: if a phenomenon can be made unreachable by a
-  sharper category (e.g. "bare letters cannot be operators unless
-  lexically marked as such"), the pragma that guards against it
-  becomes obsolete and can be deleted. Pragmas should only remain for
-  *genuine* semantic ambiguities that notation cannot disambiguate
-  — the four remaining hotspots listed above are candidates
-  (`\sin[XY]`, `tr ρ`, `FGHa`, `a|a|+b|b|+c|c|`).
-
-  Deliverable: a design doc (probably extending
-  `MATH_GRAMMAR_FIRST_PRINCIPLES.md`) that classifies every current
-  pragma into {obsolete under redesign, still needed for genuine
-  ambiguity, still needed as engineering compromise}, with a migration
-  plan for each. Not scheduled — tracked here so the categorical
-  rethink isn't forgotten when the near-term pragma list stabilises.
-
-- [ ] **Rationalize the `Stored` enum** (`latexml_core::common::store::Stored`).
-  Nearly every step in the core business logic assigns or looks up a
-  `Stored` value through the state API — macro bodies, counters,
-  graphics paths, keyval stores, registers, font specs, the lot.
-  Because the enum is the universal value currency, its memory
-  footprint and method-dispatch cost is a first-order driver of
-  overall conversion speed and RSS.
-
-  Round-17 observations supporting this:
-  - `arena::to_string(sym)` heap-allocates each time — motivated the
-    zero-alloc `state::graphics_paths_contains` helper landed today
-    (`<round-17>`), but the same waste pattern recurs across every
-    caller of `get_graphics_paths` / `get_search_paths` / etc.
-  - `Stored::clone()` shows up in callgrind as a non-trivial band
-    (session 116-117 already cut it from 1.02% → 0.17% by routing
-    hot paths through `state::with_meaning`, but the remaining 0.17%
-    is still a per-token cost at conversion scale).
-  - The variant set has grown organically (`String`, `Strings`,
-    `VecDequeStored`, `Number`, `Dimension`, `Glue`, `MuGlue`,
-    `RegisterValue`, `Tokens`, `Expandable`, `Meaning`, …) with
-    ad-hoc packing; likely overlap we could coalesce.
-
-  Proposed investigation:
-  1. Measure `size_of::<Stored>()` and the histogram of live-instance
-    variants on a representative paper (complex/si.tex and a
-    math-heavy paper).
-  2. Split hot variants into `Copy`-able small forms vs heap-carrying
-    forms; consider an enum-with-small-variants pattern
-    (`SmallStored` fitting in a `u64`/`u128`).
-  3. Add `with_*`-style closure accessors for every variant that
-    currently hands out owned data — mirror the `state::with_value`
-    refactor done for `lookup_value` (D4 tracks that separately).
-  4. Audit method dispatch: many `match`-on-variant call sites can be
-    pushed into inherent methods on `Stored` (`as_string()`,
-    `as_int()`, `as_tokens()`) with inlined fast-paths.
-
-  This is a high-payoff but invasive refactor — deferred until D4
-  allocation hotspot work has more per-variant data to guide the
-  redesign. Not scheduled.
-
-### Other structural follow-ups
-
-- [ ] **Dump Let-alias preservation.** Perl serialises
-  `Lt('\cs','\target')` (Let alias) separately from full Expandable
-  `I(E(...))` records; our Rust dump collapses both to `M E`, which
-  forces the loader's safety gate at `dump_reader.rs:177-191` to admit
-  *all* public-CS M records (cascades expl3/hook bodies) or *none*
-  (misses plain Let aliases latex.ltx relies on, e.g. `\let\a=\@tabacckludge`
-  at L10007). Workaround: explicit `Let!("\\a", ...)` in
-  `latex_constructs.rs`. Proper fix: new `L <cs> <target>` record type
-  with a narrow loader gate. Would recover `\filecontents`, `\fbox`,
-  `\itshape`, `\ae`, `\shipout`, etc. wholesale.
-
-### Future-facing / not-wired exploration
-
-The following designs are **intentionally kept out of the active
-engine wiring** — they describe beyond-Perl directions worth
-revisiting once the parity baseline is cleaner. Not loaded, not
-referenced by any compiled code path.
-
-- [ ] **Native l3hook storage** (post-parity beyond-Perl direction).
-  Perl's bindings handle l3hooks as no-op stubs (see the completed
-  "l3hooks — Perl-parity stub port" entry above). A richer Rust
-  implementation would actually store hook code per name, fire it at
-  `\hook_use:n{…}`, and let `\AtBeginDocument` / `\AtEndDocument` /
-  `\AtBeginEnvironment` route through it. Sketch:
-
-  1. `\hook_new:n{name}` — declare a hook (lazy: first `gput` creates).
-  2. `\hook_gput_code:nnn{name}{label}{code}` — `state::push_value("@l3hook:{name}", code)`.
-  3. `\hook_use:n{name}` — `state::with_vecdeque` + digest each.
-  4. `\hook_if_exist:nTF{name}{T}{F}`.
-  5. Parallel: `\AddToHook` → maps to `\hook_gput_code:nnn`, etc.
-
-  **Why not now**: Perl doesn't do this, so adopting it inside the
-  core engine risks divergent render output whenever a package
-  registers code into a hook that Perl silently drops. Any pursuit
-  should be behind a feature flag (e.g. `LATEXML_OXIDE_L3_HOOKS`)
-  and validated with a dedicated test corpus, not the parity test
-  suite.
-
-  **Placement when pursued**: a new standalone crate or a
-  `latexml_package/src/engine/latex_lthooks.rs` module behind a
-  `#[cfg(feature = "l3hooks")]` flag. Engine wiring must NOT be
-  added to the default path.
-
-  **Prerequisites before any of this is reasonable**:
-  - Dumper staircase complete / dump_reader simplified (this
-    unblocks the ambient test surface).
-  - A purpose-built hook test corpus with Perl/Rust A/B parity to
-    show the cases where "store and fire" changes output vs
-    "silently drop" — and confirm the changes are always
-    improvements, never regressions.
+* **Native l3hook storage.** Perl currently treats l3hooks as
+  no-op stubs (parity); a richer Rust implementation would
+  store hook code per name, fire it at `\hook_use:n{…}`. Sketch
+  in
+  [`memory/wisdom_lhook_perl_parity_stub.md`](../memory/wisdom_lhook_perl_parity_stub.md).
+  Behind a feature flag (`LATEXML_OXIDE_L3_HOOKS`) only; engine
+  default must NOT change without an A/B parity corpus showing
+  the change is always an improvement.
 
 ---
 
-> **Reminder:** Every entry ported from Perl must follow tightly the original semantics and nuances. Read the Perl source, translate precisely, preserve edge cases. The Perl code is the ground truth.
+> **Reminder:** Every entry ported from Perl must follow tightly
+> the original semantics and nuances. Read the Perl source,
+> translate precisely, preserve edge cases. The Perl code is the
+> ground truth.

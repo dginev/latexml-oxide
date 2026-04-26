@@ -1,10 +1,15 @@
-# Perl Dumper — How It Solves What Our Format v2 Cannot
+# Perl Dumper — On-Disk Record Format and Engine Hookup
+
+> **Active reference (2026-04-26).** Strict-Perl LoadFormat
+> mutual-exclusivity is now ON; the v3 structured-Parameter
+> encoding documented here is the active format. Section 5 below
+> ("Recommended implementation sequence") logs the historical
+> bisection that brought us here.
 
 Scope: a close reading of `LaTeXML/lib/LaTeXML/Core/Dumper.pm` plus the
 shipped `LaTeXML/blib/lib/LaTeXML/Engine/{plain,latex}_dump.pool.ltxml`,
 comparing line-for-line against our `dump_writer.rs` / `dump_reader.rs`
-to isolate exactly what Perl does that we do not — and which pieces
-unblock the D0 mutual-exclusivity flip.
+to keep the record format faithful.
 
 ## The three concrete problems we hit
 
@@ -218,27 +223,20 @@ flipping mutual-exclusivity:
    Perl's `dump_register` L371 — returns `None` when `getter` or
    `setter` is present.
 
-5. **(v3.e/v3.f) Mutual-exclusivity experiment ABANDONED (2026-04-18).**
-   We shipped an `LATEXML_DUMP_ONLY=1` env gate that made `_base.rs` skip
-   when the dump loaded (mirroring Perl's `LoadFormat`). Bisection showed
-   that ~296/415 tests passed under it at first, rising to 414/415 after
-   relocating closure-backed primitives and `\fontsize`. But the whole
-   experiment has been rolled back because **the design intention for
-   the Rust port is different from Perl's**:
-   - Perl's `_base.pool.ltxml` is interpreted `.ltxml` loading — a real
-     startup cost, hence Perl's mutual exclusion.
-   - Our `_base.rs` is ~3-5 ms of compiled Rust — no meaningful win from
-     skipping it.
-   - Under our unified design (`bootstrap → _base → dump → _constructs`,
-     always all four), closures in `_base.rs` are always defined;
-     serializable state from the dump layers on top via add-only; no
-     special "dump-only" mode is needed.
+5. **(v3.e/v3.f) Mutual-exclusivity REVIVED (2026-04-26 strict-Perl
+   pivot).** A 2026-04-18 bisection of `LATEXML_DUMP_ONLY=1` left this
+   path on the back-burner under the older "unified design" (always run
+   bootstrap → _base → dump → _constructs). User directive 2026-04-26
+   reversed that decision: the Rust port now mirrors Perl's mutual
+   exclusivity exactly — `bootstrap → dump → constructs` when the dump
+   is on disk, `bootstrap → base → constructs` otherwise. See
+   [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) for the active
+   parity audit and [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission" for
+   the rationale (the dump must be a faithful Perl translation, not a
+   Rust-flavored alternate path).
 
-   The v3 structured Parameter encoding (v3.a-v3.c) stays landed — it
-   keeps the dump format correct for `Until:`/`Match:` delimiters even
-   under normal operation. Mutual-exclusivity itself is no longer a
-   goal. See `memory/project_load_order_design.md` for the authoritative
-   design note.
+   The v3 structured Parameter encoding (v3.a-v3.c) remains the active
+   on-disk format.
 
 ## References
 

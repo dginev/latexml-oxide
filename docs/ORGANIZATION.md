@@ -36,6 +36,10 @@ LaTeX.pool
 ```
 
 ### Rust
+
+Strict-Perl `LoadFormat` mutual exclusivity (commit `0c4d609ad` and
+follow-ups). Either dump XOR base, never both:
+
 ```
 tex.rs                     (≈ TeX.pool + Base.pool combined)
 ├── base_schema
@@ -47,17 +51,28 @@ tex.rs                     (≈ TeX.pool + Base.pool combined)
 ├── pdftex
 ├── base_deprecated
 ├── plain_bootstrap        (≈ plain_bootstrap.pool.ltxml)
-├── plain_base             (≈ plain_base.pool.ltxml)
+├── stage_snapshot("plain_bootstrap")    ← diff baseline for `--init=plain.tex`
+├── if dump available && !LATEXML_NODUMP:
+│     plain_dump           (runtime loader for plain.dump.txt)
+│   else:
+│     plain_base           (≈ plain_base.pool.ltxml)
 └── plain_constructs       (≈ plain_constructs.pool.ltxml)
     └── math_common        (≈ math_common.pool.ltxml)
 
 latex.rs                   (≈ LaTeX.pool)
 ├── LoadPool!("TeX")       (loads tex.rs above)
 ├── latex_bootstrap.rs     (≈ latex_bootstrap.pool.ltxml)
-├── latex_base.rs          (≈ latex_base.pool.ltxml)
-├── latex_dump             (precompiled latex.ltx state)
+├── stage_snapshot("latex_bootstrap")    ← diff baseline for `--init=latex.ltx`
+├── if dump available && !LATEXML_NODUMP:
+│     latex_dump           (runtime loader for latex.dump.txt)
+│   else:
+│     latex_base.rs        (≈ latex_base.pool.ltxml)
 └── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, ~8675 lines, sections C.1–C.15)
 ```
+
+Mirrors Perl `Package.pm:LoadFormat` L2734-2752 exactly. See
+[`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) for the
+parity audit.
 
 ## File-by-file mapping
 
@@ -102,8 +117,11 @@ latex.rs                   (≈ LaTeX.pool)
 | `plain_constructs.pool.ltxml` | `plain_constructs.rs` | Font commands, accents, alignment, footnotes |
 | `math_common.pool.ltxml` | `math_common.rs` | Greek, operators, relations, arrows, delimiters, log functions |
 
-Loading chain in `tex.rs`:
-`InnerPool!(plain_bootstrap)` → `InnerPool!(plain_base)` → `InnerPool!(plain_constructs)` → (which loads `InnerPool!(math_common)`)
+Loading chain in `tex.rs` (strict-Perl `LoadFormat`):
+`InnerPool!(plain_bootstrap)` → `stage_snapshot("plain_bootstrap")`
+→ EITHER `InnerPool!(plain_dump)` OR `InnerPool!(plain_base)`
+(mutually exclusive) → `InnerPool!(plain_constructs)` (which loads
+`InnerPool!(math_common)`).
 
 ### LaTeX format (LoadFormat 'latex')
 
@@ -113,8 +131,11 @@ Loading chain in `tex.rs`:
 | `latex_base.pool.ltxml` | `latex_base.rs` | Infrastructure: DefMacro, Let, DefRegister, RawTeX |
 | `latex_constructs.pool.ltxml` | `latex_constructs.rs` | All constructors/environments (~8675 lines, C.1–C.15) |
 
-Loading chain in `latex.rs`:
-`LoadPool!("TeX")` → `InnerPool!(latex_bootstrap)` → `InnerPool!(latex_base)` → `latex_dump::load_definitions()` → `InnerPool!(latex_constructs)`
+Loading chain in `latex.rs` (strict-Perl `LoadFormat`):
+`LoadPool!("TeX")` → `InnerPool!(latex_bootstrap)` →
+`stage_snapshot("latex_bootstrap")` → EITHER `InnerPool!(latex_dump)`
+OR `InnerPool!(latex_base)` (mutually exclusive) →
+`InnerPool!(latex_constructs)`.
 
 ### LaTeX constructs — section mapping
 
@@ -153,5 +174,5 @@ definitions organized by Lamport chapter with section comment headers.
 | Rust file | Purpose |
 |---|---|
 | `engine.rs` | Module declarations (Rust boilerplate) |
-| `plain_dump.rs` | Precompiled plain.ltx state (auto-generated) |
-| `latex_dump.rs` | Precompiled latex.ltx state (auto-generated) |
+| `plain_dump.rs` | Runtime loader for `resources/dumps/plain.dump.txt` (delegates to `dump_reader`) |
+| `latex_dump.rs` | Runtime loader for `resources/dumps/latex.dump.txt` (delegates to `dump_reader`) |
