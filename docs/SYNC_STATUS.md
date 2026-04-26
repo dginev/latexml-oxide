@@ -467,7 +467,29 @@ papers; later batches surfaced clusters AR. didn't address).
 - The AR. flip captured the easy wins; remaining wins require
   structural rewrites or specific package-by-package fleshing.
 
-Re-tally pending full run completion (~10% remaining).
+### FINAL RESULT (sandbox complete 2026-04-26)
+
+**Full sandbox completion: 7717/7898 OK = 97.71% clean.**
+
+| Bucket | Count |
+|---|---|
+| Status:0 (clean) | 5119 |
+| Status:1 (warnings only, rc=0, sandbox-OK) | 2598 |
+| Status:2 (errors) | 172 |
+| Status:3 (fatals) | 3 |
+| Empty/abort (SIGABRT/SIGKILL) | 6 |
+| **Total problem papers** | **181** |
+
+**Driver script categories:** 172 conversion_error, 3 conversion_fatal,
+2 abort. **Net change vs `sandbox_full_2026-04-26c_postfix` baseline
+(196 problem papers): 15-20 papers cleared.**
+
+Key insight: the AR. flip and other session fixes did clear papers,
+but many AR-flip-recovered papers gained new errors from raw .sty
+load cascades (pgf catcode, mhchem regex, expl3 dependencies) that
+partially offset the wins. The dominant remaining clusters are
+deep multi-week areas (math-parser shape, expl3 kernel) per the
+cluster table above.
 
 ### SS. Sandbox snapshot is stale (resolved)
 
