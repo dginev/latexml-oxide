@@ -53,8 +53,26 @@ are LOWERED until the dumps are complete and Perl-faithful.
   `\unexpanded`/`\the`/`\detokenize`/`\showthe`),
   `Expandable::new` copies it through, gullet checks both
   `cs.text` and alias. `\documentclass{article}` errors
-  4 → 2 (q_no_value × 2 gone). Sandbox rerun in progress.
+  4 → 2 (q_no_value × 2 gone).
+  **10k_sandbox_failures rerun (181 papers, 2026-04-26 13:25):**
+  Pre-fix: 100% conversion_fatal/abort/timeout. Post-fix:
+  2 ok (clean HTML), 12 conversion_error (HTML w/ recoverable
+  errors), 118 conversion_fatal, 22 abort, 24 timeout, 3 error.
+  **14 papers (7.7%) recovered to HTML output** —
+  `hep-th9609235` (18KB) and `math9712228` (50KB) fully clean.
   Documented in [wisdom_deferred_commands_alias.md].
+* **NEXT cluster (12+ papers, 49 deterministic errors each)**:
+  `\group_begin:` boxing-group close mismatch during expl3 raw-load.
+  Pattern: `\if_case:w` warns "Missing number" near expl3.sty load,
+  then `}` closes a `\begingroup`-frame triggering 49 successive
+  boxing-group errors. The cascade then nukes definitions like
+  `\author`/`\sqrt` (4974+ undefined errors per paper). All 12
+  conversion_error papers exhibit this pattern with EXACTLY 49
+  boxing-group errors — deterministic structural divergence
+  during expl3 init. Likely upstream cause of many of the 118
+  conversion_fatal papers too. Investigation deferred to next
+  session — affecting papers loaded with raw expl3.sty (not
+  ar5iv-bundled expl3 codepath).
 * **Plain dump (the easier target — perfect this first).**
   Currently 1196 entries vs Perl's ~1238. ~36 non-`\lx@` extras
   remain in the Rust dump that Perl's `plain_dump.pool.ltxml`
