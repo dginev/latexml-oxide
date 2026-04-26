@@ -137,7 +137,79 @@ The strict-Perl mission per CLAUDE.md L1-3:
 
 ---
 
-## Engine instrumentation findings (2026-04-26 iteration)
+## read_balanced/read_arg trace finding (2026-04-26 iteration B)
+
+User directive: "instrument read_balanced/read_arg directly and isolate
+where cc-2 leaks into the unconsumed pushback."
+
+Added `LATEXML_TRACE_BAL=1`-gated [BAL-IN/BAL-BEG/BAL-END/BAL-OUT/ARG-IN/
+ARG-FT/ARG-OUT] tracer in `gullet.rs` (committed temporarily, then
+reverted — see git history for the patch). Trace confirmed:
+
+**read_balanced consumes cc-1/cc-2 SPACE correctly as group syntax.**
+Body's 8 cc-1 + 8 cc-2 SPACE pairs are read CLEANLY by the read_arg
+calls of `\iow_now:Nn`'s n-arg, `\__kernel_iow_with:Nnn`'s n-arg, etc.
+No leak via read_balanced.
+
+The 7 boxing-mismatch errors fire on REAL `}` tokens (cc-2 with text
+`}`, NOT cc-2 with text SPACE). Trace immediately before first
+boxing error:
+```
+[ARG-IN]  d=1 exp=Off
+[ARG-FT]  d=1 first_tok=BEGIN/{       ← regular `{`
+[BAL-IN]  d=1 exp=Off mdef=false ropen=false pb=150
+[BAL-END] d=1 tok=END/} level: 1->0   ← regular `}`
+[BAL-OUT] d=1 ntokens=11 unbal_level=0
+   pb_top=["END/}", "OTHER/E", "OTHER/r", "OTHER/r", "OTHER/o",
+           "OTHER/r", "OTHER/:", "LETTER/:"]   ← `}` then "Error:..."
+[ARG-OUT] d=1 ntokens=11
+
+Error:unexpected:} Attempt to close boxing group; current frame is
+   non-boxing group due to T_CS[\group_begin:]
+```
+
+The leftover `}` followed by literal "Error: foo" text is the
+**already-defined error message** template, expanded into pushback
+via `\msg_error_text:n` / `\msg_format_*` chain. Stomach reads the
+text from pushback for digestion; on encountering each `}`, calls
+egroup() which fails against the `\group_begin:`-frame.
+
+## Perl baseline comparison
+
+Same probe (`\documentclass{article}\usepackage{expl3}\ExplSyntaxOn
+\msg_new:nnn{cmd}{define-command}{x}\ExplSyntaxOff\begin{document}
+hi\end{document}`) in Perl LaTeXML produces:
+- **1 error** total: `LaTeX Error: Message 'define-command' for module
+  'cmd' already defined.`
+- **0 boxing-mismatch errors**
+
+Perl's `\errmessage{}` (DefPrimitive) reads its `{...}` arg via the
+`{}` parameter type → `read_balanced(0, 0, 1)`. Inside that read,
+ALL cc-1/cc-2 SPACE tokens AND nested `{...}` get consumed as group
+syntax / content. The ENTIRE message (including its trailing braces)
+is consumed by `\errmessage`'s arg. Then `\group_end:` closes the
+non-boxing frame cleanly.
+
+Rust's `\errmessage{}` is structurally identical
+(`latexml_package/src/engine/tex_debugging.rs:59`). So why does Rust
+produce the cascade? Hypothesis: a divergent flow control PATH or
+something earlier in the chain emits text-content `}` tokens that
+escape `\errmessage`'s read_balanced scope.
+
+## Updated next-steps
+
+The bug is NOT in read_balanced. The bug is in the macro-expansion
+chain that produces the error-message text — somewhere in the
+`\msg_error → \msg_error:nnnn → \__msg_use:nnnnnnn → \__msg_use_code:
+→ \__msg_error_code → \__msg_interrupt:NnnnN → \__msg_interrupt:n`
+chain, an extra `}` is being emitted to the input stream that sits
+OUTSIDE the `\errmessage`-arg's brace-balanced scope.
+
+Next iteration: trace the message-text expansion (search for where
+"Error:" text gets pushed) — likely via instrumentation of `unread*`
+or `pushback` writes during `\__msg_*` macro expansion.
+
+## Original (2026-04-26 iteration A)
 
 Single duplicate `\msg_new:nnn{cmd}{define-command}{x}` in `\ExplSyntaxOn`
 context produces:
