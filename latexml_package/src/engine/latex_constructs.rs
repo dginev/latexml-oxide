@@ -2730,37 +2730,56 @@ LoadDefinitions!({
       }
       // Should we try to indent the last paragraph? If so, it goes like this:
       boxes.push(stomach::digest(T_CS!("\\lx@normal@par"))?);
-      // Now we check whether we're down to the last stack frame.
-      // It is common for unclosed { or even environments
-      // and we want to at least compress & avoid unnecessary errors & warnings.
-      let _nframes = get_frame_depth();
-      //     my $ifstack;
-      //     if ($state->isValueBound('current_environment', 0)
-      //       && ($state->valueInFrame('current_environment', 0) eq 'document')
-      //       && (!($ifstack = $state->lookupValue('if_stack')) || !$$ifstack[0])) { }    # OK!
-      //     else {
-      //       my @lines = ();
-      //       while ((!$state->isValueBound('current_environment', 0)
-      //           || ($state->valueInFrame('current_environment', 0) ne 'document'))
-      //         && ($state->getFrameDepth > 0)) {
-      //         # my $nonbox = $state->valueInFrame('groupNonBoxing',0) || 0;
-      //         my $tok = $state->valueInFrame('groupInitiator',        0) || '<unknown>';
-      //         my $loc = $state->valueInFrame('groupInitiatorLocator', 0);
-      //         $loc = defined $loc ? ToString($loc) : '<unknown>';
-      //         my $env = $state->isValueBound('current_environment', 0)
-      //           && $state->valueInFrame('current_environment', 0);
-      //         if ($env) {
-      //           push(@lines, "Environment $env opened by " . ToString($tok) . ' ' . $loc); }
-      //         else {    # but unclosed { is so common and latex itself doesn't Error!
-  //           push(@lines, "Group opened by " . ToString($tok) . ' ' . $loc); }
-  //         $state->popFrame; }
-  //       while (($ifstack = $state->lookupValue('if_stack')) && $$ifstack[0]) {
-  //         my $frame = $state->shiftValue('if_stack');
-  //         push(@lines, "Conditional " . ToString($$frame{token})
-  //             . "started " . ToString($$frame{start})); }
-  //       Warn('unexpected', '\end{document}', $stomach,
-  //         "Attempt to end document with open groups, environments or conditionals", @lines);
-  //     }
+      // Pop unclosed groups and environments back to the document frame
+      // so endMode's strict BOUND_MODE check sees the right frame at the
+      // top. Mirrors Perl latex_constructs.pool.ltxml L350-374. Without
+      // this loop, papers with a dangling `\begingroup` inside the body
+      // (e.g. `\providecommand{\href}[2]{#2}\begingroup\raggedright
+      // \begin{thebibliography}{99}`) trigger
+      // "Attempt to end mode `internal_vertical` in `internal_vertical`"
+      // because the top frame is the dangling group, not the document.
+      // Note: Rust port omits Perl's if_stack handling — Rust's gullet
+      // does not maintain an explicit if_stack value.
+      let top_is_document = state::is_value_bound("current_environment", Some(0))
+        && state::lookup_string("current_environment") == "document";
+      if !top_is_document {
+        let mut popped_lines: Vec<String> = Vec::new();
+        while !(state::is_value_bound("current_environment", Some(0))
+          && state::lookup_string("current_environment") == "document")
+          && get_frame_depth() > 0
+        {
+          let initiator = state::lookup_string("groupInitiator");
+          let initiator = if initiator.is_empty() {
+            "<unknown>".to_string()
+          } else {
+            initiator
+          };
+          let env_bound = state::is_value_bound("current_environment", Some(0));
+          let env_name = if env_bound {
+            state::lookup_string("current_environment")
+          } else {
+            String::new()
+          };
+          if !env_name.is_empty() {
+            popped_lines.push(s!("Environment {env_name} opened by {initiator}"));
+          } else {
+            popped_lines.push(s!("Group opened by {initiator}"));
+          }
+          state::pop_frame()?;
+        }
+        let detail = if popped_lines.is_empty() {
+          String::new()
+        } else {
+          s!("\n{}", popped_lines.join("\n"))
+        };
+        Warn!(
+          "unexpected",
+          "\\end{document}",
+          s!(
+            "Attempt to end document with open groups, environments or conditionals{detail}"
+          )
+        );
+      }
       // Perl: endMode('internal_vertical', 1) — noframe=1
       // End mode without popping stack frame (executes beforeAfterGroup)
       end_mode_opt("internal_vertical", true)?;
