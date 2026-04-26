@@ -214,7 +214,20 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       // the cascade the expl3 short-circuit is guarding against. Allows
       // plain-TeX math chardefs like `\ldotp`, `\cdotp`, `\intop` to load
       // without opening the door to public Expandable bodies.
-      let is_public_register = data.starts_with("R\t");
+      //
+      // Targeted exclusion: `\BooleanTrue`/`\BooleanFalse` are defined
+      // in latex.ltx L4408-4409 (TL2023 kernel xparse merge) AND
+      // re-defined in xparse-2018-04-12.sty L2264-2265. Admitting them
+      // from the dump means the legacy xparse-2018 raw-load (triggered
+      // when `\NewDocumentCommand` isn't admitted) hits expl3's strict
+      // "command-already-defined" check, producing 2 cosmetic LaTeX
+      // errors + 2 undefineds (`\iow_wrap:nnnN`/`\iow_wrap:nenN`) per
+      // document that does `\usepackage{xparse}`. Excluding these two
+      // names lets xparse-2018 re-define them cleanly. See
+      // project_kernel_dump_parity.md Stage 5 option (b).
+      let is_public_register = data.starts_with("R\t")
+        && name != "BooleanTrue"
+        && name != "BooleanFalse";
       // Safe additional gate: Let-alias records (`PA\t<target>` or
       // `MPA\t<target>`) where NEITHER the key NOR the target is an
       // expl3 `:`-style identifier. These replay `\let <key> <target>`
