@@ -12,6 +12,7 @@
 //! The resulting dump can be loaded at runtime to skip re-processing
 //! the LaTeX kernel on every test run.
 
+use std::borrow::Cow;
 use std::path::Path;
 
 use latexml_core::binding::content::InputDefinitionOptions;
@@ -45,7 +46,34 @@ pub fn dump_format(
   // Falls back to `take_snapshot()` (current state) if the staged one
   // is missing — preserves the legacy behavior for unexpected paths.
   let init_lower = init_file.to_ascii_lowercase();
-  let stage_name = if init_lower.contains("plain") {
+  let is_plain_init = init_lower.contains("plain");
+
+  // For `--init=latex.ltx`: explicitly load LaTeX.pool BEFORE snapshotting.
+  // Perl's `make formats` recipe runs LaTeX in interactive iniTeX mode where
+  // the LaTeX kernel pool is loaded as part of normal startup. In Rust, the
+  // `\documentclass`-class autoload triggers (TeX.pool L33-39) only fire on
+  // user-emitted document keywords, so without this explicit load the
+  // engine reaches raw latex.ltx with no `\@latex@info`, `\@gtempa`, or
+  // any latex_base content — and 10000+ undefined-CS errors cascade.
+  //
+  // Mirrors LaTeX.pool.ltxml L28-29:
+  //   LoadPool('TeX'); LoadFormat('latex');
+  //
+  // We invoke via input_definitions("LaTeX","pool") so the LaTeX.pool
+  // entry registered in `latexml_package/src/lib.rs:36` fires its
+  // standard load chain.
+  if !is_plain_init {
+    eprintln!("[ini_tex] Pre-loading LaTeX.pool before snapshot (Perl `make formats` parity)");
+    let preload = input_definitions("LaTeX", InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("pool")),
+      ..InputDefinitionOptions::default()
+    });
+    if let Err(e) = preload {
+      eprintln!("[ini_tex] LaTeX.pool preload warning: {}", e);
+    }
+  }
+
+  let stage_name = if is_plain_init {
     "plain_bootstrap"
   } else {
     "latex_bootstrap"
