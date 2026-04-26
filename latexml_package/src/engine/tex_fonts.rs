@@ -49,7 +49,11 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
+  // Perl: \font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName
+  // (TeX_Fonts.pool.ltxml:82). Token does NOT auto-skip spaces in Rust gullet
+  // (parity with Perl readToken), so the leading SkipSpaces is the
+  // Perl-faithful guard for inputs like `\font  \foo  =  cmr10`.
+  DefPrimitive!("\\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
     // Read optional "at <dimen>" or "scaled <number>"
@@ -117,19 +121,18 @@ LoadDefinitions!({
       );
     }
     // Perl: installDefinition(FontDef->new($cs, $key))
-    // When the font switch CS is invoked, set current_FontDef so \fontname\font works
-    // Respect \global prefix: if \global\font was used, install globally.
+    //   FontDef.pm L42: assignValue(current_FontDef => $$self{cs}, 'local')
+    // Perl's State::installDefinition with $scope undef → assign_internal
+    // defaults to local-with-\global-prefix-promotion (State.pm L152).
+    // Rust DefPrimitive! defaults match. TODO (SYNC_STATUS): rewrite this
+    // primitive to a strict Perl-faithful translation — see Work Plan.
     let is_global = state::get_prefix("global");
-    let _scope = if is_global { Some(Scope::Global) } else { None };
     let cs_for_fontdef = cs;
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
         AssignValue!("current_FontDef", cs_for_fontdef, None);
       }
     );
-    // If \global prefix was active, re-install with global scope.
-    // The DefPrimitive! above installs locally; we need to promote to global
-    // for \global\font\xydashfont=... (used by xy.tex's \xyfont@).
     if is_global {
       if let Some(meaning) = state::lookup_meaning(&cs) {
         state::assign_meaning(&cs, meaning, Some(Scope::Global));

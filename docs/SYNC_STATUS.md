@@ -270,6 +270,212 @@ Phase D0 (2k-sandbox, 84/84) and the test-suite refactor (round 17) are
 closed out; per-paper narration and session diaries for sessions ≤128
 live in git log and `memory/project_session_history.md`. What remains:
 
+### FN. `\font` primitive — Perl-faithful rewrite (NEW)
+
+**Symptom.** Current `tex_fonts.rs:52-141` `\font` translation has
+diverged from Perl's `LaTeXML/lib/LaTeXML/Engine/TeX_Fonts.pool.ltxml:82-120`
+in three structural dimensions. None are individually fatal but
+together they make `\global\font` and `\fontname\font` semantics
+fragile, and they leak into 6 downstream consumer files.
+
+**Specific divergences from Perl.**
+
+1. **Prototype mismatch.** Perl reads
+   `\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName`.
+   Rust currently has `\font Token SkipMatch:= SkipSpaces TeXFileName` —
+   missing both `SkipSpaces` before `Token` and before `SkipMatch:=`.
+   Causes input like `\font  \foo  =  cmr10` to misread the CS arg.
+2. **`at`/`scaled` read order.** Perl L88-89 reads
+   `at`/`scaled` AFTER decoding the fontname (so `decode_fontname`
+   runs without `at`/`scaled` first, then those are layered onto the
+   resulting size). Rust passes them as args INTO `decode_fontname`
+   on L60.
+3. **Storage shape.** Perl uses ONE keyed struct
+   `$key = 'fontinfo_' . $name [ . " at " . $at ]`, looked up via
+   `LookupValue($key)` with cache check (Perl L102-103: only build
+   fontinfo if not present). Rust splits into 4 separate state keys
+   per CS:
+     - `fontinfo_{cs}` — Stored::Font
+     - `font_shared_key_{cs}` — Stored::String pointing to the
+       Perl-shaped key
+     - `fontinfo_at_{cs}` — Stored::String of the "at" dimension
+     - `hyphenchar_{shared_key}` / `skewchar_{shared_key}` —
+       per-shared-key character defaults
+   Result: no cache check (every `\font\foo=cmr10` rebuilds), and
+   `\meaning\foo` / `\fontname\foo` go through Rust-only indirections
+   instead of Perl's single FontDef invoke pattern.
+4. **No FontDef class.** Perl `LaTeXML/lib/LaTeXML/Core/Definition/FontDef.pm`
+   is a `Definition::Primitive` subclass whose `invoke()` does:
+     ```perl
+     assignValue(current_FontDef => $$self{cs}, 'local');
+     assignValue(font => lookupValue('font')->merge(%$fontinfo), 'local');
+     return Box(undef, undef, undef, $$self{cs});
+     ```
+   Rust uses an inline `DefPrimitive!` closure with `font => props_opt`
+   that pre-bakes the merged Font at INSTALL time, not at INVOKE time.
+   This bakes-in is wrong: when `\font\foo=cmr10` is called inside a
+   group with custom `\hyphenchar\foo=...`, the invoke-time merge
+   should pick up the current group's hyphenchar via `$fontinfo`
+   indirection. With pre-baked closures, post-install hyphenchar
+   changes don't surface.
+
+**Plan.** Five-step Perl-faithful rewrite, accepted scope.
+
+- [x] **FN.1** Fix the prototype string in `tex_fonts.rs:52` to
+      `"\\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName"`.
+      **Done.** Verified zero observable diff on
+      `\font\foo=cmr10 / \font \bar = cmr10 / \font  \baz   =   cmr10 /
+      \global\font\quux=cmr10` baseline (`Token` does not auto-skip
+      spaces in Rust gullet, but the LaTeX mouth's catcode-10 absorption
+      already eats whitespace following control sequences, so observable
+      behavior is unchanged on real-world LaTeX inputs). Workspace tests
+      still 1107/0/0.
+- [ ] **FN.2** Reorder `decode_fontname` / `at` / `scaled` reads to
+      match Perl L82-95: read `at`/`scaled` AFTER `decode_fontname`,
+      then call `$size = $$props{size}; $$props{size} = $size * $sc / 1000`
+      (or `* $at / $size` for the `at` form). Match Perl semantics
+      exactly: `at <dim>` sets size to the dim; `scaled N` multiplies
+      the decoded size by N/1000.
+- [ ] **FN.3** Introduce a `FontDef` Rust struct equivalent to
+      `LaTeXML::Core::Definition::FontDef`: `{ cs: Token, font_id_key:
+      Cow<str> }` with an `invoke()` method that mirrors Perl
+      FontDef.pm L38-45. Hook it into the `Definition` enum (or
+      whatever Rust uses for primitive-with-data — see how
+      `RegisterDef` is structured) so that the install-time call can
+      pass `(cs, key)` and the invoke-time logic does the lookup-merge.
+- [ ] **FN.4** Migrate storage to the Perl-shaped single key
+      `fontinfo_{name}[ at {at}]`. Add the `LookupValue` cache check
+      (Perl L102-103). Remove the four-state-key shape
+      (`font_shared_key_*`, `fontinfo_at_*`, etc.). Stored::Font
+      retains the merged props; `at`/`hyphenchar`/`skewchar` go inside
+      the struct, not as parallel state values.
+- [ ] **FN.5** Update consumers to read from the Perl-shaped key.
+      Files affected (as of 2026-04-26):
+        - `latexml_package/src/engine/tex_hyphenation.rs:62,75` —
+          reads `hyphenchar_{shared_key}`
+        - `latexml_package/src/engine/tex_debugging.rs:85,93` —
+          `\meaning\foo` reads `fontinfo_at_{cs}`
+        - `latexml_package/src/engine/etex.rs:9,11,124` — `\fontchardef`
+          / `\fontcharht` / `\fontcharwd` read `fontinfo_{cs}`
+        - `latexml_package/src/engine/tex_macro.rs:229` — `\fontname`
+          reads `fontinfo_{lookup_cs}`
+        - `latexml_core/src/state.rs:836,838` — `\meaning` formatter
+          for FontDef
+        - `latexml_package/src/dump_writer/plain_dump.rs:39-41` —
+          dump round-trip for fontinfo
+
+**Acceptance.** All five FN.* substeps complete. New regression
+tests under `latexml_oxide/tests/structure/font_*.tex` cover the
+prototype, `at`/`scaled` semantics, cache-reuse, `\global\font`,
+post-install `\hyphenchar\foo` change, and `\fontname\font`.
+Workspace tests stable at 1108/0/0 or higher. Sandbox unchanged
+(this is structural cleanup, not a regression-recovery push).
+
+**Why this matters.** `\font` is a fundamental TeX primitive
+exercised by every paper. The current 4-state-key shape leaks Rust
+internals into the `\meaning` and `\fontname` formatters, making
+the code brittle to consumer changes. Switching to the Perl-shaped
+single key + FontDef class brings parity with the Perl reference
+and removes the indirection layer that has caused
+`current_FontDef` resets to fail under nested groups in the past
+(e.g., 1709.05096 AIAA cluster).
+
+### SS. Sandbox snapshot is stale (NEW)
+
+`sandbox_full_2026-04-26c_postfix` was generated 2026-04-25, BEFORE
+commits `2e5769f08` (`\end{document}` dangling-group cleanup) and
+`4e2b3777b` (`\documentstyle` .sty-before-.cls dispatch) landed.
+At least one cluster from that snapshot is already resolved:
+
+- **`\end{document}: Attempt to end mode internal_vertical in
+  restricted_horizontal`** (5 single-error papers — `1112.0082,
+  1306.0904, 1309.2191, 1404.1853, 1505.00149`). Spot-checked
+  `1112.0082` and `1306.0904` 2026-04-26: both now report
+  *"Conversion complete: 1 warning"* (rc=0, sandbox-clean). The
+  warning is the cleanup-loop's "open groups, environments or
+  conditionals" notice — informative, not blocking.
+
+Re-running task #23 ("Sandbox: re-run after each fix and prune
+worklist") against current HEAD will produce a cleaner baseline.
+Several other 1-error patterns in the snapshot are likely also
+already-resolved by the post-2026-04-25 commits and just haven't
+been re-measured.
+
+### AR. ar5iv.sty `localrawstyles` ↔ Perl `rawstyles` divergence (NEW)
+
+**Symptom.** Papers using system-installed but unbound .sty packages
+(colonequals, mathdots, comment, …) succeed in Perl LaTeXML but fail
+in Rust with `\<missing-cs> undefined`. Confirmed reproducer:
+
+```bash
+# Perl: 0 errors, loads colonequals.sty from /usr/local/texlive...
+latexml --preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings paper.tex
+
+# Rust: error \colonequals undefined
+cargo run --release --bin latexml_oxide -- paper.tex
+```
+
+with paper:
+```tex
+\documentclass{article}
+\usepackage{colonequals}
+\begin{document} $f \colonequals 1$ \end{document}
+```
+
+**Root cause (verified 2026-04-26).**
+- `LaTeXML/lib/LaTeXML/Package/` has NO `colonequals.sty.ltxml`.
+- `~/git/ar5iv-bindings/bindings/` has NO `colonequals.sty.ltxml`.
+- Perl `ar5iv.sty.ltxml` passes `rawstyles` →
+  `INCLUDE_STYLES=true` → `notex=false`, **kpsewhich enabled**.
+  Perl's `\usepackage{colonequals}` falls through to kpsewhich,
+  finds the system .sty in `/usr/local/texlive/.../oberdiek/`, loads
+  raw — `\colonequals` defined.
+- Rust `latexml_contrib/src/ar5iv_sty.rs:14` passes `localrawstyles`
+  → `INCLUDE_STYLES='searchpaths'` → `notex=false` AND
+  `searchpaths_only=true`, **kpsewhich SUPPRESSED**. Rust's
+  `find_file_aux` skips the system-texmf fallback. `colonequals.sty`
+  isn't on the user-supplied SEARCHPATHS, so the lookup fails.
+- The divergence was introduced in commit `9869267eb` (2026-04-23,
+  "switches ar5iv.sty from `rawstyles` to `localrawstyles` per user
+  directive") with the explicit follow-up note: *"the Perl
+  ar5iv.sty.ltxml (separate repo) still passes `rawstyles`; keeping it
+  in sync is a separate change once the user directs that repo's
+  update."*
+
+**Sandbox impact estimate.** Single-error papers in
+`sandbox_full_2026-04-26c_postfix` matching the "missing CS from
+system-installed package" pattern:
+- `1204.2526` (`\colonequals` from colonequals.sty)
+- `0806.0463` (`\excludeversion` from comment.sty)
+- … and many of the remaining 196 errors that bottom out in
+  per-package long-tail undefined-CS reports likely also depend on
+  this lookup path.
+
+**Plan.**
+
+- [ ] **AR.1** Decide: align Rust ar5iv with Perl (`rawstyles`,
+      kpsewhich enabled) OR keep the hardening (`localrawstyles`,
+      kpsewhich suppressed)? The "Sandbox = Perl-error-free" rule
+      (`feedback_sandbox_perl_baseline.md`) argues for the former
+      since Perl successfully handles these papers. The hardening
+      argument was about archival determinism — but determinism is
+      already provided by the `tools/test_with_tl2023.sh` CI gate
+      (TL2023 image), which pins the texmf surface.
+- [ ] **AR.2** If aligning to Perl: change
+      `latexml_contrib/src/ar5iv_sty.rs:14` `localrawstyles` →
+      `rawstyles`. Run workspace tests for regression. Re-run a
+      sandbox 100-paper sample to measure error reduction.
+- [ ] **AR.3** Update `wisdom_include_styles_tristate.md` to remove
+      the "Rust uses localrawstyles" claim if AR.2 lands; or replace
+      it with a documented OXIDIZED_DESIGN intentional-divergence
+      entry if the hardening is kept.
+
+**Why not flipped here.** This is a high-impact change (every Rust
+sandbox conversion), and the original commit was explicitly
+user-directed. The right call needs explicit user OK before flipping.
+The finding is documented here as a candidate for the user to
+prioritize after FN. completes.
+
 ### CB. Compile-time bottleneck — `latexml_package` codegen (NEW, next-up)
 
 **Symptom.** `cargo-timings` (2026-04-25 run, file
