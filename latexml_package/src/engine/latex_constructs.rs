@@ -2687,7 +2687,28 @@ LoadDefinitions!({
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      boxes.push(stomach::digest(Tokenize!(r"\hook_use:n{begindocument}"))?);
+      // Build the Tokens explicitly: `Tokenize!` runs at the runtime
+      // catcode regime where `:` is OTHER (not LETTER), which would
+      // truncate the CS to `\hook_use` and emit `:n` as plain text.
+      // That leaks `_use:n` + arg-text into the document body.
+      boxes.push(stomach::digest(Tokens!(
+        T_CS!("\\hook_use:n"),
+        T_BEGIN!(),
+        T_LETTER!("b"),
+        T_LETTER!("e"),
+        T_LETTER!("g"),
+        T_LETTER!("i"),
+        T_LETTER!("n"),
+        T_LETTER!("d"),
+        T_LETTER!("o"),
+        T_LETTER!("c"),
+        T_LETTER!("u"),
+        T_LETTER!("m"),
+        T_LETTER!("e"),
+        T_LETTER!("n"),
+        T_LETTER!("t"),
+        T_END!()
+      ))?);
     }
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
