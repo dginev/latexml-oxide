@@ -1001,19 +1001,30 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
 
 fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
   let cs = token.with_cs_name(|cs| String::from(cs));
-  note_status(LogStatus::Undefined, Some(&cs));
+  // Gate the undefined-CS summary tally and the Error! emission by
+  // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install
+  // the ERROR stub silently — forward references resolve when subsequent
+  // post-load fixups rebind the canonical CS (see expl3_sty.rs L161-167
+  // for \iow_wrap stubs that overwrite ERROR after the raw load). Mirrors
+  // the existing gate at state.rs::generate_error_stub L1018-L1030.
+  let suppressed = lookup_bool_sym(crate::pin!("SUPPRESS_UNDEFINED_ERRORS"));
+  if !suppressed {
+    note_status(LogStatus::Undefined, Some(&cs));
+  }
 
   // To minimize chatter, go ahead and define it...
   if cs.starts_with("\\if") {
     // Apparently an \ifsomething ???
     let name = cs.replace("\\if", "");
-    let message = s!("The token {} is not defined.", token.stringify());
-    Error!(
-      "undefined",
-      token,
-      &message,
-      "Defining it now as with \\newif"
-    );
+    if !suppressed {
+      let message = s!("The token {} is not defined.", token.stringify());
+      Error!(
+        "undefined",
+        token,
+        &message,
+        "Defining it now as with \\newif"
+      );
+    }
     // install stub definitions for new conditional
     install_definition(
       Expandable::new(
@@ -1038,13 +1049,15 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
     gullet::unread_one(*token); // Retry
     Ok(Vec::new())
   } else {
-    let message = s!("The token {} is not defined.", token.stringify());
-    Error!(
-      "undefined",
-      token,
-      &message,
-      "Defining it now as <ltx:ERROR/>"
-    );
+    if !suppressed {
+      let message = s!("The token {} is not defined.", token.stringify());
+      Error!(
+        "undefined",
+        token,
+        &message,
+        "Defining it now as <ltx:ERROR/>"
+      );
+    }
     install_definition(
       Constructor {
         cs: *token,

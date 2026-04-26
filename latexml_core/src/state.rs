@@ -983,7 +983,14 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
-  note_status(LogStatus::Undefined, Some(&cs));
+  // Gate the undefined-CS summary tally by SUPPRESS_UNDEFINED_ERRORS so it
+  // matches the `Error!` gate at L1021 below — during expl3-code.tex raw
+  // load with thousands of forward-references we install the ERROR stub
+  // without polluting the user-facing summary count. See
+  // project_kernel_dump_parity.md "iow_wrap residual" for full diagnosis.
+  if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
+    note_status(LogStatus::Undefined, Some(&cs));
+  }
   // To minimize chatter, go ahead and define it...
   if cs.starts_with("\\if") {
     // Apparently an \ifsomething ???
