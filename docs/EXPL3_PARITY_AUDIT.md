@@ -137,6 +137,49 @@ The strict-Perl mission per CLAUDE.md L1-3:
 
 ---
 
+## Engine instrumentation findings (2026-04-26 iteration)
+
+Single duplicate `\msg_new:nnn{cmd}{define-command}{x}` in `\ExplSyntaxOn`
+context produces:
+- **7 boxing-mismatch errors per `\__msg_interrupt:n` call** (linear:
+  1→7, 2→14, 3→21).
+
+Instrumented `bgroup()`/`egroup()` shows pattern per call:
+- 5 `BGROUP-OPEN depth=2->3 tok={` events (cc-1 SPACE tokens that DO
+  reach stomach as proper open-group)
+- 7 `BOXING-MISMATCH depth=2 cur_tok=} cur_tok_cc=END initiator=\group_begin:` events
+
+Body decode (`\__msg_interrupt:n`):
+- 8 catcode-1 SPACE tokens (`Token(' ',1)` in Perl Dumper notation)
+- 8 catcode-2 SPACE tokens (`Token(' ',2)`)
+- 1 catcode-13 ACTIVE space (`TA(' ')`) — NOT T_ALIGN, the `TA` SUB
+  in Dumper.pm L243 is `CC_ACTIVE`, not `T_ALIGN` (the `$TA` VAR)
+- 44 catcode-12 OTHER spaces (`O(' ')`)
+
+Expected: cc-1 / cc-2 SPACE pairs structurally pair within macro
+arg-reading (Nn = N + n parameter spec consuming the cc-1 + content +
+cc-2 of the n-arg). Only 1 cc-2 should reach `\group_end:` to close the
+explicit `\group_begin:`-frame.
+
+Observed: 5 cc-1 leak past arg-reading and reach `bgroup()` as
+boxing-frame opens. 7 cc-2 leak and reach `egroup()` against a
+non-boxing frame, firing the boxing-mismatch error.
+
+The 5 vs 7 asymmetry is the bug: the `n` parameter type's
+`read_balanced` (gullet.rs L825-839) tracks cc-1/cc-2 levels for arg
+boundary detection. Either it consumes cc-1 SPACE but leaves the cc-2
+SPACE in pushback, OR macro-body unread reverses the order, leaking
+cc-2 first.
+
+`\iow_term:n` in dump (`E ... 0 LP \iow_now:Nn \c_term_iow`) is
+verified Perl-faithful — body has NO `#1`, expl3-code.tex L11133 reads
+`\cs_new_protected:Npn \iow_term:n { \iow_now:Nn \c_term_iow }`.
+The pass-through pattern relies on `\iow_now:Nn` reading its 2nd arg
+from input, which would consume the cc-1 / cc-2 properly IF
+`\iow_now:Nn`'s `n` parameter reading is correct.
+
+---
+
 ## Cross-references
 
 - `LaTeXML/blib/lib/LaTeXML/Package/expl3.sty.ltxml` — 3-line baseline
