@@ -131,14 +131,30 @@ zero undefined-CS errors during expl3 load.
 
 * **`\hook`**, **`\__int_eval:w`**, **`\tex_par:D`** still absent
   from latex.dump.txt as M-keys despite being referenced as bodies
-  of other entries. These are expl3 let-aliases
-  (`\cs_new_eq:NN \tex_par:D \par`). Suspected cause: `diff_snapshot`
-  not capturing the "primitive → primitive" let-alias when the
-  bootstrap snapshot already includes `\par`.
+  of other entries.
+
+* `is_serializable` (state.rs L2789-2836) DOES allow Stored::Primitive
+  → return Some("PA\\t<target>"), so the `Stored::Primitive` arm
+  ISN'T the gap. Confirmed via probe (`\meaning\tex_par:D` returns
+  literal CS name, not "undefined" — but RUST treats it as
+  undefined-CS at lookup time).
+
+* **Real gap**: `\__kernel_primitive:NN \par \tex_par:D` (expl3-code.tex
+  L499) doesn't successfully install `\tex_par:D` aliased to `\par`
+  during raw `--init=latex.ltx`. Yet `\__kernel_primitive:NN \space
+  \tex_space:D` (L280, same loop) DOES produce `\tex_space:D = \ `.
+  Difference is unclear — maybe `\par` is special-cased in Rust's
+  let-handling (paragraph-terminator semantics?), or the expl3
+  catcode regime in the loop doesn't take effect for `\par`'s line.
 
 * **`\__int_eval:w` runtime meaning is `\x@protect …`** (per probe
   with `\meaning`), suggesting it's wrapped in robust-protection
   layer instead of being installed as a direct primitive alias.
+
+* **Plain dump pollution**: running `\bye` plain-TeX test shows
+  `\par` defined as `\para_end:`-style expl3 chain, which means
+  plain.dump.txt OR plain_dump.rs is loading latex content. Need
+  to verify plain.dump.txt is clean (just plain.tex bindings).
 
 ### Sandbox regression
 
