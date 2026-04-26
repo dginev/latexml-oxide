@@ -60,10 +60,6 @@ LoadDefinitions!({
 
   InnerPool!(latex_bootstrap);
 
-  // Stage snapshot right after latex_bootstrap — diff baseline for
-  // `--init=latex.ltx`.
-  latexml_core::state::stage_snapshot("latex_bootstrap");
-
   // Perl `LoadFormat('latex')` strict split:
   //   if dump available: bootstrap → dump → constructs (NO base)
   //   else:              bootstrap → base → constructs (NO dump)
