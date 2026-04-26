@@ -37,6 +37,41 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 ### Active gaps (as of 2026-04-26)
 
+* **2026-04-26 (Perl `Dumper.pm` + `DumpFile` parity wave)**:
+  Multi-commit refactor landing strict Perl parity at the
+  dump-build / dump-load layer. **Stale `latex.dump.txt` on disk
+  must be regenerated to take effect** — until then, tests still
+  observe pre-fix pollution.
+  - `32bfe0a74` `dump_reader`: every load arm now calls
+    `state::assign_internal` directly, mirroring Perl
+    `Core/Dumper.pm`'s `V/Cc/Mc/Sc/Lc/Uc/Dc/Im/I/Lt`. No more
+    `install_definition` (lock-checked), no more
+    `assign_meaning` (50-link `\let`-chase), no more
+    `let_i` (deferred targets handled in-arm). Single state
+    mutation API path = Perl `assign_internal`.
+  - `610485966` `ini_tex::dump_format`: loads only
+    `<name>_bootstrap` between snap and diff, NOT the full
+    `latex.rs` chain (which pulled in `latex_base`/`latex_dump`
+    + `latex_constructs`). Mirrors Perl `DumpFile`
+    (TeX_Job.pool.ltxml L120-220) exactly. Eliminates the
+    pollution where `latex_constructs.rs::DefMacro!(...,
+    locked => true)` deposited dozens of `:locked` V-entries
+    into the dump (Perl's dump has zero).
+  - `bbc4675cc` engine: drop dead `stage_snapshot('<name>_bootstrap')`
+    calls in `latex.rs` / `tex.rs`. Single source of truth for
+    the diff baseline = `dump_format::take_snapshot()`.
+  - `c67cbb862` Makefile: 6 GB virtual-memory cap on `make test`
+    so runaway loops fail fast instead of OOMing host.
+  Full-coverage audit of `plain_base.rs` and `latex_base.rs`
+  vs `plain_base.pool.ltxml` / `latex_base.pool.ltxml`:
+  zero misses on Def/Let/DefRegister/NewCounter targets;
+  RawTeX-block CSes (`\baselineskip`, `\parskip`, `\newskip`,
+  etc.) confirmed present (some relocated to `tex_paragraph.rs`,
+  others embedded in `plain_base.rs::RawTeX!` blocks).
+  **Next**: regenerate `resources/dumps/latex.dump.txt` via
+  `make dump` (or `tools/make_formats.sh`) — only then do the
+  url_test cluster + babel-timeout cluster see the benefit.
+
 * **2026-04-26 (`_loaded` flag dual-naming complete)**: OXIDIZED_DESIGN
   #23 implementation landed:
   - `de21ae928` — path-aware `already_handled` closure in
