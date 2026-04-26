@@ -2,6 +2,31 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
+## Active priority (2026-04-26): strict-Perl dump parity
+
+Engine-dump parity is the current top priority. See
+[`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md)
+and [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) "Mission".
+Concretely:
+
+* `tex.rs` and `latex.rs` use Perl `LoadFormat`'s mutually
+  exclusive split (dump XOR base, NOT both).
+* `dump_reader.rs` mirrors Perl `I()`/`V()` — unconditional
+  `assign_internal('global')`, no admission gate, no
+  skip-if-defined.
+* Every `\foo` defined in `Engine/<file>.pool.ltxml` must live in
+  `latexml_package/src/engine/<file>.rs`. Use raw `\outer\def`
+  bodies wherever Perl uses `RawTeX`, so the dump captures them
+  as Token bodies — Rust closures aren't serializable through the
+  dump format.
+* Parity target: `--init=plain.tex` and `--init=latex.ltx` must
+  complete with **zero errors** (Perl loads expl3-code.tex
+  cleanly; Rust currently aborts at 10000 errors during expl3
+  forward-reference resolution — that's the gap to close).
+
+Test regressions during this work are expected and acceptable —
+re-pass tests AFTER the dumps are complete + correct.
+
 ## Project Overview
 
 latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).

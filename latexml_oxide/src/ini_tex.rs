@@ -85,11 +85,14 @@ pub fn dump_format(
   // Raw latex.ltx redefines commands already in the compiled engine ("already defined"),
   // and expl3-code.tex has forward references that produce transient errors.
   // All these errors are benign — the dump captures the final correct state.
-  let prev_suppress = latexml_core::common::error::set_suppress_log_output(true);
+  // Set LATEXML_INIT_DEBUG=1 to keep errors visible (for debugging the
+  // expl3 cascade — Perl parity target is zero errors during expl3 load).
+  let init_debug = std::env::var_os("LATEXML_INIT_DEBUG").is_some();
+  let prev_suppress = latexml_core::common::error::set_suppress_log_output(!init_debug);
 
   // Suppress known expl3 loading errors at the state level too
-  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !init_debug, None);
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !init_debug, None);
 
   // Use the full filename with extension for proper file resolution
   let load_name = if ext.is_empty() {

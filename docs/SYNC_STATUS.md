@@ -2,9 +2,49 @@
 
 > **This is a Perl-to-Rust translation project.** Every ported function, macro, and definition must faithfully reproduce the original Perl semantics, control flow, and edge-case behavior. The Perl source (`LaTeXML/` directory) is the ground truth. Only diverge when explicitly documented in `docs/OXIDIZED_DESIGN.md`.
 
-## Mission (2026-04-24 pivot)
+## Mission (2026-04-26 pivot — STRICT-PERL DUMP PARITY)
 
-### HIGHEST PRIORITY — CI green + 10k sandbox clean
+### HIGHEST PRIORITY — strict Perl LoadFormat + complete dump parity
+
+User directive 2026-04-26: **the engine dumps must be a strict
+translation of Perl's `make formats` output.** That means:
+
+1. **Strict mutual-exclusivity in `LoadFormat`**
+   (`Package.pm:LoadFormat` L2734-2752):
+   * if `<format>_dump.pool.ltxml` exists AND `LATEXML_NODUMP` is
+     unset → load `bootstrap → dump → constructs` (NO base);
+   * else → load `bootstrap → base → constructs` (NO dump).
+2. **Unconditional `I()`/`V()` semantics** in `dump_reader.rs`:
+   no admission gate, no skip-if-defined. Mirrors Perl's
+   `Core/Dumper.pm` L59-67 which call `assign_internal('global')`
+   without filters.
+3. **Same-file definitions** as Perl: every `\foo` defined in
+   `Engine/<file>.pool.ltxml` must be defined in
+   `latexml_package/src/engine/<file>.rs`. Use raw `\outer\def`
+   bodies wherever Perl uses RawTeX, so the dump captures them as
+   serializable Token-bodies (not opaque Rust closures).
+4. **Perl-zero-error baseline**: `--init=plain.tex` and
+   `--init=latex.ltx` must complete with **zero errors** —
+   matching Perl. Any error during expl3-code.tex / latex.ltx
+   raw-load is a parity gap, not a thing to suppress with caps.
+
+**Working doc:** [`docs/PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
+
+**Active gaps (as of commit `0c4d609ad` + this turn):**
+- **expl3-code.tex aborts at 10000 errors** during `--init=latex.ltx`.
+  First two undefined CSes: `\@latex@info`, `\@gtempa`. Need to
+  trace back to the kernel CSes Perl has but Rust doesn't.
+- **Eager-vs-lazy LaTeX load**: Perl autoloads LaTeX.pool from
+  `\documentclass`; Rust's `latex.rs` runs at engine init.
+- **latex_base.rs closures**: when dump is loaded, latex_base is
+  skipped — closures lost.
+
+**Future** (after dumps are robust): bundle multiple TL versions'
+dumps into the binary via `include_bytes!` + runtime selection by
+`kpsewhich --version`. See `PERL_LOADFORMAT_AUDIT.md` "Distribution"
+section.
+
+### Historical priority (LOWERED) — CI green + 10k sandbox clean
 
 User directive 2026-04-24: **stop the Def*-parity / bounded-hook / stub-
 fleshing milestone entirely.** Those audits have been revisiting the
