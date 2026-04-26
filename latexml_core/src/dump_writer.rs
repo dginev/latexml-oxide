@@ -154,6 +154,17 @@ pub fn write_dump(
       continue;
     }
 
+    // Perl IGNORED_SYMBOLS: meaning:\lnot, meaning:\to are skipped because
+    // pre-2017 TeXlive let-aliased \lnot → \neg and \to → \rightarrow,
+    // which would gratuitously diverge tests across TL versions.
+    // Mirror Perl `TeX_Job.pool.ltxml` IGNORED_SYMBOLS L104-107.
+    if matches!(*table, TableName::Meaning)
+      && matches!(key_str.as_str(), "\\lnot" | "\\to")
+    {
+      skipped += 1;
+      continue;
+    }
+
     let Some(serialized) = serialize_stored(value) else {
       skipped += 1;
       continue;
