@@ -380,7 +380,28 @@ and removes the indirection layer that has caused
 `current_FontDef` resets to fail under nested groups in the past
 (e.g., 1709.05096 AIAA cluster).
 
-### SS. Sandbox snapshot is stale (NEW)
+### POST-AR-FLIP MEASUREMENT (2026-04-26 in-progress)
+
+Full sandbox run launched against current HEAD with 16 workers,
+120s timeout. **First 894 papers (11.3% of 7898):**
+
+| Status | Count | Meaning |
+|---|---|---|
+| `:0` | 704 | clean (rc=0, no warnings) |
+| `:1` | 188 | warnings only (rc=0, sandbox-clean) |
+| `:2` | **1** | errors (`0909.3444` — frenchb babel missing, **Perl-also-broken** per `feedback_sandbox_perl_baseline.md`) |
+| `:3` | 0 | fatal |
+
+**Projection:** at this rate, full sandbox should yield ~5-10 actual
+error papers (Status:2) out of 7898, most of which are likely
+already documented as Perl-also-broken. Down from the
+sandbox_full_2026-04-26c_postfix baseline of ~196 errors. The AR.
+flip alone (rawstyles enabling kpsewhich) appears to clear the
+overwhelming majority of "missing CS from system .sty" cases.
+
+Re-tally pending full run completion.
+
+### SS. Sandbox snapshot is stale (resolved)
 
 `sandbox_full_2026-04-26c_postfix` was generated 2026-04-25, BEFORE
 commits `2e5769f08` (`\end{document}` dangling-group cleanup) and
