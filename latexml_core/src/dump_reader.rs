@@ -225,9 +225,8 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
       // document that does `\usepackage{xparse}`. Excluding these two
       // names lets xparse-2018 re-define them cleanly. See
       // project_kernel_dump_parity.md Stage 5 option (b).
-      let is_public_register = data.starts_with("R\t")
-        && name != "BooleanTrue"
-        && name != "BooleanFalse";
+      let is_public_register =
+        data.starts_with("R\t") && name != "BooleanTrue" && name != "BooleanFalse";
       // Safe additional gate: Let-alias records (`PA\t<target>` or
       // `MPA\t<target>`) where NEITHER the key NOR the target is an
       // expl3 `:`-style identifier. These replay `\let <key> <target>`
