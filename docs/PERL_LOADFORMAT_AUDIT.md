@@ -115,22 +115,38 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
 
 ### expl3-code.tex 10000-error abort
 
-`--init=latex.ltx` raw-loads `expl3-code.tex` which emits >>10000
-benign undefined-CS errors (forward references during loading). The
-default 10000 cap aborts the load, so the dump misses everything
-defined AFTER the abort point — including:
+**RESOLVED (commit `209083ff4`, 2026-04-26):** root cause was
+`--init=latex.ltx` reaching raw expl3-code.tex without LaTeX.pool's
+infrastructure (since the autoload triggers only fire on
+`\documentclass` etc., not during raw-loading latex.ltx itself).
 
-* `\__int_eval:w` (let-aliased to `\tex_numexpr:D` somewhere
-  AFTER the abort)
-* `\tex_par:D`, `\hook` (similar)
-* Hundreds of expl3 internal aliases
+**Fix:** `ini_tex.rs` explicitly preloads `LaTeX.pool` before
+snapshotting when init basename is `latex.*`. Mirrors Perl
+`LaTeX.pool.ltxml:28-29`'s `LoadPool('TeX'); LoadFormat('latex');`.
 
-**Tried:** lifting `MAX_ERRORS` to 10M in `ini_tex.rs`. Caused the
-load to spin (likely error-recovery loop, not just slow). Reverted.
+**Effect:** `latex.dump.txt` grew from 19,797 → 24,987 entries (+26%);
+zero undefined-CS errors during expl3 load.
 
-**TODO:** Investigate whether the recovery is truly looping or
-just slow; if slow, add progress logging. If looping, identify the
-root-cause CS that recovery can't define.
+### Remaining dump gaps (post-209083ff4)
+
+* **`\hook`**, **`\__int_eval:w`**, **`\tex_par:D`** still absent
+  from latex.dump.txt as M-keys despite being referenced as bodies
+  of other entries. These are expl3 let-aliases
+  (`\cs_new_eq:NN \tex_par:D \par`). Suspected cause: `diff_snapshot`
+  not capturing the "primitive → primitive" let-alias when the
+  bootstrap snapshot already includes `\par`.
+
+* **`\__int_eval:w` runtime meaning is `\x@protect …`** (per probe
+  with `\meaning`), suggesting it's wrapped in robust-protection
+  layer instead of being installed as a direct primitive alias.
+
+### Sandbox regression
+
+181-paper failure subset: post-strict-Perl-translation, 166 papers
+moved from `Status:conversion:1/2` (errors) to `Status:conversion:3`
+(fatal in ~0.2s). Acceptable per user directive — parity work
+continues; tests / sandbox are re-validated after dumps are
+complete.
 
 ### Closure round-trip
 
