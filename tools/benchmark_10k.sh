@@ -18,9 +18,9 @@ INPUT_DIR="${INPUT_DIR:-$HOME/data/10k_sandbox}"
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
 WORKER_BIN="${WORKER_BIN:-$(dirname "$0")/../target/release/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
-WORKERS=16
-TIMEOUT_S=120
-MAX_RAM_KB=8388608   # 8 GB in KB (for ulimit -v)
+WORKERS="${WORKERS:-16}"
+TIMEOUT_S="${TIMEOUT_S:-120}"
+MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
 LIMIT=0              # 0 = no limit
 RERUN_FAILURES=false
 MAX_OUTPUT_MB=200    # cap: skip output ZIPs larger than this
