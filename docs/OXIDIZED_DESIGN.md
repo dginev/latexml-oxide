@@ -884,3 +884,34 @@ shadows the same lifecycle.
 After the rename, the Rust set of `_loaded`-family flags should be
 EXACTLY: `<name>_loaded`, `<name>_raw_loaded`, `<name>_loaded_with_options`
 (matches Perl's `_loaded_with_options` at L2569/L2612).
+
+#### Important: Perl error semantics
+
+Perl's `loadLTXML` (L2296) and `loadTeXDefinitions` (L2332) BOTH set
+`_loaded` BEFORE attempting to read the file (L2315 & L2347). On read
+error, `_loaded` is already set, so subsequent calls early-skip.
+
+Rust's `binding/content.rs:317` mimics this for binding load. But Rust's
+`_found_loaded` was added because the existing `_loaded` flag is set
+even on error paths in some routes — so callers needed a way to ask
+"did the load *actually succeed*?".
+
+Perl does NOT have this distinction. Perl's caller of `loadLTXML` /
+`loadTeXDefinitions` checks the return value (truthy = success).
+
+**Migration plan (to be implemented carefully)**:
+1. Keep `_loaded` semantics exactly Perl-faithful: set BEFORE read
+   attempt, persist on error.
+2. The "did it succeed" question is answered by the `Result` return,
+   not a flag.
+3. The 6 sites that read `<name>_found_loaded` are checking "did it
+   actually load (not just attempt)". Audit each:
+   - If they truly need success-not-error semantics, add an explicit
+     return/result check at the call site rather than a flag.
+   - If they only need "loaded at all" semantics, switch to `_loaded`.
+4. Drop the `_found_loaded` flag in `dump_writer.rs` (it shouldn't
+   be in dumps) and `dump_reader.rs` (its skip-list).
+
+This must be done WITH CARE — the error behavior at `binding/content.rs:317`
+could be load-bearing for Rust-specific recursion guards. Implementer
+must run the full test suite and sandbox after each change.
