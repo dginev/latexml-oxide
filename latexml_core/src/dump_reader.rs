@@ -418,11 +418,33 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         return Err("Incomplete Expandable entry".into());
       }
 
-      // Note: eparts[0] is the internal CS name carried by the E
-      // serialization (the Expandable's `self.cs`), which for non-alias
-      // entries matches `key`. We don't decode it here — the outer key
-      // is already parsed above into `cs_tok`, and `Expandable::new`
-      // doesn't need a distinct internal name.
+      // eparts[0] is the alias-cs from the dump (Perl-side: the cs of
+      // the Definition object that this entry was let-aliased from).
+      //
+      // We propagate the alias ONLY when the target is a known deferred
+      // command (`\unexpanded`, `\the`, `\detokenize`, `\showthe`) — that
+      // narrow case is what makes `\exp_not:n {…}` inside `\edef` bodies
+      // correctly skip re-expansion (Perl `Gullet.pm:505`'s DEFERRED
+      // path), preserving `\__seq_item:n {…}` inside `\seq_gpush:Nn`'s
+      // `\unexpanded`-wrapped body. Without this, the seq stack stays
+      // empty after push, leading to `extra-pop-label` and the
+      // `\q_no_value` recursion cascade during `\@pushfilename`.
+      //
+      // We DON'T propagate alias for the ~1k other Lt-aliased entries
+      // (e.g. `\bool_if_exist:NTF` → `\cs_if_exist:NTF`) — those would
+      // change `defn.get_cs_name()`'s return value, which feeds into
+      // many lookup paths and triggers infinite-loop regressions in
+      // `\@nil` handling, etc. Keep blast radius tight.
+      const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
+      let alias_decoded = url_decode(eparts[0]);
+      let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
+      let alias_for_traits = if is_alias_diff
+        && DEFERRED_NAMES.iter().any(|n| *n == alias_decoded.as_str())
+      {
+        Some(alias_decoded)
+      } else {
+        None
+      };
       let nargs: usize = eparts[1].parse().unwrap_or(0);
       let flags = eparts[2];
       let tok_data = eparts[3];
@@ -485,6 +507,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         long: is_long,
         protected: is_protected,
         nopack_parameters: true, // tokens already have ARG catcode
+        alias: alias_for_traits,
         ..ExpandableOptions::default()
       });
 

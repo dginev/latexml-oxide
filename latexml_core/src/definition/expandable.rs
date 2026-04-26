@@ -256,6 +256,7 @@ impl Expandable {
       is_outer: traits.outer || get_prefix("outer"),
       is_long: traits.long || get_prefix("long"),
       has_cc_arg,
+      alias: traits.alias,
       ..Expandable::default()
     })
   }

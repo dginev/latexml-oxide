@@ -870,7 +870,22 @@ pub fn read_balanced(
                 }
                 // If a special \the type command, push the expansion directly into the result
                 // Well, almost directly: handle any MARKER tokens now, and possibly un-pack T_PARAM
-                if expansion_level != Full && DEFERRED_COMMANDS.contains(&defn.get_cs().text) {
+                //
+                // Perl `Gullet.pm:505` checks `$$defn{cs}[0]` — but in Perl the Lt-aliases
+                // (e.g. `Lt('\\exp_not:n','\\unexpanded')`) share the SAME Definition, so its
+                // cs field IS `\unexpanded`. In Rust the dump-writer emits `\exp_not:n` as a
+                // separate Expandable with alias=`\unexpanded`; check the alias too so the
+                // DEFERRED_COMMANDS gate fires for `\exp_not:n {…}` inside `\edef` bodies.
+                // Without this, expl3's `\seq_gpush:Nn` (which uses `\exp_not:n` to wrap
+                // `\__seq_item:n {…}`) loses its item — the item gets re-expanded into the
+                // expandable-error trap, leaving the seq stack empty and triggering
+                // `extra-pop-label`/`\q_no_value`-recursion cascades during `\@pushfilename`.
+                let cs_matches = DEFERRED_COMMANDS.contains(&defn.get_cs().text);
+                let alias_matches = defn
+                  .get_alias()
+                  .map(|a| DEFERRED_COMMANDS.contains(&arena::pin(a)))
+                  .unwrap_or(false);
+                if expansion_level != Full && (cs_matches || alias_matches) {
                   for t in expansion.unlist() {
                     match t.get_catcode() {
                       Catcode::MARKER => handle_marker(t),
