@@ -109,6 +109,12 @@ LoadDefinitions!({
     lookup_meaning(&t).is_some()
   });
 
+  // \ifincsname — eTeX (TeX §506-507): true when expansion is happening
+  // inside a `\csname...\endcsname` construction. LaTeXML does not have
+  // a separate "inside csname" mode (it expands eagerly), so this is
+  // always false — matching Perl LaTeXML's same shortcut.
+  DefConditional!("\\ifincsname", { false });
+
   // # ???
   DefRegister!("\\lastnodetype", Number::new(0));
 

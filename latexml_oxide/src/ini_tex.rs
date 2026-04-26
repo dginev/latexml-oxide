@@ -29,27 +29,38 @@ pub fn dump_format(
 ) -> Result<usize, String> {
   eprintln!("[ini_tex] Dumping format from {}", init_file);
 
-  // Step 1: load only the bootstrap pool, then snapshot.
+  // Strict Perl `iniTeX` + `DumpFile` order:
   //
-  // Perl `DumpFile` (TeX_Job.pool.ltxml L120-220):
-  //   LoadPool($name . '_bootstrap');   # LaTeX → latex_bootstrap.pool
-  //   $snap = ...                       # snapshot all 8 tables
-  //   loadTeXDefinitions($name, ...)    # raw <name>.ltx
-  //   diff
-  //   write
+  //   Core.pm L168-212 (iniTeX, default mode='Base'):
+  //     initializeState('Base.pool');     # ← Step 1 below
+  //     installDefinition('\jobname', ...);
+  //     installDefinition('\dump', Tokens());  # no-op
+  //     DumpFile($file, $dest);           # ← Step 2 below
   //
-  // CRITICAL: Perl loads ONLY `<name>_bootstrap` between init and
-  // snapshot — NOT `<name>_base`, `<name>_dump`, or `<name>_constructs`.
-  // Those would pollute the diff with `:locked` flags, base/constructs
-  // definitions, etc. that the dump should NOT carry (the constructs
-  // run fresh at runtime AFTER the dump loads).
+  //   TeX_Job.pool.ltxml L120-220 (DumpFile):
+  //     LoadPool($name . '_bootstrap');   # ← Step 3 below
+  //     $snap = ...                       # ← Step 4 below
+  //     loadTeXDefinitions($name, ...)    # ← Step 5 below
+  //     diff                              # ← Step 6 below
+  //     write                             # ← Step 7 below
   //
-  // Earlier Rust did `input_definitions("LaTeX","pool")` which fires
-  // the full `latex.rs` LoadDefinitions chain (bootstrap + base/dump +
-  // constructs). That populated state with `:locked` flags from
-  // `latex_constructs.rs::DefMacro!(..., locked => true)` and made
-  // them appear in the diff — Perl's dump never has them. Now we
-  // call the bootstrap loader directly to mirror Perl exactly.
+  // CRITICAL: Perl iniTeX defaults to `mode='Base'`, so `Base.pool` is
+  // loaded BEFORE any bootstrap. Without it, raw plain.tex / latex.ltx
+  // can't expand any TeX primitive — every `\def`, `\catcode`,
+  // `\let`, `\edef` etc. is undefined and we get an error cascade.
+  // After Base.pool, only `<name>_bootstrap` is loaded — NEVER
+  // `<name>_base`, `<name>_dump`, or `<name>_constructs`. Those
+  // pollute the diff with `:locked` flags, base/constructs
+  // definitions, etc. that the dump should NOT carry.
+
+  // Step 1: Load Base.pool equivalent (Perl `initializeState('Base.pool')`).
+  eprintln!("[ini_tex] Loading Base.pool (Perl `initializeState('Base.pool')`)");
+  if let Err(e) = latexml_package::engine::base::load_definitions() {
+    eprintln!("[ini_tex] base warning: {}", e);
+  }
+
+  // Step 2 + 3: install \jobname / \dump (no-op), then load bootstrap.
+  // (Perl Core.pm L204-207 + TeX_Job.pool.ltxml L127-129)
   let init_lower = init_file.to_ascii_lowercase();
   let is_plain_init = init_lower.contains("plain");
 

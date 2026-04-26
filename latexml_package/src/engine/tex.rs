@@ -105,34 +105,14 @@ LoadDefinitions!({
   // commit 4cd73e7584c5f0422293ba38f9b757332584afec
   // Author: Bruce Miller <nebconinc@gmail.com>
   // Date:   Thu May 9 13:19:32 2024 -0400
-  InnerPool!(base_schema);
-  InnerPool!(base_parameter_types);
-  InnerPool!(base_utilities);
-  InnerPool!(base_xmath);
-  InnerPool!(tex_box);
-  InnerPool!(tex_character);
-  InnerPool!(tex_debugging);
-  InnerPool!(tex_file_io);
-  InnerPool!(tex_fonts);
-  InnerPool!(tex_glue);
-  InnerPool!(tex_hyphenation);
-  InnerPool!(tex_inserts);
-  InnerPool!(tex_job);
-  InnerPool!(tex_kern);
-  InnerPool!(tex_logic);
-  InnerPool!(tex_macro);
-  InnerPool!(tex_marks);
-  InnerPool!(tex_math);
-  // tex_scripts content now inlined in tex_math.rs (Perl: TeX_Math.pool.ltxml)
-  InnerPool!(tex_page);
-  InnerPool!(tex_paragraph);
-  InnerPool!(tex_penalties);
-  InnerPool!(tex_registers);
-  InnerPool!(tex_tables);
-  InnerPool!(etex); // unless... ?
-  InnerPool!(pdftex); // unless... ?
 
-  InnerPool!(base_deprecated);
+  // Perl TeX.pool.ltxml L22: LoadPool('Base'); — loads the entire
+  // Base subsystem (schemas, parameter types, utilities, XMath,
+  // TeX_*, eTeX, pdfTeX, Base_Deprecated). Rust mirrors this with
+  // a single call to the `base` LoadDefinitions module so the same
+  // pool is reusable from `ini_tex.rs` for dump-build (which
+  // needs ONLY Base.pool, not the autoload triggers below).
+  InnerPool!(base);
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Pre-LoadFormat content. In Perl TeX.pool.ltxml these are AFTER

@@ -6,7 +6,8 @@
 // plain_constructs → math_common                  LoadFormat('latex')  →  latex_bootstrap →
 // latex_base → latex_dump → latex_constructs
 
-// Base.pool.ltxml — loaded via TeX.pool (Base.pool is a pure loader, no definitions)
+// Base.pool.ltxml — loaded via Base.pool (a pure loader-of-pools)
+pub mod base; // Perl: Base.pool.ltxml (LoadPool('Base_Schema'), ..., 'Base_Deprecated')
 mod base_deprecated;
 mod base_parameter_types; // Perl: Base_ParameterTypes.pool.ltxml
 mod base_schema; // Perl: Base_Schema.pool.ltxml
