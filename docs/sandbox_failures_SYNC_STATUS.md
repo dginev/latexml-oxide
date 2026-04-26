@@ -180,13 +180,33 @@ Expandable** (per strict-Perl LoadFormat ordering: dump runs THEN
 constructs, latex.rs L70-78). Yet runtime probe shows the dump's body
 in effect — the Rust DefPrimitive isn't actually overwriting.
 
-**Suspected (next iteration) root cause:** `install_definition` at
-state.rs:947 may be silently skipping due to either (a) the dump
-having set a `:locked` value somewhere (verified absent for
-`\DeclareFontEncoding`), or (b) some other guard in `install_definition`
-or its Stored::Primitive into-Stored path. Need to instrument
-state.rs:962 with a debug `eprintln!` to see whether the install
-fires for `\DeclareFontEncoding` after the dump load.
+**Iteration 4 (instrumented `install_definition`):** Verified both
+installs of `\DeclareFontEncoding` succeed:
+```
+[DEBUG_INSTALL] \DeclareFontEncoding install (locked=false, unlocked=false, will_skip=false)
+[DEBUG_INSTALL] \DeclareFontEncoding install (locked=false, unlocked=false, will_skip=false)
+```
+First install is the dump's Expandable; second is latex_constructs.rs:5432
+DefPrimitive (Rust closure). The Primitive **does** override.
+
+So at runtime `\DeclareFontEncoding` IS the Rust Primitive. The Rust
+closure body does NOT call `\DeclareFontEncoding@`. It calls:
+* `AddToMacro!(\cdp@list, \cdp@elt{enc}{\default@family}{\default@series}{\default@shape})`
+* `DefMacro!(\LastDeclaredEncoding, ..., enc)`
+* `DefMacro!(\T@<enc>, ..., x)`
+* `DefMacro!(\M@<enc>, ..., \default@M y)`
+
+`AddToMacro!` does `\xdef\cdp@list{...new content with \default@family, \default@series, \default@shape...}`. The `\xdef` expansion drives the
+chain — `\default@family` etc. expand into expl3 chains containing
+`\q_no_value`.
+
+**Next iteration root-cause hunt:**
+1. Check what `\default@family`, `\default@series`, `\default@shape`
+   expand to in the dump and in Perl. Compare bodies — find which
+   expansion reaches `\q_no_value`.
+2. Compare Perl's `AddToMacro` semantic implementation to Rust's —
+   the chain Perl runs may not actually `\xdef`-expand the operands
+   (could use `\toks` or other non-expanding accumulator).
 
 **Fix path for next iteration:**
 1. Instrument `install_definition` to confirm whether Rust DefPrimitive
