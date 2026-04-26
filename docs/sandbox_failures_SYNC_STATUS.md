@@ -150,12 +150,54 @@ inside an `\edef` arg. Perl's `_constructs` either redefines
 `\hook_use:n` to a no-op stub OR Perl's package-load architecture
 intercepts BEFORE the dump's `\hook_use:n` fires.
 
+**Iteration 3 deeper trace (2026-04-26):**
+The triggering primitive is `\edef`/`\xdef` invoked DURING textcomp.sty
+binding load. Specifically textcomp_sty.rs L247 runs
+`TeX!(r"\DeclareFontEncoding{TS1}{}{}")`. At runtime the gullet
+encounters `\DeclareFontEncoding` and finds it as the **dump's
+Expandable** with body
+`\begingroup\nfss@catcodes\expandafter\endgroup\DeclareFontEncoding@`.
+Then `\DeclareFontEncoding@` (also from dump) runs its complex body:
+```
+\expandafter\ifx\csname T@#1\endcsname\relax
+  \def\cdp@elt{\noexpand\cdp@elt}%
+  \xdef\cdp@list{\cdp@list\cdp@elt{#1}{\default@family}{\default@series}{\default@shape}}
+  \expandafter\let\csname #1-cmd\endcsname\@changed@cmd
+\else \@font@info{Redeclaring font encoding #1}\fi
+\global\@namedef{T@#1}{#2}
+\global\@namedef{M@#1}{\default@M#3}
+\xdef\LastDeclaredEncoding{#1}
+```
+This `\xdef\cdp@list{...}` triggers `\edef`-style expansion of its
+body. `\default@family`/`\default@series`/`\default@shape` are
+hooked-LaTeX3 macros that expand to chains containing `\q_no_value`.
+
+**Critical Perl-vs-Rust comparison verified this iteration:**
+Both `\DeclareFontEncoding` (Perl `latex_constructs.pool.ltxml:2769`
+DefPrimitive, Rust `latex_constructs.rs:5432` DefPrimitive) are
+*Perl-faithful*. **The Rust DefPrimitive should override the dump's
+Expandable** (per strict-Perl LoadFormat ordering: dump runs THEN
+constructs, latex.rs L70-78). Yet runtime probe shows the dump's body
+in effect — the Rust DefPrimitive isn't actually overwriting.
+
+**Suspected (next iteration) root cause:** `install_definition` at
+state.rs:947 may be silently skipping due to either (a) the dump
+having set a `:locked` value somewhere (verified absent for
+`\DeclareFontEncoding`), or (b) some other guard in `install_definition`
+or its Stored::Primitive into-Stored path. Need to instrument
+state.rs:962 with a debug `eprintln!` to see whether the install
+fires for `\DeclareFontEncoding` after the dump load.
+
 **Fix path for next iteration:**
-1. Add `\hook_use:n` (and the kernel hook family) as no-op stubs
-   in `expl3_sty.rs` or `latex_constructs.rs` — they'd run AFTER
-   the dump install (per strict-Perl LoadFormat ordering:
-   `bootstrap → dump → constructs`), overriding the kernel chain
-   with stub bodies.
-2. Verify Perl-parity: confirm Perl's runtime actually runs a
-   stub for these (per `wisdom_lhook_perl_parity_stub.md`).
-3. Re-run sandbox to measure recovery.
+1. Instrument `install_definition` to confirm whether Rust DefPrimitive
+   actually runs and overrides the dump for `\DeclareFontEncoding` (and
+   other Perl-faithful overrides like `\NewHook`/`\AddToHook` defined
+   in latex_base.rs L623-629).
+2. If the install IS firing but the dump's Expandable persists, find
+   the lock/skip path and document the fix.
+3. Alternative: have the dump_writer detect when a CS will have a
+   Rust-level Primitive override (i.e. the engine has a definition for
+   it post-load) and skip emitting the dump entry for that CS — this is
+   the cleanest "Perl Definition::Primitive bypasses TeX-level kernel"
+   pattern in Rust form.
+4. Re-run sandbox to measure recovery.
