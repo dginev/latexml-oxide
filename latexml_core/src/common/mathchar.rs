@@ -850,7 +850,7 @@ pub fn decode_math_char(
     // call preload_font_map which mutates state, and with_font_info holds
     // a State borrow while its closure runs — the reentrant mutation
     // panics with "RefCell already borrowed" (sandbox paper 0711.4787).
-    let encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
+    let mut encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
       if let Some(Stored::Font(ref info)) = fontinfo? {
         Ok::<Option<String>, crate::common::error::Error>(
           info.encoding.as_ref().map(|s| s.to_string()),
@@ -859,6 +859,33 @@ pub fn decode_math_char(
         Ok(None)
       }
     })?;
+    // Fallback: when `fontinfo_<token>` is missing (typical post-dump-load:
+    // `Stored::Font` isn't currently Font-serialized in the dump_writer,
+    // so the rich props don't round-trip — only the `font_shared_key_<cs>`
+    // pointer survives), derive the encoding from the font NAME via
+    // `font::decode_fontname`. This recovers `cmmi10 → OML`, so plain.tex's
+    // `.` mathcode 0x013A (class 0, fam 1, char 0x3A) decodes to glyph
+    // `.` instead of the raw ASCII `:` that the no-encoding path emits.
+    // Without this, `12345.67890` math input split as
+    // <NUMBER>12345</NUMBER><METARELOP>:</METARELOP><NUMBER>67890</NUMBER>
+    // — see `00_tokenize::ligatures_test` / `mathtokens_test` 2026-04-27.
+    if encoding_opt.is_none() {
+      let shared_key = state::with_value(
+        &crate::s!("font_shared_key_{}", ftok.with_str(ToString::to_string)),
+        |v| match v {
+          Some(Stored::String(s)) => crate::common::arena::with(*s, |str| Some(str.to_string())),
+          _ => None,
+        },
+      );
+      if let Some(sk) = shared_key {
+        // shared_key is "fontinfo_<name>"; strip the "fontinfo_" prefix to get the font name
+        if let Some(name) = sk.strip_prefix("fontinfo_") {
+          if let Some(props) = crate::common::font::decode_fontname(name, None, None) {
+            encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
+          }
+        }
+      }
+    }
     if let Some(data) = encoding_opt {
       crate::common::font::decode(n as u8, Some(data), false)
     } else {
