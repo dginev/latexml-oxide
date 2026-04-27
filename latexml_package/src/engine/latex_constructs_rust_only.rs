@@ -95,4 +95,49 @@ LoadDefinitions!({
   // value is reassigned at \begin{thebibliography} time (see
   // latex_constructs.rs `\bibliography` constructor).
   DefMacro!("\\thebibliography@ID", "");
+
+  //======================================================================
+  // 5. Modern LaTeX kernel (2023+) — `\NewCommandCopy`/`\DeclareCommandCopy`/
+  //    `\ShowCommand` from `ltcmd.dtx` (semantic-let equivalents).
+  //
+  // Not in Perl LaTeXML (too new), but needed for modern packages
+  // (tcolorbox, etc.).
+  //======================================================================
+  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
+    state::let_i(&new_cs, &old_cs, None);
+  });
+  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
+    state::let_i(&new_cs, &old_cs, None);
+  });
+  DefMacro!("\\ShowCommand Token", "");
+
+  //======================================================================
+  // 6. Modern LaTeX (2015+) extras
+  //======================================================================
+  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML).
+  DefPrimitive!("\\extrafloats{}", None);
+
+  // `\wlog{...}` — write to log only (no-op in LaTeXML).
+  DefMacro!("\\wlog{}", "");
+
+  //======================================================================
+  // 7. Rust helper used by `\newlength` (latex_constructs.rs)
+  //======================================================================
+  // `\@check@length` — verify a CS is a length register; if not, define
+  // it as a Dimension(0) and warn. Mirrors the role of internal kernel
+  // checks done implicitly by Perl LaTeXML via DefRegister probing.
+  DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
+    match lookup_definition(&cs)? {
+      None => {
+        let message = s!("'{}' is not a length; defining it now", cs.stringify());
+        Warn!("undefined", cs, message);
+        DefRegister!(cs, None, Dimension::new(0));
+      },
+      Some(defn) => if !defn.is_register() {
+        let message = s!("'{}' length was expected, got {:?} instead of register.",
+          cs.to_string(), defn.register_type());
+        Error!("misdefined", cs, message);
+      }
+    };
+  });
 });

@@ -599,7 +599,7 @@ LoadDefinitions!({
   DefMacro!("\\tracingfonts", None);
   DefMacro!("\\showoverfull", None);
   DefMacro!("\\showoutput", None);
-  DefMacro!("\\wlog{}", "");
+  // `\wlog` moved to `latex_constructs_rust_only.rs`.
 
   //======================================================================
   // Perl L829-863: Expl3 / L3 hook stubs + kernel conditionals

@@ -5608,16 +5608,8 @@ LoadDefinitions!({
   DefPrimitive!("\\addtoversion{}{}", None);
   DefPrimitive!("\\TextSymbolUnavailable{}", None);
 
-  // LaTeX3 ltcmd: \NewCommandCopy and \DeclareCommandCopy
-  // These are semantic \let equivalents from the 2023+ LaTeX kernel.
-  // Not in Perl LaTeXML (too new), but needed for modern packages (tcolorbox, etc.).
-  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
-  });
-  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
-  });
-  DefMacro!("\\ShowCommand Token", "");
+  // `\NewCommandCopy`, `\DeclareCommandCopy`, `\ShowCommand` (modern
+  // LaTeX kernel 2023+ ltcmd) moved to `latex_constructs_rust_only.rs`.
 
   TeX!(
     r#"""
@@ -7344,20 +7336,8 @@ LoadDefinitions!({
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
-    match lookup_definition(&cs)? {
-      None => {
-        let message = s!("'{}' is not a length; defining it now", cs.stringify());
-        Warn!("undefined", cs, message);
-        DefRegister!(cs, None, Dimension::new(0));
-      },
-      Some(defn) => if !defn.is_register() {
-        let message = s!("'{}' length was expected, got {:?} instead of register.",
-          cs.to_string(), defn.register_type());
-        Error!("misdefined", cs, message);
-      }
-    };
-  });
+  // `\@check@length` (Rust helper used by `\newlength`) moved to
+  // `latex_constructs_rust_only.rs`.
 
   DefPrimitive!("\\newlength DefToken", sub[(cs)] {
     DefRegister!(cs, None, Glue::new(0), allocate => "\\skip");
@@ -9117,8 +9097,8 @@ LoadDefinitions!({
     }
   });
 
-  // Perl L5825: \extrafloats — modern LaTeX (2015+) for extra float slots (no-op)
-  DefPrimitive!("\\extrafloats{}", None);
+  // `\extrafloats` (modern LaTeX 2015+) moved to
+  // `latex_constructs_rust_only.rs`.
 
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
