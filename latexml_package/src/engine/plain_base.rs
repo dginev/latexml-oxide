@@ -196,7 +196,9 @@ LoadDefinitions!({
     // Perl: properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
     properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_boxing_level())) }
   );
-  DefMacro!("\\hidewidth", None);
+  // `\hidewidth` moved to latex_constructs.rs (Perl L51 — Perl-LaTeXML
+  // declares it in latex_constructs.pool.ltxml not in plain pool, even
+  // though it's a TeX-Book Appendix B primitive).
 
   //======================================================================
   // TeX Book, Appendix B, p. 344

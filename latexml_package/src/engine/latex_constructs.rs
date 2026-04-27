@@ -2379,6 +2379,9 @@ LoadDefinitions!({
   // ======================================================================
 
 
+  // Perl latex_constructs.pool.ltxml L51 — "Just to pass test t/alignment/halignatt"
+  DefMacro!("\\hidewidth", None);
+
   // Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
   Let!("\\magnification", "\\@undefined");

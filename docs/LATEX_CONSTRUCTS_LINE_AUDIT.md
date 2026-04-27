@@ -67,10 +67,54 @@ Status legend:
 * **Verify**: `font => textDefault`/`mathfont => mathDefault`
   assignments (L25-26), `\@empty`/`\@ifundefined` Lets (L57-58).
 
-## Phase 2 (TODO): Perl L101-L500
+## Phase 2 (Perl L101-L350)
 
-Includes major sections — probably options handling, `\AtBeginDocument`,
-package loading, main document block. Will continue in next iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 100-129 | `\documentstyle` afterDigest body | latex_constructs.rs:~2440 | ✅ PARITY |
+| 132-135 | `compatDefinitions` Perl-fn (`\@maxsep`,`\@dblmaxsep`) | latex_constructs.rs:6156-6157 | ↻ ORDER + ⚠ DIVERGE (Rust unconditional, Perl gated by `\documentstyle`) |
+| 137-153 | `DefPrimitiveI '\compat@loadpackages'` | latex_constructs.rs:2454 | ✅ PARITY |
+| 155-160 | `onlyPreamble` Perl-fn | latex_constructs.rs:2486 (comment) | ✅ |
+| 185 | `AssignValue current_environment ''` | latex_constructs.rs:2491 | ✅ |
+| 186 | `DefMacro '\@currenvir' ''` | latex_constructs.rs:2492 | ✅ |
+| 187-189 | `DefPrimitive '\lx@setcurrenvir{}'` | latex_constructs.rs:2501 | ✅ |
+| 190 | `DefMacro '\@checkend{}'` | latex_constructs.rs:2509 | ✅ |
+| 191 | `Let '\@currenvline' '\@empty'` | latex_constructs.rs:2506 | ✅ |
+| 193-213 | `DefMacro '\begin{}'` | latex_constructs.rs:2511 | ✅ |
+| 216-231 | `DefMacro '\end{}'` | latex_constructs.rs:2544 | ✅ |
+| 254-268 | `DefConstructor '\lx@newline …'` | latex_constructs.rs:2654 | ✅ PARITY |
+| 269 | `Let '\\\\' '\lx@newline'` | latex_constructs.rs:2682 | ✅ |
+| 271-274 | `DefConstructor '\newline'` | latex_constructs.rs (verify, ~2683) | ✅ likely |
+| 275 | `Let '\@normalcr' '\\\\'` | latex_constructs.rs:2689 | ✅ |
+| 276 | `Let '\@normalnewline' '\newline'` | latex_constructs.rs:2690 | ✅ |
+| 280 | `DefMacro '\@nolnerr' ''` | latex_constructs.rs:2695 | ✅ |
+| 281-282 | `DefMacro '\@centercr …'` | latex_constructs.rs:2697 | ✅ |
+| 283 | `DefMacro '\@xcentercr …'` | latex_constructs.rs:2701 | ✅ |
+| 284 | `DefMacro '\@icentercr[] …'` | latex_constructs.rs:2704 | ✅ |
+| 295-296 | `DefMacro '\AtBeginDocument{}'` | latex_constructs.rs:2727 | ⚠ DIVERGE (Rust takes optional `[]` arg, Perl doesn't) |
+| 297-298 | `DefMacro '\AtEndDocument{}'` | latex_constructs.rs:2730 | ⚠ DIVERGE (same) |
+| 303-330 | `DefConstructorI '\begin{document}'` | latex_constructs.rs:2737 | ✅ |
+| 333 | `Let '\document' '\begin{document}'` | (need verify) | ❓ |
+| 335+ | `DefConstructorI '\end{document}'` | latex_constructs.rs (verify, ~2800+) | ✅ likely |
+
+### Phase 2 findings
+
+* **Strong PARITY** for L185-L330 — Rust L2491-2737 maps tightly to Perl
+  in source order. This block (environments, `\\`, document begin/end)
+  was well-translated.
+* **`\@maxsep`/`\@dblmaxsep`** are at Rust L6156-6157, far from where
+  Perl puts them (L133-134 inside `compatDefinitions`). In Perl these
+  registers are only created when `\documentstyle` is invoked. In Rust
+  they're unconditional load-time. Functionally equivalent (default 0
+  in both); the divergence is when-defined, not what.
+* **`\AtBeginDocument`/`\AtEndDocument`** Rust adds an `[label]` optional
+  argument that Perl doesn't have. Modern LaTeX `ltx-2023` introduced
+  the optional label form; Rust port follows the modern kernel.
+
+## Phase 3 (TODO): Perl L351-L500
+
+Continues with document-end logic, frontmatter setup. Will continue
+in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
