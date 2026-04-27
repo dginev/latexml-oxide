@@ -470,9 +470,34 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         },
         _ => "0".to_string(),
       };
+      // Serialize address if different from cs name. Allocated registers
+      // (`\newcount\m@ne`/`\newdimen\p@`/etc.) point at low-level `\count<n>`/
+      // `\dimen<n>` slots whose runtime values live there, NOT at the alias
+      // CS name. Without the address, dump_reader would `assign_internal` at
+      // the CS name's slot (default value), and `\the\m@ne` would yield 0
+      // instead of -1. Mirror Perl's `R(C(...),undef,...,address=>'\\count22')`
+      // serialization (LaTeXML/Core/Dumper.pm). Format extension:
+      // `R\t<cs>\t<rtype>\t<value>\t<mathglyph_or_empty>\t<address>`.
+      // If address == cs_name we still serialize an empty 6th field for
+      // forward-compat parsers; the reader accepts both 4/5/6-field forms.
       let mut s = format!("R\t{}\t{}\t{}", cs_name, rtype, value_str);
-      if let Some(glyph) = reg.mathglyph {
-        s.push_str(&format!("\t{}", glyph as u32));
+      let mathglyph_str = match reg.mathglyph {
+        Some(glyph) => format!("{}", glyph as u32),
+        None => String::new(),
+      };
+      let cs_decoded = arena::with(reg.cs.get_sym(), |s| s.to_string());
+      let address_field = if reg.address.is_empty() || reg.address == cs_decoded {
+        String::new()
+      } else {
+        url_encode(&reg.address)
+      };
+      // Only emit extended fields when needed (keep current format size for
+      // the common case)
+      if !mathglyph_str.is_empty() || !address_field.is_empty() {
+        s.push_str(&format!("\t{}", mathglyph_str));
+      }
+      if !address_field.is_empty() {
+        s.push_str(&format!("\t{}", address_field));
       }
       Some(s)
     },

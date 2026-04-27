@@ -607,10 +607,17 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       Ok(true)
     },
     "R" => {
-      // Register: R\tCS\tTYPE\tVALUE[\tMATHGLYPH]
+      // Register: R\tCS\tTYPE\tVALUE[\tMATHGLYPH][\tADDRESS]
       // rparts[0] (internal CS name) is redundant with the outer key —
       // same reasoning as the E arm; we skip the decode + alloc.
-      let rparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
+      // ADDRESS field is a url-encoded address-slot key for allocated
+      // registers (Perl `\newcount\m@ne` → address='\count22'). When
+      // absent, address defaults to the CS name. Without this, dump_reader
+      // wrote `\m@ne`'s -1 to its CS-name slot, but `\m@ne`'s actual
+      // address (`\count22`) held the default 0 — `\settabs 20\columns`
+      // looped infinitely because `\m@ne == 0` never advanced `\count@`
+      // toward 0 in `\loop\ifnum\count@>\z@\@nother\repeat`.
+      let rparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(5, '\t').collect();
       if rparts.len() < 3 {
         return Err("Incomplete Register entry".into());
       }
@@ -618,8 +625,13 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let value_str = rparts[2];
       let mathglyph = rparts
         .get(3)
+        .filter(|s| !s.is_empty())
         .and_then(|s| s.parse::<u32>().ok())
         .and_then(char::from_u32);
+      let dump_address: Option<String> = rparts
+        .get(4)
+        .filter(|s| !s.is_empty())
+        .map(|s| url_decode(s));
 
       use crate::common::number::Number;
       use crate::definition::register::{Register, RegisterType, RegisterValue};
@@ -685,19 +697,33 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         locator: current_dump_locator(),
         ..Register::default()
       };
-      // Set address from CS name
-      reg.address = key.to_string();
+      // Set address: prefer dump-supplied address (allocated registers),
+      // fall back to CS name (direct registers like `\count1`).
+      let has_explicit_address = dump_address.is_some();
+      reg.address = dump_address.unwrap_or_else(|| key.to_string());
       if !matches!(reg_type, RegisterType::CharDef) {
         if let Some(ref rv) = reg_value {
           // Perl `R(...)` register dump-restore: the address slot
           // gets the initial value via `assign_internal('value', ...,
-          // 'global')`. Mirror exactly.
-          state::assign_internal(
-            TableName::Value,
-            arena::pin(&reg.address),
-            rv.clone(),
-            Some(Scope::Global),
-          );
+          // 'global')`. Mirror Perl `def_register` behavior: when the
+          // address is allocated (different from CS) AND already has a
+          // value (from an earlier V entry), DO NOT overwrite — the V
+          // entry holds the runtime value (e.g. `\m@ne`'s `\count22 =
+          // -1`), and the Register's `value` field is just the default
+          // (typically 0). Without this guard, the M entry resets
+          // `\count22` to 0, breaking `\settabs 20\columns` (loops
+          // because `\m@ne` reads as 0 instead of -1, so
+          // `\advance\count@\m@ne` doesn't decrement).
+          let should_assign = !has_explicit_address
+            || !state::has_value(&reg.address);
+          if should_assign {
+            state::assign_internal(
+              TableName::Value,
+              arena::pin(&reg.address),
+              rv.clone(),
+              Some(Scope::Global),
+            );
+          }
         }
       }
       // Perl `I(...)` for the Register meaning entry — direct
