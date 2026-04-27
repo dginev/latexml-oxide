@@ -610,7 +610,7 @@ pub fn read_x_token(
           return Ok(Some(token));
         },
         Outcome::Invoke(defn) => {
-          local_current_token(token.clone());
+          local_current_token(token);
           let invoked = defn.invoke(false)?;
           if std::env::var("LXML_TRACE_GROUP_END").is_ok() {
             // Print per-event {macro, delta} so post-processing can sum
@@ -627,7 +627,7 @@ pub fn read_x_token(
             if begs > 0 || ends > 0 {
               eprintln!(
                 "TRACE_GE delta={} begs={} ends={} cs={}",
-                begs as i32 - ends as i32,
+                begs - ends,
                 begs,
                 ends,
                 token
@@ -1127,24 +1127,20 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // legitimate CS name, just a runaway. Emit one clear error and break.
   const MAX_CS_NAME_BYTES: usize = 4096;
   let mut cs = String::from("\\");
-  let mut runaway_reported = false;
   // keep newlines from having \n inside!
   while let Some(token) = read_x_token(Some(true), false, None)? {
     if token.defined_as(&TOKEN_ENDCSNAME) {
       break;
     }
     if cs.len() > MAX_CS_NAME_BYTES {
-      if !runaway_reported {
-        runaway_reported = true;
-        Error!(
-          "runaway",
-          "csname",
-          format!(
-            "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
-            &cs[..cs.len().min(200)]
-          )
-        );
-      }
+      Error!(
+        "runaway",
+        "csname",
+        format!(
+          "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
+          &cs[..cs.len().min(200)]
+        )
+      );
       break;
     }
     match token.get_catcode() {

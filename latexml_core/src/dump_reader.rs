@@ -267,8 +267,8 @@ const SKIP_VALUE_PREFIXES: &[&str] = &["input_file:", "output_file:", "texsys"];
 /// active at a time, mirroring Perl's `LoadFormat` branching. Until that lands,
 /// keep the skip list conservative so mixed paths don't trigger recovery loops.
 const SKIP_VALUE_CONTAINS: &[&str] = &[
-  "_loaded", // Package loading flags — see doc comment above.
-             // Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23).
+  "_loaded", /* Package loading flags — see doc comment above.
+             * Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23). */
 ];
 
 /// Load a value entry: V\tKEY\tTYPE\tDATA
@@ -451,9 +451,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
       let alias_decoded = url_decode(eparts[0]);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
-      let alias_for_traits = if is_alias_diff
-        && DEFERRED_NAMES.iter().any(|n| *n == alias_decoded.as_str())
-      {
+      let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&alias_decoded.as_str()) {
         Some(alias_decoded)
       } else {
         None
@@ -714,8 +712,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           // `\count22` to 0, breaking `\settabs 20\columns` (loops
           // because `\m@ne` reads as 0 instead of -1, so
           // `\advance\count@\m@ne` doesn't decrement).
-          let should_assign = !has_explicit_address
-            || !state::has_value(&reg.address);
+          let should_assign = !has_explicit_address || !state::has_value(&reg.address);
           if should_assign {
             state::assign_internal(
               TableName::Value,

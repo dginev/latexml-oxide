@@ -24,7 +24,6 @@ use std::collections::VecDeque;
 /// fall back to `dimension_to_spaces(width)` instead of reverting to the
 /// macro name. All other Whatsits use their normal `get_string` path.
 fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
-  use std::ops::Deref;
   let mut out = String::new();
   match d.data() {
     DigestedData::TBox(b) => out.push_str(&b.borrow().get_string()?),
@@ -35,7 +34,7 @@ fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
     },
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
-      if let Some(Stored::Dimension(width)) = w.get_property("width").as_ref().map(Deref::deref) {
+      if let Some(Stored::Dimension(width)) = w.get_property("width").as_deref() {
         out.push_str(&super::tex_glue::dimension_to_spaces(*width));
       } else {
         out.push_str(&w.get_string()?);

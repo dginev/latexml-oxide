@@ -177,6 +177,43 @@ zero undefined-CS errors during expl3 load.
   plain.dump.txt OR plain_dump.rs is loading latex content. Need
   to verify plain.dump.txt is clean (just plain.tex bindings).
 
+### Dump-path `\par` chain over-reads input (2026-04-29 finding)
+
+`20_digestion::box_test` passes with `LATEXML_NODUMP=1`, fails with the dump.
+Trigger: `\vskip0.01em` invoked in horizontal mode (e.g. between two text lines)
+mid-document. `\vskip` Constructor fires `before_digest = leave_horizontal()`,
+which calls `invoke_token(T_CS!("\\par"))`. In the dump path, `\par`'s body is
+the heavy expl3 chain (`\para_end:` → `\mode_if_horizontal:TF{...}{...}` etc.,
+see `latex.dump.txt:7863`). Its expansion **eats `0.01em` from the outer input
+stream** before the Glue parameter parser can read it.
+
+Symptom: the literal `0.01em` text appears in the next paragraph, plus a
+`Warn:expected:<number>` "Missing number, treated as zero" warning at
+`gullet.rs:1672` while processing `\vskip`.
+
+NODUMP path uses the simple `\lx@normal@par` Constructor — no token-stream side
+effects, no bug. Perl handles the expl3 chain correctly via its own gullet, so
+this is a Rust-only gap.
+
+Fix paths to investigate:
+1. **expl3 conditional handling**: `\__prg_TF_true:w` is a delimited macro
+   (`Match:\fi:\use_ii:nn`). Verify Rust gullet matches Perl's delimiter-
+   matching semantics so `\use_ii:nn` doesn't fall through to outer args.
+2. **`invoke_token` body isolation**: in Perl, invoking an Expandable
+   processes its body independently of outer input. Audit Rust's
+   `stomach::invoke_token` Expandable arm for whether it temporarily swaps
+   the gullet's input buffer.
+3. **Workaround**: `leave_horizontal()` could call `\lx@normal@par` directly
+   when the user `\par` is the dump-installed expl3 chain. Less faithful
+   but isolates the bug from leaveHorizontal.
+
+Replicate locally:
+```
+echo '\\documentclass{article}\\begin{document}before x\n\nFirst line\n\\vskip0.01em\nsecond line\\end{document}' > /tmp/x.tex
+cargo run --release --bin latexml_oxide -- /tmp/x.tex
+LATEXML_NODUMP=1 cargo run --release --bin latexml_oxide -- /tmp/x.tex
+```
+
 ### Sandbox regression
 
 181-paper failure subset: post-strict-Perl-translation, 166 papers

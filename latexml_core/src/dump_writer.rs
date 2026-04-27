@@ -146,18 +146,23 @@ pub fn write_dump(
     if matches!(*table, TableName::Value)
       && matches!(
         key_str.as_str(),
-        "\\everymath" | "\\everydisplay" | "\\everyhbox" | "\\everyvbox"
-        | "\\everycr"  | "\\everyjob"     | "\\everypar"  | "\\everyeof"
+        "\\everymath"
+          | "\\everydisplay"
+          | "\\everyhbox"
+          | "\\everyvbox"
+          | "\\everycr"
+          | "\\everyjob"
+          | "\\everypar"
+          | "\\everyeof"
       )
     {
       // Confirm the loop pattern before dropping (don't suppress
       // valid hook contributions on engines with sound aliasing).
       if let Stored::Tokens(ref tks) = value {
         let body = tks.unlist_ref();
-        let needle_cs = format!("{key_str}");
-        let has_self_the = body.iter().any(|t| {
-          t.with_str(|s| s == "\\the")
-        }) && body.iter().any(|t| t.with_str(|s| s == &needle_cs));
+        let needle_cs = key_str.to_string();
+        let has_self_the = body.iter().any(|t| t.with_str(|s| s == "\\the"))
+          && body.iter().any(|t| t.with_str(|s| s == needle_cs));
         if has_self_the {
           skipped += 1;
           continue;
@@ -191,9 +196,7 @@ pub fn write_dump(
     // pre-2017 TeXlive let-aliased \lnot → \neg and \to → \rightarrow,
     // which would gratuitously diverge tests across TL versions.
     // Mirror Perl `TeX_Job.pool.ltxml` IGNORED_SYMBOLS L104-107.
-    if matches!(*table, TableName::Meaning)
-      && matches!(key_str.as_str(), "\\lnot" | "\\to")
-    {
+    if matches!(*table, TableName::Meaning) && matches!(key_str.as_str(), "\\lnot" | "\\to") {
       skipped += 1;
       continue;
     }
