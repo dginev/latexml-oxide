@@ -603,7 +603,11 @@ impl Stored {
   pub fn cast_to_string_hash(in_map: &SymHashMap<Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::default();
     for (key, val) in in_map {
-      out_map.insert(arena::to_string(*key), val.to_string());
+      // Use to_attribute() so MuGlue/MuDimension widths are converted to pt
+      // (e.g. `3.0mu` → `1.66663pt`) before becoming XML attribute strings.
+      // Mirror Perl `attributeformat` which uses `ptValue` for mu-typed
+      // lengths in attribute context.
+      out_map.insert(arena::to_string(*key), val.to_attribute());
     }
     out_map
   }
