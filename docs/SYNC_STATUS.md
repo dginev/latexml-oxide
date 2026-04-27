@@ -143,6 +143,51 @@ conversion suite:
 this wave). Excluded: `40_math` and `53_alignment` (>90s
 timeout, otherwise complete).
 
+### 2026-04-28 — dump Register address serialization
+
+Continuing the dump-path recovery wave. One critical fix landed:
+
+* `a17cb8a4a` `dump`: serialize `Register.address` for allocated
+  registers (`\newcount\m@ne` → address `\count22` etc.). Mirror
+  Perl `Core/Dumper.pm`'s `R(C(...),undef,...,address=>'\\count22')`
+  serialization. Before this fix, the dump_reader stored the
+  Register's value at the CS-name slot, but the runtime address
+  slot's value (set by an earlier `V \count22 Nm -1` entry) was
+  later overwritten with the default 0 by the `M` entry. Result:
+  `\m@ne` read as 0, breaking `\settabs 20\columns` (loops because
+  `\advance\count@\m@ne` doesn't decrement) and 5+ plain-TeX
+  sandbox papers that crashed on tab alignment.
+
+* `e8ddb67e7` `gullet`: 4096-byte safety bound in `read_cs_name_inner`
+  to surface runaway `\csname` expansions (lipsum.sty pathologies)
+  with a clear error instead of OOMing the pushback Vec. Doesn't
+  address the underlying expansion bug; bounds the allocation.
+
+**Sandbox impact (181 papers in `~/data/10k_sandbox_failures`):**
+
+| Round | OK | conv:2 | conv:3 | crash |
+|---|---|---|---|---|
+| Apr 26 baseline | 0 | 13 | 166 | 2 |
+| Apr 27 mid-session | 5 | 151 | 13 | 12 |
+| Apr 27 + address fix | 10 | 151 | 13 | 7 |
+
+5 papers fully recovered this iteration (no errors): astro-ph9308008,
+astro-ph9708022, funct-an9711006, hep-th9404085, q-alg9505016 — all
+plain-TeX papers using `\m@ne`/`\@ne`/`\p@`/etc. allocated registers
+in tab-alignment, glue, or counter-arithmetic contexts.
+
+Test suite: 50_structure 42/3 → 43/2 (+plainsample). Workspace
+total **248 passed / 27 failed**.
+
+**Still-deferred: latex.dump.txt regen OOMs at preload.ltx with a
+4.6GB single allocation in `read_x_token` pushback Vec.** Likely a
+runaway macro expansion via `\ifcsname`. Not addressable with the
+csname-byte-cap (which only bounds the `cs` accumulator, not the
+gullet's pushback queue). Needs deeper investigation of which
+specific macro expansion goes infinite during latex.ltx kernel
+load. The on-disk `latex.dump.txt` (Apr 27 00:22 timestamp) remains
+the source-of-truth for latex tests.
+
 **Known issue: latex.dump.txt regen OOMs at preload.ltx.**
 Re-running `--init=latex.ltx` to regenerate the dump aborts with
 9.2GB allocation failure during preload.ltx raw-load. The on-disk
