@@ -150,6 +150,12 @@ LoadDefinitions!({
   DefMacro!("\\listfigurename", "List of Figures");
   DefMacro!("\\listtablename",  "List of Tables");
 
+  // C.5.1 page registers (Perl latex_base L309-311) — same dump-path
+  // coverage rationale.
+  DefRegister!("\\columnsep"     => Dimension::new(0));
+  DefRegister!("\\columnseprule" => Dimension::new(0));
+  DefRegister!("\\mathindent"    => Dimension::new(0));
+
   //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //

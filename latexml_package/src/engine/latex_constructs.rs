@@ -3874,10 +3874,8 @@ LoadDefinitions!({
   DefRegister!("\\columnwidth"     => Dimension!("6in"));
   DefRegister!("\\linewidth"       => Dimension!("6in"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
-  // Perl: latex_base.pool.ltxml lines 309-311
-  DefRegister!("\\columnsep"       => Dimension::new(0));
-  DefRegister!("\\columnseprule"   => Dimension::new(0));
-  DefRegister!("\\mathindent"      => Dimension::new(0));
+  // \columnsep, \columnseprule, \mathindent moved to latex_base.rs
+  // (Perl latex_base L309-311).
 
   TeX!(
     r"\def\@ifl@t@r#1#2{%
