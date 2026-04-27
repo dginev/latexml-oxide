@@ -216,12 +216,24 @@ LoadDefinitions!({
   // exclusive dump-or-base path (see strict-Perl LoadFormat parity).
   InnerPool!(plain_bootstrap); // Perl: plain_bootstrap.pool.ltxml
 
-  if std::env::var_os("LATEXML_NODUMP").is_none() && plain_dump_available() {
-    InnerPool!(plain_dump); // Perl: plain_dump.pool.ltxml
-  } else {
-    InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
+  // In `--init=plain.tex` (dump-build) mode, stop after plain_bootstrap.
+  // The whole point is to take a snapshot at this point, then digest raw
+  // plain.tex against it — pre-loading plain_dump / plain_base /
+  // plain_constructs would pollute the snapshot and silence the diff for
+  // every register/macro plain.tex defines (e.g. `\countdef\allocationnumber=21`
+  // → `Stored::Register{address:"\count21"}` then identical to itself).
+  // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
+  // `prepare_session`, so this branch fires before tex.rs runs in init mode.
+  // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
+  // `Base.pool` (no LoadFormat) before `DumpFile`.
+  if std::env::var_os("LATEXML_INI_MODE").is_none() {
+    if std::env::var_os("LATEXML_NODUMP").is_none() && plain_dump_available() {
+      InnerPool!(plain_dump); // Perl: plain_dump.pool.ltxml
+    } else {
+      InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
+    }
+    InnerPool!(plain_constructs); // Perl: plain_constructs.pool.ltxml → math_common
   }
-  InnerPool!(plain_constructs); // Perl: plain_constructs.pool.ltxml → math_common
 
   // Perl: LoadFormat('plain') — precompiled plain.tex state.
   // TODO: Enable once dump has full parity (Let, CharDef, Register entries).

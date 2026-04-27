@@ -355,6 +355,24 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     include_comments: if cli.nocomments { Some(false) } else { None },
     nomathparse: if cli.nomathparse { Some(true) } else { None },
   };
+  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
+  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
+  // → plain_constructs and the latex equivalent) reads
+  // `LATEXML_INI_MODE` to decide whether to fully load the format
+  // or stop after the bootstrap pool. If it's not set yet,
+  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
+  // pollutes the snapshot taken later in `ini_tex::dump_format` and
+  // silences the diff for everything raw plain.tex / latex.ltx defines
+  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
+  // problem from 2026-04-26).
+  if cli.init.is_some() {
+    // SAFETY: setting the var before any thread is spawned. `prepare_session`
+    // and `ini_tex::dump_format` both read it but neither mutates env.
+    unsafe {
+      std::env::set_var("LATEXML_INI_MODE", "1");
+    }
+  }
+
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
     eprintln!("Could not prepare converter session: {}", e);

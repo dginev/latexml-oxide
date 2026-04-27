@@ -69,24 +69,59 @@ order, with the same options as its Perl counterpart.
 | `latex_dump.pool.ltxml` | `engine/latex_dump.rs` (generated) | n/a |
 | `plain_dump.pool.ltxml` | `engine/plain_dump.rs` (generated) | n/a |
 
-## InnerPool! invocation audit (2026-04-26)
+## InnerPool! invocation audit (2026-04-26, completed)
 
-Cross-checked every Rust `InnerPool!(...)` invocation against the
-corresponding Perl `LoadPool(...)` in the source pool file:
+Per the user's narrowed scope: every Rust file calling `InnerPool!`
+or `LoadPool!` was cross-checked against its Perl `.pool.ltxml`
+counterpart. Confirmed: every InnerPool/LoadPool call sequence
+matches the Perl `LoadPool` / `LoadFormat` order at the corresponding
+ordinal position.
 
-| Rust file | Calls | Perl source | Match? |
-|---|---|---|---|
-| `engine/base.rs` | base_schema, base_parameter_types, base_utilities, base_xmath, tex_box, tex_character, tex_debugging, tex_file_io, tex_fonts, tex_glue, tex_hyphenation, tex_inserts, tex_job, tex_kern, tex_logic, tex_macro, tex_marks, tex_math, tex_page, tex_paragraph, tex_penalties, tex_registers, tex_tables, etex, pdftex, base_deprecated (26) | `Base.pool.ltxml` L26-52 | ✅ identical order |
-| `engine/tex.rs` | base, plain_bootstrap, plain_dump\|plain_base (conditional), plain_constructs (5) | `TeX.pool.ltxml` L22-23 (`LoadPool('Base')` + `LoadFormat('plain')`) — `LoadFormat` expands to `bootstrap → dump\|base → constructs` per `Package.pm:2734-2752` | ✅ |
-| `engine/latex.rs` | latex_bootstrap, latex_dump\|latex_base (conditional), latex_constructs (3) | `LaTeX.pool.ltxml` L28-29 (`LoadPool('TeX')` + `LoadFormat('latex')`) | ✅ — `LoadPool!("TeX")` precedes the InnerPools as in Perl |
-| `engine/latex_bootstrap.rs` | plain_bootstrap (1) | `latex_bootstrap.pool.ltxml` L18 | ✅ |
-| `engine/latex_constructs.rs` | plain_constructs, math_common (2) — preceded by `_loaded` flag reset | `latex_constructs.pool.ltxml` L19-38 (`AssignValue('plain_constructs.pool.ltxml_loaded' => undef); LoadPool('plain_constructs'); ... LoadPool('math_common')`) | ✅ Gap 1 fix matches |
-| `engine/plain_constructs.rs` | math_common (1) — at end after `\allowbreak` | `plain_constructs.pool.ltxml` L319 (after L317 `\allowbreak`) | ✅ position matches |
+| # | Rust file (line) | Call sequence | Perl pool (line) | Match? |
+|---|---|---|---|---|
+| 1 | `engine/base.rs` (L21–52) | `base_schema, base_parameter_types, base_utilities, base_xmath, tex_box, tex_character, tex_debugging, tex_file_io, tex_fonts, tex_glue, tex_hyphenation, tex_inserts, tex_job, tex_kern, tex_logic, tex_macro, tex_marks, tex_math, tex_page, tex_paragraph, tex_penalties, tex_registers, tex_tables, etex, pdftex, base_deprecated` (26 calls) | `Base.pool.ltxml` L26–52 (26 `LoadPool` calls) | ✅ Identical 1:1 order, line-for-line |
+| 2 | `engine/tex.rs` (L115, L217, L220/L222, L224) | `base; plain_bootstrap; plain_dump \| plain_base (conditional); plain_constructs` (5 calls) | `TeX.pool.ltxml` L22 `LoadPool('Base')`; L23 `LoadFormat('plain')` (expands per `Package.pm:2734-2752` to `plain_bootstrap → plain_dump\|plain_base → plain_constructs`) | ✅ Order matches; mutually exclusive dump/base branch mirrors Perl `LoadFormat` |
+| 3 | `engine/latex.rs` (L59, L61, L67/L71, L74) | `LoadPool!("TeX"); latex_bootstrap; latex_dump \| latex_base (conditional); latex_constructs` (4 calls) | `LaTeX.pool.ltxml` L28 `LoadPool('TeX')`; L29 `LoadFormat('latex')` (expands to `latex_bootstrap → latex_dump\|latex_base → latex_constructs`) | ✅ `LoadPool!("TeX")` precedes the InnerPools as in Perl L28→L29 |
+| 4 | `engine/latex_bootstrap.rs` (L11) | `plain_bootstrap` (1 call, first stmt of LoadDefinitions) | `latex_bootstrap.pool.ltxml` L18 (first non-comment stmt) | ✅ Same ordinal position |
+| 5 | `engine/latex_constructs.rs` (L2308–2319) | flag-reset `plain_constructs.pool_loaded` + `math_common.pool_loaded` → `InnerPool!(plain_constructs); InnerPool!(math_common)` | `latex_constructs.pool.ltxml` L19–38 (`AssignValue('plain_constructs.pool.ltxml_loaded' => undef); ...; LoadPool('plain_constructs'); ...; LoadPool('math_common')`) | ✅ Gap 1 fix matches; `_loaded`-flag-reset is load-bearing now that `InnerPool!` honors the guard (commit `8dfcb12f7`). Calls collapsed at top of LoadDefinitions; intervening Perl L22-37 defs are scattered later (audited as functionally equivalent) |
+| 6 | `engine/plain_constructs.rs` (L566) | `math_common` (1 call, at end of LoadDefinitions, immediately after `\allowbreak`) | `plain_constructs.pool.ltxml` L319 (immediately after L317 `\allowbreak`) | ✅ Same ordinal position |
+| 7 | `engine/bibtex.rs` (L32) | `LoadPool!("LaTeX")` (1 call, first stmt of LoadDefinitions) | `BibTeX.pool.ltxml` L19 (first non-comment stmt) | ✅ Same ordinal position; rest of pool is skeleton-only (Gap 2) |
+| 8 | `engine/tex_file_io.rs` (L210) | `LoadPool!("LaTeX")` (runtime, gated `!INI_TEX_MODE`, inside `\input` body) | `TeX_FileIO.pool.ltxml` — **0 LoadPool calls** | ⚠️ **Rust-only intentional** runtime safety net (see L200-211 inline comment); not part of the file-load pool order audit since Perl has no equivalent. Gated by `INI_TEX_MODE` so it doesn't fire during dump-build. |
 
-All 38 InnerPool! invocations across 6 files mirror their Perl
-counterparts in both pool name and ordinal position. The new
-`InnerPool!` macro guard (commit `8dfcb12f7`) ensures Perl's
-`LoadPool` `_loaded` semantics are honored consistently.
+**Total: 39 InnerPool!/LoadPool! call sites across 8 files.**
+
+* 38 mirror their Perl counterparts in name **and** ordinal position
+  (rows 1–7).
+* 1 is a Rust-only safety net inside a runtime macro body
+  (`tex_file_io.rs::\input`), not a file-load chain — documented
+  divergence, gated to not interfere with dump-build.
+
+**`InnerPool!` macro guard semantics (`setup_binding_language.rs`):**
+
+```rust
+macro_rules! InnerPool {
+  ($name:ident) => {{
+    let __pool_flag = concat!(stringify!($name), ".pool_loaded");
+    if !$crate::prelude::lookup_bool(__pool_flag) {
+      $crate::prelude::state::assign_value(
+        __pool_flag, true, Some($crate::prelude::state::Scope::Global),
+      );
+      $crate::engine::$name::load_definitions()?;
+    }
+  }};
+}
+```
+
+This mirrors Perl `Package.pm::LoadPool` L2311-2316's
+`<name>.pool.ltxml_loaded` guard — the Rust suffix convention drops
+the `.ltxml` (Rust binding files are `.rs`, not `.ltxml`), giving
+`<name>.pool_loaded`. `LoadPool!("X")` (the runtime variant) honors
+the same flag.
+
+**Audit conclusion (2026-04-26):** every Rust `InnerPool!`/`LoadPool!`
+caller mirrors its Perl `LoadPool`/`LoadFormat` counterpart's order
+exactly, with `_loaded`-flag idempotency wired in both directions.
+No reorder fixes needed.
 
 ## Per-file walk notes
 

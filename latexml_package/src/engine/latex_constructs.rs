@@ -2292,12 +2292,12 @@ LoadDefinitions!({
   // followed by `LoadPool('math_common')` (L38) to re-establish those
   // pools' definitions on top of LaTeX-side changes.
   //
-  // Rust note: `InnerPool!(...)` calls `load_definitions()` directly
-  // and does not consult any `_loaded` guard (unlike Perl's
-  // `LoadPool`, which honors `<name>.pool.ltxml_loaded`). The two
-  // `assign_value(... Stored::None)` resets below are kept anyway for
-  // parity with any external code (e.g. `lookup_bool`) that reads
-  // those flags.
+  // Rust note: since commit `8dfcb12f7`, `InnerPool!(...)` honors
+  // `<name>.pool_loaded` (mirror of Perl `LoadPool`'s
+  // `<name>.pool.ltxml_loaded` guard, with the Rust suffix
+  // convention). The two `assign_value(... Stored::None)` resets
+  // below are therefore load-bearing — without them, `InnerPool!`
+  // would skip the re-run.
   //
   // Perl interleaves a handful of defs (font reset, `\hline`,
   // `\f@encoding`, `\par→\lx@normal@par`, etc.) between L21 and L38;

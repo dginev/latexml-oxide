@@ -60,6 +60,16 @@ LoadDefinitions!({
 
   InnerPool!(latex_bootstrap);
 
+  // In `--init=latex.ltx` (dump-build) mode, stop after latex_bootstrap.
+  // The same reasoning as in `tex.rs`'s plain branch: pre-loading
+  // latex_dump / latex_base / latex_constructs pollutes the snapshot
+  // and silences the diff for everything raw latex.ltx defines.
+  // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
+  // `prepare_session`, so this branch fires before latex.rs runs.
+  if std::env::var_os("LATEXML_INI_MODE").is_some() {
+    return Ok(());
+  }
+
   // Perl `LoadFormat('latex')` strict split:
   //   if dump available: bootstrap → dump → constructs (NO base)
   //   else:              bootstrap → base → constructs (NO dump)
