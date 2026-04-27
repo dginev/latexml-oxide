@@ -1488,18 +1488,91 @@ in source order. Rust L2410-L8414 maps roughly to Perl L73-L5250.
 * `\not@math@alphabet`/`\DeclareOldFontCommand` slight ORDER
   divergence (Rust earlier).
 
-## Cumulative parity health (Perl L1-L5500, ~91% of file)
+## Phase 25 — Perl L5501-L5750
 
-The first 5500 lines audited show **predominantly strong PARITY**
-in source order. Rust L2410-L8670 maps roughly to Perl L73-L5500.
+Audit window covers `\mapstochar`/`\owns` math primitives (L5500-5501)
+through Perl's "Other stuff" section (L5510-5742): error infrastructure,
+case-mapping helpers, generic message dispatchers, font-warning macros,
+tracing stubs, semi-undocumented kernel commands, and `\IfFileExists`.
 
-## Phase 25+ (TODO): Perl L5501-L6014
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 5500 | `\mapstochar` | latex_constructs.rs:8738 | ✅ |
+| 5501 | `\owns` | latex_constructs.rs:8739 | ✅ |
+| 5510 | `Let '\@begindocumenthook' '\@empty'` | latex_constructs.rs (was latex_base.rs:39) | ✅ ↻ relocated 2026-04-27 |
+| 5511 | `\@preamblecmds` (`Tokens()`) | latex_constructs.rs (was latex_base.rs:74) | ✅ ↻ relocated 2026-04-27 |
+| 5512-5519 | `\@ifdefinable DefToken {}` | latex_constructs.rs:8968 | ✅ |
+| 5521 | `Let '\@@ifdefinable' '\@ifdefinable'` | latex_constructs.rs:8982 | ✅ |
+| 5523-5526 | `\@rc@ifdefinable DefToken {}` | latex_constructs.rs:8984 | ✅ |
+| 5528-5534 | `\@notdefinable` | latex_constructs.rs:8989 | ✅ |
+| 5536 | `\@qend` (`Tokens(Explode('end'))`) | latex_constructs.rs (was latex_base.rs:47) | ✅ ↻ relocated 2026-04-27 |
+| 5537 | `\@qrelax` | latex_constructs.rs (was latex_base.rs:48) | ✅ ↻ relocated 2026-04-27 |
+| 5538 | `\@spaces` | latex_constructs.rs (was latex_base.rs:49) | ✅ ↻ relocated 2026-04-27 |
+| 5539 | `Let '\@sptoken' T_SPACE` | latex_constructs.rs (was latex_base.rs:50) | ✅ ↻ relocated 2026-04-27 |
+| 5541-5552 | `prepareCaseMapping` / `\lx@prepare@case@mapping` | latex_constructs.rs:8759 | ✅ |
+| 5571-5619 | `latexChangeCase` / `\lx@latex@changecase` | latex_constructs.rs:8797 + lx_change_case_tokens helper | ✅ |
+| 5622-5645 | `make_message` Perl helper | (Rust `make_generic_message` in helpers/ module) | ✅ |
+| 5645 | `\@onlypreamble{}` | latex_constructs.rs:9137 | ✅ |
+| 5646 | `\GenericError{}{}{}{}` | latex_constructs.rs:9142 | ✅ |
+| 5647 | `\GenericWarning{}{}` | latex_constructs.rs:9145 | ✅ |
+| 5648 | `\GenericInfo{}{}` | latex_constructs.rs:9148 | ✅ |
+| 5650 | `Let '\MessageBreak' '\relax'` | latex_constructs.rs:9159 | ✅ |
+| 5652 | `\@setsize{}{}{}{}` | latex_constructs.rs:9162 | ✅ |
+| 5653-5655 | `\hexnumber@ {}` | latex_constructs.rs (was latex_base.rs:385) | ✅ ↻ relocated 2026-04-27 |
+| 5657 | `\on@line` | latex_constructs.rs (was latex_base.rs:388) | ✅ ↻ relocated 2026-04-27 |
+| 5658 | `Let '\@warning' '\@latex@warning'` | latex_constructs.rs (was latex_base.rs:390) | ✅ ↻ relocated 2026-04-27 |
+| 5659 | `Let '\@@warning' '\@latex@warning@no@line'` | latex_constructs.rs (was latex_base.rs:391) | ✅ ↻ relocated 2026-04-27 |
+| 5661 | `\G@refundefinedtrue` | latex_constructs.rs (was latex_base.rs:392) | ✅ ↻ relocated 2026-04-27 |
+| 5663-5664 | `\@nomath{}` | latex_constructs.rs (was latex_base.rs:393) | ✅ ↻ relocated 2026-04-27 |
+| 5665-5666 | `\@font@warning{}` | latex_constructs.rs (was latex_base.rs:398) | ✅ ↻ relocated 2026-04-27 |
+| 5670 | `\check@mathfonts` | latex_constructs.rs:9179 | ✅ |
+| 5671 | `\fontsize{}{}` | latex_constructs.rs:9180 | ✅ |
+| 5673 | `\@setfontsize{}{}{}` | latex_constructs.rs:9181 | ✅ |
+| 5676 | `\loggingoutput` | latex_constructs.rs (was latex_base.rs:597) | ✅ ↻ relocated 2026-04-27 |
+| 5677 | `\tracingfonts` | latex_constructs.rs (was latex_base.rs:599) | ✅ ↻ relocated 2026-04-27 |
+| 5678 | `\showoverfull` | latex_constructs.rs (was latex_base.rs:600) | ✅ ↻ relocated 2026-04-27 |
+| 5679 | `\showoutput` | latex_constructs.rs (was latex_base.rs:601) | ✅ ↻ relocated 2026-04-27 |
+| 5687-5693 | `\@ifnextchar DefToken {}{}` | latex_constructs.rs:9185 | ✅ |
+| 5694 | `Let '\kernel@ifnextchar' '\@ifnextchar'` | latex_constructs.rs:9198 | ✅ |
+| 5695 | `Let '\@ifnext' '\@ifnextchar'` | latex_constructs.rs:9199 | ✅ |
+| 5698-5706 | `\@ifnext@n {}{}{}` | latex_constructs.rs:8857 | ✅ |
+| 5708-5714 | `\@ifstar {}{}` | latex_constructs.rs:8887 | ✅ |
+| 5716 | `\@dblarg {}` | latex_constructs.rs:8900 | ✅ |
+| 5717 | `\@xdblarg {}{}` | latex_constructs.rs:8901 | ✅ |
+| 5719-5722 | `\@testopt{}{}` | latex_constructs.rs:8903 | ✅ |
+| 5723-5730 | `\@protected@testopt` (RawTeX) | latex_constructs.rs:8910 | ✅ |
+| 5732 | `Let '\l@ngrel@x' '\relax'` | latex_constructs.rs:8920 | ✅ |
+| 5733 | `\@star@or@long{}` | latex_constructs.rs:8921 | ✅ |
+| 5736-5742 | `\in@`, `\ifin@` (RawTeX) | latex_constructs.rs:8926 | ✅ |
+| 5744+ | `\IfFileExists{}{}{}` | latex_constructs.rs:8935 | ✅ |
 
-Math-symbol primitives (`\arrowvert`, `\braceld` etc),
-`\mathparagraph`/`\mathsection`/etc, errors/warnings infrastructure,
-hyphenation, language support, NoCaseChangeList, document closing
-miscellany. Will continue in subsequent iterations.
+### Phase 25 findings
 
-## Phase 3+ (TODO): L501-L6014
+* **Strong PARITY achieved** for L5510-L5742, with one substantial
+  Rust-housekeeping move: 17 entries previously in `latex_base.rs`
+  (Perl-source-order belongs to `latex_constructs.pool.ltxml`)
+  relocated to `latex_constructs.rs` 2026-04-27. Both NODUMP and
+  dump paths still load all of these (they survive in
+  `_constructs.rs`'s always-loaded LoadFormat chain).
+* The case-mapping helpers (`\lx@prepare@case@mapping`,
+  `\lx@latex@changecase`) live earlier in Rust (~L8759-8797) than
+  Perl-source-order strict ordering would dictate (Perl L5541-5619).
+  This is a long-standing layout-of-conveniences ORDER divergence;
+  flagging but not fixing.
+* `\makeatletter`/`\makeatother` (Perl L5765-5766) live at the END
+  of the closure-backed block in Rust, which is now Perl-faithful
+  (after `\@ifnextchar`), reflecting Perl's order.
 
-The bulk of `latex_constructs.pool.ltxml`.
+## Cumulative parity health (Perl L1-L5750, ~95% of file)
+
+The first 5750 lines audited show **predominantly strong PARITY**
+in source order, with the major Phase-25 housekeeping migration
+(17 misplaced CSes) eliminating a long-standing latex_base.rs vs
+latex_constructs.rs divergence.
+
+## Phase 26+ (TODO): Perl L5751-L6014
+
+Final ~265 lines: hyphenation `\newlanguage` chain, `\protected@write`,
+`\@@end`, `\bibdata`/`\bibcite`/etc aux file stubs, `\mathgroup`,
+`\nocorr`/`\nocorrlist`/`\check@nocorr` text-formatting helpers,
+miscellaneous closing internals. Will continue in subsequent iterations.

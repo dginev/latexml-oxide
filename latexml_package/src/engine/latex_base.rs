@@ -36,18 +36,10 @@ LoadDefinitions!({
     "
   );
 
-  Let!("\\@begindocumenthook", "\\@empty");
   Let!("\\@elt", "\\relax");
-
-  // Utility macros needed by error infrastructure.
-  // Perl: latex_constructs.pool.ltxml L5536-5537 defines these via
-  // `DefMacroI('\@qend', undef, Tokens(Explode('end')))` — token-list
-  // bodies (NOT closures), so they survive dump serialization. We use
-  // matching string-literal token-list form here for the same reason.
-  DefMacro!("\\@qend", "end");
-  DefMacro!("\\@qrelax", "relax");
-  DefMacro!("\\@spaces", r"\space\space\space\space");
-  Let!("\\@sptoken", T_SPACE!());
+  // `\@begindocumenthook`, `\@qend`, `\@qrelax`, `\@spaces`, `\@sptoken`
+  // moved to `latex_constructs.rs` (Perl latex_constructs.pool.ltxml
+  // L5510, L5536-5539).
 
   // Float page management stubs (LaTeXML doesn't do page layout)
   DefMacro!("\\@topnewpage{}", "#1");
@@ -70,8 +62,7 @@ LoadDefinitions!({
   DefMacro!("\\contentsline{}{}{}", "");
   DefMacro!("\\newlabel{}{}", "");
 
-  // Text formatting stubs (no-ops)
-  DefMacro!("\\@preamblecmds", None, "");
+  // `\@preamblecmds` moved to latex_constructs.rs (Perl L5511).
   DefMacro!("\\nocorrlist", None, ",.");
   DefMacro!("\\text@command{}", "");
   DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
@@ -380,24 +371,10 @@ LoadDefinitions!({
        \@latex@info{#1\@gobble}}
      "
   );
-  // Perl-parity: `\@setsize` is `DefMacro` in latex_constructs.pool.ltxml L5652.
-  // Relocated there 2026-04-18 (closure-backed; closure can't serialize).
-  DefMacro!("\\hexnumber@ {}", "\\ifcase\\number#1
- 0\\or 1\\or 2\\or 3\\or 4\\or 5\\or 6\\or 7\\or 8\\or
- 9\\or A\\or B\\or C\\or D\\or E\\or F\\fi");
-  DefMacro!("\\on@line", " on input line \\the\\inputlineno");
-  // `\@latexbug` moved to `latex_constructs_rust_only.rs`.
-  Let!("\\@warning", "\\@latex@warning");
-  Let!("\\@@warning", "\\@latex@warning@no@line");
-  DefMacro!("\\G@refundefinedtrue", None);
-  DefMacro!(
-    "\\@nomath{}",
-    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
-  );
-  DefMacro!(
-    "\\@font@warning{}",
-    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
-  );
+  // `\hexnumber@`, `\on@line`, `\@warning`, `\@@warning`,
+  // `\G@refundefinedtrue`, `\@nomath`, `\@font@warning` moved to
+  // latex_constructs.rs (Perl L5653-5666). `\@latexbug` moved to
+  // `latex_constructs_rust_only.rs`.
 
   //======================================================================
   // Perl: latex_base.pool.ltxml lines 601-608
@@ -594,11 +571,10 @@ LoadDefinitions!({
   //======================================================================
   // Perl L809: \loggingall
   //======================================================================
-  DefMacro!("\\loggingoutput", None);
+  // `\loggingoutput`, `\tracingfonts`, `\showoverfull`, `\showoutput`
+  // moved to latex_constructs.rs (Perl L5676-5679); only `\loggingall`
+  // belongs here per Perl L809.
   DefMacro!("\\loggingall", None);
-  DefMacro!("\\tracingfonts", None);
-  DefMacro!("\\showoverfull", None);
-  DefMacro!("\\showoutput", None);
   // `\wlog` moved to `latex_constructs_rust_only.rs`.
 
   //======================================================================

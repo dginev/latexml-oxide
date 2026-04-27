@@ -8965,6 +8965,15 @@ LoadDefinitions!({
     }
   });
 
+  // Perl L5510 — \@begindocumenthook, target of \AtBeginDocument.
+  // Relocated from latex_base.rs 2026-04-27 (Phase 25 audit: Perl-parity).
+  Let!("\\@begindocumenthook", "\\@empty");
+
+  // Perl L5511 — \@preamblecmds, list of preamble-only commands.
+  // Relocated from latex_base.rs 2026-04-27 (Phase 25 audit: Perl-parity).
+  DefMacro!("\\@preamblecmds", None, "");
+
+  // Perl L5512-5519
   DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
     if is_definable(&token) {
       iftoken.unlist()
@@ -8979,13 +8988,16 @@ LoadDefinitions!({
     }
   });
 
+  // Perl L5521
   Let!("\\@@ifdefinable", "\\@ifdefinable");
 
+  // Perl L5523-5526
   DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(_token, iftoken)] {
     Let!("\\@ifdefinable", "\\@@ifdefinable");
     iftoken.unlist()
   });
 
+  // Perl L5528-5534
   DefMacro!(
     "\\@notdefinable",
     None,
@@ -8995,6 +9007,15 @@ LoadDefinitions!({
     Or name \@backslashchar\@qend... illegal, see p.192 of the manual}
   "###
   );
+
+  // Perl L5536-5539 — \@qend, \@qrelax, \@spaces, \@sptoken.
+  // Token-list bodies (Perl: `Tokens(Explode('end'))`) so they
+  // serialize into the dump cleanly as token bodies, not closures.
+  // Relocated from latex_base.rs 2026-04-27 (Phase 25 audit: Perl-parity).
+  DefMacro!("\\@qend", "end");
+  DefMacro!("\\@qrelax", "relax");
+  DefMacro!("\\@spaces", r"\space\space\space\space");
+  Let!("\\@sptoken", T_SPACE!());
 
   // Sundry
   // Perl latex_constructs.pool L5771: DefPrimitiveI('\textprime', undef, UTF(0xB4))
@@ -9161,13 +9182,36 @@ LoadDefinitions!({
   // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
   DefMacro!("\\@setsize{}{}{}{}", "");
 
-  // Perl L5765-5766
-  DefPrimitive!("\\makeatletter", {
-    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
-  });
-  DefPrimitive!("\\makeatother", {
-    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
-  });
+  // Perl L5653-5655 — \hexnumber@: produce a hex digit for #1.
+  // Relocated from latex_base.rs 2026-04-27 (Phase 25 audit: Perl-parity).
+  DefMacro!(
+    "\\hexnumber@ {}",
+    "\\ifcase\\number#1
+ 0\\or 1\\or 2\\or 3\\or 4\\or 5\\or 6\\or 7\\or 8\\or
+ 9\\or A\\or B\\or C\\or D\\or E\\or F\\fi"
+  );
+
+  // Perl L5657
+  DefMacro!("\\on@line", " on input line \\the\\inputlineno");
+
+  // Perl L5658-5659
+  Let!("\\@warning", "\\@latex@warning");
+  Let!("\\@@warning", "\\@latex@warning@no@line");
+
+  // Perl L5661
+  DefMacro!("\\G@refundefinedtrue", None);
+
+  // Perl L5663-5664
+  DefMacro!(
+    "\\@nomath{}",
+    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
+  );
+
+  // Perl L5665-5666
+  DefMacro!(
+    "\\@font@warning{}",
+    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
+  );
 
   // Perl L5670-5673 — font size stubs. Token-list bodies (Perl:
   // `Tokens()` = empty) that swallow their args. Relocated from
@@ -9179,6 +9223,13 @@ LoadDefinitions!({
   DefMacro!("\\check@mathfonts", None);
   DefMacro!("\\fontsize{}{}", None);
   DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+
+  // Perl L5676-5679 — tracing/logging stubs (no-ops).
+  // Relocated from latex_base.rs 2026-04-27 (Phase 25 audit: Perl-parity).
+  DefMacro!("\\loggingoutput", None);
+  DefMacro!("\\tracingfonts", None);
+  DefMacro!("\\showoverfull", None);
+  DefMacro!("\\showoutput", None);
 
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
   // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
@@ -9197,4 +9248,12 @@ LoadDefinitions!({
   });
   Let!("\\kernel@ifnextchar", "\\@ifnextchar");
   Let!("\\@ifnext", "\\@ifnextchar");
+
+  // Perl L5765-5766 — \makeatletter, \makeatother.
+  DefPrimitive!("\\makeatletter", {
+    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
+  });
+  DefPrimitive!("\\makeatother", {
+    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
+  });
 });
