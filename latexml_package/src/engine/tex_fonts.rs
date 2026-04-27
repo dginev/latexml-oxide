@@ -49,6 +49,11 @@ LoadDefinitions!({
     }
   });
 
+  // Perl TeX_Fonts.pool.ltxml L77-78: default skew/hyphen registers
+  // before \font.
+  DefRegister!("\\defaultskewchar", Number!(-1));
+  DefRegister!("\\defaulthyphenchar", Number!(45)); // ord('-') = 45
+
   // Perl: \font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName
   // (TeX_Fonts.pool.ltxml:82). Token does NOT auto-skip spaces in Rust gullet
   // (parity with Perl readToken), so the leading SkipSpaces is the
@@ -183,8 +188,8 @@ LoadDefinitions!({
       }
     }
   );
-  DefRegister!("\\defaultskewchar", Number!(-1));
-  DefRegister!("\\defaulthyphenchar", Number!(45)); // ord('-') = 45
+  // \defaultskewchar / \defaulthyphenchar moved up to mirror Perl
+  // L77-78 (right before \font).
 
   // Not sure what this should be...
   DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
