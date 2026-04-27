@@ -35,6 +35,61 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 **Working doc:** [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
 
+### 2026-04-27 — test-suite recovery wave
+
+Four commits brought `00_tokenize` from 0/14 (all hanging or
+OOM-leak-killed) to 12/14 passing:
+
+* `6e95dcd6b` — `LATEXML_INI_MODE` env gate set in
+  `bin/latexml_oxide.rs` BEFORE `prepare_session`, so
+  `tex.rs` / `latex.rs` skip the dump-or-base + constructs
+  trio in init mode. Mirrors Perl `Core.pm::iniTeX` default
+  `mode='Base'`. Plain dump went from 7 corrupt entries to
+  925 valid entries.
+
+* `94706300f` — `find_file` binding-registry hits gated on
+  `notex=true`. Raw-file callers (`\openin`, `\IfFileExists`)
+  no longer get the literal binding name as a phantom path.
+  Killed the `t1enc.def` cascade in latex.ltx dump-build
+  (log size 381 MB → 112 KB). Same commit restored
+  `~ → \lx@NBSP` in `plain_constructs.rs` (mirror of Perl
+  `plain_constructs.pool.ltxml:220`).
+
+* `07a9f237b` — `dump_writer` skips `\everymath` /
+  `\everydisplay` / etc. with self-`\the<key>` body.
+  latex.ltx's `\let\frozen@everymath\everymath` +
+  `\newtoks\everymath` dance results in our dump capturing
+  the self-referential body on the new `\everymath` slot
+  (slot aliasing isn't fully Perl-faithful yet). At runtime,
+  math-mode entry recursively expanded `\the\everymath` until
+  token-limit exhaustion — this was the OOM source the user
+  observed (~57 MB/s gullet buffer growth in debug builds).
+
+* `42294d611` — drop redundant `Let \@@input \input` in
+  `latex_constructs.rs:6996`. The bootstrap-level Let in
+  `latex_bootstrap.rs:48` already aliases `\@@input` to the
+  raw TeX `\input` BEFORE the dump installs latex.ltx's
+  redefined `\input` (`\@ifnextchar\bgroup\@iinput\@@input`).
+  Re-letting AFTER the dump made `\@@input` self-referential;
+  `\input <missing-file>` looped at the false branch.
+  Triggered by `\verbatimlisting{snippet}` in
+  `tests/tokenize/verb.tex`.
+
+**Remaining `00_tokenize` failures (2/14):**
+
+* `ligatures_test`, `mathtokens_test` — both diff on math
+  number ligature: `12345.67890` becomes
+  `<NUMBER>12345</NUMBER><METARELOP>colon</METARELOP><NUMBER>67890</NUMBER>`
+  instead of one `<NUMBER>12345.67890</NUMBER>`. Both pass
+  with `LATEXML_NODUMP=1` (raw `latex_base` path); the dump
+  path's `.`-in-math handling is broken regardless of dump
+  file content (even an empty-body `latex.dump.txt` triggers
+  the failure — file existence alone routes to `latex_dump`
+  instead of `latex_base`). Likely a missing
+  math-character-state initialization that `latex_base` does
+  and the dump capture misses. **Deferred to a separate
+  investigation.**
+
 ### Active gaps (as of 2026-04-26)
 
 * **2026-04-26 (Perl `Dumper.pm` + `DumpFile` parity wave)**:
