@@ -227,3 +227,75 @@ Action plan:
    kernel, LaTeXML helper, etc.). No moves/deletes needed.
 3. The line-count divergence is per-line verbosity — leave alone unless
    we want to compress macro syntax (separate concern).
+
+## Updated 2026-04-27 — `latex_constructs_rust_only.rs` migration
+
+Per user directive: the three Rust files
+`engine/latex_{base,bootstrap,constructs}.rs` should match the three
+Perl `LaTeXML/Engine/latex_{base,bootstrap,constructs}.pool.ltxml`
+files exactly. Anything Rust needs as a hotfix lives in the new
+`engine/latex_constructs_rust_only.rs` module, loaded LAST in the
+`LoadFormat('latex')` chain.
+
+**Migrated entries (commit `c35b3b2d2`)** — verified absent from any
+Perl latex_*.pool.ltxml:
+
+* `\@bls`, `\@latexbug`, `\ltx@hard@MessageBreak` (from latex_base.rs)
+* `\@maxlistdepth`, `\@listi`-`\@listvi` (no-op stubs)
+* `\IfPackageLoadedTF`, `\IfClassLoadedTF`, `\IfPackageAtLeastTF`,
+  `\IfClassAtLeastTF`, `\IfFormatAtLeastTF`, `\IfFileAtLeastTF`
+  (modern LaTeX3 kernel post-2020 file-load family)
+* `\ltx@ifpackageloaded`, `\ltx@ifclassloaded` (LaTeXML aliases)
+* `\maybe@end@title` (Rust titling-pipeline Constructor)
+* `\thebibliography@ID` (initial empty default)
+
+**Deferred for follow-up** (require helper-fn relocation):
+* `\filecontents`, `\lx@filecontents@star` — `cache_filecontents` Rust
+  helper would need to move alongside.
+
+**Test impact**: workspace 1081/18 unchanged baseline. 50_structure
+clean (45/0).
+
+## Updated 2026-04-27 — symbol-set audit v2 (tighter extraction)
+
+Earlier audit comparisons had high false-positive rates because
+extraction patterns missed several Rust definition forms (`DefMath!`,
+`DefAccent!`, `DefEnvironment!`, dynamic `T_CS!(s!(…))`, raw-TeX in
+closures). v2 extraction restricted to `Def…!`/`Let!`/`NewCounter!`
+first-arg only, and emits NewCounter side-effect CSes (`\thefoo`,
+`\c@foo`).
+
+| Side | Total CSes |
+|---|---|
+| Perl `latex_{base,bootstrap,constructs}.pool.ltxml` | **1279** |
+| Rust `latex_{base,bootstrap,constructs,constructs_rust_only}.rs` | **1207** |
+| In both | **1159** (~91% overlap) |
+| **Rust-only** | **48** |
+| **Perl-only** | **120** |
+
+`docs/parity_data/latex_combined_{rust,perl}_only_v2.txt` lists each.
+
+### Caveats
+
+The Perl-only list still contains a high false-positive rate. Spot
+checks: `\caption`, `\frac`, `\bfseries`, `\itshape`, `\array`, `\date`
+all show as "Perl-only" in v2 but are actually defined in Rust under
+forms the regex misses (e.g. `DefConstructor!`, `Tag!`, dynamic
+`T_CS!(s!(...))`). Estimated true Perl-only count is closer to ~50,
+not 120.
+
+The Rust-only count of 48 is more reliable. It includes the migration
+targets (now in `latex_constructs_rust_only.rs`) plus other modern
+kernel additions still in `latex_constructs.rs` itself
+(e.g. `\extrafloats`, `\@equationgroup` family, `\NewCommandCopy`,
+`\DeclareCommandCopy`, `\ShowCommand`, `\wlog`, picture extras
+`\lx@pic@line` etc.) that need eventual disposition (move to rust_only
+or document as intentional kernel-additions).
+
+### Methodology limit
+
+A symbol-set diff fundamentally cannot reach exact parity given
+Rust's many definition styles. The next-step approach is
+**line-by-line walk** through Perl `latex_constructs.pool.ltxml`,
+finding each Rust analog in any of the four latex_* files, in source
+order. Symbol-set diff stays useful as a coarse health indicator.
