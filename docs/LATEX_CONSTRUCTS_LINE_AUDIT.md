@@ -1563,16 +1563,117 @@ tracing stubs, semi-undocumented kernel commands, and `\IfFileExists`.
   of the closure-backed block in Rust, which is now Perl-faithful
   (after `\@ifnextchar`), reflecting Perl's order.
 
-## Cumulative parity health (Perl L1-L5750, ~95% of file)
+## Phase 26 — Perl L5751-L6014 (file end)
 
-The first 5750 lines audited show **predominantly strong PARITY**
-in source order, with the major Phase-25 housekeeping migration
-(17 misplaced CSes) eliminating a long-standing latex_base.rs vs
-latex_constructs.rs divergence.
+Final 264 lines: `\IfFileExists` else-branch + `\InputIfFileExists`,
+`\makeatletter`/`\makeatother`, sundry text/math symbols and
+declarations, hyphenation registers, `\protected@write`, fixltx2e
+defaults, `\textsubscript`, `\DeclareUnicodeCharacter`, textcomp
+load, NoCaseChangeList machinery, `\@uclclist`,
+`\Make{Upper,Lower,Title}case` builders.
 
-## Phase 26+ (TODO): Perl L5751-L6014
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 5750-5751 | `\IfFileExists` else-branch | latex_constructs.rs:8941 | ✅ |
+| 5753-5761 | `\InputIfFileExists{}{}{}` | latex_constructs.rs:8955 | ✅ |
+| 5765-5766 | `\makeatletter`/`\makeatother` | latex_constructs.rs:9201/9204 | ✅ ↻ relocated 2026-04-27 |
+| 5771 | `\textprime` (UTF 0xB4) | latex_constructs.rs:9001 | ✅ |
+| 5773 | `Let '\endgraf' '\par'` | latex_constructs.rs:9002 | ✅ |
+| 5774 | `Let '\endline' '\cr'` | latex_constructs.rs:9003 | ✅ |
+| 5778 | `\fileversion` (Tokens()) | latex_constructs.rs:9004 | ✅ |
+| 5779 | `\filedate` | latex_constructs.rs:9005 | ✅ |
+| 5783 | `\chaptername` ("Chapter") | latex_constructs.rs:9006 | ✅ |
+| 5784 | `\partname` ("Part") | latex_constructs.rs:9007 | ✅ |
+| 5785 | `\appendixname` ("Appendix") | latex_constructs.rs:9008 | ✅ |
+| 5788 | `\sectiontyperefname` | latex_constructs.rs:9009 | ✅ |
+| 5789 | `\subsectiontyperefname` | latex_constructs.rs:9010 | ✅ |
+| 5790 | `\subsubsectiontyperefname` | latex_constructs.rs:9011 | ✅ |
+| 5791 | `\paragraphtyperefname` | latex_constructs.rs:9012 | ✅ |
+| 5792 | `\subparagraphtyperefname` | latex_constructs.rs:9013 | ✅ |
+| 5796 | `\bibdata{}` | latex_constructs.rs:9018 (also dup at latex_base.rs:59 ⚠) | ✅ DUP |
+| 5797 | `\bibcite{}{}` | latex_constructs.rs:9019 (also dup at latex_base.rs:60 ⚠) | ✅ DUP |
+| 5798 | `\citation{}` | latex_constructs.rs:9020 (also dup at latex_base.rs:61 ⚠) | ✅ DUP |
+| 5799 | `\contentsline{}{}{}` | latex_constructs.rs:9021 (also dup at latex_base.rs:62 ⚠) | ✅ DUP |
+| 5800 | `\newlabel{}{}` | latex_constructs.rs:9022 (also dup at latex_base.rs:63 ⚠) | ✅ DUP |
+| 5802 | `\stop` (closure: closeMouth(1)) | latex_constructs.rs:8374 (`Let \stop \endinput`) | ⚠ DIVERGE |
+| 5803 | `\ignorespacesafterend` | latex_constructs.rs:8375 (also dup at latex_base.rs:663 ⚠) | ✅ DUP |
+| 5804 | `Let '\mathgroup' '\fam'` | latex_constructs.rs:9046 (also dup at latex_base.rs:664 ⚠) | ✅ DUP |
+| 5805 | `Let '\mathalpha' '\relax'` | latex_constructs.rs:8744 (also dup at latex_base.rs:665 ⚠) | ✅ DUP |
+| 5808-5812 | `\mathhexbox{}{}{}` (DefPrimitive: decodeMathChar) | plain_base.rs:654 only — missing latex_constructs override | ❌ MISSING |
+| 5814 | `\nocorrlist` (",.") | latex_constructs.rs:9049 (also dup at latex_base.rs:66 ⚠) | ✅ DUP |
+| 5815 | `Let '\nocorr' '\relax'` | latex_constructs.rs:9050 | ✅ |
+| 5816 | `Let '\check@icl' '\@empty'` | latex_constructs.rs:9051 | ✅ |
+| 5817 | `Let '\check@icr' '\@empty'` | latex_constructs.rs:9052 | ✅ |
+| 5818 | `\text@command{}` | latex_constructs.rs:9054 (also dup at latex_base.rs:67 ⚠) | ✅ DUP |
+| 5819 | `\check@nocorr@ Until:\nocorr Until:\@nil` | latex_constructs.rs:9055 (also dup at latex_base.rs:68 ⚠) | ✅ DUP |
+| 5820 | `\newif\ifmaybe@ic` (RawTeX) | latex_base.rs:69 only — should be in latex_constructs.rs | ⚠ ORDER |
+| 5822 | `\maybe@ic` | latex_base.rs:70 only — should be in latex_constructs.rs | ⚠ ORDER |
+| 5823 | `\maybe@ic@` | latex_base.rs:71 only — should be in latex_constructs.rs | ⚠ ORDER |
+| 5825 | `\sw@slant` | latex_base.rs:72 only — should be in latex_constructs.rs | ⚠ ORDER |
+| 5826 | `\fix@penalty` | latex_base.rs:73 only — should be in latex_constructs.rs | ⚠ ORDER |
+| 5828 | `\@@end` (closure: gullet flush) | latex_constructs.rs:9120 | ✅ |
+| 5836-5886 | `\newlanguage\l@*` (52 entries) | latex_constructs.rs:9091-9109 (RawTeX!) (also dup chunk in latex_base.rs:667+) | ✅ DUP |
+| 5889-5903 | `\protected@write Number {}{}` | latex_constructs.rs:9112 | ✅ |
+| 5913 | `\eminnershape` | latex_constructs.rs:8848 | ✅ |
+| 5916 | `\TextOrMath{}{}` | latex_constructs.rs:8849 | ✅ |
+| 5918-5919 | `\textsubscript` (mode=>'restricted_horizontal',enterHorizontal=>1) | latex_constructs.rs:8687 (mode => "text") | ⚠ DIVERGE |
+| 5923-5936 | `\DeclareUnicodeCharacter Expanded {}` | latex_constructs.rs:5591 | ✅ ORDER (Rust earlier) |
+| 5939 | `RequirePackage('textcomp')` | latex_constructs.rs:8748 | ✅ |
+| 5949-5953 | `\AddToNoCaseChangeList{DefToken}` | latex_constructs.rs:8790 | ✅ |
+| 5954 | `\NoCaseChange{}` (robust) | latex_constructs.rs:8795 | ✅ |
+| 5956-5961 | `\AddToNoCaseChangeList` for `\NoCaseChange`/`\label`/`\ref`/`\cite`/`\ensuremath`/`\thanks` | latex_constructs.rs:8802-8809 | ✅ + extra `\@ensuremath` (Rust-only) |
+| 5964 | `\@uclclist` body `\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\ij\IJ\th\TH` | latex_constructs.rs:8755 (missing `\ij\IJ` pair) | ⚠ DIVERGE |
+| 5966-6010 | `\MakeUppercase`/`\MakeLowercase`/`\MakeTitlecase` (RawTeX builders) | latex_constructs.rs:8813-8845 | ✅ |
 
-Final ~265 lines: hyphenation `\newlanguage` chain, `\protected@write`,
-`\@@end`, `\bibdata`/`\bibcite`/etc aux file stubs, `\mathgroup`,
-`\nocorr`/`\nocorrlist`/`\check@nocorr` text-formatting helpers,
-miscellaneous closing internals. Will continue in subsequent iterations.
+### Phase 26 findings
+
+* **Duplicates (10 entries)**: `\bibdata`/`\bibcite`/`\citation`/
+  `\contentsline`/`\newlabel`/`\nocorrlist`/`\text@command`/
+  `\check@nocorr@`/`\ignorespacesafterend`/`\mathgroup` defined in
+  BOTH latex_base.rs and latex_constructs.rs. Latter wins at
+  load-order (loaded after) but the duplication should be cleaned
+  up (latex_base.rs entries removed) for strict parity. The float-
+  page stubs `\@topnewpage`/`\@next`/`\@xnext`/`\@freelist`/
+  `\@currbox`/`\@toplist`/`\@botlist`/`\@midlist`/`\@currlist`/
+  `\@deferlist`/`\@dbltoplist`/`\@dbldeferlist`/`\@startcolumn`
+  (Perl latex_constructs L1015-1028) are misplaced in latex_base.rs
+  L43-56 — should be relocated to latex_constructs.rs (Phase ~7
+  area).
+* **Misplacements (5 entries)**: `\ifmaybe@ic`/`\maybe@ic`/
+  `\maybe@ic@`/`\sw@slant`/`\fix@penalty` only in latex_base.rs
+  L69-73 — should relocate to latex_constructs.rs.
+* **MISSING**: `\mathhexbox` defined as DefMacro in plain_base.rs
+  but Perl latex_constructs L5808-5812 OVERRIDES with closure
+  decoding mathchar via `decodeMathChar`. Rust missing the
+  override.
+* **DIVERGE**:
+  * `\stop` — Rust uses `Let \stop \endinput` (cleaner); Perl uses
+    closure `closeMouth(1)`. Functional equivalent in normal usage.
+  * `\textsubscript` — Rust `mode => "text"` vs Perl
+    `mode => 'restricted_horizontal', enterHorizontal => 1`. Same
+    pattern as `\textsuperscript` family.
+  * `\@uclclist` — Rust missing `\ij\IJ` pair (oe-IJ ligature).
+* **Hyphenation registers** are also DUPLICATE: ~50 `\newlanguage\l@*`
+  entries appear both in latex_base.rs:667+ and latex_constructs.rs:
+  9091-9109. Cleanup target.
+
+## Cumulative parity health (Perl L1-L6014, 100% of latex_constructs.pool.ltxml)
+
+The 26-phase line-by-line walk shows **strong PARITY** in source
+order, with two clusters of housekeeping work remaining:
+1. **latex_base.rs ↔ latex_constructs.rs duplicates / misplacements**
+   (~30 entries): float-page stubs, hyphenation, aux-file stubs,
+   nocorr family. These belong in latex_constructs.rs per Perl,
+   currently mirrored or only in latex_base.rs.
+2. **Single MISSING / DIVERGE entries** (~5): `\mathhexbox` override,
+   `\@uclclist` IJ pair, `\stop` closure, `\textsubscript` mode.
+
+## Next: 5 more source files
+
+Per user directive (2026-04-27), proceed to audit:
+1. `latex_base.pool.ltxml` (vs `latex_base.rs`)
+2. `latex_bootstrap.pool.ltxml` (vs `latex_bootstrap.rs`)
+3. `latex_dump.pool.ltxml` (vs `latex_dump.rs`)
+4. `plain_base.pool.ltxml` (vs `plain_base.rs`)
+5. `plain_constructs.pool.ltxml` (vs `plain_constructs.rs`)
+(Also possibly `plain_dump.pool.ltxml`.)
