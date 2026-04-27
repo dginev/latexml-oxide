@@ -39,8 +39,8 @@ order, with the same options as its Perl counterpart.
 | `Base_Schema.pool.ltxml` | `engine/base_schema.rs` | ✅ walked — order matches; Rust `after_open` closure has extra `xml:lang`/`DOCUMENT_LANGUAGE` handling not in Perl (likely belongs in babel binding) |
 | `Base_ParameterTypes.pool.ltxml` | `engine/base_parameter_types.rs` | ✅ walked — every Perl `DefParameterType` has a matching Rust `DefParameterType!` in the same order. Rust adds extras (`Relation`, `Pair`, `TeXFileName`, `DirectoryList`, `MoveableBox`, `BalancedParen`, `TeXDelimiter`, `Digested`, `DigestUntil`, `DigestedBody`) interleaved or appended; not present in Perl Base_ParameterTypes — likely additions for downstream Rust bindings, harmless to stay |
 | `Base_Utility.pool.ltxml` | `engine/base_utilities.rs` | ✅ walked & reordered — dash/space defs (`\lx@endash` etc.) hoisted to immediately after `\lx@ifundefined`; `\lx@ignorehardspaces` and `\@ADDCLASS` and the `frontmatter` `AssignValue` reordered to follow Perl L23-179 sequence. Rest of file (`\@add@frontmatter` chain, `\lx@tag*`, `\lx@@compose@title`, etc.) was already in Perl order. |
-| `Base_XMath.pool.ltxml` | `engine/base_xmath.rs` | walk pending |
-| `Base_Deprecated.pool.ltxml` | `engine/base_deprecated.rs` | walk pending |
+| `Base_XMath.pool.ltxml` | `engine/base_xmath.rs` | ✅ walked — early DefConstructor sequence (`\lx@assert@meaning`, `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript`, `\lx@subscript`) and DefMath sequence for ASCII operators all in Perl order |
+| `Base_Deprecated.pool.ltxml` | `engine/base_deprecated.rs` | ✅ walked & **rewritten** — Rust had grouped entries by category (alignment / core / math / etc.); rewritten 1:1 in Perl L29-220 order. All 77 deprecation aliases now in same sequence. |
 | `TeX_Box.pool.ltxml` | `engine/tex_box.rs` | walk pending |
 | `TeX_Character.pool.ltxml` | `engine/tex_character.rs` | walk pending |
 | `TeX_Debugging.pool.ltxml` | `engine/tex_debugging.rs` | walk pending |
