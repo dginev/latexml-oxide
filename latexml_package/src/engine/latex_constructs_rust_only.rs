@@ -134,6 +134,23 @@ LoadDefinitions!({
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   //======================================================================
+  // 8. C.4 label-macros — dump-path coverage
+  //
+  // Perl latex_base L287-288, L294-296 defines these label macros.
+  // Under the dump path (LoadFormat mutual exclusivity) latex_base.rs
+  // is SKIPPED, and the dump (resources/dumps/latex.dump.txt) does
+  // NOT capture these CSes (raw latex.ltx doesn't define them).
+  // Pre-define here so dump-path runs find them too. NODUMP path
+  // already gets them from latex_base.rs. Either way, definitions
+  // are Perl-faithful values.
+  //======================================================================
+  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixesname", "Appendixes");
+  DefMacro!("\\contentsname",   "Contents");
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefMacro!("\\listtablename",  "List of Tables");
+
+  //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //
   // Perl gets these from raw `latex.ltx` load (dump captures them).
