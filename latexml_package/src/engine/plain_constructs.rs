@@ -572,6 +572,31 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\allowbreak", None);
 
+  // \boldmath / \unboldmath — re-establish here (post-dump) so the
+  // LaTeXML-semantic mathfont merging survives the dump path. The
+  // raw latex.ltx `\boldmath → \@nomath\boldmath \mathversion{bold}`
+  // chain captured in the dump doesn't actually toggle our
+  // `mathfont` slot, so post-dump bold math output lost the
+  // `font="bold italic"` attribute on math tokens. plain_base.rs
+  // had identical defs, but it's replaced by plain_dump in dump
+  // mode. plain_constructs runs in BOTH paths, so the override
+  // wins after the dump load (mirroring our `~ → \lx@NBSP` and
+  // `\nobreakspace → \lx@nobreakspace` pattern).
+  DefPrimitive!("\\boldmath", None,
+    before_digest => {
+      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(true), ..Font::default() });
+      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    },
+    forbid_math => true);
+  DefPrimitive!("\\unboldmath", None,
+    before_digest => {
+      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(false), ..Font::default() });
+      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    },
+    forbid_math => true);
+
   // Perl: plain_constructs.pool.ltxml L319 — load math_common last
   InnerPool!(math_common);
 });
