@@ -166,6 +166,23 @@ LoadDefinitions!({
   DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
   DefRegister!("\\footnotesep" => Dimension::new(0));
 
+  // C.5.2 version parsing (Perl latex_base L317-331) — dump-path coverage.
+  TeX!(
+    r"\def\@ifl@t@r#1#2{%
+  \ifnum\expandafter\@parse@version@#1//00\@nil<%
+        \expandafter\@parse@version@#2//00\@nil
+    \expandafter\@secondoftwo
+  \else
+    \expandafter\@firstoftwo
+  \fi}
+\def\@parse@version@#1{\@parse@version0#1}
+\def\@parse@version#1/#2/#3#4#5\@nil{%
+\@parse@version@dash#1-#2-#3#4\@nil
+}
+\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
+  \if\relax#2\relax\else#1\fi#2#3#4 }"
+  );
+
   //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //

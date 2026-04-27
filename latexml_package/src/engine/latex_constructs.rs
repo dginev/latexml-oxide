@@ -3750,22 +3750,8 @@ LoadDefinitions!({
 
   DefMacro!("\\AtBeginDvi {}", None);
 
-  TeX!(
-    r###"
-  \def\@ifl@t@r#1#2{%
-    \ifnum\expandafter\@parse@version@#1//00\@nil<%
-          \expandafter\@parse@version@#2//00\@nil
-      \expandafter\@secondoftwo
-    \else
-      \expandafter\@firstoftwo
-    \fi}
-  \def\@parse@version@#1{\@parse@version0#1}
-  \def\@parse@version#1/#2/#3#4#5\@nil{%
-  \@parse@version@dash#1-#2-#3#4\@nil
-  }
-  \def\@parse@version@dash#1-#2-#3#4#5\@nil{%
-    \if\relax#2\relax\else#1\fi#2#3#4 }"###
-  );
+  // \@ifl@t@r / \@parse@version* moved to latex_base.rs
+  // (Perl latex_base L317-331 C.5.2 Packages).
 
   //======================================================================
   // Somewhat related I/O stuff
@@ -3873,22 +3859,8 @@ LoadDefinitions!({
   // \columnsep, \columnseprule, \mathindent moved to latex_base.rs
   // (Perl latex_base L309-311).
 
-  TeX!(
-    r"\def\@ifl@t@r#1#2{%
-  \ifnum\expandafter\@parse@version@#1//00\@nil<%
-        \expandafter\@parse@version@#2//00\@nil
-    \expandafter\@secondoftwo
-  \else
-    \expandafter\@firstoftwo
-  \fi}
-\def\@parse@version@#1{\@parse@version0#1}
-\def\@parse@version#1/#2/#3#4#5\@nil{%
-\@parse@version@dash#1-#2-#3#4\@nil
-}
-\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
-  \if\relax#2\relax\else#1\fi#2#3#4 }
-"
-  );
+  // \@ifl@t@r / \@parse@version* (Perl latex_base L317-331 C.5.2)
+  // moved to latex_base.rs.
 
 
   //======================================================================

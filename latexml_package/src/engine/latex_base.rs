@@ -254,6 +254,23 @@ LoadDefinitions!({
   DefRegister!("\\mathindent"    => Dimension::new(0));
   // secnumdepth — still in latex_constructs.rs (couples with \@startsection).
 
+  // C.5.2 Packages — version parsing helpers (Perl L317-331)
+  TeX!(
+    r"\def\@ifl@t@r#1#2{%
+  \ifnum\expandafter\@parse@version@#1//00\@nil<%
+        \expandafter\@parse@version@#2//00\@nil
+    \expandafter\@secondoftwo
+  \else
+    \expandafter\@firstoftwo
+  \fi}
+\def\@parse@version@#1{\@parse@version0#1}
+\def\@parse@version#1/#2/#3#4#5\@nil{%
+\@parse@version@dash#1-#2-#3#4\@nil
+}
+\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
+  \if\relax#2\relax\else#1\fi#2#3#4 }"
+  );
+
   //======================================================================
   // C.5 Classes, Packages and Page Styles
   // Perl: latex_base.pool.ltxml lines 302-347
