@@ -1119,10 +1119,32 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
   // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
 
+  // Safety bound: a real CS name fits in well under 256 chars. We've seen
+  // pathological cases (lipsum.sty with malformed \cs_set_nopar:Npe expansion,
+  // or expl3 raw-load before \endcsname is bound) where `\csname` reads
+  // thousands of tokens accumulating into `cs`, eventually OOMing the
+  // `read_x_token` pushback Vec. Cap at 4096 bytes — beyond that there's no
+  // legitimate CS name, just a runaway. Emit one clear error and break.
+  const MAX_CS_NAME_BYTES: usize = 4096;
   let mut cs = String::from("\\");
+  let mut runaway_reported = false;
   // keep newlines from having \n inside!
   while let Some(token) = read_x_token(Some(true), false, None)? {
     if token.defined_as(&TOKEN_ENDCSNAME) {
+      break;
+    }
+    if cs.len() > MAX_CS_NAME_BYTES {
+      if !runaway_reported {
+        runaway_reported = true;
+        Error!(
+          "runaway",
+          "csname",
+          format!(
+            "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
+            &cs[..cs.len().min(200)]
+          )
+        );
+      }
       break;
     }
     match token.get_catcode() {
