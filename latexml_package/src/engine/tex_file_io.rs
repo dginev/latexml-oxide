@@ -195,8 +195,18 @@ LoadDefinitions!({
       && tks.last().unwrap().get_catcode() == Catcode::END {
       tks.remove(0);
       tks.pop();
-      // and load LaTeX.pool if not already
-      if !lookup_bool("LaTeX.pool_loaded") {
+      // and load LaTeX.pool if not already.
+      //
+      // Skip this auto-load during dump-build (`--init=latex.ltx`).
+      // We ARE in the process of dumping LaTeX itself — calling
+      // `LoadPool!("LaTeX")` recursively from inside fonttext.ltx's
+      // `\input {ot1enc.def}` would re-input latex.ltx, exhaust the
+      // gullet, and short-circuit the dump (the cascade observed in
+      // Task #28's secondary symptoms). Mirrors Perl iniTeX
+      // `mode='Base'`, which never auto-loads LaTeX.pool from
+      // `\input` during dump-build.
+      if !lookup_bool("LaTeX.pool_loaded")
+         && !lookup_bool("INI_TEX_MODE") {
         LoadPool!("LaTeX");
       }
     }

@@ -59,6 +59,12 @@ pub fn dump_format(
     eprintln!("[ini_tex] base warning: {}", e);
   }
 
+  // Mark this as init/dump mode so machinery elsewhere (notably
+  // `tex_file_io::\\input`'s LaTeX-style brace-arg auto-load of
+  // `LaTeX.pool`) skips behaviors that would corrupt the dump-build
+  // — see `tex_file_io.rs` for the gate.
+  state::assign_value("INI_TEX_MODE", true, Some(state::Scope::Global));
+
   // Clear LaTeX/expl3/AmSTeX autoload triggers and `\documentstyle`
   // installed by `tex.rs` during `prepare_session`. These triggers
   // pre-define `\makeatletter`, `\documentclass`, etc. — which then
