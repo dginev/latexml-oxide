@@ -1469,13 +1469,12 @@ LoadDefinitions!({
 
   // MuGlue registers; TeXBook p.274
   // Perl `TeX_Math.pool.ltxml:1168-1170` defines as `MuGlue("3mu")`.
-  // Storing as Glue lost the "mu" unit info — Glue::Display outputs
-  // `"3.0pt"` regardless, and `\,`/`\:`/`\;` widths flowed into math
-  // attributes mis-typed. Math parser's `get_xmhint_spacing` then
-  // skipped the mu→pt division-by-1.8, producing rpadding="3.0pt"
-  // instead of "1.67pt" for `\thinmuskip`. MuGlue's Display correctly
-  // emits the "mu" suffix so the conversion happens.
-  DefRegister!("\\thinmuskip", MuGlue::new_f64(3.0));
+  // Use new_full with explicit fixpoint values (mu_value × UNITY = 65536)
+  // because `MuGlue::new_f64(3.0)` only does `kround(3.0) = 3` (1sp), not
+  // `3 × UNITY = 196608` (3mu); see NumericOps::new_f64 → new_setup which
+  // doesn't multiply by UNITY. The fixpoint encoding for "Nmu" is
+  // `N × UNITY`, so 3mu = 3*65536 = 196608.
+  DefRegister!("\\thinmuskip", MuGlue::new(3 * 65536));
   DefRegister!("\\medmuskip",
     MuGlue::new_full(4 * 65536, Some(2 * 65536), None, Some(4 * 65536), None));
   DefRegister!("\\thickmuskip",
