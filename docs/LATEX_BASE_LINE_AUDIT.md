@@ -128,8 +128,125 @@ matching Rust file, in the same source order, with the same shape.
   loading order and is referenced by many later definitions).
   Defer migration; flag as ↻ for tracking.
 
-## Phase 3+ (TODO)
+## Phase 3 — Perl L350-550 (C.8 Defining, C.9 Floats, C.11 Files/Boxes)
 
-* Phase 3: Perl L350-550 (C.8 Defining Commands, C.9 Floats)
-* Phase 4: Perl L550-700 (Error/Warning infra, math chardefs)
-* Phase 5: Perl L700-865 (final blocks — registers/iteration/lists)
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 357 | `\@tabacckludge {}` (`\csname\string#1\endcsname`) | latex_constructs.rs (C.8) | ↻ MISPLACED |
+| 359-360 | `\DeclareTextAccent DefToken {}{}` (closure: `ignoredDefinition`) | latex_constructs.rs (C.8) | ↻ MISPLACED |
+| 361-362 | `\DeclareTextAccentDefault{}{}` (closure) | latex_constructs.rs (C.8) | ↻ MISPLACED |
+| 365-366 | `\DeclareTextComposite{}{}{}{}` (closure) | latex_constructs.rs (C.8) | ↻ MISPLACED |
+| 367-368 | `\DeclareTextCompositeCommand{}{}{}{}` (closure) | latex_constructs.rs (C.8) | ↻ MISPLACED |
+| 391 | `\flushbottom` (DefPrimitive undef) | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 392 | `\suppressfloats[]` (DefPrimitive undef) | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 394 | `NewCounter('topnumber')` | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 395 | `\topfraction` "0.25" | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 396 | `NewCounter('bottomnumber')` | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 397 | `\bottomfraction` "0.25" | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 398 | `NewCounter('totalnumber')` | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 399 | `\textfraction` "0.25" | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 400 | `\floatpagefraction` "0.25" | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 401 | `NewCounter('dbltopnumber')` | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 402 | `\dbltopfraction` "0.7" | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 403 | `\dblfloatpagefraction` "0.25" | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 404-414 | float separators/extents `\floatsep`/`\textfloatsep`/`\intextsep`/`\dblfloatsep`/`\dbltextfloatsep`/`\@fptop`/`\@fpsep`/`\@fpbot`/`\@dblfptop`/`\@dblfpsep`/`\@dblfpbot` (DefRegister Glue) | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 415-417 | `Let \topfigrule \relax`, `\botfigrule`, `\dblfigrule` | latex_constructs.rs (C.9) | ↻ MISPLACED |
+| 454-456 | `\DeclareRobustCommand` DefPrimitive | latex_constructs.rs (C.13) | ↻ MISPLACED |
+| 457-486 | RawTeX block: `\newsavebox`/`\savebox`/`\sbox`/`\@savebox`/`\@isavebox`/`\@savepicbox`/`\@isavepicbox`/`\lrbox`/`\endlrbox`/`\usebox` | latex_constructs.rs (C.13) | ↻ MISPLACED |
+| 516-554 | `\PackageError`/`\PackageWarning`/`\PackageWarningNoLine`/`\PackageInfo`/`\ClassError` (RawTeX `\gdef`/`\def`) | latex_base.rs:266-308 (TeX!) | ✅ |
+
+### Phase 3 findings
+
+* **C.8 / C.9 / C.13 clusters all misplaced**: ~25 entries should
+  be in latex_base.rs but are in latex_constructs.rs.
+* **PARITY for `\PackageError`/etc**: The error/warning RawTeX block
+  IS in latex_base.rs:266-308 — correctly placed (Perl L516-554).
+
+## Phase 4 — Perl L550-865 (file end: PackageError finish, math chardefs, registers, hooks)
+
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 550-594 | `\ClassWarning`/`\ClassWarningNoLine`/`\ClassInfo`/`\@latex@error`/`\@latex@warning`/`\@latex@warning@no@line`/`\@latex@info`/`\@latex@info@no@line` (RawTeX cont.) | latex_base.rs:266-352 (TeX!) | ✅ |
+| 601-606 | `\@xxxii`, `\@Mi`-`\@Miv` mathchardef | latex_base.rs:363-368 | ✅ |
+| 607 | `\@fontenc@load@list` (`\@elt{T1,OT1}`) | latex_base.rs:369 | ✅ |
+| 609-620 | `\@vpt`-`\@xxvpt` redefinitions (string form) | latex_base.rs:177-188 (T_OTHER+string mixed form, see Phase 1) | ⚠ shape (Perl L609-620 OVERRIDES L129-140 with all-string form; Rust matches L129-140) |
+| 622-625 | `\@tempa`, `\@tempb`, `\@tempc`, `\@gtempa` | latex_base.rs:373-376 | ✅ |
+| 627-628 | `\defaultscriptratio` ".7", `\defaultscriptscriptratio` ".5" | latex_base.rs:378-379 | ✅ |
+| 630-803 | Big RawTeX block: `\loop`, ~80 register declarations (`\@ydim`, `\@arstrutbox`, etc.), `\@sqrt`, conditionals (`\if@filesw`, `\if@partsw`, `\@tempswa*`, `\@tempcnta`/`\@tempcntb`, `\@tempdim*`, `\@tempbox*`, `\@tempskip*`, `\@temptokena`, `\@flushglue`, `\if@afterindent`, `\rootbox`, eq-related, iteration helpers `\@whilenum`/`\@iwhilenum`/`\@whiledim`/`\@iwhiledim`/`\@whilesw`/`\@iwhilesw`, `\@nnil`/`\@fornoop`/`\@for`/`\@forloop`/`\@iforloop`/`\@tfor`/`\@tf@r`/`\@tforloop`/`\@break@tfor`/`\@removeelement`, `\remove@to@nnil`/`\remove@angles`/`\remove@star`/`\@defaultunits`, math/list flags (`\ifmath@fonts`, `\@labels`, `\if@inlabel`, `\if@newlist`, `\if@noparitem`, `\if@noparlist`, `\if@noitemarg`, `\if@nmbrlist`), `\glb@settings`) | latex_base.rs:385-549 (TeX!) | ✅ |
+| 809 | `\loggingall` (DefMacroI Tokens()) | latex_base.rs:557 | ✅ |
+| 829 | `\hook_gput_code:nnn {}{}{}` "" | latex_base.rs:579 | ✅ |
+| 830 | `\NewHook{}` "" | latex_base.rs:580 | ✅ |
+| 831 | `\NewReversedHook{}` "" | latex_base.rs:581 | ✅ |
+| 832 | `\NewMirroredHookPair{}{}` "" | latex_base.rs:582 | ✅ |
+| 833 | `\ActivateGenericHook{}` "" | latex_base.rs:583 | ✅ |
+| 834 | `\DisableGenericHook{}` "" | latex_base.rs:584 | ✅ |
+| 835 | `\AddToHook{}[]{}` "" | latex_base.rs:585 | ✅ |
+| 836 | `\AddToHookNext{}{}` "" | latex_base.rs:586 | ✅ |
+| 837 | `\ClearHookNext{}` "" | latex_base.rs:587 | ✅ |
+| 838 | `\RemoveFromHook{}[]` "" | latex_base.rs:588 | ✅ |
+| 839 | `\SetDefaultHookLabel{}` "" | latex_base.rs:589 | ✅ |
+| 840 | `\PushDefaultHookLabel{}` "" | latex_base.rs:590 | ✅ |
+| 841 | `\PopDefaultHookLabel` "" | latex_base.rs:591 | ✅ |
+| 842 | `\UseHook{}` "" | latex_base.rs:592 | ✅ |
+| 843 | `\UseOneTimeHook{}` "" | latex_base.rs:593 | ✅ |
+| 844 | `\ShowHook{}` "" | latex_base.rs:594 | ✅ |
+| 845 | `\LogHook{}` "" | latex_base.rs:595 | ✅ |
+| 846 | `\DebugHooksOn` "" | latex_base.rs:596 | ✅ |
+| 847 | `\DebugHooksOff` "" | latex_base.rs:597 | ✅ |
+| 848 | `\DeclareHookRule{}{}{}{}` "" | latex_base.rs:598 | ✅ |
+| 849 | `\DeclareDefaultHookRule{}{}{}` "" | latex_base.rs:599 | ✅ |
+| 850 | `\ClearHookRule{}{}{}` "" | latex_base.rs:600 | ✅ |
+| 851 | `\IfHookEmptyTF{}{}{}` "#3" | latex_base.rs:601 | ✅ |
+| 852 | `\IfHookExistsTF{}{}{}` "#3" | latex_base.rs:602 | ✅ |
+| 853 | `\MakeTextLowercase` "\lowercase" | latex_base.rs:603 | ✅ |
+| 854 | `\MakeTextUppercase` "\uppercase" | latex_base.rs:604 | ✅ |
+| 856 | `\if@includeinrelease` (DefConditional) | latex_base.rs:607 | ✅ |
+| 857 | `Let \@kernel@after@enddocument \@empty` | latex_base.rs:608 | ✅ |
+| 858 | `Let \@kernel@after@enddocument@afterlastpage \@empty` | latex_base.rs:609 | ✅ |
+| 859 | `Let \@kernel@before@begindocument \@empty` | latex_base.rs:610 | ✅ |
+| 860 | `Let \@kernel@after@begindocument \@empty` | latex_base.rs:611 | ✅ |
+| 861 | `Let \conditionally@traceon \@empty` | latex_base.rs:612 | ✅ |
+| 862 | `Let \conditionally@traceoff \@empty` | latex_base.rs:613 | ✅ |
+
+### Phase 4 findings
+
+* **Strong PARITY** for L550-865. The error-message RawTeX (L516-594),
+  math chardefs (L601-608), temp registers (L622-628), big RawTeX
+  registers/iteration/lists block (L630-803), `\loggingall`,
+  expl3 hook stubs (L829-854), and kernel conditionals/Lets
+  (L856-862) are ALL correctly placed in latex_base.rs.
+* **⚠ shape divergence** (L609-620): Perl explicitly redefines
+  `\@vpt`-`\@xxvpt` with all-string form here, OVERRIDING the
+  earlier L129-140 mixed form. Rust only mirrors L129-140's mixed
+  form. Functionally negligible (T_OTHER('5') and "5" digest
+  identically).
+* **🔵 Rust-only** (latex_base.rs:631): `\nofiles` defined as
+  `\@fileswfalse`. Not in Perl source. Used by raw `latex.ltx`
+  load — Rust pre-defines as a stub. Move to `_rust_only.rs`?
+  Actually it's a small one-liner; reasonable as documented stub.
+
+## Cumulative parity health (Perl L1-L865, 100% of latex_base.pool.ltxml)
+
+* **Phase 1** (L1-150): ✅ Strong PARITY for C.0 Preliminaries.
+* **Phase 2** (L150-350): ↻ MASSIVE MISPLACED cluster — entire
+  C.1.3 Fragile, C.3 Sentences, C.4 Sectioning, C.5 Page Styles
+  blocks live in `latex_constructs.rs`. Should relocate to
+  `latex_base.rs`.
+* **Phase 3** (L350-550): ↻ MISPLACED — C.8 Defining Commands,
+  C.9 Floats, C.13 Boxes (the `\DeclareRobustCommand`/
+  `\newsavebox`/`\sbox`/etc cluster).
+* **Phase 4** (L550-865): ✅ Strong PARITY — error-msg infra,
+  math chardefs, big RawTeX register block, hooks, kernel Lets.
+
+## Pending parity work (post-audit)
+
+The Phase 2 + Phase 3 clusters are large-scale Rust→latex_base.rs
+migrations. Each migration must verify:
+1. Order preservation: entries land in Perl-source-order positions.
+2. No duplicates: latex_constructs.rs must not retain a copy.
+3. No ordering hazards: e.g., the C.1.3 RawTeX `\protected@edef`
+   chain may be referenced by later C.1.* definitions.
+
+Plan: do them in batches by C.* section, smaller first
+(C.3 footnote counters; C.5 page-style stubs) → larger later
+(C.1.3 Fragile RawTeX block). Run regression tests after each.
