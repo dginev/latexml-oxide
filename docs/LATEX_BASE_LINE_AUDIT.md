@@ -240,13 +240,30 @@ matching Rust file, in the same source order, with the same shape.
 
 ## Pending parity work (post-audit)
 
-The Phase 2 + Phase 3 clusters are large-scale Rust→latex_base.rs
-migrations. Each migration must verify:
-1. Order preservation: entries land in Perl-source-order positions.
-2. No duplicates: latex_constructs.rs must not retain a copy.
-3. No ordering hazards: e.g., the C.1.3 RawTeX `\protected@edef`
-   chain may be referenced by later C.1.* definitions.
+Migration progress (commits 1b0dc204c..2bbd9e54e):
 
-Plan: do them in batches by C.* section, smaller first
-(C.3 footnote counters; C.5 page-style stubs) → larger later
-(C.1.3 Fragile RawTeX block). Run regression tests after each.
+✅ Completed (Phase 2/3):
+* C.3.1 \fmtname/\fmtversion (Perl L255-256)
+* C.3.2 \@@par/\@par/\@restorepar (Perl L261-263)
+* C.3.3 footnote counters (Perl L268-273)
+* C.4.2 \appendixname/\appendixesname (Perl L287-288)
+* C.4.3 \contentsname/\listfigurename/\listtablename (Perl L294-296)
+* C.5.1 \columnsep/\columnseprule/\mathindent (Perl L309-311)
+* C.5.2 \@ifl@t@r/\@parse@version* RawTeX (Perl L317-331)
+* C.5.4 \sectionmark/\subsectionmark family (Perl L343-347)
+* C.8.1 \@tabacckludge/\DeclareTextAccent family (Perl L357-368)
+* C.9.1 float infrastructure (Perl L391-417)
+
+For each, dump-path coverage hotfixes added to latex_constructs_rust_only.rs
+where the dump didn't capture the Perl-faithful CS values. NewCounter/
+DefRegister are idempotent so dual-definition is safe.
+
+⏸️ Deferred (tight coupling / risky):
+* C.1.3 Fragile Commands RawTeX block (Perl L177-237) — \protect chain
+  has many internal references; large risk of cascade.
+* C.13 \DeclareRobustCommand DefPrimitive (Perl L454-456) — closure
+  uses convert_latex_args; lives at latex_constructs.rs:5296.
+* C.13 Savebox machinery RawTeX (Perl L457-486) — depends on
+  \DeclareRobustCommand being defined first.
+* secnumdepth/tocdepth NewCounter (Perl L300, L312) — coupled with
+  \@startsection/TOC machinery.
