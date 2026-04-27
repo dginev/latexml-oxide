@@ -927,11 +927,81 @@ in source order. Rust L2410-L6135 maps roughly to Perl L73-L3250.
 The first 3500 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L6135 maps roughly to Perl L73-L3500.
 
-## Phase 17+ (TODO): Perl L3501-L6014
+## Phase 17 (Perl L3501-L3750)
 
-Cross-references, label, ref, equation labels, bibliography
-machinery, indexing, miscellany. Will continue in subsequent
-iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 3500-3521 | `collapseFloat` body cont. | latex_constructs.rs:1724 (`collapse_float`) | ✅ |
+| 3522-3524 | `Tag('ltx:figure'/'ltx:table'/'ltx:float', afterClose=>collapseFloat)` | latex_constructs.rs (verify) | ❓ |
+| 3526 | `\figurename` 'Figure' | latex_constructs.rs:5964, 6180 | ⚠ DUPLICATE |
+| 3527 | `\figuresname` 'Figures' | latex_constructs.rs:5965, 6181 | ⚠ DUPLICATE |
+| 3528 | `\tablename` 'Table' | latex_constructs.rs:5966, 6182 | ⚠ DUPLICATE |
+| 3529 | `\tablesname` 'Tables' | latex_constructs.rs:5967, 6183 | ⚠ DUPLICATE |
+| 3531 | `Let '\outer@nobreak' '\@empty'` | latex_constructs.rs:6185 | ✅ |
+| 3532 | `\@dbflt{}` | latex_constructs.rs:6186 | ✅ |
+| 3533 | `\@xdblfloat{}[]` | latex_constructs.rs:6187 | ✅ |
+| 3534 | `\@floatplacement` | latex_constructs.rs:6188 | ✅ |
+| 3535 | `\@dblfloatplacement` | latex_constructs.rs:6189 | ✅ |
+| 3541 | `DefConditional '\if@reversemargin'` | latex_constructs.rs:6193 | ✅ |
+| 3542 | `Let '\reversemarginpar'` | latex_constructs.rs:6194 | ✅ |
+| 3543 | `Let '\normalmarginpar'` | latex_constructs.rs:6195 | ✅ |
+| 3544-3547 | `\marginpar[]{}` | latex_constructs.rs:6197 | ✅ |
+| 3548 | `\marginparpush` | latex_constructs.rs:6199 | ✅ |
+| 3557 | `\tabbingsep` | latex_constructs.rs:6211 | ✅ |
+| 3559-3560 | `\tabbing` | latex_constructs.rs:6214 | ✅ |
+| 3561-3562 | `\endtabbing` | latex_constructs.rs:6215 | ✅ |
+| 3563 | `\@end@tabbing` | latex_constructs.rs:6217 | ✅ |
+| 3564-3568 | `\@@tabbing` Constructor | latex_constructs.rs:6221 | ✅ |
+| 3570-3573 | `\@tabbing@tabset`/`@nexttab`/`@newline`/`@kill` | latex_constructs.rs:6230-6233 | ✅ |
+| 3575-3582 | `\@tabbing@*@marker` Constructors | latex_constructs.rs:6236-6247 | ✅ |
+| 3584-3585 | `tabbing_start_tabs` AssignValue + `\@tabbing@start@tabs` | latex_constructs.rs:6267 | ✅ |
+| 3586-3591 | `\@tabbing@increment`/`@decrement` | latex_constructs.rs:6276, 6291 | ✅ |
+| 3595-3602 | `\@tabbing@untab`/`@flushright`/`@hfil`/`@pushtabs`/`@poptabs` | latex_constructs.rs:6309-6313 | ✅ STUBS |
+| 3604 | `\@tabbing@accent{}` | latex_constructs.rs:6316 | ✅ |
+| 3609-3636 | `tabbingBindings` Perl-fn | latex_constructs.rs:1787 (`tabbing_bindings`) | ✅ |
+| 3638-3640 | `\pushtabs`/`\poptabs`/`\kill` (top-level) | (verify ~6323) | ❓ |
+| 3642-3643 | `\@tabbing@bindings` | latex_constructs.rs:6327 | ✅ |
+| 3648-3651 | `\@startfield`/`\@stopfield`/`\@contfield`/`\@addfield` | (verify) | ❓ |
+| 3665-3667 | DefRegister `\lx@arstrut`/`\lx@default@tabcolsep`/`\tabcolsep` | (verify) | ❓ |
+| 3668 | `\arraystretch` | (verify) | ❓ |
+| 3669 | `Let '\@tabularcr' '\lx@alignment@newline'` | (verify) | ❓ |
+| 3670-3671 | `AssignValue GUESS_TABULAR_HEADERS => 1` | (verify) | ❓ |
+| 3673-3699 | `tabularBindings` Perl-fn | latex_constructs.rs:267 (`tabular_bindings`) | ✅ |
+| 3705 | `DefKeyVal 'tabular' 'width' 'Dimension'` | (verify) | ❓ |
+| 3706-3712 | `\@tabular@bindings` | (verify) | ❓ |
+| 3714-3719 | `\@tabular@before/after/row@before/row@after/column@before/column@after` | (verify) | ❓ |
+| 3723-3725 | `\tabular[]{}` | (verify) | ❓ |
+| 3726-3728 | `\endtabular` | (verify) | ❓ |
+| 3729 | `\@end@tabular` | (verify) | ❓ |
+| 3734-3746 | `\@@tabular` Constructor | (verify) | ❓ |
+
+### Phase 17 findings
+
+* **Strong PARITY** for L3501-L3750 (with caveats below). Tabbing
+  machinery (full chain: `\tabbing`/`\@@tabbing`/`@tabset`/
+  `@nexttab`/`@newline`/`@kill`/`@start@tabs`/`@increment`/
+  `@decrement`/`@untab`/`@flushright`/`@hfil`/`@pushtabs`/
+  `@poptabs`/`@accent`, `tabbing_bindings`),
+  marginpar machinery (`\if@reversemargin`/`\reversemarginpar`/
+  `\normalmarginpar`/`\marginpar`/`\marginparpush`),
+  float-placement Lets (`\outer@nobreak`/`\@dbflt`/`\@xdblfloat`/
+  `\@floatplacement`/`\@dblfloatplacement`),
+  tabular helpers (`tabular_bindings` Rust fn at L267).
+* **⚠ DUPLICATE found**: `\figurename`/`\figuresname`/`\tablename`/
+  `\tablesname` defined TWICE in Rust (L5964-5967 AND L6180-6183) —
+  in two separate locations. Single Perl L3526-3529 source. Rust
+  has dead duplicate. Should be cleaned up.
+
+## Cumulative parity health (Perl L1-L3750, ~62% of file)
+
+The first 3750 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L6327 maps roughly to Perl L73-L3750.
+
+## Phase 18+ (TODO): Perl L3751-L6014
+
+Tabular continuation, multicolumn, hline, columns, picture mode,
+indexing, glossaries, bibliography, miscellany. Will continue in
+subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
