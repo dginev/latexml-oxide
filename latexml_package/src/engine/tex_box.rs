@@ -272,24 +272,9 @@ LoadDefinitions!({
   // Box Family of primitive control sequences
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  // Perl: TeX_Box.pool.ltxml lines 50-55
-  // Hidden bgroup/egroup: scoping without visible { } in reversion
-  DefConstructor!("\\lx@hidden@bgroup", "#body",
-    before_digest => { bgroup(); },
-    capture_body => true,
-    reversion => sub[whatsit, _args] {
-      if let Some(body) = whatsit.get_body()? {
-        body.revert()
-      } else { Ok(Tokens!()) }
-    }
-  );
-  DefConstructor!("\\lx@hidden@egroup", "",
-    after_digest => sub[_whatsit] { egroup()?; },
-    reversion => ""
-  );
-
   //======================================================================
   // These define the handler for { } (or anything of catcode BEGIN, END)
+  // Perl TeX_Box.pool.ltxml L32-47 (T_BEGIN, T_END handlers).
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
@@ -353,6 +338,22 @@ LoadDefinitions!({
     )
   });
 
+  // Perl TeX_Box.pool.ltxml L50-55: \lx@hidden@bgroup / \lx@hidden@egroup
+  // — scoping without visible { } in reversion.
+  DefConstructor!("\\lx@hidden@bgroup", "#body",
+    before_digest => { bgroup(); },
+    capture_body => true,
+    reversion => sub[whatsit, _args] {
+      if let Some(body) = whatsit.get_body()? {
+        body.revert()
+      } else { Ok(Tokens!()) }
+    }
+  );
+  DefConstructor!("\\lx@hidden@egroup", "",
+    after_digest => sub[_whatsit] { egroup()?; },
+    reversion => ""
+  );
+
   // These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,
   // BUT you DON'T want extra {, } showing up in any untex-ing.
@@ -393,6 +394,17 @@ LoadDefinitions!({
   DefConstructor!(
     "\\lx@hflipped{}",
     "<ltx:text class='ltx_hflipped' _noautoclose='1'>#1</ltx:text>",
+    enter_horizontal => true
+  );
+
+  // Perl TeX_Box.pool.ltxml L69-74: \lx@overlay — overlay one glyph
+  // on another (used by \accent fallback). Moved here from the
+  // bottom of the LoadDefinitions block to mirror Perl's order.
+  DefConstructor!("\\lx@overlay{}{}",
+    "<ltx:text class='ltx_overlay' _noautoclose='1'>\
+       <ltx:text class='ltx_overlay_base' _noautoclose='1'>#1</ltx:text>\
+       <ltx:text class='ltx_overlay_over' _noautoclose='1'>#2</ltx:text>\
+     </ltx:text>",
     enter_horizontal => true
   );
 
@@ -1208,15 +1220,9 @@ LoadDefinitions!({
   state::let_i(&T_CS!("\\cleaders"), &T_CS!("\\leaders"), None);
   state::let_i(&T_CS!("\\xleaders"), &T_CS!("\\leaders"), None);
 
-  // Overlay one glyph on another (used by \accent fallback)
-  // Perl: enterHorizontal => 1
-  DefConstructor!("\\lx@overlay{}{}",
-    "<ltx:text class='ltx_overlay' _noautoclose='1'>\
-       <ltx:text class='ltx_overlay_base' _noautoclose='1'>#1</ltx:text>\
-       <ltx:text class='ltx_overlay_over' _noautoclose='1'>#2</ltx:text>\
-     </ltx:text>",
-    enter_horizontal => true
-  );
+  // \lx@overlay was here in the old Rust order; moved to its
+  // Perl-mirrored position (TeX_Box.pool.ltxml L69) right after
+  // \lx@hflipped to satisfy the file-order parity audit.
 });
 
 // Risky: I think this needs to be digested as a body to work like TeX (?)

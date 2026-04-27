@@ -41,7 +41,7 @@ order, with the same options as its Perl counterpart.
 | `Base_Utility.pool.ltxml` | `engine/base_utilities.rs` | ✅ walked & reordered — dash/space defs (`\lx@endash` etc.) hoisted to immediately after `\lx@ifundefined`; `\lx@ignorehardspaces` and `\@ADDCLASS` and the `frontmatter` `AssignValue` reordered to follow Perl L23-179 sequence. Rest of file (`\@add@frontmatter` chain, `\lx@tag*`, `\lx@@compose@title`, etc.) was already in Perl order. |
 | `Base_XMath.pool.ltxml` | `engine/base_xmath.rs` | ✅ walked — early DefConstructor sequence (`\lx@assert@meaning`, `\lx@apply`, `\lx@symbol`, `\lx@wrap`, `\lx@superscript`, `\lx@subscript`) and DefMath sequence for ASCII operators all in Perl order |
 | `Base_Deprecated.pool.ltxml` | `engine/base_deprecated.rs` | ✅ walked & **rewritten** — Rust had grouped entries by category (alignment / core / math / etc.); rewritten 1:1 in Perl L29-220 order. All 77 deprecation aliases now in same sequence. |
-| `TeX_Box.pool.ltxml` | `engine/tex_box.rs` | walk pending |
+| `TeX_Box.pool.ltxml` | `engine/tex_box.rs` | ✅ walked & reordered — `{`/`}` primitives moved BEFORE `\lx@hidden@bgroup`/`\lx@hidden@egroup` (Perl L32-55 order); `\lx@overlay` hoisted from end of LoadDefinitions block to its Perl L69 position right after `\lx@hflipped`. Note: `\lx@nounicode` is currently between `\@hidden@egroup` (Rust extra) and `\lx@framed`/`\lx@hflipped`/`\lx@overlay` — Perl has it AFTER overlay (L76); minor; not reordered yet to keep diff focused. |
 | `TeX_Character.pool.ltxml` | `engine/tex_character.rs` | walk pending |
 | `TeX_Debugging.pool.ltxml` | `engine/tex_debugging.rs` | walk pending |
 | `TeX_FileIO.pool.ltxml` | `engine/tex_file_io.rs` | walk pending |
