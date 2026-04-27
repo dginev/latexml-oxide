@@ -36,3 +36,21 @@ split-debuginfo = "unpacked"
 # runners — so this setting only affects local iterative dev.
 incremental = true
 
+# `test-fast`: a release-flavored profile tuned for the build-test loop
+# during local development. Use with `cargo test --profile=test-fast`
+# (or `cargo build --profile=test-fast`). Trades ~10% test runtime for
+# ~25-30% faster compile by dropping `opt-level` from 3 to 2:
+#   * LLVM skips the loop-vectorizer + several inlining passes — the
+#     codegen passes that account for the bulk of release-build time
+#     on a TeX-engine workload like ours (~300 crates, lots of
+#     monomorphized generics in latexml_core / latexml_package).
+#   * Tests still run fast enough to be productive — the dump load
+#     and digestion hot paths are still aggressively inlined at -O2.
+# Reserve `--release` for final validation (CI parity, push gate).
+[profile.test-fast]
+inherits = "release"
+opt-level = 2
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+incremental = true
+
