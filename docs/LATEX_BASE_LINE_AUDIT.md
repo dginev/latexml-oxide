@@ -79,9 +79,57 @@ matching Rust file, in the same source order, with the same shape.
   divergence; doesn't affect semantics since the entries are
   independent.
 
-## Phase 2+ (TODO)
+## Phase 2 — Perl L150-350 (C.1.3 Fragile, C.3 Sentences, C.4 Sectioning, C.5 Page Styles)
 
-* Phase 2: Perl L150-300 (C.1.3 Fragile Commands, C.3 Sentences/Paragraphs)
-* Phase 3: Perl L300-500 (C.4 Sectioning, fontenc, etc.)
-* Phase 4: Perl L500-700 (\loggingall, math chardefs, etc.)
-* Phase 5: Perl L700-865 (final block — to be discovered)
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 177-237 | RawTeX block: `\@ignorefalse`/`\@ignoretrue`, `\zap@space`, `\@unexpandable@protect`, `\x@protect`/`\@x@protect`, `\@typeset@protect`, `\set@display@protect`/`\set@typeset@protect`, `\protected@edef`/`\protected@xdef`/`\unrestored@protected@xdef`/`\restore@protect`, `\@nobreakfalse`/`\@nobreaktrue`, conditionals (`\ifv@`, `\ifh@`, `\ifdt@p`, `\if@pboxsw`, `\if@rjfield`, `\if@firstamp`, `\if@negarg`, `\if@ovt`/`\if@ovb`/`\if@ovl`/`\if@ovr`), dimens (`\@ovxx`/`\@ovyy`/`\@ovdx`/`\@ovdy`/`\@ovro`/`\@ovri`), `\if@noskipsec` true | latex_constructs.rs (C.1.3 area) | ↻ MISPLACED |
+| 255 | `\fmtname` "LaTeX2e" | latex_constructs.rs:2960 | ↻ MISPLACED |
+| 256 | `\fmtversion` "2018/12/01" | latex_constructs.rs:2961 | ↻ MISPLACED |
+| 261 | `Let '\@@par' '\par'` | latex_constructs.rs:2991 | ↻ MISPLACED |
+| 262 | `\@par` (`\let\par\@@par\par`) | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 263 | `\@restorepar` (`\def\par{\@par}`) | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 268 | `NewCounter('footnote')` | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 269 | `\thefootnote` (`\arabic{footnote}`) | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 270 | `NewCounter('mpfootnote')` | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 271 | `\thempfn` (`\thefootnote`) | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 272 | `\thempfootnote` (`\arabic{mpfootnote}`) | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 273 | `\footnotesep` register Dimension(0) | latex_constructs.rs (C.3) | ↻ MISPLACED |
+| 287 | `\appendixname` "Appendix" | latex_constructs.rs:9059 (also at L3406 — DUP) | ↻ MISPLACED + ⚠ DUP |
+| 288 | `\appendixesname` "Appendixes" | latex_constructs.rs (C.4) | ↻ MISPLACED |
+| 294 | `\contentsname` "Contents" | latex_constructs.rs:3416 | ↻ MISPLACED |
+| 295 | `\listfigurename` "List of Figures" | latex_constructs.rs (C.4) | ↻ MISPLACED |
+| 296 | `\listtablename` "List of Tables" | latex_constructs.rs (C.4) | ↻ MISPLACED |
+| 300 | `NewCounter('tocdepth')` | latex_constructs.rs (C.4) | ↻ MISPLACED |
+| 309 | `\columnsep` Dimension(0) | latex_constructs.rs:3879 | ↻ MISPLACED |
+| 310 | `\columnseprule` Dimension(0) | latex_constructs.rs:3880 | ↻ MISPLACED |
+| 311 | `\mathindent` Dimension(0) | latex_constructs.rs (C.5) | ↻ MISPLACED |
+| 312 | `NewCounter('secnumdepth')` | latex_constructs.rs (C.5) | ↻ MISPLACED |
+| 317-331 | RawTeX: `\@ifl@t@r`/`\@parse@version@`/`\@parse@version`/`\@parse@version@dash` | latex_constructs.rs (C.5) | ↻ MISPLACED |
+| 343-347 | `\sectionmark`/`\subsectionmark`/`\subsubsectionmark`/`\paragraphmark`/`\subparagraphmark` | latex_constructs.rs:4196+ | ↻ MISPLACED |
+
+### Phase 2 findings
+
+* **Massive ↻ MISPLACED cluster**: All Perl L177-347 entries are in
+  Rust `latex_constructs.rs`, NOT `latex_base.rs`. Per CLAUDE.md
+  "Every `\foo` defined in `LaTeXML/blib/lib/LaTeXML/Engine/<file>.pool.ltxml`
+  must be defined in `latexml_package/src/engine/<file>.rs`" — these
+  should ALL move to `latex_base.rs`.
+* **⚠ Duplicate**: `\appendixname` defined twice in
+  latex_constructs.rs (L3406 AND L9059). Perl also has it twice
+  (`latex_base.pool.ltxml:287` AND `latex_constructs.pool.ltxml:5783`),
+  so the Rust duplication is parity-faithful — but at the Perl level,
+  the latex_constructs entry overrides the latex_base one. Should
+  the Rust order match? Probably fine: latex_constructs.rs loads
+  AFTER latex_base.rs, so the L9059 entry wins, which mirrors Perl.
+* **Fragile-Commands cluster (L177-237)**: This is a large RawTeX
+  block; relocating it requires careful scoping (the
+  `\protected@edef`/`\@unexpandable@protect` chain depends on
+  loading order and is referenced by many later definitions).
+  Defer migration; flag as ↻ for tracking.
+
+## Phase 3+ (TODO)
+
+* Phase 3: Perl L350-550 (C.8 Defining Commands, C.9 Floats)
+* Phase 4: Perl L550-700 (Error/Warning infra, math chardefs)
+* Phase 5: Perl L700-865 (final blocks — registers/iteration/lists)
