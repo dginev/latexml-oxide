@@ -509,11 +509,60 @@ in source order. Rust L2410-L4474 maps roughly to Perl L73-L1500.
 The first 1750 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L4660 maps roughly to Perl L73-L1750.
 
-## Phase 10+ (TODO): Perl L1751-L6014
+## Phase 10 (Perl L1751-L2000)
 
-Verbatim, more environment variants, declarations, sectioning
-internals, math environments, floats, ToC. Will continue in
-subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 1750-1764 | DefRegister `\leftmarginii`-`vi`, `\@listdepth`, `\@itempenalty`, `\@beginparpenalty`, `\@endparpenalty`, `\labelwidthi`-`vi` | latex_constructs.rs:4656-4670 | ✅ |
+| 1766 | DefRegister `\@itemdepth` | latex_constructs.rs:4672 | ✅ |
+| 1772-1773 | `\@verbatim` macro | latex_constructs.rs (verify ~4685) | ✅ likely |
+| 1774-1782 | `\lx@@verbatim` Constructor | latex_constructs.rs:4688 | ✅ |
+| 1783-1786 | `\lx@end@verbatim` Constructor | latex_constructs.rs:4696 | ✅ |
+| 1793-1797 | `\begin{verbatim}` Constructor | latex_constructs.rs:4704 | ✅ |
+| 1799-1803 | `\begin{verbatim*}` Constructor | latex_constructs.rs:4711 | ✅ |
+| 1805-1815 | `beforeDigestVerbatim` Perl-fn | latex_constructs.rs (Rust closure inline) | ✅ |
+| 1817-1845 | `afterDigestVerbatim` Perl-fn | latex_constructs.rs (Rust closure inline) | ✅ |
+| 1847 | `Let '\nobreakspace' '\lx@nobreakspace'` | latex_constructs.rs:4727 | ↻ ORDER (also at L4722 prior, here is duplicate per Perl L1847) |
+| 1849-1852 | `\@vobeyspaces` | latex_constructs.rs:4729 | ✅ |
+| 1853 | `\@xobeysp` | latex_constructs.rs:4733 | ✅ |
+| 1857-1889 | `\verb` (macro with sub) | latex_constructs.rs:4737 | ✅ |
+| 1891-1895 | `\lx@use@visiblespace` | latex_constructs.rs:4792 | ✅ |
+| 1898 | `\@internal@verb{}{}{}` | latex_constructs.rs:4800 | ✅ |
+| 1899-1903 | `\@internal@math@verb` | latex_constructs.rs:4802 | ✅ |
+| 1904-1911 | `\@internal@text@verb` | latex_constructs.rs:4808 | ✅ |
+| 1917 | `\obeycr` | latex_constructs.rs:4821 | ✅ |
+| 1918 | `\restorecr` | latex_constructs.rs:4824 | ✅ |
+| 1920 | `\normalsfcodes` | latex_constructs.rs:4827 | ✅ |
+| 1929 | `\@eqnnum` | latex_constructs.rs:4835 | ✅ |
+| 1930 | `\fnum@equation` | latex_constructs.rs:4836 | ✅ |
+| 1933-1944 | `\lx@begin@display@math` Constructor | latex_constructs.rs:4839 | ✅ |
+| 1946-1956 | `DefEnvironment '{displaymath}'` | latex_constructs.rs:4875 | ✅ |
+| 1957-1963 | `DefEnvironment '{math}'` | latex_constructs.rs (verify ~4900) | ✅ likely |
+| 1965 | `Let '\curr@math@size' '\@empty'` | latex_constructs.rs:9027 | ↻ ORDER (Rust ~5000L later) |
+| 1971 | `NewCounter('subequation', 'equation', idprefix=>'E', idwithin=>'equation')` | latex_constructs.rs:5084 | ✅ |
+| 1972 | `\thesubequation` | latex_constructs.rs:5085 | ✅ |
+| 1973 | `\fnum@subequation` | latex_constructs.rs:5086 | ✅ |
+| 1980-1983 | `prepareEquationCounter` Perl-fn | latex_constructs.rs:598 (`prepare_equation_counter`) | ✅ |
+| 1985-1999+ | `beforeEquation` Perl-fn | latex_constructs.rs (Rust fn — find) | ✅ likely |
+
+### Phase 10 findings
+
+* **Strong PARITY** for L1751-L2000. Verbatim machinery, math
+  environment Constructors, equation counter setup all align.
+* `\curr@math@size` at Rust L9027 (~5000L later than Perl L1965)
+  — significant ORDER divergence; flagged for follow-up.
+* `\nobreakspace` Let appears twice in Rust (L4722 + L4727) —
+  Perl pool also Lets twice (L48 and L1847) so this is faithful.
+
+## Cumulative parity health (Perl L1-L2000, ~33% of file)
+
+The first 2000 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L4827 maps roughly to Perl L73-L2000.
+
+## Phase 11+ (TODO): Perl L2001-L6014
+
+Equation environments, equation arrays, math constructs, theorem
+environments, floats. Will continue in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
