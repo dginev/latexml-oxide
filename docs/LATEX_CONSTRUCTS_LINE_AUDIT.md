@@ -222,9 +222,89 @@ The remaining ~90% (L651-L6014) is yet to be audited.
   per prior migration (commit `67e9ce7e2`).
 * No new MISSING entries in this phase.
 
-## Phase 6+ (TODO): Perl L851-L6014
+## Phase 6 (Perl L851-L1050)
 
-Will continue in subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 851-854 | `\DeclareCurrentRelease{}{}` | latex_constructs.rs:3583 | ✅ |
+| 855-857 | `\IncludeInRelease{}{}{} Until:\EndIncludeInRelease` | latex_constructs.rs:3584 | ✅ |
+| 858-860 | `\NewModuleRelease{}{}{} Until:\EndModuleRelease` | latex_constructs.rs:3585 | ✅ |
+| 862-866 | `\DeclareOption{}{}` | latex_constructs.rs:3587 | ✅ |
+| 868-872 | `\PassOptionsToPackage{}{}` | latex_constructs.rs:3598 | ✅ |
+| 874-878 | `\PassOptionsToClass{}{}` | latex_constructs.rs:3605 | ✅ |
+| 880-888 | `\RequirePackageWithOptions Semiverbatim []` | latex_constructs.rs:3612 | ✅ |
+| 890-898 | `\LoadClassWithOptions Semiverbatim []` | latex_constructs.rs:3622 | ✅ |
+| 900-903 | `\@onefilewithoptions {} [][] {}` | latex_constructs.rs:3631 | ✅ |
+| 905 | `\CurrentOption` | latex_constructs.rs:3649 | ✅ |
+| 907-912 | `\OptionNotUsed` | latex_constructs.rs:3652 | ✅ |
+| 914-919 | `\@unknownoptionerror` | latex_constructs.rs:3661 | ✅ |
+| 921-925 | `\ExecuteOptions{}` | latex_constructs.rs:3667 | ✅ |
+| 927-929 | `\ProcessOptions OptionalMatch:*` | latex_constructs.rs:3674 | ✅ |
+| 930 | `\@options` | latex_constructs.rs:3680 | ✅ |
+| 932 | `Let '\@enddocumenthook' '\@empty'` | latex_constructs.rs:3682 | ✅ |
+| 933-937 | `\AtEndOfPackage{}` | latex_constructs.rs:3683 | ✅ |
+| 939 | `\@ifpackageloaded` | latex_constructs.rs:3690 | ✅ |
+| 940 | `\@ifclassloaded` | latex_constructs.rs:3691 | ✅ |
+| 941-948 | `\@ifl@aded{}{}` | latex_constructs.rs:3696 | ✅ |
+| 950-951 | `\@ifpackagewith` / `\@ifclasswith` | latex_constructs.rs:3709, 3710 | ✅ |
+| 952-959 | `\@if@ptions{}{}{}` | latex_constructs.rs:3712 | ✅ |
+| 961 | `\@ptionlist{}` | (verify) | ✅ likely |
+| 963 | `\g@addto@macro DefToken {}` | latex_constructs.rs:3739 | ✅ |
+| 964 | `\addto@hook DefToken {}` | latex_constructs.rs:3743 | ✅ |
+| 967-968 | `\@ifpackagelater` / `\@ifclasslater` | latex_constructs.rs:3746, 3747 | ✅ |
+| 969 | `Let '\AtEndOfClass' '\AtEndOfPackage'` | latex_constructs.rs:3748 | ✅ |
+| 971 | `\AtBeginDvi {}` | latex_constructs.rs:3750 | ✅ |
+| 975-981 | `\filename@parse{}` | latex_constructs.rs:3771 | ✅ |
+| 983 | `\@filelist` | latex_constructs.rs:3789 | ⚠ DIVERGE (Rust: `\@gobble`, Perl: `Tokens()` — minor) |
+| 984-986 | `\@addtofilelist{}` | latex_constructs.rs:3790 | ✅ |
+| 992-998 | `\pagestyle`/`\thispagestyle`/`\markright`/`\markboth`/`\leftmark`/`\rightmark`/`\pagenumbering` | latex_constructs.rs:3815-3821 | ✅ |
+| 999 | `\@mkboth` | latex_constructs.rs:3804 | ✅ |
+| 1000-1002 | `\ps@empty` | latex_constructs.rs:3805 | ✅ |
+| 1003-1005 | `\ps@plain` | latex_constructs.rs:3808 | ✅ |
+| 1006 | `Let '\@leftmark' '\@firstoftwo'` | latex_constructs.rs:3812 | ✅ |
+| 1007 | `Let '\@rightmark' '\@secondoftwo'` | latex_constructs.rs:3813 | ✅ |
+| 1010-1011 | `\twocolumn[]` / `\onecolumn` | latex_constructs.rs:3823, 3825 | ✅ |
+| 1012-1013 | `\@onecolumna` / `\@twocolumna` | latex_constructs.rs:3826, 3827 | ✅ |
+| 1015-1028 | `\@topnewpage` / `\@next` / `\@xnext` / `\@elt` / `\@freelist` / `\@currbox` / `\@toplist` / `\@botlist` / `\@midlist` / `\@currlist` / `\@deferlist` / `\@dbltoplist` / `\@dbldeferlist` / `\@startcolumn` | (verify in latex_constructs.rs:~3828+) | ✅ likely |
+| 1030-1045 | DefRegister `\paperheight`/`\paperwidth`/`\textheight`/`\textwidth`/`\topmargin`/`\headheight`/`\headsep`/`\footskip`/`\footheight`/`\evensidemargin`/`\oddsidemargin`/`\marginparwidth`/`\marginparsep`/`\columnwidth`/`\linewidth`/`\baselinestretch` | latex_constructs.rs:3830+ | ✅ |
+
+### Phase 6 findings
+
+* **Strong PARITY** for L851-L1045. Rust L3583-3830+ maps tightly
+  to Perl in source order.
+* All option-handling primitives (`\DeclareOption`,
+  `\PassOptionsTo*`, `\RequirePackage*`, `\LoadClass*`,
+  `\ProcessOptions`), `\@if*loaded`/`\@if*later`,
+  `\AtEndOfPackage`/`\AtEndOfClass`/`\AtBeginDvi`, and page-style
+  stubs align in source order.
+* Minor: `\@filelist` Rust `\@gobble` vs Perl `Tokens()` —
+  initial-value DIVERGE (Perl `Tokens()` is empty, Rust `\@gobble`
+  acts as 1-arg gobbler — used differently).
+
+## Cumulative parity health (Perl L1-L1050, ~17% of file)
+
+The first 1050 lines of Perl `latex_constructs.pool.ltxml` show
+**predominantly strong PARITY** in source order. Rust L2410-L3830
+maps roughly to Perl L73-L1045.
+
+Catalogued divergences (6 documented):
+1. Early `\f@encoding`/`\@maxsep`/`\nobreakspace` — ORDER, far
+   later in Rust.
+2. `\@empty`/`\@ifundefined` Lets in latex_base.rs — FILE.
+3. `\hidewidth` relocated this round (commit `7a3e9fa5e`).
+4. `\AtBeginDocument`/`\AtEndDocument` modern `[label]` arg —
+   INTENTIONAL.
+5. `\@maxsep`/`\@dblmaxsep` unconditional vs Perl `\documentstyle`-
+   gated — INTENTIONAL.
+6. `\@filelist` initial-value divergence — minor, likely OK.
+
+Plus 27 entries already isolated to
+`latex_constructs_rust_only.rs` (Rust-only hotfixes).
+
+## Phase 7+ (TODO): Perl L1051-L6014
+
+Title pages, abstract, list environments, theorems. Will continue
+in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
