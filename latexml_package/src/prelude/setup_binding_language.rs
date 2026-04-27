@@ -1157,6 +1157,39 @@ macro_rules! DefMacro {
     compile_expansion!(compiled_expansion, $expansion);
     def_macro(cs, params, compiled_expansion, None)?;
   };
+  // ($cs:expr, $params_str:literal, sub [$args] $body) — non-classical CS
+  // names (expl3 `\__foo:nn`, `\g_x_int`, etc.) where the leading
+  // `parse_prototype!` token-tokenizer can't represent the colon/underscore
+  // letters. Caller hands us the CS as an expression (typically `T_CS!(...)`)
+  // plus a parameters string. We invoke `parse_parameters` at runtime to
+  // build the Parameters from the literal — same shape as the
+  // ($proto:literal, sub [$args] $body) arm.
+  ($cs:expr, $parameters:literal, sub [$args:ident]
+    $body:block $($input:tt)*) => {
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let cs_expr = $cs;
+    let parsed_params = parse_parameters($parameters, &cs_expr, true)?;
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |$args| $body.into_tokens_result()
+    )));
+    def_macro(cs_expr, parsed_params, expansion_closure, Some(options))?;
+  };
+  // Same as above, but with parenthesized named args:
+  //   DefMacro!(T_CS!("\\__foo:nn"), "{}{}", sub[(case, cp)] { ... });
+  ($cs:expr, $parameters:literal, sub [( $($var:ident),* )]
+    $body:block $($input:tt)*) => {
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let cs_expr = $cs;
+    let parsed_params = parse_parameters($parameters, &cs_expr, true)?;
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        let mut iter = args.into_iter();
+        $( let $var = iter.next().unwrap_or(ArgWrap::None); )*
+        $body.into_tokens_result()
+      }
+    )));
+    def_macro(cs_expr, parsed_params, expansion_closure, Some(options))?;
+  };
   ($cs:expr, $parameters:expr, sub [$args:ident]
     $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
