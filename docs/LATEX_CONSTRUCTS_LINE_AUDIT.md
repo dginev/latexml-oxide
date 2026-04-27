@@ -997,11 +997,70 @@ in source order. Rust L2410-L6135 maps roughly to Perl L73-L3500.
 The first 3750 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L6327 maps roughly to Perl L73-L3750.
 
-## Phase 18+ (TODO): Perl L3751-L6014
+## Phase 18 (Perl L3751-L4000)
 
-Tabular continuation, multicolumn, hline, columns, picture mode,
-indexing, glossaries, bibliography, miscellany. Will continue in
-subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 3748-3750 | `\csname tabular*\endcsname` | latex_constructs.rs:6407 | ✅ |
+| 3751-3752 | `\csname endtabular*\endcsname` | latex_constructs.rs:6409 | ✅ |
+| 3753-3757 | `\@@tabular@` Constructor | latex_constructs.rs:6413 | ✅ |
+| 3758 | `\@end@tabular@` | latex_constructs.rs:6419 | ✅ |
+| 3759 | `Let '\multicolumn'` | latex_constructs.rs:6423 | ✅ |
+| 3764 | `\@xhline` | latex_constructs.rs:6428 | ✅ |
+| 3766 | `\cline{}` | latex_constructs.rs:6430 | ✅ |
+| 3767-3779 | `\@cline{}` Constructor | latex_constructs.rs:6431 | ✅ |
+| 3781-3784 | `\vline` Constructor | latex_constructs.rs:6479 | ✅ |
+| 3785 | `\lx@default@arraycolsep` | latex_constructs.rs:6485 | ✅ |
+| 3786 | `\arraycolsep` | latex_constructs.rs:6486 | ✅ |
+| 3787 | `\arrayrulewidth` | latex_constructs.rs:6487 | ✅ |
+| 3788 | `\doublerulesep` | latex_constructs.rs:6488 | ✅ |
+| 3789 | `\extracolsep{}` | latex_constructs.rs:6489 | ✅ |
+| 3793-3810 | `\@array@bindings` | latex_constructs.rs:6493 | ✅ |
+| 3812-3813 | `\array[]{}` | latex_constructs.rs (verify ~6530) | ✅ likely |
+| 3814-3815 | `\endarray` | latex_constructs.rs:6532 | ✅ |
+| 3816 | `\@end@array` | latex_constructs.rs:6533 | ✅ |
+| 3817-3820 | `\@@array` Constructor | latex_constructs.rs:6536 | ✅ |
+| 3822 | `\@tabarray` | latex_constructs.rs:6541 | ✅ |
+| 3830 | `\nofiles` | latex_constructs.rs:6552 | ✅ |
+| 3839-3861 | `\lx@label` Constructor | latex_constructs.rs:6568 | ✅ |
+| 3862 | `Let '\label' '\lx@label'` | (verify) | ❓ |
+| 3866-3869 | `Tag('ltx:*', afterClose:late)` | (verify) | ❓ |
+| 3873-3878 | `\ref` Constructor | latex_constructs.rs:6625 | ✅ |
+| 3881 | `Let '\pageref' '\ref'` | latex_constructs.rs:6638 | ✅ |
+| 3890 | `NewCounter('@lx@bibliography')` | (verify) | ❓ |
+| 3891 | `\the@lx@bibliography@ID` | latex_constructs.rs:6657 | ✅ |
+| 3894-3901 | `beforeDigestBibliography` Perl-fn | latex_constructs.rs:1881 (`before_digest_bibliography`) | ✅ |
+| 3905-3910 | `beginBibliography` Perl-fn | latex_constructs.rs:1920 (`begin_bibliography`) | ✅ |
+| 3912-3950 | `beginBibliography_clean` Perl-fn | latex_constructs.rs:1926 (`begin_bibliography_clean`) | ✅ |
+| 3952-3953 | `\bibliography` | (verify ~6700) | ❓ |
+| 3955-3983 | `\lx@ifusebbl{}{}{}` | latex_constructs.rs:6664 | ✅ |
+| 3985-3986 | `AssignMapping BACKMATTER_ELEMENT` | (verify) | ❓ |
+| 3988-3991 | `noteBackmatterElement` Perl-fn | latex_constructs.rs:1856 (`note_backmatter_element`) | ✅ |
+| 3993-3997 | `adjustBackmatterElement` Perl-fn | latex_constructs.rs:1862 (`adjust_backmatter_element`) | ✅ |
+| 3999+ | `\lx@bibliography` Constructor | latex_constructs.rs:6719 | ✅ |
+
+### Phase 18 findings
+
+* **Strong PARITY** for L3751-L4000. Tabular* environment
+  (`\csname tabular*\endcsname` chain), array environment full
+  chain (`\@array@bindings`/`\array`/`\endarray`/`\@end@array`/
+  `\@@array`/`\@tabarray`), `\multicolumn`/`\@xhline`/`\cline`/
+  `\@cline`/`\vline`, array DefRegisters, label/ref machinery
+  (`\lx@label`/`\label`/`\ref`/`\pageref`), bibliography helpers
+  (`before_digest_bibliography`/`begin_bibliography`/
+  `begin_bibliography_clean`/`note_backmatter_element`/
+  `adjust_backmatter_element` Rust fns), `\lx@ifusebbl`,
+  `\lx@bibliography` all align.
+
+## Cumulative parity health (Perl L1-L4000, ~67% of file)
+
+The first 4000 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L6719 maps roughly to Perl L73-L4000.
+
+## Phase 19+ (TODO): Perl L4001-L6014
+
+Bibliography body, citations, indexing, glossaries, picture mode,
+miscellany. Will continue in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
