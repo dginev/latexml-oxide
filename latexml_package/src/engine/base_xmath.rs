@@ -230,7 +230,9 @@ LoadDefinitions!({
         _ => None,
       };
       if let Some(mu) = mu_val {
-        let fs = state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+        let fs = state::lookup_font()
+          .and_then(|f| f.get_size())
+          .unwrap_or(10.0);
         let unity = latexml_core::common::numeric_ops::UNITY_F64;
         let muwidth = (fs * unity / 18.0) as i64;
         let pt_scaled = (mu as f64 * muwidth as f64 / unity).trunc() as i64;
