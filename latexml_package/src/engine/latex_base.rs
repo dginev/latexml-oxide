@@ -212,9 +212,17 @@ LoadDefinitions!({
   // C.3. Sentences and Paragraphs
   // Perl: latex_base.pool.ltxml lines 248-277
   //======================================================================
-  // \fmtname, \fmtversion — in latex_constructs.rs (C.3)
-  // \@@par, \@par, \@restorepar — in latex_constructs.rs (C.3)
-  // footnote counters — in latex_constructs.rs (C.3)
+  // C.3.1 Making Sentences (Perl L255-256)
+  DefMacro!("\\fmtname", "LaTeX2e");
+  DefMacro!("\\fmtversion", "2018/12/01");
+
+  // C.3.2 Making Paragraphs (Perl L261-263)
+  Let!("\\@@par", "\\par");
+  DefMacro!("\\@par", r"\let\par\@@par\par");
+  DefMacro!("\\@restorepar", r"\def\par{\@par}");
+
+  // footnote counters (Perl L268-273) — still in latex_constructs.rs
+  // (couples with `\footnote` Constructor + Hash-table machinery there)
 
   //======================================================================
   // C.4 Sectioning and Table of Contents
@@ -228,9 +236,15 @@ LoadDefinitions!({
   // C.5 Classes, Packages and Page Styles
   // Perl: latex_base.pool.ltxml lines 302-347
   //======================================================================
-  // \columnsep, \columnseprule, \mathindent — in latex_constructs.rs (C.5)
-  // NewCounter('secnumdepth') — in latex_constructs.rs (C.5)
-  // \sectionmark{}, \subsectionmark{}, etc. — in latex_constructs.rs (C.5)
+  // \columnsep, \columnseprule, \mathindent — still in latex_constructs.rs (C.5)
+  // NewCounter('secnumdepth') — still in latex_constructs.rs (C.5)
+
+  // C.5.4 Title Page mark stubs (Perl L343-347)
+  DefMacro!("\\sectionmark{}", "");
+  DefMacro!("\\subsectionmark{}", "");
+  DefMacro!("\\subsubsectionmark{}", "");
+  DefMacro!("\\paragraphmark{}", "");
+  DefMacro!("\\subparagraphmark{}", "");
 
   //======================================================================
   // C.8.1 Defining Commands

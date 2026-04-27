@@ -2957,8 +2957,7 @@ LoadDefinitions!({
   enter_horizontal => true,
   sizer => { Ok((Dimension!("3.7em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
-  DefMacro!("\\fmtname", "LaTeX2e");
-  DefMacro!("\\fmtversion", "2018/12/01");
+  // `\fmtname`, `\fmtversion` moved to latex_base.rs (Perl latex_base L255-256).
 
   DefMacro!("\\today", { ExplodeText!(Today!()) });
 
@@ -2987,10 +2986,8 @@ LoadDefinitions!({
   // C.3.2 Making Paragraphs
   //======================================================================
   // \noindent, \indent, \par in TeX.pool.ltxml
-
-  Let!("\\@@par", "\\par");
-  DefMacro!("\\@par", r"\let\par\@@par\par");
-  DefMacro!("\\@restorepar", r"\def\par{\@par}");
+  // `\@@par`, `\@par`, `\@restorepar` moved to latex_base.rs
+  // (Perl latex_base.pool.ltxml L261-263).
 
   // Style parameters
   // \parindent, \baselineskip, \parskip alreadin in TeX.pool.ltxml
@@ -4193,11 +4190,8 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\sectionmark{}", "");
-  DefMacro!("\\subsectionmark{}", "");
-  DefMacro!("\\subsubsectionmark{}", "");
-  DefMacro!("\\paragraphmark{}", "");
-  DefMacro!("\\subparagraphmark{}", "");
+  // `\sectionmark`/`\subsectionmark`/`\subsubsectionmark`/`\paragraphmark`/
+  // `\subparagraphmark` moved to latex_base.rs (Perl latex_base L343-347).
   DefMacro!("\\@oddfoot", "");
   DefMacro!("\\@oddhed", "");
   DefMacro!("\\@evenfoot", "");
