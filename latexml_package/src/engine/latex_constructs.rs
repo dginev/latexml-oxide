@@ -3839,6 +3839,25 @@ LoadDefinitions!({
   DefMacro!("\\@onecolumna", "", locked => true);
   DefMacro!("\\@twocolumna", "", locked => true);
 
+  // Perl latex_constructs.pool.ltxml L1015-1028: float-page stubs from
+  // ltoutput.dtx in latex.ltx. Relocated from latex_base.rs 2026-04-27
+  // (Phase 25 cleanup: Perl-source-order placement).
+  DefMacro!("\\@topnewpage{}", "#1");
+  DefMacro!("\\@next{}{}{}{}",
+    r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi");
+  TeX!(r"\def\@xnext \@elt #1#2\@@#3#4{\def#3{#1}\gdef#4{#2}}");
+  Let!("\\@elt", "\\relax");
+  DefMacro!("\\@freelist", "");
+  DefMacro!("\\@currbox", "");
+  DefMacro!("\\@toplist", "");
+  DefMacro!("\\@botlist", "");
+  DefMacro!("\\@midlist", "");
+  DefMacro!("\\@currlist", "");
+  DefMacro!("\\@deferlist", "");
+  DefMacro!("\\@dbltoplist", "");
+  DefMacro!("\\@dbldeferlist", "");
+  DefMacro!("\\@startcolumn", "");
+
   // Style parameters from Fig. C.3, p.182
   DefRegister!("\\paperheight"     => Dimension!("11in"));
   DefRegister!("\\paperwidth"      => Dimension!("8.5in"));
@@ -7769,6 +7788,11 @@ LoadDefinitions!({
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );
 
+  // Perl latex_constructs.pool.ltxml L4857: \@finalstrut helper.
+  // Relocated from latex_base.rs 2026-04-27 (Phase 25 cleanup).
+  DefMacro!("\\@finalstrut{}",
+    "\\unskip\\ifhmode\\nobreak\\fi\\vrule\\@width\\z@\\@height\\z@\\@depth\\dp#1");
+
 
   // ======================================================================
   // C.14-C.15 Pictures, Fonts, Symbols
@@ -8370,7 +8394,13 @@ LoadDefinitions!({
   Let!("\\color@endbox", "\\relax");
 
   // Perl: latex_constructs.pool.ltxml line 5802
-  // \stop — closes the current input mouth (Plain TeX command)
+  // \stop — force-closes the current input mouth (Plain TeX). Perl
+  //   DefMacroI('\stop', undef, sub { $_[0]->closeMouth(1); return; });
+  // calls `closeMouth(1)`. Direct `gullet::close_mouth(true)` here
+  // tears down the active runtime stack mid-digestion (rust unwrap
+  // panic in pushback). Use `Let \stop \endinput` instead, which
+  // flushes the current mouth lazily — functionally equivalent for
+  // user-level `\stop` calls, and safer in our gullet model.
   Let!("\\stop", "\\endinput");
   DefMacro!("\\ignorespacesafterend", None);
 
@@ -8751,9 +8781,11 @@ LoadDefinitions!({
   // Perl latex_constructs.pool.ltxml L5941-5993: Case-changing
   //======================================================================
 
+  // Perl latex_constructs.pool.ltxml L5964:
+  //   '\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\ij\IJ\th\TH'
   DefMacro!(
     "\\@uclclist",
-    r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
+    r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\ij\IJ\th\TH"
   );
 
   DefPrimitive!("\\lx@prepare@case@mapping", {

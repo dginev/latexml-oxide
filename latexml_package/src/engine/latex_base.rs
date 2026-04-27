@@ -36,43 +36,23 @@ LoadDefinitions!({
     "
   );
 
-  Let!("\\@elt", "\\relax");
-  // `\@begindocumenthook`, `\@qend`, `\@qrelax`, `\@spaces`, `\@sptoken`
-  // moved to `latex_constructs.rs` (Perl latex_constructs.pool.ltxml
-  // L5510, L5536-5539).
-
-  // Float page management stubs (LaTeXML doesn't do page layout)
-  DefMacro!("\\@topnewpage{}", "#1");
-  DefMacro!("\\@next{}{}{}{}", "\\ifx#2\\@empty #4\\else\\expandafter\\@xnext #2\\@@#1#2#3\\fi");
-  DefMacro!("\\@freelist", "");
-  DefMacro!("\\@currbox", "");
-  DefMacro!("\\@toplist", "");
-  DefMacro!("\\@botlist", "");
-  DefMacro!("\\@midlist", "");
-  DefMacro!("\\@currlist", "");
-  DefMacro!("\\@deferlist", "");
-  DefMacro!("\\@dbltoplist", "");
-  DefMacro!("\\@dbldeferlist", "");
-  DefMacro!("\\@startcolumn", "");
-
-  // Aux file stubs (Perl latex_constructs L5796-5800)
-  DefMacro!("\\bibdata{}", "");
-  DefMacro!("\\bibcite{}{}", "");
-  DefMacro!("\\citation{}", "");
-  DefMacro!("\\contentsline{}{}{}", "");
-  DefMacro!("\\newlabel{}{}", "");
-
-  // `\@preamblecmds` moved to latex_constructs.rs (Perl L5511).
-  DefMacro!("\\nocorrlist", None, ",.");
-  DefMacro!("\\text@command{}", "");
-  DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
-  TeX!("\\newif\\ifmaybe@ic");
-  DefMacro!("\\maybe@ic", None, "");
-  DefMacro!("\\maybe@ic@", None, "");
-  DefMacro!("\\sw@slant", None, "");
-  DefMacro!("\\fix@penalty", None, "");
-  DefMacro!("\\@finalstrut{}",
-    "\\unskip\\ifhmode\\nobreak\\fi\\vrule\\@width\\z@\\@height\\z@\\@depth\\dp#1");
+  // The following Perl-latex_constructs entries previously lived here
+  // and were misplaced; all have been relocated to latex_constructs.rs
+  // (Phase 25 cleanup, 2026-04-27):
+  //   * `\@elt` (Perl L1018) — at latex_constructs.rs:3848
+  //   * `\@begindocumenthook` (Perl L5510)
+  //   * `\@qend`, `\@qrelax`, `\@spaces`, `\@sptoken` (Perl L5536-5539)
+  //   * Float-page stubs (Perl L1015-1028): `\@topnewpage`, `\@next`,
+  //     `\@xnext`, `\@freelist`, `\@currbox`, `\@toplist`, `\@botlist`,
+  //     `\@midlist`, `\@currlist`, `\@deferlist`, `\@dbltoplist`,
+  //     `\@dbldeferlist`, `\@startcolumn`
+  //   * Aux file stubs (Perl L5796-5800): `\bibdata`, `\bibcite`,
+  //     `\citation`, `\contentsline`, `\newlabel`
+  //   * `\@preamblecmds` (Perl L5511)
+  //   * `\nocorrlist`, `\text@command`, `\check@nocorr@`,
+  //     `\ifmaybe@ic`, `\maybe@ic`, `\maybe@ic@`, `\sw@slant`,
+  //     `\fix@penalty` (Perl L5814-5826)
+  //   * `\@finalstrut` (Perl L4857)
 
   // Perl L35-36
   Let!("\\@pushfilename", "\\lx@pushfilename");
@@ -650,68 +630,11 @@ LoadDefinitions!({
   // LaTeX kernel: \nofiles
   DefMacro!("\\nofiles", "\\@fileswfalse");
 
-  // \extrafloats already in latex_constructs.rs (Perl L5825)
-
-  // Aux file stubs (Perl latex_constructs L5796-5800)
-  DefMacro!("\\bibdata{}", "");
-  DefMacro!("\\bibcite{}{}", "");
-  DefMacro!("\\citation{}", "");
-  DefMacro!("\\contentsline{}{}{}", "");
-  DefMacro!("\\newlabel{}{}", "");
-
-  // Perl latex_constructs L5803-5805
-  DefMacro!("\\ignorespacesafterend", "");
-  Let!("\\mathgroup", "\\fam");
-  Let!("\\mathalpha", "\\relax");
-
-  // Perl latex_constructs L5836-5886: language declarations for babel
-  RawTeX!(r"\newlanguage\l@english");
-  RawTeX!(r"\newlanguage\l@usenglishmax");
-  RawTeX!(r"\newlanguage\l@USenglish");
-  RawTeX!(r"\newlanguage\l@dumylang");
-  RawTeX!(r"\newlanguage\l@nohyphenation");
-  RawTeX!(r"\newlanguage\l@arabic");
-  RawTeX!(r"\newlanguage\l@basque");
-  RawTeX!(r"\newlanguage\l@bulgarian");
-  RawTeX!(r"\newlanguage\l@coptic");
-  RawTeX!(r"\newlanguage\l@welsh");
-  RawTeX!(r"\newlanguage\l@czech");
-  RawTeX!(r"\newlanguage\l@slovak");
-  RawTeX!(r"\newlanguage\l@german");
-  RawTeX!(r"\newlanguage\l@ngerman");
-  RawTeX!(r"\newlanguage\l@danish");
-  RawTeX!(r"\newlanguage\l@esperanto");
-  RawTeX!(r"\newlanguage\l@spanish");
-  RawTeX!(r"\newlanguage\l@catalan");
-  RawTeX!(r"\newlanguage\l@galician");
-  RawTeX!(r"\newlanguage\l@estonian");
-  RawTeX!(r"\newlanguage\l@farsi");
-  RawTeX!(r"\newlanguage\l@finnish");
-  RawTeX!(r"\newlanguage\l@french");
-  RawTeX!(r"\newlanguage\l@greek");
-  RawTeX!(r"\newlanguage\l@monogreek");
-  RawTeX!(r"\newlanguage\l@ancientgreek");
-  RawTeX!(r"\newlanguage\l@croatian");
-  RawTeX!(r"\newlanguage\l@hungarian");
-  RawTeX!(r"\newlanguage\l@interlingua");
-  RawTeX!(r"\newlanguage\l@ibycus");
-  RawTeX!(r"\newlanguage\l@indonesian");
-  RawTeX!(r"\newlanguage\l@icelandic");
-  RawTeX!(r"\newlanguage\l@italian");
-  RawTeX!(r"\newlanguage\l@latin");
-  RawTeX!(r"\newlanguage\l@mongolian");
-  RawTeX!(r"\newlanguage\l@dutch");
-  RawTeX!(r"\newlanguage\l@norsk");
-  RawTeX!(r"\newlanguage\l@polish");
-  RawTeX!(r"\newlanguage\l@portuguese");
-  RawTeX!(r"\newlanguage\l@pinyin");
-  RawTeX!(r"\newlanguage\l@romanian");
-  RawTeX!(r"\newlanguage\l@russian");
-  RawTeX!(r"\newlanguage\l@slovenian");
-  RawTeX!(r"\newlanguage\l@uppersorbian");
-  RawTeX!(r"\newlanguage\l@serbian");
-  RawTeX!(r"\newlanguage\l@swedish");
-  RawTeX!(r"\newlanguage\l@turkish");
-  RawTeX!(r"\newlanguage\l@ukenglish");
-  RawTeX!(r"\newlanguage\l@ukrainiane");
+  // The following Perl-latex_constructs entries previously lived here
+  // and were misplaced; all have been relocated to latex_constructs.rs
+  // (Phase 25 cleanup, 2026-04-27):
+  //   * Aux file stubs (Perl L5796-5800)
+  //   * `\ignorespacesafterend`/`\mathgroup`/`\mathalpha` (Perl L5803-5805)
+  //   * Hyphenation `\newlanguage\l@*` (Perl L5836-5886)
+  //   * `\extrafloats` (Perl L5825) lives in latex_constructs_rust_only.rs
 });
