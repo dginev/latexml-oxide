@@ -9220,53 +9220,6 @@ LoadDefinitions!({
     make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
   });
 
-  // `\newif`-generated boolean toggles from latex.ltx post-line-11957.
-  // Our latex.ltx dump-build OOMs at L11958 (expl3 `\cs_new_protected:Npn
-  // \property_new:nnnn ...` block) so the dump is currently truncated to
-  // the first 11957 lines. The 22+ `\newif` calls between L11958 and end
-  // (line 18513) are missing — common LaTeX2e booleans that papers use.
-  // Add them as a single `\newif` raw-TeX block here so:
-  //  - `\if@twocolumn`/`\@twocolumntrue`/`\@twocolumnfalse`
-  //  - `\if@twoside`, `\if@compatibility`, `\if@firstcolumn`,
-  //  - `\if@mparswitch`, `\if@reversemargin`, `\if@specialpage`,
-  //  - `\if@insert`, `\if@fcolmade`, `\if@noskipsec`, `\if@afterindent`
-  //  - and 10+ more
-  // are defined post-dump. Mirrors latex.ltx's actual `\newif` calls.
-  RawTeX!(r"\newif\ifv@
-\newif\ifh@
-\newif\ifdt@p
-\newif\if@eqnsw\@eqnswtrue
-\newif\if@inlabel \@inlabelfalse
-\newif\if@newlist   \@newlistfalse
-\newif\if@noparitem \@noparitemfalse
-\newif\if@noparlist \@noparlistfalse
-\newif\if@noitemarg \@noitemargfalse
-\newif\if@nmbrlist  \@nmbrlistfalse
-\newif\if@endpe
-\newif\if@in@minipage@env
-\newif\if@pboxsw
-\newif\if@rjfield
-\newif\if@firstamp
-\newif\if@negarg
-\newif\if@ovt
-\newif\if@ovb
-\newif\if@ovl
-\newif\if@ovr
-\newif\if@ovvline \@ovvlinetrue
-\newif\if@ovhline \@ovhlinetrue
-\newif\if@noskipsec \@noskipsectrue
-\newif\if@afterindent \@afterindenttrue
-\newif\if@compatibility
-\newif\if@fcolmade
-\newif\if@firstcolumn \@firstcolumntrue
-\newif\if@insert
-\newif\if@mparswitch  \@mparswitchfalse
-\newif\if@reversemargin \@reversemarginfalse
-\newif\if@specialpage \@specialpagefalse
-\newif\if@twocolumn   \@twocolumnfalse
-\newif\if@twoside     \@twosidefalse
-");
-
   // `\ltx@hard@MessageBreak` is the literal newline target used by
   // `make_generic_message` to convert `\MessageBreak`-separated lines
   // in `\GenericInfo`/`\GenericWarning`/`\GenericError` messages.
