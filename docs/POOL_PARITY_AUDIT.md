@@ -52,11 +52,11 @@ order, with the same options as its Perl counterpart.
 | `TeX_Job.pool.ltxml` | `engine/tex_job.rs` | ✅ walked — `\jobname`, `\time`/`\day`/`\month`/`\year`/`\mag` registers, time AssignValues, `\lx@end@document`, `\let \end`, `\everyjob`/`\deadcycles`/`\maxdeadcycles`, `\dump`, `\documentstyle` all in Perl order. Rust extra `\let \@@end` (probably for amsTeX compat). |
 | `TeX_Kern.pool.ltxml` | `engine/tex_kern.rs` | ✅ walked — `\kern`, `\unkern`, `\lastkern`, `\lower`, `\raise`, `\moveleft`, `\moveright` in Perl order. |
 | `TeX_Logic.pool.ltxml` | `engine/tex_logic.rs` | ✅ walked & reordered — `\ifvoid`/`\ifhbox`/`\ifvbox` reordered to Perl L111-113 sequence (Rust had hbox/vbox before void). Rest matches. |
-| `TeX_Macro.pool.ltxml` | `engine/tex_macro.rs` | walk pending |
-| `TeX_Marks.pool.ltxml` | `engine/tex_marks.rs` | walk pending |
+| `TeX_Macro.pool.ltxml` | `engine/tex_macro.rs` | ✅ walked — `\begingroup`/`\endgroup`, `\relax`, `\let \protect \relax`, `\special_relax`, `\afterassignment`, `\aftergroup`, `CSName` ParameterType all in Perl order. |
+| `TeX_Marks.pool.ltxml` | `engine/tex_marks.rs` | ✅ walked & reordered — `\firstmark`/`\botmark` swapped to mirror Perl L33-34 (Perl: topmark, botmark, firstmark; Rust had: topmark, firstmark, botmark). |
 | `TeX_Math.pool.ltxml` | `engine/tex_math.rs` | walk pending |
-| `TeX_Page.pool.ltxml` | `engine/tex_page.rs` | walk pending |
-| `TeX_Paragraph.pool.ltxml` | `engine/tex_paragraph.rs` | walk pending |
+| `TeX_Page.pool.ltxml` | `engine/tex_page.rs` | ✅ walked — `\hoffset`/`\voffset`/`\topskip`/`\pagedepth`/`\pagetotal`/`\maxdepth`/`\vsize`/`\pagegoal` all in Perl order. |
+| `TeX_Paragraph.pool.ltxml` | `engine/tex_paragraph.rs` | ✅ walked — `\ignorespaces`/`\noboundary`, `\vadjust`, `\everypar`, `\indent`/`\noindent`, `\lx@normal@par`, `\let \par \lx@normal@par` all in Perl order. |
 | `TeX_Penalties.pool.ltxml` | `engine/tex_penalties.rs` | walk pending |
 | `TeX_Registers.pool.ltxml` | `engine/tex_registers.rs` | walk pending |
 | `TeX_Tables.pool.ltxml` | `engine/tex_tables.rs` | walk pending |
