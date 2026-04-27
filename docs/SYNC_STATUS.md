@@ -35,6 +35,104 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 **Working doc:** [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
 
+### 2026-04-28 — dump-path test-suite continued recovery wave
+
+Continued from 2026-04-27 wave. Seven commits brought 25+ tests
+from failing to passing across multiple suites:
+
+* `ddd23f95c` `plain_bootstrap`: INITEX letter `\lccode`/`\uccode`/
+  `\sfcode` initialization for dump path. Mirrors plain.tex
+  L112-113. Without it, `\MakeUppercase` produced lowercase output
+  in dump path. Mathcodes deliberately NOT set (would preempt
+  base_xmath's DefMath letter handlers — confirmed via bbold_test
+  regression). Test impact: 10_expansion `partial_test` newly
+  passes.
+
+* `05146fecd` `tex_glue`: `\hskip` reversion preserves
+  `\quad`/`\qquad`/`\enskip`/`\thinspace`/`\>`/`\;` macro names
+  via em-multiple lookup (Perl `revertSkip` in TeX_Glue.pool.ltxml
+  L57-65). Both Perl plain_dump and Rust plain.dump.txt capture
+  `\quad`/`\qquad` as raw `\hskip 1em\relax` / `\hskip 2em\relax`
+  bodies; without reversion the `tex=` attribute decayed to
+  `\hskip 10.00002pt`. Dramatically shrunk diffs in 22_fonts.
+
+* `c9db40925` `tex_glue`: `\hskip` emits `<ltx:XMHint>` in math
+  mode (Perl L80 parity). The math parser's `filter_hints` then
+  converts XMHint width into `lpadding`/`rpadding` on the adjacent
+  token (or promotes large skips ≥10pt to virtual PUNCT XMHints).
+  Without this branch, `\qquad` after `,` in math lost its
+  `rpadding="20.0pt"` because no XMHint was emitted. Test
+  impact: 22_fonts 14/9 → 19/4 (+acc, +esint, +mathaccents,
+  +mathbbol, +stmaryrd).
+
+* `e6ecf5c0f` `latex_constructs`: `Let \nobreakspace
+  \lx@nobreakspace` (Perl L1847 parity). The dump captures
+  latex.ltx's `\nobreakspace → \protect\nobreakspace<sp> →
+  \leavevmode\nobreak\<sp>` chain (regular space). Re-let to
+  `\lx@nobreakspace` (= NBSP `\u{00A0}`) so hyperref autoref's
+  `section\nobreakspace1` produces `section\u{00A0}1` not
+  `section 1`. Test impact: 10_expansion `hyperurls_test`
+  newly passes.
+
+* `3a532c15f` `latex_constructs`: `digested_to_text` walker for
+  `\lx@author@prefix`'s `before=` attribute. Perl uses
+  `DigestText(...)` which emits rendered chars (em-spaces from
+  `\qquad`, or `, `/` and ` after ams_support overrides). Rust's
+  `Digest!(...).to_string()` returned the Whatsit's `revert()`
+  form (`\qquad` macro CS) instead. Walker handles TBox/List
+  recursion; for `\hskip`-style Whatsits with no text content,
+  falls back to `dimension_to_spaces(width)`. Test impact:
+  50_structure 37/8 → 41/4 (+article, +authors, +book, +report,
+  +amsarticle).
+
+* `99ec353e7` `latex_constructs`: unlock state for
+  `math_common`/`plain_constructs` reload. The first plain-format
+  pass already locks common math CSes (`\prime`,
+  `\active@math@prime`) via their `locked => true` DefMath.
+  Without `local_state_unlocked(true)…expire`, the second pass's
+  redefinitions were silently rejected, leaving the dump-loaded
+  `\mathchardef\prime="0230` mathchar in place — `$\prime$`
+  rendered as `0` (char 0x30 fam 2) instead of U+2032 ′.
+  Test impact: +abxtest (22_fonts), +io (20_digestion),
+  +amsdisplay/+sideset (56_ams), +eqnums (50_structure).
+
+* `5f6aeb5bf` `plain_constructs`: re-add `\boldmath`/`\unboldmath`
+  for dump-path parity. plain_base's DefPrimitive entries are
+  replaced by plain_dump in dump mode; the dump's
+  `\boldmath → \protect\boldmath<sp> → \@nomath\boldmath
+  \mathversion{bold}` chain doesn't toggle our `mathfont` Stored
+  slot. plain_constructs runs in BOTH paths AND is reloaded by
+  latex_constructs's force-reload, so the Rust DefPrimitive wins
+  post-dump. Test impact: 22_fonts 20/3 → 21/2 (+fonts).
+
+**Cumulative test-count delta this wave (across major suites):**
+
+| Suite | Before | After | Δ |
+|---|---|---|---|
+| 22_fonts | 14/9 | 21/2 | +7 |
+| 50_structure | 37/8 | 42/3 | +5 |
+| 56_ams | 4/3 | 6/1 | +2 |
+| 20_digestion | 8/2 | 9/1 | +1 |
+| 10_expansion | 29/4 | 33/3 | +4 |
+
+**Workspace total** (suites that complete in 90s): **239 passed
+/ 36 failed** across 21 test suites. Excluded: `40_math` and
+`53_alignment` (>90s timeout, otherwise complete).
+
+**Known issue: latex.dump.txt regen OOMs at preload.ltx.**
+Re-running `--init=latex.ltx` to regenerate the dump aborts with
+9.2GB allocation failure during preload.ltx raw-load. The on-disk
+`latex.dump.txt` (Apr 27 00:22 timestamp from previous session) is
+therefore the source-of-truth for latex tests in this wave. The
+plain.dump.txt regenerates fine at ~6s. Tests like
+50_structure::epitest_test still fail due to `\p@=0pt` (the dump's
+register `value` field captures the Register definition's default,
+not the address slot's runtime value after `\setlength{\p@}{1pt}`
+in raw plain.tex). A dump_writer patch to read
+`state::with_value(&reg.address)` was prepared and tested on
+plain.dump (`\p@` correctly serializes `D 65536`) but cannot be
+validated for latex until the regen OOM is diagnosed. Deferred.
+
 ### 2026-04-27 — test-suite recovery wave
 
 Four commits brought `00_tokenize` from 0/14 (all hanging or
