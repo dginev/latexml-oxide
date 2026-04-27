@@ -240,30 +240,35 @@ matching Rust file, in the same source order, with the same shape.
 
 ## Pending parity work (post-audit)
 
-Migration progress (commits 1b0dc204c..2bbd9e54e):
+✅ **Phase 2/3 latex_base reverse-migration 100% COMPLETE**
+(commits 1b0dc204c..426c64b68):
 
-✅ Completed (Phase 2/3):
-* C.3.1 \fmtname/\fmtversion (Perl L255-256)
-* C.3.2 \@@par/\@par/\@restorepar (Perl L261-263)
-* C.3.3 footnote counters (Perl L268-273)
-* C.4.2 \appendixname/\appendixesname (Perl L287-288)
-* C.4.3 \contentsname/\listfigurename/\listtablename (Perl L294-296)
-* C.5.1 \columnsep/\columnseprule/\mathindent (Perl L309-311)
-* C.5.2 \@ifl@t@r/\@parse@version* RawTeX (Perl L317-331)
-* C.5.4 \sectionmark/\subsectionmark family (Perl L343-347)
-* C.8.1 \@tabacckludge/\DeclareTextAccent family (Perl L357-368)
-* C.9.1 float infrastructure (Perl L391-417)
+### All migrations:
+* C.1.3 Fragile Commands RawTeX (Perl L177-237) — `\protect` chain,
+  conditionals, dimens (commit `751bfb2a2`)
+* C.3.1 \fmtname/\fmtversion (L255-256)
+* C.3.2 \@@par/\@par/\@restorepar (L261-263)
+* C.3.3 footnote counters + \footnotesep (L268-273)
+* C.4.2 \appendixname/\appendixesname (L287-288)
+* C.4.3 \contentsname/\listfigurename/\listtablename (L294-296)
+* C.4.4 NewCounter('tocdepth') (L300)
+* C.5.1 \columnsep/\columnseprule/\mathindent (L309-311)
+* C.5.1 NewCounter('secnumdepth') (L312)
+* C.5.2 \@ifl@t@r/\@parse@version* RawTeX (L317-331)
+* C.5.4 \sectionmark family (5 entries) (L343-347)
+* C.8.1 \@tabacckludge/\DeclareTextAccent family (L357-368)
+* C.9.1 float infrastructure (~22 entries) (L391-417)
+* C.13 \DeclareRobustCommand DefPrimitive (L454-456)
+* C.13 Savebox RawTeX block — \newsavebox/\savebox/\sbox/etc (L457-486)
 
-For each, dump-path coverage hotfixes added to latex_constructs_rust_only.rs
-where the dump didn't capture the Perl-faithful CS values. NewCounter/
-DefRegister are idempotent so dual-definition is safe.
+### Architecture pattern
 
-⏸️ Deferred (tight coupling / risky):
-* C.1.3 Fragile Commands RawTeX block (Perl L177-237) — \protect chain
-  has many internal references; large risk of cascade.
-* C.13 \DeclareRobustCommand DefPrimitive (Perl L454-456) — closure
-  uses convert_latex_args; lives at latex_constructs.rs:5296.
-* C.13 Savebox machinery RawTeX (Perl L457-486) — depends on
-  \DeclareRobustCommand being defined first.
-* secnumdepth/tocdepth NewCounter (Perl L300, L312) — coupled with
-  \@startsection/TOC machinery.
+For Perl-latex_base entries the dump doesn't capture:
+* **Primary**: defined in `latex_base.rs` (NODUMP path / strict file-name parity)
+* **Dump-path coverage**: mirrored in `latex_constructs_rust_only.rs`
+  (loaded after dump). NewCounter/DefRegister are idempotent so
+  dual-definition is safe.
+
+### Tests (continuously green throughout)
+
+50_structure 45/0, 30_encoding 26/0, 53_alignment 29/0, 56_ams 7/0.
