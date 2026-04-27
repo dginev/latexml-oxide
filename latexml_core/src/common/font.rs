@@ -792,7 +792,13 @@ impl Font {
     };
     if let Ok(Some(def)) = lookup_definition(&reg_cs) {
       if let Some(val) = def.value_of(Vec::new()) {
-        return val.value_of() as f64;
+        // Perl: $STATE->lookupDefinition(...)->valueOf->spValue
+        // MuGlue->spValue = fixpoint($skip/UNITY, font->getMUWidth)
+        //                 = kround((skip/UNITY) * MUWidth)
+        // The raw skip is in mu*UNITY units; convert to sp via MUWidth.
+        let skip = val.value_of();
+        let mu_width = self.get_mu_width() as f64;
+        return (skip as f64 / UNITY_F64 * mu_width).trunc();
       }
     }
     0.0
