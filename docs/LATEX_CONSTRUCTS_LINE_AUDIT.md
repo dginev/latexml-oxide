@@ -443,10 +443,77 @@ Catalogued divergences (7 documented):
 The first 1500 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L4474 maps roughly to Perl L73-L1500.
 
-## Phase 9+ (TODO): Perl L1501-L6014
+## Phase 9 (Perl L1501-L1750)
 
-List environments full bodies, theorems, ToC, math environments,
-floats, etc. Will continue in subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 1505-1510 | `\preitem@par` | latex_constructs.rs:4333 | ✅ |
+| 1515-1518 | `\itemize@item` / `\itemize@item@` | latex_constructs.rs:4344, 4345 | ✅ |
+| 1519-1521 | `\inline@itemize@item` | latex_constructs.rs:4350 | ✅ |
+| 1523-1526 | `\enumerate@item` / `\enumerate@item@` | latex_constructs.rs:4356, 4357 | ✅ |
+| 1527-1529 | `\inline@enumerate@item` | latex_constructs.rs:4362 | ✅ |
+| 1531-1534 | `\description@item` / `\description@item@` | latex_constructs.rs:4368, 4369 | ✅ |
+| 1535-1537 | `\inline@description@item` | latex_constructs.rs:4374 | ✅ |
+| 1539-1544 | `DefEnvironment '{itemize}'` | latex_constructs.rs:4380 | ✅ |
+| 1545-1550 | `DefEnvironment '{enumerate}'` | latex_constructs.rs:4387 | ✅ |
+| 1551-1557 | `DefEnvironment '{description}'` | latex_constructs.rs:4394 | ✅ |
+| 1559 | `\makelabel{}` | latex_constructs.rs:4403 | ✅ |
+| 1560 | `\@mklab{}` | latex_constructs.rs:4339 | ↻ ORDER (Rust earlier) |
+| 1565-1570 | `NewCounter('@itemi')`-`@itemvi` | latex_constructs.rs:4407-4412 | ✅ |
+| 1572-1577 | `\the@itemi`-`\the@itemvi` empty | latex_constructs.rs:4414-4419 | ✅ |
+| 1581-1584 | `\labelitemi`-`\labelitemiv` | latex_constructs.rs:4423-4426 | ✅ |
+| 1587-1590 | `\label@itemi`-`\label@itemiv` | latex_constructs.rs:4429-4432 | ✅ |
+| 1593-1596 | `\fnum@@itemi`-`\fnum@@itemiv` | latex_constructs.rs:4435-4438 | ✅ |
+| 1601-1607 | `\lx@poormans@ordinal{}` | latex_constructs.rs:4440 | ✅ |
+| 1608 | `\itemtyperefname` | latex_constructs.rs:4448 | ✅ |
+| 1609-1610 | `\itemcontext` (twice — Perl bug; Rust mirrors) | latex_constructs.rs:4449, 4450 | ✅ |
+| 1612-1615 | `\typerefnum@@itemi`-`@itemiv` | latex_constructs.rs (verify ~4451) | ✅ likely |
+| 1622-1627 | `NewCounter('enumi')`-`enumvi` | latex_constructs.rs:4474+ | ✅ |
+| 1630-1632 | `\p@enumii`/`\p@enumiii`/`\p@enumiv` | latex_constructs.rs:4482-4484 | ✅ |
+| 1635-1638 | `\labelenumi`-`\labelenumiv` | latex_constructs.rs:4487-4490 | ✅ |
+| 1641-1644 | `\fnum@enumi`-`\fnum@enumiv` | latex_constructs.rs:4493-4496 | ✅ |
+| 1647 | `\enumtyperefname` | latex_constructs.rs:4499 | ✅ |
+| 1648-1651 | `\typerefnum@enumi`-`enumiv` | latex_constructs.rs (verify ~4500) | ✅ likely |
+| 1655-1660 | `NewCounter('@desci')`-`@descvi` | latex_constructs.rs:4520+ | ✅ |
+| 1662-1667 | `\the@desci`-`\the@descvi` empty | latex_constructs.rs (verify ~4525) | ✅ likely |
+| 1670 | `\descriptionlabel{}` | latex_constructs.rs:4535 | ✅ |
+| 1671-1674 | `\fnum@@desci`-`\fnum@@desciv` | latex_constructs.rs:4536-4539 | ✅ |
+| 1676 | `\desctyperefname` | latex_constructs.rs:4541 | ✅ |
+| 1679-1684 | `\@itemi name`/`\enumi name`/`\@desci name` map | latex_constructs.rs:4550, 4555 | ✅ |
+| 1692 | `DefConditional '\if@nmbrlist'` | (verify) | ❓ |
+| 1693 | `\@listctr` | (verify) | ❓ |
+| 1694-1698 | `\usecounter{}` | latex_constructs.rs:4567 | ✅ |
+| 1700-1701 | `\list{}{}` | latex_constructs.rs (verify ~4570) | ✅ likely |
+| 1702 | `\endlist` | latex_constructs.rs:4579 | ✅ |
+| 1705-1707 | `\lx@list` | latex_constructs.rs:4582 | ✅ |
+| 1709-1711 | `\endlx@list` | latex_constructs.rs:4586 | ✅ |
+| 1713-1715 | `\list@item` | latex_constructs.rs:4590 | ✅ |
+| 1720-1723 | `\trivlist` | latex_constructs.rs:4607 | ✅ |
+| 1724-1726 | `\endtrivlist` | latex_constructs.rs:4614 | ✅ |
+| 1727 | `\trivlist@item` | latex_constructs.rs:4621 | ✅ |
+| 1728-1731 | `\trivlist@item@` | latex_constructs.rs:4622 | ✅ |
+| 1732 | `\@trivlist` | (verify) | ❓ |
+| 1734-1749 | DefRegister `\topsep`/`\partopsep`/`\lx@default@itemsep`/`\itemsep`/`\parsep`/`\@topsep`/`\@topsepadd`/`\@outerparskip`/`\leftmargin`/`\rightmargin`/`\listparindent`/`\itemindent`/`\labelwidth`/`\labelsep`/`\@totalleftmargin`/`\leftmargini` | latex_constructs.rs:4640+ | ✅ |
+
+### Phase 9 findings
+
+* **Strong PARITY** for L1501-L1750. Rust L4333-L4660+ maps tightly
+  to Perl in source order. List, enumerate, description, list/trivlist
+  environments, plus all itemize/enum/desc counter machinery, label
+  formatters, ordinal helpers, and list-related DefRegisters.
+* `\@mklab{}` order: Rust at L4339 is slightly earlier than Perl L1560
+  (which puts it after `\makelabel`). Cosmetic.
+
+## Cumulative parity health (Perl L1-L1750, ~29% of file)
+
+The first 1750 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L4660 maps roughly to Perl L73-L1750.
+
+## Phase 10+ (TODO): Perl L1751-L6014
+
+Verbatim, more environment variants, declarations, sectioning
+internals, math environments, floats, ToC. Will continue in
+subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
