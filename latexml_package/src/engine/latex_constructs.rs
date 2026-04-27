@@ -3005,12 +3005,8 @@ LoadDefinitions!({
   //======================================================================
   // C.3.3 Footnotes
   //======================================================================
-
-  NewCounter!("footnote");
-  DefMacro!("\\thefootnote", "\\arabic{footnote}");
-  NewCounter!("mpfootnote");
-  DefMacro!("\\thempfn", "\\thefootnote");
-  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  // footnote counters/macros (Perl latex_base L268-273) moved to
+  // latex_base.rs. \footnotetyperefname stays here (Rust-only addition).
   DefMacro!("\\footnotetyperefname", "footnote");
 
   DefMacro!("\\ext@footnote", None);
@@ -3076,7 +3072,7 @@ LoadDefinitions!({
   Tag!("ltx:note", after_close => sub[doc, node] { relocate_footnote(doc, node)?; });
 
   // Style parameters
-  DefRegister!("\\footnotesep" => Dimension::new(0));
+  // \footnotesep moved to latex_base.rs (Perl latex_base L273).
   DefPrimitive!("\\footnoterule", None);
 
 

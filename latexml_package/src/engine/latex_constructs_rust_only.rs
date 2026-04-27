@@ -156,6 +156,16 @@ LoadDefinitions!({
   DefRegister!("\\columnseprule" => Dimension::new(0));
   DefRegister!("\\mathindent"    => Dimension::new(0));
 
+  // C.3.3 footnote counters (Perl latex_base L268-273) — same dump-path
+  // coverage rationale. NewCounter is idempotent under dump path so
+  // counter-creation is safe.
+  NewCounter!("footnote");
+  DefMacro!("\\thefootnote", "\\arabic{footnote}");
+  NewCounter!("mpfootnote");
+  DefMacro!("\\thempfn", "\\thefootnote");
+  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  DefRegister!("\\footnotesep" => Dimension::new(0));
+
   //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //

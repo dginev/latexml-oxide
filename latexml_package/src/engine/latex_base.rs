@@ -221,8 +221,13 @@ LoadDefinitions!({
   DefMacro!("\\@par", r"\let\par\@@par\par");
   DefMacro!("\\@restorepar", r"\def\par{\@par}");
 
-  // footnote counters (Perl L268-273) — still in latex_constructs.rs
-  // (couples with `\footnote` Constructor + Hash-table machinery there)
+  // C.3.3 Footnotes (Perl L268-273)
+  NewCounter!("footnote");
+  DefMacro!("\\thefootnote", "\\arabic{footnote}");
+  NewCounter!("mpfootnote");
+  DefMacro!("\\thempfn", "\\thefootnote");
+  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  DefRegister!("\\footnotesep" => Dimension::new(0));
 
   //======================================================================
   // C.4 Sectioning and Table of Contents
