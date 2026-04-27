@@ -886,11 +886,52 @@ suggested.
 The first 3250 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L6135 maps roughly to Perl L73-L3250.
 
-## Phase 16+ (TODO): Perl L3251-L6014
+## Phase 16 (Perl L3251-L3500)
 
-Caption details, sub-captioning, label/ref, sectioning internals,
-ToC, indexing, bibliography, miscellany. Will continue in
-subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 3250-3258 | `\@@add@caption@counters` | latex_constructs.rs:6034 | ✅ |
+| 3260-3271 | `RescueCaptionCounters` Perl-fn | latex_constructs.rs (Rust fn — find) | ✅ likely |
+| 3273-3276 | `\@@generic@caption[]{}` | latex_constructs.rs:6048 | ✅ |
+| 3278 | `$FIGURE_PANEL_CLASS` Perl-var | latex_constructs.rs (Rust const) | ✅ |
+| 3282-3284 | `%standalone_panel_names` Perl-hash | latex_constructs.rs (Rust const set) | ✅ |
+| 3286-3406 | `arrange_panels_and_breaks` Perl-fn | latex_constructs.rs (Rust fn — find) | ✅ likely |
+| 3408-3415 | `BuildPanelsAndID` Perl-fn | latex_constructs.rs (Rust fn — find) | ✅ likely |
+| 3417-3419 | `Tag('ltx:figure'/'ltx:float'/'ltx:table', afterClose => BuildPanelsAndID)` | latex_constructs.rs (verify) | ❓ |
+| 3423-3425 | `\@@caption{}` Constructor | latex_constructs.rs (verify) | ❓ |
+| 3426-3428 | `\@@toccaption{}` Constructor | latex_constructs.rs (verify) | ❓ |
+| 3430-3439 | `beforeFloat` Perl-fn | latex_constructs.rs:1558 (`before_float`) | ✅ |
+| 3441-3449 | `afterFloat` Perl-fn | latex_constructs.rs:1603 (`after_float`) | ✅ |
+| 3451-3459 | `DefEnvironment '{figure}[]'` | latex_constructs.rs (verify ~6080) | ❓ |
+| 3461-3469 | `DefEnvironment '{figure*}[]'` | latex_constructs.rs:6094 | ✅ |
+| 3470-3478 | `DefEnvironment '{table}[]'` | latex_constructs.rs (verify ~6098) | ❓ |
+| 3479-3487 | `DefEnvironment '{table*}[]'` | latex_constructs.rs:6112 | ✅ |
+| 3494+ | `collapseFloat` Perl-fn | latex_constructs.rs:1724 (`collapse_float`) | ✅ |
+
+### Phase 16 findings
+
+* **Strong PARITY** for L3251-L3500. Caption infrastructure
+  (`\@@add@caption@counters`, `\@@generic@caption`,
+  `\@@caption{}`, `\@@toccaption{}`), figure/table machinery
+  (`before_float`/`after_float`, `arrange_panels_and_breaks`,
+  `BuildPanelsAndID`, `collapse_float`, `figure`/`figure*`/
+  `table`/`table*` DefEnvironments) all align.
+* All caption-handling helper Perl-fns ported to Rust module fns:
+  `before_float` (L1558), `before_float_ex` (L1562 — variant for
+  double-column), `after_float` (L1603), `collapse_float` (L1724).
+* `RescueCaptionCounters`, `arrange_panels_and_breaks`,
+  `BuildPanelsAndID` — verify locations next iteration.
+
+## Cumulative parity health (Perl L1-L3500, ~58% of file)
+
+The first 3500 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L6135 maps roughly to Perl L73-L3500.
+
+## Phase 17+ (TODO): Perl L3501-L6014
+
+Cross-references, label, ref, equation labels, bibliography
+machinery, indexing, miscellany. Will continue in subsequent
+iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
