@@ -3400,17 +3400,21 @@ LoadDefinitions!({
   // C.4.2 The Appendix
   //======================================================================
   // Handled in article,report or book.
-  DefMacro!("\\appendixname", "Appendix");
-  DefMacro!("\\appendixesname", "Appendixes");
-  // TODO: add the rest...
+  // `\appendixname` is defined here at ~L9055 (Perl latex_constructs
+  // L5783). The latex_base mirror (Perl L287) is in latex_base.rs.
+  // `\appendixesname` (Perl latex_base L288 only) is in latex_base.rs.
   // `\@@appendix` moved to `latex_constructs_rust_only.rs` (Rust defensive
   // override; Perl gets it from raw latex.ltx dump).
 
   //======================================================================
   // C.4.3 Table of Contents
   //======================================================================
-  // Insert stubs that will be filled in during post processing.
-  DefMacro!("\\contentsname", "Contents");
+  // `\contentsname`/`\listfigurename`/`\listtablename` (Perl latex_base
+  // L294-296 only) are in latex_base.rs.
+  // Under the dump-active path latex_base.rs is SKIPPED (LoadFormat mutual
+  // exclusivity per CLAUDE.md), so the dump must capture these. Current
+  // dump (resources/dumps/latex.dump.txt) does NOT have them — known
+  // dump-completeness gap. See: book.tex / figures.tex tests under dump.
   DefConstructor!("\\tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
@@ -3431,12 +3435,10 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\listfigurename", "List of Figures");
   DefConstructor!("\\listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listfigurename"))?)) });
 
-  DefMacro!("\\listtablename", "List of Tables");
   DefConstructor!("\\listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listtablename"))?)) });

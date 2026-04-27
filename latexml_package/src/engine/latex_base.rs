@@ -228,9 +228,18 @@ LoadDefinitions!({
   // C.4 Sectioning and Table of Contents
   // Perl: latex_base.pool.ltxml lines 279-300
   //======================================================================
-  // \appendixname, \appendixesname — in latex_constructs.rs (C.4)
-  // \contentsname, \listfigurename, \listtablename — in latex_constructs.rs (C.4)
-  // NewCounter('tocdepth') — in latex_constructs.rs (C.4)
+  // C.4.2 The Appendix (Perl L287-288)
+  // `\appendixname` is also in Perl latex_constructs L5783 (Perl-faithful
+  // dup); Rust mirrors with a 2nd entry in latex_constructs.rs (~L9055).
+  DefMacro!("\\appendixname", "Appendix");
+  DefMacro!("\\appendixesname", "Appendixes");
+
+  // C.4.3 Table of Contents — label macros (Perl L294-296)
+  DefMacro!("\\contentsname", "Contents");
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefMacro!("\\listtablename", "List of Tables");
+
+  // NewCounter('tocdepth') — still in latex_constructs.rs (C.4)
 
   //======================================================================
   // C.5 Classes, Packages and Page Styles
