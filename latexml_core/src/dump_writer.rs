@@ -132,6 +132,39 @@ pub fn write_dump(
       continue;
     }
 
+    // Skip token-list register VALUES whose body contains a self-`\the`
+    // reference. latex.ltx L10564-10580 sets `\frozen@everymath` =
+    // `{... \the\everymath}` then allocates a NEW `\everymath` via
+    // `\newtoks`. Our `\newtoks` doesn't fully detach the new register's
+    // slot from the frozen alias's, so the body lands on `\everymath`'s
+    // value slot — `\the\everymath` then expands recursively at math
+    // entry, blowing the token limit. Until the `\newtoks`/`\let`
+    // slot-aliasing is fixed at the dialect level, the safest cure is
+    // to drop the corrupted self-referential capture; runtime
+    // re-evaluation of latex.ltx's hook chain (or LaTeXML's own
+    // `\everymath`/`\everydisplay` setup) repopulates correctly.
+    if matches!(*table, TableName::Value)
+      && matches!(
+        key_str.as_str(),
+        "\\everymath" | "\\everydisplay" | "\\everyhbox" | "\\everyvbox"
+        | "\\everycr"  | "\\everyjob"     | "\\everypar"  | "\\everyeof"
+      )
+    {
+      // Confirm the loop pattern before dropping (don't suppress
+      // valid hook contributions on engines with sound aliasing).
+      if let Stored::Tokens(ref tks) = value {
+        let body = tks.unlist_ref();
+        let needle_cs = format!("{key_str}");
+        let has_self_the = body.iter().any(|t| {
+          t.with_str(|s| s == "\\the")
+        }) && body.iter().any(|t| t.with_str(|s| s == &needle_cs));
+        if has_self_the {
+          skipped += 1;
+          continue;
+        }
+      }
+    }
+
     // Perl #2771 (2026-03-13) + upstream IGNORED_SYMBOLS: these are
     // runtime-only Value entries — control-flow counters, and large
     // registered-rule tables that can't meaningfully round-trip through
