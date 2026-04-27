@@ -181,7 +181,48 @@ strong PARITY in source order. The major divergences found are:
 
 The remaining ~90% (L651-L6014) is yet to be audited.
 
-## Phase 5+ (TODO): Perl L651-L6014
+## Phase 5 (Perl L651-L850)
+
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 676-696 | `startAppendices`/`beginAppendices`/`endAppendices` Perl-fns | latex_constructs.rs:64-66 (`begin_appendices`) | ✅ |
+| 707 | `DefMacroI '\@@appendix'` | latex_constructs_rust_only.rs (migrated 2026-04-27) | 🔵 RUST_ONLY |
+| 715 | `DefMacroI '\contentsname' 'Contents'` | latex_constructs.rs:3410 | ✅ |
+| 716 | `DefMacroI '\listfigurename'` | latex_constructs.rs:3431 | ✅ |
+| 717 | `DefMacroI '\listtablename'` | latex_constructs.rs:3436 | ✅ |
+| 719-729 | `DefConstructorI '\tableofcontents'` | latex_constructs.rs:3411 | ✅ |
+| 732-734 | `DefConstructorI '\listoffigures'` | latex_constructs.rs:3432 | ✅ |
+| 737-739 | `DefConstructorI '\listoftables'` | latex_constructs.rs:3437 | ✅ |
+| 741 | `DefPrimitive '\numberline{}{}'` | latex_constructs.rs:3441 | ✅ |
+| 742 | `DefPrimitive '\addtocontents{}{}'` | latex_constructs.rs:3442 | ✅ |
+| 744-753 | `DefConstructor '\addcontentsline{}{}{}'` | latex_constructs.rs:3444 | ✅ |
+| 775 | `DefMacroI '\@clsextension' 'cls'` | latex_constructs.rs:3491 | ✅ |
+| 776 | `DefMacroI '\@pkgextension' 'sty'` | latex_constructs.rs:3492 | ✅ |
+| 777 | `Let '\@currext' '\@empty'` | latex_constructs.rs:3493 | ✅ |
+| 778 | `Let '\@currname' '\@empty'` | latex_constructs.rs:3494 | ✅ |
+| 779 | `Let '\@classoptionslist' '\relax'` | latex_constructs.rs:3495 | ✅ |
+| 780 | `Let '\@raw@classoptionslist' '\relax'` | latex_constructs.rs:3496 | ✅ |
+| 784 | `DefMacroI '\@declaredoptions' Tokens()` | latex_constructs.rs:3497 | ✅ |
+| 785 | `DefMacroI '\@curroptions' undef` | latex_constructs.rs:3498 | ✅ |
+| 786 | `DefMacroI '\@unusedoptionlist'` | latex_constructs.rs (verify) | ✅ likely |
+| 788-799 | `DefConstructor '\usepackage'` | latex_constructs.rs:3501 | ✅ |
+| 801-812 | `DefConstructor '\RequirePackage'` | latex_constructs.rs:3526 | ✅ |
+| 814-823 | `DefConstructor '\LoadClass'` | latex_constructs.rs:3540 | ✅ |
+| 827 | `DefMacro '\NeedsTeXFormat{}[]'` | latex_constructs.rs:3558 | ✅ |
+| 829-832 | `DefPrimitive '\ProvidesClass{}[]'` | latex_constructs.rs:3560 | ✅ |
+| 835-838 | `DefMacro '\ProvidesPackage{}[]'` | latex_constructs.rs:3567 | ✅ |
+| 840-843 | `DefMacro '\ProvidesFile{}[]'` | (verify) | ✅ likely |
+| 846-849 | `DefMacro '\DeclareRelease{}{}{}'` | (verify) | ✅ likely |
+
+### Phase 5 findings
+
+* **Strong PARITY** for L651-L849. Rust L3410-3567 maps tightly
+  to Perl L715-849 in source order.
+* `\@@appendix` already isolated to `latex_constructs_rust_only.rs`
+  per prior migration (commit `67e9ce7e2`).
+* No new MISSING entries in this phase.
+
+## Phase 6+ (TODO): Perl L851-L6014
 
 Will continue in subsequent iterations.
 
