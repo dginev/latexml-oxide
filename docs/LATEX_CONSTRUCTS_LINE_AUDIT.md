@@ -1671,9 +1671,13 @@ order, with two clusters of housekeeping work remaining:
 ## Next: 5 more source files
 
 Per user directive (2026-04-27), proceed to audit:
-1. `latex_base.pool.ltxml` (vs `latex_base.rs`)
-2. `latex_bootstrap.pool.ltxml` (vs `latex_bootstrap.rs`)
-3. `latex_dump.pool.ltxml` (vs `latex_dump.rs`)
-4. `plain_base.pool.ltxml` (vs `plain_base.rs`)
-5. `plain_constructs.pool.ltxml` (vs `plain_constructs.rs`)
-(Also possibly `plain_dump.pool.ltxml`.)
+1. `latex_bootstrap.pool.ltxml` (vs `latex_bootstrap.rs`) — 66 lines
+2. `latex_base.pool.ltxml` (vs `latex_base.rs`) — 865 lines
+3. `plain_bootstrap.pool.ltxml` (vs `plain_bootstrap.rs`) — 45 lines
+4. `plain_base.pool.ltxml` (vs `plain_base.rs`) — 622 lines
+5. `plain_constructs.pool.ltxml` (vs `plain_constructs.rs`) — 323 lines
+
+Each gets its own line-by-line walk in `docs/<NAME>_LINE_AUDIT.md`.
+Cross-file misplacements (e.g. `\newcounter` Perl-bootstrap-but-
+Rust-constructs) are flagged with ↻ status; cleanup follows the
+audit, not blocks it.
