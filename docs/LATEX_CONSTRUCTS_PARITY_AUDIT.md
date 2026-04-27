@@ -151,3 +151,79 @@ intentional divergence.
 
 Best time-leverage: tackle the obvious topical-misplacements first
 (`\@@array` → `tex_tables.rs`, etc.).
+
+## Updated 2026-04-29 — combined latex_*.{rs,pool.ltxml}
+
+The previous comparison only looked at `latex_constructs.{rs,pool.ltxml}`.
+Many "Rust-only" entries actually live in Perl's `latex_base.pool.ltxml`
+(e.g. `\@@par` is at `latex_base:261`). Combining all three latex files on
+both sides gives a much more accurate view:
+
+| Side | Total CSes |
+|---|---|
+| Perl `latex_{constructs,base,bootstrap}.pool.ltxml` | **813** |
+| Rust `latex_{constructs,base,bootstrap}.rs` | **759** |
+| In both | **728** (89.5% match) |
+| **Rust-only** | **31** |
+| **Perl-only** | **85** |
+
+So the apparent 396-CS bloat was an artifact of the file-by-file
+comparison. Across the latex_* family, **Rust has only 31 truly extra
+CSes**, most of which are meaningful additions:
+
+* Modern LaTeX kernel CSes added post-2020 that Perl source predates:
+  `\IfClassAtLeastTF`, `\IfClassLoadedTF`, `\IfFileAtLeastTF`,
+  `\IfFormatAtLeastTF`, `\IfPackageAtLeastTF`, `\IfPackageLoadedTF`.
+* LaTeXML-helper CSes: `\ltx@hard@MessageBreak`, `\ltx@ifclassloaded`,
+  `\ltx@ifpackageloaded`, `\lx@filecontents@star`, `\lx@newline`.
+* List internals not yet in Perl source: `\@listi`-`\@listvi`,
+  `\@bls`, `\@maxlistdepth`.
+* Graphicx driver: `\Gin@driver`.
+* Document state stubs: `\document`, `\enddocument`,
+  `\thebibliography@ID`, `\maybe@end@title`.
+* Picture mode: `\oval`.
+* Encoding: `\textperiodcentered`.
+* Misc: `\@@appendix`, `\@latexbug`, `\@leftmark`, `\@rightmark`,
+  `\filecontents`.
+
+These are NOT bloat in any meaningful sense.
+
+### Revised bloat picture
+
+The 3300-line file-size delta between `latex_constructs.{rs,pool.ltxml}`
+is therefore mostly per-line verbosity, not extra CSes. Rust's macros
+(`DefMacro!("\\foo", "\\bar baz", before_digest => sub {...})`) expand
+to several lines per definition, where Perl's call (`DefMacro('\foo',
+'\bar baz', beforeDigest => sub {...})`) is more terse. Plus the Rust
+file carries extensive Perl-line-number comments (a useful translation
+practice but adds bulk).
+
+### Real gap: 85 Perl-only CSes
+
+`docs/parity_data/latex_combined_perl_only.txt` lists them. Sample:
+`\@bibitem`, `\@captype`, `\@charlb`, `\@charrb`, `\@dblfloat`,
+`\@desci`-`\@descvi`, `\@filef@und`, `\@float`, `\@include`,
+`\@itemi`-`\@itemvi`, `\@enumi`-`\@enumiv`, `\@trivlist`,
+`\bottomnumber`, `\dbltopnumber`, `\dotfill`, plus various font-size
+definitions (`\@viipt`-`\@xivpt`).
+
+Many of these are list/enumeration internals (`\@itemi`-`\@itemvi`,
+`\@desci`-`\@descvi`, `\@enumi`-`\@enumiv`). Verify whether they're
+captured by `latex.ltx` raw load + dump. If yes, no action needed —
+the dump IS the source of truth for those.
+
+If not, port them in correct file location to match Perl source order.
+
+### Revised conclusion
+
+The user's "3000-line bloat" framing was based on the per-file size
+comparison. Looking at *content* the picture is much narrower: 31
+real Rust-only CSes (mostly additions, not bloat) and 85 Perl-only
+CSes (genuine translation gaps).
+
+Action plan:
+1. Verify the 85 Perl-only CSes are dump-captured. Likely most are.
+2. For the 31 Rust-only, document each as intentional addition (modern
+   kernel, LaTeXML helper, etc.). No moves/deletes needed.
+3. The line-count divergence is per-line verbosity — leave alone unless
+   we want to compress macro syntax (separate concern).
