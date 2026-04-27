@@ -62,7 +62,67 @@ against `plain_base.rs` (751 lines).
   defines them later in `latex_constructs.pool.ltxml:5487-5492`.
   Need to verify if Rust-side has duplicate in latex_constructs.rs.
 
-## Phase 2+ (TODO)
+## Phase 2 — Perl L200-400 (Appendix B p.347-352)
 
-* Phase 2: Perl L200-400 (`\wlog` and other Appendix B middle entries)
-* Phase 3: Perl L400-622 (file end)
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 200-203 | `\wlog{}` (DefPrimitive, locked) | plain_base.rs:259-262 | ✅ |
+| 207-218 | `\new*` (count/dimen/skip/muskip/box/help/toks/read/write/fam/language) RawTeX | plain_base.rs:266-278 (TeX!) | ✅ |
+| 222 | `\newinsert Token` (DefPrimitive closure) | plain_base.rs:283-285 | ✅ |
+| 226 | `\maxdimen` Dimension(16383.99999*UNITY) | plain_base.rs:291 | ✅ |
+| 227 | `\hideskip` Glue('-1000pt plus 1fill') | plain_base.rs:292 | ✅ |
+| 228 | `\centering` Glue('0pt plus 1000pt minus 1000pt') | plain_base.rs:293 | ✅ |
+| 229 | `\p@` Dimension(UNITY) | plain_base.rs:294 | ✅ |
+| 230 | `\z@` Dimension(0) | plain_base.rs:295 | ✅ |
+| 231 | `\z@skip` Glue(0,0,0) | plain_base.rs:296 | ✅ |
+| 234 | `\@` (DefConstructor empty) | plain_base.rs:299 | ✅ |
+| 237 | RawTeX `\newbox\voidb@x` | plain_base.rs:302 | ✅ |
+| 244 | `\smallskipamount` | plain_base.rs:315 | ✅ |
+| 245 | `\medskipamount` | plain_base.rs:316 | ✅ |
+| 246 | `\bigskipamount` | plain_base.rs:317 | ✅ |
+| 247 | `\normalbaselineskip` | plain_base.rs:318 | ✅ |
+| 248 | `\normallineskip` | plain_base.rs:319 | ✅ |
+| 249 | `\normallineskiplimit` | plain_base.rs:320 | ✅ |
+| 250 | `\jot` | plain_base.rs:321 | ✅ |
+| 251 | `\lx@default@jot` (LookupRegister `\jot`) | plain_base.rs:325 | ✅ |
+| 252 | `\interdisplaylinepenalty` Number(100) | plain_base.rs:326 | ✅ |
+| 253 | `\interfootnotelinepenalty` Number(100) | plain_base.rs:327 | ✅ |
+| 255 | `\magstephalf` "1095" | plain_base.rs:329 | ✅ |
+| 257-261 | `\magstep{}` (closure) | plain_base.rs:330-340 | ✅ |
+| 267-302 | RawTeX font setup `\font\tenrm=cmr10` etc. + `\textfont*=*`, `\newfam*` | plain_base.rs:346-372 | ✅ |
+| 303-360 | RawTeX mathcodes block (`\mathcode\^^@` through `\mathcode\^^?`, plus ASCII chars `*`/`+`/`,`/`-`/etc.) | math_common.rs:425+ (assign_mathcode calls) | ↻ MISPLACED |
+| 367 | `AssignValue NOMINAL_FONT_SIZE => 10` | plain_base.rs:385 | ✅ |
+| 369-374 | `\mit` (DefPrimitiveI declarative + closure shadowed) | plain_base.rs:397-401 (closure with require_math) | ⚠ shape (Rust merges Perl's two forms) |
+| 376 | `\frenchspacing` (DefPrimitiveI) | plain_base.rs:403 | ✅ |
+| 377 | `\nonfrenchspacing` | plain_base.rs:404 | ✅ |
+| 378-379 | `\normalbaselines` | plain_base.rs:405-408 | ✅ |
+| 380 | `\space` Tokens(T_SPACE) | plain_base.rs:409 | ✅ |
+| 381 | `\lq` "`" | plain_base.rs:410 | ✅ |
+| 382 | `\rq` "'" | plain_base.rs:411 | ✅ |
+| 383 | `Let \empty \lx@empty` | plain_base.rs:412 | ✅ |
+| 384 | `\null` `\hbox{}` | plain_base.rs:413 | ✅ |
+| 385 | `Let \bgroup T_BEGIN` | plain_base.rs:414 | ✅ |
+| 386 | `Let \egroup T_END` | plain_base.rs:415 | ✅ |
+| 387 | `Let \endgraf \par` | plain_base.rs:416 | ✅ |
+| 388 | `Let \endline \cr` | plain_base.rs:417 | ✅ |
+| 390 | `\endline` (DefPrimitiveI undef) | plain_base.rs:419 | ✅ |
+| 393 | `\\\r` `\<cr>==\<space>` | plain_base.rs:422 | ✅ |
+| 394 | `Let T_ACTIVE("\r") \par` | plain_base.rs:423 | ✅ |
+| 396 | `Let \\\t \\\r` | plain_base.rs:425 | ✅ |
+
+### Phase 2 findings
+
+* **Predominantly PARITY** for L200-400. ~30 entries match Rust
+  in source order at plain_base.rs:259-425.
+* **↻ MISPLACED**: Plain TeX mathcodes block (Perl L303-360) lives
+  in `math_common.rs:425+` in Rust, not `plain_base.rs`. Per
+  strict-parity rule, should be in plain_base.rs. Need to verify
+  that `math_common.pool.ltxml` doesn't ALSO define them — if
+  shared between Perl files, keep math_common.rs; otherwise migrate.
+* **⚠ shape**: `\mit` — Rust merges Perl's two forms (declarative
+  L369 + closure L371-374) into a single closure with
+  `require_math => true`. Functionally equivalent.
+
+## Phase 3+ (TODO)
+
+* Phase 3: Perl L400-622 (final blocks)
