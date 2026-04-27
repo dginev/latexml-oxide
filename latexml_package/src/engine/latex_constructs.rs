@@ -9210,6 +9210,25 @@ LoadDefinitions!({
     make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
   });
 
+  // `\ltx@hard@MessageBreak` is the literal newline target used by
+  // `make_generic_message` to convert `\MessageBreak`-separated lines
+  // in `\GenericInfo`/`\GenericWarning`/`\GenericError` messages.
+  // Originally defined in `latex_base.rs:287`, but `latex_base` is
+  // replaced by `latex_dump` in dump path — so the DefMacro doesn't
+  // run there and `\ltx@hard@MessageBreak` is undefined. When
+  // `make_generic_message` then calls `let_i(\MessageBreak,
+  // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
+  // becomes Stored::None → `\MessageBreak` becomes undefined for the
+  // remainder of the digestion. The next babel info message
+  // ("Importing font data...") then errors with "MessageBreak
+  // undefined". Re-define here in latex_constructs (post-dump) so
+  // both paths converge.
+  DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
+
+  // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
+  // Defensive parity with Perl's exact placement.
+  Let!("\\MessageBreak", "\\relax");
+
   // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
   DefMacro!("\\@setsize{}{}{}{}", "");
 
