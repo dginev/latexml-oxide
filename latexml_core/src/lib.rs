@@ -268,10 +268,36 @@ pub trait BoxOps: Object {
       return Ok(Some(RegisterValue::Dimension(w)));
     }
 
+    // Convert MuGlue/MuDimension widths to pt (1mu = font_size/18). `\the\wd`
+    // is a dimension query — the result must be Dimension-typed. Without
+    // this conversion `\hbox{\,}` width came back as `MuGlue(3mu)` and
+    // formatted as `3.0pt` (raw mu treated as pt) instead of `1.66663pt`.
+    // Order of ops (div by 18 then mul by fs) matches Perl integer
+    // truncation: see `mu_to_pt_value` in store.rs.
+    fn coerce_mu(val: &Stored) -> Option<RegisterValue> {
+      match val {
+        Stored::MuGlue(g) => {
+          let fs = crate::state::lookup_font()
+            .and_then(|f| f.get_size())
+            .unwrap_or(10.0);
+          let muwidth = (fs * crate::common::numeric_ops::UNITY_F64 / 18.0) as i64;
+          let pt_scaled = (g.value_of() as f64 * muwidth as f64 / crate::common::numeric_ops::UNITY_F64).trunc();
+          Some(RegisterValue::Dimension(crate::common::dimension::Dimension::new(pt_scaled as i64)))
+        },
+        Stored::MuDimension(d) => {
+          let fs = crate::state::lookup_font()
+            .and_then(|f| f.get_size())
+            .unwrap_or(10.0);
+          let pt_scaled = (d.value_of() / 18) as f64 * fs;
+          Some(RegisterValue::Dimension(crate::common::dimension::Dimension::new(pt_scaled as i64)))
+        },
+        _ => val.into(),
+      }
+    }
     Ok(match self.get_property("width") {
-      Some(val) => (&*val).into(),
+      Some(val) => coerce_mu(&val),
       None => match self.get_property("cached_width") {
-        Some(val) => (&*val).into(),
+        Some(val) => coerce_mu(&val),
         None => Some(RegisterValue::Dimension(Dimension::default())),
       },
     })
@@ -366,8 +392,8 @@ pub trait BoxOps: Object {
             let fs = crate::state::lookup_font()
               .and_then(|f| f.get_size())
               .unwrap_or(10.0);
-            let mu_val = g.value_of() as f64;
-            let pt_scaled = mu_val * fs / 18.0;
+            let muwidth = (fs * crate::common::numeric_ops::UNITY_F64 / 18.0) as i64;
+          let pt_scaled = (g.value_of() as f64 * muwidth as f64 / crate::common::numeric_ops::UNITY_F64).trunc();
             Some(Dimension::new(pt_scaled as i64))
           },
           Some(Stored::MuDimension(d)) => {

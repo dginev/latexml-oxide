@@ -1468,11 +1468,18 @@ LoadDefinitions!({
       stored_map!("width" => length, "isSpace" => true)) });
 
   // MuGlue registers; TeXBook p.274
-  // NOTE: Perl stores these as Glue with "mu" parsed to pt internally,
-  // NOT as MuGlue. Changing to MuGlue causes width computation regressions.
-  DefRegister!("\\thinmuskip", Glue!("3mu"));
-  DefRegister!("\\medmuskip", Glue!("4mu plus 2mu minus 4mu"));
-  DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
+  // Perl `TeX_Math.pool.ltxml:1168-1170` defines as `MuGlue("3mu")`.
+  // Storing as Glue lost the "mu" unit info — Glue::Display outputs
+  // `"3.0pt"` regardless, and `\,`/`\:`/`\;` widths flowed into math
+  // attributes mis-typed. Math parser's `get_xmhint_spacing` then
+  // skipped the mu→pt division-by-1.8, producing rpadding="3.0pt"
+  // instead of "1.67pt" for `\thinmuskip`. MuGlue's Display correctly
+  // emits the "mu" suffix so the conversion happens.
+  DefRegister!("\\thinmuskip", MuGlue::new_f64(3.0));
+  DefRegister!("\\medmuskip",
+    MuGlue::new_full(4 * 65536, Some(2 * 65536), None, Some(4 * 65536), None));
+  DefRegister!("\\thickmuskip",
+    MuGlue::new_full(5 * 65536, Some(5 * 65536), None, None, None));
 
   DefRegister!("\\abovedisplayskip", Glue!("12pt plus 3pt minus 9pt"));
   DefRegister!("\\abovedisplayshortskip", Glue!("0pt plus 3pt"));

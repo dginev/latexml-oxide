@@ -1006,14 +1006,34 @@ impl<'a> From<&'a Stored> for Option<Number> {
   }
 }
 
+// MuGlue/MuDimension store raw mu in fixpoint units (1mu = 1/18 em).
+// Convert to scaled-pt by mirroring Perl `MuGlue::spValue` →
+// `fixpoint(mu/UNITY, MUWidth)` where `MUWidth = int(size * emwidth /
+// 18)`. The two-step integer truncation in Perl is load-bearing: a
+// single-step `(mu * size / 18)` gives a slightly larger value (109226
+// vs 109219 for 3mu at 10pt), and Knuth's `print_scaled` then formats
+// "1.66666pt" instead of the expected "1.66663pt". See
+// LaTeXML/lib/LaTeXML/Common/Font.pm:580 (getMUWidth) and
+// Core/MuGlue.pm spValue.
+fn mu_to_pt_value(mu_val: i64) -> i64 {
+  let fs = crate::state::lookup_font()
+    .and_then(|f| f.get_size())
+    .unwrap_or(10.0);
+  let unity = crate::common::numeric_ops::UNITY_F64;
+  // MUWidth = int(font_size * emwidth(=1.0*UNITY) / 18)
+  let muwidth = (fs * unity / 18.0) as i64;
+  // fixpoint(mu/UNITY, MUWidth) ≈ (mu_val * muwidth / UNITY).trunc()
+  ((mu_val as f64 * muwidth as f64 / unity).trunc()) as i64
+}
+
 impl<'a> From<&'a Stored> for Option<Dimension> {
   fn from(value: &'a Stored) -> Option<Dimension> {
     match value {
       Stored::Dimension(ref n) => Some(*n),
       Stored::Number(ref n) => Some(Dimension::new(n.value_of())),
       Stored::Glue(ref n) => Some(Dimension::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Dimension::new(n.value_of())),
-      Stored::MuGlue(ref n) => Some(Dimension::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
+      Stored::MuGlue(ref n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
       _ => None,
     }
   }
@@ -1024,8 +1044,8 @@ impl<'a> From<&'a Stored> for Option<Glue> {
     match value {
       Stored::Dimension(ref n) => Some(Glue::new(n.value_of())),
       Stored::Number(ref n) => Some(Glue::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Glue::new(n.value_of())),
-      Stored::MuGlue(ref n) => Some(Glue::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
+      Stored::MuGlue(ref n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
       Stored::Glue(ref n) => Some(*n),
       _ => None,
     }
