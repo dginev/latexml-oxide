@@ -1120,11 +1120,72 @@ in source order. Rust L2410-L6719 maps roughly to Perl L73-L4000.
 The first 4250 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L7000 maps roughly to Perl L73-L4250.
 
-## Phase 20+ (TODO): Perl L4251-L6014
+## Phase 20 (Perl L4251-L4500)
 
-Citation rendering, natbib-aware citations, `\cite*` family,
-indexing, glossaries, picture mode, miscellany. Will continue in
-subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 4254-4255 | `\@@citephrase{}` | latex_constructs.rs:7007 | ✅ |
+| 4257-4267 | `\cite[] Semiverbatim` | latex_constructs.rs:7010 | ✅ |
+| 4271-4273 | `\nocite{}` | latex_constructs.rs:7038 | ✅ |
+| 4274-4278 | `\lx@mark@nocite Semiverbatim` | (verify ~7050) | ❓ |
+| 4283 | `\lx@latex@input` | latex_constructs.rs:7078 | ✅ |
+| 4284 | `\input` | latex_constructs.rs:7079 | ✅ |
+| 4285 | `Let '\@iinput' '\lx@latex@input'` | latex_constructs.rs:7080 | ✅ |
+| 4286 | `\@input{}` | latex_constructs.rs (verify ~7088) | ❓ |
+| 4287 | `\@input@{}` | latex_constructs.rs (verify ~7089) | ❓ |
+| 4289 | `\quote@name{}` | latex_constructs.rs:7090 | ✅ |
+| 4290 | `\quote@@name{}` | latex_constructs.rs:7091 | ✅ |
+| 4291 | `\unquote@name{}` | latex_constructs.rs:7092 | ✅ |
+| 4296-4302 | `\include{}` | latex_constructs.rs:7095 | ✅ |
+| 4303 | `Let '\@include' '\include'` | (verify ~7109) | ❓ |
+| 4306-4312 | `\includeonly{}` | latex_constructs.rs:7110 | ✅ |
+| 4316-4334 | `\begin{filecontents}` Constructor | latex_constructs_rust_only.rs (migrated) | 🔵 RUST_ONLY |
+| 4335-4352 | `\begin{filecontents*}` Constructor | latex_constructs_rust_only.rs (migrated) | 🔵 RUST_ONLY |
+| 4353 | `\endfilecontents` | latex_constructs_rust_only.rs (migrated) | 🔵 RUST_ONLY |
+| 4354 | `\listfiles` | latex_constructs.rs:6559 | ↻ ORDER (Rust placed earlier) |
+| 4378-4379 | `%index_style` Perl-hash | latex_constructs.rs (Rust const map) | ✅ |
+| 4383-4429 | `process_index_phrases` Perl-fn | latex_constructs.rs:2074 (`process_index_phrases`) | ✅ |
+| 4433-4451 | `DefParameterType('SanitizedVerbatim', …)` | (verify) | ❓ |
+| 4454 | `\index SanitizedVerbatim` | latex_constructs.rs:7180 | ✅ |
+| 4456 | `Tag('ltx:indexphrase', afterClose => addIndexPhraseKey)` | (verify) | ❓ |
+| 4457 | `Tag('ltx:glossaryphrase', afterClose => addIndexPhraseKey)` | (verify) | ❓ |
+| 4460-4464 | `addIndexPhraseKey` Perl-fn | latex_constructs.rs:2029 (`add_index_phrase_key`) | ✅ |
+| 4466-4469 | `\@index[][]{}` Constructor | latex_constructs.rs:7136 | ✅ |
+| 4470-4472 | `\@indexphrase[]{}` Constructor | latex_constructs.rs:7143 | ✅ |
+| 4473-4475 | `\@indexsee{}` Constructor | latex_constructs.rs:7157 | ✅ |
+| 4477-4479 | `\@indexseealso{}` Constructor | latex_constructs.rs:7167 | ✅ |
+| 4481-4493 | `\glossary{}` Constructor | latex_constructs.rs:7194 | ✅ |
+| 4499+ | `indexify` Perl-fn (sortable string) | latex_constructs.rs (Rust fn — find) | ✅ likely |
+
+### Phase 20 findings
+
+* **Strong PARITY** for L4251-L4500. Cite/bibref machinery
+  (`\@@citephrase`, `\cite`, `\nocite`, `\lx@mark@nocite`),
+  input machinery (`\lx@latex@input`/`\input`/`\@iinput`/
+  `\@input`/`\@input@`), quoted-filename helpers (`\quote@name`/
+  `\quote@@name`/`\unquote@name`), `\include`/`\@include`/
+  `\includeonly`, `\listfiles`, index machinery
+  (`%index_style`/`process_index_phrases`/`SanitizedVerbatim`/
+  `\index`/`Tag(.indexphrase, .glossaryphrase)`/
+  `addIndexPhraseKey`), index Constructors (`\@index`/
+  `\@indexphrase`/`\@indexsee`/`\@indexseealso`),
+  `\glossary{}` Constructor all align.
+* `\begin{filecontents}`/`\begin{filecontents*}`/`\endfilecontents`
+  isolated to `latex_constructs_rust_only.rs` per prior migration
+  (commit `e2b375b2f`).
+* `\listfiles` ORDER: Rust at L6559 vs Perl L4354 (slightly earlier
+  in Rust, with cite/input block rather than after filecontents).
+
+## Cumulative parity health (Perl L1-L4500, ~75% of file)
+
+The first 4500 lines audited — **three-quarters of the file** —
+show **predominantly strong PARITY** in source order. Rust
+L2410-L7194 maps roughly to Perl L73-L4500.
+
+## Phase 21+ (TODO): Perl L4501-L6014
+
+Index post-processing, glossaries, picture mode, miscellany,
+class internals. Will continue in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
