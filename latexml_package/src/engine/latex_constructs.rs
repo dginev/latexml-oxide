@@ -2382,6 +2382,12 @@ LoadDefinitions!({
   // Perl latex_constructs.pool.ltxml L51 — "Just to pass test t/alignment/halignatt"
   DefMacro!("\\hidewidth", None);
 
+  // Perl L33-34: DefPrimitiveI('\ASCII\^', '{}', sub { Box('^' . ToString(Digest($_[1]))); });
+  // The CS name literally contains `\^` / `\~`. Perl's body prepends a literal
+  // ASCII char to the digested arg. Functionally equivalent DefMacro form here.
+  DefMacro!("\\ASCII\\^{}", "^#1");
+  DefMacro!("\\ASCII\\~{}", "~#1");
+
   // Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
   Let!("\\magnification", "\\@undefined");
@@ -5961,10 +5967,9 @@ LoadDefinitions!({
   // refnums, ids, get passed on to the figure, table when needed.
   // AND, as soon as possible, since other items may base their id's on the id of the table!
 
-  DefMacro!("\\figurename", "Figure");
-  DefMacro!("\\figuresname", "Figures"); // Never used?
-  DefMacro!("\\tablename", "Table");
-  DefMacro!("\\tablesname", "Tables");
+  // `\figurename`/`\figuresname`/`\tablename`/`\tablesname` defined
+  // below at the Perl-faithful position (after figure/table DefEnvironments,
+  // mirroring Perl L3526-3529).
 
   // Let the fonts for float be the default for all floats, figures, tables, etc.
   DefMacro!("\\fnum@font@float", "\\@empty");

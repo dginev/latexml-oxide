@@ -31,8 +31,8 @@ Status legend:
 | 28 | `DefMacroI '\cf@encoding'` | latex_constructs.rs:5406 | ↻ ORDER |
 | 30 | `DefMacro '\hline'` | tex_tables.rs (likely) | 📁 FILE (intentional — table) |
 | 31 | `DefMacroI '\ldots'` | math_common.rs (likely) | 📁 FILE (intentional — math) |
-| 33 | `DefPrimitiveI '\ASCII\^'` | NOT FOUND | ❌ MISSING |
-| 34 | `DefPrimitiveI '\ASCII\~'` | NOT FOUND | ❌ MISSING |
+| 33 | `DefPrimitiveI '\ASCII\^'` | latex_constructs.rs:~2390 | ✅ PORTED 2026-04-28 |
+| 34 | `DefPrimitiveI '\ASCII\~'` | latex_constructs.rs:~2391 | ✅ PORTED 2026-04-28 |
 | 36 | `Let '\par' '\lx@normal@par'` | latex_constructs.rs:2370 | ✅ FIXED 2026-04-27 (`b3c114d79`) |
 | 38 | `LoadPool('math_common')` | latex_constructs.rs:2358 (collapsed at top) | ↻ ORDER (Perl L38, Rust at top) |
 | 42 | `DefAccent '\k'` | latex_constructs.rs:8754 | ↻ ORDER (~6000L late, also redefined) |
