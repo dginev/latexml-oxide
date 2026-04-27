@@ -626,7 +626,7 @@ impl Stored {
     match self {
       Stored::Dimension(ref v) => v.to_attribute(),
       Stored::Number(ref v) => v.to_attribute(),
-      //Stored::MuDimension(ref v) => v.to_attribute(),
+      Stored::MuDimension(ref v) => v.to_attribute(),
       Stored::Glue(ref v) => v.to_attribute(),
       Stored::MuGlue(ref v) => v.to_attribute(),
       other => other.to_string(),

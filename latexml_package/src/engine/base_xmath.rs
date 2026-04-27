@@ -219,6 +219,26 @@ LoadDefinitions!({
     reversion => "#1");
   // Perl L197-209: \lx@padded sets lpadding/rpadding on the absorbed content.
   // afterConstruct sets attributes on the last child (skipping XMDual wrapper).
+  // The lpadding/rpadding values are MuDimensions, but the XML attribute is
+  // pt-typed; do mu→pt conversion here (1mu = font_size/18) instead of
+  // emitting raw "3.0mu" strings.
+  fn mudimension_to_pt_attr(d: &Digested) -> String {
+    if let DigestedData::RegisterValue(rv) = d.data() {
+      let mu_val = match rv {
+        RegisterValue::MuDimension(md) => Some(md.value_of()),
+        RegisterValue::MuGlue(mg) => Some(mg.value_of()),
+        _ => None,
+      };
+      if let Some(mu) = mu_val {
+        let fs = state::lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+        let unity = latexml_core::common::numeric_ops::UNITY_F64;
+        let muwidth = (fs * unity / 18.0) as i64;
+        let pt_scaled = (mu as f64 * muwidth as f64 / unity).trunc() as i64;
+        return Dimension::new(pt_scaled).to_string();
+      }
+    }
+    d.to_string()
+  }
   DefConstructor!("\\lx@padded[MuDimension]{MuDimension}{}",
     "#3",
     after_construct => sub[document, whatsit] {
@@ -231,13 +251,13 @@ LoadDefinitions!({
           }
         }
         if let Some(lpad) = whatsit.get_arg(0) {
-          let val = lpad.to_string();
+          let val = mudimension_to_pt_attr(lpad);
           if !val.is_empty() {
             document.set_attribute(&mut last, "lpadding", &val)?;
           }
         }
         if let Some(rpad) = whatsit.get_arg(1) {
-          let val = rpad.to_string();
+          let val = mudimension_to_pt_attr(rpad);
           if !val.is_empty() {
             document.set_attribute(&mut last, "rpadding", &val)?;
           }

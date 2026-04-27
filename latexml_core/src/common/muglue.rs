@@ -113,17 +113,23 @@ impl MuGlue {
   }
 
   pub fn to_attribute(&self) -> String {
-    let u = "mu";
-    let mut string = attribute_format(self.skip, Some(u));
+    // XML attribute output is pt-typed by convention (Perl
+    // `Common/Dimension::attributeformat`). Convert mu→pt via the
+    // shared `mu_to_pt` helper so XMHint width / lpadding /
+    // rpadding values come out as `1.66663pt` not `3.0mu`.
+    // Mirrors Perl `Common/MuGlue::ptValue` flow.
+    let pt_skip = mu_to_pt(self.skip);
+    let mut string = attribute_format(pt_skip, Some("pt"));
     if let Some(plus) = self.plus {
       if plus != 0 {
         string.push_str(" plus ");
         let fill_u = if let Some(pfill) = self.pfill {
           pfill.to_str()
         } else {
-          u
+          "pt"
         };
-        string.push_str(&attribute_format(plus, Some(fill_u)));
+        let plus_pt = if fill_u == "pt" { mu_to_pt(plus) } else { plus };
+        string.push_str(&attribute_format(plus_pt, Some(fill_u)));
       }
     }
     if let Some(minus) = self.minus {
@@ -132,13 +138,23 @@ impl MuGlue {
         let mfill_u = if let Some(mfill) = self.mfill {
           mfill.to_str()
         } else {
-          u
+          "pt"
         };
-        string.push_str(&attribute_format(minus, Some(mfill_u)));
+        let minus_pt = if mfill_u == "pt" { mu_to_pt(minus) } else { minus };
+        string.push_str(&attribute_format(minus_pt, Some(mfill_u)));
       }
     }
     string
   }
+}
+
+fn mu_to_pt(mu_val: i64) -> i64 {
+  let fs = crate::state::lookup_font()
+    .and_then(|f| f.get_size())
+    .unwrap_or(10.0);
+  let unity = crate::common::numeric_ops::UNITY_F64;
+  let muwidth = (fs * unity / 18.0) as i64;
+  ((mu_val as f64 * muwidth as f64 / unity).trunc()) as i64
 }
 
 impl From<MuGlue> for Option<Tokens> {

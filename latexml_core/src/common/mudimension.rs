@@ -18,6 +18,18 @@ impl NumericOps for MuDimension {
   fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::MuDimension }
   fn unit(&self) -> Option<&'static str> { Some("mu") }
+  // XML attribute output is pt-typed by convention. Convert mu→pt via
+  // Perl `MuGlue::ptValue` two-step truncation so XMHint width attrs
+  // emit `1.66663pt` not `3.0mu` (and downstream lpadding/rpadding
+  // transferred from the XMHint width keep the pt unit).
+  fn to_attribute(&self) -> String {
+    let fs = crate::state::lookup_font()
+      .and_then(|f| f.get_size())
+      .unwrap_or(10.0);
+    let muwidth = (fs * UNITY_F64 / 18.0) as i64;
+    let pt_scaled = ((self.0 as f64 * muwidth as f64 / UNITY_F64).trunc()) as i64;
+    super::dimension::attribute_format(pt_scaled, Some("pt"))
+  }
 }
 
 impl fmt::Display for MuDimension {
