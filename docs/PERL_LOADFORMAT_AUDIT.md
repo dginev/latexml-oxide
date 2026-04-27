@@ -195,17 +195,64 @@ NODUMP path uses the simple `\lx@normal@par` Constructor — no token-stream sid
 effects, no bug. Perl handles the expl3 chain correctly via its own gullet, so
 this is a Rust-only gap.
 
-Fix paths to investigate:
-1. **expl3 conditional handling**: `\__prg_TF_true:w` is a delimited macro
-   (`Match:\fi:\use_ii:nn`). Verify Rust gullet matches Perl's delimiter-
-   matching semantics so `\use_ii:nn` doesn't fall through to outer args.
-2. **`invoke_token` body isolation**: in Perl, invoking an Expandable
-   processes its body independently of outer input. Audit Rust's
-   `stomach::invoke_token` Expandable arm for whether it temporarily swaps
-   the gullet's input buffer.
-3. **Workaround**: `leave_horizontal()` could call `\lx@normal@par` directly
-   when the user `\par` is the dump-installed expl3 chain. Less faithful
-   but isolates the bug from leaveHorizontal.
+### Investigation 2026-04-29 — concrete diagnosis
+
+Diagnostic probe in `gullet.rs::read_dimension` (the "Missing number"
+branch) drained the next 8 tokens from input at the point the `\vskip0.01em`
+read fails:
+
+```
+XXX_DIM_FAIL cur="\\vskip" peek=[
+  "\\tex_unskip:D", "\\tex_long:D", "\\tex_gdef:D", "{", "}",
+  "\\tex_par:D", "\\tex_long:D", "\\tex_gdef:D"]
+```
+
+These tokens are leftover residue from the dump-installed `\par` body
+(`\para_end:` chain) — `\tex_unskip:D` is the chain's first internal step,
+the `\tex_long:D \tex_gdef:D` pair comes from one of the hook-expansion
+sub-bodies (`\__hook_initialize_hook_code:n` etc.). They sit in the gullet's
+pushback after `leave_horizontal` returns.
+
+Why: Rust `stomach::invoke_token` (stomach.rs:867) for an Expandable runs
+`meaning.invoke()`, unreads body, reads next x-token, processes that one
+token via continue+match, then **breaks** (line 996). Body has 85 tokens;
+processing only the first (`\scan_stop:`, a Primitive no-op) leaves 84 in
+gullet. Any subsequent gullet read sees those primitives instead of the
+user's source tokens.
+
+Perl `Stomach.pm::invokeToken` (lines 195-200) **has identical structure** —
+unread+readXToken+goto-INVOKE, with the goto path falling through after one
+Primitive arm. Perl's `\par` body is byte-identical to Rust's (verified by
+line-by-line comparison of `latex_dump.pool.ltxml:17860` Perl vs the dump's
+`\para_end:` row). Yet `latexml --quiet box.tex` produces correct output
+in Perl.
+
+The mechanism Perl uses to drain the residue is therefore NOT in
+`invokeToken`. It must be in:
+* `Gullet::readXToken` (Gullet.pm:373) — the loop expands ALL Expandables it
+  encounters before returning the first non-expandable. So when `\vskip`'s
+  parameter reader calls `readXToken`, encountering `\mode_if_horizontal:TF`
+  (a non-protected Expandable) triggers full expansion. The expansion runs
+  the inner `\tex_par:D` etc. Eventually a non-content non-expandable token
+  emerges. The DIFFERENCE may be that Perl's `Conditional::invoke` for
+  `\if_mode_horizontal:` not only evaluates but also CONSUMES the entire
+  conditional body (TRUE branch tokens), leaving only the result.
+* OR `Tokens::unread` may have a sentinel/marker semantics we don't have.
+* OR the `isProtected` flag on `\par` (`\para_end:`) causes special handling
+  in `readXToken` (line 408-410 — protected expandables NOT auto-expanded
+  by `readXToken` unless `$fully_expand` is true). This means in some
+  contexts the `\par` chain is NOT auto-expanded, but `invokeToken`'s
+  explicit invoke bypasses that.
+
+Attempts blocked: instrumenting Perl directly via PERL5LIB/`-I` does not
+override the user's installed-from-CPAN-via-cpanm copy at
+`/home/deyan/perl5/lib/perl5/LaTeXML/Core/Stomach.pm` (read-only on this
+host). Patching the source `LaTeXML/lib/...` violates CLAUDE.md.
+
+Workaround tried: in `leave_horizontal`, route through `\lx@normal@par`
+instead of user `\par`. Recovers `box_test` (10/0 vs 9/1 in 20_digestion),
+no regressions in 16 surveyed test suites. **But abandoned** — the user
+flagged that quiet divergences from Perl bite later. Reverted.
 
 Replicate locally:
 ```
