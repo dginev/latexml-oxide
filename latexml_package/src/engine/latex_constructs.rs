@@ -4651,6 +4651,16 @@ LoadDefinitions!({
       document.maybe_close_element("ltx:p")?; }
   );
 
+  // Perl latex_constructs.pool.ltxml L1847 — re-let `\nobreakspace`
+  // to LaTeXML's `\lx@nobreakspace` (= NBSP `\u{00A0}`). Required HERE
+  // (not just plain_base.rs) so the override survives `LoadFormat`'s
+  // dump path: the dump captures latex.ltx's
+  // `\nobreakspace → \protect\nobreakspace<sp>` chain which decays to a
+  // regular space + `\leavevmode\nobreak\<sp>`. Without this Let, the
+  // hyperref autoref wrapping `\sectionautorefname\nobreakspace\thesection`
+  // produced `section 1` (regular space) instead of `section\u{00A0}1`.
+  Let!("\\nobreakspace", "\\lx@nobreakspace");
+
   DefPrimitive!("\\@vobeyspaces", {
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(' '), T_CS!("\\nobreakspace"));
