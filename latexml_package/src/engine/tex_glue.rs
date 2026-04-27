@@ -12,6 +12,20 @@ static UNICODE_EM_SPACES: [(f64, char); 7] = [
   (0.500, '\u{2002}'), // en-quad, "nut"
   (1.000, '\u{2003}'), // em-quad, "mutton"
 ];
+
+// Spacing widths with their canonical TeX command (Perl @spaces in
+// TeX_Glue.pool.ltxml L31-40). Used by `revert_skip` to recover the
+// original macro name from a digested `\hskip` length, so reversions
+// like `\quad` are preserved instead of decaying to `\hskip 10.0pt`.
+static REVERT_SKIPS: [(f64, &str); 6] = [
+  (0.200, "\\thinspace"), // five-per-em
+  (0.250, "\\>"),         // four-per-em
+  (0.333, "\\;"),         // three-per-em
+  (0.500, "\\enskip"),    // en-quad
+  (1.000, "\\quad"),      // em-quad
+  (2.000, "\\qquad"),     // double em
+];
+
 /// String of spacing chars with width roughly equivalent to $dimen
 pub(crate) fn dimension_to_spaces(dimen: Dimension) -> String {
   let fs = lookup_font().unwrap().get_size().unwrap_or(1.0); // 1 em
@@ -30,6 +44,32 @@ pub(crate) fn dimension_to_spaces(dimen: Dimension) -> String {
     }
   }
   s
+}
+
+/// Revert a skip length to its canonical command (Perl
+/// `revertSkip` in TeX_Glue.pool.ltxml L57-65). If `dimen` matches one
+/// of the well-known em-multiple widths to within 0.01em, returns the
+/// corresponding `\quad`/`\qquad`/`\enskip`/etc CS token. Otherwise
+/// returns `<command> <dimen>` (e.g. `\hskip 10.0pt`).
+pub(crate) fn revert_skip(command: Token, dimen: Dimension) -> Tokens {
+  let fs = lookup_font()
+    .and_then(|f| f.get_size())
+    .unwrap_or(10.0);
+  let ems = dimen.pt_value(None) / fs;
+  for (w, cs) in REVERT_SKIPS.iter() {
+    if ems > w + 0.01 {
+      continue;
+    }
+    if ems < w + 0.01 && ems > w - 0.01 {
+      return Tokens!(T_CS!(*cs));
+    }
+  }
+  let dim_str = dimen.to_string();
+  let mut out: Vec<Token> = vec![command];
+  for ch in dim_str.chars() {
+    out.push(T_OTHER!(ch.to_string()));
+  }
+  Tokens::new(out)
 }
 
 LoadDefinitions!({
@@ -77,6 +117,16 @@ LoadDefinitions!({
   },
   // Perl: enterHorizontal => 1
   enter_horizontal => true,
+  // Perl `reversion => sub { revertSkip(T_CS('\hskip'), $_[1]); }`
+  // (TeX_Glue.pool.ltxml L78). Recovers `\quad`/`\qquad`/`\enskip`/etc
+  // when the skip width matches an em-multiple within 0.01em tolerance.
+  reversion => sub[_whatsit, args] {
+    let length = match args.first().and_then(|o| o.as_ref()).map(|d| d.data()) {
+      Some(DigestedData::RegisterValue(v)) => v.into(),
+      _ => Dimension::default(),
+    };
+    Ok(revert_skip(T_CS!("\\hskip"), length))
+  },
   properties => sub[args] {
     unref!(args => length_digested);
     let width: Dimension = match length_digested.data() {
