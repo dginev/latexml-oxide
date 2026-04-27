@@ -3684,19 +3684,11 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
-  Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
-  Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
-  // Latex.ltx L15252-15256: LaTeX3-style aliases for the file-load
-  // tracking commands. The dump captures these as `Lt(...)` self-let
-  // entries that don't actually replay because we filter same-target
-  // aliases in `dump_writer`. Re-establish here post-dump.
-  Let!("\\IfPackageLoadedTF", r"\@ifpackageloaded");
-  Let!("\\IfClassLoadedTF", r"\@ifclassloaded");
-  Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
-  Let!("\\IfClassAtLeastTF", r"\@ifclasslater");
-  Let!("\\IfFormatAtLeastTF", r"\@ifl@t@r@released");
-  Let!("\\IfFileAtLeastTF", r"\@ifl@t@r");
+  // `\ltx@ifpackageloaded`, `\ltx@ifclassloaded`, and the
+  // `\If…AtLeast/LoadedTF` family moved to
+  // `latex_constructs_rust_only.rs` (Rust-only; not in Perl
+  // latex_*.pool.ltxml).
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // Per OXIDIZED_DESIGN #23: a package is "loaded" when EITHER the
@@ -4154,11 +4146,7 @@ LoadDefinitions!({
 
   Tag!("ltx:titlepage", auto_close => true);
 
-  DefConstructor!("\\maybe@end@title", sub[document,_args,_props] {
-    if document.is_closeable("ltx:titlepage").is_some() {
-      document.close_element("ltx:titlepage")?;
-    }
-  });
+  // `\maybe@end@title` moved to `latex_constructs_rust_only.rs`.
 
   DefConstructor!("\\maybe@end@titlepage", sub[document,_args,_props] {
     document.maybe_close_element("ltx:titlepage")?;
@@ -4671,18 +4659,8 @@ LoadDefinitions!({
   DefRegister!("\\labelwidthvi"       => Dimension::new(0));
 
   DefRegister!("\\@itemdepth" => Number::new(0));
-  DefRegister!("\\@maxlistdepth" => Number::new(6));
-
-  // List formatting macros from article.cls / report.cls / book.cls
-  // These set list parameters at various nesting levels.
-  // In raw TeX classes, \@listi etc. are defined by the class file.
-  // We stub them as no-ops since LaTeXML handles list formatting via CSS.
-  DefMacro!("\\@listi", "");
-  DefMacro!("\\@listii", "");
-  DefMacro!("\\@listiii", "");
-  DefMacro!("\\@listiv", "");
-  DefMacro!("\\@listv", "");
-  DefMacro!("\\@listvi", "");
+  // `\@maxlistdepth` and `\@listi`-`\@listvi` moved to
+  // `latex_constructs_rust_only.rs` (Rust-only stubs; not in Perl).
 
   //======================================================================
   // C.6.4 Verbatim
@@ -6671,7 +6649,9 @@ LoadDefinitions!({
   // Note that it's called \refname in LaTeX's article, but \bibname in report & book.
   // And likewise, mixed up in various other classes!
 
-  DefMacro!("\\thebibliography@ID", "");
+  // `\thebibliography@ID` initial empty default moved to
+  // `latex_constructs_rust_only.rs` (per-bibliography value still
+  // assigned dynamically by the `\bibliography` constructor).
   // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
   DefMacro!("\\the@lx@bibliography@ID", "");
 
@@ -9235,20 +9215,10 @@ LoadDefinitions!({
     make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
   });
 
-  // `\ltx@hard@MessageBreak` is the literal newline target used by
-  // `make_generic_message` to convert `\MessageBreak`-separated lines
-  // in `\GenericInfo`/`\GenericWarning`/`\GenericError` messages.
-  // Originally defined in `latex_base.rs:287`, but `latex_base` is
-  // replaced by `latex_dump` in dump path — so the DefMacro doesn't
-  // run there and `\ltx@hard@MessageBreak` is undefined. When
-  // `make_generic_message` then calls `let_i(\MessageBreak,
-  // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
-  // becomes Stored::None → `\MessageBreak` becomes undefined for the
-  // remainder of the digestion. The next babel info message
-  // ("Importing font data...") then errors with "MessageBreak
-  // undefined". Re-define here in latex_constructs (post-dump) so
-  // both paths converge.
-  DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
+  // `\ltx@hard@MessageBreak` (literal newline target used by
+  // `make_generic_message`) lives in `latex_constructs_rust_only.rs`,
+  // which loads after this file. Both NODUMP and dump paths converge
+  // there.
 
   // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
   // Defensive parity with Perl's exact placement.

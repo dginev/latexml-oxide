@@ -284,7 +284,8 @@ LoadDefinitions!({
   // Error/Warning/Info infrastructure
   // Perl: latex_base.pool.ltxml lines 516-593
   //======================================================================
-  DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
+  // `\ltx@hard@MessageBreak` moved to `latex_constructs_rust_only.rs`
+  // (Rust-only; not in Perl latex_*.pool.ltxml).
   // Perl-parity: `\@onlypreamble`, `\GenericError/Warning/Info` are
   // closure-backed primitives defined in `latex_constructs.pool.ltxml`
   // (L5645-5648), not latex_base. Relocated there 2026-04-18 so they
@@ -385,7 +386,7 @@ LoadDefinitions!({
  0\\or 1\\or 2\\or 3\\or 4\\or 5\\or 6\\or 7\\or 8\\or
  9\\or A\\or B\\or C\\or D\\or E\\or F\\fi");
   DefMacro!("\\on@line", " on input line \\the\\inputlineno");
-  DefMacro!("\\@latexbug", "");
+  // `\@latexbug` moved to `latex_constructs_rust_only.rs`.
   Let!("\\@warning", "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
   DefMacro!("\\G@refundefinedtrue", None);
@@ -667,8 +668,8 @@ LoadDefinitions!({
   // macros whose definitions normally come from `_base.rs`.
 
   // Class internals used by raw TeX classes
-  DefRegister!("\\@bls" => Dimension!("12pt"));
-  // \@maxlistdepth already in latex_constructs.rs (with list stubs)
+  // `\@bls` moved to `latex_constructs_rust_only.rs`.
+  // `\@maxlistdepth` also in `latex_constructs_rust_only.rs`.
 
   // LaTeX kernel: \nofiles
   DefMacro!("\\nofiles", "\\@fileswfalse");
