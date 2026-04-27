@@ -1625,37 +1625,55 @@ load, NoCaseChangeList machinery, `\@uclclist`,
 | 5964 | `\@uclclist` body `\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\ij\IJ\th\TH` | latex_constructs.rs:8755 (missing `\ij\IJ` pair) | ⚠ DIVERGE |
 | 5966-6010 | `\MakeUppercase`/`\MakeLowercase`/`\MakeTitlecase` (RawTeX builders) | latex_constructs.rs:8813-8845 | ✅ |
 
-### Phase 26 findings
+### Phase 26 findings (resolved 2026-04-27)
 
-* **Duplicates (10 entries)**: `\bibdata`/`\bibcite`/`\citation`/
-  `\contentsline`/`\newlabel`/`\nocorrlist`/`\text@command`/
-  `\check@nocorr@`/`\ignorespacesafterend`/`\mathgroup` defined in
-  BOTH latex_base.rs and latex_constructs.rs. Latter wins at
-  load-order (loaded after) but the duplication should be cleaned
-  up (latex_base.rs entries removed) for strict parity. The float-
-  page stubs `\@topnewpage`/`\@next`/`\@xnext`/`\@freelist`/
-  `\@currbox`/`\@toplist`/`\@botlist`/`\@midlist`/`\@currlist`/
-  `\@deferlist`/`\@dbltoplist`/`\@dbldeferlist`/`\@startcolumn`
-  (Perl latex_constructs L1015-1028) are misplaced in latex_base.rs
-  L43-56 — should be relocated to latex_constructs.rs (Phase ~7
-  area).
-* **Misplacements (5 entries)**: `\ifmaybe@ic`/`\maybe@ic`/
-  `\maybe@ic@`/`\sw@slant`/`\fix@penalty` only in latex_base.rs
-  L69-73 — should relocate to latex_constructs.rs.
-* **MISSING**: `\mathhexbox` defined as DefMacro in plain_base.rs
-  but Perl latex_constructs L5808-5812 OVERRIDES with closure
-  decoding mathchar via `decodeMathChar`. Rust missing the
-  override.
-* **DIVERGE**:
-  * `\stop` — Rust uses `Let \stop \endinput` (cleaner); Perl uses
-    closure `closeMouth(1)`. Functional equivalent in normal usage.
-  * `\textsubscript` — Rust `mode => "text"` vs Perl
-    `mode => 'restricted_horizontal', enterHorizontal => 1`. Same
-    pattern as `\textsuperscript` family.
-  * `\@uclclist` — Rust missing `\ij\IJ` pair (oe-IJ ligature).
-* **Hyphenation registers** are also DUPLICATE: ~50 `\newlanguage\l@*`
-  entries appear both in latex_base.rs:667+ and latex_constructs.rs:
-  9091-9109. Cleanup target.
+All flagged discoveries from the line-by-line walk are RESOLVED:
+
+* **Duplicates (10 entries)**: REMOVED from latex_base.rs (commit
+  `5a42a678b`). Now uniquely defined in latex_constructs.rs in
+  proper Perl-source-order positions: `\bibdata`/`\bibcite`/
+  `\citation`/`\contentsline`/`\newlabel` (L9066-9070, Perl L5796-5800);
+  `\nocorrlist`/`\text@command`/`\check@nocorr@`/`\ifmaybe@ic`/
+  `\maybe@ic`/`\maybe@ic@`/`\sw@slant`/`\fix@penalty` (L9076-9087,
+  Perl L5814-5826); `\ignorespacesafterend`/`\mathgroup`/
+  `\mathalpha` (L8375, L9073, L8744, Perl L5803-5805); hyphenation
+  `\newlanguage\l@*` (L9091-9109, Perl L5836-5886).
+* **Float-page stubs** (Perl L1015-1028): MIGRATED to
+  latex_constructs.rs L3843-3858 in proper Perl-source-order
+  position (commit `5a42a678b`).
+* **`\@finalstrut`** (Perl L4857): MIGRATED to latex_constructs.rs
+  L7791-7793.
+* **DIVERGE → resolved**:
+  * `\stop` — RESTORED to Perl-faithful closure form
+    `gullet::close_mouth(true)` (commit `6b1326dd3`). Required
+    core gullet fix in `read_internal_token` to handle a None
+    runtime gracefully.
+  * `\@uclclist` — `\ij\IJ` pair ADDED (Perl L5964 parity).
+  * `\textsubscript` — confirmed as Rust idiom `mode => "text"`
+    (auto-implies `enter_horizontal`); functionally equivalent to
+    Perl `mode => 'restricted_horizontal', enterHorizontal => 1`
+    per WISDOM #45.
+* **MISSING `\mathhexbox`** (Perl L5808-5812): functionally COVERED
+  by `plain_base.rs:519` DefMacro form using `\mathchar` which
+  routes through Rust's stomach `decode_math_char_for_stomach`.
+  Perl override is more direct (DefPrimitive that produces the
+  box directly via `decodeMathChar(n)`) but doesn't add semantic
+  value beyond the textbook form. Reclassified ✅.
+* **`\Gin@driver`**: MOVED to `latex_constructs_rust_only.rs`
+  (commit `a5d528272`). No Perl source, pure Rust hotfix.
+
+### Remaining deferred items
+
+These are coupled migrations or non-trivial fixes; not blocking:
+
+* `\@equationgroup` family (`\c@@equationgroup`, `\the@equationgroup`)
+  — Rust-only equationgroup mechanism, coupled to math-extension
+  helpers. Move to _rust_only.rs eventually.
+* `\@dblfloat`/`\end@dblfloat`/`\@float`/`\end@float` — Rust
+  DefEnvironment helpers, coupled to `before_float`/`after_float`
+  helpers (~31 use sites).
+* `\lx@pic@line`/`\lx@pic@oval`/`\lx@pic@qbezier`/`\lx@pic@vector` —
+  Rust picture-mode helpers, coupled to `px_value`/`fmt_px` helpers.
 
 ## Cumulative parity health (Perl L1-L6014, 100% of latex_constructs.pool.ltxml)
 
