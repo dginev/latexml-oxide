@@ -69,6 +69,25 @@ order, with the same options as its Perl counterpart.
 | `latex_dump.pool.ltxml` | `engine/latex_dump.rs` (generated) | n/a |
 | `plain_dump.pool.ltxml` | `engine/plain_dump.rs` (generated) | n/a |
 
+## InnerPool! invocation audit (2026-04-26)
+
+Cross-checked every Rust `InnerPool!(...)` invocation against the
+corresponding Perl `LoadPool(...)` in the source pool file:
+
+| Rust file | Calls | Perl source | Match? |
+|---|---|---|---|
+| `engine/base.rs` | base_schema, base_parameter_types, base_utilities, base_xmath, tex_box, tex_character, tex_debugging, tex_file_io, tex_fonts, tex_glue, tex_hyphenation, tex_inserts, tex_job, tex_kern, tex_logic, tex_macro, tex_marks, tex_math, tex_page, tex_paragraph, tex_penalties, tex_registers, tex_tables, etex, pdftex, base_deprecated (26) | `Base.pool.ltxml` L26-52 | ✅ identical order |
+| `engine/tex.rs` | base, plain_bootstrap, plain_dump\|plain_base (conditional), plain_constructs (5) | `TeX.pool.ltxml` L22-23 (`LoadPool('Base')` + `LoadFormat('plain')`) — `LoadFormat` expands to `bootstrap → dump\|base → constructs` per `Package.pm:2734-2752` | ✅ |
+| `engine/latex.rs` | latex_bootstrap, latex_dump\|latex_base (conditional), latex_constructs (3) | `LaTeX.pool.ltxml` L28-29 (`LoadPool('TeX')` + `LoadFormat('latex')`) | ✅ — `LoadPool!("TeX")` precedes the InnerPools as in Perl |
+| `engine/latex_bootstrap.rs` | plain_bootstrap (1) | `latex_bootstrap.pool.ltxml` L18 | ✅ |
+| `engine/latex_constructs.rs` | plain_constructs, math_common (2) — preceded by `_loaded` flag reset | `latex_constructs.pool.ltxml` L19-38 (`AssignValue('plain_constructs.pool.ltxml_loaded' => undef); LoadPool('plain_constructs'); ... LoadPool('math_common')`) | ✅ Gap 1 fix matches |
+| `engine/plain_constructs.rs` | math_common (1) — at end after `\allowbreak` | `plain_constructs.pool.ltxml` L319 (after L317 `\allowbreak`) | ✅ position matches |
+
+All 38 InnerPool! invocations across 6 files mirror their Perl
+counterparts in both pool name and ordinal position. The new
+`InnerPool!` macro guard (commit `8dfcb12f7`) ensures Perl's
+`LoadPool` `_loaded` semantics are honored consistently.
+
 ## Per-file walk notes
 
 Notes accumulate here as each pair is walked. Format:
